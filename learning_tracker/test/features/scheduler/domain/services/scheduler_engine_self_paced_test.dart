@@ -72,6 +72,7 @@ void main() {
     required DateTime? startedAt,
     Set<String> priorlyShown = const <String>{},
     DateTime? now,
+    String? learningUnit,
   }) => ScheduleConfig(
     curriculumId: curriculum,
     trackId: 1,
@@ -80,6 +81,7 @@ void main() {
     pacePerDay: pace,
     trackStartedAt: startedAt,
     priorlyShownRefs: priorlyShown,
+    learningUnit: learningUnit,
   );
 
   group('SchedulerEngine self-paced new-learning', () {
@@ -289,5 +291,141 @@ void main() {
         );
       },
     );
+  });
+
+  group('SchedulerEngine coarse-unit batching (1 perek = all its mishnas)', () {
+    setUp(() {
+      // Mishnayos with 3 perakim: perek 1 has 5 mishnas, perek 2 has 8,
+      // perek 3 has 4. Refs are ordered globally (perek 1 leaves first,
+      // then perek 2, then perek 3).
+      final items = <SchedulerContentItem>[];
+      var sort = 0;
+      void addPerek(String masechta, String perekNum, int mishnaCount) {
+        for (var m = 1; m <= mishnaCount; m++) {
+          items.add(
+            SchedulerContentItem(
+              sefariaRef: '$masechta $perekNum.$m',
+              sortOrder: sort++,
+              level1: 'Zeraim',
+              level2: masechta,
+              level3: perekNum,
+              level4: '$m',
+            ),
+          );
+        }
+      }
+
+      addPerek('Berachos', '1', 5);
+      addPerek('Berachos', '2', 8);
+      addPerek('Berachos', '3', 4);
+      contentRepo.items = items;
+    });
+
+    test(
+      'pace=1 perek/day emits ALL mishnas of the next un-introduced perek',
+      () async {
+        final tasks = await engine.generateDailyTasks(
+          configFor(
+            pace: 1,
+            startedAt: today,
+            priorlyShown: const {},
+            learningUnit: 'perek',
+          ),
+        );
+        final newRefs = tasks
+            .where((t) => t.priority == DailyTaskPriority.newLearning)
+            .map((t) => t.contentItemSefariaRef)
+            .toList();
+        expect(
+          newRefs,
+          [
+            'Berachos 1.1',
+            'Berachos 1.2',
+            'Berachos 1.3',
+            'Berachos 1.4',
+            'Berachos 1.5',
+          ],
+          reason:
+              'Asking for 1 perek/day should emit the full first perek '
+              '(5 mishnas), not a single mishna.',
+        );
+      },
+    );
+
+    test('pace=2 perek/day emits the first two perakim in full', () async {
+      final tasks = await engine.generateDailyTasks(
+        configFor(
+          pace: 2,
+          startedAt: today,
+          priorlyShown: const {},
+          learningUnit: 'perek',
+        ),
+      );
+      final newRefs = tasks
+          .where((t) => t.priority == DailyTaskPriority.newLearning)
+          .map((t) => t.contentItemSefariaRef)
+          .toList();
+      // Perek 1 = 5 mishnas + Perek 2 = 8 mishnas → 13 refs.
+      expect(newRefs, hasLength(13));
+      expect(newRefs.first, 'Berachos 1.1');
+      expect(newRefs.last, 'Berachos 2.8');
+    });
+
+    test(
+      'partially-shown perek is skipped (treated as already introduced)',
+      () async {
+        // Day 2: perek 1 was introduced on day 1 (all 5 mishnas in
+        // priorlyShown). Today should jump to perek 2.
+        final tasks = await engine.generateDailyTasks(
+          configFor(
+            pace: 1,
+            startedAt: today.subtract(const Duration(days: 1)),
+            priorlyShown: const {
+              'Berachos 1.1',
+              'Berachos 1.2',
+              'Berachos 1.3',
+              'Berachos 1.4',
+              'Berachos 1.5',
+            },
+            learningUnit: 'perek',
+          ),
+        );
+        final newRefs = tasks
+            .where((t) => t.priority == DailyTaskPriority.newLearning)
+            .map((t) => t.contentItemSefariaRef)
+            .toList();
+        expect(newRefs, [
+          'Berachos 2.1',
+          'Berachos 2.2',
+          'Berachos 2.3',
+          'Berachos 2.4',
+          'Berachos 2.5',
+          'Berachos 2.6',
+          'Berachos 2.7',
+          'Berachos 2.8',
+        ]);
+      },
+    );
+
+    test('learningUnit==leaf falls back to leaf-counted pace', () async {
+      // For Mishnayos the leaf is 'Mishna'. Setting learningUnit='mishna'
+      // must NOT switch on coarse grouping — pace=5 should emit exactly
+      // 5 mishnas.
+      final tasks = await engine.generateDailyTasks(
+        configFor(
+          pace: 5,
+          startedAt: today,
+          priorlyShown: const {},
+          learningUnit: 'mishna',
+        ),
+      );
+      final newRefs = tasks
+          .where((t) => t.priority == DailyTaskPriority.newLearning)
+          .map((t) => t.contentItemSefariaRef)
+          .toList();
+      expect(newRefs, hasLength(5));
+      expect(newRefs.first, 'Berachos 1.1');
+      expect(newRefs.last, 'Berachos 1.5');
+    });
   });
 }

@@ -23,6 +23,10 @@ class SchedulerContentRepositoryImpl implements SchedulerContentRepository {
           (i) => SchedulerContentItem(
             sefariaRef: i.sefariaRef,
             sortOrder: i.sortOrder,
+            level1: i.level1,
+            level2: i.level2,
+            level3: i.level3,
+            level4: i.level4,
           ),
         )
         .toList()

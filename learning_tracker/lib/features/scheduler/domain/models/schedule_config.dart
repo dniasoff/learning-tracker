@@ -51,5 +51,14 @@ abstract class ScheduleConfig with _$ScheduleConfig {
     ///   (b) skip already-shown refs when picking today's new-learning
     ///       batch from the current ordered list.
     @Default(<String>{}) Set<String> priorlyShownRefs,
+
+    /// The coarse/leaf unit the user picked in goal setup ('daf', 'amud',
+    /// 'perek', 'mishna', 'pasuk', 'siman', 'seif', 'halacha'). When this
+    /// names a coarse level (e.g. 'perek' on Mishnayos), the engine
+    /// emits **all leaves under the next N coarse units** for today's
+    /// new-learning batch — so "1 perek/day" means a whole perek, not
+    /// 1 mishna. When `null` or naming the curriculum's leaf, the engine
+    /// uses the leaf-counted pace as before.
+    String? learningUnit,
   }) = _ScheduleConfig;
 }

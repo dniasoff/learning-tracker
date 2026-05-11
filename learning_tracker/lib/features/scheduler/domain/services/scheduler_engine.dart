@@ -1,5 +1,6 @@
 import 'dart:math';
 
+import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/schedule_config.dart';
@@ -148,8 +149,12 @@ class SchedulerEngine {
       // Snapshot-aware path for self-paced tracks:
       //   - overdue = refs ever shown in a prior-day snapshot that are not
       //     completed at the first stage
-      //   - today's new = next pacePerDay refs from CURRENT orderedRefs
-      //     that haven't been shown before and aren't completed
+      //   - today's new = next pacePerDay (leaf or coarse) units from
+      //     CURRENT orderedRefs that haven't been shown before and aren't
+      //     completed. When the goal's learningUnit names a coarse level
+      //     (e.g. 'perek' on Mishnayos, 'daf' on Bavli), today's batch is
+      //     ALL leaves under the next N coarse units — so "1 perek/day"
+      //     emits a whole perek, not one mishna.
       // Reorder mid-stream and multi-day app gaps are both handled because
       // the repository back-fills synthetic snapshots before the engine
       // runs and populates `priorlyShownRefs`.
@@ -179,15 +184,27 @@ class SchedulerEngine {
         );
       }
 
-      // Today's new batch: next [pace] refs that haven't been shown
-      // before and aren't already completed at the first stage.
-      final todaysNewRefs = <String>[];
-      for (final ref in orderedRefs) {
-        if (priorlyShown.contains(ref)) continue;
-        final done = completionMap[ref]?.containsKey(firstStageOrder) ?? false;
-        if (done) continue;
-        todaysNewRefs.add(ref);
-        if (todaysNewRefs.length >= pace) break;
+      // Today's new batch
+      final List<String> todaysNewRefs;
+      if (_isCoarseMode(config)) {
+        todaysNewRefs = _pickCoarseBatch(
+          orderedRefs: orderedRefs,
+          contentItems: contentItems,
+          priorlyShown: priorlyShown,
+          completionMap: completionMap,
+          firstStageOrder: firstStageOrder,
+          coarseUnitsPerDay: pace,
+        );
+      } else {
+        todaysNewRefs = <String>[];
+        for (final ref in orderedRefs) {
+          if (priorlyShown.contains(ref)) continue;
+          final done =
+              completionMap[ref]?.containsKey(firstStageOrder) ?? false;
+          if (done) continue;
+          todaysNewRefs.add(ref);
+          if (todaysNewRefs.length >= pace) break;
+        }
       }
       newTasks = todaysNewRefs
           .map(
@@ -442,6 +459,72 @@ class SchedulerEngine {
     return config.pacePerDay != null && config.trackStartedAt != null;
   }
 
+  /// True when the goal's learningUnit names a level **above** the
+  /// curriculum's leaf — meaning pacePerDay counts coarse units (perek /
+  /// daf / siman) rather than individual leaves. When false (leaf mode,
+  /// or no learningUnit set), pacePerDay is interpreted as a count of
+  /// leaf items.
+  bool _isCoarseMode(ScheduleConfig config) {
+    final unit = config.learningUnit;
+    if (unit == null) return false;
+    final leafEn = CurriculumLabels.leaf(config.curriculumId).en.toLowerCase();
+    return unit.toLowerCase() != leafEn;
+  }
+
+  /// Pick today's new-learning leaves as **all** leaves under the next
+  /// [coarseUnitsPerDay] coarse units (perek / daf / siman) that have
+  /// not yet been introduced (no leaf in [priorlyShown]).
+  ///
+  /// Within a chosen coarse unit, leaves already completed at the first
+  /// stage are dropped — we only re-emit refs the user still needs to
+  /// learn. This means a partially-completed perek does not re-emit its
+  /// completed mishnas; the user picks up where they left off.
+  ///
+  /// A coarse unit is treated as "introduced" (and skipped) the moment
+  /// any of its leaves is in [priorlyShown]. The remaining leaves of
+  /// such a unit live in overdue carry-over, not in today's batch.
+  List<String> _pickCoarseBatch({
+    required List<String> orderedRefs,
+    required List<SchedulerContentItem> contentItems,
+    required Set<String> priorlyShown,
+    required Map<String, Map<int, DateTime>> completionMap,
+    required int firstStageOrder,
+    required int coarseUnitsPerDay,
+  }) {
+    final byRef = {for (final c in contentItems) c.sefariaRef: c};
+
+    // Walk orderedRefs once to build a deduplicated, order-preserving
+    // list of coarse-unit keys and the leaves under each.
+    final coarseOrder = <String>[];
+    final coarseLeaves = <String, List<String>>{};
+    for (final ref in orderedRefs) {
+      final item = byRef[ref];
+      final key = item?.coarseUnitKey ?? ref;
+      final leaves = coarseLeaves.putIfAbsent(key, () {
+        coarseOrder.add(key);
+        return <String>[];
+      });
+      leaves.add(ref);
+    }
+
+    final picked = <String>[];
+    var unitsTaken = 0;
+    for (final key in coarseOrder) {
+      if (unitsTaken >= coarseUnitsPerDay) break;
+      final leaves = coarseLeaves[key]!;
+      final anyShown = leaves.any(priorlyShown.contains);
+      if (anyShown) continue;
+      final remaining = leaves.where((r) {
+        final done = completionMap[r]?.containsKey(firstStageOrder) ?? false;
+        return !done;
+      }).toList();
+      if (remaining.isEmpty) continue;
+      picked.addAll(remaining);
+      unitsTaken += 1;
+    }
+    return picked;
+  }
+
   /// Public accessor for the same orderedRefs computation the engine uses
   /// internally. Used by the daily-plan back-fill step in
   /// `_buildFreshPlan` so synthetic snapshots are anchored to the same
@@ -450,6 +533,23 @@ class SchedulerEngine {
     final contentItems = await _contentRepository.getLeafItems(curriculumId);
     final customOrder = await _learningOrderRepository.getOrder(curriculumId);
     return _buildOrderedRefs(contentItems, customOrder);
+  }
+
+  /// Same ordering as [getOrderedRefs] but returns the full
+  /// [SchedulerContentItem]s. Used by the back-fill builder so synthetic
+  /// snapshots can group leaves by coarse unit (perek / daf / siman) when
+  /// the goal's learningUnit calls for it.
+  Future<List<SchedulerContentItem>> getOrderedLeafItems(
+    CurriculumId curriculumId,
+  ) async {
+    final contentItems = await _contentRepository.getLeafItems(curriculumId);
+    final customOrder = await _learningOrderRepository.getOrder(curriculumId);
+    final orderedRefs = _buildOrderedRefs(contentItems, customOrder);
+    final byRef = {for (final c in contentItems) c.sefariaRef: c};
+    return [
+      for (final ref in orderedRefs)
+        if (byRef[ref] != null) byRef[ref]!,
+    ];
   }
 
   int _calculateNewItemsPerDay(

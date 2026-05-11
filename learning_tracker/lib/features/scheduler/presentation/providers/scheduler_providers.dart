@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
@@ -30,21 +31,13 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 part 'scheduler_providers.g.dart';
 
-/// Convert a goal's daily rate (in the user's chosen unit) to leaf items
-/// per day for the scheduler engine. Only Bavli requires conversion: the
-/// engine emits leaf refs (Amud) but users typically set pace in Dafim,
-/// and 1 Daf = 2 Amudim exactly. For every other curriculum we treat the
-/// pace value literally — coarse↔fine conversion (e.g. mishnas-per-perek)
-/// varies per item and would need an engine-level grouping change.
-double _toLeafDailyRate(
-  double dailyRate,
-  CurriculumId curriculum,
-  String? learningUnit,
-) {
-  if (curriculum == CurriculumId.bavli && learningUnit == 'daf') {
-    return dailyRate * 2;
-  }
-  return dailyRate;
+/// True when the goal's [learningUnit] (e.g. 'perek', 'daf', 'siman')
+/// names a level above the curriculum's leaf, so pace is interpreted in
+/// coarse units. When false (leaf mode or no unit set) pace counts leaves.
+bool _isCoarseLearningUnit(CurriculumId curriculum, String? learningUnit) {
+  if (learningUnit == null) return false;
+  final leafEn = CurriculumLabels.leaf(curriculum).en.toLowerCase();
+  return learningUnit.toLowerCase() != leafEn;
 }
 
 /// Dashboard-driven task section filter for Scheduler screen.
@@ -506,6 +499,7 @@ Future<List<DailyTask>> _buildFreshPlan({
 
   final goalDeadlines = <CurriculumId, DateTime>{};
   final pacePerDayMap = <CurriculumId, double>{};
+  final learningUnitMap = <CurriculumId, String>{};
   for (final curriculum in activeCurricula) {
     final trackId = trackIds[curriculum];
     if (trackId != null) {
@@ -514,14 +508,18 @@ Future<List<DailyTask>> _buildFreshPlan({
         if (goal.goalType == 'pace' &&
             goal.paceValue != null &&
             goal.paceUnit != null) {
-          final dailyRate = _toLeafDailyRate(
-            PaceCalculator.paceToDaily(goal.paceValue!, goal.paceUnit!),
-            curriculum,
-            goal.learningUnit,
+          final dailyRate = PaceCalculator.paceToDaily(
+            goal.paceValue!,
+            goal.paceUnit!,
           );
           final existing = pacePerDayMap[curriculum];
           if (existing == null || dailyRate > existing) {
             pacePerDayMap[curriculum] = dailyRate;
+            if (goal.learningUnit != null) {
+              learningUnitMap[curriculum] = goal.learningUnit!;
+            } else {
+              learningUnitMap.remove(curriculum);
+            }
           }
         } else if (goal.targetDate != null) {
           final existing = goalDeadlines[curriculum];
@@ -542,14 +540,18 @@ Future<List<DailyTask>> _buildFreshPlan({
       if (goal.goalType == 'pace' &&
           goal.paceValue != null &&
           goal.paceUnit != null) {
-        final dailyRate = _toLeafDailyRate(
-          PaceCalculator.paceToDaily(goal.paceValue!, goal.paceUnit!),
-          curriculum,
-          goal.learningUnit,
+        final dailyRate = PaceCalculator.paceToDaily(
+          goal.paceValue!,
+          goal.paceUnit!,
         );
         final existing = pacePerDayMap[curriculum];
         if (existing == null || dailyRate > existing) {
           pacePerDayMap[curriculum] = dailyRate;
+          if (goal.learningUnit != null) {
+            learningUnitMap[curriculum] = goal.learningUnit!;
+          } else {
+            learningUnitMap.remove(curriculum);
+          }
         }
       } else if (goal.targetDate != null) {
         final existing = goalDeadlines[curriculum];
@@ -619,14 +621,41 @@ Future<List<DailyTask>> _buildFreshPlan({
     final startedAt = trackStartedAtMap[curriculum];
     if (trackId == null || pace == null || startedAt == null) continue;
 
-    final orderedRefs = await engine.getOrderedRefs(curriculum);
+    final orderedItems = await engine.getOrderedLeafItems(curriculum);
     final paceCeil = pace.ceil();
     final stages = await db.stageDao.getStagesByTrack(trackId);
-    if (stages.isEmpty || orderedRefs.isEmpty || paceCeil <= 0) continue;
+    if (stages.isEmpty || orderedItems.isEmpty || paceCeil <= 0) continue;
     final firstStage = stages.reduce(
       (StageDefinition a, StageDefinition b) =>
           a.stageOrder < b.stageOrder ? a : b,
     );
+
+    // Slot a day's worth of refs by either coarse unit (when the goal's
+    // learningUnit names a level above the leaf, e.g. 'perek' for
+    // Mishnayos or 'daf' for Bavli) or single leaves. Each day consumes
+    // [paceCeil] slots.
+    final learningUnit = learningUnitMap[curriculum];
+    final isCoarse = _isCoarseLearningUnit(curriculum, learningUnit);
+    final daySlots = <List<String>>[];
+    if (isCoarse) {
+      final byKey = <String, List<String>>{};
+      final keyOrder = <String>[];
+      for (final item in orderedItems) {
+        final key = item.coarseUnitKey ?? item.sefariaRef;
+        final list = byKey.putIfAbsent(key, () {
+          keyOrder.add(key);
+          return <String>[];
+        });
+        list.add(item.sefariaRef);
+      }
+      for (final key in keyOrder) {
+        daySlots.add(byKey[key]!);
+      }
+    } else {
+      for (final item in orderedItems) {
+        daySlots.add([item.sefariaRef]);
+      }
+    }
 
     await planRepo.backfillMissingSnapshots(
       profileId: profileId,
@@ -635,9 +664,9 @@ Future<List<DailyTask>> _buildFreshPlan({
       currentDate: now,
       buildSnapshotForDay: ({required dayIndex, required planDate}) async {
         final start = dayIndex * paceCeil;
-        if (start >= orderedRefs.length) return const <DailyTask>[];
-        final end = (start + paceCeil).clamp(0, orderedRefs.length);
-        final refs = orderedRefs.sublist(start, end);
+        if (start >= daySlots.length) return const <DailyTask>[];
+        final end = (start + paceCeil).clamp(0, daySlots.length);
+        final refs = daySlots.sublist(start, end).expand((g) => g).toList();
         return refs
             .map(
               (ref) => DailyTask(
@@ -674,6 +703,7 @@ Future<List<DailyTask>> _buildFreshPlan({
     trackLabels: trackLabels,
     trackStartedAtMap: trackStartedAtMap,
     priorlyShownRefsMap: priorlyShownRefsMap,
+    learningUnitMap: learningUnitMap,
   );
 
   final overridden = await _applyProgramCalendarOverrides(

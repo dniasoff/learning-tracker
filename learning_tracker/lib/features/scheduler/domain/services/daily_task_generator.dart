@@ -27,6 +27,7 @@ class DailyTaskGenerator {
     Set<String> skippedRefs = const {},
     DateTime? trackStartedAt,
     Set<String> priorlyShownRefs = const {},
+    String? learningUnit,
   }) async {
     final config = ScheduleConfig(
       curriculumId: curriculumId,
@@ -40,6 +41,7 @@ class DailyTaskGenerator {
       studyDaysInDeadlineWindow: studyDaysInDeadlineWindow,
       trackStartedAt: trackStartedAt,
       priorlyShownRefs: priorlyShownRefs,
+      learningUnit: learningUnit,
     );
     final tasks = await _engine.generateDailyTasks(config);
 
@@ -74,6 +76,7 @@ class DailyTaskGenerator {
     Map<CurriculumId, String> trackLabels = const {},
     Map<CurriculumId, DateTime> trackStartedAtMap = const {},
     Map<CurriculumId, Set<String>> priorlyShownRefsMap = const {},
+    Map<CurriculumId, String> learningUnitMap = const {},
   }) async {
     final allTasks = <DailyTask>[];
 
@@ -91,6 +94,7 @@ class DailyTaskGenerator {
         skippedRefs: skippedRefs,
         trackStartedAt: trackStartedAtMap[curriculum],
         priorlyShownRefs: priorlyShownRefsMap[curriculum] ?? const <String>{},
+        learningUnit: learningUnitMap[curriculum],
       );
       allTasks.addAll(tasks);
     }

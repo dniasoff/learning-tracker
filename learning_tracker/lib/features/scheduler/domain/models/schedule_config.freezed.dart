@@ -35,7 +35,14 @@ mixin _$ScheduleConfig {
 ///   (a) treat any uncompleted ref in this set as overdue today, and
 ///   (b) skip already-shown refs when picking today's new-learning
 ///       batch from the current ordered list.
- Set<String> get priorlyShownRefs;
+ Set<String> get priorlyShownRefs;/// The coarse/leaf unit the user picked in goal setup ('daf', 'amud',
+/// 'perek', 'mishna', 'pasuk', 'siman', 'seif', 'halacha'). When this
+/// names a coarse level (e.g. 'perek' on Mishnayos), the engine
+/// emits **all leaves under the next N coarse units** for today's
+/// new-learning batch — so "1 perek/day" means a whole perek, not
+/// 1 mishna. When `null` or naming the curriculum's leaf, the engine
+/// uses the leaf-counted pace as before.
+ String? get learningUnit;
 /// Create a copy of ScheduleConfig
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -46,16 +53,16 @@ $ScheduleConfigCopyWith<ScheduleConfig> get copyWith => _$ScheduleConfigCopyWith
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is ScheduleConfig&&(identical(other.curriculumId, curriculumId) || other.curriculumId == curriculumId)&&(identical(other.trackId, trackId) || other.trackId == trackId)&&(identical(other.trackLabel, trackLabel) || other.trackLabel == trackLabel)&&(identical(other.goalDeadline, goalDeadline) || other.goalDeadline == goalDeadline)&&(identical(other.currentDate, currentDate) || other.currentDate == currentDate)&&(identical(other.defaultNewItemsPerDay, defaultNewItemsPerDay) || other.defaultNewItemsPerDay == defaultNewItemsPerDay)&&(identical(other.pacePerDay, pacePerDay) || other.pacePerDay == pacePerDay)&&(identical(other.isStudyDay, isStudyDay) || other.isStudyDay == isStudyDay)&&(identical(other.studyDaysPerWeek, studyDaysPerWeek) || other.studyDaysPerWeek == studyDaysPerWeek)&&(identical(other.studyDaysInDeadlineWindow, studyDaysInDeadlineWindow) || other.studyDaysInDeadlineWindow == studyDaysInDeadlineWindow)&&(identical(other.trackStartedAt, trackStartedAt) || other.trackStartedAt == trackStartedAt)&&const DeepCollectionEquality().equals(other.priorlyShownRefs, priorlyShownRefs));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is ScheduleConfig&&(identical(other.curriculumId, curriculumId) || other.curriculumId == curriculumId)&&(identical(other.trackId, trackId) || other.trackId == trackId)&&(identical(other.trackLabel, trackLabel) || other.trackLabel == trackLabel)&&(identical(other.goalDeadline, goalDeadline) || other.goalDeadline == goalDeadline)&&(identical(other.currentDate, currentDate) || other.currentDate == currentDate)&&(identical(other.defaultNewItemsPerDay, defaultNewItemsPerDay) || other.defaultNewItemsPerDay == defaultNewItemsPerDay)&&(identical(other.pacePerDay, pacePerDay) || other.pacePerDay == pacePerDay)&&(identical(other.isStudyDay, isStudyDay) || other.isStudyDay == isStudyDay)&&(identical(other.studyDaysPerWeek, studyDaysPerWeek) || other.studyDaysPerWeek == studyDaysPerWeek)&&(identical(other.studyDaysInDeadlineWindow, studyDaysInDeadlineWindow) || other.studyDaysInDeadlineWindow == studyDaysInDeadlineWindow)&&(identical(other.trackStartedAt, trackStartedAt) || other.trackStartedAt == trackStartedAt)&&const DeepCollectionEquality().equals(other.priorlyShownRefs, priorlyShownRefs)&&(identical(other.learningUnit, learningUnit) || other.learningUnit == learningUnit));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,curriculumId,trackId,trackLabel,goalDeadline,currentDate,defaultNewItemsPerDay,pacePerDay,isStudyDay,studyDaysPerWeek,studyDaysInDeadlineWindow,trackStartedAt,const DeepCollectionEquality().hash(priorlyShownRefs));
+int get hashCode => Object.hash(runtimeType,curriculumId,trackId,trackLabel,goalDeadline,currentDate,defaultNewItemsPerDay,pacePerDay,isStudyDay,studyDaysPerWeek,studyDaysInDeadlineWindow,trackStartedAt,const DeepCollectionEquality().hash(priorlyShownRefs),learningUnit);
 
 @override
 String toString() {
-  return 'ScheduleConfig(curriculumId: $curriculumId, trackId: $trackId, trackLabel: $trackLabel, goalDeadline: $goalDeadline, currentDate: $currentDate, defaultNewItemsPerDay: $defaultNewItemsPerDay, pacePerDay: $pacePerDay, isStudyDay: $isStudyDay, studyDaysPerWeek: $studyDaysPerWeek, studyDaysInDeadlineWindow: $studyDaysInDeadlineWindow, trackStartedAt: $trackStartedAt, priorlyShownRefs: $priorlyShownRefs)';
+  return 'ScheduleConfig(curriculumId: $curriculumId, trackId: $trackId, trackLabel: $trackLabel, goalDeadline: $goalDeadline, currentDate: $currentDate, defaultNewItemsPerDay: $defaultNewItemsPerDay, pacePerDay: $pacePerDay, isStudyDay: $isStudyDay, studyDaysPerWeek: $studyDaysPerWeek, studyDaysInDeadlineWindow: $studyDaysInDeadlineWindow, trackStartedAt: $trackStartedAt, priorlyShownRefs: $priorlyShownRefs, learningUnit: $learningUnit)';
 }
 
 
@@ -66,7 +73,7 @@ abstract mixin class $ScheduleConfigCopyWith<$Res>  {
   factory $ScheduleConfigCopyWith(ScheduleConfig value, $Res Function(ScheduleConfig) _then) = _$ScheduleConfigCopyWithImpl;
 @useResult
 $Res call({
- CurriculumId curriculumId, int trackId, String trackLabel, DateTime? goalDeadline, DateTime currentDate, int defaultNewItemsPerDay, double? pacePerDay, bool isStudyDay, int studyDaysPerWeek, int? studyDaysInDeadlineWindow, DateTime? trackStartedAt, Set<String> priorlyShownRefs
+ CurriculumId curriculumId, int trackId, String trackLabel, DateTime? goalDeadline, DateTime currentDate, int defaultNewItemsPerDay, double? pacePerDay, bool isStudyDay, int studyDaysPerWeek, int? studyDaysInDeadlineWindow, DateTime? trackStartedAt, Set<String> priorlyShownRefs, String? learningUnit
 });
 
 
@@ -83,7 +90,7 @@ class _$ScheduleConfigCopyWithImpl<$Res>
 
 /// Create a copy of ScheduleConfig
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? curriculumId = null,Object? trackId = null,Object? trackLabel = null,Object? goalDeadline = freezed,Object? currentDate = null,Object? defaultNewItemsPerDay = null,Object? pacePerDay = freezed,Object? isStudyDay = null,Object? studyDaysPerWeek = null,Object? studyDaysInDeadlineWindow = freezed,Object? trackStartedAt = freezed,Object? priorlyShownRefs = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? curriculumId = null,Object? trackId = null,Object? trackLabel = null,Object? goalDeadline = freezed,Object? currentDate = null,Object? defaultNewItemsPerDay = null,Object? pacePerDay = freezed,Object? isStudyDay = null,Object? studyDaysPerWeek = null,Object? studyDaysInDeadlineWindow = freezed,Object? trackStartedAt = freezed,Object? priorlyShownRefs = null,Object? learningUnit = freezed,}) {
   return _then(_self.copyWith(
 curriculumId: null == curriculumId ? _self.curriculumId : curriculumId // ignore: cast_nullable_to_non_nullable
 as CurriculumId,trackId: null == trackId ? _self.trackId : trackId // ignore: cast_nullable_to_non_nullable
@@ -97,7 +104,8 @@ as bool,studyDaysPerWeek: null == studyDaysPerWeek ? _self.studyDaysPerWeek : st
 as int,studyDaysInDeadlineWindow: freezed == studyDaysInDeadlineWindow ? _self.studyDaysInDeadlineWindow : studyDaysInDeadlineWindow // ignore: cast_nullable_to_non_nullable
 as int?,trackStartedAt: freezed == trackStartedAt ? _self.trackStartedAt : trackStartedAt // ignore: cast_nullable_to_non_nullable
 as DateTime?,priorlyShownRefs: null == priorlyShownRefs ? _self.priorlyShownRefs : priorlyShownRefs // ignore: cast_nullable_to_non_nullable
-as Set<String>,
+as Set<String>,learningUnit: freezed == learningUnit ? _self.learningUnit : learningUnit // ignore: cast_nullable_to_non_nullable
+as String?,
   ));
 }
 
@@ -182,10 +190,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( CurriculumId curriculumId,  int trackId,  String trackLabel,  DateTime? goalDeadline,  DateTime currentDate,  int defaultNewItemsPerDay,  double? pacePerDay,  bool isStudyDay,  int studyDaysPerWeek,  int? studyDaysInDeadlineWindow,  DateTime? trackStartedAt,  Set<String> priorlyShownRefs)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( CurriculumId curriculumId,  int trackId,  String trackLabel,  DateTime? goalDeadline,  DateTime currentDate,  int defaultNewItemsPerDay,  double? pacePerDay,  bool isStudyDay,  int studyDaysPerWeek,  int? studyDaysInDeadlineWindow,  DateTime? trackStartedAt,  Set<String> priorlyShownRefs,  String? learningUnit)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _ScheduleConfig() when $default != null:
-return $default(_that.curriculumId,_that.trackId,_that.trackLabel,_that.goalDeadline,_that.currentDate,_that.defaultNewItemsPerDay,_that.pacePerDay,_that.isStudyDay,_that.studyDaysPerWeek,_that.studyDaysInDeadlineWindow,_that.trackStartedAt,_that.priorlyShownRefs);case _:
+return $default(_that.curriculumId,_that.trackId,_that.trackLabel,_that.goalDeadline,_that.currentDate,_that.defaultNewItemsPerDay,_that.pacePerDay,_that.isStudyDay,_that.studyDaysPerWeek,_that.studyDaysInDeadlineWindow,_that.trackStartedAt,_that.priorlyShownRefs,_that.learningUnit);case _:
   return orElse();
 
 }
@@ -203,10 +211,10 @@ return $default(_that.curriculumId,_that.trackId,_that.trackLabel,_that.goalDead
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( CurriculumId curriculumId,  int trackId,  String trackLabel,  DateTime? goalDeadline,  DateTime currentDate,  int defaultNewItemsPerDay,  double? pacePerDay,  bool isStudyDay,  int studyDaysPerWeek,  int? studyDaysInDeadlineWindow,  DateTime? trackStartedAt,  Set<String> priorlyShownRefs)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( CurriculumId curriculumId,  int trackId,  String trackLabel,  DateTime? goalDeadline,  DateTime currentDate,  int defaultNewItemsPerDay,  double? pacePerDay,  bool isStudyDay,  int studyDaysPerWeek,  int? studyDaysInDeadlineWindow,  DateTime? trackStartedAt,  Set<String> priorlyShownRefs,  String? learningUnit)  $default,) {final _that = this;
 switch (_that) {
 case _ScheduleConfig():
-return $default(_that.curriculumId,_that.trackId,_that.trackLabel,_that.goalDeadline,_that.currentDate,_that.defaultNewItemsPerDay,_that.pacePerDay,_that.isStudyDay,_that.studyDaysPerWeek,_that.studyDaysInDeadlineWindow,_that.trackStartedAt,_that.priorlyShownRefs);case _:
+return $default(_that.curriculumId,_that.trackId,_that.trackLabel,_that.goalDeadline,_that.currentDate,_that.defaultNewItemsPerDay,_that.pacePerDay,_that.isStudyDay,_that.studyDaysPerWeek,_that.studyDaysInDeadlineWindow,_that.trackStartedAt,_that.priorlyShownRefs,_that.learningUnit);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -223,10 +231,10 @@ return $default(_that.curriculumId,_that.trackId,_that.trackLabel,_that.goalDead
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( CurriculumId curriculumId,  int trackId,  String trackLabel,  DateTime? goalDeadline,  DateTime currentDate,  int defaultNewItemsPerDay,  double? pacePerDay,  bool isStudyDay,  int studyDaysPerWeek,  int? studyDaysInDeadlineWindow,  DateTime? trackStartedAt,  Set<String> priorlyShownRefs)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( CurriculumId curriculumId,  int trackId,  String trackLabel,  DateTime? goalDeadline,  DateTime currentDate,  int defaultNewItemsPerDay,  double? pacePerDay,  bool isStudyDay,  int studyDaysPerWeek,  int? studyDaysInDeadlineWindow,  DateTime? trackStartedAt,  Set<String> priorlyShownRefs,  String? learningUnit)?  $default,) {final _that = this;
 switch (_that) {
 case _ScheduleConfig() when $default != null:
-return $default(_that.curriculumId,_that.trackId,_that.trackLabel,_that.goalDeadline,_that.currentDate,_that.defaultNewItemsPerDay,_that.pacePerDay,_that.isStudyDay,_that.studyDaysPerWeek,_that.studyDaysInDeadlineWindow,_that.trackStartedAt,_that.priorlyShownRefs);case _:
+return $default(_that.curriculumId,_that.trackId,_that.trackLabel,_that.goalDeadline,_that.currentDate,_that.defaultNewItemsPerDay,_that.pacePerDay,_that.isStudyDay,_that.studyDaysPerWeek,_that.studyDaysInDeadlineWindow,_that.trackStartedAt,_that.priorlyShownRefs,_that.learningUnit);case _:
   return null;
 
 }
@@ -238,7 +246,7 @@ return $default(_that.curriculumId,_that.trackId,_that.trackLabel,_that.goalDead
 
 
 class _ScheduleConfig implements ScheduleConfig {
-  const _ScheduleConfig({required this.curriculumId, required this.trackId, required this.trackLabel, this.goalDeadline, required this.currentDate, this.defaultNewItemsPerDay = 5, this.pacePerDay, this.isStudyDay = true, this.studyDaysPerWeek = 7, this.studyDaysInDeadlineWindow, this.trackStartedAt, final  Set<String> priorlyShownRefs = const <String>{}}): _priorlyShownRefs = priorlyShownRefs;
+  const _ScheduleConfig({required this.curriculumId, required this.trackId, required this.trackLabel, this.goalDeadline, required this.currentDate, this.defaultNewItemsPerDay = 5, this.pacePerDay, this.isStudyDay = true, this.studyDaysPerWeek = 7, this.studyDaysInDeadlineWindow, this.trackStartedAt, final  Set<String> priorlyShownRefs = const <String>{}, this.learningUnit}): _priorlyShownRefs = priorlyShownRefs;
   
 
 @override final  CurriculumId curriculumId;
@@ -286,6 +294,14 @@ class _ScheduleConfig implements ScheduleConfig {
   return EqualUnmodifiableSetView(_priorlyShownRefs);
 }
 
+/// The coarse/leaf unit the user picked in goal setup ('daf', 'amud',
+/// 'perek', 'mishna', 'pasuk', 'siman', 'seif', 'halacha'). When this
+/// names a coarse level (e.g. 'perek' on Mishnayos), the engine
+/// emits **all leaves under the next N coarse units** for today's
+/// new-learning batch — so "1 perek/day" means a whole perek, not
+/// 1 mishna. When `null` or naming the curriculum's leaf, the engine
+/// uses the leaf-counted pace as before.
+@override final  String? learningUnit;
 
 /// Create a copy of ScheduleConfig
 /// with the given fields replaced by the non-null parameter values.
@@ -297,16 +313,16 @@ _$ScheduleConfigCopyWith<_ScheduleConfig> get copyWith => __$ScheduleConfigCopyW
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _ScheduleConfig&&(identical(other.curriculumId, curriculumId) || other.curriculumId == curriculumId)&&(identical(other.trackId, trackId) || other.trackId == trackId)&&(identical(other.trackLabel, trackLabel) || other.trackLabel == trackLabel)&&(identical(other.goalDeadline, goalDeadline) || other.goalDeadline == goalDeadline)&&(identical(other.currentDate, currentDate) || other.currentDate == currentDate)&&(identical(other.defaultNewItemsPerDay, defaultNewItemsPerDay) || other.defaultNewItemsPerDay == defaultNewItemsPerDay)&&(identical(other.pacePerDay, pacePerDay) || other.pacePerDay == pacePerDay)&&(identical(other.isStudyDay, isStudyDay) || other.isStudyDay == isStudyDay)&&(identical(other.studyDaysPerWeek, studyDaysPerWeek) || other.studyDaysPerWeek == studyDaysPerWeek)&&(identical(other.studyDaysInDeadlineWindow, studyDaysInDeadlineWindow) || other.studyDaysInDeadlineWindow == studyDaysInDeadlineWindow)&&(identical(other.trackStartedAt, trackStartedAt) || other.trackStartedAt == trackStartedAt)&&const DeepCollectionEquality().equals(other._priorlyShownRefs, _priorlyShownRefs));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _ScheduleConfig&&(identical(other.curriculumId, curriculumId) || other.curriculumId == curriculumId)&&(identical(other.trackId, trackId) || other.trackId == trackId)&&(identical(other.trackLabel, trackLabel) || other.trackLabel == trackLabel)&&(identical(other.goalDeadline, goalDeadline) || other.goalDeadline == goalDeadline)&&(identical(other.currentDate, currentDate) || other.currentDate == currentDate)&&(identical(other.defaultNewItemsPerDay, defaultNewItemsPerDay) || other.defaultNewItemsPerDay == defaultNewItemsPerDay)&&(identical(other.pacePerDay, pacePerDay) || other.pacePerDay == pacePerDay)&&(identical(other.isStudyDay, isStudyDay) || other.isStudyDay == isStudyDay)&&(identical(other.studyDaysPerWeek, studyDaysPerWeek) || other.studyDaysPerWeek == studyDaysPerWeek)&&(identical(other.studyDaysInDeadlineWindow, studyDaysInDeadlineWindow) || other.studyDaysInDeadlineWindow == studyDaysInDeadlineWindow)&&(identical(other.trackStartedAt, trackStartedAt) || other.trackStartedAt == trackStartedAt)&&const DeepCollectionEquality().equals(other._priorlyShownRefs, _priorlyShownRefs)&&(identical(other.learningUnit, learningUnit) || other.learningUnit == learningUnit));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,curriculumId,trackId,trackLabel,goalDeadline,currentDate,defaultNewItemsPerDay,pacePerDay,isStudyDay,studyDaysPerWeek,studyDaysInDeadlineWindow,trackStartedAt,const DeepCollectionEquality().hash(_priorlyShownRefs));
+int get hashCode => Object.hash(runtimeType,curriculumId,trackId,trackLabel,goalDeadline,currentDate,defaultNewItemsPerDay,pacePerDay,isStudyDay,studyDaysPerWeek,studyDaysInDeadlineWindow,trackStartedAt,const DeepCollectionEquality().hash(_priorlyShownRefs),learningUnit);
 
 @override
 String toString() {
-  return 'ScheduleConfig(curriculumId: $curriculumId, trackId: $trackId, trackLabel: $trackLabel, goalDeadline: $goalDeadline, currentDate: $currentDate, defaultNewItemsPerDay: $defaultNewItemsPerDay, pacePerDay: $pacePerDay, isStudyDay: $isStudyDay, studyDaysPerWeek: $studyDaysPerWeek, studyDaysInDeadlineWindow: $studyDaysInDeadlineWindow, trackStartedAt: $trackStartedAt, priorlyShownRefs: $priorlyShownRefs)';
+  return 'ScheduleConfig(curriculumId: $curriculumId, trackId: $trackId, trackLabel: $trackLabel, goalDeadline: $goalDeadline, currentDate: $currentDate, defaultNewItemsPerDay: $defaultNewItemsPerDay, pacePerDay: $pacePerDay, isStudyDay: $isStudyDay, studyDaysPerWeek: $studyDaysPerWeek, studyDaysInDeadlineWindow: $studyDaysInDeadlineWindow, trackStartedAt: $trackStartedAt, priorlyShownRefs: $priorlyShownRefs, learningUnit: $learningUnit)';
 }
 
 
@@ -317,7 +333,7 @@ abstract mixin class _$ScheduleConfigCopyWith<$Res> implements $ScheduleConfigCo
   factory _$ScheduleConfigCopyWith(_ScheduleConfig value, $Res Function(_ScheduleConfig) _then) = __$ScheduleConfigCopyWithImpl;
 @override @useResult
 $Res call({
- CurriculumId curriculumId, int trackId, String trackLabel, DateTime? goalDeadline, DateTime currentDate, int defaultNewItemsPerDay, double? pacePerDay, bool isStudyDay, int studyDaysPerWeek, int? studyDaysInDeadlineWindow, DateTime? trackStartedAt, Set<String> priorlyShownRefs
+ CurriculumId curriculumId, int trackId, String trackLabel, DateTime? goalDeadline, DateTime currentDate, int defaultNewItemsPerDay, double? pacePerDay, bool isStudyDay, int studyDaysPerWeek, int? studyDaysInDeadlineWindow, DateTime? trackStartedAt, Set<String> priorlyShownRefs, String? learningUnit
 });
 
 
@@ -334,7 +350,7 @@ class __$ScheduleConfigCopyWithImpl<$Res>
 
 /// Create a copy of ScheduleConfig
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? curriculumId = null,Object? trackId = null,Object? trackLabel = null,Object? goalDeadline = freezed,Object? currentDate = null,Object? defaultNewItemsPerDay = null,Object? pacePerDay = freezed,Object? isStudyDay = null,Object? studyDaysPerWeek = null,Object? studyDaysInDeadlineWindow = freezed,Object? trackStartedAt = freezed,Object? priorlyShownRefs = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? curriculumId = null,Object? trackId = null,Object? trackLabel = null,Object? goalDeadline = freezed,Object? currentDate = null,Object? defaultNewItemsPerDay = null,Object? pacePerDay = freezed,Object? isStudyDay = null,Object? studyDaysPerWeek = null,Object? studyDaysInDeadlineWindow = freezed,Object? trackStartedAt = freezed,Object? priorlyShownRefs = null,Object? learningUnit = freezed,}) {
   return _then(_ScheduleConfig(
 curriculumId: null == curriculumId ? _self.curriculumId : curriculumId // ignore: cast_nullable_to_non_nullable
 as CurriculumId,trackId: null == trackId ? _self.trackId : trackId // ignore: cast_nullable_to_non_nullable
@@ -348,7 +364,8 @@ as bool,studyDaysPerWeek: null == studyDaysPerWeek ? _self.studyDaysPerWeek : st
 as int,studyDaysInDeadlineWindow: freezed == studyDaysInDeadlineWindow ? _self.studyDaysInDeadlineWindow : studyDaysInDeadlineWindow // ignore: cast_nullable_to_non_nullable
 as int?,trackStartedAt: freezed == trackStartedAt ? _self.trackStartedAt : trackStartedAt // ignore: cast_nullable_to_non_nullable
 as DateTime?,priorlyShownRefs: null == priorlyShownRefs ? _self._priorlyShownRefs : priorlyShownRefs // ignore: cast_nullable_to_non_nullable
-as Set<String>,
+as Set<String>,learningUnit: freezed == learningUnit ? _self.learningUnit : learningUnit // ignore: cast_nullable_to_non_nullable
+as String?,
   ));
 }
 
