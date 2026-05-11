@@ -2,7 +2,7 @@ name: learning_tracker
 description: "Learning tracker for daily study management."
 publish_to: 'none'
 
-version: 1.0.36+1
+version: 1.0.37+1
 
 environment:
   sdk: ^3.10.8
@@ -61,8 +61,8 @@ dependencies:
   kosher_dart: ^2.0.18
 
   # Sacred Time (Shabbos / Yom Tov auto-lock)
-  geolocator: ^13.0.1
-  geocoding: ^3.0.0
+  geolocator: ^14.0.2
+  geocoding: ^4.0.0
 
   # Preferences
   shared_preferences: ^2.3.0
@@ -70,7 +70,7 @@ dependencies:
   # Notifications
   flutter_local_notifications: ^21.0.0
   timezone: ^0.11.0
-  flutter_timezone: ^4.1.1
+  flutter_timezone: ^5.0.2
 
   # Security
   flutter_secure_storage: ^10.0.0
@@ -82,7 +82,7 @@ dependencies:
   url_launcher: ^6.3.1
 
   # Deep links (magic-link auth handler)
-  app_links: ^6.4.0
+  app_links: ^7.0.0
 
   # UUID generation for local auth
   uuid: ^4.5.0
@@ -100,7 +100,7 @@ dependencies:
   internet_connection_checker: ^3.0.1
 
   # Typography (Playfair Display headlines + Inter body for Mesorah Heritage theme)
-  google_fonts: ^6.2.1
+  google_fonts: ^8.1.0
   confetti: ^0.8.0
   cloud_functions: ^6.2.0
 

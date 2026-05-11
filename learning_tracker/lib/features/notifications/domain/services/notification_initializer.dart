@@ -19,8 +19,10 @@ class NotificationInitializer {
     // Without setLocalLocation, tz.local defaults to UTC and every
     // zonedSchedule fires at the wrong wall-clock time for the user.
     try {
-      final name = await FlutterTimezone.getLocalTimezone();
-      tz.setLocalLocation(tz.getLocation(name));
+      // flutter_timezone 5.x returns a TimezoneInfo struct; the IANA
+      // identifier we feed to tz.getLocation lives on .identifier.
+      final info = await FlutterTimezone.getLocalTimezone();
+      tz.setLocalLocation(tz.getLocation(info.identifier));
     } catch (_) {
       // Platform query failed — leave tz.local as UTC rather than crash.
       // Reminders will fire at UTC wall-clock in this fallback.
