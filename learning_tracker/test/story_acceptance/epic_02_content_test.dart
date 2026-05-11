@@ -238,7 +238,7 @@ void main() {
     });
 
     test('TextContent model has required fields', () {
-      final content = TextContent(
+      final content = TextContent.single(
         sefariaRef: 'Mishnah Berachos 1.1',
         hebrewText: 'מאימתי',
         englishText: 'From when',

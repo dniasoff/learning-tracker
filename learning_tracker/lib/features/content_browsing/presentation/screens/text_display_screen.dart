@@ -8,6 +8,7 @@ import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/preferences/text_display_preferences.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/theme/text_styles.dart';
+import 'package:learning_tracker/core/utils/gematriya.dart';
 import 'package:learning_tracker/core/utils/hebrew_utils.dart';
 import 'package:learning_tracker/features/content_browsing/data/repositories/text_cache_repository.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
@@ -232,9 +233,9 @@ class _TextContentView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final displayHebrew = showNikud
-        ? textContent.hebrewText
-        : HebrewUtils.stripNikud(textContent.hebrewText);
+    final segments = textContent.segments;
+    final showSegmentNumbers =
+        segments.length > 1 && segments.any((s) => s.number != null);
     final insightChips = _buildInsightChips(textContent.englishText);
 
     return Column(
@@ -265,11 +266,12 @@ class _TextContentView extends StatelessWidget {
                     label: 'Hebrew Text',
                     labelBackground: const Color(0xFFF26666),
                     alignLabelRight: false,
-                    child: Text(
-                      displayHebrew,
-                      textDirection: TextDirection.rtl,
-                      textAlign: TextAlign.right,
-                      style: AppTextStyles.hebrewBodyLarge.copyWith(
+                    child: _NumberedSegmentColumn(
+                      segments: segments,
+                      isHebrew: true,
+                      showNumbers: showSegmentNumbers,
+                      showNikud: showNikud,
+                      baseStyle: AppTextStyles.hebrewBodyLarge.copyWith(
                         fontSize: 26 * fontSize.multiplier,
                         height: 1.65,
                         color: const Color(0xFF1A1D24),
@@ -310,9 +312,12 @@ class _TextContentView extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          textContent.englishText,
-                          style: AppTextStyles.bodyLarge.copyWith(
+                        _NumberedSegmentColumn(
+                          segments: segments,
+                          isHebrew: false,
+                          showNumbers: showSegmentNumbers,
+                          showNikud: showNikud,
+                          baseStyle: AppTextStyles.bodyLarge.copyWith(
                             fontSize: 16 * fontSize.multiplier,
                             height: 1.55,
                             color: AppTheme.brandInk,
@@ -383,6 +388,134 @@ List<String> _buildInsightChips(String englishText) {
     chips.add('Concept: Time');
   }
   return chips.take(2).toList();
+}
+
+/// Renders a list of [TextSegment]s — one paragraph per segment with a
+/// small leading number badge when [showNumbers] is true.
+///
+/// Hebrew side uses gematriya (`א`, `ב`, …); English side uses Arabic
+/// numerals (`1`, `2`, …). The number is visually distinct (smaller,
+/// brand-blue, slight badge background) so it reads as a verse marker
+/// rather than text. Only the number itself is shown — no leading
+/// "Pasuk" / "Mishna" / etc. label.
+class _NumberedSegmentColumn extends StatelessWidget {
+  const _NumberedSegmentColumn({
+    required this.segments,
+    required this.isHebrew,
+    required this.showNumbers,
+    required this.showNikud,
+    required this.baseStyle,
+  });
+
+  final List<TextSegment> segments;
+  final bool isHebrew;
+  final bool showNumbers;
+  final bool showNikud;
+  final TextStyle baseStyle;
+
+  @override
+  Widget build(BuildContext context) {
+    final visible = segments.where((s) {
+      final t = isHebrew ? s.hebrewText : s.englishText;
+      return t.isNotEmpty;
+    }).toList();
+
+    if (visible.isEmpty) return const SizedBox.shrink();
+
+    return Column(
+      crossAxisAlignment: isHebrew
+          ? CrossAxisAlignment.end
+          : CrossAxisAlignment.start,
+      children: [
+        for (var i = 0; i < visible.length; i++) ...[
+          _SegmentParagraph(
+            segment: visible[i],
+            isHebrew: isHebrew,
+            showNumber: showNumbers && visible[i].number != null,
+            showNikud: showNikud,
+            baseStyle: baseStyle,
+          ),
+          if (i < visible.length - 1) const SizedBox(height: 10),
+        ],
+      ],
+    );
+  }
+}
+
+class _SegmentParagraph extends StatelessWidget {
+  const _SegmentParagraph({
+    required this.segment,
+    required this.isHebrew,
+    required this.showNumber,
+    required this.showNikud,
+    required this.baseStyle,
+  });
+
+  final TextSegment segment;
+  final bool isHebrew;
+  final bool showNumber;
+  final bool showNikud;
+  final TextStyle baseStyle;
+
+  @override
+  Widget build(BuildContext context) {
+    var text = isHebrew ? segment.hebrewText : segment.englishText;
+    if (isHebrew && !showNikud) {
+      text = HebrewUtils.stripNikud(text);
+    }
+
+    final spans = <InlineSpan>[];
+    if (showNumber && segment.number != null) {
+      final marker = isHebrew
+          ? Gematriya.forNumber(segment.number!)
+          : segment.number!.toString();
+      spans.add(
+        WidgetSpan(
+          alignment: PlaceholderAlignment.baseline,
+          baseline: TextBaseline.alphabetic,
+          child: Padding(
+            padding: isHebrew
+                ? const EdgeInsets.only(left: 6)
+                : const EdgeInsets.only(right: 6),
+            child: _VerseNumberBadge(marker: marker),
+          ),
+        ),
+      );
+    }
+    spans.add(TextSpan(text: text, style: baseStyle));
+
+    return Text.rich(
+      TextSpan(children: spans, style: baseStyle),
+      textDirection: isHebrew ? TextDirection.rtl : TextDirection.ltr,
+      textAlign: isHebrew ? TextAlign.right : TextAlign.left,
+    );
+  }
+}
+
+class _VerseNumberBadge extends StatelessWidget {
+  const _VerseNumberBadge({required this.marker});
+
+  final String marker;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 1),
+      decoration: BoxDecoration(
+        color: AppTheme.brandBlueSoft.withValues(alpha: 0.55),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        marker,
+        style: const TextStyle(
+          color: AppTheme.brandBlueDeep,
+          fontWeight: FontWeight.w800,
+          fontSize: 13,
+          height: 1.0,
+        ),
+      ),
+    );
+  }
 }
 
 class _ReaderSectionCard extends StatelessWidget {

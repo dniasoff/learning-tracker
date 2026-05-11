@@ -80,7 +80,7 @@ void main() {
 
       // Complete the future to avoid pending timers
       completer.complete(
-        TextContent(
+        TextContent.single(
           sefariaRef: 'Mishnah Berakhot 1.1',
           hebrewText: 'hebrew',
           englishText: 'english',
@@ -93,7 +93,7 @@ void main() {
       const hebrewText = 'מֵאֵימָתַי קוֹרִין אֶת שְׁמַע';
       final mockRepo = MockTextCacheRepository();
       when(() => mockRepo.getText(any())).thenAnswer((_) async {
-        return TextContent(
+        return TextContent.single(
           sefariaRef: 'Mishnah Berakhot 1.1',
           hebrewText: hebrewText,
           englishText: 'English text',
@@ -116,7 +116,7 @@ void main() {
       const englishText = 'From when may one recite';
       final mockRepo = MockTextCacheRepository();
       when(() => mockRepo.getText(any())).thenAnswer((_) async {
-        return TextContent(
+        return TextContent.single(
           sefariaRef: 'Mishnah Berakhot 1.1',
           hebrewText: hebrewText,
           englishText: englishText,
@@ -166,7 +166,7 @@ void main() {
     testWidgets('displays reader section labels', (tester) async {
       final mockRepo = MockTextCacheRepository();
       when(() => mockRepo.getText(any())).thenAnswer((_) async {
-        return TextContent(
+        return TextContent.single(
           sefariaRef: 'Mishnah Berakhot 1.1',
           hebrewText: 'hebrew',
           englishText: 'english',
@@ -184,7 +184,7 @@ void main() {
     testWidgets('displays mark completion section', (tester) async {
       final mockRepo = MockTextCacheRepository();
       when(() => mockRepo.getText(any())).thenAnswer((_) async {
-        return TextContent(
+        return TextContent.single(
           sefariaRef: 'Mishnah Berakhot 1.1',
           hebrewText: 'hebrew',
           englishText: 'english',
@@ -209,7 +209,7 @@ void main() {
     testWidgets('shows sefariaRef in AppBar title', (tester) async {
       final mockRepo = MockTextCacheRepository();
       when(() => mockRepo.getText(any())).thenAnswer((_) async {
-        return TextContent(
+        return TextContent.single(
           sefariaRef: 'Mishnah Berakhot 1.1',
           hebrewText: 'hebrew',
           englishText: 'english',

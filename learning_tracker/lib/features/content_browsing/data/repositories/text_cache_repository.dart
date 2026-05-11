@@ -2,17 +2,68 @@ import 'package:learning_tracker/core/database/content/daos/daily_content_dao.da
 import 'package:learning_tracker/core/database/content/daos/text_cache_dao.dart';
 import 'package:learning_tracker/core/utils/hebrew_utils.dart';
 
-/// Model for fetched text content.
-class TextContent {
-  TextContent({
+/// One inner sub-leaf within a [TextContent] — a single pasuk, mishna,
+/// halacha, seif, amud, etc. When the user opens a perek/daf/siman, the
+/// repository aggregates its child leaves into a list of [TextSegment]
+/// so the reader can render each with a small in-line number badge
+/// (e.g. `א ` before its pasuk).
+class TextSegment {
+  TextSegment({
     required this.sefariaRef,
     required this.hebrewText,
     required this.englishText,
+    this.number,
   });
 
   final String sefariaRef;
   final String hebrewText;
   final String englishText;
+
+  /// 1-based sub-position parsed from the ref (e.g. `Genesis 1:5` → 5,
+  /// `Mishnah Berakhot 1:3` → 3). `null` when the ref carries no
+  /// numeric suffix (e.g. `Berakhot 2a` for a Bavli amud, where there
+  /// is only ever one segment anyway).
+  final int? number;
+}
+
+/// Model for fetched text content.
+class TextContent {
+  TextContent({required this.sefariaRef, required this.segments});
+
+  /// Convenience constructor for callers that have a single block of
+  /// Hebrew + English text (no per-verse split). Mostly used by tests
+  /// and legacy code paths.
+  factory TextContent.single({
+    required String sefariaRef,
+    required String hebrewText,
+    required String englishText,
+  }) {
+    return TextContent(
+      sefariaRef: sefariaRef,
+      segments: [
+        TextSegment(
+          sefariaRef: sefariaRef,
+          hebrewText: hebrewText,
+          englishText: englishText,
+        ),
+      ],
+    );
+  }
+
+  final String sefariaRef;
+
+  /// Ordered list of inner segments (1+). Single-segment for direct
+  /// leaf opens; multi-segment for chapter-/perek-level aggregation.
+  final List<TextSegment> segments;
+
+  /// Convenience: joined Hebrew text (newline-separated). Preserved for
+  /// callers that need a flat string — e.g. nikud stripping. The new
+  /// per-segment renderer reads [segments] directly.
+  String get hebrewText =>
+      segments.map((s) => s.hebrewText).where((t) => t.isNotEmpty).join('\n');
+
+  String get englishText =>
+      segments.map((s) => s.englishText).where((t) => t.isNotEmpty).join('\n');
 }
 
 /// Repository for cached Sefaria text content.
@@ -44,8 +95,14 @@ class TextCacheRepository {
     if (cached != null) {
       return TextContent(
         sefariaRef: cached.sefariaRef,
-        hebrewText: HebrewUtils.decodeHtmlEntities(cached.hebrewText),
-        englishText: cached.englishText,
+        segments: [
+          TextSegment(
+            sefariaRef: cached.sefariaRef,
+            hebrewText: HebrewUtils.decodeHtmlEntities(cached.hebrewText),
+            englishText: cached.englishText,
+            number: _verseNumberOrNull(cached.sefariaRef),
+          ),
+        ],
       );
     }
 
@@ -53,12 +110,20 @@ class TextCacheRepository {
     if (daily != null) {
       return TextContent(
         sefariaRef: daily.sefariaRef,
-        hebrewText: HebrewUtils.decodeHtmlEntities(daily.hebrewText),
-        englishText: daily.englishText,
+        segments: [
+          TextSegment(
+            sefariaRef: daily.sefariaRef,
+            hebrewText: HebrewUtils.decodeHtmlEntities(daily.hebrewText),
+            englishText: daily.englishText,
+            number: _verseNumberOrNull(daily.sefariaRef),
+          ),
+        ],
       );
     }
 
-    // Chapter-level fallback: aggregate child verse rows.
+    // Chapter-level fallback: aggregate child verse rows. Each child
+    // becomes its own TextSegment so the reader can prefix a number
+    // badge (gematriya in Hebrew, Arabic in English).
     final children = await textCacheDao.getChildTexts(sefariaRef);
     if (children.isNotEmpty) {
       children.sort((a, b) {
@@ -66,20 +131,21 @@ class TextCacheRepository {
         final numB = _verseNumber(b.sefariaRef);
         return numA.compareTo(numB);
       });
-      final he = children
-          .map((c) => HebrewUtils.decodeHtmlEntities(c.hebrewText))
-          .where((t) => t.isNotEmpty)
-          .join('\n');
-      final en = children
-          .map((c) => c.englishText)
-          .where((t) => t.isNotEmpty)
-          .join('\n');
-      if (he.isNotEmpty || en.isNotEmpty) {
-        return TextContent(
-          sefariaRef: sefariaRef,
-          hebrewText: he,
-          englishText: en,
+      final segments = <TextSegment>[];
+      for (final c in children) {
+        final he = HebrewUtils.decodeHtmlEntities(c.hebrewText);
+        if (he.isEmpty && c.englishText.isEmpty) continue;
+        segments.add(
+          TextSegment(
+            sefariaRef: c.sefariaRef,
+            hebrewText: he,
+            englishText: c.englishText,
+            number: _verseNumberOrNull(c.sefariaRef),
+          ),
         );
+      }
+      if (segments.isNotEmpty) {
+        return TextContent(sefariaRef: sefariaRef, segments: segments);
       }
     }
 
@@ -87,9 +153,13 @@ class TextCacheRepository {
   }
 
   static int _verseNumber(String sefariaRef) {
+    return _verseNumberOrNull(sefariaRef) ?? 0;
+  }
+
+  static int? _verseNumberOrNull(String sefariaRef) {
     final colonIdx = sefariaRef.lastIndexOf(':');
-    if (colonIdx < 0) return 0;
-    return int.tryParse(sefariaRef.substring(colonIdx + 1)) ?? 0;
+    if (colonIdx < 0) return null;
+    return int.tryParse(sefariaRef.substring(colonIdx + 1));
   }
 
   /// Returns list of all cached Sefaria references.
