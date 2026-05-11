@@ -106,24 +106,11 @@ class TextCacheRepository {
       );
     }
 
-    final daily = await dailyContentDao.getByRef(sefariaRef);
-    if (daily != null) {
-      return TextContent(
-        sefariaRef: daily.sefariaRef,
-        segments: [
-          TextSegment(
-            sefariaRef: daily.sefariaRef,
-            hebrewText: HebrewUtils.decodeHtmlEntities(daily.hebrewText),
-            englishText: daily.englishText,
-            number: _verseNumberOrNull(daily.sefariaRef),
-          ),
-        ],
-      );
-    }
-
-    // Chapter-level fallback: aggregate child verse rows. Each child
-    // becomes its own TextSegment so the reader can prefix a number
-    // badge (gematriya in Hebrew, Arabic in English).
+    // Chapter-level aggregation: try child verse rows before the daily_content
+    // blob. If individual rows exist (e.g. "Pirkei Avot 1:1"…"1:18" for
+    // "Pirkei Avot 1"), use them so each verse gets a number badge.
+    // daily_content is the fallback for refs without child rows (e.g. Talmud
+    // chapter blobs like "Berakhot 1").
     final children = await textCacheDao.getChildTexts(sefariaRef);
     if (children.isNotEmpty) {
       children.sort((a, b) {
@@ -147,6 +134,23 @@ class TextCacheRepository {
       if (segments.isNotEmpty) {
         return TextContent(sefariaRef: sefariaRef, segments: segments);
       }
+    }
+
+    // Last resort: daily_content blob (e.g. Talmud chapter or program refs
+    // that have no individual child rows in text_cache).
+    final daily = await dailyContentDao.getByRef(sefariaRef);
+    if (daily != null) {
+      return TextContent(
+        sefariaRef: daily.sefariaRef,
+        segments: [
+          TextSegment(
+            sefariaRef: daily.sefariaRef,
+            hebrewText: HebrewUtils.decodeHtmlEntities(daily.hebrewText),
+            englishText: daily.englishText,
+            number: _verseNumberOrNull(daily.sefariaRef),
+          ),
+        ],
+      );
     }
 
     return null;
