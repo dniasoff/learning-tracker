@@ -103,6 +103,15 @@ class _GoalSetupFormState extends ConsumerState<GoalSetupForm> {
     _learningUnit = _defaultUnit;
   }
 
+  /// Whether this curriculum's pace is set in Pasuk/Perek units (Tanakh
+  /// family + Mussar). For these the user can pick between counting
+  /// pesukim per day or perakim per day.
+  bool get _isPasukPerekCurriculum =>
+      widget.curriculumId == CurriculumId.chumash ||
+      widget.curriculumId == CurriculumId.nach ||
+      widget.curriculumId == CurriculumId.tanach ||
+      widget.curriculumId == CurriculumId.mussar;
+
   /// Default learning unit based on curriculum type.
   String get _defaultUnit {
     // Bavli/Yerushalmi use Amud as smallest unit
@@ -110,17 +119,23 @@ class _GoalSetupFormState extends ConsumerState<GoalSetupForm> {
         widget.curriculumId == CurriculumId.yerushalmi) {
       return 'amud';
     }
+    // Tanakh + Mussar default to Perek pace (1 perek/day reads more
+    // naturally than 1 pasuk/day for most learners).
+    if (_isPasukPerekCurriculum) return 'perek';
     return 'item';
   }
 
-  /// Whether the curriculum supports Amud/Daf unit selection.
+  /// Whether the curriculum supports a unit picker on the goal screen.
   bool get _showUnitPicker =>
       widget.curriculumId == CurriculumId.bavli ||
-      widget.curriculumId == CurriculumId.yerushalmi;
+      widget.curriculumId == CurriculumId.yerushalmi ||
+      _isPasukPerekCurriculum;
 
   String get _unitDisplayLabel {
     if (_learningUnit == 'daf') return 'Daf';
     if (_learningUnit == 'amud') return 'Amud';
+    if (_learningUnit == 'perek') return 'Perek';
+    if (_learningUnit == 'pasuk') return 'Pasuk';
     return _getUnitLabel(widget.curriculumId);
   }
 
@@ -397,7 +412,9 @@ class _GoalSetupFormState extends ConsumerState<GoalSetupForm> {
                     onChanged: (v) => setState(() => _targetPercent = v),
                   ),
                   const SizedBox(height: 24),
-                  // Unit picker (Amud/Daf) for Bavli/Yerushalmi
+                  // Unit picker — Amud/Daf for Talmud, Pasuk/Perek for
+                  // Tanakh + Mussar. Lets the user choose whether the
+                  // pace count is in chapter-sized or verse-sized units.
                   if (_showUnitPicker) ...[
                     Text(
                       'Learning unit',
@@ -405,10 +422,21 @@ class _GoalSetupFormState extends ConsumerState<GoalSetupForm> {
                     ),
                     const SizedBox(height: 8),
                     SegmentedButton<String>(
-                      segments: const [
-                        ButtonSegment(value: 'amud', label: Text('Amud')),
-                        ButtonSegment(value: 'daf', label: Text('Daf')),
-                      ],
+                      segments: _isPasukPerekCurriculum
+                          ? const [
+                              ButtonSegment(
+                                value: 'perek',
+                                label: Text('Perek'),
+                              ),
+                              ButtonSegment(
+                                value: 'pasuk',
+                                label: Text('Pasuk'),
+                              ),
+                            ]
+                          : const [
+                              ButtonSegment(value: 'amud', label: Text('Amud')),
+                              ButtonSegment(value: 'daf', label: Text('Daf')),
+                            ],
                       selected: {_learningUnit},
                       onSelectionChanged: (selected) {
                         setState(() => _learningUnit = selected.first);
