@@ -2484,6 +2484,7 @@ class _SelfPacedGoalStepState extends ConsumerState<_SelfPacedGoalStep> {
   String _paceUnit = 'per_week';
   DateTime? _deadline;
   String _mode = 'pace';
+  late String _learningUnit;
 
   @override
   void initState() {
@@ -2493,15 +2494,77 @@ class _SelfPacedGoalStepState extends ConsumerState<_SelfPacedGoalStep> {
     _paceValue = (daily * 7).clamp(1, 99);
     final now = DateTime.now();
     _deadline = DateTime(now.year, now.month, now.day);
+    _learningUnit = _paceUnitOptions.defaultKey;
   }
 
-  /// The level used for pace setting — leaf for every curriculum except
-  /// Bavli, where we skip the Amud sub-level and let users set pace in
-  /// Dafim (a whole-page-per-day is the natural cadence). Yerushalmi's
-  /// leaf is already Daf, so no special-case is needed.
-  LevelLabels get _paceUnitLevel => widget.curriculumId == CurriculumId.bavli
-      ? CurriculumLabels.level(widget.curriculumId, 3)
-      : CurriculumLabels.leaf(widget.curriculumId);
+  /// The two unit choices offered for the curriculum. `single` means the
+  /// curriculum has only one natural pace level (Yerushalmi = Daf) so no
+  /// picker UI is shown. Otherwise the user toggles between [coarse]
+  /// (Daf / Perek / Siman) and [fine] (Amud / Mishna / Pasuk / Seif /
+  /// Halacha) — see the switch below for each curriculum's mapping.
+  _PaceUnitOptions get _paceUnitOptions {
+    final id = widget.curriculumId;
+    return switch (id) {
+      CurriculumId.mishnayos => _PaceUnitOptions.dual(
+        coarseKey: 'perek',
+        coarse: CurriculumLabels.level(id, 3),
+        fineKey: 'mishna',
+        fine: CurriculumLabels.leaf(id),
+        defaultKey: 'mishna',
+      ),
+      CurriculumId.bavli => _PaceUnitOptions.dual(
+        coarseKey: 'daf',
+        coarse: CurriculumLabels.level(id, 3),
+        fineKey: 'amud',
+        fine: CurriculumLabels.leaf(id),
+        defaultKey: 'daf',
+      ),
+      CurriculumId.yerushalmi => _PaceUnitOptions.single(
+        key: 'daf',
+        level: CurriculumLabels.leaf(id),
+      ),
+      CurriculumId.chumash => _PaceUnitOptions.dual(
+        coarseKey: 'perek',
+        coarse: CurriculumLabels.level(id, 2),
+        fineKey: 'pasuk',
+        fine: CurriculumLabels.leaf(id),
+        defaultKey: 'pasuk',
+      ),
+      CurriculumId.nach || CurriculumId.tanach => _PaceUnitOptions.dual(
+        coarseKey: 'perek',
+        coarse: CurriculumLabels.level(id, 3),
+        fineKey: 'pasuk',
+        fine: CurriculumLabels.leaf(id),
+        defaultKey: 'pasuk',
+      ),
+      CurriculumId.mussar => _PaceUnitOptions.dual(
+        // Mussar's L2 default is Perek; book-specific overrides
+        // (Shaar / Part) only apply when a parentL1Value is known,
+        // which there isn't at curriculum-wide pace setting.
+        coarseKey: 'perek',
+        coarse: CurriculumLabels.level(id, 2),
+        fineKey: 'pasuk',
+        fine: CurriculumLabels.leaf(id),
+        defaultKey: 'pasuk',
+      ),
+      CurriculumId.mishnaBerurah => _PaceUnitOptions.dual(
+        coarseKey: 'siman',
+        coarse: CurriculumLabels.level(id, 2),
+        fineKey: 'seif',
+        fine: CurriculumLabels.leaf(id),
+        defaultKey: 'seif',
+      ),
+      CurriculumId.mishnehTorah => _PaceUnitOptions.dual(
+        coarseKey: 'perek',
+        coarse: CurriculumLabels.level(id, 3),
+        fineKey: 'halacha',
+        fine: CurriculumLabels.leaf(id),
+        defaultKey: 'halacha',
+      ),
+    };
+  }
+
+  LevelLabels get _paceUnitLevel => _paceUnitOptions.levelFor(_learningUnit);
 
   String get _unitSingular => _paceUnitLevel.en;
   String get _unitPlural => _paceUnitLevel.enPlural;
@@ -2664,6 +2727,28 @@ class _SelfPacedGoalStepState extends ConsumerState<_SelfPacedGoalStep> {
                 color: AppTheme.brandInkMuted,
               ),
             ),
+            if (_paceUnitOptions.hasChoice) ...[
+              const SizedBox(height: 10),
+              SegmentedButton<String>(
+                segments: [
+                  ButtonSegment(
+                    value: _paceUnitOptions.coarseKey,
+                    label: Text(_paceUnitOptions.coarse.enPlural),
+                  ),
+                  ButtonSegment(
+                    value: _paceUnitOptions.fineKey!,
+                    label: Text(_paceUnitOptions.fine!.enPlural),
+                  ),
+                ],
+                selected: {_learningUnit},
+                onSelectionChanged: (value) {
+                  setState(() {
+                    _mode = 'pace';
+                    _learningUnit = value.first;
+                  });
+                },
+              ),
+            ],
             const SizedBox(height: 10),
             SegmentedButton<String>(
               segments: const [
@@ -2864,11 +2949,7 @@ class _SelfPacedGoalStepState extends ConsumerState<_SelfPacedGoalStep> {
           goalType: 'deadline',
           targetDate: _deadline!.toUtc(),
           dateType: useHebrew ? 'hebrew' : 'gregorian',
-          learningUnit:
-              widget.curriculumId == CurriculumId.bavli ||
-                  widget.curriculumId == CurriculumId.yerushalmi
-              ? 'daf'
-              : null,
+          learningUnit: _learningUnit,
         ),
       );
       return;
@@ -2880,11 +2961,7 @@ class _SelfPacedGoalStepState extends ConsumerState<_SelfPacedGoalStep> {
         goalType: 'pace',
         paceValue: _paceValue,
         paceUnit: _paceUnit,
-        learningUnit:
-            widget.curriculumId == CurriculumId.bavli ||
-                widget.curriculumId == CurriculumId.yerushalmi
-            ? 'daf'
-            : null,
+        learningUnit: _learningUnit,
       ),
     );
   }
@@ -2975,6 +3052,56 @@ class _SelfPacedGoalStepState extends ConsumerState<_SelfPacedGoalStep> {
         ],
       ),
     );
+  }
+}
+
+/// Pace-unit options shown to the user in the self-paced goal step.
+///
+/// Two variants:
+///  - [_PaceUnitOptions.dual] — curriculum has a coarse (e.g. Daf, Perek,
+///    Siman) and a fine (Amud, Mishna, Pasuk, Seif, Halacha) choice.
+///  - [_PaceUnitOptions.single] — curriculum has only one natural pace
+///    level (Yerushalmi = Daf). No segmented picker is rendered.
+class _PaceUnitOptions {
+  const _PaceUnitOptions._({
+    required this.coarseKey,
+    required this.coarse,
+    this.fineKey,
+    this.fine,
+    required this.defaultKey,
+  });
+
+  factory _PaceUnitOptions.dual({
+    required String coarseKey,
+    required LevelLabels coarse,
+    required String fineKey,
+    required LevelLabels fine,
+    required String defaultKey,
+  }) => _PaceUnitOptions._(
+    coarseKey: coarseKey,
+    coarse: coarse,
+    fineKey: fineKey,
+    fine: fine,
+    defaultKey: defaultKey,
+  );
+
+  factory _PaceUnitOptions.single({
+    required String key,
+    required LevelLabels level,
+  }) => _PaceUnitOptions._(coarseKey: key, coarse: level, defaultKey: key);
+
+  final String coarseKey;
+  final LevelLabels coarse;
+  final String? fineKey;
+  final LevelLabels? fine;
+  final String defaultKey;
+
+  bool get hasChoice => fineKey != null;
+
+  LevelLabels levelFor(String key) {
+    if (key == coarseKey) return coarse;
+    if (key == fineKey && fine != null) return fine!;
+    return coarse;
   }
 }
 

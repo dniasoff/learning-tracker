@@ -30,6 +30,23 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 part 'scheduler_providers.g.dart';
 
+/// Convert a goal's daily rate (in the user's chosen unit) to leaf items
+/// per day for the scheduler engine. Only Bavli requires conversion: the
+/// engine emits leaf refs (Amud) but users typically set pace in Dafim,
+/// and 1 Daf = 2 Amudim exactly. For every other curriculum we treat the
+/// pace value literally — coarse↔fine conversion (e.g. mishnas-per-perek)
+/// varies per item and would need an engine-level grouping change.
+double _toLeafDailyRate(
+  double dailyRate,
+  CurriculumId curriculum,
+  String? learningUnit,
+) {
+  if (curriculum == CurriculumId.bavli && learningUnit == 'daf') {
+    return dailyRate * 2;
+  }
+  return dailyRate;
+}
+
 /// Dashboard-driven task section filter for Scheduler screen.
 enum SchedulerTaskSection { all, today, overdue, review }
 
@@ -497,9 +514,10 @@ Future<List<DailyTask>> _buildFreshPlan({
         if (goal.goalType == 'pace' &&
             goal.paceValue != null &&
             goal.paceUnit != null) {
-          final dailyRate = PaceCalculator.paceToDaily(
-            goal.paceValue!,
-            goal.paceUnit!,
+          final dailyRate = _toLeafDailyRate(
+            PaceCalculator.paceToDaily(goal.paceValue!, goal.paceUnit!),
+            curriculum,
+            goal.learningUnit,
           );
           final existing = pacePerDayMap[curriculum];
           if (existing == null || dailyRate > existing) {
@@ -524,9 +542,10 @@ Future<List<DailyTask>> _buildFreshPlan({
       if (goal.goalType == 'pace' &&
           goal.paceValue != null &&
           goal.paceUnit != null) {
-        final dailyRate = PaceCalculator.paceToDaily(
-          goal.paceValue!,
-          goal.paceUnit!,
+        final dailyRate = _toLeafDailyRate(
+          PaceCalculator.paceToDaily(goal.paceValue!, goal.paceUnit!),
+          curriculum,
+          goal.learningUnit,
         );
         final existing = pacePerDayMap[curriculum];
         if (existing == null || dailyRate > existing) {
