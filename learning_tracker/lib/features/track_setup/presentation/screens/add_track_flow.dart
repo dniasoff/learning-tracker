@@ -2579,9 +2579,44 @@ class _SelfPacedGoalStepState extends ConsumerState<_SelfPacedGoalStep> {
     return '$dd/$mm/$yyyy';
   }
 
-  String _projectedFinishLabel(bool useHebrew) {
+  /// Number of items in the user's currently-selected `_learningUnit`.
+  ///
+  /// For leaf-mode pace (default for most curricula) returns the leaf
+  /// count directly. For coarse-mode pace (e.g. Perakim, Simanim,
+  /// Dafim) groups leaves by their coarse-unit key — everything except
+  /// the leaf level value — and returns the distinct group count.
+  ///
+  /// Falls back to `leafCountFallback` when scoped content is still
+  /// loading so the projection doesn't snap to garbage during a frame.
+  int _countScopeInLearningUnit(
+    List<ContentItem>? scopedContent,
+    int leafCountFallback,
+  ) {
+    final isCoarse =
+        _paceUnitOptions.hasChoice && _learningUnit != _paceUnitOptions.fineKey;
+    if (!isCoarse) return leafCountFallback;
+    if (scopedContent == null) return leafCountFallback;
+    final keys = <String>{};
+    for (final item in scopedContent) {
+      if (!item.isLeaf) continue;
+      final key = item.level4 != null
+          ? '${item.level1}|${item.level2}|${item.level3}'
+          : item.level3 != null
+          ? '${item.level1}|${item.level2}'
+          : item.level2 != null
+          ? item.level1
+          : item.sefariaRef;
+      keys.add(key);
+    }
+    return keys.isEmpty ? leafCountFallback : keys.length;
+  }
+
+  String _projectedFinishLabel(bool useHebrew, int totalScopeItems) {
+    if (totalScopeItems <= 0 || _paceValue <= 0) {
+      return _formatDate(DateTime.now(), useHebrew: useHebrew);
+    }
     final weeklyPace = _paceUnit == 'per_day' ? _paceValue * 7 : _paceValue;
-    final days = (weeklyPace <= 0 ? 14 : (120 / weeklyPace * 7)).ceil();
+    final days = (totalScopeItems / weeklyPace * 7).ceil();
     final projected = DateTime.now().add(Duration(days: days));
     return _formatDate(projected, useHebrew: useHebrew);
   }
@@ -2683,7 +2718,11 @@ class _SelfPacedGoalStepState extends ConsumerState<_SelfPacedGoalStep> {
     );
   }
 
-  Widget _buildPaceCard(ThemeData theme, bool useHebrew) {
+  Widget _buildPaceCard(
+    ThemeData theme,
+    bool useHebrew, {
+    required int totalScopeItems,
+  }) {
     return DecoratedBox(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -2797,7 +2836,7 @@ class _SelfPacedGoalStepState extends ConsumerState<_SelfPacedGoalStep> {
               ],
             ),
             Text(
-              'Estimated finish: ${_projectedFinishLabel(useHebrew)}',
+              'Estimated finish: ${_projectedFinishLabel(useHebrew, totalScopeItems)}',
               style: theme.textTheme.bodySmall?.copyWith(
                 color: AppTheme.brandInkMuted,
                 fontStyle: FontStyle.italic,
@@ -2974,6 +3013,13 @@ class _SelfPacedGoalStepState extends ConsumerState<_SelfPacedGoalStep> {
     final scopeCountAsync = ref.watch(
       scopedItemCountProvider(widget.curriculumId),
     );
+    // Also watch full scoped content so we can count distinct coarse units
+    // (perakim, simanim, dafim) — when the user's selected learningUnit
+    // is coarse, the projected-finish math needs scope in that unit, not
+    // leaf count.
+    final scopedContentAsync = ref.watch(
+      scopedCurriculumContentProvider(widget.curriculumId),
+    );
     final start = _localDateOnlyFromDt(DateTime.now());
     final end = _deadline != null
         ? _localDateOnlyFromDt(_deadline!.toLocal())
@@ -2983,11 +3029,19 @@ class _SelfPacedGoalStepState extends ConsumerState<_SelfPacedGoalStep> {
         : 0;
     final scopeLoading = scopeCountAsync.isLoading;
     final totalScopeItems = scopeCountAsync.asData?.value ?? 120;
+    final totalScopeInLearningUnit = _countScopeInLearningUnit(
+      scopedContentAsync.asData?.value,
+      totalScopeItems,
+    );
     final itemsPerStudyDay = studyDaysInWindow > 0
         ? (totalScopeItems / studyDaysInWindow).ceil().clamp(1, 999999)
         : 0;
 
-    final paceCard = _buildPaceCard(theme, useHebrew);
+    final paceCard = _buildPaceCard(
+      theme,
+      useHebrew,
+      totalScopeItems: totalScopeInLearningUnit,
+    );
     final deadlineCard = _buildDeadlineCard(
       theme,
       useHebrew,
