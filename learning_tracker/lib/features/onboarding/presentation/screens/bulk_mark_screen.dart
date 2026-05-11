@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/core/labels/curriculum_label_renderer.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/widgets/app_bar_title.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
@@ -10,6 +11,8 @@ import 'package:learning_tracker/features/onboarding/presentation/providers/onbo
 import 'package:learning_tracker/features/progress/presentation/providers/progress_providers.dart';
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/curriculum_scope_providers.dart';
+import 'package:learning_tracker/features/settings/presentation/providers/hebrew_terms_provider.dart';
+import 'package:learning_tracker/features/settings/presentation/providers/transliteration_variant_provider.dart';
 import 'package:learning_tracker/features/stages/presentation/providers/stage_providers.dart';
 import 'package:learning_tracker/features/track_setup/domain/entities/add_track_result.dart';
 
@@ -365,10 +368,6 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
   }
 
   Widget _buildSelection(ThemeData theme) {
-    final configAsync = ref.watch(
-      curriculumHierarchyConfigProvider(widget.curriculumId),
-    );
-
     // Use search results when searching, hierarchy browsing otherwise
     final isSearchActive = _searchQuery.length >= 2;
     final AsyncValue<List<ContentItem>> itemsAsync;
@@ -405,30 +404,39 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
             ),
           ),
           if (_navigationStack.isNotEmpty && !isSearchActive)
-            configAsync.when(
-              data: (config) => Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Wrap(
-                  children: [
-                    for (var i = 0; i < _navigationStack.length; i++)
-                      TextButton(
-                        onPressed: () {
-                          setState(() {
-                            _navigationStack = _navigationStack.sublist(
-                              0,
-                              i + 1,
-                            );
-                          });
-                        },
-                        child: Text(
-                          '${i < config.levelLabels.length ? config.levelLabels[i] : ''}: ${_navigationStack[i]}',
+            Builder(
+              builder: (context) {
+                // Same renderer used by Browse Content and the reader —
+                // each crumb is the bare named segment ("זרעים", "ברכות")
+                // or the ordinal value with prefix ("פרק א").
+                final hebrewTerms = ref.watch(hebrewTermsScriptProvider);
+                final variant = ref.watch(transliterationVariantProvider);
+                final segments = CurriculumLabelRenderer.renderBreadcrumb(
+                  curriculumId: widget.curriculumId,
+                  rawSegmentValues: _navigationStack,
+                  useHebrew: hebrewTerms,
+                  transliterationVariant: variant,
+                );
+                return Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Wrap(
+                    children: [
+                      for (var i = 0; i < segments.length; i++)
+                        TextButton(
+                          onPressed: () {
+                            setState(() {
+                              _navigationStack = _navigationStack.sublist(
+                                0,
+                                i + 1,
+                              );
+                            });
+                          },
+                          child: Text(segments[i]),
                         ),
-                      ),
-                  ],
-                ),
-              ),
-              loading: () => const SizedBox.shrink(),
-              error: (_, __) => const SizedBox.shrink(),
+                    ],
+                  ),
+                );
+              },
             ),
           Expanded(
             child: itemsAsync.when(
@@ -458,20 +466,35 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
                   );
                 }
 
+                final hebrewOnly = ref.watch(hebrewTermsScriptProvider);
                 return ListView.builder(
                   itemCount: displayItems.length,
                   itemBuilder: (context, index) {
                     final item = displayItems[index];
                     final isSelected = _isItemSelected(item);
-
+                    final showEnglishSubtitle =
+                        !hebrewOnly && item.displayNameEn != item.displayNameHe;
                     return ListTile(
                       leading: Checkbox(
                         value: isSelected,
                         onChanged: (_) => _toggleItem(item),
                       ),
-                      title: Text(item.displayNameEn),
-                      subtitle: item.displayNameHe != item.displayNameEn
-                          ? Text(item.displayNameHe)
+                      title: Text(
+                        item.displayNameHe,
+                        textDirection: TextDirection.rtl,
+                        textAlign: TextAlign.right,
+                        style: theme.textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      subtitle: showEnglishSubtitle
+                          ? Text(
+                              item.displayNameEn,
+                              style: theme.textTheme.titleSmall?.copyWith(
+                                color: theme.colorScheme.onSurfaceVariant,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            )
                           : null,
                       trailing: item.isLeaf || isSearchActive
                           ? null
@@ -801,13 +824,14 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
     );
   }
 
-  /// Group items by the next hierarchy level (same logic as ContentHierarchyScreen).
+  /// Group items by the next hierarchy level. Display names flow through
+  /// `CurriculumLabelRenderer` so this screen renders the same Hebrew /
+  /// transliterated strings as Browse Content and the dashboard pill.
   List<ContentItem> _groupItemsByNextLevel(List<ContentItem> items) {
     final currentDepth = _navigationStack.length;
-
     if (currentDepth >= 4) return items;
-    if (items.isNotEmpty && items.every((i) => i.isLeaf)) return items;
 
+    final variant = ref.read(transliterationVariantProvider);
     final uniqueItems = <String, ContentItem>{};
 
     for (final item in items) {
@@ -818,25 +842,41 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
         3 => item.level4,
         _ => null,
       };
-
-      if (nextLevelValue != null && !uniqueItems.containsKey(nextLevelValue)) {
-        if (!item.isLeaf) {
-          uniqueItems[nextLevelValue] = item;
-        } else {
-          uniqueItems[nextLevelValue] = ContentItem(
-            curriculumId: item.curriculumId,
-            level1: item.level1,
-            level2: currentDepth >= 1 ? item.level2 : null,
-            level3: currentDepth >= 2 ? item.level3 : null,
-            level4: currentDepth >= 3 ? item.level4 : null,
-            displayNameHe: nextLevelValue,
-            displayNameEn: nextLevelValue,
-            sefariaRef: item.sefariaRef,
-            sortOrder: item.sortOrder,
-            isLeaf: false,
-          );
-        }
+      if (nextLevelValue == null || uniqueItems.containsKey(nextLevelValue)) {
+        continue;
       }
+
+      final renderedHe = CurriculumLabelRenderer.renderValue(
+        curriculumId: widget.curriculumId,
+        level: currentDepth + 1,
+        rawValue: nextLevelValue,
+        useHebrew: true,
+        hebrewName: !item.isLeaf ? item.displayNameHe : null,
+        parentL1Value: item.level1,
+        transliterationVariant: variant,
+      );
+      final renderedEn = CurriculumLabelRenderer.renderValue(
+        curriculumId: widget.curriculumId,
+        level: currentDepth + 1,
+        rawValue: nextLevelValue,
+        useHebrew: false,
+        hebrewName: !item.isLeaf ? item.displayNameHe : null,
+        parentL1Value: item.level1,
+        transliterationVariant: variant,
+      );
+
+      uniqueItems[nextLevelValue] = ContentItem(
+        curriculumId: item.curriculumId,
+        level1: item.level1,
+        level2: currentDepth >= 1 ? item.level2 : null,
+        level3: currentDepth >= 2 ? item.level3 : null,
+        level4: currentDepth >= 3 ? item.level4 : null,
+        displayNameHe: renderedHe,
+        displayNameEn: renderedEn,
+        sefariaRef: item.sefariaRef,
+        sortOrder: item.sortOrder,
+        isLeaf: item.isLeaf,
+      );
     }
 
     return uniqueItems.values.toList()

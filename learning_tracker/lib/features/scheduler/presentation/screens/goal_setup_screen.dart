@@ -131,12 +131,14 @@ class _GoalSetupFormState extends ConsumerState<GoalSetupForm> {
       widget.curriculumId == CurriculumId.yerushalmi ||
       _isPasukPerekCurriculum;
 
+  /// Plural unit label shown in the pace input ("Pesukim per day", not
+  /// "Pasuk per day") — the count is always > 1 in practice.
   String get _unitDisplayLabel {
-    if (_learningUnit == 'daf') return 'Daf';
-    if (_learningUnit == 'amud') return 'Amud';
-    if (_learningUnit == 'perek') return 'Perek';
-    if (_learningUnit == 'pasuk') return 'Pasuk';
-    return _getUnitLabel(widget.curriculumId);
+    if (_learningUnit == 'daf') return 'Dafim';
+    if (_learningUnit == 'amud') return 'Amudim';
+    if (_learningUnit == 'perek') return 'Perakim';
+    if (_learningUnit == 'pasuk') return 'Pesukim';
+    return CurriculumLabels.leaf(widget.curriculumId).enPlural;
   }
 
   String _formatDateLine(DateTime? d, {required bool useHebrew}) {
@@ -159,8 +161,6 @@ class _GoalSetupFormState extends ConsumerState<GoalSetupForm> {
     _descriptionController.dispose();
     super.dispose();
   }
-
-  String _getUnitLabel(CurriculumId id) => CurriculumLabels.leaf(id).en;
 
   DateTime _now() => ref.read(clockProvider);
 
@@ -426,16 +426,22 @@ class _GoalSetupFormState extends ConsumerState<GoalSetupForm> {
                           ? const [
                               ButtonSegment(
                                 value: 'perek',
-                                label: Text('Perek'),
+                                label: Text('Perakim'),
                               ),
                               ButtonSegment(
                                 value: 'pasuk',
-                                label: Text('Pasuk'),
+                                label: Text('Pesukim'),
                               ),
                             ]
                           : const [
-                              ButtonSegment(value: 'amud', label: Text('Amud')),
-                              ButtonSegment(value: 'daf', label: Text('Daf')),
+                              ButtonSegment(
+                                value: 'amud',
+                                label: Text('Amudim'),
+                              ),
+                              ButtonSegment(
+                                value: 'daf',
+                                label: Text('Dafim'),
+                              ),
                             ],
                       selected: {_learningUnit},
                       onSelectionChanged: (selected) {

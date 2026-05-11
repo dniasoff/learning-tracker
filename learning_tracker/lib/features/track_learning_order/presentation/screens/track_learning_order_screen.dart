@@ -26,6 +26,10 @@ class _TrackLearningOrderScreenState
     extends ConsumerState<TrackLearningOrderScreen> {
   List<LearningOrderItem>? _localSedarim;
   List<LearningOrderItem>? _localMasechtos;
+  // Sequence counter so a slow sedarim-save can't overwrite a newer
+  // local edit (race where invalidate fires multiple times in quick
+  // reorders and the older fetch resolves last with stale data).
+  int _sedarimSaveSeq = 0;
 
   @override
   Widget build(BuildContext context) {
@@ -162,19 +166,24 @@ class _TrackLearningOrderScreenState
     _persistMasechtos(updated);
   }
 
-  void _persistSedarim(List<LearningOrderItem> items) {
+  Future<void> _persistSedarim(List<LearningOrderItem> items) async {
+    final mySeq = ++_sedarimSaveSeq;
     final args = (trackId: widget.trackId, curriculumId: widget.curriculumId);
-    ref
+    await ref
         .read(trackLearningOrderRepositoryProvider)
-        .saveSedarimOrder(widget.trackId, items)
-        .then((_) {
-          ref.invalidate(trackSedarimOrderProvider(args));
-          // Reordering sedarim shifts the natural grouping of masechtos
-          // below — drop the local cache so the bottom list re-fetches
-          // with the new parent-seder priority.
-          ref.invalidate(trackMasechtosOrderProvider(args));
-          if (mounted) setState(() => _localMasechtos = null);
-        });
+        .saveSedarimOrder(widget.trackId, items);
+    if (!mounted || mySeq != _sedarimSaveSeq) return;
+    ref.invalidate(trackSedarimOrderProvider(args));
+    // Reordering sedarim shifts the natural grouping of masechtos below.
+    // Wait for the fresh masechtos fetch before re-seeding the local
+    // cache; the previous setState(null) approach could lock in the
+    // stale cached value during the rebuild before the refetch landed.
+    ref.invalidate(trackMasechtosOrderProvider(args));
+    final freshMasechtos = await ref.read(
+      trackMasechtosOrderProvider(args).future,
+    );
+    if (!mounted || mySeq != _sedarimSaveSeq) return;
+    setState(() => _localMasechtos = List.from(freshMasechtos));
   }
 
   void _persistMasechtos(List<LearningOrderItem> items) {
