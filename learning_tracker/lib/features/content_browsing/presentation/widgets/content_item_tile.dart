@@ -50,32 +50,21 @@ class ContentItemTile extends ConsumerWidget {
         0;
 
     final hebrewOnly = ref.watch(hebrewTermsScriptProvider);
-    final showEnglishSubtitle =
-        !hebrewOnly && item.displayNameEn != item.displayNameHe;
+    // Single-script title — Hebrew when Hebrew Terms is on, transliterated
+    // English when off. No parallel subtitle showing the other script.
+    final title = hebrewOnly ? item.displayNameHe : item.displayNameEn;
     return ListTile(
-      // Consistent leading/padding across all rows regardless of leaf vs
-      // container — leaf rows used to be visibly smaller, but the user
-      // expects a uniform list size at every drill-down level.
       minLeadingWidth: 48,
       minVerticalPadding: 14,
       leading: _buildLeadingIcon(theme, count),
       title: Text(
-        item.displayNameHe,
+        title,
         style: theme.textTheme.titleLarge?.copyWith(
           fontWeight: FontWeight.w700,
         ),
-        textDirection: TextDirection.rtl,
-        textAlign: TextAlign.right,
+        textDirection: hebrewOnly ? TextDirection.rtl : TextDirection.ltr,
+        textAlign: hebrewOnly ? TextAlign.right : TextAlign.left,
       ),
-      subtitle: showEnglishSubtitle
-          ? Text(
-              item.displayNameEn,
-              style: theme.textTheme.titleSmall?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-                fontWeight: FontWeight.w500,
-              ),
-            )
-          : null,
       trailing: _buildTrailing(theme, count),
       onTap: onTap,
       onLongPress: item.isLeaf && count > 0

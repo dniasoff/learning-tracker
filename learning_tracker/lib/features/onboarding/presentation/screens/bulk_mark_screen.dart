@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label_renderer.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
@@ -333,7 +334,7 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
               )
             : AppBarTitle(
                 text:
-                    'Mark Prior Completions — ${widget.curriculumId.displayNameHe}',
+                    'Mark Prior Completions — ${CurriculumLabels.curriculumName(widget.curriculumId, useHebrew: ref.watch(hebrewTermsScriptProvider))}',
               ),
         leading: _phase == _Phase.selection && _navigationStack.isNotEmpty
             ? IconButton(
@@ -472,30 +473,26 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
                   itemBuilder: (context, index) {
                     final item = displayItems[index];
                     final isSelected = _isItemSelected(item);
-                    final showEnglishSubtitle =
-                        !hebrewOnly && item.displayNameEn != item.displayNameHe;
+                    final title = hebrewOnly
+                        ? item.displayNameHe
+                        : item.displayNameEn;
                     return ListTile(
                       leading: Checkbox(
                         value: isSelected,
                         onChanged: (_) => _toggleItem(item),
                       ),
                       title: Text(
-                        item.displayNameHe,
-                        textDirection: TextDirection.rtl,
-                        textAlign: TextAlign.right,
+                        title,
+                        textDirection: hebrewOnly
+                            ? TextDirection.rtl
+                            : TextDirection.ltr,
+                        textAlign: hebrewOnly
+                            ? TextAlign.right
+                            : TextAlign.left,
                         style: theme.textTheme.titleLarge?.copyWith(
                           fontWeight: FontWeight.w700,
                         ),
                       ),
-                      subtitle: showEnglishSubtitle
-                          ? Text(
-                              item.displayNameEn,
-                              style: theme.textTheme.titleSmall?.copyWith(
-                                color: theme.colorScheme.onSurfaceVariant,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            )
-                          : null,
                       trailing: item.isLeaf || isSearchActive
                           ? null
                           : const Icon(Icons.chevron_right),

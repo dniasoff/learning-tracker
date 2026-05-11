@@ -1,15 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
 import 'package:learning_tracker/core/services/cross_curriculum_aggregator.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/utils/percentage_formatter.dart';
 import 'package:learning_tracker/core/widgets/animated_progress_bar.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/pace_status.dart';
+import 'package:learning_tracker/features/settings/presentation/providers/hebrew_terms_provider.dart';
 
 /// A summary card for one curriculum on the dashboard.
 ///
 /// Shows name, completion %, pace indicator, and next due item.
 /// Tapping navigates to the per-curriculum progress screen.
-class CurriculumSummaryCard extends StatelessWidget {
+class CurriculumSummaryCard extends ConsumerWidget {
   final CurriculumSummary summary;
   final VoidCallback onTap;
 
@@ -20,8 +23,9 @@ class CurriculumSummaryCard extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final hebrewOnly = ref.watch(hebrewTermsScriptProvider);
     final percentage = formatFractionAsPercent(summary.completionPercentage);
     final curriculumColor = AppTheme.getCurriculumColor(summary.curriculumId);
 
@@ -48,7 +52,10 @@ class CurriculumSummaryCard extends StatelessWidget {
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(
-                      summary.curriculumId.displayNameHe,
+                      CurriculumLabels.curriculumName(
+                        summary.curriculumId,
+                        useHebrew: hebrewOnly,
+                      ),
                       style: theme.textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.bold,
                       ),

@@ -4,6 +4,7 @@ library;
 
 import 'package:drift/drift.dart' hide isNotNull, isNull;
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart'
     hide expect, group, setUp, tearDown, test;
 import 'package:learning_tracker/core/database/user/user_database.dart';
@@ -425,22 +426,24 @@ void main() {
       (tester) async {
         var tapped = false;
         await tester.pumpWidget(
-          MaterialApp(
-            home: Scaffold(
-              body: CurriculumSummaryCard(
-                summary: CurriculumSummary(
-                  curriculumId: CurriculumId.mishnayos,
-                  completionPercentage: 0.75,
-                  paceStatus: const PaceStatus(
-                    status: PaceStatusType.ahead,
-                    daysDelta: 3,
-                    rollingAverage: 2.0,
+          ProviderScope(
+            child: MaterialApp(
+              home: Scaffold(
+                body: CurriculumSummaryCard(
+                  summary: CurriculumSummary(
+                    curriculumId: CurriculumId.mishnayos,
+                    completionPercentage: 0.75,
+                    paceStatus: const PaceStatus(
+                      status: PaceStatusType.ahead,
+                      daysDelta: 3,
+                      rollingAverage: 2.0,
+                    ),
+                    nextDueItem: 'Berachos 1:1',
+                    todayTaskCount: 5,
+                    lastCompletionAt: DateTime.utc(2026, 3, 16),
                   ),
-                  nextDueItem: 'Berachos 1:1',
-                  todayTaskCount: 5,
-                  lastCompletionAt: DateTime.utc(2026, 3, 16),
+                  onTap: () => tapped = true,
                 ),
-                onTap: () => tapped = true,
               ),
             ),
           ),

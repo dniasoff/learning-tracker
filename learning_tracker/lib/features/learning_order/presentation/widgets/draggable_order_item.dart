@@ -26,17 +26,16 @@ class DraggableOrderItem extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final colorScheme = Theme.of(context).colorScheme;
     final hebrewOnly = ref.watch(hebrewTermsScriptProvider);
-    final showSubtitle =
-        !hebrewOnly && item.displayNameEn != item.displayNameHe;
+    // Single-script title — never both Hebrew and English at once.
+    final title = hebrewOnly ? item.displayNameHe : item.displayNameEn;
 
     final tile = ListTile(
       key: ValueKey(item.sefariaRef),
       title: Text(
-        item.displayNameHe,
-        textDirection: TextDirection.rtl,
+        title,
+        textDirection: hebrewOnly ? TextDirection.rtl : TextDirection.ltr,
         style: Theme.of(context).textTheme.titleMedium,
       ),
-      subtitle: showSubtitle ? Text(item.displayNameEn) : null,
       trailing: showDragHandle
           ? ReorderableDragStartListener(
               index: index,

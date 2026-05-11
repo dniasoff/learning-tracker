@@ -12,6 +12,7 @@ import 'package:learning_tracker/features/dashboard/presentation/providers/dashb
 import 'package:learning_tracker/features/onboarding/presentation/screens/bulk_mark_screen.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/lifetime_knowledge_providers.dart';
+import 'package:learning_tracker/features/settings/presentation/providers/hebrew_terms_provider.dart';
 import 'package:learning_tracker/features/track_learning_order/presentation/screens/track_learning_order_screen.dart';
 import 'package:learning_tracker/features/track_setup/domain/entities/add_track_result.dart';
 import 'package:learning_tracker/features/track_setup/presentation/providers/after_track_change_invalidation.dart';
@@ -89,7 +90,7 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
         backgroundColor: const Color(0xFFF5F7FC),
         elevation: 0,
         title: Text(
-          '$hebrewName • $englishName',
+          ref.watch(hebrewTermsScriptProvider) ? hebrewName : englishName,
           style: theme.textTheme.titleLarge?.copyWith(
             fontWeight: FontWeight.w800,
             color: AppTheme.brandBlueDeep,

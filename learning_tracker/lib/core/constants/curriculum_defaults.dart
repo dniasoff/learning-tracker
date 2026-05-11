@@ -536,6 +536,15 @@ class CurriculumLabels {
     return _englishNameTransliterations[variant]?[rawValue] ?? rawValue;
   }
 
+  /// Single-script curriculum display name based on the user's Hebrew
+  /// Terms toggle. Anywhere a screen would have written
+  /// `curriculumId.displayNameHe` directly should now call this so the
+  /// English mode receives the transliterated form, never the Hebrew, and
+  /// the Hebrew mode never receives a bilingual "•" concatenation.
+  static String curriculumName(CurriculumId id, {required bool useHebrew}) {
+    return useHebrew ? id.displayNameHe : id.displayNameEn;
+  }
+
   /// Per-book level overrides for curricula whose hierarchy varies by L1 book.
   /// Mussar is the only one today — Shaarei Teshuvah uses Shaarim (gates),
   /// Tanya uses Parts (named), the rest use Perakim like the default.
@@ -671,21 +680,24 @@ class CurriculumLabels {
     };
   }
 
-  /// Bilingual plural header for the level-1 reorder section
-  /// (e.g. "סדרים • Sedarim", "חומשים • Seferim").
-  static String topSectionHeader(CurriculumId id) =>
-      level(id, 1).bilingualPlural;
+  /// Plural label for the level-1 reorder section ("סדרים" in Hebrew
+  /// mode, "Sedarim" in English mode). Never bilingual.
+  static String topSectionHeader(CurriculumId id, {required bool useHebrew}) =>
+      level(id, 1).inLanguage(useHebrew: useHebrew, plural: true);
 
-  /// Bilingual plural header for the level-2 reorder section
-  /// (e.g. "מסכתות • Masechtos"). Null for single-level curricula.
+  /// Plural label for the level-2 reorder section ("מסכתות" / "Masechtos").
+  /// Null for single-level curricula.
   ///
   /// **Always returns level 2's plural** — not "level above leaf". For
   /// deep curricula like Mishnayos (Seder/Masechta/Perek/Mishna) the
   /// second reorder section is Masechtos (L2), not Perakim (L3).
-  static String? containerSectionHeader(CurriculumId id) {
+  static String? containerSectionHeader(
+    CurriculumId id, {
+    required bool useHebrew,
+  }) {
     final list = _levels[id]!;
     if (list.length < 2) return null;
-    return list[1].bilingualPlural;
+    return list[1].inLanguage(useHebrew: useHebrew, plural: true);
   }
 
   /// Whether the level-2 reorder section should render. Chumash and Tanach

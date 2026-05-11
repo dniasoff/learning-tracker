@@ -438,10 +438,7 @@ class _GoalSetupFormState extends ConsumerState<GoalSetupForm> {
                                 value: 'amud',
                                 label: Text('Amudim'),
                               ),
-                              ButtonSegment(
-                                value: 'daf',
-                                label: Text('Dafim'),
-                              ),
+                              ButtonSegment(value: 'daf', label: Text('Dafim')),
                             ],
                       selected: {_learningUnit},
                       onSelectionChanged: (selected) {

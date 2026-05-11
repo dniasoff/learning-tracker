@@ -7,6 +7,7 @@ import 'package:learning_tracker/core/utils/percentage_formatter.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/lifetime_knowledge_providers.dart';
+import 'package:learning_tracker/features/settings/presentation/providers/hebrew_terms_provider.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// Rich track row used on [TrackManagementHubScreen] and
@@ -144,7 +145,12 @@ class LearningTrackCard extends ConsumerWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        '$hebrewName \u2022 $englishName',
+                        // Single-script title \u2014 Hebrew when Hebrew Terms
+                        // is on, transliterated English when off. No
+                        // bilingual "\u2022" concatenation.
+                        ref.watch(hebrewTermsScriptProvider)
+                            ? hebrewName
+                            : englishName,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: theme.textTheme.titleLarge?.copyWith(

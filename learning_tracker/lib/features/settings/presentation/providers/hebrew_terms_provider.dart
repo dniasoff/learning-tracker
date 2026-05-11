@@ -33,7 +33,16 @@ class HebrewTermsScriptNotifier extends _$HebrewTermsScriptNotifier {
   }
 
   Future<void> _loadFromPrefs(int profileId) async {
-    final prefs = await SharedPreferences.getInstance();
+    // Wrap SharedPreferences access — tests that don't initialize the
+    // shared-prefs platform channel would otherwise crash with
+    // MissingPluginException and bubble up through every widget that
+    // depends on this provider.
+    final SharedPreferences prefs;
+    try {
+      prefs = await SharedPreferences.getInstance();
+    } catch (_) {
+      return;
+    }
     final value = ProfileScopedPreferenceKeys.readHebrewTermsScript(
       prefs,
       profileId,

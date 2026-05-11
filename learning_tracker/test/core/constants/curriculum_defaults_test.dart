@@ -158,14 +158,21 @@ void main() {
       }
     });
 
-    test('topSectionHeader is bilingual plural', () {
+    test('topSectionHeader switches script with useHebrew flag', () {
       expect(
-        CurriculumLabels.topSectionHeader(CurriculumId.bavli),
-        'סדרים • Sedarim',
+        CurriculumLabels.topSectionHeader(CurriculumId.bavli, useHebrew: true),
+        'סדרים',
       );
       expect(
-        CurriculumLabels.topSectionHeader(CurriculumId.chumash),
-        'חומשים • Seferim',
+        CurriculumLabels.topSectionHeader(CurriculumId.bavli, useHebrew: false),
+        'Sedarim',
+      );
+      expect(
+        CurriculumLabels.topSectionHeader(
+          CurriculumId.chumash,
+          useHebrew: true,
+        ),
+        'חומשים',
       );
     });
 

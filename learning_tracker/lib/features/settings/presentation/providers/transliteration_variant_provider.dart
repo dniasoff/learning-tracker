@@ -35,7 +35,12 @@ class TransliterationVariantNotifier extends _$TransliterationVariantNotifier {
   }
 
   Future<void> _loadFromPrefs(int profileId) async {
-    final prefs = await SharedPreferences.getInstance();
+    final SharedPreferences prefs;
+    try {
+      prefs = await SharedPreferences.getInstance();
+    } catch (_) {
+      return;
+    }
     final raw = ProfileScopedPreferenceKeys.readTransliterationVariant(
       prefs,
       profileId,

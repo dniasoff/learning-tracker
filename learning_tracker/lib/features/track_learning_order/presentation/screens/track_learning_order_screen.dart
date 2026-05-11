@@ -5,6 +5,7 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/features/learning_order/domain/models/learning_order_item.dart';
 import 'package:learning_tracker/features/learning_order/presentation/widgets/draggable_order_item.dart';
 import 'package:learning_tracker/features/learning_order/presentation/widgets/reset_order_dialog.dart';
+import 'package:learning_tracker/features/settings/presentation/providers/hebrew_terms_provider.dart';
 import 'package:learning_tracker/features/track_learning_order/presentation/providers/track_learning_order_providers.dart';
 
 class TrackLearningOrderScreen extends ConsumerStatefulWidget {
@@ -46,10 +47,13 @@ class _TrackLearningOrderScreenState
 
     final theme = Theme.of(context);
     final isLoading = sedarimAsync.isLoading || masechtosAsync.isLoading;
+    final hebrewOnly = ref.watch(hebrewTermsScriptProvider);
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('${widget.curriculumId.displayNameHe} • Reorder'),
+        title: Text(
+          '${CurriculumLabels.curriculumName(widget.curriculumId, useHebrew: hebrewOnly)} • Reorder',
+        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
@@ -69,7 +73,10 @@ class _TrackLearningOrderScreenState
                     _buildSectionHeader(
                       context,
                       theme,
-                      CurriculumLabels.topSectionHeader(widget.curriculumId),
+                      CurriculumLabels.topSectionHeader(
+                        widget.curriculumId,
+                        useHebrew: hebrewOnly,
+                      ),
                     ),
                     ReorderableListView(
                       shrinkWrap: true,
@@ -95,6 +102,7 @@ class _TrackLearningOrderScreenState
                       theme,
                       CurriculumLabels.containerSectionHeader(
                             widget.curriculumId,
+                            useHebrew: hebrewOnly,
                           ) ??
                           '',
                     ),

@@ -204,9 +204,11 @@ class _ProgressChartsScreenState extends ConsumerState<ProgressChartsScreen> {
             (curriculum) => Padding(
               padding: const EdgeInsets.only(right: 8),
               child: _FilterPill(
+                // Single-script label — Hebrew when Hebrew Terms is on,
+                // transliterated English when off. Never both.
                 label: ref.watch(hebrewTermsScriptProvider)
                     ? curriculum.displayNameHe
-                    : '${curriculum.displayNameHe} • ${curriculum.displayNameEn}',
+                    : curriculum.displayNameEn,
                 selected: _curriculum == curriculum,
                 onSelected: (_) => setState(
                   () => _curriculum = _curriculum == curriculum
