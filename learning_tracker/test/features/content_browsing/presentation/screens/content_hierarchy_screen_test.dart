@@ -242,10 +242,13 @@ void main() {
       expect(find.byIcon(Icons.arrow_back), findsOneWidget);
     });
 
-    testWidgets('displays leaf items with different styling', (tester) async {
-      // Production data uses numeric values for ordinal levels (Perek/Mishna),
-      // not the literal phrase "Perek 1". The renderer composes the level
-      // word + gematriya from those numbers.
+    testWidgets('displays browse-leaf items at max browse depth', (
+      tester,
+    ) async {
+      // Mishnayos browse caps one level above leaf (Perek, not Mishna)
+      // because drilling into individual mishnayos is too tedious for
+      // browsing. At masechta depth the screen should render Perek rows
+      // composed via gematriya: "פרק א".
       final testItems = [
         const ContentItem(
           curriculumId: 'mishnayos',
@@ -266,7 +269,7 @@ void main() {
           curriculumId: CurriculumId.mishnayos,
           level1: 'Seder Zeraim',
           level2: 'Berachos',
-          level3: '1',
+          level3: null,
           level4: null,
         ),
       ).thenAnswer((_) async => testItems);
@@ -282,17 +285,12 @@ void main() {
       );
 
       await tester.pumpWidget(
-        createTestWidget(
-          level1: 'Seder Zeraim',
-          level2: 'Berachos',
-          level3: '1',
-        ),
+        createTestWidget(level1: 'Seder Zeraim', level2: 'Berachos'),
       );
       await tester.pumpAndSettle();
 
-      // Leaf items should be visible (Hebrew title in default mode).
-      // The renderer composes "משנה" + gematriya("1") = "משנה א".
-      expect(find.text('משנה א'), findsOneWidget);
+      // Perek row composed via renderer: "פרק" + gematriya("1") = "פרק א".
+      expect(find.text('פרק א'), findsOneWidget);
     });
   });
 }

@@ -287,8 +287,8 @@ class _ContentHierarchyScreenState
   /// single source of truth.
   ///
   /// Browse depth is capped at `CurriculumLabels.maxBrowseDepth(curriculum)`
-  /// so Chumash / Nach / Tanach never drill into pasuk-level rows — the
-  /// chapter row opens the reader directly instead.
+  /// so no curriculum drills into pasuk / mishna / seif / halacha rows —
+  /// the perek-or-equivalent row opens the reader directly instead.
   List<ContentItem> _groupItemsByNextLevel(
     List<ContentItem> items,
     bool hebrewTerms,
@@ -367,9 +367,9 @@ class _ContentHierarchyScreenState
   /// Returns true when tapping this item should open the text reader.
   ///
   /// Generalized rule: when a curriculum's `maxBrowseDepth` is less than
-  /// its full depth (Chumash/Nach/Tanach/Mussar), items sitting at the
-  /// max-browse depth open the reader instead of drilling — there's
-  /// nothing useful to browse below them.
+  /// its full depth (every curriculum except Bavli/Yerushalmi), items
+  /// sitting at the max-browse depth open the reader instead of drilling
+  /// — there's nothing useful to browse below them.
   bool _isChapterLevelRef(ContentItem item) {
     final curriculum = _curriculumOrNull;
     if (curriculum == null) return false;

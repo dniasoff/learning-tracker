@@ -34,16 +34,8 @@ class CurriculumPickerStep extends StatelessWidget {
       CurriculumId.nach,
       CurriculumId.mishnaBerurah,
     ];
-    final excluded = <CurriculumId>[
-      CurriculumId.mishnehTorah,
-      CurriculumId.tanach,
-      CurriculumId.mussar,
-    ];
     final remaining = CurriculumId.values
-        .where(
-          (curriculum) =>
-              !featured.contains(curriculum) && !excluded.contains(curriculum),
-        )
+        .where((curriculum) => !featured.contains(curriculum))
         .toList();
 
     return Padding(

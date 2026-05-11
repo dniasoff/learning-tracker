@@ -631,21 +631,19 @@ class CurriculumLabels {
   static LevelLabels leaf(CurriculumId id) => _levels[id]!.last;
 
   /// Deepest level the **browse UI** drills into. Browse stops at the
-  /// chapter row (which opens the reader on tap) for curricula where
-  /// drilling further yields pasuk/verse-level fragments — these are
-  /// rarely useful as browse rows.
+  /// "perek-or-equivalent" row (which opens the reader on tap) — drilling
+  /// down to individual pasuk / mishna / seif / halacha rows is too
+  /// tedious for casual browsing. Goal-setup, lifetime-marking, and
+  /// daily-task assignment screens still use the full `depth(id)` because
+  /// they work at the leaf unit.
   ///
-  /// Goal-setup, lifetime-marking, and completion tracking screens use
-  /// the full depth (`depth(id)`) because they work at the leaf unit.
-  /// The cap here only affects the browse list rendering.
+  /// Bavli / Yerushalmi are the exception: their leaf is Daf, which is
+  /// already the natural browse target.
   static int maxBrowseDepth(CurriculumId id) {
-    if (id == CurriculumId.chumash ||
-        id == CurriculumId.nach ||
-        id == CurriculumId.tanach ||
-        id == CurriculumId.mussar) {
-      return depth(id) - 1;
+    if (id == CurriculumId.bavli || id == CurriculumId.yerushalmi) {
+      return depth(id);
     }
-    return depth(id);
+    return depth(id) - 1;
   }
 
   /// Level just above leaf — the typical "container" in drill-down UIs.

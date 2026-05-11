@@ -2495,17 +2495,16 @@ class _SelfPacedGoalStepState extends ConsumerState<_SelfPacedGoalStep> {
     _deadline = DateTime(now.year, now.month, now.day);
   }
 
-  String get _unitSingular => switch (widget.curriculumId) {
-    CurriculumId.bavli || CurriculumId.yerushalmi => 'daf',
-    CurriculumId.mishnayos => 'mishnah',
-    _ => 'unit',
-  };
+  /// The level used for pace setting — leaf for every curriculum except
+  /// Bavli, where we skip the Amud sub-level and let users set pace in
+  /// Dafim (a whole-page-per-day is the natural cadence). Yerushalmi's
+  /// leaf is already Daf, so no special-case is needed.
+  LevelLabels get _paceUnitLevel => widget.curriculumId == CurriculumId.bavli
+      ? CurriculumLabels.level(widget.curriculumId, 3)
+      : CurriculumLabels.leaf(widget.curriculumId);
 
-  String get _unitPlural => switch (_unitSingular) {
-    'daf' => 'dafim',
-    'mishnah' => 'mishnayos',
-    _ => 'units',
-  };
+  String get _unitSingular => _paceUnitLevel.en;
+  String get _unitPlural => _paceUnitLevel.enPlural;
 
   String _formatDate(DateTime value, {required bool useHebrew}) {
     if (useHebrew) {
@@ -2660,7 +2659,7 @@ class _SelfPacedGoalStepState extends ConsumerState<_SelfPacedGoalStep> {
             ),
             const SizedBox(height: 10),
             Text(
-              '${_unitSingular[0].toUpperCase()}${_unitSingular.substring(1)} $_unitPlural ${_paceUnit == 'per_day' ? 'per day' : 'per week'}',
+              '$_unitPlural ${_paceUnit == 'per_day' ? 'per day' : 'per week'}',
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: AppTheme.brandInkMuted,
               ),
