@@ -25,6 +25,8 @@ class DailyTaskGenerator {
     int studyDaysPerWeek = 7,
     int? studyDaysInDeadlineWindow,
     Set<String> skippedRefs = const {},
+    DateTime? trackStartedAt,
+    Set<String> priorlyShownRefs = const {},
   }) async {
     final config = ScheduleConfig(
       curriculumId: curriculumId,
@@ -36,6 +38,8 @@ class DailyTaskGenerator {
       isStudyDay: isStudyDay,
       studyDaysPerWeek: studyDaysPerWeek,
       studyDaysInDeadlineWindow: studyDaysInDeadlineWindow,
+      trackStartedAt: trackStartedAt,
+      priorlyShownRefs: priorlyShownRefs,
     );
     final tasks = await _engine.generateDailyTasks(config);
 
@@ -51,6 +55,12 @@ class DailyTaskGenerator {
   /// [goalDeadlines] maps curriculum IDs to their earliest goal deadline,
   /// enabling deadline-aware pacing.
   /// [trackIds] and [trackLabels] map curriculum IDs to their track context.
+  /// [trackStartedAtMap] enables the snapshot-aware self-paced new-learning
+  /// path when combined with [pacePerDayMap]; both must be set for a
+  /// curriculum for the new logic to kick in.
+  /// [priorlyShownRefsMap] is the set of refs that have appeared in any
+  /// prior-day snapshot for that curriculum's track (resolved by the
+  /// repository before this call).
   Future<List<DailyTask>> generateAll(
     List<CurriculumId> curricula,
     DateTime date, {
@@ -62,6 +72,8 @@ class DailyTaskGenerator {
     Map<CurriculumId, int> studyDaysInDeadlineWindowMap = const {},
     Map<CurriculumId, int> trackIds = const {},
     Map<CurriculumId, String> trackLabels = const {},
+    Map<CurriculumId, DateTime> trackStartedAtMap = const {},
+    Map<CurriculumId, Set<String>> priorlyShownRefsMap = const {},
   }) async {
     final allTasks = <DailyTask>[];
 
@@ -77,6 +89,8 @@ class DailyTaskGenerator {
         studyDaysPerWeek: studyDaysPerWeekMap[curriculum] ?? 7,
         studyDaysInDeadlineWindow: studyDaysInDeadlineWindowMap[curriculum],
         skippedRefs: skippedRefs,
+        trackStartedAt: trackStartedAtMap[curriculum],
+        priorlyShownRefs: priorlyShownRefsMap[curriculum] ?? const <String>{},
       );
       allTasks.addAll(tasks);
     }

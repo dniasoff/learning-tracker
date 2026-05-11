@@ -4,6 +4,22 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dart';
 
+/// Builder used by [DailyPlanRepository.backfillMissingSnapshots] to
+/// synthesize what would have been today's plan for a single past day.
+///
+/// Inputs:
+///   - [dayIndex] — 0-based day offset since the track was activated.
+///   - [planDate] — the local-date midnight that snapshot belongs to.
+///
+/// Output: the refs (and their stage metadata) that should be recorded
+/// for that day. Returning an empty list is a valid "no-op" for a day
+/// that should have no new learning.
+typedef DailySnapshotBuilder =
+    Future<List<DailyTask>> Function({
+      required int dayIndex,
+      required DateTime planDate,
+    });
+
 /// Snapshots the day's scheduled tasks and serves them back on subsequent
 /// reads. The scheduler is invoked only when no snapshot exists for
 /// ([profileId], local date); completions do not trigger regeneration.
@@ -42,6 +58,48 @@ class DailyPlanRepository {
       planDate: planDate,
     );
     return rows.map(_rowToTask).toList();
+  }
+
+  /// Writes a synthetic snapshot for each local-date between
+  /// [activatedAt] and the day BEFORE [currentDate] that has no existing
+  /// snapshot row for [trackId]. Used by self-paced tracks so the
+  /// scheduler can present a backlog of "missed" items even when the app
+  /// wasn't opened on those days.
+  ///
+  /// [buildSnapshotForDay] computes the refs that would have been
+  /// scheduled for the given past day. Implementations typically use a
+  /// position-based rule (orderedRefs[d*pace .. (d+1)*pace - 1]).
+  ///
+  /// Idempotent: re-running on a day that already has a snapshot is a
+  /// no-op for that day.
+  Future<void> backfillMissingSnapshots({
+    required int profileId,
+    required int trackId,
+    required DateTime activatedAt,
+    required DateTime currentDate,
+    required DailySnapshotBuilder buildSnapshotForDay,
+  }) async {
+    final startDay = DateUtils.extractLocalDate(activatedAt);
+    final todayLocal = DateUtils.extractLocalDate(currentDate);
+    if (!startDay.isBefore(todayLocal)) return; // no gap to fill
+
+    final totalDays = todayLocal.difference(startDay).inDays;
+    for (var d = 0; d < totalDays; d++) {
+      final planDate = startDay.add(Duration(days: d));
+      final exists = await _db.dailyPlanDao.hasPlanForTrackOnDay(
+        trackId: trackId,
+        planDate: planDate,
+      );
+      if (exists) continue;
+      final tasks = await buildSnapshotForDay(dayIndex: d, planDate: planDate);
+      if (tasks.isEmpty) continue;
+      await _persistPlan(
+        profileId: profileId,
+        planDate: planDate,
+        tasks: tasks,
+        now: planDate, // attribute the synthetic snapshot to that day
+      );
+    }
   }
 
   /// Forces regeneration for today's plan by clearing the existing snapshot.

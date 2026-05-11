@@ -38,5 +38,18 @@ abstract class ScheduleConfig with _$ScheduleConfig {
     /// pacing divides remaining items by this count instead of approximating
     /// with [studyDaysPerWeek].
     int? studyDaysInDeadlineWindow,
+
+    /// When the track was activated. Used by the self-paced new-learning
+    /// path to back-fill snapshots for days the app didn't run, then to
+    /// determine which prior-day items are overdue today.
+    DateTime? trackStartedAt,
+
+    /// Refs that have appeared in any prior-day snapshot for this track
+    /// (including synthetic back-fill snapshots). Resolved by the
+    /// repository before the engine runs. The engine uses this to:
+    ///   (a) treat any uncompleted ref in this set as overdue today, and
+    ///   (b) skip already-shown refs when picking today's new-learning
+    ///       batch from the current ordered list.
+    @Default(<String>{}) Set<String> priorlyShownRefs,
   }) = _ScheduleConfig;
 }

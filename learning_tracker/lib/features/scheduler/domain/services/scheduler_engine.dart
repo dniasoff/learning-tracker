@@ -1,5 +1,6 @@
 import 'dart:math';
 
+import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/schedule_config.dart';
 import 'package:learning_tracker/features/scheduler/domain/repositories/scheduler_completion_repository.dart';
@@ -138,30 +139,99 @@ class SchedulerEngine {
       }
     }
 
-    // Phase 3: Task Assembly with adaptive pacing
+    // Phase 3: Task Assembly
     final chazaraCount = overdueTasks.length + scheduledTasks.length;
-    final newItemsPerDay = _calculateNewItemsPerDay(
-      config,
-      newLearningRefs.length,
-      chazaraCount,
-    );
-
     final firstStage = sortedStages.first;
-    final newTasks = newLearningRefs.take(newItemsPerDay).map((ref) {
-      return DailyTask(
-        curriculumId: config.curriculumId,
-        contentItemSefariaRef: ref,
-        stageOrder: firstStageOrder,
-        stageDefinitionId: firstStage.id,
-        priority: DailyTaskPriority.newLearning,
-        isOverdue: false,
-        reason: 'New learning',
-        stageName: firstStage.stageName,
-        trackId: config.trackId,
-        trackLabel: config.trackLabel,
-        estimatedEffortMinutes: 5,
+
+    final List<DailyTask> newTasks;
+    if (_useSnapshotSchedule(config)) {
+      // Snapshot-aware path for self-paced tracks:
+      //   - overdue = refs ever shown in a prior-day snapshot that are not
+      //     completed at the first stage
+      //   - today's new = next pacePerDay refs from CURRENT orderedRefs
+      //     that haven't been shown before and aren't completed
+      // Reorder mid-stream and multi-day app gaps are both handled because
+      // the repository back-fills synthetic snapshots before the engine
+      // runs and populates `priorlyShownRefs`.
+      final pace = config.pacePerDay!.ceil();
+      final priorlyShown = config.priorlyShownRefs;
+
+      // Carry-over overdue from prior-day snapshots. Preserve original
+      // orderedRefs order so the list is stable across runs.
+      for (final ref in orderedRefs) {
+        if (!priorlyShown.contains(ref)) continue;
+        final done = completionMap[ref]?.containsKey(firstStageOrder) ?? false;
+        if (done) continue;
+        overdueTasks.add(
+          DailyTask(
+            curriculumId: config.curriculumId,
+            contentItemSefariaRef: ref,
+            stageOrder: firstStageOrder,
+            stageDefinitionId: firstStage.id,
+            priority: DailyTaskPriority.overdueChazara,
+            isOverdue: true,
+            reason: 'Missed earlier',
+            stageName: firstStage.stageName,
+            trackId: config.trackId,
+            trackLabel: config.trackLabel,
+            estimatedEffortMinutes: 5,
+          ),
+        );
+      }
+
+      // Today's new batch: next [pace] refs that haven't been shown
+      // before and aren't already completed at the first stage.
+      final todaysNewRefs = <String>[];
+      for (final ref in orderedRefs) {
+        if (priorlyShown.contains(ref)) continue;
+        final done = completionMap[ref]?.containsKey(firstStageOrder) ?? false;
+        if (done) continue;
+        todaysNewRefs.add(ref);
+        if (todaysNewRefs.length >= pace) break;
+      }
+      newTasks = todaysNewRefs
+          .map(
+            (ref) => DailyTask(
+              curriculumId: config.curriculumId,
+              contentItemSefariaRef: ref,
+              stageOrder: firstStageOrder,
+              stageDefinitionId: firstStage.id,
+              priority: DailyTaskPriority.newLearning,
+              isOverdue: false,
+              reason: 'New learning',
+              stageName: firstStage.stageName,
+              trackId: config.trackId,
+              trackLabel: config.trackLabel,
+              estimatedEffortMinutes: 5,
+            ),
+          )
+          .toList();
+    } else {
+      // Legacy path: adaptive pacing with no per-day snapshot anchoring.
+      // Used by every track that doesn't have both pacePerDay AND
+      // trackStartedAt set (e.g. program-driven tracks, tracks with no
+      // goal, tests that don't opt in).
+      final newItemsPerDay = _calculateNewItemsPerDay(
+        config,
+        newLearningRefs.length,
+        chazaraCount,
       );
-    }).toList();
+      newTasks = newLearningRefs.take(newItemsPerDay).map((ref) {
+        return DailyTask(
+          curriculumId: config.curriculumId,
+          contentItemSefariaRef: ref,
+          stageOrder: firstStageOrder,
+          stageDefinitionId: firstStage.id,
+          priority: DailyTaskPriority.newLearning,
+          isOverdue: false,
+          reason: 'New learning',
+          stageName: firstStage.stageName,
+          trackId: config.trackId,
+          trackLabel: config.trackLabel,
+          estimatedEffortMinutes: 5,
+        );
+      }).toList();
+    }
 
     // Review-only day: suppress new learning tasks
     if (!config.isStudyDay) {
@@ -364,6 +434,24 @@ class SchedulerEngine {
   /// When chazara load is heavy (exceeds half of daily capacity),
   /// new items are reduced proportionally. Always returns at least 1
   /// to ensure forward progress.
+  /// Whether to use the snapshot-anchored self-paced new-learning path.
+  /// True when both pacePerDay and trackStartedAt are set on the config —
+  /// i.e. the caller has plumbed a self-paced goal. Program tracks land
+  /// on the legacy adaptive-pacing branch.
+  bool _useSnapshotSchedule(ScheduleConfig config) {
+    return config.pacePerDay != null && config.trackStartedAt != null;
+  }
+
+  /// Public accessor for the same orderedRefs computation the engine uses
+  /// internally. Used by the daily-plan back-fill step in
+  /// `_buildFreshPlan` so synthetic snapshots are anchored to the same
+  /// ordering the engine produces.
+  Future<List<String>> getOrderedRefs(CurriculumId curriculumId) async {
+    final contentItems = await _contentRepository.getLeafItems(curriculumId);
+    final customOrder = await _learningOrderRepository.getOrder(curriculumId);
+    return _buildOrderedRefs(contentItems, customOrder);
+  }
+
   int _calculateNewItemsPerDay(
     ScheduleConfig config,
     int remainingNewItems,

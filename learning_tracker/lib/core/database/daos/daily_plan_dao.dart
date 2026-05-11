@@ -52,6 +52,45 @@ class DailyPlanDao extends DatabaseAccessor<UserDatabase>
     return (count.read(dailyPlans.id.count()) ?? 0) > 0;
   }
 
+  /// Whether a snapshot exists for ([trackId], [planDate]). Per-track
+  /// granular check used by back-fill so a profile with several tracks
+  /// doesn't skip back-fill for a track just because another track has
+  /// already been snapshotted that day.
+  Future<bool> hasPlanForTrackOnDay({
+    required int trackId,
+    required DateTime planDate,
+  }) async {
+    final count =
+        await (selectOnly(dailyPlans)
+              ..addColumns([dailyPlans.id.count()])
+              ..where(
+                dailyPlans.trackId.equals(trackId) &
+                    dailyPlans.planDate.equals(planDate),
+              ))
+            .getSingle();
+    return (count.read(dailyPlans.id.count()) ?? 0) > 0;
+  }
+
+  /// Distinct sefariaRefs that have appeared in **any** snapshot for
+  /// [trackId] strictly before [excludeDate]. Used by the snapshot-aware
+  /// new-learning path to identify items that were already shown — so
+  /// uncompleted ones become "overdue" today and the new-learning batch
+  /// can skip them.
+  Future<Set<String>> getPriorlyShownRefsForTrack({
+    required int trackId,
+    required DateTime excludeDate,
+  }) async {
+    final rows =
+        await (selectOnly(dailyPlans, distinct: true)
+              ..addColumns([dailyPlans.sefariaRef])
+              ..where(
+                dailyPlans.trackId.equals(trackId) &
+                    dailyPlans.planDate.isSmallerThanValue(excludeDate),
+              ))
+            .get();
+    return rows.map((r) => r.read(dailyPlans.sefariaRef)!).toSet();
+  }
+
   Future<void> insertEntries(List<DailyPlansCompanion> entries) async {
     if (entries.isEmpty) return;
     await batch((b) {

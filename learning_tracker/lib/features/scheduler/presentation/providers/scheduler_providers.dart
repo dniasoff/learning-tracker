@@ -254,12 +254,15 @@ Future<List<DailyTask>> allDailyTasks(Ref ref) async {
   final profileId = ref.watch(activeProfileIdProvider);
   final now = ref.watch(clockProvider);
 
+  final engine = ref.watch(schedulerEngineProvider);
   final tasks = await planRepo.getOrSnapshotPlan(
     profileId: profileId,
     now: now,
     buildPlan: () => _buildFreshPlan(
       db: db,
       generator: generator,
+      engine: engine,
+      planRepo: planRepo,
       profileId: profileId,
       now: now,
       calendarService: calendarService,
@@ -299,6 +302,8 @@ Future<List<DailyTask>> allDailyTasks(Ref ref) async {
           buildPlan: () => _buildFreshPlan(
             db: db,
             generator: generator,
+            engine: engine,
+            planRepo: planRepo,
             profileId: profileId,
             now: now,
             calendarService: calendarService,
@@ -447,6 +452,8 @@ bool _programAssignmentPresentInTasks({
 Future<List<DailyTask>> _buildFreshPlan({
   required UserDatabase db,
   required DailyTaskGenerator generator,
+  required SchedulerEngine engine,
+  required DailyPlanRepository planRepo,
   required int profileId,
   required DateTime now,
   required CalendarProgramService calendarService,
@@ -465,6 +472,7 @@ Future<List<DailyTask>> _buildFreshPlan({
   final activeTracks = await db.trackDao.getActiveTracksForProfile(profileId);
   final trackIds = <CurriculumId, int>{};
   final trackLabels = <CurriculumId, String>{};
+  final trackStartedAtMap = <CurriculumId, DateTime>{};
   for (final curriculum in activeCurricula) {
     final tracksForCurriculum = activeTracks
         .where((t) => t.curriculumId == curriculum.storageKey)
@@ -476,6 +484,7 @@ Future<List<DailyTask>> _buildFreshPlan({
     );
     trackIds[curriculum] = preferred.id;
     trackLabels[curriculum] = preferred.trackType;
+    trackStartedAtMap[curriculum] = preferred.activatedAt;
   }
 
   final goalDeadlines = <CurriculumId, DateTime>{};
@@ -578,6 +587,62 @@ Future<List<DailyTask>> _buildFreshPlan({
     }
   }
 
+  // For each self-paced track (pace + activatedAt both known), back-fill
+  // synthetic snapshots for any past local-days that have no snapshot.
+  // Then capture the set of refs that have appeared in any prior-day
+  // snapshot — the engine uses this to mark uncompleted prior items as
+  // overdue today.
+  final priorlyShownRefsMap = <CurriculumId, Set<String>>{};
+  final todayLocal = _localDateOnly(now);
+  for (final curriculum in activeCurricula) {
+    final trackId = trackIds[curriculum];
+    final pace = pacePerDayMap[curriculum];
+    final startedAt = trackStartedAtMap[curriculum];
+    if (trackId == null || pace == null || startedAt == null) continue;
+
+    final orderedRefs = await engine.getOrderedRefs(curriculum);
+    final paceCeil = pace.ceil();
+    final stages = await db.stageDao.getStagesByTrack(trackId);
+    if (stages.isEmpty || orderedRefs.isEmpty || paceCeil <= 0) continue;
+    final firstStage = stages.reduce(
+      (StageDefinition a, StageDefinition b) =>
+          a.stageOrder < b.stageOrder ? a : b,
+    );
+
+    await planRepo.backfillMissingSnapshots(
+      profileId: profileId,
+      trackId: trackId,
+      activatedAt: startedAt,
+      currentDate: now,
+      buildSnapshotForDay: ({required dayIndex, required planDate}) async {
+        final start = dayIndex * paceCeil;
+        if (start >= orderedRefs.length) return const <DailyTask>[];
+        final end = (start + paceCeil).clamp(0, orderedRefs.length);
+        final refs = orderedRefs.sublist(start, end);
+        return refs
+            .map(
+              (ref) => DailyTask(
+                curriculumId: curriculum,
+                contentItemSefariaRef: ref,
+                stageOrder: firstStage.stageOrder,
+                stageDefinitionId: firstStage.id,
+                priority: DailyTaskPriority.newLearning,
+                isOverdue: true,
+                reason: 'Backfilled (app not run)',
+                stageName: firstStage.stageName,
+                trackId: trackId,
+                trackLabel: trackLabels[curriculum] ?? '',
+                estimatedEffortMinutes: 5,
+              ),
+            )
+            .toList();
+      },
+    );
+
+    priorlyShownRefsMap[curriculum] = await db.dailyPlanDao
+        .getPriorlyShownRefsForTrack(trackId: trackId, excludeDate: todayLocal);
+  }
+
   final generated = await generator.generateAll(
     activeCurricula,
     now,
@@ -588,6 +653,8 @@ Future<List<DailyTask>> _buildFreshPlan({
     studyDaysInDeadlineWindowMap: studyDaysInDeadlineWindowMap,
     trackIds: trackIds,
     trackLabels: trackLabels,
+    trackStartedAtMap: trackStartedAtMap,
+    priorlyShownRefsMap: priorlyShownRefsMap,
   );
 
   final overridden = await _applyProgramCalendarOverrides(
