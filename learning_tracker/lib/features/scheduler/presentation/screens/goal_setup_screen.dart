@@ -146,14 +146,14 @@ class _GoalSetupFormState extends ConsumerState<GoalSetupForm> {
     if (useHebrew) {
       return HebrewCalendarUtils.gregorianToHebrew(d.toLocal());
     }
-    return '${d.day}/${d.month}/${d.year}';
+    return HebrewCalendarUtils.formatEnglishDate(d);
   }
 
   String _formatYmdLine(DateTime d, {required bool useHebrew}) {
     if (useHebrew) {
       return HebrewCalendarUtils.gregorianToHebrew(d.toLocal());
     }
-    return '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+    return HebrewCalendarUtils.formatEnglishDate(d);
   }
 
   @override

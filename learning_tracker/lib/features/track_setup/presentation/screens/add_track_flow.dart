@@ -2573,10 +2573,7 @@ class _SelfPacedGoalStepState extends ConsumerState<_SelfPacedGoalStep> {
     if (useHebrew) {
       return HebrewCalendarUtils.gregorianToHebrew(value.toLocal());
     }
-    final dd = value.day.toString().padLeft(2, '0');
-    final mm = value.month.toString().padLeft(2, '0');
-    final yyyy = value.year.toString();
-    return '$dd/$mm/$yyyy';
+    return HebrewCalendarUtils.formatEnglishDate(value);
   }
 
   /// Number of items in the user's currently-selected `_learningUnit`.

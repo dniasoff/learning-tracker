@@ -35,12 +35,12 @@ void main() {
       expect(find.text('Select date'), findsOneWidget);
     });
 
-    testWidgets('displays Gregorian confirmation text', (tester) async {
+    testWidgets('displays English-calendar confirmation text', (tester) async {
       await tester.pumpWidget(_buildTestApp(onResult: (_) {}));
       await tester.tap(find.text('Open'));
       await tester.pumpAndSettle();
 
-      expect(find.textContaining('Gregorian:'), findsOneWidget);
+      expect(find.textContaining('English:'), findsOneWidget);
     });
 
     testWidgets('cancel returns null', (tester) async {

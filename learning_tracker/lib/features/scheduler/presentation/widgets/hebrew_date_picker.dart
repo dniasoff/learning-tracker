@@ -297,7 +297,7 @@ class _HebrewDatePickerState extends State<HebrewDatePicker> {
                     const SizedBox(width: 10),
                     Expanded(
                       child: Text(
-                        'Gregorian: ${gregorian.year}-${gregorian.month.toString().padLeft(2, '0')}-${gregorian.day.toString().padLeft(2, '0')}',
+                        'English: ${HebrewCalendarUtils.formatEnglishDate(gregorian)}',
                         style: theme.textTheme.bodyMedium?.copyWith(
                           color: AppTheme.brandInk,
                           fontWeight: FontWeight.w600,

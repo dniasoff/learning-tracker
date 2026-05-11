@@ -2,10 +2,23 @@
 /// Provides conversion between Gregorian and Hebrew dates.
 library;
 
+import 'package:intl/intl.dart';
 import 'package:kosher_dart/kosher_dart.dart';
 
 /// Utilities for Hebrew calendar operations.
 class HebrewCalendarUtils {
+  /// Format a date for **user-facing English-calendar display** — always
+  /// `d MMM y` (e.g. "11 May 2026"). Never use ISO or numeric DMY for
+  /// English dates shown in the UI: the user has explicitly flagged
+  /// `2026-05-11` and `11/05/2026` as undesirable.
+  ///
+  /// Use this anywhere you'd previously typed a hand-rolled
+  /// `"$y-$m-$d"` or `"$d/$m/$y"` for the Gregorian side of a Hebrew
+  /// date picker, deadline display, projected-finish line, etc.
+  static String formatEnglishDate(DateTime date) {
+    return DateFormat('d MMM y').format(date.toLocal());
+  }
+
   /// Converts a Gregorian DateTime to a Hebrew date string.
   /// Returns formatted string like "י״א טבת תשפ״ו" (11 Teves 5786).
   ///
