@@ -83,31 +83,30 @@ void main() {
       },
     );
 
-    testWidgets(
-      'shows English title only when Hebrew Terms toggle is off',
-      (tester) async {
-        const item = ContentItem(
-          curriculumId: 'mishnayos',
-          level1: 'Seder Zeraim',
-          displayNameHe: 'סדר זרעים',
-          displayNameEn: 'Seder Zeraim',
-          sefariaRef: 'Seder Zeraim',
-          sortOrder: 0,
-          isLeaf: false,
-        );
+    testWidgets('shows English title only when Hebrew Terms toggle is off', (
+      tester,
+    ) async {
+      const item = ContentItem(
+        curriculumId: 'mishnayos',
+        level1: 'Seder Zeraim',
+        displayNameHe: 'סדר זרעים',
+        displayNameEn: 'Seder Zeraim',
+        sefariaRef: 'Seder Zeraim',
+        sortOrder: 0,
+        isLeaf: false,
+      );
 
-        await tester.pumpWidget(
-          createTestWidget(item: item, onTap: () {}, hebrewTermsScript: false),
-        );
-        // Wait for the async _load on the notifier to settle.
-        await tester.pumpAndSettle();
+      await tester.pumpWidget(
+        createTestWidget(item: item, onTap: () {}, hebrewTermsScript: false),
+      );
+      // Wait for the async _load on the notifier to settle.
+      await tester.pumpAndSettle();
 
-        // English-only mode: only the transliterated title is shown.
-        // Hebrew is not displayed as a parallel subtitle.
-        expect(find.text('Seder Zeraim'), findsOneWidget);
-        expect(find.text('סדר זרעים'), findsNothing);
-      },
-    );
+      // English-only mode: only the transliterated title is shown.
+      // Hebrew is not displayed as a parallel subtitle.
+      expect(find.text('Seder Zeraim'), findsOneWidget);
+      expect(find.text('סדר זרעים'), findsNothing);
+    });
 
     testWidgets('shows folder icon for container items', (tester) async {
       const item = ContentItem(
