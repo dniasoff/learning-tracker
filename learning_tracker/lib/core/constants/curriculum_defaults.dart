@@ -621,15 +621,19 @@ class CurriculumLabels {
   /// Deepest level (Mishna for Mishnayos, Pasuk for Chumash, …).
   static LevelLabels leaf(CurriculumId id) => _levels[id]!.last;
 
-  /// Deepest level the **browse UI** drills into. For Tanakh curricula
-  /// (Chumash / Nach / Tanach) the chapter row goes straight to the reader
-  /// — browsing individual pasukim isn't useful, so we cap one above the
-  /// leaf. Every other curriculum browses all the way to the leaf (Mishna,
-  /// Amud, Pasuk-within-Mussar-book, etc.).
+  /// Deepest level the **browse UI** drills into. Browse stops at the
+  /// chapter row (which opens the reader on tap) for curricula where
+  /// drilling further yields pasuk/verse-level fragments — these are
+  /// rarely useful as browse rows.
+  ///
+  /// Goal-setup, lifetime-marking, and completion tracking screens use
+  /// the full depth (`depth(id)`) because they work at the leaf unit.
+  /// The cap here only affects the browse list rendering.
   static int maxBrowseDepth(CurriculumId id) {
     if (id == CurriculumId.chumash ||
         id == CurriculumId.nach ||
-        id == CurriculumId.tanach) {
+        id == CurriculumId.tanach ||
+        id == CurriculumId.mussar) {
       return depth(id) - 1;
     }
     return depth(id);

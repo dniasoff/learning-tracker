@@ -364,19 +364,25 @@ class _ContentHierarchyScreenState
     }
   }
 
-  /// Returns true when tapping this item should open the text reader directly.
-  /// For Chumash/Nach/Tanach, chapter-level refs (e.g. 'Genesis 1') open text
-  /// rather than drilling into individual verses.
+  /// Returns true when tapping this item should open the text reader.
+  ///
+  /// Generalized rule: when a curriculum's `maxBrowseDepth` is less than
+  /// its full depth (Chumash/Nach/Tanach/Mussar), items sitting at the
+  /// max-browse depth open the reader instead of drilling — there's
+  /// nothing useful to browse below them.
   bool _isChapterLevelRef(ContentItem item) {
     final curriculum = _curriculumOrNull;
     if (curriculum == null) return false;
-    if (curriculum != CurriculumId.chumash &&
-        curriculum != CurriculumId.nach &&
-        curriculum != CurriculumId.tanach)
-      return false;
-    // Chapter ref: '{Book} {digits}' with no colon (e.g., 'Genesis 1', 'Joshua 3').
-    return !item.sefariaRef.contains(':') &&
-        RegExp(r'^.+ \d+$').hasMatch(item.sefariaRef);
+    final maxDepth = CurriculumLabels.maxBrowseDepth(curriculum);
+    if (maxDepth >= CurriculumLabels.depth(curriculum)) return false;
+    final itemDepth = item.level4 != null
+        ? 4
+        : item.level3 != null
+        ? 3
+        : item.level2 != null
+        ? 2
+        : 1;
+    return itemDepth == maxDepth;
   }
 
   void _drillDown(ContentItem item) {
