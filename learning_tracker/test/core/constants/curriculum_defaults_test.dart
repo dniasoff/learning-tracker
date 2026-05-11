@@ -68,21 +68,21 @@ void main() {
       ]);
     });
 
-    test('Yerushalmi has 3-level hierarchy', () {
+    test('Yerushalmi has 3-level hierarchy (Seder/Masechta/Daf)', () {
       expect(CurriculumLabels.depth(CurriculumId.yerushalmi), 3);
       expect(CurriculumLabels.labelsEn(CurriculumId.yerushalmi), [
+        'Seder',
         'Masechta',
         'Daf',
-        'Halacha',
       ]);
     });
 
-    test('Mishna Berurah has 3-level hierarchy', () {
+    test('Mishna Berurah has 3-level hierarchy (Sefer/Siman/Seif)', () {
       expect(CurriculumLabels.depth(CurriculumId.mishnaBerurah), 3);
       expect(CurriculumLabels.labelsEn(CurriculumId.mishnaBerurah), [
+        'Sefer',
         'Siman',
         'Seif',
-        'Seif Katan',
       ]);
     });
 
@@ -105,14 +105,20 @@ void main() {
       ]);
     });
 
-    test('Mussar has 3-level hierarchy (Sefer/Perek/Pasuk by default)', () {
-      expect(CurriculumLabels.depth(CurriculumId.mussar), 3);
-      expect(CurriculumLabels.labelsEn(CurriculumId.mussar), [
-        'Sefer',
-        'Perek',
-        'Pasuk',
-      ]);
-    });
+    test(
+      'Mussar has 4-level hierarchy (Sefer/Perek/Pasuk/Pasuk) — Tanya uses 4 levels',
+      () {
+        expect(CurriculumLabels.depth(CurriculumId.mussar), 4);
+        // L3 + L4 are both Pasuk by default; 3-level books (Mesillat
+        // Yesharim, Orchot Tzadikim, Tomer Devorah, Shaarei Teshuvah)
+        // simply don't use L4. Tanya uses the Part override at L2 and
+        // Perek override at L3.
+        expect(
+          CurriculumLabels.labelsEn(CurriculumId.mussar),
+          ['Sefer', 'Perek', 'Pasuk', 'Pasuk'],
+        );
+      },
+    );
 
     test('Mussar per-book L2 override: Shaarei Teshuvah uses Shaar', () {
       final l2 = CurriculumLabels.level(
@@ -160,6 +166,29 @@ void main() {
         'חומשים • Seferim',
       );
     });
+
+    test(
+      'stripStructuralPrefix scoped to Mishneh Torah strips "משנה תורה,"',
+      () {
+        // Without scoping, the legacy global strip would chop off "משנה " (the
+        // Mishnayos level label) and leave a leading "תורה, " — the exact bug
+        // that produced "תורה, הלכות גירושין" on the Mishneh Torah browse.
+        expect(
+          CurriculumLabels.stripStructuralPrefix(
+            'משנה תורה, הלכות גירושין',
+            curriculumId: CurriculumId.mishnehTorah,
+          ),
+          'גירושין',
+        );
+        expect(
+          CurriculumLabels.stripStructuralPrefix(
+            'משנה תורה, הלכות אישות',
+            curriculumId: CurriculumId.mishnehTorah,
+          ),
+          'אישות',
+        );
+      },
+    );
 
     test('stripStructuralPrefix removes known Hebrew prefixes', () {
       expect(CurriculumLabels.stripStructuralPrefix('מסכת ברכות'), 'ברכות');

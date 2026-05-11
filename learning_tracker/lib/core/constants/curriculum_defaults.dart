@@ -187,6 +187,16 @@ class CurriculumLabels {
       ),
     ],
     CurriculumId.yerushalmi: [
+      // Bundled yerushalmi.json: level1=Seder, level2=Masechta, level3=Daf
+      // (where Daf is the leaf; there is no Halacha sub-level in the data).
+      LevelLabels(
+        en: 'Seder',
+        enPlural: 'Sedarim',
+        he: 'סדר',
+        hePlural: 'סדרים',
+        valueKind: LevelValueKind.named,
+        prefixLabelInDisplay: false,
+      ),
       LevelLabels(
         en: 'Masechta',
         enPlural: 'Masechtos',
@@ -203,16 +213,18 @@ class CurriculumLabels {
         valueKind: LevelValueKind.ordinal,
         prefixLabelInDisplay: true,
       ),
-      LevelLabels(
-        en: 'Halacha',
-        enPlural: 'Halachos',
-        he: 'הלכה',
-        hePlural: 'הלכות',
-        valueKind: LevelValueKind.ordinal,
-        prefixLabelInDisplay: true,
-      ),
     ],
     CurriculumId.mishnaBerurah: [
+      // The bundled mishna_berurah.json has level1='Mishnah Berurah'
+      // (the book name) and Siman/Seif as the numeric levels below it.
+      LevelLabels(
+        en: 'Sefer',
+        enPlural: 'Seforim',
+        he: 'ספר',
+        hePlural: 'ספרים',
+        valueKind: LevelValueKind.named,
+        prefixLabelInDisplay: false,
+      ),
       LevelLabels(
         en: 'Siman',
         enPlural: 'Simanim',
@@ -226,14 +238,6 @@ class CurriculumLabels {
         enPlural: 'Seifim',
         he: 'סעיף',
         hePlural: 'סעיפים',
-        valueKind: LevelValueKind.ordinal,
-        prefixLabelInDisplay: true,
-      ),
-      LevelLabels(
-        en: 'Seif Katan',
-        enPlural: 'Seifim Ketanim',
-        he: 'סעיף קטן',
-        hePlural: 'סעיפים קטנים',
         valueKind: LevelValueKind.ordinal,
         prefixLabelInDisplay: true,
       ),
@@ -390,6 +394,18 @@ class CurriculumLabels {
         valueKind: LevelValueKind.ordinal,
         prefixLabelInDisplay: true,
       ),
+      // L3 default = Pasuk for 3-level books (Mesillat Yesharim, Orchot
+      // Tzadikim, Tomer Devorah, Shaarei Teshuvah).
+      LevelLabels(
+        en: 'Pasuk',
+        enPlural: 'Pesukim',
+        he: 'פסוק',
+        hePlural: 'פסוקים',
+        valueKind: LevelValueKind.ordinal,
+        prefixLabelInDisplay: true,
+      ),
+      // L4 = Pasuk for 4-level books (Tanya only — L3 becomes Perek via
+      // per-book override).
       LevelLabels(
         en: 'Pasuk',
         enPlural: 'Pesukim',
@@ -545,6 +561,15 @@ class CurriculumLabels {
           valueKind: LevelValueKind.named,
           prefixLabelInDisplay: false,
         ),
+        // Tanya is 4 levels deep — L3 below the Part is the Perek.
+        3: LevelLabels(
+          en: 'Perek',
+          enPlural: 'Perakim',
+          he: 'פרק',
+          hePlural: 'פרקים',
+          valueKind: LevelValueKind.ordinal,
+          prefixLabelInDisplay: true,
+        ),
       },
     },
   };
@@ -596,14 +621,17 @@ class CurriculumLabels {
   /// Deepest level (Mishna for Mishnayos, Pasuk for Chumash, …).
   static LevelLabels leaf(CurriculumId id) => _levels[id]!.last;
 
-  /// Deepest level the **browse UI** drills into. For Chumash / Nach /
-  /// Tanach the leaf is Pasuk (verse), which is rarely useful as a row
-  /// — chapter-level rows go straight to the reader. So browse stops one
-  /// level above the leaf for those curricula and at the leaf for every
-  /// other curriculum.
+  /// Deepest level the **browse UI** drills into. For Tanakh curricula
+  /// (Chumash / Nach / Tanach) the chapter row goes straight to the reader
+  /// — browsing individual pasukim isn't useful, so we cap one above the
+  /// leaf. Every other curriculum browses all the way to the leaf (Mishna,
+  /// Amud, Pasuk-within-Mussar-book, etc.).
   static int maxBrowseDepth(CurriculumId id) {
-    final leafLabel = leaf(id).en;
-    if (leafLabel == 'Pasuk') return depth(id) - 1;
+    if (id == CurriculumId.chumash ||
+        id == CurriculumId.nach ||
+        id == CurriculumId.tanach) {
+      return depth(id) - 1;
+    }
     return depth(id);
   }
 
@@ -655,28 +683,64 @@ class CurriculumLabels {
   static bool hasReorderableLevel2(CurriculumId id) =>
       id != CurriculumId.chumash && id != CurriculumId.tanach;
 
-  /// All Hebrew singular + plural labels followed by a space — used to
-  /// strip redundant structural prefixes from `displayNameHe`
-  /// (e.g. 'מסכת ברכות' → 'ברכות' when shown as a child of its container).
-  /// Derived from `_levels`, so adding a curriculum extends the set
-  /// automatically.
-  static List<String> structuralPrefixesHe() {
+  /// Curriculum-specific Hebrew name prefixes that always appear in the
+  /// bundled data and should be stripped before the value is shown to the
+  /// user. Distinct from level-label prefixes (which we derive from
+  /// `_levels`). Mishneh Torah's data ships every item with a
+  /// "משנה תורה, " breadcrumb prefix; the renderer must remove it before
+  /// any further level-label stripping.
+  static const Map<CurriculumId, List<String>> _curriculumNamePrefixesHe = {
+    CurriculumId.mishnehTorah: ['משנה תורה, '],
+  };
+
+  /// Hebrew singular + plural level labels (followed by a space) for the
+  /// given curriculum. When [curriculumId] is null, returns the union
+  /// across every curriculum (legacy callers).
+  ///
+  /// Scoping by curriculum prevents over-eager stripping — e.g. stripping
+  /// "משנה " (the Mishnayos level label) from "משנה תורה, …" (the Mishneh
+  /// Torah data prefix).
+  static List<String> structuralPrefixesHe({CurriculumId? curriculumId}) {
     final set = <String>{};
-    for (final list in _levels.values) {
-      for (final l in list) {
+    if (curriculumId != null) {
+      for (final l in _levels[curriculumId]!) {
         if (l.he.isNotEmpty) set.add('${l.he} ');
         if (l.hePlural.isNotEmpty) set.add('${l.hePlural} ');
+      }
+      set.addAll(_curriculumNamePrefixesHe[curriculumId] ?? const []);
+    } else {
+      for (final list in _levels.values) {
+        for (final l in list) {
+          if (l.he.isNotEmpty) set.add('${l.he} ');
+          if (l.hePlural.isNotEmpty) set.add('${l.hePlural} ');
+        }
       }
     }
     return set.toList();
   }
 
-  /// Strip the first matching structural Hebrew prefix from [he].
-  static String stripStructuralPrefix(String he) {
-    for (final p in structuralPrefixesHe()) {
-      if (he.startsWith(p)) return he.substring(p.length);
+  /// Strip every matching structural Hebrew prefix from [he] (looping
+  /// until no prefix matches). When [curriculumId] is provided, only that
+  /// curriculum's level labels plus its curriculum-specific name prefixes
+  /// are considered. Without it, the legacy global pool is used.
+  ///
+  /// Example: 'משנה תורה, הלכות גירושין' with curriculumId=mishnehTorah →
+  /// strips 'משנה תורה, ' → 'הלכות גירושין' → strips 'הלכות ' → 'גירושין'.
+  static String stripStructuralPrefix(String he, {CurriculumId? curriculumId}) {
+    final prefixes = structuralPrefixesHe(curriculumId: curriculumId);
+    var out = he;
+    var stripped = true;
+    while (stripped) {
+      stripped = false;
+      for (final p in prefixes) {
+        if (out.startsWith(p)) {
+          out = out.substring(p.length);
+          stripped = true;
+          break;
+        }
+      }
     }
-    return he;
+    return out;
   }
 
   /// Combine a level label and a content value: e.g.

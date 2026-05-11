@@ -577,6 +577,53 @@ void main() {
       },
     );
 
+    // ── Regression: every bundled item ships a Hebrew displayNameHe
+    //
+    // Mishneh Torah's L1 sefer rows historically shipped English in
+    // BOTH displayNameHe and displayNameEn (e.g. "Sefer Madda" twice),
+    // which made the unified label renderer return English in Hebrew
+    // mode regardless of which screen it was called from. This test
+    // walks every curriculum's bundled JSON and fails if any item's
+    // displayNameHe lacks a Hebrew character.
+    test('every bundled item has a Hebrew displayNameHe', () {
+      // Hebrew block: U+0590..U+05FF
+      bool hasHebrewChar(String s) => s.runes.any((r) {
+        return r >= 0x0590 && r <= 0x05FF;
+      });
+
+      final dir = Directory('assets/content/hierarchy');
+      if (!dir.existsSync()) return; // skip when bundled assets removed
+
+      final failures = <String>[];
+      for (final file in dir.listSync().whereType<File>().where(
+        (f) => f.path.endsWith('.json'),
+      )) {
+        final data =
+            jsonDecode(file.readAsStringSync()) as Map<String, dynamic>;
+        final items = (data['items'] as List).cast<Map<String, dynamic>>();
+        for (final item in items) {
+          final he = item['displayNameHe'] as String? ?? '';
+          if (!hasHebrewChar(he)) {
+            failures.add(
+              '${file.path.split('/').last}: '
+              'sefariaRef=${item['sefariaRef']}, '
+              'displayNameHe=$he',
+            );
+            if (failures.length >= 10) break;
+          }
+        }
+        if (failures.length >= 10) break;
+      }
+
+      expect(
+        failures,
+        isEmpty,
+        reason:
+            'Items shipping with English-only displayNameHe '
+            '(first 10 shown):\n${failures.join('\n')}',
+      );
+    });
+
     // ── Regression: Shaarei Teshuvah hierarchy is clean (no "h" placeholder)
 
     test(

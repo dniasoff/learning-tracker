@@ -53,7 +53,10 @@ class CurriculumLabelRenderer {
       case LevelValueKind.named:
         final name = useHebrew
             ? (hebrewName != null && hebrewName.isNotEmpty
-                  ? CurriculumLabels.stripStructuralPrefix(hebrewName)
+                  ? CurriculumLabels.stripStructuralPrefix(
+                      hebrewName,
+                      curriculumId: curriculumId,
+                    )
                   : rawValue)
             : CurriculumLabels.transliterateNamedValue(
                 rawValue,
