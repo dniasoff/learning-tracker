@@ -150,9 +150,8 @@ class _ParentTrackManagementScreenState
                     child: LearningTrackCard(
                       track: track,
                       showProgress: true,
-                      onTap: () => context.router.push(
-                        TrackDetailRoute(track: track),
-                      ),
+                      onTap: () =>
+                          context.router.push(TrackDetailRoute(track: track)),
                       onLongPress: () => _showArchiveDialog(track),
                     ),
                   ),
