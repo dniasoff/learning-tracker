@@ -117,7 +117,13 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
             lifetimePercentDisplay,
           ),
           const SizedBox(height: 20),
-          _buildActionsCard(context, theme, track, curriculum),
+          _buildActionsCard(
+            context,
+            theme,
+            track,
+            curriculum,
+            hasProgramEnrollment: hasProgramEnrollment,
+          ),
         ],
       ),
     );
@@ -263,8 +269,13 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
     BuildContext context,
     ThemeData theme,
     CurriculumTrack track,
-    CurriculumId? curriculum,
-  ) {
+    CurriculumId? curriculum, {
+    required bool hasProgramEnrollment,
+  }) {
+    // Mark Content Done + Reorder Content are self-paced-only. When the
+    // user is following a program (Daf Yomi, Mishna Yomi, etc.) the
+    // pace and order are dictated by the program, so showing those
+    // controls is misleading.
     return DecoratedBox(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -279,43 +290,48 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
       ),
       child: Column(
         children: [
-          ListTile(
-            shape: const RoundedRectangleBorder(
-              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          if (!hasProgramEnrollment) ...[
+            ListTile(
+              shape: const RoundedRectangleBorder(
+                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+              ),
+              leading: const Icon(
+                Icons.check_circle_outline,
+                color: Color(0xFF1C47C4),
+              ),
+              title: const Text('Mark Content Done'),
+              trailing: const Icon(Icons.chevron_right_rounded),
+              onTap: curriculum != null
+                  ? () => _openBulkMark(track, curriculum)
+                  : null,
             ),
-            leading: const Icon(
-              Icons.check_circle_outline,
-              color: Color(0xFF1C47C4),
-            ),
-            title: const Text('Mark Content Done'),
-            trailing: const Icon(Icons.chevron_right_rounded),
-            onTap: curriculum != null
-                ? () => _openBulkMark(track, curriculum)
-                : null,
-          ),
-          const Divider(height: 1, indent: 56),
-          ListTile(
-            leading: const Icon(
-              Icons.swap_vert_rounded,
-              color: Color(0xFF1C47C4),
-            ),
-            title: const Text('Reorder Content'),
-            trailing: const Icon(Icons.chevron_right_rounded),
-            onTap: curriculum != null
-                ? () => Navigator.of(context).push<void>(
-                    MaterialPageRoute<void>(
-                      builder: (_) => TrackLearningOrderScreen(
-                        trackId: track.id,
-                        curriculumId: curriculum,
+            const Divider(height: 1, indent: 56),
+            ListTile(
+              leading: const Icon(
+                Icons.swap_vert_rounded,
+                color: Color(0xFF1C47C4),
+              ),
+              title: const Text('Reorder Content'),
+              trailing: const Icon(Icons.chevron_right_rounded),
+              onTap: curriculum != null
+                  ? () => Navigator.of(context).push<void>(
+                      MaterialPageRoute<void>(
+                        builder: (_) => TrackLearningOrderScreen(
+                          trackId: track.id,
+                          curriculumId: curriculum,
+                        ),
                       ),
-                    ),
-                  )
-                : null,
-          ),
-          const Divider(height: 1, indent: 56),
+                    )
+                  : null,
+            ),
+            const Divider(height: 1, indent: 56),
+          ],
           ListTile(
             shape: const RoundedRectangleBorder(
-              borderRadius: BorderRadius.vertical(bottom: Radius.circular(24)),
+              borderRadius: BorderRadius.vertical(
+                top: Radius.circular(24),
+                bottom: Radius.circular(24),
+              ),
             ),
             leading: const Icon(
               Icons.archive_outlined,
