@@ -143,6 +143,7 @@ class UserDatabase extends _$UserDatabase {
         }
         // v7 → v8: drop archivedAt — tracks are hard-deleted, not archived.
         if (from < 8) {
+          // ignore: experimental_member_use
           await m.alterTable(TableMigration(curriculumTracks));
         }
         // v8 → v9: drop active_curricula — active curricula are now derived
