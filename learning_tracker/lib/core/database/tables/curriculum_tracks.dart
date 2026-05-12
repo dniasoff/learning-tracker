@@ -26,10 +26,6 @@ class CurriculumTracks extends Table {
   /// When this track was last deactivated (null if currently active)
   DateTimeColumn get deactivatedAt => dateTime().nullable()();
 
-  /// When this track was archived (null if not archived).
-  /// Archived tracks are hidden from dashboard/scheduler but data is preserved.
-  DateTimeColumn get archivedAt => dateTime().nullable()();
-
   /// Date when pace was last reset (for Reset Pace recovery action).
   /// Null if pace has never been reset.
   DateTimeColumn get paceResetDate => dateTime().nullable()();

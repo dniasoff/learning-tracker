@@ -79,6 +79,10 @@ class StudyDayConfigDao extends DatabaseAccessor<UserDatabase>
     }
   }
 
+  /// Delete all configs for a specific track (used when hard-deleting a track).
+  Future<int> deleteConfigsForTrack(int trackId) =>
+      (delete(studyDayConfigs)..where((t) => t.trackId.equals(trackId))).go();
+
   /// Delete all configs for a curriculum/profile.
   Future<int> deleteConfigsByCurriculumAndProfile(
     String curriculumId,

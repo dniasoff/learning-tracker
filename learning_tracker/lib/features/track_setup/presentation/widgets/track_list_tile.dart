@@ -6,14 +6,12 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 class TrackListTile extends StatelessWidget {
   const TrackListTile({
     required this.track,
-    this.isArchived = false,
     this.onTap,
     this.onLongPress,
     super.key,
   });
 
   final CurriculumTrack track;
-  final bool isArchived;
   final VoidCallback? onTap;
   final VoidCallback? onLongPress;
 
@@ -32,9 +30,6 @@ class TrackListTile extends StatelessWidget {
 
     return Card(
       clipBehavior: Clip.antiAlias,
-      color: isArchived
-          ? theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5)
-          : null,
       child: InkWell(
         onTap: onTap,
         onLongPress: onLongPress,
@@ -50,9 +45,6 @@ class TrackListTile extends StatelessWidget {
                       hebrewName,
                       style: theme.textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.w600,
-                        color: isArchived
-                            ? theme.colorScheme.onSurface.withValues(alpha: 0.5)
-                            : null,
                       ),
                       textDirection: TextDirection.rtl,
                     ),
@@ -60,11 +52,7 @@ class TrackListTile extends StatelessWidget {
                     Text(
                       englishName,
                       style: theme.textTheme.bodySmall?.copyWith(
-                        color: isArchived
-                            ? theme.colorScheme.onSurfaceVariant.withValues(
-                                alpha: 0.5,
-                              )
-                            : theme.colorScheme.onSurfaceVariant,
+                        color: theme.colorScheme.onSurfaceVariant,
                       ),
                     ),
                     Text(
@@ -78,16 +66,10 @@ class TrackListTile extends StatelessWidget {
                   ],
                 ),
               ),
-              if (isArchived)
-                Chip(
-                  label: Text('Archived', style: theme.textTheme.labelSmall),
-                  visualDensity: VisualDensity.compact,
-                )
-              else
-                Icon(
-                  Icons.chevron_right,
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
+              Icon(
+                Icons.chevron_right,
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
             ],
           ),
         ),

@@ -21,14 +21,12 @@ class LearningTrackCard extends ConsumerWidget {
   const LearningTrackCard({
     super.key,
     required this.track,
-    this.isArchived = false,
     this.showProgress = false,
     this.onTap,
     this.onLongPress,
   });
 
   final CurriculumTrack track;
-  final bool isArchived;
   final bool showProgress;
   final VoidCallback? onTap;
   final VoidCallback? onLongPress;
@@ -97,137 +95,67 @@ class LearningTrackCard extends ConsumerWidget {
         onTap: onTap,
         onLongPress: onLongPress,
         child: Ink(
-          padding: EdgeInsets.symmetric(
-            horizontal: isArchived ? 14 : 16,
-            vertical: isArchived ? 12 : 14,
-          ),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           decoration: BoxDecoration(
-            color: isArchived ? const Color(0xFFF2F5FB) : Colors.white,
+            color: Colors.white,
             borderRadius: BorderRadius.circular(30),
-            border: isArchived
-                ? Border.all(color: const Color(0xFFD7DFEC))
-                : null,
-            boxShadow: isArchived
-                ? null
-                : [
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF0A2056).withValues(alpha: 0.07),
+                blurRadius: 14,
+                offset: const Offset(0, 6),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 66,
+                height: 66,
+                decoration: BoxDecoration(
+                  color: accent,
+                  borderRadius: BorderRadius.circular(18),
+                  boxShadow: [
                     BoxShadow(
-                      color: const Color(0xFF0A2056).withValues(alpha: 0.07),
-                      blurRadius: 14,
-                      offset: const Offset(0, 6),
+                      color: accent.withValues(alpha: 0.28),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
                     ),
                   ],
-          ),
-          child: Opacity(
-            opacity: isArchived ? 0.82 : 1,
-            child: Row(
-              children: [
-                Container(
-                  width: 66,
-                  height: 66,
-                  decoration: BoxDecoration(
-                    color: accent,
-                    borderRadius: BorderRadius.circular(18),
-                    boxShadow: isArchived
-                        ? null
-                        : [
-                            BoxShadow(
-                              color: accent.withValues(alpha: 0.28),
-                              blurRadius: 10,
-                              offset: const Offset(0, 4),
-                            ),
-                          ],
-                  ),
-                  child: Icon(icon, color: Colors.white, size: 34),
                 ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        // Single-script title \u2014 Hebrew when Hebrew Terms
-                        // is on, transliterated English when off. No
-                        // bilingual "\u2022" concatenation.
-                        ref.watch(hebrewTermsScriptProvider)
-                            ? hebrewName
-                            : englishName,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.titleLarge?.copyWith(
-                          color: AppTheme.brandBlueDeep,
-                          fontWeight: FontWeight.w800,
-                        ),
+                child: Icon(icon, color: Colors.white, size: 34),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      ref.watch(hebrewTermsScriptProvider)
+                          ? hebrewName
+                          : englishName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.titleLarge?.copyWith(
+                        color: AppTheme.brandBlueDeep,
+                        fontWeight: FontWeight.w800,
                       ),
-                      const SizedBox(height: 2),
-                      Text(
-                        trackLabel,
-                        style: theme.textTheme.titleSmall?.copyWith(
-                          color: AppTheme.brandInkMuted,
-                          fontWeight: FontWeight.w600,
-                        ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      trackLabel,
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        color: AppTheme.brandInkMuted,
+                        fontWeight: FontWeight.w600,
                       ),
-                      if (isArchived)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 3),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 10,
-                              vertical: 4,
-                            ),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFE2E8F3),
-                              borderRadius: BorderRadius.circular(999),
-                            ),
-                            child: Text(
-                              'ARCHIVED',
-                              style: theme.textTheme.labelSmall?.copyWith(
-                                color: AppTheme.brandInkMuted,
-                                fontWeight: FontWeight.w800,
-                                letterSpacing: 0.5,
-                              ),
-                            ),
-                          ),
-                        ),
-                      if (showProgress && !isArchived) ...[
-                        const SizedBox(height: 9),
-                        if (!hasProgramEnrollment) ...[
-                          Row(
-                            children: [
-                              Text(
-                                l10n.carouselCompletion,
-                                style: theme.textTheme.labelSmall?.copyWith(
-                                  color: AppTheme.brandInkMuted,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                              const Spacer(),
-                              Text(
-                                cyclePercentDisplay,
-                                style: theme.textTheme.labelMedium?.copyWith(
-                                  color: AppTheme.brandInk,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 6),
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(999),
-                            child: LinearProgressIndicator(
-                              value: cycleFraction,
-                              minHeight: 10,
-                              backgroundColor: AppTheme.brandCreamSoft,
-                              valueColor: AlwaysStoppedAnimation<Color>(
-                                curriculumBarColor,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                        ],
+                    ),
+                    if (showProgress) ...[
+                      const SizedBox(height: 9),
+                      if (!hasProgramEnrollment) ...[
                         Row(
                           children: [
                             Text(
-                              l10n.trackLifetimeLearning,
+                              l10n.carouselCompletion,
                               style: theme.textTheme.labelSmall?.copyWith(
                                 color: AppTheme.brandInkMuted,
                                 fontWeight: FontWeight.w700,
@@ -235,7 +163,7 @@ class LearningTrackCard extends ConsumerWidget {
                             ),
                             const Spacer(),
                             Text(
-                              lifetimePercentDisplay,
+                              cyclePercentDisplay,
                               style: theme.textTheme.labelMedium?.copyWith(
                                 color: AppTheme.brandInk,
                                 fontWeight: FontWeight.w700,
@@ -247,26 +175,57 @@ class LearningTrackCard extends ConsumerWidget {
                         ClipRRect(
                           borderRadius: BorderRadius.circular(999),
                           child: LinearProgressIndicator(
-                            value: lifetimeProgress,
+                            value: cycleFraction,
                             minHeight: 10,
-                            backgroundColor: const Color(0xFFE8ECF3),
-                            valueColor: const AlwaysStoppedAnimation<Color>(
-                              Color(0xFF2CC597),
+                            backgroundColor: AppTheme.brandCreamSoft,
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              curriculumBarColor,
                             ),
                           ),
                         ),
+                        const SizedBox(height: 8),
                       ],
+                      Row(
+                        children: [
+                          Text(
+                            l10n.trackLifetimeLearning,
+                            style: theme.textTheme.labelSmall?.copyWith(
+                              color: AppTheme.brandInkMuted,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          const Spacer(),
+                          Text(
+                            lifetimePercentDisplay,
+                            style: theme.textTheme.labelMedium?.copyWith(
+                              color: AppTheme.brandInk,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(999),
+                        child: LinearProgressIndicator(
+                          value: lifetimeProgress,
+                          minHeight: 10,
+                          backgroundColor: const Color(0xFFE8ECF3),
+                          valueColor: const AlwaysStoppedAnimation<Color>(
+                            Color(0xFF2CC597),
+                          ),
+                        ),
+                      ),
                     ],
-                  ),
+                  ],
                 ),
-                if (!isArchived)
-                  const Icon(
-                    Icons.chevron_right_rounded,
-                    size: 30,
-                    color: AppTheme.brandBlueDeep,
-                  ),
-              ],
-            ),
+              ),
+              const Icon(
+                Icons.chevron_right_rounded,
+                size: 30,
+                color: AppTheme.brandBlueDeep,
+              ),
+            ],
           ),
         ),
       ),

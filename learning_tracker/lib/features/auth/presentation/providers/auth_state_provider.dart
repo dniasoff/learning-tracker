@@ -22,7 +22,10 @@ class AuthStateNotifier extends _$AuthStateNotifier {
   }
 
   Future<void> _init() async {
-    // Cloud-born fast path — Firebase has a cached session for us.
+    // Cloud-born accounts require a valid Firebase session. If Firebase
+    // has no current user (reinstall, signed out, etc.), we are signed
+    // out — never resurrect a cloudBorn profile row from SQLite without
+    // Firebase confirming the session.
     final firebaseUser = FirebaseAuth.instance.currentUser;
     if (firebaseUser != null) {
       await firebaseUser.reload();
@@ -32,10 +35,8 @@ class AuthStateNotifier extends _$AuthStateNotifier {
             (provider) => provider.providerId == 'password',
           ) ??
           false;
-      if (refreshed == null ||
-          (isPasswordAccount && !refreshed.emailVerified)) {
-        await FirebaseAuth.instance.signOut();
-      } else {
+      if (refreshed != null &&
+          !(isPasswordAccount && !refreshed.emailVerified)) {
         final dao = ref.read(userDatabaseProvider).userProfileDao;
         final profile = await dao.findCloudBornByFirebaseUid(refreshed.uid);
         if (profile != null) {
@@ -45,25 +46,14 @@ class AuthStateNotifier extends _$AuthStateNotifier {
           );
           return;
         }
+      } else {
+        await FirebaseAuth.instance.signOut();
       }
     }
 
-    // Cloud-born offline restore: if local profile data exists for a
-    // cloud account but Firebase has no cached user yet, keep the user
-    // signed in locally so writes still work offline and queue for sync.
+    // Local-born accounts don't need Firebase auth — they store data
+    // locally only. Restore the first local-born row if present.
     final dao = ref.read(userDatabaseProvider).userProfileDao;
-    final clouds = await dao.findByTier(UserTier.cloudBorn);
-    if (clouds.isNotEmpty) {
-      state = AuthState.signedIn(
-        user: AuthUser.fromProfile(clouds.first),
-        tier: Tier.cloudBorn,
-      );
-      return;
-    }
-
-    // Local-born session restore (20.7 will populate SharedPreferences
-    // with the signed-in profile id). For now, fall back to the first
-    // local-born row we find — a transitional heuristic.
     final locals = await dao.findByTier(UserTier.localBorn);
     if (locals.isNotEmpty) {
       state = AuthState.signedIn(

@@ -125,14 +125,12 @@ class TrackDao extends DatabaseAccessor<UserDatabase> with _$TrackDaoMixin {
     }
   }
 
-  /// Get all active (non-archived) tracks for a profile.
+  /// Get all active tracks for a profile.
   Future<List<CurriculumTrack>> getActiveTracksForProfile(int profileId) =>
       (select(curriculumTracks)
             ..where(
               (t) =>
-                  t.profileId.equals(profileId) &
-                  t.isActive.equals(true) &
-                  t.archivedAt.isNull(),
+                  t.profileId.equals(profileId) & t.isActive.equals(true),
             )
             ..orderBy([(t) => OrderingTerm.asc(t.curriculumId)]))
           .get();
@@ -142,68 +140,55 @@ class TrackDao extends DatabaseAccessor<UserDatabase> with _$TrackDaoMixin {
     curriculumTracks,
   )..where((t) => t.id.equals(trackId))).getSingleOrNull();
 
-  /// Watch all active (non-archived) tracks for a profile.
+  /// Watch all active tracks for a profile.
   Stream<List<CurriculumTrack>> watchActiveTracksForProfile(int profileId) {
     return (select(curriculumTracks)
           ..where(
             (t) =>
-                t.profileId.equals(profileId) &
-                t.isActive.equals(true) &
-                t.archivedAt.isNull(),
+                t.profileId.equals(profileId) & t.isActive.equals(true),
           )
           ..orderBy([(t) => OrderingTerm.asc(t.curriculumId)]))
         .watch();
   }
 
-  /// Watch all archived tracks for a profile.
-  Stream<List<CurriculumTrack>> watchArchivedTracksForProfile(int profileId) {
-    return (select(curriculumTracks)
-          ..where(
-            (t) => t.profileId.equals(profileId) & t.archivedAt.isNotNull(),
-          )
-          ..orderBy([(t) => OrderingTerm.asc(t.curriculumId)]))
-        .watch();
-  }
+  /// Hard-delete a track and all its associated data.
+  ///
+  /// Deletes (in order): goals, stages, completions, daily plans,
+  /// point configs, curriculum scopes, study day configs, learning order,
+  /// then the track row itself. Also removes the curriculum from
+  /// active_curricula for the profile.
+  Future<void> deleteTrackAndData(int trackId) async {
+    final track = await getTrackById(trackId);
+    if (track == null) return;
 
-  /// Archive a track — hides from dashboard/scheduler but preserves data.
-  Future<void> archiveTrack(
-    int profileId,
-    CurriculumId curriculumId,
-    TrackType trackType,
-  ) async {
-    await (update(curriculumTracks)..where(
-          (t) =>
-              t.profileId.equals(profileId) &
-              t.curriculumId.equals(curriculumId.storageKey) &
-              t.trackType.equals(trackType.storageKey),
-        ))
-        .write(
-          CurriculumTracksCompanion(
-            archivedAt: Value(DateTimeFactory.nowUtc()),
-          ),
+    await db.transaction(() async {
+      await db.goalDao.deleteGoalsForTrack(trackId);
+      await db.stageDao.deleteStagesForTrack(trackId);
+      await db.completionDao.deleteByTrack(trackId);
+      await db.dailyPlanDao.deletePlansByTrack(trackId);
+      await db.pointConfigDao.deleteAllForTrack(trackId);
+      await db.curriculumScopeDao.clearScopesForTrack(trackId);
+      await db.studyDayConfigDao.deleteConfigsForTrack(trackId);
+      await db.trackLearningOrderDao.deleteByTrack(trackId);
+      await (delete(curriculumTracks)
+            ..where((t) => t.id.equals(trackId)))
+          .go();
+      final curriculum = CurriculumId.values
+          .where((c) => c.storageKey == track.curriculumId)
+          .firstOrNull;
+      if (curriculum != null) {
+        await db.activeCurriculumDao.forceRemoveForProfile(
+          curriculum,
+          track.profileId,
         );
+      }
+    });
   }
 
-  /// Unarchive a track — makes it active again.
-  Future<void> unarchiveTrack(
-    int profileId,
-    CurriculumId curriculumId,
-    TrackType trackType,
-  ) async {
-    await (update(curriculumTracks)..where(
-          (t) =>
-              t.profileId.equals(profileId) &
-              t.curriculumId.equals(curriculumId.storageKey) &
-              t.trackType.equals(trackType.storageKey),
-        ))
-        .write(const CurriculumTracksCompanion(archivedAt: Value(null)));
-  }
-
-  /// Get every track row for a profile (active, inactive, or archived).
+  /// Get every track row for a profile (active and inactive).
   ///
   /// Used by the sync engine to push the full per-profile track state to
-  /// Firestore — listeners and pull-on-launch rely on seeing deactivations
-  /// and archivals, not just current activations.
+  /// Firestore.
   Future<List<CurriculumTrack>> getAllForProfile(int profileId) => (select(
     curriculumTracks,
   )..where((t) => t.profileId.equals(profileId))).get();
@@ -218,7 +203,6 @@ class TrackDao extends DatabaseAccessor<UserDatabase> with _$TrackDaoMixin {
     required bool isActive,
     required DateTime activatedAt,
     DateTime? deactivatedAt,
-    DateTime? archivedAt,
     DateTime? paceResetDate,
   }) async {
     final existing =
@@ -239,7 +223,6 @@ class TrackDao extends DatabaseAccessor<UserDatabase> with _$TrackDaoMixin {
           isActive: Value(isActive),
           activatedAt: activatedAt,
           deactivatedAt: Value(deactivatedAt),
-          archivedAt: Value(archivedAt),
           paceResetDate: Value(paceResetDate),
         ),
       );
@@ -251,21 +234,18 @@ class TrackDao extends DatabaseAccessor<UserDatabase> with _$TrackDaoMixin {
           isActive: Value(isActive),
           activatedAt: Value(activatedAt),
           deactivatedAt: Value(deactivatedAt),
-          archivedAt: Value(archivedAt),
           paceResetDate: Value(paceResetDate),
         ),
       );
     }
   }
 
-  /// Count active (non-archived) tracks for a profile.
+  /// Count active tracks for a profile.
   Future<int> countActiveTracksForProfile(int profileId) async {
     final tracks =
         await (select(curriculumTracks)..where(
               (t) =>
-                  t.profileId.equals(profileId) &
-                  t.isActive.equals(true) &
-                  t.archivedAt.isNull(),
+                  t.profileId.equals(profileId) & t.isActive.equals(true),
             ))
             .get();
     return tracks.length;

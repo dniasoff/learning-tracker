@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/utils/percentage_formatter.dart';
@@ -335,21 +334,21 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
                 bottom: Radius.circular(24),
               ),
             ),
-            leading: const Icon(
-              Icons.archive_outlined,
-              color: AppTheme.brandInkMuted,
+            leading: Icon(
+              Icons.delete_outline_rounded,
+              color: theme.colorScheme.error,
             ),
             title: Text(
-              'Archive Track',
+              'Delete Track',
               style: theme.textTheme.bodyLarge?.copyWith(
-                color: AppTheme.brandInkMuted,
+                color: theme.colorScheme.error,
               ),
             ),
-            trailing: const Icon(
+            trailing: Icon(
               Icons.chevron_right_rounded,
-              color: AppTheme.brandInkMuted,
+              color: theme.colorScheme.error,
             ),
-            onTap: () => _showArchiveDialog(track, curriculum),
+            onTap: () => _showDeleteDialog(track, curriculum),
           ),
         ],
       ),
@@ -381,33 +380,19 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
     );
   }
 
-  Future<void> _showArchiveDialog(
+  Future<void> _showDeleteDialog(
     CurriculumTrack track,
     CurriculumId? curriculum,
   ) async {
-    final activeCount = await ref
-        .read(userDatabaseProvider)
-        .trackDao
-        .countActiveTracksForProfile(track.profileId);
-    final isLastTrack = activeCount <= 1;
-
-    if (!mounted) return;
     final name = curriculum?.displayNameHe ?? track.curriculumId;
 
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text(
-          isLastTrack ? 'Archive your only track?' : 'Archive Track?',
-        ),
+        title: const Text('Delete Track?'),
         content: Text(
-          isLastTrack
-              ? 'This is your only active track. Archiving "$name" will leave '
-                    'you with no learning scheduled. Your data and progress are '
-                    'preserved — you can reactivate it or add a new track at '
-                    'any time.'
-              : 'Archive "$name"? Your data and progress will be preserved. '
-                    'You can reactivate it later.',
+          'Permanently delete "$name"? All progress and data for this track '
+          'will be removed. This cannot be undone.',
         ),
         actions: [
           TextButton(
@@ -415,23 +400,18 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
             child: const Text('Cancel'),
           ),
           FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: Theme.of(context).colorScheme.error,
+            ),
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Archive'),
+            child: const Text('Delete'),
           ),
         ],
       ),
     );
 
     if ((confirmed ?? false) && mounted) {
-      final db = ref.read(userDatabaseProvider);
-      await db.trackDao.archiveTrack(
-        track.profileId,
-        curriculum ?? CurriculumId.mishnayos,
-        TrackType.values
-                .where((t) => t.storageKey == track.trackType)
-                .firstOrNull ??
-            TrackType.personal,
-      );
+      await ref.read(userDatabaseProvider).trackDao.deleteTrackAndData(track.id);
       await invalidateAfterTrackDataChange(ref, track.profileId);
       if (mounted) context.router.pop();
     }

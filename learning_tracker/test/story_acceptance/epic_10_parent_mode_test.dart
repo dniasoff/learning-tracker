@@ -687,7 +687,6 @@ void main() {
       (tester) async {
         _pointConfigLargeSurface(tester);
         // Second active track (Bavli) with its own stages and point configs
-        await db.activeCurriculumDao.activate(CurriculumId.bavli);
         final bavliTrackRow = await db
             .into(db.curriculumTracks)
             .insertReturning(

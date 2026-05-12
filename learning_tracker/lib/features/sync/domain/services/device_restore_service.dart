@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/curriculum_import_service.dart';
@@ -74,7 +75,19 @@ class DeviceRestoreService {
     final state = await _readRestoreState();
     if (state == _kStateInProgress) return true;
 
+    // Valid Firebase session + no completions = signed in on a clean
+    // install. This catches the reinstall case even if stale profile
+    // rows exist locally (otherwise the empty-completions check would
+    // be hidden by leftover SQLite state).
+    User? firebaseUser;
+    try {
+      firebaseUser = FirebaseAuth.instance.currentUser;
+    } catch (_) {
+      // Firebase not initialized (e.g. test environment) — treat as no session.
+    }
     final completions = await _database.completionDao.getAllCompletions();
+    if (firebaseUser != null && completions.isEmpty) return true;
+
     if (completions.isNotEmpty) return false;
 
     final profiles = await _database.userProfileDao.getAllUserProfiles();
@@ -152,7 +165,7 @@ class DeviceRestoreService {
         throw Exception('Data pull failed: $message');
       }
 
-      // Step 2: Fetch active curricula from Firestore
+      // Step 2: Derive active curricula from Firestore curriculum_tracks.
       _updateStatus(
         const RestoreStatus.restoring(
           phase: 'Loading curricula...',
@@ -160,7 +173,12 @@ class DeviceRestoreService {
           totalSteps: totalSteps,
         ),
       );
-      final activeCurricula = await _firestoreDataSource.fetchActiveCurricula();
+      final allTracks = await _firestoreDataSource.fetchCurriculumTracks();
+      final activeCurriculaKeys = allTracks
+          .where((t) => t['is_active'] == true)
+          .map((t) => t['curriculum_id'] as String?)
+          .whereType<String>()
+          .toSet();
 
       // Step 3: Re-import bundled content for active curricula
       _updateStatus(
@@ -171,8 +189,8 @@ class DeviceRestoreService {
         ),
       );
 
-      if (activeCurricula.isNotEmpty) {
-        final curricula = activeCurricula
+      if (activeCurriculaKeys.isNotEmpty) {
+        final curricula = activeCurriculaKeys
             .map(
               (key) => CurriculumId.values.cast<CurriculumId?>().firstWhere(
                 (c) => c!.storageKey == key,

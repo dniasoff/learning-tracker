@@ -327,7 +327,6 @@ void main() {
 
       service = CurriculumActivationService(
         database: db,
-        pushActiveCurricula: (_) async {},
         pushCurriculumTrack: (_) async {},
         trackRepository: TrackRepositoryImpl(database: db),
       );
@@ -737,7 +736,7 @@ void main() {
       addTearDown(() => db.close());
       // The database should not have content_items or
       // curriculum_hierarchy_config tables; they were removed in schema v3.
-      expect(db.schemaVersion, equals(7));
+      expect(db.schemaVersion, equals(9));
     });
 
     // ── AC: curriculum_hierarchy_config table removed from Drift schema
@@ -746,7 +745,7 @@ void main() {
       final db = createTestDatabase();
       addTearDown(() => db.close());
       // Schema v3 drops these tables.
-      expect(db.schemaVersion, equals(7));
+      expect(db.schemaVersion, equals(9));
     });
 
     // ── AC: completions/bookmarks/learning_order use sefariaRef FK

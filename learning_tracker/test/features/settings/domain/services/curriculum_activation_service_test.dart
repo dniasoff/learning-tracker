@@ -8,11 +8,6 @@ import 'package:learning_tracker/features/learning/domain/repositories/track_rep
 import 'package:learning_tracker/features/settings/domain/services/curriculum_activation_service.dart';
 import 'package:mocktail/mocktail.dart';
 
-class MockFirestoreSync extends Mock {
-  Future<void> pushActiveCurricula(List<String> curricula);
-  Future<List<String>> fetchActiveCurricula();
-}
-
 class MockTrackRepository extends Mock implements TrackRepository {}
 
 Future<void> _dummyPushCurriculumTrack(Map<String, dynamic> data) async {}
@@ -23,27 +18,17 @@ void main() {
   });
   late UserDatabase database;
   late CurriculumActivationService service;
-  late MockFirestoreSync mockFirestore;
   late MockTrackRepository mockTrackRepository;
 
   setUp(() async {
     database = UserDatabase(NativeDatabase.memory());
-    mockFirestore = MockFirestoreSync();
     mockTrackRepository = MockTrackRepository();
     service = CurriculumActivationService(
       database: database,
-      pushActiveCurricula: mockFirestore.pushActiveCurricula,
       pushCurriculumTrack: _dummyPushCurriculumTrack,
       trackRepository: mockTrackRepository,
     );
 
-    // Mock Firestore calls to succeed silently
-    when(
-      () => mockFirestore.pushActiveCurricula(any()),
-    ).thenAnswer((_) async {});
-    when(
-      () => mockFirestore.fetchActiveCurricula(),
-    ).thenAnswer((_) async => []);
     // Mock TrackRepository to create the personal track in the test database
     // (mirrors real impl, skips the cloud push)
     when(
@@ -71,50 +56,28 @@ void main() {
   }
 
   group('CurriculumActivationService', () {
-    test(
-      'activate adds curriculum to database and syncs to Firestore',
-      () async {
-        await service.activate(CurriculumId.bavli);
+    test('activate adds curriculum to database', () async {
+      await service.activate(CurriculumId.bavli);
 
-        // Verify in database
-        final isActive = await database.activeCurriculumDao.isActive(
-          CurriculumId.bavli,
-        );
-        expect(isActive, isTrue);
+      final isActive = await database.activeCurriculumDao.isActive(
+        CurriculumId.bavli,
+      );
+      expect(isActive, isTrue);
+    });
 
-        // Verify Firestore sync called
-        verify(
-          () => mockFirestore.pushActiveCurricula(
-            any(that: contains(CurriculumId.bavli.storageKey)),
-          ),
-        ).called(1);
-      },
-    );
+    test('deactivate removes curriculum from database', () async {
+      // Activate two curricula
+      await service.activate(CurriculumId.bavli);
+      await service.activate(CurriculumId.yerushalmi);
 
-    test(
-      'deactivate removes curriculum from database and syncs to Firestore',
-      () async {
-        // Activate two curricula
-        await service.activate(CurriculumId.bavli);
-        await service.activate(CurriculumId.yerushalmi);
+      // Deactivate one
+      await service.deactivate(CurriculumId.bavli);
 
-        // Deactivate one
-        await service.deactivate(CurriculumId.bavli);
-
-        // Verify in database
-        final isActive = await database.activeCurriculumDao.isActive(
-          CurriculumId.bavli,
-        );
-        expect(isActive, isFalse);
-
-        // Verify Firestore sync called
-        verify(
-          () => mockFirestore.pushActiveCurricula(
-            any(that: isNot(contains(CurriculumId.bavli.storageKey))),
-          ),
-        ).called(1);
-      },
-    );
+      final isActive = await database.activeCurriculumDao.isActive(
+        CurriculumId.bavli,
+      );
+      expect(isActive, isFalse);
+    });
 
     test('toggle activates an inactive curriculum', () async {
       await service.toggle(CurriculumId.bavli);
@@ -208,21 +171,6 @@ void main() {
       );
     });
 
-    test('Firestore sync fails gracefully (offline scenario)', () async {
-      // Simulate Firestore failure
-      when(
-        () => mockFirestore.pushActiveCurricula(any()),
-      ).thenThrow(Exception('Offline'));
-
-      // Activation should still succeed locally
-      await service.activate(CurriculumId.bavli);
-
-      final isActive = await database.activeCurriculumDao.isActive(
-        CurriculumId.bavli,
-      );
-      expect(isActive, isTrue);
-    });
-
     test('all curricula can be activated simultaneously', () async {
       for (final curriculum in CurriculumId.values) {
         await service.activate(curriculum);
@@ -234,7 +182,7 @@ void main() {
     });
 
     test(
-      'deactivation preserves completion data (does not delete completions)',
+      'deactivation hard-deletes track and completion data',
       () async {
         // Activate two curricula
         await service.activate(CurriculumId.bavli);
@@ -257,22 +205,19 @@ void main() {
         // Deactivate Bavli
         await service.deactivate(CurriculumId.bavli);
 
-        // Verify completion data is still present
+        // Completion data is hard-deleted along with the track.
         final completions = await database.completionDao
             .getCompletionsByCurriculum(CurriculumId.bavli.storageKey);
-        expect(completions, hasLength(1));
-        expect(completions.first.sefariaRef, equals('Berakhot.2a'));
+        expect(completions, isEmpty);
       },
     );
 
     test(
-      'deactivation preserves bookmark data (does not delete bookmarks)',
+      'deactivation preserves bookmarks (curriculum-scoped, not track-scoped)',
       () async {
-        // Activate two curricula
         await service.activate(CurriculumId.bavli);
         await service.activate(CurriculumId.mishnayos);
 
-        // Insert a bookmark for Bavli
         await database.bookmarkDao.upsertBookmark(
           curriculumId: CurriculumId.bavli.storageKey,
           trackType: TrackType.personal.storageKey,
@@ -280,10 +225,8 @@ void main() {
           updatedAt: DateTime.now().toUtc(),
         );
 
-        // Deactivate Bavli
         await service.deactivate(CurriculumId.bavli);
 
-        // Verify bookmark data is still present
         final bookmark = await database.bookmarkDao
             .getBookmarkByCurriculumAndTrack(
               CurriculumId.bavli.storageKey,
@@ -291,63 +234,6 @@ void main() {
             );
         expect(bookmark, isNotNull);
         expect(bookmark!.sefariaRef, equals('Berakhot.2a'));
-      },
-    );
-
-    test(
-      're-activating a previously deactivated curriculum restores all prior data',
-      () async {
-        // Activate two curricula and add data to Bavli
-        await service.activate(CurriculumId.bavli);
-        await service.activate(CurriculumId.mishnayos);
-
-        final bavliTrackId = await getTrackId(CurriculumId.bavli);
-        await database.completionDao.insertCompletion(
-          CompletionsCompanion.insert(
-            curriculumId: CurriculumId.bavli.storageKey,
-            sefariaRef: 'Berakhot.2a',
-            stageId: 1,
-            trackType: TrackType.personal.storageKey,
-            trackId: bavliTrackId,
-            completedAt: DateTime.now(),
-            points: const Value(10),
-          ),
-        );
-
-        await database.bookmarkDao.upsertBookmark(
-          curriculumId: CurriculumId.bavli.storageKey,
-          trackType: TrackType.personal.storageKey,
-          sefariaRef: 'Berakhot.5a',
-          updatedAt: DateTime.now().toUtc(),
-        );
-
-        // Deactivate Bavli
-        await service.deactivate(CurriculumId.bavli);
-        expect(
-          await database.activeCurriculumDao.isActive(CurriculumId.bavli),
-          isFalse,
-        );
-
-        // Re-activate Bavli
-        await service.activate(CurriculumId.bavli);
-        expect(
-          await database.activeCurriculumDao.isActive(CurriculumId.bavli),
-          isTrue,
-        );
-
-        // Verify all prior data is still accessible
-        final completions = await database.completionDao
-            .getCompletionsByCurriculum(CurriculumId.bavli.storageKey);
-        expect(completions, hasLength(1));
-        expect(completions.first.sefariaRef, equals('Berakhot.2a'));
-
-        final bookmark = await database.bookmarkDao
-            .getBookmarkByCurriculumAndTrack(
-              CurriculumId.bavli.storageKey,
-              TrackType.personal.storageKey,
-            );
-        expect(bookmark, isNotNull);
-        expect(bookmark!.sefariaRef, equals('Berakhot.5a'));
       },
     );
 

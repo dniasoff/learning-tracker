@@ -41,7 +41,6 @@ void stubFirestorePullOnLaunchEmpty(MockFirestoreDataSource mock) {
   when(() => mock.fetchStreak()).thenAnswer((_) async => null);
   when(() => mock.fetchProfile()).thenAnswer((_) async => null);
   when(() => mock.fetchLedgerEntries(pageSize: ps)).thenAnswer((_) async => []);
-  when(() => mock.fetchActiveCurricula()).thenAnswer((_) async => []);
   when(
     () => mock.fetchCurriculumTracks(pageSize: ps),
   ).thenAnswer((_) async => []);
@@ -330,7 +329,6 @@ void main() {
       verify(() => mockFirestore.fetchProfilePrograms(pageSize: ps)).called(1);
       verify(() => mockFirestore.fetchStreak()).called(1);
       verify(() => mockFirestore.fetchLedgerEntries(pageSize: ps)).called(1);
-      verify(() => mockFirestore.fetchActiveCurricula()).called(1);
       verify(() => mockFirestore.fetchCurriculumTracks(pageSize: ps)).called(1);
       verify(() => mockFirestore.fetchNotificationSettings()).called(1);
       verify(() => mockFirestore.fetchGamificationSettings()).called(1);
@@ -573,9 +571,6 @@ void main() {
           () => mockFirestore.listenToProfilePrograms(),
         ).thenAnswer((_) => Stream.value([]));
         when(
-          () => mockFirestore.listenToActiveCurricula(),
-        ).thenAnswer((_) => Stream.value([]));
-        when(
           () => mockFirestore.listenToLedgerEntries(),
         ).thenAnswer((_) => ledgerEntries ?? Stream.value([]));
         when(
@@ -760,7 +755,6 @@ void main() {
         verify(() => mockFirestore.listenToStreak()).called(1);
         verify(() => mockFirestore.listenToGoals()).called(1);
         verify(() => mockFirestore.listenToProfilePrograms()).called(1);
-        verify(() => mockFirestore.listenToActiveCurricula()).called(1);
         verify(() => mockFirestore.listenToLedgerEntries()).called(1);
         verify(() => mockFirestore.listenToCurriculumTracks()).called(1);
         verify(() => mockFirestore.listenToNotificationSettings()).called(1);
@@ -911,9 +905,6 @@ void main() {
           pageSize: FirestoreDataSource.defaultPageSize,
         ),
       ).thenAnswer((_) async => []);
-      when(
-        () => mockFirestore.fetchActiveCurricula(),
-      ).thenAnswer((_) async => []);
 
       await restoreService.restore();
 
@@ -955,10 +946,10 @@ void main() {
       verify(() => mockFirestore.fetchStreak()).called(1);
       verify(() => mockFirestore.fetchProfile()).called(1);
       verify(() => mockFirestore.fetchLedgerEntries(pageSize: ps)).called(1);
-      verify(() => mockFirestore.fetchActiveCurricula()).called(2);
       verify(() => mockFirestore.fetchLearnerProfiles()).called(1);
       verify(() => mockFirestore.forProfile(1)).called(1);
-      verify(() => mockFirestore.fetchCurriculumTracks(pageSize: ps)).called(1);
+      // Called twice: once in pullOnLaunch, once to derive active curricula.
+      verify(() => mockFirestore.fetchCurriculumTracks(pageSize: ps)).called(2);
       verify(() => mockFirestore.fetchNotificationSettings()).called(1);
       verify(() => mockFirestore.fetchGamificationSettings()).called(1);
       verify(() => mockFirestore.isAuthenticated).called(1);
@@ -969,8 +960,14 @@ void main() {
       () async {
         stubEmptyFetches();
         when(
-          () => mockFirestore.fetchActiveCurricula(),
-        ).thenAnswer((_) async => ['mishnayos']);
+          () => mockFirestore.fetchCurriculumTracks(
+            pageSize: any(named: 'pageSize'),
+          ),
+        ).thenAnswer(
+          (_) async => [
+            {'curriculum_id': 'mishnayos', 'is_active': true, 'track_id': 1},
+          ],
+        );
         when(
           () => mockImportService.importAll(any()),
         ).thenAnswer((_) => const Stream.empty());
@@ -1036,9 +1033,6 @@ void main() {
         () => mockFirestore.fetchLedgerEntries(
           pageSize: FirestoreDataSource.defaultPageSize,
         ),
-      ).thenAnswer((_) async => []);
-      when(
-        () => mockFirestore.fetchActiveCurricula(),
       ).thenAnswer((_) async => []);
       when(
         () => mockFirestore.fetchLearnerProfiles(),

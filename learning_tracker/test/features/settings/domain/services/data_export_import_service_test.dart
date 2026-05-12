@@ -193,7 +193,8 @@ void main() {
       );
 
       final preview = service.validateAndPreview(jsonStr);
-      expect(preview.totalRecords, 10);
+      // activeCurricula section is now ignored (removed from schema v9)
+      expect(preview.totalRecords, 9);
     });
   });
 }

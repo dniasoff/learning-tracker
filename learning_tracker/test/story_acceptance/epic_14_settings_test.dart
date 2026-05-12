@@ -266,16 +266,6 @@ void main() {
             ),
           );
 
-      // Active curricula
-      await db
-          .into(db.activeCurricula)
-          .insert(
-            ActiveCurriculaCompanion.insert(
-              curriculumId: 'mishna',
-              activatedAt: DateTime(2026, 1, 1),
-            ),
-          );
-
       // Curriculum tracks
       await db
           .into(db.curriculumTracks)
@@ -317,7 +307,6 @@ void main() {
         expect(data['pointConfigs'], isList);
         expect(data['bookmarks'], isList);
         expect(data['learningOrder'], isList);
-        expect(data['activeCurricula'], isList);
         expect(data['curriculumTracks'], isList);
         expect(data['userProfiles'], isList);
 
@@ -329,7 +318,6 @@ void main() {
         expect((data['pointConfigs'] as List).length, equals(1));
         expect((data['bookmarks'] as List).length, equals(1));
         expect((data['learningOrder'] as List).length, equals(1));
-        expect((data['activeCurricula'] as List).length, equals(1));
         expect((data['curriculumTracks'] as List).length, equals(2));
         expect((data['userProfiles'] as List).length, equals(1));
       },
@@ -377,7 +365,6 @@ void main() {
           'pointConfigs': <dynamic>[],
           'bookmarks': <dynamic>[],
           'learningOrder': <dynamic>[],
-          'activeCurricula': <dynamic>[],
           'curriculumTracks': <dynamic>[],
           'userProfiles': <dynamic>[],
         });
@@ -397,7 +384,6 @@ void main() {
           'pointConfigs': <dynamic>[],
           'bookmarks': <dynamic>[],
           'learningOrder': <dynamic>[],
-          'activeCurricula': <dynamic>[],
           'curriculumTracks': <dynamic>[],
           'userProfiles': <dynamic>[],
         });
@@ -421,10 +407,9 @@ void main() {
       expect(preview.pointConfigCount, equals(1));
       expect(preview.bookmarkCount, equals(1));
       expect(preview.learningOrderCount, equals(1));
-      expect(preview.activeCurriculaCount, equals(1));
       expect(preview.curriculumTrackCount, equals(2));
       expect(preview.userProfileCount, equals(1));
-      expect(preview.totalRecords, equals(13));
+      expect(preview.totalRecords, equals(12));
       expect(preview.exportedAt, isNot('unknown'));
       expect(preview.appVersion, equals('1.0.0'));
     });
@@ -444,7 +429,6 @@ void main() {
           await db.delete(db.pointConfigs).go();
           await db.delete(db.bookmarks).go();
           await db.delete(db.learningOrder).go();
-          await db.delete(db.activeCurricula).go();
           await db.delete(db.curriculumTracks).go();
           await db.delete(db.userProfiles).go();
         });
@@ -559,7 +543,6 @@ void main() {
           await db.delete(db.pointConfigs).go();
           await db.delete(db.bookmarks).go();
           await db.delete(db.learningOrder).go();
-          await db.delete(db.activeCurricula).go();
           await db.delete(db.curriculumTracks).go();
           await db.delete(db.userProfiles).go();
         });
@@ -583,9 +566,11 @@ void main() {
           (await db.learningOrderDao.getAllLearningOrders()).length,
           equals(1),
         );
+        // Both tracks (mishnayos from setUp + mishna from seedTestData) are
+        // active — active_curricula table was removed in schema v9.
         expect(
           (await db.activeCurriculumDao.getActiveCurricula()).length,
-          equals(1),
+          equals(2),
         );
         expect((await db.select(db.curriculumTracks).get()).length, equals(2));
         expect(

@@ -187,9 +187,6 @@ class ProfileRepositoryImpl implements ProfileRepository {
         _db.pointConfigs,
       )..where((t) => t.profileId.equals(id))).go();
       await (_db.delete(
-        _db.activeCurricula,
-      )..where((t) => t.profileId.equals(id))).go();
-      await (_db.delete(
         _db.curriculumTracks,
       )..where((t) => t.profileId.equals(id))).go();
       await (_db.delete(

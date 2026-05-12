@@ -179,19 +179,6 @@ class OfflineQueue {
     );
   }
 
-  /// Enqueue active-curricula operation.
-  Future<void> enqueueActiveCurricula(
-    List<String> activeCurricula, {
-    int? targetProfileId,
-  }) async {
-    final payload = jsonEncode({
-      'curricula': activeCurricula,
-      if (targetProfileId != null) '_target_profile_id': targetProfileId,
-    });
-    await _queue.enqueue('active_curricula', payload);
-    _logger.info('Queued active curricula for offline sync');
-  }
-
   /// Enqueue a curriculum-track operation.
   Future<void> enqueueCurriculumTrack(Map<String, dynamic> track) async {
     final payload = jsonEncode(track);
@@ -334,13 +321,6 @@ class OfflineQueue {
               break;
             case 'curriculum_import_metadata':
               await dataSource.pushCurriculumImportMetadata(payload);
-              break;
-            case 'active_curricula':
-              final rawCurricula = payload['curricula'];
-              final curricula = rawCurricula is List
-                  ? rawCurricula.map((e) => e.toString()).toList()
-                  : <String>[];
-              await dataSource.pushActiveCurricula(curricula);
               break;
             case 'curriculum_track':
               await dataSource.pushCurriculumTrack(payload);

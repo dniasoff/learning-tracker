@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
@@ -14,9 +13,7 @@ import 'package:learning_tracker/features/track_setup/presentation/providers/tra
 import 'package:learning_tracker/features/track_setup/presentation/screens/add_track_flow.dart';
 import 'package:learning_tracker/features/track_setup/presentation/widgets/learning_track_card.dart';
 
-/// Central hub for viewing, adding, and archiving tracks.
-///
-/// Replaces the old per-curriculum TrackManagementScreen.
+/// Central hub for viewing and managing tracks.
 @RoutePage()
 class TrackManagementHubScreen extends ConsumerStatefulWidget {
   const TrackManagementHubScreen({
@@ -33,7 +30,6 @@ class TrackManagementHubScreen extends ConsumerStatefulWidget {
 
 class _TrackManagementHubScreenState
     extends ConsumerState<TrackManagementHubScreen> {
-  bool _showArchived = true;
   late bool _addingTrack = widget.startAdding;
 
   @override
@@ -50,7 +46,6 @@ class _TrackManagementHubScreenState
     }
 
     final activeAsync = ref.watch(activeTracksProvider);
-    final archivedAsync = ref.watch(archivedTracksProvider);
 
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FC),
@@ -66,30 +61,6 @@ class _TrackManagementHubScreenState
             color: AppTheme.brandBlueDeep,
           ),
         ),
-        actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 12),
-            child: FilledButton.tonalIcon(
-              onPressed: () => setState(() => _showArchived = !_showArchived),
-              icon: Icon(
-                _showArchived ? Icons.visibility_off_rounded : Icons.visibility,
-                size: 18,
-              ),
-              label: Text(_showArchived ? 'Hide Archived' : 'Show Archived'),
-              style: FilledButton.styleFrom(
-                backgroundColor: const Color(0xFFDEE4FF),
-                foregroundColor: AppTheme.brandBlueDeep,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: 8,
-                ),
-                textStyle: Theme.of(
-                  context,
-                ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w700),
-              ),
-            ),
-          ),
-        ],
       ),
       floatingActionButton: (activeAsync.asData?.value.isNotEmpty ?? false)
           ? FloatingActionButton.extended(
@@ -120,7 +91,7 @@ class _TrackManagementHubScreenState
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text('Error: $e')),
         data: (activeTracks) {
-          if (activeTracks.isEmpty && !_showArchived) {
+          if (activeTracks.isEmpty) {
             return _buildEmptyState();
           }
 
@@ -132,58 +103,19 @@ class _TrackManagementHubScreenState
               bottom: 96,
             ),
             children: [
-              if (activeTracks.isNotEmpty) ...[
-                _buildActiveHeader(context, activeTracks.length),
-                ...activeTracks.map(
-                  (track) => Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: LearningTrackCard(
-                      track: track,
-                      showProgress: true,
-                      onTap: () =>
-                          context.router.push(TrackDetailRoute(track: track)),
-                      onLongPress: () => _showArchiveDialog(track),
-                    ),
+              _buildActiveHeader(context, activeTracks.length),
+              ...activeTracks.map(
+                (track) => Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: LearningTrackCard(
+                    track: track,
+                    showProgress: true,
+                    onTap: () =>
+                        context.router.push(TrackDetailRoute(track: track)),
+                    onLongPress: () => _showDeleteDialog(track),
                   ),
                 ),
-              ],
-              if (_showArchived)
-                archivedAsync.when(
-                  loading: () => const Padding(
-                    padding: EdgeInsets.all(16),
-                    child: Center(child: CircularProgressIndicator()),
-                  ),
-                  error: (e, _) => Text('Error loading archived: $e'),
-                  data: (archivedTracks) {
-                    if (archivedTracks.isEmpty) {
-                      return Padding(
-                        padding: const EdgeInsets.fromLTRB(0, 18, 0, 10),
-                        child: Text(
-                          'No archived tracks',
-                          style: Theme.of(context).textTheme.bodyMedium
-                              ?.copyWith(color: AppTheme.brandInkMuted),
-                        ),
-                      );
-                    }
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const SizedBox(height: 10),
-                        _buildArchivedHeader(context),
-                        ...archivedTracks.map(
-                          (track) => Padding(
-                            padding: const EdgeInsets.only(bottom: 10),
-                            child: LearningTrackCard(
-                              track: track,
-                              isArchived: true,
-                              onTap: () => _showReactivateDialog(track),
-                            ),
-                          ),
-                        ),
-                      ],
-                    );
-                  },
-                ),
+              ),
             ],
           );
         },
@@ -220,27 +152,6 @@ class _TrackManagementHubScreenState
               ),
             ),
           ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildArchivedHeader(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(2, 12, 2, 14),
-      child: Row(
-        children: [
-          const Expanded(child: Divider(color: Color(0xFFDDE3EE))),
-          const SizedBox(width: 12),
-          Text(
-            'Archived',
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-              color: AppTheme.brandInkSoft,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-          const SizedBox(width: 12),
-          const Expanded(child: Divider(color: Color(0xFFDDE3EE))),
         ],
       ),
     );
@@ -283,24 +194,12 @@ class _TrackManagementHubScreenState
 
   void _onAddTrackComplete(AddTrackResult result) {
     setState(() => _addingTrack = false);
-    // Refresh is handled in AddTrackFlow after createTrack (plan clear + provider invalidation).
     ScaffoldMessenger.of(
       context,
     ).showSnackBar(SnackBar(content: Text('Track "${result.label}" created')));
   }
 
-  Future<void> _showArchiveDialog(CurriculumTrack track) async {
-    // Archiving the last track used to be hard-blocked, which left users
-    // with no way to "start over" with a different curriculum from the
-    // hub. Now we warn instead — the dashboard's empty state handles
-    // routing to the Add Track flow afterwards.
-    final activeCount = await ref
-        .read(userDatabaseProvider)
-        .trackDao
-        .countActiveTracksForProfile(track.profileId);
-    final isLastTrack = activeCount <= 1;
-
-    if (!mounted) return;
+  Future<void> _showDeleteDialog(CurriculumTrack track) async {
     final curriculum = CurriculumId.values
         .where((c) => c.storageKey == track.curriculumId)
         .firstOrNull;
@@ -309,17 +208,10 @@ class _TrackManagementHubScreenState
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text(
-          isLastTrack ? 'Archive your only track?' : 'Archive Track?',
-        ),
+        title: const Text('Delete Track?'),
         content: Text(
-          isLastTrack
-              ? 'This is your only active track. Archiving "$name" will '
-                    'leave you with no learning scheduled. Your data and '
-                    'progress are preserved and you can reactivate it or '
-                    'add a new track at any time.'
-              : 'Archive "$name"? Your data and progress will be preserved. '
-                    'You can reactivate it later.',
+          'Permanently delete "$name"? All progress and data for this track '
+          'will be removed. This cannot be undone.',
         ),
         actions: [
           TextButton(
@@ -327,63 +219,18 @@ class _TrackManagementHubScreenState
             child: const Text('Cancel'),
           ),
           FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: Theme.of(context).colorScheme.error,
+            ),
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Archive'),
+            child: const Text('Delete'),
           ),
         ],
       ),
     );
 
     if ((confirmed ?? false) && mounted) {
-      final db = ref.read(userDatabaseProvider);
-      await db.trackDao.archiveTrack(
-        track.profileId,
-        curriculum ?? CurriculumId.mishnayos,
-        TrackType.values
-                .where((t) => t.storageKey == track.trackType)
-                .firstOrNull ??
-            TrackType.personal,
-      );
-      await invalidateAfterTrackDataChange(ref, track.profileId);
-    }
-  }
-
-  Future<void> _showReactivateDialog(CurriculumTrack track) async {
-    final curriculum = CurriculumId.values
-        .where((c) => c.storageKey == track.curriculumId)
-        .firstOrNull;
-    final name = curriculum?.displayNameHe ?? track.curriculumId;
-
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Reactivate Track?'),
-        content: Text(
-          'Reactivate "$name"? It will appear on your dashboard again.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Reactivate'),
-          ),
-        ],
-      ),
-    );
-
-    if ((confirmed ?? false) && mounted) {
-      final db = ref.read(userDatabaseProvider);
-      await db.trackDao.unarchiveTrack(
-        track.profileId,
-        curriculum ?? CurriculumId.mishnayos,
-        TrackType.values
-                .where((t) => t.storageKey == track.trackType)
-                .firstOrNull ??
-            TrackType.personal,
-      );
+      await ref.read(userDatabaseProvider).trackDao.deleteTrackAndData(track.id);
       await invalidateAfterTrackDataChange(ref, track.profileId);
     }
   }

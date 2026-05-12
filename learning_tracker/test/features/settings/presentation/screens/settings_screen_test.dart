@@ -78,7 +78,6 @@ void main() {
             curriculumActivationServiceProvider.overrideWith((ref) {
               return CurriculumActivationService(
                 database: database,
-                pushActiveCurricula: (_) async {},
                 pushCurriculumTrack: (_) async {},
                 trackRepository: TrackRepositoryImpl(database: database),
               );

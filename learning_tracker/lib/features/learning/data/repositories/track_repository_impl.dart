@@ -58,7 +58,6 @@ class TrackRepositoryImpl implements TrackRepository {
       'is_active': row.isActive,
       'activated_at': row.activatedAt.toIso8601String(),
       'deactivated_at': row.deactivatedAt?.toIso8601String(),
-      'archived_at': row.archivedAt?.toIso8601String(),
       'pace_reset_date': row.paceResetDate?.toIso8601String(),
     });
   }

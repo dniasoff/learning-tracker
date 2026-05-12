@@ -22,6 +22,12 @@ import 'package:learning_tracker/features/stages/domain/models/schedule_type.dar
 /// - Weekly: review on specific days of the week
 /// - Rolling: always review the last N items
 class SchedulerEngine {
+  /// Max overdue chazarah tasks shown per day. Spreads a large backlog
+  /// (e.g. after a device restore with old completion timestamps) over many
+  /// days instead of dumping all of them on day 1. The remainder stays in
+  /// the overdue queue and surfaces tomorrow.
+  static const int kMaxOverdueChazarahPerDay = 20;
+
   const SchedulerEngine({
     required SchedulerContentRepository contentRepository,
     required SchedulerCompletionRepository completionRepository,
@@ -250,13 +256,18 @@ class SchedulerEngine {
       }).toList();
     }
 
+    // Cap overdue chazarah per day so a large backlog doesn't dump on day 1.
+    final cappedOverdue = overdueTasks.length > kMaxOverdueChazarahPerDay
+        ? overdueTasks.sublist(0, kMaxOverdueChazarahPerDay)
+        : overdueTasks;
+
     // Review-only day: suppress new learning tasks
     if (!config.isStudyDay) {
-      return [...overdueTasks, ...scheduledTasks];
+      return [...cappedOverdue, ...scheduledTasks];
     }
 
     // Combine with priority ordering
-    return [...overdueTasks, ...scheduledTasks, ...newTasks];
+    return [...cappedOverdue, ...scheduledTasks, ...newTasks];
   }
 
   /// Process a delay-based stage for a single item.

@@ -12,18 +12,15 @@ import 'package:learning_tracker/features/learning/domain/repositories/track_rep
 class CurriculumActivationService {
   CurriculumActivationService({
     required UserDatabase database,
-    required Future<void> Function(List<String>)? pushActiveCurricula,
     required Future<void> Function(Map<String, dynamic>)? pushCurriculumTrack,
     required TrackRepository trackRepository,
     int profileId = 0,
   }) : _database = database,
-       _pushActiveCurricula = pushActiveCurricula,
        _pushCurriculumTrack = pushCurriculumTrack,
        _trackRepository = trackRepository,
        _profileId = profileId;
 
   final UserDatabase _database;
-  final Future<void> Function(List<String>)? _pushActiveCurricula;
   final Future<void> Function(Map<String, dynamic>)? _pushCurriculumTrack;
   final TrackRepository _trackRepository;
   final int _profileId;
@@ -33,10 +30,6 @@ class CurriculumActivationService {
     final activeCurricula = await _database.activeCurriculumDao
         .getActiveCurriculaByProfile(_profileId);
     if (activeCurricula.isEmpty) {
-      await _database.activeCurriculumDao.activateByProfile(
-        CurriculumId.mishnayos,
-        _profileId,
-      );
       await _trackRepository.initializeDefaultTracks(
         CurriculumId.mishnayos,
         profileId: _profileId,
@@ -157,12 +150,9 @@ class CurriculumActivationService {
     return track?.id ?? 0;
   }
 
-  /// Sync this profile's active curricula to Firestore.
+  /// Sync this profile's tracks to Firestore.
   Future<void> _syncToFirestore() async {
     try {
-      final activeCurricula = await _database.activeCurriculumDao
-          .getActiveCurriculaByProfile(_profileId);
-      await _pushActiveCurricula?.call(activeCurricula);
       await _syncTracksToFirestore();
     } catch (e) {
       // Silent fail for offline/auth issues — local DB is source of truth
@@ -181,7 +171,6 @@ class CurriculumActivationService {
         'is_active': track.isActive,
         'activated_at': track.activatedAt.toIso8601String(),
         'deactivated_at': track.deactivatedAt?.toIso8601String(),
-        'archived_at': track.archivedAt?.toIso8601String(),
         'pace_reset_date': track.paceResetDate?.toIso8601String(),
       });
     }

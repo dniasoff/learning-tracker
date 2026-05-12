@@ -17,7 +17,6 @@ final curriculumActivationServiceProvider =
 
       return CurriculumActivationService(
         database: database,
-        pushActiveCurricula: syncEngine?.pushActiveCurricula,
         pushCurriculumTrack: syncEngine?.pushCurriculumTrack,
         trackRepository: trackRepository,
         profileId: profileId,

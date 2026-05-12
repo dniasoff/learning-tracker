@@ -158,7 +158,6 @@ class FirestoreDataSource {
         'goals',
         'profile_programs',
         'streak',
-        'active_curricula',
         'curriculum_tracks',
         'notification_settings',
         'gamification_settings',
@@ -216,7 +215,6 @@ class FirestoreDataSource {
         'goals',
         'profile_programs',
         'streak',
-        'active_curricula',
         'curriculum_tracks',
         'notification_settings',
         'gamification_settings',
@@ -805,63 +803,6 @@ class FirestoreDataSource {
 
     return collection.snapshots().map((snapshot) {
       return snapshot.docs.map((doc) => doc.data()).toList();
-    });
-  }
-
-  // ========== Active Curricula Operations ==========
-
-  /// Get active curricula document reference (profile-scoped).
-  DocumentReference<Map<String, dynamic>>? get _activeCurriculaDoc {
-    return _profileScopedDoc?.collection('active_curricula').doc('data');
-  }
-
-  /// Push active curricula list to Firestore.
-  Future<void> pushActiveCurricula(List<String> activeCurricula) async {
-    await _ensureProfilePathReady();
-    final doc = _activeCurriculaDoc;
-    if (doc == null) {
-      throw Exception('User not authenticated');
-    }
-
-    await doc.set({
-      'curricula': activeCurricula,
-      'updated_at': FieldValue.serverTimestamp(),
-    }, SetOptions(merge: true));
-  }
-
-  /// Fetch active curricula list from Firestore.
-  Future<List<String>> fetchActiveCurricula() async {
-    await _ensureProfilePathReady();
-    final doc = _activeCurriculaDoc;
-    if (doc == null) return [];
-
-    final snapshot = await doc.get();
-    final data = snapshot.data();
-    if (data == null) return [];
-
-    final curricula = data['curricula'];
-    if (curricula is List) {
-      return curricula.cast<String>();
-    }
-    return [];
-  }
-
-  /// Listen to real-time active curricula updates.
-  Stream<List<String>> listenToActiveCurricula() {
-    final doc = _activeCurriculaDoc;
-    if (doc == null) {
-      return Stream.value([]);
-    }
-
-    return doc.snapshots().map((snapshot) {
-      final data = snapshot.data();
-      if (data == null) return [];
-
-      final curricula = data['curricula'];
-      if (curricula is List) {
-        return curricula.cast<String>();
-      }
-      return [];
     });
   }
 

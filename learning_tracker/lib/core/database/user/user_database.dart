@@ -18,7 +18,6 @@ import 'package:learning_tracker/core/database/daos/text_download_status_dao.dar
 import 'package:learning_tracker/core/database/daos/track_dao.dart';
 import 'package:learning_tracker/core/database/daos/track_learning_order_dao.dart';
 import 'package:learning_tracker/core/database/daos/user_profile_dao.dart';
-import 'package:learning_tracker/core/database/tables/active_curricula.dart';
 import 'package:learning_tracker/core/database/tables/bookmarks.dart';
 import 'package:learning_tracker/core/database/tables/completions.dart';
 import 'package:learning_tracker/core/database/tables/curriculum_scopes.dart';
@@ -50,7 +49,6 @@ part 'user_database.g.dart';
   tables: [
     UserProfiles,
     Profiles,
-    ActiveCurricula,
     CurriculumTracks,
     CurriculumScopes,
     ProfilePrograms,
@@ -95,7 +93,7 @@ class UserDatabase extends _$UserDatabase {
   UserDatabase(super.e);
 
   @override
-  int get schemaVersion => 7;
+  int get schemaVersion => 9;
 
   @override
   MigrationStrategy get migration {
@@ -142,6 +140,17 @@ class UserDatabase extends _$UserDatabase {
         // v6 → v7: per-track content ordering table.
         if (from < 7) {
           await m.createTable(trackLearningOrder);
+        }
+        // v7 → v8: drop archivedAt — tracks are hard-deleted, not archived.
+        if (from < 8) {
+          await m.alterTable(
+            TableMigration(curriculumTracks),
+          );
+        }
+        // v8 → v9: drop active_curricula — active curricula are now derived
+        // from curriculum_tracks WHERE is_active = 1. Single source of truth.
+        if (from < 9) {
+          await m.deleteTable('active_curricula');
         }
       },
     );

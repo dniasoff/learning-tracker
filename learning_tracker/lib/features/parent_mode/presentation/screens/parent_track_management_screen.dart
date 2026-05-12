@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
@@ -29,7 +28,6 @@ class ParentTrackManagementScreen extends ConsumerStatefulWidget {
 
 class _ParentTrackManagementScreenState
     extends ConsumerState<ParentTrackManagementScreen> {
-  bool _showArchived = true;
   bool _addingTrack = false;
 
   @override
@@ -48,14 +46,8 @@ class _ParentTrackManagementScreenState
     }
 
     final activeAsync = ref.watch(tm.activeTracksProvider);
-    final archivedAsync = ref.watch(tm.archivedTracksProvider);
 
-    final hideFabForCenterEmptyState = activeAsync.maybeWhen(
-      data: (tracks) => tracks.isEmpty && !_showArchived,
-      orElse: () => false,
-    );
-    final showAddTrackFab =
-        !activeAsync.isLoading && !hideFabForCenterEmptyState;
+    final showAddTrackFab = !activeAsync.isLoading;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FC),
@@ -75,30 +67,6 @@ class _ParentTrackManagementScreenState
             color: AppTheme.brandBlueDeep,
           ),
         ),
-        actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 12),
-            child: FilledButton.tonalIcon(
-              onPressed: () => setState(() => _showArchived = !_showArchived),
-              icon: Icon(
-                _showArchived ? Icons.visibility_off_rounded : Icons.visibility,
-                size: 18,
-              ),
-              label: Text(_showArchived ? 'Hide Archived' : 'Show Archived'),
-              style: FilledButton.styleFrom(
-                backgroundColor: const Color(0xFFDEE4FF),
-                foregroundColor: AppTheme.brandBlueDeep,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: 8,
-                ),
-                textStyle: Theme.of(
-                  context,
-                ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w700),
-              ),
-            ),
-          ),
-        ],
       ),
       floatingActionButton: showAddTrackFab
           ? FloatingActionButton.extended(
@@ -130,7 +98,7 @@ class _ParentTrackManagementScreenState
         error: (e, _) =>
             Center(child: Text(l10n.errorWithMessage(e.toString()))),
         data: (activeTracks) {
-          if (activeTracks.isEmpty && !_showArchived) {
+          if (activeTracks.isEmpty) {
             return _buildEmptyState(l10n);
           }
 
@@ -142,58 +110,19 @@ class _ParentTrackManagementScreenState
               bottom: 96,
             ),
             children: [
-              if (activeTracks.isNotEmpty) ...[
-                _buildActiveHeader(context, activeTracks.length),
-                ...activeTracks.map(
-                  (track) => Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: LearningTrackCard(
-                      track: track,
-                      showProgress: true,
-                      onTap: () =>
-                          context.router.push(TrackDetailRoute(track: track)),
-                      onLongPress: () => _showArchiveDialog(track),
-                    ),
+              _buildActiveHeader(context, activeTracks.length),
+              ...activeTracks.map(
+                (track) => Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: LearningTrackCard(
+                    track: track,
+                    showProgress: true,
+                    onTap: () =>
+                        context.router.push(TrackDetailRoute(track: track)),
+                    onLongPress: () => _showDeleteDialog(track),
                   ),
                 ),
-              ],
-              if (_showArchived)
-                archivedAsync.when(
-                  loading: () => const Padding(
-                    padding: EdgeInsets.all(16),
-                    child: Center(child: CircularProgressIndicator()),
-                  ),
-                  error: (e, _) => Text('Error loading archived: $e'),
-                  data: (archivedTracks) {
-                    if (archivedTracks.isEmpty) {
-                      return Padding(
-                        padding: const EdgeInsets.fromLTRB(0, 18, 0, 10),
-                        child: Text(
-                          'No archived tracks',
-                          style: Theme.of(context).textTheme.bodyMedium
-                              ?.copyWith(color: AppTheme.brandInkMuted),
-                        ),
-                      );
-                    }
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const SizedBox(height: 10),
-                        _buildArchivedHeader(context),
-                        ...archivedTracks.map(
-                          (track) => Padding(
-                            padding: const EdgeInsets.only(bottom: 10),
-                            child: LearningTrackCard(
-                              track: track,
-                              isArchived: true,
-                              onTap: () => _showReactivateDialog(track),
-                            ),
-                          ),
-                        ),
-                      ],
-                    );
-                  },
-                ),
+              ),
             ],
           );
         },
@@ -230,27 +159,6 @@ class _ParentTrackManagementScreenState
               ),
             ),
           ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildArchivedHeader(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(2, 12, 2, 14),
-      child: Row(
-        children: [
-          const Expanded(child: Divider(color: Color(0xFFDDE3EE))),
-          const SizedBox(width: 12),
-          Text(
-            'Archived',
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-              color: AppTheme.brandInkSoft,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-          const SizedBox(width: 12),
-          const Expanded(child: Divider(color: Color(0xFFDDE3EE))),
         ],
       ),
     );
@@ -293,7 +201,6 @@ class _ParentTrackManagementScreenState
 
   void _onAddTrackComplete(AddTrackResult result) {
     setState(() => _addingTrack = false);
-    // Refresh is handled in AddTrackFlow after createTrack (plan clear + invalidation).
     if (!mounted) return;
     final l10n = AppLocalizations.of(context)!;
     ScaffoldMessenger.of(
@@ -301,20 +208,7 @@ class _ParentTrackManagementScreenState
     ).showSnackBar(SnackBar(content: Text(l10n.trackCreated(result.label))));
   }
 
-  Future<void> _showArchiveDialog(CurriculumTrack track) async {
-    final activeCount = await ref
-        .read(userDatabaseProvider)
-        .trackDao
-        .countActiveTracksForProfile(track.profileId);
-    if (activeCount <= 1) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Cannot archive your only active track')),
-      );
-      return;
-    }
-
-    if (!mounted) return;
+  Future<void> _showDeleteDialog(CurriculumTrack track) async {
     final curriculum = CurriculumId.values
         .where((c) => c.storageKey == track.curriculumId)
         .firstOrNull;
@@ -323,10 +217,10 @@ class _ParentTrackManagementScreenState
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Archive Track?'),
+        title: const Text('Delete Track?'),
         content: Text(
-          'Archive "$name"? Your data and progress will be preserved. '
-          'You can reactivate it later.',
+          'Permanently delete "$name"? All progress and data for this track '
+          'will be removed. This cannot be undone.',
         ),
         actions: [
           TextButton(
@@ -334,63 +228,18 @@ class _ParentTrackManagementScreenState
             child: const Text('Cancel'),
           ),
           FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: Theme.of(context).colorScheme.error,
+            ),
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Archive'),
+            child: const Text('Delete'),
           ),
         ],
       ),
     );
 
     if ((confirmed ?? false) && mounted) {
-      final db = ref.read(userDatabaseProvider);
-      await db.trackDao.archiveTrack(
-        track.profileId,
-        curriculum ?? CurriculumId.mishnayos,
-        TrackType.values
-                .where((t) => t.storageKey == track.trackType)
-                .firstOrNull ??
-            TrackType.personal,
-      );
-      await invalidateAfterTrackDataChange(ref, track.profileId);
-    }
-  }
-
-  Future<void> _showReactivateDialog(CurriculumTrack track) async {
-    final curriculum = CurriculumId.values
-        .where((c) => c.storageKey == track.curriculumId)
-        .firstOrNull;
-    final name = curriculum?.displayNameHe ?? track.curriculumId;
-
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Reactivate Track?'),
-        content: Text(
-          'Reactivate "$name"? It will appear on your dashboard again.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Reactivate'),
-          ),
-        ],
-      ),
-    );
-
-    if ((confirmed ?? false) && mounted) {
-      final db = ref.read(userDatabaseProvider);
-      await db.trackDao.unarchiveTrack(
-        track.profileId,
-        curriculum ?? CurriculumId.mishnayos,
-        TrackType.values
-                .where((t) => t.storageKey == track.trackType)
-                .firstOrNull ??
-            TrackType.personal,
-      );
+      await ref.read(userDatabaseProvider).trackDao.deleteTrackAndData(track.id);
       await invalidateAfterTrackDataChange(ref, track.profileId);
     }
   }

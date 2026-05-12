@@ -30,7 +30,6 @@ Future<void> invalidateAfterTrackDataChange(
   // on daily-plan deletion and the broad invalidation sweep below.
   ref.invalidate(dashboardActiveTracksStreamProvider);
   ref.invalidate(activeTracksProvider);
-  ref.invalidate(archivedTracksProvider);
 
   await db.dailyPlanDao.deletePlanForDay(
     profileId: profileId,

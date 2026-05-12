@@ -98,6 +98,10 @@ class DailyPlanDao extends DatabaseAccessor<UserDatabase>
     });
   }
 
+  /// Delete all plan rows for a specific track (used when hard-deleting a track).
+  Future<void> deletePlansByTrack(int trackId) =>
+      (delete(dailyPlans)..where((t) => t.trackId.equals(trackId))).go();
+
   /// Remove all snapshot rows for a single local day/profile pair.
   Future<void> deletePlanForDay({
     required int profileId,

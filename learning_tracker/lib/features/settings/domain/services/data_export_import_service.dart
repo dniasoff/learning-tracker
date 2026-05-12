@@ -13,7 +13,6 @@ class ImportPreview {
     required this.pointConfigCount,
     required this.bookmarkCount,
     required this.learningOrderCount,
-    required this.activeCurriculaCount,
     required this.curriculumTrackCount,
     required this.userProfileCount,
     required this.exportedAt,
@@ -27,7 +26,6 @@ class ImportPreview {
   final int pointConfigCount;
   final int bookmarkCount;
   final int learningOrderCount;
-  final int activeCurriculaCount;
   final int curriculumTrackCount;
   final int userProfileCount;
   final String exportedAt;
@@ -41,7 +39,6 @@ class ImportPreview {
       pointConfigCount +
       bookmarkCount +
       learningOrderCount +
-      activeCurriculaCount +
       curriculumTrackCount +
       userProfileCount;
 }
@@ -66,7 +63,6 @@ class DataExportImportService {
     'pointConfigs',
     'bookmarks',
     'learningOrder',
-    'activeCurricula',
     'curriculumTracks',
     'userProfiles',
   ];
@@ -81,9 +77,6 @@ class DataExportImportService {
     final bookmarks = await _database.bookmarkDao.getAllBookmarks();
     final learningOrders = await _database.learningOrderDao
         .getAllLearningOrders();
-    final activeCurricula = await _database
-        .select(_database.activeCurricula)
-        .get();
     final curriculumTracks = await _database
         .select(_database.curriculumTracks)
         .get();
@@ -178,14 +171,6 @@ class DataExportImportService {
             },
           )
           .toList(),
-      'activeCurricula': activeCurricula
-          .map(
-            (ac) => {
-              'curriculumId': ac.curriculumId,
-              'activatedAt': ac.activatedAt.toIso8601String(),
-            },
-          )
-          .toList(),
       'curriculumTracks': curriculumTracks
           .map(
             (t) => {
@@ -249,7 +234,6 @@ class DataExportImportService {
       pointConfigCount: (data['pointConfigs'] as List).length,
       bookmarkCount: (data['bookmarks'] as List).length,
       learningOrderCount: (data['learningOrder'] as List).length,
-      activeCurriculaCount: (data['activeCurricula'] as List).length,
       curriculumTrackCount: (data['curriculumTracks'] as List).length,
       userProfileCount: (data['userProfiles'] as List).length,
       exportedAt: data['exportedAt'] as String? ?? 'unknown',
@@ -276,7 +260,6 @@ class DataExportImportService {
       await _database.delete(_database.pointConfigs).go();
       await _database.delete(_database.bookmarks).go();
       await _database.delete(_database.learningOrder).go();
-      await _database.delete(_database.activeCurricula).go();
       await _database.delete(_database.curriculumTracks).go();
       await _database.delete(_database.userProfiles).go();
 
@@ -396,21 +379,6 @@ class DataExportImportService {
                 curriculumId: map['curriculumId'] as String,
                 sefariaRef: map['sefariaRef'] as String,
                 userSortOrder: map['userSortOrder'] as int,
-              ),
-            );
-      }
-
-      // Import active curricula
-      for (final a in data['activeCurricula'] as List) {
-        final map = a as Map<String, dynamic>;
-        await _database
-            .into(_database.activeCurricula)
-            .insert(
-              ActiveCurriculaCompanion.insert(
-                curriculumId: map['curriculumId'] as String,
-                activatedAt: map['activatedAt'] != null
-                    ? DateTime.parse(map['activatedAt'] as String)
-                    : DateTime.now(),
               ),
             );
       }

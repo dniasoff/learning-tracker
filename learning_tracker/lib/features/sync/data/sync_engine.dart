@@ -58,7 +58,6 @@ class SyncEngine {
   StreamSubscription<Map<String, dynamic>?>? _streakSubscription;
   StreamSubscription<List<Map<String, dynamic>>>? _goalsSubscription;
   StreamSubscription<List<Map<String, dynamic>>>? _profileProgramsSubscription;
-  StreamSubscription<List<String>>? _activeCurriculaSubscription;
   StreamSubscription<List<Map<String, dynamic>>>? _ledgerSubscription;
   StreamSubscription<List<Map<String, dynamic>>>? _curriculumTracksSubscription;
   StreamSubscription<Map<String, dynamic>?>? _notificationSettingsSubscription;
@@ -92,7 +91,6 @@ class SyncEngine {
   bool _mergingStreak = false;
   bool _mergingGoals = false;
   bool _mergingProfilePrograms = false;
-  bool _mergingActiveCurricula = false;
   bool _mergingLedgerEntries = false;
   bool _mergingCurriculumTracks = false;
   bool _mergingNotificationSettings = false;
@@ -229,10 +227,6 @@ class SyncEngine {
         .listenToProfilePrograms()
         .listen(_onProfileProgramsUpdate, onError: _handleListenerError);
 
-    _activeCurriculaSubscription = _firestoreDataSource
-        .listenToActiveCurricula()
-        .listen(_onActiveCurriculaUpdate, onError: _handleListenerError);
-
     _ledgerSubscription = _firestoreDataSource.listenToLedgerEntries().listen(
       _onLedgerUpdate,
       onError: _handleListenerError,
@@ -271,7 +265,6 @@ class SyncEngine {
     await _streakSubscription?.cancel();
     await _goalsSubscription?.cancel();
     await _profileProgramsSubscription?.cancel();
-    await _activeCurriculaSubscription?.cancel();
     await _ledgerSubscription?.cancel();
     await _curriculumTracksSubscription?.cancel();
     await _notificationSettingsSubscription?.cancel();
@@ -284,7 +277,6 @@ class SyncEngine {
     _streakSubscription = null;
     _goalsSubscription = null;
     _profileProgramsSubscription = null;
-    _activeCurriculaSubscription = null;
     _ledgerSubscription = null;
     _curriculumTracksSubscription = null;
     _notificationSettingsSubscription = null;
@@ -412,7 +404,6 @@ class SyncEngine {
       ds.fetchProfilePrograms(),
       ds.fetchStreak(),
       ds.fetchLedgerEntries(),
-      ds.fetchActiveCurricula(),
       ds.fetchCurriculumTracks(),
       ds.fetchNotificationSettings(),
       ds.fetchGamificationSettings(),
@@ -445,24 +436,20 @@ class SyncEngine {
       results[6] as List<Map<String, dynamic>>,
       fallbackProfileId: profileId,
     );
-    await _mergeActiveCurricula(
-      results[7] as List<String>,
-      profileId: profileId,
-    );
     await _mergeCurriculumTracks(
-      results[8] as List<Map<String, dynamic>>,
+      results[7] as List<Map<String, dynamic>>,
       profileId: profileId,
     );
 
     if (mergeNotificationSettings) {
-      await _mergeNotificationSettings(results[9] as Map<String, dynamic>?);
+      await _mergeNotificationSettings(results[8] as Map<String, dynamic>?);
     }
     await _mergeGamificationSettings(
-      results[10] as Map<String, dynamic>?,
+      results[9] as Map<String, dynamic>?,
       profileId: profileId,
     );
     await _mergeUiPreferences(
-      results[11] as Map<String, dynamic>?,
+      results[10] as Map<String, dynamic>?,
       profileId: profileId,
     );
   }
@@ -918,15 +905,6 @@ class SyncEngine {
       _withQueueTargetProfile({'curriculum_id': curriculumStorageKey}),
     );
     await _afterEnqueueForBackgroundFlush(context: 'profile program delete');
-  }
-
-  /// Push active curricula list to Firestore after local write.
-  Future<void> pushActiveCurricula(List<String> activeCurricula) async {
-    await _offlineQueue.enqueueActiveCurricula(
-      activeCurricula,
-      targetProfileId: _firestoreDataSource.profileId,
-    );
-    await _afterEnqueueForBackgroundFlush(context: 'active curricula');
   }
 
   /// Push curriculum-track state to Firestore after local write.
@@ -1733,46 +1711,6 @@ class SyncEngine {
     // the completions table. No local write needed.
   }
 
-  /// Merge active curricula from Firestore.
-  ///
-  /// Activates any remote curriculum not yet present locally, scoped to the
-  /// syncing profile. Does not deactivate — deactivation flows through the
-  /// repository so user intent is preserved.
-  Future<void> _mergeActiveCurricula(
-    List<String> remoteCurricula, {
-    required int profileId,
-  }) async {
-    _logger.debug(
-      'Merging ${remoteCurricula.length} active curricula from Firestore',
-    );
-    if (remoteCurricula.isEmpty) return;
-
-    try {
-      final localCurricula = await _database.activeCurriculumDao
-          .getActiveCurriculaByProfile(profileId);
-
-      for (final curriculumKey in remoteCurricula) {
-        if (!localCurricula.contains(curriculumKey)) {
-          final curriculumId = CurriculumId.values
-              .cast<CurriculumId?>()
-              .firstWhere(
-                (c) => c!.storageKey == curriculumKey,
-                orElse: () => null,
-              );
-          if (curriculumId != null) {
-            await _database.activeCurriculumDao.activateByProfile(
-              curriculumId,
-              profileId,
-            );
-          }
-        }
-      }
-    } catch (e) {
-      // ignore: avoid_catches_without_on_clauses — intentional merge error boundary
-      _logger.warning('Failed to merge active curricula: $e');
-    }
-  }
-
   /// Merge curriculum tracks from Firestore.
   ///
   /// Upserts each remote track row keyed by (profileId, curriculumId,
@@ -1794,7 +1732,6 @@ class SyncEngine {
         final isActive = remote['is_active'] as bool? ?? true;
         final activatedAt = _parseTimestamp(remote['activated_at']);
         final deactivatedAt = _parseTimestamp(remote['deactivated_at']);
-        final archivedAt = _parseTimestamp(remote['archived_at']);
         final paceResetDate = _parseTimestamp(remote['pace_reset_date']);
 
         if (curriculumKey == null ||
@@ -1841,7 +1778,6 @@ class SyncEngine {
                   isActive: Value(isActive),
                   activatedAt: activatedAt,
                   deactivatedAt: Value(deactivatedAt),
-                  archivedAt: Value(archivedAt),
                   paceResetDate: Value(paceResetDate),
                 ),
               );
@@ -1853,20 +1789,11 @@ class SyncEngine {
               isActive: Value(isActive),
               activatedAt: Value(activatedAt),
               deactivatedAt: Value(deactivatedAt),
-              archivedAt: Value(archivedAt),
               paceResetDate: Value(paceResetDate),
             ),
           );
         }
 
-        // Keep active_curricula table consistent even when the dedicated
-        // active_curricula document is missing in Firestore.
-        if (isActive && archivedAt == null) {
-          await _database.activeCurriculumDao.activateByProfile(
-            curriculumId,
-            profileId,
-          );
-        }
       } catch (e) {
         // ignore: avoid_catches_without_on_clauses — intentional merge-loop error boundary
         _logger.warning('Failed to merge curriculum track: $e');
@@ -2121,7 +2048,6 @@ class SyncEngine {
           'is_active': track.isActive,
           'activated_at': track.activatedAt.toIso8601String(),
           'deactivated_at': track.deactivatedAt?.toIso8601String(),
-          'archived_at': track.archivedAt?.toIso8601String(),
           'pace_reset_date': track.paceResetDate?.toIso8601String(),
         });
         pushed++;
@@ -2201,9 +2127,6 @@ class SyncEngine {
     if (profileId == null) return profile;
     final mode = (profile['mode'] as String?)?.toLowerCase();
     final isChildProfile = mode == 'child';
-
-    final activeCurricula = await _database.activeCurriculumDao
-        .getActiveCurriculaByProfile(profileId);
 
     final stageRows = await (_database.select(
       _database.stageDefinitions,
@@ -2289,7 +2212,6 @@ class SyncEngine {
 
     final enriched = <String, dynamic>{
       ...profile,
-      'active_curricula': activeCurricula,
       'progress_summary': {
         'total_completions': completionStats.read(totalCompletionsExpr) ?? 0,
         'last_completion_at': lastCompletion?.completedAt.toIso8601String(),
@@ -2415,23 +2337,6 @@ class SyncEngine {
       );
     } finally {
       _mergingProfilePrograms = false;
-    }
-  }
-
-  Future<void> _onActiveCurriculaUpdate(List<String> curricula) async {
-    if (_mergingActiveCurricula) return;
-    _mergingActiveCurricula = true;
-    _consecutiveListenerErrors = 0;
-    try {
-      _logger.debug(
-        'Received ${curricula.length} active curricula from listener',
-      );
-      await _mergeActiveCurricula(
-        curricula,
-        profileId: _firestoreDataSource.profileId,
-      );
-    } finally {
-      _mergingActiveCurricula = false;
     }
   }
 
@@ -2968,14 +2873,6 @@ class SyncEngine {
       }
       _logger.debug('Pushed ${ledgerEntries.length} ledger entries');
 
-      // --- Active curricula (scoped to the syncing profile) ---
-      final activeCurricula = await _database.activeCurriculumDao
-          .getActiveCurriculaByProfile(_firestoreDataSource.profileId);
-      if (activeCurricula.isNotEmpty) {
-        await _firestoreDataSource.pushActiveCurricula(activeCurricula);
-        _logger.debug('Pushed ${activeCurricula.length} active curricula');
-      }
-
       // --- Curriculum tracks (track activation/archival state) ---
       final tracks = await _database.trackDao.getAllForProfile(
         _firestoreDataSource.profileId,
@@ -2989,7 +2886,6 @@ class SyncEngine {
           'is_active': t.isActive,
           'activated_at': t.activatedAt.toIso8601String(),
           'deactivated_at': t.deactivatedAt?.toIso8601String(),
-          'archived_at': t.archivedAt?.toIso8601String(),
           'pace_reset_date': t.paceResetDate?.toIso8601String(),
         });
       }
