@@ -75,10 +75,10 @@ const _kOnboardingTransliterationVariant = 'onboarding_transliteration_variant';
 const kOnboardingComplete = 'onboarding_complete';
 
 class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
-  String _selectedLanguage = 'en';
+  String _selectedLanguage = 'he';
 
   /// `true` = Hebrew calendar; `false` = Gregorian (matches UI labels).
-  bool _useHebrewCalendar = false;
+  bool _useHebrewCalendar = true;
 
   /// `true` = render Hebrew text with nikud (vowel marks); `false` = strip.
   bool _showNikud = true;
@@ -394,8 +394,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     _createdProfileId = null;
     _profileName = null;
     _profileMode = 'adult';
-    _useHebrewCalendar = false;
-    _selectedLanguage = 'en';
+    _useHebrewCalendar = true;
+    _selectedLanguage = 'he';
     _nameError = null;
     _trackCount = 0;
     _lastTrackLabel = null;
@@ -714,94 +714,6 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Row(
-                    children: [
-                      const Icon(
-                        Icons.calendar_month_rounded,
-                        size: 22,
-                        color: AppTheme.brandInk,
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        'Preferred Calendar',
-                        style: theme.textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.w800,
-                          color: AppTheme.brandInk,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-                  pillPair(
-                    leftLabel: 'English',
-                    rightLabel: 'Hebrew',
-                    leftSelected: !_useHebrewCalendar,
-                    onLeft: () => setState(() => _useHebrewCalendar = false),
-                    onRight: () => setState(() => _useHebrewCalendar = true),
-                  ),
-                  const SizedBox(height: 18),
-                  Row(
-                    children: [
-                      const Icon(
-                        Icons.language_rounded,
-                        size: 22,
-                        color: AppTheme.brandInk,
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        'App Language',
-                        style: theme.textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.w800,
-                          color: AppTheme.brandInk,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-                  pillPair(
-                    leftLabel: 'English',
-                    rightLabel: 'עברית',
-                    leftSelected: _selectedLanguage == 'en',
-                    onLeft: () => setState(() => _selectedLanguage = 'en'),
-                    onRight: () => setState(() => _selectedLanguage = 'he'),
-                  ),
-                  if (_selectedLanguage == 'en') ...[
-                    const SizedBox(height: 18),
-                    Row(
-                      children: [
-                        const Icon(
-                          Icons.translate_rounded,
-                          size: 22,
-                          color: AppTheme.brandInk,
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          'Pronunciation',
-                          style: theme.textTheme.titleSmall?.copyWith(
-                            fontWeight: FontWeight.w800,
-                            color: AppTheme.brandInk,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 10),
-                    pillPair(
-                      leftLabel: 'Ashkenazi',
-                      rightLabel: 'Sephardi',
-                      leftSelected:
-                          _transliterationVariant ==
-                          TransliterationVariant.ashkenazi,
-                      onLeft: () => setState(
-                        () => _transliterationVariant =
-                            TransliterationVariant.ashkenazi,
-                      ),
-                      onRight: () => setState(
-                        () => _transliterationVariant =
-                            TransliterationVariant.sephardi,
-                      ),
-                    ),
-                  ],
-                  const SizedBox(height: 18),
                   Row(
                     children: [
                       const Icon(
