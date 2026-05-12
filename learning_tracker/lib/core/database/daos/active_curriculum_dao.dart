@@ -21,20 +21,19 @@ class ActiveCurriculumDao extends DatabaseAccessor<UserDatabase>
 
   /// Returns list of active curriculum IDs for a specific profile.
   Future<List<String>> getActiveCurriculaByProfile(int profileId) async {
-    final rows = await (select(curriculumTracks)
-          ..where(
-            (t) => t.profileId.equals(profileId) & t.isActive.equals(true),
-          ))
-        .get();
+    final rows =
+        await (select(curriculumTracks)..where(
+              (t) => t.profileId.equals(profileId) & t.isActive.equals(true),
+            ))
+            .get();
     return rows.map((r) => r.curriculumId).toSet().toList();
   }
 
   /// Watch stream of active curriculum IDs for a specific profile.
   Stream<List<String>> watchActiveCurriculaByProfile(int profileId) {
-    return (select(curriculumTracks)
-          ..where(
-            (t) => t.profileId.equals(profileId) & t.isActive.equals(true),
-          ))
+    return (select(curriculumTracks)..where(
+          (t) => t.profileId.equals(profileId) & t.isActive.equals(true),
+        ))
         .watch()
         .map((rows) => rows.map((r) => r.curriculumId).toSet().toList());
   }
@@ -44,15 +43,16 @@ class ActiveCurriculumDao extends DatabaseAccessor<UserDatabase>
     CurriculumId curriculum,
     int profileId,
   ) async {
-    final row = await (select(curriculumTracks)
-          ..where(
-            (t) =>
-                t.profileId.equals(profileId) &
-                t.curriculumId.equals(curriculum.storageKey) &
-                t.isActive.equals(true),
-          )
-          ..limit(1))
-        .getSingleOrNull();
+    final row =
+        await (select(curriculumTracks)
+              ..where(
+                (t) =>
+                    t.profileId.equals(profileId) &
+                    t.curriculumId.equals(curriculum.storageKey) &
+                    t.isActive.equals(true),
+              )
+              ..limit(1))
+            .getSingleOrNull();
     return row != null;
   }
 
@@ -93,13 +93,13 @@ class ActiveCurriculumDao extends DatabaseAccessor<UserDatabase>
       );
     }
 
-    final tracks = await (select(curriculumTracks)
-          ..where(
-            (t) =>
-                t.profileId.equals(profileId) &
-                t.curriculumId.equals(curriculum.storageKey),
-          ))
-        .get();
+    final tracks =
+        await (select(curriculumTracks)..where(
+              (t) =>
+                  t.profileId.equals(profileId) &
+                  t.curriculumId.equals(curriculum.storageKey),
+            ))
+            .get();
 
     for (final track in tracks) {
       await attachedDatabase.trackDao.deleteTrackAndData(track.id);

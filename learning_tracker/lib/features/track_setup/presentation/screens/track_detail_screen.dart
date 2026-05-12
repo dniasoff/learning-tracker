@@ -411,7 +411,10 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
     );
 
     if ((confirmed ?? false) && mounted) {
-      await ref.read(userDatabaseProvider).trackDao.deleteTrackAndData(track.id);
+      await ref
+          .read(userDatabaseProvider)
+          .trackDao
+          .deleteTrackAndData(track.id);
       await invalidateAfterTrackDataChange(ref, track.profileId);
       if (mounted) context.router.pop();
     }

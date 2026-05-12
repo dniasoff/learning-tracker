@@ -782,7 +782,6 @@ void main() {
 
               final activationService = CurriculumActivationService(
                 database: db,
-                pushActiveCurricula: (_) async {},
                 pushCurriculumTrack: (_) async {},
                 trackRepository: mockTrackRepo,
               );
@@ -2704,7 +2703,6 @@ void main() {
 
           final service = CurriculumActivationService(
             database: db,
-            pushActiveCurricula: (_) async {},
             pushCurriculumTrack: (_) async {},
             trackRepository: mockTrackRepo,
           );

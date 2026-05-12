@@ -230,7 +230,10 @@ class _TrackManagementHubScreenState
     );
 
     if ((confirmed ?? false) && mounted) {
-      await ref.read(userDatabaseProvider).trackDao.deleteTrackAndData(track.id);
+      await ref
+          .read(userDatabaseProvider)
+          .trackDao
+          .deleteTrackAndData(track.id);
       await invalidateAfterTrackDataChange(ref, track.profileId);
     }
   }

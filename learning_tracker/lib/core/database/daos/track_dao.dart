@@ -129,8 +129,7 @@ class TrackDao extends DatabaseAccessor<UserDatabase> with _$TrackDaoMixin {
   Future<List<CurriculumTrack>> getActiveTracksForProfile(int profileId) =>
       (select(curriculumTracks)
             ..where(
-              (t) =>
-                  t.profileId.equals(profileId) & t.isActive.equals(true),
+              (t) => t.profileId.equals(profileId) & t.isActive.equals(true),
             )
             ..orderBy([(t) => OrderingTerm.asc(t.curriculumId)]))
           .get();
@@ -144,8 +143,7 @@ class TrackDao extends DatabaseAccessor<UserDatabase> with _$TrackDaoMixin {
   Stream<List<CurriculumTrack>> watchActiveTracksForProfile(int profileId) {
     return (select(curriculumTracks)
           ..where(
-            (t) =>
-                t.profileId.equals(profileId) & t.isActive.equals(true),
+            (t) => t.profileId.equals(profileId) & t.isActive.equals(true),
           )
           ..orderBy([(t) => OrderingTerm.asc(t.curriculumId)]))
         .watch();
@@ -170,9 +168,7 @@ class TrackDao extends DatabaseAccessor<UserDatabase> with _$TrackDaoMixin {
       await db.curriculumScopeDao.clearScopesForTrack(trackId);
       await db.studyDayConfigDao.deleteConfigsForTrack(trackId);
       await db.trackLearningOrderDao.deleteByTrack(trackId);
-      await (delete(curriculumTracks)
-            ..where((t) => t.id.equals(trackId)))
-          .go();
+      await (delete(curriculumTracks)..where((t) => t.id.equals(trackId))).go();
       final curriculum = CurriculumId.values
           .where((c) => c.storageKey == track.curriculumId)
           .firstOrNull;
@@ -244,8 +240,7 @@ class TrackDao extends DatabaseAccessor<UserDatabase> with _$TrackDaoMixin {
   Future<int> countActiveTracksForProfile(int profileId) async {
     final tracks =
         await (select(curriculumTracks)..where(
-              (t) =>
-                  t.profileId.equals(profileId) & t.isActive.equals(true),
+              (t) => t.profileId.equals(profileId) & t.isActive.equals(true),
             ))
             .get();
     return tracks.length;

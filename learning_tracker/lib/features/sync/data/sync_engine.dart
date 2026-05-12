@@ -1793,7 +1793,6 @@ class SyncEngine {
             ),
           );
         }
-
       } catch (e) {
         // ignore: avoid_catches_without_on_clauses — intentional merge-loop error boundary
         _logger.warning('Failed to merge curriculum track: $e');
