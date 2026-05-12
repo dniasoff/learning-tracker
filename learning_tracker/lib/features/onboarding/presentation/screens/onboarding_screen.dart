@@ -75,7 +75,7 @@ const _kOnboardingTransliterationVariant = 'onboarding_transliteration_variant';
 const kOnboardingComplete = 'onboarding_complete';
 
 class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
-  String _selectedLanguage = 'he';
+  String _selectedLanguage = 'en';
 
   /// `true` = Hebrew calendar; `false` = Gregorian (matches UI labels).
   bool _useHebrewCalendar = true;
@@ -166,7 +166,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     if (profileName != null) _profileName = profileName;
     if (profileMode != null) _profileMode = profileMode;
     if (savedLanguage != null) _selectedLanguage = savedLanguage;
-    _useHebrewCalendar = prefs.getBool(_kOnboardingHebrewCalendar) ?? false;
+    _useHebrewCalendar = prefs.getBool(_kOnboardingHebrewCalendar) ?? true;
     _showNikud = prefs.getBool(_kOnboardingShowNikud) ?? true;
     final savedVariant = prefs.getString(_kOnboardingTransliterationVariant);
     if (savedVariant == 'sephardi') {
@@ -395,7 +395,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     _profileName = null;
     _profileMode = 'adult';
     _useHebrewCalendar = true;
-    _selectedLanguage = 'he';
+    _selectedLanguage = 'en';
     _nameError = null;
     _trackCount = 0;
     _lastTrackLabel = null;
