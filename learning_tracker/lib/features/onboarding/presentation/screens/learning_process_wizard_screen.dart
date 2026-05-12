@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/constants/hebrew_terms.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/services/learning_program_service.dart';
 import 'package:learning_tracker/features/onboarding/domain/models/wizard_result_wrapper.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/learning_process_wizard_service.dart';
@@ -16,7 +18,7 @@ export 'package:learning_tracker/features/onboarding/domain/models/wizard_result
 /// 1. Follow a program (preset)
 /// 2. Custom schedule (3-step builder)
 /// 3. No formal review (Learn only)
-class LearningProcessWizardScreen extends StatefulWidget {
+class LearningProcessWizardScreen extends ConsumerStatefulWidget {
   const LearningProcessWizardScreen({
     required this.curriculumId,
     required this.presets,
@@ -36,7 +38,7 @@ class LearningProcessWizardScreen extends StatefulWidget {
   final bool skipChooseMethod;
 
   @override
-  State<LearningProcessWizardScreen> createState() =>
+  ConsumerState<LearningProcessWizardScreen> createState() =>
       _LearningProcessWizardScreenState();
 }
 
@@ -49,7 +51,7 @@ enum _WizardStep {
 }
 
 class _LearningProcessWizardScreenState
-    extends State<LearningProcessWizardScreen> {
+    extends ConsumerState<LearningProcessWizardScreen> {
   late _WizardStep _step;
 
   // Preset selection
@@ -153,7 +155,9 @@ class _LearningProcessWizardScreenState
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.curriculumId.displayNameHe),
+        title: Text(
+          curriculumLabelText(ref, curriculum: widget.curriculumId),
+        ),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () {
@@ -197,7 +201,7 @@ class _LearningProcessWizardScreenState
             ),
             const SizedBox(height: 8),
             Text(
-              widget.curriculumId.displayNameHe,
+              curriculumLabelText(ref, curriculum: widget.curriculumId),
               style: theme.textTheme.bodyLarge?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
               ),

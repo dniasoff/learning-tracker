@@ -20,7 +20,6 @@ import 'package:learning_tracker/features/profiles/domain/models/profile_model.d
 import 'package:learning_tracker/features/profiles/domain/repositories/profile_repository.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/hebrew_date_provider.dart';
-import 'package:learning_tracker/features/settings/presentation/providers/hebrew_terms_provider.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/transliteration_variant_provider.dart';
 import 'package:learning_tracker/features/track_setup/domain/entities/add_track_result.dart';
 import 'package:learning_tracker/features/track_setup/presentation/screens/add_track_flow.dart';
@@ -257,9 +256,6 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     await ref
         .read(transliterationVariantProvider.notifier)
         .setVariant(_transliterationVariant);
-    await ref
-        .read(hebrewTermsScriptNotifierProvider.notifier)
-        .setHebrewTermsScript(true);
 
     final repo = ref.read(profileRepositoryProvider);
     final ProfileModel profile;

@@ -719,8 +719,10 @@ void main() {
         );
         await tester.pumpAndSettle();
 
-        // Both curricula visible (English titles + Hebrew subtitles).
-        expect(find.text('Mishnayos', skipOffstage: false), findsOneWidget);
+        // Both curricula visible — primary uses Hebrew because the Hebrew
+        // Terms toggle defaults to ON; the dual English subtitle is hidden
+        // unless the toggle is off.
+        expect(find.text('משניות', skipOffstage: false), findsOneWidget);
         expect(
           find.textContaining('תלמוד בבלי', skipOffstage: false),
           findsOneWidget,

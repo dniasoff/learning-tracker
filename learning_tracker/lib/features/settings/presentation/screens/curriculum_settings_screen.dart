@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/constants/app_constants.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/services/learning_program_service.dart';
 import 'package:learning_tracker/core/widgets/app_bar_title.dart';
@@ -47,7 +48,10 @@ class _CurriculumSettingsScreenState
 
     return Scaffold(
       appBar: AppBar(
-        title: AppBarTitle(text: 'Settings - ${_curriculum.displayNameHe}'),
+        title: AppBarTitle(
+          text:
+              'Settings - ${curriculumLabelText(ref, curriculum: _curriculum)}',
+        ),
       ),
       body: SafeArea(
         top: false,

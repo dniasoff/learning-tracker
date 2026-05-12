@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/progress/domain/models/journey_view_model.dart';
 import 'package:learning_tracker/features/progress/presentation/widgets/track_type_badge.dart';
@@ -104,18 +106,26 @@ class _TimelineEntry {
   final CurriculumId curriculumId;
 }
 
-class _TimelineCard extends StatelessWidget {
+class _TimelineCard extends ConsumerWidget {
   const _TimelineCard({required this.entry});
 
   final _TimelineEntry entry;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final color = AppTheme.getCurriculumColor(entry.curriculumId);
     final completion = entry.completion;
     final date = completion.completedAt.toLocal();
     final formattedDate = '${date.day}/${date.month}/${date.year}';
     final ordinal = _ordinal(completion.completionNumber);
+    final completionLabel = unitCompletionLabelText(
+      ref,
+      completion: completion,
+    );
+    final curriculumLabel = curriculumLabelText(
+      ref,
+      curriculum: entry.curriculumId,
+    );
 
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
@@ -129,13 +139,13 @@ class _TimelineCard extends StatelessWidget {
           ),
         ),
         title: Text(
-          completion.displayNameHe,
+          completionLabel,
           style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
         ),
         subtitle: Row(
           children: [
             Text(
-              '${entry.curriculumId.displayNameHe} · $ordinal completion · $formattedDate',
+              '$curriculumLabel · $ordinal completion · $formattedDate',
               style: TextStyle(
                 fontSize: 12,
                 color: Theme.of(context).colorScheme.onSurfaceVariant,

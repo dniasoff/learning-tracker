@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/utils/percentage_formatter.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/lifetime_knowledge_providers.dart';
-import 'package:learning_tracker/features/settings/presentation/providers/hebrew_terms_provider.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// Rich track row used on [TrackManagementHubScreen] and
@@ -40,9 +40,6 @@ class LearningTrackCard extends ConsumerWidget {
         break;
       }
     }
-    final hebrewName = curriculum?.displayNameHe ?? track.curriculumId;
-    final englishName = curriculum?.displayNameEn ?? track.curriculumId;
-
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context)!;
     final profileId = ref.watch(activeProfileIdProvider);
@@ -130,17 +127,26 @@ class LearningTrackCard extends ConsumerWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      ref.watch(hebrewTermsScriptProvider)
-                          ? hebrewName
-                          : englishName,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.titleLarge?.copyWith(
-                        color: AppTheme.brandBlueDeep,
-                        fontWeight: FontWeight.w800,
+                    if (curriculum != null)
+                      CurriculumLabel.curriculum(
+                        curriculum,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.titleLarge?.copyWith(
+                          color: AppTheme.brandBlueDeep,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      )
+                    else
+                      Text(
+                        track.curriculumId,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.titleLarge?.copyWith(
+                          color: AppTheme.brandBlueDeep,
+                          fontWeight: FontWeight.w800,
+                        ),
                       ),
-                    ),
                     const SizedBox(height: 2),
                     Text(
                       trackLabel,

@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
+import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
@@ -90,6 +91,7 @@ Future<JourneyViewModel> journeyViewModel(Ref ref, int profileId) async {
 
     // Detect milestones
     final milestones = _detectMilestones(
+      ref,
       entriesForCurriculum,
       content,
       curriculum,
@@ -135,6 +137,7 @@ int _countTotalUnits(List<ContentItem> content, CurriculumId curriculum) {
 
 /// Detect milestone achievements from ledger entries.
 List<MilestoneAchievement> _detectMilestones(
+  Ref ref,
   List<LearningLedgerData> entries,
   List<ContentItem> content,
   CurriculumId curriculum,
@@ -187,7 +190,7 @@ List<MilestoneAchievement> _detectMilestones(
     milestones.add(
       MilestoneAchievement(
         type: 'curriculum_complete',
-        displayName: curriculum.displayNameHe,
+        displayName: curriculumLabelTextFromRef(ref, curriculum: curriculum),
         achievedAt: allEntries.first.completedAt,
       ),
     );

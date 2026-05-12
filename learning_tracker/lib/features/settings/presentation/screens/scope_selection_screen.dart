@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/widgets/app_bar_title.dart';
@@ -79,7 +80,9 @@ class _ScopeSelectionScreenState extends ConsumerState<ScopeSelectionScreen> {
     return Scaffold(
       appBar: AppBar(
         title: AppBarTitle(
-          text: 'Learning Scope — ${widget.curriculumId.displayNameHe}',
+          text:
+              'Learning Scope — '
+              '${curriculumLabelText(ref, curriculum: widget.curriculumId)}',
         ),
         actions: [TextButton(onPressed: _save, child: const Text('Save'))],
       ),

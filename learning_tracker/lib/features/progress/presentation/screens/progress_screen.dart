@@ -136,12 +136,14 @@ class _StatGrid extends StatelessWidget {
           iconColor: const Color(0xFFF8C146),
           value: '$totalCompletions',
           label: l10n.statCompletions,
+          onTap: () => context.router.push(CompletionHistoryRoute()),
         ),
         _OverviewStatCard(
           icon: Icons.menu_book_outlined,
           iconColor: AppTheme.brandBlue,
           value: '$totalUniqueUnits',
           label: l10n.statUnitsDone,
+          onTap: () => context.router.push(LearningJourneyRoute()),
         ),
         _OverviewStatCard(
           icon: Icons.local_fire_department_rounded,
@@ -149,12 +151,14 @@ class _StatGrid extends StatelessWidget {
           value: '$currentStreak',
           label: l10n.statDayStreak,
           highlighted: true,
+          onTap: () => context.router.push(const StreakHistoryRoute()),
         ),
         _OverviewStatCard(
           icon: Icons.hub_outlined,
           iconColor: const Color(0xFFF8C146),
           value: '$activeTracks',
           label: l10n.statActiveTracks,
+          onTap: () => context.router.push(TrackManagementHubRoute()),
         ),
       ],
     );
@@ -168,6 +172,7 @@ class _OverviewStatCard extends StatelessWidget {
     required this.value,
     required this.label,
     this.highlighted = false,
+    this.onTap,
   });
 
   final IconData icon;
@@ -175,6 +180,7 @@ class _OverviewStatCard extends StatelessWidget {
   final String value;
   final String label;
   final bool highlighted;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -184,66 +190,84 @@ class _OverviewStatCard extends StatelessWidget {
         ? Colors.white.withValues(alpha: 0.82)
         : const Color(0xFF7C8595);
 
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: cardColor,
+    return Material(
+      color: cardColor,
+      borderRadius: BorderRadius.circular(22),
+      elevation: 0,
+      shadowColor: const Color(0xFF03174C).withValues(alpha: 0.08),
+      child: InkWell(
+        onTap: onTap,
         borderRadius: BorderRadius.circular(22),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF03174C).withValues(alpha: 0.08),
-            blurRadius: 14,
-            offset: const Offset(0, 6),
-          ),
-        ],
-      ),
-      child: Stack(
-        children: [
-          if (highlighted)
-            Align(
-              alignment: Alignment.topRight,
-              child: Container(
-                width: 22,
-                height: 22,
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.18),
-                  shape: BoxShape.circle,
-                ),
-              ),
-            ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                width: 30,
-                height: 30,
-                decoration: BoxDecoration(
-                  color: iconColor.withValues(alpha: highlighted ? 0.18 : 0.14),
-                  borderRadius: BorderRadius.circular(9),
-                ),
-                child: Icon(icon, color: iconColor, size: 17),
-              ),
-              const Spacer(),
-              Text(
-                value,
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  color: valueColor,
-                  fontWeight: FontWeight.w800,
-                  height: 1,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                label,
-                style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                  color: labelColor,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 0.6,
-                ),
+        splashColor: highlighted
+            ? Colors.white.withValues(alpha: 0.18)
+            : null,
+        highlightColor: highlighted
+            ? Colors.white.withValues(alpha: 0.08)
+            : null,
+        child: Ink(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: cardColor,
+            borderRadius: BorderRadius.circular(22),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF03174C).withValues(alpha: 0.08),
+                blurRadius: 14,
+                offset: const Offset(0, 6),
               ),
             ],
           ),
-        ],
+          child: Stack(
+            children: [
+              if (highlighted)
+                Align(
+                  alignment: Alignment.topRight,
+                  child: Container(
+                    width: 22,
+                    height: 22,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.18),
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: 30,
+                    height: 30,
+                    decoration: BoxDecoration(
+                      color: iconColor.withValues(
+                        alpha: highlighted ? 0.18 : 0.14,
+                      ),
+                      borderRadius: BorderRadius.circular(9),
+                    ),
+                    child: Icon(icon, color: iconColor, size: 17),
+                  ),
+                  const Spacer(),
+                  Text(
+                    value,
+                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                      color: valueColor,
+                      fontWeight: FontWeight.w800,
+                      height: 1,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    label,
+                    style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                      color: labelColor,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.6,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -378,8 +402,7 @@ class _LearningLifetimeTreeCardState extends State<_LearningLifetimeTreeCard> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         LifetimeCurriculumFolderRow(
-          titleEn: id.displayNameEn,
-          titleHe: id.displayNameHe,
+          curriculumId: id,
           trailingPercent: percentTextForCurriculum(summary),
           isExpanded: expanded,
           isExpandableListStyle: true,
@@ -405,7 +428,7 @@ class _LearningLifetimeTreeCardState extends State<_LearningLifetimeTreeCard> {
                     LifetimeFolderTreeNode(
                       node: node,
                       depth: 0,
-                      nodeKey: '${id.storageKey}/0/${node.label}',
+                      nodeKey: '${id.storageKey}/0/${node.rawValue}',
                       expandedNodes: _treeExpandedNodes,
                       onExpandToggle: (key, isExpanded) {
                         setState(() {

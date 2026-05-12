@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/core/labels/curriculum_label.dart';
+import 'package:learning_tracker/core/labels/curriculum_label_renderer.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/widgets/app_bar_title.dart';
@@ -16,6 +18,7 @@ import 'package:learning_tracker/features/progress/presentation/providers/lifeti
 import 'package:learning_tracker/features/progress/presentation/providers/progress_providers.dart';
 import 'package:learning_tracker/features/progress/presentation/widgets/lifetime_folder_styled_widgets.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/hebrew_terms_provider.dart';
+import 'package:learning_tracker/features/settings/presentation/providers/transliteration_variant_provider.dart';
 import 'package:learning_tracker/features/track_setup/domain/entities/add_track_result.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
@@ -114,7 +117,7 @@ IconData _curriculumIcon(CurriculumId id) {
   };
 }
 
-class _LifetimeLibraryCategoryCard extends StatelessWidget {
+class _LifetimeLibraryCategoryCard extends ConsumerWidget {
   const _LifetimeLibraryCategoryCard({
     required this.curriculum,
     required this.summariesAsync,
@@ -126,9 +129,10 @@ class _LifetimeLibraryCategoryCard extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
+    final hebrewOnly = ref.watch(hebrewTermsScriptProvider);
     final summary =
         summariesAsync.asData?.value.firstWhere(
           (s) => s.curriculumId == curriculum,
@@ -195,21 +199,23 @@ class _LifetimeLibraryCategoryCard extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          curriculum.displayNameEn,
+                        CurriculumLabel.curriculum(
+                          curriculum,
                           style: theme.textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.w800,
                             color: AppTheme.brandInk,
                           ),
                         ),
-                        const SizedBox(height: 2),
-                        Text(
-                          curriculum.displayNameHe,
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: AppTheme.brandInkMuted,
-                            fontWeight: FontWeight.w500,
+                        if (!hebrewOnly) ...[
+                          const SizedBox(height: 2),
+                          Text(
+                            curriculumHebrewName(curriculum),
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: AppTheme.brandInkMuted,
+                              fontWeight: FontWeight.w500,
+                            ),
                           ),
-                        ),
+                        ],
                       ],
                     ),
                   ),
@@ -470,9 +476,7 @@ class _LifetimeCurriculumMarkingScreenState
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         title: AppBarTitle(
-          text: ref.watch(hebrewTermsScriptProvider)
-              ? _curriculum.displayNameHe
-              : _curriculum.displayNameEn,
+          text: curriculumLabelText(ref, curriculum: _curriculum),
         ),
       ),
       body: DecoratedBox(
@@ -498,11 +502,26 @@ class _LifetimeCurriculumMarkingScreenState
           data: (allItems) {
             final values = _valuesAtCurrentLevel(allItems);
             final canDrill = _currentLevel < 4;
+            final variant = ref.watch(transliterationVariantProvider);
+            // English forms for the row's secondary line. Built via the
+            // centralized renderer so the result matches the rest of the
+            // app's English-mode display.
             final valueToEnglish = <String, String>{};
             for (final item in allItems) {
               final key = _getItemLevel(item, _currentLevel);
               if (key == null || key.isEmpty) continue;
-              valueToEnglish.putIfAbsent(key, () => item.displayNameEn);
+              valueToEnglish.putIfAbsent(
+                key,
+                () => CurriculumLabelRenderer.renderValue(
+                  curriculumId: _curriculum,
+                  level: _currentLevel,
+                  rawValue: key,
+                  useHebrew: false,
+                  hebrewName: item.displayNameHe,
+                  parentL1Value: item.level1,
+                  transliterationVariant: variant,
+                ),
+              );
             }
             return SafeArea(
               child: Padding(

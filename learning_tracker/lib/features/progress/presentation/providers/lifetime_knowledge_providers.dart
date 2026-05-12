@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
@@ -9,22 +10,38 @@ import 'package:learning_tracker/features/dashboard/presentation/providers/progr
 
 enum LifetimeNodeState { none, partial, full }
 
+/// One node in the lifetime knowledge tree. Carries the structured metadata
+/// the renderer needs to produce a level-aware local label ("פרק א", not
+/// "משנה דמאי א") — the actual text is rendered by [CurriculumLabel.level]
+/// at the UI layer so the Hebrew Terms toggle is respected.
 class LifetimeTreeNode {
   const LifetimeTreeNode({
-    required this.label,
-    required this.labelHe,
+    required this.curriculumId,
+    required this.level,
+    required this.rawValue,
+    required this.parentL1Value,
+    required this.hebrewName,
     required this.state,
     required this.children,
   });
 
-  /// Latin / English transliteration label (the storage key value used in
-  /// content_items.level1..4 — e.g. "Chullin", "Perek 1").
-  final String label;
+  final CurriculumId curriculumId;
 
-  /// Hebrew display label, sourced from any ContentItem in the same group
-  /// (all items at a given level share the same Hebrew name). Falls back
-  /// to [label] when no Hebrew is available.
-  final String labelHe;
+  /// Hierarchy level (1..4) — Seder / Masechta / Perek / Mishna for Mishnayos.
+  final int level;
+
+  /// Raw value from `content_items.levelN` (e.g. "Chullin", "1" for Perek 1).
+  /// Sortable; usable as a node key.
+  final String rawValue;
+
+  /// The level-1 value for this branch (needed for curricula whose level
+  /// structure varies by top-level book, e.g. Mussar).
+  final String parentL1Value;
+
+  /// Optional Hebrew name from the matching intermediate `ContentItem` row.
+  /// Null when no intermediate row was found; renderer falls back to raw.
+  final String? hebrewName;
+
   final LifetimeNodeState state;
   final List<LifetimeTreeNode> children;
 }
@@ -120,6 +137,7 @@ final globalLifetimeCurriculaProvider = FutureProvider.autoDispose
 
         final heLookup = await _heLabelLookup(repo, curriculum);
         final tree = _buildTree(
+          curriculum,
           leaves,
           learnedLeafRefs,
           heLabelLookup: heLookup,
@@ -206,10 +224,14 @@ final trackDualProgressMetricsProvider = FutureProvider.autoDispose
           }
         }
 
+        final localizedCurriculum = curriculumLabelTextFromRef(
+          ref,
+          curriculum: curriculum,
+        );
         metrics.add(
           TrackDualProgressMetric(
             trackId: track.id,
-            trackLabel: '${curriculum.displayNameHe} (${track.trackType})',
+            trackLabel: '$localizedCurriculum (${track.trackType})',
             curriculumId: curriculum,
             currentCyclePercentage: currentCyclePct.clamp(0.0, 1.0),
             lifetimePercentage: lifetimePct.clamp(0.0, 1.0),
@@ -425,6 +447,7 @@ Set<String> _learnedLeafRefs({
 }
 
 List<LifetimeTreeNode> _buildTree(
+  CurriculumId curriculumId,
   List<ContentItem> leaves,
   Set<String> learnedRefs, {
   Map<String, String> heLabelLookup = const {},
@@ -512,23 +535,21 @@ List<LifetimeTreeNode> _buildTree(
             ? LifetimeNodeState.full
             : (anyDone ? LifetimeNodeState.partial : LifetimeNodeState.none);
       }
-      // Hebrew label: at non-leaf levels look up the intermediate hierarchy
-      // row's displayNameHe via [heLabelLookup]; only at leaf level fall
-      // back to the item's own displayNameHe (which carries the full
-      // ref-form Hebrew). Without this, masechta-level groups were
-      // showing '<book> <gematria>:<gematria>' from the first leaf's
-      // displayNameHe.
+      // Hebrew name source: at non-leaf levels look up the intermediate
+      // hierarchy row's displayNameHe via [heLabelLookup]; only at leaf level
+      // fall back to the item's own displayNameHe. Renderer ignores it for
+      // ordinal levels (Perek, Mishnah, Daf, Pasuk) and strips the structural
+      // prefix for named levels (Masechta, Seder).
       final levelKey = _levelLookupKey(entry.value.first, level);
-      final heFromLookup = heLabelLookup[levelKey];
-      final heLabel =
-          heFromLookup ??
-          (level == 4
-              ? (_hebrewLabelForLeafGroup(entry.value) ?? entry.key)
-              : entry.key);
+      final hebrewName = heLabelLookup[levelKey] ??
+          (level == 4 ? _hebrewLabelForLeafGroup(entry.value) : null);
       nodes.add(
         LifetimeTreeNode(
-          label: entry.key,
-          labelHe: heLabel,
+          curriculumId: curriculumId,
+          level: level,
+          rawValue: entry.key,
+          parentL1Value: entry.value.first.level1,
+          hebrewName: hebrewName,
           state: nodeState,
           children: children,
         ),

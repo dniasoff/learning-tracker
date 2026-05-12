@@ -51,11 +51,13 @@ void main() {
       await tester.pumpWidget(createTestWidget(item: item, onTap: () {}));
       await tester.pump(); // resolve async completionCountProvider
 
-      // Hebrew name should be the title
-      expect(find.text('סדר זרעים'), findsOneWidget);
+      // Renderer strips the structural prefix from named-level labels —
+      // "סדר זרעים" renders as "זרעים" (the seder is shown bare; the
+      // structural "סדר" word is dropped per CurriculumLabelRenderer rules).
+      expect(find.text('זרעים'), findsOneWidget);
 
       // Verify RTL directionality for Hebrew
-      final hebrewText = tester.widget<Text>(find.text('סדר זרעים'));
+      final hebrewText = tester.widget<Text>(find.text('זרעים'));
       expect(hebrewText.textDirection, TextDirection.rtl);
       expect(hebrewText.textAlign, TextAlign.right);
     });
@@ -76,10 +78,11 @@ void main() {
         await tester.pumpWidget(createTestWidget(item: item, onTap: () {}));
         await tester.pump();
 
-        // Hebrew title is shown.
-        expect(find.text('סדר זרעים'), findsOneWidget);
+        // Hebrew rendered title is shown (stripped to "זרעים").
+        expect(find.text('זרעים'), findsOneWidget);
         // English transliteration is suppressed in the default Hebrew-only mode.
         expect(find.text('Seder Zeraim'), findsNothing);
+        expect(find.text('Zeraim'), findsNothing);
       },
     );
 
@@ -102,10 +105,12 @@ void main() {
       // Wait for the async _load on the notifier to settle.
       await tester.pumpAndSettle();
 
-      // English-only mode: only the transliterated title is shown.
-      // Hebrew is not displayed as a parallel subtitle.
+      // English-only mode: renderer transliterates the rawValue
+      // ("Seder Zeraim" — already English so passes through). Hebrew is
+      // not displayed as a parallel subtitle.
       expect(find.text('Seder Zeraim'), findsOneWidget);
       expect(find.text('סדר זרעים'), findsNothing);
+      expect(find.text('זרעים'), findsNothing);
     });
 
     testWidgets('shows folder icon for container items', (tester) async {

@@ -7,6 +7,7 @@ import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/core/enums/user_mode.dart';
+import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/labels/curriculum_label_providers.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
@@ -1586,21 +1587,21 @@ class _TrackTaskBuckets {
   });
 
   /// Missed program days (non-review overdue), aligned with dashboard lanes.
-  final int missedProgram;
+  final List<DailyTask> missedProgram;
 
   /// On-time program + new learning (not chazara).
-  final int dueTodayLane;
+  final List<DailyTask> dueTodayLane;
 
   /// All chazara / review tasks for this track.
-  final int review;
+  final List<DailyTask> review;
 
-  int get total => missedProgram + dueTodayLane + review;
+  int get total => missedProgram.length + dueTodayLane.length + review.length;
 }
 
 _TrackTaskBuckets _bucketTrackTasks(List<DailyTask> tasks) {
-  var missedProgram = 0;
-  var dueTodayLane = 0;
-  var review = 0;
+  final missedProgram = <DailyTask>[];
+  final dueTodayLane = <DailyTask>[];
+  final review = <DailyTask>[];
 
   bool isReview(DailyTask t) =>
       t.priority == DailyTaskPriority.overdueChazara ||
@@ -1608,11 +1609,11 @@ _TrackTaskBuckets _bucketTrackTasks(List<DailyTask> tasks) {
 
   for (final t in tasks) {
     if (isReview(t)) {
-      review++;
+      review.add(t);
     } else if (t.isOverdue) {
-      missedProgram++;
+      missedProgram.add(t);
     } else {
-      dueTodayLane++;
+      dueTodayLane.add(t);
     }
   }
 
@@ -1650,22 +1651,20 @@ class _ActiveTrackCard extends ConsumerWidget {
     final curriculum = _curriculumIdForTrack(track);
     final hebrewOnly = ref.watch(hebrewTermsScriptProvider);
     final displayNamePrimary =
-        '${_trackTypeLabel(track.trackType)} · ${curriculum.displayNameHe}';
-    final displayNameSecondary = hebrewOnly ? null : curriculum.displayNameEn;
+        '${_trackTypeLabel(track.trackType)} · '
+        '${curriculumLabelText(ref, curriculum: curriculum)}';
+    final displayNameSecondary = hebrewOnly
+        ? null
+        : curriculumHebrewName(curriculum);
     final curriculumColor = AppTheme.getCurriculumColor(curriculum);
     final bookIconBg = Color.lerp(
       _kActiveTrackPrimaryBlue.withValues(alpha: 0.2),
       curriculumColor.withValues(alpha: 0.2),
       0.45,
     )!;
-    final completionAsync = ref.watch(
-      dashboardTrackCompletionPercentageProvider(track.id),
-    );
     final hasProgramEnrollmentAsync = ref.watch(
       dashboardHasProgramEnrollmentProvider(curriculum),
     );
-    final percentage = completionAsync.asData?.value ?? 0.0;
-    final pctDisplay = formatFractionAsPercent(percentage);
     final profileId = ref.watch(activeProfileIdProvider);
     final lifetimeSummariesAsync = ref.watch(
       globalLifetimeCurriculaProvider(profileId),
@@ -1784,52 +1783,25 @@ class _ActiveTrackCard extends ConsumerWidget {
               const SizedBox(height: 10),
               _ActiveTrackFocusPill(label: focusLabel, value: focusValue),
               const SizedBox(height: 10),
-              if (hasProgramEnrollment) ...[
-                _ProgrammedTrackMetricsRow(
-                  chazara: taskBuckets.review,
-                  dueToday: taskBuckets.dueTodayLane,
-                  overdue: taskBuckets.missedProgram,
-                  l10n: l10n,
-                  chazaraLabel: ref.watch(hebrewTermsScriptProvider)
-                      ? HebrewTerms.uiActiveTrackChazara
-                      : l10n.activeTrackMetricChazara,
-                ),
-                if (taskBuckets.total == 0)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 4),
-                    child: Text(
-                      l10n.nothingDueInQueue,
-                      maxLines: 2,
-                      style: theme.textTheme.labelSmall?.copyWith(
-                        color: AppTheme.brandInkMuted,
-                        height: 1.2,
-                      ),
+              _TrackStatGrid(
+                buckets: taskBuckets,
+                l10n: l10n,
+                chazaraLabel: ref.watch(hebrewTermsScriptProvider)
+                    ? HebrewTerms.uiActiveTrackChazara
+                    : l10n.activeTrackMetricChazara,
+              ),
+              if (taskBuckets.total == 0)
+                Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: Text(
+                    l10n.nothingDueInQueue,
+                    maxLines: 2,
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: AppTheme.brandInkMuted,
+                      height: 1.2,
                     ),
                   ),
-              ] else ...[
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      pctDisplay,
-                      style: theme.textTheme.titleSmall?.copyWith(
-                        color: AppTheme.brandInk,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                    Text(
-                      l10n.carouselCompletion,
-                      style: theme.textTheme.labelSmall?.copyWith(
-                        color: AppTheme.brandInkMuted,
-                        fontWeight: FontWeight.w600,
-                        letterSpacing: 0.3,
-                      ),
-                    ),
-                  ],
                 ),
-                const SizedBox(height: 6),
-                _ActiveTrackGreenProgress(value: percentage),
-              ],
               Expanded(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.end,
@@ -1958,18 +1930,17 @@ class _ActiveTrackFocusPill extends StatelessWidget {
   }
 }
 
-class _ProgrammedTrackMetricsRow extends StatelessWidget {
-  const _ProgrammedTrackMetricsRow({
-    required this.chazara,
-    required this.dueToday,
-    required this.overdue,
+/// Reusable 3-box stat grid for active-track cards. One layout for every
+/// track variant — counts come from [buckets]; tapping a box jumps to the
+/// first task in that category.
+class _TrackStatGrid extends StatelessWidget {
+  const _TrackStatGrid({
+    required this.buckets,
     required this.l10n,
     required this.chazaraLabel,
   });
 
-  final int chazara;
-  final int dueToday;
-  final int overdue;
+  final _TrackTaskBuckets buckets;
   final AppLocalizations l10n;
   final String chazaraLabel;
 
@@ -1979,52 +1950,72 @@ class _ProgrammedTrackMetricsRow extends StatelessWidget {
     return Row(
       children: [
         Expanded(
-          child: _ActiveTrackMetricBox(
-            count: chazara,
+          child: _TaskCategoryStatBox(
+            count: buckets.review.length,
             label: chazaraLabel,
-            valueColor: chazara > 0
+            valueColor: buckets.review.isNotEmpty
                 ? const Color(0xFFB45309)
                 : AppTheme.brandInk,
             valueBg: const Color(0xFFFFE7D1),
             labelStyle: theme.textTheme.labelSmall,
+            onTap: buckets.review.isNotEmpty
+                ? () => _openFirst(context, buckets.review)
+                : null,
           ),
         ),
         const SizedBox(width: 8),
         Expanded(
-          child: _ActiveTrackMetricBox(
-            count: dueToday,
+          child: _TaskCategoryStatBox(
+            count: buckets.dueTodayLane.length,
             label: l10n.activeTrackMetricDueToday,
-            valueColor: dueToday > 0
+            valueColor: buckets.dueTodayLane.isNotEmpty
                 ? _kActiveTrackPrimaryBlue
                 : AppTheme.brandInk,
             valueBg: const Color(0xFFDFE9FD),
             labelStyle: theme.textTheme.labelSmall,
+            onTap: buckets.dueTodayLane.isNotEmpty
+                ? () => _openFirst(context, buckets.dueTodayLane)
+                : null,
           ),
         ),
         const SizedBox(width: 8),
         Expanded(
-          child: _ActiveTrackMetricBox(
-            count: overdue,
+          child: _TaskCategoryStatBox(
+            count: buckets.missedProgram.length,
             label: l10n.activeTrackMetricOverdue,
             valueColor: const Color(0xFFD63C3C),
             valueBg: const Color(0xFFFFE0EB),
             labelStyle: theme.textTheme.labelSmall,
             countMutedWhenZero: true,
+            onTap: buckets.missedProgram.isNotEmpty
+                ? () => _openFirst(context, buckets.missedProgram)
+                : null,
           ),
         ),
       ],
     );
   }
+
+  void _openFirst(BuildContext context, List<DailyTask> tasks) {
+    if (tasks.isEmpty) return;
+    context.router.push(
+      TextDisplayRoute(sefariaRef: tasks.first.contentItemSefariaRef),
+    );
+  }
 }
 
-class _ActiveTrackMetricBox extends StatelessWidget {
-  const _ActiveTrackMetricBox({
+/// Reusable stat box for [_TrackStatGrid]. Becomes a no-op (greyed-out) when
+/// [onTap] is null — the parent decides whether the count makes the box
+/// actionable.
+class _TaskCategoryStatBox extends StatelessWidget {
+  const _TaskCategoryStatBox({
     required this.count,
     required this.label,
     required this.valueColor,
     required this.valueBg,
     required this.labelStyle,
     this.countMutedWhenZero = false,
+    this.onTap,
   });
 
   final int count;
@@ -2033,6 +2024,7 @@ class _ActiveTrackMetricBox extends StatelessWidget {
   final Color valueBg;
   final TextStyle? labelStyle;
   final bool countMutedWhenZero;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -2040,55 +2032,41 @@ class _ActiveTrackMetricBox extends StatelessWidget {
     final displayColor = countMutedWhenZero && count == 0
         ? AppTheme.brandInk
         : valueColor;
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 7, horizontal: 4),
-      decoration: BoxDecoration(
-        color: valueBg,
+    return Material(
+      color: valueBg,
+      borderRadius: BorderRadius.circular(14),
+      child: InkWell(
+        onTap: onTap,
         borderRadius: BorderRadius.circular(14),
-      ),
-      child: Column(
-        children: [
-          Text(
-            '$count',
-            style: theme.textTheme.headlineSmall?.copyWith(
-              fontWeight: FontWeight.w800,
-              color: displayColor,
-              fontSize: 19,
-            ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 7, horizontal: 4),
+          child: Column(
+            children: [
+              Text(
+                '$count',
+                style: theme.textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.w800,
+                  color: displayColor,
+                  fontSize: 19,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                label,
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                style: labelStyle?.copyWith(
+                  color: AppTheme.brandInkMuted,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 9.5,
+                  height: 1.1,
+                  letterSpacing: 0.2,
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 2),
-          Text(
-            label,
-            textAlign: TextAlign.center,
-            maxLines: 2,
-            style: labelStyle?.copyWith(
-              color: AppTheme.brandInkMuted,
-              fontWeight: FontWeight.w800,
-              fontSize: 9.5,
-              height: 1.1,
-              letterSpacing: 0.2,
-            ),
-          ),
-        ],
+        ),
       ),
-    );
-  }
-}
-
-class _ActiveTrackGreenProgress extends StatelessWidget {
-  const _ActiveTrackGreenProgress({required this.value});
-
-  final double value;
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedProgressBar(
-      value: value.clamp(0.0, 1.0),
-      color: _kActiveTrackCompletionGreen,
-      backgroundColor: _kActiveTrackCompletionGreen.withValues(alpha: 0.22),
-      height: 10,
-      duration: const Duration(milliseconds: 600),
-      curve: Curves.easeOutCubic,
     );
   }
 }

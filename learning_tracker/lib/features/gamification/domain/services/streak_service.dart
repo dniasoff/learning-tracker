@@ -2,6 +2,7 @@ import 'package:drift/drift.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/gamification/domain/models/streak_recovery_info.dart';
+import 'package:learning_tracker/features/sync/domain/reducers/streak_reducer.dart';
 
 /// Service for computing and managing per-profile learning streaks.
 ///
@@ -112,6 +113,40 @@ class StreakService {
 
   Stream<Streak?> watchStreak() =>
       _db.streakDao.watchStreakByProfile(_profileId);
+
+  /// Replays the `streak_events` log for this profile through
+  /// [reduceStreakEvents] and overwrites the cached `streaks` row if it
+  /// disagrees. Self-heals stale rows left by previous bugs (e.g. a
+  /// bulk-mark-prior crediting a phantom streak across reinstalls).
+  ///
+  /// Idempotent: safe to call on every app launch and on every streak read.
+  Future<Streak?> reconcileFromEvents() async {
+    final events = await (_db.select(_db.streakEvents)
+          ..where((t) => t.profileId.equals(_profileId)))
+        .get();
+    final state = reduceStreakEvents(events);
+    final existing = await _db.streakDao.getStreakByProfile(_profileId);
+
+    final cachedCurrent = existing?.currentStreak ?? 0;
+    final cachedMax = existing?.maxStreak ?? 0;
+    if (cachedCurrent == state.currentStreak &&
+        cachedMax == state.longestStreak) {
+      return existing;
+    }
+
+    await _db.streakDao.upsertStreakByProfile(
+      _profileId,
+      StreaksCompanion(
+        profileId: Value(_profileId),
+        currentStreak: Value(state.currentStreak),
+        maxStreak: Value(state.longestStreak),
+        lastCompletionDate: state.lastCompletionDate != null
+            ? Value(state.lastCompletionDate)
+            : const Value.absent(),
+      ),
+    );
+    return _db.streakDao.getStreakByProfile(_profileId);
+  }
 
   /// Get a map of dates with learning activity within a date range,
   /// scoped to this profile.

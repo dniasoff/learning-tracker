@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
+import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/bookmark_providers.dart';
 
@@ -55,7 +56,9 @@ class BookmarkCard extends ConsumerWidget {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'Begin your ${curriculumId.displayNameHe} journey',
+                      'Begin your '
+                      '${curriculumLabelText(ref, curriculum: curriculumId)} '
+                      'journey',
                       style: Theme.of(context).textTheme.bodyMedium,
                     ),
                   ],

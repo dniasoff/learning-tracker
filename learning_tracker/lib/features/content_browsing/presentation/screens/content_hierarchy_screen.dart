@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/labels/curriculum_label_renderer.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
@@ -144,10 +145,8 @@ class _ContentHierarchyScreenState
                     color: curriculumColor.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(16),
                   ),
-                  child: Text(
-                    ref.watch(hebrewTermsScriptProvider)
-                        ? curriculum.displayNameHe
-                        : curriculum.displayNameEn,
+                  child: CurriculumLabel.curriculum(
+                    curriculum,
                     style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w600,

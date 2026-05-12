@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/widgets/app_bar_title.dart';
 import 'package:learning_tracker/core/widgets/error_display.dart';
@@ -11,6 +12,7 @@ import 'package:learning_tracker/features/progress/presentation/providers/progre
 import 'package:learning_tracker/features/progress/presentation/widgets/hierarchy_progress_card.dart';
 import 'package:learning_tracker/features/progress/presentation/widgets/overall_stats_card.dart';
 import 'package:learning_tracker/features/progress/presentation/widgets/pace_indicator.dart';
+import 'package:learning_tracker/features/settings/presentation/providers/hebrew_terms_provider.dart';
 
 @RoutePage()
 class CurriculumProgressScreen extends ConsumerWidget {
@@ -31,8 +33,7 @@ class CurriculumProgressScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final curriculum = _curriculumEnum();
-    final titleEn = curriculum?.displayNameEn ?? curriculumId;
-    final titleHe = curriculum?.displayNameHe;
+    final hebrewOnly = ref.watch(hebrewTermsScriptProvider);
     final progressAsync = ref.watch(curriculumProgressProvider(curriculumId));
     final paceAsync = ref.watch(curriculumPaceStatusProvider(curriculumId));
     final curriculumColor = AppTheme.getCurriculumColorByKey(curriculumId);
@@ -56,16 +57,25 @@ class CurriculumProgressScreen extends ConsumerWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(
-                titleEn,
-                style: plusJakartaTheme.textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w800,
-                  color: AppTheme.brandInk,
-                ),
-              ),
-              if (titleHe != null && titleHe.isNotEmpty)
+              if (curriculum != null)
+                CurriculumLabel.curriculum(
+                  curriculum,
+                  style: plusJakartaTheme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w800,
+                    color: AppTheme.brandInk,
+                  ),
+                )
+              else
                 Text(
-                  titleHe,
+                  curriculumId,
+                  style: plusJakartaTheme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w800,
+                    color: AppTheme.brandInk,
+                  ),
+                ),
+              if (curriculum != null && !hebrewOnly)
+                Text(
+                  curriculumHebrewName(curriculum),
                   style: plusJakartaTheme.textTheme.labelSmall?.copyWith(
                     color: AppTheme.brandInkMuted,
                     fontWeight: FontWeight.w600,

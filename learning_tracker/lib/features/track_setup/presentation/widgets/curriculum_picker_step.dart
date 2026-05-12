@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/features/settings/presentation/providers/hebrew_terms_provider.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// Stage 1: Pick ONE curriculum from all 9 available options.
@@ -91,7 +94,7 @@ class CurriculumPickerStep extends StatelessWidget {
   }
 }
 
-class _CurriculumTile extends StatelessWidget {
+class _CurriculumTile extends ConsumerWidget {
   const _CurriculumTile({
     required this.curriculum,
     required this.showReplaceWarning,
@@ -121,9 +124,10 @@ class _CurriculumTile extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final style = _curriculumStyle(curriculum);
+    final hebrewOnly = ref.watch(hebrewTermsScriptProvider);
 
     return DecoratedBox(
       decoration: BoxDecoration(
@@ -171,20 +175,21 @@ class _CurriculumTile extends StatelessWidget {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(
-                                curriculum.displayNameHe,
+                              CurriculumLabel.curriculum(
+                                curriculum,
                                 style: theme.textTheme.titleLarge?.copyWith(
                                   fontWeight: FontWeight.w800,
                                 ),
-                                textDirection: TextDirection.rtl,
                               ),
-                              const SizedBox(height: 2),
-                              Text(
-                                curriculum.displayNameEn,
-                                style: theme.textTheme.titleMedium?.copyWith(
-                                  color: AppTheme.brandInk,
+                              if (!hebrewOnly) ...[
+                                const SizedBox(height: 2),
+                                Text(
+                                  curriculumHebrewName(curriculum),
+                                  style: theme.textTheme.titleMedium?.copyWith(
+                                    color: AppTheme.brandInk,
+                                  ),
                                 ),
-                              ),
+                              ],
                             ],
                           ),
                         ),

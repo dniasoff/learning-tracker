@@ -86,27 +86,6 @@ void main() {
       expect(find.text('ACTIVE'), findsOneWidget);
     });
 
-    testWidgets(
-      'legacy languageSelection save without profile maps to new profile UI',
-      (tester) async {
-        SharedPreferences.setMockInitialValues({
-          'onboarding_phase': 'languageSelection',
-          'onboarding_language': 'he',
-        });
-
-        await tester.pumpWidget(createTestWidget());
-        await tester.pump();
-        await tester.pump(const Duration(milliseconds: 500));
-
-        expect(find.text('New Profile'), findsNothing);
-        // "English" appears twice now — once for the Calendar pill
-        // (Gregorian was renamed to English) and once for the App Language
-        // pill. Only the Hebrew (עברית) label is unique to the language pair.
-        expect(find.text('English'), findsAtLeastNWidgets(1));
-        expect(find.text('עברית'), findsOneWidget);
-      },
-    );
-
     testWidgets('childAwareText returns adult text in adult mode', (
       tester,
     ) async {

@@ -750,22 +750,7 @@ class _CompletionSectionState extends ConsumerState<_CompletionSection> {
           (t) => t.contentItemSefariaRef == widget.sefariaRef,
         );
         if (matches.isEmpty) {
-          return Row(
-            children: [
-              Icon(
-                Icons.check_circle,
-                color: AppTheme.brandGold.withValues(alpha: 0.8),
-                size: 20,
-              ),
-              const SizedBox(width: 12),
-              const Expanded(
-                child: Text(
-                  'No open stage for today — all caught up on this item.',
-                  style: TextStyle(fontSize: 13, color: AppTheme.brandInkMuted),
-                ),
-              ),
-            ],
-          );
+          return const SizedBox.shrink();
         }
 
         final task = matches.first;

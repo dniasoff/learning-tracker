@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/progress/domain/models/journey_view_model.dart';
 import 'package:learning_tracker/features/progress/presentation/widgets/milestone_badge.dart';
@@ -22,13 +24,13 @@ class JourneyGroupedView extends StatelessWidget {
   }
 }
 
-class _CurriculumSection extends StatelessWidget {
+class _CurriculumSection extends ConsumerWidget {
   const _CurriculumSection({required this.journey});
 
   final CurriculumJourney journey;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final color = AppTheme.getCurriculumColor(journey.curriculumId);
     final progress = journey.totalUnitsAvailable > 0
         ? journey.uniqueUnitsCompleted / journey.totalUnitsAvailable
@@ -59,8 +61,8 @@ class _CurriculumSection extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  journey.curriculumId.displayNameHe,
+                CurriculumLabel.curriculum(
+                  journey.curriculumId,
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
@@ -106,8 +108,6 @@ class _CurriculumSection extends StatelessWidget {
           if (groupedByUnit.isNotEmpty)
             ...groupedByUnit.entries.map(
               (entry) => _UnitCompletionTile(
-                unitName: entry.value.first.displayNameHe,
-                unitNameHe: entry.value.first.displayNameHe,
                 completions: entry.value,
                 curriculumColor: color,
               ),
@@ -130,26 +130,23 @@ class _CurriculumSection extends StatelessWidget {
   }
 }
 
-class _UnitCompletionTile extends StatelessWidget {
+class _UnitCompletionTile extends ConsumerWidget {
   const _UnitCompletionTile({
-    required this.unitName,
-    required this.unitNameHe,
     required this.completions,
     required this.curriculumColor,
   });
 
-  final String unitName;
-  final String unitNameHe;
   final List<UnitCompletion> completions;
   final Color curriculumColor;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final latestCompletion = completions.reduce(
       (a, b) => a.completedAt.isAfter(b.completedAt) ? a : b,
     );
     final count = completions.length;
     final suffix = count > 1 ? ' ($count completions)' : '';
+    final label = unitCompletionLabelText(ref, completion: latestCompletion);
 
     return ListTile(
       dense: true,
@@ -165,14 +162,13 @@ class _UnitCompletionTile extends StatelessWidget {
         children: [
           Expanded(
             child: Text(
-              '$unitName$suffix',
+              '$label$suffix',
               style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
             ),
           ),
           TrackTypeBadge(trackType: latestCompletion.trackType),
         ],
       ),
-      subtitle: Text(unitNameHe, style: const TextStyle(fontSize: 12)),
     );
   }
 }

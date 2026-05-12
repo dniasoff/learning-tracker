@@ -6,6 +6,7 @@ import 'package:confetti/confetti.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/features/gamification/domain/models/reward_milestone.dart';
 import 'package:learning_tracker/features/gamification/presentation/providers/achievements_overview_provider.dart';
@@ -21,18 +22,12 @@ CurriculumId? _curriculumForStorageKey(String key) {
   return null;
 }
 
-Future<String> _resolveTrackLabel(
-  WidgetRef ref,
-  String languageCode,
-  int trackId,
-) async {
+Future<String> _resolveTrackLabel(WidgetRef ref, int trackId) async {
   final db = ref.read(userDatabaseProvider);
   final track = await db.trackDao.getTrackById(trackId);
   if (track == null) return '';
   final c = _curriculumForStorageKey(track.curriculumId);
-  if (c != null) {
-    return languageCode == 'he' ? c.displayNameHe : c.displayNameEn;
-  }
+  if (c != null) return curriculumLabelText(ref, curriculum: c);
   return track.curriculumId;
 }
 
@@ -102,12 +97,7 @@ class AchievementUnlockCelebration {
     final milestoneTitle = first.title;
 
     if (!context.mounted) return;
-    final languageCode = Localizations.localeOf(context).languageCode;
-    final trackLabel = await _resolveTrackLabel(
-      ref,
-      languageCode,
-      first.trackId,
-    );
+    final trackLabel = await _resolveTrackLabel(ref, first.trackId);
     if (!context.mounted) return;
 
     final l10n = AppLocalizations.of(context)!;

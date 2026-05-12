@@ -1,4 +1,7 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/database/seed/learning_program_seeds.dart';
+import 'package:learning_tracker/core/services/calendar_program_registry.dart';
+import 'package:learning_tracker/features/settings/presentation/providers/hebrew_terms_provider.dart';
 
 /// In-memory learning program data, replacing the old ContentDatabase DAO.
 ///
@@ -32,6 +35,20 @@ class LearningProgramData {
   final String? apiSource;
   final String? apiProgramKey;
   final bool isCalendarProgram;
+}
+
+/// Pure-string label for a [LearningProgramData] respecting the Hebrew Terms
+/// toggle. When Hebrew Terms is on, returns the Hebrew name from
+/// [CalendarProgramRegistry]; otherwise returns the program's English
+/// [LearningProgramData.displayName].
+String learningProgramLabelText(
+  WidgetRef ref, {
+  required LearningProgramData program,
+}) {
+  final useHebrew = ref.watch(hebrewTermsScriptProvider);
+  if (!useHebrew) return program.displayName;
+  final reg = CalendarProgramRegistry.byId(program.name);
+  return reg?.displayNameHe ?? program.displayName;
 }
 
 /// Provides learning program data from compile-time constants.

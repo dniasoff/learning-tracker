@@ -171,11 +171,19 @@ Future<DateTime?> dashboardLastCompletion(
 }
 
 /// Streak data provider, scoped to the active profile.
+///
+/// Self-heals the cached `streaks` row from the `streak_events` log on every
+/// first read for the profile — so stale rows left by old bugs (e.g. a
+/// bulk-mark-prior crediting a phantom streak across reinstalls) get
+/// reconciled without user intervention.
 @riverpod
-Stream<({int currentStreak, int maxStreak})> dashboardStreak(Ref ref) {
+Stream<({int currentStreak, int maxStreak})> dashboardStreak(Ref ref) async* {
   final db = ref.watch(userDatabaseProvider);
   final profileId = ref.watch(activeProfileIdProvider);
-  return db.streakDao.watchStreakByProfile(profileId).map((streak) {
+  // One-shot reconciliation per (profile, provider build) so the cached
+  // row reflects truth before the dashboard renders.
+  await StreakService(db, profileId: profileId).reconcileFromEvents();
+  yield* db.streakDao.watchStreakByProfile(profileId).map((streak) {
     if (streak == null) return (currentStreak: 0, maxStreak: 0);
     return (currentStreak: streak.currentStreak, maxStreak: streak.maxStreak);
   });

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/utils/percentage_formatter.dart';
@@ -11,7 +12,6 @@ import 'package:learning_tracker/features/dashboard/presentation/providers/dashb
 import 'package:learning_tracker/features/onboarding/presentation/screens/bulk_mark_screen.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/lifetime_knowledge_providers.dart';
-import 'package:learning_tracker/features/settings/presentation/providers/hebrew_terms_provider.dart';
 import 'package:learning_tracker/features/track_learning_order/presentation/screens/track_learning_order_screen.dart';
 import 'package:learning_tracker/features/track_setup/domain/entities/add_track_result.dart';
 import 'package:learning_tracker/features/track_setup/presentation/providers/after_track_change_invalidation.dart';
@@ -35,8 +35,9 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
     final curriculum = CurriculumId.values
         .where((c) => c.storageKey == track.curriculumId)
         .firstOrNull;
-    final hebrewName = curriculum?.displayNameHe ?? track.curriculumId;
-    final englishName = curriculum?.displayNameEn ?? track.curriculumId;
+    final titleText = curriculum != null
+        ? curriculumLabelText(ref, curriculum: curriculum)
+        : track.curriculumId;
 
     final l10n = AppLocalizations.of(context)!;
     final profileId = ref.watch(activeProfileIdProvider);
@@ -91,7 +92,7 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
         backgroundColor: const Color(0xFFF5F7FC),
         elevation: 0,
         title: Text(
-          ref.watch(hebrewTermsScriptProvider) ? hebrewName : englishName,
+          titleText,
           style: theme.textTheme.titleLarge?.copyWith(
             fontWeight: FontWeight.w800,
             color: AppTheme.brandBlueDeep,
@@ -384,7 +385,9 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
     CurriculumTrack track,
     CurriculumId? curriculum,
   ) async {
-    final name = curriculum?.displayNameHe ?? track.curriculumId;
+    final name = curriculum != null
+        ? curriculumLabelText(ref, curriculum: curriculum)
+        : track.curriculumId;
 
     final confirmed = await showDialog<bool>(
       context: context,

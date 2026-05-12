@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
@@ -50,15 +51,12 @@ class ContentItemTile extends ConsumerWidget {
         0;
 
     final hebrewOnly = ref.watch(hebrewTermsScriptProvider);
-    // Single-script title — Hebrew when Hebrew Terms is on, transliterated
-    // English when off. No parallel subtitle showing the other script.
-    final title = hebrewOnly ? item.displayNameHe : item.displayNameEn;
     return ListTile(
       minLeadingWidth: 48,
       minVerticalPadding: 14,
       leading: _buildLeadingIcon(theme, count),
-      title: Text(
-        title,
+      title: CurriculumLabel.item(
+        item,
         style: theme.textTheme.titleLarge?.copyWith(
           fontWeight: FontWeight.w700,
         ),
@@ -82,8 +80,7 @@ class ContentItemTile extends ConsumerWidget {
       ),
       builder: (_) => _StageBreakdownSheet(
         curriculumId: curriculum.storageKey,
-        sefariaRef: item.sefariaRef,
-        displayName: item.displayNameEn,
+        item: item,
       ),
     );
   }
@@ -183,20 +180,18 @@ class AggregateCompletionIndicator extends StatelessWidget {
 class _StageBreakdownSheet extends ConsumerWidget {
   const _StageBreakdownSheet({
     required this.curriculumId,
-    required this.sefariaRef,
-    required this.displayName,
+    required this.item,
   });
 
   final String curriculumId;
-  final String sefariaRef;
-  final String displayName;
+  final ContentItem item;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final breakdownAsync = ref.watch(
       itemStageBreakdownProvider((
         curriculumId: curriculumId,
-        sefariaRef: sefariaRef,
+        sefariaRef: item.sefariaRef,
       )),
     );
     final db = ref.watch(userDatabaseProvider);
@@ -218,8 +213,8 @@ class _StageBreakdownSheet extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: 16),
-          Text(
-            displayName,
+          CurriculumLabel.item(
+            item,
             style: const TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w600,

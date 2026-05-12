@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/utils/percentage_formatter.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/lifetime_knowledge_providers.dart';
@@ -189,13 +191,15 @@ class LifetimeFolderFrostedHint extends StatelessWidget {
 
 /// Curriculum row: frosted background, `>` or expand chevron.
 ///
-/// When the Hebrew Terms toggle is on (default), shows only the Hebrew
-/// title; when off, shows the English title with the Hebrew underneath.
+/// When the Hebrew Terms toggle is on (default), shows only the Hebrew name.
+/// When off, shows the English transliteration with the Hebrew name
+/// underneath as a smaller secondary line — the one place in the app that
+/// intentionally renders both forms simultaneously, hence the use of
+/// [curriculumHebrewName] for the secondary.
 class LifetimeCurriculumFolderRow extends ConsumerWidget {
   const LifetimeCurriculumFolderRow({
     super.key,
-    required this.titleEn,
-    required this.titleHe,
+    required this.curriculumId,
     this.trailingPercent,
     this.isExpanded = false,
     this.isExpandableListStyle = true,
@@ -203,8 +207,7 @@ class LifetimeCurriculumFolderRow extends ConsumerWidget {
     this.onTap,
   });
 
-  final String titleEn;
-  final String titleHe;
+  final CurriculumId curriculumId;
   final String? trailingPercent;
   final bool isExpanded;
 
@@ -244,8 +247,8 @@ class LifetimeCurriculumFolderRow extends ConsumerWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        hebrewOnly ? titleHe : titleEn,
+                      CurriculumLabel.curriculum(
+                        curriculumId,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: theme.textTheme.titleSmall?.copyWith(
@@ -256,7 +259,7 @@ class LifetimeCurriculumFolderRow extends ConsumerWidget {
                       if (!hebrewOnly) ...[
                         const SizedBox(height: 2),
                         Text(
-                          titleHe,
+                          curriculumHebrewName(curriculumId),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: theme.textTheme.labelSmall?.copyWith(
@@ -370,7 +373,6 @@ class _LifetimeFolderTreeNodeState
     extends ConsumerState<LifetimeFolderTreeNode> {
   @override
   Widget build(BuildContext context) {
-    final hebrewOnly = ref.watch(hebrewTermsScriptProvider);
     final color = switch (widget.node.state) {
       LifetimeNodeState.full => const Color(0xFF3BDD87),
       LifetimeNodeState.partial => const Color(0xFFFFD26A),
@@ -432,8 +434,12 @@ class _LifetimeFolderTreeNodeState
                   ),
                   const SizedBox(width: 8),
                   Expanded(
-                    child: Text(
-                      hebrewOnly ? widget.node.labelHe : widget.node.label,
+                    child: CurriculumLabel.level(
+                      curriculumId: widget.node.curriculumId,
+                      level: widget.node.level,
+                      rawValue: widget.node.rawValue,
+                      parentL1Value: widget.node.parentL1Value,
+                      hebrewName: widget.node.hebrewName,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -452,7 +458,7 @@ class _LifetimeFolderTreeNodeState
             LifetimeFolderTreeNode(
               node: child,
               depth: widget.depth + 1,
-              nodeKey: '${widget.nodeKey}/${child.label}',
+              nodeKey: '${widget.nodeKey}/${child.rawValue}',
               expandedNodes: widget.expandedNodes,
               onExpandToggle: widget.onExpandToggle,
             ),

@@ -1,6 +1,8 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
+import 'package:learning_tracker/features/settings/presentation/providers/hebrew_terms_provider.dart';
 
 part 'journey_view_model.freezed.dart';
 
@@ -39,6 +41,16 @@ abstract class UnitCompletion with _$UnitCompletion {
     required int completionNumber,
     required bool isManual,
   }) = _UnitCompletion;
+}
+
+/// Pure-string display label for a [UnitCompletion] respecting the Hebrew
+/// Terms toggle. Mirrors `curriculumLabelText` for [CurriculumId].
+String unitCompletionLabelText(
+  WidgetRef ref, {
+  required UnitCompletion completion,
+}) {
+  final useHebrew = ref.watch(hebrewTermsScriptProvider);
+  return useHebrew ? completion.displayNameHe : completion.displayNameEn;
 }
 
 /// A milestone achievement (completing a seder or full curriculum).

@@ -1,6 +1,7 @@
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/labels/curriculum_label_providers.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
@@ -145,8 +146,8 @@ class DailyTaskCard extends ConsumerWidget {
                               color: curriculumColor.withValues(alpha: 0.15),
                               borderRadius: BorderRadius.circular(999),
                             ),
-                            child: Text(
-                              task.curriculumId.displayNameHe,
+                            child: CurriculumLabel.curriculum(
+                              task.curriculumId,
                               style: theme.textTheme.labelSmall?.copyWith(
                                 color: curriculumColor,
                                 fontWeight: FontWeight.w800,

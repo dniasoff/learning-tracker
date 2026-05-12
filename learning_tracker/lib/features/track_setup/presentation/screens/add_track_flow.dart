@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
 import 'package:learning_tracker/core/constants/hebrew_terms.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/providers/calendar_providers.dart';
 import 'package:learning_tracker/core/services/calendar_program_registry.dart';
@@ -27,7 +28,6 @@ import 'package:learning_tracker/features/scheduler/presentation/screens/goal_se
 import 'package:learning_tracker/features/scheduler/presentation/widgets/hebrew_date_picker.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/curriculum_scope_providers.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/hebrew_date_provider.dart';
-import 'package:learning_tracker/features/settings/presentation/providers/hebrew_terms_provider.dart';
 import 'package:learning_tracker/features/stages/domain/models/schedule_type.dart';
 import 'package:learning_tracker/features/track_setup/domain/entities/add_track_result.dart';
 import 'package:learning_tracker/features/track_setup/domain/services/track_creation_service.dart';
@@ -582,10 +582,7 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
       barrierDismissible: false,
       builder: (ctx) {
         final theme = Theme.of(ctx);
-        final hebrewOnly = ref.read(hebrewTermsScriptProvider);
-        final name = hebrewOnly
-            ? curriculum.displayNameHe
-            : curriculum.displayNameEn;
+        final name = curriculumLabelText(ref, curriculum: curriculum);
         return AlertDialog(
           icon: Icon(
             Icons.warning_amber_rounded,
@@ -746,7 +743,9 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
     if (_state.scopeSelections != null && _state.scopeSelections!.isNotEmpty) {
       return _state.scopeSelections!.last.value;
     }
-    return _state.curriculumId?.displayNameHe ?? '';
+    final c = _state.curriculumId;
+    if (c == null) return '';
+    return curriculumLabelText(ref, curriculum: c);
   }
 
   // ── Build ──────────────────────────────────────────────────────────────────
@@ -1154,7 +1153,8 @@ class _SelfPacedPriorProgressStep extends ConsumerWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            'Choose which sections to mark in ${curriculumId.displayNameHe}.',
+            'Choose which sections to mark in '
+            '${curriculumLabelText(ref, curriculum: curriculumId)}.',
             style: theme.textTheme.bodySmall?.copyWith(
               color: theme.colorScheme.onSurfaceVariant,
             ),
@@ -1672,8 +1672,8 @@ class _ScopeStepContentState extends ConsumerState<_ScopeStepContent> {
                       color: AppTheme.brandBlueDeep,
                     ),
                     const SizedBox(width: 6),
-                    Text(
-                      widget.curriculumId.displayNameEn,
+                    CurriculumLabel.curriculum(
+                      widget.curriculumId,
                       style: theme.textTheme.titleSmall?.copyWith(
                         color: AppTheme.brandBlueDeep,
                         fontWeight: FontWeight.w700,
@@ -1767,7 +1767,10 @@ class _ScopeStepContentState extends ConsumerState<_ScopeStepContent> {
                           const SizedBox(height: 4),
                           Text(
                             l10n.learnEntireCurriculumSubtitle(
-                              widget.curriculumId.displayNameHe,
+                              curriculumLabelText(
+                                ref,
+                                curriculum: widget.curriculumId,
+                              ),
                             ),
                             style: theme.textTheme.bodyMedium?.copyWith(
                               color: Colors.white.withValues(alpha: 0.86),
@@ -1798,8 +1801,8 @@ class _ScopeStepContentState extends ConsumerState<_ScopeStepContent> {
             padding: const EdgeInsets.fromLTRB(12, 12, 12, 10),
             child: Row(
               children: [
-                Text(
-                  widget.curriculumId.displayNameEn,
+                CurriculumLabel.curriculum(
+                  widget.curriculumId,
                   style: theme.textTheme.titleSmall?.copyWith(
                     color: AppTheme.brandBlueDeep,
                     fontWeight: FontWeight.w700,
@@ -1814,7 +1817,7 @@ class _ScopeStepContentState extends ConsumerState<_ScopeStepContent> {
                 const SizedBox(width: 8),
                 Text(
                   l10n.level1Selection(
-                    widget.curriculumId.displayNameEn,
+                    curriculumLabelText(ref, curriculum: widget.curriculumId),
                     _labelForLevel(1),
                   ),
                   style: theme.textTheme.titleSmall?.copyWith(
@@ -1993,8 +1996,8 @@ class _ScopeStepContentState extends ConsumerState<_ScopeStepContent> {
               children: [
                 InkWell(
                   onTap: () => setState(() => _breadcrumbs.clear()),
-                  child: Text(
-                    widget.curriculumId.displayNameHe,
+                  child: CurriculumLabel.curriculum(
+                    widget.curriculumId,
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: theme.colorScheme.primary,
                     ),
@@ -3394,15 +3397,10 @@ class _StartingPositionStepState extends ConsumerState<_StartingPositionStep> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            _selectedLeaf!.displayNameEn,
+                          CurriculumLabel.item(
+                            _selectedLeaf!,
+                            mode: CurriculumLabelMode.breadcrumb,
                             style: theme.textTheme.titleMedium?.copyWith(
-                              color: theme.colorScheme.onPrimaryContainer,
-                            ),
-                          ),
-                          Text(
-                            _selectedLeaf!.displayNameHe,
-                            style: theme.textTheme.bodyMedium?.copyWith(
                               color: theme.colorScheme.onPrimaryContainer,
                             ),
                           ),
@@ -3432,8 +3430,8 @@ class _StartingPositionStepState extends ConsumerState<_StartingPositionStep> {
                     onPressed: _clearSelection,
                     tooltip: 'Back to $_containerLabel list',
                   ),
-                  Text(
-                    _selectedContainer!.displayNameEn,
+                  CurriculumLabel.item(
+                    _selectedContainer!,
                     style: theme.textTheme.titleSmall,
                   ),
                 ],
@@ -3474,8 +3472,7 @@ class _StartingPositionStepState extends ConsumerState<_StartingPositionStep> {
       itemBuilder: (context, index) {
         final container = _containers[index];
         return ListTile(
-          title: Text(container.displayNameEn),
-          subtitle: Text(container.displayNameHe),
+          title: CurriculumLabel.item(container),
           trailing: const Icon(Icons.chevron_right),
           onTap: () => _onContainerSelected(container),
         );
@@ -3490,8 +3487,7 @@ class _StartingPositionStepState extends ConsumerState<_StartingPositionStep> {
         final leaf = _leaves[index];
         final isSelected = _selectedLeaf?.sefariaRef == leaf.sefariaRef;
         return ListTile(
-          title: Text(leaf.displayNameEn),
-          subtitle: Text(leaf.displayNameHe),
+          title: CurriculumLabel.item(leaf),
           selected: isSelected,
           selectedTileColor: theme.colorScheme.primaryContainer.withValues(
             alpha: 0.3,
@@ -3628,14 +3624,10 @@ class _StartingPositionStepState extends ConsumerState<_StartingPositionStep> {
                           children: [
                             Builder(
                               builder: (context) {
-                                final hebrewOnly = ref.watch(
-                                  hebrewTermsScriptProvider,
+                                final refLabel = calendarEntryTodayRefText(
+                                  ref,
+                                  entry: _calendarEntry!,
                                 );
-                                final refLabel =
-                                    hebrewOnly &&
-                                        _calendarEntry!.todayRefHe.isNotEmpty
-                                    ? _calendarEntry!.todayRefHe
-                                    : _calendarEntry!.todayRef;
                                 return Text(
                                   refLabel,
                                   textAlign: TextAlign.center,
@@ -3649,12 +3641,10 @@ class _StartingPositionStepState extends ConsumerState<_StartingPositionStep> {
                             const SizedBox(height: 8),
                             Builder(
                               builder: (context) {
-                                final hebrewOnly = ref.watch(
-                                  hebrewTermsScriptProvider,
+                                final label = calendarEntryLabelText(
+                                  ref,
+                                  entry: _calendarEntry!,
                                 );
-                                final label = hebrewOnly
-                                    ? _calendarEntry!.displayNameHe
-                                    : _calendarEntry!.displayNameEn;
                                 return Container(
                                   padding: const EdgeInsets.symmetric(
                                     horizontal: 12,

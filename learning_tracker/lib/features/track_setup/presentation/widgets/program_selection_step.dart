@@ -1,19 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/core/services/calendar_program_registry.dart';
 import 'package:learning_tracker/core/services/learning_program_service.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
-import 'package:learning_tracker/features/settings/presentation/providers/hebrew_terms_provider.dart';
-
-/// Resolves a learning program's display name in the active language.
-/// When the Hebrew Terms toggle is on (default), returns the Hebrew name from
-/// [CalendarProgramRegistry]; otherwise falls back to the English seed name.
-String _localizedProgramName(LearningProgramData program, bool hebrewOnly) {
-  if (!hebrewOnly) return program.displayName;
-  final reg = CalendarProgramRegistry.byId(program.name);
-  return reg?.displayNameHe ?? program.displayName;
-}
 
 /// Stage 2: Join a calendar program or continue self-paced.
 ///
@@ -55,7 +44,6 @@ class _ProgramSelectionStepState extends ConsumerState<ProgramSelectionStep> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final hebrewOnly = ref.watch(hebrewTermsScriptProvider);
 
     if (_programs.isEmpty) {
       if (!_didAutoSkip) {
@@ -91,10 +79,9 @@ class _ProgramSelectionStepState extends ConsumerState<ProgramSelectionStep> {
               children: [
                 _FeaturedProgramCard(
                   program: _programs.first,
-                  hebrewOnly: hebrewOnly,
                   onTap: () => widget.onSelected(
                     _programs.first.id,
-                    _localizedProgramName(_programs.first, hebrewOnly),
+                    learningProgramLabelText(ref, program: _programs.first),
                     _programs.first,
                   ),
                 ),
@@ -102,7 +89,6 @@ class _ProgramSelectionStepState extends ConsumerState<ProgramSelectionStep> {
                   const SizedBox(height: 12),
                   _CompactProgramCard(
                     program: _programs[i],
-                    hebrewOnly: hebrewOnly,
                     accentColor: i.isEven
                         ? const Color(0xFFDDE4FF)
                         : const Color(0xFFF9E4C8),
@@ -111,7 +97,7 @@ class _ProgramSelectionStepState extends ConsumerState<ProgramSelectionStep> {
                         : const Color(0xFF7D5411),
                     onTap: () => widget.onSelected(
                       _programs[i].id,
-                      _localizedProgramName(_programs[i], hebrewOnly),
+                      learningProgramLabelText(ref, program: _programs[i]),
                       _programs[i],
                     ),
                   ),
@@ -163,21 +149,16 @@ class _ProgramSelectionStepState extends ConsumerState<ProgramSelectionStep> {
   }
 }
 
-class _FeaturedProgramCard extends StatelessWidget {
-  const _FeaturedProgramCard({
-    required this.program,
-    required this.hebrewOnly,
-    required this.onTap,
-  });
+class _FeaturedProgramCard extends ConsumerWidget {
+  const _FeaturedProgramCard({required this.program, required this.onTap});
 
   final LearningProgramData program;
-  final bool hebrewOnly;
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    final name = _localizedProgramName(program, hebrewOnly);
+    final name = learningProgramLabelText(ref, program: program);
     return DecoratedBox(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -258,25 +239,23 @@ class _FeaturedProgramCard extends StatelessWidget {
   }
 }
 
-class _CompactProgramCard extends StatelessWidget {
+class _CompactProgramCard extends ConsumerWidget {
   const _CompactProgramCard({
     required this.program,
-    required this.hebrewOnly,
     required this.onTap,
     this.accentColor = const Color(0xFFF9E4C8),
     this.iconColor = const Color(0xFF7D5411),
   });
 
   final LearningProgramData program;
-  final bool hebrewOnly;
   final VoidCallback onTap;
   final Color accentColor;
   final Color iconColor;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    final name = _localizedProgramName(program, hebrewOnly);
+    final name = learningProgramLabelText(ref, program: program);
     return DecoratedBox(
       decoration: BoxDecoration(
         color: Colors.white,

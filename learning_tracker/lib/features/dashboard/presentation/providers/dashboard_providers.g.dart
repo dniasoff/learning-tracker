@@ -489,11 +489,21 @@ final class DashboardLastCompletionFamily extends $Family
 }
 
 /// Streak data provider, scoped to the active profile.
+///
+/// Self-heals the cached `streaks` row from the `streak_events` log on every
+/// first read for the profile — so stale rows left by old bugs (e.g. a
+/// bulk-mark-prior crediting a phantom streak across reinstalls) get
+/// reconciled without user intervention.
 
 @ProviderFor(dashboardStreak)
 final dashboardStreakProvider = DashboardStreakProvider._();
 
 /// Streak data provider, scoped to the active profile.
+///
+/// Self-heals the cached `streaks` row from the `streak_events` log on every
+/// first read for the profile — so stale rows left by old bugs (e.g. a
+/// bulk-mark-prior crediting a phantom streak across reinstalls) get
+/// reconciled without user intervention.
 
 final class DashboardStreakProvider
     extends
@@ -506,6 +516,11 @@ final class DashboardStreakProvider
         $FutureModifier<({int currentStreak, int maxStreak})>,
         $StreamProvider<({int currentStreak, int maxStreak})> {
   /// Streak data provider, scoped to the active profile.
+  ///
+  /// Self-heals the cached `streaks` row from the `streak_events` log on every
+  /// first read for the profile — so stale rows left by old bugs (e.g. a
+  /// bulk-mark-prior crediting a phantom streak across reinstalls) get
+  /// reconciled without user intervention.
   DashboardStreakProvider._()
     : super(
         from: null,
@@ -532,7 +547,7 @@ final class DashboardStreakProvider
   }
 }
 
-String _$dashboardStreakHash() => r'57d98ffb0171ffdee4b35d132f16c664e828f662';
+String _$dashboardStreakHash() => r'3221eaabdbe45b4448a9fbbe313f5aff77edb4f3';
 
 /// Global points total, scoped to active profile.
 ///

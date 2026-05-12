@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
@@ -7,6 +8,16 @@ import 'package:learning_tracker/features/progress/presentation/widgets/journey_
 import 'package:learning_tracker/features/progress/presentation/widgets/journey_timeline_view.dart';
 import 'package:learning_tracker/features/progress/presentation/widgets/milestone_badge.dart';
 import 'package:learning_tracker/features/progress/presentation/widgets/track_type_badge.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+Widget _wrap(Widget child, {bool hebrewTermsScript = true}) {
+  SharedPreferences.setMockInitialValues({
+    'hebrew_terms_script_p0': hebrewTermsScript,
+  });
+  return ProviderScope(
+    child: MaterialApp(home: Scaffold(body: child)),
+  );
+}
 
 void main() {
   group('TrackTypeBadge', () {
@@ -105,10 +116,9 @@ void main() {
       );
 
       await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(body: JourneyGroupedView(viewModel: viewModel)),
-        ),
+        _wrap(JourneyGroupedView(viewModel: viewModel)),
       );
+      await tester.pumpAndSettle();
 
       expect(find.text('משניות'), findsWidgets);
       expect(find.text('1 of 63 units completed'), findsOneWidget);
@@ -133,10 +143,9 @@ void main() {
       );
 
       await tester.pumpWidget(
-        const MaterialApp(
-          home: Scaffold(body: JourneyGroupedView(viewModel: viewModel)),
-        ),
+        _wrap(const JourneyGroupedView(viewModel: viewModel)),
       );
+      await tester.pumpAndSettle();
 
       expect(find.text('No completions yet'), findsOneWidget);
     });
@@ -163,10 +172,9 @@ void main() {
       );
 
       await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(body: JourneyGroupedView(viewModel: viewModel)),
-        ),
+        _wrap(JourneyGroupedView(viewModel: viewModel)),
       );
+      await tester.pumpAndSettle();
 
       expect(find.byType(MilestoneBadge), findsOneWidget);
     });
@@ -208,10 +216,9 @@ void main() {
       );
 
       await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(body: JourneyGroupedView(viewModel: viewModel)),
-        ),
+        _wrap(JourneyGroupedView(viewModel: viewModel)),
       );
+      await tester.pumpAndSettle();
 
       expect(find.textContaining('2 completions'), findsOneWidget);
     });
@@ -255,10 +262,9 @@ void main() {
       );
 
       await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(body: JourneyTimelineView(viewModel: viewModel)),
-        ),
+        _wrap(JourneyTimelineView(viewModel: viewModel)),
       );
+      await tester.pumpAndSettle();
 
       // Month headers should appear
       expect(find.text('March 2026'), findsOneWidget);
@@ -276,10 +282,9 @@ void main() {
       );
 
       await tester.pumpWidget(
-        const MaterialApp(
-          home: Scaffold(body: JourneyTimelineView(viewModel: viewModel)),
-        ),
+        _wrap(const JourneyTimelineView(viewModel: viewModel)),
       );
+      await tester.pumpAndSettle();
 
       expect(find.text('No completions to show'), findsOneWidget);
     });
@@ -311,10 +316,9 @@ void main() {
       );
 
       await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(body: JourneyTimelineView(viewModel: viewModel)),
-        ),
+        _wrap(JourneyTimelineView(viewModel: viewModel)),
       );
+      await tester.pumpAndSettle();
 
       expect(find.byType(TrackTypeBadge), findsOneWidget);
       expect(find.text('Personal'), findsOneWidget);

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/utils/percentage_formatter.dart';
@@ -190,19 +191,18 @@ class _CurriculumCard extends ConsumerWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        curriculum.displayNameHe,
+                      CurriculumLabel.curriculum(
+                        curriculum,
                         style: const TextStyle(
                           fontSize: 22,
                           fontWeight: FontWeight.bold,
                           color: AppTheme.brandInk,
                         ),
-                        textDirection: TextDirection.rtl,
                       ),
                       if (!ref.watch(hebrewTermsScriptProvider)) ...[
                         const SizedBox(height: 4),
                         Text(
-                          curriculum.displayNameEn,
+                          curriculumHebrewName(curriculum),
                           style: const TextStyle(
                             fontSize: 15,
                             fontWeight: FontWeight.w500,

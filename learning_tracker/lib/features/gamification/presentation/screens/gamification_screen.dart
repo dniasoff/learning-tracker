@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:learning_tracker/core/enums/user_mode.dart';
+import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/gamification/domain/models/reward_milestone.dart';
@@ -35,24 +36,30 @@ Future<Set<DateTime>> streakCalendar(Ref ref) async {
 const Color _kBrandBlue = Color(0xFF0038A8);
 const Color _kPageBg = Color(0xFFF0F2F5);
 
-String _curriculumLabel(BuildContext context, AchievementRowVm row) {
+String _curriculumLabel(
+  BuildContext context,
+  WidgetRef ref,
+  AchievementRowVm row,
+) {
   if (row.trackId == RewardMilestone.kGlobalTrackSentinel) {
     return AppLocalizations.of(context)!.achievementsGlobalRewardsLabel;
   }
   final c = row.curriculumId;
   if (c == null) return row.trackLabel;
-  final code = Localizations.localeOf(context).languageCode;
-  return code == 'he' ? c.displayNameHe : c.displayNameEn;
+  return curriculumLabelText(ref, curriculum: c);
 }
 
-String _filterChipLabel(BuildContext context, AchievementTrackFilterVm opt) {
+String _filterChipLabel(
+  BuildContext context,
+  WidgetRef ref,
+  AchievementTrackFilterVm opt,
+) {
   if (opt.trackId == RewardMilestone.kGlobalTrackSentinel) {
     return AppLocalizations.of(context)!.achievementsGlobalRewardsLabel;
   }
   final c = opt.curriculumId;
   if (c == null) return opt.sortLabel;
-  final code = Localizations.localeOf(context).languageCode;
-  return code == 'he' ? c.displayNameHe : c.displayNameEn;
+  return curriculumLabelText(ref, curriculum: c);
 }
 
 @RoutePage()
@@ -127,8 +134,9 @@ class _GamificationScreenState extends ConsumerState<GamificationScreen> {
                         if (byTh != 0) return byTh;
                         return _curriculumLabel(
                           context,
+                          ref,
                           a,
-                        ).compareTo(_curriculumLabel(context, b));
+                        ).compareTo(_curriculumLabel(context, ref, b));
                       });
 
                     return CustomScrollView(
@@ -155,7 +163,8 @@ class _GamificationScreenState extends ConsumerState<GamificationScreen> {
                                   setState(() => _trackFilterId = null),
                               onSelectTrack: (id) =>
                                   setState(() => _trackFilterId = id),
-                              labelFor: (o) => _filterChipLabel(context, o),
+                              labelFor: (o) =>
+                                  _filterChipLabel(context, ref, o),
                             ),
                           ),
                         ),
@@ -185,7 +194,11 @@ class _GamificationScreenState extends ConsumerState<GamificationScreen> {
                                   child: _AchievementTierCard(
                                     l10n: l10n,
                                     row: row,
-                                    trackTag: _curriculumLabel(context, row),
+                                    trackTag: _curriculumLabel(
+                                      context,
+                                      ref,
+                                      row,
+                                    ),
                                   ),
                                 );
                               }, childCount: sorted.length),

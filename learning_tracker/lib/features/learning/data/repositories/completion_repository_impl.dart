@@ -320,10 +320,10 @@ class CompletionRepositoryImpl implements CompletionRepository {
       });
     }
 
-    await _appendStreakEvent(profileId: effectiveProfileId, at: now);
-
-    final streak = StreakService(_database, profileId: effectiveProfileId);
-    await streak.recordCompletion(now);
+    // Bulk-mark-prior is "I learned this in the past" — these completions
+    // belong to historical learning, not today. They must NOT credit a
+    // streak event (which would otherwise show "1 Day Streak" on fresh
+    // install for anyone who used onboarding's bulk-mark step).
 
     final uniqueRefs = request.sefariaRefs.toSet().toList();
     final allRows = await _database.completionDao

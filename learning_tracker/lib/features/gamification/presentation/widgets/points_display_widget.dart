@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/enums/user_mode.dart';
+import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/features/gamification/presentation/providers/points_providers.dart';
 
 /// Displays total points with curriculum breakdown.
@@ -39,8 +40,12 @@ class PointsDisplayWidget extends ConsumerWidget {
               spacing: 12,
               children: map.entries
                   .map(
-                    (e) =>
-                        Chip(label: Text('${e.key.displayNameHe}: ${e.value}')),
+                    (e) => Chip(
+                      label: Text(
+                        '${curriculumLabelText(ref, curriculum: e.key)}: '
+                        '${e.value}',
+                      ),
+                    ),
                   )
                   .toList(),
             ),

@@ -6,9 +6,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
+import 'package:learning_tracker/features/settings/presentation/providers/hebrew_terms_provider.dart';
 import 'package:learning_tracker/features/stages/presentation/providers/stage_providers.dart';
 import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
 import 'package:learning_tracker/features/track_setup/presentation/providers/track_management_providers.dart';
@@ -440,7 +442,7 @@ class _HeroHeader extends StatelessWidget {
   }
 }
 
-class _CurriculumPointsCard extends StatelessWidget {
+class _CurriculumPointsCard extends ConsumerWidget {
   const _CurriculumPointsCard({
     required this.l10n,
     required this.data,
@@ -460,8 +462,9 @@ class _CurriculumPointsCard extends StatelessWidget {
   final VoidCallback onIncrement;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final hebrewOnly = ref.watch(hebrewTermsScriptProvider);
     return Material(
       color: Colors.white,
       elevation: 2,
@@ -479,21 +482,23 @@ class _CurriculumPointsCard extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        data.curriculum.displayNameEn,
+                      CurriculumLabel.curriculum(
+                        data.curriculum,
                         style: theme.textTheme.titleMedium?.copyWith(
                           fontWeight: FontWeight.w800,
                           color: AppTheme.brandInk,
                         ),
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        data.curriculum.displayNameHe,
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          color: _kHebrewSubtitleBlue,
-                          fontWeight: FontWeight.w500,
+                      if (!hebrewOnly) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          curriculumHebrewName(data.curriculum),
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: _kHebrewSubtitleBlue,
+                            fontWeight: FontWeight.w500,
+                          ),
                         ),
-                      ),
+                      ],
                     ],
                   ),
                 ),

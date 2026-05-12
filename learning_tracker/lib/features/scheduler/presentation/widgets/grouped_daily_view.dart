@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/services/daily_schedule_composer.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/scheduler/presentation/widgets/daily_task_card.dart';
 
 /// Displays composed daily tasks organized by curriculum with collapsible
 /// sections.
-class GroupedDailyView extends StatelessWidget {
+class GroupedDailyView extends ConsumerWidget {
   const GroupedDailyView({
     required this.schedule,
     required this.onTaskDismissed,
@@ -19,7 +21,7 @@ class GroupedDailyView extends StatelessWidget {
   final void Function(CurriculumId curriculum, int taskIndex) onTaskCompleted;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final grouped = schedule.groupedByCurriculum;
 
     if (grouped.isEmpty) {
@@ -41,7 +43,10 @@ class GroupedDailyView extends StatelessWidget {
           key: ValueKey('group_${curriculum.storageKey}'),
           initiallyExpanded: true,
           leading: CircleAvatar(backgroundColor: color, radius: 8),
-          title: Text('${curriculum.displayNameHe} (${tasks.length})'),
+          title: Text(
+            '${curriculumLabelText(ref, curriculum: curriculum)} '
+            '(${tasks.length})',
+          ),
           children: List.generate(tasks.length, (i) {
             final task = tasks[i];
             return DailyTaskCard(

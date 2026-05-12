@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/labels/curriculum_label_providers.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
@@ -11,7 +12,6 @@ import 'package:learning_tracker/features/dashboard/presentation/providers/dashb
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dart';
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
-import 'package:learning_tracker/features/settings/presentation/providers/hebrew_terms_provider.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 @RoutePage()
@@ -435,20 +435,6 @@ class _LearnTaskCard extends ConsumerWidget {
                             ),
                           ),
                         ),
-                        const SizedBox(width: 8),
-                        const Icon(
-                          Icons.watch_later_outlined,
-                          size: 14,
-                          color: Color(0xFF6A7282),
-                        ),
-                        const SizedBox(width: 3),
-                        Text(
-                          '${task.estimatedEffortMinutes}m',
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: const Color(0xFF586170),
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
                       ],
                     ),
                   ],
@@ -478,14 +464,12 @@ class _LearnTaskCard extends ConsumerWidget {
   }
 }
 
-class _BrowseSection extends ConsumerWidget {
+class _BrowseSection extends StatelessWidget {
   const _BrowseSection();
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final hebrewTerms = ref.watch(hebrewTermsScriptProvider);
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -500,10 +484,7 @@ class _BrowseSection extends ConsumerWidget {
         ...CurriculumId.values.map(
           (curriculum) => Padding(
             padding: const EdgeInsets.only(bottom: 10),
-            child: _CurriculumBrowseCard(
-              curriculum: curriculum,
-              hebrewTerms: hebrewTerms,
-            ),
+            child: _CurriculumBrowseCard(curriculum: curriculum),
           ),
         ),
       ],
@@ -512,21 +493,14 @@ class _BrowseSection extends ConsumerWidget {
 }
 
 class _CurriculumBrowseCard extends StatelessWidget {
-  const _CurriculumBrowseCard({
-    required this.curriculum,
-    required this.hebrewTerms,
-  });
+  const _CurriculumBrowseCard({required this.curriculum});
 
   final CurriculumId curriculum;
-  final bool hebrewTerms;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final color = AppTheme.getCurriculumColor(curriculum);
-    final name = hebrewTerms
-        ? curriculum.displayNameHe
-        : curriculum.displayNameEn;
 
     return Material(
       color: Colors.transparent,
@@ -561,8 +535,8 @@ class _CurriculumBrowseCard extends StatelessWidget {
               ),
               const SizedBox(width: 12),
               Expanded(
-                child: Text(
-                  name,
+                child: CurriculumLabel.curriculum(
+                  curriculum,
                   style: theme.textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.w700,
                     fontSize: 20,

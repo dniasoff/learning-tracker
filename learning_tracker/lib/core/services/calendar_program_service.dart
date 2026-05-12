@@ -1,4 +1,6 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/services/local_calendar_engine.dart';
+import 'package:learning_tracker/features/settings/presentation/providers/hebrew_terms_provider.dart';
 
 /// Unified calendar entry combining data from any source.
 ///
@@ -28,6 +30,28 @@ class CalendarProgramEntry {
   /// fall back to [todayRef] when this is empty.
   final String todayRefHe;
   final String apiSource;
+}
+
+/// Pure-string label for a [CalendarProgramEntry] respecting the Hebrew
+/// Terms toggle. Mirrors `curriculumLabelText` for [CurriculumId].
+String calendarEntryLabelText(
+  WidgetRef ref, {
+  required CalendarProgramEntry entry,
+}) {
+  final useHebrew = ref.watch(hebrewTermsScriptProvider);
+  return useHebrew ? entry.displayNameHe : entry.displayNameEn;
+}
+
+/// Today's-ref label for a [CalendarProgramEntry] respecting the Hebrew
+/// Terms toggle. Falls back to the English [CalendarProgramEntry.todayRef]
+/// when the Hebrew form is unavailable.
+String calendarEntryTodayRefText(
+  WidgetRef ref, {
+  required CalendarProgramEntry entry,
+}) {
+  final useHebrew = ref.watch(hebrewTermsScriptProvider);
+  if (useHebrew && entry.todayRefHe.isNotEmpty) return entry.todayRefHe;
+  return entry.todayRef;
 }
 
 /// Calendar program service.

@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/core/labels/curriculum_label.dart';
+import 'package:learning_tracker/features/settings/presentation/providers/hebrew_terms_provider.dart';
 
 /// A list tile displaying a single track's summary info.
-class TrackListTile extends StatelessWidget {
+class TrackListTile extends ConsumerWidget {
   const TrackListTile({
     required this.track,
     this.onTap,
@@ -22,11 +25,10 @@ class TrackListTile extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final curriculum = _curriculumId;
-    final hebrewName = curriculum?.displayNameHe ?? track.curriculumId;
-    final englishName = curriculum?.displayNameEn ?? track.curriculumId;
+    final hebrewOnly = ref.watch(hebrewTermsScriptProvider);
 
     return Card(
       clipBehavior: Clip.antiAlias,
@@ -41,20 +43,29 @@ class TrackListTile extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      hebrewName,
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
+                    if (curriculum != null)
+                      CurriculumLabel.curriculum(
+                        curriculum,
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                      )
+                    else
+                      Text(
+                        track.curriculumId,
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
-                      textDirection: TextDirection.rtl,
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      englishName,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
+                    if (curriculum != null && !hebrewOnly) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        curriculumHebrewName(curriculum),
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
                       ),
-                    ),
+                    ],
                     Text(
                       track.trackType,
                       style: theme.textTheme.labelSmall?.copyWith(

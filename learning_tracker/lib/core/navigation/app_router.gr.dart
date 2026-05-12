@@ -1039,6 +1039,22 @@ class SignupRouteArgs {
 }
 
 /// generated route for
+/// [StreakHistoryScreen]
+class StreakHistoryRoute extends PageRouteInfo<void> {
+  const StreakHistoryRoute({List<PageRouteInfo>? children})
+    : super(StreakHistoryRoute.name, initialChildren: children);
+
+  static const String name = 'StreakHistoryRoute';
+
+  static PageInfo page = PageInfo(
+    name,
+    builder: (data) {
+      return const StreakHistoryScreen();
+    },
+  );
+}
+
+/// generated route for
 /// [StudyDayConfigScreen]
 class StudyDayConfigRoute extends PageRouteInfo<StudyDayConfigRouteArgs> {
   StudyDayConfigRoute({

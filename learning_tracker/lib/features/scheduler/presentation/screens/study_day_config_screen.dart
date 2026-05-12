@@ -3,6 +3,7 @@ import 'package:drift/drift.dart' hide Column;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/widgets/app_bar_title.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
@@ -35,7 +36,10 @@ class StudyDayConfigScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: AppBarTitle(text: '${curriculumId.displayNameHe} Study Days'),
+        title: AppBarTitle(
+          text:
+              '${curriculumLabelText(ref, curriculum: curriculumId)} Study Days',
+        ),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.router.maybePop(),
