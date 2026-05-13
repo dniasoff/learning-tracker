@@ -14,6 +14,7 @@ import 'package:learning_tracker/features/dashboard/presentation/widgets/todays_
 import 'package:learning_tracker/features/gamification/presentation/widgets/streak_widget.dart';
 import 'package:learning_tracker/features/profiles/presentation/widgets/profile_avatar.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/pace_status.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// Load real fonts so text renders in golden screenshots instead of Ahem boxes.
 Future<void> loadFonts() async {
@@ -80,6 +81,13 @@ String _golden(String name) => 'goldens/$name';
 void main() {
   setUpAll(() async {
     await loadFonts();
+  });
+
+  setUp(() {
+    // CurriculumLabel now watches `useHebrewTermsProvider`, which reads
+    // SharedPreferences; without an in-memory mock the dashboard widget
+    // throws MissingPluginException before the golden snapshot is taken.
+    SharedPreferences.setMockInitialValues(<String, Object>{});
   });
 
   group('Play Store Screenshots', () {
