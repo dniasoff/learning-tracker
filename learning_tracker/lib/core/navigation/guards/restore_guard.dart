@@ -41,14 +41,14 @@ class RestoreGuard extends AutoRouteGuard {
     StackRouter router,
   ) async {
     if (_isNewDevice == false) {
-      _log.debug('RestoreGuard: already checked — not new device, proceeding');
+      _log.debug(event: 'restore_guard_already_checked_proceeding');
       resolver.next();
       return;
     }
 
     // Skip for local-only users — no cloud account means nothing to restore.
     if (!_hasCloudAccount()) {
-      _log.debug('RestoreGuard: no cloud account — skipping restore check');
+      _log.debug(event: 'restore_guard_no_cloud_account_skipping');
       _isNewDevice = false;
       resolver.next();
       return;
@@ -62,13 +62,16 @@ class RestoreGuard extends AutoRouteGuard {
     _isNewDevice = completions.isEmpty && profiles.isEmpty;
 
     _log.info(
-      'RestoreGuard: completions=${completions.length} '
-      'userProfiles=${profiles.length} '
-      'isNewDevice=$_isNewDevice',
+      event: 'restore_guard_new_device_check',
+      fields: {
+        'completionCount': completions.length,
+        'userProfileCount': profiles.length,
+        'isNewDevice': _isNewDevice,
+      },
     );
 
     if (_isNewDevice!) {
-      _log.info('RestoreGuard: redirecting to DeviceRestoreRoute');
+      _log.info(event: 'restore_guard_redirecting_to_device_restore');
       unawaited(router.replace(const DeviceRestoreRoute()));
       resolver.next(false);
     } else {

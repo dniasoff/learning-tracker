@@ -35,8 +35,8 @@ class ProfileGuard extends AutoRouteGuard {
     // If a profile is already selected, proceed
     if (_getSelectedProfileId() != null) {
       _log.debug(
-        'ProfileGuard: profile already selected '
-        'id=${_getSelectedProfileId()}, proceeding',
+        event: 'profile_guard_already_selected',
+        fields: {'profileId': _getSelectedProfileId()},
       );
       resolver.next();
       return;
@@ -48,8 +48,8 @@ class ProfileGuard extends AutoRouteGuard {
     );
 
     _log.info(
-      'ProfileGuard: found ${profiles.length} profiles '
-      'for accountId=${_getAccountId()}',
+      event: 'profile_guard_profiles_fetched',
+      fields: {'profileCount': profiles.length},
     );
 
     if (profiles.isEmpty) {
@@ -57,9 +57,7 @@ class ProfileGuard extends AutoRouteGuard {
       // means either a fresh cloud sign-in where sync hasn't populated
       // yet, or a user whose profiles were removed — route them to the
       // picker so they can add one, never let them into AppShell.
-      _log.info(
-        'ProfileGuard: no profiles — redirecting to ProfilePickerRoute',
-      );
+      _log.info(event: 'profile_guard_no_profiles_redirecting');
       unawaited(router.replace(const ProfilePickerRoute()));
       resolver.next(false);
       return;
@@ -68,8 +66,8 @@ class ProfileGuard extends AutoRouteGuard {
     if (profiles.length == 1) {
       // Auto-select the single profile
       _log.info(
-        'ProfileGuard: single profile id=${profiles.first.id} '
-        '— auto-selecting',
+        event: 'profile_guard_single_profile_auto_selecting',
+        fields: {'profileId': profiles.first.id},
       );
       _setSelectedProfileId(profiles.first.id);
       resolver.next();
@@ -78,8 +76,8 @@ class ProfileGuard extends AutoRouteGuard {
 
     // 2+ profiles, none selected → redirect to picker
     _log.info(
-      'ProfileGuard: ${profiles.length} profiles, none selected '
-      '— redirecting to ProfilePickerRoute',
+      event: 'profile_guard_multiple_profiles_redirecting',
+      fields: {'profileCount': profiles.length},
     );
     unawaited(router.replace(const ProfilePickerRoute()));
     resolver.next(false);

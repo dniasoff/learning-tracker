@@ -1,6 +1,7 @@
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
+import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/features/sync/data/firestore_data_source.dart';
 import 'package:learning_tracker/features/sync/data/offline_queue.dart';
 import 'package:mocktail/mocktail.dart';
@@ -15,13 +16,13 @@ UserDatabase _createInMemoryDatabase() {
 void main() {
   late UserDatabase database;
   late MockFirestoreDataSource mockFirestore;
-  late Talker logger;
+  late AppLogger logger;
   late OfflineQueue offlineQueue;
 
   setUp(() {
     database = _createInMemoryDatabase();
     mockFirestore = MockFirestoreDataSource();
-    logger = Talker();
+    logger = AppLogger(Talker());
 
     offlineQueue = OfflineQueue(
       database: database,
@@ -282,7 +283,7 @@ void main() {
       final newQueue = OfflineQueue(
         database: database,
         firestoreDataSource: mockFirestore,
-        logger: logger,
+        logger: AppLogger(Talker()),
       );
 
       final count = await newQueue.getPendingCount();

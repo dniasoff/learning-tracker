@@ -9,6 +9,7 @@ import 'package:drift/native.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/cross_profile_scope.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/network/connectivity_service.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/curriculum_import_service.dart';
 import 'package:learning_tracker/features/sync/data/firestore_data_source.dart';
@@ -83,7 +84,7 @@ void main() {
       late UserDatabase database;
       late MockFirestoreDataSource mockFirestore;
       late MockConnectivityService mockConnectivity;
-      late Talker logger;
+      late AppLogger logger;
       late OfflineQueue offlineQueue;
       late SyncEngine syncEngine;
 
@@ -92,7 +93,7 @@ void main() {
         await _insertTrack(database);
         mockFirestore = MockFirestoreDataSource();
         mockConnectivity = MockConnectivityService();
-        logger = Talker();
+        logger = AppLogger(Talker());
         offlineQueue = OfflineQueue(
           database: database,
           firestoreDataSource: mockFirestore,
@@ -280,7 +281,7 @@ void main() {
     late int trackId;
     late MockFirestoreDataSource mockFirestore;
     late MockConnectivityService mockConnectivity;
-    late Talker logger;
+    late AppLogger logger;
     late OfflineQueue offlineQueue;
     late SyncEngine syncEngine;
 
@@ -289,7 +290,7 @@ void main() {
       trackId = await _insertTrack(database);
       mockFirestore = MockFirestoreDataSource();
       mockConnectivity = MockConnectivityService();
-      logger = Talker();
+      logger = AppLogger(Talker());
       offlineQueue = OfflineQueue(
         database: database,
         firestoreDataSource: mockFirestore,
@@ -518,7 +519,7 @@ void main() {
       late int trackId;
       late MockFirestoreDataSource mockFirestore;
       late MockConnectivityService mockConnectivity;
-      late Talker logger;
+      late AppLogger logger;
       late OfflineQueue offlineQueue;
       late SyncEngine syncEngine;
 
@@ -527,7 +528,7 @@ void main() {
         trackId = await _insertTrack(database);
         mockFirestore = MockFirestoreDataSource();
         mockConnectivity = MockConnectivityService();
-        logger = Talker();
+        logger = AppLogger(Talker());
         offlineQueue = OfflineQueue(
           database: database,
           firestoreDataSource: mockFirestore,
@@ -796,7 +797,7 @@ void main() {
     late MockFirestoreDataSource mockFirestore;
     late MockConnectivityService mockConnectivity;
     late MockCurriculumImportService mockImportService;
-    late Talker logger;
+    late AppLogger logger;
     late OfflineQueue offlineQueue;
     late SyncEngine syncEngine;
     late DeviceRestoreService restoreService;
@@ -811,7 +812,7 @@ void main() {
       mockFirestore = MockFirestoreDataSource();
       mockConnectivity = MockConnectivityService();
       mockImportService = MockCurriculumImportService();
-      logger = Talker();
+      logger = AppLogger(Talker());
       offlineQueue = OfflineQueue(
         database: database,
         firestoreDataSource: mockFirestore,
@@ -833,7 +834,7 @@ void main() {
         syncEngine: syncEngine,
         firestoreDataSource: mockFirestore,
         curriculumImportService: mockImportService,
-        logger: logger,
+        logger: logger.talker,
       );
     });
 

@@ -6,6 +6,7 @@ import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/cross_profile_scope.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
+import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/network/connectivity_service.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/gamification/domain/services/reward_milestone_service.dart';
@@ -15,7 +16,6 @@ import 'package:learning_tracker/features/sync/domain/merge_rules.dart';
 import 'package:learning_tracker/features/sync/domain/models/sync_status.dart';
 import 'package:learning_tracker/features/sync/domain/profile_scoped_preference_keys.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:talker/talker.dart';
 
 /// Orchestrates sync between local SQLite and Firestore.
 ///
@@ -31,7 +31,7 @@ class SyncEngine {
     required UserDatabase database,
     required FirestoreDataSource firestoreDataSource,
     required OfflineQueue offlineQueue,
-    required Talker logger,
+    required AppLogger logger,
     required ConnectivityService connectivityService,
   }) : _database = database,
        _firestoreDataSource = firestoreDataSource,
@@ -42,7 +42,7 @@ class SyncEngine {
   final UserDatabase _database;
   final FirestoreDataSource _firestoreDataSource;
   final OfflineQueue _offlineQueue;
-  final Talker _logger;
+  final AppLogger _logger;
   final ConnectivityService _connectivityService;
 
   final _statusController = StreamController<SyncStatus>.broadcast();
@@ -137,7 +137,7 @@ class SyncEngine {
 
   /// Initialize sync engine and pull data on launch.
   Future<void> initialize() async {
-    _logger.info('Initializing sync engine');
+    _logger.info(event: 'sync_engine_initializing');
 
     // Restore persisted last-sync timestamp (issue #5)
     await _restoreLastSyncTimestamp();
@@ -154,7 +154,7 @@ class SyncEngine {
 
   /// Dispose resources and detach listeners.
   Future<void> dispose() async {
-    _logger.info('Disposing sync engine');
+    _logger.info(event: 'sync_engine_disposing');
     await detachListeners();
     await _statusController.close();
   }
@@ -168,7 +168,10 @@ class SyncEngine {
     if (_isOnline == isOnline) return;
 
     _isOnline = isOnline;
-    _logger.info('Network state changed: ${isOnline ? "online" : "offline"}');
+    _logger.info(
+      event: 'sync_engine_network_state_changed',
+      fields: {'online': isOnline},
+    );
 
     if (isOnline) {
       _onReconnect();
@@ -180,26 +183,26 @@ class SyncEngine {
   /// Attach foreground listeners for real-time sync.
   Future<void> attachListeners() async {
     if (!_firestoreDataSource.isAuthenticated) {
-      _logger.debug('Cannot attach listeners: user not authenticated');
+      _logger.debug(event: 'sync_listeners_attach_skipped_unauthenticated');
       return;
     }
 
     if (_listenersAttached) {
-      _logger.debug('Listeners already attached');
+      _logger.debug(event: 'sync_listeners_already_attached');
       return;
     }
 
     if (!_isOnline) {
-      _logger.debug('Cannot attach listeners while offline');
+      _logger.debug(event: 'sync_listeners_attach_skipped_offline');
       return;
     }
 
     if (_quotaDegraded) {
-      _logger.debug('Listeners disabled due to quota degradation');
+      _logger.debug(event: 'sync_listeners_attach_skipped_quota_degraded');
       return;
     }
 
-    _logger.info('Attaching foreground listeners');
+    _logger.info(event: 'sync_listeners_attaching');
     _listenersAttached = true;
 
     _completionsSubscription = _firestoreDataSource
@@ -259,11 +262,11 @@ class SyncEngine {
   /// Detach foreground listeners (on app background).
   Future<void> detachListeners() async {
     if (!_listenersAttached) {
-      _logger.debug('Listeners already detached');
+      _logger.debug(event: 'sync_listeners_already_detached');
       return;
     }
 
-    _logger.info('Detaching foreground listeners');
+    _logger.info(event: 'sync_listeners_detaching');
     _listenersAttached = false;
 
     await _completionsSubscription?.cancel();
@@ -302,7 +305,7 @@ class SyncEngine {
   /// still deliver realtime updates).
   Future<void> pullOnLaunch({bool triggeredFromResume = false}) async {
     if (!_firestoreDataSource.isAuthenticated) {
-      _logger.info('Pull-on-launch skipped: user not authenticated');
+      _logger.info(event: 'sync_pull_on_launch_skipped_unauthenticated');
       return;
     }
 
@@ -324,26 +327,29 @@ class SyncEngine {
           final elapsed = DateTime.now().toUtc().difference(last);
           if (elapsed < pullOnResumeMinInterval) {
             _logger.info(
-              'Pull-on-launch skipped (resume throttle, '
-              'elapsed=${elapsed.inSeconds}s)',
+              event: 'sync_pull_on_launch_skipped_resume_throttle',
+              fields: {'elapsedSeconds': elapsed.inSeconds},
             );
             return;
           }
         }
       } catch (e) {
-        _logger.warning('Resume throttle prefs read failed: $e');
+        _logger.warning(
+          event: 'sync_resume_throttle_prefs_read_failed',
+          exception: e,
+        );
       }
     }
 
     _updateStatus(SyncStatus.syncing(startedAt: DateTime.now().toUtc()));
 
     try {
-      _logger.info('Pull-on-launch: Fetching data from Firestore');
+      _logger.info(event: 'sync_pull_on_launch_fetching');
 
       final learnerProfiles = await _firestoreDataSource.fetchLearnerProfiles();
       _logger.info(
-        'Pull-on-launch: fetched ${learnerProfiles.length} learner profiles '
-        'from Firestore: ids=${learnerProfiles.map((p) => p["id"]).toList()}',
+        event: 'sync_pull_on_launch_fetched_learner_profiles',
+        fields: {'count': learnerProfiles.length},
       );
       await _mergeLearnerProfiles(learnerProfiles);
 
@@ -379,12 +385,16 @@ class SyncEngine {
         }
       }
 
-      _logger.info('Pull-on-launch completed successfully');
+      _logger.info(event: 'sync_pull_on_launch_completed');
       final syncedAt = DateTime.now().toUtc();
       await _persistLastSyncTimestamp(syncedAt);
       _updateStatus(SyncStatus.synced(lastSyncedAt: syncedAt));
     } catch (e, stackTrace) {
-      _logger.error('Pull-on-launch failed', e, stackTrace);
+      _logger.error(
+        event: 'sync_pull_on_launch_failed',
+        exception: e,
+        stackTrace: stackTrace,
+      );
       _updateStatus(
         SyncStatus.error(
           message: e.toString(),
@@ -481,8 +491,8 @@ class SyncEngine {
       _consecutivePushPermissionErrors++;
       if (_pushSuppressed) {
         _logger.warning(
-          'Push suppressed after $_consecutivePushPermissionErrors '
-          'consecutive permission-denied errors — queuing silently',
+          event: 'sync_push_suppressed_permission_denied',
+          fields: {'consecutiveErrors': _consecutivePushPermissionErrors},
         );
       }
       return true;
@@ -551,7 +561,11 @@ class SyncEngine {
     } catch (e) {
       // ignore: avoid_catches_without_on_clauses — intentional Firestore error boundary
       _trackPushError(e);
-      _logger.warning('Background $context flush failed', e);
+      _logger.warning(
+        event: 'sync_background_flush_failed',
+        fields: {'context': context},
+        exception: e,
+      );
     }
   }
 
@@ -697,7 +711,7 @@ class SyncEngine {
   Future<void> pushLedgerEntry(Map<String, dynamic> entry) async {
     // Local-born / unauthenticated sessions should stay local-only.
     if (!_firestoreDataSource.isAuthenticated) {
-      _logger.debug('Skipping ledger sync: user not authenticated');
+      _logger.debug(event: 'sync_ledger_skipped_unauthenticated');
       return;
     }
 
@@ -712,7 +726,7 @@ class SyncEngine {
   ) async {
     if (entries.isEmpty) return;
     if (!_firestoreDataSource.isAuthenticated) {
-      _logger.debug('Skipping ledger batch sync: user not authenticated');
+      _logger.debug(event: 'sync_ledger_batch_skipped_unauthenticated');
       return;
     }
     for (final e in entries) {
@@ -730,7 +744,7 @@ class SyncEngine {
   /// Push a bookmark to Firestore after local write.
   Future<void> pushBookmark(Map<String, dynamic> bookmark) async {
     if (!_firestoreDataSource.isAuthenticated) {
-      _logger.debug('Skipping bookmark sync: user not authenticated');
+      _logger.debug(event: 'sync_bookmark_skipped_unauthenticated');
       return;
     }
 
@@ -830,8 +844,11 @@ class SyncEngine {
   /// background so the UI can respond immediately after the local DB write.
   Future<void> deleteLearnerProfile(int profileId) async {
     _logger.info(
-      'deleteLearnerProfile: profileId=$profileId '
-      'authenticated=${_firestoreDataSource.isAuthenticated}',
+      event: 'sync_delete_learner_profile_start',
+      fields: {
+        'profileId': profileId,
+        'authenticated': _firestoreDataSource.isAuthenticated,
+      },
     );
 
     // 1. Persist tombstone so pullOnLaunch never re-creates this profile.
@@ -842,12 +859,15 @@ class SyncEngine {
         existing.add(profileId.toString());
         await prefs.setStringList(_deletedProfileIdsKey, existing);
         _logger.info(
-          'deleteLearnerProfile: tombstone stored, '
-          'total tombstoned=${existing.length}',
+          event: 'sync_delete_learner_profile_tombstone_stored',
+          fields: {'totalTombstoned': existing.length},
         );
       }
     } catch (e) {
-      _logger.warning('deleteLearnerProfile: failed to persist tombstone: $e');
+      _logger.warning(
+        event: 'sync_delete_learner_profile_tombstone_failed',
+        exception: e,
+      );
     }
 
     // 2. Fire-and-forget Firestore delete — UI does not wait for network.
@@ -855,18 +875,18 @@ class SyncEngine {
       if (_firestoreDataSource.isAuthenticated) {
         try {
           _logger.info(
-            'deleteLearnerProfile: starting Firestore delete '
-            'profileId=$profileId',
+            event: 'sync_delete_learner_profile_firestore_start',
+            fields: {'profileId': profileId},
           );
           await _firestoreDataSource.deleteLearnerProfile(profileId);
           _logger.info(
-            'deleteLearnerProfile: Firestore delete complete '
-            'profileId=$profileId',
+            event: 'sync_delete_learner_profile_firestore_complete',
+            fields: {'profileId': profileId},
           );
         } catch (e) {
           _logger.warning(
-            'deleteLearnerProfile: Firestore delete failed, '
-            'falling back to queue: $e',
+            event: 'sync_delete_learner_profile_firestore_failed_queuing',
+            exception: e,
           );
           await _offlineQueue.enqueueLearnerProfileDelete(profileId);
           await _afterEnqueueForBackgroundFlush(
@@ -875,7 +895,8 @@ class SyncEngine {
         }
       } else {
         _logger.info(
-          'deleteLearnerProfile: offline — queuing profileId=$profileId',
+          event: 'sync_delete_learner_profile_offline_queuing',
+          fields: {'profileId': profileId},
         );
         await _offlineQueue.enqueueLearnerProfileDelete(profileId);
         await _afterEnqueueForBackgroundFlush(
@@ -894,7 +915,7 @@ class SyncEngine {
   /// Push a profile-program assignment to Firestore after local write.
   Future<void> pushProfileProgram(Map<String, dynamic> profileProgram) async {
     if (!_firestoreDataSource.isAuthenticated) {
-      _logger.debug('Skipping profile program sync: user not authenticated');
+      _logger.debug(event: 'sync_profile_program_skipped_unauthenticated');
       return;
     }
 
@@ -911,7 +932,7 @@ class SyncEngine {
   ) async {
     if (!_firestoreDataSource.isAuthenticated) {
       _logger.debug(
-        'Skipping profile program delete sync: user not authenticated',
+        event: 'sync_profile_program_delete_skipped_unauthenticated',
       );
       return;
     }
@@ -977,7 +998,8 @@ class SyncEngine {
     required int fallbackProfileId,
   }) async {
     _logger.debug(
-      'Merging ${remoteCompletions.length} completions from Firestore',
+      event: 'sync_merge_completions_start',
+      fields: {'count': remoteCompletions.length},
     );
 
     var insertedCount = 0;
@@ -1011,7 +1033,7 @@ class SyncEngine {
             stageId == null ||
             trackType == null ||
             completedAt == null) {
-          _logger.warning('Skipping invalid remote completion: $remote');
+          _logger.warning(event: 'sync_merge_completion_invalid_skipped');
           continue;
         }
 
@@ -1076,11 +1098,14 @@ class SyncEngine {
         }
       } catch (e) {
         // ignore: avoid_catches_without_on_clauses — intentional merge-loop error boundary
-        _logger.warning('Failed to merge completion: $e');
+        _logger.warning(event: 'sync_merge_completion_failed', exception: e);
       }
     }
 
-    _logger.debug('Inserted $insertedCount new completions from Firestore');
+    _logger.debug(
+      event: 'sync_merge_completions_done',
+      fields: {'insertedCount': insertedCount},
+    );
   }
 
   /// Merge ledger entries from Firestore (append-only).
@@ -1092,7 +1117,8 @@ class SyncEngine {
     required int fallbackProfileId,
   }) async {
     _logger.debug(
-      'Merging ${remoteLedgerEntries.length} ledger entries from Firestore',
+      event: 'sync_merge_ledger_entries_start',
+      fields: {'count': remoteLedgerEntries.length},
     );
 
     var insertedCount = 0;
@@ -1116,7 +1142,7 @@ class SyncEngine {
             unitIdentifier == null ||
             trackType == null ||
             completedAt == null) {
-          _logger.warning('Skipping invalid remote ledger entry: $remote');
+          _logger.warning(event: 'sync_merge_ledger_entry_invalid_skipped');
           continue;
         }
 
@@ -1149,11 +1175,14 @@ class SyncEngine {
         }
       } catch (e) {
         // ignore: avoid_catches_without_on_clauses — intentional merge-loop error boundary
-        _logger.warning('Failed to merge ledger entry: $e');
+        _logger.warning(event: 'sync_merge_ledger_entry_failed', exception: e);
       }
     }
 
-    _logger.debug('Inserted $insertedCount new ledger entries from Firestore');
+    _logger.debug(
+      event: 'sync_merge_ledger_entries_done',
+      fields: {'insertedCount': insertedCount},
+    );
   }
 
   /// Merge bookmarks from Firestore (last-write-wins per D4).
@@ -1164,7 +1193,10 @@ class SyncEngine {
     List<Map<String, dynamic>> remoteBookmarks, {
     required int profileId,
   }) async {
-    _logger.debug('Merging ${remoteBookmarks.length} bookmarks from Firestore');
+    _logger.debug(
+      event: 'sync_merge_bookmarks_start',
+      fields: {'count': remoteBookmarks.length},
+    );
 
     for (final remote in remoteBookmarks) {
       try {
@@ -1177,7 +1209,7 @@ class SyncEngine {
             trackType == null ||
             sefariaRef == null ||
             updatedAt == null) {
-          _logger.warning('Skipping invalid remote bookmark: $remote');
+          _logger.warning(event: 'sync_merge_bookmark_invalid_skipped');
           continue;
         }
 
@@ -1190,7 +1222,7 @@ class SyncEngine {
         );
       } catch (e) {
         // ignore: avoid_catches_without_on_clauses — intentional merge-loop error boundary
-        _logger.warning('Failed to merge bookmark: $e');
+        _logger.warning(event: 'sync_merge_bookmark_failed', exception: e);
       }
     }
   }
@@ -1204,7 +1236,10 @@ class SyncEngine {
     List<Map<String, dynamic>> remoteSettings, {
     required int profileId,
   }) async {
-    _logger.debug('Merging ${remoteSettings.length} settings from Firestore');
+    _logger.debug(
+      event: 'sync_merge_settings_start',
+      fields: {'count': remoteSettings.length},
+    );
 
     for (final remote in remoteSettings) {
       try {
@@ -1212,7 +1247,7 @@ class SyncEngine {
         final stages = remote['stages'] as List<dynamic>?;
         final remoteUpdatedAt = _parseTimestamp(remote['updated_at']);
         if (curriculumId == null || stages == null) {
-          _logger.warning('Skipping invalid remote settings: $remote');
+          _logger.warning(event: 'sync_merge_settings_invalid_skipped');
           continue;
         }
 
@@ -1226,7 +1261,8 @@ class SyncEngine {
             remoteUpdatedAt: remoteUpdatedAt,
           )) {
             _logger.debug(
-              'Skipping settings for $curriculumId: local is newer or equal',
+              event: 'sync_merge_settings_skipped_local_newer',
+              fields: {'curriculumId': curriculumId},
             );
             continue;
           }
@@ -1261,7 +1297,7 @@ class SyncEngine {
         await _mergeStudyDayConfig(remote, curriculumId, profileId);
       } catch (e) {
         // ignore: avoid_catches_without_on_clauses — intentional merge-loop error boundary
-        _logger.warning('Failed to merge settings: $e');
+        _logger.warning(event: 'sync_merge_settings_failed', exception: e);
       }
     }
   }
@@ -1285,7 +1321,8 @@ class SyncEngine {
       );
       if (!remoteIsNewer(localUpdatedAt: localTs, remoteUpdatedAt: remoteTs)) {
         _logger.debug(
-          'Skipping study day config for $curriculumId: local is newer',
+          event: 'sync_merge_study_day_config_skipped_local_newer',
+          fields: {'curriculumId': curriculumId},
         );
         return;
       }
@@ -1333,7 +1370,7 @@ class SyncEngine {
             remoteUpdatedAt: remoteUpdatedAt,
           )) {
         _logger.debug(
-          'Skipping notification settings merge: local is newer or equal',
+          event: 'sync_merge_notification_settings_skipped_local_newer',
         );
         return;
       }
@@ -1380,7 +1417,10 @@ class SyncEngine {
       await prefs.setInt(_notificationSettingsUpdatedAtMsKey, stamp);
     } catch (e) {
       // ignore: avoid_catches_without_on_clauses — intentional merge-loop error boundary
-      _logger.warning('Failed to merge notification settings: $e');
+      _logger.warning(
+        event: 'sync_merge_notification_settings_failed',
+        exception: e,
+      );
     }
   }
 
@@ -1454,7 +1494,9 @@ class SyncEngine {
             localUpdatedAt: localUpdatedAt,
             remoteUpdatedAt: remoteUpdatedAt,
           )) {
-        _logger.debug('Skipping gamification settings merge: local is newer');
+        _logger.debug(
+          event: 'sync_merge_gamification_settings_skipped_local_newer',
+        );
         return;
       }
 
@@ -1505,7 +1547,10 @@ class SyncEngine {
       await prefs.setInt(_gamificationLocalUpdatedAtKey(profileId), stamp);
     } catch (e) {
       // ignore: avoid_catches_without_on_clauses — intentional merge-loop error boundary
-      _logger.warning('Failed to merge gamification settings: $e');
+      _logger.warning(
+        event: 'sync_merge_gamification_settings_failed',
+        exception: e,
+      );
     }
   }
 
@@ -1530,7 +1575,7 @@ class SyncEngine {
             localUpdatedAt: localUpdatedAt,
             remoteUpdatedAt: remoteUpdatedAt,
           )) {
-        _logger.debug('Skipping UI preferences merge: local is newer or equal');
+        _logger.debug(event: 'sync_merge_ui_preferences_skipped_local_newer');
         return;
       }
 
@@ -1627,7 +1672,7 @@ class SyncEngine {
       );
     } catch (e) {
       // ignore: avoid_catches_without_on_clauses — intentional merge-loop error boundary
-      _logger.warning('Failed to merge UI preferences: $e');
+      _logger.warning(event: 'sync_merge_ui_preferences_failed', exception: e);
     }
   }
 
@@ -1639,7 +1684,10 @@ class SyncEngine {
     List<Map<String, dynamic>> remoteGoals, {
     required int profileId,
   }) async {
-    _logger.debug('Merging ${remoteGoals.length} goals from Firestore');
+    _logger.debug(
+      event: 'sync_merge_goals_start',
+      fields: {'count': remoteGoals.length},
+    );
 
     for (final remote in remoteGoals) {
       try {
@@ -1666,7 +1714,7 @@ class SyncEngine {
             trackId == 0 ||
             createdAt == null ||
             updatedAt == null) {
-          _logger.warning('Skipping invalid remote goal: $remote');
+          _logger.warning(event: 'sync_merge_goal_invalid_skipped');
           continue;
         }
 
@@ -1686,7 +1734,7 @@ class SyncEngine {
         );
       } catch (e) {
         // ignore: avoid_catches_without_on_clauses — intentional merge-loop error boundary
-        _logger.warning('Failed to merge goal: $e');
+        _logger.warning(event: 'sync_merge_goal_failed', exception: e);
       }
     }
   }
@@ -1697,7 +1745,8 @@ class SyncEngine {
     required int defaultProfileId,
   }) async {
     _logger.debug(
-      'Merging ${remoteProfilePrograms.length} profile programs from Firestore',
+      event: 'sync_merge_profile_programs_start',
+      fields: {'count': remoteProfilePrograms.length},
     );
 
     for (final remote in remoteProfilePrograms) {
@@ -1717,9 +1766,7 @@ class SyncEngine {
         final trackingStartRef = remote['tracking_start_ref'] as String?;
 
         if (curriculumId == null || programId == null) {
-          _logger.warning(
-            'Skipping invalid remote profile program assignment: $remote',
-          );
+          _logger.warning(event: 'sync_merge_profile_program_invalid_skipped');
           continue;
         }
 
@@ -1732,7 +1779,10 @@ class SyncEngine {
         );
       } catch (e) {
         // ignore: avoid_catches_without_on_clauses — intentional merge-loop error boundary
-        _logger.warning('Failed to merge profile program assignment: $e');
+        _logger.warning(
+          event: 'sync_merge_profile_program_failed',
+          exception: e,
+        );
       }
     }
   }
@@ -1744,8 +1794,11 @@ class SyncEngine {
   /// accuracy is ensured by completions merge.
   Future<void> _mergeStreak(Map<String, dynamic> remoteStreak) async {
     _logger.debug(
-      'Streak from Firestore: current=${remoteStreak['current_count']}, '
-      'max=${remoteStreak['max_count']}',
+      event: 'sync_merge_streak_received',
+      fields: {
+        'current': remoteStreak['current_count'],
+        'max': remoteStreak['max_count'],
+      },
     );
     // Streak is computed from completions locally. The Firestore streak
     // document serves as a cross-device cache but local truth comes from
@@ -1762,7 +1815,8 @@ class SyncEngine {
     required int profileId,
   }) async {
     _logger.debug(
-      'Merging ${remoteTracks.length} curriculum tracks from Firestore',
+      event: 'sync_merge_curriculum_tracks_start',
+      fields: {'count': remoteTracks.length},
     );
     if (remoteTracks.isEmpty) return;
 
@@ -1778,7 +1832,7 @@ class SyncEngine {
         if (curriculumKey == null ||
             trackTypeKey == null ||
             activatedAt == null) {
-          _logger.warning('Skipping invalid remote curriculum track: $remote');
+          _logger.warning(event: 'sync_merge_curriculum_track_invalid_skipped');
           continue;
         }
 
@@ -1794,7 +1848,7 @@ class SyncEngine {
         );
         if (curriculumId == null || trackType == null) {
           _logger.warning(
-            'Skipping curriculum track with unknown key: $remote',
+            event: 'sync_merge_curriculum_track_unknown_key_skipped',
           );
           continue;
         }
@@ -1862,14 +1916,17 @@ class SyncEngine {
         }
       } catch (e) {
         // ignore: avoid_catches_without_on_clauses — intentional merge-loop error boundary
-        _logger.warning('Failed to merge curriculum track: $e');
+        _logger.warning(
+          event: 'sync_merge_curriculum_track_failed',
+          exception: e,
+        );
       }
     }
   }
 
   /// Merge profile from Firestore (last-write-wins per D4).
   Future<void> _mergeProfile(Map<String, dynamic> remoteProfile) async {
-    _logger.debug('Merging profile from Firestore');
+    _logger.debug(event: 'sync_merge_profile_start');
 
     try {
       final firebaseUid = remoteProfile['firebase_uid'] as String?;
@@ -1881,7 +1938,7 @@ class SyncEngine {
           displayName == null ||
           userMode == null ||
           updatedAt == null) {
-        _logger.warning('Skipping invalid remote profile: $remoteProfile');
+        _logger.warning(event: 'sync_merge_profile_invalid_skipped');
         return;
       }
 
@@ -1893,7 +1950,7 @@ class SyncEngine {
       );
     } catch (e) {
       // ignore: avoid_catches_without_on_clauses — intentional Firestore error boundary
-      _logger.warning('Failed to merge profile: $e');
+      _logger.warning(event: 'sync_merge_profile_failed', exception: e);
     }
   }
 
@@ -1905,7 +1962,8 @@ class SyncEngine {
     List<Map<String, dynamic>> remoteProfiles,
   ) async {
     _logger.info(
-      '_mergeLearnerProfiles: merging ${remoteProfiles.length} profiles',
+      event: 'sync_merge_learner_profiles_start',
+      fields: {'count': remoteProfiles.length},
     );
 
     // Load tombstone set once — profiles deleted locally are never re-created.
@@ -1918,13 +1976,14 @@ class SyncEngine {
           .toSet();
       if (tombstoned.isNotEmpty) {
         _logger.info(
-          '_mergeLearnerProfiles: tombstone set=$tombstoned — '
-          'these ids will be skipped even if present in Firestore',
+          event: 'sync_merge_learner_profiles_tombstone_set_loaded',
+          fields: {'tombstonedCount': tombstoned.length},
         );
       }
     } catch (e) {
       _logger.warning(
-        '_mergeLearnerProfiles: failed to load tombstone set: $e',
+        event: 'sync_merge_learner_profiles_tombstone_load_failed',
+        exception: e,
       );
     }
 
@@ -1933,14 +1992,15 @@ class SyncEngine {
         final rawId = remote['id'];
         final id = rawId is int ? rawId : int.tryParse(rawId?.toString() ?? '');
         if (id == null) {
-          _logger.warning('Skipping invalid remote learner profile: $remote');
+          _logger.warning(event: 'sync_merge_learner_profile_invalid_skipped');
           continue;
         }
 
         // Skip tombstoned profiles — user explicitly deleted them locally.
         if (tombstoned.contains(id)) {
           _logger.info(
-            '_mergeLearnerProfiles: skipping tombstoned profile id=$id',
+            event: 'sync_merge_learner_profile_tombstoned_skipped',
+            fields: {'profileId': id},
           );
           continue;
         }
@@ -1980,8 +2040,8 @@ class SyncEngine {
         final existing = await _database.profileDao.getProfileById(id);
         if (existing == null) {
           _logger.info(
-            '_mergeLearnerProfiles: INSERT profile id=$id '
-            'name="$displayName" mode=$mode',
+            event: 'sync_merge_learner_profile_insert',
+            fields: {'profileId': id, 'mode': mode},
           );
           await _database
               .into(_database.profiles)
@@ -1999,8 +2059,8 @@ class SyncEngine {
         } else if (remoteUpdatedAt != null &&
             remoteUpdatedAt.isAfter(existing.updatedAt)) {
           _logger.info(
-            '_mergeLearnerProfiles: UPDATE profile id=$id '
-            'name="$displayName" (remote newer)',
+            event: 'sync_merge_learner_profile_update',
+            fields: {'profileId': id},
           );
           await (_database.update(
             _database.profiles,
@@ -2014,12 +2074,16 @@ class SyncEngine {
           );
         } else {
           _logger.debug(
-            '_mergeLearnerProfiles: SKIP profile id=$id (local is current)',
+            event: 'sync_merge_learner_profile_skip_local_current',
+            fields: {'profileId': id},
           );
         }
       } catch (e) {
         // ignore: avoid_catches_without_on_clauses — intentional merge-loop error boundary
-        _logger.warning('Failed to merge learner profile: $e');
+        _logger.warning(
+          event: 'sync_merge_learner_profile_failed',
+          exception: e,
+        );
       }
     }
   }
@@ -2073,11 +2137,17 @@ class SyncEngine {
       }
 
       if (pushed > 0) {
-        _logger.info('Backfilled $pushed learner profile(s) to Firestore');
+        _logger.info(
+          event: 'sync_backfill_learner_profiles_done',
+          fields: {'pushedCount': pushed},
+        );
       }
     } catch (e) {
       // ignore: avoid_catches_without_on_clauses — best-effort backfill path
-      _logger.warning('Learner profile backfill skipped: $e');
+      _logger.warning(
+        event: 'sync_backfill_learner_profiles_skipped',
+        exception: e,
+      );
     }
   }
 
@@ -2120,11 +2190,17 @@ class SyncEngine {
       }
 
       if (pushed > 0) {
-        _logger.info('Backfilled $pushed curriculum track(s) to Firestore');
+        _logger.info(
+          event: 'sync_backfill_curriculum_tracks_done',
+          fields: {'pushedCount': pushed},
+        );
       }
     } catch (e) {
       // ignore: avoid_catches_without_on_clauses — best-effort backfill path
-      _logger.warning('Curriculum track backfill skipped: $e');
+      _logger.warning(
+        event: 'sync_backfill_curriculum_tracks_skipped',
+        exception: e,
+      );
     }
   }
 
@@ -2175,11 +2251,17 @@ class SyncEngine {
       }
 
       if (updated > 0) {
-        _logger.info('Repaired $updated legacy completion track ids');
+        _logger.info(
+          event: 'sync_repair_legacy_completion_track_ids_done',
+          fields: {'updatedCount': updated},
+        );
       }
     } catch (e) {
       // ignore: avoid_catches_without_on_clauses — best-effort repair path
-      _logger.warning('Legacy completion track-id repair skipped: $e');
+      _logger.warning(
+        event: 'sync_repair_legacy_completion_track_ids_skipped',
+        exception: e,
+      );
     }
   }
 
@@ -2325,7 +2407,10 @@ class SyncEngine {
     _mergingCompletions = true;
     _consecutiveListenerErrors = 0;
     try {
-      _logger.debug('Received ${completions.length} completions from listener');
+      _logger.debug(
+        event: 'sync_listener_completions_received',
+        fields: {'count': completions.length},
+      );
       await _mergeCompletions(
         completions,
         fallbackProfileId: _firestoreDataSource.profileId,
@@ -2340,7 +2425,10 @@ class SyncEngine {
     _mergingBookmarks = true;
     _consecutiveListenerErrors = 0;
     try {
-      _logger.debug('Received ${bookmarks.length} bookmarks from listener');
+      _logger.debug(
+        event: 'sync_listener_bookmarks_received',
+        fields: {'count': bookmarks.length},
+      );
       await _mergeBookmarks(
         bookmarks,
         profileId: _firestoreDataSource.profileId,
@@ -2355,7 +2443,10 @@ class SyncEngine {
     _mergingSettings = true;
     _consecutiveListenerErrors = 0;
     try {
-      _logger.debug('Received ${settings.length} settings from listener');
+      _logger.debug(
+        event: 'sync_listener_settings_received',
+        fields: {'count': settings.length},
+      );
       await _mergeSettings(settings, profileId: _firestoreDataSource.profileId);
     } finally {
       _mergingSettings = false;
@@ -2368,7 +2459,7 @@ class SyncEngine {
     _mergingStreak = true;
     _consecutiveListenerErrors = 0;
     try {
-      _logger.debug('Received streak update from listener');
+      _logger.debug(event: 'sync_listener_streak_received');
       await _mergeStreak(streak);
     } finally {
       _mergingStreak = false;
@@ -2380,7 +2471,10 @@ class SyncEngine {
     _mergingGoals = true;
     _consecutiveListenerErrors = 0;
     try {
-      _logger.debug('Received ${goals.length} goals from listener');
+      _logger.debug(
+        event: 'sync_listener_goals_received',
+        fields: {'count': goals.length},
+      );
       await _mergeGoals(goals, profileId: _firestoreDataSource.profileId);
     } finally {
       _mergingGoals = false;
@@ -2395,7 +2489,8 @@ class SyncEngine {
     _consecutiveListenerErrors = 0;
     try {
       _logger.debug(
-        'Received ${profilePrograms.length} profile programs from listener',
+        event: 'sync_listener_profile_programs_received',
+        fields: {'count': profilePrograms.length},
       );
       await _mergeProfilePrograms(
         profilePrograms,
@@ -2412,7 +2507,8 @@ class SyncEngine {
     _consecutiveListenerErrors = 0;
     try {
       _logger.debug(
-        'Received ${ledgerEntries.length} ledger entries from listener',
+        event: 'sync_listener_ledger_entries_received',
+        fields: {'count': ledgerEntries.length},
       );
       await _mergeLedgerEntries(
         ledgerEntries,
@@ -2431,7 +2527,8 @@ class SyncEngine {
     _consecutiveListenerErrors = 0;
     try {
       _logger.debug(
-        'Received ${tracks.length} curriculum tracks from listener',
+        event: 'sync_listener_curriculum_tracks_received',
+        fields: {'count': tracks.length},
       );
       await _mergeCurriculumTracks(
         tracks,
@@ -2450,7 +2547,7 @@ class SyncEngine {
     _mergingNotificationSettings = true;
     _consecutiveListenerErrors = 0;
     try {
-      _logger.debug('Received notification settings update from listener');
+      _logger.debug(event: 'sync_listener_notification_settings_received');
       await _mergeNotificationSettings(notificationSettings);
     } finally {
       _mergingNotificationSettings = false;
@@ -2465,7 +2562,7 @@ class SyncEngine {
     _mergingGamificationSettings = true;
     _consecutiveListenerErrors = 0;
     try {
-      _logger.debug('Received gamification settings update from listener');
+      _logger.debug(event: 'sync_listener_gamification_settings_received');
       await _mergeGamificationSettings(
         gamificationSettings,
         profileId: _firestoreDataSource.profileId,
@@ -2481,7 +2578,7 @@ class SyncEngine {
     _mergingUiPreferences = true;
     _consecutiveListenerErrors = 0;
     try {
-      _logger.debug('Received UI preferences update from listener');
+      _logger.debug(event: 'sync_listener_ui_preferences_received');
       await _mergeUiPreferences(
         remote,
         profileId: _firestoreDataSource.profileId,
@@ -2569,16 +2666,17 @@ class SyncEngine {
   /// to prevent further quota consumption. The app falls back to
   /// pull-on-launch sync only.
   void _handleListenerError(Object error, StackTrace stackTrace) {
-    _logger.error('Listener error', error, stackTrace);
+    _logger.error(
+      event: 'sync_listener_error',
+      exception: error,
+      stackTrace: stackTrace,
+    );
 
     // Distinguish PERMISSION_DENIED (auth issue) from other errors (quota).
     // Permission errors should detach immediately — retrying just wastes
     // requests and the 3-strike counter would misattribute them as quota.
     if (error is FirebaseException && error.code == 'permission-denied') {
-      _logger.warning(
-        'Listener received PERMISSION_DENIED — detaching listeners. '
-        'Likely a stale or missing auth session.',
-      );
+      _logger.warning(event: 'sync_listener_permission_denied_detaching');
       detachListeners();
       _updateStatus(
         SyncStatus.error(
@@ -2595,8 +2693,8 @@ class SyncEngine {
 
     if (_consecutiveListenerErrors >= quotaErrorThreshold && !_quotaDegraded) {
       _logger.warning(
-        'Firebase quota threshold reached ($_consecutiveListenerErrors '
-        'consecutive errors). Disabling real-time listeners.',
+        event: 'sync_listener_quota_threshold_reached_disabling',
+        fields: {'consecutiveErrors': _consecutiveListenerErrors},
       );
       _quotaDegraded = true;
       detachListeners();
@@ -2622,7 +2720,7 @@ class SyncEngine {
   // ========== Network Events ==========
 
   Future<void> _onReconnect() async {
-    _logger.info('Device reconnected, flushing offline queue');
+    _logger.info(event: 'sync_device_reconnected_flushing_queue');
 
     // Reset quota degradation on reconnect — give listeners another chance
     _consecutiveListenerErrors = 0;
@@ -2630,10 +2728,7 @@ class SyncEngine {
     _consecutivePushPermissionErrors = 0;
 
     if (!_firestoreDataSource.isAuthenticated) {
-      _logger.info(
-        'Reconnect flush deferred: user not authenticated '
-        '(keeping queued writes local)',
-      );
+      _logger.info(event: 'sync_reconnect_flush_deferred_unauthenticated');
       await _updateQueueOnlyStatus();
       return;
     }
@@ -2644,7 +2739,10 @@ class SyncEngine {
       // In battery saver mode, process in smaller batches with delays
       final batchSize = _isBatterySaverMode ? 5 : null;
       final syncedCount = await _offlineQueue.flush(batchSize: batchSize);
-      _logger.info('Flushed $syncedCount operations from offline queue');
+      _logger.info(
+        event: 'sync_reconnect_flush_done',
+        fields: {'syncedCount': syncedCount},
+      );
 
       _updateStatus(SyncStatus.synced(lastSyncedAt: DateTime.now().toUtc()));
 
@@ -2653,7 +2751,11 @@ class SyncEngine {
       _listenersAttached = false;
       await attachListeners();
     } catch (e, stackTrace) {
-      _logger.error('Failed to flush offline queue', e, stackTrace);
+      _logger.error(
+        event: 'sync_reconnect_flush_failed',
+        exception: e,
+        stackTrace: stackTrace,
+      );
       _updateStatus(
         SyncStatus.error(
           message: e.toString(),
@@ -2714,7 +2816,10 @@ class SyncEngine {
       return DateTime.fromMillisecondsSinceEpoch(ms, isUtc: true);
     } catch (e) {
       // ignore: avoid_catches_without_on_clauses — SharedPreferences may be unavailable in tests
-      _logger.warning('Failed to read settings timestamp: $e');
+      _logger.warning(
+        event: 'sync_settings_timestamp_read_failed',
+        exception: e,
+      );
       return null;
     }
   }
@@ -2733,7 +2838,10 @@ class SyncEngine {
       );
     } catch (e) {
       // ignore: avoid_catches_without_on_clauses — SharedPreferences may be unavailable in tests
-      _logger.warning('Failed to persist settings timestamp: $e');
+      _logger.warning(
+        event: 'sync_settings_timestamp_persist_failed',
+        exception: e,
+      );
     }
   }
 
@@ -2744,7 +2852,10 @@ class SyncEngine {
       await prefs.setInt(_lastSyncKey, syncedAt.millisecondsSinceEpoch);
     } catch (e) {
       // ignore: avoid_catches_without_on_clauses — SharedPreferences may be unavailable in tests
-      _logger.warning('Failed to persist last sync timestamp: $e');
+      _logger.warning(
+        event: 'sync_last_sync_timestamp_persist_failed',
+        exception: e,
+      );
     }
   }
 
@@ -2760,7 +2871,10 @@ class SyncEngine {
       }
     } catch (e) {
       // ignore: avoid_catches_without_on_clauses — SharedPreferences may be unavailable in tests
-      _logger.warning('Failed to restore last sync timestamp: $e');
+      _logger.warning(
+        event: 'sync_last_sync_timestamp_restore_failed',
+        exception: e,
+      );
     }
   }
 
@@ -2886,7 +3000,10 @@ class SyncEngine {
   /// intervals to reduce network activity (NFR27).
   void setBatterySaverMode(bool enabled) {
     _isBatterySaverMode = enabled;
-    _logger.info('Battery saver mode: ${enabled ? "on" : "off"}');
+    _logger.info(
+      event: 'sync_battery_saver_mode_changed',
+      fields: {'enabled': enabled},
+    );
   }
 
   /// Whether battery saver mode is currently active.
@@ -2903,11 +3020,13 @@ class SyncEngine {
   /// Called once after the user creates a cloud account (story 19.7).
   Future<void> pushAllLocalData() async {
     if (!_firestoreDataSource.isAuthenticated) {
-      _logger.warning('pushAllLocalData skipped: user not authenticated');
+      _logger.warning(
+        event: 'sync_push_all_local_data_skipped_unauthenticated',
+      );
       return;
     }
 
-    _logger.info('pushAllLocalData: starting initial cloud push');
+    _logger.info(event: 'sync_push_all_local_data_start');
     _updateStatus(SyncStatus.syncing(startedAt: DateTime.now().toUtc()));
 
     try {
@@ -2927,7 +3046,10 @@ class SyncEngine {
           'points': c.points,
         });
       }
-      _logger.debug('Pushed ${completions.length} completions');
+      _logger.debug(
+        event: 'sync_push_all_completions_queued',
+        fields: {'count': completions.length},
+      );
 
       // --- Bookmarks ---
       final bookmarks = await _database.bookmarkDao.getAllBookmarks();
@@ -2939,7 +3061,10 @@ class SyncEngine {
           'updated_at': b.updatedAt.toIso8601String(),
         });
       }
-      _logger.debug('Pushed ${bookmarks.length} bookmarks');
+      _logger.debug(
+        event: 'sync_push_all_bookmarks_queued',
+        fields: {'count': bookmarks.length},
+      );
 
       // --- Goals ---
       final goals = await _database.goalDao.getAllGoals();
@@ -2959,7 +3084,10 @@ class SyncEngine {
           'updated_at': g.updatedAt.toIso8601String(),
         });
       }
-      _logger.debug('Pushed ${goals.length} goals');
+      _logger.debug(
+        event: 'sync_push_all_goals_queued',
+        fields: {'count': goals.length},
+      );
 
       // --- Program assignments / start anchors ---
       final profilePrograms = await _database.profileProgramDao
@@ -2973,7 +3101,10 @@ class SyncEngine {
           'tracking_start_ref': p.trackingStartRef,
         });
       }
-      _logger.debug('Pushed ${profilePrograms.length} profile programs');
+      _logger.debug(
+        event: 'sync_push_all_profile_programs_queued',
+        fields: {'count': profilePrograms.length},
+      );
 
       // --- Streak ---
       final streak = await _database.streakDao.getStreakByProfile(
@@ -2987,7 +3118,7 @@ class SyncEngine {
           'grace_used_date': streak.graceUsedDate?.toIso8601String(),
           'grace_period_days': streak.gracePeriodDays,
         });
-        _logger.debug('Pushed streak');
+        _logger.debug(event: 'sync_push_all_streak_queued');
       }
 
       // --- Ledger entries ---
@@ -3011,7 +3142,10 @@ class SyncEngine {
           'isManual': e.isManual,
         });
       }
-      _logger.debug('Pushed ${ledgerEntries.length} ledger entries');
+      _logger.debug(
+        event: 'sync_push_all_ledger_entries_queued',
+        fields: {'count': ledgerEntries.length},
+      );
 
       // --- Curriculum tracks (track activation/archival state) ---
       final tracks = await _database.trackDao.getAllForProfile(
@@ -3029,28 +3163,35 @@ class SyncEngine {
           'pace_reset_date': t.paceResetDate?.toIso8601String(),
         });
       }
-      _logger.debug('Pushed ${tracks.length} curriculum tracks');
+      _logger.debug(
+        event: 'sync_push_all_curriculum_tracks_queued',
+        fields: {'count': tracks.length},
+      );
 
       // --- Notification settings (profile-scoped preferences) ---
       final notificationSettings =
           await _readLocalNotificationSettingsPayload();
       await pushNotificationSettings(notificationSettings);
-      _logger.debug('Pushed notification settings');
+      _logger.debug(event: 'sync_push_all_notification_settings_queued');
 
       // --- Gamification settings (points + reward milestones/unlocks) ---
       await pushGamificationSettingsSnapshot();
-      _logger.debug('Pushed gamification settings');
+      _logger.debug(event: 'sync_push_all_gamification_settings_queued');
 
       // --- UI preferences (locale, Hebrew calendar, text display, learning order) ---
       await pushUiPreferencesSnapshot();
-      _logger.debug('Pushed UI preferences');
+      _logger.debug(event: 'sync_push_all_ui_preferences_queued');
 
-      _logger.info('pushAllLocalData: completed successfully');
+      _logger.info(event: 'sync_push_all_local_data_completed');
       final syncedAt = DateTime.now().toUtc();
       await _persistLastSyncTimestamp(syncedAt);
       _updateStatus(SyncStatus.synced(lastSyncedAt: syncedAt));
     } catch (e, stackTrace) {
-      _logger.error('pushAllLocalData failed', e, stackTrace);
+      _logger.error(
+        event: 'sync_push_all_local_data_failed',
+        exception: e,
+        stackTrace: stackTrace,
+      );
       _updateStatus(
         SyncStatus.error(
           message: e.toString(),

@@ -67,7 +67,7 @@ class ProfileRepositoryImpl implements ProfileRepository {
       throw DuplicateProfileNameException(trimmedName);
     }
 
-    _log.info('createProfile: name="$trimmedName" mode=$mode');
+    _log.info(event: 'profile_repo_create_start', fields: {'mode': mode});
     final now = DateTime.now().toUtc();
     final id = await _db.profileDao.insertProfile(
       ProfilesCompanion.insert(
@@ -91,7 +91,8 @@ class ProfileRepositoryImpl implements ProfileRepository {
     );
 
     _log.info(
-      'createProfile: inserted id=${model.id} name="${model.displayName}"',
+      event: 'profile_repo_create_done',
+      fields: {'profileId': model.id},
     );
     // Profile creation must succeed offline-first even if cloud push fails.
     try {
@@ -151,8 +152,8 @@ class ProfileRepositoryImpl implements ProfileRepository {
   @override
   Future<void> deleteProfile(int id, {bool allowLast = false}) async {
     _log.info(
-      'deleteProfile: id=$id allowLast=$allowLast '
-      'hasSyncEngine=${_syncEngine != null}',
+      event: 'profile_repo_delete_start',
+      fields: {'profileId': id, 'allowLast': allowLast},
     );
     // Guard: by default we refuse to leave the account with zero profiles —
     // the picker would have nothing to show. Callers can opt in via
@@ -204,10 +205,16 @@ class ProfileRepositoryImpl implements ProfileRepository {
       // Finally delete the profile itself
       await _db.profileDao.deleteProfile(id);
     });
-    _log.info('deleteProfile: local DB transaction complete for id=$id');
+    _log.info(
+      event: 'profile_repo_delete_db_complete',
+      fields: {'profileId': id},
+    );
 
     await _syncEngine?.deleteLearnerProfile(id);
-    _log.info('deleteProfile: sync engine notified for id=$id');
+    _log.info(
+      event: 'profile_repo_delete_sync_notified',
+      fields: {'profileId': id},
+    );
   }
 
   @override

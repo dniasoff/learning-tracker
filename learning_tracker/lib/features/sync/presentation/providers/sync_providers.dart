@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/providers/firebase_providers.dart';
 import 'package:learning_tracker/core/providers/network_providers.dart';
@@ -39,12 +40,12 @@ final offlineQueueProvider = Provider<OfflineQueue?>((ref) {
   final database = ref.watch(userDatabaseProvider);
   final firestoreDataSource = ref.watch(firestoreDataSourceProvider);
   if (firestoreDataSource == null) return null;
-  final logger = ref.watch(talkerProvider);
+  final talker = ref.watch(talkerProvider);
 
   return OfflineQueue(
     database: database,
     firestoreDataSource: firestoreDataSource,
-    logger: logger,
+    logger: AppLogger(talker),
   );
 });
 
@@ -66,14 +67,14 @@ final syncEngineProvider = Provider<SyncEngine?>((ref) {
   if (firestoreDataSource == null) return null;
   final offlineQueue = ref.watch(offlineQueueProvider);
   if (offlineQueue == null) return null;
-  final logger = ref.watch(talkerProvider);
+  final talker = ref.watch(talkerProvider);
   final connectivityService = ref.watch(connectivityServiceProvider);
 
   final engine = SyncEngine(
     database: database,
     firestoreDataSource: firestoreDataSource,
     offlineQueue: offlineQueue,
-    logger: logger,
+    logger: AppLogger(talker),
     connectivityService: connectivityService,
   );
 

@@ -3,8 +3,8 @@ import 'dart:math';
 
 import 'package:learning_tracker/core/database/daos/sync_queue_dao.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
+import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/features/sync/data/firestore_data_source.dart';
-import 'package:talker/talker.dart';
 
 /// Manages offline queue for pending Firestore operations.
 ///
@@ -15,14 +15,14 @@ class OfflineQueue {
   OfflineQueue({
     required UserDatabase database,
     required FirestoreDataSource firestoreDataSource,
-    required Talker logger,
+    required AppLogger logger,
   }) : _database = database,
        _firestoreDataSource = firestoreDataSource,
        _logger = logger;
 
   final UserDatabase _database;
   final FirestoreDataSource _firestoreDataSource;
-  final Talker _logger;
+  final AppLogger _logger;
 
   /// Maximum number of retry attempts before an item is considered dead (FR93).
   static const maxRetries = 5;
@@ -64,21 +64,24 @@ class OfflineQueue {
   Future<void> enqueueCompletion(Map<String, dynamic> completion) async {
     final payload = jsonEncode(completion);
     await _queue.enqueue('completion', payload);
-    _logger.info('Queued completion for offline sync: ${completion['id']}');
+    _logger.info(
+      event: 'offline_queue_enqueue_completion',
+      fields: {'id': completion['id']},
+    );
   }
 
   /// Enqueue a bookmark operation.
   Future<void> enqueueBookmark(Map<String, dynamic> bookmark) async {
     final payload = jsonEncode(bookmark);
     await _queue.enqueue('bookmark', payload);
-    _logger.info('Queued bookmark for offline sync');
+    _logger.info(event: 'offline_queue_enqueue_bookmark');
   }
 
   /// Enqueue a settings operation.
   Future<void> enqueueSettings(Map<String, dynamic> settings) async {
     final payload = jsonEncode(settings);
     await _queue.enqueue('settings', payload);
-    _logger.info('Queued settings for offline sync');
+    _logger.info(event: 'offline_queue_enqueue_settings');
   }
 
   /// Enqueue a notification settings operation.
@@ -87,7 +90,7 @@ class OfflineQueue {
   ) async {
     final payload = jsonEncode(notificationSettings);
     await _queue.enqueue('notification_settings', payload);
-    _logger.info('Queued notification settings for offline sync');
+    _logger.info(event: 'offline_queue_enqueue_notification_settings');
   }
 
   /// Enqueue a gamification settings operation.
@@ -96,49 +99,52 @@ class OfflineQueue {
   ) async {
     final payload = jsonEncode(gamificationSettings);
     await _queue.enqueue('gamification_settings', payload);
-    _logger.info('Queued gamification settings for offline sync');
+    _logger.info(event: 'offline_queue_enqueue_gamification_settings');
   }
 
   /// Enqueue UI preferences (locale, calendar, text display, learning order).
   Future<void> enqueueUiPreferences(Map<String, dynamic> uiPreferences) async {
     final payload = jsonEncode(uiPreferences);
     await _queue.enqueue('ui_preferences', payload);
-    _logger.info('Queued UI preferences for offline sync');
+    _logger.info(event: 'offline_queue_enqueue_ui_preferences');
   }
 
   /// Enqueue a streak operation.
   Future<void> enqueueStreak(Map<String, dynamic> streak) async {
     final payload = jsonEncode(streak);
     await _queue.enqueue('streak', payload);
-    _logger.info('Queued streak for offline sync');
+    _logger.info(event: 'offline_queue_enqueue_streak');
   }
 
   /// Enqueue a profile operation.
   Future<void> enqueueProfile(Map<String, dynamic> profile) async {
     final payload = jsonEncode(profile);
     await _queue.enqueue('profile', payload);
-    _logger.info('Queued profile for offline sync');
+    _logger.info(event: 'offline_queue_enqueue_profile');
   }
 
   /// Enqueue a learner profile operation.
   Future<void> enqueueLearnerProfile(Map<String, dynamic> profile) async {
     final payload = jsonEncode(profile);
     await _queue.enqueue('learner_profile', payload);
-    _logger.info('Queued learner profile for offline sync');
+    _logger.info(event: 'offline_queue_enqueue_learner_profile');
   }
 
   /// Enqueue a learner profile delete operation.
   Future<void> enqueueLearnerProfileDelete(int profileId) async {
     final payload = jsonEncode({'profile_id': profileId});
     await _queue.enqueue('learner_profile_delete', payload);
-    _logger.info('Queued learner profile delete for offline sync: $profileId');
+    _logger.info(
+      event: 'offline_queue_enqueue_learner_profile_delete',
+      fields: {'profileId': profileId},
+    );
   }
 
   /// Enqueue a goal operation.
   Future<void> enqueueGoal(Map<String, dynamic> goal) async {
     final payload = jsonEncode(goal);
     await _queue.enqueue('goal', payload);
-    _logger.info('Queued goal for offline sync');
+    _logger.info(event: 'offline_queue_enqueue_goal');
   }
 
   /// Enqueue a profile-program assignment operation.
@@ -148,7 +154,8 @@ class OfflineQueue {
     final payload = jsonEncode(profileProgram);
     await _queue.enqueue('profile_program', payload);
     _logger.info(
-      'Queued profile program for offline sync: ${profileProgram['curriculum_id']}',
+      event: 'offline_queue_enqueue_profile_program',
+      fields: {'curriculumId': profileProgram['curriculum_id']},
     );
   }
 
@@ -157,7 +164,8 @@ class OfflineQueue {
     final encoded = jsonEncode(payload);
     await _queue.enqueue('profile_program_delete', encoded);
     _logger.info(
-      'Queued profile program delete for offline sync: ${payload['curriculum_id']}',
+      event: 'offline_queue_enqueue_profile_program_delete',
+      fields: {'curriculumId': payload['curriculum_id']},
     );
   }
 
@@ -165,7 +173,7 @@ class OfflineQueue {
   Future<void> enqueueLedgerEntry(Map<String, dynamic> entry) async {
     final payload = jsonEncode(entry);
     await _queue.enqueue('ledger_entry', payload);
-    _logger.info('Queued ledger entry for offline sync');
+    _logger.info(event: 'offline_queue_enqueue_ledger_entry');
   }
 
   /// Enqueue curriculum import metadata operation.
@@ -175,7 +183,8 @@ class OfflineQueue {
     final payload = jsonEncode(metadata);
     await _queue.enqueue('curriculum_import_metadata', payload);
     _logger.info(
-      'Queued curriculum import metadata for offline sync: ${metadata['curriculum_id']}',
+      event: 'offline_queue_enqueue_curriculum_import_metadata',
+      fields: {'curriculumId': metadata['curriculum_id']},
     );
   }
 
@@ -184,8 +193,11 @@ class OfflineQueue {
     final payload = jsonEncode(track);
     await _queue.enqueue('curriculum_track', payload);
     _logger.info(
-      'Queued curriculum track for offline sync: '
-      '${track['curriculum_id']}_${track['track_type']}',
+      event: 'offline_queue_enqueue_curriculum_track',
+      fields: {
+        'curriculumId': track['curriculum_id'],
+        'trackType': track['track_type'],
+      },
     );
   }
 
@@ -207,7 +219,7 @@ class OfflineQueue {
   Future<int> flush({int? batchSize}) async {
     final allPending = await _queue.getAllPending();
     if (allPending.isEmpty) {
-      _logger.debug('No pending operations to flush');
+      _logger.debug(event: 'offline_queue_flush_empty');
       return 0;
     }
 
@@ -225,7 +237,10 @@ class OfflineQueue {
       batches.add(allPending);
     }
 
-    _logger.info('Flushing ${allPending.length} pending operations');
+    _logger.info(
+      event: 'offline_queue_flush_start',
+      fields: {'pendingCount': allPending.length},
+    );
     var successCount = 0;
 
     for (var batchIndex = 0; batchIndex < batches.length; batchIndex++) {
@@ -238,8 +253,12 @@ class OfflineQueue {
         // Skip items that have exceeded the retry limit (dead-letter).
         if (operation.retryCount >= maxRetries) {
           _logger.warning(
-            'Skipping dead-letter operation #${operation.id} '
-            '(${operation.operationType}) after $maxRetries retries',
+            event: 'offline_queue_dead_letter_skipped',
+            fields: {
+              'operationId': operation.id,
+              'operationType': operation.operationType,
+              'maxRetries': maxRetries,
+            },
           );
           continue;
         }
@@ -253,8 +272,12 @@ class OfflineQueue {
           );
           if (DateTime.now().toUtc().isBefore(nextRetryAt)) {
             _logger.debug(
-              'Skipping operation #${operation.id} — backoff until $nextRetryAt '
-              '(retry ${operation.retryCount})',
+              event: 'offline_queue_backoff_skip',
+              fields: {
+                'operationId': operation.id,
+                'retryCount': operation.retryCount,
+                'nextRetryAt': nextRetryAt.toIso8601String(),
+              },
             );
             continue;
           }
@@ -304,7 +327,11 @@ class OfflineQueue {
                   : int.tryParse(rawProfileId?.toString() ?? '');
               if (profileId == null) {
                 _logger.warning(
-                  'Invalid learner_profile_delete payload: $payload',
+                  event: 'offline_queue_invalid_payload',
+                  fields: {
+                    'operationType': 'learner_profile_delete',
+                    'reason': 'missing_profile_id',
+                  },
                 );
                 continue;
               }
@@ -320,7 +347,11 @@ class OfflineQueue {
               final cid = payload['curriculum_id'] as String?;
               if (cid == null || cid.isEmpty) {
                 _logger.warning(
-                  'Invalid profile_program_delete payload: $payload',
+                  event: 'offline_queue_invalid_payload',
+                  fields: {
+                    'operationType': 'profile_program_delete',
+                    'reason': 'missing_curriculum_id',
+                  },
                 );
                 continue;
               }
@@ -340,7 +371,8 @@ class OfflineQueue {
               break;
             default:
               _logger.warning(
-                'Unknown operation type: ${operation.operationType}',
+                event: 'offline_queue_unknown_operation_type',
+                fields: {'operationType': operation.operationType},
               );
               continue;
           }
@@ -349,13 +381,21 @@ class OfflineQueue {
           await _queue.remove(operation.id);
           successCount++;
           _logger.debug(
-            'Synced ${operation.operationType} operation #${operation.id}',
+            event: 'offline_queue_operation_synced',
+            fields: {
+              'operationId': operation.id,
+              'operationType': operation.operationType,
+            },
           );
         } catch (e, stackTrace) {
           _logger.error(
-            'Failed to sync ${operation.operationType} operation #${operation.id}',
-            e,
-            stackTrace,
+            event: 'offline_queue_operation_failed',
+            fields: {
+              'operationId': operation.id,
+              'operationType': operation.operationType,
+            },
+            exception: e,
+            stackTrace: stackTrace,
           );
           await _queue.markFailed(operation.id, e.toString());
         }
@@ -363,7 +403,8 @@ class OfflineQueue {
     }
 
     _logger.info(
-      'Flushed $successCount/${allPending.length} operations successfully',
+      event: 'offline_queue_flush_complete',
+      fields: {'successCount': successCount, 'totalCount': allPending.length},
     );
     return successCount;
   }
@@ -371,6 +412,6 @@ class OfflineQueue {
   /// Clear all queued operations (use with caution).
   Future<void> clearAll() async {
     await _queue.clearAll();
-    _logger.warning('Cleared all queued operations');
+    _logger.warning(event: 'offline_queue_cleared_all');
   }
 }
