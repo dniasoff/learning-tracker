@@ -4,6 +4,8 @@ part of 'bookmark_dao.dart';
 
 // ignore_for_file: type=lint
 mixin _$BookmarkDaoMixin on DatabaseAccessor<UserDatabase> {
+  $CurriculumTracksTable get curriculumTracks =>
+      attachedDatabase.curriculumTracks;
   $BookmarksTable get bookmarks => attachedDatabase.bookmarks;
   BookmarkDaoManager get managers => BookmarkDaoManager(this);
 }
@@ -11,6 +13,11 @@ mixin _$BookmarkDaoMixin on DatabaseAccessor<UserDatabase> {
 class BookmarkDaoManager {
   final _$BookmarkDaoMixin _db;
   BookmarkDaoManager(this._db);
+  $$CurriculumTracksTableTableManager get curriculumTracks =>
+      $$CurriculumTracksTableTableManager(
+        _db.attachedDatabase,
+        _db.curriculumTracks,
+      );
   $$BookmarksTableTableManager get bookmarks =>
       $$BookmarksTableTableManager(_db.attachedDatabase, _db.bookmarks);
 }

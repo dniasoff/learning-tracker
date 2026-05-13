@@ -7,7 +7,7 @@ import 'package:learning_tracker/core/database/tables/curriculum_tracks.dart';
 /// for each curriculum with ordering and delay configuration.
 class StageDefinitions extends Table {
   IntColumn get id => integer().autoIncrement()();
-  IntColumn get profileId => integer().withDefault(const Constant(0))();
+  IntColumn get profileId => integer()();
   TextColumn get curriculumId => text()();
   IntColumn get trackId => integer().references(CurriculumTracks, #id)();
   IntColumn get stageOrder => integer()();

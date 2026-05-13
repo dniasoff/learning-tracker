@@ -1,8 +1,16 @@
 import 'package:drift/drift.dart';
-import 'package:learning_tracker/core/database/tables/user_profiles.dart';
+import 'package:learning_tracker/core/database/tables/accounts.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 
 part 'user_profile_dao.g.dart';
+
+// ---------------------------------------------------------------------------
+// Backwards-compatibility aliases — callers that imported UserProfile /
+// UserProfilesCompanion from user_profile_dao.dart continue to compile.
+// The underlying generated types are Account / AccountsCompanion (schema v1).
+// ---------------------------------------------------------------------------
+typedef UserProfile = Account;
+typedef UserProfilesCompanion = AccountsCompanion;
 
 /// Tier enum mirrors the `tier` column values.
 enum UserTier { cloudBorn, localBorn }
@@ -17,25 +25,26 @@ extension UserTierX on UserTier {
   };
 }
 
-@DriftAccessor(tables: [UserProfiles])
+/// DAO for the accounts table (was: user_profiles table).
+@DriftAccessor(tables: [Accounts])
 class UserProfileDao extends DatabaseAccessor<UserDatabase>
     with _$UserProfileDaoMixin {
   UserProfileDao(super.db);
 
-  Future<List<UserProfile>> getAllUserProfiles() => select(userProfiles).get();
+  Future<List<Account>> getAllUserProfiles() => select(accounts).get();
 
-  Future<UserProfile?> getUserProfileById(int id) =>
-      (select(userProfiles)..where((t) => t.id.equals(id))).getSingleOrNull();
+  Future<Account?> getUserProfileById(int id) =>
+      (select(accounts)..where((t) => t.id.equals(id))).getSingleOrNull();
 
-  Future<UserProfile?> getUserProfileByFirebaseUid(String firebaseUid) =>
+  Future<Account?> getUserProfileByFirebaseUid(String firebaseUid) =>
       (select(
-        userProfiles,
+        accounts,
       )..where((t) => t.firebaseUid.equals(firebaseUid))).getSingleOrNull();
 
   /// Find the local-born account matching an email. Returns null if no
   /// local-born row exists with that email (cloud-born rows are ignored).
-  Future<UserProfile?> findLocalBornByEmail(String email) =>
-      (select(userProfiles)..where(
+  Future<Account?> findLocalBornByEmail(String email) =>
+      (select(accounts)..where(
             (t) =>
                 t.email.equals(email) &
                 t.tier.equals(UserTier.localBorn.dbValue),
@@ -43,25 +52,25 @@ class UserProfileDao extends DatabaseAccessor<UserDatabase>
           .getSingleOrNull();
 
   /// Find the cloud-born account matching a Firebase UID.
-  Future<UserProfile?> findCloudBornByFirebaseUid(String firebaseUid) =>
-      (select(userProfiles)..where(
+  Future<Account?> findCloudBornByFirebaseUid(String firebaseUid) =>
+      (select(accounts)..where(
             (t) =>
                 t.firebaseUid.equals(firebaseUid) &
                 t.tier.equals(UserTier.cloudBorn.dbValue),
           ))
           .getSingleOrNull();
 
-  Future<List<UserProfile>> findByTier(UserTier tier) =>
-      (select(userProfiles)..where((t) => t.tier.equals(tier.dbValue))).get();
+  Future<List<Account>> findByTier(UserTier tier) =>
+      (select(accounts)..where((t) => t.tier.equals(tier.dbValue))).get();
 
-  Future<int> insertUserProfile(UserProfilesCompanion entry) =>
-      into(userProfiles).insert(entry);
+  Future<int> insertUserProfile(AccountsCompanion entry) =>
+      into(accounts).insert(entry);
 
-  Future<bool> updateUserProfile(UserProfilesCompanion entry) =>
-      update(userProfiles).replace(entry);
+  Future<bool> updateUserProfile(AccountsCompanion entry) =>
+      update(accounts).replace(entry);
 
   Future<int> deleteUserProfile(int id) =>
-      (delete(userProfiles)..where((t) => t.id.equals(id))).go();
+      (delete(accounts)..where((t) => t.id.equals(id))).go();
 
   /// Atomic tier flip for the local → cloud upgrade flow (Epic 20 story 20.9).
   ///
@@ -73,8 +82,8 @@ class UserProfileDao extends DatabaseAccessor<UserDatabase>
     required DateTime updatedAt,
   }) async {
     await transaction(() async {
-      await (update(userProfiles)..where((t) => t.id.equals(profileId))).write(
-        UserProfilesCompanion(
+      await (update(accounts)..where((t) => t.id.equals(profileId))).write(
+        AccountsCompanion(
           tier: Value(UserTier.cloudBorn.dbValue),
           firebaseUid: Value(firebaseUid),
           passwordHash: const Value(null),
@@ -100,7 +109,7 @@ class UserProfileDao extends DatabaseAccessor<UserDatabase>
 
     if (existing == null) {
       await insertUserProfile(
-        UserProfilesCompanion.insert(
+        AccountsCompanion.insert(
           email: email ?? '$firebaseUid@cloud.placeholder',
           firebaseUid: Value(firebaseUid),
           tier: UserTier.cloudBorn.dbValue,
@@ -112,9 +121,9 @@ class UserProfileDao extends DatabaseAccessor<UserDatabase>
       );
     } else if (updatedAt.isAfter(existing.updatedAt)) {
       await (update(
-        userProfiles,
+        accounts,
       )..where((t) => t.id.equals(existing.id))).write(
-        UserProfilesCompanion(
+        AccountsCompanion(
           displayName: Value(displayName),
           userMode: Value(userMode),
           updatedAt: Value(updatedAt),

@@ -14,6 +14,10 @@ import 'package:learning_tracker/features/sync/data/sync_engine.dart';
 ///
 /// Scoped to a single profile so bookmarks on the same curriculum+track
 /// are independent across profiles on the account.
+///
+/// Schema v1 (DNI-322): Bookmarks now reference curriculumTracks by trackId
+/// (integer FK) rather than trackType (TEXT). The [_resolveTrackId] helper
+/// looks up the track row when only a TrackType enum is available.
 class BookmarkRepositoryImpl implements BookmarkRepository {
   final UserDatabase _database;
   final SyncEngine? _syncEngine;
@@ -30,21 +34,41 @@ class BookmarkRepositoryImpl implements BookmarkRepository {
        _contentRepository = contentRepository,
        _profileId = profileId;
 
+  /// Resolve the integer track ID for a (curriculumId, trackType) pair
+  /// scoped to [_profileId]. Returns null if no matching track exists.
+  Future<int?> _resolveTrackId(
+    CurriculumId curriculumId,
+    TrackType trackType,
+  ) async {
+    final tracks = await _database.trackDao.getActiveTracks(curriculumId);
+    final match = tracks
+        .where(
+          (t) =>
+              t.trackType == trackType.storageKey &&
+              t.profileId == _profileId,
+        )
+        .firstOrNull;
+    return match?.id;
+  }
+
   @override
   Future<BookmarkEntity?> getBookmark({
     required CurriculumId curriculumId,
     required TrackType trackType,
   }) async {
+    final trackId = await _resolveTrackId(curriculumId, trackType);
+    if (trackId == null) return null;
+
     final bookmark = await _database.bookmarkDao
         .getBookmarkByCurriculumTrackAndProfile(
           curriculumId.storageKey,
-          trackType.storageKey,
+          trackId,
           _profileId,
         );
 
     if (bookmark == null) return null;
 
-    return _bookmarkFromDb(bookmark);
+    return _bookmarkFromDb(bookmark, trackType);
   }
 
   @override
@@ -55,10 +79,17 @@ class BookmarkRepositoryImpl implements BookmarkRepository {
   }) async {
     final now = DateTimeFactory.nowUtc(); // P5: UTC timestamps
 
+    final trackId = await _resolveTrackId(curriculumId, trackType);
+    if (trackId == null) {
+      throw StateError(
+        'No active track found for $curriculumId / $trackType / profile $_profileId',
+      );
+    }
+
     final existing = await _database.bookmarkDao
         .getBookmarkByCurriculumTrackAndProfile(
           curriculumId.storageKey,
-          trackType.storageKey,
+          trackId,
           _profileId,
         );
 
@@ -70,7 +101,7 @@ class BookmarkRepositoryImpl implements BookmarkRepository {
           id: drift.Value(existing.id),
           profileId: drift.Value(_profileId),
           curriculumId: drift.Value(curriculumId.storageKey),
-          trackType: drift.Value(trackType.storageKey),
+          trackId: drift.Value(trackId),
           sefariaRef: drift.Value(sefariaRef),
           updatedAt: drift.Value(now),
         ),
@@ -85,9 +116,9 @@ class BookmarkRepositoryImpl implements BookmarkRepository {
     } else {
       await _database.bookmarkDao.insertBookmark(
         BookmarksCompanion.insert(
-          profileId: drift.Value(_profileId),
+          profileId: _profileId,
           curriculumId: curriculumId.storageKey,
-          trackType: trackType.storageKey,
+          trackId: trackId,
           sefariaRef: sefariaRef,
           updatedAt: now,
         ),
@@ -113,10 +144,13 @@ class BookmarkRepositoryImpl implements BookmarkRepository {
     required TrackType trackType,
     required String completedSefariaRef,
   }) async {
+    final trackId = await _resolveTrackId(curriculumId, trackType);
+    if (trackId == null) return;
+
     final bookmark = await _database.bookmarkDao
         .getBookmarkByCurriculumTrackAndProfile(
           curriculumId.storageKey,
-          trackType.storageKey,
+          trackId,
           _profileId,
         );
 
@@ -255,7 +289,10 @@ class BookmarkRepositoryImpl implements BookmarkRepository {
   }
 
   /// Convert database model to domain entity.
-  BookmarkEntity _bookmarkFromDb(Bookmark bookmark) {
+  ///
+  /// Since the Bookmark row no longer stores trackType as text, the caller
+  /// must supply the [TrackType] that was used to look up the bookmark.
+  BookmarkEntity _bookmarkFromDb(Bookmark bookmark, TrackType trackType) {
     return BookmarkEntity(
       curriculumId: CurriculumId.values.firstWhere(
         (c) => c.storageKey == bookmark.curriculumId,
@@ -263,7 +300,7 @@ class BookmarkRepositoryImpl implements BookmarkRepository {
           'Unknown curriculumId: ${bookmark.curriculumId}',
         ),
       ),
-      trackType: TrackType.fromStorageKey(bookmark.trackType),
+      trackType: trackType,
       sefariaRef: bookmark.sefariaRef,
       updatedAt: bookmark.updatedAt,
     );
@@ -283,22 +320,34 @@ class BookmarkRepositoryImpl implements BookmarkRepository {
     );
 
     if (local == null) {
-      // No local bookmark for this profile, insert remote scoped to it
+      // No local bookmark for this profile — need to resolve trackId first.
+      final trackId = await _resolveTrackId(
+        remote.curriculumId,
+        remote.trackType,
+      );
+      if (trackId == null) return; // Track not yet set up for this profile
+
       await _database.bookmarkDao.insertBookmark(
         BookmarksCompanion.insert(
-          profileId: drift.Value(_profileId),
+          profileId: _profileId,
           curriculumId: remote.curriculumId.storageKey,
-          trackType: remote.trackType.storageKey,
+          trackId: trackId,
           sefariaRef: remote.sefariaRef,
           updatedAt: remote.updatedAt,
         ),
       );
     } else {
       if (remote.updatedAt.isAfter(local.updatedAt)) {
+        final trackId = await _resolveTrackId(
+          remote.curriculumId,
+          remote.trackType,
+        );
+        if (trackId == null) return;
+
         await _database.bookmarkDao.upsertBookmarkByProfile(
           profileId: _profileId,
           curriculumId: remote.curriculumId.storageKey,
-          trackType: remote.trackType.storageKey,
+          trackId: trackId,
           sefariaRef: remote.sefariaRef,
           updatedAt: remote.updatedAt,
         );

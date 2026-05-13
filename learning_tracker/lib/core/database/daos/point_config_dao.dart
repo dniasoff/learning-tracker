@@ -120,7 +120,7 @@ class PointConfigDao extends DatabaseAccessor<UserDatabase>
       for (final d in fallbackDefaults) {
         await insertConfig(
           PointConfigsCompanion.insert(
-            profileId: Value(profileId),
+            profileId: profileId,
             curriculumId: curriculumId,
             trackId: trackId,
             stageOrder: d.stageOrder,
@@ -140,7 +140,7 @@ class PointConfigDao extends DatabaseAccessor<UserDatabase>
           : 1;
       await insertConfig(
         PointConfigsCompanion.insert(
-          profileId: Value(profileId),
+          profileId: profileId,
           curriculumId: curriculumId,
           trackId: trackId,
           stageOrder: stage.stageOrder,

@@ -213,7 +213,7 @@ class TrackCreationService {
         await _database.bookmarkDao.upsertBookmarkByProfile(
           profileId: profileId,
           curriculumId: curriculum.storageKey,
-          trackType: TrackType.personal.storageKey,
+          trackId: trackId,
           sefariaRef: bookmarkRef,
           updatedAt: updatedAt,
         );
@@ -274,7 +274,7 @@ class TrackCreationService {
           .into(_database.curriculumScopes)
           .insert(
             CurriculumScopesCompanion.insert(
-              profileId: Value(profileId),
+              profileId: profileId,
               curriculumId: curriculumId.storageKey,
               trackId: trackId,
               scopeLevel: scope.level,

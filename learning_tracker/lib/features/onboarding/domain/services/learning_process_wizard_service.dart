@@ -87,9 +87,9 @@ class LearningProcessWizardService {
       case WizardChoice.preset:
         await _applyPreset(result, profileId: profileId, trackId: trackId);
       case WizardChoice.custom:
-        await _applyCustom(result, trackId: trackId);
+        await _applyCustom(result, profileId: profileId, trackId: trackId);
       case WizardChoice.noReview:
-        await _applyNoReview(result, trackId: trackId);
+        await _applyNoReview(result, profileId: profileId, trackId: trackId);
     }
   }
 
@@ -120,6 +120,7 @@ class LearningProcessWizardService {
 
       await _stageDao.insertStageDefinition(
         db.StageDefinitionsCompanion.insert(
+          profileId: profileId,
           curriculumId: result.curriculumId.storageKey,
           trackId: trackId,
           stageOrder: i + 1,
@@ -134,10 +135,15 @@ class LearningProcessWizardService {
     }
   }
 
-  Future<void> _applyCustom(WizardResult result, {required int trackId}) async {
+  Future<void> _applyCustom(
+    WizardResult result, {
+    required int profileId,
+    required int trackId,
+  }) async {
     // Always create לימוד as stage 1.
     await _stageDao.insertStageDefinition(
       db.StageDefinitionsCompanion.insert(
+        profileId: profileId,
         curriculumId: result.curriculumId.storageKey,
         trackId: trackId,
         stageOrder: 1,
@@ -153,6 +159,7 @@ class LearningProcessWizardService {
       final round = rounds[i];
       await _stageDao.insertStageDefinition(
         db.StageDefinitionsCompanion.insert(
+          profileId: profileId,
           curriculumId: result.curriculumId.storageKey,
           trackId: trackId,
           stageOrder: i + 2,
@@ -170,10 +177,12 @@ class LearningProcessWizardService {
 
   Future<void> _applyNoReview(
     WizardResult result, {
+    required int profileId,
     required int trackId,
   }) async {
     await _stageDao.insertStageDefinition(
       db.StageDefinitionsCompanion.insert(
+        profileId: profileId,
         curriculumId: result.curriculumId.storageKey,
         trackId: trackId,
         stageOrder: 1,

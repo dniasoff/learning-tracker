@@ -158,7 +158,7 @@ class DataExportImportService {
             (b) => {
               'id': b.id,
               'curriculumId': b.curriculumId,
-              'trackType': b.trackType,
+              'trackId': b.trackId,
               'sefariaRef': b.sefariaRef,
               'updatedAt': b.updatedAt.toIso8601String(),
             },
@@ -264,7 +264,7 @@ class DataExportImportService {
       await _database.delete(_database.bookmarks).go();
       await _database.delete(_database.learningOrder).go();
       await _database.delete(_database.curriculumTracks).go();
-      await _database.delete(_database.userProfiles).go();
+      await _database.delete(_database.accounts).go();
 
       // Import completions
       for (final c in data['completions'] as List) {
@@ -273,6 +273,7 @@ class DataExportImportService {
             .into(_database.completions)
             .insert(
               CompletionsCompanion.insert(
+                profileId: map['profileId'] as int? ?? 0,
                 curriculumId: map['curriculumId'] as String,
                 sefariaRef: map['sefariaRef'] as String,
                 stageId: map['stageId'] as int,
@@ -291,6 +292,7 @@ class DataExportImportService {
             .into(_database.goals)
             .insert(
               GoalsCompanion.insert(
+                profileId: map['profileId'] as int? ?? 0,
                 curriculumId: map['curriculumId'] as String,
                 trackId: map['trackId'] as int? ?? 0,
                 targetPercent: Value(map['targetPercent'] as double? ?? 100.0),
@@ -314,6 +316,7 @@ class DataExportImportService {
             .into(_database.stageDefinitions)
             .insert(
               StageDefinitionsCompanion.insert(
+                profileId: map['profileId'] as int? ?? 0,
                 curriculumId: map['curriculumId'] as String,
                 trackId: map['trackId'] as int? ?? 0,
                 stageOrder: map['stageOrder'] as int,
@@ -331,6 +334,7 @@ class DataExportImportService {
             .into(_database.streaks)
             .insert(
               StreaksCompanion.insert(
+                profileId: map['profileId'] as int? ?? 0,
                 currentStreak: Value(map['currentStreak'] as int? ?? 0),
                 maxStreak: Value(map['maxStreak'] as int? ?? 0),
                 lastCompletionDate: Value(
@@ -349,6 +353,7 @@ class DataExportImportService {
             .into(_database.pointConfigs)
             .insert(
               PointConfigsCompanion.insert(
+                profileId: map['profileId'] as int? ?? 0,
                 curriculumId: map['curriculumId'] as String,
                 trackId: map['trackId'] as int? ?? 0,
                 stageOrder: map['stageOrder'] as int,
@@ -364,8 +369,9 @@ class DataExportImportService {
             .into(_database.bookmarks)
             .insert(
               BookmarksCompanion.insert(
+                profileId: map['profileId'] as int? ?? 0,
                 curriculumId: map['curriculumId'] as String,
-                trackType: map['trackType'] as String,
+                trackId: map['trackId'] as int? ?? 0,
                 sefariaRef: map['sefariaRef'] as String,
                 updatedAt: DateTime.parse(map['updatedAt'] as String),
               ),
@@ -379,6 +385,7 @@ class DataExportImportService {
             .into(_database.learningOrder)
             .insert(
               LearningOrderCompanion.insert(
+                profileId: map['profileId'] as int? ?? 0,
                 curriculumId: map['curriculumId'] as String,
                 sefariaRef: map['sefariaRef'] as String,
                 userSortOrder: map['userSortOrder'] as int,
@@ -393,6 +400,7 @@ class DataExportImportService {
             .into(_database.curriculumTracks)
             .insert(
               CurriculumTracksCompanion.insert(
+                profileId: map['profileId'] as int? ?? 0,
                 curriculumId: map['curriculumId'] as String,
                 trackType: map['trackType'] as String,
                 isActive: Value(map['isActive'] as bool? ?? true),
@@ -410,9 +418,9 @@ class DataExportImportService {
       for (final u in data['userProfiles'] as List) {
         final map = u as Map<String, dynamic>;
         await _database
-            .into(_database.userProfiles)
+            .into(_database.accounts)
             .insert(
-              UserProfilesCompanion.insert(
+              AccountsCompanion.insert(
                 email:
                     (map['email'] as String?) ??
                     (map['firebaseUid'] as String? ?? ''),

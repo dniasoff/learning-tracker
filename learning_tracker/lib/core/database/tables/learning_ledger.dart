@@ -8,7 +8,7 @@ import 'package:learning_tracker/core/database/tables/curriculum_tracks.dart';
 /// and curriculum deactivation (no foreign keys to those tables).
 class LearningLedger extends Table {
   IntColumn get id => integer().autoIncrement()();
-  IntColumn get profileId => integer().withDefault(const Constant(0))();
+  IntColumn get profileId => integer()();
   TextColumn get curriculumId => text()();
   TextColumn get unitType => text()(); // 'seder', 'masechta', 'sefer'
   TextColumn get unitIdentifier => text()(); // level1 or level2 value

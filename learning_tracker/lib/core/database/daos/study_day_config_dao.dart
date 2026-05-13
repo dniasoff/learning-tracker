@@ -48,7 +48,7 @@ class StudyDayConfigDao extends DatabaseAccessor<UserDatabase>
   }) async {
     await into(studyDayConfigs).insertOnConflictUpdate(
       StudyDayConfigsCompanion.insert(
-        profileId: Value(profileId),
+        profileId: profileId,
         curriculumId: curriculumId,
         trackId: trackId,
         dayOfWeek: dayOfWeek,
@@ -68,7 +68,7 @@ class StudyDayConfigDao extends DatabaseAccessor<UserDatabase>
     for (var day = 1; day <= 7; day++) {
       await into(studyDayConfigs).insertOnConflictUpdate(
         StudyDayConfigsCompanion.insert(
-          profileId: Value(profileId),
+          profileId: profileId,
           curriculumId: curriculumId,
           trackId: trackId,
           dayOfWeek: day,

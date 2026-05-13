@@ -92,7 +92,7 @@ class GoalDao extends DatabaseAccessor<UserDatabase> with _$GoalDaoMixin {
     if (existing == null) {
       await insertGoal(
         GoalsCompanion.insert(
-          profileId: Value(profileId),
+          profileId: profileId,
           curriculumId: curriculumId,
           trackId: trackId,
           description: Value(description),
@@ -129,6 +129,7 @@ class GoalDao extends DatabaseAccessor<UserDatabase> with _$GoalDaoMixin {
   Future<void> upsertGoal({
     required String curriculumId,
     required int trackId,
+    required int profileId,
     required String description,
     required double targetPercent,
     required DateTime? targetDate,
@@ -150,6 +151,7 @@ class GoalDao extends DatabaseAccessor<UserDatabase> with _$GoalDaoMixin {
     if (existing == null) {
       await insertGoal(
         GoalsCompanion.insert(
+          profileId: profileId,
           curriculumId: curriculumId,
           trackId: trackId,
           description: Value(description),

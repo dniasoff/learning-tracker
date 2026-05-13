@@ -144,8 +144,8 @@ class AccountManagementService {
       await _database.delete(_database.textDownloadStatuses).go();
       // Parent tables
       await _database.delete(_database.curriculumTracks).go();
-      await _database.delete(_database.profiles).go();
-      await _database.delete(_database.userProfiles).go();
+      await _database.delete(_database.learnerProfiles).go();
+      await _database.delete(_database.accounts).go();
     });
   }
 }

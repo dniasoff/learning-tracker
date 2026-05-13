@@ -4,13 +4,13 @@ part of 'user_profile_dao.dart';
 
 // ignore_for_file: type=lint
 mixin _$UserProfileDaoMixin on DatabaseAccessor<UserDatabase> {
-  $UserProfilesTable get userProfiles => attachedDatabase.userProfiles;
+  $AccountsTable get accounts => attachedDatabase.accounts;
   UserProfileDaoManager get managers => UserProfileDaoManager(this);
 }
 
 class UserProfileDaoManager {
   final _$UserProfileDaoMixin _db;
   UserProfileDaoManager(this._db);
-  $$UserProfilesTableTableManager get userProfiles =>
-      $$UserProfilesTableTableManager(_db.attachedDatabase, _db.userProfiles);
+  $$AccountsTableTableManager get accounts =>
+      $$AccountsTableTableManager(_db.attachedDatabase, _db.accounts);
 }

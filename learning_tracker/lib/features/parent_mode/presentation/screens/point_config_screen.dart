@@ -115,7 +115,7 @@ final _pointConfigDataProvider = FutureProvider.autoDispose<List<_TrackPointData
         if (config == null) {
           await db.pointConfigDao.upsertConfig(
             PointConfigsCompanion.insert(
-              profileId: Value(profileId),
+              profileId: profileId,
               curriculumId: curriculum.storageKey,
               trackId: track.id,
               stageOrder: stage.stageOrder,

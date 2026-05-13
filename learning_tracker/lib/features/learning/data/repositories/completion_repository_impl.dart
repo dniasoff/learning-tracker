@@ -305,7 +305,7 @@ class CompletionRepositoryImpl implements CompletionRepository {
         final companions = chunk
             .map(
               (ref) => CompletionsCompanion.insert(
-                profileId: drift.Value(effectiveProfileId),
+                profileId: effectiveProfileId,
                 curriculumId: request.curriculumId,
                 sefariaRef: ref,
                 stageId: request.stageId,
@@ -566,7 +566,7 @@ class CompletionRepositoryImpl implements CompletionRepository {
 
     final id = await _database.completionDao.insertCompletion(
       CompletionsCompanion.insert(
-        profileId: drift.Value(profileId),
+        profileId: profileId,
         curriculumId: request.curriculumId,
         sefariaRef: request.sefariaRef,
         stageId: request.stageId,

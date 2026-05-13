@@ -22,7 +22,7 @@ class StreakService {
 
     if (existing == null) {
       final companion = StreaksCompanion.insert(
-        profileId: Value(_profileId),
+        profileId: _profileId,
         currentStreak: const Value(1),
         maxStreak: const Value(1),
         lastCompletionDate: Value(completionDateUtc),

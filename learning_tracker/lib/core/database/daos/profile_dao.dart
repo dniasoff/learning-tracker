@@ -1,43 +1,55 @@
 import 'package:drift/drift.dart';
-import 'package:learning_tracker/core/database/tables/profiles.dart';
+import 'package:learning_tracker/core/database/tables/learner_profiles.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 
 part 'profile_dao.g.dart';
 
-/// DAO for the profiles table.
-@DriftAccessor(tables: [Profiles])
-class ProfileDao extends DatabaseAccessor<UserDatabase> with _$ProfileDaoMixin {
+// ---------------------------------------------------------------------------
+// Backwards-compatibility aliases — callers that imported Profile /
+// ProfilesCompanion from profile_dao.dart continue to compile.
+// The underlying generated types are LearnerProfile / LearnerProfilesCompanion.
+// ---------------------------------------------------------------------------
+typedef Profile = LearnerProfile;
+typedef ProfilesCompanion = LearnerProfilesCompanion;
+
+/// DAO for the learner_profiles table (was: profiles table).
+@DriftAccessor(tables: [LearnerProfiles])
+class ProfileDao extends DatabaseAccessor<UserDatabase>
+    with _$ProfileDaoMixin {
   ProfileDao(super.db);
 
   /// Get all profiles for an account.
-  Future<List<Profile>> getProfilesByAccount(int accountId) =>
-      (select(profiles)..where((t) => t.accountId.equals(accountId))).get();
+  Future<List<LearnerProfile>> getProfilesByAccount(int accountId) =>
+      (select(learnerProfiles)
+            ..where((t) => t.accountId.equals(accountId)))
+          .get();
 
   /// Get a single profile by ID.
-  Future<Profile?> getProfileById(int id) =>
-      (select(profiles)..where((t) => t.id.equals(id))).getSingleOrNull();
+  Future<LearnerProfile?> getProfileById(int id) =>
+      (select(learnerProfiles)..where((t) => t.id.equals(id)))
+          .getSingleOrNull();
 
   /// Count profiles for an account.
   Future<int> countProfilesForAccount(int accountId) async {
     final count = countAll();
-    final query = selectOnly(profiles)
+    final query = selectOnly(learnerProfiles)
       ..addColumns([count])
-      ..where(profiles.accountId.equals(accountId));
+      ..where(learnerProfiles.accountId.equals(accountId));
     final result = await query.getSingle();
     return result.read(count) ?? 0;
   }
 
   /// Insert a new profile. Returns the profile ID.
-  Future<int> insertProfile(ProfilesCompanion entry) =>
-      into(profiles).insert(entry);
+  Future<int> insertProfile(LearnerProfilesCompanion entry) =>
+      into(learnerProfiles).insert(entry);
 
   /// Update an existing profile.
-  Future<bool> updateProfile(ProfilesCompanion entry) =>
-      update(profiles).replace(entry);
+  Future<bool> updateProfile(LearnerProfilesCompanion entry) =>
+      update(learnerProfiles).replace(entry);
 
   /// Delete a profile by ID.
   Future<int> deleteProfile(int id) =>
-      (delete(profiles)..where((t) => t.id.equals(id))).go();
+      (delete(learnerProfiles)..where((t) => t.id.equals(id))).go();
 
   /// Check if a profile with the given name (case-insensitive, trimmed)
   /// already exists for the account. Optionally excludes a profile by ID
@@ -57,6 +69,8 @@ class ProfileDao extends DatabaseAccessor<UserDatabase> with _$ProfileDaoMixin {
   }
 
   /// Watch all profiles for an account.
-  Stream<List<Profile>> watchProfilesByAccount(int accountId) =>
-      (select(profiles)..where((t) => t.accountId.equals(accountId))).watch();
+  Stream<List<LearnerProfile>> watchProfilesByAccount(int accountId) =>
+      (select(learnerProfiles)
+            ..where((t) => t.accountId.equals(accountId)))
+          .watch();
 }

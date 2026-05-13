@@ -51,8 +51,9 @@ class TrackDao extends DatabaseAccessor<UserDatabase> with _$TrackDaoMixin {
   /// reactivates it with a new activatedAt timestamp.
   Future<void> activateTrack(
     CurriculumId curriculumId,
-    TrackType trackType,
-  ) async {
+    TrackType trackType, {
+    int profileId = 0,
+  }) async {
     final existing =
         await (select(curriculumTracks)..where(
               (t) =>
@@ -65,6 +66,7 @@ class TrackDao extends DatabaseAccessor<UserDatabase> with _$TrackDaoMixin {
       // Create new active track
       await into(curriculumTracks).insert(
         CurriculumTracksCompanion.insert(
+          profileId: profileId,
           curriculumId: curriculumId.storageKey,
           trackType: trackType.storageKey,
           isActive: const Value(true),
@@ -234,7 +236,7 @@ class TrackDao extends DatabaseAccessor<UserDatabase> with _$TrackDaoMixin {
     if (existing == null) {
       await into(curriculumTracks).insert(
         CurriculumTracksCompanion.insert(
-          profileId: Value(profileId),
+          profileId: profileId,
           curriculumId: curriculumId.storageKey,
           trackType: trackType.storageKey,
           isActive: Value(isActive),
@@ -300,7 +302,7 @@ class TrackDao extends DatabaseAccessor<UserDatabase> with _$TrackDaoMixin {
     if (existing.isEmpty) {
       await into(curriculumTracks).insert(
         CurriculumTracksCompanion.insert(
-          profileId: Value(profileId),
+          profileId: profileId,
           curriculumId: curriculumId.storageKey,
           trackType: TrackType.personal.storageKey,
           isActive: const Value(true),

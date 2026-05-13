@@ -63,7 +63,7 @@ class CurriculumScopeDao extends DatabaseAccessor<UserDatabase>
       for (final value in scopeValues) {
         await into(curriculumScopes).insert(
           CurriculumScopesCompanion.insert(
-            profileId: Value(profileId),
+            profileId: profileId,
             curriculumId: curriculum.storageKey,
             trackId: trackId,
             scopeLevel: scopeLevel,

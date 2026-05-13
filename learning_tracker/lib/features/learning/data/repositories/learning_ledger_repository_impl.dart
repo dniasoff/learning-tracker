@@ -80,7 +80,7 @@ class LearningLedgerRepositoryImpl implements LearningLedgerRepository {
 
     final id = await _database.learningLedgerDao.insertEntry(
       LearningLedgerCompanion.insert(
-        profileId: drift.Value(_activeProfileId),
+        profileId: _activeProfileId,
         curriculumId: curriculumId,
         unitType: unitType,
         unitIdentifier: unitIdentifier,
@@ -134,7 +134,7 @@ class LearningLedgerRepositoryImpl implements LearningLedgerRepository {
 
         final id = await _database.learningLedgerDao.insertEntry(
           LearningLedgerCompanion.insert(
-            profileId: drift.Value(_activeProfileId),
+            profileId: _activeProfileId,
             curriculumId: item.curriculumId,
             unitType: item.unitType,
             unitIdentifier: item.unitIdentifier,

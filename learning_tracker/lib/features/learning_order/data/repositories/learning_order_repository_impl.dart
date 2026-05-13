@@ -99,7 +99,7 @@ class LearningOrderRepositoryImpl implements LearningOrderRepository {
           curriculumId: curriculumId.storageKey,
           sefariaRef: items[i].sefariaRef,
           userSortOrder: i,
-          profileId: Value(_profileId),
+          profileId: _profileId,
           updatedAt: Value(updatedAt),
         ),
       );

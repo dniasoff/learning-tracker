@@ -70,7 +70,7 @@ class ProfileRepositoryImpl implements ProfileRepository {
     _log.info(event: 'profile_repo_create_start', fields: {'mode': mode});
     final now = DateTime.now().toUtc();
     final id = await _db.profileDao.insertProfile(
-      ProfilesCompanion.insert(
+      LearnerProfilesCompanion.insert(
         accountId: accountId,
         displayName: trimmedName,
         mode: mode,
@@ -128,8 +128,8 @@ class ProfileRepositoryImpl implements ProfileRepository {
 
     final trimmedDisplayName = displayName?.trim();
     final now = DateTime.now().toUtc();
-    await (_db.update(_db.profiles)..where((t) => t.id.equals(id))).write(
-      ProfilesCompanion(
+    await (_db.update(_db.learnerProfiles)..where((t) => t.id.equals(id))).write(
+      LearnerProfilesCompanion(
         displayName: trimmedDisplayName != null
             ? Value(trimmedDisplayName)
             : const Value.absent(),

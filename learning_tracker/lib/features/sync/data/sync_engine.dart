@@ -365,7 +365,7 @@ class SyncEngine {
       final idsFromRemote = _learnerProfileIdsFromRemotePayload(
         learnerProfiles,
       );
-      final allLocalProfiles = await _database.select(_database.profiles).get();
+      final allLocalProfiles = await _database.select(_database.learnerProfiles).get();
       final idsFromLocal = allLocalProfiles.map((p) => p.id).toSet();
       final mergedProfileIds = {...idsFromRemote, ...idsFromLocal}.toList()
         ..sort();
@@ -1084,7 +1084,7 @@ class SyncEngine {
 
           await _database.completionDao.insertCompletion(
             CompletionsCompanion.insert(
-              profileId: Value(profileId),
+              profileId: profileId,
               curriculumId: curriculumId,
               sefariaRef: sefariaRef,
               stageId: stageId,
@@ -1157,7 +1157,7 @@ class SyncEngine {
         if (!exists) {
           await _database.learningLedgerDao.insertEntry(
             LearningLedgerCompanion.insert(
-              profileId: Value(profileId),
+              profileId: profileId,
               curriculumId: curriculumId,
               unitType: remote['unitType'] as String? ?? 'masechta',
               unitIdentifier: unitIdentifier,
@@ -1213,9 +1213,23 @@ class SyncEngine {
           continue;
         }
 
+        // Resolve trackType string → trackId FK (CurriculumTracks.id)
+        final track = await (_database.select(_database.curriculumTracks)
+              ..where(
+                (t) =>
+                    t.profileId.equals(profileId) &
+                    t.curriculumId.equals(curriculumId) &
+                    t.trackType.equals(trackType),
+              ))
+            .getSingleOrNull();
+        if (track == null) {
+          _logger.warning(event: 'sync_merge_bookmark_track_not_found_skipped');
+          continue;
+        }
+
         await _database.bookmarkDao.upsertBookmarkByProfile(
           curriculumId: curriculumId,
-          trackType: trackType,
+          trackId: track.id,
           sefariaRef: sefariaRef,
           updatedAt: updatedAt,
           profileId: profileId,
@@ -1273,6 +1287,7 @@ class SyncEngine {
             .cast<Map<String, dynamic>>()
             .map(
               (s) => StageDefinitionsCompanion.insert(
+                profileId: profileId, // profile from enclosing merge context
                 curriculumId: curriculumId,
                 trackId: s['track_id'] as int? ?? trackId,
                 stageOrder: s['stage_order'] as int,
@@ -1518,7 +1533,7 @@ class SyncEngine {
 
           await _database.pointConfigDao.upsertConfig(
             PointConfigsCompanion.insert(
-              profileId: Value(profileId),
+              profileId: profileId,
               curriculumId: curriculumId,
               trackId: trackId,
               stageOrder: stageOrder,
@@ -1867,7 +1882,7 @@ class SyncEngine {
               .into(_database.curriculumTracks)
               .insert(
                 CurriculumTracksCompanion.insert(
-                  profileId: Value(profileId),
+                  profileId: profileId,
                   curriculumId: curriculumKey,
                   trackType: trackTypeKey,
                   isActive: Value(isActive),
@@ -2044,9 +2059,9 @@ class SyncEngine {
             fields: {'profileId': id, 'mode': mode},
           );
           await _database
-              .into(_database.profiles)
+              .into(_database.learnerProfiles)
               .insertOnConflictUpdate(
-                ProfilesCompanion.insert(
+                LearnerProfilesCompanion.insert(
                   id: Value(id),
                   accountId: accountId,
                   displayName: displayName,
@@ -2063,9 +2078,9 @@ class SyncEngine {
             fields: {'profileId': id},
           );
           await (_database.update(
-            _database.profiles,
+            _database.learnerProfiles,
           )..where((t) => t.id.equals(id))).write(
-            ProfilesCompanion(
+            LearnerProfilesCompanion(
               displayName: Value(displayName),
               mode: Value(mode),
               avatarIndex: Value(avatarIndex),
@@ -2107,7 +2122,7 @@ class SyncEngine {
         }
       }
 
-      final localProfiles = await _database.select(_database.profiles).get();
+      final localProfiles = await _database.select(_database.learnerProfiles).get();
       if (localProfiles.isEmpty) return;
 
       var pushed = 0;
@@ -3058,9 +3073,14 @@ class SyncEngine {
       // --- Bookmarks ---
       final bookmarks = await _database.bookmarkDao.getAllBookmarks();
       for (final b in bookmarks) {
+        // Resolve trackId → trackType string for Firestore payload
+        final track = await (_database.select(_database.curriculumTracks)
+              ..where((t) => t.id.equals(b.trackId)))
+            .getSingleOrNull();
+        if (track == null) continue;
         await pushBookmark({
           'curriculum_id': b.curriculumId,
-          'track_type': b.trackType,
+          'track_type': track.trackType,
           'content_item_id': b.sefariaRef,
           'updated_at': b.updatedAt.toIso8601String(),
         });

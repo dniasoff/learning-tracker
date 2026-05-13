@@ -9,7 +9,7 @@ class CurriculumTracks extends Table {
   /// Auto-increment primary key for FK references from other tables.
   IntColumn get id => integer().autoIncrement()();
 
-  IntColumn get profileId => integer().withDefault(const Constant(0))();
+  IntColumn get profileId => integer()();
 
   /// curriculum_id from CurriculumId enum storageKey
   TextColumn get curriculumId => text()();

@@ -68,6 +68,7 @@ class StageDefinitionRepositoryImpl implements StageDefinitionRepository {
 
     final id = await _stageDao.insertStageDefinition(
       db.StageDefinitionsCompanion.insert(
+        profileId: 0, // TODO(DNI-322): wire real profileId from caller
         curriculumId: curriculumId.storageKey,
         trackId: trackId,
         stageOrder: newOrder,
@@ -182,6 +183,7 @@ class StageDefinitionRepositoryImpl implements StageDefinitionRepository {
     for (final d in _defaults) {
       await _stageDao.insertStageDefinition(
         db.StageDefinitionsCompanion.insert(
+          profileId: 0, // TODO(DNI-322): wire real profileId from caller
           curriculumId: curriculumId.storageKey,
           trackId: trackId,
           stageOrder: d.stageOrder,
@@ -202,6 +204,7 @@ class StageDefinitionRepositoryImpl implements StageDefinitionRepository {
     for (final d in _defaults) {
       await _stageDao.insertStageDefinition(
         db.StageDefinitionsCompanion.insert(
+          profileId: 0, // TODO(DNI-322): wire real profileId from caller
           curriculumId: curriculumId.storageKey,
           trackId: trackId,
           stageOrder: d.stageOrder,

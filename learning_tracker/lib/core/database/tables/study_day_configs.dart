@@ -2,7 +2,7 @@ import 'package:drift/drift.dart';
 import 'package:learning_tracker/core/database/tables/curriculum_tracks.dart';
 
 class StudyDayConfigs extends Table {
-  IntColumn get profileId => integer().withDefault(const Constant(0))();
+  IntColumn get profileId => integer()();
   TextColumn get curriculumId => text()();
   IntColumn get trackId => integer().references(CurriculumTracks, #id)();
   IntColumn get dayOfWeek => integer()(); // 1=Mon, 2=Tue, ..., 7=Sun (ISO 8601)

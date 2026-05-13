@@ -14,14 +14,15 @@ class BookmarkDao extends DatabaseAccessor<UserDatabase>
   Future<Bookmark?> getBookmarkById(int id) =>
       (select(bookmarks)..where((t) => t.id.equals(id))).getSingleOrNull();
 
+  /// Get a bookmark by curriculum and track ID.
   Future<Bookmark?> getBookmarkByCurriculumAndTrack(
     String curriculumId,
-    String trackType,
+    int trackId,
   ) =>
       (select(bookmarks)..where(
             (t) =>
                 t.curriculumId.equals(curriculumId) &
-                t.trackType.equals(trackType),
+                t.trackId.equals(trackId),
           ))
           .getSingleOrNull();
 
@@ -36,16 +37,16 @@ class BookmarkDao extends DatabaseAccessor<UserDatabase>
 
   // ========== Profile-Scoped Queries ==========
 
-  /// Get a bookmark by curriculum, track, and profile.
+  /// Get a bookmark by curriculum, track ID, and profile.
   Future<Bookmark?> getBookmarkByCurriculumTrackAndProfile(
     String curriculumId,
-    String trackType,
+    int trackId,
     int profileId,
   ) =>
       (select(bookmarks)..where(
             (t) =>
                 t.curriculumId.equals(curriculumId) &
-                t.trackType.equals(trackType) &
+                t.trackId.equals(trackId) &
                 t.profileId.equals(profileId),
           ))
           .getSingleOrNull();
@@ -54,26 +55,26 @@ class BookmarkDao extends DatabaseAccessor<UserDatabase>
   Future<List<Bookmark>> getBookmarksByProfile(int profileId) =>
       (select(bookmarks)..where((t) => t.profileId.equals(profileId))).get();
 
-  /// Upsert a bookmark by curriculum, track, and profile (last-write-wins).
+  /// Upsert a bookmark by curriculum, track ID, and profile (last-write-wins).
   Future<void> upsertBookmarkByProfile({
     required String curriculumId,
-    required String trackType,
+    required int trackId,
     required String sefariaRef,
     required DateTime updatedAt,
     required int profileId,
   }) async {
     final existing = await getBookmarkByCurriculumTrackAndProfile(
       curriculumId,
-      trackType,
+      trackId,
       profileId,
     );
 
     if (existing == null) {
       await insertBookmark(
         BookmarksCompanion.insert(
-          profileId: Value(profileId),
+          profileId: profileId,
           curriculumId: curriculumId,
-          trackType: trackType,
+          trackId: trackId,
           sefariaRef: sefariaRef,
           updatedAt: updatedAt,
         ),
@@ -88,26 +89,28 @@ class BookmarkDao extends DatabaseAccessor<UserDatabase>
     }
   }
 
-  /// Upsert a bookmark by curriculum and track (last-write-wins per D4).
+  /// Upsert a bookmark by curriculum and track ID (last-write-wins per D4).
   ///
-  /// Inserts if no bookmark exists for the curriculum+track pair,
+  /// Inserts if no bookmark exists for the curriculum+trackId pair,
   /// or updates if the existing bookmark is older than [updatedAt].
   Future<void> upsertBookmark({
     required String curriculumId,
-    required String trackType,
+    required int trackId,
+    required int profileId,
     required String sefariaRef,
     required DateTime updatedAt,
   }) async {
     final existing = await getBookmarkByCurriculumAndTrack(
       curriculumId,
-      trackType,
+      trackId,
     );
 
     if (existing == null) {
       await insertBookmark(
         BookmarksCompanion.insert(
+          profileId: profileId,
           curriculumId: curriculumId,
-          trackType: trackType,
+          trackId: trackId,
           sefariaRef: sefariaRef,
           updatedAt: updatedAt,
         ),

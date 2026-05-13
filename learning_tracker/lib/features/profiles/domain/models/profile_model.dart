@@ -17,8 +17,8 @@ abstract class ProfileModel with _$ProfileModel {
     required DateTime updatedAt,
   }) = _ProfileModel;
 
-  /// Converts a Drift [drift.Profile] row into a domain [ProfileModel].
-  factory ProfileModel.fromDriftRow(drift.Profile row) => ProfileModel(
+  /// Converts a Drift [drift.LearnerProfile] row into a domain [ProfileModel].
+  factory ProfileModel.fromDriftRow(drift.LearnerProfile row) => ProfileModel(
     id: row.id,
     accountId: row.accountId,
     displayName: row.displayName,

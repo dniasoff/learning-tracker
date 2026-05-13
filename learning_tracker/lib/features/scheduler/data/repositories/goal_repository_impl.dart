@@ -39,7 +39,7 @@ class GoalRepositoryImpl implements GoalRepository {
 
       final id = await _database.goalDao.insertGoal(
         GoalsCompanion.insert(
-          profileId: drift.Value(profileId),
+          profileId: profileId,
           curriculumId: curriculumId.storageKey,
           trackId: trackId,
           targetPercent: drift.Value(targetPercent),

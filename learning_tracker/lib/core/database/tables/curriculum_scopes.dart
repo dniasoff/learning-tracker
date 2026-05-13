@@ -9,7 +9,7 @@ import 'package:learning_tracker/core/database/tables/curriculum_tracks.dart';
 /// No rows = entire curriculum (backward compatible default).
 class CurriculumScopes extends Table {
   IntColumn get id => integer().autoIncrement()();
-  IntColumn get profileId => integer().withDefault(const Constant(0))();
+  IntColumn get profileId => integer()();
   TextColumn get curriculumId => text()();
   IntColumn get trackId => integer().references(CurriculumTracks, #id)();
 

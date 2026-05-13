@@ -67,7 +67,7 @@ class ActiveCurriculumDao extends DatabaseAccessor<UserDatabase>
 
     await into(curriculumTracks).insert(
       CurriculumTracksCompanion.insert(
-        profileId: Value(profileId),
+        profileId: profileId,
         curriculumId: curriculum.storageKey,
         trackType: TrackType.personal.storageKey,
         isActive: const Value(true),
