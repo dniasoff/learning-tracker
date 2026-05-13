@@ -1,6 +1,7 @@
 /// Story acceptance tests for Epic 25 — Schema + Core Foundation.
 ///
 /// Story 25.5 (DNI-326): Outbox table and OutboxProcessor scaffolding.
+/// Story 25.8 (DNI-329): ContentIndex + ProgramRefResolver.
 /// Story 25.11 (DNI-332): AuthRepository — sole firebase_auth consumer.
 @Tags(['epic_25'])
 library;
@@ -8,8 +9,12 @@ library;
 import 'dart:convert';
 
 import 'package:drift/native.dart';
+import 'package:learning_tracker/core/content/content_index.dart';
+import 'package:learning_tracker/core/content/program_ref_resolver.dart';
 import 'package:learning_tracker/core/database/daos/outbox_dao.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
+import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/sync/outbox/outbox_processor.dart';
 import 'package:learning_tracker/core/sync/outbox/push_pipeline.dart';
 import 'package:learning_tracker/features/auth/domain/models/app_user.dart';
@@ -460,6 +465,338 @@ void main() {
       });
     },
   );
+
+  // --------------------------------------------------------------------------
+  // Story 25.8 — ContentIndex + ProgramRefResolver (DNI-329)
+  // --------------------------------------------------------------------------
+
+  group('Story 25.8 — ContentIndex + ProgramRefResolver', tags: ['story_25_8'], () {
+    // ── ContentIndex ──────────────────────────────────────────────────────
+
+    group('ContentIndex', () {
+      test('lookup returns the item for a known sefariaRef', () {
+        final index = ContentIndex.fromCurricula(_smallCurriculumSet());
+
+        final result = index.lookup('Mishnah Berakhot 1:1');
+
+        expect(result, isNotNull);
+        expect(result!.curriculumId, equals('mishnayos'));
+        expect(result.displayNameEn, equals('Mishnah 1'));
+      });
+
+      test('lookup returns null for an unknown sefariaRef', () {
+        final index = ContentIndex.fromCurricula(_smallCurriculumSet());
+
+        expect(index.lookup('Made-up Ref 99:99'), isNull);
+      });
+
+      test('lookup spans all curricula (cross-curriculum match)', () {
+        final index = ContentIndex.fromCurricula(_smallCurriculumSet());
+
+        final bavli = index.lookup('Berakhot 2a');
+        final mishnah = index.lookup('Mishnah Berakhot 1:1');
+
+        expect(bavli?.curriculumId, equals('bavli'));
+        expect(mishnah?.curriculumId, equals('mishnayos'));
+      });
+
+      test('size reports total indexed items', () {
+        final index = ContentIndex.fromCurricula(_smallCurriculumSet());
+
+        // 4 mishnayos + 3 bavli leaves + 2 mishnayos containers = 9
+        expect(index.size, equals(9));
+      });
+
+      test('adjacent returns prev/next leaves within same curriculum', () {
+        final index = ContentIndex.fromCurricula(_smallCurriculumSet());
+
+        final adj = index.adjacent('Mishnah Berakhot 1:2');
+
+        expect(adj.prev, isNotNull);
+        expect(adj.prev!.sefariaRef, equals('Mishnah Berakhot 1:1'));
+        expect(adj.next, isNotNull);
+        expect(adj.next!.sefariaRef, equals('Mishnah Berakhot 1:3'));
+      });
+
+      test('adjacent returns null prev at first leaf of curriculum', () {
+        final index = ContentIndex.fromCurricula(_smallCurriculumSet());
+
+        final adj = index.adjacent('Mishnah Berakhot 1:1');
+
+        expect(adj.prev, isNull);
+        expect(adj.next, isNotNull);
+      });
+
+      test('adjacent returns null next at last leaf of curriculum', () {
+        final index = ContentIndex.fromCurricula(_smallCurriculumSet());
+
+        final adj = index.adjacent('Mishnah Berakhot 1:4');
+
+        expect(adj.prev, isNotNull);
+        expect(adj.next, isNull);
+      });
+
+      test('adjacent returns (null, null) for unknown ref', () {
+        final index = ContentIndex.fromCurricula(_smallCurriculumSet());
+
+        final adj = index.adjacent('Made-up Ref 99:99');
+
+        expect(adj.prev, isNull);
+        expect(adj.next, isNull);
+      });
+
+      test('adjacent does NOT cross curriculum boundaries', () {
+        final index = ContentIndex.fromCurricula(_smallCurriculumSet());
+
+        // Last leaf of mishnayos in this fixture is Berakhot 1:4;
+        // adjacent.next must be null even though bavli items exist
+        // elsewhere in the index.
+        final adj = index.adjacent('Mishnah Berakhot 1:4');
+
+        expect(adj.next, isNull);
+      });
+
+      test('lookup completes in < 1ms after first warmup (NFR22 benchmark)', () {
+        // Build a large index to make any O(N) walk visible.
+        final items = <CurriculumId, List<ContentItem>>{};
+        for (final c in CurriculumId.values) {
+          items[c] = _generateLeafItems(c, count: 6000);
+        }
+        final index = ContentIndex.fromCurricula(items);
+
+        // Warmup — exercise the cache once.
+        index.lookup(items[CurriculumId.bavli]!.first.sefariaRef);
+
+        const iterations = 10000;
+        final stopwatch = Stopwatch()..start();
+        for (var i = 0; i < iterations; i++) {
+          final c = CurriculumId.values[i % CurriculumId.values.length];
+          final ref = items[c]![i % items[c]!.length].sefariaRef;
+          index.lookup(ref);
+        }
+        stopwatch.stop();
+
+        final perLookupUs = stopwatch.elapsedMicroseconds / iterations;
+
+        expect(
+          perLookupUs,
+          lessThan(1000),
+          reason:
+              'lookup must complete in < 1ms (=1000us) per call after warmup; '
+              'measured ${perLookupUs.toStringAsFixed(2)}us',
+        );
+      });
+    });
+
+    // ── ProgramRefResolver ────────────────────────────────────────────────
+
+    group('ProgramRefResolver', () {
+      test('resolve returns the canonical sefariaRef for the program day', () {
+        final index = ContentIndex.fromCurricula(_smallCurriculumSet());
+        final resolver = ProgramRefResolver(
+          index: index,
+          programRefSource: _StubProgramRefSource({
+            ('daf_yomi', 0): 'Berakhot 2a',
+          }),
+        );
+
+        final ref = resolver.resolve(programId: 'daf_yomi', dayOffset: 0);
+
+        expect(ref, equals('Berakhot 2a'));
+      });
+
+      test('resolve normalizes whitespace and case variants to canonical', () {
+        final index = ContentIndex.fromCurricula(_smallCurriculumSet());
+        final resolver = ProgramRefResolver(
+          index: index,
+          programRefSource: _StubProgramRefSource({
+            // Calendar feed sometimes returns spacing/case variants
+            // ("mishna" → "mishnah"). Resolver must normalize to the
+            // canonical content-index ref.
+            ('mishna_yomit', 0): 'Mishna  Berakhot 1:1',
+          }),
+        );
+
+        final ref = resolver.resolve(programId: 'mishna_yomit', dayOffset: 0);
+
+        expect(ref, equals('Mishnah Berakhot 1:1'));
+      });
+
+      test(
+        'resolve returns null when the program has no entry for the day',
+        () {
+          final index = ContentIndex.fromCurricula(_smallCurriculumSet());
+          final resolver = ProgramRefResolver(
+            index: index,
+            programRefSource: _StubProgramRefSource(const {}),
+          );
+
+          final ref = resolver.resolve(programId: 'daf_yomi', dayOffset: 5);
+
+          expect(ref, isNull);
+        },
+      );
+
+      test(
+        'resolve returns null when calendar ref does not match any ContentIndex entry',
+        () {
+          final index = ContentIndex.fromCurricula(_smallCurriculumSet());
+          final resolver = ProgramRefResolver(
+            index: index,
+            programRefSource: _StubProgramRefSource({
+              ('daf_yomi', 0): 'Hullin 7', // not in this fixture's index
+            }),
+          );
+
+          final ref = resolver.resolve(programId: 'daf_yomi', dayOffset: 0);
+
+          // Resolver MUST NOT fall back to the raw display string —
+          // T1.7 explicitly forbids that. Return null instead.
+          expect(ref, isNull);
+        },
+      );
+
+      test('different dayOffsets map to different refs', () {
+        final index = ContentIndex.fromCurricula(_smallCurriculumSet());
+        final resolver = ProgramRefResolver(
+          index: index,
+          programRefSource: _StubProgramRefSource({
+            ('daf_yomi', 0): 'Berakhot 2a',
+            ('daf_yomi', 1): 'Berakhot 2b',
+            ('daf_yomi', 2): 'Berakhot 3a',
+          }),
+        );
+
+        expect(
+          resolver.resolve(programId: 'daf_yomi', dayOffset: 0),
+          equals('Berakhot 2a'),
+        );
+        expect(
+          resolver.resolve(programId: 'daf_yomi', dayOffset: 1),
+          equals('Berakhot 2b'),
+        );
+        expect(
+          resolver.resolve(programId: 'daf_yomi', dayOffset: 2),
+          equals('Berakhot 3a'),
+        );
+      });
+    });
+  });
+}
+
+// ── Story 25.8 helpers ───────────────────────────────────────────────────────
+
+/// Builds a small but realistic content fixture spanning two curricula:
+/// 1 masechta of Mishnah Berakhot with 4 mishnayos (plus 2 containers),
+/// and 3 leaf amudim of Bavli Berakhot.
+Map<CurriculumId, List<ContentItem>> _smallCurriculumSet() {
+  final mishnayos = <ContentItem>[
+    const ContentItem(
+      curriculumId: 'mishnayos',
+      level1: 'Zeraim',
+      displayNameHe: 'זרעים',
+      displayNameEn: 'Zeraim',
+      sefariaRef: 'Zeraim',
+      sortOrder: 0,
+      isLeaf: false,
+    ),
+    const ContentItem(
+      curriculumId: 'mishnayos',
+      level1: 'Zeraim',
+      level2: 'Berakhot',
+      displayNameHe: 'ברכות',
+      displayNameEn: 'Berakhot',
+      sefariaRef: 'Mishnah Berakhot',
+      sortOrder: 1,
+      isLeaf: false,
+    ),
+    for (var i = 1; i <= 4; i++)
+      ContentItem(
+        curriculumId: 'mishnayos',
+        level1: 'Zeraim',
+        level2: 'Berakhot',
+        level3: 'Perek 1',
+        level4: 'Mishnah $i',
+        displayNameHe: 'משנה $i',
+        displayNameEn: 'Mishnah $i',
+        sefariaRef: 'Mishnah Berakhot 1:$i',
+        sortOrder: 1 + i,
+        isLeaf: true,
+      ),
+  ];
+
+  final bavli = <ContentItem>[
+    const ContentItem(
+      curriculumId: 'bavli',
+      level1: 'Berakhot',
+      level2: 'Daf 2',
+      level3: 'Amud a',
+      displayNameHe: 'ברכות ב.',
+      displayNameEn: 'Berakhot 2a',
+      sefariaRef: 'Berakhot 2a',
+      sortOrder: 0,
+      isLeaf: true,
+    ),
+    const ContentItem(
+      curriculumId: 'bavli',
+      level1: 'Berakhot',
+      level2: 'Daf 2',
+      level3: 'Amud b',
+      displayNameHe: 'ברכות ב:',
+      displayNameEn: 'Berakhot 2b',
+      sefariaRef: 'Berakhot 2b',
+      sortOrder: 1,
+      isLeaf: true,
+    ),
+    const ContentItem(
+      curriculumId: 'bavli',
+      level1: 'Berakhot',
+      level2: 'Daf 3',
+      level3: 'Amud a',
+      displayNameHe: 'ברכות ג.',
+      displayNameEn: 'Berakhot 3a',
+      sefariaRef: 'Berakhot 3a',
+      sortOrder: 2,
+      isLeaf: true,
+    ),
+  ];
+
+  return {CurriculumId.mishnayos: mishnayos, CurriculumId.bavli: bavli};
+}
+
+/// Synthesises [count] unique leaf items for [curriculum]. Used by the
+/// benchmark test to size the index up to realistic content scale
+/// (~52K rows across 9 curricula).
+List<ContentItem> _generateLeafItems(
+  CurriculumId curriculum, {
+  required int count,
+}) {
+  final prefix = curriculum.storageKey;
+  return [
+    for (var i = 0; i < count; i++)
+      ContentItem(
+        curriculumId: curriculum.storageKey,
+        level1: 'Section',
+        level2: 'Unit $i',
+        displayNameHe: '$prefix-$i',
+        displayNameEn: '$prefix-$i',
+        sefariaRef: '$prefix-bench:$i',
+        sortOrder: i,
+        isLeaf: true,
+      ),
+  ];
+}
+
+/// Stub implementation of [ProgramRefSource] for tests. Backs a fixed
+/// `(programId, dayOffset) → rawRef` map; returns null otherwise.
+class _StubProgramRefSource implements ProgramRefSource {
+  _StubProgramRefSource(this._map);
+
+  final Map<(String, int), String> _map;
+
+  @override
+  String? rawRefFor({required String programId, required int dayOffset}) =>
+      _map[(programId, dayOffset)];
 }
 
 // ── mock for story 25.11 ──────────────────────────────────────────────────────

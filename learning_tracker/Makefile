@@ -1,4 +1,4 @@
-.PHONY: help test test-story-4.1 test-story-5.2 test-story-6.1 test-story-6.3 test-story-6.4 test-story-6.5 test-story-7.1 test-story-7.2 test-story-7.3 test-story-8.4 test-epic-8 test-story-9.4 test-epic-9 test-story-10.4 test-story-10.5 test-epic-10 test-story-12.4 test-epic-12 test-story-13.1 test-story-13.2 test-epic-13 test-story-14.1 test-story-14.2 test-story-14.3 test-epic-14 test-story-15.5 test-story-15.6 test-story-15.8 test-epic-15 test-epic-21 test-story-24.7 test-epic-24 test-story-25.5 test-story-25.11 test-epic-25 ci analyze format validate-calendar
+.PHONY: help test test-story-4.1 test-story-5.2 test-story-6.1 test-story-6.3 test-story-6.4 test-story-6.5 test-story-7.1 test-story-7.2 test-story-7.3 test-story-8.4 test-epic-8 test-story-9.4 test-epic-9 test-story-10.4 test-story-10.5 test-epic-10 test-story-12.4 test-epic-12 test-story-13.1 test-story-13.2 test-epic-13 test-story-14.1 test-story-14.2 test-story-14.3 test-epic-14 test-story-15.5 test-story-15.6 test-story-15.8 test-epic-15 test-epic-21 test-story-24.7 test-epic-24 test-story-25.5 test-story-25.8 test-story-25.11 test-epic-25 ci analyze format validate-calendar
 
 help: ## Show this help message
 	@echo 'Usage: make [target]'
@@ -108,6 +108,9 @@ test-epic-24: ## Run all Epic 24 (Stop-the-Bleeding) acceptance tests
 
 test-story-25.5: ## Run Story 25.5 (Outbox table + OutboxProcessor) acceptance tests
 	flutter test test/story_acceptance/epic_25_schema_core_test.dart --name "Story 25.5"
+
+test-story-25.8: ## Run Story 25.8 (ContentIndex + ProgramRefResolver) acceptance tests
+	flutter test test/story_acceptance/epic_25_schema_core_test.dart --name "Story 25.8"
 
 test-story-25.11: ## Run Story 25.11 (AuthRepository sole firebase_auth consumer) acceptance tests
 	flutter test test/story_acceptance/epic_25_schema_core_test.dart --name "Story 25.11"
