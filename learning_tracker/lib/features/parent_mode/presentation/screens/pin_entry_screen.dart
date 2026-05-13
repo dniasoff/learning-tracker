@@ -1,6 +1,7 @@
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:learning_tracker/core/analytics/analytics_provider.dart';
 import 'package:learning_tracker/core/navigation/router_provider.dart';
 import 'package:learning_tracker/core/services/pin_service.dart';
 import 'package:learning_tracker/features/parent_mode/presentation/widgets/parent_pin_keypad_dialog.dart';
@@ -31,10 +32,12 @@ class _PinEntryScreenState extends ConsumerState<PinEntryScreen> {
       if (mounted) await context.router.maybePop(false);
       return;
     }
+    final analytics = ref.read(analyticsServiceProvider);
     final ok = await showParentPinVerificationDialog(
       context,
       profileId: profileId,
       pinService: pinService,
+      analytics: analytics,
     );
     if (ok) {
       ref.read(routerProvider).pinGuard.markAuthenticated(profileId);

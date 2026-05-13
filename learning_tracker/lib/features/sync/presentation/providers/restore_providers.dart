@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:learning_tracker/core/analytics/analytics_provider.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/providers/talker_provider.dart';
 import 'package:learning_tracker/features/onboarding/presentation/providers/onboarding_providers.dart';
@@ -18,12 +19,15 @@ final deviceRestoreServiceProvider = Provider<DeviceRestoreService?>((ref) {
   final curriculumImportService = ref.watch(curriculumImportServiceProvider);
   final logger = ref.watch(appLoggerProvider);
 
+  final analytics = ref.watch(analyticsServiceProvider);
+
   final service = DeviceRestoreService(
     database: database,
     syncEngine: syncEngine,
     firestoreDataSource: firestoreDataSource,
     curriculumImportService: curriculumImportService,
     logger: logger,
+    analytics: analytics,
   );
 
   ref.onDispose(() {

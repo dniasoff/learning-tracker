@@ -1,10 +1,17 @@
+import 'dart:async';
+
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:flutter/foundation.dart';
+import 'package:learning_tracker/core/analytics/analytics_service.dart';
 
 /// Thin wrapper around [FirebaseCrashlytics] that can be substituted in tests.
 ///
 /// All Crashlytics interactions go through this class so that unit tests can
 /// inject a [NullCrashlyticsService] without touching the real Firebase SDK.
+///
+/// Story 27.14 (DNI-390): [recordError] fires [AnalyticsEvent.crashReported]
+/// via the injected [AnalyticsService]. Inject [NullAnalyticsService] in
+/// tests or when analytics is not yet wired.
 abstract class CrashlyticsService {
   /// Enables or disables Crashlytics collection.
   Future<void> setCrashlyticsCollectionEnabled(bool enabled);
@@ -27,9 +34,11 @@ abstract class CrashlyticsService {
 
 /// Production implementation backed by [FirebaseCrashlytics].
 class FirebaseCrashlyticsService implements CrashlyticsService {
-  FirebaseCrashlyticsService(this._crashlytics);
+  FirebaseCrashlyticsService(this._crashlytics, {AnalyticsService? analytics})
+    : _analytics = analytics ?? const NullAnalyticsService();
 
   final FirebaseCrashlytics _crashlytics;
+  final AnalyticsService _analytics;
 
   @override
   Future<void> setCrashlyticsCollectionEnabled(bool enabled) =>
@@ -44,7 +53,11 @@ class FirebaseCrashlyticsService implements CrashlyticsService {
     Object error,
     StackTrace? stack, {
     bool fatal = false,
-  }) => _crashlytics.recordError(error, stack, fatal: fatal);
+  }) {
+    // Story 27.14 (DNI-390): fire crash_reported event alongside Crashlytics.
+    unawaited(_analytics.logCrashReported(fatal: fatal));
+    return _crashlytics.recordError(error, stack, fatal: fatal);
+  }
 
   @override
   Future<void> setUserIdentifier(int? profileId) =>
@@ -70,4 +83,16 @@ class NullCrashlyticsService implements CrashlyticsService {
 
   @override
   Future<void> setUserIdentifier(int? profileId) async {}
+}
+
+/// Crashlytics service backed by a [NullAnalyticsService] analytics instance.
+///
+/// Used in production before analytics is wired or in test environments.
+/// Replace [_analytics] with a real [AnalyticsService] once firebase_analytics
+/// is added to pubspec.
+class AnalyticsWrappedCrashlyticsService extends FirebaseCrashlyticsService {
+  AnalyticsWrappedCrashlyticsService(
+    super.crashlytics, {
+    required AnalyticsService analytics,
+  }) : super(analytics: analytics);
 }

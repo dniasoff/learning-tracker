@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:learning_tracker/core/analytics/analytics_service.dart';
 import 'package:learning_tracker/core/services/pin_service.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/parent_mode/presentation/widgets/parent_mode_dialog_frame.dart';
@@ -6,10 +9,14 @@ import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// Shows the redesigned parent PIN keypad, verifies against [profileId],
 /// and returns `true` only when the PIN is correct. Returns `false` on cancel.
+///
+/// Fires [AnalyticsEvent.parentModeEntered] on success when [analytics] is
+/// provided (Story 27.14, DNI-390).
 Future<bool> showParentPinVerificationDialog(
   BuildContext context, {
   required int profileId,
   required PinService pinService,
+  AnalyticsService? analytics,
 }) async {
   final result = await showDialog<bool>(
     context: context,
@@ -20,7 +27,12 @@ Future<bool> showParentPinVerificationDialog(
       pinService: pinService,
     ),
   );
-  return result ?? false;
+  final verified = result ?? false;
+  if (verified && analytics != null) {
+    // Story 27.14 (DNI-390): fire parent_mode_entered on successful verification.
+    unawaited(analytics.logParentModeEntered(profileId: profileId));
+  }
+  return verified;
 }
 
 /// Multi-step change PIN flow in the same modal style as verification.

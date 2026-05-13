@@ -1,6 +1,8 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:drift/drift.dart';
+import 'package:learning_tracker/core/analytics/analytics_service.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/learning/completion_command.dart';
 import 'package:learning_tracker/core/sync/outbox/outbox_processor.dart';
@@ -39,9 +41,11 @@ class CompletionWriteResult {
 /// must not generate outbox rows (that would loop remote writes back into
 /// the push pipeline).
 class CompletionWriter {
-  CompletionWriter(this._db);
+  CompletionWriter(this._db, {AnalyticsService? analytics})
+    : _analytics = analytics ?? const NullAnalyticsService();
 
   final UserDatabase _db;
+  final AnalyticsService _analytics;
 
   Future<CompletionWriteResult> commit(CompletionCommand cmd) async {
     return _db.transaction(() async {
@@ -89,6 +93,13 @@ class CompletionWriter {
           'CompletionWriter: inserted row id=$id could not be read back',
         );
       }
+      // Story 27.14 (DNI-390): fire analytics event for new completions only.
+      unawaited(
+        _analytics.logCompletionRecorded(
+          sefariaRef: cmd.sefariaRef,
+          trackType: cmd.trackType,
+        ),
+      );
       return CompletionWriteResult(completion: inserted, isNew: true);
     });
   }

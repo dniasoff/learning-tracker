@@ -1,6 +1,10 @@
+import 'dart:async';
+
 import 'package:bcrypt/bcrypt.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:learning_tracker/core/analytics/analytics_provider.dart';
+import 'package:learning_tracker/core/analytics/analytics_service.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
@@ -15,9 +19,11 @@ class PinService {
     this._secureStorage, {
     this.maxFailedAttempts = 5,
     this.lockoutDurationMinutes = 15,
-  });
+    AnalyticsService? analytics,
+  }) : _analytics = analytics ?? const NullAnalyticsService();
 
   final FlutterSecureStorage _secureStorage;
+  final AnalyticsService _analytics;
 
   /// Maximum number of failed PIN attempts before lockout.
   final int maxFailedAttempts;
@@ -272,6 +278,10 @@ class PinService {
           .toString();
       await _secureStorage.write(key: timestampKey, value: lockoutTimestamp);
       await _secureStorage.write(key: countKey, value: '0');
+      // Story 27.14 (DNI-390): fire analytics event when lockout triggers.
+      // profileId is not known at this layer — use 0 as sentinel (profileId=0
+      // convention per coding standards).
+      unawaited(_analytics.logPinLockedOut(profileId: 0));
     }
   }
 
@@ -331,5 +341,6 @@ final flutterSecureStorageProvider = Provider<FlutterSecureStorage>(
 @riverpod
 PinService pinService(Ref ref) {
   final storage = ref.watch(flutterSecureStorageProvider);
-  return PinService(storage);
+  final analytics = ref.watch(analyticsServiceProvider);
+  return PinService(storage, analytics: analytics);
 }

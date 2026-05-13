@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import 'package:drift/drift.dart';
+import 'package:learning_tracker/core/analytics/analytics_service.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
@@ -37,17 +40,20 @@ class TrackCreationService {
     required LearningProcessWizardService wizardService,
     required GoalRepository goalRepository,
     SyncEngine? syncEngine,
+    AnalyticsService? analytics,
   }) : _database = database,
        _activationService = activationService,
        _wizardService = wizardService,
        _goalRepository = goalRepository,
-       _syncEngine = syncEngine;
+       _syncEngine = syncEngine,
+       _analytics = analytics ?? const NullAnalyticsService();
 
   final UserDatabase _database;
   final CurriculumActivationService _activationService;
   final LearningProcessWizardService _wizardService;
   final GoalRepository _goalRepository;
   final SyncEngine? _syncEngine;
+  final AnalyticsService _analytics;
 
   /// Persist all track configuration from the AddTrackFlow result.
   ///
@@ -239,6 +245,9 @@ class TrackCreationService {
       'TrackCreationService: track "${result.label}" created for '
       '${curriculum.storageKey} (profile=$profileId)',
     );
+
+    // Story 27.14 (DNI-390): fire analytics event after successful track creation.
+    unawaited(_analytics.logTrackAdded(curriculumId: curriculum.storageKey));
   }
 
   Future<void> _saveStudyDays({

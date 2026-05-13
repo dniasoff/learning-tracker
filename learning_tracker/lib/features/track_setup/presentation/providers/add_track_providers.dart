@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:learning_tracker/core/analytics/analytics_provider.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/features/onboarding/presentation/providers/onboarding_providers.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/curriculum_activation_providers.dart';
@@ -12,6 +13,7 @@ final trackCreationServiceProvider = Provider<TrackCreationService>((ref) {
   final wizardService = ref.watch(learningProcessWizardServiceProvider);
   final goalRepo = ref.watch(goalRepositoryProvider);
   final syncEngine = ref.watch(syncEngineProvider);
+  final analytics = ref.watch(analyticsServiceProvider);
 
   return TrackCreationService(
     database: db,
@@ -19,5 +21,6 @@ final trackCreationServiceProvider = Provider<TrackCreationService>((ref) {
     wizardService: wizardService,
     goalRepository: goalRepo,
     syncEngine: syncEngine,
+    analytics: analytics,
   );
 });

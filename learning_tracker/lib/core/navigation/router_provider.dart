@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:learning_tracker/core/analytics/analytics_provider.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/navigation/guards/auth_guard.dart';
@@ -58,6 +59,7 @@ final routerProvider = Provider<AppRouter>((ref) {
           context,
           profileId: profileId,
           pinService: pinSvc,
+          analytics: ref.read(analyticsServiceProvider),
         );
       },
       // All currently-gated routes are parent-mode. Tutor-mode routes will

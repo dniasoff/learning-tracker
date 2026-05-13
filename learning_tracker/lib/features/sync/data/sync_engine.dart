@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart'
     show FirebaseException, Timestamp;
 import 'package:drift/drift.dart';
+import 'package:learning_tracker/core/analytics/analytics_service.dart';
 import 'package:learning_tracker/core/analytics/parent_analytics_repository.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/cross_profile_scope.dart';
@@ -35,17 +36,20 @@ class SyncEngine {
     required OfflineQueue offlineQueue,
     required AppLogger logger,
     required ConnectivityService connectivityService,
+    AnalyticsService? analytics,
   }) : _database = database,
        _firestoreDataSource = firestoreDataSource,
        _offlineQueue = offlineQueue,
        _logger = logger,
-       _connectivityService = connectivityService;
+       _connectivityService = connectivityService,
+       _analytics = analytics ?? const NullAnalyticsService();
 
   final UserDatabase _database;
   final FirestoreDataSource _firestoreDataSource;
   final OfflineQueue _offlineQueue;
   final AppLogger _logger;
   final ConnectivityService _connectivityService;
+  final AnalyticsService _analytics;
 
   final _statusController = StreamController<SyncStatus>.broadcast();
   Stream<SyncStatus> get statusStream => _statusController.stream;
@@ -400,6 +404,8 @@ class SyncEngine {
         exception: e,
         stackTrace: stackTrace,
       );
+      // Story 27.14 (DNI-390): fire sync_failed analytics event.
+      unawaited(_analytics.logSyncFailed(reason: e.toString()));
       _updateStatus(
         SyncStatus.error(
           message: e.toString(),

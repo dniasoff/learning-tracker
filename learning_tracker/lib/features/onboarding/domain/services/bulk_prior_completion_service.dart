@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import 'package:learning_tracker/core/analytics/analytics_service.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
@@ -33,6 +36,7 @@ class BulkPriorCompletionService {
   final BookmarkRepository _bookmarkRepository;
   final UserDatabase _database;
   final SyncEngine? _syncEngine;
+  final AnalyticsService _analytics;
 
   /// Cached content items from the last [resolveSelections] call.
   List<ContentItem>? _cachedAllItems;
@@ -44,11 +48,13 @@ class BulkPriorCompletionService {
     required BookmarkRepository bookmarkRepository,
     required UserDatabase database,
     SyncEngine? syncEngine,
+    AnalyticsService? analytics,
   }) : _contentRepository = contentRepository,
        _completionRepository = completionRepository,
        _bookmarkRepository = bookmarkRepository,
        _database = database,
-       _syncEngine = syncEngine;
+       _syncEngine = syncEngine,
+       _analytics = analytics ?? const NullAnalyticsService();
 
   /// Resolve hierarchy selections into leaf-level sefariaRefs.
   ///
@@ -157,6 +163,14 @@ class BulkPriorCompletionService {
         sefariaRef: bookmarkRef,
       );
     }
+
+    // Story 27.14 (DNI-390): fire analytics event when bulk-mark-prior completes.
+    unawaited(
+      _analytics.logBulkMarkPriorUsed(
+        itemCount: sefariaRefs.length,
+        completionCount: totalCompletions,
+      ),
+    );
 
     return BulkPriorCompletionResult(
       itemCount: sefariaRefs.length,

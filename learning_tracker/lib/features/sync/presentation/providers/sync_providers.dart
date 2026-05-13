@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:learning_tracker/core/analytics/analytics_provider.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/providers/firebase_providers.dart';
@@ -73,12 +74,15 @@ final syncEngineProvider = Provider<SyncEngine?>((ref) {
   final talker = ref.watch(talkerProvider);
   final connectivityService = ref.watch(connectivityServiceProvider);
 
+  final analytics = ref.watch(analyticsServiceProvider);
+
   final engine = SyncEngine(
     database: database,
     firestoreDataSource: firestoreDataSource,
     offlineQueue: offlineQueue,
     logger: AppLogger(talker),
     connectivityService: connectivityService,
+    analytics: analytics,
   );
 
   // Initialize; surface errors onto the status stream.

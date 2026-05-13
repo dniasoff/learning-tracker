@@ -7,6 +7,9 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:learning_tracker/core/analytics/analytics_provider.dart';
+import 'package:learning_tracker/core/analytics/analytics_service.dart';
+import 'package:learning_tracker/core/analytics/streak_milestone_analytics_observer.dart';
 import 'package:learning_tracker/core/database/registry/device_registry_database.dart';
 import 'package:learning_tracker/core/database/seed_manager.dart';
 import 'package:learning_tracker/core/logging/crashlytics_service.dart';
@@ -36,6 +39,13 @@ void main() {
       // Initialize Firebase BEFORE providers — but non-fatal if it fails.
       // Firebase providers (firebaseAuthProvider, firebaseFirestoreProvider)
       // need Firebase.initializeApp() to have completed.
+      //
+      // Story 27.14 (DNI-390): Analytics service is created early (using
+      // AppLogger) so it can be shared with CrashlyticsService for the
+      // `crash_reported` event, and overridden into the provider container.
+      // AppLogger is initialized below; create a lazy-init holder so the
+      // analytics instance can be created after AppLogger.init().
+
       CrashlyticsService crashlytics = const NullCrashlyticsService();
       try {
         await Firebase.initializeApp(
@@ -77,6 +87,22 @@ void main() {
 
       final talker = AppLogger.init();
       final log = AppLogger(talker);
+
+      // Story 27.14 (DNI-390): create the analytics service now that AppLogger
+      // is available. The same instance is wired into CrashlyticsService and
+      // overridden into the provider container so all layers share one service.
+      final AnalyticsService analytics = LoggingAnalyticsService(log);
+
+      // Re-wrap CrashlyticsService with analytics once AppLogger is ready.
+      // If Firebase init succeeded, upgrade to report analytics events on
+      // recordError (crash_reported event, Story 27.14).
+      if (crashlytics is FirebaseCrashlyticsService) {
+        crashlytics = AnalyticsWrappedCrashlyticsService(
+          FirebaseCrashlytics.instance,
+          analytics: analytics,
+        );
+      }
+
       log.info(event: 'app_starting_local_first');
 
       // Story 19.2b / 19.6: Decompress the bundled seed DB to a writable
@@ -149,9 +175,15 @@ void main() {
       // is required because `MaterialApp.locale` and the Hebrew-terms
       // toggle both default to safe values until SharedPreferences resolves.
 
+      // Story 27.14 (DNI-390): fire app_launch analytics event.
+      unawaited(analytics.logAppLaunch());
+
       final container = ProviderContainer(
         overrides: [
           contentDbPathProvider.overrideWithValue(resolvedContentDbPath),
+          // Story 27.14 (DNI-390): inject the same analytics instance created
+          // above so all providers share one service (same AppLogger backing).
+          analyticsServiceProvider.overrideWithValue(analytics),
         ],
         observers: [
           TalkerRiverpodObserver(
@@ -165,6 +197,7 @@ void main() {
 
       // Story 24.4: Forward profileId to Crashlytics whenever a profile is
       // selected or cleared. Only the numeric ID is sent — no email or PII.
+      // Single observer — no scattered setUserIdentifier call sites (Story 27.14).
       container.listen<int?>(selectedProfileIdProvider, (_, id) {
         crashlytics.setUserIdentifier(id);
       }, fireImmediately: true);
@@ -230,6 +263,8 @@ class _LearningTrackerAppState extends ConsumerState<LearningTrackerApp> {
   @override
   Widget build(BuildContext context) {
     ref.watch(magicLinkInitializationProvider);
+    // Story 27.14 (DNI-390): activate streak milestone analytics observer.
+    ref.watch(streakMilestoneAnalyticsObserverProvider);
     final isChildMode =
         ref.watch(selectedProfileProvider).asData?.value?.mode == 'child';
 

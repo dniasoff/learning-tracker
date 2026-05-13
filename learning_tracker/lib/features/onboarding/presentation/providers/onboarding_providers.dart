@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:learning_tracker/core/analytics/analytics_provider.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/providers/firebase_providers.dart';
 import 'package:learning_tracker/core/services/learning_program_service.dart';
@@ -51,12 +52,14 @@ final bulkPriorCompletionServiceProvider = Provider<BulkPriorCompletionService>(
     final bookmarkRepo = ref.watch(bookmarkRepositoryProvider);
     final db = ref.watch(userDatabaseProvider);
     final syncEngine = ref.watch(syncEngineProvider);
+    final analytics = ref.watch(analyticsServiceProvider);
     return BulkPriorCompletionService(
       contentRepository: contentRepo,
       completionRepository: completionRepo,
       bookmarkRepository: bookmarkRepo,
       database: db,
       syncEngine: syncEngine,
+      analytics: analytics,
     );
   },
 );

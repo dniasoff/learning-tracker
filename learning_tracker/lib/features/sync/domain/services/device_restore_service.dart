@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:learning_tracker/core/analytics/analytics_service.dart';
 import 'package:learning_tracker/core/analytics/parent_analytics_repository.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/cross_profile_scope.dart';
@@ -34,17 +35,20 @@ class DeviceRestoreService {
     required FirestoreDataSource firestoreDataSource,
     required CurriculumImportService curriculumImportService,
     required AppLogger logger,
+    AnalyticsService? analytics,
   }) : _database = database,
        _syncEngine = syncEngine,
        _firestoreDataSource = firestoreDataSource,
        _curriculumImportService = curriculumImportService,
-       _logger = logger;
+       _logger = logger,
+       _analytics = analytics ?? const NullAnalyticsService();
 
   final UserDatabase _database;
   final SyncEngine _syncEngine;
   final FirestoreDataSource _firestoreDataSource;
   final CurriculumImportService _curriculumImportService;
   final AppLogger _logger;
+  final AnalyticsService _analytics;
 
   /// SharedPreferences key tracking restore lifecycle. Values: 'in_progress'
   /// while a restore is running and 'complete' on success. Absent when the
@@ -217,6 +221,8 @@ class DeviceRestoreService {
       _updateStatus(
         const RestoreStatus.complete(collectionsRestored: totalSteps),
       );
+      // Story 27.14 (DNI-390): fire analytics event after successful restore.
+      unawaited(_analytics.logCloudRestoreCompleted(stepsRestored: totalSteps));
       // Tell every Riverpod surface that depends on profile/track/completion
       // data to re-fetch from the now-populated DB. Without this the dashboard
       // can render the empty pre-restore snapshot indefinitely.

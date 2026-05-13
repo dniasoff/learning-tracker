@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:learning_tracker/core/analytics/analytics_provider.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/notifications/domain/services/notification_scheduler.dart';
@@ -220,7 +223,8 @@ bool isShabbosQuietActive(Ref ref) {
 @riverpod
 NotificationScheduler notificationScheduler(Ref ref) {
   final service = ref.watch(notificationServiceProvider);
-  return NotificationScheduler(service: service);
+  final analytics = ref.watch(analyticsServiceProvider);
+  return NotificationScheduler(service: service, analytics: analytics);
 }
 
 /// Watches all notification preference providers and syncs the composite
@@ -253,8 +257,13 @@ Future<void> reminderSyncEffect(Ref ref) async {
   final scheduler = ref.watch(notificationSchedulerProvider);
   final shabbosQuiet = ref.watch(isShabbosQuietActiveProvider);
 
-  if (!enabled || shabbosQuiet) {
+  if (!enabled) {
     await scheduler.cancel();
+    return;
+  }
+  if (shabbosQuiet) {
+    // Story 27.14 (DNI-390): fire suppression event when sacred time blocks.
+    await scheduler.cancelForSacredTime();
     return;
   }
 
@@ -276,10 +285,12 @@ StreakAlertService streakAlertService(Ref ref) {
   final db = ref.watch(userDatabaseProvider);
   final notifService = ref.watch(notificationServiceProvider);
   final profileId = ref.watch(activeProfileIdProvider);
+  final analytics = ref.watch(analyticsServiceProvider);
   return StreakAlertService(
     db: db,
     notificationService: notifService,
     profileId: profileId,
+    analytics: analytics,
   );
 }
 
@@ -297,8 +308,19 @@ Future<void> streakAlertSyncEffect(Ref ref) async {
   final service = ref.watch(streakAlertServiceProvider);
   final shabbosQuiet = ref.watch(isShabbosQuietActiveProvider);
 
-  if (!enabled || shabbosQuiet) {
+  if (!enabled) {
     await service.cancelAlert();
+    return;
+  }
+  if (shabbosQuiet) {
+    // Story 27.14 (DNI-390): fire suppression event when sacred time blocks.
+    await service.cancelAlert();
+    final analytics = ref.read(analyticsServiceProvider);
+    unawaited(
+      analytics.logNotificationSuppressedSacredTime(
+        notificationType: 'streak_alert',
+      ),
+    );
     return;
   }
 
