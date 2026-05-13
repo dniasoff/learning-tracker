@@ -761,7 +761,7 @@ final class DashboardPaceStatusProvider
 }
 
 String _$dashboardPaceStatusHash() =>
-    r'ace6bd244d844610ee21ff071a51315fc5278baa';
+    r'ef32a5d020c72aa8b96c898048f483360c6cbe3f';
 
 /// Per-curriculum pace status for the dashboard.
 ///

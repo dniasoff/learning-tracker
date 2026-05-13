@@ -268,7 +268,7 @@ void main() {
               .then((r) => r.id);
 
           // Learner profile for account 1
-          final lp1Id = await db
+          await db
               .into(db.learnerProfiles)
               .insertReturning(
                 LearnerProfilesCompanion.insert(
@@ -282,7 +282,7 @@ void main() {
               .then((r) => r.id);
 
           // Learner profile for account 2
-          final lp2Id = await db
+          await db
               .into(db.learnerProfiles)
               .insertReturning(
                 LearnerProfilesCompanion.insert(

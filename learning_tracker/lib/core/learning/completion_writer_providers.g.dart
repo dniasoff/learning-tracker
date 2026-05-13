@@ -60,7 +60,7 @@ final class CompletionWriterProvider
   }
 }
 
-String _$completionWriterHash() => r'ee31d13012a8c2c59954daee6629476a8f457fae';
+String _$completionWriterHash() => r'59699010e94abe7a0eca93a8e75318b46474d37a';
 
 /// Monotonically-increasing counter that increments once per successfully
 /// committed completion (Story 26.13 — DNI-356).

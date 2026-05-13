@@ -1,3 +1,4 @@
+import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
@@ -15,7 +16,6 @@ import 'package:learning_tracker/features/track_setup/presentation/providers/tra
 import 'package:learning_tracker/features/track_setup/presentation/screens/add_track_flow.dart';
 import 'package:learning_tracker/features/track_setup/presentation/widgets/learning_track_card.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
-import 'package:auto_route/auto_route.dart';
 
 /// Shared body widget for both parent and child track-management screens.
 ///

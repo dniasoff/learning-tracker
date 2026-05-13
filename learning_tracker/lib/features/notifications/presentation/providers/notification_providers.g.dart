@@ -457,7 +457,7 @@ final class NotificationSchedulerProvider
 }
 
 String _$notificationSchedulerHash() =>
-    r'c7c31ebd396145bcec7513ef79d2c12cce5c22a3';
+    r'605e8d4e6fe317d4c269b36a541f9aa9099e53b6';
 
 /// Watches reminder settings and daily tasks, then schedules or cancels
 /// the notification accordingly.
@@ -514,7 +514,7 @@ final class ReminderSyncEffectProvider
 }
 
 String _$reminderSyncEffectHash() =>
-    r'91dd352771341ee2f05e6bdb4f2a6dfd39c25203';
+    r'b5fa176459b433271dd887cd1828b16b0ed718a5';
 
 /// Provides the [StreakAlertService] instance.
 
@@ -567,7 +567,7 @@ final class StreakAlertServiceProvider
 }
 
 String _$streakAlertServiceHash() =>
-    r'69100ba731ee440aa6962da5a87dbbe4f59604d6';
+    r'095dcecb6259740ab0957146fc6abde80d0f8d7a';
 
 /// Watches streak alert settings and evaluates whether to schedule or cancel
 /// the streak protection alert.
@@ -624,4 +624,4 @@ final class StreakAlertSyncEffectProvider
 }
 
 String _$streakAlertSyncEffectHash() =>
-    r'73fd730261dd54dcb5a9f6455b6e4792458ad7ad';
+    r'c67f6bb09c53c67d2a228c4b8f42e00946f4a244';
