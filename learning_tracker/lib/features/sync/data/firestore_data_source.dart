@@ -1,6 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:learning_tracker/features/auth/domain/repositories/auth_repository.dart';
 
 /// Handles all Firestore read/write operations for sync.
 ///
@@ -25,13 +25,13 @@ import 'package:firebase_auth/firebase_auth.dart';
 class FirestoreDataSource {
   FirestoreDataSource({
     required FirebaseFirestore firestore,
-    required FirebaseAuth auth,
+    required AuthRepository auth,
     this.profileId = 0,
   }) : _firestore = firestore,
        _auth = auth;
 
   final FirebaseFirestore _firestore;
-  final FirebaseAuth _auth;
+  final AuthRepository _auth;
   bool _profilePathChecked = false;
   bool _legacyProfilesMigrated = false;
 

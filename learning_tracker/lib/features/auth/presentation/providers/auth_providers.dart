@@ -1,7 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
-import 'package:learning_tracker/core/providers/firebase_providers.dart';
 import 'package:learning_tracker/features/auth/data/repositories/auth_repository_impl.dart';
+import 'package:learning_tracker/features/auth/domain/models/app_user.dart';
 import 'package:learning_tracker/features/auth/domain/repositories/auth_repository.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
@@ -15,12 +15,12 @@ GoogleSignIn googleSignIn(Ref ref) {
 @Riverpod(keepAlive: true)
 AuthRepository authRepository(Ref ref) {
   return AuthRepositoryImpl(
-    firebaseAuth: ref.watch(firebaseAuthProvider),
+    firebaseAuth: FirebaseAuth.instance,
     googleSignIn: ref.watch(googleSignInProvider),
   );
 }
 
 @Riverpod(keepAlive: true)
-Stream<User?> authState(Ref ref) {
-  return ref.watch(authRepositoryProvider).authStateChanges();
+Stream<AppUser?> authState(Ref ref) {
+  return ref.watch(authRepositoryProvider).onAuthStateChanged();
 }

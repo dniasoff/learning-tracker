@@ -1,7 +1,6 @@
 import 'package:auto_route/auto_route.dart';
 import 'package:drift/drift.dart' show driftRuntimeOptions;
 import 'package:drift/native.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -10,8 +9,8 @@ import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart'
     show userDatabaseProvider;
-import 'package:learning_tracker/core/providers/firebase_providers.dart';
 import 'package:learning_tracker/core/providers/registry_provider.dart';
+import 'package:learning_tracker/features/auth/domain/models/app_user.dart';
 import 'package:learning_tracker/features/auth/domain/models/auth_state.dart';
 import 'package:learning_tracker/features/auth/presentation/providers/auth_providers.dart';
 import 'package:learning_tracker/features/auth/presentation/providers/auth_state_provider.dart'
@@ -26,16 +25,9 @@ import '../../../../mocks/mock_repositories.dart';
 
 class MockStackRouter extends Mock implements StackRouter {}
 
-class MockFirebaseAuth extends Mock implements FirebaseAuth {}
-
-class MockUser extends Mock implements User {}
-
-class MockUserCredential extends Mock implements UserCredential {}
-
 void main() {
   late MockAuthRepository mockAuthRepo;
   late MockStackRouter mockRouter;
-  late MockFirebaseAuth mockAuth;
 
   setUpAll(() {
     driftRuntimeOptions.dontWarnAboutMultipleDatabases = true;
@@ -46,8 +38,7 @@ void main() {
   setUp(() {
     mockAuthRepo = MockAuthRepository();
     mockRouter = MockStackRouter();
-    mockAuth = MockFirebaseAuth();
-    when(() => mockAuth.currentUser).thenReturn(null);
+    when(() => mockAuthRepo.currentUser).thenReturn(null);
     when(() => mockRouter.push(any())).thenAnswer((_) async => null);
     when(() => mockRouter.replace(any())).thenAnswer((_) async => null);
   });
@@ -56,7 +47,6 @@ void main() {
     return ProviderScope(
       overrides: [
         authRepositoryProvider.overrideWithValue(mockAuthRepo),
-        firebaseAuthProvider.overrideWithValue(mockAuth),
         connectivityStreamProvider.overrideWith((ref) => Stream.value(true)),
       ],
       child: MaterialApp(
@@ -70,7 +60,6 @@ void main() {
   }
 
   Widget createTestWidgetWithDatabase({
-    required MockFirebaseAuth firebaseAuth,
     required UserDatabase database,
     bool online = true,
   }) {
@@ -78,7 +67,6 @@ void main() {
     return ProviderScope(
       overrides: [
         authRepositoryProvider.overrideWithValue(mockAuthRepo),
-        firebaseAuthProvider.overrideWithValue(firebaseAuth),
         userDatabaseProvider.overrideWithValue(database),
         deviceRegistryProvider.overrideWithValue(testRegistry),
         auth_state_mod.authStateProvider.overrideWithValue(
@@ -201,11 +189,7 @@ void main() {
       addTearDown(() async => db.close());
 
       await tester.pumpWidget(
-        createTestWidgetWithDatabase(
-          firebaseAuth: mockAuth,
-          database: db,
-          online: false,
-        ),
+        createTestWidgetWithDatabase(database: db, online: false),
       );
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 100));
@@ -220,18 +204,19 @@ void main() {
     testWidgets('Google sign-in button triggers signInWithGoogle', (
       tester,
     ) async {
-      final mockCredential = MockUserCredential();
-      final mockAuthForGoogle = MockFirebaseAuth();
-      final mockUser = MockUser();
+      const mockUser = AppUser(
+        uid: 'test-uid',
+        email: 'test@example.com',
+        displayName: 'Test User',
+        emailVerified: true,
+        providers: ['google.com'],
+      );
       final db = UserDatabase(NativeDatabase.memory());
 
       addTearDown(() async => db.close());
 
-      when(
-        () => mockAuthRepo.signInWithGoogle(),
-      ).thenAnswer((_) async => mockCredential);
-      when(() => mockAuthForGoogle.currentUser).thenReturn(mockUser);
-      when(() => mockUser.uid).thenReturn('test-uid');
+      when(() => mockAuthRepo.signInWithGoogle()).thenAnswer((_) async {});
+      when(() => mockAuthRepo.currentUser).thenReturn(mockUser);
 
       // Suppress provider exceptions from auth state notifier
       // since the full cloud-born flow requires Firebase.
@@ -246,12 +231,7 @@ void main() {
       };
       addTearDown(() => FlutterError.onError = originalOnError);
 
-      await tester.pumpWidget(
-        createTestWidgetWithDatabase(
-          firebaseAuth: mockAuthForGoogle,
-          database: db,
-        ),
-      );
+      await tester.pumpWidget(createTestWidgetWithDatabase(database: db));
 
       final googleButton = find.text('Sign Up with Google');
       await tester.ensureVisible(googleButton);

@@ -6,13 +6,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
 import 'package:learning_tracker/core/enums/user_mode.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
-import 'package:learning_tracker/core/providers/firebase_providers.dart';
 import 'package:learning_tracker/core/providers/locale_provider.dart';
 import 'package:learning_tracker/core/services/pin_service.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/widgets/app_bar_title.dart';
 import 'package:learning_tracker/core/widgets/pin_entry_widget.dart';
 import 'package:learning_tracker/features/auth/domain/services/pending_local_signup.dart';
+import 'package:learning_tracker/features/auth/presentation/providers/auth_providers.dart'
+    show authRepositoryProvider;
 import 'package:learning_tracker/features/auth/presentation/providers/auth_state_provider.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/text_display_providers.dart';
 import 'package:learning_tracker/features/onboarding/presentation/providers/onboarding_providers.dart';
@@ -280,7 +281,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     // Local-born accounts often still have a stale Firebase session on device;
     // awaiting Firestore here blocks offline-first profile creation indefinitely.
     final authState = ref.read(authStateProvider);
-    final user = ref.read(firebaseAuthProvider).currentUser;
+    final user = ref.read(authRepositoryProvider).currentUser;
     if (authState.isCloudBorn && user != null) {
       final profileService = ref.read(userProfileServiceProvider);
       await profileService.setUserMode(

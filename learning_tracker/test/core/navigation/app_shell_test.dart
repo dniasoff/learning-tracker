@@ -1,6 +1,5 @@
 import 'package:auto_route/auto_route.dart';
 import 'package:drift/drift.dart' show driftRuntimeOptions;
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -16,9 +15,11 @@ import 'package:learning_tracker/core/navigation/guards/parent_pin_guard.dart';
 import 'package:learning_tracker/core/navigation/guards/profile_guard.dart';
 import 'package:learning_tracker/core/navigation/guards/restore_guard.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
-import 'package:learning_tracker/core/providers/firebase_providers.dart';
 import 'package:learning_tracker/core/services/pin_service.dart';
 import 'package:learning_tracker/features/auth/domain/models/auth_state.dart';
+import 'package:learning_tracker/features/auth/domain/repositories/auth_repository.dart';
+import 'package:learning_tracker/features/auth/presentation/providers/auth_providers.dart'
+    show authRepositoryProvider;
 import 'package:learning_tracker/features/auth/presentation/providers/auth_state_provider.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/gamification/domain/models/streak_recovery_info.dart';
@@ -28,7 +29,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../helpers/test_database.dart';
 
-class MockFirebaseAuth extends Mock implements FirebaseAuth {}
+class MockAuthRepository extends Mock implements AuthRepository {}
 
 class MockPinService extends Mock implements PinService {}
 
@@ -313,7 +314,7 @@ void main() {
       tester,
     ) async {
       final router = _createAuthenticatedRouter();
-      final mockAuthForProvider = MockFirebaseAuth();
+      final mockAuthForProvider = MockAuthRepository();
       when(() => mockAuthForProvider.currentUser).thenReturn(null);
 
       // The CurriculumToggleTile reads curriculumActivationServiceProvider,
@@ -349,7 +350,7 @@ void main() {
                 ),
               ),
             ],
-            firebaseAuthProvider.overrideWithValue(mockAuthForProvider),
+            authRepositoryProvider.overrideWithValue(mockAuthForProvider),
           ],
           child: _wrapApp(
             router.config(

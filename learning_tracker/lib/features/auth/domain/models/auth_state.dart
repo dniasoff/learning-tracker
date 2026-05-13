@@ -1,5 +1,4 @@
 import 'package:learning_tracker/core/database/daos/user_profile_dao.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
 
 /// Hard-tier classification — set at signup, immutable except via the
 /// one-way local → cloud upgrade flow (Epic 20 story 20.9).

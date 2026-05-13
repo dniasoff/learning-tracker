@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'package:auto_route/auto_route.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -10,7 +9,6 @@ import 'package:internet_connection_checker/internet_connection_checker.dart';
 import 'package:learning_tracker/core/database/registry/device_registry_database.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
-import 'package:learning_tracker/core/providers/firebase_providers.dart';
 import 'package:learning_tracker/core/providers/registry_provider.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/auth/data/services/magic_link_service.dart';
@@ -249,7 +247,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
         if (isOnline && mounted) {
           final upgradeSvc = UpgradeToCloudService(
             dao: dao,
-            firebaseAuth: ref.read(firebaseAuthProvider),
+            authRepository: ref.read(authRepositoryProvider),
             registry: registry,
             accountId: account.accountId,
           );
@@ -326,23 +324,19 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
       }
     } on InvalidCredentialsException {
       if (mounted) _showError(l10n.authIncorrectPassword);
-    } on FirebaseAuthException catch (e) {
-      if (mounted) _showError(_mapAuthError(e.code, l10n));
     } catch (e) {
-      if (mounted) _showError(l10n.authSignInFailedError(e.toString()));
+      if (mounted) _showError(_mapAuthErrorFromException(e, l10n));
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
   }
 
   Future<bool> _ensureCloudEmailVerified() async {
-    final auth = ref.read(firebaseAuthProvider);
-    final signedInUser = auth.currentUser;
+    final authRepo = ref.read(authRepositoryProvider);
+    final signedInUser = authRepo.currentUser;
     if (signedInUser == null) return false;
 
-    final isPasswordAccount = signedInUser.providerData.any(
-      (provider) => provider.providerId == 'password',
-    );
+    final isPasswordAccount = signedInUser.providers.contains('password');
     if (!isPasswordAccount) {
       return true;
     }
@@ -361,7 +355,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
 
     final stillUnverified = !(await _refreshAndCheckVerified());
     if (!stillUnverified) return true;
-    final reloadedUser = auth.currentUser;
+    final reloadedUser = authRepo.currentUser;
     if (reloadedUser == null) return false;
 
     final verifiedAfterPrompt = await _showEmailVerificationPrompt(
@@ -371,17 +365,16 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
       return true;
     }
 
-    await ref.read(authRepositoryProvider).signOut();
+    await authRepo.signOut();
     return false;
   }
 
   /// Reload auth state and check whether current user is verified.
   Future<bool> _refreshAndCheckVerified() async {
-    final auth = ref.read(firebaseAuthProvider);
-    final user = auth.currentUser;
-    if (user == null) return false;
-    await user.reload();
-    return auth.currentUser?.emailVerified ?? false;
+    final refreshed = await ref
+        .read(authRepositoryProvider)
+        .reloadCurrentUser();
+    return refreshed?.emailVerified ?? false;
   }
 
   Future<bool> _waitForVerified({required int maxAttempts}) async {
@@ -401,15 +394,16 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
     }
 
     try {
-      final auth = ref.read(firebaseAuthProvider);
-      await auth.checkActionCode(pendingCode);
-      await auth.applyActionCode(pendingCode);
+      final authRepo = ref.read(authRepositoryProvider);
+      await authRepo.checkActionCode(pendingCode);
+      await authRepo.applyActionCode(pendingCode);
       await prefs.remove(kPendingVerifyEmailOobCode);
-      await auth.currentUser?.reload();
-      return auth.currentUser?.emailVerified ?? false;
-    } on FirebaseAuthException catch (e) {
+      final refreshed = await authRepo.reloadCurrentUser();
+      return refreshed?.emailVerified ?? false;
+    } catch (e) {
+      final code = _extractFirebaseCode(e);
       // If the code is no longer usable, clear it to avoid retry loops.
-      if (e.code == 'expired-action-code' || e.code == 'invalid-action-code') {
+      if (code == 'expired-action-code' || code == 'invalid-action-code') {
         await prefs.remove(kPendingVerifyEmailOobCode);
         // "invalid-action-code" can mean it was already consumed.
         // Re-check verification before treating it as failure.
@@ -441,10 +435,10 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(content: Text(m.authVerificationEmailSentAgain)),
                 );
-              } on FirebaseAuthException catch (e) {
+              } catch (e) {
                 if (!mounted) return;
                 _showError(
-                  _mapAuthError(e.code, AppLocalizations.of(context)!),
+                  _mapAuthErrorFromException(e, AppLocalizations.of(context)!),
                 );
               }
             },
@@ -480,7 +474,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
       await authRepo.signInWithGoogle();
       if (!mounted) return;
 
-      final googleUser = FirebaseAuth.instance.currentUser;
+      final googleUser = ref.read(authRepositoryProvider).currentUser;
       if (googleUser == null) return;
 
       // Epic 21.8: check 5-account cap for genuinely new accounts
@@ -510,10 +504,6 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
       if (mounted) {
         await _navigateAfterSignIn();
       }
-    } on FirebaseAuthException catch (e) {
-      if (mounted) {
-        _showError(_mapAuthError(e.code, l10n));
-      }
     } on GoogleSignInException catch (e) {
       if (e.code == GoogleSignInExceptionCode.canceled ||
           e.code == GoogleSignInExceptionCode.interrupted) {
@@ -523,7 +513,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
       }
     } catch (e) {
       if (mounted) {
-        _showError(l10n.authSignInFailedError(e.toString()));
+        _showError(_mapAuthErrorFromException(e, l10n));
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -531,7 +521,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
   }
 
   Future<void> _navigateAfterSignIn() async {
-    final user = ref.read(firebaseAuthProvider).currentUser;
+    final user = ref.read(authRepositoryProvider).currentUser;
     if (user == null || !mounted) return;
 
     // Epic 21: route this Firebase user into the right per-account DB
@@ -667,6 +657,22 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
       default:
         return l10n.authErrSignInGeneric;
     }
+  }
+
+  /// Maps a caught exception to a user-friendly error message.
+  /// Extracts the Firebase error code from the exception message if present.
+  String _mapAuthErrorFromException(Object e, AppLocalizations l10n) {
+    final code = _extractFirebaseCode(e);
+    if (code != null) return _mapAuthError(code, l10n);
+    return l10n.authErrSignInGeneric;
+  }
+
+  /// Extracts the Firebase error code from an exception (if present).
+  String? _extractFirebaseCode(Object e) {
+    final str = e.toString();
+    // FirebaseAuthException.toString() contains the code in brackets.
+    final match = RegExp(r'\[([a-z-]+)\]').firstMatch(str);
+    return match?.group(1);
   }
 
   void _showError(String message) {

@@ -1,5 +1,4 @@
 import 'package:auto_route/auto_route.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
@@ -9,6 +8,9 @@ import 'package:learning_tracker/core/providers/firebase_providers.dart';
 import 'package:learning_tracker/core/providers/talker_provider.dart';
 import 'package:learning_tracker/core/services/pin_service.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/features/auth/domain/models/app_user.dart';
+import 'package:learning_tracker/features/auth/presentation/providers/auth_providers.dart'
+    show authRepositoryProvider;
 import 'package:learning_tracker/features/auth/presentation/providers/auth_state_provider.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/text_display_providers.dart';
 import 'package:learning_tracker/features/parent_mode/presentation/widgets/parent_pin_keypad_dialog.dart';
@@ -37,7 +39,7 @@ class SettingsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
-    final user = ref.watch(firebaseAuthProvider).currentUser;
+    final user = ref.watch(authRepositoryProvider).currentUser;
     final authState = ref.watch(authStateProvider);
     final theme = Theme.of(context);
 
@@ -49,8 +51,7 @@ class SettingsScreen extends ConsumerWidget {
     final isChildProfile = activeProfile?.mode == 'child';
     final isAdultProfile = activeProfile?.mode == 'adult';
     final hasPasswordProvider =
-        user != null &&
-        user.providerData.any((info) => info.providerId == 'password');
+        user != null && user.providers.contains('password');
     final showDeleteAccountTile =
         !isChildProfile &&
         isAdultProfile &&
@@ -222,7 +223,7 @@ class SettingsScreen extends ConsumerWidget {
                   context: context,
                   talker: ref.read(talkerProvider),
                   firestore: ref.read(firebaseFirestoreProvider),
-                  auth: ref.read(firebaseAuthProvider),
+                  auth: ref.read(authRepositoryProvider),
                 ),
               ),
             ),
@@ -807,7 +808,7 @@ class _ParentalControlsSection extends ConsumerStatefulWidget {
     required this.isChildProfile,
   });
 
-  final User? user;
+  final AppUser? user;
   final bool isChildProfile;
 
   @override
@@ -910,7 +911,7 @@ class _ParentalControlsSectionState
 Future<void> _showChangePasswordFlow(
   BuildContext context,
   WidgetRef ref,
-  User user,
+  AppUser user,
 ) async {
   final service = ref.read(accountManagementServiceProvider);
 

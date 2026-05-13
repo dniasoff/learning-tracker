@@ -1,6 +1,6 @@
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:learning_tracker/features/auth/domain/models/app_user.dart';
 import 'package:learning_tracker/features/auth/domain/models/auth_state.dart';
 import 'package:learning_tracker/features/auth/presentation/providers/auth_state_provider.dart';
 import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
@@ -28,7 +28,7 @@ class UserProfileHeaderCard extends ConsumerStatefulWidget {
     this.surface = UserProfileHeaderSurface.settings,
   });
 
-  final User? user;
+  final AppUser? user;
   final ProfileModel? activeProfile;
   final UserProfileHeaderSurface surface;
 
@@ -38,7 +38,7 @@ class UserProfileHeaderCard extends ConsumerStatefulWidget {
 }
 
 class _UserProfileHeaderCardState extends ConsumerState<UserProfileHeaderCard> {
-  User? _user;
+  AppUser? _user;
 
   @override
   void initState() {

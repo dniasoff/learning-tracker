@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:learning_tracker/features/auth/data/repositories/auth_repository_impl.dart';
+import 'package:learning_tracker/features/auth/domain/models/app_user.dart';
 import 'package:mocktail/mocktail.dart';
 
 // Mocks
@@ -58,12 +59,9 @@ void main() {
           ),
         ).thenAnswer((_) async => mockCredential);
 
-        final result = await repository.signInWithEmail(
-          'test@example.com',
-          'password123',
-        );
+        // signInWithEmail now returns void
+        await repository.signInWithEmail('test@example.com', 'password123');
 
-        expect(result, equals(mockCredential));
         verify(
           () => mockFirebaseAuth.signInWithEmailAndPassword(
             email: 'test@example.com',
@@ -91,13 +89,9 @@ void main() {
           () => mockUser.updateDisplayName('Test User'),
         ).thenAnswer((_) async {});
 
-        final result = await repository.signUp(
-          'new@example.com',
-          'newpass123',
-          'Test User',
-        );
+        // signUp now returns void
+        await repository.signUp('new@example.com', 'newpass123', 'Test User');
 
-        expect(result, equals(mockCredential));
         verify(
           () => mockFirebaseAuth.createUserWithEmailAndPassword(
             email: 'new@example.com',
@@ -156,9 +150,9 @@ void main() {
           () => mockFirebaseAuth.signInWithCredential(any()),
         ).thenAnswer((_) async => mockCredential);
 
-        final result = await repository.signInWithGoogle();
+        // signInWithGoogle now returns void
+        await repository.signInWithGoogle();
 
-        expect(result, equals(mockCredential));
         verify(() => mockGoogleSignIn.authenticate()).called(1);
         verify(() => mockFirebaseAuth.signInWithCredential(any())).called(1);
       },
@@ -190,9 +184,16 @@ void main() {
 
   group('signInWithEmailLink', () {
     test(
-      'calls FirebaseAuth.signInWithEmailLink with stored email and incoming link',
+      'calls FirebaseAuth.signInWithEmailLink and returns AppUser?',
       () async {
         final mockCredential = MockUserCredential();
+        final mockUser = MockUser();
+        when(() => mockCredential.user).thenReturn(mockUser);
+        when(() => mockUser.uid).thenReturn('user-uid');
+        when(() => mockUser.email).thenReturn('user@example.com');
+        when(() => mockUser.displayName).thenReturn(null);
+        when(() => mockUser.emailVerified).thenReturn(false);
+        when(() => mockUser.providerData).thenReturn([]);
         when(
           () => mockFirebaseAuth.signInWithEmailLink(
             email: 'user@example.com',
@@ -205,7 +206,8 @@ void main() {
           'https://example.com/sign-in?oobCode=abc123',
         );
 
-        expect(result, equals(mockCredential));
+        expect(result, isA<AppUser>());
+        expect(result?.uid, equals('user-uid'));
         verify(
           () => mockFirebaseAuth.signInWithEmailLink(
             email: 'user@example.com',
@@ -360,26 +362,31 @@ void main() {
     });
   });
 
-  group('authStateChanges', () {
+  group('onAuthStateChanged', () {
     test('emits null when user is signed out', () async {
       when(
         () => mockFirebaseAuth.authStateChanges(),
       ).thenAnswer((_) => Stream.value(null));
 
-      final stream = repository.authStateChanges();
+      final stream = repository.onAuthStateChanged();
 
       await expectLater(stream, emits(isNull));
     });
 
-    test('emits User object when user is signed in', () async {
+    test('emits AppUser when user is signed in', () async {
       final mockUser = MockUser();
+      when(() => mockUser.uid).thenReturn('test-uid');
+      when(() => mockUser.email).thenReturn('test@example.com');
+      when(() => mockUser.displayName).thenReturn('Test User');
+      when(() => mockUser.emailVerified).thenReturn(true);
+      when(() => mockUser.providerData).thenReturn([]);
       when(
         () => mockFirebaseAuth.authStateChanges(),
       ).thenAnswer((_) => Stream.value(mockUser));
 
-      final stream = repository.authStateChanges();
+      final stream = repository.onAuthStateChanged();
 
-      await expectLater(stream, emits(isA<User>()));
+      await expectLater(stream, emits(isA<AppUser>()));
     });
   });
 }

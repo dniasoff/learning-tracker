@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_sign_in/google_sign_in.dart'
@@ -10,6 +9,7 @@ import 'package:learning_tracker/core/navigation/router_provider.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/providers/registry_provider.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/features/auth/domain/models/app_user.dart';
 import 'package:learning_tracker/features/auth/domain/services/account_lifecycle_service.dart';
 import 'package:learning_tracker/features/auth/domain/services/session_persistence_service.dart';
 import 'package:learning_tracker/features/auth/presentation/providers/auth_providers.dart'
@@ -181,18 +181,14 @@ Future<void> showSignOutConfirmation(
 Future<void> showDeleteAccountFlow(
   BuildContext context,
   WidgetRef ref,
-  User? user,
+  AppUser? user,
 ) async {
   if (user == null) return;
 
   final service = ref.read(accountManagementServiceProvider);
 
-  final hasPassword = user.providerData.any(
-    (info) => info.providerId == 'password',
-  );
-  final hasGoogle = user.providerData.any(
-    (info) => info.providerId == 'google.com',
-  );
+  final hasPassword = user.providers.contains('password');
+  final hasGoogle = user.providers.contains('google.com');
 
   // Show the type-DELETE confirmation first so the user knows what they're
   // doing before being prompted for credentials. The dialog copy explains

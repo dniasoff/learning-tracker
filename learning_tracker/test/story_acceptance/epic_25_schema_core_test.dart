@@ -1,6 +1,7 @@
 /// Story acceptance tests for Epic 25 — Schema + Core Foundation.
 ///
 /// Story 25.5 (DNI-326): Outbox table and OutboxProcessor scaffolding.
+/// Story 25.11 (DNI-332): AuthRepository — sole firebase_auth consumer.
 @Tags(['epic_25'])
 library;
 
@@ -11,6 +12,8 @@ import 'package:learning_tracker/core/database/daos/outbox_dao.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/sync/outbox/outbox_processor.dart';
 import 'package:learning_tracker/core/sync/outbox/push_pipeline.dart';
+import 'package:learning_tracker/features/auth/domain/models/app_user.dart';
+import 'package:learning_tracker/features/auth/domain/repositories/auth_repository.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:test/test.dart';
 
@@ -21,14 +24,13 @@ UserDatabase _createDb() => UserDatabase(NativeDatabase.memory());
 OutboxCompanion _completionRow({
   int profileId = 1,
   String entityKey = 'comp-001',
-}) =>
-    OutboxCompanion.insert(
-      profileId: profileId,
-      entityKind: OutboxEntityKind.completion,
-      entityKey: entityKey,
-      payload: jsonEncode({'ref': 'Mishnah Berakhot 1'}),
-      createdAt: DateTime.utc(2026, 5, 13, 10),
-    );
+}) => OutboxCompanion.insert(
+  profileId: profileId,
+  entityKind: OutboxEntityKind.completion,
+  entityKey: entityKey,
+  payload: jsonEncode({'ref': 'Mishnah Berakhot 1'}),
+  createdAt: DateTime.utc(2026, 5, 13, 10),
+);
 
 // ── mocks ─────────────────────────────────────────────────────────────────────
 
@@ -68,39 +70,41 @@ void main() {
           expect(rows.first.lastAttemptAt, isNull);
         });
 
-        test('getPendingByKind returns rows for matching kind and profileId',
-            () async {
-          // Insert two completions for profile 1 and one streak for profile 1.
-          await db.outboxDao.insertOutboxRow(
-            _completionRow(profileId: 1, entityKey: 'comp-001'),
-          );
-          await db.outboxDao.insertOutboxRow(
-            _completionRow(profileId: 1, entityKey: 'comp-002'),
-          );
-          await db.outboxDao.insertOutboxRow(
-            OutboxCompanion.insert(
-              profileId: 1,
-              entityKind: OutboxEntityKind.streak,
-              entityKey: 'streak-001',
-              payload: jsonEncode({'current': 5}),
-              createdAt: DateTime.utc(2026, 5, 13, 11),
-            ),
-          );
-          // Insert a completion for a different profile (must not show up).
-          await db.outboxDao.insertOutboxRow(
-            _completionRow(profileId: 99, entityKey: 'comp-other'),
-          );
+        test(
+          'getPendingByKind returns rows for matching kind and profileId',
+          () async {
+            // Insert two completions for profile 1 and one streak for profile 1.
+            await db.outboxDao.insertOutboxRow(
+              _completionRow(profileId: 1, entityKey: 'comp-001'),
+            );
+            await db.outboxDao.insertOutboxRow(
+              _completionRow(profileId: 1, entityKey: 'comp-002'),
+            );
+            await db.outboxDao.insertOutboxRow(
+              OutboxCompanion.insert(
+                profileId: 1,
+                entityKind: OutboxEntityKind.streak,
+                entityKey: 'streak-001',
+                payload: jsonEncode({'current': 5}),
+                createdAt: DateTime.utc(2026, 5, 13, 11),
+              ),
+            );
+            // Insert a completion for a different profile (must not show up).
+            await db.outboxDao.insertOutboxRow(
+              _completionRow(profileId: 99, entityKey: 'comp-other'),
+            );
 
-          final completions = await db.outboxDao.getPendingByKind(
-            OutboxEntityKind.completion,
-            1,
-          );
-          expect(completions, hasLength(2));
-          expect(
-            completions.map((r) => r.entityKey),
-            containsAll(['comp-001', 'comp-002']),
-          );
-        });
+            final completions = await db.outboxDao.getPendingByKind(
+              OutboxEntityKind.completion,
+              1,
+            );
+            expect(completions, hasLength(2));
+            expect(
+              completions.map((r) => r.entityKey),
+              containsAll(['comp-001', 'comp-002']),
+            );
+          },
+        );
 
         test('getPendingByKind respects limit parameter', () async {
           // Insert 5 rows.
@@ -119,8 +123,7 @@ void main() {
         });
 
         test('markAttempted increments attempts and records error', () async {
-          final id =
-              await db.outboxDao.insertOutboxRow(_completionRow());
+          final id = await db.outboxDao.insertOutboxRow(_completionRow());
 
           await db.outboxDao.markAttempted(id, error: 'timeout');
 
@@ -180,9 +183,9 @@ void main() {
             // streak row. Both should commit successfully.
             await db.transaction(() async {
               await db.outboxDao.insertOutboxRow(_completionRow());
-              await db.into(db.streaks).insert(
-                    StreaksCompanion.insert(profileId: 1),
-                  );
+              await db
+                  .into(db.streaks)
+                  .insert(StreaksCompanion.insert(profileId: 1));
             });
 
             final outboxRows = await db.select(db.outbox).get();
@@ -193,7 +196,7 @@ void main() {
         );
       });
 
-      // ── 3. OutboxProcessor drain ───────────────────────────────────────────
+      // ── 3. OutboxProcessor drain ──────────────────────────────────────────
 
       group('OutboxProcessor.drain', () {
         late UserDatabase db;
@@ -205,10 +208,7 @@ void main() {
           db = _createDb();
           dao = db.outboxDao;
           mockPipeline = MockPushPipeline();
-          processor = OutboxProcessor(
-            outboxDao: dao,
-            pipeline: mockPipeline,
-          );
+          processor = OutboxProcessor(outboxDao: dao, pipeline: mockPipeline);
 
           // Default: all push methods succeed.
           when(
@@ -332,4 +332,136 @@ void main() {
       });
     },
   );
+
+  // --------------------------------------------------------------------------
+  // Story 25.11 — AuthRepository sole firebase_auth consumer (DNI-332)
+  // --------------------------------------------------------------------------
+
+  group(
+    'Story 25.11 — AuthRepository sole firebase_auth consumer',
+    tags: ['story_25_11'],
+    () {
+      // ── 1. AuthRepository interface exposes required members ───────────────
+
+      test(
+        'AuthRepository interface declares currentUser, onAuthStateChanged, signIn, signInWithGoogle, signOut',
+        () {
+          // Verify the abstract class has the expected members by constructing
+          // a mock and calling them. This is a compile-time check — if the
+          // interface is missing a member, the mock class cannot compile.
+          final repo = _MockAuthRepository();
+
+          when(() => repo.currentUser).thenReturn(null);
+          when(
+            () => repo.onAuthStateChanged(),
+          ).thenAnswer((_) => Stream.value(null));
+          when(
+            () => repo.signInWithEmail(any(), any()),
+          ).thenAnswer((_) async {});
+          when(() => repo.signInWithGoogle()).thenAnswer((_) async {});
+          when(() => repo.signOut()).thenAnswer((_) async {});
+
+          expect(repo.currentUser, isNull);
+          expect(repo.onAuthStateChanged(), isA<Stream<AppUser?>>());
+
+          // Verify the calls complete without error.
+          expect(
+            () async => repo.signInWithEmail('a@b.com', 'pw'),
+            returnsNormally,
+          );
+          expect(() async => repo.signInWithGoogle(), returnsNormally);
+          expect(() async => repo.signOut(), returnsNormally);
+        },
+      );
+
+      // ── 2. AppUser maps uid, email, displayName, emailVerified, providers ─
+
+      test('AppUser holds all required fields', () {
+        const user = AppUser(
+          uid: 'uid-123',
+          email: 'test@example.com',
+          displayName: 'Test User',
+          emailVerified: true,
+          providers: ['password', 'google.com'],
+        );
+
+        expect(user.uid, equals('uid-123'));
+        expect(user.email, equals('test@example.com'));
+        expect(user.displayName, equals('Test User'));
+        expect(user.emailVerified, isTrue);
+        expect(user.providers, containsAll(['password', 'google.com']));
+      });
+
+      test('AppUser allows null email and displayName', () {
+        const user = AppUser(
+          uid: 'uid-456',
+          email: null,
+          displayName: null,
+          emailVerified: false,
+          providers: [],
+        );
+
+        expect(user.uid, equals('uid-456'));
+        expect(user.email, isNull);
+        expect(user.displayName, isNull);
+        expect(user.emailVerified, isFalse);
+        expect(user.providers, isEmpty);
+      });
+
+      // ── 3. onAuthStateChanged emits AppUser? not firebase User? ───────────
+
+      test('onAuthStateChanged stream emits AppUser? typed values', () async {
+        final repo = _MockAuthRepository();
+        const mockUser = AppUser(
+          uid: 'uid-789',
+          email: 'mock@test.com',
+          displayName: 'Mock',
+          emailVerified: true,
+          providers: ['password'],
+        );
+
+        when(
+          () => repo.onAuthStateChanged(),
+        ).thenAnswer((_) => Stream.fromIterable([mockUser, null]));
+
+        final emitted = await repo.onAuthStateChanged().toList();
+        expect(emitted, hasLength(2));
+        expect(emitted[0], isA<AppUser>());
+        expect((emitted[0] as AppUser).uid, equals('uid-789'));
+        expect(emitted[1], isNull);
+      });
+
+      // ── 4. AppUser.providers replaces providerData ─────────────────────────
+
+      test('providers list supports contains() for password provider', () {
+        const user = AppUser(
+          uid: 'uid-pw',
+          email: 'pw@test.com',
+          displayName: null,
+          emailVerified: true,
+          providers: ['password'],
+        );
+
+        expect(user.providers.contains('password'), isTrue);
+        expect(user.providers.contains('google.com'), isFalse);
+      });
+
+      test('providers list supports contains() for google.com provider', () {
+        const user = AppUser(
+          uid: 'uid-google',
+          email: 'g@test.com',
+          displayName: 'Google User',
+          emailVerified: true,
+          providers: ['google.com'],
+        );
+
+        expect(user.providers.contains('google.com'), isTrue);
+        expect(user.providers.contains('password'), isFalse);
+      });
+    },
+  );
 }
+
+// ── mock for story 25.11 ──────────────────────────────────────────────────────
+
+class _MockAuthRepository extends Mock implements AuthRepository {}

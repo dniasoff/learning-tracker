@@ -1,8 +1,8 @@
 import 'package:drift/drift.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:learning_tracker/core/database/daos/user_profile_dao.dart';
 import 'package:learning_tracker/core/database/registry/device_registry_database.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
+import 'package:learning_tracker/features/auth/domain/models/app_user.dart';
+import 'package:learning_tracker/features/auth/domain/repositories/auth_repository.dart';
 import 'package:learning_tracker/features/auth/domain/services/password_hasher.dart';
 
 /// Thrown when the email is already in use by an existing Firebase
@@ -44,16 +44,16 @@ class UpgradeEmailNotVerifiedException implements Exception {
 class UpgradeToCloudService {
   UpgradeToCloudService({
     required UserProfileDao dao,
-    required FirebaseAuth firebaseAuth,
+    required AuthRepository authRepository,
     PasswordHasher? hasher,
     this.registry,
     this.accountId,
   }) : _dao = dao,
-       _auth = firebaseAuth,
+       _auth = authRepository,
        _hasher = hasher ?? PasswordHasher();
 
   final UserProfileDao _dao;
-  final FirebaseAuth _auth;
+  final AuthRepository _auth;
   final PasswordHasher _hasher;
 
   /// Epic 21.12: optional registry + accountId for multi-account
@@ -63,9 +63,6 @@ class UpgradeToCloudService {
   final DeviceRegistryDatabase? registry;
   final String? accountId;
 
-  static const _packageName = 'com.jcom.torah.learning_tracker';
-  static const _linkDomain = 'https://torah-study-tracker.firebaseapp.com';
-
   /// Attempts to upgrade [profile] to a cloud-born account.
   ///
   /// Throws:
@@ -73,7 +70,7 @@ class UpgradeToCloudService {
   ///     match the existing argon2id hash on [profile]
   ///   - [EmailCollisionException] if Firebase reports the email is
   ///     already in use — caller must enter the merge flow
-  ///   - [FirebaseAuthException] for other Firebase errors
+  ///   - Exception for other Firebase errors
   Future<UserProfile> upgrade({
     required UserProfile profile,
     required String password,
@@ -86,69 +83,65 @@ class UpgradeToCloudService {
       throw const UpgradePasswordMismatchException();
     }
 
-    UserCredential credential;
+    AppUser? signedInUser;
     try {
-      credential = await _auth.createUserWithEmailAndPassword(
-        email: profile.email,
-        password: password,
-      );
-    } on FirebaseAuthException catch (e) {
-      if (e.code == 'email-already-in-use') {
+      final uid = await _auth.createUserAccount(profile.email, password);
+      signedInUser = await _auth.reloadCurrentUser();
+      if (signedInUser == null || !signedInUser.emailVerified) {
+        await _auth.sendEmailVerification();
+        await _auth.signOut();
+        throw const UpgradeEmailNotVerifiedException();
+      }
+      return await _finalizeUpgrade(profile, uid);
+    } catch (e) {
+      final code = _extractFirebaseCode(e);
+      if (code == 'email-already-in-use') {
         // Retry path: user may already have started upgrade. If the existing
         // account can be signed in with the same password and is verified,
         // proceed; otherwise require verification or collision flow.
         try {
-          credential = await _auth.signInWithEmailAndPassword(
-            email: profile.email,
-            password: password,
-          );
-        } on FirebaseAuthException catch (signInError) {
-          if (signInError.code == 'wrong-password' ||
-              signInError.code == 'invalid-credential' ||
-              signInError.code == 'user-not-found') {
+          signedInUser = await _auth.signInAndGetUser(profile.email, password);
+        } catch (signInError) {
+          final signInCode = _extractFirebaseCode(signInError);
+          if (signInCode == 'wrong-password' ||
+              signInCode == 'invalid-credential' ||
+              signInCode == 'user-not-found') {
             throw EmailCollisionException(profile.email);
           }
           rethrow;
         }
 
-        final existingUser = credential.user!;
-        await existingUser.reload();
-        final refreshed = _auth.currentUser;
-        if (refreshed == null || !refreshed.emailVerified) {
-          await _sendVerificationEmail(existingUser);
+        final existing = await _auth.reloadCurrentUser();
+        if (existing == null || !existing.emailVerified) {
+          await _auth.sendEmailVerification();
           await _auth.signOut();
           throw const UpgradeEmailNotVerifiedException();
         }
-      } else {
-        rethrow;
+        return await _finalizeUpgrade(profile, existing.uid);
       }
+      rethrow;
     }
+  }
 
-    final firebaseUser = credential.user!;
-    await firebaseUser.reload();
-    final refreshedUser = _auth.currentUser;
-
-    // Freshly created upgrade accounts must verify ownership before migration.
-    if (refreshedUser == null || !refreshedUser.emailVerified) {
-      await _sendVerificationEmail(firebaseUser);
+  Future<UserProfile> _finalizeUpgrade(UserProfile profile, String uid) async {
+    final refreshed = await _auth.reloadCurrentUser();
+    if (refreshed == null || !refreshed.emailVerified) {
+      await _auth.sendEmailVerification();
       await _auth.signOut();
       throw const UpgradeEmailNotVerifiedException();
     }
 
-    final firebaseUid = refreshedUser.uid;
     await _dao.upgradeLocalToCloud(
       profileId: profile.id,
-      firebaseUid: firebaseUid,
+      firebaseUid: refreshed.uid,
       updatedAt: DateTime.now().toUtc(),
     );
 
-    // Epic 21.12: also update the device registry so the account
-    // picker shows the cloud badge after upgrade.
     if (registry != null && accountId != null) {
       await registry!.updateAccountTier(
         accountId!,
         'cloudBorn',
-        firebaseUid: firebaseUid,
+        firebaseUid: refreshed.uid,
       );
     }
 
@@ -170,12 +163,8 @@ class UpgradeToCloudService {
   }) async {
     if (localProfile.tier != UserTier.localBorn.dbValue) return null;
     try {
-      final credential = await _auth.signInWithEmailAndPassword(
-        email: localProfile.email,
-        password: password,
-      );
-      await credential.user?.reload();
-      final refreshed = _auth.currentUser;
+      await _auth.signInAndGetUser(localProfile.email, password);
+      final refreshed = await _auth.reloadCurrentUser();
       if (refreshed == null || !refreshed.emailVerified) {
         await _auth.signOut();
         return null;
@@ -195,7 +184,7 @@ class UpgradeToCloudService {
       }
 
       return (await _dao.getUserProfileById(localProfile.id))!;
-    } on FirebaseAuthException {
+    } catch (_) {
       await _auth.signOut();
       return null;
     }
@@ -215,30 +204,24 @@ class UpgradeToCloudService {
       throw const UpgradePasswordMismatchException();
     }
 
-    UserCredential credential;
     try {
-      credential = await _auth.signInWithEmailAndPassword(
-        email: profile.email,
-        password: password,
-      );
-    } on FirebaseAuthException catch (e) {
-      if (e.code == 'wrong-password' ||
-          e.code == 'invalid-credential' ||
-          e.code == 'user-not-found') {
+      await _auth.signInAndGetUser(profile.email, password);
+    } catch (e) {
+      final code = _extractFirebaseCode(e);
+      if (code == 'wrong-password' ||
+          code == 'invalid-credential' ||
+          code == 'user-not-found') {
         throw EmailCollisionException(profile.email);
       }
       rethrow;
     }
 
-    final user = credential.user;
-    if (user == null) return;
-    await user.reload();
-    final refreshed = _auth.currentUser;
+    final refreshed = await _auth.reloadCurrentUser();
     if (refreshed != null && refreshed.emailVerified) {
       await _auth.signOut();
       return;
     }
-    await _sendVerificationEmail(user);
+    await _auth.sendEmailVerification();
     await _auth.signOut();
   }
 
@@ -246,11 +229,11 @@ class UpgradeToCloudService {
   /// account and adopt it as the user's identity. Local data handling
   /// (upload vs discard) is delegated to the caller — this service
   /// only handles the credential side.
-  Future<UserCredential> signInToExistingCloud({
+  Future<AppUser?> signInToExistingCloud({
     required String email,
     required String password,
   }) {
-    return _auth.signInWithEmailAndPassword(email: email, password: password);
+    return _auth.signInAndGetUser(email, password);
   }
 
   /// Wipe the local-born profile on a "discard local" merge choice.
@@ -279,14 +262,10 @@ class UpgradeToCloudService {
     required UserProfile localProfile,
     required String cloudPassword,
   }) async {
-    final credential = await _auth.signInWithEmailAndPassword(
-      email: localProfile.email,
-      password: cloudPassword,
-    );
-    await credential.user?.reload();
-    final refreshed = _auth.currentUser;
+    await _auth.signInAndGetUser(localProfile.email, cloudPassword);
+    final refreshed = await _auth.reloadCurrentUser();
     if (refreshed == null || !refreshed.emailVerified) {
-      await _sendVerificationEmail(credential.user!);
+      await _auth.sendEmailVerification();
       await _auth.signOut();
       throw const UpgradeEmailNotVerifiedException();
     }
@@ -315,14 +294,10 @@ class UpgradeToCloudService {
     required UserProfile localProfile,
     required String cloudPassword,
   }) async {
-    final credential = await _auth.signInWithEmailAndPassword(
-      email: localProfile.email,
-      password: cloudPassword,
-    );
-    await credential.user?.reload();
-    final refreshed = _auth.currentUser;
+    await _auth.signInAndGetUser(localProfile.email, cloudPassword);
+    final refreshed = await _auth.reloadCurrentUser();
     if (refreshed == null || !refreshed.emailVerified) {
-      await _sendVerificationEmail(credential.user!);
+      await _auth.sendEmailVerification();
       await _auth.signOut();
       throw const UpgradeEmailNotVerifiedException();
     }
@@ -344,14 +319,10 @@ class UpgradeToCloudService {
     return (await _dao.getUserProfileById(localProfile.id))!;
   }
 
-  Future<void> _sendVerificationEmail(User user) {
-    return user.sendEmailVerification(
-      ActionCodeSettings(
-        url: '$_linkDomain/verify-email',
-        handleCodeInApp: true,
-        androidPackageName: _packageName,
-        androidInstallApp: true,
-      ),
-    );
+  /// Extracts the Firebase error code from an exception (if present).
+  String? _extractFirebaseCode(Object e) {
+    final str = e.toString();
+    final match = RegExp(r'\[([a-z-]+)\]').firstMatch(str);
+    return match?.group(1);
   }
 }

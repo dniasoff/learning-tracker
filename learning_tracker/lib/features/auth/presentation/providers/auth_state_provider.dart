@@ -1,7 +1,6 @@
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:learning_tracker/core/database/daos/user_profile_dao.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
+import 'package:learning_tracker/features/auth/domain/models/app_user.dart';
 import 'package:learning_tracker/features/auth/domain/models/auth_state.dart';
 import 'package:learning_tracker/features/auth/presentation/providers/auth_providers.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -27,15 +26,12 @@ class AuthStateNotifier extends _$AuthStateNotifier {
     // has no current user (reinstall, signed out, etc.), we are signed
     // out — never resurrect a cloudBorn profile row from SQLite without
     // Firebase confirming the session.
-    final firebaseUser = FirebaseAuth.instance.currentUser;
+    final authRepo = ref.read(authRepositoryProvider);
+    final firebaseUser = authRepo.currentUser;
     if (firebaseUser != null) {
-      await firebaseUser.reload();
-      final refreshed = FirebaseAuth.instance.currentUser;
+      final refreshed = await authRepo.reloadCurrentUser();
       final isPasswordAccount =
-          refreshed?.providerData.any(
-            (provider) => provider.providerId == 'password',
-          ) ??
-          false;
+          refreshed?.providers.contains('password') ?? false;
       if (refreshed != null &&
           !(isPasswordAccount && !refreshed.emailVerified)) {
         final dao = ref.read(userDatabaseProvider).userProfileDao;
@@ -48,7 +44,7 @@ class AuthStateNotifier extends _$AuthStateNotifier {
           return;
         }
       } else {
-        await ref.read(authRepositoryProvider).signOut();
+        await authRepo.signOut();
       }
     }
 
@@ -96,7 +92,7 @@ class AuthStateNotifier extends _$AuthStateNotifier {
   /// Legacy: called from the deprecated `sign_in_screen`,
   /// `signup_screen`, and magic-link providers. Keeps
   /// those files compiling; they will be removed in 20.6/20.7.
-  Future<void> promoteToCloud(User firebaseUser) async {
+  Future<void> promoteToCloud(AppUser firebaseUser) async {
     final dao = ref.read(userDatabaseProvider).userProfileDao;
     var profile = await dao.getUserProfileByFirebaseUid(firebaseUser.uid);
     if (profile == null) {

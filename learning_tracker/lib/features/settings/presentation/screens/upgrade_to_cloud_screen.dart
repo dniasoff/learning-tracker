@@ -1,11 +1,11 @@
 import 'package:auto_route/auto_route.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
-import 'package:learning_tracker/core/providers/firebase_providers.dart';
 import 'package:learning_tracker/core/providers/registry_provider.dart';
 import 'package:learning_tracker/features/auth/domain/services/upgrade_to_cloud_service.dart';
+import 'package:learning_tracker/features/auth/presentation/providers/auth_providers.dart'
+    show authRepositoryProvider;
 import 'package:learning_tracker/features/auth/presentation/providers/auth_state_provider.dart';
 import 'package:learning_tracker/features/auth/presentation/providers/connectivity_providers.dart';
 import 'package:learning_tracker/features/auth/presentation/widgets/email_verification_confirm_panel.dart';
@@ -99,7 +99,7 @@ class _UpgradeToCloudScreenState extends ConsumerState<UpgradeToCloudScreen> {
 
       final service = UpgradeToCloudService(
         dao: dao,
-        firebaseAuth: ref.read(firebaseAuthProvider),
+        authRepository: ref.read(authRepositoryProvider),
         registry: registry,
         accountId: account?.accountId,
       );
@@ -138,19 +138,25 @@ class _UpgradeToCloudScreenState extends ConsumerState<UpgradeToCloudScreen> {
           _collision = true;
         });
       }
-    } on FirebaseAuthException catch (e) {
+    } catch (e) {
       if (mounted) {
         setState(() {
-          _error = e.code == 'network-request-failed'
+          final code = _extractFirebaseCode(e);
+          _error = code == 'network-request-failed'
               ? 'Internet connection is required to upgrade to cloud.'
-              : 'Upgrade failed: ${e.code}';
+              : 'Upgrade failed: $e';
         });
       }
-    } catch (e) {
-      if (mounted) setState(() => _error = 'Upgrade failed: $e');
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
+  }
+
+  /// Extracts the Firebase error code from an exception (if present).
+  String? _extractFirebaseCode(Object e) {
+    final str = e.toString();
+    final match = RegExp(r'\[([a-z-]+)\]').firstMatch(str);
+    return match?.group(1);
   }
 
   Future<void> _resendVerification() async {
@@ -172,7 +178,7 @@ class _UpgradeToCloudScreenState extends ConsumerState<UpgradeToCloudScreen> {
       final account = await registry.findByEmail(profile.email);
       final service = UpgradeToCloudService(
         dao: dao,
-        firebaseAuth: ref.read(firebaseAuthProvider),
+        authRepository: ref.read(authRepositoryProvider),
         registry: registry,
         accountId: account?.accountId,
       );
@@ -196,10 +202,6 @@ class _UpgradeToCloudScreenState extends ConsumerState<UpgradeToCloudScreen> {
           _collision = true;
           _error = null;
         });
-      }
-    } on FirebaseAuthException catch (e) {
-      if (mounted) {
-        setState(() => _error = 'Could not resend verification: ${e.code}');
       }
     } catch (e) {
       if (mounted) setState(() => _error = 'Could not resend verification: $e');
@@ -244,7 +246,7 @@ class _UpgradeToCloudScreenState extends ConsumerState<UpgradeToCloudScreen> {
 
       final service = UpgradeToCloudService(
         dao: dao,
-        firebaseAuth: ref.read(firebaseAuthProvider),
+        authRepository: ref.read(authRepositoryProvider),
         registry: registry,
         accountId: account?.accountId,
       );
@@ -280,19 +282,17 @@ class _UpgradeToCloudScreenState extends ConsumerState<UpgradeToCloudScreen> {
               'then tap "I\'ve verified — complete upgrade" below.';
         });
       }
-    } on FirebaseAuthException catch (e) {
+    } catch (e) {
       if (mounted) {
         setState(() {
-          _error = switch (e.code) {
-            'wrong-password' => 'Incorrect cloud account password.',
-            'network-request-failed' =>
-              'Internet connection is required to complete this merge option.',
-            _ => 'Sign-in failed: ${e.code}',
-          };
+          final code = _extractFirebaseCode(e);
+          _error = code == 'wrong-password'
+              ? 'Incorrect cloud account password.'
+              : code == 'network-request-failed'
+              ? 'Internet connection is required to complete this merge option.'
+              : 'Merge failed: $e';
         });
       }
-    } catch (e) {
-      if (mounted) setState(() => _error = 'Merge failed: $e');
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }

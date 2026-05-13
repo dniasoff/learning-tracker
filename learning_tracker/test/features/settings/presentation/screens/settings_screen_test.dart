@@ -1,5 +1,4 @@
 import 'package:drift/native.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -7,8 +6,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
-import 'package:learning_tracker/core/providers/firebase_providers.dart';
 import 'package:learning_tracker/features/auth/domain/models/auth_state.dart';
+import 'package:learning_tracker/features/auth/domain/repositories/auth_repository.dart';
+import 'package:learning_tracker/features/auth/presentation/providers/auth_providers.dart'
+    show authRepositoryProvider;
 import 'package:learning_tracker/features/auth/presentation/providers/auth_state_provider.dart';
 import 'package:learning_tracker/features/learning/data/repositories/track_repository_impl.dart';
 import 'package:learning_tracker/features/settings/domain/services/curriculum_activation_service.dart';
@@ -18,7 +19,7 @@ import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
-class MockFirebaseAuth extends Mock implements FirebaseAuth {}
+class MockAuthRepository extends Mock implements AuthRepository {}
 
 void main() {
   setUpAll(() {
@@ -33,11 +34,11 @@ void main() {
   });
 
   late UserDatabase database;
-  late MockFirebaseAuth mockAuth;
+  late MockAuthRepository mockAuth;
 
   setUp(() {
     database = UserDatabase(NativeDatabase.memory());
-    mockAuth = MockFirebaseAuth();
+    mockAuth = MockAuthRepository();
     when(() => mockAuth.currentUser).thenReturn(null);
   });
 
@@ -63,7 +64,7 @@ void main() {
           overrides: [
             appDatabaseProvider.overrideWithValue(database),
             userDatabaseProvider.overrideWithValue(database),
-            firebaseAuthProvider.overrideWithValue(mockAuth),
+            authRepositoryProvider.overrideWithValue(mockAuth),
             authStateProvider.overrideWithValue(
               const AuthState.signedIn(
                 user: AuthUser(

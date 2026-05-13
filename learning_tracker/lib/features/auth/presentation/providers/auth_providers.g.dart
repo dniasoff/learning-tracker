@@ -89,14 +89,15 @@ final class AuthRepositoryProvider
   }
 }
 
-String _$authRepositoryHash() => r'4643a420045444e49b84b5c05a666f019f52b25a';
+String _$authRepositoryHash() => r'5f5ae637bcf2e0923dcf269ac1a140bf73dfde29';
 
 @ProviderFor(authState)
 final authStateProvider = AuthStateProvider._();
 
 final class AuthStateProvider
-    extends $FunctionalProvider<AsyncValue<User?>, User?, Stream<User?>>
-    with $FutureModifier<User?>, $StreamProvider<User?> {
+    extends
+        $FunctionalProvider<AsyncValue<AppUser?>, AppUser?, Stream<AppUser?>>
+    with $FutureModifier<AppUser?>, $StreamProvider<AppUser?> {
   AuthStateProvider._()
     : super(
         from: null,
@@ -113,13 +114,13 @@ final class AuthStateProvider
 
   @$internal
   @override
-  $StreamProviderElement<User?> $createElement($ProviderPointer pointer) =>
+  $StreamProviderElement<AppUser?> $createElement($ProviderPointer pointer) =>
       $StreamProviderElement(pointer);
 
   @override
-  Stream<User?> create(Ref ref) {
+  Stream<AppUser?> create(Ref ref) {
     return authState(ref);
   }
 }
 
-String _$authStateHash() => r'abe931a6d8380e57959015e347e0e6ede49e8ddf';
+String _$authStateHash() => r'1a21c258fa66f08a6c43ff3e20408dae008faf57';

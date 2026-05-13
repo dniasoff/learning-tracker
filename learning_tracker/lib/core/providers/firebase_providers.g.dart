@@ -9,47 +9,6 @@ part of 'firebase_providers.dart';
 // GENERATED CODE - DO NOT MODIFY BY HAND
 // ignore_for_file: type=lint, type=warning
 
-@ProviderFor(firebaseAuth)
-final firebaseAuthProvider = FirebaseAuthProvider._();
-
-final class FirebaseAuthProvider
-    extends $FunctionalProvider<FirebaseAuth, FirebaseAuth, FirebaseAuth>
-    with $Provider<FirebaseAuth> {
-  FirebaseAuthProvider._()
-    : super(
-        from: null,
-        argument: null,
-        retry: null,
-        name: r'firebaseAuthProvider',
-        isAutoDispose: false,
-        dependencies: null,
-        $allTransitiveDependencies: null,
-      );
-
-  @override
-  String debugGetCreateSourceHash() => _$firebaseAuthHash();
-
-  @$internal
-  @override
-  $ProviderElement<FirebaseAuth> $createElement($ProviderPointer pointer) =>
-      $ProviderElement(pointer);
-
-  @override
-  FirebaseAuth create(Ref ref) {
-    return firebaseAuth(ref);
-  }
-
-  /// {@macro riverpod.override_with_value}
-  Override overrideWithValue(FirebaseAuth value) {
-    return $ProviderOverride(
-      origin: this,
-      providerOverride: $SyncValueProvider<FirebaseAuth>(value),
-    );
-  }
-}
-
-String _$firebaseAuthHash() => r'cb440927c3ab863427fd4b052a8ccba4c024c863';
-
 @ProviderFor(firebaseFirestore)
 final firebaseFirestoreProvider = FirebaseFirestoreProvider._();
 

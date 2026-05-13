@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:learning_tracker/features/auth/data/repositories/auth_repository_impl.dart';
+import 'package:learning_tracker/features/auth/domain/models/app_user.dart';
 import 'package:mocktail/mocktail.dart';
 
 class MockFirebaseAuth extends Mock implements FirebaseAuth {}
@@ -29,13 +30,17 @@ void main() {
   });
 
   test(
-    'Integration: sign in with email → verify UID is non-null → sign out → verify auth state is null',
+    'Integration: sign in with email → verify currentUser is non-null → sign out → verify auth state is null',
     () async {
       // Set up mocks
       final mockCredential = MockUserCredential();
       final mockUser = MockUser();
       when(() => mockCredential.user).thenReturn(mockUser);
       when(() => mockUser.uid).thenReturn('test-uid-123');
+      when(() => mockUser.email).thenReturn('test@example.com');
+      when(() => mockUser.displayName).thenReturn('Test User');
+      when(() => mockUser.emailVerified).thenReturn(true);
+      when(() => mockUser.providerData).thenReturn([]);
 
       // Auth state stream: emits user on sign-in, then null on sign-out
       final authStateController = StreamController<User?>();
@@ -59,23 +64,22 @@ void main() {
         () => mockFirebaseAuth.authStateChanges(),
       ).thenAnswer((_) => authStateController.stream);
 
-      // Start listening to auth state
-      final authStates = <User?>[];
-      final subscription = repository.authStateChanges().listen(authStates.add);
-
-      // Step 1: Sign in with email/password
-      final credential = await repository.signInWithEmail(
-        'test@example.com',
-        'password123',
+      // Start listening to auth state via the new onAuthStateChanged API
+      final authStates = <AppUser?>[];
+      final subscription = repository.onAuthStateChanged().listen(
+        authStates.add,
       );
 
-      // Step 2: Verify UID is non-null
-      expect(credential.user, isNotNull);
-      expect(credential.user!.uid, equals('test-uid-123'));
+      // Step 1: Sign in with email/password (now returns void)
+      await repository.signInWithEmail('test@example.com', 'password123');
 
       // Allow stream to process
       await Future<void>.delayed(Duration.zero);
-      expect(authStates, contains(isA<User>()));
+      expect(authStates, contains(isA<AppUser>()));
+
+      // Step 2: Verify uid is non-null on the emitted AppUser
+      final signedInUser = authStates.whereType<AppUser>().first;
+      expect(signedInUser.uid, equals('test-uid-123'));
 
       // Step 3: Sign out
       await repository.signOut();

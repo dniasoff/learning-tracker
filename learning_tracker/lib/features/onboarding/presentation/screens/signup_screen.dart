@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:auto_route/auto_route.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -11,7 +10,6 @@ import 'package:internet_connection_checker/internet_connection_checker.dart';
 import 'package:learning_tracker/core/database/registry/device_registry_database.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
-import 'package:learning_tracker/core/providers/firebase_providers.dart';
 import 'package:learning_tracker/core/providers/registry_provider.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/auth/domain/services/local_auth_service.dart';
@@ -130,18 +128,21 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
         );
         unawaited(context.router.replace(const SignInRoute()));
       }
-    } on FirebaseAuthException catch (e) {
-      if (e.code == 'network-request-failed' && mounted) {
+    } on DuplicateEmailException {
+      if (mounted) _showError('An account already exists with this email.');
+    } on InvalidInputException catch (e) {
+      if (mounted) _showError(e.reason);
+    } catch (e) {
+      final code = _extractFirebaseCode(e);
+      if (code == 'network-request-failed' && mounted) {
         // Race condition: one-shot said online but Firebase call
         // failed. Offer graceful fallback to offline account.
         _showFallbackDialog(email, password, displayName);
         return;
       }
-      if (mounted) _showError(_mapAuthError(e.code));
-    } on DuplicateEmailException {
-      if (mounted) _showError('An account already exists with this email.');
-    } on InvalidInputException catch (e) {
-      if (mounted) _showError(e.reason);
+      if (mounted) {
+        _showError(code != null ? _mapAuthError(code) : e.toString());
+      }
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -305,7 +306,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
       await authRepo.signInWithGoogle();
       if (!mounted) return;
 
-      final googleUser = ref.read(firebaseAuthProvider).currentUser;
+      final googleUser = ref.read(authRepositoryProvider).currentUser;
       if (googleUser == null) return;
 
       // Epic 21.6: check 5-account cap before adding
@@ -392,7 +393,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
         return;
       }
 
-      final user = ref.read(firebaseAuthProvider).currentUser;
+      final user = ref.read(authRepositoryProvider).currentUser;
       if (user != null && mounted) {
         final profileService = ref.read(userProfileServiceProvider);
         final existingMode = await profileService.getUserMode(user.uid);
@@ -417,10 +418,6 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
           }
         }
       }
-    } on FirebaseAuthException catch (e) {
-      if (mounted) {
-        _showError(_mapAuthError(e.code));
-      }
     } on GoogleSignInException catch (e) {
       if (e.code == GoogleSignInExceptionCode.canceled ||
           e.code == GoogleSignInExceptionCode.interrupted) {
@@ -429,12 +426,22 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
         _showError('Google Sign-In failed. Please try again.');
       }
     } catch (e) {
+      final code = _extractFirebaseCode(e);
       if (mounted) {
-        _showError('Google Sign-In failed: $e');
+        _showError(
+          code != null ? _mapAuthError(code) : 'Google Sign-In failed: $e',
+        );
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
+  }
+
+  /// Extracts a Firebase Auth error code from an exception without importing
+  /// firebase_auth. Firebase errors stringify as '[error-code] message'.
+  String? _extractFirebaseCode(Object e) {
+    final match = RegExp(r'\[([a-z/-]+)\]').firstMatch(e.toString());
+    return match?.group(1);
   }
 
   String _mapAuthError(String code) {

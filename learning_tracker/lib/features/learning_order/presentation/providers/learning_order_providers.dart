@@ -2,7 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/user_mode.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
-import 'package:learning_tracker/core/providers/firebase_providers.dart';
+import 'package:learning_tracker/features/auth/presentation/providers/auth_providers.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/learning_order/data/repositories/learning_order_repository_impl.dart';
 import 'package:learning_tracker/features/learning_order/domain/models/learning_order_item.dart';
@@ -50,8 +50,7 @@ final parentControlsOrderingProvider = FutureProvider<bool>((ref) async {
 
 /// Provides the current user's UserMode from the database.
 final userModeProvider = FutureProvider<UserMode>((ref) async {
-  final firebaseAuth = ref.watch(firebaseAuthProvider);
-  final uid = firebaseAuth.currentUser?.uid;
+  final uid = ref.watch(authRepositoryProvider).currentUser?.uid;
   if (uid == null) return UserMode.adult;
 
   final database = ref.watch(userDatabaseProvider);

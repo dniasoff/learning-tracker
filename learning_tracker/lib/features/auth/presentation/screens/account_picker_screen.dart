@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:auto_route/auto_route.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:internet_connection_checker/internet_connection_checker.dart';
@@ -235,7 +234,7 @@ class _AccountTile extends ConsumerWidget {
     final isCloud = account.tier == 'cloudBorn';
 
     // Cloud session status
-    final fbUser = FirebaseAuth.instance.currentUser;
+    final fbUser = ref.read(authRepositoryProvider).currentUser;
     final hasValidSession =
         isCloud && fbUser != null && fbUser.uid == account.firebaseUid;
 

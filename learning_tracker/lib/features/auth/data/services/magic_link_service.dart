@@ -1,8 +1,8 @@
 import 'dart:async';
 
 import 'package:app_links/app_links.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
+import 'package:learning_tracker/features/auth/domain/models/app_user.dart';
 import 'package:learning_tracker/features/auth/domain/repositories/auth_repository.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -47,14 +47,14 @@ const kPendingVerifyEmailOobCode = 'pending_verify_email_oob_code';
 class MagicLinkService {
   MagicLinkService({
     required AuthRepository authRepository,
-    required Future<void> Function(User user) onSignedIn,
+    required Future<void> Function(AppUser user) onSignedIn,
     AppLinks? appLinks,
   }) : _authRepository = authRepository,
        _onSignedIn = onSignedIn,
        _appLinks = appLinks ?? AppLinks();
 
   final AuthRepository _authRepository;
-  final Future<void> Function(User user) _onSignedIn;
+  final Future<void> Function(AppUser user) _onSignedIn;
   final AppLinks _appLinks;
 
   StreamSubscription<Uri>? _linkSubscription;
@@ -166,17 +166,16 @@ class MagicLinkService {
     }
 
     try {
-      final credential = await _authRepository.signInWithEmailLink(email, link);
-      final user = credential.user;
+      final user = await _authRepository.signInWithEmailLink(email, link);
       if (user != null) {
         // Apply pending display name (if any) before promoting auth state.
         final pendingName = prefs.getString(kMagicLinkPendingDisplayName);
         if (pendingName != null && pendingName.isNotEmpty) {
-          await user.updateDisplayName(pendingName);
+          await _authRepository.updateDisplayName(pendingName);
         }
         await _onSignedIn(user);
       }
-    } on FirebaseAuthException catch (e, stack) {
+    } catch (e, stack) {
       AppLogger.instance.handle(e, stack);
     } finally {
       // Clear pending state regardless — a stale email is worse than none.
@@ -198,18 +197,28 @@ class MagicLinkService {
     await prefs.setString(kPendingVerifyEmailOobCode, oobCode);
     AppLogger.instance.info('Stored pending verify-email action code');
     try {
-      await FirebaseAuth.instance.checkActionCode(oobCode);
-      await FirebaseAuth.instance.applyActionCode(oobCode);
+      await _authRepository.checkActionCode(oobCode);
+      await _authRepository.applyActionCode(oobCode);
       await prefs.remove(kPendingVerifyEmailOobCode);
       AppLogger.instance.info('Applied verify-email action code successfully');
-      await FirebaseAuth.instance.currentUser?.reload();
-    } on FirebaseAuthException catch (e, stack) {
-      if (e.code == 'invalid-action-code' || e.code == 'expired-action-code') {
+      await _authRepository.reloadCurrentUser();
+    } catch (e, stack) {
+      final code = _extractFirebaseCode(e);
+      if (code == 'invalid-action-code' || code == 'expired-action-code') {
         // Code may already be consumed if another handler/browser applied it.
         await prefs.remove(kPendingVerifyEmailOobCode);
         AppLogger.instance.info('Verify-email action code already consumed');
       }
       AppLogger.instance.handle(e, stack);
     }
+  }
+
+  /// Extracts the Firebase error code from an exception (if present).
+  String? _extractFirebaseCode(Object e) {
+    // FirebaseAuthException has a `.code` field. We avoid importing
+    // firebase_auth here so we fall back to string parsing.
+    final str = e.toString();
+    final match = RegExp(r'\[([a-z-]+)\]').firstMatch(str);
+    return match?.group(1);
   }
 }

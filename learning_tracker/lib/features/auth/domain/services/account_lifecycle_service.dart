@@ -1,8 +1,8 @@
 import 'dart:io';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:learning_tracker/core/database/registry/device_registry_database.dart';
+import 'package:learning_tracker/features/auth/domain/repositories/auth_repository.dart';
 
 /// Service handling account removal and deletion for all tiers.
 ///
@@ -14,19 +14,18 @@ class AccountLifecycleService {
   AccountLifecycleService({
     required DeviceRegistryDatabase registry,
     required String databasesPath,
-    FirebaseAuth? auth,
+    AuthRepository? authRepository,
     FirebaseFirestore? firestore,
   }) : _registry = registry,
        _dbPath = databasesPath,
-       _auth = auth,
+       _authRepository = authRepository,
        _firestore = firestore;
 
   final DeviceRegistryDatabase _registry;
   final String _dbPath;
-  final FirebaseAuth? _auth;
+  final AuthRepository? _authRepository;
   final FirebaseFirestore? _firestore;
 
-  FirebaseAuth get _firebaseAuth => _auth ?? FirebaseAuth.instance;
   FirebaseFirestore get _firestoreDb =>
       _firestore ?? FirebaseFirestore.instance;
 
@@ -47,16 +46,16 @@ class AccountLifecycleService {
 
     // If we're removing the Firebase user whose token is currently
     // cached, clear it — otherwise the picker would still show the
-    // removed account as having a "valid session" via
-    // FirebaseAuth.currentUser on the next launch. Swallow Firebase
-    // init failures so this works in unit tests without a real app.
+    // removed account as having a "valid session" via currentUser
+    // on the next launch. Swallow failures so this works in unit
+    // tests without a real app.
     try {
-      final currentUser = _firebaseAuth.currentUser;
+      final currentUser = _authRepository?.currentUser;
       if (currentUser != null && currentUser.uid == account.firebaseUid) {
-        await _firebaseAuth.signOut();
+        await _authRepository?.signOut();
       }
     } catch (_) {
-      // Firebase not initialized (tests, or Firebase init failed at
+      // Auth not initialized (tests, or Firebase init failed at
       // startup). Nothing to clean up on the auth side.
     }
 
@@ -110,9 +109,9 @@ class AccountLifecycleService {
     await _deleteFirestoreData(uid);
 
     // Step 2: delete Firebase Auth user — triggers Cloud Function
-    final currentUser = _firebaseAuth.currentUser;
+    final currentUser = _authRepository?.currentUser;
     if (currentUser != null && currentUser.uid == uid) {
-      await currentUser.delete();
+      await _authRepository?.deleteCurrentFirebaseUser();
     }
 
     // Step 3: local cleanup (only after cloud succeeds)

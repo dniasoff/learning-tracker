@@ -1,6 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:learning_tracker/features/auth/domain/repositories/auth_repository.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:talker/talker.dart';
 
@@ -16,7 +16,7 @@ Future<void> sendLogsToFirebase({
   required BuildContext context,
   required Talker talker,
   required FirebaseFirestore firestore,
-  required FirebaseAuth auth,
+  required AuthRepository auth,
 }) async {
   final uid = auth.currentUser?.uid;
   if (uid == null) {

@@ -4,6 +4,8 @@ import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/providers/firebase_providers.dart';
 import 'package:learning_tracker/core/providers/network_providers.dart';
 import 'package:learning_tracker/core/providers/talker_provider.dart';
+import 'package:learning_tracker/features/auth/presentation/providers/auth_providers.dart'
+    show authRepositoryProvider;
 import 'package:learning_tracker/features/auth/presentation/providers/auth_state_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/sync/data/firestore_data_source.dart';
@@ -19,7 +21,7 @@ final firestoreDataSourceProvider = Provider<FirestoreDataSource?>((ref) {
   if (!authState.isCloudBorn) return null;
 
   final firestore = ref.watch(firebaseFirestoreProvider);
-  final auth = ref.watch(firebaseAuthProvider);
+  final auth = ref.watch(authRepositoryProvider);
   final profileId = ref.watch(activeProfileIdProvider);
 
   return FirestoreDataSource(

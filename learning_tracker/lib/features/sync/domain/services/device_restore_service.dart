@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/cross_profile_scope.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
@@ -80,16 +79,18 @@ class DeviceRestoreService {
     // install. This catches the reinstall case even if stale profile
     // rows exist locally (otherwise the empty-completions check would
     // be hidden by leftover SQLite state).
-    User? firebaseUser;
+    String? firebaseUid;
     try {
-      firebaseUser = FirebaseAuth.instance.currentUser;
+      firebaseUid = _firestoreDataSource.isAuthenticated
+          ? 'authenticated' // non-null sentinel: session is active
+          : null;
     } catch (_) {
       // Firebase not initialized (e.g. test environment) — treat as no session.
     }
     final completions = await _database.completionDao.getAllCompletions(
       scope: CrossProfileScope.syncRestore,
     );
-    if (firebaseUser != null && completions.isEmpty) return true;
+    if (firebaseUid != null && completions.isEmpty) return true;
 
     if (completions.isNotEmpty) return false;
 

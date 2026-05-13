@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
+import 'package:learning_tracker/features/auth/domain/models/app_user.dart';
 import 'package:learning_tracker/features/auth/domain/repositories/auth_repository.dart';
 
 class AuthRepositoryImpl implements AuthRepository {
@@ -17,13 +18,15 @@ class AuthRepositoryImpl implements AuthRepository {
   static const _packageName = 'com.jcom.torah.learning_tracker';
   static const _linkDomain = 'https://torah-study-tracker.firebaseapp.com';
 
-  @override
-  Future<UserCredential> signInWithEmail(String email, String password) {
-    return _firebaseAuth.signInWithEmailAndPassword(
-      email: email,
-      password: password,
-    );
-  }
+  // ── Helpers ────────────────────────────────────────────────────────────────
+
+  AppUser _toAppUser(User user) => AppUser(
+    uid: user.uid,
+    email: user.email,
+    displayName: user.displayName,
+    emailVerified: user.emailVerified,
+    providers: user.providerData.map((i) => i.providerId).toList(),
+  );
 
   /// Lazily initialize GoogleSignIn on first use.
   ///
@@ -36,30 +39,34 @@ class AuthRepositoryImpl implements AuthRepository {
     _googleSignInInitialized = true;
   }
 
+  // ── AuthRepository ─────────────────────────────────────────────────────────
+
   @override
-  Future<UserCredential> signInWithGoogle() async {
+  Future<void> signInWithEmail(String email, String password) {
+    return _firebaseAuth.signInWithEmailAndPassword(
+      email: email,
+      password: password,
+    );
+  }
+
+  @override
+  Future<void> signInWithGoogle() async {
     await _ensureGoogleSignInInitialized();
     final googleUser = await _googleSignIn.authenticate();
     final googleAuth = googleUser.authentication;
     final credential = GoogleAuthProvider.credential(
       idToken: googleAuth.idToken,
     );
-
-    return _firebaseAuth.signInWithCredential(credential);
+    await _firebaseAuth.signInWithCredential(credential);
   }
 
   @override
-  Future<UserCredential> signUp(
-    String email,
-    String password,
-    String displayName,
-  ) async {
+  Future<void> signUp(String email, String password, String displayName) async {
     final credential = await _firebaseAuth.createUserWithEmailAndPassword(
       email: email,
       password: password,
     );
     await credential.user?.updateDisplayName(displayName);
-    return credential;
   }
 
   @override
@@ -92,11 +99,13 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
-  Future<UserCredential> signInWithEmailLink(String email, String emailLink) {
-    return _firebaseAuth.signInWithEmailLink(
+  Future<AppUser?> signInWithEmailLink(String email, String emailLink) async {
+    final credential = await _firebaseAuth.signInWithEmailLink(
       email: email,
       emailLink: emailLink,
     );
+    final user = credential.user;
+    return user == null ? null : _toAppUser(user);
   }
 
   @override
@@ -186,7 +195,72 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
-  Stream<User?> authStateChanges() {
-    return _firebaseAuth.authStateChanges();
+  Stream<AppUser?> onAuthStateChanged() {
+    return _firebaseAuth.authStateChanges().map(
+      (user) => user == null ? null : _toAppUser(user),
+    );
+  }
+
+  // ── User state accessors ───────────────────────────────────────────────────
+
+  @override
+  AppUser? get currentUser {
+    final user = _firebaseAuth.currentUser;
+    return user == null ? null : _toAppUser(user);
+  }
+
+  @override
+  Future<AppUser?> reloadCurrentUser() async {
+    final user = _firebaseAuth.currentUser;
+    if (user == null) return null;
+    await user.reload();
+    final refreshed = _firebaseAuth.currentUser;
+    return refreshed == null ? null : _toAppUser(refreshed);
+  }
+
+  // ── Action-code operations ─────────────────────────────────────────────────
+
+  @override
+  Future<void> checkActionCode(String oobCode) {
+    return _firebaseAuth.checkActionCode(oobCode);
+  }
+
+  @override
+  Future<void> applyActionCode(String oobCode) {
+    return _firebaseAuth.applyActionCode(oobCode);
+  }
+
+  // ── Firebase low-level pass-throughs ──────────────────────────────────────
+
+  @override
+  Future<String> createUserAccount(String email, String password) async {
+    final credential = await _firebaseAuth.createUserWithEmailAndPassword(
+      email: email,
+      password: password,
+    );
+    return credential.user!.uid;
+  }
+
+  @override
+  Future<AppUser?> signInAndGetUser(String email, String password) async {
+    final credential = await _firebaseAuth.signInWithEmailAndPassword(
+      email: email,
+      password: password,
+    );
+    final user = credential.user;
+    return user == null ? null : _toAppUser(user);
+  }
+
+  @override
+  Future<void> updateDisplayName(String displayName) async {
+    await _firebaseAuth.currentUser?.updateDisplayName(displayName);
+  }
+
+  @override
+  Future<void> deleteCurrentFirebaseUser() async {
+    final user = _firebaseAuth.currentUser;
+    if (user != null) {
+      await user.delete();
+    }
   }
 }
