@@ -137,8 +137,9 @@ tags:
   story_21_14:
   story_21_15:
 
-  # Epic 26 Reader Purity + Provider Hygiene
+  # Epic 26 UX Rebuild + Reader Purity
   epic_26:
+  story_26_11:
   story_26_13:
 
   # Epic 25 Schema + Core Foundation
