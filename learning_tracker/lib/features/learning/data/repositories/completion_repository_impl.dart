@@ -409,6 +409,11 @@ class CompletionRepositoryImpl implements CompletionRepository {
       trackId: trackId,
       points: points,
       profileId: profileId,
+      // Bulk-mark-prior ("I learned this in the past") opts out of
+      // gamification; those completions are historical, so they must
+      // not produce a `streak_events` row and must not credit a streak
+      // (NFR13 / DNI-381).
+      appendStreakEvent: awardGamificationPoints,
     );
     // No `StreakService.recordCompletion` — DNI-337: streak state is
     // derived from `streak_events` by `core/streak/StreakReducer`. The
@@ -554,6 +559,7 @@ class CompletionRepositoryImpl implements CompletionRepository {
     required int trackId,
     required int points,
     required int profileId,
+    bool appendStreakEvent = true,
   }) async {
     final now = DateTimeFactory.nowUtc(); // P5: Store as UTC
 
@@ -573,8 +579,11 @@ class CompletionRepositoryImpl implements CompletionRepository {
     // Tee the completion into the append-only streak event log
     // so the streak reducer can derive state independent of the
     // cached Streaks table. Unique keys swallow duplicates silently.
+    // Skipped for prior-learning bulk marks (NFR13 / DNI-381).
     // (Moves into CompletionWriter in DNI-337 / Story 25.16.)
-    await _appendStreakEvent(profileId: profileId, at: now);
+    if (appendStreakEvent) {
+      await _appendStreakEvent(profileId: profileId, at: now);
+    }
 
     return result.completion;
   }

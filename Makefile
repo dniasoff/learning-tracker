@@ -1,4 +1,4 @@
-.PHONY: help test test-unit test-widget test-integration test-story-4.3 test-story-25.5 test-story-25.7 test-story-25.12 test-story-25.13 test-story-25.16 test-story-25.18 test-epic-25 test-all ci analyze format schema-check linear-sync linear-story linear-check
+.PHONY: help test test-unit test-widget test-integration test-story-4.3 test-story-25.5 test-story-25.7 test-story-25.12 test-story-25.13 test-story-25.16 test-story-25.18 test-story-27.5 test-epic-25 test-epic-27 test-all ci analyze format schema-check linear-sync linear-story linear-check
 
 help:
 	@echo "Learning Tracker - Make Commands"
@@ -12,6 +12,8 @@ help:
 	@echo "  make test-story-25.13   - Run Story 25.13 (DNI-334) acceptance tests"
 	@echo "  make test-story-25.16   - Run Story 25.16 (DNI-337) acceptance tests"
 	@echo "  make test-story-25.18   - Run Story 25.18 (DNI-339) acceptance tests"
+	@echo "  make test-story-27.5    - Run Story 27.5 (DNI-381) acceptance tests"
+	@echo "  make test-epic-27       - Run Epic 27 acceptance tests"
 	@echo "  make test-all           - Run all tests"
 	@echo ""
 	@echo "Quality:"
@@ -68,6 +70,14 @@ test-story-25.18:
 test-epic-25:
 	@echo "Running Epic 25 acceptance tests..."
 	@cd learning_tracker && flutter test test/story_acceptance/epic_25_schema_core_test.dart --reporter=expanded
+
+test-story-27.5:
+	@echo "Running Story 27.5 acceptance tests (DNI-381 — bulk-mark-prior does not credit streak)..."
+	@cd learning_tracker && flutter test test/story_acceptance/epic_27_story_05_bulk_mark_prior_test.dart --reporter=expanded
+
+test-epic-27:
+	@echo "Running Epic 27 acceptance tests..."
+	@cd learning_tracker && flutter test test/story_acceptance/epic_27_story_05_bulk_mark_prior_test.dart --reporter=expanded
 
 test-all:
 	@echo "Running all tests..."
