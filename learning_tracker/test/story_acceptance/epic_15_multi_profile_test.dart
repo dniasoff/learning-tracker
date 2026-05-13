@@ -129,7 +129,7 @@ void main() {
           // Insert completions for each profile
           await db.completionDao.insertCompletion(
             CompletionsCompanion.insert(
-              profileId: Value(p1.id),
+              profileId: p1.id,
               curriculumId: 'mishnah',
               sefariaRef: 'Mishnah_Berakhot.1.1',
               stageId: 1,
@@ -140,7 +140,7 @@ void main() {
           );
           await db.completionDao.insertCompletion(
             CompletionsCompanion.insert(
-              profileId: Value(p2.id),
+              profileId: p2.id,
               curriculumId: 'mishnah',
               sefariaRef: 'Mishnah_Berakhot.1.2',
               stageId: 1,
@@ -184,18 +184,18 @@ void main() {
 
           await db.bookmarkDao.insertBookmark(
             BookmarksCompanion.insert(
-              profileId: Value(p1.id),
+              profileId: p1.id,
               curriculumId: 'mishnah',
-              trackType: 'personal',
+              trackId: trackId,
               sefariaRef: 'Mishnah_Berakhot.1.1',
               updatedAt: DateTime.now().toUtc(),
             ),
           );
           await db.bookmarkDao.insertBookmark(
             BookmarksCompanion.insert(
-              profileId: Value(p2.id),
+              profileId: p2.id,
               curriculumId: 'mishnah',
-              trackType: 'personal',
+              trackId: trackId,
               sefariaRef: 'Mishnah_Berakhot.2.1',
               updatedAt: DateTime.now().toUtc(),
             ),
@@ -217,7 +217,7 @@ void main() {
 
           await db.goalDao.insertGoal(
             GoalsCompanion.insert(
-              profileId: Value(p1.id),
+              profileId: p1.id,
               curriculumId: 'mishnah',
               trackId: trackId,
               createdAt: DateTime.now().toUtc(),
@@ -381,7 +381,7 @@ void main() {
             // Insert data for this profile
             await db.completionDao.insertCompletion(
               CompletionsCompanion.insert(
-                profileId: Value(pid),
+                profileId: pid,
                 curriculumId: 'mishnah',
                 sefariaRef: 'Mishnah_Berakhot.1.1',
                 stageId: 1,
@@ -392,16 +392,16 @@ void main() {
             );
             await db.bookmarkDao.insertBookmark(
               BookmarksCompanion.insert(
-                profileId: Value(pid),
+                profileId: pid,
                 curriculumId: 'mishnah',
-                trackType: 'personal',
+                trackId: trackId,
                 sefariaRef: 'Mishnah_Berakhot.1.1',
                 updatedAt: DateTime.now().toUtc(),
               ),
             );
             await db.goalDao.insertGoal(
               GoalsCompanion.insert(
-                profileId: Value(pid),
+                profileId: pid,
                 curriculumId: 'mishnah',
                 trackId: trackId,
                 createdAt: DateTime.now().toUtc(),
@@ -462,7 +462,7 @@ void main() {
           // Add data for both profiles
           await db.completionDao.insertCompletion(
             CompletionsCompanion.insert(
-              profileId: Value(p1.id),
+              profileId: p1.id,
               curriculumId: 'mishnah',
               sefariaRef: 'Mishnah_Berakhot.1.1',
               stageId: 1,
@@ -473,7 +473,7 @@ void main() {
           );
           await db.completionDao.insertCompletion(
             CompletionsCompanion.insert(
-              profileId: Value(p2.id),
+              profileId: p2.id,
               curriculumId: 'mishnah',
               sefariaRef: 'Mishnah_Berakhot.1.2',
               stageId: 1,
@@ -998,7 +998,7 @@ void main() {
           // Add some data
           await db.completionDao.insertCompletion(
             CompletionsCompanion.insert(
-              profileId: Value(profile.id),
+              profileId: profile.id,
               curriculumId: 'mishnah',
               sefariaRef: 'Mishnah_Berakhot.1.1',
               stageId: 1,
@@ -1098,7 +1098,7 @@ void main() {
             // Insert completions for each profile
             await db.completionDao.insertCompletion(
               CompletionsCompanion.insert(
-                profileId: Value(p1.id),
+                profileId: p1.id,
                 curriculumId: 'mishnah',
                 sefariaRef: 'Mishnah_Berakhot.1.1',
                 stageId: 1,
@@ -1109,7 +1109,7 @@ void main() {
             );
             await db.completionDao.insertCompletion(
               CompletionsCompanion.insert(
-                profileId: Value(p2.id),
+                profileId: p2.id,
                 curriculumId: 'mishnah',
                 sefariaRef: 'Mishnah_Berakhot.1.2',
                 stageId: 1,
@@ -1146,7 +1146,7 @@ void main() {
 
           await db.completionDao.insertCompletion(
             CompletionsCompanion.insert(
-              profileId: Value(p1.id),
+              profileId: p1.id,
               curriculumId: 'mishnah',
               sefariaRef: 'Mishnah_Berakhot.1.1',
               stageId: 1,
@@ -1157,7 +1157,7 @@ void main() {
           );
           await db.completionDao.insertCompletion(
             CompletionsCompanion.insert(
-              profileId: Value(p2.id),
+              profileId: p2.id,
               curriculumId: 'mishnah',
               sefariaRef: 'Mishnah_Berakhot.2.1',
               stageId: 1,
@@ -1194,14 +1194,14 @@ void main() {
 
           await db.bookmarkDao.upsertBookmarkByProfile(
             curriculumId: 'mishnah',
-            trackType: 'personal',
+            trackId: trackId,
             sefariaRef: 'Mishnah_Berakhot.1.1',
             updatedAt: DateTime.now().toUtc(),
             profileId: p1.id,
           );
           await db.bookmarkDao.upsertBookmarkByProfile(
             curriculumId: 'mishnah',
-            trackType: 'personal',
+            trackId: trackId,
             sefariaRef: 'Mishnah_Berakhot.3.1',
             updatedAt: DateTime.now().toUtc(),
             profileId: p2.id,
@@ -1210,7 +1210,7 @@ void main() {
           final p1Bookmark = await db.bookmarkDao
               .getBookmarkByCurriculumTrackAndProfile(
                 'mishnah',
-                'personal',
+                trackId,
                 p1.id,
               );
           expect(p1Bookmark, isNotNull);
@@ -1219,7 +1219,7 @@ void main() {
           final p2Bookmark = await db.bookmarkDao
               .getBookmarkByCurriculumTrackAndProfile(
                 'mishnah',
-                'personal',
+                trackId,
                 p2.id,
               );
           expect(p2Bookmark, isNotNull);
@@ -1240,7 +1240,7 @@ void main() {
 
           await db.goalDao.insertGoal(
             GoalsCompanion.insert(
-              profileId: Value(p1.id),
+              profileId: p1.id,
               curriculumId: 'mishnah',
               trackId: trackId,
               createdAt: DateTime.now().toUtc(),
@@ -1249,7 +1249,7 @@ void main() {
           );
           await db.goalDao.insertGoal(
             GoalsCompanion.insert(
-              profileId: Value(p2.id),
+              profileId: p2.id,
               curriculumId: 'bavli',
               trackId: trackId,
               createdAt: DateTime.now().toUtc(),
@@ -1342,7 +1342,7 @@ void main() {
             // Simulate synced completions for different profiles
             await db.completionDao.insertCompletion(
               CompletionsCompanion.insert(
-                profileId: Value(p1.id),
+                profileId: p1.id,
                 curriculumId: 'mishnah',
                 sefariaRef: 'Mishnah_Berakhot.1.1',
                 stageId: 1,
@@ -1353,7 +1353,7 @@ void main() {
             );
             await db.completionDao.insertCompletion(
               CompletionsCompanion.insert(
-                profileId: Value(p2.id),
+                profileId: p2.id,
                 curriculumId: 'mishnah',
                 sefariaRef: 'Mishnah_Berakhot.1.1',
                 stageId: 1,
@@ -1395,7 +1395,7 @@ void main() {
           for (var i = 1; i <= 2; i++) {
             await db.completionDao.insertCompletion(
               CompletionsCompanion.insert(
-                profileId: Value(p1.id),
+                profileId: p1.id,
                 curriculumId: 'mishnah',
                 sefariaRef: 'Mishnah_Berakhot.1.$i',
                 stageId: 1,
@@ -1409,7 +1409,7 @@ void main() {
           // P2 has 1 personal completion
           await db.completionDao.insertCompletion(
             CompletionsCompanion.insert(
-              profileId: Value(p2.id),
+              profileId: p2.id,
               curriculumId: 'mishnah',
               sefariaRef: 'Mishnah_Berakhot.2.1',
               stageId: 1,
@@ -1471,7 +1471,7 @@ void main() {
           // P1 earns 10 points
           await db.completionDao.insertCompletion(
             CompletionsCompanion.insert(
-              profileId: Value(p1.id),
+              profileId: p1.id,
               curriculumId: 'mishnah',
               sefariaRef: 'Mishnah_Berakhot.1.1',
               stageId: 1,
@@ -1485,7 +1485,7 @@ void main() {
           // P2 earns 5 points
           await db.completionDao.insertCompletion(
             CompletionsCompanion.insert(
-              profileId: Value(p2.id),
+              profileId: p2.id,
               curriculumId: 'mishnah',
               sefariaRef: 'Mishnah_Berakhot.2.1',
               stageId: 1,

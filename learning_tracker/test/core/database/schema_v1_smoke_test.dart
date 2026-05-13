@@ -1,11 +1,10 @@
 /// Schema v1 smoke tests — DNI-322
 ///
 /// Verifies that the schema-v1 changes (table renames, profileId required,
-/// Bookmarks.trackId FK, schemaVersion=12) hold at the Drift level on a
+/// Bookmarks.trackId FK, schemaVersion=13) hold at the Drift level on a
 /// freshly-created in-memory database.
 library;
 
-import 'package:drift/drift.dart' hide isNotNull, isNull;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 
@@ -27,11 +26,11 @@ void main() {
     // 1. Schema version
     // -------------------------------------------------------------------------
 
-    test('schemaVersion is 12', () async {
+    test('schemaVersion is 13', () async {
       final version = await db.customSelect('PRAGMA user_version').map((row) {
         return row.read<int>('user_version');
       }).getSingle();
-      expect(version, equals(12));
+      expect(version, equals(13));
     });
 
     // -------------------------------------------------------------------------
@@ -41,26 +40,30 @@ void main() {
     test('learner_profiles table exists and accepts inserts', () async {
       final now = DateTime.now().toUtc();
       // Accounts row is needed because LearnerProfiles.accountId is a FK.
-      final accountId = await db.into(db.accounts).insert(
-        AccountsCompanion.insert(
-          email: 'learner@example.com',
-          tier: 'localBorn',
-          displayName: 'Learner Account',
-          userMode: 'child',
-          createdAt: now,
-          updatedAt: now,
-        ),
-      );
+      final accountId = await db
+          .into(db.accounts)
+          .insert(
+            AccountsCompanion.insert(
+              email: 'learner@example.com',
+              tier: 'localBorn',
+              displayName: 'Learner Account',
+              userMode: 'child',
+              createdAt: now,
+              updatedAt: now,
+            ),
+          );
 
-      final id = await db.into(db.learnerProfiles).insert(
-        LearnerProfilesCompanion.insert(
-          accountId: accountId,
-          displayName: 'Test Learner',
-          mode: 'child',
-          createdAt: now,
-          updatedAt: now,
-        ),
-      );
+      final id = await db
+          .into(db.learnerProfiles)
+          .insert(
+            LearnerProfilesCompanion.insert(
+              accountId: accountId,
+              displayName: 'Test Learner',
+              mode: 'child',
+              createdAt: now,
+              updatedAt: now,
+            ),
+          );
       expect(id, greaterThan(0));
 
       final row = await db.profileDao.getProfileById(id);
@@ -74,16 +77,18 @@ void main() {
 
     test('accounts table exists and accepts inserts', () async {
       final now = DateTime.now().toUtc();
-      final id = await db.into(db.accounts).insert(
-        AccountsCompanion.insert(
-          email: 'test@example.com',
-          tier: 'localBorn',
-          displayName: 'Test User',
-          userMode: 'child',
-          createdAt: now,
-          updatedAt: now,
-        ),
-      );
+      final id = await db
+          .into(db.accounts)
+          .insert(
+            AccountsCompanion.insert(
+              email: 'test@example.com',
+              tier: 'localBorn',
+              displayName: 'Test User',
+              userMode: 'child',
+              createdAt: now,
+              updatedAt: now,
+            ),
+          );
       expect(id, greaterThan(0));
 
       final row = await db.userProfileDao.getUserProfileById(id);
@@ -97,27 +102,31 @@ void main() {
 
     test('completions.profileId is required (no default)', () async {
       // Insert a curriculum track first (FK dependency)
-      final trackId = await db.into(db.curriculumTracks).insert(
-        CurriculumTracksCompanion.insert(
-          profileId: 1,
-          curriculumId: 'bavli',
-          trackType: 'personal',
-          activatedAt: DateTime.now().toUtc(),
-        ),
-      );
+      final trackId = await db
+          .into(db.curriculumTracks)
+          .insert(
+            CurriculumTracksCompanion.insert(
+              profileId: 1,
+              curriculumId: 'bavli',
+              trackType: 'personal',
+              activatedAt: DateTime.now().toUtc(),
+            ),
+          );
 
       // Insert with explicit profileId = 2 — should succeed
-      final id = await db.into(db.completions).insert(
-        CompletionsCompanion.insert(
-          profileId: 2,
-          curriculumId: 'bavli',
-          sefariaRef: 'Berakhot 2a',
-          stageId: 1,
-          trackType: 'personal',
-          trackId: trackId,
-          completedAt: DateTime.now().toUtc(),
-        ),
-      );
+      final id = await db
+          .into(db.completions)
+          .insert(
+            CompletionsCompanion.insert(
+              profileId: 2,
+              curriculumId: 'bavli',
+              sefariaRef: 'Berakhot 2a',
+              stageId: 1,
+              trackType: 'personal',
+              trackId: trackId,
+              completedAt: DateTime.now().toUtc(),
+            ),
+          );
       expect(id, greaterThan(0));
 
       final rows = await db.completionDao.getCompletionsByProfile(2);
@@ -126,14 +135,16 @@ void main() {
     });
 
     test('goals.profileId is required (no default)', () async {
-      final trackId = await db.into(db.curriculumTracks).insert(
-        CurriculumTracksCompanion.insert(
-          profileId: 1,
-          curriculumId: 'bavli',
-          trackType: 'personal',
-          activatedAt: DateTime.now().toUtc(),
-        ),
-      );
+      final trackId = await db
+          .into(db.curriculumTracks)
+          .insert(
+            CurriculumTracksCompanion.insert(
+              profileId: 1,
+              curriculumId: 'bavli',
+              trackType: 'personal',
+              activatedAt: DateTime.now().toUtc(),
+            ),
+          );
 
       final now = DateTime.now().toUtc();
       final id = await db.goalDao.insertGoal(
@@ -158,14 +169,16 @@ void main() {
 
     test('bookmarks table has trackId column (not trackType)', () async {
       // Insert prerequisite track
-      final trackId = await db.into(db.curriculumTracks).insert(
-        CurriculumTracksCompanion.insert(
-          profileId: 1,
-          curriculumId: 'bavli',
-          trackType: 'personal',
-          activatedAt: DateTime.now().toUtc(),
-        ),
-      );
+      final trackId = await db
+          .into(db.curriculumTracks)
+          .insert(
+            CurriculumTracksCompanion.insert(
+              profileId: 1,
+              curriculumId: 'bavli',
+              trackType: 'personal',
+              activatedAt: DateTime.now().toUtc(),
+            ),
+          );
 
       final id = await db.bookmarkDao.insertBookmark(
         BookmarksCompanion.insert(
@@ -184,14 +197,16 @@ void main() {
     });
 
     test('bookmark trackId references curriculum_tracks.id', () async {
-      final trackId = await db.into(db.curriculumTracks).insert(
-        CurriculumTracksCompanion.insert(
-          profileId: 1,
-          curriculumId: 'bavli',
-          trackType: 'personal',
-          activatedAt: DateTime.now().toUtc(),
-        ),
-      );
+      final trackId = await db
+          .into(db.curriculumTracks)
+          .insert(
+            CurriculumTracksCompanion.insert(
+              profileId: 1,
+              curriculumId: 'bavli',
+              trackType: 'personal',
+              activatedAt: DateTime.now().toUtc(),
+            ),
+          );
 
       // Valid FK insert succeeds and round-trips correctly
       final id = await db.bookmarkDao.insertBookmark(
@@ -212,17 +227,19 @@ void main() {
     // -------------------------------------------------------------------------
 
     test('curriculum_tracks.profileId is required (no default)', () async {
-      final trackId = await db.into(db.curriculumTracks).insert(
-        CurriculumTracksCompanion.insert(
-          profileId: 7,
-          curriculumId: 'mishnayos',
-          trackType: 'personal',
-          activatedAt: DateTime.now().toUtc(),
-        ),
-      );
-      final row = await (db.select(db.curriculumTracks)
-            ..where((t) => t.id.equals(trackId)))
-          .getSingleOrNull();
+      final trackId = await db
+          .into(db.curriculumTracks)
+          .insert(
+            CurriculumTracksCompanion.insert(
+              profileId: 7,
+              curriculumId: 'mishnayos',
+              trackType: 'personal',
+              activatedAt: DateTime.now().toUtc(),
+            ),
+          );
+      final row = await (db.select(
+        db.curriculumTracks,
+      )..where((t) => t.id.equals(trackId))).getSingleOrNull();
       expect(row, isNotNull);
       expect(row!.profileId, equals(7));
     });
@@ -232,12 +249,10 @@ void main() {
     // -------------------------------------------------------------------------
 
     test('streaks.profileId is required (no default)', () async {
-      await db.into(db.streaks).insert(
-        StreaksCompanion.insert(profileId: 5),
-      );
-      final row = await (db.select(db.streaks)
-            ..where((t) => t.profileId.equals(5)))
-          .getSingleOrNull();
+      await db.into(db.streaks).insert(StreaksCompanion.insert(profileId: 5));
+      final row = await (db.select(
+        db.streaks,
+      )..where((t) => t.profileId.equals(5))).getSingleOrNull();
       expect(row, isNotNull);
       expect(row!.profileId, equals(5));
     });
@@ -248,25 +263,29 @@ void main() {
 
     test('learner_profiles.avatarIndex defaults to 0', () async {
       final now = DateTime.now().toUtc();
-      final accountId = await db.into(db.accounts).insert(
-        AccountsCompanion.insert(
-          email: 'avatar@example.com',
-          tier: 'localBorn',
-          displayName: 'Avatar Account',
-          userMode: 'child',
-          createdAt: now,
-          updatedAt: now,
-        ),
-      );
-      final id = await db.into(db.learnerProfiles).insert(
-        LearnerProfilesCompanion.insert(
-          accountId: accountId,
-          displayName: 'Avatar Test',
-          mode: 'child',
-          createdAt: now,
-          updatedAt: now,
-        ),
-      );
+      final accountId = await db
+          .into(db.accounts)
+          .insert(
+            AccountsCompanion.insert(
+              email: 'avatar@example.com',
+              tier: 'localBorn',
+              displayName: 'Avatar Account',
+              userMode: 'child',
+              createdAt: now,
+              updatedAt: now,
+            ),
+          );
+      final id = await db
+          .into(db.learnerProfiles)
+          .insert(
+            LearnerProfilesCompanion.insert(
+              accountId: accountId,
+              displayName: 'Avatar Test',
+              mode: 'child',
+              createdAt: now,
+              updatedAt: now,
+            ),
+          );
       final row = await db.profileDao.getProfileById(id);
       expect(row!.avatarIndex, equals(0));
     });

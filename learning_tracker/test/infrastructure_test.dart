@@ -123,8 +123,8 @@ void main() {
         expect(db, isNotNull);
         expect(
           db.schemaVersion,
-          12,
-        ); // v12: profileId non-nullable + bookmarks trackId FK (DNI-322)
+          13,
+        ); // v13: outbox table (DNI-326); v12: profileId non-nullable + bookmarks trackId FK (DNI-322)
 
         db.close();
       });

@@ -4,7 +4,6 @@ library;
 
 import 'dart:async';
 
-import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/cross_profile_scope.dart';
@@ -50,9 +49,7 @@ void stubFirestorePullOnLaunchEmpty(MockFirestoreDataSource mock) {
   when(() => mock.fetchNotificationSettings()).thenAnswer((_) async => null);
   when(() => mock.fetchGamificationSettings()).thenAnswer((_) async => null);
   when(() => mock.fetchUiPreferences()).thenAnswer((_) async => null);
-  when(
-    () => mock.fetchLearningOrder(pageSize: ps),
-  ).thenAnswer((_) async => []);
+  when(() => mock.fetchLearningOrder(pageSize: ps)).thenAnswer((_) async => []);
 }
 
 UserDatabase _createInMemoryDatabase() {
@@ -970,7 +967,10 @@ void main() {
       verify(() => mockFirestore.fetchCurriculumTracks(pageSize: ps)).called(2);
       verify(() => mockFirestore.fetchNotificationSettings()).called(1);
       verify(() => mockFirestore.fetchGamificationSettings()).called(1);
-      verify(() => mockFirestore.isAuthenticated).called(1);
+      // Called twice: once via _isNewDevice for new-install detection (DNI-332
+      // routed through FirestoreDataSource.isAuthenticated), once via the
+      // existing pullOnLaunch session check.
+      verify(() => mockFirestore.isAuthenticated).called(2);
     });
 
     test(

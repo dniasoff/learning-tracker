@@ -2,7 +2,6 @@
 @Tags(['epic_3'])
 library;
 
-import 'package:drift/drift.dart' show Value;
 import 'package:learning_tracker/core/database/daos/profile_dao.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
