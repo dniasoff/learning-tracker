@@ -45,3 +45,43 @@ After changing Drift tables, Freezed models, or Riverpod providers, regenerate b
 ```bash
 dart run build_runner build --delete-conflicting-outputs
 ```
+
+---
+
+## Layering Rules
+
+The dependency direction is: `app → features → core`. These five invariants are **non-negotiable** and are enforced by custom lints (DNI-386 / DNI-387 — see `docs/coding-standards.md` for details):
+
+### Rule 1 — No `core/` → `features/` imports
+
+`lib/core/` MUST NOT import anything from `lib/features/`. Core is shared infrastructure; it cannot depend on feature business logic.
+
+**Enforced by:** `no-feature-cross-import` custom lint (DNI-386).
+
+### Rule 2 — No cross-feature deep imports
+
+`lib/features/X/` MUST NOT import directly from `lib/features/Y/` sub-paths. The only permitted cross-feature reference is `lib/features/Y/providers.dart` (the feature's public surface).
+
+**Enforced by:** `no-feature-cross-import` custom lint (DNI-386).
+
+### Rule 3 — Firebase symbols confined to `core/` Firebase modules
+
+`FirebaseAuth`, `FirebaseFirestore`, and `FirebaseStorage` MUST only appear inside `lib/core/sync/` and `lib/features/auth/`. All other code receives Firebase objects through injected providers — never by importing Firebase packages directly.
+
+**Enforced by:** `no-firebase-outside-core` custom lint (DNI-387).
+
+### Rule 4 — Raw Talker confined to `core/logging/`
+
+`package:talker/talker.dart` MUST only be imported inside `lib/core/logging/`. All other code logs through `AppLogger` (`lib/core/logging/logger.dart`).
+
+**Enforced by:** `no-raw-talker` custom lint (DNI-387).
+
+### Rule 5 — `.displayNameEn` / `.displayNameHe` confined to `core/labels/` and generated files
+
+Direct access to `.displayNameEn` or `.displayNameHe` on curriculum enums MUST only appear in `lib/core/labels/` and in generated files (`.g.dart`). Presentation code MUST use the `CurriculumLabelRenderer` in `lib/core/labels/curriculum_label_renderer.dart`.
+
+**Enforced by:** `no-curriculum-display-name-bypass` custom lint (DNI-386).
+
+### Local enforcement
+
+Run `make audit` to execute every layering grep and lint check locally before pushing. Full docs: [`docs/coding-standards.md`](../docs/coding-standards.md).
