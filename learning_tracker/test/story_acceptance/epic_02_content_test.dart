@@ -736,7 +736,8 @@ void main() {
       addTearDown(() => db.close());
       // The database should not have content_items or
       // curriculum_hierarchy_config tables; they were removed in schema v3.
-      expect(db.schemaVersion, equals(9));
+      // v10 adds deleted_at to curriculum_tracks (DNI-317).
+      expect(db.schemaVersion, equals(10));
     });
 
     // ── AC: curriculum_hierarchy_config table removed from Drift schema
@@ -745,7 +746,8 @@ void main() {
       final db = createTestDatabase();
       addTearDown(() => db.close());
       // Schema v3 drops these tables.
-      expect(db.schemaVersion, equals(9));
+      // v10 adds deleted_at to curriculum_tracks (DNI-317).
+      expect(db.schemaVersion, equals(10));
     });
 
     // ── AC: completions/bookmarks/learning_order use sefariaRef FK

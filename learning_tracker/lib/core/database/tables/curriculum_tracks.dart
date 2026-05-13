@@ -30,6 +30,12 @@ class CurriculumTracks extends Table {
   /// Null if pace has never been reset.
   DateTimeColumn get paceResetDate => dateTime().nullable()();
 
+  /// When this track was soft-deleted (null if not deleted).
+  ///
+  /// Tracks are never hard-deleted; setting this field is the only allowed
+  /// delete operation. Any non-null value means the track is logically deleted.
+  DateTimeColumn get deletedAt => dateTime().nullable()();
+
   @override
   List<Set<Column>> get uniqueKeys => [
     {profileId, curriculumId, trackType},

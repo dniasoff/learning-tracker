@@ -121,7 +121,7 @@ void main() {
         final db = createTestDatabase();
 
         expect(db, isNotNull);
-        expect(db.schemaVersion, 9);
+        expect(db.schemaVersion, 10); // v10: added deleted_at to curriculum_tracks (DNI-317)
 
         db.close();
       });

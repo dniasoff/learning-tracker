@@ -93,7 +93,7 @@ class UserDatabase extends _$UserDatabase {
   UserDatabase(super.e);
 
   @override
-  int get schemaVersion => 9;
+  int get schemaVersion => 10;
 
   @override
   MigrationStrategy get migration {
@@ -150,6 +150,16 @@ class UserDatabase extends _$UserDatabase {
         // from curriculum_tracks WHERE is_active = 1. Single source of truth.
         if (from < 9) {
           await m.deleteTable('active_curricula');
+        }
+        // v9 → v10: soft-delete tracks — add deleted_at column to
+        // curriculum_tracks. Existing rows get NULL (not deleted). Hard-delete
+        // of completions is replaced by a soft-delete of the track row;
+        // completions are append-only and must never be deleted (FR5, E24).
+        if (from < 10) {
+          await m.addColumn(
+            curriculumTracks,
+            curriculumTracks.deletedAt,
+          );
         }
       },
     );

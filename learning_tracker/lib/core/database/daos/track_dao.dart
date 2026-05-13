@@ -13,12 +13,13 @@ class TrackDao extends DatabaseAccessor<UserDatabase> with _$TrackDaoMixin {
 
   /// Get all active tracks for a curriculum.
   ///
-  /// Returns only tracks where isActive = true.
+  /// Returns only tracks where isActive = true and deletedAt IS NULL.
   Future<List<CurriculumTrack>> getActiveTracks(CurriculumId curriculumId) =>
       (select(curriculumTracks)..where(
             (t) =>
                 t.curriculumId.equals(curriculumId.storageKey) &
-                t.isActive.equals(true),
+                t.isActive.equals(true) &
+                t.deletedAt.isNull(),
           ))
           .get();
 
@@ -126,10 +127,15 @@ class TrackDao extends DatabaseAccessor<UserDatabase> with _$TrackDaoMixin {
   }
 
   /// Get all active tracks for a profile.
+  ///
+  /// Returns only tracks where isActive = true and deletedAt IS NULL.
   Future<List<CurriculumTrack>> getActiveTracksForProfile(int profileId) =>
       (select(curriculumTracks)
             ..where(
-              (t) => t.profileId.equals(profileId) & t.isActive.equals(true),
+              (t) =>
+                  t.profileId.equals(profileId) &
+                  t.isActive.equals(true) &
+                  t.deletedAt.isNull(),
             )
             ..orderBy([(t) => OrderingTerm.asc(t.curriculumId)]))
           .get();
@@ -140,21 +146,28 @@ class TrackDao extends DatabaseAccessor<UserDatabase> with _$TrackDaoMixin {
   )..where((t) => t.id.equals(trackId))).getSingleOrNull();
 
   /// Watch all active tracks for a profile.
+  ///
+  /// Emits only tracks where isActive = true and deletedAt IS NULL.
   Stream<List<CurriculumTrack>> watchActiveTracksForProfile(int profileId) {
     return (select(curriculumTracks)
           ..where(
-            (t) => t.profileId.equals(profileId) & t.isActive.equals(true),
+            (t) =>
+                t.profileId.equals(profileId) &
+                t.isActive.equals(true) &
+                t.deletedAt.isNull(),
           )
           ..orderBy([(t) => OrderingTerm.asc(t.curriculumId)]))
         .watch();
   }
 
-  /// Hard-delete a track and all its associated data.
+  /// Soft-delete a track by stamping [deletedAt] and clearing configuration
+  /// data. Completions, streak events, and ledger rows are intentionally
+  /// preserved (append-only invariant, FR5 / E24).
   ///
-  /// Deletes (in order): goals, stages, completions, daily plans,
-  /// point configs, curriculum scopes, study day configs, learning order,
-  /// then the track row itself. Also removes the curriculum from
-  /// active_curricula for the profile.
+  /// Non-append-only configuration tables (goals, stages, daily plans, point
+  /// configs, curriculum scopes, study day configs, learning order) are still
+  /// hard-deleted because they hold no historical value once the track is gone.
+  /// The track row itself is never removed; [deletedAt] is the tombstone.
   Future<void> deleteTrackAndData(int trackId) async {
     final track = await getTrackById(trackId);
     if (track == null) return;
@@ -162,13 +175,20 @@ class TrackDao extends DatabaseAccessor<UserDatabase> with _$TrackDaoMixin {
     await db.transaction(() async {
       await db.goalDao.deleteGoalsForTrack(trackId);
       await db.stageDao.deleteStagesForTrack(trackId);
-      await db.completionDao.deleteByTrack(trackId);
+      // Completions are NOT deleted — they are append-only (FR5 / E24).
       await db.dailyPlanDao.deletePlansByTrack(trackId);
       await db.pointConfigDao.deleteAllForTrack(trackId);
       await db.curriculumScopeDao.clearScopesForTrack(trackId);
       await db.studyDayConfigDao.deleteConfigsForTrack(trackId);
       await db.trackLearningOrderDao.deleteByTrack(trackId);
-      await (delete(curriculumTracks)..where((t) => t.id.equals(trackId))).go();
+      // Soft-delete: stamp deletedAt instead of removing the row.
+      await (update(curriculumTracks)..where((t) => t.id.equals(trackId)))
+          .write(
+            CurriculumTracksCompanion(
+              isActive: const Value(false),
+              deletedAt: Value(DateTimeFactory.nowUtc()),
+            ),
+          );
       final curriculum = CurriculumId.values
           .where((c) => c.storageKey == track.curriculumId)
           .firstOrNull;
@@ -237,10 +257,15 @@ class TrackDao extends DatabaseAccessor<UserDatabase> with _$TrackDaoMixin {
   }
 
   /// Count active tracks for a profile.
+  ///
+  /// Excludes soft-deleted tracks (deletedAt IS NOT NULL).
   Future<int> countActiveTracksForProfile(int profileId) async {
     final tracks =
         await (select(curriculumTracks)..where(
-              (t) => t.profileId.equals(profileId) & t.isActive.equals(true),
+              (t) =>
+                  t.profileId.equals(profileId) &
+                  t.isActive.equals(true) &
+                  t.deletedAt.isNull(),
             ))
             .get();
     return tracks.length;

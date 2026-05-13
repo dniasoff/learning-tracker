@@ -181,33 +181,41 @@ void main() {
       expect(activeCurricula, containsAll(CurriculumId.values));
     });
 
-    test('deactivation hard-deletes track and completion data', () async {
-      // Activate two curricula
-      await service.activate(CurriculumId.bavli);
-      await service.activate(CurriculumId.mishnayos);
+    test(
+      'deactivation soft-deletes the track and preserves completions (DNI-317)',
+      () async {
+        // Activate two curricula
+        await service.activate(CurriculumId.bavli);
+        await service.activate(CurriculumId.mishnayos);
 
-      // Insert a completion for Bavli
-      final bavliTrackId = await getTrackId(CurriculumId.bavli);
-      await database.completionDao.insertCompletion(
-        CompletionsCompanion.insert(
-          curriculumId: CurriculumId.bavli.storageKey,
-          sefariaRef: 'Berakhot.2a',
-          stageId: 1,
-          trackType: TrackType.personal.storageKey,
-          trackId: bavliTrackId,
-          completedAt: DateTime.now(),
-          points: const Value(10),
-        ),
-      );
+        // Insert a completion for Bavli
+        final bavliTrackId = await getTrackId(CurriculumId.bavli);
+        await database.completionDao.insertCompletion(
+          CompletionsCompanion.insert(
+            curriculumId: CurriculumId.bavli.storageKey,
+            sefariaRef: 'Berakhot.2a',
+            stageId: 1,
+            trackType: TrackType.personal.storageKey,
+            trackId: bavliTrackId,
+            completedAt: DateTime.now(),
+            points: const Value(10),
+          ),
+        );
 
-      // Deactivate Bavli
-      await service.deactivate(CurriculumId.bavli);
+        // Deactivate Bavli
+        await service.deactivate(CurriculumId.bavli);
 
-      // Completion data is hard-deleted along with the track.
-      final completions = await database.completionDao
-          .getCompletionsByCurriculum(CurriculumId.bavli.storageKey);
-      expect(completions, isEmpty);
-    });
+        // The track row is soft-deleted (deletedAt IS NOT NULL), not hard-deleted.
+        final allTracks = await database.trackDao.getAllTracks(CurriculumId.bavli);
+        expect(allTracks, hasLength(1));
+        expect(allTracks.first.deletedAt, isNotNull);
+
+        // Completion data is preserved — completions are append-only (FR5 / E24).
+        final completions = await database.completionDao
+            .getCompletionsByCurriculum(CurriculumId.bavli.storageKey);
+        expect(completions, hasLength(1));
+      },
+    );
 
     test(
       'deactivation preserves bookmarks (curriculum-scoped, not track-scoped)',

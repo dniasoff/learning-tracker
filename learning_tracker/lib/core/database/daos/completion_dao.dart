@@ -441,10 +441,6 @@ class CompletionDao extends DatabaseAccessor<UserDatabase>
   Future<List<Completion>> getCompletionsByTrack(int trackId) =>
       (select(completions)..where((t) => t.trackId.equals(trackId))).get();
 
-  /// Delete all completions for a specific track (used when hard-deleting a track).
-  Future<void> deleteByTrack(int trackId) =>
-      (delete(completions)..where((t) => t.trackId.equals(trackId))).go();
-
   /// Get completions for a track scoped to a specific profile.
   Future<List<Completion>> getCompletionsByTrackAndProfile(
     int trackId,
