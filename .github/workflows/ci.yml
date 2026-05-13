@@ -139,6 +139,15 @@ jobs:
         working-directory: learning_tracker
         run: flutter test --concurrency=4 --coverage
 
+      - name: Upload golden test failures (diffs)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: golden-test-failures
+          path: learning_tracker/test/**/failures/**
+          if-no-files-found: ignore
+          retention-days: 14
+
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5
         with:
