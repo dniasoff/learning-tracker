@@ -1,4 +1,4 @@
-.PHONY: help test test-unit test-widget test-integration test-story-4.3 test-all ci analyze format schema-check linear-sync linear-story linear-check
+.PHONY: help test test-unit test-widget test-integration test-story-4.3 test-story-25.12 test-all ci analyze format schema-check linear-sync linear-story linear-check
 
 help:
 	@echo "Learning Tracker - Make Commands"
@@ -8,6 +8,7 @@ help:
 	@echo "  make test-widget        - Run widget tests"
 	@echo "  make test-integration   - Run integration tests"
 	@echo "  make test-story-4.3     - Run Story 4.3 acceptance tests"
+	@echo "  make test-story-25.12   - Run Story 25.12 (DNI-333) acceptance tests"
 	@echo "  make test-all           - Run all tests"
 	@echo ""
 	@echo "Quality:"
@@ -36,6 +37,10 @@ test-integration:
 test-story-4.3:
 	@echo "Running Story 4.3 acceptance tests..."
 	@cd learning_tracker && flutter test test/story_acceptance/epic_04_multi_track_test.dart --reporter=expanded
+
+test-story-25.12:
+	@echo "Running Story 25.12 acceptance tests (DNI-333 — SyncEngine decomp Part 1)..."
+	@cd learning_tracker && flutter test test/story_acceptance/epic_25_story_12_sync_decomp_part1_test.dart --reporter=expanded
 
 test-all:
 	@echo "Running all tests..."
