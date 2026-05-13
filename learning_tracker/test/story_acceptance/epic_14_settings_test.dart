@@ -146,7 +146,10 @@ void main() {
     setUp(() async {
       db = createTestDatabase();
       trackId = await _insertTrack(db);
-      service = DataExportImportService(database: db);
+      service = DataExportImportService(
+        database: db,
+        appVersionFetcher: () async => '1.0.0',
+      );
     });
 
     tearDown(() async {
@@ -307,7 +310,7 @@ void main() {
         final data = json.decode(jsonString) as Map<String, dynamic>;
 
         // Check metadata
-        expect(data['formatVersion'], equals('1'));
+        expect(data['formatVersion'], equals('schemaV1'));
         expect(data['exportedAt'], isNotNull);
         expect(data['appVersion'], equals('1.0.0'));
 
@@ -549,69 +552,64 @@ void main() {
       expect(completions.length, equals(2)); // Original 2 completions
     });
 
-    test(
-      'full round-trip: export, clear DB, import, verify all data',
-      () async {
-        await seedTestData(db);
+    test('full round-trip: export, clear DB, import, verify all data', () async {
+      await seedTestData(db);
 
-        // Export
-        final exported = await service.exportData();
+      // Export
+      final exported = await service.exportData();
 
-        // Clear all tables
-        await db.transaction(() async {
-          await db.delete(db.completions).go();
-          await db.delete(db.goals).go();
-          await db.delete(db.stageDefinitions).go();
-          await db.delete(db.streaks).go();
-          await db.delete(db.pointConfigs).go();
-          await db.delete(db.bookmarks).go();
-          await db.delete(db.learningOrder).go();
-          await db.delete(db.curriculumTracks).go();
-          await db.delete(db.accounts).go();
-        });
+      // Clear all tables
+      await db.transaction(() async {
+        await db.delete(db.completions).go();
+        await db.delete(db.goals).go();
+        await db.delete(db.stageDefinitions).go();
+        await db.delete(db.streaks).go();
+        await db.delete(db.pointConfigs).go();
+        await db.delete(db.bookmarks).go();
+        await db.delete(db.learningOrder).go();
+        await db.delete(db.curriculumTracks).go();
+        await db.delete(db.accounts).go();
+      });
 
-        // Verify all empty
-        expect(
-          await db.completionDao.internalGetAllCompletionsCrossProfile(
-            scope: CrossProfileScope.dataExport,
-          ),
-          isEmpty,
-        );
-        expect(await db.goalDao.getAllGoals(), isEmpty);
-        expect(await db.streakDao.getStreak(), isNull);
+      // Verify all empty
+      expect(
+        await db.completionDao.internalGetAllCompletionsCrossProfile(
+          scope: CrossProfileScope.dataExport,
+        ),
+        isEmpty,
+      );
+      expect(await db.goalDao.getAllGoals(), isEmpty);
+      expect(await db.streakDao.getStreak(), isNull);
 
-        // Import
-        await service.importData(exported);
+      // Import
+      await service.importData(exported);
 
-        // Verify all data restored
-        expect(
-          (await db.completionDao.internalGetAllCompletionsCrossProfile(
-            scope: CrossProfileScope.dataExport,
-          )).length,
-          equals(2),
-        );
-        expect((await db.goalDao.getAllGoals()).length, equals(1));
-        expect((await db.stageDao.getAllStageDefinitions()).length, equals(2));
-        expect((await db.streakDao.getStreak())?.currentStreak, equals(5));
-        expect((await db.select(db.pointConfigs).get()).length, equals(1));
-        expect((await db.bookmarkDao.getAllBookmarks()).length, equals(1));
-        expect(
-          (await db.learningOrderDao.getAllLearningOrders()).length,
-          equals(1),
-        );
-        // Both tracks (mishnayos from setUp + mishna from seedTestData) are
-        // active — active_curricula table was removed in schema v9.
-        expect(
-          (await db.activeCurriculumDao.getActiveCurricula()).length,
-          equals(2),
-        );
-        expect((await db.select(db.curriculumTracks).get()).length, equals(2));
-        expect(
-          (await db.userProfileDao.getAllUserProfiles()).length,
-          equals(1),
-        );
-      },
-    );
+      // Verify all data restored
+      expect(
+        (await db.completionDao.internalGetAllCompletionsCrossProfile(
+          scope: CrossProfileScope.dataExport,
+        )).length,
+        equals(2),
+      );
+      expect((await db.goalDao.getAllGoals()).length, equals(1));
+      expect((await db.stageDao.getAllStageDefinitions()).length, equals(2));
+      expect((await db.streakDao.getStreak())?.currentStreak, equals(5));
+      expect((await db.select(db.pointConfigs).get()).length, equals(1));
+      expect((await db.bookmarkDao.getAllBookmarks()).length, equals(1));
+      expect(
+        (await db.learningOrderDao.getAllLearningOrders()).length,
+        equals(1),
+      );
+      // Both tracks (mishnayos from setUp + mishna from seedTestData) belong
+      // to profileId=1. Now that export preserves profileId, query by profile.
+      // active_curricula table was removed in schema v9.
+      expect(
+        (await db.activeCurriculumDao.getActiveCurriculaByProfile(1)).length,
+        equals(2),
+      );
+      expect((await db.select(db.curriculumTracks).get()).length, equals(2));
+      expect((await db.userProfileDao.getAllUserProfiles()).length, equals(1));
+    });
   });
 
   // ── Story 14.3: Account management ────────────────────────────

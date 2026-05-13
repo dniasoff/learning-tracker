@@ -42,7 +42,10 @@ void main() {
 
     setUp(() {
       db = UserDatabase(NativeDatabase.memory());
-      service = DataExportImportService(database: db);
+      service = DataExportImportService(
+        database: db,
+        appVersionFetcher: () async => '1.0.0',
+      );
     });
 
     tearDown(() async {
