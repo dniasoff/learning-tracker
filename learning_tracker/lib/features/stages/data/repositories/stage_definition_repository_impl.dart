@@ -11,6 +11,7 @@ import 'package:learning_tracker/features/stages/domain/exceptions/stage_limit_e
 import 'package:learning_tracker/features/stages/domain/models/schedule_type.dart';
 import 'package:learning_tracker/features/stages/domain/models/stage_definition.dart';
 import 'package:learning_tracker/features/stages/domain/repositories/stage_definition_repository.dart';
+import 'package:learning_tracker/features/stages/domain/services/stage_validator.dart';
 
 /// Maximum number of stages allowed per curriculum.
 const _maxStages = 10;
@@ -55,6 +56,9 @@ class StageDefinitionRepositoryImpl implements StageDefinitionRepository {
     String name,
     int delayDays, {
     required int trackId,
+    ScheduleType scheduleType = ScheduleType.delay,
+    List<int>? daysOfWeek,
+    int? rollingWindowSize,
   }) async {
     final count = await _stageDao.countStagesForCurriculum(
       curriculumId.storageKey,
@@ -67,6 +71,23 @@ class StageDefinitionRepositoryImpl implements StageDefinitionRepository {
         await _stageDao.getMaxStageOrder(curriculumId.storageKey) ?? 0;
     final newOrder = maxOrder + 1;
 
+    // Validate the stage definition before persisting.
+    final candidate = StageDefinition(
+      id: 0,
+      curriculumId: curriculumId,
+      stageOrder: newOrder,
+      stageName: name,
+      delayDays: delayDays,
+      isDefault: false,
+      scheduleType: scheduleType,
+      daysOfWeek: daysOfWeek,
+      rollingWindowSize: rollingWindowSize,
+    );
+    final validationError = StageValidator.validate(candidate);
+    if (validationError != null) {
+      throw ArgumentError(validationError);
+    }
+
     final id = await _stageDao.insertStageDefinition(
       db.StageDefinitionsCompanion.insert(
         profileId: 0, // TODO(DNI-322): wire real profileId from caller
@@ -76,6 +97,9 @@ class StageDefinitionRepositoryImpl implements StageDefinitionRepository {
         stageName: name,
         delayDays: delayDays,
         isDefault: const Value(false),
+        scheduleType: Value(scheduleType.storageKey),
+        daysOfWeek: Value(daysOfWeek != null ? jsonEncode(daysOfWeek) : null),
+        rollingWindowSize: Value(rollingWindowSize),
       ),
     );
 
@@ -89,6 +113,27 @@ class StageDefinitionRepositoryImpl implements StageDefinitionRepository {
   Future<void> updateStage(int id, {String? name, int? delayDays}) async {
     final existing = await _stageDao.getStageDefinitionById(id);
     if (existing == null) return;
+
+    final curriculumId = _curriculumFromStorageKey(existing.curriculumId);
+
+    // Validate the updated stage definition.
+    final candidate = StageDefinition(
+      id: id,
+      curriculumId: curriculumId,
+      stageOrder: existing.stageOrder,
+      stageName: name ?? existing.stageName,
+      delayDays: delayDays ?? existing.delayDays,
+      isDefault: existing.isDefault,
+      scheduleType: ScheduleType.fromStorageKey(existing.scheduleType),
+      daysOfWeek: existing.daysOfWeek != null
+          ? (jsonDecode(existing.daysOfWeek!) as List).cast<int>()
+          : null,
+      rollingWindowSize: existing.rollingWindowSize,
+    );
+    final validationError = StageValidator.validate(candidate);
+    if (validationError != null) {
+      throw ArgumentError(validationError);
+    }
 
     await _stageDao.updateStageDefinition(
       db.StageDefinitionsCompanion(
@@ -106,7 +151,6 @@ class StageDefinitionRepositoryImpl implements StageDefinitionRepository {
       ),
     );
 
-    final curriculumId = _curriculumFromStorageKey(existing.curriculumId);
     await _pushStages(curriculumId);
   }
 
@@ -130,49 +174,70 @@ class StageDefinitionRepositoryImpl implements StageDefinitionRepository {
     CurriculumId curriculumId,
     List<int> orderedIds,
   ) async {
-    // Two-pass to avoid UNIQUE constraint on (curriculumId, stageOrder).
-    // Pass 1: set all to negative temporary orders.
-    for (var i = 0; i < orderedIds.length; i++) {
-      final stageId = orderedIds[i];
-      final existing = await _stageDao.getStageDefinitionById(stageId);
-      if (existing == null) continue;
-      await _stageDao.updateStageDefinition(
-        db.StageDefinitionsCompanion(
-          id: Value(stageId),
-          profileId: Value(existing.profileId),
-          curriculumId: Value(existing.curriculumId),
-          trackId: Value(existing.trackId),
-          stageOrder: Value(-(i + 1)),
-          stageName: Value(existing.stageName),
-          delayDays: Value(existing.delayDays),
-          isDefault: Value(existing.isDefault),
-          scheduleType: Value(existing.scheduleType),
-          daysOfWeek: Value(existing.daysOfWeek),
-          rollingWindowSize: Value(existing.rollingWindowSize),
-        ),
-      );
+    // Guard: Learn stage (stageOrder == 1) must remain at position 1.
+    // Fetch the current Learn stage for this curriculum.
+    final allStages = await _stageDao.getStageDefinitionsByCurriculum(
+      curriculumId.storageKey,
+    );
+    final learnStage = allStages.isNotEmpty
+        ? allStages.firstWhere(
+            (s) => s.stageOrder == 1,
+            orElse: () => allStages.first,
+          )
+        : null;
+    if (learnStage != null &&
+        orderedIds.isNotEmpty &&
+        orderedIds.first != learnStage.id) {
+      throw const ProtectedStageException();
     }
-    // Pass 2: set to final positive orders.
-    for (var i = 0; i < orderedIds.length; i++) {
-      final stageId = orderedIds[i];
-      final existing = await _stageDao.getStageDefinitionById(stageId);
-      if (existing == null) continue;
-      await _stageDao.updateStageDefinition(
-        db.StageDefinitionsCompanion(
-          id: Value(stageId),
-          profileId: Value(existing.profileId),
-          curriculumId: Value(existing.curriculumId),
-          trackId: Value(existing.trackId),
-          stageOrder: Value(i + 1),
-          stageName: Value(existing.stageName),
-          delayDays: Value(existing.delayDays),
-          isDefault: Value(existing.isDefault),
-          scheduleType: Value(existing.scheduleType),
-          daysOfWeek: Value(existing.daysOfWeek),
-          rollingWindowSize: Value(existing.rollingWindowSize),
-        ),
-      );
-    }
+
+    // Run the two-pass reorder inside a single transaction so a mid-loop
+    // failure leaves all stages at their original positions.
+    await _stageDao.runTransaction(() async {
+      // Pass 1: set all to negative temporary orders to avoid UNIQUE
+      // constraint violations on (curriculumId, stageOrder).
+      for (var i = 0; i < orderedIds.length; i++) {
+        final stageId = orderedIds[i];
+        final existing = await _stageDao.getStageDefinitionById(stageId);
+        if (existing == null) continue;
+        await _stageDao.updateStageDefinition(
+          db.StageDefinitionsCompanion(
+            id: Value(stageId),
+            profileId: Value(existing.profileId),
+            curriculumId: Value(existing.curriculumId),
+            trackId: Value(existing.trackId),
+            stageOrder: Value(-(i + 1)),
+            stageName: Value(existing.stageName),
+            delayDays: Value(existing.delayDays),
+            isDefault: Value(existing.isDefault),
+            scheduleType: Value(existing.scheduleType),
+            daysOfWeek: Value(existing.daysOfWeek),
+            rollingWindowSize: Value(existing.rollingWindowSize),
+          ),
+        );
+      }
+      // Pass 2: set to final positive orders.
+      for (var i = 0; i < orderedIds.length; i++) {
+        final stageId = orderedIds[i];
+        final existing = await _stageDao.getStageDefinitionById(stageId);
+        if (existing == null) continue;
+        await _stageDao.updateStageDefinition(
+          db.StageDefinitionsCompanion(
+            id: Value(stageId),
+            profileId: Value(existing.profileId),
+            curriculumId: Value(existing.curriculumId),
+            trackId: Value(existing.trackId),
+            stageOrder: Value(i + 1),
+            stageName: Value(existing.stageName),
+            delayDays: Value(existing.delayDays),
+            isDefault: Value(existing.isDefault),
+            scheduleType: Value(existing.scheduleType),
+            daysOfWeek: Value(existing.daysOfWeek),
+            rollingWindowSize: Value(existing.rollingWindowSize),
+          ),
+        );
+      }
+    });
     await _pushStages(curriculumId);
   }
 

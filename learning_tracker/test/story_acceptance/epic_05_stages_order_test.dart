@@ -90,18 +90,24 @@ void main() {
       expect(all, hasLength(4));
     });
 
-    test('user can reorder stages', () async {
+    test('user can reorder stages (Learn must stay at position 1)', () async {
       await repository.initializeDefaults(curriculum, trackId: trackId);
       final stages = await repository.getStagesForCurriculum(curriculum);
-      // Reverse order: [3, 2, 1]
-      final reversed = stages.reversed.map((s) => s.id).toList();
+      // Learn must remain first; swap Chazara 1 and Chazara 2 only.
+      final learnId = stages[0].id; // stageOrder == 1
+      final chazara1Id = stages[1].id; // stageOrder == 2
+      final chazara2Id = stages[2].id; // stageOrder == 3
 
-      await repository.reorderStages(curriculum, reversed);
+      await repository.reorderStages(
+        curriculum,
+        [learnId, chazara2Id, chazara1Id],
+      );
 
       final reordered = await repository.getStagesForCurriculum(curriculum);
       expect(reordered[0].stageOrder, 1);
-      expect(reordered[0].stageName, 'חזרה ב׳');
-      expect(reordered[2].stageName, 'לימוד');
+      expect(reordered[0].stageName, 'לימוד'); // Learn stays at 1
+      expect(reordered[1].stageName, 'חזרה ב׳'); // Chazara 2 moved to 2
+      expect(reordered[2].stageName, 'חזרה א׳'); // Chazara 1 moved to 3
     });
 
     test('user can adjust delay days for a stage', () async {

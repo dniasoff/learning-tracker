@@ -1,4 +1,5 @@
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/features/stages/domain/models/schedule_type.dart';
 import 'package:learning_tracker/features/stages/domain/models/stage_definition.dart';
 
 /// Abstract repository for managing stage definitions per curriculum.
@@ -11,11 +12,15 @@ abstract class StageDefinitionRepository {
   /// Adds a new custom stage. Assigns stageOrder = max + 1.
   ///
   /// Throws [StageLimitExceededException] if curriculum already has 10 stages.
+  /// Throws [ArgumentError] if [StageValidator] rejects the new stage.
   Future<StageDefinition> addStage(
     CurriculumId curriculumId,
     String name,
     int delayDays, {
     required int trackId,
+    ScheduleType scheduleType = ScheduleType.delay,
+    List<int>? daysOfWeek,
+    int? rollingWindowSize,
   });
 
   /// Updates the name and/or delayDays of an existing stage.
@@ -28,6 +33,10 @@ abstract class StageDefinitionRepository {
   Future<void> deleteStage(int id);
 
   /// Reorders stages by updating stageOrder for each ID in [orderedIds].
+  ///
+  /// Runs in a single transaction — a mid-loop failure leaves stages unchanged.
+  /// Throws [ProtectedStageException] if the Learn stage (stageOrder == 1) would
+  /// be displaced from position 1 (i.e., its ID is not first in [orderedIds]).
   Future<void> reorderStages(CurriculumId curriculumId, List<int> orderedIds);
 
   /// Seeds default stages (Learn, Chazara 1, Chazara 2) if none exist.

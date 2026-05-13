@@ -102,6 +102,14 @@ class StageDao extends DatabaseAccessor<UserDatabase> with _$StageDaoMixin {
     return row?.read(maxCol);
   }
 
+  /// Runs [body] inside a database transaction.
+  ///
+  /// Exposed so that repository-layer callers (e.g. [StageDefinitionRepositoryImpl])
+  /// can wrap multi-step reorder operations atomically without importing
+  /// the database directly.
+  Future<T> runTransaction<T>(Future<T> Function() body) =>
+      db.transaction(body);
+
   /// Replace all stage definitions for a curriculum with remote data.
   ///
   /// Used during sync merge (last-write-wins per D4).
