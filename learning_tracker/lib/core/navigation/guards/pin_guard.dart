@@ -1,50 +1,116 @@
 import 'package:auto_route/auto_route.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
+import 'package:learning_tracker/core/navigation/pin_scope.dart';
 import 'package:learning_tracker/core/services/pin_service.dart';
 
-/// Abstract base class for PIN-protected route guards.
+/// Route guard that protects PIN-gated routes for any [PinScope].
 ///
-/// Subclasses provide a dialog prompt function. The guard checks whether a
-/// parent PIN is set; if no PIN has been configured it pushes the setup
-/// screen. Otherwise it prompts the user and allows access only on
-/// successful verification.
-abstract class PinGuard extends AutoRouteGuard {
-  PinGuard({required this.pinService, required this.promptForPin});
+/// The scope is resolved at navigation time via [getScope] (typically a
+/// closure over the currently active profile + the kind of PIN the route
+/// needs). The guard then dispatches `hasPin` / `verifyPin` to the
+/// scope-appropriate [PinService] method:
+///
+///   * [PinScopeParent] → `hasProfilePin` / `verifyProfilePin`
+///   * [PinScopeTutor]  → `hasTutorPin` / `verifyTutorPin`
+///
+/// Successful verification primes a per-`(scope, profileId)` session cache so
+/// subsequent guarded navigations skip the prompt. Call [lock] (e.g. on
+/// sign-out or leaving the gated mode) to invalidate the session.
+///
+/// Adding a new PIN-gated route is one line — declare a new [PinScope]
+/// variant + a `PinService` method pair; route configs just need a closure
+/// that returns the new scope.
+class PinGuard extends AutoRouteGuard {
+  PinGuard({
+    required this.pinService,
+    required this.promptForPin,
+    required this.getScope,
+    this.onSessionAuthenticated,
+    this.onSessionLocked,
+  });
 
   final PinService pinService;
 
-  /// Opens a UI prompt asking the user to enter their PIN.
-  ///
-  /// Returns the entered PIN string, or `null` if the user cancelled.
-  final Future<String?> Function() promptForPin;
+  /// Opens a UI prompt where the user enters and verifies their PIN.
+  /// Returns `true` if the PIN was correct, `false` if cancelled or wrong.
+  final Future<bool> Function() promptForPin;
+
+  /// Resolves the [PinScope] required by the route being navigated to, or
+  /// `null` if access should be denied (e.g. no active profile selected).
+  final PinScope? Function() getScope;
+
+  /// Called when a `(scope, profileId)` becomes authenticated this session.
+  final void Function(PinScope scope)? onSessionAuthenticated;
+
+  /// Called when the PIN session is cleared.
+  final void Function()? onSessionLocked;
+
+  /// `(scopeKind, profileId)` that successfully entered its PIN in the
+  /// current session. Parent and tutor scopes are tracked independently so
+  /// authenticating one does not grant the other.
+  PinScope? _authenticatedScope;
+
+  /// Invalidates the cached session, forcing the next guarded navigation to
+  /// prompt for the PIN again.
+  void lock() {
+    _authenticatedScope = null;
+    onSessionLocked?.call();
+  }
+
+  /// Marks the parent-mode PIN as authenticated for [profileId] in the
+  /// current session. Convenience wrapper for flows that verify the parent
+  /// PIN outside the guard (e.g. PIN entry route).
+  void markAuthenticated(int profileId) {
+    _authenticatedScope = PinScope.parent(profileId);
+    onSessionAuthenticated?.call(_authenticatedScope!);
+  }
+
+  /// Marks an arbitrary [scope] as authenticated for the current session.
+  void markScopeAuthenticated(PinScope scope) {
+    _authenticatedScope = scope;
+    onSessionAuthenticated?.call(scope);
+  }
 
   @override
   Future<void> onNavigation(
     NavigationResolver resolver,
     StackRouter router,
   ) async {
-    final hasPinSet = await pinService.hasParentPin();
+    final scope = getScope();
+    if (scope == null) {
+      resolver.next(false);
+      return;
+    }
 
+    if (_authenticatedScope == scope) {
+      resolver.next(true);
+      return;
+    }
+
+    final hasPinSet = await _hasPin(scope);
     if (!hasPinSet) {
-      // No PIN configured — push the setup screen and await result.
-      // If setup succeeds (pops with true), re-attempt navigation.
       final result = await router.push<bool>(const PinSetupRoute());
-      resolver.next(result ?? false);
+      final ok = result ?? false;
+      if (ok) {
+        _authenticatedScope = scope;
+        onSessionAuthenticated?.call(scope);
+      }
+      resolver.next(ok);
       return;
     }
 
-    final enteredPin = await promptForPin();
-    if (enteredPin == null) {
-      // User cancelled the prompt.
-      resolver.next(false);
-      return;
+    final verified = await promptForPin();
+    if (verified) {
+      _authenticatedScope = scope;
+      onSessionAuthenticated?.call(scope);
     }
+    resolver.next(verified);
+  }
 
-    try {
-      final verified = await pinService.verifyParentPin(enteredPin);
-      resolver.next(verified);
-    } on PinLockoutException {
-      resolver.next(false);
-    }
+  Future<bool> _hasPin(PinScope scope) {
+    return switch (scope) {
+      PinScopeParent(:final profileId) => pinService.hasProfilePin(profileId),
+      PinScopeTutor(:final profileId) => pinService.hasTutorPin(profileId),
+    };
   }
 }

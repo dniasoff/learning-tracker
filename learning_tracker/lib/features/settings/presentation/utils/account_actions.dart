@@ -154,7 +154,7 @@ Future<void> showSignOutConfirmation(
     // on next launch rather than being silently resumed via cached token.
     await ref.read(authRepositoryProvider).signOut();
     ref.read(authStateProvider.notifier).signOut();
-    ref.read(routerProvider).parentPinGuard.lock();
+    ref.read(routerProvider).pinGuard.lock();
 
     final registry = ref.read(deviceRegistryProvider);
     final accounts = await registry.getAllAccounts();
@@ -358,7 +358,7 @@ Future<void> showDeleteLocalAccountFlow(
 
     ref.read(authStateProvider.notifier).signOut();
     ref.read(selectedProfileIdProvider.notifier).clear();
-    ref.read(routerProvider).parentPinGuard.lock();
+    ref.read(routerProvider).pinGuard.lock();
 
     final remaining = await registry.getAllAccounts();
     final router = ref.read(routerProvider);

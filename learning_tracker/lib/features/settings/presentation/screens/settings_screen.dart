@@ -862,7 +862,7 @@ class _ParentalControlsSectionState
               size: 18,
             ),
             onTap: () async {
-              ref.read(routerProvider).parentPinGuard.lock();
+              ref.read(routerProvider).pinGuard.lock();
               await context.pushRoute(const ParentSettingsRoute());
               if (mounted) await _load();
             },

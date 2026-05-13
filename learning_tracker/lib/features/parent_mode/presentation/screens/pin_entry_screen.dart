@@ -37,7 +37,7 @@ class _PinEntryScreenState extends ConsumerState<PinEntryScreen> {
       pinService: pinService,
     );
     if (ok) {
-      ref.read(routerProvider).parentPinGuard.markAuthenticated(profileId);
+      ref.read(routerProvider).pinGuard.markAuthenticated(profileId);
     }
     if (mounted) await context.router.maybePop(ok);
   }

@@ -4,7 +4,7 @@ import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/navigation/app_shell.dart';
 import 'package:learning_tracker/core/navigation/guards/child_mode_guard.dart';
-import 'package:learning_tracker/core/navigation/guards/parent_pin_guard.dart';
+import 'package:learning_tracker/core/navigation/guards/pin_guard.dart';
 import 'package:learning_tracker/core/navigation/guards/profile_guard.dart';
 import 'package:learning_tracker/core/navigation/guards/restore_guard.dart';
 import 'package:learning_tracker/features/auth/presentation/screens/account_picker_screen.dart';
@@ -57,14 +57,14 @@ class AppRouter extends RootStackRouter {
   final RestoreGuard restoreGuard;
   final ProfileGuard profileGuard;
   final ChildModeGuard childModeGuard;
-  final ParentPinGuard parentPinGuard;
+  final PinGuard pinGuard;
 
   AppRouter({
     required this.authGuard,
     required this.restoreGuard,
     required this.profileGuard,
     required this.childModeGuard,
-    required this.parentPinGuard,
+    required this.pinGuard,
     super.navigatorKey,
   });
 
@@ -205,17 +205,17 @@ class AppRouter extends RootStackRouter {
     AutoRoute(
       path: '/parent-mode/settings',
       page: ParentSettingsRoute.page,
-      guards: [authGuard, childModeGuard, parentPinGuard],
+      guards: [authGuard, childModeGuard, pinGuard],
     ),
     AutoRoute(
       path: '/parent-mode/point-config',
       page: PointConfigRoute.page,
-      guards: [authGuard, childModeGuard, parentPinGuard],
+      guards: [authGuard, childModeGuard, pinGuard],
     ),
     AutoRoute(
       path: '/parent-mode/reward-config',
       page: RewardConfigurationRoute.page,
-      guards: [authGuard, childModeGuard, parentPinGuard],
+      guards: [authGuard, childModeGuard, pinGuard],
     ),
     AutoRoute(
       path: '/parent-mode/pin-setup',
@@ -235,7 +235,7 @@ class AppRouter extends RootStackRouter {
     AutoRoute(
       path: '/parent-mode/tracks',
       page: ParentTrackManagementRoute.page,
-      guards: [authGuard, childModeGuard, parentPinGuard],
+      guards: [authGuard, childModeGuard, pinGuard],
     ),
     AutoRoute(
       path: '/study-days/:curriculumId',

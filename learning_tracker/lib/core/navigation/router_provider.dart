@@ -4,9 +4,10 @@ import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/navigation/guards/auth_guard.dart';
 import 'package:learning_tracker/core/navigation/guards/child_mode_guard.dart';
-import 'package:learning_tracker/core/navigation/guards/parent_pin_guard.dart';
+import 'package:learning_tracker/core/navigation/guards/pin_guard.dart';
 import 'package:learning_tracker/core/navigation/guards/profile_guard.dart';
 import 'package:learning_tracker/core/navigation/guards/restore_guard.dart';
+import 'package:learning_tracker/core/navigation/pin_scope.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/services/pin_service.dart';
 import 'package:learning_tracker/features/auth/presentation/providers/auth_state_provider.dart';
@@ -46,7 +47,7 @@ final routerProvider = Provider<AppRouter>((ref) {
       getDatabase: getDb,
       getSelectedProfileId: () => ref.read(selectedProfileIdProvider),
     ),
-    parentPinGuard: ParentPinGuard(
+    pinGuard: PinGuard(
       pinService: pinSvc,
       promptForPin: () async {
         final context = navigatorKey.currentContext;
@@ -59,11 +60,19 @@ final routerProvider = Provider<AppRouter>((ref) {
           pinService: pinSvc,
         );
       },
-      getProfileId: () => ref.read(selectedProfileIdProvider),
-      onSessionAuthenticated: (id) {
-        ref
-            .read(parentPinAuthenticatedProfileIdProvider.notifier)
-            .setAuthenticated(id);
+      // All currently-gated routes are parent-mode. Tutor-mode routes will
+      // pass their own scope via a different closure when they land.
+      getScope: () {
+        final profileId = ref.read(selectedProfileIdProvider);
+        if (profileId == null) return null;
+        return PinScope.parent(profileId);
+      },
+      onSessionAuthenticated: (scope) {
+        if (scope is PinScopeParent) {
+          ref
+              .read(parentPinAuthenticatedProfileIdProvider.notifier)
+              .setAuthenticated(scope.profileId);
+        }
       },
       onSessionLocked: () {
         ref.read(parentPinAuthenticatedProfileIdProvider.notifier).clear();

@@ -16,7 +16,7 @@ import 'package:learning_tracker/core/enums/user_mode.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/navigation/guards/auth_guard.dart';
-import 'package:learning_tracker/core/navigation/guards/parent_pin_guard.dart';
+import 'package:learning_tracker/core/navigation/guards/pin_guard.dart';
 import 'package:learning_tracker/core/network/sefaria/curriculum_content_fetcher.dart';
 import 'package:learning_tracker/core/services/pin_service.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
@@ -190,9 +190,12 @@ void main() {
       expect(AuthGuard, isNotNull);
     });
 
-    test('ParentPinGuard exists', () {
-      expect(ParentPinGuard, isNotNull);
-    });
+    test(
+      'PinGuard exists (parameterised by PinScope; replaces ParentPinGuard)',
+      () {
+        expect(PinGuard, isNotNull);
+      },
+    );
   });
 
   // ── Story 1.6: Theme & design tokens ─────────────────────────

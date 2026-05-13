@@ -7,7 +7,7 @@ import 'package:learning_tracker/features/learning/domain/repositories/learning_
 /// - Adult profile → can self-mark (markedBy = own profileId)
 /// - Child profile → CANNOT self-mark (rejected with error), unless a parent
 ///   PIN session is active for this profile (same device session as
-///   [ParentPinGuard]).
+///   [PinGuard] with `PinScope.parent`).
 /// - Parent acting on child (adult profile active) → can mark for child via
 ///   repository target semantics where applicable.
 class ManualCompletionUseCase {

@@ -100,8 +100,8 @@ The core layer (`lib/core/`) provides shared infrastructure that all feature mod
 
 ### Navigation
 
-- **Router:** auto_route with 40+ routes
-- **Guards (7):** Auth, Profile, Restore, ChildMode, ParentPin, TutorPin, plus route-level guards
+- **Router:** auto_route with 40+ routes (fully typed — no string-based navigation)
+- **Guards (5):** Auth, Restore, Profile, ChildMode, and a single PinGuard parameterized by PinScope (parent/tutor). Adding a new PIN-gated route is one line.
 - **Shell:** AppShell with 4-tab bottom navigation
 
 ### Services
