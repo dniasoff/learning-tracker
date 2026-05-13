@@ -2,11 +2,14 @@ import 'dart:async';
 
 import 'package:drift_flutter/drift_flutter.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/database/registry/device_registry_database.dart';
 import 'package:learning_tracker/core/database/seed_manager.dart';
+import 'package:learning_tracker/core/logging/crashlytics_service.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/navigation/router_provider.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
@@ -37,16 +40,38 @@ void main() {
       // Initialize Firebase BEFORE providers — but non-fatal if it fails.
       // Firebase providers (firebaseAuthProvider, firebaseFirestoreProvider)
       // need Firebase.initializeApp() to have completed.
+      CrashlyticsService crashlytics = const NullCrashlyticsService();
       try {
         await Firebase.initializeApp(
           options: DefaultFirebaseOptions.currentPlatform,
         );
+        // Story 24.4: Wire Crashlytics immediately after Firebase init,
+        // before any other init that can throw.
+        final fbCrashlytics = FirebaseCrashlytics.instance;
+        await fbCrashlytics.setCrashlyticsCollectionEnabled(true);
+        crashlytics = FirebaseCrashlyticsService(fbCrashlytics);
       } on FirebaseException catch (_) {
         // Already initialized (e.g. hot restart) — use existing app.
+        // Crashlytics may already be wired; re-wrap the singleton.
+        crashlytics = FirebaseCrashlyticsService(FirebaseCrashlytics.instance);
       } catch (_) {
         // Firebase init failed (no network, no Play Services, etc.)
         // App continues in local-first mode — sync features unavailable.
+        // Crashlytics stays as NullCrashlyticsService to avoid re-crashing.
       }
+
+      // Story 24.4: Override Flutter and Dart error hooks to report to
+      // Crashlytics as the primary handler. Talker remains a secondary
+      // handler for in-app diagnostics (ring-buffer / "Send Logs" feature).
+      FlutterError.onError = (FlutterErrorDetails details) {
+        crashlytics.recordFlutterFatalError(details);
+        AppLogger.instance.handle(details.exception, details.stack);
+      };
+      PlatformDispatcher.instance.onError = (Object error, StackTrace stack) {
+        crashlytics.recordError(error, stack, fatal: true);
+        AppLogger.instance.handle(error, stack);
+        return true;
+      };
 
       // GoogleSignIn.initialize() is NOT called here.
       // google_sign_in v7 requires initialize() before authenticate(),
@@ -55,7 +80,6 @@ void main() {
       // right before the first authentication attempt.
 
       final talker = AppLogger.init();
-      AppLogger.setupFlutterErrorHandlers();
       talker.info('App starting — local-first mode');
 
       // Story 19.2b / 19.6: Decompress the bundled seed DB to a writable
@@ -133,6 +157,16 @@ void main() {
             ),
           ),
         ],
+      );
+
+      // Story 24.4: Forward profileId to Crashlytics whenever a profile is
+      // selected or cleared. Only the numeric ID is sent — no email or PII.
+      container.listen<int?>(
+        selectedProfileIdProvider,
+        (_, id) {
+          crashlytics.setUserIdentifier(id);
+        },
+        fireImmediately: true,
       );
 
       // Initialize notification system (non-fatal).
