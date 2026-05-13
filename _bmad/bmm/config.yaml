@@ -17,5 +17,5 @@ output_folder: "{project-root}/docs"
 
 # Linear Integration
 team_key: DNI
-linear_tenant: dniasoff
+linear_tenant: orvexai
 linear_project: learning-tracker

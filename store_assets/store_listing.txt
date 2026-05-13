@@ -1,44 +1,48 @@
 SHORT DESCRIPTION (80 chars max):
-Track Torah study across Mishnayos, Bavli, Chumash & more with smart scheduling.
+Daily Torah study tracker with smart scheduling, chazarah & streak tracking.
 
 FULL DESCRIPTION (4000 chars max):
-Torah Learning Tracker helps you stay on top of your daily Torah learning across multiple curricula — all in one app.
+Torah Learning Tracker keeps your daily Torah study organised across 9 curricula — all in one app, with intelligent scheduling, chazarah management, and progress tracking that works offline and syncs across your devices.
 
-Whether you're learning Mishnayos, Talmud Bavli, Chumash, Mishna Berurah, Nach, or Mussar, Torah Learning Tracker keeps everything organized with smart scheduling, progress tracking, and chazara management that works offline and syncs across your devices.
+Whether you're learning Daf Yomi, working through Mishnayos, or studying Chumash with your children, Torah Learning Tracker builds your daily schedule automatically and keeps you on pace to meet your goals.
 
 KEY FEATURES
 
-📚 7 Curricula in One Place
-Track your progress across Mishnayos, Talmud Bavli, Talmud Yerushalmi, Mishna Berurah, Chumash, Nach, and Mussar — each with full content hierarchies.
+📚 9 Curricula in One Place
+Track your progress across Mishnayos, Talmud Bavli, Talmud Yerushalmi, Mishna Berurah, Chumash, Nach, Tanach, Mishneh Torah, and Mussar — each with full content hierarchies and bilingual Hebrew/English text.
 
-📅 Smart Scheduling
-Set learning goals with deadlines (Gregorian or Hebrew calendar) and let the app generate your daily schedule. See at a glance whether you're ahead, on pace, or need to catch up.
+📅 Smart Daily Scheduling
+Set a learning goal with a target date and let the app generate your daily task list. It adapts in real time — when you fall behind, it spreads the catch-up across future days rather than piling tasks on one day.
+
+🔄 Chazarah Management
+Every item moves through built-in review stages (Learn → Chazarah 1 → Chazarah 2) on a spaced-repetition schedule. The app surfaces what's due today automatically so nothing gets forgotten.
+
+📖 In-App Text Reader
+Read mishnayos and Talmud pages directly in the app with Hebrew and English side by side. Mark items complete as you go — no need to switch between apps.
 
 📊 Progress Tracking
-View detailed progress charts, weekly activity breakdowns, and curriculum-by-curriculum completion percentages. Track your learning journey over time.
+View weekly activity charts, per-curriculum completion percentages, and a lifetime knowledge bar across all your learning. See at a glance whether you're ahead, on pace, or need to catch up.
 
-🔄 Chazara Management
-Built-in review stages (Learn, Chazara 1, Chazara 2) ensure you retain what you've learned. The app tracks which items are due for review.
+🔥 Streaks & Achievements
+Stay motivated with daily streak tracking, points earned per completion, and milestone achievements. A 30-day calendar shows your consistency at a glance.
 
-🔥 Streaks & Gamification
-Stay motivated with daily streak tracking, points, and achievements. Child mode adds celebratory animations and a reward system managed by parents.
-
-👨‍👩‍👧‍👦 Multi-Learner Support
-Create separate profiles for each family member. Parents can monitor progress and manage rewards through a PIN-protected parent mode. Tutors get a read-only view of student progress.
+👨‍👩‍👧‍👦 Multi-Profile Support
+Create separate profiles for every family member. Each profile has its own tracks, schedule, and progress — perfect for parents tracking children's learning alongside their own.
 
 🎯 Multi-Track Learning
-Track personal, school, and tutor learning independently — perfect for students juggling multiple schedules.
+Track personal, school, and tutor learning independently on the same curriculum. Students juggling multiple schedules can keep each track separate without confusion.
+
+🔒 Parent Mode
+A PIN-protected parent mode lets parents monitor progress, manage reward milestones, and configure daily learning goals for children — without exposing the settings to young learners.
 
 📶 Offline-First with Cloud Sync
-Learn anywhere without an internet connection. Your progress syncs automatically across devices when you're back online.
-
-🔤 Bilingual Support
-Full Hebrew and English text display with right-to-left layout support.
+Learn anywhere without an internet connection. Progress syncs automatically to the cloud when you're back online, and restores instantly when you sign in on a new device.
 
 PERFECT FOR
-• Daily Mishnayos or Daf Yomi learners
-• Students tracking school and personal learning
+• Daf Yomi and Mishnayos learners
+• Students tracking school and personal learning separately
 • Parents managing children's Torah education
-• Anyone working through a structured Torah curriculum
+• Anyone working towards a siyum or structured curriculum goal
+• Families who learn together and want one app for everyone
 
 Torah Learning Tracker is free and open source.
