@@ -374,8 +374,19 @@ class CurriculumLabel extends ConsumerWidget {
     maxLines: maxLines,
     overflow: overflow,
     textAlign: textAlign,
-    textDirection: textDirection ?? (useHebrew ? TextDirection.rtl : null),
+    // DNI-341: when no explicit textDirection is supplied, infer RTL from
+    // the rendered text so Hebrew-script labels render correctly regardless
+    // of the surrounding Directionality (e.g. an LTR app shell embedding
+    // a Hebrew curriculum name).
+    textDirection: textDirection ?? _inferDirection(text),
   );
+
+  static TextDirection? _inferDirection(String text) {
+    // Hebrew code block U+0590..U+05FF.
+    return _hebrew.hasMatch(text) ? TextDirection.rtl : null;
+  }
+
+  static final RegExp _hebrew = RegExp('[֐-׿]');
 }
 
 enum _Kind {

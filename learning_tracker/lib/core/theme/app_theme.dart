@@ -5,16 +5,19 @@ import 'package:learning_tracker/core/enums/track_type.dart';
 
 /// Material 3 theme for the Torah learning app.
 ///
-/// App-wide palette:
+/// Light palette:
 /// - Primary: Techelet Blue (#0038A8)
 /// - Secondary background: Stone White (#F9F9FB)
 /// - Accent: Silver Slate (#708090)
 /// - Success: Olive Grove (#6B8E23)
+///
+/// Dark palette is derived from the same brand hues, brightened for use on
+/// dark surfaces, with ink/surface roles inverted (DNI-341 / Story 25.20).
 class AppTheme {
   AppTheme._();
 
   // ---------------------------------------------------------------------------
-  // Canonical palette
+  // Canonical light palette
   // ---------------------------------------------------------------------------
 
   /// Primary brand blue (Techelet Blue).
@@ -52,44 +55,39 @@ class AppTheme {
   static const Color defaultAccentColor = brandBlue;
 
   // ---------------------------------------------------------------------------
-  // Legacy aliases — kept for compatibility with existing widgets that
-  // reference older names. All map to the new light palette.
+  // Dark palette — Material 3 dark surfaces with brand hues raised for AA
+  // contrast on dark backgrounds.
   // ---------------------------------------------------------------------------
 
-  static const Color heritageGold = brandGold;
-  static const Color heritageGoldMuted = brandGoldDeep;
-  static const Color heritageGoldSoft = brandGoldSoft;
+  /// Brightened brand blue for dark surfaces (primary on dark).
+  static const Color brandBlueDark = Color(0xFF7AA7FF);
+  static const Color brandBlueDarkContainer = Color(0xFF002C75);
+  static const Color brandBlueOnContainerDark = Color(0xFFD9E2F4);
 
-  static const Color heritageNavy = brandCream;
-  static const Color heritageNavySurface = brandCreamSoft;
-  static const Color heritageNavyCard = brandCreamCard;
-  static const Color heritageNavyOutline = brandOutline;
+  static const Color brandCoralDark = Color(0xFFB6C2CE);
+  static const Color brandCoralDarkContainer = Color(0xFF394755);
+  static const Color brandCoralOnContainerDark = Color(0xFFE2E8EE);
 
-  static const Color heritageParchment = brandCream;
-  static const Color heritageParchmentSurface = brandCreamSoft;
-  static const Color heritageParchmentCard = brandCreamCard;
-  static const Color heritageParchmentOutline = brandOutline;
+  static const Color brandGoldDark = Color(0xFFB6D17A);
+  static const Color brandGoldDarkContainer = Color(0xFF3B5210);
+  static const Color brandGoldOnContainerDark = Color(0xFFE6F0CC);
 
-  static const Color heritageInk = brandInk;
-  static const Color heritageInkMuted = brandInkMuted;
+  /// Dark surfaces and outlines.
+  static const Color darkSurface = Color(0xFF12161D);
+  static const Color darkSurfaceCard = Color(0xFF1B2230);
+  static const Color darkSurfaceSoft = Color(0xFF232A39);
+  static const Color darkOutline = Color(0xFF3A4452);
+  static const Color darkOutlineMuted = Color(0xFF2A3140);
 
-  static const Color heritageDarkInk = brandInk;
-  static const Color heritageDarkInkMuted = brandInkMuted;
+  /// Ink on dark surfaces.
+  static const Color darkInk = Color(0xFFEFF1F5);
+  static const Color darkInkMuted = Color(0xFFB6C2CE);
+  static const Color darkInkSoft = Color(0xFF8893A0);
 
-  /// Child mode aliases — reuse brand palette so UI stays consistent.
-  static const Color childBackground = brandCream;
-  static const Color childSurface = brandCreamSoft;
-  static const Color childCard = brandCreamCard;
-  static const Color childOutline = brandOutline;
-  static const Color childPrimary = brandBlue;
-  static const Color childStreakAccent = brandGold;
-  static const Color childPointsAccent = brandBlueBright;
-  static const Color childTrophyAccent = brandGold;
-  static const Color childText = brandInk;
-  static const Color childTextMuted = brandInkMuted;
+  static const Color _errorColorDark = Color(0xFFE57373);
 
   // ---------------------------------------------------------------------------
-  // Curriculum / track colors
+  // Curriculum / track colors (identity colors — same in light and dark)
   // ---------------------------------------------------------------------------
 
   static const Color curriculumMishna = Color(0xFF2D8C46);
@@ -145,13 +143,17 @@ class AppTheme {
   // Typography
   // ---------------------------------------------------------------------------
 
-  static TextTheme _buildTextTheme() {
+  static TextTheme _buildTextTheme({required Brightness brightness}) {
     final sans = GoogleFonts.plusJakartaSansTextTheme();
+    final ink = brightness == Brightness.dark ? darkInk : brandInk;
+    final inkMuted = brightness == Brightness.dark
+        ? darkInkMuted
+        : brandInkMuted;
 
     TextStyle? head(TextStyle? base) =>
-        base?.copyWith(color: brandInk, fontWeight: FontWeight.w700);
-    TextStyle? body(TextStyle? base) => base?.copyWith(color: brandInk);
-    TextStyle? subtle(TextStyle? base) => base?.copyWith(color: brandInkMuted);
+        base?.copyWith(color: ink, fontWeight: FontWeight.w700);
+    TextStyle? body(TextStyle? base) => base?.copyWith(color: ink);
+    TextStyle? subtle(TextStyle? base) => base?.copyWith(color: inkMuted);
 
     return TextTheme(
       displayLarge: head(sans.displayLarge),
@@ -183,21 +185,23 @@ class AppTheme {
     bool isChildMode = false,
     Color accent = brandBlue,
   }) {
-    return _lightTheme(accent: accent);
+    return brightness == Brightness.dark
+        ? _darkTheme(accent: brandBlueDark)
+        : _lightTheme(accent: accent);
   }
 
   /// Back-compat entry points.
   static ThemeData lightTheme([Color accent = brandBlue]) =>
       _lightTheme(accent: accent);
-  static ThemeData darkTheme([Color accent = brandBlue]) =>
-      _lightTheme(accent: accent);
+  static ThemeData darkTheme([Color accent = brandBlueDark]) =>
+      _darkTheme(accent: accent);
 
   // ---------------------------------------------------------------------------
   // Light theme
   // ---------------------------------------------------------------------------
 
   static ThemeData _lightTheme({required Color accent}) {
-    final textTheme = _buildTextTheme();
+    final textTheme = _buildTextTheme(brightness: Brightness.light);
 
     return ThemeData(
       useMaterial3: true,
@@ -431,6 +435,251 @@ class AppTheme {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
       drawerTheme: const DrawerThemeData(backgroundColor: brandCream),
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // Dark theme — Material 3 dark palette built from the brand hues.
+  // ---------------------------------------------------------------------------
+
+  static ThemeData _darkTheme({required Color accent}) {
+    final textTheme = _buildTextTheme(brightness: Brightness.dark);
+
+    return ThemeData(
+      useMaterial3: true,
+      brightness: Brightness.dark,
+      colorScheme: ColorScheme.dark(
+        primary: accent,
+        onPrimary: brandBlueDeep,
+        primaryContainer: brandBlueDarkContainer,
+        onPrimaryContainer: brandBlueOnContainerDark,
+        secondary: brandCoralDark,
+        onSecondary: darkSurface,
+        secondaryContainer: brandCoralDarkContainer,
+        onSecondaryContainer: brandCoralOnContainerDark,
+        tertiary: brandGoldDark,
+        onTertiary: darkSurface,
+        tertiaryContainer: brandGoldDarkContainer,
+        onTertiaryContainer: brandGoldOnContainerDark,
+        error: _errorColorDark,
+        onError: darkSurface,
+        surface: darkSurfaceCard,
+        onSurface: darkInk,
+        onSurfaceVariant: darkInkMuted,
+        outline: darkOutline,
+        outlineVariant: darkOutlineMuted,
+        shadow: Colors.black.withValues(alpha: 0.35),
+      ),
+      scaffoldBackgroundColor: darkSurface,
+      textTheme: textTheme,
+      appBarTheme: AppBarTheme(
+        backgroundColor: darkSurface,
+        foregroundColor: darkInk,
+        elevation: 0,
+        centerTitle: true,
+        titleTextStyle: GoogleFonts.plusJakartaSans(
+          color: darkInk,
+          fontSize: 18,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 0.3,
+        ),
+        iconTheme: const IconThemeData(color: darkInk),
+      ),
+      cardTheme: CardThemeData(
+        color: darkSurfaceCard,
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(18),
+          side: const BorderSide(color: darkOutline, width: 1),
+        ),
+        margin: EdgeInsets.zero,
+      ),
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(
+          elevation: 0,
+          backgroundColor: accent,
+          foregroundColor: brandBlueDeep,
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(30),
+          ),
+          textStyle: GoogleFonts.plusJakartaSans(
+            fontSize: 15,
+            fontWeight: FontWeight.w600,
+            letterSpacing: 0.2,
+          ),
+        ),
+      ),
+      filledButtonTheme: FilledButtonThemeData(
+        style: FilledButton.styleFrom(
+          backgroundColor: accent,
+          foregroundColor: brandBlueDeep,
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(30),
+          ),
+          textStyle: GoogleFonts.plusJakartaSans(
+            fontSize: 15,
+            fontWeight: FontWeight.w600,
+            letterSpacing: 0.2,
+          ),
+        ),
+      ),
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(
+          foregroundColor: accent,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          textStyle: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w600),
+        ),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          foregroundColor: darkInk,
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(30),
+          ),
+          side: const BorderSide(color: darkOutline),
+          textStyle: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w600),
+        ),
+      ),
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: darkSurfaceCard,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: darkOutline),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: darkOutline),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: accent, width: 2),
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: _errorColorDark),
+        ),
+        labelStyle: GoogleFonts.plusJakartaSans(color: darkInkMuted),
+        hintStyle: GoogleFonts.plusJakartaSans(color: darkInkSoft),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 16,
+        ),
+      ),
+      bottomNavigationBarTheme: BottomNavigationBarThemeData(
+        backgroundColor: darkSurfaceCard,
+        selectedItemColor: accent,
+        unselectedItemColor: darkInkMuted,
+        type: BottomNavigationBarType.fixed,
+        elevation: 0,
+      ),
+      navigationBarTheme: NavigationBarThemeData(
+        backgroundColor: transparent,
+        indicatorColor: accent.withValues(alpha: 0.18),
+        iconTheme: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return IconThemeData(color: accent);
+          }
+          return const IconThemeData(color: darkInkMuted);
+        }),
+        labelTextStyle: WidgetStateProperty.resolveWith((states) {
+          final base = GoogleFonts.plusJakartaSans(
+            fontSize: 12,
+            letterSpacing: 0.2,
+          );
+          if (states.contains(WidgetState.selected)) {
+            return base.copyWith(color: accent, fontWeight: FontWeight.w700);
+          }
+          return base.copyWith(
+            color: darkInkMuted,
+            fontWeight: FontWeight.w500,
+          );
+        }),
+        surfaceTintColor: transparent,
+        elevation: 0,
+      ),
+      dividerColor: darkOutline,
+      chipTheme: ChipThemeData(
+        backgroundColor: darkSurfaceSoft,
+        selectedColor: accent,
+        labelStyle: GoogleFonts.plusJakartaSans(color: darkInk, fontSize: 13),
+        secondaryLabelStyle: GoogleFonts.plusJakartaSans(
+          color: brandBlueDeep,
+          fontSize: 13,
+        ),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+          side: const BorderSide(color: darkOutline),
+        ),
+        side: BorderSide.none,
+      ),
+      segmentedButtonTheme: SegmentedButtonThemeData(
+        style: ButtonStyle(
+          backgroundColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.selected)) return accent;
+            return darkSurfaceCard;
+          }),
+          foregroundColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.selected)) return brandBlueDeep;
+            return darkInk;
+          }),
+        ),
+      ),
+      checkboxTheme: CheckboxThemeData(
+        fillColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) return accent;
+          return Colors.transparent;
+        }),
+        checkColor: WidgetStateProperty.all(brandBlueDeep),
+        side: const BorderSide(color: darkInkMuted),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+      ),
+      radioTheme: RadioThemeData(
+        fillColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) return accent;
+          return darkInkMuted;
+        }),
+      ),
+      switchTheme: SwitchThemeData(
+        thumbColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) return accent;
+          return darkInkMuted;
+        }),
+        trackColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return accent.withValues(alpha: 0.3);
+          }
+          return darkOutline;
+        }),
+      ),
+      progressIndicatorTheme: const ProgressIndicatorThemeData(
+        color: brandGoldDark,
+        linearTrackColor: darkOutline,
+      ),
+      dialogTheme: DialogThemeData(
+        backgroundColor: darkSurfaceCard,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: const BorderSide(color: darkOutline),
+        ),
+      ),
+      bottomSheetTheme: const BottomSheetThemeData(
+        backgroundColor: darkSurfaceCard,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+      ),
+      snackBarTheme: SnackBarThemeData(
+        backgroundColor: darkSurfaceSoft,
+        contentTextStyle: GoogleFonts.plusJakartaSans(color: darkInk),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+      drawerTheme: const DrawerThemeData(backgroundColor: darkSurface),
     );
   }
 }

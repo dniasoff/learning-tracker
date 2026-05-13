@@ -51,7 +51,6 @@ class OnboardingScreen extends ConsumerStatefulWidget {
 /// Per-track configuration is delegated to [AddTrackFlow] (Story 18.1).
 enum _ScreenPhase {
   profileCreation,
-  languageSelection,
   parentPinSetup,
   calendarPreference,
   addTrack,
@@ -65,7 +64,6 @@ const _kOnboardingPhase = 'onboarding_phase';
 const _kOnboardingProfileId = 'onboarding_profile_id';
 const _kOnboardingProfileName = 'onboarding_profile_name';
 const _kOnboardingProfileMode = 'onboarding_profile_mode';
-const _kOnboardingLanguage = 'onboarding_language';
 const _kOnboardingHebrewCalendar = 'onboarding_use_hebrew_calendar';
 const _kOnboardingShowNikud = 'onboarding_show_nikud';
 const _kOnboardingTransliterationVariant = 'onboarding_transliteration_variant';
@@ -74,8 +72,6 @@ const _kOnboardingTransliterationVariant = 'onboarding_transliteration_variant';
 const kOnboardingComplete = 'onboarding_complete';
 
 class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
-  String _selectedLanguage = 'en';
-
   /// `true` = Hebrew calendar; `false` = Gregorian (matches UI labels).
   bool _useHebrewCalendar = true;
 
@@ -158,12 +154,10 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     final profileId = prefs.getInt(_kOnboardingProfileId);
     final profileName = prefs.getString(_kOnboardingProfileName);
     final profileMode = prefs.getString(_kOnboardingProfileMode);
-    final savedLanguage = prefs.getString(_kOnboardingLanguage);
 
     if (profileId != null) _createdProfileId = profileId;
     if (profileName != null) _profileName = profileName;
     if (profileMode != null) _profileMode = profileMode;
-    if (savedLanguage != null) _selectedLanguage = savedLanguage;
     _useHebrewCalendar = prefs.getBool(_kOnboardingHebrewCalendar) ?? true;
     _showNikud = prefs.getBool(_kOnboardingShowNikud) ?? true;
     final savedVariant = prefs.getString(_kOnboardingTransliterationVariant);
@@ -175,25 +169,11 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     // quickly), don't let a delayed restore overwrite the newer phase.
     if (!mounted || _phase != _ScreenPhase.profileCreation) return;
 
-    // Legacy: older builds created the profile row before language/calendar.
-    if (profileId != null &&
-        (savedPhase == 'languageSelection' ||
-            savedPhase == 'calendarPreference')) {
-      final resumeChildPin =
-          profileMode == 'child' && savedPhase == 'languageSelection';
+    // Legacy: older builds created the profile row before the calendar step.
+    if (profileId != null && savedPhase == 'calendarPreference') {
       setState(() {
-        _phase = resumeChildPin
-            ? _ScreenPhase.parentPinSetup
-            : _ScreenPhase.addTrack;
+        _phase = _ScreenPhase.addTrack;
       });
-      return;
-    }
-
-    // New flow: language/calendar are on the profile screen — remap saves.
-    if (profileId == null &&
-        (savedPhase == 'languageSelection' ||
-            savedPhase == 'calendarPreference')) {
-      setState(() => _phase = _ScreenPhase.profileCreation);
       return;
     }
 
@@ -213,7 +193,6 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       await prefs.setString(_kOnboardingProfileName, _profileName!);
     }
     await prefs.setString(_kOnboardingProfileMode, _profileMode);
-    await prefs.setString(_kOnboardingLanguage, _selectedLanguage);
     await prefs.setBool(_kOnboardingHebrewCalendar, _useHebrewCalendar);
     await prefs.setBool(_kOnboardingShowNikud, _showNikud);
     await prefs.setString(
@@ -229,7 +208,6 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       _kOnboardingProfileId,
       _kOnboardingProfileName,
       _kOnboardingProfileMode,
-      _kOnboardingLanguage,
       _kOnboardingHebrewCalendar,
       _kOnboardingShowNikud,
       _kOnboardingTransliterationVariant,
@@ -392,7 +370,6 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     _profileName = null;
     _profileMode = 'adult';
     _useHebrewCalendar = true;
-    _selectedLanguage = 'en';
     _nameError = null;
     _trackCount = 0;
     _lastTrackLabel = null;
@@ -426,12 +403,10 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
     final isCombinedProfilePhase =
         _phase == _ScreenPhase.profileCreation ||
-        _phase == _ScreenPhase.languageSelection ||
         _phase == _ScreenPhase.calendarPreference;
 
     final appBarTitle = switch (_phase) {
       _ScreenPhase.profileCreation ||
-      _ScreenPhase.languageSelection ||
       _ScreenPhase.calendarPreference => const SizedBox.shrink(),
       _ScreenPhase.parentPinSetup => const AppBarTitle(text: 'Set Parent PIN'),
       _ScreenPhase.addTrack => const AppBarTitle(text: 'Set Up a Track'),
@@ -463,7 +438,6 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
           child: switch (_phase) {
             _ScreenPhase.profileCreation => _buildProfileCreation(theme),
             _ScreenPhase.parentPinSetup => _buildParentPinSetup(theme),
-            _ScreenPhase.languageSelection => _buildProfileCreation(theme),
             _ScreenPhase.calendarPreference => _buildProfileCreation(theme),
             _ScreenPhase.addTrack => _buildAddTrack(),
             _ScreenPhase.addAnotherPrompt => _buildAddAnotherPrompt(theme),

@@ -234,7 +234,6 @@ class _LearningTrackerAppState extends ConsumerState<LearningTrackerApp> {
   @override
   Widget build(BuildContext context) {
     ref.watch(magicLinkInitializationProvider);
-    final locale = ref.watch(currentAppLocaleProvider);
     final isChildMode =
         ref.watch(selectedProfileProvider).asData?.value?.mode == 'child';
 
@@ -246,10 +245,13 @@ class _LearningTrackerAppState extends ConsumerState<LearningTrackerApp> {
           brightness: Brightness.light,
           isChildMode: isChildMode,
         ),
-        themeMode: ThemeMode.light,
+        darkTheme: AppTheme.darkTheme(),
+        themeMode: ThemeMode.system,
         debugShowCheckedModeBanner: false,
         routerConfig: _routerConfig,
-        locale: locale,
+        // locale: null — Flutter resolves the active locale automatically
+        // from WidgetsBinding.window.locale against supportedLocales (DNI-341).
+        locale: null,
         localizationsDelegates: const [
           AppLocalizations.delegate,
           GlobalMaterialLocalizations.delegate,
