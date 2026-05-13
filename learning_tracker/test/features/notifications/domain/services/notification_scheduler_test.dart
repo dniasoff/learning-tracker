@@ -3,30 +3,41 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/features/notifications/domain/services/notification_scheduler.dart';
 import 'package:learning_tracker/features/notifications/domain/services/notification_service.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:timezone/data/latest_all.dart' as tz;
+import 'package:timezone/timezone.dart' as tz_lib;
 
 class MockNotificationService extends Mock implements NotificationService {}
 
 void main() {
+  setUpAll(() {
+    tz.initializeTimeZones();
+    tz_lib.setLocalLocation(tz_lib.getLocation('America/New_York'));
+    registerFallbackValue(<tz_lib.TZDateTime>[]);
+  });
+
   late MockNotificationService mockService;
   late NotificationScheduler scheduler;
 
   setUp(() {
     mockService = MockNotificationService();
     scheduler = NotificationScheduler(service: mockService);
+
+    when(
+      () => mockService.scheduleBatchReminders(
+        fireTimes: any(named: 'fireTimes'),
+        title: any(named: 'title'),
+        body: any(named: 'body'),
+      ),
+    ).thenAnswer((_) async {});
+
+    when(() => mockService.cancelBatchReminders()).thenAnswer((_) async {});
+    when(() => mockService.cancelDailyReminder()).thenAnswer((_) async {});
   });
 
   group('NotificationScheduler', () {
     test(
-      'schedule creates daily repeating notification at configured time',
+      'schedule creates 14-day batch notification at configured time',
       () async {
-        when(
-          () => mockService.scheduleDailyReminder(
-            hour: any(named: 'hour'),
-            minute: any(named: 'minute'),
-            body: any(named: 'body'),
-          ),
-        ).thenAnswer((_) async {});
-
         await scheduler.schedule(
           time: const TimeOfDay(hour: 19, minute: 0),
           taskCount: 5,
@@ -34,9 +45,9 @@ void main() {
         );
 
         verify(
-          () => mockService.scheduleDailyReminder(
-            hour: 19,
-            minute: 0,
+          () => mockService.scheduleBatchReminders(
+            fireTimes: any(named: 'fireTimes'),
+            title: 'Learning Reminder',
             body: 'You have 5 tasks across 2 curricula today',
           ),
         ).called(1);
@@ -46,14 +57,6 @@ void main() {
     test(
       'notification body includes correct task count from scheduler',
       () async {
-        when(
-          () => mockService.scheduleDailyReminder(
-            hour: any(named: 'hour'),
-            minute: any(named: 'minute'),
-            body: any(named: 'body'),
-          ),
-        ).thenAnswer((_) async {});
-
         await scheduler.schedule(
           time: const TimeOfDay(hour: 8, minute: 30),
           taskCount: 1,
@@ -61,24 +64,16 @@ void main() {
         );
 
         verify(
-          () => mockService.scheduleDailyReminder(
-            hour: 8,
-            minute: 30,
+          () => mockService.scheduleBatchReminders(
+            fireTimes: any(named: 'fireTimes'),
+            title: 'Learning Reminder',
             body: 'You have 1 task across 1 curriculum today',
           ),
         ).called(1);
       },
     );
 
-    test('time change updates scheduled notification', () async {
-      when(
-        () => mockService.scheduleDailyReminder(
-          hour: any(named: 'hour'),
-          minute: any(named: 'minute'),
-          body: any(named: 'body'),
-        ),
-      ).thenAnswer((_) async {});
-
+    test('time change updates scheduled notification batch', () async {
       // Schedule at 7 PM
       await scheduler.schedule(
         time: const TimeOfDay(hour: 19, minute: 0),
@@ -94,31 +89,22 @@ void main() {
       );
 
       verify(
-        () => mockService.scheduleDailyReminder(
-          hour: 8,
-          minute: 0,
+        () => mockService.scheduleBatchReminders(
+          fireTimes: any(named: 'fireTimes'),
+          title: 'Learning Reminder',
           body: 'You have 3 tasks across 2 curricula today',
         ),
-      ).called(1);
+      ).called(2);
     });
 
-    test('cancel removes the daily reminder', () async {
-      when(() => mockService.cancelDailyReminder()).thenAnswer((_) async {});
-
+    test('cancel removes the daily reminder and batch', () async {
       await scheduler.cancel();
 
       verify(() => mockService.cancelDailyReminder()).called(1);
+      verify(() => mockService.cancelBatchReminders()).called(1);
     });
 
     test('zero tasks produces correct body', () async {
-      when(
-        () => mockService.scheduleDailyReminder(
-          hour: any(named: 'hour'),
-          minute: any(named: 'minute'),
-          body: any(named: 'body'),
-        ),
-      ).thenAnswer((_) async {});
-
       await scheduler.schedule(
         time: const TimeOfDay(hour: 19, minute: 0),
         taskCount: 0,
@@ -126,12 +112,24 @@ void main() {
       );
 
       verify(
-        () => mockService.scheduleDailyReminder(
-          hour: 19,
-          minute: 0,
+        () => mockService.scheduleBatchReminders(
+          fireTimes: any(named: 'fireTimes'),
+          title: 'Learning Reminder',
           body: 'You have 0 tasks across 0 curricula today',
         ),
       ).called(1);
+    });
+
+    test('buildFireTimesForTest returns up to 14 entries without repository',
+        () {
+      final fireTimes = scheduler.buildFireTimesForTest(
+        time: const TimeOfDay(hour: 19, minute: 0),
+        location: null,
+        inIsrael: false,
+        fromDay: DateTime(2026, 5, 13), // a Wednesday
+      );
+      // Without a sacred window repository, all 14 entries should be returned.
+      expect(fireTimes.length, equals(kBatchDays));
     });
   });
 }

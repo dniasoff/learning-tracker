@@ -10,6 +10,8 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:timezone/data/latest_all.dart' as tz;
+import 'package:timezone/timezone.dart' as tz_lib;
 import 'package:learning_tracker/core/analytics/analytics_service.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/learning/completion_command.dart';
@@ -106,6 +108,12 @@ Future<int> _insertTrack(UserDatabase db, int profileId) async {
 // ---------------------------------------------------------------------------
 
 void main() {
+  setUpAll(() {
+    tz.initializeTimeZones();
+    tz_lib.setLocalLocation(tz_lib.getLocation('America/New_York'));
+    registerFallbackValue(<tz_lib.TZDateTime>[]);
+  });
+
   // ── 1. app_launch ──────────────────────────────────────────────────────────
   group('27.14 — app_launch', () {
     test('logAppLaunch fires exactly one app_launch event', () async {
@@ -305,12 +313,13 @@ void main() {
       final notifSvc = _MockNotificationService();
 
       when(
-        () => notifSvc.scheduleDailyReminder(
-          hour: any(named: 'hour'),
-          minute: any(named: 'minute'),
+        () => notifSvc.scheduleBatchReminders(
+          fireTimes: any(named: 'fireTimes'),
+          title: any(named: 'title'),
           body: any(named: 'body'),
         ),
       ).thenAnswer((_) async {});
+      when(() => notifSvc.cancelBatchReminders()).thenAnswer((_) async {});
 
       final scheduler = NotificationScheduler(
         service: notifSvc,
@@ -383,6 +392,7 @@ void main() {
         final notifSvc = _MockNotificationService();
 
         when(() => notifSvc.cancelDailyReminder()).thenAnswer((_) async {});
+        when(() => notifSvc.cancelBatchReminders()).thenAnswer((_) async {});
 
         final scheduler = NotificationScheduler(
           service: notifSvc,

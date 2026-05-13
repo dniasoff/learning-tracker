@@ -761,5 +761,13 @@
     }
   },
   "cannotDeactivateLastCurriculum": "חייב להישאר לפחות קורס לימוד אחד פעיל",
-  "cannotDeactivateLastCurriculumDetail": "לא ניתן להסיר את קורס הלימוד האחרון הפעיל. הוסיפו קורס נוסף לפני הסרת זה."
+  "cannotDeactivateLastCurriculumDetail": "לא ניתן להסיר את קורס הלימוד האחרון הפעיל. הוסיפו קורס נוסף לפני הסרת זה.",
+  "notificationReminderTitle": "תזכורת לימוד",
+  "notificationReminderBody": "{taskCount,plural, =0{אין משימות להיום — שמרו על הרצף!} =1{יש לכם משימה אחת ב{curriculumCount,plural, =1{תוכנית לימוד אחת} other{{curriculumCount} תוכניות לימוד}} היום} other{יש לכם {taskCount} משימות ב{curriculumCount,plural, =1{תוכנית לימוד אחת} other{{curriculumCount} תוכניות לימוד}} היום}}",
+  "@notificationReminderBody": {
+    "placeholders": {
+      "taskCount": { "type": "int" },
+      "curriculumCount": { "type": "int" }
+    }
+  }
 }

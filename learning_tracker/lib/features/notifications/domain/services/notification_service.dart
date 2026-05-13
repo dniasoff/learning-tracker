@@ -12,6 +12,11 @@ const String _channelDescription = 'Daily learning reminder notifications';
 /// Notification ID for the daily reminder (single repeating notification).
 const int dailyReminderId = 0;
 
+/// Base notification ID for the rolling 14-day one-shot batch (DNI-367).
+/// Uses IDs 10–23 (14 slots). IDs 10-23 are reserved for the batch.
+const int _batchBaseId = 10;
+const int _batchSize = 14;
+
 /// Payload used when a streak protection notification is tapped.
 const String streakAlertPayload = 'streak_protection';
 
@@ -138,6 +143,55 @@ class NotificationService {
   /// Cancel the daily reminder notification.
   Future<void> cancelDailyReminder() async {
     await _plugin.cancel(id: dailyReminderId);
+  }
+
+  /// Schedule a rolling 14-day batch of pre-filtered one-shot reminders
+  /// (DNI-367, Story 26.24).
+  ///
+  /// Cancels any existing batch notifications (IDs 10–23), then schedules
+  /// a one-shot for each [fireTimes] entry. Fire-times that have already
+  /// been filtered (e.g. by [SacredWindowRepository]) are omitted before
+  /// this call — this method schedules every entry in [fireTimes] without
+  /// further filtering.
+  ///
+  /// [title] and [body] are the notification strings, resolved at schedule
+  /// time so that locale is captured correctly (UX-DR7).
+  Future<void> scheduleBatchReminders({
+    required List<tz.TZDateTime> fireTimes,
+    required String title,
+    required String body,
+  }) async {
+    // Cancel existing batch first.
+    await cancelBatchReminders();
+
+    const androidDetails = AndroidNotificationDetails(
+      _channelId,
+      _channelName,
+      channelDescription: _channelDescription,
+      importance: Importance.defaultImportance,
+      priority: Priority.defaultPriority,
+    );
+    const notificationDetails = NotificationDetails(android: androidDetails);
+
+    for (var i = 0; i < fireTimes.length && i < _batchSize; i++) {
+      await _plugin.zonedSchedule(
+        id: _batchBaseId + i,
+        title: title,
+        body: body,
+        scheduledDate: fireTimes[i],
+        notificationDetails: notificationDetails,
+        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        payload: dailyReminderPayload,
+      );
+    }
+  }
+
+  /// Cancel all batch reminder notifications (IDs [_batchBaseId] to
+  /// [_batchBaseId] + [_batchSize] - 1).
+  Future<void> cancelBatchReminders() async {
+    for (var i = 0; i < _batchSize; i++) {
+      await _plugin.cancel(id: _batchBaseId + i);
+    }
   }
 
   /// Schedule a daily streak protection alert at [hour]:[minute].

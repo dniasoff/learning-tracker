@@ -761,5 +761,13 @@
     }
   },
   "cannotDeactivateLastCurriculum": "At least one curriculum must remain active",
-  "cannotDeactivateLastCurriculumDetail": "You cannot remove your last active curriculum. Add another curriculum before removing this one."
+  "cannotDeactivateLastCurriculumDetail": "You cannot remove your last active curriculum. Add another curriculum before removing this one.",
+  "notificationReminderTitle": "Learning Reminder",
+  "notificationReminderBody": "{taskCount,plural, =0{No tasks today — stay on track!} =1{You have 1 task across {curriculumCount,plural, =1{1 curriculum} other{{curriculumCount} curricula}} today} other{You have {taskCount} tasks across {curriculumCount,plural, =1{1 curriculum} other{{curriculumCount} curricula}} today}}",
+  "@notificationReminderBody": {
+    "placeholders": {
+      "taskCount": { "type": "int" },
+      "curriculumCount": { "type": "int" }
+    }
+  }
 }

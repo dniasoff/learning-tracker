@@ -406,6 +406,71 @@ final class IsShabbosQuietActiveProvider
 String _$isShabbosQuietActiveHash() =>
     r'c0ff93c843be96474b547761aaf28f2350dffdc2';
 
+/// Provides the [SacredWindowRepository] singleton.
+///
+/// Kept alive so the in-memory cache survives across provider rebuilds.
+/// [TimezoneLifecycleObserver] calls [SacredWindowRepository.invalidate]
+/// on resume (DNI-367).
+
+@ProviderFor(sacredWindowRepository)
+final sacredWindowRepositoryProvider = SacredWindowRepositoryProvider._();
+
+/// Provides the [SacredWindowRepository] singleton.
+///
+/// Kept alive so the in-memory cache survives across provider rebuilds.
+/// [TimezoneLifecycleObserver] calls [SacredWindowRepository.invalidate]
+/// on resume (DNI-367).
+
+final class SacredWindowRepositoryProvider
+    extends
+        $FunctionalProvider<
+          SacredWindowRepository,
+          SacredWindowRepository,
+          SacredWindowRepository
+        >
+    with $Provider<SacredWindowRepository> {
+  /// Provides the [SacredWindowRepository] singleton.
+  ///
+  /// Kept alive so the in-memory cache survives across provider rebuilds.
+  /// [TimezoneLifecycleObserver] calls [SacredWindowRepository.invalidate]
+  /// on resume (DNI-367).
+  SacredWindowRepositoryProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'sacredWindowRepositoryProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$sacredWindowRepositoryHash();
+
+  @$internal
+  @override
+  $ProviderElement<SacredWindowRepository> $createElement(
+    $ProviderPointer pointer,
+  ) => $ProviderElement(pointer);
+
+  @override
+  SacredWindowRepository create(Ref ref) {
+    return sacredWindowRepository(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(SacredWindowRepository value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<SacredWindowRepository>(value),
+    );
+  }
+}
+
+String _$sacredWindowRepositoryHash() =>
+    r'352f72aa0a86150457c461db1bea1a2ad7b69a86';
+
 /// Provides the [NotificationScheduler] instance.
 
 @ProviderFor(notificationScheduler)
@@ -457,12 +522,17 @@ final class NotificationSchedulerProvider
 }
 
 String _$notificationSchedulerHash() =>
-    r'605e8d4e6fe317d4c269b36a541f9aa9099e53b6';
+    r'03597a17d9f0f098a5e5e09a941b7b808db154bb';
 
 /// Watches reminder settings and daily tasks, then schedules or cancels
 /// the notification accordingly.
 ///
-/// Also respects Shabbos quiet mode — cancels notifications during Shabbos.
+/// DNI-367 (Story 26.24): now schedules a rolling 14-day batch of pre-filtered
+/// one-shots instead of a repeating notification. Sacred Time windows are
+/// checked per-fire-time by [NotificationScheduler.scheduleReminder].
+///
+/// Also respects Shabbos quiet mode — cancels all notifications when Sacred
+/// Time is currently active (the live lock-screen guard).
 ///
 /// Kept alive so that time/enable changes always trigger a reschedule,
 /// even if no UI is watching this provider at the moment.
@@ -473,7 +543,12 @@ final reminderSyncEffectProvider = ReminderSyncEffectProvider._();
 /// Watches reminder settings and daily tasks, then schedules or cancels
 /// the notification accordingly.
 ///
-/// Also respects Shabbos quiet mode — cancels notifications during Shabbos.
+/// DNI-367 (Story 26.24): now schedules a rolling 14-day batch of pre-filtered
+/// one-shots instead of a repeating notification. Sacred Time windows are
+/// checked per-fire-time by [NotificationScheduler.scheduleReminder].
+///
+/// Also respects Shabbos quiet mode — cancels all notifications when Sacred
+/// Time is currently active (the live lock-screen guard).
 ///
 /// Kept alive so that time/enable changes always trigger a reschedule,
 /// even if no UI is watching this provider at the moment.
@@ -484,7 +559,12 @@ final class ReminderSyncEffectProvider
   /// Watches reminder settings and daily tasks, then schedules or cancels
   /// the notification accordingly.
   ///
-  /// Also respects Shabbos quiet mode — cancels notifications during Shabbos.
+  /// DNI-367 (Story 26.24): now schedules a rolling 14-day batch of pre-filtered
+  /// one-shots instead of a repeating notification. Sacred Time windows are
+  /// checked per-fire-time by [NotificationScheduler.scheduleReminder].
+  ///
+  /// Also respects Shabbos quiet mode — cancels all notifications when Sacred
+  /// Time is currently active (the live lock-screen guard).
   ///
   /// Kept alive so that time/enable changes always trigger a reschedule,
   /// even if no UI is watching this provider at the moment.
@@ -514,7 +594,7 @@ final class ReminderSyncEffectProvider
 }
 
 String _$reminderSyncEffectHash() =>
-    r'b5fa176459b433271dd887cd1828b16b0ed718a5';
+    r'213c508ba36007542db6a805edce0dfd5a249423';
 
 /// Provides the [StreakAlertService] instance.
 

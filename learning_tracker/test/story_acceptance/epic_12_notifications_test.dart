@@ -11,6 +11,8 @@ import 'package:learning_tracker/features/notifications/domain/services/notifica
 import 'package:learning_tracker/features/notifications/domain/services/streak_alert_service.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:test/test.dart';
+import 'package:timezone/data/latest_all.dart' as tz;
+import 'package:timezone/timezone.dart' as tz_lib;
 
 import '../helpers/test_database.dart';
 
@@ -35,7 +37,10 @@ Future<int> _insertTrack(UserDatabase db) async {
 
 void main() {
   setUpAll(() {
+    tz.initializeTimeZones();
+    tz_lib.setLocalLocation(tz_lib.getLocation('America/New_York'));
     registerFallbackValue(const GamificationRoute());
+    registerFallbackValue(<tz_lib.TZDateTime>[]);
   });
 
   // ── Story 12.1: Local notifications ───────────────────────────
@@ -47,19 +52,20 @@ void main() {
     setUp(() {
       mockService = MockNotificationService();
       scheduler = NotificationScheduler(service: mockService);
+      when(
+        () => mockService.scheduleBatchReminders(
+          fireTimes: any(named: 'fireTimes'),
+          title: any(named: 'title'),
+          body: any(named: 'body'),
+        ),
+      ).thenAnswer((_) async {});
+      when(() => mockService.cancelBatchReminders()).thenAnswer((_) async {});
+      when(() => mockService.cancelDailyReminder()).thenAnswer((_) async {});
     });
 
     test(
       'schedule() calls service with correct body for plural counts',
       () async {
-        when(
-          () => mockService.scheduleDailyReminder(
-            hour: any(named: 'hour'),
-            minute: any(named: 'minute'),
-            body: any(named: 'body'),
-          ),
-        ).thenAnswer((_) async {});
-
         await scheduler.schedule(
           time: const TimeOfDay(hour: 19, minute: 0),
           taskCount: 5,
@@ -67,9 +73,9 @@ void main() {
         );
 
         verify(
-          () => mockService.scheduleDailyReminder(
-            hour: 19,
-            minute: 0,
+          () => mockService.scheduleBatchReminders(
+            fireTimes: any(named: 'fireTimes'),
+            title: 'Learning Reminder',
             body: 'You have 5 tasks across 2 curricula today',
           ),
         ).called(1);
@@ -77,14 +83,6 @@ void main() {
     );
 
     test('schedule() uses singular forms for count of 1', () async {
-      when(
-        () => mockService.scheduleDailyReminder(
-          hour: any(named: 'hour'),
-          minute: any(named: 'minute'),
-          body: any(named: 'body'),
-        ),
-      ).thenAnswer((_) async {});
-
       await scheduler.schedule(
         time: const TimeOfDay(hour: 8, minute: 30),
         taskCount: 1,
@@ -92,29 +90,27 @@ void main() {
       );
 
       verify(
-        () => mockService.scheduleDailyReminder(
-          hour: 8,
-          minute: 30,
+        () => mockService.scheduleBatchReminders(
+          fireTimes: any(named: 'fireTimes'),
+          title: 'Learning Reminder',
           body: 'You have 1 task across 1 curriculum today',
         ),
       ).called(1);
     });
 
-    test('cancel() delegates to service.cancelDailyReminder()', () async {
-      when(() => mockService.cancelDailyReminder()).thenAnswer((_) async {});
-
+    test('cancel() delegates to service.cancelDailyReminder() and batch', () async {
       await scheduler.cancel();
 
       verify(() => mockService.cancelDailyReminder()).called(1);
+      verify(() => mockService.cancelBatchReminders()).called(1);
     });
 
     test('notification payload enables deep link to daily tasks', () {
       expect(dailyReminderPayload, 'daily_reminder');
     });
 
-    test('notification repeats daily via matchDateTimeComponents', () {
-      // The service uses matchDateTimeComponents: DateTimeComponents.time
-      // which repeats daily. Verified by the notification ID constant.
+    test('daily reminder ID is stable', () {
+      // Verified by the notification ID constant.
       expect(dailyReminderId, 0);
     });
   });
@@ -270,12 +266,13 @@ void main() {
         scheduler = NotificationScheduler(service: mockService);
 
         when(
-          () => mockService.scheduleDailyReminder(
-            hour: any(named: 'hour'),
-            minute: any(named: 'minute'),
+          () => mockService.scheduleBatchReminders(
+            fireTimes: any(named: 'fireTimes'),
+            title: any(named: 'title'),
             body: any(named: 'body'),
           ),
         ).thenAnswer((_) async {});
+        when(() => mockService.cancelBatchReminders()).thenAnswer((_) async {});
         when(() => mockService.cancelDailyReminder()).thenAnswer((_) async {});
         when(
           () => mockService.scheduleStreakAlert(
@@ -292,23 +289,16 @@ void main() {
         await scheduler.cancel();
 
         verify(() => mockService.cancelDailyReminder()).called(1);
+        verify(() => mockService.cancelBatchReminders()).called(1);
       });
 
-      // Unit: Changing reminder time reschedules notification
+      // Unit: Changing reminder time reschedules notification batch
       test('changing reminder time reschedules notification', () async {
         await scheduler.schedule(
           time: const TimeOfDay(hour: 19, minute: 0),
           taskCount: 3,
           curriculumCount: 1,
         );
-
-        verify(
-          () => mockService.scheduleDailyReminder(
-            hour: 19,
-            minute: 0,
-            body: 'You have 3 tasks across 1 curriculum today',
-          ),
-        ).called(1);
 
         // Change time
         await scheduler.schedule(
@@ -317,13 +307,14 @@ void main() {
           curriculumCount: 1,
         );
 
+        // Called twice total (once for 19:00, once for 7:30)
         verify(
-          () => mockService.scheduleDailyReminder(
-            hour: 7,
-            minute: 30,
+          () => mockService.scheduleBatchReminders(
+            fireTimes: any(named: 'fireTimes'),
+            title: 'Learning Reminder',
             body: 'You have 3 tasks across 1 curriculum today',
           ),
-        ).called(1);
+        ).called(2);
       });
     },
   );

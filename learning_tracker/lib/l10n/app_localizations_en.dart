@@ -1670,4 +1670,31 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get cannotDeactivateLastCurriculumDetail =>
       'You cannot remove your last active curriculum. Add another curriculum before removing this one.';
+
+  @override
+  String get notificationReminderTitle => 'Learning Reminder';
+
+  @override
+  String notificationReminderBody(int taskCount, int curriculumCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      curriculumCount,
+      locale: localeName,
+      other: '$curriculumCount curricula',
+      one: '1 curriculum',
+    );
+    String _temp1 = intl.Intl.pluralLogic(
+      curriculumCount,
+      locale: localeName,
+      other: '$curriculumCount curricula',
+      one: '1 curriculum',
+    );
+    String _temp2 = intl.Intl.pluralLogic(
+      taskCount,
+      locale: localeName,
+      other: 'You have $taskCount tasks across $_temp0 today',
+      one: 'You have 1 task across $_temp1 today',
+      zero: 'No tasks today — stay on track!',
+    );
+    return '$_temp2';
+  }
 }

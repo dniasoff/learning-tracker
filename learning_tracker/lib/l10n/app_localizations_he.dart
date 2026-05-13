@@ -1650,4 +1650,31 @@ class AppLocalizationsHe extends AppLocalizations {
   @override
   String get cannotDeactivateLastCurriculumDetail =>
       'לא ניתן להסיר את קורס הלימוד האחרון הפעיל. הוסיפו קורס נוסף לפני הסרת זה.';
+
+  @override
+  String get notificationReminderTitle => 'תזכורת לימוד';
+
+  @override
+  String notificationReminderBody(int taskCount, int curriculumCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      curriculumCount,
+      locale: localeName,
+      other: '$curriculumCount תוכניות לימוד',
+      one: 'תוכנית לימוד אחת',
+    );
+    String _temp1 = intl.Intl.pluralLogic(
+      curriculumCount,
+      locale: localeName,
+      other: '$curriculumCount תוכניות לימוד',
+      one: 'תוכנית לימוד אחת',
+    );
+    String _temp2 = intl.Intl.pluralLogic(
+      taskCount,
+      locale: localeName,
+      other: 'יש לכם $taskCount משימות ב$_temp0 היום',
+      one: 'יש לכם משימה אחת ב$_temp1 היום',
+      zero: 'אין משימות להיום — שמרו על הרצף!',
+    );
+    return '$_temp2';
+  }
 }

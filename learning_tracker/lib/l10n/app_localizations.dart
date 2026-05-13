@@ -3076,6 +3076,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'You cannot remove your last active curriculum. Add another curriculum before removing this one.'**
   String get cannotDeactivateLastCurriculumDetail;
+
+  /// No description provided for @notificationReminderTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Learning Reminder'**
+  String get notificationReminderTitle;
+
+  /// No description provided for @notificationReminderBody.
+  ///
+  /// In en, this message translates to:
+  /// **'{taskCount,plural, =0{No tasks today — stay on track!} =1{You have 1 task across {curriculumCount,plural, =1{1 curriculum} other{{curriculumCount} curricula}} today} other{You have {taskCount} tasks across {curriculumCount,plural, =1{1 curriculum} other{{curriculumCount} curricula}} today}}'**
+  String notificationReminderBody(int taskCount, int curriculumCount);
 }
 
 class _AppLocalizationsDelegate

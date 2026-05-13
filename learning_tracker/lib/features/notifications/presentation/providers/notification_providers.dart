@@ -5,10 +5,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/analytics/analytics_provider.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
+import 'package:learning_tracker/features/notifications/data/services/sacred_window_repository.dart';
 import 'package:learning_tracker/features/notifications/domain/services/notification_scheduler.dart';
 import 'package:learning_tracker/features/notifications/domain/services/notification_service.dart';
 import 'package:learning_tracker/features/notifications/domain/services/streak_alert_service.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
+import 'package:learning_tracker/features/sacred_time/presentation/providers/sacred_location_provider.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/providers/sacred_windows_provider.dart';
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
 import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
@@ -219,12 +221,27 @@ bool isShabbosQuietActive(Ref ref) {
   return ref.watch(currentSacredWindowProvider) != null;
 }
 
+/// Provides the [SacredWindowRepository] singleton.
+///
+/// Kept alive so the in-memory cache survives across provider rebuilds.
+/// [TimezoneLifecycleObserver] calls [SacredWindowRepository.invalidate]
+/// on resume (DNI-367).
+@Riverpod(keepAlive: true)
+SacredWindowRepository sacredWindowRepository(Ref ref) {
+  return SacredWindowRepository();
+}
+
 /// Provides the [NotificationScheduler] instance.
 @riverpod
 NotificationScheduler notificationScheduler(Ref ref) {
   final service = ref.watch(notificationServiceProvider);
   final analytics = ref.watch(analyticsServiceProvider);
-  return NotificationScheduler(service: service, analytics: analytics);
+  final sacredRepo = ref.watch(sacredWindowRepositoryProvider);
+  return NotificationScheduler(
+    service: service,
+    sacredWindowRepository: sacredRepo,
+    analytics: analytics,
+  );
 }
 
 /// Watches all notification preference providers and syncs the composite
@@ -246,7 +263,12 @@ final notificationSettingsCloudSyncEffectProvider = FutureProvider<void>((
 /// Watches reminder settings and daily tasks, then schedules or cancels
 /// the notification accordingly.
 ///
-/// Also respects Shabbos quiet mode — cancels notifications during Shabbos.
+/// DNI-367 (Story 26.24): now schedules a rolling 14-day batch of pre-filtered
+/// one-shots instead of a repeating notification. Sacred Time windows are
+/// checked per-fire-time by [NotificationScheduler.scheduleReminder].
+///
+/// Also respects Shabbos quiet mode — cancels all notifications when Sacred
+/// Time is currently active (the live lock-screen guard).
 ///
 /// Kept alive so that time/enable changes always trigger a reschedule,
 /// even if no UI is watching this provider at the moment.
@@ -272,10 +294,26 @@ Future<void> reminderSyncEffect(Ref ref) async {
   final taskCount = tasks.length;
   final curriculumCount = tasks.map((t) => t.curriculumId).toSet().length;
 
-  await scheduler.schedule(
+  // Resolve Sacred Location for per-fire-time window filtering (DNI-367).
+  final location = ref.read(sacredLocationProvider);
+  final inIsrael = ref.read(inIsraelProvider);
+
+  // Build locale-aware notification body.
+  // NOTE: We build a plain-English body here since locale context is not
+  // available in providers. For fully locale-aware bodies, callers that have
+  // BuildContext should use AppLocalizations and call scheduler.scheduleReminder
+  // directly with a pre-resolved body string (UX-DR7).
+  final body =
+      'You have $taskCount '
+      'task${taskCount == 1 ? '' : 's'} across '
+      '$curriculumCount curricul${curriculumCount == 1 ? 'um' : 'a'} today';
+
+  await scheduler.scheduleReminder(
     time: time,
-    taskCount: taskCount,
-    curriculumCount: curriculumCount,
+    title: 'Learning Reminder',
+    body: body,
+    location: location,
+    inIsrael: inIsrael,
   );
 }
 
