@@ -2,6 +2,7 @@ import 'package:drift/drift.dart' hide isNotNull, isNull;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
+import 'package:learning_tracker/core/enums/cross_profile_scope.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/track_repository.dart';
@@ -214,7 +215,10 @@ void main() {
 
         // Completion data is preserved — completions are append-only (FR5 / E24).
         final completions = await database.completionDao
-            .getCompletionsByCurriculum(CurriculumId.bavli.storageKey);
+            .getCompletionsByCurriculum(
+              CurriculumId.bavli.storageKey,
+              scope: CrossProfileScope.dataExport,
+            );
         expect(completions, hasLength(1));
       },
     );

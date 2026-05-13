@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:drift/drift.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
+import 'package:learning_tracker/core/enums/cross_profile_scope.dart';
 
 /// Result of validating an import file.
 class ImportPreview {
@@ -69,7 +70,9 @@ class DataExportImportService {
 
   /// Exports all user data to a JSON string.
   Future<String> exportData() async {
-    final completions = await _database.completionDao.getAllCompletions();
+    final completions = await _database.completionDao.getAllCompletions(
+      scope: CrossProfileScope.dataExport,
+    );
     final goals = await _database.goalDao.getAllGoals();
     final stages = await _database.stageDao.getAllStageDefinitions();
     final streaks = await _database.streakDao.getStreak();

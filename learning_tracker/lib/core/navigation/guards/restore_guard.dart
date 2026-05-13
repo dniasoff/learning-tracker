@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:auto_route/auto_route.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
+import 'package:learning_tracker/core/enums/cross_profile_scope.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 
@@ -54,7 +55,9 @@ class RestoreGuard extends AutoRouteGuard {
     }
 
     final db = _getDatabase();
-    final completions = await db.completionDao.getAllCompletions();
+    final completions = await db.completionDao.getAllCompletions(
+      scope: CrossProfileScope.syncRestore,
+    );
     final profiles = await db.userProfileDao.getAllUserProfiles();
     _isNewDevice = completions.isEmpty && profiles.isEmpty;
 

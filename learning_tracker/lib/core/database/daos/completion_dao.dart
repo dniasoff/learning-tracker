@@ -1,8 +1,10 @@
 import 'dart:math' as math;
 
 import 'package:drift/drift.dart';
+import 'package:flutter/foundation.dart';
 import 'package:learning_tracker/core/database/tables/completions.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
+import 'package:learning_tracker/core/enums/cross_profile_scope.dart';
 
 part 'completion_dao.g.dart';
 
@@ -15,20 +17,34 @@ class CompletionDao extends DatabaseAccessor<UserDatabase>
     with _$CompletionDaoMixin {
   CompletionDao(super.db);
 
-  Future<List<Completion>> getAllCompletions() => select(completions).get();
+  Future<List<Completion>> getAllCompletions({
+    required CrossProfileScope scope,
+  }) {
+    _assertCrossProfileScope(scope, 'getAllCompletions');
+    return select(completions).get();
+  }
 
   Future<Completion?> getCompletionById(int id) =>
       (select(completions)..where((t) => t.id.equals(id))).getSingleOrNull();
 
-  Future<List<Completion>> getCompletionsByCurriculum(String curriculumId) =>
-      (select(
-        completions,
-      )..where((t) => t.curriculumId.equals(curriculumId))).get();
+  Future<List<Completion>> getCompletionsByCurriculum(
+    String curriculumId, {
+    required CrossProfileScope scope,
+  }) {
+    _assertCrossProfileScope(scope, 'getCompletionsByCurriculum');
+    return (select(completions)
+          ..where((t) => t.curriculumId.equals(curriculumId)))
+        .get();
+  }
 
-  Future<List<Completion>> getCompletionsForContent(String sefariaRef) =>
-      (select(
-        completions,
-      )..where((t) => t.sefariaRef.equals(sefariaRef))).get();
+  Future<List<Completion>> getCompletionsForContent(
+    String sefariaRef, {
+    required CrossProfileScope scope,
+  }) {
+    _assertCrossProfileScope(scope, 'getCompletionsForContent');
+    return (select(completions)..where((t) => t.sefariaRef.equals(sefariaRef)))
+        .get();
+  }
 
   // ========== Profile-Scoped Queries ==========
 
@@ -264,17 +280,26 @@ class CompletionDao extends DatabaseAccessor<UserDatabase>
   /// Get completions within a date range.
   Future<List<Completion>> getCompletionsByDateRange(
     DateTime start,
-    DateTime end,
-  ) =>
-      (select(completions)..where(
+    DateTime end, {
+    required CrossProfileScope scope,
+  }) {
+    _assertCrossProfileScope(scope, 'getCompletionsByDateRange');
+    return (select(completions)
+          ..where(
             (t) =>
                 t.completedAt.isBiggerOrEqualValue(start) &
                 t.completedAt.isSmallerOrEqualValue(end),
           ))
-          .get();
+        .get();
+  }
 
   /// Check if any completions exist within a date range.
-  Future<bool> hasCompletionsInDateRange(DateTime start, DateTime end) async {
+  Future<bool> hasCompletionsInDateRange(
+    DateTime start,
+    DateTime end, {
+    required CrossProfileScope scope,
+  }) async {
+    _assertCrossProfileScope(scope, 'hasCompletionsInDateRange');
     final result =
         await (select(completions)
               ..where(
@@ -316,7 +341,11 @@ class CompletionDao extends DatabaseAccessor<UserDatabase>
   ///
   /// Returns a map of track type keys to completion counts.
   /// Includes counts from deactivated tracks (historical data preserved).
-  Future<Map<String, int>> getTrackBreakdown(String curriculumId) async {
+  Future<Map<String, int>> getTrackBreakdown(
+    String curriculumId, {
+    required CrossProfileScope scope,
+  }) async {
+    _assertCrossProfileScope(scope, 'getTrackBreakdown');
     final query = selectOnly(completions)
       ..addColumns([completions.trackType, completions.id.count()])
       ..where(completions.curriculumId.equals(curriculumId))
@@ -339,7 +368,11 @@ class CompletionDao extends DatabaseAccessor<UserDatabase>
   /// Get total completion count for a curriculum across all tracks.
   ///
   /// Returns the sum of all completions regardless of track type.
-  Future<int> getAggregateCount(String curriculumId) async {
+  Future<int> getAggregateCount(
+    String curriculumId, {
+    required CrossProfileScope scope,
+  }) async {
+    _assertCrossProfileScope(scope, 'getAggregateCount');
     final query = selectOnly(completions)
       ..addColumns([completions.id.count()])
       ..where(completions.curriculumId.equals(curriculumId));
@@ -566,5 +599,33 @@ class CompletionDao extends DatabaseAccessor<UserDatabase>
               ..limit(1))
             .get();
     return result.isNotEmpty;
+  }
+
+  // ========== Cross-Profile Scope Guard (DNI-321) ==========
+
+  /// Asserts that [scope] is provided for every cross-profile read.
+  ///
+  /// In debug builds an [AssertionError] is thrown and the event is logged.
+  /// In release builds only the structured warning breadcrumb is written.
+  void _assertCrossProfileScope(CrossProfileScope scope, String method) {
+    // ignore: unnecessary_null_comparison — future-proofs against nullable callers
+    assert(scope != null, 'CrossProfileScope must be provided for $method');
+    if (kDebugMode) {
+      // Stable caller hash: method name → identity integer (no stack-unwinding
+      // needed; real stack hash would require dart:developer which is
+      // unavailable in release).
+      final callerHash = method.hashCode & 0xFFFF;
+      debugPrint(
+        '[cross_profile_read] event=cross_profile_read '
+        'method=$method scope=${scope.name} callerHash=$callerHash',
+      );
+    } else {
+      // In release mode log a structured breadcrumb as a warning.
+      // No Crashlytics SDK dependency — we use debugPrint which Talker
+      // captures via its Flutter error handler.
+      debugPrint(
+        'WARNING cross_profile_read method=$method scope=${scope.name}',
+      );
+    }
   }
 }

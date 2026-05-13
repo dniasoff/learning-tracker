@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart'
     hide expect, group, setUp, tearDown, test;
 import 'package:learning_tracker/core/database/user/user_database.dart';
+import 'package:learning_tracker/core/enums/cross_profile_scope.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/core/enums/user_mode.dart';
@@ -297,7 +298,9 @@ void main() {
         ),
       );
 
-      final completions = await db.completionDao.getAllCompletions();
+      final completions = await db.completionDao.getAllCompletions(
+        scope: CrossProfileScope.dataExport,
+      );
       final total = completions.fold<int>(0, (sum, c) => sum + c.points);
       expect(total, equals(18));
     });
@@ -372,9 +375,15 @@ void main() {
         );
 
         final mishnayosCompletions = await db.completionDao
-            .getCompletionsByCurriculum('mishnayos');
+            .getCompletionsByCurriculum(
+              'mishnayos',
+              scope: CrossProfileScope.parentAnalytics,
+            );
         final bavliCompletions = await db.completionDao
-            .getCompletionsByCurriculum('bavli');
+            .getCompletionsByCurriculum(
+              'bavli',
+              scope: CrossProfileScope.parentAnalytics,
+            );
 
         DateTime? latestFor(List<Completion> completions) {
           if (completions.isEmpty) return null;
@@ -829,6 +838,7 @@ void main() {
 
       final allCompletions = await db.completionDao.getCompletionsByCurriculum(
         'mishnayos',
+        scope: CrossProfileScope.parentAnalytics,
       );
       final personalCompletions = allCompletions
           .where((c) => c.trackType == TrackType.personal.storageKey)

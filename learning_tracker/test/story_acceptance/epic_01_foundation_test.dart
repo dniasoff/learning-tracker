@@ -9,6 +9,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart' show TestWidgetsFlutterBinding;
 import 'package:kosher_dart/kosher_dart.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
+import 'package:learning_tracker/core/enums/cross_profile_scope.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/core/enums/user_mode.dart';
@@ -133,7 +134,9 @@ void main() {
       );
       expect(id, greaterThan(0));
 
-      final all = await db.completionDao.getAllCompletions();
+      final all = await db.completionDao.getAllCompletions(
+        scope: CrossProfileScope.dataExport,
+      );
       expect(all, hasLength(1));
     });
   });

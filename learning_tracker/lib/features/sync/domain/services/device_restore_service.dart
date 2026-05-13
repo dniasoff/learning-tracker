@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
+import 'package:learning_tracker/core/enums/cross_profile_scope.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/curriculum_import_service.dart';
 import 'package:learning_tracker/features/sync/data/firestore_data_source.dart';
@@ -85,7 +86,9 @@ class DeviceRestoreService {
     } catch (_) {
       // Firebase not initialized (e.g. test environment) — treat as no session.
     }
-    final completions = await _database.completionDao.getAllCompletions();
+    final completions = await _database.completionDao.getAllCompletions(
+      scope: CrossProfileScope.syncRestore,
+    );
     if (firebaseUser != null && completions.isEmpty) return true;
 
     if (completions.isNotEmpty) return false;

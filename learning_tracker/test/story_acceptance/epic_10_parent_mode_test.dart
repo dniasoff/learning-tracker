@@ -10,6 +10,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart'
     hide expect, group, setUp, setUpAll, tearDown, tearDownAll, test;
 import 'package:learning_tracker/core/database/user/user_database.dart';
+import 'package:learning_tracker/core/enums/cross_profile_scope.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/user_mode.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
@@ -667,6 +668,7 @@ void main() {
       // Existing completion still has 10 points
       final completions = await db.completionDao.getCompletionsByCurriculum(
         CurriculumId.mishnayos.storageKey,
+        scope: CrossProfileScope.parentAnalytics,
       );
       expect(completions.length, 1);
       expect(completions.first.points, 10);
@@ -819,6 +821,7 @@ void main() {
         // Verify the completion has 15 points
         final completions = await db.completionDao.getCompletionsByCurriculum(
           CurriculumId.mishnayos.storageKey,
+          scope: CrossProfileScope.parentAnalytics,
         );
         expect(completions.last.points, 15);
 

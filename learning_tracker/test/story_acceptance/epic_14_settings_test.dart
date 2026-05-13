@@ -6,6 +6,7 @@ import 'dart:convert';
 
 import 'package:drift/drift.dart' hide isNotNull, isNull;
 import 'package:learning_tracker/core/database/user/user_database.dart';
+import 'package:learning_tracker/core/enums/cross_profile_scope.dart';
 import 'package:learning_tracker/core/enums/user_mode.dart';
 import 'package:learning_tracker/features/auth/domain/repositories/auth_repository.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/user_profile_service.dart';
@@ -434,13 +435,20 @@ void main() {
         });
 
         // Verify empty
-        expect(await db.completionDao.getAllCompletions(), isEmpty);
+        expect(
+          await db.completionDao.getAllCompletions(
+            scope: CrossProfileScope.dataExport,
+          ),
+          isEmpty,
+        );
 
         // Import
         await service.importData(jsonString);
 
         // Verify restored
-        final completions = await db.completionDao.getAllCompletions();
+        final completions = await db.completionDao.getAllCompletions(
+          scope: CrossProfileScope.dataExport,
+        );
         expect(completions.length, equals(2));
         expect(completions.first.curriculumId, equals('mishna'));
         expect(completions.first.sefariaRef, equals('Mishnah_Berakhot.1.1'));
@@ -522,7 +530,9 @@ void main() {
       expect(() => service.importData(badImport), throwsA(anything));
 
       // Original data should be preserved (transaction rolled back)
-      final completions = await db.completionDao.getAllCompletions();
+      final completions = await db.completionDao.getAllCompletions(
+        scope: CrossProfileScope.dataExport,
+      );
       expect(completions.length, equals(2)); // Original 2 completions
     });
 
@@ -548,7 +558,12 @@ void main() {
         });
 
         // Verify all empty
-        expect(await db.completionDao.getAllCompletions(), isEmpty);
+        expect(
+          await db.completionDao.getAllCompletions(
+            scope: CrossProfileScope.dataExport,
+          ),
+          isEmpty,
+        );
         expect(await db.goalDao.getAllGoals(), isEmpty);
         expect(await db.streakDao.getStreak(), isNull);
 
@@ -556,7 +571,12 @@ void main() {
         await service.importData(exported);
 
         // Verify all data restored
-        expect((await db.completionDao.getAllCompletions()).length, equals(2));
+        expect(
+          (await db.completionDao.getAllCompletions(
+            scope: CrossProfileScope.dataExport,
+          )).length,
+          equals(2),
+        );
         expect((await db.goalDao.getAllGoals()).length, equals(1));
         expect((await db.stageDao.getAllStageDefinitions()).length, equals(2));
         expect((await db.streakDao.getStreak())?.currentStreak, equals(5));

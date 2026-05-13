@@ -7,6 +7,7 @@ import 'dart:async';
 import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
+import 'package:learning_tracker/core/enums/cross_profile_scope.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/connectivity_service.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/curriculum_import_service.dart';
@@ -381,7 +382,9 @@ void main() {
 
       await syncEngine.pullOnLaunch();
 
-      final completions = await database.completionDao.getAllCompletions();
+      final completions = await database.completionDao.getAllCompletions(
+        scope: CrossProfileScope.syncRestore,
+      );
       expect(completions.length, 2);
     });
 
@@ -479,7 +482,9 @@ void main() {
         await syncEngine.pullOnLaunch();
 
         // Local data unchanged
-        final completions = await database.completionDao.getAllCompletions();
+        final completions = await database.completionDao.getAllCompletions(
+          scope: CrossProfileScope.syncRestore,
+        );
         expect(completions.length, 1);
         // No Firestore calls
         verifyNever(
@@ -634,7 +639,9 @@ void main() {
         // Allow async merge to process
         await Future<void>.delayed(const Duration(milliseconds: 50));
 
-        final completions = await database.completionDao.getAllCompletions();
+        final completions = await database.completionDao.getAllCompletions(
+          scope: CrossProfileScope.syncRestore,
+        );
         expect(completions.length, 1);
         expect(completions.first.sefariaRef, 'mishna-5');
 
@@ -915,7 +922,9 @@ void main() {
 
       await restoreService.restore();
 
-      final completions = await database.completionDao.getAllCompletions();
+      final completions = await database.completionDao.getAllCompletions(
+        scope: CrossProfileScope.syncRestore,
+      );
       expect(completions, hasLength(1));
       expect(completions.first.sefariaRef, 'mishna-1');
 

@@ -9,6 +9,7 @@ import 'dart:io';
 import 'package:drift/drift.dart' hide isNotNull, isNull;
 import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
+import 'package:learning_tracker/core/enums/cross_profile_scope.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
@@ -414,6 +415,7 @@ void main() {
         // Data must still exist
         final completions = await db.completionDao.getCompletionsByCurriculum(
           CurriculumId.bavli.storageKey,
+          scope: CrossProfileScope.dataExport,
         );
         expect(completions, hasLength(1));
 
@@ -451,6 +453,7 @@ void main() {
         // Data survives the round-trip
         final completions = await db.completionDao.getCompletionsByCurriculum(
           CurriculumId.bavli.storageKey,
+          scope: CrossProfileScope.dataExport,
         );
         expect(completions, hasLength(1));
         expect(completions.first.sefariaRef, equals('Berakhot.2a'));
@@ -770,6 +773,7 @@ void main() {
 
       final completions = await db.completionDao.getCompletionsForContent(
         'Mishnah Berakhot 1.1',
+        scope: CrossProfileScope.dataExport,
       );
       expect(completions, hasLength(1));
       expect(completions.first.sefariaRef, equals('Mishnah Berakhot 1.1'));

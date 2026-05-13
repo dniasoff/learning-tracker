@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart'
     show FirebaseException, Timestamp;
 import 'package:drift/drift.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
+import 'package:learning_tracker/core/enums/cross_profile_scope.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/core/network/connectivity_service.dart';
@@ -2911,7 +2912,9 @@ class SyncEngine {
 
     try {
       // --- Completions (append-only) ---
-      final completions = await _database.completionDao.getAllCompletions();
+      final completions = await _database.completionDao.getAllCompletions(
+        scope: CrossProfileScope.syncRestore,
+      );
       for (final c in completions) {
         await pushCompletion({
           'profile_id': c.profileId,

@@ -2,6 +2,7 @@ import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:learning_tracker/core/database/user/user_database.dart';
+import 'package:learning_tracker/core/enums/cross_profile_scope.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/core/exceptions/duplicate_completion_exception.dart';
 import 'package:learning_tracker/core/services/duplicate_prevention_service.dart';
@@ -129,7 +130,9 @@ void main() {
       );
 
       // Verify both completions exist
-      final allCompletions = await database.completionDao.getAllCompletions();
+      final allCompletions = await database.completionDao.getAllCompletions(
+        scope: CrossProfileScope.dataExport,
+      );
       expect(allCompletions.length, 2);
       expect(
         allCompletions.any(

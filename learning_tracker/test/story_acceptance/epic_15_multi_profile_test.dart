@@ -6,6 +6,7 @@ import 'dart:convert';
 
 import 'package:drift/drift.dart' hide isNotNull, isNull;
 import 'package:learning_tracker/core/database/user/user_database.dart';
+import 'package:learning_tracker/core/enums/cross_profile_scope.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/core/services/learning_program_service.dart';
@@ -149,7 +150,9 @@ void main() {
           );
 
           // Query all completions — both exist
-          final all = await db.completionDao.getAllCompletions();
+          final all = await db.completionDao.getAllCompletions(
+            scope: CrossProfileScope.parentAnalytics,
+          );
           expect(all.length, 2);
 
           // Query by profile — each profile sees only its own
@@ -2657,6 +2660,7 @@ void main() {
           // Old completion should still exist (append-only table).
           final completions = await db.completionDao.getCompletionsByCurriculum(
             'bavli',
+            scope: CrossProfileScope.parentAnalytics,
           );
           expect(completions.length, 1);
           expect(completions.first.sefariaRef, 'Berakhot 2a');
