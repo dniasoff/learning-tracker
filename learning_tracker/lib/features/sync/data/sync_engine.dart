@@ -1904,13 +1904,13 @@ class SyncEngine {
               ),
             );
             _logger.debug(
-              'LWW: remote curriculum track wins '
-              '(curriculum=$curriculumKey, trackType=$trackTypeKey)',
+              event: 'LWW: remote curriculum track wins '
+                  '(curriculum=$curriculumKey, trackType=$trackTypeKey)',
             );
           } else {
             _logger.debug(
-              'LWW: local curriculum track kept '
-              '(curriculum=$curriculumKey, trackType=$trackTypeKey)',
+              event: 'LWW: local curriculum track kept '
+                  '(curriculum=$curriculumKey, trackType=$trackTypeKey)',
             );
           }
         }
@@ -2599,7 +2599,7 @@ class SyncEngine {
     required int profileId,
   }) async {
     _logger.debug(
-      'Merging ${remoteItems.length} learning-order items from Firestore',
+      event: 'Merging ${remoteItems.length} learning-order items from Firestore',
     );
 
     for (final remote in remoteItems) {
@@ -2621,7 +2621,8 @@ class SyncEngine {
             sortOrder == null ||
             updatedAt == null) {
           _logger.warning(
-            'Skipping invalid remote learning-order item: $remote',
+            event: 'Skipping invalid remote learning-order item',
+            fields: {'item': remote.toString()},
           );
           continue;
         }
@@ -2638,7 +2639,10 @@ class SyncEngine {
         );
       } catch (e) {
         // ignore: avoid_catches_without_on_clauses — intentional merge-loop error boundary
-        _logger.warning('Failed to merge learning-order item: $e');
+        _logger.warning(
+          event: 'Failed to merge learning-order item',
+          fields: {'error': e.toString()},
+        );
       }
     }
   }
@@ -2649,7 +2653,7 @@ class SyncEngine {
     _consecutiveListenerErrors = 0;
     try {
       _logger.debug(
-        'Received ${items.length} learning-order items from listener',
+        event: 'Received ${items.length} learning-order items from listener',
       );
       await _mergeLearningOrder(
         items,

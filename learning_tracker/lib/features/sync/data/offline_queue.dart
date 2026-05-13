@@ -206,8 +206,8 @@ class OfflineQueue {
     final payload = jsonEncode(item);
     await _queue.enqueue('learning_order_item', payload);
     _logger.info(
-      'Queued learning order item for offline sync: '
-      '${item["curriculum_id"]}_${item["sefaria_ref"]}',
+      event: 'Queued learning order item for offline sync: '
+          '${item["curriculum_id"]}_${item["sefaria_ref"]}',
     );
   }
 
