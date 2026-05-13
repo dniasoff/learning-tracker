@@ -5,6 +5,8 @@ import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/core/enums/user_mode.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/services/cross_curriculum_aggregator.dart';
+import 'package:learning_tracker/core/streak/streak_state_provider.dart';
+import 'package:learning_tracker/core/time/local_day_clock.dart';
 import 'package:learning_tracker/features/gamification/domain/models/reward_milestone.dart';
 import 'package:learning_tracker/features/gamification/domain/models/streak_recovery_info.dart';
 import 'package:learning_tracker/features/gamification/domain/services/points_service.dart';
@@ -172,21 +174,24 @@ Future<DateTime?> dashboardLastCompletion(
 
 /// Streak data provider, scoped to the active profile.
 ///
-/// Self-heals the cached `streaks` row from the `streak_events` log on every
-/// first read for the profile — so stale rows left by old bugs (e.g. a
-/// bulk-mark-prior crediting a phantom streak across reinstalls) get
-/// reconciled without user intervention.
+/// Reads streak state through `core/streak/StreakStateProvider` — the
+/// only read path post-DNI-337. The provider replays the append-only
+/// `streak_events` log through `StreakReducer` (UTC day boundaries),
+/// restoring from `completions` on a new-device empty-log first launch.
 @riverpod
 Stream<({int currentStreak, int maxStreak})> dashboardStreak(Ref ref) async* {
   final db = ref.watch(userDatabaseProvider);
   final profileId = ref.watch(activeProfileIdProvider);
-  // One-shot reconciliation per (profile, provider build) so the cached
-  // row reflects truth before the dashboard renders.
-  await StreakService(db, profileId: profileId).reconcileFromEvents();
-  yield* db.streakDao.watchStreakByProfile(profileId).map((streak) {
-    if (streak == null) return (currentStreak: 0, maxStreak: 0);
-    return (currentStreak: streak.currentStreak, maxStreak: streak.maxStreak);
-  });
+  final stateProvider = StreakStateProvider(
+    db: db,
+    clock: const SystemLocalDayClock(),
+  );
+  yield* stateProvider
+      .watch(profileId: profileId)
+      .map(
+        (state) =>
+            (currentStreak: state.currentStreak, maxStreak: state.maxStreak),
+      );
 }
 
 /// Global points total, scoped to active profile.

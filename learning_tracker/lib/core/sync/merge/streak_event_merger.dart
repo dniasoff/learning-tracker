@@ -1,36 +1,48 @@
-import 'package:learning_tracker/core/sync/merge/entity_merger.dart';
-
-/// Append-only merger for streak events.
+/// `StreakEventMerger` — append-only merger for `streak_events`.
 ///
-/// Streak state is derived by replaying the event log (DNI-337 — `core/streak/`
-/// reducer). Merging a pull therefore means inserting any unseen events;
-/// the reducer rebuilds the snapshot on the next read. Duplicates are
-/// dropped by the composite-UNIQUE constraint introduced in DNI-323.
-class StreakEventMerger implements EntityMerger {
-  StreakEventMerger({required MergeStore store}) : _store = store;
+/// Streak state is derived by replaying the event log
+/// ([StreakReducer]). Merging a pull therefore reduces to "insert any
+/// unseen rows"; the reducer rebuilds the snapshot on the next read.
+/// Duplicates (cross-device same-instant completions) are dropped by
+/// the composite-UNIQUE `(profileId, eventTimestamp, eventType)` from
+/// Story 25.2 (DNI-323).
+///
+/// API note: lives at `core/sync/merge/` so the DNI-334 `MergeRouter`
+/// can pick it up unchanged when that PR lands on `dev`. Until then
+/// this class can be used directly by `core/streak/` code.
+library;
 
-  final MergeStore _store;
+import 'package:learning_tracker/core/database/user/user_database.dart'
+    hide StreakEvent;
+import 'package:learning_tracker/core/streak/streak_event.dart';
+import 'package:learning_tracker/core/streak/streak_event_log.dart';
 
-  @override
-  String get kind => EntityKind.streak;
+class StreakEventMerger {
+  StreakEventMerger(UserDatabase db) : _log = StreakEventLog(db);
 
-  @override
+  final StreakEventLog _log;
+
+  /// Insert any unseen pulled rows. Each [rows] entry follows the
+  /// Firestore shape (`event_type`, `event_timestamp` ISO-8601 string,
+  /// optional `client_device_id`). UNIQUE silently collapses dupes.
   Future<void> merge({
     required int profileId,
     required List<Map<String, dynamic>> rows,
   }) async {
     for (final row in rows) {
-      final naturalKey =
-          row['firestore_id']?.toString() ?? _eventKey(row, profileId);
-      await _store.insertIfAbsent(
-        kind: kind,
-        profileId: profileId,
-        naturalKey: naturalKey,
-        fields: row,
+      final eventType = row['event_type'] as String?;
+      final tsRaw = row['event_timestamp'];
+      if (eventType == null || tsRaw == null) continue;
+      final ts = tsRaw is DateTime ? tsRaw : DateTime.parse(tsRaw.toString());
+
+      await _log.append(
+        StreakEvent(
+          profileId: profileId,
+          eventType: eventType,
+          eventTimestamp: ts,
+          clientDeviceId: row['client_device_id'] as String?,
+        ),
       );
     }
   }
-
-  String _eventKey(Map<String, dynamic> row, int profileId) =>
-      '$profileId|${row['event_type']}|${row['occurred_at']}';
 }

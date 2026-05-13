@@ -10,7 +10,6 @@ import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 import 'package:learning_tracker/features/gamification/domain/models/reward_milestone.dart';
 import 'package:learning_tracker/features/gamification/domain/services/reward_milestone_service.dart';
-import 'package:learning_tracker/features/gamification/domain/services/streak_service.dart';
 import 'package:learning_tracker/features/learning/data/repositories/bookmark_repository_impl.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_request.dart';
 import 'package:learning_tracker/features/learning/domain/entities/mark_completion_result.dart';
@@ -26,7 +25,6 @@ class CompletionRepositoryImpl implements CompletionRepository {
   final ContentRepository _contentRepository;
   final BookmarkRepository? _bookmarkRepository;
   final CompletionDetectionService? _completionDetectionService;
-  final StreakService? _streakService;
   final RewardMilestoneService? _rewardMilestoneService;
   final int _activeProfileId;
   final CompletionWriter _completionWriter;
@@ -37,7 +35,6 @@ class CompletionRepositoryImpl implements CompletionRepository {
     required ContentRepository contentRepository,
     BookmarkRepository? bookmarkRepository,
     CompletionDetectionService? completionDetectionService,
-    StreakService? streakService,
     RewardMilestoneService? rewardMilestoneService,
     int activeProfileId = 0,
     CompletionWriter? completionWriter,
@@ -46,7 +43,6 @@ class CompletionRepositoryImpl implements CompletionRepository {
        _contentRepository = contentRepository,
        _bookmarkRepository = bookmarkRepository,
        _completionDetectionService = completionDetectionService,
-       _streakService = streakService,
        _rewardMilestoneService = rewardMilestoneService,
        _activeProfileId = activeProfileId,
        _completionWriter = completionWriter ?? CompletionWriter(database);
@@ -127,17 +123,17 @@ class CompletionRepositoryImpl implements CompletionRepository {
             )
           : 0;
 
-      // 5. Create completion record
+      // 5. Create completion record. `_createCompletion` tees the
+      //    write into `streak_events` (the append-only log) so the
+      //    streak reducer in `core/streak/` derives state on read.
+      //    No `StreakService.recordCompletion` call — DNI-337 removed
+      //    the synchronous cached-table write path.
       final created = await _createCompletion(
         request: request,
         trackId: trackId,
         points: points,
         profileId: _activeProfileId,
       );
-
-      // 6. Update cached streak table so the dashboard reflects the new
-      //    streak immediately — applies to both child and adult profiles.
-      await _streakService?.recordCompletion(created.completedAt);
 
       return (completion: created, isNew: true);
     });
@@ -414,10 +410,9 @@ class CompletionRepositoryImpl implements CompletionRepository {
       points: points,
       profileId: profileId,
     );
-
-    final streak = StreakService(_database, profileId: profileId);
-    await streak.recordCompletion(completion.completedAt);
-
+    // No `StreakService.recordCompletion` — DNI-337: streak state is
+    // derived from `streak_events` by `core/streak/StreakReducer`. The
+    // event was teed in by `_createCompletion → _appendStreakEvent`.
     return completion;
   }
 

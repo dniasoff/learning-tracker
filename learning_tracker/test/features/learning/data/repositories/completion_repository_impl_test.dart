@@ -3,8 +3,9 @@ import 'package:learning_tracker/core/database/daos/profile_dao.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
+import 'package:learning_tracker/core/streak/streak_state_provider.dart';
+import 'package:learning_tracker/core/time/local_day_clock.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
-import 'package:learning_tracker/features/gamification/domain/services/streak_service.dart';
 import 'package:learning_tracker/features/learning/data/repositories/completion_repository_impl.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_request.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/completion_repository.dart';
@@ -75,7 +76,6 @@ void main() {
       database: database,
       syncEngine: mockSyncEngine,
       contentRepository: mockContentRepository,
-      streakService: StreakService(database, profileId: learnerId),
       activeProfileId: learnerId,
     );
 
@@ -322,10 +322,11 @@ void main() {
   });
 
   group('streak integration', () {
-    test('updates cached streak table on first completion', () async {
-      // Streak table empty before any completion
-      expect(await database.streakDao.getStreakByProfile(learnerId), isNull);
-
+    // Streak state is derived from `streak_events` (DNI-337). The
+    // completion path tees an event into the log; assertions go
+    // through `StreakStateProvider` rather than the cached `streaks`
+    // snapshot.
+    test('first completion produces currentStreak=1 via the reducer', () async {
       await repository.markComplete(
         const CompletionRequest(
           curriculumId: 'mishnayos',
@@ -335,10 +336,12 @@ void main() {
         ),
       );
 
-      final streak = await database.streakDao.getStreakByProfile(learnerId);
-      expect(streak, isNotNull);
-      expect(streak!.currentStreak, 1);
-      expect(streak.maxStreak, 1);
+      final state = await StreakStateProvider(
+        db: database,
+        clock: const SystemLocalDayClock(),
+      ).read(profileId: learnerId);
+      expect(state.currentStreak, 1);
+      expect(state.maxStreak, 1);
     });
 
     test('duplicate completion does not double-increment streak', () async {
@@ -352,8 +355,11 @@ void main() {
       await repository.markComplete(request);
       await repository.markComplete(request); // idempotent path
 
-      final streak = await database.streakDao.getStreakByProfile(learnerId);
-      expect(streak!.currentStreak, 1);
+      final state = await StreakStateProvider(
+        db: database,
+        clock: const SystemLocalDayClock(),
+      ).read(profileId: learnerId);
+      expect(state.currentStreak, 1);
     });
   });
 

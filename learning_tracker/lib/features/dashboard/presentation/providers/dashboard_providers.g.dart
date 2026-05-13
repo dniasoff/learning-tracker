@@ -490,20 +490,20 @@ final class DashboardLastCompletionFamily extends $Family
 
 /// Streak data provider, scoped to the active profile.
 ///
-/// Self-heals the cached `streaks` row from the `streak_events` log on every
-/// first read for the profile — so stale rows left by old bugs (e.g. a
-/// bulk-mark-prior crediting a phantom streak across reinstalls) get
-/// reconciled without user intervention.
+/// Reads streak state through `core/streak/StreakStateProvider` — the
+/// only read path post-DNI-337. The provider replays the append-only
+/// `streak_events` log through `StreakReducer` (UTC day boundaries),
+/// restoring from `completions` on a new-device empty-log first launch.
 
 @ProviderFor(dashboardStreak)
 final dashboardStreakProvider = DashboardStreakProvider._();
 
 /// Streak data provider, scoped to the active profile.
 ///
-/// Self-heals the cached `streaks` row from the `streak_events` log on every
-/// first read for the profile — so stale rows left by old bugs (e.g. a
-/// bulk-mark-prior crediting a phantom streak across reinstalls) get
-/// reconciled without user intervention.
+/// Reads streak state through `core/streak/StreakStateProvider` — the
+/// only read path post-DNI-337. The provider replays the append-only
+/// `streak_events` log through `StreakReducer` (UTC day boundaries),
+/// restoring from `completions` on a new-device empty-log first launch.
 
 final class DashboardStreakProvider
     extends
@@ -517,10 +517,10 @@ final class DashboardStreakProvider
         $StreamProvider<({int currentStreak, int maxStreak})> {
   /// Streak data provider, scoped to the active profile.
   ///
-  /// Self-heals the cached `streaks` row from the `streak_events` log on every
-  /// first read for the profile — so stale rows left by old bugs (e.g. a
-  /// bulk-mark-prior crediting a phantom streak across reinstalls) get
-  /// reconciled without user intervention.
+  /// Reads streak state through `core/streak/StreakStateProvider` — the
+  /// only read path post-DNI-337. The provider replays the append-only
+  /// `streak_events` log through `StreakReducer` (UTC day boundaries),
+  /// restoring from `completions` on a new-device empty-log first launch.
   DashboardStreakProvider._()
     : super(
         from: null,
@@ -547,7 +547,7 @@ final class DashboardStreakProvider
   }
 }
 
-String _$dashboardStreakHash() => r'3221eaabdbe45b4448a9fbbe313f5aff77edb4f3';
+String _$dashboardStreakHash() => r'0370557f7b040536a349a20b951070cb1fefa7f1';
 
 /// Global points total, scoped to active profile.
 ///

@@ -3,9 +3,14 @@
 library;
 
 import 'package:drift/drift.dart' hide isNotNull, isNull;
-import 'package:learning_tracker/core/database/user/user_database.dart';
+import 'package:learning_tracker/core/database/user/user_database.dart'
+    hide StreakEvent;
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/user_mode.dart';
+import 'package:learning_tracker/core/streak/streak_event.dart';
+import 'package:learning_tracker/core/streak/streak_event_log.dart';
+import 'package:learning_tracker/core/streak/streak_state_provider.dart';
+import 'package:learning_tracker/core/time/local_day_clock.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/gamification/domain/services/points_service.dart';
 import 'package:learning_tracker/features/gamification/domain/services/streak_service.dart';
@@ -160,44 +165,48 @@ void main() {
     late UserDatabase db;
     late int trackId;
     late StreakService streakService;
+    late StreakEventLog log;
 
     setUp(() async {
       db = createTestDatabase();
       trackId = await _insertTrack(db);
       streakService = StreakService(db);
+      log = StreakEventLog(db);
     });
 
     tearDown(() async {
       await db.close();
     });
 
-    test('complete items on 3 consecutive days, verify streak=3; '
-        'skip a day, complete again, verify streak=4 and max=4', () async {
-      final day1 = DateTimeFactory.utc(2026, 3, 10, 12);
-      final day2 = DateTimeFactory.utc(2026, 3, 11, 14);
-      final day3 = DateTimeFactory.utc(2026, 3, 12, 9);
+    // Streak state is derived from `streak_events` by `core/streak/`
+    // (post-DNI-337). Old `StreakService.recordCompletion` semantics
+    // (incl. grace period) are gone; the reducer is UTC-day only.
+    Future<void> recordOn(DateTime utc) => log.append(
+      StreakEvent(profileId: 0, eventType: 'completion', eventTimestamp: utc),
+    );
 
-      await streakService.recordCompletion(day1);
-      await streakService.recordCompletion(day2);
-      var streak = await streakService.recordCompletion(day3);
-      expect(streak.currentStreak, 3);
-      expect(streak.maxStreak, 3);
+    test('three consecutive UTC days → streak=3 (no grace)', () async {
+      await recordOn(DateTimeFactory.utc(2026, 3, 10, 12));
+      await recordOn(DateTimeFactory.utc(2026, 3, 11, 14));
+      await recordOn(DateTimeFactory.utc(2026, 3, 12, 9));
 
-      // Skip day 4 (March 13), complete on day 5 (dayGap=2, grace applies)
-      final day5 = DateTimeFactory.utc(2026, 3, 14, 12);
-      streak = await streakService.recordCompletion(day5);
-      // Grace period preserves the streak and increments it
-      expect(streak.currentStreak, 4);
-      expect(streak.maxStreak, 4);
+      final state = await StreakStateProvider(
+        db: db,
+        clock: FakeLocalDayClock(DateTimeFactory.utc(2026, 3, 12, 15)),
+      ).read(profileId: 0);
+      expect(state.currentStreak, 3);
+      expect(state.maxStreak, 3);
     });
 
-    test('streak does not double-increment on same day', () async {
-      final morning = DateTimeFactory.utc(2026, 3, 10, 8);
-      final evening = DateTimeFactory.utc(2026, 3, 10, 20);
+    test('streak does not double-increment on same UTC day', () async {
+      await recordOn(DateTimeFactory.utc(2026, 3, 10, 8));
+      await recordOn(DateTimeFactory.utc(2026, 3, 10, 20));
 
-      await streakService.recordCompletion(morning);
-      final streak = await streakService.recordCompletion(evening);
-      expect(streak.currentStreak, 1);
+      final state = await StreakStateProvider(
+        db: db,
+        clock: FakeLocalDayClock(DateTimeFactory.utc(2026, 3, 10, 22)),
+      ).read(profileId: 0);
+      expect(state.currentStreak, 1);
     });
 
     test('streak calendar returns active dates for range', () async {

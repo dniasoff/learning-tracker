@@ -2,12 +2,14 @@ import 'package:drift/drift.dart' hide isNotNull, isNull;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/daos/user_profile_dao.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
+import 'package:learning_tracker/core/database/user/user_database.dart'
+    hide StreakEvent;
+import 'package:learning_tracker/core/streak/streak_event.dart';
+import 'package:learning_tracker/core/streak/streak_reducer.dart';
 import 'package:learning_tracker/features/auth/domain/models/auth_state.dart';
 import 'package:learning_tracker/features/auth/domain/services/local_auth_service.dart';
 import 'package:learning_tracker/features/auth/domain/services/password_hasher.dart';
 import 'package:learning_tracker/features/sync/domain/merge_rules.dart';
-import 'package:learning_tracker/features/sync/domain/reducers/streak_reducer.dart';
 
 /// End-to-end story acceptance tests for Epic 20 — v2 hard-tier
 /// auth refactor. Covers the contract promised by the v2 architecture
@@ -167,35 +169,33 @@ void main() {
         // Device B: 1/3 (while A was offline)
         final union = [
           StreakEvent(
-            id: 0,
             profileId: 1,
             eventType: 'completion',
             dayUtc: DateTime.utc(2026, 1, 1),
             eventTimestamp: DateTime.utc(2026, 1, 1),
             clientDeviceId: 'A',
-            createdAt: DateTime.utc(2026, 1, 1),
           ),
           StreakEvent(
-            id: 0,
             profileId: 1,
             eventType: 'completion',
             dayUtc: DateTime.utc(2026, 1, 3),
             eventTimestamp: DateTime.utc(2026, 1, 3),
             clientDeviceId: 'B',
-            createdAt: DateTime.utc(2026, 1, 3),
           ),
           StreakEvent(
-            id: 0,
             profileId: 1,
             eventType: 'completion',
             dayUtc: DateTime.utc(2026, 1, 2),
             eventTimestamp: DateTime.utc(2026, 1, 2),
             clientDeviceId: 'A',
-            createdAt: DateTime.utc(2026, 1, 2),
           ),
         ];
-        final fromA = reduceStreakEvents(union);
-        final fromB = reduceStreakEvents(union.reversed);
+        final today = DateTime.utc(2026, 1, 3);
+        final fromA = const StreakReducer().reduce(union, today: today);
+        final fromB = const StreakReducer().reduce(
+          union.reversed,
+          today: today,
+        );
         expect(fromA.currentStreak, fromB.currentStreak);
         expect(fromA.currentStreak, 3);
       });

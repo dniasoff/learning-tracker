@@ -4,7 +4,6 @@ import 'package:learning_tracker/core/learning/completion_writer_providers.dart'
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/gamification/domain/services/reward_milestone_service.dart';
-import 'package:learning_tracker/features/gamification/domain/services/streak_service.dart';
 import 'package:learning_tracker/features/learning/data/repositories/completion_repository_impl.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/completion_repository.dart';
 import 'package:learning_tracker/features/learning/domain/services/completion_detection_service.dart';
@@ -81,7 +80,6 @@ CompletionRepository completionRepository(Ref ref) {
     contentRepository: contentRepository,
     bookmarkRepository: bookmarkRepository,
     completionDetectionService: detectionService,
-    streakService: StreakService(database, profileId: profileId),
     rewardMilestoneService: rewardMilestoneService,
     activeProfileId: profileId,
     completionWriter: ref.watch(completionWriterProvider),
