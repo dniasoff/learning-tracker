@@ -5,11 +5,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/features/auth/presentation/providers/auth_state_provider.dart';
-import 'package:learning_tracker/features/onboarding/presentation/providers/onboarding_controller.dart';
-import 'package:learning_tracker/features/onboarding/presentation/steps/add_track_step.dart';
-import 'package:learning_tracker/features/onboarding/presentation/steps/profile_creation_step.dart';
+import 'package:learning_tracker/core/preferences/preference_providers.dart';
+import 'package:learning_tracker/features/content_browsing/presentation/providers/text_display_providers.dart';
+import 'package:learning_tracker/features/onboarding/presentation/providers/onboarding_providers.dart';
+import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
+import 'package:learning_tracker/features/profiles/domain/repositories/profile_repository.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/track_setup/domain/entities/add_track_result.dart';
+import 'package:learning_tracker/features/track_setup/presentation/screens/add_track_flow_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 export 'package:learning_tracker/features/onboarding/presentation/steps/profile_creation_step.dart'
