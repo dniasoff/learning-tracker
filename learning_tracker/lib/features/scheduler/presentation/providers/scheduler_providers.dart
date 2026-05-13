@@ -1269,3 +1269,48 @@ DateTime _localDateOnly(DateTime utc) {
   final l = utc.toLocal();
   return DateTime(l.year, l.month, l.day);
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// TrackTaskCategory — task bucket selector for firstTaskInTrackForCategory
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Selector that identifies which bucket of the track's task queue to inspect.
+///
+/// Used by [firstTaskInTrackForCategoryProvider] and consumed by
+/// [NextTaskBreadcrumb] when the user taps a stat box on a [TrackCard].
+///
+///   [review]    — chazara / repetition tasks (overdueChazara, scheduledChazara)
+///   [dueToday]  — new-learning and on-time program tasks
+///   [overdue]   — missed program days (non-review overdue)
+enum TrackTaskCategory { review, dueToday, overdue }
+
+/// Returns the first [DailyTask] for [trackId] that falls in [category],
+/// or null when the bucket is empty.
+///
+/// Sourced from [allDailyTasksProvider] so it shares the frozen daily snapshot
+/// and benefits from the same skip-filtering logic.
+@riverpod
+Future<DailyTask?> firstTaskInTrackForCategory(
+  Ref ref, {
+  required int trackId,
+  required TrackTaskCategory category,
+}) async {
+  final all = await ref.watch(allDailyTasksProvider.future);
+  final forTrack = all.where((t) => t.trackId == trackId);
+
+  bool isReview(DailyTask t) =>
+      t.priority == DailyTaskPriority.overdueChazara ||
+      t.priority == DailyTaskPriority.scheduledChazara;
+
+  final Iterable<DailyTask> bucket;
+  switch (category) {
+    case TrackTaskCategory.review:
+      bucket = forTrack.where(isReview);
+    case TrackTaskCategory.dueToday:
+      bucket = forTrack.where((t) => !isReview(t) && !t.isOverdue);
+    case TrackTaskCategory.overdue:
+      bucket = forTrack.where((t) => !isReview(t) && t.isOverdue);
+  }
+
+  return bucket.isEmpty ? null : bucket.first;
+}
