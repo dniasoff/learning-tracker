@@ -1,14 +1,43 @@
 rules_version = '2';
 
+// Firestore v1 — top-level collection layout (DNI-325)
+//
+// Doc ID conventions
+// ──────────────────
+// Event collections  : {uid}_{profileId}_{sefariaRef}_{stageId}_{trackType}
+//                      (or abbreviated natural key per collection — see docs/firestore-collection-layout.md)
+// Snapshot collections: {uid}_{profileId}  or  {uid}_{profileId}_{scope}
+// accounts            : {uid}
+//
+// All deletes are denied — mutations must go through Cloud Functions.
+
 service cloud.firestore {
   match /databases/{database}/documents {
+
+    // ── Shared helpers ─────────────────────────────────────────────────────
 
     function isSignedIn() {
       return request.auth != null;
     }
 
-    function isOwner(uid) {
-      return isSignedIn() && request.auth.uid == uid;
+    // True when the caller owns the document.
+    // For top-level docs the doc ID starts with the caller's uid.
+    function isOwnerByDocId() {
+      return isSignedIn()
+        && resource.id.matches('^' + request.auth.uid + '(_.*)?$');
+    }
+
+    // True when the incoming write's uid field matches the caller.
+    function isOwnerByField() {
+      return isSignedIn()
+        && request.resource.data.uid == request.auth.uid;
+    }
+
+    // True when the document being written starts with the caller's uid
+    // (used for creates where resource.id is the new doc id).
+    function isOwnerByNewDocId(docId) {
+      return isSignedIn()
+        && docId.matches('^' + request.auth.uid + '(_.*)?$');
     }
 
     // Deny all reads and writes by default.
@@ -16,146 +45,188 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
-    match /users/{uid} {
-      // Diagnostic logs written by the device; readable only via Admin SDK
-      // (Firebase console). TTL field `expires_at` enables auto-deletion —
-      // configure in: Firestore → Data → TTL policies → field: expires_at.
-      match /diagnostic_logs/{logId} {
-        allow create: if isOwner(uid);
-        allow read, update, delete: if false;
-      }
+    // ── accounts ───────────────────────────────────────────────────────────
+    // Snapshot collection; one doc per Firebase Auth UID.
+    // Doc ID: {uid}
+    // Whitelisted fields: uid, email, display_name, created_at, updated_at,
+    //                     fcm_token, platform, app_version
+    match /accounts/{docId} {
+      allow read: if isSignedIn() && request.auth.uid == docId;
 
-      // Account-level profile
-      match /profile/{docId} {
-        allow read, write: if isOwner(uid);
-      }
+      allow create: if isSignedIn()
+        && request.auth.uid == docId
+        && request.resource.data.keys().hasOnly([
+          'uid', 'email', 'display_name', 'created_at', 'updated_at',
+          'fcm_token', 'platform', 'app_version'
+        ]);
 
-      // Account-level learner profile documents (one doc per learner/profile).
-      // Individual profile fields are managed through per-collection rules below.
-      match /learner_profiles/{profileId} {
-        allow read, write: if isOwner(uid);
+      allow update: if isSignedIn()
+        && request.auth.uid == docId
+        && request.resource.data.keys().hasOnly([
+          'uid', 'email', 'display_name', 'created_at', 'updated_at',
+          'fcm_token', 'platform', 'app_version'
+        ]);
 
-        // ── Completions — append-only event collection ──────────────────────
-        // Allows authenticated owner to create a completion with:
-        //   - points in [0, 100] (closes T1.3: prevents points: 999_999)
-        //   - completedAt at or before server time (prevents future-dating)
-        // Delete is denied; deletions must go through Cloud Functions.
-        match /completions/{completionId} {
-          allow read: if isOwner(uid);
-          allow create: if isOwner(uid)
-            && request.resource.data.points >= 0
-            && request.resource.data.points <= 100
-            && request.resource.data.completedAt <= request.time;
-          allow update, delete: if false;
-        }
-
-        // ── Streak events — append-only event collection ────────────────────
-        // Allows create only; timestamp must not exceed server time.
-        // Delete is denied; deletions must go through Cloud Functions.
-        match /streak_events/{eventId} {
-          allow read: if isOwner(uid);
-          allow create: if isOwner(uid)
-            && request.resource.data.createdAt <= request.time;
-          allow update, delete: if false;
-        }
-
-        // ── Learning ledger — append-only event collection ──────────────────
-        // Allows create only; timestamp must not exceed server time.
-        // Delete is denied; deletions must go through Cloud Functions.
-        match /learning_ledger/{entryId} {
-          allow read: if isOwner(uid);
-          allow create: if isOwner(uid)
-            && request.resource.data.createdAt <= request.time;
-          allow update, delete: if false;
-        }
-
-        // ── Settings — snapshot collection with field whitelist ─────────────
-        // Allows create and update, but only for the whitelisted fields.
-        // Prevents injection of arbitrary fields.
-        // Delete is denied; deletions must go through Cloud Functions.
-        match /settings/{settingId} {
-          allow read: if isOwner(uid);
-          allow create: if isOwner(uid)
-            && request.resource.data.keys().hasOnly([
-              'hebrewTerms', 'useHebrewDate', 'curriculum_id', 'updated_at',
-              'display_name', 'learning_order', 'daily_goal', 'review_enabled',
-              'chazara_interval', 'show_points', 'track_type'
-            ]);
-          allow update: if isOwner(uid)
-            && request.resource.data.keys().hasOnly([
-              'hebrewTerms', 'useHebrewDate', 'curriculum_id', 'updated_at',
-              'display_name', 'learning_order', 'daily_goal', 'review_enabled',
-              'chazara_interval', 'show_points', 'track_type'
-            ]);
-          allow delete: if false;
-        }
-
-        // ── Bookmarks — snapshot collection (last-write-wins) ───────────────
-        // Full read/write for owner; delete denied.
-        match /bookmarks/{bookmarkId} {
-          allow read: if isOwner(uid);
-          allow create, update: if isOwner(uid);
-          allow delete: if false;
-        }
-
-        // ── Goals — snapshot collection (last-write-wins) ───────────────────
-        // Full read/write for owner; delete denied.
-        match /goals/{goalId} {
-          allow read: if isOwner(uid);
-          allow create, update: if isOwner(uid);
-          allow delete: if false;
-        }
-
-        // ── Streak — single-doc snapshot (last-write-wins) ──────────────────
-        // Full read/write for owner; delete denied.
-        match /streak/{docId} {
-          allow read: if isOwner(uid);
-          allow create, update: if isOwner(uid);
-          allow delete: if false;
-        }
-
-        // ── Notification settings — single-doc snapshot ─────────────────────
-        match /notification_settings/{docId} {
-          allow read: if isOwner(uid);
-          allow create, update: if isOwner(uid);
-          allow delete: if false;
-        }
-
-        // ── Gamification settings — single-doc snapshot ─────────────────────
-        match /gamification_settings/{docId} {
-          allow read: if isOwner(uid);
-          allow create, update: if isOwner(uid);
-          allow delete: if false;
-        }
-
-        // ── UI preferences — single-doc snapshot ────────────────────────────
-        match /ui_preferences/{docId} {
-          allow read: if isOwner(uid);
-          allow create, update: if isOwner(uid);
-          allow delete: if false;
-        }
-
-        // ── Active curricula — single-doc snapshot ───────────────────────────
-        match /active_curricula/{docId} {
-          allow read: if isOwner(uid);
-          allow create, update: if isOwner(uid);
-          allow delete: if false;
-        }
-
-        // ── Curriculum tracks — snapshot collection (last-write-wins) ────────
-        match /curriculum_tracks/{trackId} {
-          allow read: if isOwner(uid);
-          allow create, update: if isOwner(uid);
-          allow delete: if false;
-        }
-
-        // ── Profiles (account-level sub-collection) ──────────────────────────
-        match /profiles/{profileDocId} {
-          allow read: if isOwner(uid);
-          allow create, update: if isOwner(uid);
-          allow delete: if false;
-        }
-      }
+      allow delete: if false;
     }
+
+    // ── learner_profiles ───────────────────────────────────────────────────
+    // Snapshot collection; one doc per (uid, profileId) pair.
+    // Doc ID: {uid}_{profileId}
+    // Whitelisted fields: uid, profile_id, display_name, avatar_url,
+    //                     created_at, updated_at, is_child_mode
+    match /learner_profiles/{docId} {
+      allow read: if isSignedIn() && isOwnerByDocId();
+
+      allow create: if isSignedIn()
+        && isOwnerByNewDocId(docId)
+        && request.resource.data.keys().hasOnly([
+          'uid', 'profile_id', 'display_name', 'avatar_url',
+          'created_at', 'updated_at', 'is_child_mode'
+        ]);
+
+      allow update: if isSignedIn()
+        && isOwnerByDocId()
+        && request.resource.data.keys().hasOnly([
+          'uid', 'profile_id', 'display_name', 'avatar_url',
+          'created_at', 'updated_at', 'is_child_mode'
+        ]);
+
+      allow delete: if false;
+    }
+
+    // ── completion_events ──────────────────────────────────────────────────
+    // Event collection — append-only.
+    // Doc ID: {uid}_{profileId}_{sefariaRef}_{stageId}_{trackType}
+    // Validators: uid matches caller, points in [0, 100],
+    //             completed_at <= server time.
+    match /completion_events/{docId} {
+      allow read: if isSignedIn() && isOwnerByDocId();
+
+      allow create: if isSignedIn()
+        && isOwnerByNewDocId(docId)
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.points >= 0
+        && request.resource.data.points <= 100
+        && request.resource.data.completed_at <= request.time;
+
+      allow update: if false;
+      allow delete: if false;
+    }
+
+    // ── streak_events ──────────────────────────────────────────────────────
+    // Event collection — append-only.
+    // Doc ID: {uid}_{profileId}_{eventType}_{isoDate}
+    // Validators: uid matches caller, created_at <= server time.
+    match /streak_events/{docId} {
+      allow read: if isSignedIn() && isOwnerByDocId();
+
+      allow create: if isSignedIn()
+        && isOwnerByNewDocId(docId)
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.created_at <= request.time;
+
+      allow update: if false;
+      allow delete: if false;
+    }
+
+    // ── learning_ledger ────────────────────────────────────────────────────
+    // Event collection — append-only.
+    // Doc ID: {uid}_{profileId}_{curriculumId}_{isoDate}
+    // Validators: uid matches caller, created_at <= server time.
+    match /learning_ledger/{docId} {
+      allow read: if isSignedIn() && isOwnerByDocId();
+
+      allow create: if isSignedIn()
+        && isOwnerByNewDocId(docId)
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.created_at <= request.time;
+
+      allow update: if false;
+      allow delete: if false;
+    }
+
+    // ── track_configs ──────────────────────────────────────────────────────
+    // Snapshot collection; one doc per (uid, profileId, curriculumId) triple.
+    // Doc ID: {uid}_{profileId}_{curriculumId}
+    // Whitelisted fields: uid, profile_id, curriculum_id, track_type,
+    //                     learning_order, stage_id, is_active, updated_at
+    match /track_configs/{docId} {
+      allow read: if isSignedIn() && isOwnerByDocId();
+
+      allow create: if isSignedIn()
+        && isOwnerByNewDocId(docId)
+        && request.resource.data.keys().hasOnly([
+          'uid', 'profile_id', 'curriculum_id', 'track_type',
+          'learning_order', 'stage_id', 'is_active', 'updated_at'
+        ]);
+
+      allow update: if isSignedIn()
+        && isOwnerByDocId()
+        && request.resource.data.keys().hasOnly([
+          'uid', 'profile_id', 'curriculum_id', 'track_type',
+          'learning_order', 'stage_id', 'is_active', 'updated_at'
+        ]);
+
+      allow delete: if false;
+    }
+
+    // ── bookmarks ──────────────────────────────────────────────────────────
+    // Snapshot collection; one doc per (uid, profileId, sefariaRef).
+    // Doc ID: {uid}_{profileId}_{sefariaRef}
+    // Whitelisted fields: uid, profile_id, sefaria_ref, curriculum_id,
+    //                     stage_id, updated_at
+    match /bookmarks/{docId} {
+      allow read: if isSignedIn() && isOwnerByDocId();
+
+      allow create: if isSignedIn()
+        && isOwnerByNewDocId(docId)
+        && request.resource.data.keys().hasOnly([
+          'uid', 'profile_id', 'sefaria_ref', 'curriculum_id',
+          'stage_id', 'updated_at'
+        ]);
+
+      allow update: if isSignedIn()
+        && isOwnerByDocId()
+        && request.resource.data.keys().hasOnly([
+          'uid', 'profile_id', 'sefaria_ref', 'curriculum_id',
+          'stage_id', 'updated_at'
+        ]);
+
+      allow delete: if false;
+    }
+
+    // ── settings ───────────────────────────────────────────────────────────
+    // Snapshot collection; one doc per (uid, profileId) or
+    // (uid, profileId, scope) for curriculum-specific overrides.
+    // Doc ID: {uid}_{profileId}  or  {uid}_{profileId}_{scope}
+    // Whitelisted fields (superset): uid, profile_id, hebrew_terms,
+    //   use_hebrew_date, curriculum_id, updated_at, display_name,
+    //   learning_order, daily_goal, review_enabled, chazara_interval,
+    //   show_points, track_type
+    match /settings/{docId} {
+      allow read: if isSignedIn() && isOwnerByDocId();
+
+      allow create: if isSignedIn()
+        && isOwnerByNewDocId(docId)
+        && request.resource.data.keys().hasOnly([
+          'uid', 'profile_id', 'hebrew_terms', 'use_hebrew_date',
+          'curriculum_id', 'updated_at', 'display_name', 'learning_order',
+          'daily_goal', 'review_enabled', 'chazara_interval',
+          'show_points', 'track_type'
+        ]);
+
+      allow update: if isSignedIn()
+        && isOwnerByDocId()
+        && request.resource.data.keys().hasOnly([
+          'uid', 'profile_id', 'hebrew_terms', 'use_hebrew_date',
+          'curriculum_id', 'updated_at', 'display_name', 'learning_order',
+          'daily_goal', 'review_enabled', 'chazara_interval',
+          'show_points', 'track_type'
+        ]);
+
+      allow delete: if false;
+    }
+
   }
 }
