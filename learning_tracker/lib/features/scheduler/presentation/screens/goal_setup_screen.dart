@@ -3,13 +3,17 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
-import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/core/utils/hebrew_calendar_utils.dart';
 import 'package:learning_tracker/core/widgets/app_bar_title.dart';
 import 'package:learning_tracker/core/widgets/learning_date_picker_theme.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/goal_entity.dart';
+import 'package:learning_tracker/features/scheduler/domain/models/goal_form_result.dart';
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
 import 'package:learning_tracker/features/scheduler/presentation/widgets/hebrew_date_picker.dart';
+
+// Re-export from domain layer for backward compatibility.
+export 'package:learning_tracker/features/scheduler/domain/models/goal_form_result.dart'
+    show GoalFormResult;
 
 /// Screen for creating or editing a learning goal.
 ///
@@ -56,7 +60,7 @@ class GoalSetupForm extends ConsumerStatefulWidget {
   final CurriculumId curriculumId;
   final GoalEntity? existingGoal;
   final int? totalItems;
-  final ValueChanged<GoalEntity> onComplete;
+  final ValueChanged<GoalFormResult> onComplete;
   final String? submitLabel;
 
   const GoalSetupForm({
@@ -96,7 +100,7 @@ class _GoalSetupFormState extends ConsumerState<GoalSetupForm> {
         widget.existingGoal?.paceValue ??
         (CurriculumDefaults.defaultDailyTargets[widget.curriculumId] ?? 1);
     _paceUnit = widget.existingGoal?.paceUnit ?? 'per_day';
-    _learningUnit = widget.existingGoal?.learningUnit ?? _defaultUnit;
+    _learningUnit = _defaultUnit;
   }
 
   /// Whether this curriculum's pace is set in Pasuk/Perek units (Tanakh
@@ -190,12 +194,8 @@ class _GoalSetupFormState extends ConsumerState<GoalSetupForm> {
   }
 
   void _submit() {
-    final now = DateTimeFactory.nowUtc();
-    final rawUnit = _showUnitPicker ? _learningUnit : null;
     widget.onComplete(
-      GoalEntity(
-        id: widget.existingGoal?.id,
-        curriculumId: widget.curriculumId,
+      GoalFormResult(
         targetPercent: _targetPercent,
         targetDate: _goalType == 'deadline' ? _targetDate : null,
         description: _goalType == 'deadline' ? _descriptionController.text : '',
@@ -203,12 +203,7 @@ class _GoalSetupFormState extends ConsumerState<GoalSetupForm> {
         goalType: _goalType,
         paceValue: _goalType == 'pace' ? _paceValue : null,
         paceUnit: _goalType == 'pace' ? _paceUnit : null,
-        paceGranularity: PaceGranularity.fromStorageKey(rawUnit),
-        rawLearningUnit: PaceGranularity.fromStorageKey(rawUnit) == null
-            ? rawUnit
-            : null,
-        createdAt: widget.existingGoal?.createdAt ?? now,
-        updatedAt: now,
+        learningUnit: _showUnitPicker ? _learningUnit : null,
       ),
     );
   }

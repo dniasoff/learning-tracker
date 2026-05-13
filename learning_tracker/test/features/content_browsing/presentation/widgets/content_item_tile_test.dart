@@ -59,7 +59,7 @@ void main() {
       // Verify RTL directionality for Hebrew
       final hebrewText = tester.widget<Text>(find.text('זרעים'));
       expect(hebrewText.textDirection, TextDirection.rtl);
-      expect(hebrewText.textAlign, TextAlign.right);
+      expect(hebrewText.textAlign, TextAlign.start);
     });
 
     testWidgets(

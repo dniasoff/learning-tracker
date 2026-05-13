@@ -108,7 +108,7 @@ void main() {
 
       // Verify RTL directionality
       expect(hebrewTextWidget.textDirection, TextDirection.rtl);
-      expect(hebrewTextWidget.textAlign, TextAlign.right);
+      expect(hebrewTextWidget.textAlign, TextAlign.start);
     });
 
     testWidgets('displays English text below Hebrew text', (tester) async {

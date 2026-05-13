@@ -65,8 +65,8 @@ void main() {
 
         await _pump(
           tester,
-          SacredTimeLockOverlay(
-            child: const SizedBox(key: childKey, child: Text('DASHBOARD')),
+          const SacredTimeLockOverlay(
+            child: SizedBox(key: childKey, child: Text('DASHBOARD')),
           ),
           overrides: [
             currentSacredWindowProvider.overrideWithValue(_activeShabboWindow()),
@@ -89,8 +89,8 @@ void main() {
       (tester) async {
         await _pump(
           tester,
-          SacredTimeLockOverlay(
-            child: const Text('DASHBOARD'),
+          const SacredTimeLockOverlay(
+            child: Text('DASHBOARD'),
           ),
           overrides: [
             currentSacredWindowProvider.overrideWithValue(null),
@@ -108,8 +108,8 @@ void main() {
       'post-auth shell content (wrapped in overlay) is blocked during sacred time',
       (tester) async {
         // Simulates AppShellScreen wrapping its child with SacredTimeLockOverlay.
-        final shellContent = SacredTimeLockOverlay(
-          child: const Text('SHELL CONTENT'),
+        const shellContent = SacredTimeLockOverlay(
+          child: Text('SHELL CONTENT'),
         );
 
         await _pump(

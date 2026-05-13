@@ -11,8 +11,6 @@ import 'package:learning_tracker/features/dashboard/presentation/providers/dashb
 import 'package:learning_tracker/features/onboarding/domain/models/wizard_result_wrapper.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/bulk_prior_completion_service.dart';
 import 'package:learning_tracker/features/onboarding/presentation/providers/onboarding_providers.dart';
-import 'package:learning_tracker/features/progress/presentation/providers/progress_providers.dart';
-import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
 import 'package:learning_tracker/features/scheduler/presentation/screens/goal_setup_screen.dart';
 import 'package:learning_tracker/features/track_setup/domain/entities/add_track_result.dart';
 import 'package:learning_tracker/features/track_setup/domain/services/track_creation_service.dart';
@@ -676,10 +674,7 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
     );
 
     // Refresh dashboard/progress/task views immediately.
-    ref.invalidate(dashboardCompletionPercentageProvider(curriculum));
-    ref.invalidate(dashboardLastCompletionProvider(curriculum));
-    ref.invalidate(progressOverviewStatsProvider);
-    ref.invalidate(allDailyTasksProvider);
+    await onTrackChanged(ref, widget.profileId);
 
     return (
       itemCount: completion.itemCount,

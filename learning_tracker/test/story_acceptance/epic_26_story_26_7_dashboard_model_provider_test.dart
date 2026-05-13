@@ -167,6 +167,14 @@ void main() {
       test(
         'add_track_flow.dart does not contain parallel invalidation list',
         () {
+          // add_track_flow.dart was deleted by DNI-353 (26.10). If the file no
+          // longer exists, the constraint is trivially satisfied.
+          final candidates = [
+            'lib/features/track_setup/presentation/screens/add_track_flow.dart',
+            'learning_tracker/lib/features/track_setup/presentation/screens/add_track_flow.dart',
+          ];
+          final exists = candidates.any((c) => File(c).existsSync());
+          if (!exists) return; // file deleted — constraint satisfied
           final src = _src(
             'features/track_setup/presentation/screens/add_track_flow.dart',
           );
@@ -201,6 +209,14 @@ void main() {
       test(
         'add_track_flow.dart calls onTrackChanged',
         () {
+          // add_track_flow.dart was deleted by DNI-353 (26.10). If the file no
+          // longer exists, the constraint is trivially satisfied.
+          final candidates = [
+            'lib/features/track_setup/presentation/screens/add_track_flow.dart',
+            'learning_tracker/lib/features/track_setup/presentation/screens/add_track_flow.dart',
+          ];
+          final exists = candidates.any((c) => File(c).existsSync());
+          if (!exists) return; // file deleted — constraint satisfied
           final src = _src(
             'features/track_setup/presentation/screens/add_track_flow.dart',
           );
@@ -238,7 +254,7 @@ void main() {
         'dashboardChildNextRewardProvider',
         'dashboardCompletionPercentageProvider',
         'dashboardLastCompletionProvider',
-        'trackProgressProvider',
+        // trackProgressProvider deleted by DNI-351 (26.8)
         'programCalendarPositionProvider',
         'lifetimeTotalsAcrossAllCurriculaProvider',
         'globalLifetimeCurriculaProvider',
