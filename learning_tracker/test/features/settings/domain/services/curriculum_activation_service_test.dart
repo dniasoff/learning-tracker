@@ -6,6 +6,7 @@ import 'package:learning_tracker/core/enums/cross_profile_scope.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/track_repository.dart';
+import 'package:learning_tracker/features/settings/domain/exceptions/last_active_curriculum_exception.dart';
 import 'package:learning_tracker/features/settings/domain/services/curriculum_activation_service.dart';
 import 'package:mocktail/mocktail.dart';
 
@@ -104,13 +105,13 @@ void main() {
     });
 
     test(
-      'attempting to deactivate the last curriculum throws StateError',
+      'attempting to deactivate the last curriculum throws LastActiveCurriculumException',
       () async {
         await service.activate(CurriculumId.mishnayos);
 
         expect(
           () => service.deactivate(CurriculumId.mishnayos),
-          throwsA(isA<StateError>()),
+          throwsA(isA<LastActiveCurriculumException>()),
         );
       },
     );
@@ -264,7 +265,7 @@ void main() {
         // Mishnayos is the last one -- toggling should throw
         expect(
           () => service.toggle(CurriculumId.mishnayos),
-          throwsA(isA<StateError>()),
+          throwsA(isA<LastActiveCurriculumException>()),
         );
 
         // Verify mishnayos is still active

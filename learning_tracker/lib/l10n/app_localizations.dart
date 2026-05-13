@@ -3064,6 +3064,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'+1   Add another account ({remaining} slots remaining)'**
   String accountPickerAddAnother(int remaining);
+
+  /// No description provided for @cannotDeactivateLastCurriculum.
+  ///
+  /// In en, this message translates to:
+  /// **'At least one curriculum must remain active'**
+  String get cannotDeactivateLastCurriculum;
+
+  /// No description provided for @cannotDeactivateLastCurriculumDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'You cannot remove your last active curriculum. Add another curriculum before removing this one.'**
+  String get cannotDeactivateLastCurriculumDetail;
 }
 
 class _AppLocalizationsDelegate

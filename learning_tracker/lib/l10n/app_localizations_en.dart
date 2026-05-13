@@ -1662,4 +1662,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String accountPickerAddAnother(int remaining) {
     return '+1   Add another account ($remaining slots remaining)';
   }
+
+  @override
+  String get cannotDeactivateLastCurriculum =>
+      'At least one curriculum must remain active';
+
+  @override
+  String get cannotDeactivateLastCurriculumDetail =>
+      'You cannot remove your last active curriculum. Add another curriculum before removing this one.';
 }

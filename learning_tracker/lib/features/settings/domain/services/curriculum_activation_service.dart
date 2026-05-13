@@ -4,6 +4,7 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/track_repository.dart';
+import 'package:learning_tracker/features/settings/domain/exceptions/last_active_curriculum_exception.dart';
 
 /// Service for managing curriculum activation/deactivation.
 ///
@@ -86,7 +87,15 @@ class CurriculumActivationService {
   }
 
   /// Deactivate a curriculum for the active profile.
+  ///
+  /// Throws [LastActiveCurriculumException] when the profile has exactly one
+  /// active curriculum (minimum-1 invariant).
   Future<void> deactivate(CurriculumId curriculum) async {
+    final active = await _database.activeCurriculumDao
+        .getActiveCurriculaByProfile(_profileId);
+    if (active.length <= 1) {
+      throw const LastActiveCurriculumException();
+    }
     await _database.activeCurriculumDao.deactivateByProfile(
       curriculum,
       _profileId,

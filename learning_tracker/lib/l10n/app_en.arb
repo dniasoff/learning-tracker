@@ -759,5 +759,7 @@
     "placeholders": {
       "remaining": { "type": "int" }
     }
-  }
+  },
+  "cannotDeactivateLastCurriculum": "At least one curriculum must remain active",
+  "cannotDeactivateLastCurriculumDetail": "You cannot remove your last active curriculum. Add another curriculum before removing this one."
 }

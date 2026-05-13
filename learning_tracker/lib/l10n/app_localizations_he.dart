@@ -1642,4 +1642,12 @@ class AppLocalizationsHe extends AppLocalizations {
   String accountPickerAddAnother(int remaining) {
     return '+1   הוספת חשבון ($remaining מקומות פנויים)';
   }
+
+  @override
+  String get cannotDeactivateLastCurriculum =>
+      'חייב להישאר לפחות קורס לימוד אחד פעיל';
+
+  @override
+  String get cannotDeactivateLastCurriculumDetail =>
+      'לא ניתן להסיר את קורס הלימוד האחרון הפעיל. הוסיפו קורס נוסף לפני הסרת זה.';
 }

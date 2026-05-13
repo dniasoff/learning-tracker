@@ -759,5 +759,7 @@
     "placeholders": {
       "remaining": { "type": "int" }
     }
-  }
+  },
+  "cannotDeactivateLastCurriculum": "חייב להישאר לפחות קורס לימוד אחד פעיל",
+  "cannotDeactivateLastCurriculumDetail": "לא ניתן להסיר את קורס הלימוד האחרון הפעיל. הוסיפו קורס נוסף לפני הסרת זה."
 }
