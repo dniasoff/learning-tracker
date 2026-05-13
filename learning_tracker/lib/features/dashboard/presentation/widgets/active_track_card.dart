@@ -43,11 +43,11 @@ class ActiveTrackCard extends ConsumerWidget {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context)!;
     final curriculum = _curriculumIdForTrack(track);
-    final hebrewOnly = ref.watch(useHebrewTermsProvider);
+    final useHebrew = ref.watch(useHebrewTermsProvider);
     final displayNamePrimary =
         '${_trackTypeLabelText(ref, track.trackType)} · '
         '${curriculumLabelText(ref, curriculum: curriculum)}';
-    final displayNameSecondary = hebrewOnly
+    final displayNameSecondary = useHebrew
         ? null
         : curriculumHebrewName(curriculum);
     final curriculumColor = AppTheme.getCurriculumColor(curriculum);

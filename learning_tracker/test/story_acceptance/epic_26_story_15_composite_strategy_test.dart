@@ -30,6 +30,10 @@ import 'package:test/test.dart';
 class _MockContentRepository extends Mock implements ContentRepository {}
 
 void main() {
+  setUpAll(() {
+    registerFallbackValue(CurriculumId.mishnayos);
+  });
+
   // ── AC1: CompositeCurriculumStrategy exists and is data-driven ─────────────
   group(
     'Story 26.15 AC1 — CompositeCurriculumStrategy is data-driven',

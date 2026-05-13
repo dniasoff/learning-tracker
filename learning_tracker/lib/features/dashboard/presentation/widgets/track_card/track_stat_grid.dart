@@ -24,8 +24,6 @@ class TrackStatGrid extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final theme = Theme.of(context);
-
     return Row(
       children: [
         // ── Review / Chazara ────────────────────────────────────────────────
@@ -37,7 +35,6 @@ class TrackStatGrid extends ConsumerWidget {
                 ? const Color(0xFFB45309)
                 : AppTheme.brandInk,
             valueBg: const Color(0xFFFFE7D1),
-            labelStyle: theme.textTheme.labelSmall,
             onTap: vm.reviewCount > 0
                 ? () => _navigateToCategory(
                     context,
@@ -57,7 +54,6 @@ class TrackStatGrid extends ConsumerWidget {
                 ? kActiveTrackPrimaryBlue
                 : AppTheme.brandInk,
             valueBg: const Color(0xFFDFE9FD),
-            labelStyle: theme.textTheme.labelSmall,
             onTap: vm.dueTodayCount > 0
                 ? () => _navigateToCategory(
                     context,
@@ -75,7 +71,6 @@ class TrackStatGrid extends ConsumerWidget {
             label: l10n.activeTrackMetricOverdue,
             valueColor: const Color(0xFFD63C3C),
             valueBg: const Color(0xFFFFE0EB),
-            labelStyle: theme.textTheme.labelSmall,
             countMutedWhenZero: true,
             onTap: vm.overdueCount > 0
                 ? () => _navigateToCategory(

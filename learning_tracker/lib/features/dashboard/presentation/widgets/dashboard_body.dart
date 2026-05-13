@@ -119,11 +119,11 @@ class DashboardBody extends ConsumerWidget {
     final lifetimeTotalsAsync = ref.watch(
       lifetimeTotalsAcrossAllCurriculaProvider(profileId),
     );
-    final hebrewTerms = ref.watch(useHebrewTermsProvider);
-    final reviewSectionLabel = hebrewTerms
+    final useHebrew = ref.watch(useHebrewTermsProvider);
+    final reviewSectionLabel = useHebrew
         ? HebrewTerms.uiReviewSection
         : l10n.reviewSection;
-    final chazaraReviewLabel = hebrewTerms
+    final chazaraReviewLabel = useHebrew
         ? HebrewTerms.uiChazaraReview
         : l10n.chazaraReview;
     final name = profileName ?? l10n.learner;

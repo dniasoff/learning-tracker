@@ -53,10 +53,10 @@ class CompositeCurriculumStrategy {
 
   /// All known composite strategies, keyed by [compositeKey].
   static final Map<String, CompositeCurriculumStrategy> _registry = {
-    'tanach': CompositeCurriculumStrategy(
+    'tanach': const CompositeCurriculumStrategy(
       compositeKey: 'tanach',
       sources: ['chumash', 'nach'],
-      preamble: const [
+      preamble: [
         ContentItem(
           curriculumId: 'tanach',
           level1: 'Torah',
