@@ -230,9 +230,9 @@ void main() {
         'CurriculumLabel.curriculum renders Hebrew with TextDirection.rtl when locale=he',
         (tester) async {
           SharedPreferences.setMockInitialValues(<String, Object>{
-            // hebrewTermsScript defaults to true; mirror it explicitly so the
-            // provider's first-build state is unambiguous.
-            'hebrew_terms_script_0': true,
+            // hebrewTermsScript defaults to false; the DNI-328 key naming
+            // scheme is `hebrew_terms_script_p<profileId>`.
+            'hebrew_terms_script_p0': true,
           });
 
           await tester.pumpWidget(
