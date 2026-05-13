@@ -7,6 +7,7 @@ import 'package:learning_tracker/core/database/daos/daily_plan_dao.dart';
 import 'package:learning_tracker/core/database/daos/goal_dao.dart';
 import 'package:learning_tracker/core/database/daos/learning_ledger_dao.dart';
 import 'package:learning_tracker/core/database/daos/learning_order_dao.dart';
+import 'package:learning_tracker/core/database/daos/outbox_dao.dart';
 import 'package:learning_tracker/core/database/daos/point_config_dao.dart';
 import 'package:learning_tracker/core/database/daos/profile_dao.dart';
 import 'package:learning_tracker/core/database/daos/profile_program_dao.dart';
@@ -28,6 +29,7 @@ import 'package:learning_tracker/core/database/tables/goals.dart';
 import 'package:learning_tracker/core/database/tables/learner_profiles.dart';
 import 'package:learning_tracker/core/database/tables/learning_ledger.dart';
 import 'package:learning_tracker/core/database/tables/learning_order.dart';
+import 'package:learning_tracker/core/database/tables/outbox_table.dart';
 import 'package:learning_tracker/core/database/tables/point_configs.dart';
 import 'package:learning_tracker/core/database/tables/profile_programs.dart';
 import 'package:learning_tracker/core/database/tables/stage_definitions.dart';
@@ -72,6 +74,7 @@ part 'user_database.g.dart';
     StreakEvents,
     SyncQueue,
     TextDownloadStatuses,
+    Outbox,
   ],
   daos: [
     ActiveCurriculumDao,
@@ -93,13 +96,14 @@ part 'user_database.g.dart';
     TextDownloadStatusDao,
     StudyDayConfigDao,
     ProfileProgramDao,
+    OutboxDao,
   ],
 )
 class UserDatabase extends _$UserDatabase {
   UserDatabase(super.e);
 
   @override
-  int get schemaVersion => 12;
+  int get schemaVersion => 13;
 
   @override
   MigrationStrategy get migration {

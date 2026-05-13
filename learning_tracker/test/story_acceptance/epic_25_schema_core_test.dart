@@ -1,0 +1,335 @@
+/// Story acceptance tests for Epic 25 — Schema + Core Foundation.
+///
+/// Story 25.5 (DNI-326): Outbox table and OutboxProcessor scaffolding.
+@Tags(['epic_25'])
+library;
+
+import 'dart:convert';
+
+import 'package:drift/native.dart';
+import 'package:learning_tracker/core/database/daos/outbox_dao.dart';
+import 'package:learning_tracker/core/database/user/user_database.dart';
+import 'package:learning_tracker/core/sync/outbox/outbox_processor.dart';
+import 'package:learning_tracker/core/sync/outbox/push_pipeline.dart';
+import 'package:mocktail/mocktail.dart';
+import 'package:test/test.dart';
+
+// ── helpers ──────────────────────────────────────────────────────────────────
+
+UserDatabase _createDb() => UserDatabase(NativeDatabase.memory());
+
+OutboxCompanion _completionRow({
+  int profileId = 1,
+  String entityKey = 'comp-001',
+}) =>
+    OutboxCompanion.insert(
+      profileId: profileId,
+      entityKind: OutboxEntityKind.completion,
+      entityKey: entityKey,
+      payload: jsonEncode({'ref': 'Mishnah Berakhot 1'}),
+      createdAt: DateTime.utc(2026, 5, 13, 10),
+    );
+
+// ── mocks ─────────────────────────────────────────────────────────────────────
+
+class MockPushPipeline extends Mock implements PushPipeline {}
+
+// ── tests ─────────────────────────────────────────────────────────────────────
+
+void main() {
+  // --------------------------------------------------------------------------
+  // Story 25.5 — Outbox table and OutboxProcessor scaffolding (DNI-326)
+  // --------------------------------------------------------------------------
+
+  group(
+    'Story 25.5 — Outbox table and OutboxProcessor scaffolding',
+    tags: ['story_25_5'],
+    () {
+      // ── 1. Table existence and basic insert ────────────────────────────────
+
+      group('outbox table', () {
+        late UserDatabase db;
+
+        setUp(() => db = _createDb());
+        tearDown(() => db.close());
+
+        test('can insert a row into the outbox table', () async {
+          final id = await db.outboxDao.insertOutboxRow(_completionRow());
+
+          expect(id, greaterThan(0));
+
+          final rows = await db.select(db.outbox).get();
+          expect(rows, hasLength(1));
+          expect(rows.first.entityKind, equals(OutboxEntityKind.completion));
+          expect(rows.first.profileId, equals(1));
+          expect(rows.first.entityKey, equals('comp-001'));
+          expect(rows.first.attempts, equals(0));
+          expect(rows.first.lastError, isNull);
+          expect(rows.first.lastAttemptAt, isNull);
+        });
+
+        test('getPendingByKind returns rows for matching kind and profileId',
+            () async {
+          // Insert two completions for profile 1 and one streak for profile 1.
+          await db.outboxDao.insertOutboxRow(
+            _completionRow(profileId: 1, entityKey: 'comp-001'),
+          );
+          await db.outboxDao.insertOutboxRow(
+            _completionRow(profileId: 1, entityKey: 'comp-002'),
+          );
+          await db.outboxDao.insertOutboxRow(
+            OutboxCompanion.insert(
+              profileId: 1,
+              entityKind: OutboxEntityKind.streak,
+              entityKey: 'streak-001',
+              payload: jsonEncode({'current': 5}),
+              createdAt: DateTime.utc(2026, 5, 13, 11),
+            ),
+          );
+          // Insert a completion for a different profile (must not show up).
+          await db.outboxDao.insertOutboxRow(
+            _completionRow(profileId: 99, entityKey: 'comp-other'),
+          );
+
+          final completions = await db.outboxDao.getPendingByKind(
+            OutboxEntityKind.completion,
+            1,
+          );
+          expect(completions, hasLength(2));
+          expect(
+            completions.map((r) => r.entityKey),
+            containsAll(['comp-001', 'comp-002']),
+          );
+        });
+
+        test('getPendingByKind respects limit parameter', () async {
+          // Insert 5 rows.
+          for (var i = 0; i < 5; i++) {
+            await db.outboxDao.insertOutboxRow(
+              _completionRow(entityKey: 'comp-00$i'),
+            );
+          }
+
+          final result = await db.outboxDao.getPendingByKind(
+            OutboxEntityKind.completion,
+            1,
+            limit: 3,
+          );
+          expect(result, hasLength(3));
+        });
+
+        test('markAttempted increments attempts and records error', () async {
+          final id =
+              await db.outboxDao.insertOutboxRow(_completionRow());
+
+          await db.outboxDao.markAttempted(id, error: 'timeout');
+
+          final rows = await db.select(db.outbox).get();
+          expect(rows.first.attempts, equals(1));
+          expect(rows.first.lastError, equals('timeout'));
+          expect(rows.first.lastAttemptAt, isNotNull);
+        });
+
+        test('deleteRow removes the row', () async {
+          final id = await db.outboxDao.insertOutboxRow(_completionRow());
+
+          await db.outboxDao.deleteRow(id);
+
+          final rows = await db.select(db.outbox).get();
+          expect(rows, isEmpty);
+        });
+      });
+
+      // ── 2. Transactional atomicity ─────────────────────────────────────────
+
+      group('transaction atomicity', () {
+        late UserDatabase db;
+
+        setUp(() => db = _createDb());
+        tearDown(() => db.close());
+
+        test(
+          'outbox insert inside transaction rolls back when transaction aborts',
+          () async {
+            // Simulate the outbox insert failing inside a transaction by
+            // deliberately throwing after the outbox insert. The outbox row
+            // must not be committed.
+            await expectLater(
+              () => db.transaction(() async {
+                await db.outboxDao.insertOutboxRow(_completionRow());
+                // Simulate a downstream failure in the same transaction.
+                throw Exception('simulated write failure');
+              }),
+              throwsA(isA<Exception>()),
+            );
+
+            final outboxRows = await db.select(db.outbox).get();
+            expect(
+              outboxRows,
+              isEmpty,
+              reason:
+                  'outbox row must be rolled back when the transaction fails',
+            );
+          },
+        );
+
+        test(
+          'outbox insert commits together with other writes in same transaction',
+          () async {
+            // Insert an outbox row inside a transaction that also writes a
+            // streak row. Both should commit successfully.
+            await db.transaction(() async {
+              await db.outboxDao.insertOutboxRow(_completionRow());
+              await db.into(db.streaks).insert(
+                    StreaksCompanion.insert(profileId: 1),
+                  );
+            });
+
+            final outboxRows = await db.select(db.outbox).get();
+            final streakRows = await db.select(db.streaks).get();
+            expect(outboxRows, hasLength(1));
+            expect(streakRows, hasLength(1));
+          },
+        );
+      });
+
+      // ── 3. OutboxProcessor drain ───────────────────────────────────────────
+
+      group('OutboxProcessor.drain', () {
+        late UserDatabase db;
+        late OutboxDao dao;
+        late MockPushPipeline mockPipeline;
+        late OutboxProcessor processor;
+
+        setUp(() {
+          db = _createDb();
+          dao = db.outboxDao;
+          mockPipeline = MockPushPipeline();
+          processor = OutboxProcessor(
+            outboxDao: dao,
+            pipeline: mockPipeline,
+          );
+
+          // Default: all push methods succeed.
+          when(
+            () => mockPipeline.pushCompletion(
+              profileId: any(named: 'profileId'),
+              entityKey: any(named: 'entityKey'),
+              payload: any(named: 'payload'),
+            ),
+          ).thenAnswer((_) async {});
+        });
+
+        tearDown(() => db.close());
+
+        test('drain deletes rows that push successfully', () async {
+          await dao.insertOutboxRow(_completionRow());
+
+          final pushed = await processor.drain(1);
+
+          expect(pushed, equals(1));
+          final remaining = await db.select(db.outbox).get();
+          expect(remaining, isEmpty);
+        });
+
+        test('drain calls pushCompletion with correct arguments', () async {
+          await dao.insertOutboxRow(_completionRow(entityKey: 'comp-abc'));
+
+          await processor.drain(1);
+
+          verify(
+            () => mockPipeline.pushCompletion(
+              profileId: 1,
+              entityKey: 'comp-abc',
+              payload: {'ref': 'Mishnah Berakhot 1'},
+            ),
+          ).called(1);
+        });
+
+        test('drain marks row with error when push fails', () async {
+          when(
+            () => mockPipeline.pushCompletion(
+              profileId: any(named: 'profileId'),
+              entityKey: any(named: 'entityKey'),
+              payload: any(named: 'payload'),
+            ),
+          ).thenThrow(Exception('network error'));
+
+          final id = await dao.insertOutboxRow(_completionRow());
+
+          final pushed = await processor.drain(1);
+
+          expect(pushed, equals(0));
+          final rows = await db.select(db.outbox).get();
+          expect(rows, hasLength(1));
+          expect(rows.first.id, equals(id));
+          expect(rows.first.attempts, equals(1));
+          expect(rows.first.lastError, contains('network error'));
+        });
+
+        test(
+          'drain accumulates 50 rows offline and clears them all on reconnect',
+          () async {
+            // Insert 50 completion rows — simulating offline accumulation.
+            for (var i = 0; i < 50; i++) {
+              await dao.insertOutboxRow(_completionRow(entityKey: 'comp-$i'));
+            }
+
+            final pendingBefore = await dao.getPendingByKind(
+              OutboxEntityKind.completion,
+              1,
+              limit: 100,
+            );
+            expect(pendingBefore, hasLength(50));
+
+            // Drain (device "reconnects") — all 50 should push and be deleted.
+            final pushed = await processor.drain(1);
+
+            expect(pushed, equals(50));
+            final remaining = await db.select(db.outbox).get();
+            expect(remaining, isEmpty);
+
+            verify(
+              () => mockPipeline.pushCompletion(
+                profileId: 1,
+                entityKey: any(named: 'entityKey'),
+                payload: any(named: 'payload'),
+              ),
+            ).called(50);
+          },
+        );
+
+        test(
+          'drain respects batch size of 50 — leaves excess rows untouched',
+          () async {
+            // Insert 60 rows; only 50 should be processed per drain call.
+            for (var i = 0; i < 60; i++) {
+              await dao.insertOutboxRow(_completionRow(entityKey: 'comp-$i'));
+            }
+
+            final pushed = await processor.drain(1);
+
+            expect(pushed, equals(50));
+            final remaining = await db.select(db.outbox).get();
+            expect(remaining, hasLength(10));
+          },
+        );
+
+        test('drain does not process rows for other profiles', () async {
+          // Insert rows for profile 1 and profile 2.
+          await dao.insertOutboxRow(_completionRow(profileId: 1));
+          await dao.insertOutboxRow(_completionRow(profileId: 2));
+
+          // Drain only for profile 1.
+          final pushed = await processor.drain(1);
+
+          expect(pushed, equals(1));
+          // Profile 2's row must still be present.
+          final remaining = await db.select(db.outbox).get();
+          expect(remaining, hasLength(1));
+          expect(remaining.first.profileId, equals(2));
+        });
+      });
+    },
+  );
+}
