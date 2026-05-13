@@ -1,4 +1,5 @@
 import 'package:drift/drift.dart';
+import 'package:learning_tracker/core/database/base_dao.dart';
 import 'package:learning_tracker/core/database/tables/streaks.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 
@@ -8,8 +9,18 @@ part 'streak_dao.g.dart';
 ///
 /// Each profile on an account owns its own streak row, keyed by profileId.
 @DriftAccessor(tables: [Streaks])
-class StreakDao extends DatabaseAccessor<UserDatabase> with _$StreakDaoMixin {
+class StreakDao extends DatabaseAccessor<UserDatabase>
+    with _$StreakDaoMixin, BaseDao<$StreaksTable, Streak, UserDatabase> {
   StreakDao(super.db);
+
+  @override
+  TableInfo<$StreaksTable, Streak> get table => streaks;
+
+  @override
+  Expression<int> idColumn($StreaksTable t) => t.id;
+
+  @override
+  Expression<int> profileIdColumn($StreaksTable t) => t.profileId;
 
   /// Get the streak record for a specific profile, or null if none exists.
   Future<Streak?> getStreakByProfile(int profileId) =>

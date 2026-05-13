@@ -48,7 +48,7 @@ void main() {
 
   group('CompletionDao', () {
     test('getAllCompletions returns empty list initially', () async {
-      final completions = await database.completionDao.getAllCompletions(
+      final completions = await database.completionDao.internalGetAllCompletionsCrossProfile(
         scope: CrossProfileScope.dataExport,
       );
       expect(completions, isEmpty);
@@ -71,7 +71,7 @@ void main() {
         sefariaRef: 'Shabbat.2a',
       );
 
-      final results = await database.completionDao.getCompletionsByCurriculum(
+      final results = await database.completionDao.internalGetCompletionsByCurriculumCrossProfile(
         'bavli',
         scope: CrossProfileScope.dataExport,
       );
@@ -83,7 +83,7 @@ void main() {
       await insertTestCompletion(sefariaRef: 'Berakhot.2a', stageId: 2);
       await insertTestCompletion(sefariaRef: 'Shabbat.2a');
 
-      final results = await database.completionDao.getCompletionsForContent(
+      final results = await database.completionDao.internalGetCompletionsForContentCrossProfile(
         'Berakhot.2a',
         scope: CrossProfileScope.parentAnalytics,
       );
@@ -101,7 +101,7 @@ void main() {
         sefariaRef: 'Eruvin.2a',
       );
 
-      final results = await database.completionDao.getCompletionsByDateRange(
+      final results = await database.completionDao.internalGetCompletionsByDateRangeCrossProfile(
         DateTime(2024, 6, 1),
         DateTime(2024, 6, 30),
         scope: CrossProfileScope.parentAnalytics,
@@ -114,7 +114,7 @@ void main() {
       () async {
         await insertTestCompletion(completedAt: DateTime(2024, 6, 15));
 
-        final has = await database.completionDao.hasCompletionsInDateRange(
+        final has = await database.completionDao.internalHasCompletionsInDateRangeCrossProfile(
           DateTime(2024, 6, 1),
           DateTime(2024, 6, 30),
           scope: CrossProfileScope.parentAnalytics,
@@ -126,7 +126,7 @@ void main() {
     test(
       'hasCompletionsInDateRange returns false when no completions',
       () async {
-        final has = await database.completionDao.hasCompletionsInDateRange(
+        final has = await database.completionDao.internalHasCompletionsInDateRangeCrossProfile(
           DateTime(2024, 6, 1),
           DateTime(2024, 6, 30),
           scope: CrossProfileScope.parentAnalytics,
@@ -167,7 +167,7 @@ void main() {
       await insertTestCompletion(trackType: 'amud', sefariaRef: 'Shabbat.2a');
       await insertTestCompletion(trackType: 'daf', sefariaRef: 'Eruvin.2a');
 
-      final breakdown = await database.completionDao.getTrackBreakdown(
+      final breakdown = await database.completionDao.internalGetTrackBreakdownCrossProfile(
         'bavli',
         scope: CrossProfileScope.adultAggregation,
       );
@@ -183,7 +183,7 @@ void main() {
         sefariaRef: 'Eruvin.2a',
       );
 
-      final count = await database.completionDao.getAggregateCount(
+      final count = await database.completionDao.internalGetAggregateCountCrossProfile(
         'bavli',
         scope: CrossProfileScope.adultAggregation,
       );
@@ -191,7 +191,7 @@ void main() {
     });
 
     test('getAggregateCount returns 0 for unknown curriculum', () async {
-      final count = await database.completionDao.getAggregateCount(
+      final count = await database.completionDao.internalGetAggregateCountCrossProfile(
         'nonexistent',
         scope: CrossProfileScope.adultAggregation,
       );
@@ -218,35 +218,41 @@ void main() {
 
     // ========== DNI-321: CrossProfileScope assertion tests ==========
 
-    test('getAllCompletions throws AssertionError in debug when scope is null '
-        '(bypassing type system via dynamic cast)', () async {
-      // `scope` is required and non-nullable at the API level, but the
-      // assert inside _assertCrossProfileScope guards against any future
-      // nullable path or dynamic invocation.  We simulate a null scope via
-      // a dynamic cast to verify the assert fires in debug mode.
-      CrossProfileScope? nullableScope;
-      expect(
-        () => database.completionDao.getAllCompletions(
-          // ignore: null_check_always_fails — intentional null for assert test
-          scope: nullableScope!,
-        ),
-        throwsA(isA<TypeError>()),
-        // In Dart, `nullableScope!` where nullableScope is null throws
-        // TypeError (Null check operator used on a null value) which is
-        // what the assert-equivalent runtime check produces.
-      );
-    });
+    test(
+      'getAllCompletions throws AssertionError in debug when scope is null '
+      '(bypassing type system via dynamic cast)',
+      () async {
+        // `scope` is required and non-nullable at the API level, but the
+        // assert inside _assertCrossProfileScope guards against any future
+        // nullable path or dynamic invocation.  We simulate a null scope via
+        // a dynamic cast to verify the assert fires in debug mode.
+        CrossProfileScope? nullableScope;
+        expect(
+          () => database.completionDao.internalGetAllCompletionsCrossProfile(
+            // ignore: null_check_always_fails — intentional null for assert test
+            scope: nullableScope!,
+          ),
+          throwsA(isA<TypeError>()),
+          // In Dart, `nullableScope!` where nullableScope is null throws
+          // TypeError (Null check operator used on a null value) which is
+          // what the assert-equivalent runtime check produces.
+        );
+      },
+    );
   });
 
   group('CrossProfileScope — debug guard', () {
-    test('passing explicit scope does not throw', () async {
-      // All enum values should be accepted without error.
-      for (final scope in CrossProfileScope.values) {
-        await expectLater(
-          database.completionDao.getAllCompletions(scope: scope),
-          completes,
-        );
-      }
-    });
+    test(
+      'passing explicit scope does not throw',
+      () async {
+        // All enum values should be accepted without error.
+        for (final scope in CrossProfileScope.values) {
+          await expectLater(
+            database.completionDao.internalGetAllCompletionsCrossProfile(scope: scope),
+            completes,
+          );
+        }
+      },
+    );
   });
 }

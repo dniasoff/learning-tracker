@@ -447,7 +447,7 @@ void main() {
 
         // Verify empty
         expect(
-          await db.completionDao.getAllCompletions(
+          await db.completionDao.internalGetAllCompletionsCrossProfile(
             scope: CrossProfileScope.dataExport,
           ),
           isEmpty,
@@ -457,7 +457,7 @@ void main() {
         await service.importData(jsonString);
 
         // Verify restored
-        final completions = await db.completionDao.getAllCompletions(
+        final completions = await db.completionDao.internalGetAllCompletionsCrossProfile(
           scope: CrossProfileScope.dataExport,
         );
         expect(completions.length, equals(2));
@@ -541,7 +541,7 @@ void main() {
       expect(() => service.importData(badImport), throwsA(anything));
 
       // Original data should be preserved (transaction rolled back)
-      final completions = await db.completionDao.getAllCompletions(
+      final completions = await db.completionDao.internalGetAllCompletionsCrossProfile(
         scope: CrossProfileScope.dataExport,
       );
       expect(completions.length, equals(2)); // Original 2 completions
@@ -570,7 +570,7 @@ void main() {
 
         // Verify all empty
         expect(
-          await db.completionDao.getAllCompletions(
+          await db.completionDao.internalGetAllCompletionsCrossProfile(
             scope: CrossProfileScope.dataExport,
           ),
           isEmpty,
@@ -583,7 +583,7 @@ void main() {
 
         // Verify all data restored
         expect(
-          (await db.completionDao.getAllCompletions(
+          (await db.completionDao.internalGetAllCompletionsCrossProfile(
             scope: CrossProfileScope.dataExport,
           )).length,
           equals(2),

@@ -151,7 +151,7 @@ void main() {
           );
 
           // Query all completions — both exist
-          final all = await db.completionDao.getAllCompletions(
+          final all = await db.completionDao.internalGetAllCompletionsCrossProfile(
             scope: CrossProfileScope.parentAnalytics,
           );
           expect(all.length, 2);
@@ -2679,7 +2679,7 @@ void main() {
           expect(newStageIds.intersection(oldStageIds), isEmpty);
 
           // Old completion should still exist (append-only table).
-          final completions = await db.completionDao.getCompletionsByCurriculum(
+          final completions = await db.completionDao.internalGetCompletionsByCurriculumCrossProfile(
             'bavli',
             scope: CrossProfileScope.parentAnalytics,
           );

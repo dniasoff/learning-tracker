@@ -380,7 +380,7 @@ void main() {
 
       await syncEngine.pullOnLaunch();
 
-      final completions = await database.completionDao.getAllCompletions(
+      final completions = await database.completionDao.internalGetAllCompletionsCrossProfile(
         scope: CrossProfileScope.syncRestore,
       );
       expect(completions.length, 2);
@@ -481,7 +481,7 @@ void main() {
         await syncEngine.pullOnLaunch();
 
         // Local data unchanged
-        final completions = await database.completionDao.getAllCompletions(
+        final completions = await database.completionDao.internalGetAllCompletionsCrossProfile(
           scope: CrossProfileScope.syncRestore,
         );
         expect(completions.length, 1);
@@ -638,7 +638,7 @@ void main() {
         // Allow async merge to process
         await Future<void>.delayed(const Duration(milliseconds: 50));
 
-        final completions = await database.completionDao.getAllCompletions(
+        final completions = await database.completionDao.internalGetAllCompletionsCrossProfile(
           scope: CrossProfileScope.syncRestore,
         );
         expect(completions.length, 1);
@@ -921,7 +921,7 @@ void main() {
 
       await restoreService.restore();
 
-      final completions = await database.completionDao.getAllCompletions(
+      final completions = await database.completionDao.internalGetAllCompletionsCrossProfile(
         scope: CrossProfileScope.syncRestore,
       );
       expect(completions, hasLength(1));

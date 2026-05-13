@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart'
     show FirebaseException, Timestamp;
 import 'package:drift/drift.dart';
+import 'package:learning_tracker/core/analytics/parent_analytics_repository.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/cross_profile_scope.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
@@ -3067,7 +3068,8 @@ class SyncEngine {
 
     try {
       // --- Completions (append-only) ---
-      final completions = await _database.completionDao.getAllCompletions(
+      final analytics = ParentAnalyticsRepositoryImpl(_database);
+      final completions = await analytics.getAllCompletions(
         scope: CrossProfileScope.syncRestore,
       );
       for (final c in completions) {

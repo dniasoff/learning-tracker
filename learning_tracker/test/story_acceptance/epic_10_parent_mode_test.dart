@@ -677,7 +677,7 @@ void main() {
       );
 
       // Existing completion still has 10 points
-      final completions = await db.completionDao.getCompletionsByCurriculum(
+      final completions = await db.completionDao.internalGetCompletionsByCurriculumCrossProfile(
         CurriculumId.mishnayos.storageKey,
         scope: CrossProfileScope.parentAnalytics,
       );
@@ -833,7 +833,7 @@ void main() {
         );
 
         // Verify the completion has 15 points
-        final completions = await db.completionDao.getCompletionsByCurriculum(
+        final completions = await db.completionDao.internalGetCompletionsByCurriculumCrossProfile(
           CurriculumId.mishnayos.storageKey,
           scope: CrossProfileScope.parentAnalytics,
         );

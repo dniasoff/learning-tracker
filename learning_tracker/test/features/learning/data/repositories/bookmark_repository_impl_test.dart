@@ -234,7 +234,7 @@ void main() {
 
       // No completions should be created
       final completions = await database.completionDao
-          .getCompletionsByCurriculum(
+          .internalGetCompletionsByCurriculumCrossProfile(
             CurriculumId.mishnayos.storageKey,
             scope: CrossProfileScope.dataExport,
           );

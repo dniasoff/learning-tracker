@@ -18,17 +18,25 @@ class CompletionDao extends DatabaseAccessor<UserDatabase>
     with _$CompletionDaoMixin {
   CompletionDao(super.db);
 
-  Future<List<Completion>> getAllCompletions({
+  // ── Cross-profile internals (DNI-338) ───────────────────────────────────
+  //
+  // The public cross-profile methods were deleted in Story 25.17. Callers
+  // that legitimately need cross-profile reads now go through
+  // [ParentAnalyticsRepository]; its default impl delegates here. These
+  // methods are intentionally named `internal…CrossProfile` so that a
+  // custom lint (DNI-386) can forbid imports from outside that repository.
+
+  Future<List<Completion>> internalGetAllCompletionsCrossProfile({
     required CrossProfileScope scope,
   }) {
-    _assertCrossProfileScope(scope, 'getAllCompletions');
+    _assertCrossProfileScope(scope, 'internalGetAllCompletionsCrossProfile');
     return select(completions).get();
   }
 
   Future<Completion?> getCompletionById(int id) =>
       (select(completions)..where((t) => t.id.equals(id))).getSingleOrNull();
 
-  Future<List<Completion>> getCompletionsByCurriculum(
+  Future<List<Completion>> internalGetCompletionsByCurriculumCrossProfile(
     String curriculumId, {
     required CrossProfileScope scope,
   }) {
@@ -38,7 +46,7 @@ class CompletionDao extends DatabaseAccessor<UserDatabase>
     )..where((t) => t.curriculumId.equals(curriculumId))).get();
   }
 
-  Future<List<Completion>> getCompletionsForContent(
+  Future<List<Completion>> internalGetCompletionsForContentCrossProfile(
     String sefariaRef, {
     required CrossProfileScope scope,
   }) {
@@ -279,8 +287,8 @@ class CompletionDao extends DatabaseAccessor<UserDatabase>
     return out;
   }
 
-  /// Get completions within a date range.
-  Future<List<Completion>> getCompletionsByDateRange(
+  /// Cross-profile: completions in [start]..[end] inclusive.
+  Future<List<Completion>> internalGetCompletionsByDateRangeCrossProfile(
     DateTime start,
     DateTime end, {
     required CrossProfileScope scope,
@@ -294,13 +302,16 @@ class CompletionDao extends DatabaseAccessor<UserDatabase>
         .get();
   }
 
-  /// Check if any completions exist within a date range.
-  Future<bool> hasCompletionsInDateRange(
+  /// Cross-profile: any completions in [start]..[end] inclusive.
+  Future<bool> internalHasCompletionsInDateRangeCrossProfile(
     DateTime start,
     DateTime end, {
     required CrossProfileScope scope,
   }) async {
-    _assertCrossProfileScope(scope, 'hasCompletionsInDateRange');
+    _assertCrossProfileScope(
+      scope,
+      'internalHasCompletionsInDateRangeCrossProfile',
+    );
     final result =
         await (select(completions)
               ..where(
@@ -338,15 +349,12 @@ class CompletionDao extends DatabaseAccessor<UserDatabase>
     return result.isNotEmpty;
   }
 
-  /// Get completion count breakdown by track type for a curriculum.
-  ///
-  /// Returns a map of track type keys to completion counts.
-  /// Includes counts from deactivated tracks (historical data preserved).
-  Future<Map<String, int>> getTrackBreakdown(
+  /// Cross-profile: completion count breakdown by track type.
+  Future<Map<String, int>> internalGetTrackBreakdownCrossProfile(
     String curriculumId, {
     required CrossProfileScope scope,
   }) async {
-    _assertCrossProfileScope(scope, 'getTrackBreakdown');
+    _assertCrossProfileScope(scope, 'internalGetTrackBreakdownCrossProfile');
     final query = selectOnly(completions)
       ..addColumns([completions.trackType, completions.id.count()])
       ..where(completions.curriculumId.equals(curriculumId))
@@ -366,14 +374,12 @@ class CompletionDao extends DatabaseAccessor<UserDatabase>
     return breakdown;
   }
 
-  /// Get total completion count for a curriculum across all tracks.
-  ///
-  /// Returns the sum of all completions regardless of track type.
-  Future<int> getAggregateCount(
+  /// Cross-profile: total completion count for [curriculumId].
+  Future<int> internalGetAggregateCountCrossProfile(
     String curriculumId, {
     required CrossProfileScope scope,
   }) async {
-    _assertCrossProfileScope(scope, 'getAggregateCount');
+    _assertCrossProfileScope(scope, 'internalGetAggregateCountCrossProfile');
     final query = selectOnly(completions)
       ..addColumns([completions.id.count()])
       ..where(completions.curriculumId.equals(curriculumId));

@@ -9,21 +9,28 @@
 /// Story 25.19 (DNI-340): core/logging/ — finalize structured AppLogger and
 ///                        migrate remaining production logs.
 @Tags(['epic_25'])
+// The Story 25.17 deletion-proof test uses `dynamic` dispatch to confirm
+// the public CompletionDao methods are gone — that's the whole point of
+// the test, so suppress the analyzer warning at file scope.
+// ignore_for_file: avoid_dynamic_calls
 library;
 
 import 'dart:convert';
 import 'dart:io';
 import 'dart:ui';
 
-import 'package:drift/drift.dart' show Variable;
+import 'package:drift/drift.dart' show Value, Variable;
 import 'package:drift/native.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart' show TestWidgetsFlutterBinding;
+import 'package:learning_tracker/core/analytics/parent_analytics_repository.dart';
 import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
 import 'package:learning_tracker/core/content/content_index.dart';
 import 'package:learning_tracker/core/content/program_ref_resolver.dart';
 import 'package:learning_tracker/core/database/daos/outbox_dao.dart';
+import 'package:learning_tracker/core/database/track_scope.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
+import 'package:learning_tracker/core/enums/cross_profile_scope.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
@@ -1558,6 +1565,163 @@ void main() {
     },
   );
 
+
+  // --------------------------------------------------------------------------
+  // Story 25.17 — BaseDao<T> + TrackScope; delete cross-profile DAO methods
+  // (DNI-338)
+  // --------------------------------------------------------------------------
+  group(
+    'Story 25.17 — BaseDao + TrackScope; cross-profile DAO methods deleted',
+    tags: ['story_25_17'],
+    () {
+      late UserDatabase db;
+
+      setUp(() => db = UserDatabase(NativeDatabase.memory()));
+      tearDown(() => db.close());
+
+      // AC: TrackScope is a freezed record threaded through track-aware
+      //     queries.
+      test('TrackScope exposes profileId, trackId, curriculumId fields', () {
+        const scope = TrackScope(
+          profileId: 7,
+          trackId: 3,
+          curriculumId: CurriculumId.mishnayos,
+        );
+        expect(scope.profileId, 7);
+        expect(scope.trackId, 3);
+        expect(scope.curriculumId, CurriculumId.mishnayos);
+      });
+
+      test('TrackScope has freezed value equality', () {
+        const a = TrackScope(
+          profileId: 1,
+          trackId: 2,
+          curriculumId: CurriculumId.mishnayos,
+        );
+        const b = TrackScope(
+          profileId: 1,
+          trackId: 2,
+          curriculumId: CurriculumId.mishnayos,
+        );
+        expect(a, equals(b));
+        expect(a.hashCode, equals(b.hashCode));
+      });
+
+      // AC: BaseDao<T> is a Dart mixin offering getById, getByProfile,
+      //     count, exists.
+      test('BaseDao<T> mixin provides count/exists/getById/getByProfile',
+          () async {
+        await db.streakDao.upsertStreakByProfile(
+          1,
+          StreaksCompanion.insert(
+            profileId: 1,
+            currentStreak: const Value(5),
+          ),
+        );
+        await db.streakDao.upsertStreakByProfile(
+          2,
+          StreaksCompanion.insert(
+            profileId: 2,
+            currentStreak: const Value(3),
+          ),
+        );
+
+        expect(await db.streakDao.count(profileId: 1), 1);
+        expect(await db.streakDao.exists(profileId: 1), isTrue);
+        expect(await db.streakDao.count(profileId: 99), 0);
+        expect(await db.streakDao.exists(profileId: 99), isFalse);
+
+        final byProfile = await db.streakDao.getByProfile(1);
+        expect(byProfile, hasLength(1));
+        expect(byProfile.first.profileId, 1);
+
+        final byId = await db.streakDao.getById(byProfile.first.id);
+        expect(byId, isNotNull);
+        expect(byId!.profileId, 1);
+      });
+
+      // AC: The 6 cross-profile methods on CompletionDao are deleted (from
+      //     the public surface).
+      test('public cross-profile CompletionDao methods are deleted', () {
+        // The methods listed below were public on CompletionDao before
+        // DNI-338. They must no longer be reachable — `dynamic` lookups
+        // throw [NoSuchMethodError] when the method does not exist.
+        final dao = db.completionDao as dynamic;
+        for (final name in const [
+          'getAllCompletions',
+          'getCompletionsByCurriculum',
+          'getCompletionsForContent',
+          'getCompletionsByDateRange',
+          'hasCompletionsInDateRange',
+          'getTrackBreakdown',
+          'getAggregateCount',
+        ]) {
+          expect(
+            () {
+              switch (name) {
+                case 'getAllCompletions':
+                  return dao.getAllCompletions();
+                case 'getCompletionsByCurriculum':
+                  return dao.getCompletionsByCurriculum('x');
+                case 'getCompletionsForContent':
+                  return dao.getCompletionsForContent('x');
+                case 'getCompletionsByDateRange':
+                  return dao.getCompletionsByDateRange(
+                    DateTime.utc(2026),
+                    DateTime.utc(2026, 2),
+                  );
+                case 'hasCompletionsInDateRange':
+                  return dao.hasCompletionsInDateRange(
+                    DateTime.utc(2026),
+                    DateTime.utc(2026, 2),
+                  );
+                case 'getTrackBreakdown':
+                  return dao.getTrackBreakdown('x');
+                case 'getAggregateCount':
+                  return dao.getAggregateCount('x');
+              }
+            },
+            throwsA(isA<NoSuchMethodError>()),
+            reason: 'CompletionDao.$name should be deleted from public surface',
+          );
+        }
+      });
+
+      // AC: Cross-profile aggregation goes through parentAnalyticsRepository.
+      test('ParentAnalyticsRepository is the public surface for '
+          'cross-profile reads', () async {
+        await db.completionDao.insertCompletion(
+          CompletionsCompanion.insert(
+            profileId: 1,
+            curriculumId: 'mishnayos',
+            sefariaRef: 'r1',
+            stageId: 1,
+            trackType: 'forwards',
+            trackId: 1,
+            completedAt: DateTime.utc(2026, 5, 13),
+          ),
+        );
+        await db.completionDao.insertCompletion(
+          CompletionsCompanion.insert(
+            profileId: 2,
+            curriculumId: 'mishnayos',
+            sefariaRef: 'r2',
+            stageId: 1,
+            trackType: 'forwards',
+            trackId: 1,
+            completedAt: DateTime.utc(2026, 5, 13),
+          ),
+        );
+
+        final repo = ParentAnalyticsRepositoryImpl(db);
+        final all = await repo.getAllCompletions(
+          scope: CrossProfileScope.parentAnalytics,
+        );
+        expect(all, hasLength(2));
+        expect(all.map((c) => c.profileId).toSet(), equals({1, 2}));
+      });
+    },
+  );
 }
 
 Object _flippedValue(ProfileScopedPreference<Object> pref) {

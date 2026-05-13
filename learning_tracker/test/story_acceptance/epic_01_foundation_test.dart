@@ -136,7 +136,7 @@ void main() {
       );
       expect(id, greaterThan(0));
 
-      final all = await db.completionDao.getAllCompletions(
+      final all = await db.completionDao.internalGetAllCompletionsCrossProfile(
         scope: CrossProfileScope.dataExport,
       );
       expect(all, hasLength(1));

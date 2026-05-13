@@ -310,7 +310,7 @@ void main() {
         ),
       );
 
-      final completions = await db.completionDao.getAllCompletions(
+      final completions = await db.completionDao.internalGetAllCompletionsCrossProfile(
         scope: CrossProfileScope.dataExport,
       );
       final total = completions.fold<int>(0, (sum, c) => sum + c.points);
@@ -389,12 +389,12 @@ void main() {
         );
 
         final mishnayosCompletions = await db.completionDao
-            .getCompletionsByCurriculum(
+            .internalGetCompletionsByCurriculumCrossProfile(
               'mishnayos',
               scope: CrossProfileScope.parentAnalytics,
             );
         final bavliCompletions = await db.completionDao
-            .getCompletionsByCurriculum(
+            .internalGetCompletionsByCurriculumCrossProfile(
               'bavli',
               scope: CrossProfileScope.parentAnalytics,
             );
@@ -857,7 +857,7 @@ void main() {
       final goals = await db.goalDao.getGoalsByCurriculum('mishnayos');
       final goal = goals.first;
 
-      final allCompletions = await db.completionDao.getCompletionsByCurriculum(
+      final allCompletions = await db.completionDao.internalGetCompletionsByCurriculumCrossProfile(
         'mishnayos',
         scope: CrossProfileScope.parentAnalytics,
       );

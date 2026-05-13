@@ -216,7 +216,7 @@ void main() {
 
         // Completion data is preserved — completions are append-only (FR5 / E24).
         final completions = await database.completionDao
-            .getCompletionsByCurriculum(
+            .internalGetCompletionsByCurriculumCrossProfile(
               CurriculumId.bavli.storageKey,
               scope: CrossProfileScope.dataExport,
             );

@@ -421,7 +421,7 @@ void main() {
         await service.deactivate(CurriculumId.bavli);
 
         // Data must still exist
-        final completions = await db.completionDao.getCompletionsByCurriculum(
+        final completions = await db.completionDao.internalGetCompletionsByCurriculumCrossProfile(
           CurriculumId.bavli.storageKey,
           scope: CrossProfileScope.dataExport,
         );
@@ -460,7 +460,7 @@ void main() {
         await service.activate(CurriculumId.bavli);
 
         // Data survives the round-trip
-        final completions = await db.completionDao.getCompletionsByCurriculum(
+        final completions = await db.completionDao.internalGetCompletionsByCurriculumCrossProfile(
           CurriculumId.bavli.storageKey,
           scope: CrossProfileScope.dataExport,
         );
@@ -781,7 +781,7 @@ void main() {
         ),
       );
 
-      final completions = await db.completionDao.getCompletionsForContent(
+      final completions = await db.completionDao.internalGetCompletionsForContentCrossProfile(
         'Mishnah Berakhot 1.1',
         scope: CrossProfileScope.dataExport,
       );

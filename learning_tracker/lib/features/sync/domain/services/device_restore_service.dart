@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:learning_tracker/core/analytics/parent_analytics_repository.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/cross_profile_scope.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
@@ -87,7 +88,8 @@ class DeviceRestoreService {
     } catch (_) {
       // Firebase not initialized (e.g. test environment) — treat as no session.
     }
-    final completions = await _database.completionDao.getAllCompletions(
+    final analytics = ParentAnalyticsRepositoryImpl(_database);
+    final completions = await analytics.getAllCompletions(
       scope: CrossProfileScope.syncRestore,
     );
     if (firebaseUid != null && completions.isEmpty) return true;
