@@ -1,13 +1,14 @@
-import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
+
+import '../../../helpers/drift_memory.dart';
 
 void main() {
   late UserDatabase database;
   late int trackId;
 
   setUp(() async {
-    database = UserDatabase(NativeDatabase.memory());
+    database = inMemoryDb();
     trackId = await database
         .into(database.curriculumTracks)
         .insert(

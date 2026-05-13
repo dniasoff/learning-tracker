@@ -3,10 +3,11 @@
 library;
 
 import 'package:drift/drift.dart' hide isNotNull, isNull;
-import 'package:drift/native.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:test/test.dart';
+
+import '../../../helpers/drift_memory.dart';
 
 /// Two tracks for the same curriculum+type require distinct profiles
 /// (UNIQUE on curriculum_tracks: profile_id, curriculum_id, track_type).
@@ -19,7 +20,7 @@ void main() {
   late int track2Id;
 
   setUp(() async {
-    db = UserDatabase(NativeDatabase.memory());
+    db = inMemoryDb();
     final t1 = await db
         .into(db.curriculumTracks)
         .insertReturning(

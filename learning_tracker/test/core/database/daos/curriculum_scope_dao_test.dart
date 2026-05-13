@@ -1,14 +1,15 @@
-import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+
+import '../../../helpers/drift_memory.dart';
 
 void main() {
   late UserDatabase database;
   late int trackId;
 
   setUp(() async {
-    database = UserDatabase(NativeDatabase.memory());
+    database = inMemoryDb();
     // Insert a track first to satisfy FK constraint on curriculum_scopes.trackId
     trackId = await database
         .into(database.curriculumTracks)

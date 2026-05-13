@@ -1,24 +1,24 @@
 import 'package:drift/drift.dart' hide isNotNull, isNull;
-import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
+
+import '../../../helpers/drift_memory.dart';
 
 void main() {
   late UserDatabase database;
   late int trackId;
 
   setUp(() async {
-    database = UserDatabase(NativeDatabase.memory());
-    trackId = await database
-        .into(database.curriculumTracks)
-        .insert(
-          CurriculumTracksCompanion.insert(
-            profileId: 1,
-            curriculumId: 'bavli',
-            trackType: 'personal',
-            activatedAt: DateTime.utc(2026, 1, 1),
-          ),
-        );
+    database = inMemoryDb();
+    trackId = await database.into(database.curriculumTracks).insert(
+      CurriculumTracksCompanion.insert(
+        profileId: 1,
+        curriculumId: 'bavli',
+        trackType: 'personal',
+        activatedAt: DateTime.utc(2026, 1, 1),
+      ),
+    );
+
   });
 
   tearDown(() async {

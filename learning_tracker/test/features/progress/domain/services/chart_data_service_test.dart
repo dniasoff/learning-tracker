@@ -1,58 +1,61 @@
+import 'package:drift/drift.dart' show Value;
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/core/database/daos/completion_dao.dart';
-import 'package:learning_tracker/core/database/daos/goal_dao.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/user_mode.dart';
 import 'package:learning_tracker/features/progress/domain/services/chart_data_service.dart';
-import 'package:mocktail/mocktail.dart';
 
-class MockUserDatabase extends Mock implements UserDatabase {}
-
-class MockCompletionDao extends Mock implements CompletionDao {}
-
-class MockGoalDao extends Mock implements GoalDao {}
+import '../../../../helpers/drift_memory.dart';
 
 void main() {
-  late MockUserDatabase mockDb;
-  late MockCompletionDao mockCompletionDao;
-  late MockGoalDao mockGoalDao;
+  late UserDatabase db;
   late ChartDataService service;
+  late int trackId;
+  const profileId = 0;
 
-  setUp(() {
-    mockDb = MockUserDatabase();
-    mockCompletionDao = MockCompletionDao();
-    mockGoalDao = MockGoalDao();
-    when(() => mockDb.completionDao).thenReturn(mockCompletionDao);
-    when(() => mockDb.goalDao).thenReturn(mockGoalDao);
-    service = ChartDataService(mockDb);
+  setUp(() async {
+    db = inMemoryDb();
+    // The service defaults to profileId=0, so we own a track at that
+    // profile to satisfy the completions.trackId FK.
+    trackId = await db.into(db.curriculumTracks).insert(
+          CurriculumTracksCompanion.insert(
+            profileId: profileId,
+            curriculumId: 'mishnayos',
+            trackType: 'personal',
+            activatedAt: DateTime.utc(2026, 1, 1),
+          ),
+        );
+    service = ChartDataService(db);
   });
 
-  Completion makeCompletion({
+  tearDown(() async {
+    await db.close();
+  });
+
+  Future<int> insertCompletion({
     required DateTime completedAt,
     String curriculumId = 'mishnayos',
     int points = 10,
     int stageId = 1,
-  }) {
-    return Completion(
-      id: 0,
-      profileId: 0,
-      curriculumId: curriculumId,
-      sefariaRef: 'ref_1',
-      stageId: stageId,
-      trackType: 'personal',
-      trackId: 1,
-      completedAt: completedAt,
-      points: points,
-    );
+    String sefariaRef = 'ref_1',
+    int? trackIdOverride,
+  }) async {
+    return db.into(db.completions).insert(
+          CompletionsCompanion.insert(
+            profileId: profileId,
+            curriculumId: curriculumId,
+            sefariaRef: sefariaRef,
+            stageId: stageId,
+            trackType: 'personal',
+            trackId: trackIdOverride ?? trackId,
+            completedAt: completedAt,
+            points: Value(points),
+          ),
+        );
   }
 
   group('ChartDataService', () {
     group('getDailyCompletions', () {
       test('returns zero-filled entries for empty range', () async {
-        when(
-          () => mockCompletionDao.getCompletionsByProfile(0),
-        ).thenAnswer((_) async => []);
-
         final start = DateTime(2026, 3, 1);
         final end = DateTime(2026, 3, 3);
         final result = await service.getDailyCompletions(
@@ -65,12 +68,14 @@ void main() {
       });
 
       test('counts completions per day', () async {
-        when(() => mockCompletionDao.getCompletionsByProfile(0)).thenAnswer(
-          (_) async => [
-            makeCompletion(completedAt: DateTime(2026, 3, 1, 10)),
-            makeCompletion(completedAt: DateTime(2026, 3, 1, 14)),
-            makeCompletion(completedAt: DateTime(2026, 3, 3, 8)),
-          ],
+        await insertCompletion(completedAt: DateTime(2026, 3, 1, 10));
+        await insertCompletion(
+          completedAt: DateTime(2026, 3, 1, 14),
+          sefariaRef: 'ref_2',
+        );
+        await insertCompletion(
+          completedAt: DateTime(2026, 3, 3, 8),
+          sefariaRef: 'ref_3',
         );
 
         final result = await service.getDailyCompletions(
@@ -85,18 +90,25 @@ void main() {
       });
 
       test('filters by curriculumId when provided', () async {
-        when(
-          () => mockCompletionDao.getCompletionsByCurriculumAndProfile(
-            'bavli',
-            0,
-          ),
-        ).thenAnswer(
-          (_) async => [
-            makeCompletion(
-              completedAt: DateTime(2026, 3, 1, 10),
-              curriculumId: 'bavli',
-            ),
-          ],
+        // Bavli track for the same profile.
+        final bavliTrack = await db.into(db.curriculumTracks).insert(
+              CurriculumTracksCompanion.insert(
+                profileId: profileId,
+                curriculumId: 'bavli',
+                trackType: 'personal',
+                activatedAt: DateTime.utc(2026, 1, 1),
+              ),
+            );
+        await insertCompletion(
+          completedAt: DateTime(2026, 3, 1, 10),
+          curriculumId: 'bavli',
+          trackIdOverride: bavliTrack,
+        );
+        // A mishnayos completion on the same day must NOT count.
+        await insertCompletion(
+          completedAt: DateTime(2026, 3, 1, 12),
+          curriculumId: 'mishnayos',
+          sefariaRef: 'mish_ref',
         );
 
         final result = await service.getDailyCompletions(
@@ -107,18 +119,19 @@ void main() {
 
         expect(result, hasLength(1));
         expect(result[0].count, 1);
-        verifyNever(() => mockCompletionDao.getCompletionsByProfile(0));
       });
     });
 
     group('getCumulativeProgress', () {
       test('returns monotonically increasing totals', () async {
-        when(() => mockCompletionDao.getCompletionsByProfile(0)).thenAnswer(
-          (_) async => [
-            makeCompletion(completedAt: DateTime(2026, 3, 1, 10)),
-            makeCompletion(completedAt: DateTime(2026, 3, 2, 10)),
-            makeCompletion(completedAt: DateTime(2026, 3, 2, 14)),
-          ],
+        await insertCompletion(completedAt: DateTime(2026, 3, 1, 10));
+        await insertCompletion(
+          completedAt: DateTime(2026, 3, 2, 10),
+          sefariaRef: 'ref_2',
+        );
+        await insertCompletion(
+          completedAt: DateTime(2026, 3, 2, 14),
+          sefariaRef: 'ref_3',
         );
 
         final result = await service.getCumulativeProgress(
@@ -133,11 +146,10 @@ void main() {
       });
 
       test('includes completions before start date in baseline', () async {
-        when(() => mockCompletionDao.getCompletionsByProfile(0)).thenAnswer(
-          (_) async => [
-            makeCompletion(completedAt: DateTime(2026, 2, 28, 10)),
-            makeCompletion(completedAt: DateTime(2026, 3, 1, 10)),
-          ],
+        await insertCompletion(completedAt: DateTime(2026, 2, 28, 10));
+        await insertCompletion(
+          completedAt: DateTime(2026, 3, 1, 10),
+          sefariaRef: 'ref_2',
         );
 
         final result = await service.getCumulativeProgress(
@@ -162,11 +174,14 @@ void main() {
       });
 
       test('returns points per day for child mode', () async {
-        when(() => mockCompletionDao.getCompletionsByProfile(0)).thenAnswer(
-          (_) async => [
-            makeCompletion(completedAt: DateTime(2026, 3, 1, 10), points: 5),
-            makeCompletion(completedAt: DateTime(2026, 3, 1, 14), points: 3),
-          ],
+        await insertCompletion(
+          completedAt: DateTime(2026, 3, 1, 10),
+          points: 5,
+        );
+        await insertCompletion(
+          completedAt: DateTime(2026, 3, 1, 14),
+          points: 3,
+          sefariaRef: 'ref_2',
         );
 
         final result = await service.getDailyPoints(
@@ -183,12 +198,14 @@ void main() {
 
     group('getStreakCalendar', () {
       test('returns set of active dates', () async {
-        when(() => mockCompletionDao.getCompletionsByProfile(0)).thenAnswer(
-          (_) async => [
-            makeCompletion(completedAt: DateTime(2026, 3, 1, 10)),
-            makeCompletion(completedAt: DateTime(2026, 3, 1, 14)),
-            makeCompletion(completedAt: DateTime(2026, 3, 3, 8)),
-          ],
+        await insertCompletion(completedAt: DateTime(2026, 3, 1, 10));
+        await insertCompletion(
+          completedAt: DateTime(2026, 3, 1, 14),
+          sefariaRef: 'ref_2',
+        );
+        await insertCompletion(
+          completedAt: DateTime(2026, 3, 3, 8),
+          sefariaRef: 'ref_3',
         );
 
         final result = await service.getStreakCalendar(

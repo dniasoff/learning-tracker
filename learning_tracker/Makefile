@@ -1,4 +1,4 @@
-.PHONY: help test test-story-4.1 test-story-5.2 test-story-6.1 test-story-6.3 test-story-6.4 test-story-6.5 test-story-7.1 test-story-7.2 test-story-7.3 test-story-8.4 test-epic-8 test-story-9.4 test-epic-9 test-story-10.4 test-story-10.5 test-epic-10 test-story-12.4 test-epic-12 test-story-13.1 test-story-13.2 test-epic-13 test-story-14.1 test-story-14.2 test-story-14.3 test-epic-14 test-story-15.5 test-story-15.6 test-story-15.8 test-epic-15 test-epic-21 test-story-24.7 test-epic-24 test-story-25.3 test-story-25.5 test-story-25.8 test-story-25.9 test-story-25.10 test-story-25.11 test-story-25.15 test-story-25.19 test-story-25.20 test-story-25.21 test-story-25.22 test-epic-25 test-story-27.1 test-epic-27 ci analyze format validate-calendar
+.PHONY: help test test-story-4.1 test-story-5.2 test-story-6.1 test-story-6.3 test-story-6.4 test-story-6.5 test-story-7.1 test-story-7.2 test-story-7.3 test-story-8.4 test-epic-8 test-story-9.4 test-epic-9 test-story-10.4 test-story-10.5 test-epic-10 test-story-12.4 test-epic-12 test-story-13.1 test-story-13.2 test-epic-13 test-story-14.1 test-story-14.2 test-story-14.3 test-epic-14 test-story-15.5 test-story-15.6 test-story-15.8 test-epic-15 test-epic-21 test-story-24.7 test-epic-24 test-story-25.3 test-story-25.5 test-story-25.8 test-story-25.9 test-story-25.10 test-story-25.11 test-story-25.15 test-story-25.19 test-story-25.20 test-story-25.21 test-story-25.22 test-epic-25 test-story-27.1 test-story-27.3 test-epic-27 ci analyze format validate-calendar
 
 help: ## Show this help message
 	@echo 'Usage: make [target]'
@@ -144,6 +144,9 @@ test-epic-25: ## Run all Epic 25 (Schema + Core Foundation) acceptance tests
 
 test-story-27.1: ## Run Story 27.1 (Test infrastructure helpers) acceptance tests
 	flutter test test/story_acceptance/epic_27_test_infrastructure_test.dart --name "Story 27.1"
+
+test-story-27.3: ## Run Story 27.3 (DAO tests with real in-memory Drift) acceptance tests
+	flutter test test/story_acceptance/epic_27_test_infrastructure_test.dart --name "Story 27.3"
 
 test-epic-27: ## Run all Epic 27 (Test Infrastructure) acceptance tests
 	flutter test test/story_acceptance/epic_27_test_infrastructure_test.dart

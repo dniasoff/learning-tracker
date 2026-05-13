@@ -1,13 +1,13 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 
-import '../../../helpers/test_database.dart';
+import '../../../helpers/drift_memory.dart';
 
 void main() {
   late UserDatabase db;
 
   setUp(() {
-    db = createTestDatabase();
+    db = inMemoryDb();
   });
 
   tearDown(() async {
