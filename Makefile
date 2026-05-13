@@ -1,4 +1,4 @@
-.PHONY: help test test-unit test-widget test-integration test-story-4.3 test-story-25.5 test-story-25.7 test-story-25.12 test-story-25.13 test-story-25.16 test-story-25.18 test-story-27.5 test-epic-25 test-epic-27 test-all ci analyze format schema-check audit arb-parity linear-sync linear-story linear-check
+.PHONY: help test test-unit test-widget test-integration test-story-4.3 test-story-25.5 test-story-25.7 test-story-25.12 test-story-25.13 test-story-25.16 test-story-25.18 test-story-27.5 test-epic-25 test-epic-27 test-all ci analyze format schema-check audit arb-parity gen-arch-tables linear-sync linear-story linear-check
 
 help:
 	@echo "Learning Tracker - Make Commands"
@@ -22,6 +22,7 @@ help:
 	@echo "  make schema-check       - Verify Drift v1 profileId/composite-index invariants"
 	@echo "  make audit              - Run all 12 enforcement greps + custom_lint (NFR19)"
 	@echo "  make arb-parity         - Check app_en.arb keys exist in app_he.arb (NFR14)"
+	@echo "  make gen-arch-tables    - Print Markdown table of all Drift tables + column counts"
 	@echo "  make ci                 - Run full CI check (analyze + format + schema-check + all tests)"
 	@echo ""
 	@echo "Linear Cache:"
@@ -213,6 +214,10 @@ audit:
 arb-parity:
 	@echo "Running arb-parity (DNI-389)..."
 	@dart run tool/arb_parity_check.dart
+
+gen-arch-tables:
+	@echo "Generating architecture table list (DNI-391)..."
+	@dart run tool/gen_arch_tables.dart
 
 ci: analyze format schema-check test-all
 	@echo "✓ CI checks passed"
