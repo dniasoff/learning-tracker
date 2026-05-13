@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/features/auth/presentation/widgets/no_backup_badge.dart';
 import 'package:learning_tracker/features/parent_mode/presentation/widgets/parent_mode_dialog_frame.dart';
 import 'package:learning_tracker/features/parent_mode/presentation/widgets/parent_pin_setup_dialog.dart';
 import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
@@ -70,6 +71,14 @@ class _ProfilePickerScreenState extends ConsumerState<ProfilePickerScreen> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             const SizedBox(height: 16),
+            // DNI-342 / UX-DR20: persistent "no backup" badge for local-born
+            // accounts (hidden for cloudBorn / signed-out via the widget's
+            // internal tier gate).
+            const Align(
+              alignment: Alignment.center,
+              child: NoBackupBadge(),
+            ),
+            const SizedBox(height: 6),
             Text(
               l10n.profilePickerTitle,
               textAlign: TextAlign.center,
@@ -171,7 +180,10 @@ class _ProfilePickerScreenState extends ConsumerState<ProfilePickerScreen> {
               return;
             }
             try {
-              final exists = await profileDao.profileExistsByName(1, n);
+              final exists = await profileDao.profileExistsByName(
+                ref.read(currentAccountIdProvider),
+                n,
+              );
               set(() => err = exists ? l10n.profileNameAlreadyExists : null);
             } catch (_) {
               set(() => err = null);
@@ -349,7 +361,7 @@ class _ProfilePickerScreenState extends ConsumerState<ProfilePickerScreen> {
     }
     try {
       final created = await repo.createProfile(
-        accountId: 1,
+        accountId: ref.read(currentAccountIdProvider),
         displayName: result.n,
         mode: result.m,
       );
@@ -452,7 +464,7 @@ class _ProfilePickerScreenState extends ConsumerState<ProfilePickerScreen> {
             }
             try {
               final exists = await profileDao.profileExistsByName(
-                1,
+                ref.read(currentAccountIdProvider),
                 n,
                 excludeId: profile.id,
               );
@@ -513,7 +525,9 @@ class _ProfilePickerScreenState extends ConsumerState<ProfilePickerScreen> {
 
   Future<void> _showDeleteDialog(ProfileModel profile) async {
     final repo = ref.read(profileRepositoryProvider);
-    final remaining = await repo.countProfilesForAccount(1);
+    final remaining = await repo.countProfilesForAccount(
+      ref.read(currentAccountIdProvider),
+    );
     final isLast = remaining <= 1;
     if (!mounted) return;
 

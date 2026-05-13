@@ -132,7 +132,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
       final profiles = await ref
           .read(userDatabaseProvider)
           .profileDao
-          .getProfilesByAccount(1);
+          .getProfilesByAccount(ref.read(currentAccountIdProvider));
       final firstSignInNeedsSetup = profiles.isEmpty;
       if (firstSignInNeedsSetup) {
         await prefs.remove(kOnboardingComplete);
@@ -275,7 +275,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
         final profiles = await ref
             .read(userDatabaseProvider)
             .profileDao
-            .getProfilesByAccount(1);
+            .getProfilesByAccount(ref.read(currentAccountIdProvider));
         final firstSignInNeedsSetup = profiles.isEmpty;
         if (firstSignInNeedsSetup) {
           await prefs.remove(kOnboardingComplete);
@@ -587,7 +587,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
     var profileCount = await ref
         .read(userDatabaseProvider)
         .profileDao
-        .countProfilesForAccount(1);
+        .countProfilesForAccount(ref.read(currentAccountIdProvider));
 
     if (profileCount == 0) {
       // If local is still empty, double-check cloud account-level profiles.
@@ -602,7 +602,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
         profileCount = await ref
             .read(userDatabaseProvider)
             .profileDao
-            .countProfilesForAccount(1);
+            .countProfilesForAccount(ref.read(currentAccountIdProvider));
       }
     }
 
@@ -620,7 +620,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
     final profiles = await ref
         .read(userDatabaseProvider)
         .profileDao
-        .getProfilesByAccount(1);
+        .getProfilesByAccount(ref.read(currentAccountIdProvider));
     if (profiles.length == 1) {
       ref.read(selectedProfileIdProvider.notifier).select(profiles.first.id);
       ref.invalidate(syncEngineProvider);

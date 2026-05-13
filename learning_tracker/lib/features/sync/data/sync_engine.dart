@@ -360,8 +360,9 @@ class SyncEngine {
 
       // Resolve every learner profile id we should pull subtrees for:
       // - IDs returned from Firestore `learner_profiles` (authoritative paths)
-      // - Plus any row already in local `profiles` (covers account_id ≠ 1 and
-      //   offline-created rows). Do not rely only on getProfilesByAccount(1).
+      // - Plus any row already in local `profiles` (covers offline-created
+      //   rows and accounts other than the active one). Do not rely solely
+      //   on `getProfilesByAccount(currentAccountId)`.
       final idsFromRemote = _learnerProfileIdsFromRemotePayload(
         learnerProfiles,
       );

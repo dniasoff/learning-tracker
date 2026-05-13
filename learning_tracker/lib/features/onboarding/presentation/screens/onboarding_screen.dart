@@ -135,7 +135,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
     final profiles = await ref
         .read(profileRepositoryProvider)
-        .getProfilesByAccount(1);
+        .getProfilesByAccount(ref.read(currentAccountIdProvider));
     final isDuplicate = profiles.any(
       (p) => p.displayName.trim().toLowerCase() == name.toLowerCase(),
     );
@@ -255,10 +255,11 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
         .set(_transliterationVariant);
 
     final repo = ref.read(profileRepositoryProvider);
+    final accountId = ref.read(currentAccountIdProvider);
     final ProfileModel profile;
     try {
       profile = await repo.createProfile(
-        accountId: 1,
+        accountId: accountId,
         displayName: name,
         mode: _profileMode,
         avatarIndex: 0,
@@ -406,7 +407,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     await prefs.setBool(kOnboardingComplete, true);
     if (!mounted) return;
     final repo = ref.read(profileRepositoryProvider);
-    final profiles = await repo.getProfilesByAccount(1);
+    final profiles = await repo.getProfilesByAccount(
+      ref.read(currentAccountIdProvider),
+    );
     if (!mounted) return;
     if (profiles.length >= 2) {
       unawaited(context.router.replaceAll([const ProfilePickerRoute()]));

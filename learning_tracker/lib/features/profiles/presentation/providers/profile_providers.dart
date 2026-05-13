@@ -1,4 +1,5 @@
 import 'package:learning_tracker/core/providers/database_provider.dart';
+import 'package:learning_tracker/features/auth/presentation/providers/auth_state_provider.dart';
 import 'package:learning_tracker/features/profiles/data/repositories/profile_repository_impl.dart';
 import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
 import 'package:learning_tracker/features/profiles/domain/repositories/profile_repository.dart';
@@ -7,12 +8,20 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'profile_providers.g.dart';
 
-/// The current account ID.
+/// The active account's local `accounts.id` within the currently-mounted
+/// per-account user DB (FR22, Story 25.21).
 ///
-/// TODO(DNI-110): Replace with actual account ID from auth state once
-/// multi-account support is implemented.
+/// Resolves from [authStateProvider] — when a user is signed-in, the
+/// `currentUser.profileId` is the int FK that `learner_profiles.accountId`
+/// and the snapshot collections key off. Falls back to `1` during the
+/// brief signed-out window (e.g. between sign-up and the
+/// `setLocalBornSession` call that lands onboarding) so DAO calls that
+/// happen before auth-state settles keep their previous behavior.
 @Riverpod(keepAlive: true)
-int currentAccountId(Ref ref) => 1;
+int currentAccountId(Ref ref) {
+  final authState = ref.watch(authStateProvider);
+  return authState.currentUser?.profileId ?? 1;
+}
 
 /// Provider for the ProfileRepository implementation.
 @Riverpod(keepAlive: true)

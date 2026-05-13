@@ -163,9 +163,14 @@ class ProfileRepositoryImpl implements ProfileRepository {
     // `allowLast: true` after a strong confirmation; the empty-state UI in
     // ProfilePicker will route the user to add a fresh profile.
     if (!allowLast) {
-      final count = await countProfilesForAccount(1);
-      if (count <= 1) {
-        throw const LastProfileException();
+      // Read the account from the profile we're about to delete so the
+      // last-profile guard scopes to the right account (DNI-342).
+      final existing = await _db.profileDao.getProfileById(id);
+      if (existing != null) {
+        final count = await countProfilesForAccount(existing.accountId);
+        if (count <= 1) {
+          throw const LastProfileException();
+        }
       }
     }
 

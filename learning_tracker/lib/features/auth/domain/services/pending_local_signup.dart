@@ -8,6 +8,7 @@ import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/providers/registry_provider.dart';
 import 'package:learning_tracker/features/auth/domain/services/session_persistence_service.dart';
 import 'package:learning_tracker/features/auth/presentation/providers/auth_state_provider.dart';
+import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// SharedPreferences keys for offline signup that is not yet listed in the
@@ -160,7 +161,9 @@ class PendingLocalSignupStore {
     if (pending == null) return;
 
     final db = ref.read(userDatabaseProvider);
-    final count = await db.profileDao.countProfilesForAccount(1);
+    final count = await db.profileDao.countProfilesForAccount(
+      ref.read(currentAccountIdProvider),
+    );
     if (count > 0) {
       // First profile exists — registration should have finalized; repair
       // prefs if we still have a stale payload.

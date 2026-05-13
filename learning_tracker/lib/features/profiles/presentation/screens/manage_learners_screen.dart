@@ -60,8 +60,9 @@ class ManageLearnersScreen extends ConsumerWidget {
     if (result == null) return;
 
     final repo = ref.read(profileRepositoryProvider);
+    final accountId = ref.read(currentAccountIdProvider);
     final created = await repo.createProfile(
-      accountId: 1,
+      accountId: accountId,
       displayName: result.name,
       mode: result.mode,
       avatarIndex: result.avatar,
@@ -137,7 +138,8 @@ class _ProfileListTile extends ConsumerWidget {
 
   Future<void> _deleteProfile(BuildContext context, WidgetRef ref) async {
     final repo = ref.read(profileRepositoryProvider);
-    final remaining = await repo.countProfilesForAccount(1);
+    final accountId = ref.read(currentAccountIdProvider);
+    final remaining = await repo.countProfilesForAccount(accountId);
     final isLast = remaining <= 1;
     if (!context.mounted) return;
 
