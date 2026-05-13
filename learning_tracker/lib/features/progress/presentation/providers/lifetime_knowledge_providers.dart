@@ -7,7 +7,7 @@ import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
-import 'package:learning_tracker/features/dashboard/presentation/providers/program_calendar_providers.dart';
+import 'package:learning_tracker/features/dashboard/presentation/providers/calendar_position_providers.dart';
 
 enum LifetimeNodeState { none, partial, full }
 

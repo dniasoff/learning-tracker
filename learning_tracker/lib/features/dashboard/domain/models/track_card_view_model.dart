@@ -3,7 +3,6 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/features/dashboard/domain/models/calendar_position.dart';
 import 'package:learning_tracker/features/dashboard/domain/models/chazara_status.dart';
 import 'package:learning_tracker/features/dashboard/domain/models/momentum_status.dart';
-import 'package:learning_tracker/features/dashboard/domain/models/track_progress.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/pace_status.dart';
 
 part 'track_card_view_model.freezed.dart';
@@ -15,10 +14,12 @@ part 'track_card_view_model.freezed.dart';
 ///   [deadlineGoal]    — self-paced track with a finish-by-date goal
 ///   [velocityGoal]    — self-paced track with a completions-per-day goal
 ///   [momentum]        — self-paced track with no explicit goal
-///
-/// This re-exports [TrackProgressVariant] for convenience so widgets only
-/// need to import this file.
-typedef TrackCardShape = TrackProgressVariant;
+enum TrackCardShape {
+  programCalendar,
+  deadlineGoal,
+  velocityGoal,
+  momentum,
+}
 
 /// Data for the breadcrumb shown in [NextTaskBreadcrumb].
 ///

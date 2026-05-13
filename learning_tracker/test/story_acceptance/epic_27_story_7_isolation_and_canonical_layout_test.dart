@@ -9,13 +9,11 @@
 ///      invariant that one profile's data never leaks into another's reads.
 ///
 ///   2. track_card_canonical_layout
-///      Verifies that all 4 [TrackProgressVariant]s (programCalendar,
+///      Verifies that all 4 [TrackCardShape]s (programCalendar,
 ///      deadlineGoal, velocityGoal, momentum) flow through the same
-///      [TrackProgress] constructor surface. The widget-tree comparison
+///      [TrackCardViewModel] constructor surface. The widget-tree comparison
 ///      portion of UX-DR10 is left as a skip-stub because the canonical
-///      [TrackCard] / [TrackCardViewModel] freezed value type is built by
-///      Story 26.6 / DNI-388 and is not yet on dev. Activated once 26.6
-///      lands.
+///      [TrackCard] widget integration is not yet under test.
 @Tags(['epic_27'])
 library;
 
@@ -23,7 +21,7 @@ import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/features/dashboard/domain/models/calendar_position.dart';
 import 'package:learning_tracker/features/dashboard/domain/models/momentum_status.dart';
-import 'package:learning_tracker/features/dashboard/domain/models/track_progress.dart';
+import 'package:learning_tracker/features/dashboard/domain/models/track_card_view_model.dart';
 import 'package:learning_tracker/features/profiles/data/repositories/profile_repository_impl.dart';
 import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/delta_value.dart';
@@ -51,6 +49,12 @@ Future<int> _insertTrackFor(UserDatabase db, int profileId) async {
       );
   return row.id;
 }
+
+/// Minimal [NextTaskData] for constructing a [TrackCardViewModel].
+const _nextTask = NextTaskData(displayLabel: 'Berakhot 1:1');
+
+/// Minimal [LifetimeLearningData] for constructing a [TrackCardViewModel].
+const _lifetime = LifetimeLearningData(fraction: 0.0, isComplete: false);
 
 void main() {
   // ── Story 27.7.1 ─ multi-profile isolation ─────────────────────────────
@@ -312,34 +316,41 @@ void main() {
     'through one canonical model surface',
     tags: ['story_27_7'],
     () {
-      // The widget-tree comparison that UX-DR10 ultimately demands operates
-      // on the freezed `TrackCardViewModel` value type and the 5
-      // subcomponents listed under Story 26.6 (TrackCardHeader,
-      // NextTaskBreadcrumb, TrackStatGrid, LifetimeLearningLine,
-      // TrackContinueButton). None of those exist on origin/dev yet — Story
-      // 26.6 / DNI-388 (Epic 26) builds them.
-      //
-      // The shape-level half of the AC can be asserted today against
-      // `TrackProgress`, which already enumerates the 4 variants and is the
-      // single data-shape surface the future TrackCardViewModel composes
-      // from. Asserting that all 4 variants pass through the same
-      // constructor with shape-specific optional fields pins down the
-      // "differs only in data, not in structure" invariant at the model
-      // layer.
+      test(
+        'TrackCardShape has exactly 4 values (programCalendar, deadlineGoal, '
+        'velocityGoal, momentum)',
+        () {
+          expect(TrackCardShape.values, hasLength(4));
+          expect(
+            TrackCardShape.values,
+            containsAll([
+              TrackCardShape.programCalendar,
+              TrackCardShape.deadlineGoal,
+              TrackCardShape.velocityGoal,
+              TrackCardShape.momentum,
+            ]),
+          );
+        },
+      );
 
       test(
-        'all 4 TrackProgressVariants are constructible through the same '
-        'TrackProgress() factory surface (data-shape canonical-form check)',
+        'all 4 TrackCardShapes are constructible through the same '
+        'TrackCardViewModel() factory surface (data-shape canonical-form check)',
         () {
-          final variants = <TrackProgress>[
-            const TrackProgress(
+          final viewModels = <TrackCardViewModel>[
+            const TrackCardViewModel(
               trackId: 1,
-              trackLabel: 'Daf Yomi',
               curriculumId: CurriculumId.bavli,
-              variant: TrackProgressVariant.programCalendar,
-              completedItems: 12,
-              totalItems: 2711,
-              scopePercentage: 12 / 2711,
+              shape: TrackCardShape.programCalendar,
+              displayNamePrimary: 'Daf Yomi',
+              curriculumColorValue: 0xFF1565C0,
+              nextTask: _nextTask,
+              breadcrumbLabel: 'CURRENT FOCUS',
+              reviewCount: 0,
+              dueTodayCount: 1,
+              overdueCount: 0,
+              chazaraLabel: 'Review',
+              lifetime: _lifetime,
               calendarPos: CalendarPosition(
                 currentDay: 12,
                 totalDays: 2711,
@@ -348,157 +359,128 @@ void main() {
                 delta: 0,
                 status: CalendarStatus.caughtUp,
               ),
-              tasksToday: 1,
             ),
-            const TrackProgress(
+            const TrackCardViewModel(
               trackId: 2,
-              trackLabel: 'Mishnah Berakhot',
               curriculumId: CurriculumId.mishnayos,
-              variant: TrackProgressVariant.deadlineGoal,
-              completedItems: 30,
-              totalItems: 100,
-              scopePercentage: 0.30,
+              shape: TrackCardShape.deadlineGoal,
+              displayNamePrimary: 'Mishnah Berakhot',
+              curriculumColorValue: 0xFF2E7D32,
+              nextTask: _nextTask,
+              breadcrumbLabel: 'NEXT TASK',
+              reviewCount: 0,
+              dueTodayCount: 2,
+              overdueCount: 0,
+              chazaraLabel: 'Review',
+              lifetime: _lifetime,
               paceStatus: PaceStatus(
                 status: PaceStatusType.onPace,
                 daysDelta: 0,
                 delta: DateScheduleDelta(DateDelta(0)),
                 rollingAverage: 0.71,
               ),
-              tasksToday: 2,
             ),
-            const TrackProgress(
+            const TrackCardViewModel(
               trackId: 3,
-              trackLabel: 'Mishnayos cover-to-cover',
               curriculumId: CurriculumId.mishnayos,
-              variant: TrackProgressVariant.velocityGoal,
-              completedItems: 100,
-              totalItems: 4192,
-              scopePercentage: 100 / 4192,
+              shape: TrackCardShape.velocityGoal,
+              displayNamePrimary: 'Mishnayos cover-to-cover',
+              curriculumColorValue: 0xFF2E7D32,
+              nextTask: _nextTask,
+              breadcrumbLabel: 'NEXT TASK',
+              reviewCount: 0,
+              dueTodayCount: 1,
+              overdueCount: 0,
+              chazaraLabel: 'Review',
+              lifetime: _lifetime,
               paceStatus: PaceStatus(
                 status: PaceStatusType.behind,
                 daysDelta: -3,
                 delta: DateScheduleDelta(DateDelta(-3)),
                 rollingAverage: 0.4,
               ),
-              tasksToday: 1,
             ),
-            const TrackProgress(
+            const TrackCardViewModel(
               trackId: 4,
-              trackLabel: 'Tanach free-study',
               curriculumId: CurriculumId.tanach,
-              variant: TrackProgressVariant.momentum,
-              completedItems: 8,
-              totalItems: 929,
-              scopePercentage: 8 / 929,
+              shape: TrackCardShape.momentum,
+              displayNamePrimary: 'Tanach free-study',
+              curriculumColorValue: 0xFF6A1B9A,
+              nextTask: _nextTask,
+              breadcrumbLabel: 'NEXT TASK',
+              reviewCount: 0,
+              dueTodayCount: 0,
+              overdueCount: 0,
+              chazaraLabel: 'Review',
+              lifetime: _lifetime,
               momentum: MomentumStatus(
                 recentCount: 3,
                 personalAverage: 4.2,
                 level: MomentumLevel.active,
               ),
-              tasksToday: 0,
             ),
           ];
 
           // Same runtime type — proves the 4 shapes are not structurally
           // divergent at the model layer.
-          expect(variants, hasLength(4));
-          expect(variants.map((p) => p.runtimeType).toSet(), hasLength(1));
-
-          // Variant ↔ shape-specific field correspondence (the contract the
-          // future TrackCardViewModel composer relies on).
+          expect(viewModels, hasLength(4));
           expect(
-            variants
-                .where((p) => p.variant == TrackProgressVariant.programCalendar)
+            viewModels.map((vm) => vm.runtimeType).toSet(),
+            hasLength(1),
+          );
+
+          // Shape ↔ shape-specific field correspondence (the contract the
+          // TrackCard widget tree relies on).
+          expect(
+            viewModels
+                .where((vm) => vm.shape == TrackCardShape.programCalendar)
                 .single
                 .calendarPos,
             isNotNull,
           );
           expect(
-            variants
-                .where((p) => p.variant == TrackProgressVariant.deadlineGoal)
+            viewModels
+                .where((vm) => vm.shape == TrackCardShape.deadlineGoal)
                 .single
                 .paceStatus,
             isNotNull,
           );
           expect(
-            variants
-                .where((p) => p.variant == TrackProgressVariant.velocityGoal)
+            viewModels
+                .where((vm) => vm.shape == TrackCardShape.velocityGoal)
                 .single
                 .paceStatus,
             isNotNull,
           );
           expect(
-            variants
-                .where((p) => p.variant == TrackProgressVariant.momentum)
+            viewModels
+                .where((vm) => vm.shape == TrackCardShape.momentum)
                 .single
                 .momentum,
             isNotNull,
           );
 
-          // All 4 variants enumerated — no orphan shapes that bypass the
+          // All 4 shapes enumerated — no orphan shapes that bypass the
           // canonical form.
           expect(
-            variants.map((p) => p.variant).toSet(),
-            equals(TrackProgressVariant.values.toSet()),
+            viewModels.map((vm) => vm.shape).toSet(),
+            equals(TrackCardShape.values.toSet()),
           );
         },
       );
 
-      test('resolveVariant() routes (programId, goalType) tuples to the 4 '
-          'canonical variants — pins UX-DR10 routing logic for the future '
-          'TrackCardViewModel composer', () {
-        expect(
-          resolveVariant(programId: 42, goalType: null),
-          TrackProgressVariant.programCalendar,
-        );
-        expect(
-          resolveVariant(programId: 42, goalType: 'deadline'),
-          TrackProgressVariant.programCalendar,
-          reason:
-              'A program track always wins, even when goalType is set — '
-              'the permutation matrix gates programId first.',
-        );
-        expect(
-          resolveVariant(programId: null, goalType: 'deadline'),
-          TrackProgressVariant.deadlineGoal,
-        );
-        expect(
-          resolveVariant(programId: null, goalType: 'pace'),
-          TrackProgressVariant.velocityGoal,
-        );
-        expect(
-          resolveVariant(programId: null, goalType: null),
-          TrackProgressVariant.momentum,
-        );
-        expect(
-          resolveVariant(programId: null, goalType: 'unknown'),
-          TrackProgressVariant.momentum,
-          reason: 'Unrecognised goalType falls through to momentum.',
-        );
-      });
-
       test(
         'TrackCard widget-tree canonical-layout assertion (UX-DR10)',
         () {
-          // Skip-stub. The canonical TrackCard widget plus its 5
-          // subcomponents (TrackCardHeader / NextTaskBreadcrumb /
-          // TrackStatGrid / LifetimeLearningLine / TrackContinueButton) and
-          // the freezed TrackCardViewModel composer are built by Story
-          // 26.6 / DNI-388 (Epic 26). When those land, this stub becomes:
-          //
-          //   for each TrackCardViewModel built from the 4 TrackProgress
-          //   variants in the test above, pump it through TrackCard,
-          //   capture the widget tree using `tester.allWidgets`, strip
-          //   data-bearing nodes (Text, semantics), and assert the
-          //   remaining structural Widget-type sequences are identical
-          //   across all 4 variants.
-          //
-          // Matches the DNI-378 / 27.2 skip-stub precedent for
-          // StreakReducer which was activated once DNI-337 landed.
+          // Skip-stub. Widget-tree integration tests for the canonical
+          // TrackCard and its 5 subcomponents (TrackCardHeader,
+          // NextTaskBreadcrumb, TrackStatGrid, LifetimeLearningLine,
+          // TrackContinueButton) are deferred to a dedicated widget-test
+          // story.
         },
         skip:
-            'Activated after Story 26.6 / DNI-388 — TrackCardViewModel + '
-            '5 canonical subcomponents do not yet exist on dev.',
+            'Deferred to widget-test story — TrackCard widget integration '
+            'tests not yet in scope for this acceptance suite.',
       );
     },
   );

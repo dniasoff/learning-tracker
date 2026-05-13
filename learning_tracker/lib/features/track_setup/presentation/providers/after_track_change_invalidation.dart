@@ -2,9 +2,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
+import 'package:learning_tracker/features/dashboard/presentation/providers/calendar_position_providers.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
-import 'package:learning_tracker/features/dashboard/presentation/providers/program_calendar_providers.dart';
-import 'package:learning_tracker/features/dashboard/presentation/providers/track_progress_providers.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/lifetime_knowledge_providers.dart';
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/curriculum_scope_providers.dart';
@@ -59,6 +58,5 @@ Future<void> invalidateAfterTrackDataChange(
   for (final t in tracks) {
     ref.invalidate(dashboardTrackCompletionPercentageProvider(t.id));
     ref.invalidate(programCalendarPositionProvider(t.id));
-    ref.invalidate(trackProgressProvider(t.id));
   }
 }

@@ -8,7 +8,7 @@ import 'package:learning_tracker/features/profiles/presentation/providers/active
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
-part 'program_calendar_providers.g.dart';
+part 'calendar_position_providers.g.dart';
 
 /// Provides calendar-relative position for a program track.
 ///
