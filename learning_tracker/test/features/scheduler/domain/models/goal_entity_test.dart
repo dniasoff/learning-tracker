@@ -3,7 +3,126 @@ import 'package:learning_tracker/features/scheduler/domain/models/goal_entity.da
 import 'package:test/test.dart';
 
 void main() {
+  group('PaceGranularity', () {
+    test('fromStorageKey returns correct enum for known keys', () {
+      expect(PaceGranularity.fromStorageKey('perek'), PaceGranularity.perek);
+      expect(PaceGranularity.fromStorageKey('daf'), PaceGranularity.daf);
+      expect(PaceGranularity.fromStorageKey('seif'), PaceGranularity.seif);
+    });
+
+    test('fromStorageKey returns null for unknown keys', () {
+      expect(PaceGranularity.fromStorageKey('amud'), isNull);
+      expect(PaceGranularity.fromStorageKey('pasuk'), isNull);
+      expect(PaceGranularity.fromStorageKey(null), isNull);
+    });
+
+    test('storageKey round-trips correctly', () {
+      for (final v in PaceGranularity.values) {
+        expect(PaceGranularity.fromStorageKey(v.storageKey), v);
+      }
+    });
+  });
+
+  group('PaceTarget', () {
+    test('DeadlineTarget holds dueDate', () {
+      final date = DateTime.utc(2026, 12, 31);
+      final target = DeadlineTarget(date);
+      expect(target.dueDate, date);
+    });
+
+    test('PacePeriodTarget holds rate and period', () {
+      const target = PacePeriodTarget(rate: 3, period: 'per_week');
+      expect(target.rate, 3);
+      expect(target.period, 'per_week');
+    });
+
+    test('DeadlineTarget equality', () {
+      final d = DateTime.utc(2026, 6, 1);
+      expect(DeadlineTarget(d), DeadlineTarget(d));
+    });
+
+    test('PacePeriodTarget equality', () {
+      expect(
+        const PacePeriodTarget(rate: 1, period: 'per_day'),
+        const PacePeriodTarget(rate: 1, period: 'per_day'),
+      );
+    });
+  });
+
   group('GoalEntity', () {
+    group('paceTarget computed getter', () {
+      test('returns DeadlineTarget for deadline goal with date', () {
+        final date = DateTime.utc(2026, 12, 31);
+        final entity = GoalEntity(
+          curriculumId: CurriculumId.mishnayos,
+          goalType: 'deadline',
+          targetDate: date,
+          createdAt: DateTime.utc(2026, 1, 1),
+          updatedAt: DateTime.utc(2026, 1, 1),
+        );
+        expect(entity.paceTarget, isA<DeadlineTarget>());
+        expect((entity.paceTarget! as DeadlineTarget).dueDate, date);
+      });
+
+      test('returns PacePeriodTarget for pace goal', () {
+        final entity = GoalEntity(
+          curriculumId: CurriculumId.bavli,
+          goalType: 'pace',
+          paceValue: 2,
+          paceUnit: 'per_week',
+          createdAt: DateTime.utc(2026, 1, 1),
+          updatedAt: DateTime.utc(2026, 1, 1),
+        );
+        expect(entity.paceTarget, isA<PacePeriodTarget>());
+        final pt = entity.paceTarget! as PacePeriodTarget;
+        expect(pt.rate, 2);
+        expect(pt.period, 'per_week');
+      });
+
+      test('returns null for none goal type', () {
+        final entity = GoalEntity(
+          curriculumId: CurriculumId.mishnayos,
+          goalType: 'none',
+          createdAt: DateTime.utc(2026, 1, 1),
+          updatedAt: DateTime.utc(2026, 1, 1),
+        );
+        expect(entity.paceTarget, isNull);
+      });
+    });
+
+    group('learningUnit getter', () {
+      test('returns paceGranularity storageKey when set', () {
+        final entity = GoalEntity(
+          curriculumId: CurriculumId.mishnayos,
+          paceGranularity: PaceGranularity.perek,
+          createdAt: DateTime.utc(2026, 1, 1),
+          updatedAt: DateTime.utc(2026, 1, 1),
+        );
+        expect(entity.learningUnit, 'perek');
+      });
+
+      test('falls back to rawLearningUnit for non-enum keys', () {
+        final entity = GoalEntity(
+          curriculumId: CurriculumId.bavli,
+          rawLearningUnit: 'amud',
+          createdAt: DateTime.utc(2026, 1, 1),
+          updatedAt: DateTime.utc(2026, 1, 1),
+        );
+        expect(entity.learningUnit, 'amud');
+      });
+
+      test('returns null when neither field is set', () {
+        final entity = GoalEntity(
+          curriculumId: CurriculumId.mishnayos,
+          createdAt: DateTime.utc(2026, 1, 1),
+          updatedAt: DateTime.utc(2026, 1, 1),
+        );
+        expect(entity.learningUnit, isNull);
+      });
+    });
+  });
+
+  group('GoalEntity (existing tests)', () {
     group('toFirestore', () {
       test('includes pace fields for pace goal', () {
         final entity = GoalEntity(

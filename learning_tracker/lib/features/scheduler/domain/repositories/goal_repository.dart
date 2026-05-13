@@ -28,6 +28,10 @@ abstract class GoalRepository {
   Future<List<GoalEntity>> getGoals(CurriculumId curriculumId);
 
   /// Update an existing goal's deadline and/or target percentage.
+  ///
+  /// [paceGranularity] is the typed learning-unit granularity. When provided,
+  /// it takes precedence over any previously stored unit. Passing
+  /// [clearLearningUnit] == `true` removes the learning unit entirely.
   Future<GoalEntity> updateGoal({
     required int goalId,
     double? targetPercent,
@@ -38,6 +42,8 @@ abstract class GoalRepository {
     int? paceValue,
     String? paceUnit,
     bool clearPace,
+    PaceGranularity? paceGranularity,
+    bool clearLearningUnit,
   });
 
   /// Delete a goal.

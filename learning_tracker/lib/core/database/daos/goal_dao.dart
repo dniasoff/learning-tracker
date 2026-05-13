@@ -69,10 +69,12 @@ class GoalDao extends DatabaseAccessor<UserDatabase> with _$GoalDaoMixin {
 
   /// Upsert a goal keyed by trackId (one goal per track invariant).
   ///
-  /// Per Epic 20 / DNI-212, each track owns at most one goal. This variant
-  /// matches by [trackId] alone (not by description), so two tracks in the
-  /// same curriculum can have independent goals without collision.
-  /// Last-write-wins on [updatedAt].
+  /// Per Epic 20 / DNI-212, each track owns at most one goal. Matches by
+  /// [trackId] alone so two tracks in the same curriculum can have independent
+  /// goals without collision. Last-write-wins on [updatedAt].
+  ///
+  /// This is the single consolidated upsert entry-point — the legacy
+  /// `upsertGoal` (keyed by curriculumId+description) was removed in DNI-347.
   Future<void> upsertGoalByTrack({
     required int profileId,
     required int trackId,
@@ -84,6 +86,7 @@ class GoalDao extends DatabaseAccessor<UserDatabase> with _$GoalDaoMixin {
     String goalType = 'deadline',
     int? paceValue,
     String? paceUnit,
+    String? learningUnit,
     required DateTime createdAt,
     required DateTime updatedAt,
   }) async {
@@ -102,6 +105,7 @@ class GoalDao extends DatabaseAccessor<UserDatabase> with _$GoalDaoMixin {
           goalType: Value(goalType),
           paceValue: Value(paceValue),
           paceUnit: Value(paceUnit),
+          learningUnit: Value(learningUnit),
           createdAt: createdAt,
           updatedAt: updatedAt,
         ),
@@ -116,65 +120,7 @@ class GoalDao extends DatabaseAccessor<UserDatabase> with _$GoalDaoMixin {
           goalType: Value(goalType),
           paceValue: Value(paceValue),
           paceUnit: Value(paceUnit),
-          updatedAt: Value(updatedAt),
-        ),
-      );
-    }
-  }
-
-  /// Upsert a goal by curriculum and description (last-write-wins per D4).
-  ///
-  /// Matches by [curriculumId] and [description]. Inserts if not found,
-  /// or updates if remote [updatedAt] is newer than local.
-  Future<void> upsertGoal({
-    required String curriculumId,
-    required int trackId,
-    required int profileId,
-    required String description,
-    required double targetPercent,
-    required DateTime? targetDate,
-    String dateType = 'gregorian',
-    String goalType = 'deadline',
-    int? paceValue,
-    String? paceUnit,
-    required DateTime createdAt,
-    required DateTime updatedAt,
-  }) async {
-    final existing =
-        await (select(goals)..where(
-              (t) =>
-                  t.curriculumId.equals(curriculumId) &
-                  t.description.equals(description),
-            ))
-            .getSingleOrNull();
-
-    if (existing == null) {
-      await insertGoal(
-        GoalsCompanion.insert(
-          profileId: profileId,
-          curriculumId: curriculumId,
-          trackId: trackId,
-          description: Value(description),
-          targetPercent: Value(targetPercent),
-          targetDate: Value(targetDate),
-          dateType: Value(dateType),
-          goalType: Value(goalType),
-          paceValue: Value(paceValue),
-          paceUnit: Value(paceUnit),
-          createdAt: createdAt,
-          updatedAt: updatedAt,
-        ),
-      );
-    } else if (updatedAt.isAfter(existing.updatedAt)) {
-      await (update(goals)..where((t) => t.id.equals(existing.id))).write(
-        GoalsCompanion(
-          targetPercent: Value(targetPercent),
-          targetDate: Value(targetDate),
-          description: Value(description),
-          dateType: Value(dateType),
-          goalType: Value(goalType),
-          paceValue: Value(paceValue),
-          paceUnit: Value(paceUnit),
+          learningUnit: Value(learningUnit),
           updatedAt: Value(updatedAt),
         ),
       );

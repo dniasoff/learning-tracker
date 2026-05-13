@@ -127,8 +127,8 @@ void main() {
       expect(all.first.curriculumId, 'yerushalmi');
     });
 
-    test('upsertGoal inserts when no existing goal', () async {
-      await database.goalDao.upsertGoal(
+    test('upsertGoalByTrack inserts when no existing goal', () async {
+      await database.goalDao.upsertGoalByTrack(
         profileId: 1,
         curriculumId: 'bavli',
         trackId: trackId,
@@ -145,11 +145,11 @@ void main() {
       expect(goals.first.targetPercent, 75.0);
     });
 
-    test('upsertGoal updates when newer timestamp', () async {
+    test('upsertGoalByTrack updates when newer timestamp', () async {
       final older = DateTime(2024, 1, 1);
       final newer = DateTime(2024, 6, 1);
 
-      await database.goalDao.upsertGoal(
+      await database.goalDao.upsertGoalByTrack(
         profileId: 1,
         curriculumId: 'bavli',
         trackId: trackId,
@@ -160,7 +160,7 @@ void main() {
         updatedAt: older,
       );
 
-      await database.goalDao.upsertGoal(
+      await database.goalDao.upsertGoalByTrack(
         profileId: 1,
         curriculumId: 'bavli',
         trackId: trackId,
@@ -176,11 +176,11 @@ void main() {
       expect(goals.first.targetPercent, 75.0);
     });
 
-    test('upsertGoal does not update when older timestamp', () async {
+    test('upsertGoalByTrack does not update when older timestamp', () async {
       final older = DateTime(2024, 1, 1);
       final newer = DateTime(2024, 6, 1);
 
-      await database.goalDao.upsertGoal(
+      await database.goalDao.upsertGoalByTrack(
         profileId: 1,
         curriculumId: 'bavli',
         trackId: trackId,
@@ -191,7 +191,7 @@ void main() {
         updatedAt: newer,
       );
 
-      await database.goalDao.upsertGoal(
+      await database.goalDao.upsertGoalByTrack(
         profileId: 1,
         curriculumId: 'bavli',
         trackId: trackId,

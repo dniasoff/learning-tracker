@@ -25,8 +25,8 @@ import 'package:learning_tracker/features/onboarding/domain/services/learning_pr
 import 'package:learning_tracker/features/onboarding/presentation/providers/onboarding_providers.dart';
 import 'package:learning_tracker/features/onboarding/presentation/screens/learning_process_wizard_screen.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/progress_providers.dart';
+import 'package:learning_tracker/features/scheduler/domain/models/goal_entity.dart';
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
-import 'package:learning_tracker/features/scheduler/presentation/screens/goal_setup_screen.dart';
 import 'package:learning_tracker/features/scheduler/presentation/widgets/hebrew_date_picker.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/curriculum_scope_providers.dart';
 import 'package:learning_tracker/features/stages/domain/models/schedule_type.dart';
@@ -559,7 +559,7 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
     _goToNextStep();
   }
 
-  void _onGoalComplete(GoalFormResult? result) {
+  void _onGoalComplete(GoalEntity? result) {
     setState(() => _state = _state.copyWith(goalResult: result));
     _goToNextStep();
   }
@@ -2477,7 +2477,7 @@ class _SelfPacedGoalStep extends ConsumerStatefulWidget {
 
   final CurriculumId curriculumId;
   final Map<int, String> studyDays;
-  final ValueChanged<GoalFormResult?> onComplete;
+  final ValueChanged<GoalEntity?> onComplete;
 
   @override
   ConsumerState<_SelfPacedGoalStep> createState() => _SelfPacedGoalStepState();
@@ -2978,6 +2978,10 @@ class _SelfPacedGoalStepState extends ConsumerState<_SelfPacedGoalStep> {
   }
 
   void _continue() {
+    final now = DateTimeFactory.nowUtc();
+    final rawUnit = _learningUnit;
+    final granularity = PaceGranularity.fromStorageKey(rawUnit);
+
     if (_mode == 'deadline') {
       if (_deadline == null) {
         ScaffoldMessenger.of(
@@ -2987,24 +2991,32 @@ class _SelfPacedGoalStepState extends ConsumerState<_SelfPacedGoalStep> {
       }
       final useHebrew = ref.read(useHebrewDateProvider);
       widget.onComplete(
-        GoalFormResult(
+        GoalEntity(
+          curriculumId: widget.curriculumId,
           targetPercent: 100,
           goalType: 'deadline',
           targetDate: _deadline!.toUtc(),
           dateType: useHebrew ? 'hebrew' : 'gregorian',
-          learningUnit: _learningUnit,
+          paceGranularity: granularity,
+          rawLearningUnit: granularity == null ? rawUnit : null,
+          createdAt: now,
+          updatedAt: now,
         ),
       );
       return;
     }
 
     widget.onComplete(
-      GoalFormResult(
+      GoalEntity(
+        curriculumId: widget.curriculumId,
         targetPercent: 100,
         goalType: 'pace',
         paceValue: _paceValue,
         paceUnit: _paceUnit,
-        learningUnit: _learningUnit,
+        paceGranularity: granularity,
+        rawLearningUnit: granularity == null ? rawUnit : null,
+        createdAt: now,
+        updatedAt: now,
       ),
     );
   }

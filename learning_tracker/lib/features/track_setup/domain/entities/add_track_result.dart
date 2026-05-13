@@ -21,7 +21,7 @@ abstract class AddTrackResult with _$AddTrackResult {
     /// Opaque wizard result — cast to `LearningProcessWizardResult`.
     Object? wizardResult,
 
-    /// Opaque goal result — cast to `GoalFormResult`.
+    /// Opaque goal result — cast to `GoalEntity`.
     Object? goalResult,
 
     /// Opaque bulk mark result — cast to `BulkMarkResult`.

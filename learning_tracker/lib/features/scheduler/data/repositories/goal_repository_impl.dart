@@ -89,6 +89,8 @@ class GoalRepositoryImpl implements GoalRepository {
     int? paceValue,
     String? paceUnit,
     bool clearPace = false,
+    PaceGranularity? paceGranularity,
+    bool clearLearningUnit = false,
   }) async {
     return await _database.transaction(() async {
       final existing = await _database.goalDao.getGoalById(goalId);
@@ -97,6 +99,13 @@ class GoalRepositoryImpl implements GoalRepository {
       }
 
       final now = DateTimeFactory.nowUtc();
+
+      // Resolve the learning unit string from typed enum or fallback to existing.
+      final resolvedLearningUnit = clearLearningUnit
+          ? null
+          : (paceGranularity != null
+                ? paceGranularity.storageKey
+                : existing.learningUnit);
 
       await _database.goalDao.updateGoal(
         GoalsCompanion(
@@ -116,6 +125,7 @@ class GoalRepositoryImpl implements GoalRepository {
           paceUnit: clearPace
               ? const drift.Value(null)
               : drift.Value(paceUnit ?? existing.paceUnit),
+          learningUnit: drift.Value(resolvedLearningUnit),
           createdAt: drift.Value(existing.createdAt),
           updatedAt: drift.Value(now),
         ),
@@ -147,6 +157,8 @@ class GoalRepositoryImpl implements GoalRepository {
   }
 
   GoalEntity _toEntity(Goal goal) {
+    final rawUnit = goal.learningUnit;
+    final granularity = PaceGranularity.fromStorageKey(rawUnit);
     return GoalEntity(
       id: goal.id,
       curriculumId: CurriculumId.values.firstWhere(
@@ -159,7 +171,8 @@ class GoalRepositoryImpl implements GoalRepository {
       goalType: goal.goalType,
       paceValue: goal.paceValue,
       paceUnit: goal.paceUnit,
-      learningUnit: goal.learningUnit,
+      paceGranularity: granularity,
+      rawLearningUnit: granularity == null ? rawUnit : null,
       createdAt: goal.createdAt.toUtc(),
       updatedAt: goal.updatedAt.toUtc(),
     );
