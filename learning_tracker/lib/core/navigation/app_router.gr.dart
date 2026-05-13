@@ -284,66 +284,6 @@ class ContentSearchRouteArgs {
 }
 
 /// generated route for
-/// [CurriculumLearningScreen]
-class CurriculumLearningRoute
-    extends PageRouteInfo<CurriculumLearningRouteArgs> {
-  CurriculumLearningRoute({
-    Key? key,
-    required String curriculumId,
-    List<PageRouteInfo>? children,
-  }) : super(
-         CurriculumLearningRoute.name,
-         args: CurriculumLearningRouteArgs(
-           key: key,
-           curriculumId: curriculumId,
-         ),
-         rawPathParams: {'curriculumId': curriculumId},
-         initialChildren: children,
-       );
-
-  static const String name = 'CurriculumLearningRoute';
-
-  static PageInfo page = PageInfo(
-    name,
-    builder: (data) {
-      final pathParams = data.inheritedPathParams;
-      final args = data.argsAs<CurriculumLearningRouteArgs>(
-        orElse: () => CurriculumLearningRouteArgs(
-          curriculumId: pathParams.getString('curriculumId'),
-        ),
-      );
-      return CurriculumLearningScreen(
-        key: args.key,
-        curriculumId: args.curriculumId,
-      );
-    },
-  );
-}
-
-class CurriculumLearningRouteArgs {
-  const CurriculumLearningRouteArgs({this.key, required this.curriculumId});
-
-  final Key? key;
-
-  final String curriculumId;
-
-  @override
-  String toString() {
-    return 'CurriculumLearningRouteArgs{key: $key, curriculumId: $curriculumId}';
-  }
-
-  @override
-  bool operator ==(Object other) {
-    if (identical(this, other)) return true;
-    if (other is! CurriculumLearningRouteArgs) return false;
-    return key == other.key && curriculumId == other.curriculumId;
-  }
-
-  @override
-  int get hashCode => key.hashCode ^ curriculumId.hashCode;
-}
-
-/// generated route for
 /// [CurriculumListScreen]
 class CurriculumListRoute extends PageRouteInfo<void> {
   const CurriculumListRoute({List<PageRouteInfo>? children})

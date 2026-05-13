@@ -15,7 +15,6 @@ import 'package:learning_tracker/features/content_browsing/presentation/screens/
 import 'package:learning_tracker/features/content_browsing/presentation/screens/text_display_screen.dart';
 import 'package:learning_tracker/features/dashboard/presentation/screens/dashboard_screen.dart';
 import 'package:learning_tracker/features/gamification/presentation/screens/gamification_screen.dart';
-import 'package:learning_tracker/features/learning/presentation/screens/curriculum_learning_screen.dart';
 import 'package:learning_tracker/features/learning/presentation/screens/learning_screen.dart';
 import 'package:learning_tracker/features/learning_order/presentation/screens/learning_order_screen.dart';
 import 'package:learning_tracker/features/notifications/presentation/screens/notifications_screen.dart';
@@ -147,11 +146,6 @@ class AppRouter extends RootStackRouter {
     AutoRoute(
       path: '/curriculum/:curriculumId/browse',
       page: ContentHierarchyRoute.page,
-      guards: [authGuard],
-    ),
-    AutoRoute(
-      path: '/curriculum/:curriculumId/learn',
-      page: CurriculumLearningRoute.page,
       guards: [authGuard],
     ),
     AutoRoute(

@@ -4,7 +4,8 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 import 'package:learning_tracker/features/learning_order/domain/models/learning_order_item.dart';
-import 'package:learning_tracker/features/learning_order/domain/repositories/learning_order_repository.dart';
+import 'package:learning_tracker/features/learning_order/domain/repositories/learning_order_repository.dart'
+    show LearningOrderRepository, ParentControlException;
 import 'package:learning_tracker/features/sync/data/sync_engine.dart';
 
 class LearningOrderRepositoryImpl implements LearningOrderRepository {
@@ -90,21 +91,31 @@ class LearningOrderRepositoryImpl implements LearningOrderRepository {
   @override
   Future<void> saveOrder(
     CurriculumId curriculumId,
-    List<LearningOrderItem> items,
-  ) async {
+    List<LearningOrderItem> items, {
+    bool isChildRestricted = false,
+  }) async {
+    // Parent-control guard enforced at repository, not UI.
+    if (isChildRestricted) {
+      throw const ParentControlException();
+    }
+
     final updatedAt = DateTimeFactory.nowUtc();
 
-    for (var i = 0; i < items.length; i++) {
-      await _database.learningOrderDao.upsertLearningOrder(
-        LearningOrderCompanion.insert(
-          curriculumId: curriculumId.storageKey,
-          sefariaRef: items[i].sefariaRef,
-          userSortOrder: i,
-          profileId: _profileId,
-          updatedAt: Value(updatedAt),
-        ),
-      );
-    }
+    // Wrap all upserts in a single transaction so a mid-loop crash cannot
+    // leave a half-shuffled state (D7, T2.10).
+    await _database.transaction(() async {
+      for (var i = 0; i < items.length; i++) {
+        await _database.learningOrderDao.upsertLearningOrder(
+          LearningOrderCompanion.insert(
+            curriculumId: curriculumId.storageKey,
+            sefariaRef: items[i].sefariaRef,
+            userSortOrder: i,
+            profileId: _profileId,
+            updatedAt: Value(updatedAt),
+          ),
+        );
+      }
+    });
 
     // Push to Firestore (offline-queued, retry on reconnect).
     await _syncEngine?.pushLearningOrder(

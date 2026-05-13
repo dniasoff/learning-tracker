@@ -7,6 +7,7 @@ import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/network/sefaria/models/curriculum_hierarchy_config.dart';
 import 'package:learning_tracker/core/utils/hebrew_utils.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
+import 'package:learning_tracker/features/content_browsing/domain/strategies/composite_curriculum_strategy.dart';
 
 /// Asset-backed implementation of [ContentRepository].
 ///
@@ -26,24 +27,6 @@ class ContentRepositoryImpl implements ContentRepository {
   /// [search] call so nikud stripping is not recomputed per keystroke (T2.10).
   final _strippedHeCache = <String, List<String>>{};
 
-  /// Maps composite curricula to their source asset(s).
-  static const _compositeSources = <String, List<String>>{
-    'tanach': ['chumash', 'nach'],
-  };
-
-  /// Synthetic top-section row added when composing Chumash into Tanach.
-  /// Chumash's bundled JSON has only 3 levels (Sefer/Perek/Pasuk) with the
-  /// 5 books at level1; the Tanach hierarchy adds a "Torah" section above
-  /// them so the top layer reads Torah / Prophets / Writings.
-  static const _tanachTorahContainer = ContentItem(
-    curriculumId: 'tanach',
-    level1: 'Torah',
-    displayNameHe: 'תורה',
-    displayNameEn: 'Torah',
-    sefariaRef: 'Torah',
-    sortOrder: -1, // sorted to the top
-    isLeaf: false,
-  );
 
   @override
   Future<List<ContentItem>> getContentForCurriculum(
@@ -55,25 +38,19 @@ class ContentRepositoryImpl implements ContentRepository {
       return _contentCache[key]!;
     }
 
-    // Composite curricula: load from source asset(s) and remap curriculumId.
-    final sources = _compositeSources[key];
-    if (sources != null) {
-      final allItems = <ContentItem>[];
-      // For Tanach, prepend the synthetic Torah section container so users
-      // see Torah / Prophets / Writings at the top layer.
-      if (key == 'tanach') {
-        allItems.add(_tanachTorahContainer);
-      }
-      for (final source in sources) {
+    // Composite curricula: assemble from source asset(s) using strategy.
+    final strategy = CompositeCurriculumStrategy.forKey(key);
+    if (strategy != null) {
+      final allItems = <ContentItem>[...strategy.preamble];
+      for (final source in strategy.sources) {
         final sourceId = CurriculumId.values.firstWhere(
           (c) => c.storageKey == source,
         );
         final sourceItems = await getContentForCurriculum(sourceId);
         allItems.addAll(
           sourceItems.map(
-            (item) => _remapForComposite(
+            (item) => strategy.remap(
               item: item,
-              compositeKey: key,
               source: source,
               offset: allItems.length,
             ),
@@ -203,49 +180,6 @@ class ContentRepositoryImpl implements ContentRepository {
     final items = await getContentForCurriculum(curriculumId);
     final matches = items.where((item) => item.sefariaRef == sefariaRef);
     return matches.isNotEmpty ? matches.first : null;
-  }
-
-  /// Transform a source-curriculum item for use in a composite curriculum.
-  ///
-  /// For Tanach + Chumash: shifts levels up by one to fit the Section /
-  /// Sefer / Perek / Pasuk hierarchy. Chumash data is natively 3-level
-  /// (Sefer / Perek / Pasuk); we wrap each item under the synthetic "Torah"
-  /// section so the top layer matches Nach's Prophets / Writings.
-  ///
-  /// For Tanach + Nach: pass through (Nach already has Section / Sefer /
-  /// Perek / Pasuk).
-  ContentItem _remapForComposite({
-    required ContentItem item,
-    required String compositeKey,
-    required String source,
-    required int offset,
-  }) {
-    if (compositeKey == 'tanach' && source == 'chumash') {
-      return ContentItem(
-        curriculumId: compositeKey,
-        level1: 'Torah',
-        level2: item.level1,
-        level3: item.level2,
-        level4: item.level3,
-        displayNameHe: item.displayNameHe,
-        displayNameEn: item.displayNameEn,
-        sefariaRef: item.sefariaRef,
-        sortOrder: item.sortOrder + offset,
-        isLeaf: item.isLeaf,
-      );
-    }
-    return ContentItem(
-      curriculumId: compositeKey,
-      level1: item.level1,
-      level2: item.level2,
-      level3: item.level3,
-      level4: item.level4,
-      displayNameHe: item.displayNameHe,
-      displayNameEn: item.displayNameEn,
-      sefariaRef: item.sefariaRef,
-      sortOrder: item.sortOrder + offset,
-      isLeaf: item.isLeaf,
-    );
   }
 
   void _parseAndCache(String key, Map<String, dynamic> json) {
