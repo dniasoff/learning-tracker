@@ -48,6 +48,9 @@ void stubFirestorePullOnLaunchEmpty(MockFirestoreDataSource mock) {
   when(() => mock.fetchNotificationSettings()).thenAnswer((_) async => null);
   when(() => mock.fetchGamificationSettings()).thenAnswer((_) async => null);
   when(() => mock.fetchUiPreferences()).thenAnswer((_) async => null);
+  when(
+    () => mock.fetchLearningOrder(pageSize: ps),
+  ).thenAnswer((_) async => []);
 }
 
 UserDatabase _createInMemoryDatabase() {
@@ -585,6 +588,9 @@ void main() {
         when(
           () => mockFirestore.listenToUiPreferences(),
         ).thenAnswer((_) => Stream.value(null));
+        when(
+          () => mockFirestore.listenToLearningOrder(),
+        ).thenAnswer((_) => Stream.value([]));
       }
 
       test(
@@ -760,6 +766,7 @@ void main() {
         verify(() => mockFirestore.listenToNotificationSettings()).called(1);
         verify(() => mockFirestore.listenToGamificationSettings()).called(1);
         verify(() => mockFirestore.listenToUiPreferences()).called(1);
+        verify(() => mockFirestore.listenToLearningOrder()).called(1);
       });
 
       test('listeners not attached while offline', () async {
