@@ -19,6 +19,7 @@ void main() {
         .into(db.curriculumTracks)
         .insertReturning(
           CurriculumTracksCompanion.insert(
+            profileId: 0,
             curriculumId: 'mishnayos',
             trackType: 'personal',
             activatedAt: DateTime.now(),
@@ -28,6 +29,7 @@ void main() {
     final now = DateTime.now();
     await db.goalDao.insertGoal(
       GoalsCompanion.insert(
+        profileId: 0,
         curriculumId: 'mishnayos',
         trackId: trackId,
         createdAt: now,
@@ -52,6 +54,7 @@ void main() {
   }) async {
     await db.completionDao.insertCompletion(
       CompletionsCompanion.insert(
+        profileId: 0,
         curriculumId: curriculumId,
         sefariaRef: sefariaRef,
         stageId: stageId,
@@ -103,6 +106,7 @@ void main() {
         // Seed custom config: Learn=20 for mishnayos
         await db.pointConfigDao.insertConfig(
           PointConfigsCompanion.insert(
+            profileId: 0,
             curriculumId: CurriculumId.mishnayos.storageKey,
             trackId: trackId,
             stageOrder: 1,
@@ -232,6 +236,7 @@ void main() {
             .into(db.curriculumTracks)
             .insertReturning(
               CurriculumTracksCompanion.insert(
+                profileId: 0,
                 curriculumId: CurriculumId.bavli.storageKey,
                 trackType: 'personal',
                 activatedAt: DateTime.now(),
@@ -245,6 +250,7 @@ void main() {
         );
         await db.completionDao.insertCompletion(
           CompletionsCompanion.insert(
+            profileId: 0,
             curriculumId: CurriculumId.bavli.storageKey,
             sefariaRef: 'Berakhot 2a',
             stageId: 1,

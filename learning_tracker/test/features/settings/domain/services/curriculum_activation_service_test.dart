@@ -193,6 +193,7 @@ void main() {
         final bavliTrackId = await getTrackId(CurriculumId.bavli);
         await database.completionDao.insertCompletion(
           CompletionsCompanion.insert(
+            profileId: 1,
             curriculumId: CurriculumId.bavli.storageKey,
             sefariaRef: 'Berakhot.2a',
             stageId: 1,
@@ -229,9 +230,12 @@ void main() {
         await service.activate(CurriculumId.bavli);
         await service.activate(CurriculumId.mishnayos);
 
+        final bavliTrackId = await getTrackId(CurriculumId.bavli);
+
         await database.bookmarkDao.upsertBookmark(
           curriculumId: CurriculumId.bavli.storageKey,
-          trackType: TrackType.personal.storageKey,
+          trackId: bavliTrackId,
+          profileId: 0,
           sefariaRef: 'Berakhot.2a',
           updatedAt: DateTime.now().toUtc(),
         );
@@ -241,7 +245,7 @@ void main() {
         final bookmark = await database.bookmarkDao
             .getBookmarkByCurriculumAndTrack(
               CurriculumId.bavli.storageKey,
-              TrackType.personal.storageKey,
+              bavliTrackId,
             );
         expect(bookmark, isNotNull);
         expect(bookmark!.sefariaRef, equals('Berakhot.2a'));

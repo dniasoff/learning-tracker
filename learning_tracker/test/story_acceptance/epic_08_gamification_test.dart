@@ -20,6 +20,7 @@ Future<int> _insertTrack(UserDatabase db) async {
       .into(db.curriculumTracks)
       .insertReturning(
         CurriculumTracksCompanion.insert(
+          profileId: 0,
           curriculumId: 'mishnayos',
           trackType: 'personal',
           activatedAt: DateTime.now(),
@@ -44,6 +45,7 @@ void main() {
           .into(db.goals)
           .insert(
             GoalsCompanion.insert(
+              profileId: 0,
               curriculumId: 'mishnayos',
               trackId: trackId,
               createdAt: now,
@@ -66,6 +68,7 @@ void main() {
     }) async {
       await db.completionDao.insertCompletion(
         CompletionsCompanion.insert(
+          profileId: 0,
           curriculumId: curriculumId,
           sefariaRef: sefariaRef,
           stageId: stageId,
@@ -200,6 +203,7 @@ void main() {
     test('streak calendar returns active dates for range', () async {
       await db.completionDao.insertCompletion(
         CompletionsCompanion.insert(
+          profileId: 0,
           curriculumId: 'test',
           sefariaRef: 'Genesis.1',
           stageId: 1,
@@ -210,6 +214,7 @@ void main() {
       );
       await db.completionDao.insertCompletion(
         CompletionsCompanion.insert(
+          profileId: 0,
           curriculumId: 'test',
           sefariaRef: 'Genesis.2',
           stageId: 1,

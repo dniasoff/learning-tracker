@@ -53,6 +53,7 @@ Future<int> _insertTrack(UserDatabase db) async {
       .into(db.curriculumTracks)
       .insertReturning(
         CurriculumTracksCompanion.insert(
+          profileId: 1,
           curriculumId: 'mishnayos',
           trackType: 'personal',
           activatedAt: DateTime.now(),
@@ -123,6 +124,7 @@ void main() {
     test('basic CRUD round-trip on completions', () async {
       final id = await db.completionDao.insertCompletion(
         CompletionsCompanion.insert(
+          profileId: 1,
           curriculumId: CurriculumId.mishnayos.storageKey,
           sefariaRef: 'Mishnah Berachos 1.1',
           stageId: 1,

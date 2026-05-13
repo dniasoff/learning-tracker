@@ -24,7 +24,7 @@ void main() {
         .into(db.curriculumTracks)
         .insertReturning(
           CurriculumTracksCompanion.insert(
-            profileId: const Value(_p1),
+            profileId: _p1,
             curriculumId: 'mishnayos',
             trackType: 'personal',
             activatedAt: DateTime.now(),
@@ -35,7 +35,7 @@ void main() {
         .into(db.curriculumTracks)
         .insertReturning(
           CurriculumTracksCompanion.insert(
-            profileId: const Value(_p2),
+            profileId: _p2,
             curriculumId: 'mishnayos',
             trackType: 'personal',
             activatedAt: DateTime.now(),
@@ -56,7 +56,7 @@ void main() {
     ) async {
       await db.completionDao.insertCompletion(
         CompletionsCompanion.insert(
-          profileId: Value(profileId),
+          profileId: profileId,
           curriculumId: 'mishnayos',
           sefariaRef: ref,
           stageId: 1,
@@ -117,6 +117,7 @@ void main() {
     Future<void> insertStage(int trackId, int order, String name) async {
       await db.stageDao.insertStageDefinition(
         StageDefinitionsCompanion.insert(
+          profileId: 1,
           curriculumId: 'mishnayos',
           trackId: trackId,
           stageOrder: order,
@@ -165,6 +166,7 @@ void main() {
       final now = DateTime.now();
       await db.goalDao.insertGoal(
         GoalsCompanion.insert(
+          profileId: _p1,
           curriculumId: 'mishnayos',
           trackId: track1Id,
           createdAt: now,
@@ -173,6 +175,7 @@ void main() {
       );
       await db.goalDao.insertGoal(
         GoalsCompanion.insert(
+          profileId: _p2,
           curriculumId: 'mishnayos',
           trackId: track2Id,
           createdAt: now,
@@ -189,6 +192,7 @@ void main() {
       final now = DateTime.now();
       await db.goalDao.insertGoal(
         GoalsCompanion.insert(
+          profileId: _p1,
           curriculumId: 'mishnayos',
           trackId: track1Id,
           createdAt: now,
@@ -197,6 +201,7 @@ void main() {
       );
       await db.goalDao.insertGoal(
         GoalsCompanion.insert(
+          profileId: _p2,
           curriculumId: 'mishnayos',
           trackId: track2Id,
           createdAt: now,
@@ -266,6 +271,7 @@ void main() {
           .into(db.curriculumScopes)
           .insert(
             CurriculumScopesCompanion.insert(
+              profileId: _p1,
               curriculumId: 'mishnayos',
               trackId: track1Id,
               scopeLevel: 1,
@@ -277,6 +283,7 @@ void main() {
           .into(db.curriculumScopes)
           .insert(
             CurriculumScopesCompanion.insert(
+              profileId: _p2,
               curriculumId: 'mishnayos',
               trackId: track2Id,
               scopeLevel: 1,
@@ -288,6 +295,7 @@ void main() {
           .into(db.curriculumScopes)
           .insert(
             CurriculumScopesCompanion.insert(
+              profileId: _p2,
               curriculumId: 'mishnayos',
               trackId: track2Id,
               scopeLevel: 1,
@@ -346,7 +354,7 @@ void main() {
     test('getConfigsByTrack returns only that track configs', () async {
       await db.pointConfigDao.insertConfig(
         PointConfigsCompanion.insert(
-          profileId: const Value(_p1),
+          profileId: _p1,
           curriculumId: 'mishnayos',
           trackId: track1Id,
           stageOrder: 1,
@@ -355,7 +363,7 @@ void main() {
       );
       await db.pointConfigDao.insertConfig(
         PointConfigsCompanion.insert(
-          profileId: const Value(_p2),
+          profileId: _p2,
           curriculumId: 'mishnayos',
           trackId: track2Id,
           stageOrder: 1,
@@ -371,7 +379,7 @@ void main() {
     test('deleteAllForTrack removes only that track', () async {
       await db.pointConfigDao.insertConfig(
         PointConfigsCompanion.insert(
-          profileId: const Value(_p1),
+          profileId: _p1,
           curriculumId: 'mishnayos',
           trackId: track1Id,
           stageOrder: 1,
@@ -380,7 +388,7 @@ void main() {
       );
       await db.pointConfigDao.insertConfig(
         PointConfigsCompanion.insert(
-          profileId: const Value(_p2),
+          profileId: _p2,
           curriculumId: 'mishnayos',
           trackId: track2Id,
           stageOrder: 1,
@@ -405,7 +413,7 @@ void main() {
       final now = DateTime.now();
       await db.learningLedgerDao.insertEntry(
         LearningLedgerCompanion.insert(
-          profileId: const Value(_p1),
+          profileId: _p1,
           curriculumId: 'mishnayos',
           unitType: 'masechta',
           unitIdentifier: 'Berachos',
@@ -420,7 +428,7 @@ void main() {
       );
       await db.learningLedgerDao.insertEntry(
         LearningLedgerCompanion.insert(
-          profileId: const Value(_p2),
+          profileId: _p2,
           curriculumId: 'mishnayos',
           unitType: 'masechta',
           unitIdentifier: 'Shabbos',

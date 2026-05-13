@@ -23,6 +23,7 @@ void main() {
     test('upsertStreak inserts when no existing streak', () async {
       await database.streakDao.upsertStreak(
         StreaksCompanion.insert(
+          profileId: 1,
           currentStreak: const Value(5),
           maxStreak: const Value(10),
           lastCompletionDate: Value(DateTime(2024, 6, 15)),
@@ -39,6 +40,7 @@ void main() {
     test('upsertStreak updates existing streak', () async {
       await database.streakDao.upsertStreak(
         StreaksCompanion.insert(
+          profileId: 1,
           currentStreak: const Value(5),
           maxStreak: const Value(10),
         ),
@@ -70,6 +72,7 @@ void main() {
       await Future<void>.delayed(Duration.zero);
       await database.streakDao.upsertStreak(
         StreaksCompanion.insert(
+          profileId: 1,
           currentStreak: const Value(1),
           maxStreak: const Value(1),
         ),
@@ -79,6 +82,7 @@ void main() {
     test('upsertStreak maintains single row', () async {
       await database.streakDao.upsertStreak(
         StreaksCompanion.insert(
+          profileId: 1,
           currentStreak: const Value(1),
           maxStreak: const Value(1),
         ),

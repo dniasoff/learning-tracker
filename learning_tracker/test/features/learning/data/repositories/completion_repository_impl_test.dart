@@ -1,5 +1,6 @@
 import 'package:drift/drift.dart' show Value;
 import 'package:flutter_test/flutter_test.dart';
+import 'package:learning_tracker/core/database/daos/profile_dao.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
@@ -35,7 +36,7 @@ void main() {
 
     final now = DateTime.now();
     final profileRow = await database
-        .into(database.profiles)
+        .into(database.learnerProfiles)
         .insertReturning(
           ProfilesCompanion.insert(
             accountId: 1,
@@ -51,7 +52,7 @@ void main() {
         .into(database.curriculumTracks)
         .insertReturning(
           CurriculumTracksCompanion.insert(
-            profileId: Value(learnerId),
+            profileId: learnerId,
             curriculumId: 'mishnayos',
             trackType: 'personal',
             activatedAt: now,
@@ -63,7 +64,7 @@ void main() {
         .into(database.goals)
         .insert(
           GoalsCompanion.insert(
-            profileId: Value(learnerId),
+            profileId: learnerId,
             curriculumId: 'mishnayos',
             trackId: trackId,
             createdAt: now,
@@ -210,6 +211,7 @@ void main() {
         // Insert stage definitions so _calculatePoints can find them
         await database.stageDao.insertStageDefinition(
           StageDefinitionsCompanion.insert(
+            profileId: 1,
             curriculumId: curriculumId,
             trackId: trackId,
             stageOrder: 1,
@@ -219,6 +221,7 @@ void main() {
         );
         await database.stageDao.insertStageDefinition(
           StageDefinitionsCompanion.insert(
+            profileId: 1,
             curriculumId: curriculumId,
             trackId: trackId,
             stageOrder: 2,
@@ -422,10 +425,10 @@ void main() {
       // Create a bookmark on ref1
       await database.bookmarkDao.insertBookmark(
         BookmarksCompanion.insert(
-          profileId: Value(learnerId),
+          profileId: learnerId,
           curriculumId: curriculumId,
+          trackId: trackId,
           sefariaRef: ref1,
-          trackType: 'personal',
           updatedAt: DateTime.now().toUtc(),
         ),
       );
@@ -442,7 +445,7 @@ void main() {
       final bookmark = await database.bookmarkDao
           .getBookmarkByCurriculumTrackAndProfile(
             curriculumId,
-            'personal',
+            trackId,
             learnerId,
           );
       expect(bookmark?.sefariaRef, ref2);

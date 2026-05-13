@@ -18,6 +18,7 @@ void main() {
         .into(db.curriculumTracks)
         .insertReturning(
           CurriculumTracksCompanion.insert(
+            profileId: 0,
             curriculumId: 'test-curriculum',
             trackType: 'primary',
             activatedAt: DateTime.now(),
@@ -34,6 +35,7 @@ void main() {
   Future<void> addCompletion(UserDatabase db, DateTime completedAtUtc) async {
     await db.completionDao.insertCompletion(
       CompletionsCompanion.insert(
+        profileId: 0,
         curriculumId: 'test-curriculum',
         sefariaRef: 'Genesis.1',
         stageId: 1,

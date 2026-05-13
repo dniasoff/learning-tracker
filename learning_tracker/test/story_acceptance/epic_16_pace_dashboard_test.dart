@@ -28,6 +28,7 @@ Future<int> _insertTrack(UserDatabase db) async {
       .into(db.curriculumTracks)
       .insertReturning(
         CurriculumTracksCompanion.insert(
+          profileId: 1,
           curriculumId: 'mishnayos',
           trackType: 'personal',
           activatedAt: DateTime.now(),
@@ -763,6 +764,7 @@ void main() {
           // Insert stage definitions first
           await db.stageDao.insertStageDefinition(
             StageDefinitionsCompanion.insert(
+              profileId: 1,
               curriculumId: 'mishnayos',
               trackId: trackId,
               stageOrder: 0,
@@ -772,6 +774,7 @@ void main() {
           );
           await db.stageDao.insertStageDefinition(
             StageDefinitionsCompanion.insert(
+              profileId: 1,
               curriculumId: 'mishnayos',
               trackId: trackId,
               stageOrder: 1,
@@ -784,6 +787,7 @@ void main() {
           final now = DateTime.now().toUtc();
           await db.completionDao.insertCompletion(
             CompletionsCompanion.insert(
+              profileId: 0,
               curriculumId: 'mishnayos',
               sefariaRef: 'Berakhot.1.1',
               stageId: 1,
@@ -795,6 +799,7 @@ void main() {
           );
           await db.completionDao.insertCompletion(
             CompletionsCompanion.insert(
+              profileId: 0,
               curriculumId: 'mishnayos',
               sefariaRef: 'Berakhot.1.1',
               stageId: 2,
@@ -806,6 +811,7 @@ void main() {
           );
           await db.completionDao.insertCompletion(
             CompletionsCompanion.insert(
+              profileId: 0,
               curriculumId: 'mishnayos',
               sefariaRef: 'Berakhot.1.1',
               stageId: 2,
@@ -838,6 +844,7 @@ void main() {
           for (var i = 0; i < 5; i++) {
             await db.completionDao.insertCompletion(
               CompletionsCompanion.insert(
+                profileId: 0,
                 curriculumId: 'mishnayos',
                 sefariaRef: 'Berakhot.1.1',
                 stageId: i % 2 + 1,
@@ -850,6 +857,7 @@ void main() {
           }
           await db.completionDao.insertCompletion(
             CompletionsCompanion.insert(
+              profileId: 0,
               curriculumId: 'mishnayos',
               sefariaRef: 'Berakhot.1.2',
               stageId: 1,
@@ -880,6 +888,7 @@ void main() {
           final now = DateTime.now().toUtc();
           await db.completionDao.insertCompletion(
             CompletionsCompanion.insert(
+              profileId: 0,
               curriculumId: 'mishnayos',
               sefariaRef: 'Berakhot.1.1',
               stageId: 1,
@@ -891,6 +900,7 @@ void main() {
           );
           await db.completionDao.insertCompletion(
             CompletionsCompanion.insert(
+              profileId: 0,
               curriculumId: 'mishnayos',
               sefariaRef: 'Berakhot.1.2',
               stageId: 1,
@@ -902,6 +912,7 @@ void main() {
           );
           await db.completionDao.insertCompletion(
             CompletionsCompanion.insert(
+              profileId: 0,
               curriculumId: 'mishnayos',
               sefariaRef: 'Berakhot.1.2',
               stageId: 2,
@@ -931,6 +942,7 @@ void main() {
         // Profile 0
         await db.completionDao.insertCompletion(
           CompletionsCompanion.insert(
+            profileId: 0,
             curriculumId: 'mishnayos',
             sefariaRef: 'Berakhot.1.1',
             stageId: 1,
@@ -943,7 +955,7 @@ void main() {
         // Profile 5
         await db.completionDao.insertCompletion(
           CompletionsCompanion.insert(
-            profileId: const Value(5),
+            profileId: 5,
             curriculumId: 'mishnayos',
             sefariaRef: 'Berakhot.1.1',
             stageId: 1,

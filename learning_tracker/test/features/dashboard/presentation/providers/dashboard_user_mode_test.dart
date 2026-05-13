@@ -1,6 +1,7 @@
 import 'package:drift/native.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:learning_tracker/core/database/daos/profile_dao.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/user_mode.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
@@ -14,7 +15,7 @@ Future<int> _insertProfile(
 }) async {
   final now = DateTime.now().toUtc();
   return db
-      .into(db.profiles)
+      .into(db.learnerProfiles)
       .insert(
         ProfilesCompanion.insert(
           accountId: accountId,

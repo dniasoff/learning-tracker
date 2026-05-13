@@ -20,7 +20,7 @@ void main() {
       test('inserts a ledger entry and returns its id', () async {
         final id = await db.learningLedgerDao.insertEntry(
           LearningLedgerCompanion.insert(
-            profileId: const Value(1),
+            profileId: 1,
             curriculumId: 'mishna',
             unitType: 'masechta',
             unitIdentifier: 'Berakhot',
@@ -39,7 +39,7 @@ void main() {
       test('auto-sets createdAt when not provided', () async {
         await db.learningLedgerDao.insertEntry(
           LearningLedgerCompanion.insert(
-            profileId: const Value(1),
+            profileId: 1,
             curriculumId: 'mishna',
             unitType: 'masechta',
             unitIdentifier: 'Berakhot',
@@ -63,7 +63,7 @@ void main() {
         // Insert for profile 1
         await db.learningLedgerDao.insertEntry(
           LearningLedgerCompanion.insert(
-            profileId: const Value(1),
+            profileId: 1,
             curriculumId: 'mishna',
             unitType: 'masechta',
             unitIdentifier: 'Berakhot',
@@ -78,7 +78,7 @@ void main() {
         // Insert for profile 2
         await db.learningLedgerDao.insertEntry(
           LearningLedgerCompanion.insert(
-            profileId: const Value(2),
+            profileId: 2,
             curriculumId: 'mishna',
             unitType: 'masechta',
             unitIdentifier: 'Shabbat',
@@ -99,7 +99,7 @@ void main() {
       test('returns entries ordered by completedAt descending', () async {
         await db.learningLedgerDao.insertEntry(
           LearningLedgerCompanion.insert(
-            profileId: const Value(1),
+            profileId: 1,
             curriculumId: 'mishna',
             unitType: 'masechta',
             unitIdentifier: 'Berakhot',
@@ -113,7 +113,7 @@ void main() {
         );
         await db.learningLedgerDao.insertEntry(
           LearningLedgerCompanion.insert(
-            profileId: const Value(1),
+            profileId: 1,
             curriculumId: 'mishna',
             unitType: 'masechta',
             unitIdentifier: 'Shabbat',
@@ -136,7 +136,7 @@ void main() {
       test('filters by curriculum', () async {
         await db.learningLedgerDao.insertEntry(
           LearningLedgerCompanion.insert(
-            profileId: const Value(1),
+            profileId: 1,
             curriculumId: 'mishna',
             unitType: 'masechta',
             unitIdentifier: 'Berakhot',
@@ -150,7 +150,7 @@ void main() {
         );
         await db.learningLedgerDao.insertEntry(
           LearningLedgerCompanion.insert(
-            profileId: const Value(1),
+            profileId: 1,
             curriculumId: 'daf_yomi',
             unitType: 'masechta',
             unitIdentifier: 'Berakhot',
@@ -187,7 +187,7 @@ void main() {
         for (var i = 1; i <= 2; i++) {
           await db.learningLedgerDao.insertEntry(
             LearningLedgerCompanion.insert(
-              profileId: const Value(1),
+              profileId: 1,
               curriculumId: 'mishna',
               unitType: 'masechta',
               unitIdentifier: 'Berakhot',
@@ -203,7 +203,7 @@ void main() {
         // One completion of Shabbat (should not count)
         await db.learningLedgerDao.insertEntry(
           LearningLedgerCompanion.insert(
-            profileId: const Value(1),
+            profileId: 1,
             curriculumId: 'mishna',
             unitType: 'masechta',
             unitIdentifier: 'Shabbat',
@@ -229,7 +229,7 @@ void main() {
       test('groups entries by curriculum id', () async {
         await db.learningLedgerDao.insertEntry(
           LearningLedgerCompanion.insert(
-            profileId: const Value(1),
+            profileId: 1,
             curriculumId: 'mishna',
             unitType: 'masechta',
             unitIdentifier: 'Berakhot',
@@ -243,7 +243,7 @@ void main() {
         );
         await db.learningLedgerDao.insertEntry(
           LearningLedgerCompanion.insert(
-            profileId: const Value(1),
+            profileId: 1,
             curriculumId: 'daf_yomi',
             unitType: 'masechta',
             unitIdentifier: 'Berakhot',
@@ -269,7 +269,7 @@ void main() {
         for (var i = 1; i <= 5; i++) {
           await db.learningLedgerDao.insertEntry(
             LearningLedgerCompanion.insert(
-              profileId: const Value(1),
+              profileId: 1,
               curriculumId: 'mishna',
               unitType: 'masechta',
               unitIdentifier: 'Unit$i',
@@ -309,7 +309,7 @@ void main() {
         final completedAt = DateTime.utc(2026, 3, 1);
         await db.learningLedgerDao.insertEntry(
           LearningLedgerCompanion.insert(
-            profileId: const Value(1),
+            profileId: 1,
             curriculumId: 'mishna',
             unitType: 'masechta',
             unitIdentifier: 'Berakhot',
@@ -337,7 +337,7 @@ void main() {
       test('defaults to false', () async {
         await db.learningLedgerDao.insertEntry(
           LearningLedgerCompanion.insert(
-            profileId: const Value(1),
+            profileId: 1,
             curriculumId: 'mishna',
             unitType: 'masechta',
             unitIdentifier: 'Berakhot',
@@ -357,7 +357,7 @@ void main() {
       test('can be set to true for manual siyum', () async {
         await db.learningLedgerDao.insertEntry(
           LearningLedgerCompanion.insert(
-            profileId: const Value(1),
+            profileId: 1,
             curriculumId: 'mishna',
             unitType: 'masechta',
             unitIdentifier: 'Berakhot',
@@ -380,7 +380,7 @@ void main() {
       test('trackId can be null (survives track deletion)', () async {
         await db.learningLedgerDao.insertEntry(
           LearningLedgerCompanion.insert(
-            profileId: const Value(1),
+            profileId: 1,
             curriculumId: 'mishna',
             unitType: 'masechta',
             unitIdentifier: 'Berakhot',
@@ -400,7 +400,7 @@ void main() {
       test('trackId can be set', () async {
         await db.learningLedgerDao.insertEntry(
           LearningLedgerCompanion.insert(
-            profileId: const Value(1),
+            profileId: 1,
             curriculumId: 'mishna',
             unitType: 'masechta',
             unitIdentifier: 'Berakhot',

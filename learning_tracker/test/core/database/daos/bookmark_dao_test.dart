@@ -5,9 +5,18 @@ import 'package:learning_tracker/core/database/user/user_database.dart';
 
 void main() {
   late UserDatabase database;
+  late int trackId;
 
-  setUp(() {
+  setUp(() async {
     database = UserDatabase(NativeDatabase.memory());
+    trackId = await database.into(database.curriculumTracks).insert(
+      CurriculumTracksCompanion.insert(
+        profileId: 1,
+        curriculumId: 'bavli',
+        trackType: 'personal',
+        activatedAt: DateTime.utc(2026, 1, 1),
+      ),
+    );
   });
 
   tearDown(() async {
@@ -24,8 +33,9 @@ void main() {
       final now = DateTime.now();
       final id = await database.bookmarkDao.insertBookmark(
         BookmarksCompanion.insert(
+          profileId: 1,
           curriculumId: 'bavli',
-          trackType: 'amud',
+          trackId: trackId,
           sefariaRef: 'Berakhot.2a',
           updatedAt: now,
         ),
@@ -34,7 +44,7 @@ void main() {
       final bookmark = await database.bookmarkDao.getBookmarkById(id);
       expect(bookmark, isNotNull);
       expect(bookmark!.curriculumId, 'bavli');
-      expect(bookmark.trackType, 'amud');
+      expect(bookmark.trackId, trackId);
       expect(bookmark.sefariaRef, 'Berakhot.2a');
     });
 
@@ -42,15 +52,16 @@ void main() {
       final now = DateTime.now();
       await database.bookmarkDao.insertBookmark(
         BookmarksCompanion.insert(
+          profileId: 1,
           curriculumId: 'bavli',
-          trackType: 'amud',
+          trackId: trackId,
           sefariaRef: 'Berakhot.2a',
           updatedAt: now,
         ),
       );
 
       final bookmark = await database.bookmarkDao
-          .getBookmarkByCurriculumAndTrack('bavli', 'amud');
+          .getBookmarkByCurriculumAndTrack('bavli', trackId);
       expect(bookmark, isNotNull);
       expect(bookmark!.sefariaRef, 'Berakhot.2a');
     });
@@ -59,7 +70,7 @@ void main() {
       'getBookmarkByCurriculumAndTrack returns null when not found',
       () async {
         final bookmark = await database.bookmarkDao
-            .getBookmarkByCurriculumAndTrack('bavli', 'amud');
+            .getBookmarkByCurriculumAndTrack('bavli', trackId);
         expect(bookmark, isNull);
       },
     );
@@ -68,8 +79,9 @@ void main() {
       final now = DateTime.now();
       final id = await database.bookmarkDao.insertBookmark(
         BookmarksCompanion.insert(
+          profileId: 1,
           curriculumId: 'bavli',
-          trackType: 'amud',
+          trackId: trackId,
           sefariaRef: 'Berakhot.2a',
           updatedAt: now,
         ),
@@ -78,8 +90,9 @@ void main() {
       await database.bookmarkDao.updateBookmark(
         BookmarksCompanion(
           id: Value(id),
+          profileId: const Value(1),
           curriculumId: const Value('bavli'),
-          trackType: const Value('amud'),
+          trackId: Value(trackId),
           sefariaRef: const Value('Berakhot.2b'),
           updatedAt: Value(now),
         ),
@@ -93,8 +106,9 @@ void main() {
       final now = DateTime.now();
       final id = await database.bookmarkDao.insertBookmark(
         BookmarksCompanion.insert(
+          profileId: 1,
           curriculumId: 'bavli',
-          trackType: 'amud',
+          trackId: trackId,
           sefariaRef: 'Berakhot.2a',
           updatedAt: now,
         ),
@@ -111,13 +125,14 @@ void main() {
       final now = DateTime.now();
       await database.bookmarkDao.upsertBookmark(
         curriculumId: 'bavli',
-        trackType: 'amud',
+        trackId: trackId,
+        profileId: 1,
         sefariaRef: 'Berakhot.2a',
         updatedAt: now,
       );
 
       final bookmark = await database.bookmarkDao
-          .getBookmarkByCurriculumAndTrack('bavli', 'amud');
+          .getBookmarkByCurriculumAndTrack('bavli', trackId);
       expect(bookmark, isNotNull);
       expect(bookmark!.sefariaRef, 'Berakhot.2a');
     });
@@ -128,20 +143,22 @@ void main() {
 
       await database.bookmarkDao.upsertBookmark(
         curriculumId: 'bavli',
-        trackType: 'amud',
+        trackId: trackId,
+        profileId: 1,
         sefariaRef: 'Berakhot.2a',
         updatedAt: older,
       );
 
       await database.bookmarkDao.upsertBookmark(
         curriculumId: 'bavli',
-        trackType: 'amud',
+        trackId: trackId,
+        profileId: 1,
         sefariaRef: 'Berakhot.3a',
         updatedAt: newer,
       );
 
       final bookmark = await database.bookmarkDao
-          .getBookmarkByCurriculumAndTrack('bavli', 'amud');
+          .getBookmarkByCurriculumAndTrack('bavli', trackId);
       expect(bookmark!.sefariaRef, 'Berakhot.3a');
     });
 
@@ -151,20 +168,22 @@ void main() {
 
       await database.bookmarkDao.upsertBookmark(
         curriculumId: 'bavli',
-        trackType: 'amud',
+        trackId: trackId,
+        profileId: 1,
         sefariaRef: 'Berakhot.3a',
         updatedAt: newer,
       );
 
       await database.bookmarkDao.upsertBookmark(
         curriculumId: 'bavli',
-        trackType: 'amud',
+        trackId: trackId,
+        profileId: 1,
         sefariaRef: 'Berakhot.2a',
         updatedAt: older,
       );
 
       final bookmark = await database.bookmarkDao
-          .getBookmarkByCurriculumAndTrack('bavli', 'amud');
+          .getBookmarkByCurriculumAndTrack('bavli', trackId);
       expect(bookmark!.sefariaRef, 'Berakhot.3a');
     });
   });

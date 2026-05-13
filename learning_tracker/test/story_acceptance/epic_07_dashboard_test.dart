@@ -49,6 +49,7 @@ Future<int> _insertTrack(UserDatabase db) async {
       .into(db.curriculumTracks)
       .insertReturning(
         CurriculumTracksCompanion.insert(
+          profileId: 1,
           curriculumId: 'mishnayos',
           trackType: 'personal',
           activatedAt: DateTime.now(),
@@ -251,6 +252,7 @@ void main() {
       // Insert a streak record
       await db.streakDao.upsertStreak(
         StreaksCompanion.insert(
+          profileId: 1,
           currentStreak: const Value(5),
           maxStreak: const Value(12),
           lastCompletionDate: Value(DateTime.utc(2026, 3, 16)),
@@ -266,6 +268,7 @@ void main() {
     test('global points total sums across all completions', () async {
       await db.completionDao.insertCompletion(
         CompletionsCompanion.insert(
+          profileId: 1,
           curriculumId: 'mishnayos',
           sefariaRef: 'ref1',
           stageId: 1,
@@ -277,6 +280,7 @@ void main() {
       );
       await db.completionDao.insertCompletion(
         CompletionsCompanion.insert(
+          profileId: 1,
           curriculumId: 'bavli',
           sefariaRef: 'ref2',
           stageId: 1,
@@ -288,6 +292,7 @@ void main() {
       );
       await db.completionDao.insertCompletion(
         CompletionsCompanion.insert(
+          profileId: 1,
           curriculumId: 'mishnayos',
           sefariaRef: 'ref3',
           stageId: 2,
@@ -355,6 +360,7 @@ void main() {
         // Insert completions for two curricula at different times
         await db.completionDao.insertCompletion(
           CompletionsCompanion.insert(
+            profileId: 1,
             curriculumId: 'mishnayos',
             sefariaRef: 'r1',
             stageId: 1,
@@ -365,6 +371,7 @@ void main() {
         );
         await db.completionDao.insertCompletion(
           CompletionsCompanion.insert(
+            profileId: 1,
             curriculumId: 'bavli',
             sefariaRef: 'r2',
             stageId: 1,
@@ -564,6 +571,7 @@ void main() {
     ) async {
       final id = await db.stageDao.insertStageDefinition(
         StageDefinitionsCompanion.insert(
+          profileId: 1,
           curriculumId: 'mishnayos',
           trackId: trackId,
           stageOrder: stageOrder,
@@ -581,6 +589,7 @@ void main() {
     }) async {
       final id = await db.completionDao.insertCompletion(
         CompletionsCompanion.insert(
+          profileId: 1,
           curriculumId: 'mishnayos',
           sefariaRef: sefariaRef,
           stageId: stageId,
@@ -811,6 +820,7 @@ void main() {
     test('set goal, make progress, verify pace status', () async {
       await db.goalDao.insertGoal(
         GoalsCompanion.insert(
+          profileId: 1,
           curriculumId: 'mishnayos',
           trackId: trackId,
           createdAt: DateTime.utc(2026, 1, 1),
@@ -823,6 +833,7 @@ void main() {
       for (var i = 1; i <= 7; i++) {
         await db.completionDao.insertCompletion(
           CompletionsCompanion.insert(
+            profileId: 1,
             curriculumId: 'mishnayos',
             sefariaRef: 'ref_$i',
             stageId: 1,
@@ -893,6 +904,7 @@ void main() {
     }) async {
       await db.completionDao.insertCompletion(
         CompletionsCompanion.insert(
+          profileId: 0,
           curriculumId: curriculumId,
           sefariaRef: 'ref_${completedAt.millisecondsSinceEpoch}',
           stageId: 1,

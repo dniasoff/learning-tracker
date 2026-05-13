@@ -4,6 +4,7 @@ library;
 
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:learning_tracker/core/database/daos/profile_dao.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/navigation/guards/child_mode_guard.dart';
 import 'package:mocktail/mocktail.dart';
@@ -20,7 +21,7 @@ Future<int> _insertProfile(
   String displayName = 'Learner',
 }) {
   return db
-      .into(db.profiles)
+      .into(db.learnerProfiles)
       .insert(
         ProfilesCompanion.insert(
           accountId: 1,

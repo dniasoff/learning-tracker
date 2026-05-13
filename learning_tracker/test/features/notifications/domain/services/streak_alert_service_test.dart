@@ -27,6 +27,7 @@ void main() {
         .into(db.curriculumTracks)
         .insertReturning(
           CurriculumTracksCompanion.insert(
+            profileId: 1,
             curriculumId: 'test',
             trackType: 'review',
             activatedAt: DateTime.now(),
@@ -63,6 +64,7 @@ void main() {
       // Set up a streak of 5
       await db.streakDao.upsertStreak(
         StreaksCompanion.insert(
+          profileId: 1,
           currentStreak: const Value(5),
           maxStreak: const Value(5),
           lastCompletionDate: Value(DateTime.utc(2026, 3, 15, 18, 0, 0)),
@@ -85,6 +87,7 @@ void main() {
       // Set up a streak of 3
       await db.streakDao.upsertStreak(
         StreaksCompanion.insert(
+          profileId: 1,
           currentStreak: const Value(3),
           maxStreak: const Value(3),
           lastCompletionDate: Value(DateTime.utc(2026, 3, 16, 10, 0, 0)),
@@ -94,6 +97,7 @@ void main() {
       // Add a completion today
       await db.completionDao.insertCompletion(
         CompletionsCompanion.insert(
+          profileId: 0,
           curriculumId: 'test',
           sefariaRef: 'test_ref',
           stageId: 1,
@@ -119,6 +123,7 @@ void main() {
       // Set up a streak of 0
       await db.streakDao.upsertStreak(
         StreaksCompanion.insert(
+          profileId: 1,
           currentStreak: const Value(0),
           maxStreak: const Value(5),
           lastCompletionDate: Value(DateTime.utc(2026, 3, 10, 18, 0, 0)),

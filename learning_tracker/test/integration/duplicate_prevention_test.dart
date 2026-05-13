@@ -14,6 +14,7 @@ Future<int> _insertTrack(UserDatabase db) async {
       .into(db.curriculumTracks)
       .insertReturning(
         CurriculumTracksCompanion.insert(
+          profileId: 1,
           curriculumId: 'mishnayos',
           trackType: 'personal',
           activatedAt: DateTime.now(),
@@ -50,6 +51,7 @@ void main() {
         // Mark item under personal track
         await database.completionDao.insertCompletion(
           CompletionsCompanion.insert(
+            profileId: 1,
             curriculumId: curriculumId,
             sefariaRef: sefariaRef,
             stageId: stageId,
@@ -100,6 +102,7 @@ void main() {
       // Mark Learn stage under personal track
       await database.completionDao.insertCompletion(
         CompletionsCompanion.insert(
+          profileId: 1,
           curriculumId: curriculumId,
           sefariaRef: sefariaRef,
           stageId: learnStageId,
@@ -120,6 +123,7 @@ void main() {
 
       await database.completionDao.insertCompletion(
         CompletionsCompanion.insert(
+          profileId: 1,
           curriculumId: curriculumId,
           sefariaRef: sefariaRef,
           stageId: chazara1StageId,
@@ -187,6 +191,7 @@ void main() {
       // Mark item in mishnayos curriculum
       await database.completionDao.insertCompletion(
         CompletionsCompanion.insert(
+          profileId: 1,
           curriculumId: mishnayosId,
           sefariaRef: sefariaRef,
           stageId: stageId,

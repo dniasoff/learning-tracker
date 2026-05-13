@@ -33,6 +33,7 @@ Future<int> _insertTrack(UserDatabase db) async {
       .into(db.curriculumTracks)
       .insertReturning(
         CurriculumTracksCompanion.insert(
+          profileId: 1,
           curriculumId: 'mishnayos',
           trackType: 'personal',
           activatedAt: DateTime.now(),
@@ -158,6 +159,7 @@ void main() {
           .into(db.completions)
           .insert(
             CompletionsCompanion.insert(
+              profileId: 1,
               curriculumId: 'mishna',
               sefariaRef: 'Mishnah_Berakhot.1.1',
               stageId: 1,
@@ -171,6 +173,7 @@ void main() {
           .into(db.completions)
           .insert(
             CompletionsCompanion.insert(
+              profileId: 1,
               curriculumId: 'mishna',
               sefariaRef: 'Mishnah_Berakhot.1.2',
               stageId: 2,
@@ -186,6 +189,7 @@ void main() {
           .into(db.goals)
           .insert(
             GoalsCompanion.insert(
+              profileId: 1,
               curriculumId: 'mishna',
               trackId: trackId,
               targetPercent: const Value(50.0),
@@ -201,6 +205,7 @@ void main() {
           .into(db.stageDefinitions)
           .insert(
             StageDefinitionsCompanion.insert(
+              profileId: 1,
               curriculumId: 'mishna',
               trackId: trackId,
               stageOrder: 1,
@@ -213,6 +218,7 @@ void main() {
           .into(db.stageDefinitions)
           .insert(
             StageDefinitionsCompanion.insert(
+              profileId: 1,
               curriculumId: 'mishna',
               trackId: trackId,
               stageOrder: 2,
@@ -226,6 +232,7 @@ void main() {
           .into(db.streaks)
           .insert(
             StreaksCompanion.insert(
+              profileId: 0,
               currentStreak: const Value(5),
               maxStreak: const Value(12),
               lastCompletionDate: Value(DateTime(2026, 3, 17)),
@@ -237,6 +244,7 @@ void main() {
           .into(db.pointConfigs)
           .insert(
             PointConfigsCompanion.insert(
+              profileId: 1,
               curriculumId: 'mishna',
               trackId: trackId,
               stageOrder: 1,
@@ -249,8 +257,9 @@ void main() {
           .into(db.bookmarks)
           .insert(
             BookmarksCompanion.insert(
+              profileId: 1,
               curriculumId: 'mishna',
-              trackType: 'personal',
+              trackId: trackId,
               sefariaRef: 'Mishnah_Berakhot.1.3',
               updatedAt: DateTime(2026, 3, 17),
             ),
@@ -261,6 +270,7 @@ void main() {
           .into(db.learningOrder)
           .insert(
             LearningOrderCompanion.insert(
+              profileId: 1,
               curriculumId: 'mishna',
               sefariaRef: 'Mishnah_Berakhot.1.1',
               userSortOrder: 1,
@@ -272,6 +282,7 @@ void main() {
           .into(db.curriculumTracks)
           .insert(
             CurriculumTracksCompanion.insert(
+              profileId: 1,
               curriculumId: 'mishna',
               trackType: 'personal',
               activatedAt: DateTime(2026, 1, 1),
@@ -431,7 +442,7 @@ void main() {
           await db.delete(db.bookmarks).go();
           await db.delete(db.learningOrder).go();
           await db.delete(db.curriculumTracks).go();
-          await db.delete(db.userProfiles).go();
+          await db.delete(db.accounts).go();
         });
 
         // Verify empty
@@ -554,7 +565,7 @@ void main() {
           await db.delete(db.bookmarks).go();
           await db.delete(db.learningOrder).go();
           await db.delete(db.curriculumTracks).go();
-          await db.delete(db.userProfiles).go();
+          await db.delete(db.accounts).go();
         });
 
         // Verify all empty

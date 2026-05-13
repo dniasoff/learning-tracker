@@ -123,8 +123,8 @@ void main() {
         expect(db, isNotNull);
         expect(
           db.schemaVersion,
-          11,
-        ); // v11: added updated_at to learning_order for LWW sync (DNI-311)
+          12,
+        ); // v12: profileId non-nullable + bookmarks trackId FK (DNI-322)
 
         db.close();
       });

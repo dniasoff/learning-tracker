@@ -65,7 +65,7 @@ Future<int> _insertTrack(UserDatabase db) async {
       .into(db.curriculumTracks)
       .insertReturning(
         CurriculumTracksCompanion.insert(
-          profileId: const Value(1),
+          profileId: 1,
           curriculumId: 'mishnayos',
           trackType: 'personal',
           activatedAt: DateTime.now(),
@@ -345,7 +345,7 @@ void main() {
       final completedAt = DateTime.utc(2026, 2, 9, 12);
       await database.completionDao.insertCompletion(
         CompletionsCompanion.insert(
-          profileId: const Value(1),
+          profileId: 1,
           curriculumId: 'mishnayos',
           sefariaRef: 'mishna-1',
           stageId: 1,
@@ -394,9 +394,9 @@ void main() {
       // Insert older local bookmark
       await database.bookmarkDao.insertBookmark(
         BookmarksCompanion.insert(
-          profileId: const Value(1),
+          profileId: 1,
           curriculumId: 'mishnayos',
-          trackType: 'personal',
+          trackId: trackId,
           sefariaRef: 'mishna-10',
           updatedAt: DateTime.utc(2026, 2, 8),
         ),
@@ -421,7 +421,7 @@ void main() {
       await syncEngine.pullOnLaunch();
 
       final bookmark = await database.bookmarkDao
-          .getBookmarkByCurriculumTrackAndProfile('mishnayos', 'personal', 1);
+          .getBookmarkByCurriculumTrackAndProfile('mishnayos', trackId, 1);
       expect(bookmark!.sefariaRef, 'mishna-42'); // Remote won
     });
 
@@ -431,9 +431,9 @@ void main() {
         // Insert newer local bookmark
         await database.bookmarkDao.insertBookmark(
           BookmarksCompanion.insert(
-            profileId: const Value(1),
+            profileId: 1,
             curriculumId: 'mishnayos',
-            trackType: 'personal',
+            trackId: trackId,
             sefariaRef: 'mishna-99',
             updatedAt: DateTime.utc(2026, 2, 10),
           ),
@@ -458,7 +458,7 @@ void main() {
         await syncEngine.pullOnLaunch();
 
         final bookmark = await database.bookmarkDao
-            .getBookmarkByCurriculumTrackAndProfile('mishnayos', 'personal', 1);
+            .getBookmarkByCurriculumTrackAndProfile('mishnayos', trackId, 1);
         expect(bookmark!.sefariaRef, 'mishna-99'); // Local kept
       },
     );
@@ -471,6 +471,7 @@ void main() {
         // Insert local data
         await database.completionDao.insertCompletion(
           CompletionsCompanion.insert(
+            profileId: 1,
             curriculumId: 'mishnayos',
             sefariaRef: 'mishna-1',
             stageId: 1,
@@ -1075,7 +1076,7 @@ void main() {
       // Insert existing data — not a new device
       await database.completionDao.insertCompletion(
         CompletionsCompanion.insert(
-          profileId: const Value(1),
+          profileId: 1,
           curriculumId: 'mishnayos',
           sefariaRef: 'mishna-1',
           stageId: 1,

@@ -33,6 +33,7 @@ void main() {
         .into(db.curriculumTracks)
         .insertReturning(
           CurriculumTracksCompanion.insert(
+            profileId: 1,
             curriculumId: _currId,
             trackType: 'personal',
             activatedAt: DateTime.now(),
@@ -65,6 +66,7 @@ void main() {
   Future<void> insertStage(int stageOrder) async {
     await db.stageDao.insertStageDefinition(
       StageDefinitionsCompanion.insert(
+        profileId: 1,
         curriculumId: _currId,
         trackId: trackId,
         stageOrder: stageOrder,
@@ -82,7 +84,7 @@ void main() {
   }) async {
     await db.completionDao.insertCompletion(
       CompletionsCompanion.insert(
-        profileId: Value(profileId),
+        profileId: profileId,
         curriculumId: _currId,
         sefariaRef: sefariaRef,
         stageId: stageId,

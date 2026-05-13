@@ -11,6 +11,7 @@ Future<int> _insertTrack(UserDatabase db) async {
       .into(db.curriculumTracks)
       .insertReturning(
         CurriculumTracksCompanion.insert(
+          profileId: 1,
           curriculumId: 'mishnayos',
           trackType: 'personal',
           activatedAt: DateTime.now(),
@@ -85,6 +86,7 @@ void main() {
         // Simulate Firestore payload arriving with 4 stages
         final firestoreStages = [
           StageDefinitionsCompanion.insert(
+            profileId: 1,
             curriculumId: curriculum.storageKey,
             trackId: trackId,
             stageOrder: 1,
@@ -93,6 +95,7 @@ void main() {
             isDefault: const Value(true),
           ),
           StageDefinitionsCompanion.insert(
+            profileId: 1,
             curriculumId: curriculum.storageKey,
             trackId: trackId,
             stageOrder: 2,
@@ -101,6 +104,7 @@ void main() {
             isDefault: const Value(true),
           ),
           StageDefinitionsCompanion.insert(
+            profileId: 1,
             curriculumId: curriculum.storageKey,
             trackId: trackId,
             stageOrder: 3,
@@ -109,6 +113,7 @@ void main() {
             isDefault: const Value(true),
           ),
           StageDefinitionsCompanion.insert(
+            profileId: 1,
             curriculumId: curriculum.storageKey,
             trackId: trackId,
             stageOrder: 4,

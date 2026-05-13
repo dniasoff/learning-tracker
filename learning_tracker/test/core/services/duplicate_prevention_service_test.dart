@@ -35,6 +35,7 @@ void main() {
         // Insert a completion
         await database.completionDao.insertCompletion(
           CompletionsCompanion.insert(
+            profileId: 0,
             trackId: 0,
             curriculumId: 'mishnayos',
             sefariaRef: 'Mishnah Berakhot 1:1',
@@ -61,6 +62,7 @@ void main() {
         // Insert completion for mishnayos curriculum
         await database.completionDao.insertCompletion(
           CompletionsCompanion.insert(
+            profileId: 0,
             trackId: 0,
             curriculumId: 'mishnayos',
             sefariaRef: 'Mishnah Berakhot 1:1',
@@ -88,6 +90,7 @@ void main() {
         // When duplicate prevention is enforced, this should return false.
         await database.completionDao.insertCompletion(
           CompletionsCompanion.insert(
+            profileId: 0,
             trackId: 0,
             curriculumId: 'mishnayos',
             sefariaRef: 'Mishnah Berakhot 1:1',
@@ -113,6 +116,7 @@ void main() {
       // Insert stage 1 completion
       await database.completionDao.insertCompletion(
         CompletionsCompanion.insert(
+          profileId: 0,
           trackId: 0,
           curriculumId: 'mishnayos',
           sefariaRef: 'Mishnah Berakhot 1:1',
@@ -147,6 +151,7 @@ void main() {
     test('returns existing completion when found', () async {
       await database.completionDao.insertCompletion(
         CompletionsCompanion.insert(
+          profileId: 0,
           trackId: 0,
           curriculumId: 'mishnayos',
           sefariaRef: 'Mishnah Berakhot 1:1',

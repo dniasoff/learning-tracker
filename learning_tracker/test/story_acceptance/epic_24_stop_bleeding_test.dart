@@ -95,6 +95,7 @@ void main() {
               .into(db.curriculumTracks)
               .insert(
                 CurriculumTracksCompanion.insert(
+                  profileId: 1,
                   curriculumId: CurriculumId.mishnayos.storageKey,
                   trackType: TrackType.personal.storageKey,
                   activatedAt: DateTime.utc(2026, 1, 1),
@@ -291,7 +292,7 @@ void main() {
               .into(db.curriculumTracks)
               .insert(
                 CurriculumTracksCompanion.insert(
-                  profileId: const Value(1),
+                  profileId: 1,
                   curriculumId: CurriculumId.mishnayos.storageKey,
                   trackType: TrackType.personal.storageKey,
                   isActive: Value(isActive),

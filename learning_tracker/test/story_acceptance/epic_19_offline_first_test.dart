@@ -8,6 +8,7 @@ import 'package:learning_tracker/core/database/content_result.dart';
 import 'package:learning_tracker/core/database/seed/learning_program_seeds.dart';
 import 'package:learning_tracker/core/database/seed_manager.dart';
 import 'package:learning_tracker/core/database/seed_version.dart';
+import 'package:learning_tracker/core/database/daos/user_profile_dao.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/services/calendar_program_registry.dart';
 import 'package:learning_tracker/core/services/calendar_program_service.dart';
@@ -80,7 +81,7 @@ void main() {
 
     test('UserDatabase creates with user tables', () async {
       await userDb
-          .into(userDb.userProfiles)
+          .into(userDb.accounts)
           .insert(
             UserProfilesCompanion.insert(
               email: 'test@test.local',
@@ -91,7 +92,7 @@ void main() {
               updatedAt: DateTime.now(),
             ),
           );
-      final profiles = await userDb.select(userDb.userProfiles).get();
+      final profiles = await userDb.select(userDb.accounts).get();
       expect(profiles, hasLength(1));
       expect(profiles.first.email, 'test@test.local');
     });
@@ -106,7 +107,7 @@ void main() {
       'UserProfiles stores local-born account without firebaseUid',
       () async {
         await userDb
-            .into(userDb.userProfiles)
+            .into(userDb.accounts)
             .insert(
               UserProfilesCompanion.insert(
                 email: 'localonly@test.local',
@@ -118,7 +119,7 @@ void main() {
                 updatedAt: DateTime.now(),
               ),
             );
-        final profile = await userDb.select(userDb.userProfiles).getSingle();
+        final profile = await userDb.select(userDb.accounts).getSingle();
         expect(profile.email, 'localonly@test.local');
         expect(profile.firebaseUid, isNull);
         expect(profile.tier, 'localBorn');

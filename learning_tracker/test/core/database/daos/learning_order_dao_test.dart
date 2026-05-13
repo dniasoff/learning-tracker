@@ -17,6 +17,7 @@ void main() {
     test('upsertLearningOrder inserts a new row', () async {
       await database.learningOrderDao.upsertLearningOrder(
         LearningOrderCompanion.insert(
+          profileId: 1,
           curriculumId: 'mishnayos',
           sefariaRef: 'Berakhot',
           userSortOrder: 0,
@@ -36,6 +37,7 @@ void main() {
       () async {
         await database.learningOrderDao.upsertLearningOrder(
           LearningOrderCompanion.insert(
+            profileId: 1,
             curriculumId: 'mishnayos',
             sefariaRef: 'Berakhot',
             userSortOrder: 0,
@@ -44,6 +46,7 @@ void main() {
         // Upsert with new sort order
         await database.learningOrderDao.upsertLearningOrder(
           LearningOrderCompanion.insert(
+            profileId: 1,
             curriculumId: 'mishnayos',
             sefariaRef: 'Berakhot',
             userSortOrder: 5,
@@ -62,6 +65,7 @@ void main() {
       () async {
         await database.learningOrderDao.upsertLearningOrder(
           LearningOrderCompanion.insert(
+            profileId: 1,
             curriculumId: 'mishnayos',
             sefariaRef: 'Shabbat',
             userSortOrder: 2,
@@ -69,6 +73,7 @@ void main() {
         );
         await database.learningOrderDao.upsertLearningOrder(
           LearningOrderCompanion.insert(
+            profileId: 1,
             curriculumId: 'mishnayos',
             sefariaRef: 'Berakhot',
             userSortOrder: 0,
@@ -76,6 +81,7 @@ void main() {
         );
         await database.learningOrderDao.upsertLearningOrder(
           LearningOrderCompanion.insert(
+            profileId: 1,
             curriculumId: 'mishnayos',
             sefariaRef: 'Peah',
             userSortOrder: 1,
@@ -97,6 +103,7 @@ void main() {
       () async {
         await database.learningOrderDao.upsertLearningOrder(
           LearningOrderCompanion.insert(
+            profileId: 1,
             curriculumId: 'mishnayos',
             sefariaRef: 'Berakhot',
             userSortOrder: 0,
@@ -104,6 +111,7 @@ void main() {
         );
         await database.learningOrderDao.upsertLearningOrder(
           LearningOrderCompanion.insert(
+            profileId: 1,
             curriculumId: 'bavli',
             sefariaRef: 'Berakhot',
             userSortOrder: 0,

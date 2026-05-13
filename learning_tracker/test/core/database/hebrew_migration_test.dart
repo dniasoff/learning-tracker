@@ -17,6 +17,7 @@ void main() {
           .into(db.curriculumTracks)
           .insert(
             CurriculumTracksCompanion.insert(
+              profileId: 1,
               curriculumId: 'bavli',
               trackType: 'personal',
               activatedAt: DateTime.now(),
@@ -26,6 +27,7 @@ void main() {
           .into(db.curriculumTracks)
           .insert(
             CurriculumTracksCompanion.insert(
+              profileId: 1,
               curriculumId: 'mishnayos',
               trackType: 'personal',
               activatedAt: DateTime.now(),
@@ -35,6 +37,7 @@ void main() {
           .into(db.curriculumTracks)
           .insert(
             CurriculumTracksCompanion.insert(
+              profileId: 1,
               curriculumId: 'mishna_berurah',
               trackType: 'personal',
               activatedAt: DateTime.now(),
@@ -50,6 +53,7 @@ void main() {
       // Insert a stage using defaults (the current schema should use Hebrew)
       await db.stageDao.insertStageDefinition(
         StageDefinitionsCompanion.insert(
+          profileId: 1,
           curriculumId: 'bavli',
           trackId: bavliTrackId,
           stageOrder: 1,
@@ -68,6 +72,7 @@ void main() {
       // Simulate pre-migration data with English name
       await db.stageDao.insertStageDefinition(
         StageDefinitionsCompanion.insert(
+          profileId: 1,
           curriculumId: 'bavli',
           trackId: bavliTrackId,
           stageOrder: 1,
@@ -87,6 +92,7 @@ void main() {
     test('English "Chazara 1" and "Chazara 2" migrated to Hebrew', () async {
       await db.stageDao.insertStageDefinition(
         StageDefinitionsCompanion.insert(
+          profileId: 1,
           curriculumId: 'bavli',
           trackId: bavliTrackId,
           stageOrder: 1,
@@ -96,6 +102,7 @@ void main() {
       );
       await db.stageDao.insertStageDefinition(
         StageDefinitionsCompanion.insert(
+          profileId: 1,
           curriculumId: 'bavli',
           trackId: bavliTrackId,
           stageOrder: 2,
@@ -114,6 +121,7 @@ void main() {
     test('English "Review" variants migrated to Hebrew', () async {
       await db.stageDao.insertStageDefinition(
         StageDefinitionsCompanion.insert(
+          profileId: 1,
           curriculumId: 'mishna_berurah',
           trackId: mbTrackId,
           stageOrder: 1,
@@ -133,6 +141,7 @@ void main() {
     test('Oraysa program labels migrated correctly', () async {
       await db.stageDao.insertStageDefinition(
         StageDefinitionsCompanion.insert(
+          profileId: 1,
           curriculumId: 'bavli',
           trackId: bavliTrackId,
           stageOrder: 1,
@@ -142,6 +151,7 @@ void main() {
       );
       await db.stageDao.insertStageDefinition(
         StageDefinitionsCompanion.insert(
+          profileId: 1,
           curriculumId: 'bavli',
           trackId: bavliTrackId,
           stageOrder: 2,
@@ -151,6 +161,7 @@ void main() {
       );
       await db.stageDao.insertStageDefinition(
         StageDefinitionsCompanion.insert(
+          profileId: 1,
           curriculumId: 'bavli',
           trackId: bavliTrackId,
           stageOrder: 3,
@@ -170,6 +181,7 @@ void main() {
     test('user-customized stage names are NOT changed by migration', () async {
       await db.stageDao.insertStageDefinition(
         StageDefinitionsCompanion.insert(
+          profileId: 1,
           curriculumId: 'mishnayos',
           trackId: mishnayosTrackId,
           stageOrder: 1,
@@ -179,6 +191,7 @@ void main() {
       );
       await db.stageDao.insertStageDefinition(
         StageDefinitionsCompanion.insert(
+          profileId: 1,
           curriculumId: 'mishnayos',
           trackId: mishnayosTrackId,
           stageOrder: 2,
@@ -199,6 +212,7 @@ void main() {
     test('migration is idempotent (safe to run multiple times)', () async {
       await db.stageDao.insertStageDefinition(
         StageDefinitionsCompanion.insert(
+          profileId: 1,
           curriculumId: 'bavli',
           trackId: bavliTrackId,
           stageOrder: 1,
@@ -221,7 +235,8 @@ void main() {
         // English default
         await db.stageDao.insertStageDefinition(
           StageDefinitionsCompanion.insert(
-            curriculumId: 'bavli',
+            profileId: 1,
+          curriculumId: 'bavli',
             trackId: bavliTrackId,
             stageOrder: 1,
             stageName: 'Learn',
@@ -231,7 +246,8 @@ void main() {
         // Custom name
         await db.stageDao.insertStageDefinition(
           StageDefinitionsCompanion.insert(
-            curriculumId: 'bavli',
+            profileId: 1,
+          curriculumId: 'bavli',
             trackId: bavliTrackId,
             stageOrder: 2,
             stageName: 'Quick Review',
@@ -241,7 +257,8 @@ void main() {
         // English default
         await db.stageDao.insertStageDefinition(
           StageDefinitionsCompanion.insert(
-            curriculumId: 'bavli',
+            profileId: 1,
+          curriculumId: 'bavli',
             trackId: bavliTrackId,
             stageOrder: 3,
             stageName: 'Chazara 2',

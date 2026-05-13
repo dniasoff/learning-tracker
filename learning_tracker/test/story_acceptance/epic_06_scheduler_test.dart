@@ -36,6 +36,7 @@ Future<int> _insertTrack(UserDatabase db) async {
       .into(db.curriculumTracks)
       .insertReturning(
         CurriculumTracksCompanion.insert(
+          profileId: 1,
           curriculumId: 'mishnayos',
           trackType: 'personal',
           activatedAt: DateTime.now(),
@@ -69,6 +70,7 @@ void main() {
       // Set up 3 stages
       await db.stageDao.insertStageDefinition(
         StageDefinitionsCompanion.insert(
+          profileId: 1,
           curriculumId: curriculum.storageKey,
           trackId: trackId,
           stageOrder: 1,
@@ -78,6 +80,7 @@ void main() {
       );
       await db.stageDao.insertStageDefinition(
         StageDefinitionsCompanion.insert(
+          profileId: 1,
           curriculumId: curriculum.storageKey,
           trackId: trackId,
           stageOrder: 2,
@@ -87,6 +90,7 @@ void main() {
       );
       await db.stageDao.insertStageDefinition(
         StageDefinitionsCompanion.insert(
+          profileId: 1,
           curriculumId: curriculum.storageKey,
           trackId: trackId,
           stageOrder: 3,
@@ -143,6 +147,7 @@ void main() {
 
       await db.completionDao.insertCompletion(
         CompletionsCompanion.insert(
+          profileId: 0,
           curriculumId: curriculum.storageKey,
           sefariaRef: 'Mishnah_Berakhot_1.0',
           stageId: learnId,
@@ -199,6 +204,7 @@ void main() {
 
       await db.stageDao.insertStageDefinition(
         StageDefinitionsCompanion.insert(
+          profileId: 1,
           curriculumId: curriculum.storageKey,
           trackId: trackId,
           stageOrder: 1,
@@ -208,6 +214,7 @@ void main() {
       );
       await db.stageDao.insertStageDefinition(
         StageDefinitionsCompanion.insert(
+          profileId: 1,
           curriculumId: curriculum.storageKey,
           trackId: trackId,
           stageOrder: 2,
@@ -217,6 +224,7 @@ void main() {
       );
       await db.stageDao.insertStageDefinition(
         StageDefinitionsCompanion.insert(
+          profileId: 1,
           curriculumId: curriculum.storageKey,
           trackId: trackId,
           stageOrder: 3,
@@ -275,6 +283,7 @@ void main() {
         // Actually with delay=0, it's due same day, so 10 days overdue
         await db.completionDao.insertCompletion(
           CompletionsCompanion.insert(
+            profileId: 0,
             curriculumId: curriculum.storageKey,
             sefariaRef: 'Mishnah_Berakhot_1.0',
             stageId: learnId,
@@ -288,6 +297,7 @@ void main() {
         // Item 1: learned today → Chazara 1 due today (delay=0)
         await db.completionDao.insertCompletion(
           CompletionsCompanion.insert(
+            profileId: 0,
             curriculumId: curriculum.storageKey,
             sefariaRef: 'Mishnah_Berakhot_1.1',
             stageId: learnId,
@@ -348,6 +358,7 @@ void main() {
 
         await db.completionDao.insertCompletion(
           CompletionsCompanion.insert(
+            profileId: 0,
             curriculumId: curriculum.storageKey,
             sefariaRef: 'Mishnah_Berakhot_1.0',
             stageId: learnId,
@@ -388,6 +399,7 @@ void main() {
         for (var i = 0; i < 2; i++) {
           await db.completionDao.insertCompletion(
             CompletionsCompanion.insert(
+              profileId: 0,
               curriculumId: curriculum.storageKey,
               sefariaRef: 'Mishnah_Berakhot_1.$i',
               stageId: learnId,
@@ -830,6 +842,7 @@ void main() {
       // Set up stage definitions for mishnayos
       await db.stageDao.insertStageDefinition(
         StageDefinitionsCompanion.insert(
+          profileId: 1,
           curriculumId: CurriculumId.mishnayos.storageKey,
           trackId: trackId,
           stageOrder: 1,
@@ -861,6 +874,7 @@ void main() {
           for (var j = 0; j < 2; j++) {
             await db.completionDao.insertCompletion(
               CompletionsCompanion.insert(
+                profileId: 1,
                 curriculumId: curriculum.storageKey,
                 sefariaRef: 'Mishnah_Berakhot_${dayOffset}_$j',
                 stageId: learnId,
@@ -882,6 +896,7 @@ void main() {
         for (var i = 0; i < 79; i++) {
           await db.completionDao.insertCompletion(
             CompletionsCompanion.insert(
+              profileId: 1,
               curriculumId: curriculum.storageKey,
               sefariaRef: 'Mishnah_Berakhot_early_$i',
               stageId: learnId,

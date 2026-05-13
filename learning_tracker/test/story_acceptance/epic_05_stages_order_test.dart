@@ -35,6 +35,7 @@ Future<int> _insertTrack(UserDatabase db) async {
       .into(db.curriculumTracks)
       .insertReturning(
         CurriculumTracksCompanion.insert(
+          profileId: 1,
           curriculumId: 'mishnayos',
           trackType: 'personal',
           activatedAt: DateTime.now(),
@@ -214,6 +215,7 @@ void main() {
 
         await database.learningOrderDao.upsertLearningOrder(
           LearningOrderCompanion.insert(
+            profileId: 1,
             curriculumId: 'mishnayos',
             sefariaRef: 'Shabbat',
             userSortOrder: 0,
@@ -221,6 +223,7 @@ void main() {
         );
         await database.learningOrderDao.upsertLearningOrder(
           LearningOrderCompanion.insert(
+            profileId: 1,
             curriculumId: 'mishnayos',
             sefariaRef: 'Berakhot',
             userSortOrder: 1,
@@ -251,6 +254,7 @@ void main() {
 
         await database.learningOrderDao.upsertLearningOrder(
           LearningOrderCompanion.insert(
+            profileId: 1,
             curriculumId: 'mishnayos',
             sefariaRef: 'Shabbat',
             userSortOrder: 0,
@@ -319,6 +323,7 @@ void main() {
       () async {
         await database.learningOrderDao.upsertLearningOrder(
           LearningOrderCompanion.insert(
+            profileId: 1,
             curriculumId: 'mishnayos',
             sefariaRef: 'Shabbat',
             userSortOrder: 0,
@@ -326,6 +331,7 @@ void main() {
         );
         await database.learningOrderDao.upsertLearningOrder(
           LearningOrderCompanion.insert(
+            profileId: 1,
             curriculumId: 'mishnayos',
             sefariaRef: 'Berakhot',
             userSortOrder: 1,

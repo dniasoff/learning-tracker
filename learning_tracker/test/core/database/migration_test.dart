@@ -15,6 +15,7 @@ void main() {
           .into(db.curriculumTracks)
           .insert(
             CurriculumTracksCompanion.insert(
+              profileId: 1,
               curriculumId: 'bavli',
               trackType: 'personal',
               activatedAt: DateTime.now(),
@@ -31,6 +32,7 @@ void main() {
       final now = DateTime.now().toUtc();
       await db.goalDao.insertGoal(
         GoalsCompanion.insert(
+          profileId: 1,
           curriculumId: 'bavli',
           trackId: trackId,
           createdAt: now,
@@ -52,6 +54,7 @@ void main() {
       final now = DateTime.now().toUtc();
       await db.goalDao.insertGoal(
         GoalsCompanion.insert(
+          profileId: 1,
           curriculumId: 'bavli',
           trackId: trackId,
           goalType: const Value('pace'),
@@ -75,6 +78,7 @@ void main() {
       final now = DateTime.now().toUtc();
       await db.goalDao.insertGoal(
         GoalsCompanion.insert(
+          profileId: 1,
           curriculumId: 'mishnayos',
           trackId: trackId,
           goalType: const Value('pace'),
@@ -97,6 +101,7 @@ void main() {
       final targetDate = DateTime.utc(2026, 12, 31);
       await db.goalDao.insertGoal(
         GoalsCompanion.insert(
+          profileId: 1,
           curriculumId: 'mishnayos',
           trackId: trackId,
           targetDate: Value(targetDate),

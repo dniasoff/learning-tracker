@@ -32,7 +32,7 @@ void main() {
     group('Story 20.3 — v2 schema', () {
       test('UserProfiles has email, firebaseUid, passwordHash, tier', () async {
         await db
-            .into(db.userProfiles)
+            .into(db.accounts)
             .insert(
               UserProfilesCompanion.insert(
                 email: 'cloud@test.local',
@@ -44,7 +44,7 @@ void main() {
                 updatedAt: DateTime.utc(2026, 1, 1),
               ),
             );
-        final row = await db.select(db.userProfiles).getSingle();
+        final row = await db.select(db.accounts).getSingle();
         expect(row.email, 'cloud@test.local');
         expect(row.firebaseUid, 'fbuid-1');
         expect(row.tier, 'cloudBorn');

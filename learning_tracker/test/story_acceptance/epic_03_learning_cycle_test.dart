@@ -3,6 +3,7 @@
 library;
 
 import 'package:drift/drift.dart' show Value;
+import 'package:learning_tracker/core/database/daos/profile_dao.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
@@ -52,6 +53,7 @@ Future<int> _insertTrack(UserDatabase db) async {
       .into(db.curriculumTracks)
       .insertReturning(
         CurriculumTracksCompanion.insert(
+          profileId: 0,
           curriculumId: 'mishnayos',
           trackType: 'personal',
           activatedAt: DateTime.now(),
@@ -120,7 +122,7 @@ void main() {
     test('completion emits points based on stage', () async {
       // Points are only awarded to child profiles; insert a child profile
       final childProfile = await db
-          .into(db.profiles)
+          .into(db.learnerProfiles)
           .insertReturning(
             ProfilesCompanion.insert(
               accountId: 0,
@@ -136,7 +138,7 @@ void main() {
           .into(db.curriculumTracks)
           .insertReturning(
             CurriculumTracksCompanion.insert(
-              profileId: Value(childProfile.id),
+              profileId: childProfile.id,
               curriculumId: 'mishnayos',
               trackType: 'personal',
               activatedAt: DateTime.now(),
@@ -147,7 +149,7 @@ void main() {
       // Make the track reward-eligible so points are awarded
       await db.goalDao.insertGoal(
         GoalsCompanion.insert(
-          profileId: Value(childProfile.id),
+          profileId: childProfile.id,
           curriculumId: 'mishnayos',
           trackId: childTrackId,
           createdAt: DateTime.now().toUtc(),
@@ -164,6 +166,7 @@ void main() {
 
       await db.stageDao.insertStageDefinition(
         StageDefinitionsCompanion.insert(
+          profileId: 1,
           curriculumId: 'mishnayos',
           trackId: childTrackId,
           stageOrder: 1,
@@ -173,6 +176,7 @@ void main() {
       );
       await db.stageDao.insertStageDefinition(
         StageDefinitionsCompanion.insert(
+          profileId: 1,
           curriculumId: 'mishnayos',
           trackId: childTrackId,
           stageOrder: 2,
@@ -246,6 +250,7 @@ void main() {
     test('stage definitions are loaded for each curriculum', () async {
       await db.stageDao.insertStageDefinition(
         StageDefinitionsCompanion.insert(
+          profileId: 1,
           curriculumId: 'mishnayos',
           trackId: trackId,
           stageOrder: 1,
@@ -255,6 +260,7 @@ void main() {
       );
       await db.stageDao.insertStageDefinition(
         StageDefinitionsCompanion.insert(
+          profileId: 1,
           curriculumId: 'mishnayos',
           trackId: trackId,
           stageOrder: 2,
@@ -301,6 +307,7 @@ void main() {
     test('replaceStagesForCurriculum replaces all stage definitions', () async {
       await db.stageDao.insertStageDefinition(
         StageDefinitionsCompanion.insert(
+          profileId: 1,
           curriculumId: 'mishnayos',
           trackId: trackId,
           stageOrder: 1,
@@ -311,6 +318,7 @@ void main() {
 
       await db.stageDao.replaceStagesForCurriculum('mishnayos', [
         StageDefinitionsCompanion.insert(
+          profileId: 1,
           curriculumId: 'mishnayos',
           trackId: trackId,
           stageOrder: 1,
@@ -318,6 +326,7 @@ void main() {
           delayDays: 0,
         ),
         StageDefinitionsCompanion.insert(
+          profileId: 1,
           curriculumId: 'mishnayos',
           trackId: trackId,
           stageOrder: 2,

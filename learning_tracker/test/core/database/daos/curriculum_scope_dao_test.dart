@@ -14,6 +14,7 @@ void main() {
         .into(database.curriculumTracks)
         .insert(
           CurriculumTracksCompanion.insert(
+            profileId: 1,
             curriculumId: 'mishnayos',
             trackType: 'personal',
             activatedAt: DateTime.now(),
@@ -202,6 +203,7 @@ void main() {
           .into(database.curriculumTracks)
           .insert(
             CurriculumTracksCompanion.insert(
+              profileId: 1,
               curriculumId: 'bavli',
               trackType: 'personal',
               activatedAt: DateTime.now(),

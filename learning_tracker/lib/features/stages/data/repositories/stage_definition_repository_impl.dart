@@ -92,6 +92,7 @@ class StageDefinitionRepositoryImpl implements StageDefinitionRepository {
     await _stageDao.updateStageDefinition(
       db.StageDefinitionsCompanion(
         id: Value(id),
+        profileId: Value(existing.profileId),
         curriculumId: Value(existing.curriculumId),
         trackId: Value(existing.trackId),
         stageOrder: Value(existing.stageOrder),
@@ -137,6 +138,7 @@ class StageDefinitionRepositoryImpl implements StageDefinitionRepository {
       await _stageDao.updateStageDefinition(
         db.StageDefinitionsCompanion(
           id: Value(stageId),
+          profileId: Value(existing.profileId),
           curriculumId: Value(existing.curriculumId),
           trackId: Value(existing.trackId),
           stageOrder: Value(-(i + 1)),
@@ -157,6 +159,7 @@ class StageDefinitionRepositoryImpl implements StageDefinitionRepository {
       await _stageDao.updateStageDefinition(
         db.StageDefinitionsCompanion(
           id: Value(stageId),
+          profileId: Value(existing.profileId),
           curriculumId: Value(existing.curriculumId),
           trackId: Value(existing.trackId),
           stageOrder: Value(i + 1),

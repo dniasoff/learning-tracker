@@ -44,6 +44,7 @@ void main() {
           .into(db.curriculumTracks)
           .insertReturning(
             CurriculumTracksCompanion.insert(
+              profileId: 0,
               curriculumId: curriculum.storageKey,
               trackType: 'personal',
               activatedAt: DateTime.now(),
@@ -54,6 +55,7 @@ void main() {
       // 1. Set up stages
       await db.stageDao.insertStageDefinition(
         StageDefinitionsCompanion.insert(
+          profileId: 1,
           curriculumId: curriculum.storageKey,
           trackId: trackId,
           stageOrder: 1,
@@ -63,6 +65,7 @@ void main() {
       );
       await db.stageDao.insertStageDefinition(
         StageDefinitionsCompanion.insert(
+          profileId: 1,
           curriculumId: curriculum.storageKey,
           trackId: trackId,
           stageOrder: 2,
@@ -118,6 +121,7 @@ void main() {
       for (var i = 0; i < 2; i++) {
         await db.completionDao.insertCompletion(
           CompletionsCompanion.insert(
+            profileId: 0,
             curriculumId: curriculum.storageKey,
             trackId: trackId,
             sefariaRef: 'Mishnah_Berakhot_1.$i',

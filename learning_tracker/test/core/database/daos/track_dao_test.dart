@@ -129,7 +129,7 @@ void main() {
           .into(database.curriculumTracks)
           .insert(
             CurriculumTracksCompanion.insert(
-              profileId: Value(profileId),
+              profileId: profileId,
               curriculumId: curriculumId,
               trackType: trackType,
               isActive: const Value(true),
@@ -215,6 +215,7 @@ void main() {
       // Insert a completion referencing the track.
       await database.completionDao.insertCompletion(
         CompletionsCompanion.insert(
+          profileId: 1,
           curriculumId: 'bavli',
           sefariaRef: 'Berakhot.2a',
           stageId: 1,

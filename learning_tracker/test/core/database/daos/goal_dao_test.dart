@@ -13,6 +13,7 @@ void main() {
         .into(database.curriculumTracks)
         .insert(
           CurriculumTracksCompanion.insert(
+            profileId: 1,
             curriculumId: 'bavli',
             trackType: 'personal',
             activatedAt: DateTime.now(),
@@ -34,6 +35,7 @@ void main() {
   }) {
     return database.goalDao.insertGoal(
       GoalsCompanion.insert(
+        profileId: 1,
         curriculumId: curriculumId,
         trackId: trackId,
         description: Value(description),
@@ -86,6 +88,7 @@ void main() {
       await database.goalDao.updateGoal(
         GoalsCompanion(
           id: Value(id),
+          profileId: const Value(1),
           curriculumId: const Value('bavli'),
           trackId: Value(trackId),
           description: const Value('Updated goal'),
@@ -125,6 +128,7 @@ void main() {
 
     test('upsertGoal inserts when no existing goal', () async {
       await database.goalDao.upsertGoal(
+        profileId: 1,
         curriculumId: 'bavli',
         trackId: trackId,
         description: 'New goal',
@@ -145,6 +149,7 @@ void main() {
       final newer = DateTime(2024, 6, 1);
 
       await database.goalDao.upsertGoal(
+        profileId: 1,
         curriculumId: 'bavli',
         trackId: trackId,
         description: 'My goal',
@@ -155,6 +160,7 @@ void main() {
       );
 
       await database.goalDao.upsertGoal(
+        profileId: 1,
         curriculumId: 'bavli',
         trackId: trackId,
         description: 'My goal',
@@ -174,6 +180,7 @@ void main() {
       final newer = DateTime(2024, 6, 1);
 
       await database.goalDao.upsertGoal(
+        profileId: 1,
         curriculumId: 'bavli',
         trackId: trackId,
         description: 'My goal',
@@ -184,6 +191,7 @@ void main() {
       );
 
       await database.goalDao.upsertGoal(
+        profileId: 1,
         curriculumId: 'bavli',
         trackId: trackId,
         description: 'My goal',

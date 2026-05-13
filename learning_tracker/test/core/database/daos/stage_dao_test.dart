@@ -13,6 +13,7 @@ void main() {
         .into(database.curriculumTracks)
         .insert(
           CurriculumTracksCompanion.insert(
+            profileId: 1,
             curriculumId: 'mishnayos',
             trackType: 'personal',
             activatedAt: DateTime.now(),
@@ -33,6 +34,7 @@ void main() {
     bool isDefault = true,
   }) => database.stageDao.insertStageDefinition(
     StageDefinitionsCompanion.insert(
+      profileId: 1,
       curriculumId: curriculumId,
       trackId: trackId,
       stageOrder: stageOrder,
@@ -107,6 +109,7 @@ void main() {
           .into(database.curriculumTracks)
           .insert(
             CurriculumTracksCompanion.insert(
+              profileId: 1,
               curriculumId: 'bavli',
               trackType: 'personal',
               activatedAt: DateTime.now(),
@@ -114,6 +117,7 @@ void main() {
           );
       await database.stageDao.insertStageDefinition(
         StageDefinitionsCompanion.insert(
+          profileId: 1,
           curriculumId: 'bavli',
           trackId: bavliTrackId,
           stageOrder: 1,
@@ -148,6 +152,7 @@ void main() {
             .into(database.curriculumTracks)
             .insert(
               CurriculumTracksCompanion.insert(
+                profileId: 1,
                 curriculumId: 'bavli',
                 trackType: 'personal',
                 activatedAt: DateTime.now(),
@@ -155,6 +160,7 @@ void main() {
             );
         await database.stageDao.insertStageDefinition(
           StageDefinitionsCompanion.insert(
+            profileId: 1,
             curriculumId: 'bavli',
             trackId: bavliTrackId,
             stageOrder: 1,
@@ -181,6 +187,7 @@ void main() {
 
       await database.stageDao.replaceStagesForCurriculum(curriculumId, [
         StageDefinitionsCompanion.insert(
+          profileId: 1,
           curriculumId: curriculumId,
           trackId: trackId,
           stageOrder: 1,
@@ -188,6 +195,7 @@ void main() {
           delayDays: 0,
         ),
         StageDefinitionsCompanion.insert(
+          profileId: 1,
           curriculumId: curriculumId,
           trackId: trackId,
           stageOrder: 2,
@@ -195,6 +203,7 @@ void main() {
           delayDays: 3,
         ),
         StageDefinitionsCompanion.insert(
+          profileId: 1,
           curriculumId: curriculumId,
           trackId: trackId,
           stageOrder: 3,

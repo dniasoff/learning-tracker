@@ -13,6 +13,7 @@ void main() {
         .into(database.curriculumTracks)
         .insert(
           CurriculumTracksCompanion.insert(
+            profileId: 1,
             curriculumId: 'bavli',
             trackType: 'personal',
             activatedAt: DateTime.now(),
@@ -28,6 +29,7 @@ void main() {
     test('insertConfig and getConfig returns the inserted config', () async {
       await database.pointConfigDao.insertConfig(
         PointConfigsCompanion.insert(
+          profileId: 0,
           curriculumId: 'bavli',
           trackId: trackId,
           stageOrder: 1,
@@ -60,6 +62,7 @@ void main() {
     test('getConfigsByCurriculum returns configs ordered by stage', () async {
       await database.pointConfigDao.insertConfig(
         PointConfigsCompanion.insert(
+          profileId: 0,
           curriculumId: 'bavli',
           trackId: trackId,
           stageOrder: 3,
@@ -68,6 +71,7 @@ void main() {
       );
       await database.pointConfigDao.insertConfig(
         PointConfigsCompanion.insert(
+          profileId: 0,
           curriculumId: 'bavli',
           trackId: trackId,
           stageOrder: 1,
@@ -76,6 +80,7 @@ void main() {
       );
       await database.pointConfigDao.insertConfig(
         PointConfigsCompanion.insert(
+          profileId: 0,
           curriculumId: 'bavli',
           trackId: trackId,
           stageOrder: 2,
@@ -95,6 +100,7 @@ void main() {
     test('getConfigsByCurriculum filters by curriculum', () async {
       await database.pointConfigDao.insertConfig(
         PointConfigsCompanion.insert(
+          profileId: 0,
           curriculumId: 'bavli',
           trackId: trackId,
           stageOrder: 1,
@@ -103,6 +109,7 @@ void main() {
       );
       await database.pointConfigDao.insertConfig(
         PointConfigsCompanion.insert(
+          profileId: 0,
           curriculumId: 'mishnayos',
           trackId: trackId,
           stageOrder: 1,
@@ -120,7 +127,7 @@ void main() {
     test('upsertConfig inserts when config does not exist', () async {
       await database.pointConfigDao.upsertConfig(
         PointConfigsCompanion.insert(
-          profileId: const Value(0),
+          profileId: 0,
           curriculumId: 'bavli',
           trackId: trackId,
           stageOrder: 1,
@@ -141,6 +148,7 @@ void main() {
     test('upsertConfig updates points when config already exists', () async {
       await database.pointConfigDao.insertConfig(
         PointConfigsCompanion.insert(
+          profileId: 0,
           curriculumId: 'bavli',
           trackId: trackId,
           stageOrder: 1,
@@ -150,7 +158,7 @@ void main() {
 
       await database.pointConfigDao.upsertConfig(
         PointConfigsCompanion.insert(
-          profileId: const Value(0),
+          profileId: 0,
           curriculumId: 'bavli',
           trackId: trackId,
           stageOrder: 1,
@@ -172,6 +180,7 @@ void main() {
       () async {
         await database.pointConfigDao.insertConfig(
           PointConfigsCompanion.insert(
+            profileId: 0,
             curriculumId: 'bavli',
             trackId: trackId,
             stageOrder: 1,
@@ -180,6 +189,7 @@ void main() {
         );
         await database.pointConfigDao.insertConfig(
           PointConfigsCompanion.insert(
+            profileId: 0,
             curriculumId: 'mishnayos',
             trackId: trackId,
             stageOrder: 1,
@@ -228,7 +238,7 @@ void main() {
           .into(database.curriculumTracks)
           .insert(
             CurriculumTracksCompanion.insert(
-              profileId: const Value(1),
+              profileId: 1,
               curriculumId: 'mishnayos',
               trackType: 'personal',
               activatedAt: DateTime.now(),
@@ -238,7 +248,7 @@ void main() {
           .into(database.curriculumTracks)
           .insert(
             CurriculumTracksCompanion.insert(
-              profileId: const Value(2),
+              profileId: 2,
               curriculumId: 'mishnayos',
               trackType: 'personal',
               activatedAt: DateTime.now(),
@@ -248,6 +258,7 @@ void main() {
       for (final tid in [trackAdult, trackChild]) {
         await database.stageDao.insertStageDefinition(
           StageDefinitionsCompanion.insert(
+            profileId: 1,
             curriculumId: 'mishnayos',
             trackId: tid,
             stageOrder: 1,
@@ -257,6 +268,7 @@ void main() {
         );
         await database.stageDao.insertStageDefinition(
           StageDefinitionsCompanion.insert(
+            profileId: 1,
             curriculumId: 'mishnayos',
             trackId: tid,
             stageOrder: 2,

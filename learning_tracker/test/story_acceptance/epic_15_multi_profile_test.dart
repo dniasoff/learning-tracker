@@ -54,6 +54,7 @@ Future<int> _insertTrack(UserDatabase db) async {
       .into(db.curriculumTracks)
       .insertReturning(
         CurriculumTracksCompanion.insert(
+          profileId: 1,
           curriculumId: 'mishnayos',
           trackType: 'personal',
           activatedAt: DateTime.now(),
@@ -1459,6 +1460,7 @@ void main() {
           final now = DateTime.now().toUtc();
           await db.goalDao.insertGoal(
             GoalsCompanion.insert(
+              profileId: 1,
               curriculumId: 'mishnayos',
               trackId: trackId,
               createdAt: now,
@@ -1547,6 +1549,7 @@ void main() {
       test('delay stage can be created and persisted', () async {
         await db.stageDao.insertStageDefinition(
           StageDefinitionsCompanion.insert(
+            profileId: 1,
             curriculumId: curriculum.storageKey,
             trackId: trackId,
             stageOrder: 1,
@@ -1565,6 +1568,7 @@ void main() {
       test('weekly stage can be created with days_of_week', () async {
         await db.stageDao.insertStageDefinition(
           StageDefinitionsCompanion.insert(
+            profileId: 1,
             curriculumId: curriculum.storageKey,
             trackId: trackId,
             stageOrder: 2,
@@ -1586,6 +1590,7 @@ void main() {
       test('rolling stage can be created with window size', () async {
         await db.stageDao.insertStageDefinition(
           StageDefinitionsCompanion.insert(
+            profileId: 1,
             curriculumId: curriculum.storageKey,
             trackId: trackId,
             stageOrder: 3,
@@ -1610,6 +1615,7 @@ void main() {
         // Insert a stage without specifying schedule_type (simulates pre-migration)
         await db.stageDao.insertStageDefinition(
           StageDefinitionsCompanion.insert(
+            profileId: 1,
             curriculumId: curriculum.storageKey,
             trackId: trackId,
             stageOrder: 1,
@@ -1619,6 +1625,7 @@ void main() {
         );
         await db.stageDao.insertStageDefinition(
           StageDefinitionsCompanion.insert(
+            profileId: 1,
             curriculumId: curriculum.storageKey,
             trackId: trackId,
             stageOrder: 2,
@@ -1646,6 +1653,7 @@ void main() {
         // Stage 1: Learn (delay)
         await db.stageDao.insertStageDefinition(
           StageDefinitionsCompanion.insert(
+            profileId: 1,
             curriculumId: curriculum.storageKey,
             trackId: trackId,
             stageOrder: 1,
@@ -1656,6 +1664,7 @@ void main() {
         // Stage 2: Weekly review on Wednesday (3) and Friday (5)
         await db.stageDao.insertStageDefinition(
           StageDefinitionsCompanion.insert(
+            profileId: 1,
             curriculumId: curriculum.storageKey,
             trackId: trackId,
             stageOrder: 2,
@@ -1670,6 +1679,7 @@ void main() {
         for (var i = 0; i < 3; i++) {
           await db.completionDao.insertCompletion(
             CompletionsCompanion.insert(
+              profileId: 1,
               curriculumId: curriculum.storageKey,
               sefariaRef: 'Berakhot.${i + 1}a',
               stageId: 1,
@@ -1707,6 +1717,7 @@ void main() {
         () async {
           await db.stageDao.insertStageDefinition(
             StageDefinitionsCompanion.insert(
+              profileId: 1,
               curriculumId: curriculum.storageKey,
               trackId: trackId,
               stageOrder: 1,
@@ -1717,6 +1728,7 @@ void main() {
           // Only on Friday (5) and Saturday (6)
           await db.stageDao.insertStageDefinition(
             StageDefinitionsCompanion.insert(
+              profileId: 1,
               curriculumId: curriculum.storageKey,
               trackId: trackId,
               stageOrder: 2,
@@ -1729,6 +1741,7 @@ void main() {
 
           await db.completionDao.insertCompletion(
             CompletionsCompanion.insert(
+              profileId: 1,
               curriculumId: curriculum.storageKey,
               sefariaRef: 'Berakhot.1a',
               stageId: 1,
@@ -1762,6 +1775,7 @@ void main() {
       test('rolling stage includes last N completed items', () async {
         await db.stageDao.insertStageDefinition(
           StageDefinitionsCompanion.insert(
+            profileId: 1,
             curriculumId: curriculum.storageKey,
             trackId: trackId,
             stageOrder: 1,
@@ -1772,6 +1786,7 @@ void main() {
         // Rolling window of 5
         await db.stageDao.insertStageDefinition(
           StageDefinitionsCompanion.insert(
+            profileId: 1,
             curriculumId: curriculum.storageKey,
             trackId: trackId,
             stageOrder: 2,
@@ -1786,6 +1801,7 @@ void main() {
         for (var i = 0; i < 10; i++) {
           await db.completionDao.insertCompletion(
             CompletionsCompanion.insert(
+              profileId: 1,
               curriculumId: curriculum.storageKey,
               sefariaRef: 'Berakhot.${i + 1}a',
               stageId: 1,
@@ -1825,6 +1841,7 @@ void main() {
         () async {
           await db.stageDao.insertStageDefinition(
             StageDefinitionsCompanion.insert(
+              profileId: 1,
               curriculumId: curriculum.storageKey,
               trackId: trackId,
               stageOrder: 1,
@@ -1834,6 +1851,7 @@ void main() {
           );
           await db.stageDao.insertStageDefinition(
             StageDefinitionsCompanion.insert(
+              profileId: 1,
               curriculumId: curriculum.storageKey,
               trackId: trackId,
               stageOrder: 2,
@@ -1848,6 +1866,7 @@ void main() {
           for (var i = 0; i < 5; i++) {
             await db.completionDao.insertCompletion(
               CompletionsCompanion.insert(
+                profileId: 1,
                 curriculumId: curriculum.storageKey,
                 sefariaRef: 'Berakhot.${i + 1}a',
                 stageId: 1,
@@ -1861,6 +1880,7 @@ void main() {
           // Complete rolling stage for the most recent item
           await db.completionDao.insertCompletion(
             CompletionsCompanion.insert(
+              profileId: 1,
               curriculumId: curriculum.storageKey,
               sefariaRef: 'Berakhot.5a',
               stageId: 2,
@@ -2623,6 +2643,7 @@ void main() {
           // Record a completion against the first stage.
           await db.completionDao.insertCompletion(
             CompletionsCompanion.insert(
+              profileId: 1,
               curriculumId: 'bavli',
               sefariaRef: 'Berakhot 2a',
               stageId: stagesBefore.first.id,
@@ -2763,7 +2784,7 @@ void main() {
       test('table exists and accepts inserts', () async {
         final id = await db.learningLedgerDao.insertEntry(
           LearningLedgerCompanion.insert(
-            profileId: const Value(1),
+            profileId: 1,
             curriculumId: 'mishnayos',
             trackId: Value(trackId),
             unitType: 'masechta',
@@ -2786,7 +2807,7 @@ void main() {
         for (var i = 1; i <= 3; i++) {
           await db.learningLedgerDao.insertEntry(
             LearningLedgerCompanion.insert(
-              profileId: const Value(1),
+              profileId: 1,
               curriculumId: 'mishnayos',
               trackId: Value(trackId),
               unitType: 'masechta',
@@ -2827,7 +2848,7 @@ void main() {
       test('stores the marker profile id', () async {
         await db.learningLedgerDao.insertEntry(
           LearningLedgerCompanion.insert(
-            profileId: const Value(5), // child
+            profileId: 5, // child
             curriculumId: 'mishnayos',
             trackId: Value(trackId),
             unitType: 'masechta',
@@ -2851,7 +2872,7 @@ void main() {
       test('trackId is nullable — no foreign key constraint', () async {
         await db.learningLedgerDao.insertEntry(
           LearningLedgerCompanion.insert(
-            profileId: const Value(1),
+            profileId: 1,
             curriculumId: 'mishnayos',
             unitType: 'masechta',
             unitIdentifier: 'Berakhot',
@@ -2878,7 +2899,7 @@ void main() {
         // Auto completion
         await db.learningLedgerDao.insertEntry(
           LearningLedgerCompanion.insert(
-            profileId: const Value(1),
+            profileId: 1,
             curriculumId: 'mishnayos',
             trackId: Value(trackId),
             unitType: 'masechta',
@@ -2895,7 +2916,7 @@ void main() {
         // Manual siyum
         await db.learningLedgerDao.insertEntry(
           LearningLedgerCompanion.insert(
-            profileId: const Value(1),
+            profileId: 1,
             curriculumId: 'mishnayos',
             trackId: Value(trackId),
             unitType: 'masechta',

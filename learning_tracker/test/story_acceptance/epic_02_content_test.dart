@@ -39,6 +39,7 @@ Future<int> _insertTrack(UserDatabase db) async {
       .into(db.curriculumTracks)
       .insertReturning(
         CurriculumTracksCompanion.insert(
+          profileId: 1,
           curriculumId: 'mishnayos',
           trackType: 'personal',
           activatedAt: DateTime.now(),
@@ -390,21 +391,28 @@ void main() {
         await service.activate(CurriculumId.bavli);
         await service.activate(CurriculumId.mishnayos);
 
+        // Look up the bavli track created by service.activate
+        final bavliTrackId = (await db.trackDao.getAllTracks(
+          CurriculumId.bavli,
+        )).first.id;
+
         // Add completion and bookmark for Bavli
         await db.completionDao.insertCompletion(
           CompletionsCompanion.insert(
+            profileId: 1,
             curriculumId: CurriculumId.bavli.storageKey,
             sefariaRef: 'Berakhot.2a',
             stageId: 1,
             trackType: TrackType.personal.storageKey,
-            trackId: trackId,
+            trackId: bavliTrackId,
             completedAt: DateTime.now(),
             points: const Value(10),
           ),
         );
         await db.bookmarkDao.upsertBookmark(
           curriculumId: CurriculumId.bavli.storageKey,
-          trackType: TrackType.personal.storageKey,
+          trackId: bavliTrackId,
+          profileId: 0,
           sefariaRef: 'Berakhot.2a',
           updatedAt: DateTime.now().toUtc(),
         );
@@ -421,7 +429,7 @@ void main() {
 
         final bookmark = await db.bookmarkDao.getBookmarkByCurriculumAndTrack(
           CurriculumId.bavli.storageKey,
-          TrackType.personal.storageKey,
+          bavliTrackId,
         );
         expect(bookmark, isNotNull);
       },
@@ -436,6 +444,7 @@ void main() {
         // Add data
         await db.completionDao.insertCompletion(
           CompletionsCompanion.insert(
+            profileId: 1,
             curriculumId: CurriculumId.bavli.storageKey,
             sefariaRef: 'Berakhot.2a',
             stageId: 1,
@@ -740,7 +749,7 @@ void main() {
       // The database should not have content_items or
       // curriculum_hierarchy_config tables; they were removed in schema v3.
       // v10 adds deleted_at to curriculum_tracks (DNI-317).
-      expect(db.schemaVersion, equals(11));
+      expect(db.schemaVersion, equals(12));
     });
 
     // ── AC: curriculum_hierarchy_config table removed from Drift schema
@@ -750,7 +759,7 @@ void main() {
       addTearDown(() => db.close());
       // Schema v3 drops these tables.
       // v10 adds deleted_at to curriculum_tracks (DNI-317).
-      expect(db.schemaVersion, equals(11));
+      expect(db.schemaVersion, equals(12));
     });
 
     // ── AC: completions/bookmarks/learning_order use sefariaRef FK
@@ -762,6 +771,7 @@ void main() {
 
       await db.completionDao.insertCompletion(
         CompletionsCompanion.insert(
+          profileId: 1,
           curriculumId: CurriculumId.mishnayos.storageKey,
           sefariaRef: 'Mishnah Berakhot 1.1',
           stageId: 1,
@@ -782,10 +792,12 @@ void main() {
     test('bookmarks table uses sefariaRef column', () async {
       final db = createTestDatabase();
       addTearDown(() => db.close());
+      final bTrackId = await _insertTrack(db);
       await db.bookmarkDao.insertBookmark(
         BookmarksCompanion.insert(
+          profileId: 1,
           curriculumId: CurriculumId.mishnayos.storageKey,
-          trackType: 'personal',
+          trackId: bTrackId,
           sefariaRef: 'Mishnah Berakhot 1.1',
           updatedAt: DateTime.now().toUtc(),
         ),
@@ -793,7 +805,7 @@ void main() {
 
       final bookmark = await db.bookmarkDao.getBookmarkByCurriculumAndTrack(
         CurriculumId.mishnayos.storageKey,
-        'personal',
+        bTrackId,
       );
       expect(bookmark, isNotNull);
       expect(bookmark!.sefariaRef, equals('Mishnah Berakhot 1.1'));
@@ -804,6 +816,7 @@ void main() {
       addTearDown(() => db.close());
       await db.learningOrderDao.insertLearningOrder(
         LearningOrderCompanion.insert(
+          profileId: 1,
           curriculumId: CurriculumId.mishnayos.storageKey,
           sefariaRef: 'Mishnah Berakhot 1.1',
           userSortOrder: 1,

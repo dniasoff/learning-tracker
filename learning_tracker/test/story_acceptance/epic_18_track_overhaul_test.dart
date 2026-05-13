@@ -33,6 +33,7 @@ Future<int> _insertTrack(UserDatabase db) async {
       .into(db.curriculumTracks)
       .insertReturning(
         CurriculumTracksCompanion.insert(
+          profileId: 1,
           curriculumId: 'mishnayos',
           trackType: 'personal',
           activatedAt: DateTime.now(),
@@ -142,7 +143,7 @@ void main() {
                 .into(db.curriculumTracks)
                 .insert(
                   CurriculumTracksCompanion.insert(
-                    profileId: Value(pId),
+                    profileId: pId,
                     curriculumId: curriculum.storageKey,
                     trackType: 'personal',
                     activatedAt: DateTime.now(),
@@ -404,6 +405,7 @@ void main() {
                 .into(db.curriculumTracks)
                 .insertReturning(
                   CurriculumTracksCompanion.insert(
+                    profileId: 1,
                     curriculumId: 'bavli',
                     trackType: 'personal',
                     activatedAt: DateTime.now(),
@@ -438,6 +440,7 @@ void main() {
                 .into(db.curriculumTracks)
                 .insertReturning(
                   CurriculumTracksCompanion.insert(
+                    profileId: 1,
                     curriculumId: 'bavli',
                     trackType: 'personal',
                     activatedAt: DateTime.now(),
@@ -542,6 +545,7 @@ void main() {
           // Insert English defaults
           await db.stageDao.insertStageDefinition(
             StageDefinitionsCompanion.insert(
+              profileId: 1,
               curriculumId: 'bavli',
               trackId: trackId,
               stageOrder: 1,
@@ -552,6 +556,7 @@ void main() {
           );
           await db.stageDao.insertStageDefinition(
             StageDefinitionsCompanion.insert(
+              profileId: 1,
               curriculumId: 'bavli',
               trackId: trackId,
               stageOrder: 2,
@@ -582,6 +587,7 @@ void main() {
 
           await db.stageDao.insertStageDefinition(
             StageDefinitionsCompanion.insert(
+              profileId: 1,
               curriculumId: 'mishnayos',
               trackId: trackId,
               stageOrder: 1,
@@ -610,6 +616,7 @@ void main() {
 
           await db.stageDao.insertStageDefinition(
             StageDefinitionsCompanion.insert(
+              profileId: 1,
               curriculumId: 'bavli',
               trackId: trackId,
               stageOrder: 1,

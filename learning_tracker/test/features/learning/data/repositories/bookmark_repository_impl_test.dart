@@ -28,11 +28,33 @@ void main() {
   late MockSyncEngine mockSyncEngine;
   late MockContentRepository mockContentRepository;
   late BookmarkRepositoryImpl repository;
+  late int _mishnayosTrackId;
 
   setUp(() async {
     database = createTestDatabase();
     mockSyncEngine = MockSyncEngine();
     mockContentRepository = MockContentRepository();
+
+    final mishnayosTrack = await database
+        .into(database.curriculumTracks)
+        .insertReturning(
+          CurriculumTracksCompanion.insert(
+            profileId: 0,
+            curriculumId: CurriculumId.mishnayos.storageKey,
+            trackType: 'personal',
+            activatedAt: DateTime.now(),
+          ),
+        );
+    _mishnayosTrackId = mishnayosTrack.id;
+
+    await database.into(database.curriculumTracks).insert(
+      CurriculumTracksCompanion.insert(
+        profileId: 0,
+        curriculumId: CurriculumId.bavli.storageKey,
+        trackType: 'personal',
+        activatedAt: DateTime.now(),
+      ),
+    );
 
     repository = BookmarkRepositoryImpl(
       database: database,
@@ -129,6 +151,7 @@ void main() {
         // Custom order: ref3, ref1, ref2
         await database.learningOrderDao.insertLearningOrder(
           LearningOrderCompanion.insert(
+            profileId: 1,
             curriculumId: CurriculumId.mishnayos.storageKey,
             sefariaRef: _ref3,
             userSortOrder: 0,
@@ -136,6 +159,7 @@ void main() {
         );
         await database.learningOrderDao.insertLearningOrder(
           LearningOrderCompanion.insert(
+            profileId: 1,
             curriculumId: CurriculumId.mishnayos.storageKey,
             sefariaRef: _ref1,
             userSortOrder: 1,
@@ -143,6 +167,7 @@ void main() {
         );
         await database.learningOrderDao.insertLearningOrder(
           LearningOrderCompanion.insert(
+            profileId: 1,
             curriculumId: CurriculumId.mishnayos.storageKey,
             sefariaRef: _ref2,
             userSortOrder: 2,
@@ -243,8 +268,9 @@ void main() {
         );
         await database.bookmarkDao.insertBookmark(
           BookmarksCompanion.insert(
+            profileId: 0,
             curriculumId: CurriculumId.mishnayos.storageKey,
-            trackType: TrackType.personal.storageKey,
+            trackId: _mishnayosTrackId,
             sefariaRef: _ref1,
             updatedAt: localTime,
           ),

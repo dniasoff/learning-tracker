@@ -14,6 +14,7 @@ void main() {
         .into(database.curriculumTracks)
         .insert(
           CurriculumTracksCompanion.insert(
+            profileId: 1,
             curriculumId: 'bavli',
             trackType: 'personal',
             activatedAt: DateTime.now(),
@@ -34,6 +35,7 @@ void main() {
   }) {
     return database.completionDao.insertCompletion(
       CompletionsCompanion.insert(
+        profileId: 1,
         curriculumId: curriculumId,
         sefariaRef: sefariaRef,
         stageId: stageId,

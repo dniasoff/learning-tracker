@@ -9,6 +9,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart'
     hide expect, group, setUp, setUpAll, tearDown, tearDownAll, test;
+import 'package:learning_tracker/core/database/daos/user_profile_dao.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/cross_profile_scope.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
@@ -68,6 +69,7 @@ Future<int> _insertTrack(UserDatabase db) async {
       .into(db.curriculumTracks)
       .insertReturning(
         CurriculumTracksCompanion.insert(
+          profileId: 0,
           curriculumId: 'mishnayos',
           trackType: 'personal',
           activatedAt: DateTime.now(),
@@ -325,6 +327,7 @@ void main() {
       for (var i = 1; i <= stageCount; i++) {
         await db.stageDao.insertStageDefinition(
           StageDefinitionsCompanion.insert(
+            profileId: 0,
             curriculumId: curriculumId,
             trackId: trackId,
             stageOrder: i,
@@ -339,6 +342,7 @@ void main() {
       for (var i = 0; i < completionCount; i++) {
         await db.completionDao.insertCompletion(
           CompletionsCompanion.insert(
+            profileId: 0,
             curriculumId: curriculumId,
             sefariaRef: 'ref-$curriculumId-$i',
             stageId: (i % stageCount) + 1,
@@ -381,6 +385,7 @@ void main() {
         for (var i = 0; i < 3; i++) {
           await db.learningOrderDao.insertLearningOrder(
             LearningOrderCompanion.insert(
+              profileId: 0,
               curriculumId: 'mishnayos',
               sefariaRef: 'ref-mishnayos-$i',
               userSortOrder: i,
@@ -391,6 +396,7 @@ void main() {
         // 1 stage definition
         await db.stageDao.insertStageDefinition(
           StageDefinitionsCompanion.insert(
+            profileId: 0,
             curriculumId: 'mishnayos',
             trackId: trackId,
             stageOrder: 1,
@@ -403,6 +409,7 @@ void main() {
         for (var i = 0; i < 2; i++) {
           await db.completionDao.insertCompletion(
             CompletionsCompanion.insert(
+              profileId: 0,
               curriculumId: 'mishnayos',
               sefariaRef: 'ref-mishnayos-$i',
               stageId: 1,
@@ -474,6 +481,7 @@ void main() {
       for (var i = 0; i < 2; i++) {
         await db.completionDao.insertCompletion(
           CompletionsCompanion.insert(
+            profileId: 0,
             curriculumId: 'mishnayos',
             sefariaRef: 'old-ref-$i',
             stageId: 1,
@@ -514,6 +522,7 @@ void main() {
       // Set up streak
       await db.streakDao.upsertStreak(
         StreaksCompanion.insert(
+          profileId: 0,
           currentStreak: const Value(5),
           maxStreak: const Value(12),
           lastCompletionDate: Value(now),
@@ -549,6 +558,7 @@ void main() {
       for (var i = 1; i <= 3; i++) {
         await db.stageDao.insertStageDefinition(
           StageDefinitionsCompanion.insert(
+            profileId: 1,
             curriculumId: CurriculumId.mishnayos.storageKey,
             trackId: trackId,
             stageOrder: i,
@@ -644,6 +654,7 @@ void main() {
       // Record a completion with current config (10 points for stage 1)
       await db.completionDao.insertCompletion(
         CompletionsCompanion.insert(
+          profileId: 1,
           curriculumId: CurriculumId.mishnayos.storageKey,
           sefariaRef: 'test-ref-1',
           stageId: 1,
@@ -693,6 +704,7 @@ void main() {
             .into(db.curriculumTracks)
             .insertReturning(
               CurriculumTracksCompanion.insert(
+                profileId: testProfileId,
                 curriculumId: CurriculumId.bavli.storageKey,
                 trackType: 'personal',
                 activatedAt: DateTime.now(),
@@ -702,6 +714,7 @@ void main() {
         for (var i = 1; i <= 2; i++) {
           await db.stageDao.insertStageDefinition(
             StageDefinitionsCompanion.insert(
+              profileId: testProfileId,
               curriculumId: CurriculumId.bavli.storageKey,
               trackId: bavliTrackId,
               stageOrder: i,
@@ -808,6 +821,7 @@ void main() {
         // Record a completion with the new point value
         await db.completionDao.insertCompletion(
           CompletionsCompanion.insert(
+            profileId: testProfileId,
             curriculumId: CurriculumId.mishnayos.storageKey,
             sefariaRef: 'new-completion-ref',
             stageId: 1,
@@ -828,6 +842,7 @@ void main() {
         // Make the track reward-eligible so getCurriculumTotal counts it
         await db.goalDao.insertGoal(
           GoalsCompanion.insert(
+            profileId: testProfileId,
             curriculumId: CurriculumId.mishnayos.storageKey,
             trackId: trackId,
             createdAt: DateTime.now().toUtc(),
