@@ -127,6 +127,9 @@ dev_dependencies:
   # Testing
   test: ^1.26.0
   mocktail: ^1.0.4
+  # DNI-377 (27.1): Fake Firestore for unit/integration tests that exercise
+  # the sync layer without spinning up the emulator.
+  fake_cloud_firestore: ^4.1.0
 
   # Story 19.3: Seed Content DB build tool
   crypto: ^3.0.6
