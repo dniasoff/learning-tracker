@@ -31,14 +31,39 @@ Future<String> _resolveTrackLabel(WidgetRef ref, int trackId) async {
   return track.curriculumId;
 }
 
+// ---------------------------------------------------------------------------
+// Riverpod notifier — replaces the former static _dialogInFlight bool.
+// ---------------------------------------------------------------------------
+
+/// Whether the unlock-celebration dialog is currently on screen.
+///
+/// Using a Riverpod notifier instead of a static field makes the flag
+/// reset correctly when the provider is disposed (e.g. on profile switch)
+/// and allows the state to be inspected in tests without reaching into
+/// private class internals.
+final _celebrationInFlightProvider =
+    NotifierProvider<_CelebrationInFlightNotifier, bool>(
+  _CelebrationInFlightNotifier.new,
+);
+
+class _CelebrationInFlightNotifier extends Notifier<bool> {
+  @override
+  bool build() => false;
+
+  void start() => state = true;
+  void finish() => state = false;
+}
+
+// ---------------------------------------------------------------------------
+// Public API
+// ---------------------------------------------------------------------------
+
 /// Full-screen confetti + dialog when a reward milestone is newly unlocked.
 class AchievementUnlockCelebration {
   AchievementUnlockCelebration._();
 
   static const _migratedPrefix = 'achievements_unlock_party_migrated_v1_';
   static const _donePrefix = 'achievements_unlock_party_done_v1_';
-
-  static bool _dialogInFlight = false;
 
   /// One-time: seed "already seen" milestone ids from server/overview so an
   /// open of My Achievements does not show a surprise party. No confetti.
@@ -90,7 +115,10 @@ class AchievementUnlockCelebration {
   }) async {
     if (!context.mounted) return;
     if (newUnlocks.isEmpty) return;
-    if (_dialogInFlight) return;
+
+    // Guard via Riverpod notifier (replaces former static _dialogInFlight).
+    final inFlight = ref.read(_celebrationInFlightProvider);
+    if (inFlight) return;
 
     final profileId = ref.read(activeProfileIdProvider);
     final first = newUnlocks.first;
@@ -114,7 +142,7 @@ class AchievementUnlockCelebration {
 
     if (!context.mounted) return;
 
-    _dialogInFlight = true;
+    ref.read(_celebrationInFlightProvider.notifier).start();
     try {
       await showDialog<void>(
         context: context,
@@ -130,7 +158,7 @@ class AchievementUnlockCelebration {
         },
       );
     } finally {
-      _dialogInFlight = false;
+      ref.read(_celebrationInFlightProvider.notifier).finish();
     }
 
     if (!context.mounted) return;

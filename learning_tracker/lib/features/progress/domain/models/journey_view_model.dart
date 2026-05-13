@@ -1,8 +1,6 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
-import 'package:learning_tracker/core/preferences/preference_providers.dart';
 
 part 'journey_view_model.freezed.dart';
 
@@ -29,13 +27,25 @@ abstract class CurriculumJourney with _$CurriculumJourney {
 }
 
 /// A single unit completion entry from the learning ledger.
+///
+/// Display text is resolved at render time via [CurriculumLabel] — the model
+/// carries only structural keys so the label can be locale-aware and
+/// transliteration-variant-aware without baking strings into stored data.
+///
+/// * [entryScope] — the logical scope of the entry (e.g. `'masechta'`,
+///   `'seder'`, `'sefer'`). Maps to the hierarchy level used by
+///   [CurriculumLabel.level].
+/// * [entryKey] — the raw identifier value (e.g. `'Berakhot'`, `'Zeraim'`).
+/// * [parentL1Key] — the parent level-1 value when [entryScope] is at level 2
+///   (e.g. the seder name for a masechta). `null` for level-1 entries.
 @freezed
 abstract class UnitCompletion with _$UnitCompletion {
   const factory UnitCompletion({
     required String unitIdentifier,
     required String unitType,
-    required String displayNameHe,
-    required String displayNameEn,
+    required String entryScope,
+    required String entryKey,
+    String? parentL1Key,
     required TrackType trackType,
     required DateTime completedAt,
     required int completionNumber,
@@ -43,14 +53,19 @@ abstract class UnitCompletion with _$UnitCompletion {
   }) = _UnitCompletion;
 }
 
-/// Pure-string display label for a [UnitCompletion] respecting the Hebrew
-/// Terms toggle. Mirrors `curriculumLabelText` for [CurriculumId].
-String unitCompletionLabelText(
-  WidgetRef ref, {
-  required UnitCompletion completion,
-}) {
-  final useHebrew = ref.watch(useHebrewTermsProvider);
-  return useHebrew ? completion.displayNameHe : completion.displayNameEn;
+/// Map a [UnitCompletion.entryScope] string to the integer level index used by
+/// [CurriculumLabel.level]. Level-1 scopes (seder, book-level) return 1;
+/// level-2 scopes (masechta, sefer, parsha) return 2. Unknown scopes default
+/// to 2 so they still render something sensible.
+int unitCompletionLevel(String entryScope) {
+  switch (entryScope) {
+    case 'seder':
+    case 'book':
+      return 1;
+    default:
+      // masechta, sefer, parsha, and any future named level-2 type.
+      return 2;
+  }
 }
 
 /// A milestone achievement (completing a seder or full curriculum).

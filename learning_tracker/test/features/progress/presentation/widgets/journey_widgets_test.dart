@@ -19,6 +19,29 @@ Widget _wrap(Widget child, {bool hebrewTermsScript = true}) {
   );
 }
 
+/// Build a test [UnitCompletion] with new structural keys.
+UnitCompletion _completion({
+  String identifier = 'Berakhot',
+  String scope = 'masechta',
+  String? parentL1 = 'Zeraim',
+  TrackType trackType = TrackType.personal,
+  DateTime? completedAt,
+  int completionNumber = 1,
+  bool isManual = false,
+}) {
+  return UnitCompletion(
+    unitIdentifier: identifier,
+    unitType: scope,
+    entryScope: scope,
+    entryKey: identifier,
+    parentL1Key: parentL1,
+    trackType: trackType,
+    completedAt: completedAt ?? DateTime(2026, 1, 1),
+    completionNumber: completionNumber,
+    isManual: isManual,
+  );
+}
+
 void main() {
   group('TrackTypeBadge', () {
     testWidgets('displays personal track', (tester) async {
@@ -98,16 +121,7 @@ void main() {
           CurriculumJourney(
             curriculumId: CurriculumId.mishnayos,
             completions: [
-              UnitCompletion(
-                unitIdentifier: 'Berakhot',
-                unitType: 'masechta',
-                displayNameHe: 'ברכות',
-                displayNameEn: 'Berakhot',
-                trackType: TrackType.personal,
-                completedAt: DateTime(2026, 1, 1),
-                completionNumber: 1,
-                isManual: false,
-              ),
+              _completion(identifier: 'Berakhot'),
             ],
             uniqueUnitsCompleted: 1,
             totalUnitsAvailable: 63,
@@ -121,9 +135,11 @@ void main() {
       await tester.pumpWidget(_wrap(JourneyGroupedView(viewModel: viewModel)));
       await tester.pumpAndSettle();
 
+      // Curriculum name rendered via CurriculumLabel.curriculum (Hebrew mode)
       expect(find.text('משניות'), findsWidgets);
       expect(find.text('1 of 63 units completed'), findsOneWidget);
-      expect(find.text('ברכות'), findsWidgets);
+      // Entry key rendered via CurriculumLabel.level (no hebrewName → rawValue)
+      expect(find.textContaining('Berakhot'), findsWidgets);
     });
 
     testWidgets('shows no completions message for empty curriculum', (
@@ -184,25 +200,15 @@ void main() {
           CurriculumJourney(
             curriculumId: CurriculumId.mishnayos,
             completions: [
-              UnitCompletion(
-                unitIdentifier: 'Berakhot',
-                unitType: 'masechta',
-                displayNameHe: 'ברכות',
-                displayNameEn: 'Berakhot',
-                trackType: TrackType.personal,
+              _completion(
+                identifier: 'Berakhot',
                 completedAt: DateTime(2026, 1, 1),
                 completionNumber: 1,
-                isManual: false,
               ),
-              UnitCompletion(
-                unitIdentifier: 'Berakhot',
-                unitType: 'masechta',
-                displayNameHe: 'ברכות',
-                displayNameEn: 'Berakhot',
-                trackType: TrackType.personal,
+              _completion(
+                identifier: 'Berakhot',
                 completedAt: DateTime(2026, 6, 1),
                 completionNumber: 2,
-                isManual: false,
               ),
             ],
             uniqueUnitsCompleted: 1,
@@ -228,25 +234,15 @@ void main() {
           CurriculumJourney(
             curriculumId: CurriculumId.mishnayos,
             completions: [
-              UnitCompletion(
-                unitIdentifier: 'Berakhot',
-                unitType: 'masechta',
-                displayNameHe: 'ברכות',
-                displayNameEn: 'Berakhot',
-                trackType: TrackType.personal,
+              _completion(
+                identifier: 'Berakhot',
                 completedAt: DateTime(2026, 3, 15),
                 completionNumber: 1,
-                isManual: false,
               ),
-              UnitCompletion(
-                unitIdentifier: 'Shabbat',
-                unitType: 'masechta',
-                displayNameHe: 'שבת',
-                displayNameEn: 'Shabbat',
-                trackType: TrackType.personal,
+              _completion(
+                identifier: 'Shabbat',
                 completedAt: DateTime(2026, 1, 10),
                 completionNumber: 1,
-                isManual: false,
               ),
             ],
             uniqueUnitsCompleted: 2,
@@ -264,9 +260,9 @@ void main() {
       // Month headers should appear
       expect(find.text('March 2026'), findsOneWidget);
       expect(find.text('January 2026'), findsOneWidget);
-      // Entries should appear
-      expect(find.text('ברכות'), findsOneWidget);
-      expect(find.text('שבת'), findsOneWidget);
+      // Entries rendered via CurriculumLabel.level — rawValue shown without hebrewName
+      expect(find.textContaining('Berakhot'), findsOneWidget);
+      expect(find.textContaining('Shabbat'), findsOneWidget);
     });
 
     testWidgets('shows empty message when no completions', (tester) async {
@@ -290,15 +286,10 @@ void main() {
           CurriculumJourney(
             curriculumId: CurriculumId.bavli,
             completions: [
-              UnitCompletion(
-                unitIdentifier: 'Berakhot',
-                unitType: 'masechta',
-                displayNameHe: 'ברכות',
-                displayNameEn: 'Berakhot',
-                trackType: TrackType.personal,
+              _completion(
+                identifier: 'Berakhot',
                 completedAt: DateTime(2026, 2, 1),
                 completionNumber: 1,
-                isManual: false,
               ),
             ],
             uniqueUnitsCompleted: 1,
@@ -318,7 +309,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.byType(TrackTypeBadge), findsOneWidget);
+      expect(find.byType(TrackTypeBadge), findsWidgets);
       expect(find.text('Personal'), findsOneWidget);
     });
   });

@@ -100,10 +100,10 @@ void main() {
       'lib/features/learning_order/data/repositories/learning_order_repository_impl.dart',
       'lib/features/learning_order/domain/models/learning_order_item.dart',
       'lib/features/track_learning_order/data/repositories/track_learning_order_repository_impl.dart',
-      // UnitCompletion freezed model + its single chokepoint helper.
-      'lib/features/progress/domain/models/journey_view_model.dart',
-      // Provider feeds UnitCompletion freezed fields through.
-      'lib/features/progress/presentation/providers/journey_providers.dart',
+      // journey_view_model.dart and journey_providers.dart were removed from
+      // this allow-list by DNI-362: UnitCompletion no longer carries
+      // displayNameHe/displayNameEn; label resolution is deferred to
+      // CurriculumLabel.level at render time.
       // Constructs CalendarProgramEntry instances directly.
       'lib/features/scheduler/presentation/providers/scheduler_providers.dart',
       // Doc-comment reference only.

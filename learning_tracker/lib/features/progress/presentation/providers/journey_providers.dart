@@ -15,6 +15,30 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'journey_providers.g.dart';
 
+// ---------------------------------------------------------------------------
+// Helpers — derive UnitCompletion structural keys from ledger rows.
+// ---------------------------------------------------------------------------
+
+/// Entry scope: the ledger's [unitType] string verbatim (e.g. `'masechta'`).
+String _entryScope(LearningLedgerData e) => e.unitType;
+
+/// Entry key: the ledger's [unitIdentifier] verbatim.
+String _entryKey(LearningLedgerData e) => e.unitIdentifier;
+
+/// Look up the level-1 parent of a level-2 entry from the content item list.
+///
+/// The ledger row doesn't store the parent explicitly. We scan the loaded
+/// content for the first item whose [level2] matches the entry's identifier
+/// and return its [level1]. Returns `null` for level-1 scope types.
+String? _parentL1Key(LearningLedgerData e, List<ContentItem> content) {
+  const level2Types = {'masechta', 'sefer', 'parsha', 'book'};
+  if (!level2Types.contains(e.unitType)) return null;
+  for (final item in content) {
+    if (item.level2 == e.unitIdentifier) return item.level1;
+  }
+  return null;
+}
+
 /// Sort mode toggle for journey screen (grouped vs chronological).
 @riverpod
 class JourneySortModeNotifier extends _$JourneySortModeNotifier {
@@ -76,8 +100,9 @@ Future<JourneyViewModel> journeyViewModel(Ref ref, int profileId) async {
           (e) => UnitCompletion(
             unitIdentifier: e.unitIdentifier,
             unitType: e.unitType,
-            displayNameHe: e.unitDisplayNameHe,
-            displayNameEn: e.unitDisplayNameEn,
+            entryScope: _entryScope(e),
+            entryKey: _entryKey(e),
+            parentL1Key: _parentL1Key(e, content),
             trackType: TrackType.fromStorageKey(e.trackType),
             completedAt: e.completedAt,
             completionNumber: e.completionNumber,

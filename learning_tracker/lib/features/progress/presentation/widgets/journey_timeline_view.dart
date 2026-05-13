@@ -4,7 +4,7 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/progress/domain/models/journey_view_model.dart';
-import 'package:learning_tracker/features/progress/presentation/widgets/track_type_badge.dart';
+import 'package:learning_tracker/features/progress/presentation/widgets/journey_completion_row.dart';
 
 /// Chronological timeline view of all completions, most recent first.
 class JourneyTimelineView extends StatelessWidget {
@@ -106,6 +106,8 @@ class _TimelineEntry {
   final CurriculumId curriculumId;
 }
 
+/// Timeline card — uses the shared [JourneyCompletionRow] and builds the
+/// subtitle inline to avoid duplicating layout logic.
 class _TimelineCard extends ConsumerWidget {
   const _TimelineCard({required this.entry});
 
@@ -118,43 +120,17 @@ class _TimelineCard extends ConsumerWidget {
     final date = completion.completedAt.toLocal();
     final formattedDate = '${date.day}/${date.month}/${date.year}';
     final ordinal = _ordinal(completion.completionNumber);
-    final completionLabel = unitCompletionLabelText(
-      ref,
-      completion: completion,
-    );
     final curriculumLabel = curriculumLabelText(
       ref,
       curriculum: entry.curriculumId,
     );
+    final subtitle = '$curriculumLabel · $ordinal completion · $formattedDate';
 
-    return Card(
-      margin: const EdgeInsets.only(bottom: 8),
-      child: ListTile(
-        leading: Container(
-          width: 8,
-          height: 40,
-          decoration: BoxDecoration(
-            color: color,
-            borderRadius: BorderRadius.circular(4),
-          ),
-        ),
-        title: Text(
-          completionLabel,
-          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
-        ),
-        subtitle: Row(
-          children: [
-            Text(
-              '$curriculumLabel · $ordinal completion · $formattedDate',
-              style: TextStyle(
-                fontSize: 12,
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
-            ),
-          ],
-        ),
-        trailing: TrackTypeBadge(trackType: completion.trackType),
-      ),
+    return JourneyCompletionRow(
+      completion: completion,
+      curriculumId: entry.curriculumId,
+      curriculumColor: color,
+      subtitle: subtitle,
     );
   }
 

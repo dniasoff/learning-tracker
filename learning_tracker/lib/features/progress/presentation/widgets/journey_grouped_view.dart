@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/progress/domain/models/journey_view_model.dart';
+import 'package:learning_tracker/features/progress/presentation/widgets/journey_completion_row.dart';
 import 'package:learning_tracker/features/progress/presentation/widgets/milestone_badge.dart';
-import 'package:learning_tracker/features/progress/presentation/widgets/track_type_badge.dart';
 
 /// Grouped view: completions organized by curriculum → seder → unit.
 class JourneyGroupedView extends StatelessWidget {
@@ -36,7 +37,7 @@ class _CurriculumSection extends ConsumerWidget {
         ? journey.uniqueUnitsCompleted / journey.totalUnitsAvailable
         : 0.0;
 
-    // Group completions by unit type/seder (level1 grouping via unitIdentifier)
+    // Group completions by unit identifier
     final groupedByUnit = <String, List<UnitCompletion>>{};
     for (final completion in journey.completions) {
       groupedByUnit
@@ -104,11 +105,12 @@ class _CurriculumSection extends ConsumerWidget {
               ),
             ),
 
-          // Unit completions
+          // Unit completions — use shared JourneyCompletionRow
           if (groupedByUnit.isNotEmpty)
             ...groupedByUnit.entries.map(
               (entry) => _UnitCompletionTile(
                 completions: entry.value,
+                curriculumId: journey.curriculumId,
                 curriculumColor: color,
               ),
             ),
@@ -130,45 +132,33 @@ class _CurriculumSection extends ConsumerWidget {
   }
 }
 
-class _UnitCompletionTile extends ConsumerWidget {
+class _UnitCompletionTile extends StatelessWidget {
   const _UnitCompletionTile({
     required this.completions,
+    required this.curriculumId,
     required this.curriculumColor,
   });
 
   final List<UnitCompletion> completions;
+  final CurriculumId curriculumId;
   final Color curriculumColor;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final latestCompletion = completions.reduce(
       (a, b) => a.completedAt.isAfter(b.completedAt) ? a : b,
     );
     final count = completions.length;
     final suffix = count > 1 ? ' ($count completions)' : '';
-    final label = unitCompletionLabelText(ref, completion: latestCompletion);
 
-    return ListTile(
+    return JourneyCompletionRow(
+      completion: latestCompletion,
+      curriculumId: curriculumId,
+      curriculumColor: curriculumColor,
+      // Append count suffix to the label via a subtitle note when multiple.
+      // We use dense=true for the grouped layout.
+      subtitle: suffix.isNotEmpty ? suffix.trim() : null,
       dense: true,
-      leading: Container(
-        width: 4,
-        height: 32,
-        decoration: BoxDecoration(
-          color: curriculumColor,
-          borderRadius: BorderRadius.circular(2),
-        ),
-      ),
-      title: Row(
-        children: [
-          Expanded(
-            child: Text(
-              '$label$suffix',
-              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
-            ),
-          ),
-          TrackTypeBadge(trackType: latestCompletion.trackType),
-        ],
-      ),
     );
   }
 }

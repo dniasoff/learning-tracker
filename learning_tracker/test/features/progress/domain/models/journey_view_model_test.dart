@@ -25,8 +25,9 @@ void main() {
               UnitCompletion(
                 unitIdentifier: 'Berakhot',
                 unitType: 'masechta',
-                displayNameHe: 'ברכות',
-                displayNameEn: 'Berakhot',
+                entryScope: 'masechta',
+                entryKey: 'Berakhot',
+                parentL1Key: 'Zeraim',
                 trackType: TrackType.personal,
                 completedAt: DateTime(2026, 1, 1),
                 completionNumber: 1,
@@ -35,8 +36,9 @@ void main() {
               UnitCompletion(
                 unitIdentifier: 'Berakhot',
                 unitType: 'masechta',
-                displayNameHe: 'ברכות',
-                displayNameEn: 'Berakhot',
+                entryScope: 'masechta',
+                entryKey: 'Berakhot',
+                parentL1Key: 'Zeraim',
                 trackType: TrackType.personal,
                 completedAt: DateTime(2026, 2, 1),
                 completionNumber: 2,
@@ -60,12 +62,13 @@ void main() {
   });
 
   group('UnitCompletion', () {
-    test('stores all fields correctly', () {
+    test('stores structural keys correctly', () {
       final completion = UnitCompletion(
         unitIdentifier: 'Shabbat',
         unitType: 'masechta',
-        displayNameHe: 'שבת',
-        displayNameEn: 'Shabbat',
+        entryScope: 'masechta',
+        entryKey: 'Shabbat',
+        parentL1Key: 'Moed',
         trackType: TrackType.personal,
         completedAt: DateTime(2026, 3, 15),
         completionNumber: 1,
@@ -73,6 +76,9 @@ void main() {
       );
 
       expect(completion.unitIdentifier, 'Shabbat');
+      expect(completion.entryScope, 'masechta');
+      expect(completion.entryKey, 'Shabbat');
+      expect(completion.parentL1Key, 'Moed');
       expect(completion.trackType, TrackType.personal);
       expect(completion.isManual, isTrue);
       expect(completion.completionNumber, 1);
@@ -82,8 +88,9 @@ void main() {
       final a = UnitCompletion(
         unitIdentifier: 'Berakhot',
         unitType: 'masechta',
-        displayNameHe: 'ברכות',
-        displayNameEn: 'Berakhot',
+        entryScope: 'masechta',
+        entryKey: 'Berakhot',
+        parentL1Key: 'Zeraim',
         trackType: TrackType.personal,
         completedAt: DateTime(2026, 1, 1),
         completionNumber: 1,
@@ -92,14 +99,51 @@ void main() {
       final b = UnitCompletion(
         unitIdentifier: 'Berakhot',
         unitType: 'masechta',
-        displayNameHe: 'ברכות',
-        displayNameEn: 'Berakhot',
+        entryScope: 'masechta',
+        entryKey: 'Berakhot',
+        parentL1Key: 'Zeraim',
         trackType: TrackType.personal,
         completedAt: DateTime(2026, 1, 1),
         completionNumber: 1,
         isManual: false,
       );
       expect(a, equals(b));
+    });
+
+    test('parentL1Key is null for seder-level entries', () {
+      final completion = UnitCompletion(
+        unitIdentifier: 'Zeraim',
+        unitType: 'seder',
+        entryScope: 'seder',
+        entryKey: 'Zeraim',
+        trackType: TrackType.personal,
+        completedAt: DateTime(2026, 1, 1),
+        completionNumber: 1,
+        isManual: false,
+      );
+      expect(completion.parentL1Key, isNull);
+    });
+  });
+
+  group('unitCompletionLevel', () {
+    test('seder maps to level 1', () {
+      expect(unitCompletionLevel('seder'), 1);
+    });
+
+    test('book maps to level 1', () {
+      expect(unitCompletionLevel('book'), 1);
+    });
+
+    test('masechta maps to level 2', () {
+      expect(unitCompletionLevel('masechta'), 2);
+    });
+
+    test('sefer maps to level 2', () {
+      expect(unitCompletionLevel('sefer'), 2);
+    });
+
+    test('unknown scope defaults to level 2', () {
+      expect(unitCompletionLevel('unknown'), 2);
     });
   });
 

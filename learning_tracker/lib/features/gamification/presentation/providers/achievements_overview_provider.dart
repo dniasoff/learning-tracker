@@ -78,9 +78,8 @@ String _trackLabelEn(CurriculumId? c, String rawKey) {
   return rawKey;
 }
 
-final achievementsOverviewProvider = FutureProvider<AchievementsOverview>((
-  ref,
-) async {
+final achievementsOverviewProvider =
+    FutureProvider.autoDispose<AchievementsOverview>((ref) async {
   ref.watch<int>(completionCommittedProvider);
   final db = ref.watch(userDatabaseProvider);
   final profileId = ref.watch(activeProfileIdProvider);
