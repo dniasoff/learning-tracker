@@ -109,9 +109,9 @@ class SettingsScreen extends ConsumerWidget {
             _SurfaceCard(
               child: Column(
                 children: [
-                  _HebrewDateTile(),
+                  const _HebrewDateTile(),
                   _tileDivider(theme),
-                  _HebrewTermsTile(),
+                  const _HebrewTermsTile(),
                   _TransliterationVariantTileSection(theme: theme),
                   _tileDivider(theme),
                   _NikudTile(theme: theme),

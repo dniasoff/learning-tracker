@@ -1,10 +1,10 @@
+import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/widgets/animated_progress_bar.dart';
 import 'package:learning_tracker/features/dashboard/presentation/widgets/dashboard_helpers.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
-import 'package:auto_route/auto_route.dart';
 
 /// Stats card when today due, overdue, and chazara counts are all zero.
 class DashboardAllCaughtUpCard extends StatelessWidget {

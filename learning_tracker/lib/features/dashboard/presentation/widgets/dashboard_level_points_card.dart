@@ -1,3 +1,4 @@
+import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/enums/user_mode.dart';
@@ -7,7 +8,6 @@ import 'package:learning_tracker/core/widgets/animated_progress_bar.dart';
 import 'package:learning_tracker/features/dashboard/presentation/widgets/dashboard_stat_bubble.dart';
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
-import 'package:auto_route/auto_route.dart';
 
 class DashboardLevelPointsCard extends ConsumerWidget {
   const DashboardLevelPointsCard({

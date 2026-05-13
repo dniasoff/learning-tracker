@@ -32,7 +32,11 @@ class ActiveTrackCard extends ConsumerWidget {
   final CurriculumTrack track;
   final List<DailyTask> allTasks;
 
-  const ActiveTrackCard({super.key, required this.track, required this.allTasks});
+  const ActiveTrackCard({
+    super.key,
+    required this.track,
+    required this.allTasks,
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
