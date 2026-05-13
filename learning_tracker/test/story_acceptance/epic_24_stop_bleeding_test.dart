@@ -17,6 +17,7 @@ import 'package:learning_tracker/features/learning/domain/repositories/track_rep
 import 'package:learning_tracker/features/learning_order/data/repositories/learning_order_repository_impl.dart';
 import 'package:learning_tracker/features/learning_order/domain/models/learning_order_item.dart';
 import 'package:learning_tracker/features/sync/data/firestore_data_source.dart';
+import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/features/sync/data/offline_queue.dart';
 import 'package:learning_tracker/features/sync/data/sync_engine.dart';
 import 'package:mocktail/mocktail.dart';
@@ -179,13 +180,13 @@ void main() {
           offlineQueue = OfflineQueue(
             database: db,
             firestoreDataSource: mockFirestore,
-            logger: Talker(),
+            logger: AppLogger(Talker()),
           );
           syncEngine = SyncEngine(
             database: db,
             firestoreDataSource: mockFirestore,
             offlineQueue: offlineQueue,
-            logger: Talker(),
+            logger: AppLogger(Talker()),
             connectivityService: mockConnectivity,
           );
         });
@@ -265,13 +266,13 @@ void main() {
           offlineQueue = OfflineQueue(
             database: db,
             firestoreDataSource: mockFirestore,
-            logger: Talker(),
+            logger: AppLogger(Talker()),
           );
           syncEngine = SyncEngine(
             database: db,
             firestoreDataSource: mockFirestore,
             offlineQueue: offlineQueue,
-            logger: Talker(),
+            logger: AppLogger(Talker()),
             connectivityService: mockConnectivity,
           );
         });
@@ -571,13 +572,13 @@ void main() {
           offlineQueue = OfflineQueue(
             database: db,
             firestoreDataSource: mockFirestore,
-            logger: Talker(),
+            logger: AppLogger(Talker()),
           );
           syncEngine = SyncEngine(
             database: db,
             firestoreDataSource: mockFirestore,
             offlineQueue: offlineQueue,
-            logger: Talker(),
+            logger: AppLogger(Talker()),
             connectivityService: mockConnectivity,
           );
         });
@@ -636,13 +637,13 @@ void main() {
           offlineQueue = OfflineQueue(
             database: db,
             firestoreDataSource: mockFirestore,
-            logger: Talker(),
+            logger: AppLogger(Talker()),
           );
           syncEngine = SyncEngine(
             database: db,
             firestoreDataSource: mockFirestore,
             offlineQueue: offlineQueue,
-            logger: Talker(),
+            logger: AppLogger(Talker()),
             connectivityService: mockConnectivity,
           );
         });
