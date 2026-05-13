@@ -617,7 +617,7 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
   }
 
   Future<void> _finishFlow({
-    _SelfPacedPriorCompletionSelection? priorCompletionSelection,
+    SelfPacedPriorCompletionSelection? priorCompletionSelection,
   }) async {
     if (_isFinishing) return;
     _isFinishing = true;
@@ -691,7 +691,7 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
 
   Future<({int itemCount, int completionCount})>
   _applySelfPacedPriorCompletions(
-    _SelfPacedPriorCompletionSelection selection,
+    SelfPacedPriorCompletionSelection selection,
   ) async {
     final service = ref.read(bulkPriorCompletionServiceProvider);
     final curriculum = _state.curriculumId!;
@@ -864,7 +864,7 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
 
   Widget _buildScopeStep() {
     if (_state.curriculumId == null) return const SizedBox.shrink();
-    return _ScopeStepContent(
+    return ScopeStepContent(
       curriculumId: _state.curriculumId!,
       onComplete: _onScopeComplete,
     );
@@ -875,7 +875,7 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
 
     // Program mode: auto-fill read-only
     if (_isProgramTrack) {
-      return _StudyDaysReadOnly(
+      return StudyDaysReadOnly(
         programName: _state.programName ?? '',
         onContinue: () =>
             _onStudyDaysComplete(Map<int, String>.from(kDefaultStudyDays)),
@@ -883,188 +883,19 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
     }
 
     // Self-paced: editable vertical list
-    return _StudyDaysEditable(onComplete: _onStudyDaysComplete);
+    return StudyDaysEditable(onComplete: _onStudyDaysComplete);
   }
 
   Widget _buildChazaraStep() {
     if (_state.curriculumId == null) return const SizedBox.shrink();
-    final theme = Theme.of(context);
 
     // Program with DEFINED chazara → show read-only
     if (_isProgramTrack && _programHasChazara) {
       final program = _state.selectedProgram as LearningProgramData;
-      List<dynamic> stages;
-      try {
-        stages = jsonDecode(program.stagesConfig) as List<dynamic>;
-      } catch (_) {
-        stages = [];
-      }
-      final chazaraStages = stages
-          .where(
-            (s) => (s as Map<String, dynamic>)['stage'].toString() != 'learn',
-          )
-          .toList();
-
-      String normalizeStageName(String raw) {
-        final cleaned = raw.replaceAll('_', ' ').trim();
-        if (cleaned.isEmpty) return 'Review stage';
-        return cleaned
-            .split(' ')
-            .where((part) => part.isNotEmpty)
-            .map(
-              (part) =>
-                  '${part[0].toUpperCase()}${part.substring(1).toLowerCase()}',
-            )
-            .join(' ');
-      }
-
-      return Padding(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(
-              'Review Schedule',
-              style: theme.textTheme.headlineLarge?.copyWith(
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              'Review stages set by ${_state.programName}',
-              style: theme.textTheme.titleMedium?.copyWith(
-                color: AppTheme.brandInkMuted,
-              ),
-            ),
-            const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-              decoration: BoxDecoration(
-                color: const Color(0xFFEFF2FF),
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: Row(
-                children: [
-                  const Icon(
-                    Icons.lock_outline_rounded,
-                    size: 16,
-                    color: AppTheme.brandBlueDeep,
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'This schedule is fixed by the program and cannot be edited.',
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: AppTheme.brandBlueDeep,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 14),
-            Expanded(
-              child: chazaraStages.isEmpty
-                  ? Center(
-                      child: Text(
-                        'No review stages are configured for this program.',
-                        textAlign: TextAlign.center,
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          color: AppTheme.brandInkMuted,
-                        ),
-                      ),
-                    )
-                  : ListView.separated(
-                      itemCount: chazaraStages.length,
-                      separatorBuilder: (_, __) => const SizedBox(height: 10),
-                      itemBuilder: (context, index) {
-                        final stage =
-                            chazaraStages[index] as Map<String, dynamic>;
-                        final name = normalizeStageName(
-                          stage['stage'].toString(),
-                        );
-                        final delay = stage['delay_days'];
-                        final delayLabel = switch (delay) {
-                          final int value when value == 1 => 'After 1 day',
-                          final int value => 'After $value days',
-                          final String value => 'After $value days',
-                          _ => 'Scheduled by program',
-                        };
-
-                        return DecoratedBox(
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(22),
-                            border: Border.all(color: const Color(0xFFE7EAF1)),
-                          ),
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 14,
-                            ),
-                            child: Row(
-                              children: [
-                                CircleAvatar(
-                                  radius: 16,
-                                  backgroundColor: const Color(0xFFE9ECFF),
-                                  child: Text(
-                                    '${index + 1}',
-                                    style: theme.textTheme.labelLarge?.copyWith(
-                                      color: AppTheme.brandBlueDeep,
-                                      fontWeight: FontWeight.w700,
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        name,
-                                        style: theme.textTheme.titleMedium
-                                            ?.copyWith(
-                                              fontWeight: FontWeight.w700,
-                                            ),
-                                      ),
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        delayLabel,
-                                        style: theme.textTheme.bodySmall
-                                            ?.copyWith(
-                                              color: AppTheme.brandInkMuted,
-                                            ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                const Icon(
-                                  Icons.lock_rounded,
-                                  size: 18,
-                                  color: AppTheme.brandInkMuted,
-                                ),
-                              ],
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-            ),
-            FilledButton(
-              onPressed: () => _onChazaraComplete(null),
-              style: FilledButton.styleFrom(
-                minimumSize: const Size.fromHeight(54),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(28),
-                ),
-              ),
-              child: const Text('Continue'),
-            ),
-          ],
-        ),
+      return ProgramChazaraReadOnlyStep(
+        stagesConfig: program.stagesConfig,
+        programName: _state.programName ?? '',
+        onComplete: (_) => _onChazaraComplete(null),
       );
     }
 
@@ -1079,7 +910,7 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
               'Set one up now or skip.'
         : 'Pick a preset or build your own חזרה schedule.';
 
-    return _ChazaraInlineSetup(
+    return ChazaraInlineSetup(
       curriculumId: _state.curriculumId!,
       headerTitle: headerTitle,
       headerSubtitle: headerSubtitle,
@@ -1089,7 +920,7 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
 
   Widget _buildGoalStep() {
     if (_state.curriculumId == null) return const SizedBox.shrink();
-    return _SelfPacedGoalStep(
+    return SelfPacedGoalStep(
       curriculumId: _state.curriculumId!,
       studyDays: _state.studyDays ?? kDefaultStudyDays,
       onComplete: _onGoalComplete,
@@ -1101,16 +932,16 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
     if (_state.curriculumId == null) return const SizedBox.shrink();
 
     if (!_isProgramTrack) {
-      return _SelfPacedPriorProgressStep(
+      return SelfPacedPriorProgressStep(
         curriculumId: _state.curriculumId!,
         scopeSelections: _state.scopeSelections,
         onSkip: () => unawaited(_finishFlow()),
-        onMarkCompleted: (selection) =>
+        onMarkCompleted: (SelfPacedPriorCompletionSelection selection) =>
             unawaited(_finishFlow(priorCompletionSelection: selection)),
       );
     }
 
-    return _StartingPositionStep(
+    return StartingPositionStep(
       programName: _state.programName ?? '',
       curriculumId: _state.curriculumId!,
       selectedProgram: _state.selectedProgram as LearningProgramData?,
@@ -1119,18 +950,19 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
   }
 }
 
-class _SelfPacedPriorProgressStep extends ConsumerWidget {
-  const _SelfPacedPriorProgressStep({
+class SelfPacedPriorProgressStep extends ConsumerWidget {
+  const SelfPacedPriorProgressStep({
     required this.curriculumId,
     required this.scopeSelections,
     required this.onSkip,
     required this.onMarkCompleted,
+    super.key,
   });
 
   final CurriculumId curriculumId;
   final List<ScopeEntry>? scopeSelections;
   final VoidCallback onSkip;
-  final ValueChanged<_SelfPacedPriorCompletionSelection> onMarkCompleted;
+  final ValueChanged<SelfPacedPriorCompletionSelection> onMarkCompleted;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -1215,7 +1047,7 @@ class _SelfPacedSelectionList extends StatefulWidget {
   final List<ScopeEntry>? scopeSelections;
   final bool selectAllByDefault;
   final VoidCallback onSkip;
-  final ValueChanged<_SelfPacedPriorCompletionSelection> onMarkCompleted;
+  final ValueChanged<SelfPacedPriorCompletionSelection> onMarkCompleted;
 
   @override
   State<_SelfPacedSelectionList> createState() =>
@@ -1322,7 +1154,7 @@ class _SelfPacedSelectionListState extends State<_SelfPacedSelectionList> {
                             ? _entries
                             : _selectedIndexes.map((i) => _entries[i]).toList();
                         widget.onMarkCompleted(
-                          _SelfPacedPriorCompletionSelection(
+                          SelfPacedPriorCompletionSelection(
                             markAll: _markAll && _entries.isEmpty,
                             selectedScopes: selectedScopes,
                           ),
@@ -1399,8 +1231,8 @@ class _SelectionCard extends StatelessWidget {
   }
 }
 
-class _SelfPacedPriorCompletionSelection {
-  const _SelfPacedPriorCompletionSelection({
+class SelfPacedPriorCompletionSelection {
+  const SelfPacedPriorCompletionSelection({
     required this.markAll,
     required this.selectedScopes,
   });
@@ -1416,20 +1248,21 @@ class _SelfPacedPriorCompletionSelection {
 ///
 /// Selecting at a higher level implicitly includes all children.
 /// Auto-skips levels with only one option (DNI-202).
-class _ScopeStepContent extends ConsumerStatefulWidget {
-  const _ScopeStepContent({
+class ScopeStepContent extends ConsumerStatefulWidget {
+  const ScopeStepContent({
     required this.curriculumId,
     required this.onComplete,
+    super.key,
   });
 
   final CurriculumId curriculumId;
   final ValueChanged<List<ScopeEntry>?> onComplete;
 
   @override
-  ConsumerState<_ScopeStepContent> createState() => _ScopeStepContentState();
+  ConsumerState<ScopeStepContent> createState() => _ScopeStepContentState();
 }
 
-class _ScopeStepContentState extends ConsumerState<_ScopeStepContent> {
+class _ScopeStepContentState extends ConsumerState<ScopeStepContent> {
   /// Breadcrumb path: list of (level, value) pairs representing drill-down.
   final List<ScopeEntry> _breadcrumbs = [];
 
@@ -2205,16 +2038,16 @@ class _ScopeLevelTile extends StatelessWidget {
 }
 
 /// Study days — vertical layout, all 7 active by default, "Shabbos" label.
-class _StudyDaysEditable extends StatefulWidget {
-  const _StudyDaysEditable({required this.onComplete});
+class StudyDaysEditable extends StatefulWidget {
+  const StudyDaysEditable({required this.onComplete, super.key});
 
   final ValueChanged<Map<int, String>> onComplete;
 
   @override
-  State<_StudyDaysEditable> createState() => _StudyDaysEditableState();
+  State<StudyDaysEditable> createState() => StudyDaysEditableState();
 }
 
-class _StudyDaysEditableState extends State<_StudyDaysEditable> {
+class StudyDaysEditableState extends State<StudyDaysEditable> {
   late final Map<int, String> _days;
 
   @override
@@ -2415,10 +2248,11 @@ class _StudyDayCard extends StatelessWidget {
 }
 
 /// Study days — read-only display for program tracks.
-class _StudyDaysReadOnly extends StatelessWidget {
-  const _StudyDaysReadOnly({
+class StudyDaysReadOnly extends StatelessWidget {
+  const StudyDaysReadOnly({
     required this.programName,
     required this.onContinue,
+    super.key,
   });
 
   final String programName;
@@ -2468,11 +2302,12 @@ class _StudyDaysReadOnly extends StatelessWidget {
   }
 }
 
-class _SelfPacedGoalStep extends ConsumerStatefulWidget {
-  const _SelfPacedGoalStep({
+class SelfPacedGoalStep extends ConsumerStatefulWidget {
+  const SelfPacedGoalStep({
     required this.curriculumId,
     required this.studyDays,
     required this.onComplete,
+    super.key,
   });
 
   final CurriculumId curriculumId;
@@ -2480,10 +2315,10 @@ class _SelfPacedGoalStep extends ConsumerStatefulWidget {
   final ValueChanged<GoalEntity?> onComplete;
 
   @override
-  ConsumerState<_SelfPacedGoalStep> createState() => _SelfPacedGoalStepState();
+  ConsumerState<SelfPacedGoalStep> createState() => SelfPacedGoalStepState();
 }
 
-class _SelfPacedGoalStepState extends ConsumerState<_SelfPacedGoalStep> {
+class SelfPacedGoalStepState extends ConsumerState<SelfPacedGoalStep> {
   int _paceValue = 1;
   String _paceUnit = 'per_week';
   DateTime? _deadline;
@@ -3179,12 +3014,13 @@ class _PaceUnitOptions {
 ///
 /// Lets users pick their current position by content (e.g. which daf/page
 /// they are up to) using a two-level drill-down: container → leaf item.
-class _StartingPositionStep extends ConsumerStatefulWidget {
-  const _StartingPositionStep({
+class StartingPositionStep extends ConsumerStatefulWidget {
+  const StartingPositionStep({
     required this.programName,
     required this.curriculumId,
     required this.selectedProgram,
     required this.onComplete,
+    super.key,
   });
 
   final String programName;
@@ -3193,11 +3029,11 @@ class _StartingPositionStep extends ConsumerStatefulWidget {
   final ValueChanged<String?> onComplete;
 
   @override
-  ConsumerState<_StartingPositionStep> createState() =>
-      _StartingPositionStepState();
+  ConsumerState<StartingPositionStep> createState() =>
+      StartingPositionStepState();
 }
 
-class _StartingPositionStepState extends ConsumerState<_StartingPositionStep> {
+class StartingPositionStepState extends ConsumerState<StartingPositionStep> {
   // Calendar-program mode (date offset picker).
   int _offsetDays = 0;
   bool _calendarLoading = false;
@@ -3862,12 +3698,13 @@ class _StartingPositionStepState extends ConsumerState<_StartingPositionStep> {
 //   "All חזרה config on ONE screen"
 // Replaces a Navigator.push to LearningProcessWizardScreen.
 
-class _ChazaraInlineSetup extends StatefulWidget {
-  const _ChazaraInlineSetup({
+class ChazaraInlineSetup extends StatefulWidget {
+  const ChazaraInlineSetup({
     required this.curriculumId,
     required this.headerTitle,
     required this.headerSubtitle,
     required this.onComplete,
+    super.key,
   });
 
   final CurriculumId curriculumId;
@@ -3876,7 +3713,7 @@ class _ChazaraInlineSetup extends StatefulWidget {
   final ValueChanged<LearningProcessWizardResult?> onComplete;
 
   @override
-  State<_ChazaraInlineSetup> createState() => _ChazaraInlineSetupState();
+  State<ChazaraInlineSetup> createState() => ChazaraInlineSetupState();
 }
 
 /// Built-in preset templates expressed as round delays in days.
@@ -3886,7 +3723,7 @@ class _ChazaraPreset {
   final List<int> delays;
 }
 
-class _ChazaraInlineSetupState extends State<_ChazaraInlineSetup> {
+class ChazaraInlineSetupState extends State<ChazaraInlineSetup> {
   static const List<_ChazaraPreset> _presets = [
     _ChazaraPreset(label: 'Learn Only', delays: []),
     _ChazaraPreset(label: '1 day', delays: [1]),
@@ -4413,5 +4250,205 @@ class _TinyCircleButton extends StatelessWidget {
         child: Icon(icon, size: 14, color: AppTheme.brandInkMuted),
       ),
     );
+  }
+}
+
+/// Read-only view of chazara stages defined by a learning program.
+///
+/// Shown in place of the interactive ChazaraInlineSetup when the selected
+/// program already bundles its own review schedule.
+class ProgramChazaraReadOnlyStep extends StatelessWidget {
+  const ProgramChazaraReadOnlyStep({
+    required this.stagesConfig,
+    required this.programName,
+    required this.onComplete,
+    super.key,
+  });
+
+  /// Raw JSON stages config from the selected [LearningProgramData].
+  final String stagesConfig;
+
+  /// Display name of the program (used in the subtitle).
+  final String programName;
+
+  /// Callback invoked when the user presses Continue.
+  final ValueChanged<Object?> onComplete;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    List<dynamic> stages;
+    try {
+      stages = jsonDecode(stagesConfig) as List<dynamic>;
+    } catch (_) {
+      stages = [];
+    }
+    final chazaraStages = stages
+        .where(
+          (s) => (s as Map<String, dynamic>)['stage'].toString() != 'learn',
+        )
+        .toList();
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            'Review Schedule',
+            style: theme.textTheme.headlineLarge?.copyWith(
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'Review stages set by $programName',
+            style: theme.textTheme.titleMedium?.copyWith(
+              color: AppTheme.brandInkMuted,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            decoration: BoxDecoration(
+              color: const Color(0xFFEFF2FF),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Row(
+              children: [
+                const Icon(
+                  Icons.lock_outline_rounded,
+                  size: 16,
+                  color: AppTheme.brandBlueDeep,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'This schedule is fixed by the program and cannot be edited.',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: AppTheme.brandBlueDeep,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 14),
+          Expanded(
+            child: chazaraStages.isEmpty
+                ? Center(
+                    child: Text(
+                      'No review stages are configured for this program.',
+                      textAlign: TextAlign.center,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: AppTheme.brandInkMuted,
+                      ),
+                    ),
+                  )
+                : ListView.separated(
+                    itemCount: chazaraStages.length,
+                    separatorBuilder: (_, __) => const SizedBox(height: 10),
+                    itemBuilder: (context, index) {
+                      final stage =
+                          chazaraStages[index] as Map<String, dynamic>;
+                      final name = _normalizeStageName(
+                        stage['stage'].toString(),
+                      );
+                      final delay = stage['delay_days'];
+                      final delayLabel = switch (delay) {
+                        final int value when value == 1 => 'After 1 day',
+                        final int value => 'After $value days',
+                        final String value => 'After $value days',
+                        _ => 'Scheduled by program',
+                      };
+
+                      return DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(22),
+                          border: Border.all(color: const Color(0xFFE7EAF1)),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 14,
+                          ),
+                          child: Row(
+                            children: [
+                              CircleAvatar(
+                                radius: 16,
+                                backgroundColor: const Color(0xFFE9ECFF),
+                                child: Text(
+                                  '${index + 1}',
+                                  style: theme.textTheme.labelLarge?.copyWith(
+                                    color: AppTheme.brandBlueDeep,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      name,
+                                      style: theme.textTheme.titleMedium
+                                          ?.copyWith(
+                                            fontWeight: FontWeight.w700,
+                                          ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      delayLabel,
+                                      style: theme.textTheme.bodySmall
+                                          ?.copyWith(
+                                            color: AppTheme.brandInkMuted,
+                                          ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              const Icon(
+                                Icons.lock_rounded,
+                                size: 18,
+                                color: AppTheme.brandInkMuted,
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+          ),
+          FilledButton(
+            onPressed: () => onComplete(null),
+            style: FilledButton.styleFrom(
+              minimumSize: const Size.fromHeight(54),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(28),
+              ),
+            ),
+            child: const Text('Continue'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  static String _normalizeStageName(String raw) {
+    final cleaned = raw.replaceAll('_', ' ').trim();
+    if (cleaned.isEmpty) return 'Review stage';
+    return cleaned
+        .split(' ')
+        .where((part) => part.isNotEmpty)
+        .map(
+          (part) =>
+              '${part[0].toUpperCase()}${part.substring(1).toLowerCase()}',
+        )
+        .join(' ');
   }
 }
