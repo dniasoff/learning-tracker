@@ -485,9 +485,7 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
                         textDirection: useHebrew
                             ? TextDirection.rtl
                             : TextDirection.ltr,
-                        textAlign: useHebrew
-                            ? TextAlign.right
-                            : TextAlign.left,
+                        textAlign: TextAlign.start,
                         style: theme.textTheme.titleLarge?.copyWith(
                           fontWeight: FontWeight.w700,
                         ),

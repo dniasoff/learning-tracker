@@ -471,8 +471,8 @@ class _SegmentParagraph extends StatelessWidget {
           baseline: TextBaseline.alphabetic,
           child: Padding(
             padding: isHebrew
-                ? const EdgeInsets.only(left: 6)
-                : const EdgeInsets.only(right: 6),
+                ? const EdgeInsetsDirectional.only(start: 6)
+                : const EdgeInsetsDirectional.only(end: 6),
             child: _VerseNumberBadge(marker: marker),
           ),
         ),
@@ -483,7 +483,7 @@ class _SegmentParagraph extends StatelessWidget {
     return Text.rich(
       TextSpan(children: spans, style: baseStyle),
       textDirection: isHebrew ? TextDirection.rtl : TextDirection.ltr,
-      textAlign: isHebrew ? TextAlign.right : TextAlign.left,
+      textAlign: TextAlign.start,
     );
   }
 }

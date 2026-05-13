@@ -143,7 +143,7 @@ class _CurriculumTile extends ConsumerWidget {
         ],
       ),
       child: Padding(
-        padding: const EdgeInsets.only(left: 4, right: 4),
+        padding: const EdgeInsetsDirectional.only(start: 4, end: 4),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [

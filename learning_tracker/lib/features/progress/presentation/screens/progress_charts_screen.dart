@@ -157,7 +157,7 @@ class _ProgressChartsScreenState extends ConsumerState<ProgressChartsScreen> {
         final selected = _timeRange == range;
         return Expanded(
           child: Padding(
-            padding: const EdgeInsets.only(right: 8),
+            padding: const EdgeInsetsDirectional.only(end: 8),
             child: GestureDetector(
               onTap: () => setState(() => _timeRange = range),
               child: AnimatedContainer(
@@ -203,7 +203,7 @@ class _ProgressChartsScreenState extends ConsumerState<ProgressChartsScreen> {
           const SizedBox(width: 8),
           ...CurriculumId.values.map(
             (curriculum) => Padding(
-              padding: const EdgeInsets.only(right: 8),
+              padding: const EdgeInsetsDirectional.only(end: 8),
               child: _FilterPill(
                 // Single-script label respecting the Hebrew Terms toggle.
                 label: curriculumLabelText(ref, curriculum: curriculum),

@@ -1486,7 +1486,7 @@ class _ScopeStepContentState extends ConsumerState<ScopeStepContent> {
           ),
           const SizedBox(height: 10),
           Align(
-            alignment: Alignment.centerLeft,
+            alignment: AlignmentDirectional.centerStart,
             child: DecoratedBox(
               decoration: BoxDecoration(
                 color: const Color(0xFFE5E9FF),
@@ -1665,7 +1665,7 @@ class _ScopeStepContentState extends ConsumerState<ScopeStepContent> {
         if (values.isNotEmpty) ...[
           const SizedBox(height: 4),
           Align(
-            alignment: Alignment.centerLeft,
+            alignment: AlignmentDirectional.centerStart,
             child: OutlinedButton.icon(
               onPressed: () => _toggleSelectAllCurrentLevel(items),
               icon: Icon(
@@ -1765,7 +1765,7 @@ class _ScopeStepContentState extends ConsumerState<ScopeStepContent> {
         if (values.isNotEmpty) ...[
           const SizedBox(height: 4),
           Align(
-            alignment: Alignment.centerLeft,
+            alignment: AlignmentDirectional.centerStart,
             child: OutlinedButton.icon(
               onPressed: () => _toggleSelectAllCurrentLevel(items),
               icon: Icon(

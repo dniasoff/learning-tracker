@@ -600,7 +600,7 @@ class _AchievementTierCard extends StatelessWidget {
                   clipBehavior: Clip.none,
                   children: [
                     Padding(
-                      padding: const EdgeInsets.only(right: 96),
+                      padding: const EdgeInsetsDirectional.only(end: 96),
                       child: Align(
                         alignment: AlignmentDirectional.topStart,
                         child: Text(

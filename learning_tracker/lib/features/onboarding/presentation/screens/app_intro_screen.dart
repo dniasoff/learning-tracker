@@ -155,7 +155,7 @@ class _IntroHeader extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 6, 20, 6),
       child: Align(
-        alignment: Alignment.centerRight,
+        alignment: AlignmentDirectional.centerEnd,
         child: TextButton(
           onPressed: onSkip,
           style: TextButton.styleFrom(foregroundColor: AppTheme.brandInkSoft),
@@ -455,7 +455,7 @@ class _IntroPage extends ConsumerWidget {
                               ),
                             ),
                             Align(
-                              alignment: Alignment.centerLeft,
+                              alignment: AlignmentDirectional.centerStart,
                               child: Container(
                                 width: c.maxWidth * t,
                                 height: 6,
@@ -507,7 +507,7 @@ class _IntroPage extends ConsumerWidget {
                           color: const Color(0xFFE2E5EB),
                         ),
                         Align(
-                          alignment: Alignment.centerLeft,
+                          alignment: AlignmentDirectional.centerStart,
                           child: Container(
                             width: c.maxWidth * t,
                             height: 5,
@@ -758,7 +758,7 @@ class _WindowDot extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.only(right: 5),
+      margin: const EdgeInsetsDirectional.only(end: 5),
       width: 7,
       height: 7,
       decoration: BoxDecoration(shape: BoxShape.circle, color: c),
@@ -1235,7 +1235,7 @@ class _ScholarLevelCard extends StatelessWidget {
                     ),
                   ),
                   Align(
-                    alignment: Alignment.centerLeft,
+                    alignment: AlignmentDirectional.centerStart,
                     child: Container(
                       width: c.maxWidth * 0.6,
                       height: 8,

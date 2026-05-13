@@ -38,8 +38,8 @@ class DailyTaskCard extends ConsumerWidget {
       direction: DismissDirection.endToStart,
       onDismissed: (_) => onDismissed(),
       background: Container(
-        alignment: Alignment.centerRight,
-        padding: const EdgeInsets.only(right: 20),
+        alignment: AlignmentDirectional.centerEnd,
+        padding: const EdgeInsetsDirectional.only(end: 20),
         color: theme.colorScheme.outline.withValues(alpha: 0.2),
         child: Icon(
           Icons.skip_next_rounded,

@@ -61,7 +61,7 @@ class ContentItemTile extends ConsumerWidget {
           fontWeight: FontWeight.w700,
         ),
         textDirection: useHebrew ? TextDirection.rtl : TextDirection.ltr,
-        textAlign: useHebrew ? TextAlign.right : TextAlign.left,
+        textAlign: TextAlign.start,
       ),
       trailing: _buildTrailing(theme, count),
       onTap: onTap,
@@ -125,7 +125,7 @@ class StageCompletionIndicators extends StatelessWidget {
       children: stages.entries.map((entry) {
         final isComplete = entry.value;
         return Padding(
-          padding: const EdgeInsets.only(left: 4),
+          padding: const EdgeInsetsDirectional.only(start: 4),
           child: Icon(
             isComplete ? Icons.check_circle : Icons.circle_outlined,
             size: 16,

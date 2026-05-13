@@ -386,7 +386,7 @@ class _LifetimeFolderTreeNodeState
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Padding(
-          padding: EdgeInsets.only(left: indent),
+          padding: EdgeInsetsDirectional.only(start: indent),
           child: GestureDetector(
             onTap: hasChildren
                 ? () => widget.onExpandToggle(widget.nodeKey, !isExpanded)
@@ -406,7 +406,7 @@ class _LifetimeFolderTreeNodeState
                 children: [
                   if (hasChildren)
                     Padding(
-                      padding: const EdgeInsets.only(right: 6),
+                      padding: const EdgeInsetsDirectional.only(end: 6),
                       child: Icon(
                         isExpanded
                             ? Icons.expand_less_rounded
@@ -417,7 +417,7 @@ class _LifetimeFolderTreeNodeState
                     )
                   else
                     Padding(
-                      padding: const EdgeInsets.only(right: 6),
+                      padding: const EdgeInsetsDirectional.only(end: 6),
                       child: Icon(
                         Icons.description_outlined,
                         size: 16,
@@ -520,7 +520,7 @@ class LifetimeMarkingScopeRow extends StatelessWidget {
         visual == MarkingRowVisual.implicit;
 
     return Padding(
-      padding: EdgeInsets.only(left: indent, top: 4, bottom: 0),
+      padding: EdgeInsetsDirectional.only(start: indent, top: 4, bottom: 0),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
         decoration: BoxDecoration(

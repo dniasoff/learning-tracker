@@ -171,7 +171,7 @@ class ParentSettingsScreen extends ConsumerWidget {
                 const BackupSyncSection(parentSettingsHeroLayout: true),
                 const SizedBox(height: 22),
                 Padding(
-                  padding: const EdgeInsets.only(left: 4, bottom: 8),
+                  padding: const EdgeInsetsDirectional.only(start: 4, bottom: 8),
                   child: Text(
                     l10n.sectionAccountSafety,
                     style: theme.textTheme.labelSmall?.copyWith(
