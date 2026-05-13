@@ -261,7 +261,7 @@ class _TrackManagementBodyState extends ConsumerState<TrackManagementBody> {
         await ref
             .read(curriculumActivationServiceProvider)
             .deactivate(curriculum);
-        await invalidateAfterTrackDataChange(ref, track.profileId);
+        await onTrackChanged(ref, track.profileId);
       } on LastActiveCurriculumException {
         if (!mounted) return;
         _showLastCurriculumError(l10n);
@@ -272,7 +272,7 @@ class _TrackManagementBodyState extends ConsumerState<TrackManagementBody> {
           .read(userDatabaseProvider)
           .trackDao
           .deleteTrackAndData(track.id);
-      await invalidateAfterTrackDataChange(ref, track.profileId);
+      await onTrackChanged(ref, track.profileId);
     }
   }
 

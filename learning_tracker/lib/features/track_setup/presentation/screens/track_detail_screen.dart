@@ -418,7 +418,7 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
           .read(userDatabaseProvider)
           .trackDao
           .deleteTrackAndData(track.id);
-      await invalidateAfterTrackDataChange(ref, track.profileId);
+      await onTrackChanged(ref, track.profileId);
       if (mounted) context.router.pop();
     }
   }

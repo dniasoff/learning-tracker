@@ -5,11 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/services/learning_program_service.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
-import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/bulk_prior_completion_service.dart';
 import 'package:learning_tracker/features/onboarding/presentation/providers/onboarding_providers.dart';
-import 'package:learning_tracker/features/progress/presentation/providers/progress_providers.dart';
-import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
 import 'package:learning_tracker/features/track_setup/domain/entities/add_track_result.dart';
 import 'package:learning_tracker/features/track_setup/domain/services/track_creation_service.dart'
     show kDefaultStudyDays;
@@ -99,7 +96,7 @@ class _State extends ConsumerState<AddTrackFlowScreen> {
       await ref
           .read(trackCreationServiceProvider)
           .createTrack(result: result, profileId: widget.profileId);
-      await invalidateAfterTrackDataChange(ref, widget.profileId);
+      await onTrackChanged(ref, widget.profileId);
       if (prior != null && result.programId == null)
         unawaited(_applyPrior(prior, result));
       await notifier.clearSaved();
@@ -148,10 +145,9 @@ class _State extends ConsumerState<AddTrackFlowScreen> {
       stageIds: const [1],
       profileId: widget.profileId,
     );
-    ref.invalidate(dashboardCompletionPercentageProvider(r.curriculumId));
-    ref.invalidate(dashboardLastCompletionProvider(r.curriculumId));
-    ref.invalidate(progressOverviewStatsProvider);
-    ref.invalidate(allDailyTasksProvider);
+    // Use the centralized onTrackChanged helper instead of a parallel
+    // per-site invalidation list (Story 26.7 — DNI-350).
+    await onTrackChanged(ref, widget.profileId);
   }
 
   Future<bool?> _exitDialog() => showDialog<bool>(

@@ -19,14 +19,11 @@ import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/core/utils/hebrew_calendar_utils.dart';
 import 'package:learning_tracker/core/widgets/learning_date_picker_theme.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
-import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/bulk_prior_completion_service.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/learning_process_wizard_service.dart';
 import 'package:learning_tracker/features/onboarding/presentation/providers/onboarding_providers.dart';
 import 'package:learning_tracker/features/onboarding/presentation/screens/learning_process_wizard_screen.dart';
-import 'package:learning_tracker/features/progress/presentation/providers/progress_providers.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/goal_entity.dart';
-import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
 import 'package:learning_tracker/features/scheduler/presentation/widgets/hebrew_date_picker.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/curriculum_scope_providers.dart';
 import 'package:learning_tracker/features/stages/domain/models/schedule_type.dart';
@@ -658,7 +655,7 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
         profileId: widget.profileId,
       );
 
-      await invalidateAfterTrackDataChange(ref, widget.profileId);
+      await onTrackChanged(ref, widget.profileId);
 
       if (!_isProgramTrack && priorCompletionSelection != null) {
         unawaited(
@@ -727,11 +724,9 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
       profileId: widget.profileId,
     );
 
-    // Refresh dashboard/progress/task views immediately.
-    ref.invalidate(dashboardCompletionPercentageProvider(curriculum));
-    ref.invalidate(dashboardLastCompletionProvider(curriculum));
-    ref.invalidate(progressOverviewStatsProvider);
-    ref.invalidate(allDailyTasksProvider);
+    // Use the centralized onTrackChanged helper instead of a parallel
+    // per-site invalidation list (Story 26.7 — DNI-350).
+    await onTrackChanged(ref, widget.profileId);
 
     return (
       itemCount: completion.itemCount,
