@@ -49,10 +49,11 @@ class OnboardingScreen extends ConsumerStatefulWidget {
 /// Slim onboarding phases — global settings only.
 ///
 /// Per-track configuration is delegated to [AddTrackFlow] (Story 18.1).
+/// Hebrew-terms and Hebrew-date toggles are NOT onboarding steps — they live
+/// only in Settings (UX-DR3 / Story 26.20).
 enum _ScreenPhase {
   profileCreation,
   parentPinSetup,
-  calendarPreference,
   addTrack,
   addAnotherPrompt,
   handoff,
@@ -64,7 +65,6 @@ const _kOnboardingPhase = 'onboarding_phase';
 const _kOnboardingProfileId = 'onboarding_profile_id';
 const _kOnboardingProfileName = 'onboarding_profile_name';
 const _kOnboardingProfileMode = 'onboarding_profile_mode';
-const _kOnboardingHebrewCalendar = 'onboarding_use_hebrew_calendar';
 const _kOnboardingShowNikud = 'onboarding_show_nikud';
 const _kOnboardingTransliterationVariant = 'onboarding_transliteration_variant';
 
@@ -72,9 +72,6 @@ const _kOnboardingTransliterationVariant = 'onboarding_transliteration_variant';
 const kOnboardingComplete = 'onboarding_complete';
 
 class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
-  /// `true` = Hebrew calendar; `false` = Gregorian (matches UI labels).
-  bool _useHebrewCalendar = true;
-
   /// `true` = render Hebrew text with nikud (vowel marks); `false` = strip.
   bool _showNikud = true;
 
@@ -158,7 +155,6 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     if (profileId != null) _createdProfileId = profileId;
     if (profileName != null) _profileName = profileName;
     if (profileMode != null) _profileMode = profileMode;
-    _useHebrewCalendar = prefs.getBool(_kOnboardingHebrewCalendar) ?? true;
     _showNikud = prefs.getBool(_kOnboardingShowNikud) ?? true;
     final savedVariant = prefs.getString(_kOnboardingTransliterationVariant);
     if (savedVariant == 'sephardi') {
@@ -169,8 +165,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     // quickly), don't let a delayed restore overwrite the newer phase.
     if (!mounted || _phase != _ScreenPhase.profileCreation) return;
 
-    // Legacy: older builds created the profile row before the calendar step.
-    if (profileId != null && savedPhase == 'calendarPreference') {
+    // Legacy: older builds stored a 'calendarPreference' phase that no longer
+    // exists — redirect those sessions straight to addTrack.
+    if (savedPhase == 'calendarPreference') {
       setState(() {
         _phase = _ScreenPhase.addTrack;
       });
@@ -193,7 +190,6 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       await prefs.setString(_kOnboardingProfileName, _profileName!);
     }
     await prefs.setString(_kOnboardingProfileMode, _profileMode);
-    await prefs.setBool(_kOnboardingHebrewCalendar, _useHebrewCalendar);
     await prefs.setBool(_kOnboardingShowNikud, _showNikud);
     await prefs.setString(
       _kOnboardingTransliterationVariant,
@@ -208,7 +204,6 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       _kOnboardingProfileId,
       _kOnboardingProfileName,
       _kOnboardingProfileMode,
-      _kOnboardingHebrewCalendar,
       _kOnboardingShowNikud,
       _kOnboardingTransliterationVariant,
     ]) {
@@ -223,7 +218,6 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     if (name.isEmpty || _nameError != null || _isCreatingProfile) return;
     setState(() => _isCreatingProfile = true);
 
-    await ref.read(useHebrewDateProvider.notifier).set(_useHebrewCalendar);
     await ref.read(showNikudProvider.notifier).set(_showNikud);
     await ref
         .read(currentTransliterationVariantProvider.notifier)
@@ -366,7 +360,6 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     _createdProfileId = null;
     _profileName = null;
     _profileMode = 'adult';
-    _useHebrewCalendar = true;
     _nameError = null;
     _trackCount = 0;
     _lastTrackLabel = null;
@@ -398,13 +391,10 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    final isCombinedProfilePhase =
-        _phase == _ScreenPhase.profileCreation ||
-        _phase == _ScreenPhase.calendarPreference;
+    final isProfilePhase = _phase == _ScreenPhase.profileCreation;
 
     final appBarTitle = switch (_phase) {
-      _ScreenPhase.profileCreation ||
-      _ScreenPhase.calendarPreference => const SizedBox.shrink(),
+      _ScreenPhase.profileCreation => const SizedBox.shrink(),
       _ScreenPhase.parentPinSetup => const AppBarTitle(text: 'Set Parent PIN'),
       _ScreenPhase.addTrack => const AppBarTitle(text: 'Set Up a Track'),
       _ScreenPhase.addAnotherPrompt => const AppBarTitle(text: 'Track Ready!'),
@@ -413,9 +403,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     };
 
     // Hide app bar during AddTrackFlow (it has its own progress indicator).
-    // Combined profile step has no app bar (back lives in the scroll content).
-    final showAppBar =
-        _phase != _ScreenPhase.addTrack && !isCombinedProfilePhase;
+    // Profile creation step has no app bar (back lives in the scroll content).
+    final showAppBar = _phase != _ScreenPhase.addTrack && !isProfilePhase;
 
     return Scaffold(
       appBar: showAppBar ? AppBar(title: appBarTitle) : null,
@@ -435,7 +424,6 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
           child: switch (_phase) {
             _ScreenPhase.profileCreation => _buildProfileCreation(theme),
             _ScreenPhase.parentPinSetup => _buildParentPinSetup(theme),
-            _ScreenPhase.calendarPreference => _buildProfileCreation(theme),
             _ScreenPhase.addTrack => _buildAddTrack(),
             _ScreenPhase.addAnotherPrompt => _buildAddAnotherPrompt(theme),
             _ScreenPhase.handoff => _buildHandoff(theme),

@@ -9,6 +9,8 @@ import 'package:learning_tracker/core/providers/firebase_providers.dart';
 import 'package:learning_tracker/core/providers/talker_provider.dart';
 import 'package:learning_tracker/core/services/pin_service.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/widgets/preference_list_tile.dart';
+import 'package:learning_tracker/core/widgets/preference_segmented_tile.dart';
 import 'package:learning_tracker/features/auth/domain/models/app_user.dart';
 import 'package:learning_tracker/features/auth/presentation/providers/auth_providers.dart'
     show authRepositoryProvider;
@@ -79,7 +81,7 @@ class SettingsScreen extends ConsumerWidget {
               _SurfaceCard(
                 child: Column(
                   children: [
-                    _SettingsTile(
+                    PreferenceListTile.withIcon(
                       icon: Icons.route_rounded,
                       iconColor: AppTheme.brandBlueBright,
                       iconBackground: AppTheme.brandBlueSoft,
@@ -88,7 +90,7 @@ class SettingsScreen extends ConsumerWidget {
                       onTap: () => context.pushRoute(TrackManagementHubRoute()),
                     ),
                     _tileDivider(theme),
-                    _SettingsTile(
+                    PreferenceListTile.withIcon(
                       icon: Icons.people_alt_rounded,
                       iconColor: AppTheme.brandBlueBright,
                       iconBackground: AppTheme.brandBlueSoft,
@@ -107,15 +109,15 @@ class SettingsScreen extends ConsumerWidget {
             _SurfaceCard(
               child: Column(
                 children: [
-                  _HebrewDateTile(theme: theme),
+                  _HebrewDateTile(),
                   _tileDivider(theme),
-                  _HebrewTermsTile(theme: theme),
+                  _HebrewTermsTile(),
                   _TransliterationVariantTileSection(theme: theme),
                   _tileDivider(theme),
                   _NikudTile(theme: theme),
                   if (!isChildProfile) ...[
                     _tileDivider(theme),
-                    _SettingsTile(
+                    PreferenceListTile.withIcon(
                       icon: Icons.menu_book_rounded,
                       iconColor: AppTheme.brandGoldDeep,
                       iconBackground: AppTheme.brandGoldSoft,
@@ -133,7 +135,7 @@ class SettingsScreen extends ConsumerWidget {
             ),
             const SizedBox(height: 12),
             _SurfaceCard(
-              child: _SettingsTile(
+              child: PreferenceListTile.withIcon(
                 icon: Icons.notifications_active_outlined,
                 iconColor: AppTheme.brandCoralDeep,
                 iconBackground: theme.colorScheme.errorContainer,
@@ -160,7 +162,7 @@ class SettingsScreen extends ConsumerWidget {
                 Column(
                   children: [
                     _SurfaceCard(
-                      child: _SettingsTile(
+                      child: PreferenceListTile.withIcon(
                         icon: Icons.vpn_key_outlined,
                         iconColor: AppTheme.brandInkMuted,
                         iconBackground: theme.colorScheme.secondaryContainer,
@@ -174,7 +176,7 @@ class SettingsScreen extends ConsumerWidget {
                 ),
               if (!isChildProfile)
                 _SurfaceCard(
-                  child: _SettingsTile(
+                  child: PreferenceListTile.withIcon(
                     icon: Icons.logout_rounded,
                     iconColor: theme.colorScheme.error,
                     iconBackground: theme.colorScheme.errorContainer,
@@ -187,7 +189,7 @@ class SettingsScreen extends ConsumerWidget {
               if (showDeleteAccountTile) ...[
                 const SizedBox(height: 12),
                 _SurfaceCard(
-                  child: _SettingsTile(
+                  child: PreferenceListTile.withIcon(
                     icon: Icons.delete_forever_rounded,
                     iconColor: theme.colorScheme.error,
                     iconBackground: theme.colorScheme.errorContainer,
@@ -210,7 +212,7 @@ class SettingsScreen extends ConsumerWidget {
             ],
             const SizedBox(height: 24),
             _SurfaceCard(
-              child: _SettingsTile(
+              child: PreferenceListTile.withIcon(
                 icon: Icons.bug_report_outlined,
                 iconColor: AppTheme.brandInkMuted,
                 iconBackground: const Color(0xFFF0F1F5),
@@ -299,188 +301,66 @@ class SettingsScreen extends ConsumerWidget {
   }
 }
 
-/// Calendar preference: tab-style [SegmentedButton] (Gregorian vs Hebrew).
-class _HebrewDateTile extends ConsumerWidget {
-  const _HebrewDateTile({required this.theme});
+// ─── Preference tiles ────────────────────────────────────────────────────────
 
-  final ThemeData theme;
+/// Calendar preference toggle (Hebrew vs English date display).
+///
+/// Default: `useHebrewDate: false` (English calendar).
+/// Surfaced via [PreferenceListTile] with a [Switch] trailing widget so the
+/// user can toggle without navigating away.
+class _HebrewDateTile extends ConsumerWidget {
+  const _HebrewDateTile();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
     final useHebrew = ref.watch(useHebrewDateProvider);
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                width: 32,
-                height: 32,
-                decoration: BoxDecoration(
-                  color: AppTheme.brandBlueSoft,
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                alignment: Alignment.center,
-                child: Icon(
-                  Icons.calendar_month_rounded,
-                  color: theme.colorScheme.primary,
-                  size: 16,
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      l10n.calendarPreference,
-                      style: theme.textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w600,
-                        fontSize: 19,
-                        color: const Color(0xFF1D2432),
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      l10n.calendarPreferenceSubtitle,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: const Color(0xFF929BAA),
-                        fontSize: 15,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          SegmentedButton<bool>(
-            showSelectedIcon: false,
-            segments: [
-              ButtonSegment<bool>(
-                value: false,
-                label: Text(l10n.calendarGregorian),
-              ),
-              ButtonSegment<bool>(
-                value: true,
-                label: Text(l10n.calendarHebrew),
-              ),
-            ],
-            selected: {useHebrew},
-            onSelectionChanged: (selected) {
-              if (selected.isEmpty) return;
-              ref.read(useHebrewDateProvider.notifier).set(selected.first);
-            },
-            style: SegmentedButton.styleFrom(
-              selectedBackgroundColor: AppTheme.brandBlueBright,
-              selectedForegroundColor: Colors.white,
-              side: const BorderSide(color: Color(0xFFD7DEEA)),
-            ),
-          ),
-        ],
+    return PreferenceListTile(
+      title: l10n.calendarPreference,
+      subtitle: l10n.calendarPreferenceSubtitle,
+      leading: const PreferenceIconPill(
+        icon: Icons.calendar_month_rounded,
+        iconColor: AppTheme.brandBlueBright,
+        iconBackground: AppTheme.brandBlueSoft,
+      ),
+      trailing: Switch(
+        value: useHebrew,
+        onChanged: (v) => ref.read(useHebrewDateProvider.notifier).set(v),
       ),
     );
   }
 }
 
-/// Toggle: render Jewish learning terms (chazara, review section, etc.) in
-/// Hebrew script vs English transliteration. Independent of the app locale.
+/// Hebrew-terms toggle — renders Jewish learning terminology in Hebrew script
+/// vs English transliteration.
+///
+/// Default: `hebrewTerms: false` (English transliteration).
+/// Surfaced via [PreferenceListTile] with a [Switch] trailing widget.
 class _HebrewTermsTile extends ConsumerWidget {
-  const _HebrewTermsTile({required this.theme});
-
-  final ThemeData theme;
+  const _HebrewTermsTile();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
     final useHebrew = ref.watch(useHebrewTermsProvider);
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                width: 32,
-                height: 32,
-                decoration: BoxDecoration(
-                  color: AppTheme.brandBlueSoft,
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                alignment: Alignment.center,
-                child: Icon(
-                  Icons.translate_rounded,
-                  color: theme.colorScheme.primary,
-                  size: 16,
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      l10n.hebrewTermsPreference,
-                      style: theme.textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w600,
-                        fontSize: 19,
-                        color: const Color(0xFF1D2432),
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      l10n.hebrewTermsPreferenceSubtitle,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: const Color(0xFF929BAA),
-                        fontSize: 15,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          SegmentedButton<bool>(
-            showSelectedIcon: false,
-            // Order matches the Calendar Preference tile above: English on
-            // the left, Hebrew on the right.
-            segments: [
-              ButtonSegment<bool>(
-                value: false,
-                label: Text(l10n.hebrewTermsEnglish),
-              ),
-              ButtonSegment<bool>(
-                value: true,
-                label: Text(l10n.hebrewTermsHebrew),
-              ),
-            ],
-            selected: {useHebrew},
-            onSelectionChanged: (selected) {
-              if (selected.isEmpty) return;
-              ref.read(useHebrewTermsProvider.notifier).set(selected.first);
-            },
-            style: SegmentedButton.styleFrom(
-              selectedBackgroundColor: AppTheme.brandBlueBright,
-              selectedForegroundColor: Colors.white,
-              side: const BorderSide(color: Color(0xFFD7DEEA)),
-            ),
-          ),
-        ],
+    return PreferenceListTile(
+      title: l10n.hebrewTermsPreference,
+      subtitle: l10n.hebrewTermsPreferenceSubtitle,
+      leading: const PreferenceIconPill(
+        icon: Icons.translate_rounded,
+        iconColor: AppTheme.brandBlueBright,
+        iconBackground: AppTheme.brandBlueSoft,
+      ),
+      trailing: Switch(
+        value: useHebrew,
+        onChanged: (v) => ref.read(useHebrewTermsProvider.notifier).set(v),
       ),
     );
   }
 }
 
 /// Conditionally renders the transliteration-variant tile (Sephardi vs
-/// Ashkenazi) only when the Hebrew Terms toggle is **off**. Returns an
-/// empty widget when Hebrew is on, since the variant has no effect there.
+/// Ashkenazi) only when the Hebrew Terms toggle is **off**.
 class _TransliterationVariantTileSection extends ConsumerWidget {
   const _TransliterationVariantTileSection({required this.theme});
 
@@ -500,8 +380,7 @@ class _TransliterationVariantTileSection extends ConsumerWidget {
 }
 
 /// Picks the Ashkenazi or Sephardi transliteration dialect for English-mode
-/// named values (Bereishis vs Bereshit). Same visual layout as the other
-/// preference tiles on this screen.
+/// named values (Bereishis vs Bereshit).
 class _TransliterationVariantTile extends ConsumerWidget {
   const _TransliterationVariantTile({required this.theme});
 
@@ -510,89 +389,22 @@ class _TransliterationVariantTile extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final variant = ref.watch(currentTransliterationVariantProvider);
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                width: 32,
-                height: 32,
-                decoration: BoxDecoration(
-                  color: AppTheme.brandBlueSoft,
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                alignment: Alignment.center,
-                child: Icon(
-                  Icons.record_voice_over_rounded,
-                  color: theme.colorScheme.primary,
-                  size: 16,
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Pronunciation',
-                      style: theme.textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w600,
-                        fontSize: 19,
-                        color: const Color(0xFF1D2432),
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      'Bereishis (Ashkenazi) or Bereshit (Sephardi)',
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: const Color(0xFF929BAA),
-                        fontSize: 15,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          SegmentedButton<TransliterationVariant>(
-            showSelectedIcon: false,
-            segments: const [
-              ButtonSegment<TransliterationVariant>(
-                value: TransliterationVariant.ashkenazi,
-                label: Text('Ashkenazi'),
-              ),
-              ButtonSegment<TransliterationVariant>(
-                value: TransliterationVariant.sephardi,
-                label: Text('Sephardi'),
-              ),
-            ],
-            selected: {variant},
-            onSelectionChanged: (selected) {
-              if (selected.isEmpty) return;
-              ref
-                  .read(currentTransliterationVariantProvider.notifier)
-                  .set(selected.first);
-            },
-            style: SegmentedButton.styleFrom(
-              selectedBackgroundColor: AppTheme.brandBlueBright,
-              selectedForegroundColor: Colors.white,
-              side: const BorderSide(color: Color(0xFFD7DEEA)),
-            ),
-          ),
-        ],
-      ),
+    return PreferenceSegmentedTile<TransliterationVariant>(
+      icon: Icons.record_voice_over_rounded,
+      title: 'Pronunciation',
+      subtitle: 'Bereishis (Ashkenazi) or Bereshit (Sephardi)',
+      options: const [
+        (value: TransliterationVariant.ashkenazi, label: 'Ashkenazi'),
+        (value: TransliterationVariant.sephardi, label: 'Sephardi'),
+      ],
+      value: variant,
+      onChanged: (v) =>
+          ref.read(currentTransliterationVariantProvider.notifier).set(v),
     );
   }
 }
 
-/// Nikud (Hebrew vowel marks) preference: same layout as [_HebrewTermsTile].
-/// Toggles whether Hebrew text is rendered with or without nikud, applied
-/// in the source viewer.
+/// Nikud (Hebrew vowel marks) preference — show or hide nikud when learning.
 class _NikudTile extends ConsumerWidget {
   const _NikudTile({required this.theme});
 
@@ -601,78 +413,21 @@ class _NikudTile extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final showNikud = ref.watch(showNikudProvider);
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                width: 32,
-                height: 32,
-                decoration: BoxDecoration(
-                  color: AppTheme.brandBlueSoft,
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                alignment: Alignment.center,
-                child: Icon(
-                  Icons.text_fields_rounded,
-                  color: theme.colorScheme.primary,
-                  size: 16,
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Nikud',
-                      style: theme.textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w600,
-                        fontSize: 19,
-                        color: const Color(0xFF1D2432),
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      'Show or hide Hebrew vowel marks when learning.',
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: const Color(0xFF929BAA),
-                        fontSize: 15,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          SegmentedButton<bool>(
-            showSelectedIcon: false,
-            // Order: Without (cleaner) on the left, With on the right.
-            segments: const [
-              ButtonSegment<bool>(value: false, label: Text('Without nikud')),
-              ButtonSegment<bool>(value: true, label: Text('With nikud')),
-            ],
-            selected: {showNikud},
-            onSelectionChanged: (selected) {
-              if (selected.isEmpty) return;
-              ref.read(showNikudProvider.notifier).set(selected.first);
-            },
-            style: SegmentedButton.styleFrom(
-              selectedBackgroundColor: AppTheme.brandBlueBright,
-              selectedForegroundColor: Colors.white,
-              side: const BorderSide(color: Color(0xFFD7DEEA)),
-            ),
-          ),
-        ],
-      ),
+    return PreferenceSegmentedTile<bool>(
+      icon: Icons.text_fields_rounded,
+      title: 'Nikud',
+      subtitle: 'Show or hide Hebrew vowel marks when learning.',
+      options: const [
+        (value: false, label: 'Without nikud'),
+        (value: true, label: 'With nikud'),
+      ],
+      value: showNikud,
+      onChanged: (v) => ref.read(showNikudProvider.notifier).set(v),
     );
   }
 }
+
+// ─── Layout helpers ──────────────────────────────────────────────────────────
 
 class _SectionHeader extends StatelessWidget {
   const _SectionHeader({required this.title});
@@ -683,7 +438,7 @@ class _SectionHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Padding(
-      padding: const EdgeInsets.only(left: 4),
+      padding: const EdgeInsetsDirectional.only(start: 4),
       child: Text(
         title,
         style: theme.textTheme.labelMedium?.copyWith(
@@ -722,74 +477,10 @@ class _SurfaceCard extends StatelessWidget {
   }
 }
 
-class _SettingsTile extends StatelessWidget {
-  const _SettingsTile({
-    required this.icon,
-    required this.iconColor,
-    required this.iconBackground,
-    required this.title,
-    this.subtitle,
-    this.trailing,
-    this.onTap,
-    this.titleColor,
-  });
-
-  final IconData icon;
-  final Color iconColor;
-  final Color iconBackground;
-  final String title;
-  final String? subtitle;
-  final Widget? trailing;
-  final VoidCallback? onTap;
-  final Color? titleColor;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return ListTile(
-      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 3),
-      minLeadingWidth: 0,
-      leading: Container(
-        width: 32,
-        height: 32,
-        decoration: BoxDecoration(
-          color: iconBackground,
-          borderRadius: BorderRadius.circular(16),
-        ),
-        alignment: Alignment.center,
-        child: Icon(icon, color: iconColor, size: 16.5),
-      ),
-      title: Text(
-        title,
-        style: theme.textTheme.titleSmall?.copyWith(
-          color: titleColor,
-          fontWeight: FontWeight.w600,
-          fontSize: 19,
-        ),
-      ),
-      subtitle: subtitle == null
-          ? null
-          : Text(
-              subtitle!,
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: const Color(0xFF929BAA),
-                fontSize: 15,
-              ),
-            ),
-      trailing:
-          trailing ??
-          Icon(
-            Icons.chevron_right_rounded,
-            size: 19,
-            color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.55),
-          ),
-      onTap: onTap,
-    );
-  }
-}
-
 Widget _tileDivider(ThemeData theme) =>
     Divider(height: 1, indent: 62, endIndent: 14, color: theme.dividerColor);
+
+// ─── Parental controls section ───────────────────────────────────────────────
 
 /// Parental controls section — only rendered when the signed-in user is in
 /// child mode. Surfaces tiles to enter parent mode and manage the parent PIN.
@@ -850,7 +541,7 @@ class _ParentalControlsSectionState
         _SectionHeader(title: l10n.sectionParentalControls),
         const SizedBox(height: 10),
         _SurfaceCard(
-          child: _SettingsTile(
+          child: PreferenceListTile.withIcon(
             icon: Icons.admin_panel_settings_outlined,
             iconColor: AppTheme.brandCoralDeep,
             iconBackground: const Color(0xFFF8E3E7),
@@ -870,7 +561,7 @@ class _ParentalControlsSectionState
         ),
         const SizedBox(height: 12),
         _SurfaceCard(
-          child: _SettingsTile(
+          child: PreferenceListTile.withIcon(
             icon: Icons.pin_outlined,
             iconColor: AppTheme.brandInkMuted,
             iconBackground: AppTheme.brandCreamSoft,
@@ -901,6 +592,8 @@ class _ParentalControlsSectionState
     );
   }
 }
+
+// ─── Account action helpers ───────────────────────────────────────────────────
 
 Future<void> _showChangePasswordFlow(
   BuildContext context,
