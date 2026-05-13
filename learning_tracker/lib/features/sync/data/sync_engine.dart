@@ -1782,16 +1782,42 @@ class SyncEngine {
                 ),
               );
         } else {
-          await (_database.update(
-            _database.curriculumTracks,
-          )..where((t) => t.id.equals(existing.id))).write(
-            CurriculumTracksCompanion(
-              isActive: Value(isActive),
-              activatedAt: Value(activatedAt),
-              deactivatedAt: Value(deactivatedAt),
-              paceResetDate: Value(paceResetDate),
-            ),
-          );
+          // v2 §4.1 LWW: the "last write" is the most recent state-change
+          // timestamp — max(activatedAt, deactivatedAt).  Ties go to local.
+          final remoteUpdatedAt =
+              deactivatedAt != null && deactivatedAt.isAfter(activatedAt)
+              ? deactivatedAt
+              : activatedAt;
+          final localUpdatedAt =
+              existing.deactivatedAt != null &&
+                  existing.deactivatedAt!.isAfter(existing.activatedAt)
+              ? existing.deactivatedAt!
+              : existing.activatedAt;
+
+          if (remoteIsNewer(
+            localUpdatedAt: localUpdatedAt,
+            remoteUpdatedAt: remoteUpdatedAt,
+          )) {
+            await (_database.update(
+              _database.curriculumTracks,
+            )..where((t) => t.id.equals(existing.id))).write(
+              CurriculumTracksCompanion(
+                isActive: Value(isActive),
+                activatedAt: Value(activatedAt),
+                deactivatedAt: Value(deactivatedAt),
+                paceResetDate: Value(paceResetDate),
+              ),
+            );
+            _logger.debug(
+              'LWW: remote curriculum track wins '
+              '(curriculum=$curriculumKey, trackType=$trackTypeKey)',
+            );
+          } else {
+            _logger.debug(
+              'LWW: local curriculum track kept '
+              '(curriculum=$curriculumKey, trackType=$trackTypeKey)',
+            );
+          }
         }
       } catch (e) {
         // ignore: avoid_catches_without_on_clauses — intentional merge-loop error boundary
