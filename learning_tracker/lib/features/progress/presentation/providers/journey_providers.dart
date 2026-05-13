@@ -3,6 +3,7 @@ import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
+import 'package:learning_tracker/core/learning/completion_writer_providers.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
@@ -48,6 +49,7 @@ final learningLedgerProvider = FutureProvider.autoDispose
 /// Computes the full JourneyViewModel for a given profile.
 @riverpod
 Future<JourneyViewModel> journeyViewModel(Ref ref, int profileId) async {
+  ref.watch<int>(completionCommittedProvider);
   final ledgerEntries = await ref.watch(
     learningLedgerProvider(profileId).future,
   );

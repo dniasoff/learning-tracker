@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
+import 'package:learning_tracker/core/learning/completion_writer_providers.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
@@ -79,6 +80,7 @@ Future<int> aggregateCount(Ref ref, String curriculumId) async {
 /// for immediate progress feedback in the Progress screen.
 @riverpod
 Future<ProgressOverviewStats> progressOverviewStats(Ref ref) async {
+  ref.watch<int>(completionCommittedProvider);
   final db = ref.watch(userDatabaseProvider);
   final profileId = ref.watch(activeProfileIdProvider);
   final completions = await db.completionDao.getCompletionsByProfile(profileId);

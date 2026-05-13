@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/enums/user_mode.dart';
 import 'package:learning_tracker/core/labels/curriculum_label_providers.dart';
+import 'package:learning_tracker/core/learning/completion_writer_providers.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/preferences/text_display_preferences.dart';
@@ -14,14 +15,9 @@ import 'package:learning_tracker/features/content_browsing/data/repositories/tex
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/text_display_providers.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
-import 'package:learning_tracker/features/gamification/presentation/providers/achievements_overview_provider.dart';
 import 'package:learning_tracker/features/gamification/presentation/widgets/achievement_unlock_celebration.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_request.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/completion_providers.dart';
-import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
-import 'package:learning_tracker/features/progress/presentation/providers/journey_providers.dart';
-import 'package:learning_tracker/features/progress/presentation/providers/lifetime_knowledge_providers.dart';
-import 'package:learning_tracker/features/progress/presentation/providers/progress_providers.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dart';
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
@@ -638,33 +634,11 @@ class _CompletionSectionState extends ConsumerState<_CompletionSection> {
         ),
       );
 
-      final profileId = ref.read(activeProfileIdProvider);
-      ref.invalidate(allDailyTasksProvider);
-      ref.invalidate(dashboardStreakProvider);
-      ref.invalidate(dashboardGlobalPointsProvider);
-      ref.invalidate(dashboardCompletionPercentageProvider(task.curriculumId));
-      ref.invalidate(dashboardLastCompletionProvider(task.curriculumId));
-      ref.invalidate(dashboardPaceStatusProvider(task.curriculumId));
-      ref.invalidate(dashboardChildNextRewardProvider);
-      ref.invalidate(lifetimeTotalsAcrossAllCurriculaProvider(profileId));
-      ref.invalidate(globalLifetimeCurriculaProvider(profileId));
-      ref.invalidate(progressOverviewStatsProvider);
-      ref.invalidate(journeyViewModelProvider(profileId));
-      ref.invalidate(achievementsOverviewProvider);
-      ref.invalidate(
-        isStageCompletedProvider((
-          sefariaRef: widget.sefariaRef,
-          stageId: task.stageOrder,
-          trackType: trackType,
-        )),
-      );
-      ref.invalidate(
-        isStageCompletedProvider((
-          sefariaRef: widget.sefariaRef,
-          stageId: task.stageDefinitionId,
-          trackType: trackType,
-        )),
-      );
+      // Signal all completion-aware providers to rebuild (Story 26.13 — DNI-356).
+      // Incrementing completionCommittedProvider replaces 14 direct
+      // ref.invalidate() calls: each consumer now watches this counter and
+      // re-fetches automatically on every new commit.
+      ref.read(completionCommittedProvider.notifier).increment();
 
       if (mounted) {
         setState(() => _saving = false);

@@ -3,6 +3,7 @@ import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/core/enums/user_mode.dart';
+import 'package:learning_tracker/core/learning/completion_writer_providers.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/services/cross_curriculum_aggregator.dart';
 import 'package:learning_tracker/core/streak/streak_state_provider.dart';
@@ -135,6 +136,7 @@ Future<double> dashboardCompletionPercentage(
   Ref ref,
   CurriculumId curriculum,
 ) async {
+  ref.watch<int>(completionCommittedProvider);
   final db = ref.watch(userDatabaseProvider);
   final profileId = ref.watch(activeProfileIdProvider);
   final completions = await db.completionDao
@@ -159,6 +161,7 @@ Future<DateTime?> dashboardLastCompletion(
   Ref ref,
   CurriculumId curriculum,
 ) async {
+  ref.watch<int>(completionCommittedProvider);
   final db = ref.watch(userDatabaseProvider);
   final profileId = ref.watch(activeProfileIdProvider);
   final completions = await db.completionDao
@@ -180,6 +183,7 @@ Future<DateTime?> dashboardLastCompletion(
 /// restoring from `completions` on a new-device empty-log first launch.
 @riverpod
 Stream<({int currentStreak, int maxStreak})> dashboardStreak(Ref ref) async* {
+  ref.watch<int>(completionCommittedProvider);
   final db = ref.watch(userDatabaseProvider);
   final profileId = ref.watch(activeProfileIdProvider);
   final stateProvider = StreakStateProvider(
@@ -200,6 +204,7 @@ Stream<({int currentStreak, int maxStreak})> dashboardStreak(Ref ref) async* {
 /// goal); excludes onboarding bulk prior marks and browse-only tracks.
 @riverpod
 Future<int> dashboardGlobalPoints(Ref ref) async {
+  ref.watch<int>(completionCommittedProvider);
   final userMode = ref.watch(dashboardUserModeProvider).asData?.value;
   if (userMode != UserMode.child) return 0;
 
@@ -212,6 +217,7 @@ Future<int> dashboardGlobalPoints(Ref ref) async {
 /// Next reward milestone for the child dashboard (closest threshold not yet met).
 @riverpod
 Future<DashboardChildNextReward?> dashboardChildNextReward(Ref ref) async {
+  ref.watch<int>(completionCommittedProvider);
   final userMode = ref.watch(dashboardUserModeProvider).asData?.value;
   if (userMode != UserMode.child) return null;
 
@@ -303,6 +309,7 @@ Future<PaceStatus?> dashboardPaceStatus(
   Ref ref,
   CurriculumId curriculum,
 ) async {
+  ref.watch<int>(completionCommittedProvider);
   final db = ref.watch(userDatabaseProvider);
   final profileId = ref.watch(activeProfileIdProvider);
   final now = ref.watch(clockProvider);

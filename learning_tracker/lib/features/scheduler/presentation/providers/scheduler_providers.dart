@@ -5,6 +5,7 @@ import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
+import 'package:learning_tracker/core/learning/completion_writer_providers.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/providers/calendar_providers.dart';
@@ -253,6 +254,7 @@ DailyPlanRepository dailyPlanRepository(Ref ref) {
 /// boosting are applied at read time.
 @riverpod
 Future<List<DailyTask>> allDailyTasks(Ref ref) async {
+  ref.watch<int>(completionCommittedProvider);
   final db = ref.watch(userDatabaseProvider);
   final generator = ref.watch(dailyTaskGeneratorProvider);
   final planRepo = ref.watch(dailyPlanRepositoryProvider);

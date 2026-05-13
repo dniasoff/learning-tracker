@@ -30,11 +30,14 @@ final trackStorageKeyForTrackIdProvider = FutureProvider.autoDispose
 /// Provider family to check whether a specific stage is already completed.
 ///
 /// Checks optimistic state first (instant), then falls back to DB query.
+/// Watches [completionCommittedProvider] so the DB check re-runs after every
+/// successful completion commit (Story 26.13).
 final isStageCompletedProvider = FutureProvider.autoDispose
     .family<bool, ({String sefariaRef, int stageId, String trackType})>((
       ref,
       params,
     ) async {
+      ref.watch<int>(completionCommittedProvider);
       // Check optimistic state first — instant, no DB query needed
       final optimistic = ref.watch(optimisticCompletionStateProvider);
       final key = optimisticKey(

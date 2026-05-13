@@ -2,8 +2,8 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/user_mode.dart';
+import 'package:learning_tracker/core/learning/completion_writer_providers.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/widgets/animated_progress_bar.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
@@ -118,24 +118,11 @@ class _CompletionButtonState extends ConsumerState<CompletionButton> {
       final result = await useCase(request);
       final completion = result.completion;
 
-      // --- Lazy provider invalidation (non-blocking) ---
-      final curriculumEnum = CurriculumId.values.where(
-        (c) => c.storageKey == widget.curriculumId,
-      );
-      if (curriculumEnum.isNotEmpty) {
-        ref.invalidate(
-          dashboardCompletionPercentageProvider(curriculumEnum.first),
-        );
-        ref.invalidate(dashboardLastCompletionProvider(curriculumEnum.first));
-      }
-      ref.invalidate(dashboardStreakProvider);
-      if (widget.userMode == UserMode.child) {
-        ref.invalidate(dashboardGlobalPointsProvider);
-      }
-      // Today's plan is snapshotted per local day — we don't invalidate
-      // allDailyTasksProvider on completion. The task card reads completion
-      // state from isStageCompletedProvider so the UI still reflects the
-      // mark-done, and new items are not pulled into today's list.
+      // Signal all completion-aware providers to rebuild (Story 26.13 — DNI-356).
+      // Incrementing completionCommittedProvider replaces the manual
+      // per-provider invalidation list: each consumer watches this counter
+      // and re-fetches automatically.
+      ref.read(completionCommittedProvider.notifier).increment();
 
       // Background: streak alert, rewards
       if (widget.userMode == UserMode.child) {
