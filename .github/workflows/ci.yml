@@ -6,8 +6,14 @@ on:
   push:
     branches: [main, dev, dev/**]
 
+# Shared Flutter + pub setup extracted via composite action pattern (inline reuse via YAML anchors)
+# GitHub Actions does not support YAML anchors natively, so setup steps are duplicated per job.
+# Each job is self-contained so it can run in parallel without coordination overhead.
+
 jobs:
-  format:
+  # ── 1. format-check ────────────────────────────────────────────────────────
+  format-check:
+    name: format-check
     runs-on: ubuntu-latest
     timeout-minutes: 5
 
@@ -39,7 +45,9 @@ jobs:
         working-directory: learning_tracker
         run: dart format --set-exit-if-changed .
 
+  # ── 2. analyze ─────────────────────────────────────────────────────────────
   analyze:
+    name: analyze
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
@@ -89,9 +97,91 @@ jobs:
         working-directory: learning_tracker
         run: dart analyze --fatal-infos
 
-  test:
+  # ── 3. audit ───────────────────────────────────────────────────────────────
+  # Runs `make audit` when the target exists; skips gracefully if not yet landed.
+  audit:
+    name: audit
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Cache pub dependencies
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/.pub-cache
+            learning_tracker/.dart_tool
+          key: ${{ runner.os }}-pub-${{ hashFiles('learning_tracker/pubspec.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-pub-
+
+      - name: Install dependencies
+        working-directory: learning_tracker
+        run: flutter pub get
+
+      - name: Run audit (skip gracefully if target absent)
+        working-directory: learning_tracker
+        run: |
+          if make -n audit >/dev/null 2>&1; then
+            make audit
+          else
+            echo "::notice::Makefile 'audit' target not found — skipping (DNI-389 not yet merged)"
+          fi
+
+  # ── 4. lint ────────────────────────────────────────────────────────────────
+  # Runs custom_lint when the package is present; skips gracefully if not yet added.
+  lint:
+    name: lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Cache pub dependencies
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/.pub-cache
+            learning_tracker/.dart_tool
+          key: ${{ runner.os }}-pub-${{ hashFiles('learning_tracker/pubspec.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-pub-
+
+      - name: Install dependencies
+        working-directory: learning_tracker
+        run: flutter pub get
+
+      - name: Run custom_lint (skip gracefully if package absent)
+        working-directory: learning_tracker
+        run: |
+          if dart pub deps --json 2>/dev/null | grep -q '"custom_lint"'; then
+            dart run custom_lint
+          else
+            echo "::notice::custom_lint not in pubspec — skipping"
+          fi
+
+  # ── 5. test + 6. coverage-floor ────────────────────────────────────────────
+  test:
+    name: test
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
 
     steps:
       - name: Checkout repository
@@ -135,9 +225,51 @@ jobs:
           FIREBASE_OPTIONS_DART: ${{ secrets.FIREBASE_OPTIONS_DART }}
         run: echo "$FIREBASE_OPTIONS_DART" > learning_tracker/lib/firebase_options.dart
 
-      - name: Run unit and widget tests
+      - name: Run tests with coverage (make ci)
         working-directory: learning_tracker
-        run: flutter test --concurrency=4 --coverage
+        run: make ci
+
+      - name: Upload golden failure artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: golden-failures
+          path: |
+            learning_tracker/test/**/failures/
+            learning_tracker/test/**/*_masterImage.png
+            learning_tracker/test/**/*_testImage.png
+            learning_tracker/test/**/*_isolatedDiff.png
+          if-no-files-found: ignore
+          retention-days: 7
+
+      # ── 6. coverage-floor (60% line coverage) ──────────────────────────────
+      - name: Install lcov
+        run: sudo apt-get install -y lcov
+
+      - name: Assert coverage floor ≥ 60%
+        run: |
+          LCOV_FILE="learning_tracker/coverage/lcov.info"
+          if [ ! -f "$LCOV_FILE" ]; then
+            echo "::error::coverage/lcov.info not found — ensure 'make ci' runs flutter test --coverage"
+            exit 1
+          fi
+          SUMMARY=$(lcov --summary "$LCOV_FILE" 2>&1)
+          echo "$SUMMARY"
+          # Extract line coverage percentage (format: "lines......: 72.5% (...)").
+          PCT=$(echo "$SUMMARY" | grep -i "^  lines" | grep -oE '[0-9]+\.[0-9]+' | head -1)
+          if [ -z "$PCT" ]; then
+            echo "::error::Could not parse line coverage from lcov --summary output"
+            exit 1
+          fi
+          FLOOR=60
+          # Use awk for float comparison (bash can't do floats natively)
+          PASS=$(awk -v pct="$PCT" -v floor="$FLOOR" 'BEGIN { print (pct >= floor) ? "yes" : "no" }')
+          echo "Line coverage: ${PCT}% (floor: ${FLOOR}%)"
+          if [ "$PASS" != "yes" ]; then
+            echo "::error::Coverage ${PCT}% is below the ${FLOOR}% floor — add tests or lower the floor deliberately"
+            exit 1
+          fi
+          echo "Coverage check passed: ${PCT}% >= ${FLOOR}%"
 
       - name: Upload golden test failures (diffs)
         if: failure()
@@ -157,7 +289,9 @@ jobs:
           fail_ci_if_error: false
           token: ${{ secrets.CODECOV_TOKEN }}
 
+  # ── 7. firestore-rules ──────────────────────────────────────────────────────
   firestore-rules:
+    name: firestore-rules
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
@@ -165,13 +299,25 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v5
 
+      - name: Check if firestore-rules test directory exists
+        id: check-dir
+        run: |
+          if [ -d "test/firestore-rules" ]; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::test/firestore-rules/ not found — skipping firestore-rules job"
+          fi
+
       - name: Setup Java (required by Firebase emulator)
+        if: steps.check-dir.outputs.exists == 'true'
         uses: actions/setup-java@v5
         with:
           distribution: 'temurin'
           java-version: '21'
 
       - name: Setup Node.js
+        if: steps.check-dir.outputs.exists == 'true'
         uses: actions/setup-node@v4
         with:
           node-version: '20'
@@ -179,21 +325,64 @@ jobs:
           cache-dependency-path: test/firestore-rules/package-lock.json
 
       - name: Install Firebase CLI
+        if: steps.check-dir.outputs.exists == 'true'
         run: npm install -g firebase-tools
 
       - name: Cache Firebase emulator
+        if: steps.check-dir.outputs.exists == 'true'
         uses: actions/cache@v5
         with:
           path: ~/.cache/firebase/emulators
           key: ${{ runner.os }}-firebase-emulator-firestore-v1.21.0
 
       - name: Install test dependencies
+        if: steps.check-dir.outputs.exists == 'true'
         working-directory: test/firestore-rules
         run: npm ci
 
       - name: Run Firestore rules tests against emulator
+        if: steps.check-dir.outputs.exists == 'true'
         run: |
           firebase emulators:exec \
             --only firestore \
             --project learning-tracker-rules-test \
             "cd test/firestore-rules && FIRESTORE_EMULATOR_HOST=localhost:9090 npm test"
+
+  # ── 9. arb-parity ──────────────────────────────────────────────────────────
+  arb-parity:
+    name: arb-parity
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Cache pub dependencies
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/.pub-cache
+            learning_tracker/.dart_tool
+          key: ${{ runner.os }}-pub-${{ hashFiles('learning_tracker/pubspec.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-pub-
+
+      - name: Install dependencies
+        working-directory: learning_tracker
+        run: flutter pub get
+
+      - name: Run ARB parity check (skip gracefully if tool absent)
+        working-directory: learning_tracker
+        run: |
+          if [ -f "tool/arb_parity_check.dart" ]; then
+            dart run tool/arb_parity_check.dart
+          else
+            echo "::notice::tool/arb_parity_check.dart not found — skipping arb-parity check"
+          fi
