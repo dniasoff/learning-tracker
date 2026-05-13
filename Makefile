@@ -1,4 +1,4 @@
-.PHONY: help test test-unit test-widget test-integration test-story-4.3 test-all ci analyze format linear-sync linear-story linear-check
+.PHONY: help test test-unit test-widget test-integration test-story-4.3 test-all ci analyze format schema-check linear-sync linear-story linear-check
 
 help:
 	@echo "Learning Tracker - Make Commands"
@@ -13,7 +13,8 @@ help:
 	@echo "Quality:"
 	@echo "  make analyze            - Run dart analyze"
 	@echo "  make format             - Run dart format"
-	@echo "  make ci                 - Run full CI check (analyze + format + all tests)"
+	@echo "  make schema-check       - Verify Drift v1 profileId/composite-index invariants"
+	@echo "  make ci                 - Run full CI check (analyze + format + schema-check + all tests)"
 	@echo ""
 	@echo "Linear Cache:"
 	@echo "  make linear-sync        - Full sync of Linear issues to .linear-cache/"
@@ -48,7 +49,11 @@ format:
 	@echo "Checking dart format..."
 	@cd learning_tracker && dart format --set-exit-if-changed .
 
-ci: analyze format test-all
+schema-check:
+	@echo "Running schema-check (DNI-327)..."
+	@dart run tool/schema_check.dart
+
+ci: analyze format schema-check test-all
 	@echo "✓ CI checks passed"
 
 linear-sync:
