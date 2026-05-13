@@ -26,6 +26,7 @@ import 'package:flutter_test/flutter_test.dart' show TestWidgetsFlutterBinding;
 import 'package:learning_tracker/core/analytics/parent_analytics_repository.dart';
 import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
 import 'package:learning_tracker/core/content/content_index.dart';
+import 'package:learning_tracker/core/content/content_tree.dart';
 import 'package:learning_tracker/core/content/program_ref_resolver.dart';
 import 'package:learning_tracker/core/database/daos/outbox_dao.dart';
 import 'package:learning_tracker/core/database/track_scope.dart';
@@ -946,6 +947,185 @@ void main() {
           resolver.resolve(programId: 'daf_yomi', dayOffset: 2),
           equals('Berakhot 3a'),
         );
+      });
+    });
+  });
+
+  // --------------------------------------------------------------------------
+  // Story 26.14 — ContentTree indexed lookup (DNI-357)
+  // --------------------------------------------------------------------------
+
+  group('Story 26.14 — ContentTree indexed lookup', tags: ['story_26_14'], () {
+    // ── children ─────────────────────────────────────────────────────────────
+
+    group('ContentTree.children', () {
+      test('empty stack returns top-level containers', () {
+        final tree = ContentTree.fromCurricula(_smallCurriculumSet());
+
+        final roots = tree.children(CurriculumId.mishnayos, []);
+
+        // Only the L1 container "Zeraim" has no deeper-level children at root
+        expect(roots.any((i) => i.level1 == 'Zeraim'), isTrue);
+      });
+
+      test('depth-1 stack returns L2 children', () {
+        final tree = ContentTree.fromCurricula(_smallCurriculumSet());
+
+        final children = tree.children(CurriculumId.mishnayos, ['Zeraim']);
+
+        // Zeraim → Berakhot container
+        expect(children.any((i) => i.level2 == 'Berakhot'), isTrue);
+      });
+
+      test('depth-3 stack returns leaf children', () {
+        // The _smallCurriculumSet fixture has 4-level leaves (Zeraim/Berakhot/
+        // Perek 1/Mishnah N) with no explicit L3 container.  ContentTree places
+        // each leaf under its immediate parent path, so they appear at depth 3.
+        final tree = ContentTree.fromCurricula(_smallCurriculumSet());
+
+        final children = tree.children(CurriculumId.mishnayos, [
+          'Zeraim',
+          'Berakhot',
+          'Perek 1',
+        ]);
+
+        // 4 mishnah leaves under Perek 1
+        expect(children, isNotEmpty);
+        expect(children.every((i) => i.isLeaf), isTrue);
+        expect(children.every((i) => i.level3 == 'Perek 1'), isTrue);
+      });
+
+      test('unknown stack returns empty list (no crash)', () {
+        final tree = ContentTree.fromCurricula(_smallCurriculumSet());
+
+        final children = tree.children(CurriculumId.mishnayos, ['NonExistent']);
+
+        expect(children, isEmpty);
+      });
+
+      test('children are sorted by sortOrder', () {
+        final tree = ContentTree.fromCurricula(_smallCurriculumSet());
+
+        // Use the depth-3 path which yields the 4 leaf items
+        final children = tree.children(CurriculumId.mishnayos, [
+          'Zeraim',
+          'Berakhot',
+          'Perek 1',
+        ]);
+
+        expect(children, isNotEmpty);
+        final orders = children.map((i) => i.sortOrder).toList();
+        final sorted = [...orders]..sort();
+        expect(orders, equals(sorted));
+      });
+
+      test('does not cross curriculum boundaries', () {
+        final tree = ContentTree.fromCurricula(_smallCurriculumSet());
+
+        final mishnayosRoots = tree.children(CurriculumId.mishnayos, []);
+        final bavliRoots = tree.children(CurriculumId.bavli, []);
+
+        expect(
+          mishnayosRoots.every((i) => i.curriculumId == 'mishnayos'),
+          isTrue,
+        );
+        expect(bavliRoots.every((i) => i.curriculumId == 'bavli'), isTrue);
+      });
+    });
+
+    // ── parent ────────────────────────────────────────────────────────────────
+
+    group('ContentTree.parent', () {
+      test('parent of a leaf returns its container', () {
+        final tree = ContentTree.fromCurricula(_smallCurriculumSet());
+
+        final p = tree.parent('Mishnah Berakhot 1:1');
+
+        // Leaf is at level4 "Mishnah 1", parent container is "Perek 1"
+        expect(p, isNotNull);
+        expect(p!.curriculumId, equals('mishnayos'));
+      });
+
+      test('parent of a top-level container is null', () {
+        final tree = ContentTree.fromCurricula(_smallCurriculumSet());
+
+        // 'Zeraim' is the root container — no parent
+        final p = tree.parent('Zeraim');
+
+        expect(p, isNull);
+      });
+
+      test('parent of unknown ref is null', () {
+        final tree = ContentTree.fromCurricula(_smallCurriculumSet());
+
+        expect(tree.parent('Made-up Ref'), isNull);
+      });
+    });
+
+    // ── adjacent ──────────────────────────────────────────────────────────────
+
+    group('ContentTree.adjacent (delegates to ContentIndex)', () {
+      test('adjacent returns prev/next leaf within curriculum', () {
+        final tree = ContentTree.fromCurricula(_smallCurriculumSet());
+
+        final adj = tree.adjacent('Mishnah Berakhot 1:2');
+
+        expect(adj.prev?.sefariaRef, equals('Mishnah Berakhot 1:1'));
+        expect(adj.next?.sefariaRef, equals('Mishnah Berakhot 1:3'));
+      });
+
+      test('adjacent does not cross curriculum boundaries', () {
+        final tree = ContentTree.fromCurricula(_smallCurriculumSet());
+
+        // Last mishnayos leaf; next must be null
+        final adj = tree.adjacent('Mishnah Berakhot 1:4');
+
+        expect(adj.next, isNull);
+      });
+    });
+
+    // ── containerFor ─────────────────────────────────────────────────────────
+
+    group('ContentTree.containerFor', () {
+      test('returns the container item for a known stack', () {
+        final tree = ContentTree.fromCurricula(_smallCurriculumSet());
+
+        final container = tree.containerFor(CurriculumId.mishnayos, ['Zeraim']);
+
+        expect(container, isNotNull);
+        expect(container!.displayNameHe, equals('זרעים'));
+      });
+
+      test('returns null for an unknown stack', () {
+        final tree = ContentTree.fromCurricula(_smallCurriculumSet());
+
+        expect(
+          tree.containerFor(CurriculumId.mishnayos, ['NonExistent']),
+          isNull,
+        );
+      });
+    });
+
+    // ── ContentIndex.firstLeaf (added for DNI-357) ────────────────────────────
+
+    group('ContentIndex.firstLeaf', () {
+      test('returns the sefariaRef of the first leaf in sort order', () {
+        final index = ContentIndex.fromCurricula(_smallCurriculumSet());
+
+        final ref = index.firstLeaf(CurriculumId.mishnayos);
+
+        expect(ref, equals('Mishnah Berakhot 1:1'));
+      });
+
+      test('returns null for an unknown curriculum (no items)', () {
+        // Build index without halachaDailyForSefardim
+        final index = ContentIndex.fromCurricula({
+          CurriculumId.mishnayos:
+              _smallCurriculumSet()[CurriculumId.mishnayos]!,
+        });
+
+        // Any curriculum not in the map → null
+        expect(index.firstLeaf(CurriculumId.bavli), isNull);
       });
     });
   });

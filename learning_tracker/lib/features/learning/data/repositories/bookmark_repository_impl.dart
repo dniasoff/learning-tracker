@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:drift/drift.dart' as drift;
+import 'package:learning_tracker/core/content/content_index.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
@@ -18,21 +19,32 @@ import 'package:learning_tracker/features/sync/data/sync_engine.dart';
 /// Schema v1 (DNI-322): Bookmarks now reference curriculumTracks by trackId
 /// (integer FK) rather than trackType (TEXT). The [_resolveTrackId] helper
 /// looks up the track row when only a TrackType enum is available.
+///
+/// Story 26.14 (DNI-357): accepts an optional [ContentIndex] for O(1)
+/// prev/next leaf lookups in [advanceBookmark] and [initializeBookmark],
+/// eliminating the O(N) scan over all curriculum items per call.
 class BookmarkRepositoryImpl implements BookmarkRepository {
   final UserDatabase _database;
   final SyncEngine? _syncEngine;
   final ContentRepository _contentRepository;
   final int _profileId;
 
+  /// Optional [ContentIndex] for O(1) adjacent-item lookups. When provided,
+  /// [_getNextItemId] and [_getFirstItemId] skip the O(N) leaf scan and
+  /// call [ContentIndex.adjacent] / the indexed leaf list instead.
+  final ContentIndex? _contentIndex;
+
   BookmarkRepositoryImpl({
     required UserDatabase database,
     required SyncEngine? syncEngine,
     required ContentRepository contentRepository,
     int profileId = 0,
+    ContentIndex? contentIndex,
   }) : _database = database,
        _syncEngine = syncEngine,
        _contentRepository = contentRepository,
-       _profileId = profileId;
+       _profileId = profileId,
+       _contentIndex = contentIndex;
 
   /// Resolve the integer track ID for a (curriculumId, trackType) pair
   /// scoped to [_profileId]. Returns null if no matching track exists.
@@ -219,6 +231,10 @@ class BookmarkRepositoryImpl implements BookmarkRepository {
   /// Get the next content item sefariaRef in learning order.
   ///
   /// Respects custom learning order if it exists, otherwise uses sort_order.
+  ///
+  /// When a [ContentIndex] was provided at construction time, the default-order
+  /// path is O(1) via [ContentIndex.adjacent] — no full-curriculum scan needed
+  /// (Story 26.14 / DNI-357).
   Future<String?> _getNextItemId({
     required CurriculumId curriculumId,
     required String currentSefariaRef,
@@ -238,29 +254,38 @@ class BookmarkRepositoryImpl implements BookmarkRepository {
       }
 
       return customOrder[currentIndex + 1].sefariaRef;
-    } else {
-      // Use default sort_order from ContentRepository
-      final allItems = await _contentRepository.getContentForCurriculum(
-        curriculumId,
-      );
-
-      // Filter to only leaf items and sort by sortOrder
-      final leafItems = allItems.where((item) => item.isLeaf).toList()
-        ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
-
-      final currentIndex = leafItems.indexWhere(
-        (item) => item.sefariaRef == currentSefariaRef,
-      );
-
-      if (currentIndex == -1 || currentIndex == leafItems.length - 1) {
-        return null; // Current item not found or is the last item
-      }
-
-      return leafItems[currentIndex + 1].sefariaRef;
     }
+
+    // Fast path: O(1) adjacent lookup via ContentIndex when available.
+    final index = _contentIndex;
+    if (index != null) {
+      return index.adjacent(currentSefariaRef).next?.sefariaRef;
+    }
+
+    // Fallback: O(N) scan (used when ContentIndex is not injected).
+    final allItems = await _contentRepository.getContentForCurriculum(
+      curriculumId,
+    );
+
+    // Filter to only leaf items and sort by sortOrder
+    final leafItems = allItems.where((item) => item.isLeaf).toList()
+      ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+
+    final currentIndex = leafItems.indexWhere(
+      (item) => item.sefariaRef == currentSefariaRef,
+    );
+
+    if (currentIndex == -1 || currentIndex == leafItems.length - 1) {
+      return null; // Current item not found or is the last item
+    }
+
+    return leafItems[currentIndex + 1].sefariaRef;
   }
 
   /// Get the first content item sefariaRef in learning order.
+  ///
+  /// When a [ContentIndex] was provided at construction time, the default-order
+  /// path is O(1) via the indexed leaf list (Story 26.14 / DNI-357).
   Future<String?> _getFirstItemId({required CurriculumId curriculumId}) async {
     // Check if custom learning order exists for this curriculum
     final customOrder = await _database.learningOrderDao
@@ -268,18 +293,24 @@ class BookmarkRepositoryImpl implements BookmarkRepository {
 
     if (customOrder.isNotEmpty) {
       return customOrder.first.sefariaRef;
-    } else {
-      // Use default sort_order from ContentRepository
-      final allItems = await _contentRepository.getContentForCurriculum(
-        curriculumId,
-      );
-
-      // Filter to only leaf items and sort by sortOrder
-      final leafItems = allItems.where((item) => item.isLeaf).toList()
-        ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
-
-      return leafItems.isNotEmpty ? leafItems.first.sefariaRef : null;
     }
+
+    // Fast path: O(1) first-leaf lookup via ContentIndex when available.
+    final index = _contentIndex;
+    if (index != null) {
+      return index.firstLeaf(curriculumId);
+    }
+
+    // Fallback: O(N) scan (used when ContentIndex is not injected).
+    final allItems = await _contentRepository.getContentForCurriculum(
+      curriculumId,
+    );
+
+    // Filter to only leaf items and sort by sortOrder
+    final leafItems = allItems.where((item) => item.isLeaf).toList()
+      ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+
+    return leafItems.isNotEmpty ? leafItems.first.sefariaRef : null;
   }
 
   /// Queue bookmark for Firestore sync.

@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:learning_tracker/core/content/content_index.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
@@ -10,17 +11,25 @@ import 'package:learning_tracker/features/profiles/presentation/providers/active
 import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
 
 /// Provider for bookmark repository, scoped to the active profile.
+///
+/// Injects [ContentIndex] (Story 26.14 / DNI-357) so [advanceBookmark] and
+/// [initializeBookmark] use O(1) adjacent-item lookups instead of O(N) scans.
 final bookmarkRepositoryProvider = Provider<BookmarkRepository>((ref) {
   final database = ref.watch(userDatabaseProvider);
   final syncEngine = ref.watch(syncEngineProvider);
   final contentRepository = ref.watch(contentRepositoryProvider);
   final profileId = ref.watch(activeProfileIdProvider);
+  // ContentIndex may still be loading — pass null until it's ready so the
+  // repository falls back to its O(N) scan path (correct behaviour, just
+  // slightly slower during the first warmup).
+  final contentIndex = ref.watch(contentIndexProvider).asData?.value;
 
   return BookmarkRepositoryImpl(
     database: database,
     syncEngine: syncEngine,
     contentRepository: contentRepository,
     profileId: profileId,
+    contentIndex: contentIndex,
   );
 });
 

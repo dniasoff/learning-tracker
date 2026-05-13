@@ -39,6 +39,16 @@ class ContentIndex {
   /// match exists in any curriculum.
   ContentItem? lookup(String sefariaRef) => _byRef[sefariaRef];
 
+  /// Returns the sefariaRef of the first leaf in [curriculumId]'s leaf order
+  /// (sorted by `sortOrder`), or null when the curriculum is unknown or has
+  /// no leaf items.
+  ///
+  /// Used by [BookmarkRepositoryImpl._getFirstItemId] to avoid an O(N) scan.
+  String? firstLeaf(CurriculumId curriculumId) {
+    final leaves = _leavesByCurriculum[curriculumId.storageKey];
+    return leaves != null && leaves.isNotEmpty ? leaves.first.sefariaRef : null;
+  }
+
   /// Returns the previous and next leaf items sharing the same curriculum
   /// as [sefariaRef], ordered by `sortOrder`. Returns `(null, null)` when
   /// [sefariaRef] is unknown or is a non-leaf container.

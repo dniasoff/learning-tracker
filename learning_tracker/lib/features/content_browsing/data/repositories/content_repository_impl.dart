@@ -21,6 +21,11 @@ class ContentRepositoryImpl implements ContentRepository {
   /// Cache of hierarchy configs, keyed by curriculum storage key.
   final _configCache = <String, CurriculumHierarchyConfig>{};
 
+  /// Cache of pre-stripped Hebrew display names, keyed by curriculum storage
+  /// key. Built once when content is first loaded and reused on every
+  /// [search] call so nikud stripping is not recomputed per keystroke (T2.10).
+  final _strippedHeCache = <String, List<String>>{};
+
   /// Maps composite curricula to their source asset(s).
   static const _compositeSources = <String, List<String>>{
     'tanach': ['chumash', 'nach'],
@@ -169,12 +174,25 @@ class ContentRepositoryImpl implements ContentRepository {
     final items = await getContentForCurriculum(curriculumId);
     final normalizedQuery = HebrewUtils.stripNikud(query.toLowerCase().trim());
 
-    return items.where((item) {
-      final normalizedHe = HebrewUtils.stripNikud(item.displayNameHe);
-      final normalizedEn = item.displayNameEn.toLowerCase();
-      return normalizedHe.contains(normalizedQuery) ||
-          normalizedEn.contains(normalizedQuery);
-    }).toList();
+    // Build the per-curriculum stripped-Hebrew cache on first search so that
+    // subsequent keystrokes never recompute stripNikud() for each item (T2.10).
+    final key = curriculumId.storageKey;
+    if (!_strippedHeCache.containsKey(key)) {
+      _strippedHeCache[key] = items
+          .map((item) => HebrewUtils.stripNikud(item.displayNameHe))
+          .toList();
+    }
+    final strippedHeNames = _strippedHeCache[key]!;
+
+    final results = <ContentItem>[];
+    for (var i = 0; i < items.length; i++) {
+      final normalizedEn = items[i].displayNameEn.toLowerCase();
+      if (strippedHeNames[i].contains(normalizedQuery) ||
+          normalizedEn.contains(normalizedQuery)) {
+        results.add(items[i]);
+      }
+    }
+    return results;
   }
 
   @override

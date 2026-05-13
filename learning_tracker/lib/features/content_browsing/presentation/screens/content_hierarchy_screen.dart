@@ -2,6 +2,7 @@ import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
+import 'package:learning_tracker/core/content/content_tree.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/labels/curriculum_label_renderer.dart';
@@ -58,14 +59,13 @@ class _ContentHierarchyScreenState
     return matches.isNotEmpty ? matches.first : null;
   }
 
-  String? get _currentLevel1 =>
-      _navigationStack.isNotEmpty ? _navigationStack[0] : null;
-  String? get _currentLevel2 =>
-      _navigationStack.length > 1 ? _navigationStack[1] : null;
-  String? get _currentLevel3 =>
-      _navigationStack.length > 2 ? _navigationStack[2] : null;
-  String? get _currentLevel4 =>
-      _navigationStack.length > 3 ? _navigationStack[3] : null;
+  /// Returns the value at [depth] in the navigation stack (0-indexed), or null
+  /// when the stack is shallower than [depth] + 1.
+  ///
+  /// Replaces the four separate `_currentLevel1/2/3/4` getters — one helper
+  /// via [ContentTree] eliminates the ladder.
+  String? _levelAt(int depth) =>
+      _navigationStack.length > depth ? _navigationStack[depth] : null;
 
   @override
   Widget build(BuildContext context) {
@@ -98,13 +98,38 @@ class _ContentHierarchyScreenState
     final configAsync = ref.watch(
       curriculumHierarchyConfigProvider(curriculum),
     );
-    final itemsAsync = ref.watch(
-      filteredContentProvider(
-        curriculumId: curriculum,
-        level1: _currentLevel1,
-        level2: _currentLevel2,
-        level3: _currentLevel3,
-        level4: _currentLevel4,
+
+    // ContentTree-backed items lookup: O(1) child retrieval replaces the
+    // four-argument level1/2/3/4 filter (T2.10).
+    final treeAsync = ref.watch(contentTreeProvider);
+    final itemsAsync = treeAsync.when(
+      data: (tree) {
+        final children = tree.children(curriculum, _navigationStack);
+        // Fall back to the filteredContent provider if the tree hasn't
+        // indexed these items yet (e.g. during the very first load when the
+        // curriculum content hasn't been cached in the tree yet).
+        if (children.isEmpty && _navigationStack.isNotEmpty) {
+          return ref.watch(
+            filteredContentProvider(
+              curriculumId: curriculum,
+              level1: _levelAt(0),
+              level2: _levelAt(1),
+              level3: _levelAt(2),
+              level4: _levelAt(3),
+            ),
+          );
+        }
+        return AsyncValue.data(children);
+      },
+      loading: () => const AsyncValue<List<ContentItem>>.loading(),
+      error: (e, st) => ref.watch(
+        filteredContentProvider(
+          curriculumId: curriculum,
+          level1: _levelAt(0),
+          level2: _levelAt(1),
+          level3: _levelAt(2),
+          level4: _levelAt(3),
+        ),
       ),
     );
 
@@ -417,10 +442,30 @@ class _ContentHierarchyScreenState
   /// (matching levels 1..N and no deeper) so the renderer can use its
   /// `displayNameHe` instead of falling back to the raw English value.
   ///
-  /// Returns null entries when no container is found (e.g. when the content
-  /// list is still loading or a level is an ordinal value rather than a
-  /// named one).
+  /// Uses [ContentTree.containerFor] for O(1) lookup per segment when the
+  /// tree is ready; falls back to a linear scan over [allItems] when not.
+  ///
+  /// Returns null entries when no container is found (e.g. during the first
+  /// load or when a level carries an ordinal value rather than a named one).
   List<String?> _hebrewNamesForNavStack(List<ContentItem>? allItems) {
+    if (_navigationStack.isEmpty) return const [];
+    final curriculum = _curriculumOrNull;
+
+    // Fast path: O(1) via ContentTree when available.
+    if (curriculum != null) {
+      final treeValue = ref.read(contentTreeProvider).asData?.value;
+      if (treeValue != null) {
+        final result = <String?>[];
+        for (var depth = 0; depth < _navigationStack.length; depth++) {
+          final prefixStack = _navigationStack.sublist(0, depth + 1);
+          final container = treeValue.containerFor(curriculum, prefixStack);
+          result.add(container?.displayNameHe);
+        }
+        return result;
+      }
+    }
+
+    // Fallback: linear scan when tree is still loading.
     final result = <String?>[];
     if (allItems == null) {
       return List<String?>.filled(_navigationStack.length, null);
@@ -430,9 +475,9 @@ class _ContentHierarchyScreenState
       ContentItem? match;
       for (final item in allItems) {
         if (item.level1 != _navigationStack[0]) continue;
-        if (segmentDepth >= 2 && item.level2 != _navigationStack[1]) continue;
-        if (segmentDepth >= 3 && item.level3 != _navigationStack[2]) continue;
-        if (segmentDepth >= 4 && item.level4 != _navigationStack[3]) continue;
+        if (segmentDepth >= 2 && item.level2 != _levelAt(1)) continue;
+        if (segmentDepth >= 3 && item.level3 != _levelAt(2)) continue;
+        if (segmentDepth >= 4 && item.level4 != _levelAt(3)) continue;
         if (segmentDepth < 2 && item.level2 != null) continue;
         if (segmentDepth < 3 && item.level3 != null) continue;
         if (segmentDepth < 4 && item.level4 != null) continue;
