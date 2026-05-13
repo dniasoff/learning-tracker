@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:learning_tracker/core/database/tables/completions.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/cross_profile_scope.dart';
+import 'package:learning_tracker/core/logging/logger.dart';
 
 part 'completion_dao.g.dart';
 
@@ -610,21 +611,26 @@ class CompletionDao extends DatabaseAccessor<UserDatabase>
   void _assertCrossProfileScope(CrossProfileScope scope, String method) {
     // ignore: unnecessary_null_comparison — future-proofs against nullable callers
     assert(scope != null, 'CrossProfileScope must be provided for $method');
+    final log = AppLogger(AppLogger.instance);
     if (kDebugMode) {
       // Stable caller hash: method name → identity integer (no stack-unwinding
       // needed; real stack hash would require dart:developer which is
       // unavailable in release).
       final callerHash = method.hashCode & 0xFFFF;
-      debugPrint(
-        '[cross_profile_read] event=cross_profile_read '
-        'method=$method scope=${scope.name} callerHash=$callerHash',
+      log.debug(
+        event: 'cross_profile_read',
+        fields: {
+          'method': method,
+          'scope': scope.name,
+          'callerHash': callerHash,
+        },
       );
     } else {
-      // In release mode log a structured breadcrumb as a warning.
-      // No Crashlytics SDK dependency — we use debugPrint which Talker
-      // captures via its Flutter error handler.
-      debugPrint(
-        'WARNING cross_profile_read method=$method scope=${scope.name}',
+      // In release mode log a structured breadcrumb as a warning so it surfaces
+      // through AppLogger -> Talker -> Crashlytics breadcrumbs.
+      log.warning(
+        event: 'cross_profile_read',
+        fields: {'method': method, 'scope': scope.name},
       );
     }
   }

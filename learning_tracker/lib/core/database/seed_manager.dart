@@ -3,8 +3,8 @@ import 'dart:io';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:learning_tracker/core/database/content/content_database.dart';
 import 'package:learning_tracker/core/database/seed_version.dart';
+import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:sqlite3/sqlite3.dart';
-import 'package:talker/talker.dart';
 
 /// Exception thrown when the seed database cannot be initialized.
 class SeedManagerException implements Exception {
@@ -27,12 +27,12 @@ class SeedManager {
   ///
   /// [dbDirectory] is the path where content.db will be stored
   /// (typically from `getApplicationDocumentsDirectory()`).
-  SeedManager({required String dbDirectory, Talker? talker})
+  SeedManager({required String dbDirectory, AppLogger? logger})
     : _dbDirectory = dbDirectory,
-      _talker = talker;
+      _logger = logger;
 
   final String _dbDirectory;
-  final Talker? _talker;
+  final AppLogger? _logger;
 
   static const String _contentDbName = 'content.db';
   static const String _backupSuffix = '.bak';
@@ -54,15 +54,13 @@ class SeedManager {
 
     // Step 1: Check for interrupted upgrade
     if (bakFile.existsSync()) {
-      _talker?.warning(
-        'SeedManager: Found .bak file — recovering from interrupted upgrade',
-      );
+      _logger?.warning(event: 'seed_manager_interrupted_upgrade_detected');
       await _recoverFromInterruptedUpgrade();
     }
 
     // Step 2: Check if content.db exists
     if (!dbFile.existsSync()) {
-      _talker?.info('SeedManager: First launch — extracting seed database');
+      _logger?.info(event: 'seed_manager_first_launch_extract');
       await _extractSeedDb(_dbPath);
       return _dbPath;
     }
@@ -87,16 +85,23 @@ class SeedManager {
         installedSchema == null ||
         installedSchema != expectedSchema;
     if (needsReplace) {
-      _talker?.info(
-        'SeedManager: Replacing content DB '
-        '(installed v$installedVersion / schema v$installedSchema → '
-        'bundled v$bundledSeedVersion / schema v$expectedSchema)',
+      _logger?.info(
+        event: 'seed_manager_replacing_content_db',
+        fields: {
+          'installedVersion': installedVersion,
+          'installedSchema': installedSchema,
+          'bundledVersion': bundledSeedVersion,
+          'expectedSchema': expectedSchema,
+        },
       );
       await _atomicReplace();
     } else {
-      _talker?.debug(
-        'SeedManager: Content DB up to date '
-        '(v$installedVersion, schema v$installedSchema)',
+      _logger?.debug(
+        event: 'seed_manager_content_db_up_to_date',
+        fields: {
+          'installedVersion': installedVersion,
+          'installedSchema': installedSchema,
+        },
       );
     }
 
@@ -112,7 +117,10 @@ class SeedManager {
       final row = db.select('PRAGMA user_version').firstOrNull;
       return row?['user_version'] as int?;
     } catch (e) {
-      _talker?.error('SeedManager: Failed to read schema version', e);
+      _logger?.error(
+        event: 'seed_manager_read_schema_version_failed',
+        exception: e,
+      );
       return null;
     } finally {
       db?.dispose();
@@ -131,7 +139,10 @@ class SeedManager {
       if (result.isEmpty) return null;
       return result.first['version'] as int?;
     } catch (e) {
-      _talker?.error('SeedManager: Failed to read seed version', e);
+      _logger?.error(
+        event: 'seed_manager_read_seed_version_failed',
+        exception: e,
+      );
       return null;
     } finally {
       db?.dispose();
@@ -152,12 +163,15 @@ class SeedManager {
       final compressed = await rootBundle.load(_seedAssetPath);
       final decompressed = gzip.decode(compressed.buffer.asUint8List());
       await File(targetPath).writeAsBytes(decompressed, flush: true);
-      _talker?.info(
-        'SeedManager: Seed extracted '
-        '(${(decompressed.length / 1024 / 1024).toStringAsFixed(1)} MB)',
+      _logger?.info(
+        event: 'seed_manager_seed_extracted',
+        fields: {'sizeMb': (decompressed.length / 1024 / 1024).toStringAsFixed(1)},
       );
     } catch (e) {
-      _talker?.error('SeedManager: Failed to extract seed database', e);
+      _logger?.error(
+        event: 'seed_manager_extract_failed',
+        exception: e,
+      );
       throw SeedManagerException(
         'Failed to extract content database. '
         'Please restart the app or reinstall.',
@@ -190,10 +204,16 @@ class SeedManager {
         await bakFile.delete();
       }
 
-      _talker?.info('SeedManager: Upgrade complete (v$newVersion)');
+      _logger?.info(
+        event: 'seed_manager_upgrade_complete',
+        fields: {'newVersion': newVersion},
+      );
     } catch (e) {
       // Extraction or verification failed — rollback
-      _talker?.error('SeedManager: Upgrade failed, rolling back', e);
+      _logger?.error(
+        event: 'seed_manager_upgrade_failed',
+        exception: e,
+      );
       await _rollback();
       // If rollback succeeded, we're on the old version (acceptable)
       // If no old version existed, re-throw
@@ -219,7 +239,7 @@ class SeedManager {
     // Restore backup
     if (bakFile.existsSync()) {
       await bakFile.rename(_dbPath);
-      _talker?.info('SeedManager: Restored backup after interrupted upgrade');
+      _logger?.info(event: 'seed_manager_backup_restored_after_interrupt');
     }
   }
 
@@ -240,7 +260,7 @@ class SeedManager {
     // Restore backup
     if (bakFile.existsSync()) {
       await bakFile.rename(_dbPath);
-      _talker?.info('SeedManager: Rolled back to previous version');
+      _logger?.info(event: 'seed_manager_rolled_back_to_previous_version');
     }
   }
 
@@ -264,10 +284,10 @@ class SeedManager {
   /// holding a [SeedManager] instance.
   static Future<String> repairContentDatabase({
     required String dbDirectory,
-    Talker? talker,
+    AppLogger? logger,
   }) async {
-    final manager = SeedManager(dbDirectory: dbDirectory, talker: talker);
-    talker?.info('SeedManager: repairContentDatabase requested');
+    final manager = SeedManager(dbDirectory: dbDirectory, logger: logger);
+    logger?.info(event: 'seed_manager_repair_requested');
     return manager.forceReExtract();
   }
 }

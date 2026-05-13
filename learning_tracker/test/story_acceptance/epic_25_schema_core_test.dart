@@ -6,6 +6,8 @@
 /// Story 25.8 (DNI-329): ContentIndex + ProgramRefResolver.
 /// Story 25.10 (DNI-331): LocalDayClock — single time provider.
 /// Story 25.11 (DNI-332): AuthRepository — sole firebase_auth consumer.
+/// Story 25.19 (DNI-340): core/logging/ — finalize structured AppLogger and
+///                        migrate remaining production logs.
 @Tags(['epic_25'])
 library;
 
@@ -23,6 +25,7 @@ import 'package:learning_tracker/core/content/program_ref_resolver.dart';
 import 'package:learning_tracker/core/database/daos/outbox_dao.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/preferences/app_locale_preference.dart';
 import 'package:learning_tracker/core/preferences/hebrew_date_preference.dart';
@@ -40,6 +43,7 @@ import 'package:learning_tracker/features/auth/domain/repositories/auth_reposito
 import 'package:learning_tracker/features/sync/domain/profile_scoped_preference_keys.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:talker_flutter/talker_flutter.dart';
 import 'package:test/test.dart';
 
 // ── helpers ──────────────────────────────────────────────────────────────────
@@ -1360,6 +1364,204 @@ void main() {
       },
     );
   });
+
+  // --------------------------------------------------------------------------
+  // Story 25.19 — Finalize AppLogger; migrate remaining production logs (DNI-340)
+  // --------------------------------------------------------------------------
+
+  group(
+    'Story 25.19 — Finalize AppLogger and migrate remaining production logs',
+    tags: ['story_25_19'],
+    () {
+      // ── AC: no debugPrint / bare print() outside generated files ────────────
+
+      test(
+        'grep debugPrint|print() in lib/ returns zero non-generated results',
+        () {
+          final libDir = Directory('lib');
+          expect(
+            libDir.existsSync(),
+            isTrue,
+            reason: 'test must run from learning_tracker/ (Flutter project root)',
+          );
+
+          // One single piped pipeline: grep for debugPrint/bare-print, strip
+          // generated files and core/logging/ (where AppLogger lives).
+          // Raw string keeps backslashes (\|, \., \s) destined for the shell.
+          const cmd =
+              r"""grep -rn 'debugPrint\|^\s*print(' lib/ --include='*.dart' | grep -v '\.g\.dart' | grep -v '\.freezed\.dart' | grep -v 'core/logging/' || true""";
+          final result = Process.runSync('bash', const ['-c', cmd]);
+
+          final stdout = (result.stdout as String).trim();
+          expect(
+            stdout,
+            isEmpty,
+            reason:
+                'debugPrint() and bare print() are forbidden outside '
+                'core/logging/. Use AppLogger.info/.debug/.warning/.error '
+                'with the named-param API instead.\nFound:\n$stdout',
+          );
+        },
+      );
+
+      // ── AC: no raw `package:talker/talker.dart` import outside core/logging/
+
+      test(
+        'grep raw package:talker/talker.dart import outside core/logging/ '
+        'returns zero results',
+        () {
+          final libDir = Directory('lib');
+          expect(libDir.existsSync(), isTrue);
+
+          final result = Process.runSync('grep', const [
+            '-rn',
+            "import 'package:talker/talker.dart'",
+            'lib/',
+            '--exclude-dir=logging',
+          ]);
+
+          // grep exits 1 when no matches — that is the green case.
+          expect(
+            result.exitCode,
+            equals(1),
+            reason:
+                "Raw `import 'package:talker/talker.dart'` is forbidden "
+                'outside lib/core/logging/. Inject an `AppLogger` instead '
+                '(or use `talker_flutter` when a raw Talker is genuinely '
+                'required by a third-party widget).\nFound:\n${result.stdout}',
+          );
+        },
+      );
+
+      // ── AC: structured-event shape — the field-based redactor is applied ────
+
+      test(
+        'AppLogger.info(event:, fields:) builds {event field=value} message '
+        'and redacts sensitive keys',
+        () {
+          final talker = Talker(
+            settings: TalkerSettings(
+              enabled: true,
+              useConsoleLogs: false,
+              maxHistoryItems: 16,
+            ),
+          );
+          final log = AppLogger(talker);
+
+          log.info(
+            event: 'sync_pull_completed',
+            fields: const {
+              'profileId': 7,
+              'durationMs': 142,
+              'status': 'ok',
+              'email': 'leak@example.com',
+            },
+          );
+
+          // Wait until Talker drains its internal queue.
+          final entry = talker.history.firstWhere(
+            (e) => (e.message ?? '').startsWith('sync_pull_completed'),
+          );
+          final msg = entry.message ?? '';
+
+          // event prefix preserved verbatim
+          expect(msg, startsWith('sync_pull_completed '));
+          // non-sensitive fields preserved
+          expect(msg, contains('profileId: 7'));
+          expect(msg, contains('durationMs: 142'));
+          expect(msg, contains('status: ok'));
+          // sensitive value redacted by key
+          expect(msg, contains('email: [REDACTED]'));
+          expect(msg, isNot(contains('leak@example.com')));
+        },
+      );
+
+      // ── AC: DeviceRestoreService consumes an AppLogger (not raw Talker) ─────
+
+      test(
+        'DeviceRestoreService constructor takes AppLogger (DI surface migrated)',
+        () {
+          // Inspect the source file directly — we don't want this test to need
+          // a full Firebase/Drift environment. Source-level inspection is
+          // sufficient to confirm the constructor signature has been migrated.
+          final file = File(
+            'lib/features/sync/domain/services/device_restore_service.dart',
+          );
+          expect(file.existsSync(), isTrue);
+
+          final src = file.readAsStringSync();
+          expect(
+            src,
+            contains('required AppLogger logger'),
+            reason:
+                'DeviceRestoreService must now take `AppLogger logger`, '
+                'not `Talker logger`.',
+          );
+          expect(
+            src,
+            isNot(contains("import 'package:talker/talker.dart'")),
+            reason:
+                'DeviceRestoreService must not import package:talker/talker '
+                'directly — depend on AppLogger.',
+          );
+        },
+      );
+
+      test(
+        'SeedManager and ContentDbHealthChecker constructors take AppLogger',
+        () {
+          final seed = File('lib/core/database/seed_manager.dart')
+              .readAsStringSync();
+          expect(
+            seed,
+            contains('AppLogger? logger'),
+            reason: 'SeedManager must accept an optional AppLogger.',
+          );
+          expect(
+            seed,
+            isNot(contains("import 'package:talker/talker.dart'")),
+          );
+
+          final hc = File(
+            'lib/core/database/content_db_health_checker.dart',
+          ).readAsStringSync();
+          expect(
+            hc,
+            contains('AppLogger? logger'),
+            reason: 'ContentDbHealthChecker must accept an optional AppLogger.',
+          );
+          expect(
+            hc,
+            isNot(contains("import 'package:talker/talker.dart'")),
+          );
+        },
+      );
+
+      test(
+        'completion_dao cross-profile breadcrumb uses AppLogger, not debugPrint',
+        () {
+          final dao = File(
+            'lib/core/database/daos/completion_dao.dart',
+          ).readAsStringSync();
+          expect(
+            dao,
+            isNot(contains('debugPrint(')),
+            reason:
+                'CompletionDao._assertCrossProfileScope must emit through '
+                'AppLogger.warning(event: ..., fields: {...}).',
+          );
+          expect(
+            dao,
+            contains("event: 'cross_profile_read'"),
+            reason:
+                'Cross-profile breadcrumbs must use the structured '
+                '`cross_profile_read` event name (NFR7).',
+          );
+        },
+      );
+    },
+  );
+
 }
 
 Object _flippedValue(ProfileScopedPreference<Object> pref) {

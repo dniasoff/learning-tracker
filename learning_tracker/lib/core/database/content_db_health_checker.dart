@@ -1,8 +1,8 @@
 import 'dart:io';
 
 import 'package:learning_tracker/core/database/seed_manager.dart';
+import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:sqlite3/sqlite3.dart';
-import 'package:talker/talker.dart';
 
 /// Checks the health of the content database and attempts recovery when
 /// corruption is detected.
@@ -14,13 +14,13 @@ class ContentDbHealthChecker {
   /// Creates a [ContentDbHealthChecker].
   ///
   /// [seedManager] is used to re-extract the seed when corruption is found.
-  /// [talker] is used for logging recovery actions.
-  ContentDbHealthChecker({required SeedManager seedManager, Talker? talker})
+  /// [logger] is used for logging recovery actions.
+  ContentDbHealthChecker({required SeedManager seedManager, AppLogger? logger})
     : _seedManager = seedManager,
-      _talker = talker;
+      _logger = logger;
 
   final SeedManager _seedManager;
-  final Talker? _talker;
+  final AppLogger? _logger;
 
   /// Checks the content database integrity and attempts recovery if corrupted.
   ///
@@ -31,22 +31,20 @@ class ContentDbHealthChecker {
     final dbFile = File(dbPath);
 
     if (!dbFile.existsSync()) {
-      _talker?.warning(
-        'ContentDbHealthChecker: content.db not found at $dbPath',
+      _logger?.warning(
+        event: 'content_db_health_db_missing',
+        fields: {'dbPath': dbPath},
       );
       return _attemptRecovery();
     }
 
     final isHealthy = _runIntegrityCheck(dbPath);
     if (isHealthy) {
-      _talker?.debug('ContentDbHealthChecker: integrity check passed');
+      _logger?.debug(event: 'content_db_health_integrity_passed');
       return true;
     }
 
-    _talker?.error(
-      'ContentDbHealthChecker: integrity check FAILED — '
-      'attempting recovery',
-    );
+    _logger?.error(event: 'content_db_health_integrity_failed_recovering');
     return _attemptRecovery();
   }
 
@@ -67,7 +65,11 @@ class ContentDbHealthChecker {
       }
       return false;
     } on SqliteException catch (e, st) {
-      _talker?.error('ContentDbHealthChecker: integrity check threw', e, st);
+      _logger?.error(
+        event: 'content_db_health_integrity_check_threw',
+        exception: e,
+        stackTrace: st,
+      );
       return false;
     } finally {
       db?.dispose();
@@ -79,14 +81,16 @@ class ContentDbHealthChecker {
   /// Returns `true` on success, `false` on failure.
   Future<bool> _attemptRecovery() async {
     try {
-      _talker?.info(
-        'ContentDbHealthChecker: re-extracting content DB from seed',
-      );
+      _logger?.info(event: 'content_db_health_recovery_reextracting');
       await _seedManager.forceReExtract();
-      _talker?.info('ContentDbHealthChecker: recovery succeeded');
+      _logger?.info(event: 'content_db_health_recovery_succeeded');
       return true;
     } catch (e, st) {
-      _talker?.error('ContentDbHealthChecker: recovery FAILED', e, st);
+      _logger?.error(
+        event: 'content_db_health_recovery_failed',
+        exception: e,
+        stackTrace: st,
+      );
       return false;
     }
   }

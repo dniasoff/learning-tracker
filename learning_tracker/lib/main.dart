@@ -77,7 +77,8 @@ void main() {
       // right before the first authentication attempt.
 
       final talker = AppLogger.init();
-      talker.info('App starting — local-first mode');
+      final log = AppLogger(talker);
+      log.info(event: 'app_starting_local_first');
 
       // Story 19.2b / 19.6: Decompress the bundled seed DB to a writable
       // location BEFORE creating any providers that might query content.
@@ -88,12 +89,19 @@ void main() {
       try {
         final seedManager = SeedManager(
           dbDirectory: docsDir.path,
-          talker: talker,
+          logger: log,
         );
         resolvedContentDbPath = await seedManager.ensureContentDb();
-        talker.info('Content DB ready at $resolvedContentDbPath');
+        log.info(
+          event: 'content_db_ready',
+          fields: {'path': resolvedContentDbPath},
+        );
       } catch (e, stack) {
-        talker.error('SeedManager initialization failed', e, stack);
+        log.error(
+          event: 'seed_manager_init_failed',
+          exception: e,
+          stackTrace: stack,
+        );
         rethrow;
       }
 
@@ -118,20 +126,25 @@ void main() {
           final account = await registry.findById(accountId);
           if (account != null) {
             activeDbFileName = account.dbFileName;
-            talker.info(
-              'Active account resolved: ${account.email} '
-              '(${account.tier}, db=${account.dbFileName})',
+            log.info(
+              event: 'active_account_resolved',
+              fields: {
+                // email is in PiiRedactor.sensitiveKeys → redacted automatically
+                'email': account.email,
+                'tier': account.tier,
+                'db': account.dbFileName,
+              },
             );
           }
         } else {
-          talker.info('No active account — fresh install or all removed');
+          log.info(event: 'active_account_none');
         }
         await registry.close();
       } catch (e, stack) {
-        talker.error(
-          'Session resolution failed (non-fatal, using default DB)',
-          e,
-          stack,
+        log.error(
+          event: 'active_account_resolution_failed',
+          exception: e,
+          stackTrace: stack,
         );
       }
 
@@ -178,7 +191,11 @@ void main() {
         container.read(reminderSyncEffectProvider);
         container.read(streakAlertSyncEffectProvider);
       } catch (e, stack) {
-        talker.error('Notification init failed (non-fatal)', e, stack);
+        log.error(
+          event: 'notification_init_failed',
+          exception: e,
+          stackTrace: stack,
+        );
       }
 
       runApp(

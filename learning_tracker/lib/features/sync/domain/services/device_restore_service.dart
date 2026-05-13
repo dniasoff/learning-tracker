@@ -3,13 +3,13 @@ import 'dart:async';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/cross_profile_scope.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/curriculum_import_service.dart';
 import 'package:learning_tracker/features/sync/data/firestore_data_source.dart';
 import 'package:learning_tracker/features/sync/data/sync_engine.dart';
 import 'package:learning_tracker/features/sync/domain/models/restore_status.dart';
 import 'package:learning_tracker/features/sync/domain/models/sync_status.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:talker/talker.dart';
 
 /// Orchestrates full data restoration when a user signs in on a new device.
 ///
@@ -32,7 +32,7 @@ class DeviceRestoreService {
     required SyncEngine syncEngine,
     required FirestoreDataSource firestoreDataSource,
     required CurriculumImportService curriculumImportService,
-    required Talker logger,
+    required AppLogger logger,
   }) : _database = database,
        _syncEngine = syncEngine,
        _firestoreDataSource = firestoreDataSource,
@@ -43,7 +43,7 @@ class DeviceRestoreService {
   final SyncEngine _syncEngine;
   final FirestoreDataSource _firestoreDataSource;
   final CurriculumImportService _curriculumImportService;
-  final Talker _logger;
+  final AppLogger _logger;
 
   /// SharedPreferences key tracking restore lifecycle. Values: 'in_progress'
   /// while a restore is running and 'complete' on success. Absent when the
@@ -103,7 +103,10 @@ class DeviceRestoreService {
       final prefs = await SharedPreferences.getInstance();
       return prefs.getString(restoreStatePrefKey);
     } catch (e) {
-      _logger.warning('DeviceRestoreService: read restore state failed: $e');
+      _logger.warning(
+        event: 'device_restore_read_state_failed',
+        exception: e,
+      );
       return null;
     }
   }
@@ -114,7 +117,9 @@ class DeviceRestoreService {
       await prefs.setString(restoreStatePrefKey, state);
     } catch (e) {
       _logger.warning(
-        'DeviceRestoreService: write restore state ($state) failed: $e',
+        event: 'device_restore_write_state_failed',
+        fields: {'state': state},
+        exception: e,
       );
     }
   }
@@ -136,17 +141,13 @@ class DeviceRestoreService {
       if (!bypassNewDeviceCheck) {
         final needsRestore = await isNewDevice();
         if (!needsRestore) {
-          _logger.info(
-            'DeviceRestoreService: not a new device, skipping restore',
-          );
+          _logger.info(event: 'device_restore_skipped_not_new_device');
           _updateStatus(const RestoreStatus.idle());
           return false;
         }
       }
 
-      _logger.info(
-        'DeviceRestoreService: new device detected, starting restore',
-      );
+      _logger.info(event: 'device_restore_starting');
 
       // Mark restore as started BEFORE writing any merged data. If we crash,
       // sign out, or close the app between this line and the success marker
@@ -211,7 +212,7 @@ class DeviceRestoreService {
         }
       }
 
-      _logger.info('DeviceRestoreService: restore completed successfully');
+      _logger.info(event: 'device_restore_completed');
       _restoreCompleted = true;
       await _writeRestoreState(_kStateComplete);
       _updateStatus(
@@ -225,7 +226,11 @@ class DeviceRestoreService {
       }
       return true;
     } catch (e, stackTrace) {
-      _logger.error('DeviceRestoreService: restore failed', e, stackTrace);
+      _logger.error(
+        event: 'device_restore_failed',
+        exception: e,
+        stackTrace: stackTrace,
+      );
       // Leave the in-progress marker in place so the next launch retries.
       _updateStatus(RestoreStatus.error(message: e.toString()));
       return false;

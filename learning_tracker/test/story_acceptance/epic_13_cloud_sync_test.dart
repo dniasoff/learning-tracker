@@ -832,7 +832,7 @@ void main() {
         syncEngine: syncEngine,
         firestoreDataSource: mockFirestore,
         curriculumImportService: mockImportService,
-        logger: logger.talker,
+        logger: logger,
       );
     });
 

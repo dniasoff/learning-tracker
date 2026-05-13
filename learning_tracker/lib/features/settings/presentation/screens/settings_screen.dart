@@ -219,7 +219,7 @@ class SettingsScreen extends ConsumerWidget {
                 trailing: const SizedBox.shrink(),
                 onTap: () => sendLogsToFirebase(
                   context: context,
-                  talker: ref.read(talkerProvider),
+                  logger: ref.read(appLoggerProvider),
                   firestore: ref.read(firebaseFirestoreProvider),
                   auth: ref.read(authRepositoryProvider),
                 ),

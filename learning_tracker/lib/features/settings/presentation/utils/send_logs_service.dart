@@ -1,13 +1,13 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/auth/domain/repositories/auth_repository.dart';
 import 'package:package_info_plus/package_info_plus.dart';
-import 'package:talker/talker.dart';
 
 const _logWindowMinutes = 10;
 
-/// Uploads the last [_logWindowMinutes] minutes of Talker history to
+/// Uploads the last [_logWindowMinutes] minutes of log history to
 /// `users/{uid}/diagnostic_logs/{auto-id}` in Firestore.
 ///
 /// The developer can view and query logs directly in the Firebase console.
@@ -15,7 +15,7 @@ const _logWindowMinutes = 10;
 /// field to enable automatic cleanup).
 Future<void> sendLogsToFirebase({
   required BuildContext context,
-  required Talker talker,
+  required AppLogger logger,
   required FirebaseFirestore firestore,
   required AuthRepository auth,
 }) async {
@@ -31,7 +31,9 @@ Future<void> sendLogsToFirebase({
 
   final now = DateTimeFactory.nowUtc();
   final cutoff = now.subtract(const Duration(minutes: _logWindowMinutes));
-  final recent = talker.history.where((e) => e.time.isAfter(cutoff)).toList();
+  final recent = logger.talker.history
+      .where((e) => e.time.isAfter(cutoff))
+      .toList();
 
   PackageInfo? pkgInfo;
   try {

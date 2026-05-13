@@ -16,7 +16,7 @@ final deviceRestoreServiceProvider = Provider<DeviceRestoreService?>((ref) {
 
   final database = ref.watch(userDatabaseProvider);
   final curriculumImportService = ref.watch(curriculumImportServiceProvider);
-  final logger = ref.watch(talkerProvider);
+  final logger = ref.watch(appLoggerProvider);
 
   final service = DeviceRestoreService(
     database: database,
