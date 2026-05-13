@@ -32,7 +32,7 @@ class ProgressScreen extends ConsumerWidget {
     final streakAsync = ref.watch(dashboardStreakProvider);
     final profileId = ref.watch(activeProfileIdProvider);
     final lifetimeSummariesAsync = ref.watch(
-      globalLifetimeCurriculaProvider(profileId),
+      lifetimeSummariesProvider(profileId),
     );
     final overviewStatsAsync = ref.watch(progressOverviewStatsProvider);
 
@@ -72,6 +72,8 @@ class ProgressScreen extends ConsumerWidget {
                   ref.invalidate(dashboardActiveCurriculaStreamProvider);
                   ref.invalidate(dashboardStreakProvider);
                   ref.invalidate(progressOverviewStatsProvider);
+                  ref.invalidate(lifetimeSummariesProvider(profileId));
+                  // ignore: deprecated_member_use
                   ref.invalidate(globalLifetimeCurriculaProvider(profileId));
                   ref.invalidate(
                     lifetimeTotalsAcrossAllCurriculaProvider(profileId),

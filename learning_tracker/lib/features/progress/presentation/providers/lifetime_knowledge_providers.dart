@@ -109,17 +109,25 @@ class LifetimeTotals {
       totalSections > 0 ? learnedSections / totalSections : 0.0;
 }
 
-final globalLifetimeCurriculaProvider = FutureProvider.autoDispose
-    .family<List<CurriculumLifetimeSummary>, int>((ref, profileId) async {
-      ref.watch<int>(completionCommittedProvider);
-      final db = ref.watch(userDatabaseProvider);
-      final repo = ref.watch(contentRepositoryProvider);
+/// Per-curriculum lazy lifetime data provider.
+///
+/// Loads lifetime completion data for a single [CurriculumId]. Returns `null`
+/// when the curriculum's content asset is missing or empty so callers can skip
+/// it without error.
+///
+/// Keyed by `({int profileId, CurriculumId curriculumId})` so each curriculum
+/// is fetched independently and cached/disposed independently.
+final lifetimeDataProvider = FutureProvider.autoDispose
+    .family<CurriculumLifetimeSummary?, ({int profileId, CurriculumId curriculumId})>(
+      (ref, args) async {
+        final db = ref.watch(userDatabaseProvider);
+        final repo = ref.watch(contentRepositoryProvider);
+        final curriculum = args.curriculumId;
+        final profileId = args.profileId;
 
-      final summaries = <CurriculumLifetimeSummary>[];
-      for (final curriculum in CurriculumId.values) {
         final leaves = await _safeLoadLeaves(repo, curriculum);
-        if (leaves == null) continue;
-        if (leaves.isEmpty) continue;
+        if (leaves == null) return null;
+        if (leaves.isEmpty) return null;
 
         final completions = await db.completionDao
             .getCompletionsByCurriculumAndProfile(
@@ -148,19 +156,47 @@ final globalLifetimeCurriculaProvider = FutureProvider.autoDispose
             ? 0.0
             : learnedLeafRefs.length / leaves.length;
 
-        // Include curriculum even if no learned items yet (tree will show all as unlearned)
-        summaries.add(
-          CurriculumLifetimeSummary(
-            curriculumId: curriculum,
-            learnedLeafCount: learnedLeafRefs.length,
-            totalLeafCount: leaves.length,
-            percentage: percentage.clamp(0.0, 1.0),
-            tree: tree,
-          ),
+        return CurriculumLifetimeSummary(
+          curriculumId: curriculum,
+          learnedLeafCount: learnedLeafRefs.length,
+          totalLeafCount: leaves.length,
+          percentage: percentage.clamp(0.0, 1.0),
+          tree: tree,
         );
-      }
-      return summaries;
+      },
+    );
+
+/// Aggregated lifetime summaries across all active curricula.
+///
+/// Reads from [lifetimeDataProvider] per curriculum lazily — each curriculum
+/// is fetched and cached independently, so a single-curriculum tap only loads
+/// that curriculum's data.
+///
+/// This is the single aggregation surface replacing the old eager
+/// [globalLifetimeCurriculaProvider] loop.
+final lifetimeSummariesProvider = FutureProvider.autoDispose
+    .family<List<CurriculumLifetimeSummary>, int>((ref, profileId) async {
+      final results = await Future.wait(
+        CurriculumId.values.map(
+          (curriculum) => ref.watch(
+            lifetimeDataProvider(
+              (profileId: profileId, curriculumId: curriculum),
+            ).future,
+          ),
+        ),
+      );
+      return results.whereType<CurriculumLifetimeSummary>().toList();
     });
+
+/// Compatibility alias for [lifetimeSummariesProvider].
+///
+/// Retained so existing callers compile without change. Prefer
+/// [lifetimeSummariesProvider] in new code.
+///
+/// When only a single curriculum is needed, prefer
+/// [lifetimeDataProvider] to avoid loading all 9 curricula.
+@Deprecated('Use lifetimeSummariesProvider or lifetimeDataProvider instead')
+final globalLifetimeCurriculaProvider = lifetimeSummariesProvider;
 
 final trackDualProgressMetricsProvider = FutureProvider.autoDispose
     .family<List<TrackDualProgressMetric>, int>((ref, profileId) async {
@@ -250,7 +286,7 @@ final trackDualProgressMetricsProvider = FutureProvider.autoDispose
 final lifetimeTotalsAcrossAllCurriculaProvider = FutureProvider.autoDispose
     .family<LifetimeTotals, int>((ref, profileId) async {
       final summaries = await ref.watch(
-        globalLifetimeCurriculaProvider(profileId).future,
+        lifetimeSummariesProvider(profileId).future,
       );
       var learnedTotal = 0;
       var sectionTotal = 0;

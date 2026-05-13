@@ -15,7 +15,7 @@ import 'package:learning_tracker/l10n/app_localizations.dart';
 ///
 /// **Completion** (stage/cycle) matches [dashboardTrackCompletionPercentageProvider]
 /// when not on a program track. **Lifetime learning** uses
-/// [globalLifetimeCurriculaProvider] / [CurriculumLifetimeSummary.percentage] —
+/// [lifetimeDataProvider] / [CurriculumLifetimeSummary.percentage] —
 /// same per-curriculum % as Settings → Add what you've learned.
 class LearningTrackCard extends ConsumerWidget {
   const LearningTrackCard({
@@ -58,17 +58,15 @@ class LearningTrackCard extends ConsumerWidget {
               false)
         : false;
 
-    final lifetimeSummariesAsync = ref.watch(
-      globalLifetimeCurriculaProvider(profileId),
-    );
-    final lifetimeFraction = lifetimeSummariesAsync.when(
-      data: (summaries) {
-        if (curriculum == null) return 0.0;
-        for (final s in summaries) {
-          if (s.curriculumId == curriculum) return s.percentage;
-        }
-        return 0.0;
-      },
+    final lifetimeSummaryAsync = curriculum != null
+        ? ref.watch(
+            lifetimeDataProvider(
+              (profileId: profileId, curriculumId: curriculum),
+            ),
+          )
+        : null;
+    final lifetimeFraction = lifetimeSummaryAsync?.when(
+      data: (summary) => summary?.percentage ?? 0.0,
       loading: () => null,
       error: (_, __) => 0.0,
     );

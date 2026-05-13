@@ -29,7 +29,7 @@ class LifetimeMarkingScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
     final summariesAsync = ref.watch(
-      globalLifetimeCurriculaProvider(ref.watch(activeProfileIdProvider)),
+      lifetimeSummariesProvider(ref.watch(activeProfileIdProvider)),
     );
 
     return Scaffold(
@@ -446,7 +446,14 @@ class _LifetimeCurriculumMarkingScreenState
 
   void _invalidateComputedViews() {
     final profileId = ref.read(activeProfileIdProvider);
+    ref.invalidate(lifetimeSummariesProvider(profileId));
+    // ignore: deprecated_member_use
     ref.invalidate(globalLifetimeCurriculaProvider(profileId));
+    ref.invalidate(
+      lifetimeDataProvider(
+        (profileId: profileId, curriculumId: _curriculum),
+      ),
+    );
     ref.invalidate(trackDualProgressMetricsProvider(profileId));
     ref.invalidate(progressOverviewStatsProvider);
     ref.invalidate(journeyViewModelProvider(profileId));
