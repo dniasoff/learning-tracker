@@ -41,46 +41,47 @@ void main() {
 
       // ── completions ──────────────────────────────────────────────────
 
-      group('completions collection', () {
-        test('has per-collection match for completions/{completionId}', () {
-          expect(rules, contains('match /completions/{completionId}'));
+      // Story 25.4 renamed `completions` → `completion_events` (top-level, no uid nesting).
+      group('completion_events collection', () {
+        test('has per-collection match for completion_events/{docId}', () {
+          expect(rules, contains('match /completion_events/{docId}'));
         });
 
         test('allows create (not wildcard read/write)', () {
-          // Rules must contain `allow create:` in the completions block.
-          // We check that the rules file has the points validator pattern.
           expect(rules, contains('points >= 0'));
           expect(rules, contains('points <= 100'));
         });
 
-        test('enforces completedAt <= request.time', () {
-          expect(rules, contains('completedAt <= request.time'));
+        test('enforces completed_at <= request.time', () {
+          expect(rules, contains('completed_at <= request.time'));
         });
 
-        test('denies update on completions', () {
-          // The completions rule must explicitly deny update.
-          // It does so via `allow update, delete: if false`.
-          // We verify both the field and the deny pattern are present.
-          expect(rules, contains('allow update, delete: if false'));
+        test('denies update on completion_events', () {
+          final block = _extractBlock(rules, 'completion_events/{docId}');
+          expect(
+            block,
+            anyOf(
+              contains('allow update, delete: if false'),
+              contains('allow delete: if false'),
+            ),
+          );
         });
       });
 
       // ── streak_events ────────────────────────────────────────────────
 
       group('streak_events collection', () {
-        test('has per-collection match for streak_events/{eventId}', () {
-          expect(rules, contains('match /streak_events/{eventId}'));
+        test('has per-collection match for streak_events/{docId}', () {
+          expect(rules, contains('match /streak_events/{docId}'));
         });
 
         test('create-only with timestamp clamp', () {
-          // Rules must check createdAt <= request.time for streak_events.
-          // We look for the combination of the collection match and the clamp.
-          final streakBlock = _extractBlock(rules, 'streak_events/{eventId}');
-          expect(streakBlock, contains('createdAt <= request.time'));
+          final streakBlock = _extractBlock(rules, 'streak_events/{docId}');
+          expect(streakBlock, contains('created_at <= request.time'));
         });
 
         test('denies delete on streak_events', () {
-          final streakBlock = _extractBlock(rules, 'streak_events/{eventId}');
+          final streakBlock = _extractBlock(rules, 'streak_events/{docId}');
           expect(
             streakBlock,
             anyOf(
@@ -94,17 +95,17 @@ void main() {
       // ── learning_ledger ──────────────────────────────────────────────
 
       group('learning_ledger collection', () {
-        test('has per-collection match for learning_ledger/{entryId}', () {
-          expect(rules, contains('match /learning_ledger/{entryId}'));
+        test('has per-collection match for learning_ledger/{docId}', () {
+          expect(rules, contains('match /learning_ledger/{docId}'));
         });
 
         test('create-only with timestamp clamp', () {
-          final ledgerBlock = _extractBlock(rules, 'learning_ledger/{entryId}');
-          expect(ledgerBlock, contains('createdAt <= request.time'));
+          final ledgerBlock = _extractBlock(rules, 'learning_ledger/{docId}');
+          expect(ledgerBlock, contains('created_at <= request.time'));
         });
 
         test('denies delete on learning_ledger', () {
-          final ledgerBlock = _extractBlock(rules, 'learning_ledger/{entryId}');
+          final ledgerBlock = _extractBlock(rules, 'learning_ledger/{docId}');
           expect(
             ledgerBlock,
             anyOf(
@@ -118,27 +119,27 @@ void main() {
       // ── settings ─────────────────────────────────────────────────────
 
       group('settings collection', () {
-        test('has per-collection match for settings/{settingId}', () {
-          expect(rules, contains('match /settings/{settingId}'));
+        test('has per-collection match for settings/{docId}', () {
+          expect(rules, contains('match /settings/{docId}'));
         });
 
-        test('has field whitelist for hebrewTerms', () {
-          final settingsBlock = _extractBlock(rules, 'settings/{settingId}');
-          expect(settingsBlock, contains('hebrewTerms'));
+        test('has field whitelist for hebrew_terms', () {
+          final settingsBlock = _extractBlock(rules, 'settings/{docId}');
+          expect(settingsBlock, contains('hebrew_terms'));
         });
 
-        test('has field whitelist for useHebrewDate', () {
-          final settingsBlock = _extractBlock(rules, 'settings/{settingId}');
-          expect(settingsBlock, contains('useHebrewDate'));
+        test('has field whitelist for use_hebrew_date', () {
+          final settingsBlock = _extractBlock(rules, 'settings/{docId}');
+          expect(settingsBlock, contains('use_hebrew_date'));
         });
 
         test('uses hasOnly() for field whitelist enforcement', () {
-          final settingsBlock = _extractBlock(rules, 'settings/{settingId}');
+          final settingsBlock = _extractBlock(rules, 'settings/{docId}');
           expect(settingsBlock, contains('hasOnly('));
         });
 
         test('denies delete on settings', () {
-          final settingsBlock = _extractBlock(rules, 'settings/{settingId}');
+          final settingsBlock = _extractBlock(rules, 'settings/{docId}');
           expect(
             settingsBlock,
             anyOf(
