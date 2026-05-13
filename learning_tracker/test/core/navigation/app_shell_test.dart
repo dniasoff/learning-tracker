@@ -407,10 +407,9 @@ void main() {
       );
       await tester.pump();
 
-      // ContentBrowsingScreen is now a ConsumerStatefulWidget that
-      // renders the curriculum display name and a loading indicator
+      // ContentHierarchyScreen renders the 'Browse Content' AppBar title
       // while content loads from the (bundled JSON) asset provider.
-      expect(find.text('\u05DE\u05E9\u05E0\u05D9\u05D5\u05EA'), findsOneWidget);
+      expect(find.text('Browse Content'), findsOneWidget);
 
       await _cleanUpWidgets(tester);
     });
