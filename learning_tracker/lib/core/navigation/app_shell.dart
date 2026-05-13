@@ -2,6 +2,7 @@ import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/features/auth/presentation/widgets/offline_top_banner.dart';
+import 'package:learning_tracker/features/sacred_time/presentation/widgets/sacred_time_lock_overlay.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 @RoutePage()
@@ -10,60 +11,62 @@ class AppShellScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AutoTabsScaffold(
-      routes: const [
-        DashboardRoute(),
-        LearningRoute(),
-        ProgressRoute(),
-        SettingsRoute(),
-      ],
-      // Epic 20.8: top offline banner — cloud-born only, tier-gated
-      // inside the widget so local-born users never see it.
-      appBarBuilder: (_, __) => const PreferredSize(
-        preferredSize: Size.fromHeight(32),
-        child: OfflineTopBanner(),
-      ),
-      bottomNavigationBuilder: (context, tabsRouter) {
-        final l10n = AppLocalizations.of(context)!;
-        final items = [
-          (icon: Icons.space_dashboard_rounded, label: l10n.tabBarDashboard),
-          (icon: Icons.menu_book_rounded, label: l10n.tabBarLearn),
-          (icon: Icons.auto_graph_rounded, label: l10n.tabBarProgress),
-          (icon: Icons.settings_rounded, label: l10n.tabBarSettings),
-        ];
-        return DecoratedBox(
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-            boxShadow: [
-              BoxShadow(
-                color: Color(0x140038A8),
-                blurRadius: 18,
-                offset: Offset(0, -4),
-              ),
-            ],
-          ),
-          child: SafeArea(
-            top: false,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
-              child: Row(
-                children: [
-                  for (var index = 0; index < items.length; index++)
-                    Expanded(
-                      child: _ShellNavItem(
-                        icon: items[index].icon,
-                        label: items[index].label,
-                        selected: tabsRouter.activeIndex == index,
-                        onTap: () => tabsRouter.setActiveIndex(index),
+    return SacredTimeLockOverlay(
+      child: AutoTabsScaffold(
+        routes: const [
+          DashboardRoute(),
+          LearningRoute(),
+          ProgressRoute(),
+          SettingsRoute(),
+        ],
+        // Epic 20.8: top offline banner — cloud-born only, tier-gated
+        // inside the widget so local-born users never see it.
+        appBarBuilder: (_, __) => const PreferredSize(
+          preferredSize: Size.fromHeight(32),
+          child: OfflineTopBanner(),
+        ),
+        bottomNavigationBuilder: (context, tabsRouter) {
+          final l10n = AppLocalizations.of(context)!;
+          final items = [
+            (icon: Icons.space_dashboard_rounded, label: l10n.tabBarDashboard),
+            (icon: Icons.menu_book_rounded, label: l10n.tabBarLearn),
+            (icon: Icons.auto_graph_rounded, label: l10n.tabBarProgress),
+            (icon: Icons.settings_rounded, label: l10n.tabBarSettings),
+          ];
+          return DecoratedBox(
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+              boxShadow: [
+                BoxShadow(
+                  color: Color(0x140038A8),
+                  blurRadius: 18,
+                  offset: Offset(0, -4),
+                ),
+              ],
+            ),
+            child: SafeArea(
+              top: false,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+                child: Row(
+                  children: [
+                    for (var index = 0; index < items.length; index++)
+                      Expanded(
+                        child: _ShellNavItem(
+                          icon: items[index].icon,
+                          label: items[index].label,
+                          selected: tabsRouter.activeIndex == index,
+                          onTap: () => tabsRouter.setActiveIndex(index),
+                        ),
                       ),
-                    ),
-                ],
+                  ],
+                ),
               ),
             ),
-          ),
-        );
-      },
+          );
+        },
+      ),
     );
   }
 }
