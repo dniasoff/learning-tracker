@@ -332,6 +332,11 @@ Future<PaceStatus?> dashboardPaceStatus(
     dailyCounts[date] = (dailyCounts[date] ?? 0) + 1;
   }
 
+  // Real total-item count from the scoped content tree (DNI-345).
+  final totalItems = await ref.watch(
+    scopedItemCountProvider(curriculum).future,
+  );
+
   // Pace-based goal
   if (goal.goalType == 'pace' &&
       goal.paceValue != null &&
@@ -340,8 +345,6 @@ Future<PaceStatus?> dashboardPaceStatus(
       goal.paceValue!,
       goal.paceUnit!,
     );
-    // We need totalItems — approximate from completions touched
-    final totalItems = personalCompletions.length + 100; // rough estimate
     return PaceCalculator.calculateForPaceGoal(
       targetPacePerDay: dailyRate,
       totalItems: totalItems,
@@ -354,8 +357,6 @@ Future<PaceStatus?> dashboardPaceStatus(
   // Deadline-based goal
   if (goal.targetDate == null) return null;
 
-  // Approximate totalItems from completions count (rough)
-  final totalItems = personalCompletions.length + 100;
   return PaceCalculator.calculate(
     goalStartDate: goal.createdAt,
     goalDeadline: goal.targetDate!,
