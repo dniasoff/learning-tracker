@@ -3,24 +3,58 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
-import 'package:learning_tracker/core/utils/date_utils.dart';
+import 'package:learning_tracker/core/time/local_day_clock.dart';
 import 'package:learning_tracker/core/widgets/app_bar_title.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/gamification/domain/services/streak_service.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/progress/presentation/widgets/streak_calendar.dart';
 
+/// The three calendar views available on the streak history screen.
+enum _StreakRange { sevenDays, twentyNineDays, allTime }
+
 @RoutePage()
-class StreakHistoryScreen extends ConsumerWidget {
+class StreakHistoryScreen extends ConsumerStatefulWidget {
   const StreakHistoryScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<StreakHistoryScreen> createState() =>
+      _StreakHistoryScreenState();
+}
+
+class _StreakHistoryScreenState extends ConsumerState<StreakHistoryScreen> {
+  _StreakRange _range = _StreakRange.sevenDays;
+
+  ({DateTime start, DateTime end}) _dateRange(LocalDayClock clock) {
+    final today = clock.today();
+    return switch (_range) {
+      _StreakRange.sevenDays => (
+        start: today.subtract(const Duration(days: 6)),
+        end: today,
+      ),
+      _StreakRange.twentyNineDays => (
+        start: today.subtract(const Duration(days: 28)),
+        end: today,
+      ),
+      _StreakRange.allTime => (start: DateTime(2024, 1, 1), end: today),
+    };
+  }
+
+  String get _rangeLabel => switch (_range) {
+    _StreakRange.sevenDays => 'Last 7 days',
+    _StreakRange.twentyNineDays => 'Last 29 days',
+    _StreakRange.allTime => 'All time',
+  };
+
+  @override
+  Widget build(BuildContext context) {
     final streakAsync = ref.watch(dashboardStreakProvider);
     final profileId = ref.watch(activeProfileIdProvider);
     final db = ref.watch(userDatabaseProvider);
+    final clock = ref.watch(localDayClockProvider);
     final current = streakAsync.asData?.value.currentStreak ?? 0;
     final longest = streakAsync.asData?.value.maxStreak ?? 0;
+    final dates = _dateRange(clock);
 
     return Scaffold(
       backgroundColor: const Color(0xFFF4F6FB),
@@ -33,7 +67,7 @@ class StreakHistoryScreen extends ConsumerWidget {
       ),
       body: SafeArea(
         child: ListView(
-          padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+          padding: const EdgeInsetsDirectional.fromSTEB(20, 8, 20, 24),
           children: [
             Row(
               children: [
@@ -56,13 +90,41 @@ class StreakHistoryScreen extends ConsumerWidget {
                 ),
               ],
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 20),
+            // Range selector chips.
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  _RangeChip(
+                    label: 'Last 7 days',
+                    selected: _range == _StreakRange.sevenDays,
+                    onTap: () =>
+                        setState(() => _range = _StreakRange.sevenDays),
+                  ),
+                  const SizedBox(width: 8),
+                  _RangeChip(
+                    label: 'Last 29 days',
+                    selected: _range == _StreakRange.twentyNineDays,
+                    onTap: () =>
+                        setState(() => _range = _StreakRange.twentyNineDays),
+                  ),
+                  const SizedBox(width: 8),
+                  _RangeChip(
+                    label: 'All time',
+                    selected: _range == _StreakRange.allTime,
+                    onTap: () => setState(() => _range = _StreakRange.allTime),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
             FutureBuilder<Set<DateTime>>(
+              // Re-build when range changes by keying on the range enum.
+              key: ValueKey(_range),
               future: StreakService(db, profileId: profileId).getStreakCalendar(
-                startUtc: DateTimeFactory.nowUtc().subtract(
-                  const Duration(days: 30),
-                ),
-                endUtc: DateTimeFactory.nowUtc(),
+                startUtc: dates.start.toUtc(),
+                endUtc: dates.end.toUtc(),
               ),
               builder: (context, snapshot) {
                 final activeDates = snapshot.data ?? const <DateTime>{};
@@ -83,26 +145,65 @@ class StreakHistoryScreen extends ConsumerWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Last 14 days',
+                        _rangeLabel,
                         style: Theme.of(context).textTheme.titleSmall?.copyWith(
                           fontWeight: FontWeight.w800,
                           color: AppTheme.brandInk,
                         ),
                       ),
                       const SizedBox(height: 12),
-                      StreakCalendar(
-                        activeDates: activeDates,
-                        startDate: DateTimeFactory.nowLocal().subtract(
-                          const Duration(days: 13),
+                      if (!snapshot.hasData)
+                        const Center(child: CircularProgressIndicator())
+                      else
+                        StreakCalendar(
+                          activeDates: activeDates,
+                          startDate: dates.start,
+                          endDate: dates.end,
                         ),
-                        endDate: DateTimeFactory.nowLocal(),
-                      ),
                     ],
                   ),
                 );
               },
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _RangeChip extends StatelessWidget {
+  const _RangeChip({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+        decoration: BoxDecoration(
+          color: selected ? AppTheme.brandInk : Colors.white,
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(
+            color: selected ? AppTheme.brandInk : const Color(0xFFDDE1EA),
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: selected ? Colors.white : const Color(0xFF5A6175),
+          ),
         ),
       ),
     );

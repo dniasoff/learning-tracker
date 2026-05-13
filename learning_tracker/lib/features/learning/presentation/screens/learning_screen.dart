@@ -106,120 +106,130 @@ class _StreakHeroCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Stack(
-      clipBehavior: Clip.none,
-      children: [
-        Container(
-          padding: const EdgeInsets.fromLTRB(18, 14, 18, 16),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(24),
-            gradient: const LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [Color(0xFF1B3FAF), Color(0xFF1F4ECD), Color(0xFF2632AF)],
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: const Color(0xFF1F4ECD).withValues(alpha: 0.3),
-                blurRadius: 16,
-                offset: const Offset(0, 8),
+    return GestureDetector(
+      onTap: () => context.router.push(const StreakHistoryRoute()),
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Container(
+            padding: const EdgeInsets.fromLTRB(18, 14, 18, 16),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(24),
+              gradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Color(0xFF1B3FAF),
+                  Color(0xFF1F4ECD),
+                  Color(0xFF2632AF),
+                ],
               ),
-            ],
-          ),
-          child: Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'CURRENT ACHIEVEMENT',
-                      style: theme.textTheme.labelSmall?.copyWith(
-                        color: Colors.white.withValues(alpha: 0.78),
-                        letterSpacing: 1,
-                        fontWeight: FontWeight.w700,
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF1F4ECD).withValues(alpha: 0.3),
+                  blurRadius: 16,
+                  offset: const Offset(0, 8),
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'CURRENT ACHIEVEMENT',
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: Colors.white.withValues(alpha: 0.78),
+                          letterSpacing: 1,
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      '$currentStreak Day Streak',
-                      style: theme.textTheme.titleLarge?.copyWith(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w800,
-                        fontSize: 38,
-                        height: 1.02,
+                      const SizedBox(height: 6),
+                      Text(
+                        '$currentStreak Day Streak',
+                        style: theme.textTheme.titleLarge?.copyWith(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w800,
+                          fontSize: 38,
+                          height: 1.02,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.16),
-                        borderRadius: BorderRadius.circular(999),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(
-                            Icons.workspace_premium_rounded,
-                            color: Color(0xFFF7E7AF),
-                            size: 14,
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            'Personal Best: $maxStreak',
-                            style: theme.textTheme.labelSmall?.copyWith(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w700,
+                      const SizedBox(height: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.16),
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.workspace_premium_rounded,
+                              color: Color(0xFFF7E7AF),
+                              size: 14,
                             ),
-                          ),
-                        ],
+                            const SizedBox(width: 4),
+                            Text(
+                              'Personal Best: $maxStreak',
+                              style: theme.textTheme.labelSmall?.copyWith(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                const Icon(
+                  Icons.local_fire_department_rounded,
+                  color: Color(0xFFFF6C54),
+                  size: 56,
+                ),
+              ],
+            ),
+          ),
+          Positioned(
+            right: 14,
+            bottom: -14,
+            child: Transform.rotate(
+              angle: 0.08,
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF4CFA4),
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.12),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
                     ),
                   ],
                 ),
-              ),
-              const SizedBox(width: 8),
-              const Icon(
-                Icons.local_fire_department_rounded,
-                color: Color(0xFFFF6C54),
-                size: 56,
-              ),
-            ],
-          ),
-        ),
-        Positioned(
-          right: 14,
-          bottom: -14,
-          child: Transform.rotate(
-            angle: 0.08,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: const Color(0xFFF4CFA4),
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.12),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
+                child: Text(
+                  'Keep it up! 🚀',
+                  style: theme.textTheme.labelMedium?.copyWith(
+                    color: const Color(0xFF5A3E22),
+                    fontWeight: FontWeight.w700,
                   ),
-                ],
-              ),
-              child: Text(
-                'Keep it up! 🚀',
-                style: theme.textTheme.labelMedium?.copyWith(
-                  color: const Color(0xFF5A3E22),
-                  fontWeight: FontWeight.w700,
                 ),
               ),
             ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
