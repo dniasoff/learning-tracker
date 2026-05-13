@@ -94,7 +94,10 @@ class StreakService {
 
     final wasRecovered =
         streak.graceUsedDate != null &&
-        DateUtils.isSameLocalDay(streak.graceUsedDate!, DateTime.now().toUtc());
+        DateUtils.isSameLocalDay(
+          streak.graceUsedDate!,
+          DateTimeFactory.nowUtc(),
+        );
 
     final missedDate = wasRecovered && streak.graceUsedDate != null
         ? DateUtils.extractLocalDate(

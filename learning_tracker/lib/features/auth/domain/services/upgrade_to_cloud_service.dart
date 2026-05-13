@@ -1,6 +1,7 @@
 import 'package:drift/drift.dart';
 import 'package:learning_tracker/core/database/daos/user_profile_dao.dart';
 import 'package:learning_tracker/core/database/registry/device_registry_database.dart';
+import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/auth/domain/models/app_user.dart';
 import 'package:learning_tracker/features/auth/domain/repositories/auth_repository.dart';
 import 'package:learning_tracker/features/auth/domain/services/password_hasher.dart';
@@ -134,7 +135,7 @@ class UpgradeToCloudService {
     await _dao.upgradeLocalToCloud(
       profileId: profile.id,
       firebaseUid: refreshed.uid,
-      updatedAt: DateTime.now().toUtc(),
+      updatedAt: DateTimeFactory.nowUtc(),
     );
 
     if (registry != null && accountId != null) {
@@ -172,7 +173,7 @@ class UpgradeToCloudService {
       await _dao.upgradeLocalToCloud(
         profileId: localProfile.id,
         firebaseUid: refreshed.uid,
-        updatedAt: DateTime.now().toUtc(),
+        updatedAt: DateTimeFactory.nowUtc(),
       );
 
       if (registry != null && accountId != null) {
@@ -272,7 +273,7 @@ class UpgradeToCloudService {
     await _dao.upgradeLocalToCloud(
       profileId: localProfile.id,
       firebaseUid: refreshed.uid,
-      updatedAt: DateTime.now().toUtc(),
+      updatedAt: DateTimeFactory.nowUtc(),
     );
 
     if (registry != null && accountId != null) {
@@ -305,7 +306,7 @@ class UpgradeToCloudService {
     await _dao.upgradeLocalToCloud(
       profileId: localProfile.id,
       firebaseUid: refreshed.uid,
-      updatedAt: DateTime.now().toUtc(),
+      updatedAt: DateTimeFactory.nowUtc(),
     );
 
     if (registry != null && accountId != null) {

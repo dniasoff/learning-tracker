@@ -4,6 +4,7 @@ import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/providers/firebase_providers.dart';
 import 'package:learning_tracker/core/providers/network_providers.dart';
 import 'package:learning_tracker/core/providers/talker_provider.dart';
+import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/auth/presentation/providers/auth_providers.dart'
     show authRepositoryProvider;
 import 'package:learning_tracker/features/auth/presentation/providers/auth_state_provider.dart';
@@ -109,8 +110,10 @@ final syncStatusProvider = Provider<SyncStatus>((ref) {
   final asyncStatus = ref.watch(syncStatusStreamProvider);
   return asyncStatus.when(
     data: (status) => status,
-    loading: () => SyncStatus.syncing(startedAt: DateTime.now()),
-    error: (error, _) =>
-        SyncStatus.error(message: error.toString(), failedAt: DateTime.now()),
+    loading: () => SyncStatus.syncing(startedAt: DateTimeFactory.nowLocal()),
+    error: (error, _) => SyncStatus.error(
+      message: error.toString(),
+      failedAt: DateTimeFactory.nowLocal(),
+    ),
   );
 });

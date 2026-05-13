@@ -3,6 +3,7 @@ import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
+import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/onboarding/domain/models/wizard_result_wrapper.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/learning_process_wizard_service.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/goal_form_result.dart';
@@ -194,7 +195,7 @@ class TrackCreationService {
         final offset = int.tryParse(offsetSource.substring('offset:'.length));
         if (offset != null) {
           final clampedOffset = offset.clamp(-30, 30);
-          trackingStartDate = DateTime.now().toUtc().add(
+          trackingStartDate = DateTimeFactory.nowUtc().add(
             Duration(days: clampedOffset),
           );
         }
@@ -209,7 +210,7 @@ class TrackCreationService {
       );
 
       if (bookmarkRef != null && bookmarkRef.isNotEmpty) {
-        final updatedAt = DateTime.now().toUtc();
+        final updatedAt = DateTimeFactory.nowUtc();
         await _database.bookmarkDao.upsertBookmarkByProfile(
           profileId: profileId,
           curriculumId: curriculum.storageKey,
@@ -268,7 +269,7 @@ class TrackCreationService {
     required int trackId,
     required List<ScopeEntry> scopes,
   }) async {
-    final now = DateTime.now().toUtc();
+    final now = DateTimeFactory.nowUtc();
     for (final scope in scopes) {
       await _database
           .into(_database.curriculumScopes)

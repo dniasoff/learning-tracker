@@ -1,5 +1,6 @@
 import 'package:drift/drift.dart' show Value;
 import 'package:learning_tracker/core/database/registry/device_registry_database.dart';
+import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Dual-write service that keeps SharedPreferences and the device
@@ -25,7 +26,7 @@ class SessionPersistenceService {
   Future<void> setActiveAccount(String accountId) async {
     await _prefs.setString(_key, accountId);
     await _registry.setLastActiveAccountId(accountId);
-    await _registry.updateLastUsed(accountId, DateTime.now());
+    await _registry.updateLastUsed(accountId, DateTimeFactory.nowLocal());
   }
 
   /// Insert a freshly created account into the device registry and
@@ -42,7 +43,7 @@ class SessionPersistenceService {
     String? firebaseUid,
     required String dbFileName,
   }) async {
-    final now = DateTime.now();
+    final now = DateTimeFactory.nowLocal();
     await _registry.addAccount(
       DeviceAccountsCompanion.insert(
         accountId: accountId,

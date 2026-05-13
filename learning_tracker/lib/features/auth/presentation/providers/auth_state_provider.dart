@@ -1,5 +1,6 @@
 import 'package:learning_tracker/core/database/daos/user_profile_dao.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
+import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/auth/domain/models/app_user.dart';
 import 'package:learning_tracker/features/auth/domain/models/auth_state.dart';
 import 'package:learning_tracker/features/auth/presentation/providers/auth_providers.dart';
@@ -102,7 +103,7 @@ class AuthStateNotifier extends _$AuthStateNotifier {
         email: firebaseUser.email ?? '${firebaseUser.uid}@cloud.placeholder',
         displayName: firebaseUser.displayName ?? '',
         userMode: 'adult',
-        updatedAt: DateTime.now().toUtc(),
+        updatedAt: DateTimeFactory.nowUtc(),
       );
       profile = await dao.getUserProfileByFirebaseUid(firebaseUser.uid);
     }

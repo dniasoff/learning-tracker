@@ -2,6 +2,7 @@ import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
+import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/auth/presentation/providers/auth_state_provider.dart';
 import 'package:learning_tracker/features/sync/domain/models/sync_status.dart';
 import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
@@ -311,7 +312,7 @@ class BackupSyncSection extends ConsumerWidget {
   }
 
   static String _formatTimeAgo(DateTime dateTime) {
-    final diff = DateTime.now().difference(dateTime);
+    final diff = DateTimeFactory.nowLocal().difference(dateTime);
     if (diff.inMinutes < 1) return 'just now';
     if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
     if (diff.inHours < 24) return '${diff.inHours}h ago';

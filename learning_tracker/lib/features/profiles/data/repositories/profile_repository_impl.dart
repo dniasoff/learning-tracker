@@ -1,6 +1,7 @@
 import 'package:drift/drift.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
+import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
 import 'package:learning_tracker/features/profiles/domain/repositories/profile_repository.dart';
 import 'package:learning_tracker/features/sync/data/sync_engine.dart';
@@ -68,7 +69,7 @@ class ProfileRepositoryImpl implements ProfileRepository {
     }
 
     _log.info(event: 'profile_repo_create_start', fields: {'mode': mode});
-    final now = DateTime.now().toUtc();
+    final now = DateTimeFactory.nowUtc();
     final id = await _db.profileDao.insertProfile(
       LearnerProfilesCompanion.insert(
         accountId: accountId,
@@ -127,8 +128,10 @@ class ProfileRepositoryImpl implements ProfileRepository {
     }
 
     final trimmedDisplayName = displayName?.trim();
-    final now = DateTime.now().toUtc();
-    await (_db.update(_db.learnerProfiles)..where((t) => t.id.equals(id))).write(
+    final now = DateTimeFactory.nowUtc();
+    await (_db.update(
+      _db.learnerProfiles,
+    )..where((t) => t.id.equals(id))).write(
       LearnerProfilesCompanion(
         displayName: trimmedDisplayName != null
             ? Value(trimmedDisplayName)

@@ -59,7 +59,7 @@ class SchedulerTaskSectionNotifier extends Notifier<SchedulerTaskSection> {
 
 /// Provides the current UTC date/time. Override in tests to control time.
 @riverpod
-DateTime clock(Ref ref) => DateTime.now().toUtc();
+DateTime clock(Ref ref) => DateTimeFactory.nowUtc();
 
 @riverpod
 SchedulerEngine schedulerEngine(Ref ref) {

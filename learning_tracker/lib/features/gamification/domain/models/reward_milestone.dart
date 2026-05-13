@@ -1,3 +1,5 @@
+import 'package:learning_tracker/core/utils/date_utils.dart';
+
 class RewardMilestone {
   /// Stored as [trackId] for milestones that use [PointsService.getGlobalTotal].
   ///
@@ -78,10 +80,10 @@ class RewardMilestone {
       iconIndex: _asInt(json['icon_index']) ?? 0,
       createdAt:
           DateTime.tryParse((json['created_at'] ?? '').toString()) ??
-          DateTime.now().toUtc(),
+          DateTimeFactory.nowUtc(),
       updatedAt:
           DateTime.tryParse((json['updated_at'] ?? '').toString()) ??
-          DateTime.now().toUtc(),
+          DateTimeFactory.nowUtc(),
     );
   }
 
@@ -133,7 +135,7 @@ class RewardUnlockRecord {
       pointsAtUnlock: RewardMilestone._asInt(json['points_at_unlock']) ?? 0,
       unlockedAt:
           DateTime.tryParse((json['unlocked_at'] ?? '').toString()) ??
-          DateTime.now().toUtc(),
+          DateTimeFactory.nowUtc(),
     );
   }
 }

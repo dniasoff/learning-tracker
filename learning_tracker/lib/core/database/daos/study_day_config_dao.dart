@@ -2,6 +2,7 @@ import 'package:drift/drift.dart';
 import 'package:learning_tracker/core/database/tables/curriculum_tracks.dart';
 import 'package:learning_tracker/core/database/tables/study_day_configs.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
+import 'package:learning_tracker/core/utils/date_utils.dart';
 
 part 'study_day_config_dao.g.dart';
 
@@ -53,7 +54,7 @@ class StudyDayConfigDao extends DatabaseAccessor<UserDatabase>
         trackId: trackId,
         dayOfWeek: dayOfWeek,
         dayType: Value(dayType),
-        updatedAt: DateTime.now().toUtc(),
+        updatedAt: DateTimeFactory.nowUtc(),
       ),
     );
   }
@@ -64,7 +65,7 @@ class StudyDayConfigDao extends DatabaseAccessor<UserDatabase>
     required String curriculumId,
     required int trackId,
   }) async {
-    final now = DateTime.now().toUtc();
+    final now = DateTimeFactory.nowUtc();
     for (var day = 1; day <= 7; day++) {
       await into(studyDayConfigs).insertOnConflictUpdate(
         StudyDayConfigsCompanion.insert(

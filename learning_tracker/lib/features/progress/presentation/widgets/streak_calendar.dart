@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:learning_tracker/core/utils/date_utils.dart';
 
 /// Calendar grid highlighting days with learning activity.
 class StreakCalendar extends StatelessWidget {
@@ -25,7 +26,7 @@ class StreakCalendar extends StatelessWidget {
       dates.add(cursor);
       cursor = cursor.add(const Duration(days: 1));
     }
-    final today = DateTime.now();
+    final today = DateTimeFactory.nowLocal();
     final weekdayLabels = dates
         .take(7)
         .map((d) => _weekdayInitial(d.weekday))

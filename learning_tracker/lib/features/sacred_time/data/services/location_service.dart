@@ -1,5 +1,6 @@
 import 'package:geocoding/geocoding.dart' as geo;
 import 'package:geolocator/geolocator.dart';
+import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/sacred_time/domain/models/sacred_location.dart';
 
 /// Outcome of a permission/location request.
@@ -65,7 +66,7 @@ class LocationService {
           latitude: position.latitude,
           longitude: position.longitude,
           source: SacredLocationSource.detected,
-          fixedAt: DateTime.now().toUtc(),
+          fixedAt: DateTimeFactory.nowUtc(),
           countryCode: iso,
         ),
       );

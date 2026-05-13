@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/core/widgets/app_bar_title.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/gamification/domain/services/streak_service.dart';
@@ -58,10 +59,10 @@ class StreakHistoryScreen extends ConsumerWidget {
             const SizedBox(height: 24),
             FutureBuilder<Set<DateTime>>(
               future: StreakService(db, profileId: profileId).getStreakCalendar(
-                startUtc: DateTime.now().toUtc().subtract(
+                startUtc: DateTimeFactory.nowUtc().subtract(
                   const Duration(days: 30),
                 ),
-                endUtc: DateTime.now().toUtc(),
+                endUtc: DateTimeFactory.nowUtc(),
               ),
               builder: (context, snapshot) {
                 final activeDates = snapshot.data ?? const <DateTime>{};
@@ -91,10 +92,10 @@ class StreakHistoryScreen extends ConsumerWidget {
                       const SizedBox(height: 12),
                       StreakCalendar(
                         activeDates: activeDates,
-                        startDate: DateTime.now().subtract(
+                        startDate: DateTimeFactory.nowLocal().subtract(
                           const Duration(days: 13),
                         ),
-                        endDate: DateTime.now(),
+                        endDate: DateTimeFactory.nowLocal(),
                       ),
                     ],
                   ),

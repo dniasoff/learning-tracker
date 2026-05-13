@@ -3,6 +3,7 @@ import 'dart:developer' as developer;
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:learning_tracker/core/database/daos/user_profile_dao.dart';
 import 'package:learning_tracker/core/enums/user_mode.dart';
+import 'package:learning_tracker/core/utils/date_utils.dart';
 
 /// Callback type for pushing user profile data to Firestore.
 typedef PushUserProfile =
@@ -46,7 +47,7 @@ class UserProfileService {
     required String displayName,
     required UserMode mode,
   }) async {
-    final now = DateTime.now();
+    final now = DateTimeFactory.nowLocal();
     final modeString = mode.name;
 
     // Write to local database

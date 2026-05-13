@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:learning_tracker/core/utils/date_utils.dart';
 
 import 'package:learning_tracker/features/sacred_time/domain/models/sacred_window.dart';
 import 'package:learning_tracker/features/sacred_time/domain/services/zmanim_window_service.dart';
@@ -19,7 +20,7 @@ List<SacredWindow> sacredWindows(Ref ref) {
     latitude: location.latitude,
     longitude: location.longitude,
     inIsrael: inIsrael,
-    from: DateTime.now(),
+    from: DateTimeFactory.nowLocal(),
     span: const Duration(days: 180),
   );
 }
@@ -58,7 +59,7 @@ class CurrentSacredWindow extends _$CurrentSacredWindow {
   }
 
   static SacredWindow? _findActive(List<SacredWindow> windows) {
-    final nowUtc = DateTime.now().toUtc();
+    final nowUtc = DateTimeFactory.nowUtc();
     for (final w in windows) {
       if (!nowUtc.isBefore(w.startUtc) && !nowUtc.isAfter(w.endUtc)) {
         return w;

@@ -4,6 +4,7 @@ import 'dart:math';
 import 'package:learning_tracker/core/database/daos/sync_queue_dao.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
+import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/sync/data/firestore_data_source.dart';
 
 /// Manages offline queue for pending Firestore operations.
@@ -206,7 +207,8 @@ class OfflineQueue {
     final payload = jsonEncode(item);
     await _queue.enqueue('learning_order_item', payload);
     _logger.info(
-      event: 'Queued learning order item for offline sync: '
+      event:
+          'Queued learning order item for offline sync: '
           '${item["curriculum_id"]}_${item["sefaria_ref"]}',
     );
   }
@@ -270,7 +272,7 @@ class OfflineQueue {
           final nextRetryAt = operation.queuedAt.add(
             Duration(seconds: backoffSeconds),
           );
-          if (DateTime.now().toUtc().isBefore(nextRetryAt)) {
+          if (DateTimeFactory.nowUtc().isBefore(nextRetryAt)) {
             _logger.debug(
               event: 'offline_queue_backoff_skip',
               fields: {

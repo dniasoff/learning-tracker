@@ -52,7 +52,7 @@ final class ClockProvider
   }
 }
 
-String _$clockHash() => r'06fec5a43106c3c566bb13e4b7835a61774a3ff5';
+String _$clockHash() => r'9468c7ed98173bba0de2531c1898d9587398c3de';
 
 @ProviderFor(schedulerEngine)
 final schedulerEngineProvider = SchedulerEngineProvider._();

@@ -79,7 +79,7 @@ class ParentDashboardAggregator {
   ///
   /// [now] defaults to the current time; pass explicitly for testability.
   Future<ParentDashboardData> compute({DateTime? now}) async {
-    now ??= DateTime.now();
+    now ??= DateTimeFactory.nowLocal();
     final completions = await _db.completionDao.getCompletionsByProfile(
       _profileId,
     );

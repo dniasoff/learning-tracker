@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/auth/domain/repositories/auth_repository.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:talker/talker.dart';
@@ -28,7 +29,7 @@ Future<void> sendLogsToFirebase({
     return;
   }
 
-  final now = DateTime.now().toUtc();
+  final now = DateTimeFactory.nowUtc();
   final cutoff = now.subtract(const Duration(minutes: _logWindowMinutes));
   final recent = talker.history.where((e) => e.time.isAfter(cutoff)).toList();
 

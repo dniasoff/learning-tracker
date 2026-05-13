@@ -4,6 +4,7 @@ import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
+import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/dashboard/domain/models/calendar_position.dart';
 import 'package:learning_tracker/features/dashboard/domain/models/chazara_status.dart';
 import 'package:learning_tracker/features/dashboard/domain/models/momentum_status.dart';
@@ -67,7 +68,7 @@ Future<TrackProgress> trackProgress(Ref ref, int trackId) async {
       '(${track.trackType})';
 
   // 8. Compute variant-specific fields
-  final now = DateTime.now().toUtc();
+  final now = DateTimeFactory.nowUtc();
 
   PaceStatus? paceStatus;
   CalendarPosition? calendarPos;

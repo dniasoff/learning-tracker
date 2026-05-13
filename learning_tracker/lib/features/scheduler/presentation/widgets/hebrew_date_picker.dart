@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:kosher_dart/kosher_dart.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/core/utils/hebrew_calendar_utils.dart';
 
 /// A dialog that lets users pick a Hebrew date and returns the Gregorian UTC
@@ -35,7 +36,7 @@ class _HebrewDatePickerState extends State<HebrewDatePicker> {
   @override
   void initState() {
     super.initState();
-    final initial = widget.initialDate ?? DateTime.now();
+    final initial = widget.initialDate ?? DateTimeFactory.nowLocal();
     final jewishDate = HebrewCalendarUtils.gregorianToJewishDate(initial);
     _hebrewYear = jewishDate.getJewishYear();
     _hebrewMonth = jewishDate.getJewishMonth();

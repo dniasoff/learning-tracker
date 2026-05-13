@@ -1,17 +1,27 @@
 /// Utilities for date handling following P5 pattern:
 /// - All stored dates are UTC
 /// - Local timezone conversion only in presentation layer
-/// - Never use DateTime.now() in data/domain layers
+/// - Never read the system clock directly — go through `LocalDayClock`
+///   (DNI-331) so day-boundary semantics are deterministic in tests.
 library;
 
+import 'package:learning_tracker/core/time/local_day_clock.dart';
+
 /// Factory helpers for creating UTC DateTime instances.
-/// Use these instead of DateTime.now() to ensure UTC storage.
+///
+/// All "current instant" reads are routed through [LocalDayClock] so tests
+/// can swap the clock via `localDayClockProvider.overrideWithValue(...)`
+/// (Riverpod) or [useLocalDayClock] (non-Riverpod call sites).
 class DateTimeFactory {
-  /// Returns current UTC time.
-  /// Use this instead of DateTime.now() in data/domain layers.
-  static DateTime nowUtc() {
-    return DateTime.now().toUtc();
-  }
+  /// Returns the current UTC instant via the globally-installed
+  /// [LocalDayClock]. In production this is a [SystemLocalDayClock];
+  /// tests can swap it through `useLocalDayClock` / `resetLocalDayClock`.
+  static DateTime nowUtc() => currentLocalDayClock.nowUtc();
+
+  /// Returns the current LOCAL instant (`.isUtc == false`) via the
+  /// globally-installed [LocalDayClock]. Use for UI strings, time-of-day
+  /// greetings, and other presentation-layer reads.
+  static DateTime nowLocal() => currentLocalDayClock.nowUtc().toLocal();
 
   /// Creates a UTC DateTime from components.
   /// Ensures the result is always in UTC timezone.

@@ -1,6 +1,7 @@
 import 'package:drift/drift.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 import 'package:learning_tracker/features/learning_order/domain/models/learning_order_item.dart';
 import 'package:learning_tracker/features/learning_order/domain/repositories/learning_order_repository.dart';
@@ -91,7 +92,7 @@ class LearningOrderRepositoryImpl implements LearningOrderRepository {
     CurriculumId curriculumId,
     List<LearningOrderItem> items,
   ) async {
-    final updatedAt = DateTime.now().toUtc();
+    final updatedAt = DateTimeFactory.nowUtc();
 
     for (var i = 0; i < items.length; i++) {
       await _database.learningOrderDao.upsertLearningOrder(
@@ -128,7 +129,7 @@ class LearningOrderRepositoryImpl implements LearningOrderRepository {
       profileId: _profileId,
       curriculumId: curriculumId.storageKey,
       items: const [],
-      updatedAt: DateTime.now().toUtc(),
+      updatedAt: DateTimeFactory.nowUtc(),
     );
   }
 }

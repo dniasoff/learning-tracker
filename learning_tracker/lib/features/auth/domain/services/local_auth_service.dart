@@ -1,5 +1,6 @@
 import 'package:drift/drift.dart';
 import 'package:learning_tracker/core/database/daos/user_profile_dao.dart';
+import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/auth/domain/services/password_hasher.dart';
 
 /// Thrown when a local-born signup is attempted with an email that
@@ -65,7 +66,7 @@ class LocalAuthService {
     }
 
     final hash = await _hasher.hash(password);
-    final now = DateTime.now().toUtc();
+    final now = DateTimeFactory.nowUtc();
     final id = await _dao.insertUserProfile(
       UserProfilesCompanion.insert(
         email: normalized,

@@ -5,6 +5,7 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
+import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/bookmark_providers.dart';
 
 /// Card widget displaying "Continue where you left off" with bookmarked item.
@@ -181,7 +182,7 @@ class BookmarkCard extends ConsumerWidget {
   }
 
   String _formatDate(DateTime date) {
-    final now = DateTime.now();
+    final now = DateTimeFactory.nowLocal();
     final difference = now.difference(date);
 
     if (difference.inDays == 0) {

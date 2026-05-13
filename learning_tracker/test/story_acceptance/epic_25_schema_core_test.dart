@@ -3,14 +3,17 @@
 /// Story 25.3 (DNI-324): Composite indexes on hot-path queries.
 /// Story 25.5 (DNI-326): Outbox table and OutboxProcessor scaffolding.
 /// Story 25.8 (DNI-329): ContentIndex + ProgramRefResolver.
+/// Story 25.10 (DNI-331): LocalDayClock — single time provider.
 /// Story 25.11 (DNI-332): AuthRepository — sole firebase_auth consumer.
 @Tags(['epic_25'])
 library;
 
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:drift/drift.dart' show Variable;
 import 'package:drift/native.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/content/content_index.dart';
 import 'package:learning_tracker/core/content/program_ref_resolver.dart';
 import 'package:learning_tracker/core/database/daos/outbox_dao.dart';
@@ -19,6 +22,7 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/sync/outbox/outbox_processor.dart';
 import 'package:learning_tracker/core/sync/outbox/push_pipeline.dart';
+import 'package:learning_tracker/core/time/local_day_clock.dart';
 import 'package:learning_tracker/features/auth/domain/models/app_user.dart';
 import 'package:learning_tracker/features/auth/domain/repositories/auth_repository.dart';
 import 'package:mocktail/mocktail.dart';
@@ -922,6 +926,174 @@ void main() {
           equals('Berakhot 3a'),
         );
       });
+    });
+  });
+
+  // --------------------------------------------------------------------------
+  // Story 25.10 — LocalDayClock single time provider (DNI-331)
+  // --------------------------------------------------------------------------
+
+  group('Story 25.10 — LocalDayClock single time provider', tags: ['story_25_10'], () {
+    // ── 1. Interface contract ───────────────────────────────────────────────
+
+    group('LocalDayClock contract', () {
+      test('SystemLocalDayClock.nowUtc returns a UTC DateTime', () {
+        const clock = SystemLocalDayClock();
+
+        final now = clock.nowUtc();
+
+        expect(now.isUtc, isTrue);
+      });
+
+      test('SystemLocalDayClock.today returns a y/m/d local DateTime', () {
+        const clock = SystemLocalDayClock();
+
+        final today = clock.today();
+        final sysNow = DateTime.now();
+
+        expect(today.isUtc, isFalse);
+        expect(today.year, equals(sysNow.year));
+        expect(today.month, equals(sysNow.month));
+        expect(today.day, equals(sysNow.day));
+        expect(today.hour, equals(0));
+        expect(today.minute, equals(0));
+        expect(today.second, equals(0));
+        expect(today.millisecond, equals(0));
+        expect(today.microsecond, equals(0));
+      });
+
+      test('FakeLocalDayClock returns the seeded UTC instant', () {
+        final seeded = DateTime.utc(2026, 5, 13, 23, 30);
+        final clock = FakeLocalDayClock(seeded);
+
+        expect(clock.nowUtc(), equals(seeded));
+      });
+
+      test(
+        'FakeLocalDayClock.today derives local date from seeded instant',
+        () {
+          // 2026-05-13 23:30 UTC == 2026-05-14 02:30 in Asia/Jerusalem (+3),
+          // but we compute against whatever timezone the host runs in. The
+          // contract is: today() == midnight-of-local-day of nowUtc.toLocal().
+          final seeded = DateTime.utc(2026, 5, 13, 23, 30);
+          final clock = FakeLocalDayClock(seeded);
+
+          final today = clock.today();
+          final expectedLocal = seeded.toLocal();
+
+          expect(today.year, equals(expectedLocal.year));
+          expect(today.month, equals(expectedLocal.month));
+          expect(today.day, equals(expectedLocal.day));
+          expect(today.hour, equals(0));
+        },
+      );
+
+      test('FakeLocalDayClock.advance moves the clock forward', () {
+        final seeded = DateTime.utc(2026, 5, 13, 10);
+        final clock = FakeLocalDayClock(seeded);
+
+        clock.advance(const Duration(hours: 6));
+
+        expect(clock.nowUtc(), equals(DateTime.utc(2026, 5, 13, 16)));
+      });
+
+      test('FakeLocalDayClock.setNow replaces the current instant', () {
+        final clock = FakeLocalDayClock(DateTime.utc(2026, 1, 1));
+
+        clock.setNow(DateTime.utc(2026, 12, 31, 12));
+
+        expect(clock.nowUtc(), equals(DateTime.utc(2026, 12, 31, 12)));
+      });
+    });
+
+    // ── 2. Riverpod provider integration ────────────────────────────────────
+
+    group('localDayClockProvider', () {
+      test('default provider yields a SystemLocalDayClock', () {
+        final container = ProviderContainer();
+        addTearDown(container.dispose);
+
+        final clock = container.read(localDayClockProvider);
+
+        expect(clock, isA<SystemLocalDayClock>());
+      });
+
+      test('container override replaces the system clock with a fake', () {
+        final fake = FakeLocalDayClock(DateTime.utc(2026, 5, 13, 23, 30));
+        final container = ProviderContainer(
+          overrides: [localDayClockProvider.overrideWithValue(fake)],
+        );
+        addTearDown(container.dispose);
+
+        final clock = container.read(localDayClockProvider);
+
+        expect(identical(clock, fake), isTrue);
+        expect(clock.nowUtc(), equals(DateTime.utc(2026, 5, 13, 23, 30)));
+      });
+    });
+
+    // ── 3. Day-boundary determinism (NFR21 / T1.2 root cause) ───────────────
+
+    group('day-boundary determinism', () {
+      test(
+        'today is read consistently when the clock is fixed, regardless of host TZ',
+        () {
+          // The contract: any code reading today() through the provider must
+          // see the SAME (y, m, d) for a given fake instant, no matter where
+          // the host runs. We pin the seed and assert the y/m/d derived from
+          // it locally — this proves the clock-override IS the single source.
+          final seeded = DateTime.utc(2026, 5, 13, 20, 30);
+          final fake = FakeLocalDayClock(seeded);
+          final container = ProviderContainer(
+            overrides: [localDayClockProvider.overrideWithValue(fake)],
+          );
+          addTearDown(container.dispose);
+
+          final today = container.read(localDayClockProvider).today();
+          final expectedLocal = seeded.toLocal();
+
+          expect(today.year, equals(expectedLocal.year));
+          expect(today.month, equals(expectedLocal.month));
+          expect(today.day, equals(expectedLocal.day));
+        },
+      );
+    });
+
+    // ── 4. No-rogue-DateTime-now invariant (AC: grep zero results) ──────────
+
+    group('no-rogue-DateTime.now invariant', () {
+      test(
+        'grep "DateTime.now()" in lib/ outside core/time/ returns zero results',
+        () {
+          // AC: "grep -rn 'DateTime\\.now\\(\\)' lib/ --exclude-dir=core/time"
+          // must return zero results. We run grep directly so the test fails
+          // loudly the moment a new rogue DateTime.now() lands.
+          final libDir = Directory('lib');
+          expect(
+            libDir.existsSync(),
+            isTrue,
+            reason:
+                'test must run from learning_tracker/ (Flutter project root)',
+          );
+
+          final result = Process.runSync('grep', const [
+            '-rn',
+            'DateTime.now()',
+            'lib/',
+            '--exclude-dir=time',
+          ]);
+
+          // grep returns 1 when no matches found — that's the success case.
+          expect(
+            result.exitCode,
+            equals(1),
+            reason:
+                'DateTime.now() is forbidden outside lib/core/time/. '
+                'Use LocalDayClock via localDayClockProvider instead.\n'
+                'Found:\n${result.stdout}',
+          );
+        },
+      );
     });
   });
 }

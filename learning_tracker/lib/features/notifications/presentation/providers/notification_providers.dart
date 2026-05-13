@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
+import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/notifications/domain/services/notification_scheduler.dart';
 import 'package:learning_tracker/features/notifications/domain/services/notification_service.dart';
 import 'package:learning_tracker/features/notifications/domain/services/streak_alert_service.dart';
@@ -182,7 +183,7 @@ Future<void> _persistNotificationSettingsToCloud(
   }();
   if (syncEngine == null) return;
 
-  final updatedAtMs = DateTime.now().toUtc().millisecondsSinceEpoch;
+  final updatedAtMs = DateTimeFactory.nowUtc().millisecondsSinceEpoch;
   await prefs.setInt(_notificationSettingsUpdatedAtMsKey, updatedAtMs);
 
   await syncEngine.pushNotificationSettings({

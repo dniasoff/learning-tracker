@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:drift/drift.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/cross_profile_scope.dart';
+import 'package:learning_tracker/core/utils/date_utils.dart';
 
 /// Result of validating an import file.
 class ImportPreview {
@@ -87,7 +88,7 @@ class DataExportImportService {
 
     final data = <String, dynamic>{
       'formatVersion': _formatVersion,
-      'exportedAt': DateTime.now().toIso8601String(),
+      'exportedAt': DateTimeFactory.nowLocal().toIso8601String(),
       'appVersion': '1.0.0',
       'completions': completions
           .map(

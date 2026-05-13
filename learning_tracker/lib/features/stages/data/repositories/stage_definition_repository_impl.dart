@@ -5,6 +5,7 @@ import 'package:learning_tracker/core/database/daos/completion_dao.dart';
 import 'package:learning_tracker/core/database/daos/stage_dao.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart' as db;
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/stages/domain/exceptions/protected_stage_exception.dart';
 import 'package:learning_tracker/features/stages/domain/exceptions/stage_limit_exceeded_exception.dart';
 import 'package:learning_tracker/features/stages/domain/models/schedule_type.dart';
@@ -251,7 +252,7 @@ class StageDefinitionRepositoryImpl implements StageDefinitionRepository {
     );
     await _pushSettings?.call({
       'curriculum_id': curriculumId.storageKey,
-      'updated_at': DateTime.now().toUtc().toIso8601String(),
+      'updated_at': DateTimeFactory.nowUtc().toIso8601String(),
       'stages': stages
           .map(
             (s) => {

@@ -1,6 +1,7 @@
 import 'package:drift/drift.dart';
 import 'package:learning_tracker/core/database/tables/outbox_table.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
+import 'package:learning_tracker/core/utils/date_utils.dart';
 
 part 'outbox_dao.g.dart';
 
@@ -43,15 +44,16 @@ class OutboxDao extends DatabaseAccessor<UserDatabase> with _$OutboxDaoMixin {
   ///
   /// Sets [lastAttemptAt] to the current UTC time.
   Future<void> markAttempted(int id, {String? error}) async {
-    final row = await (select(outbox)..where((t) => t.id.equals(id)))
-        .getSingleOrNull();
+    final row = await (select(
+      outbox,
+    )..where((t) => t.id.equals(id))).getSingleOrNull();
     if (row == null) return;
 
     await (update(outbox)..where((t) => t.id.equals(id))).write(
       OutboxCompanion(
         attempts: Value(row.attempts + 1),
         lastError: Value(error),
-        lastAttemptAt: Value(DateTime.now().toUtc()),
+        lastAttemptAt: Value(DateTimeFactory.nowUtc()),
       ),
     );
   }

@@ -1,6 +1,7 @@
 import 'package:bcrypt/bcrypt.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'pin_service.g.dart';
@@ -201,7 +202,8 @@ class PinService {
     if (newCount >= maxFailedAttempts) {
       // Write lockout timestamp FIRST so that if the app is killed between
       // writes the lockout is still preserved (TOCTOU safety).
-      final lockoutTimestamp = DateTime.now().millisecondsSinceEpoch.toString();
+      final lockoutTimestamp = DateTimeFactory.nowLocal().millisecondsSinceEpoch
+          .toString();
       await _secureStorage.write(key: timestampKey, value: lockoutTimestamp);
       await _secureStorage.write(key: countKey, value: '0');
     }
@@ -218,7 +220,7 @@ class PinService {
       lockoutTimestamp,
     ).add(Duration(minutes: lockoutDurationMinutes));
 
-    return DateTime.now().isBefore(lockoutEnd);
+    return DateTimeFactory.nowLocal().isBefore(lockoutEnd);
   }
 
   Future<int> _getRemainingLockoutMinutes(String timestampKey) async {
@@ -232,7 +234,7 @@ class PinService {
       lockoutTimestamp,
     ).add(Duration(minutes: lockoutDurationMinutes));
 
-    final remaining = lockoutEnd.difference(DateTime.now());
+    final remaining = lockoutEnd.difference(DateTimeFactory.nowLocal());
     if (remaining.inSeconds <= 0) {
       return 0;
     }

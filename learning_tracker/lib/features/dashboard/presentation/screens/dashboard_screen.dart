@@ -11,6 +11,7 @@ import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/labels/curriculum_label_providers.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/core/utils/percentage_formatter.dart';
 import 'package:learning_tracker/core/widgets/animated_progress_bar.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
@@ -173,14 +174,14 @@ class _DashboardBody extends ConsumerWidget {
   ];
 
   String _greeting(AppLocalizations l10n) {
-    final hour = DateTime.now().hour;
+    final hour = DateTimeFactory.nowLocal().hour;
     if (hour < 12) return l10n.goodMorning;
     if (hour < 17) return l10n.goodAfternoon;
     return l10n.goodEvening;
   }
 
   ({IconData icon, Color fg, Color bg}) _greetingChip() {
-    final hour = DateTime.now().hour;
+    final hour = DateTimeFactory.nowLocal().hour;
     if (hour < 12) {
       return (
         icon: Icons.wb_sunny_rounded,
@@ -241,7 +242,7 @@ class _DashboardBody extends ConsumerWidget {
         ? HebrewTerms.uiChazaraReview
         : l10n.chazaraReview;
     final name = profileName ?? l10n.learner;
-    final now = DateTime.now();
+    final now = DateTimeFactory.nowLocal();
 
     final totalPoints = globalPointsAsync.asData?.value ?? 0;
     final allTasks = dailyTasksAsync.asData?.value ?? const <DailyTask>[];

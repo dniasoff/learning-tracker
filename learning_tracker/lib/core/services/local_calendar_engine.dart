@@ -1,6 +1,7 @@
 import 'package:learning_tracker/core/database/content/content_database.dart';
 import 'package:learning_tracker/core/services/calendar_program_registry.dart';
 import 'package:learning_tracker/core/services/calendar_program_service.dart';
+import 'package:learning_tracker/core/utils/date_utils.dart';
 
 /// Offline-first calendar engine that reads pre-computed cycle data from
 /// the [ContentDatabase].
@@ -64,14 +65,14 @@ class LocalCalendarEngine {
   }
 
   /// Get today's calendar entries for every program that has data for
-  /// [date] (defaults to `DateTime.now()`).
+  /// [date] (defaults to `DateTimeFactory.nowLocal()`).
   ///
   /// Programs without data for the given date are silently omitted.
   /// Unknown program IDs stored in the DB are also skipped.
   ///
   /// Story 19.4 AC-2 / AC-3.
   Future<List<CalendarProgramEntry>> getTodayPrograms([DateTime? date]) async {
-    final effective = date ?? DateTime.now();
+    final effective = date ?? DateTimeFactory.nowLocal();
     final dateKey = formatDateKey(effective);
     final rows = await _contentDb.calendarCycleDao.getEntriesForDate(dateKey);
 

@@ -1,3 +1,5 @@
+import 'package:learning_tracker/core/utils/date_utils.dart';
+
 /// Generates test date seeds for Dirshu programs.
 ///
 /// Dirshu tests are typically on the first Sunday of each month.
@@ -6,7 +8,7 @@ List<Map<String, Object>> generateTestDateSeeds({
   DateTime? from,
   int monthsAhead = 12,
 }) {
-  final start = from ?? DateTime.now().toUtc();
+  final start = from ?? DateTimeFactory.nowUtc();
   final seeds = <Map<String, Object>>[];
 
   // Dirshu program names that have tests

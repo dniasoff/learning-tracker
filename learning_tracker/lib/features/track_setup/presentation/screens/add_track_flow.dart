@@ -14,6 +14,7 @@ import 'package:learning_tracker/core/services/calendar_program_registry.dart';
 import 'package:learning_tracker/core/services/calendar_program_service.dart';
 import 'package:learning_tracker/core/services/learning_program_service.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/core/utils/hebrew_calendar_utils.dart';
 import 'package:learning_tracker/core/widgets/learning_date_picker_theme.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
@@ -2495,7 +2496,7 @@ class _SelfPacedGoalStepState extends ConsumerState<_SelfPacedGoalStep> {
     final daily =
         CurriculumDefaults.defaultDailyTargets[widget.curriculumId] ?? 1;
     _paceValue = (daily * 7).clamp(1, 99);
-    final now = DateTime.now();
+    final now = DateTimeFactory.nowLocal();
     _deadline = DateTime(now.year, now.month, now.day);
     _learningUnit = _paceUnitOptions.defaultKey;
   }
@@ -2616,11 +2617,11 @@ class _SelfPacedGoalStepState extends ConsumerState<_SelfPacedGoalStep> {
 
   String _projectedFinishLabel(bool useHebrew, int totalScopeItems) {
     if (totalScopeItems <= 0 || _paceValue <= 0) {
-      return _formatDate(DateTime.now(), useHebrew: useHebrew);
+      return _formatDate(DateTimeFactory.nowLocal(), useHebrew: useHebrew);
     }
     final weeklyPace = _paceUnit == 'per_day' ? _paceValue * 7 : _paceValue;
     final days = (totalScopeItems / weeklyPace * 7).ceil();
-    final projected = DateTime.now().add(Duration(days: days));
+    final projected = DateTimeFactory.nowLocal().add(Duration(days: days));
     return _formatDate(projected, useHebrew: useHebrew);
   }
 
@@ -2639,7 +2640,7 @@ class _SelfPacedGoalStepState extends ConsumerState<_SelfPacedGoalStep> {
       }
       return;
     }
-    final now = DateTime.now();
+    final now = DateTimeFactory.nowLocal();
     final picked = await showLearningAppDatePicker(
       context: context,
       initialDate: _deadline ?? DateTime(now.year, now.month, now.day),
@@ -2918,7 +2919,7 @@ class _SelfPacedGoalStepState extends ConsumerState<_SelfPacedGoalStep> {
                   children: [
                     Text(
                       _formatDate(
-                        _deadline ?? DateTime.now(),
+                        _deadline ?? DateTimeFactory.nowLocal(),
                         useHebrew: useHebrew,
                       ),
                       style: theme.textTheme.titleMedium?.copyWith(
@@ -3023,7 +3024,7 @@ class _SelfPacedGoalStepState extends ConsumerState<_SelfPacedGoalStep> {
     final scopedContentAsync = ref.watch(
       scopedCurriculumContentProvider(widget.curriculumId),
     );
-    final start = _localDateOnlyFromDt(DateTime.now());
+    final start = _localDateOnlyFromDt(DateTimeFactory.nowLocal());
     final end = _deadline != null
         ? _localDateOnlyFromDt(_deadline!.toLocal())
         : null;
@@ -3194,7 +3195,8 @@ class _StartingPositionStepState extends ConsumerState<_StartingPositionStep> {
   bool get _isCalendarProgram =>
       widget.selectedProgram?.isCalendarProgram ?? false;
 
-  DateTime get _selectedDate => DateTime.now().add(Duration(days: _offsetDays));
+  DateTime get _selectedDate =>
+      DateTimeFactory.nowLocal().add(Duration(days: _offsetDays));
 
   Future<void> _refreshCalendarEntry() async {
     if (!_isCalendarProgram || _calendarProgramKey == null) return;

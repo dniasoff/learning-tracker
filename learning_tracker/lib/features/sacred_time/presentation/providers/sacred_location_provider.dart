@@ -1,3 +1,4 @@
+import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/sacred_time/data/services/location_service.dart';
 import 'package:learning_tracker/features/sacred_time/data/services/sacred_time_preferences.dart';
 import 'package:learning_tracker/features/sacred_time/domain/models/sacred_location.dart';
@@ -54,7 +55,7 @@ class SacredLocationNotifier extends _$SacredLocationNotifier {
       latitude: latitude,
       longitude: longitude,
       source: SacredLocationSource.manualCity,
-      fixedAt: DateTime.now().toUtc(),
+      fixedAt: DateTimeFactory.nowUtc(),
       countryCode: countryCode,
       cityLabel: cityLabel,
     );
@@ -76,7 +77,7 @@ class SacredLocationNotifier extends _$SacredLocationNotifier {
       latitude: latitude,
       longitude: longitude,
       source: SacredLocationSource.manualCoords,
-      fixedAt: DateTime.now().toUtc(),
+      fixedAt: DateTimeFactory.nowUtc(),
     );
     state = loc;
     final prefs = await SharedPreferences.getInstance();

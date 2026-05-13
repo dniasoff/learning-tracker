@@ -28,7 +28,7 @@ void main() {
   late MockSyncEngine mockSyncEngine;
   late MockContentRepository mockContentRepository;
   late BookmarkRepositoryImpl repository;
-  late int _mishnayosTrackId;
+  late int mishnayosTrackId;
 
   setUp(() async {
     database = createTestDatabase();
@@ -45,7 +45,7 @@ void main() {
             activatedAt: DateTime.now(),
           ),
         );
-    _mishnayosTrackId = mishnayosTrack.id;
+    mishnayosTrackId = mishnayosTrack.id;
 
     await database.into(database.curriculumTracks).insert(
       CurriculumTracksCompanion.insert(
@@ -270,7 +270,7 @@ void main() {
           BookmarksCompanion.insert(
             profileId: 0,
             curriculumId: CurriculumId.mishnayos.storageKey,
-            trackId: _mishnayosTrackId,
+            trackId: mishnayosTrackId,
             sefariaRef: _ref1,
             updatedAt: localTime,
           ),

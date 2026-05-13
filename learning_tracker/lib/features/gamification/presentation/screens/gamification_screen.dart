@@ -8,6 +8,7 @@ import 'package:intl/intl.dart';
 import 'package:learning_tracker/core/enums/user_mode.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
+import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/gamification/domain/models/reward_milestone.dart';
 import 'package:learning_tracker/features/gamification/domain/reward_milestone_icons.dart';
@@ -28,7 +29,7 @@ Future<Set<DateTime>> streakCalendar(Ref ref) async {
   final db = ref.watch(userDatabaseProvider);
   final profileId = ref.watch(activeProfileIdProvider);
   final streakService = StreakService(db, profileId: profileId);
-  final now = DateTime.now().toUtc();
+  final now = DateTimeFactory.nowUtc();
   final thirtyDaysAgo = now.subtract(const Duration(days: 30));
   return streakService.getStreakCalendar(startUtc: thirtyDaysAgo, endUtc: now);
 }
@@ -253,7 +254,7 @@ class _GamificationScreenState extends ConsumerState<GamificationScreen> {
                                   error: (_, __) =>
                                       Text(l10n.errorLoadingCalendar),
                                   data: (activeDates) {
-                                    final now = DateTime.now();
+                                    final now = DateTimeFactory.nowLocal();
                                     final start = DateTime(
                                       now.year,
                                       now.month,

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/user_mode.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
+import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/core/widgets/error_display.dart';
 import 'package:learning_tracker/core/widgets/loading_indicator.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
@@ -29,7 +30,7 @@ class _ProgressChartsScreenState extends ConsumerState<ProgressChartsScreen> {
   CurriculumId? _curriculum;
 
   ({DateTime start, DateTime end}) get _dateRange {
-    final now = DateTime.now();
+    final now = DateTimeFactory.nowLocal();
     final today = DateTime(now.year, now.month, now.day);
     return switch (_timeRange) {
       ChartTimeRange.last7Days => (

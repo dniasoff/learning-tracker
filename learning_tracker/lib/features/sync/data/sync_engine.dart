@@ -49,7 +49,7 @@ class SyncEngine {
   Stream<SyncStatus> get statusStream => _statusController.stream;
 
   SyncStatus _currentStatus = SyncStatus.synced(
-    lastSyncedAt: DateTime.now().toUtc(),
+    lastSyncedAt: DateTimeFactory.nowUtc(),
   );
   SyncStatus get currentStatus => _currentStatus;
 
@@ -324,7 +324,7 @@ class SyncEngine {
         final ms = prefs.getInt(_lastSyncKey);
         if (ms != null) {
           final last = DateTime.fromMillisecondsSinceEpoch(ms, isUtc: true);
-          final elapsed = DateTime.now().toUtc().difference(last);
+          final elapsed = DateTimeFactory.nowUtc().difference(last);
           if (elapsed < pullOnResumeMinInterval) {
             _logger.info(
               event: 'sync_pull_on_launch_skipped_resume_throttle',
@@ -341,7 +341,7 @@ class SyncEngine {
       }
     }
 
-    _updateStatus(SyncStatus.syncing(startedAt: DateTime.now().toUtc()));
+    _updateStatus(SyncStatus.syncing(startedAt: DateTimeFactory.nowUtc()));
 
     try {
       _logger.info(event: 'sync_pull_on_launch_fetching');
@@ -365,7 +365,9 @@ class SyncEngine {
       final idsFromRemote = _learnerProfileIdsFromRemotePayload(
         learnerProfiles,
       );
-      final allLocalProfiles = await _database.select(_database.learnerProfiles).get();
+      final allLocalProfiles = await _database
+          .select(_database.learnerProfiles)
+          .get();
       final idsFromLocal = allLocalProfiles.map((p) => p.id).toSet();
       final mergedProfileIds = {...idsFromRemote, ...idsFromLocal}.toList()
         ..sort();
@@ -386,7 +388,7 @@ class SyncEngine {
       }
 
       _logger.info(event: 'sync_pull_on_launch_completed');
-      final syncedAt = DateTime.now().toUtc();
+      final syncedAt = DateTimeFactory.nowUtc();
       await _persistLastSyncTimestamp(syncedAt);
       _updateStatus(SyncStatus.synced(lastSyncedAt: syncedAt));
     } catch (e, stackTrace) {
@@ -398,7 +400,7 @@ class SyncEngine {
       _updateStatus(
         SyncStatus.error(
           message: e.toString(),
-          failedAt: DateTime.now().toUtc(),
+          failedAt: DateTimeFactory.nowUtc(),
         ),
       );
     }
@@ -556,7 +558,9 @@ class SyncEngine {
       final synced = await _offlineQueue.flush(batchSize: batchSize);
       if (synced > 0) {
         _consecutivePushPermissionErrors = 0;
-        _updateStatus(SyncStatus.synced(lastSyncedAt: DateTime.now().toUtc()));
+        _updateStatus(
+          SyncStatus.synced(lastSyncedAt: DateTimeFactory.nowUtc()),
+        );
       }
     } catch (e) {
       // ignore: avoid_catches_without_on_clauses — intentional Firestore error boundary
@@ -620,7 +624,7 @@ class SyncEngine {
       return enriched;
     }
 
-    final nowUtc = DateTime.now().toUtc();
+    final nowUtc = DateTimeFactory.nowUtc();
     final enrollment = await _database.profileProgramDao
         .getProgramForProfileAndCurriculum(profileId, curriculumId);
     final isProgramTrack = enrollment != null;
@@ -789,7 +793,7 @@ class SyncEngine {
   Future<void> pushUiPreferencesSnapshot() async {
     final profileId = _firestoreDataSource.profileId;
     final prefs = await SharedPreferences.getInstance();
-    final now = DateTime.now().toUtc();
+    final now = DateTimeFactory.nowUtc();
     await prefs.setInt(
       ProfileScopedPreferenceKeys.uiPreferencesUpdatedAtMs(profileId),
       now.millisecondsSinceEpoch,
@@ -807,7 +811,7 @@ class SyncEngine {
     final payload = <String, dynamic>{
       'curriculum_id': curriculumId,
       'study_day_config': dayConfig,
-      'study_day_config_updated_at': DateTime.now().toUtc().toIso8601String(),
+      'study_day_config_updated_at': DateTimeFactory.nowUtc().toIso8601String(),
     };
 
     await pushSettings(payload);
@@ -1214,14 +1218,14 @@ class SyncEngine {
         }
 
         // Resolve trackType string → trackId FK (CurriculumTracks.id)
-        final track = await (_database.select(_database.curriculumTracks)
-              ..where(
-                (t) =>
-                    t.profileId.equals(profileId) &
-                    t.curriculumId.equals(curriculumId) &
-                    t.trackType.equals(trackType),
-              ))
-            .getSingleOrNull();
+        final track =
+            await (_database.select(_database.curriculumTracks)..where(
+                  (t) =>
+                      t.profileId.equals(profileId) &
+                      t.curriculumId.equals(curriculumId) &
+                      t.trackType.equals(trackType),
+                ))
+                .getSingleOrNull();
         if (track == null) {
           _logger.warning(event: 'sync_merge_bookmark_track_not_found_skipped');
           continue;
@@ -1428,7 +1432,7 @@ class SyncEngine {
 
       final stamp =
           remoteUpdatedAt?.millisecondsSinceEpoch ??
-          DateTime.now().toUtc().millisecondsSinceEpoch;
+          DateTimeFactory.nowUtc().millisecondsSinceEpoch;
       await prefs.setInt(_notificationSettingsUpdatedAtMsKey, stamp);
     } catch (e) {
       // ignore: avoid_catches_without_on_clauses — intentional merge-loop error boundary
@@ -1450,7 +1454,7 @@ class SyncEngine {
       profileId: profileId,
     );
     final rewardPayload = await rewardService.exportCloudPayload();
-    final now = DateTime.now().toUtc();
+    final now = DateTimeFactory.nowUtc();
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt(
       _gamificationLocalUpdatedAtKey(profileId),
@@ -1558,7 +1562,7 @@ class SyncEngine {
 
       final stamp =
           remoteUpdatedAt?.millisecondsSinceEpoch ??
-          DateTime.now().toUtc().millisecondsSinceEpoch;
+          DateTimeFactory.nowUtc().millisecondsSinceEpoch;
       await prefs.setInt(_gamificationLocalUpdatedAtKey(profileId), stamp);
     } catch (e) {
       // ignore: avoid_catches_without_on_clauses — intentional merge-loop error boundary
@@ -1680,7 +1684,7 @@ class SyncEngine {
 
       final stamp =
           remoteUpdatedAt?.millisecondsSinceEpoch ??
-          DateTime.now().toUtc().millisecondsSinceEpoch;
+          DateTimeFactory.nowUtc().millisecondsSinceEpoch;
       await prefs.setInt(
         ProfileScopedPreferenceKeys.uiPreferencesUpdatedAtMs(profileId),
         stamp,
@@ -1919,12 +1923,14 @@ class SyncEngine {
               ),
             );
             _logger.debug(
-              event: 'LWW: remote curriculum track wins '
+              event:
+                  'LWW: remote curriculum track wins '
                   '(curriculum=$curriculumKey, trackType=$trackTypeKey)',
             );
           } else {
             _logger.debug(
-              event: 'LWW: local curriculum track kept '
+              event:
+                  'LWW: local curriculum track kept '
                   '(curriculum=$curriculumKey, trackType=$trackTypeKey)',
             );
           }
@@ -2041,7 +2047,7 @@ class SyncEngine {
             ? rawAvatarIndex
             : int.tryParse(rawAvatarIndex?.toString() ?? '') ?? 0;
 
-        final nowUtc = DateTime.now().toUtc();
+        final nowUtc = DateTimeFactory.nowUtc();
         final createdAt =
             _parseTimestamp(remote['created_at']) ??
             _parseTimestamp(remote['updated_at']) ??
@@ -2122,7 +2128,9 @@ class SyncEngine {
         }
       }
 
-      final localProfiles = await _database.select(_database.learnerProfiles).get();
+      final localProfiles = await _database
+          .select(_database.learnerProfiles)
+          .get();
       if (localProfiles.isEmpty) return;
 
       var pushed = 0;
@@ -2614,7 +2622,8 @@ class SyncEngine {
     required int profileId,
   }) async {
     _logger.debug(
-      event: 'Merging ${remoteItems.length} learning-order items from Firestore',
+      event:
+          'Merging ${remoteItems.length} learning-order items from Firestore',
     );
 
     for (final remote in remoteItems) {
@@ -2702,7 +2711,7 @@ class SyncEngine {
           message:
               'Authentication error — real-time sync paused. '
               'Sync will resume on next sign-in.',
-          failedAt: DateTime.now().toUtc(),
+          failedAt: DateTimeFactory.nowUtc(),
         ),
       );
       return;
@@ -2722,7 +2731,7 @@ class SyncEngine {
           message:
               'Firebase quota exceeded — real-time sync disabled. '
               'Data will sync on next app launch.',
-          failedAt: DateTime.now().toUtc(),
+          failedAt: DateTimeFactory.nowUtc(),
         ),
       );
       return;
@@ -2731,7 +2740,7 @@ class SyncEngine {
     _updateStatus(
       SyncStatus.error(
         message: error.toString(),
-        failedAt: DateTime.now().toUtc(),
+        failedAt: DateTimeFactory.nowUtc(),
       ),
     );
   }
@@ -2752,7 +2761,7 @@ class SyncEngine {
       return;
     }
 
-    _updateStatus(SyncStatus.syncing(startedAt: DateTime.now().toUtc()));
+    _updateStatus(SyncStatus.syncing(startedAt: DateTimeFactory.nowUtc()));
 
     try {
       // In battery saver mode, process in smaller batches with delays
@@ -2763,7 +2772,7 @@ class SyncEngine {
         fields: {'syncedCount': syncedCount},
       );
 
-      _updateStatus(SyncStatus.synced(lastSyncedAt: DateTime.now().toUtc()));
+      _updateStatus(SyncStatus.synced(lastSyncedAt: DateTimeFactory.nowUtc()));
 
       // Reattach listeners — detachListeners() cleared the flag on disconnect,
       // so always attempt to attach them now that we are back online.
@@ -2778,7 +2787,7 @@ class SyncEngine {
       _updateStatus(
         SyncStatus.error(
           message: e.toString(),
-          failedAt: DateTime.now().toUtc(),
+          failedAt: DateTimeFactory.nowUtc(),
         ),
       );
     }
@@ -2944,7 +2953,7 @@ class SyncEngine {
       ProfileScopedPreferenceKeys.uiPreferencesUpdatedAtMs(profileId),
     );
     final updatedAt = updatedAtMs == null
-        ? DateTime.now().toUtc()
+        ? DateTimeFactory.nowUtc()
         : DateTime.fromMillisecondsSinceEpoch(updatedAtMs, isUtc: true);
 
     final payload = <String, dynamic>{
@@ -2988,7 +2997,7 @@ class SyncEngine {
     final prefs = await SharedPreferences.getInstance();
     final updatedAtMs = prefs.getInt(_notificationSettingsUpdatedAtMsKey);
     final updatedAt = updatedAtMs == null
-        ? DateTime.now().toUtc()
+        ? DateTimeFactory.nowUtc()
         : DateTime.fromMillisecondsSinceEpoch(updatedAtMs, isUtc: true);
 
     return {
@@ -3046,7 +3055,7 @@ class SyncEngine {
     }
 
     _logger.info(event: 'sync_push_all_local_data_start');
-    _updateStatus(SyncStatus.syncing(startedAt: DateTime.now().toUtc()));
+    _updateStatus(SyncStatus.syncing(startedAt: DateTimeFactory.nowUtc()));
 
     try {
       // --- Completions (append-only) ---
@@ -3074,9 +3083,9 @@ class SyncEngine {
       final bookmarks = await _database.bookmarkDao.getAllBookmarks();
       for (final b in bookmarks) {
         // Resolve trackId → trackType string for Firestore payload
-        final track = await (_database.select(_database.curriculumTracks)
-              ..where((t) => t.id.equals(b.trackId)))
-            .getSingleOrNull();
+        final track = await (_database.select(
+          _database.curriculumTracks,
+        )..where((t) => t.id.equals(b.trackId))).getSingleOrNull();
         if (track == null) continue;
         await pushBookmark({
           'curriculum_id': b.curriculumId,
@@ -3207,7 +3216,7 @@ class SyncEngine {
       _logger.debug(event: 'sync_push_all_ui_preferences_queued');
 
       _logger.info(event: 'sync_push_all_local_data_completed');
-      final syncedAt = DateTime.now().toUtc();
+      final syncedAt = DateTimeFactory.nowUtc();
       await _persistLastSyncTimestamp(syncedAt);
       _updateStatus(SyncStatus.synced(lastSyncedAt: syncedAt));
     } catch (e, stackTrace) {
@@ -3219,7 +3228,7 @@ class SyncEngine {
       _updateStatus(
         SyncStatus.error(
           message: e.toString(),
-          failedAt: DateTime.now().toUtc(),
+          failedAt: DateTimeFactory.nowUtc(),
         ),
       );
     }
