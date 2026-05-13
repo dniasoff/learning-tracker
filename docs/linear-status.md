@@ -11,7 +11,7 @@ date: 2026-05-13
 - **Team:** DNI (Dniasoff)
 - **Linear project:** learning-tracker
 - **Status source:** [`docs/status/sprint-status.yaml`](status/sprint-status.yaml) (synced 2026-05-13)
-- **Last reconciled:** 2026-05-13
+- **Last reconciled:** 2026-05-13 (cancellation sweep)
 - **Totals:** 18 epics · 194 stories tracked in Linear
 
 This document is the narrative summary. `sprint-status.yaml` is the machine-readable source of truth — if the two disagree, trust the YAML.
@@ -20,9 +20,7 @@ This document is the narrative summary. `sprint-status.yaml` is the machine-read
 
 The v1 build (Epics 1–23) was completed and shipped to internal testers. Most of those epics are now **Canceled** in Linear, meaning their scope was superseded by the **Greenfield Rebuild** (Epics 24–27). The rebuild carries greenfield permission: wipe-install boundary, new DB schema, Firebase reset acceptable.
 
-Active work remaining from v1:
-- Epic 18 still has 6 Todo and 1 In Review story that predate the rebuild decision.
-- Epic 22 (Catch-up & Amnesty) and Epic 23 QA are fully scoped and remain relevant to the rebuild.
+All stories prior to Epic 24 (DNI-312) that were not already Done are now **Canceled**. The active surface is Epics 24–27 only.
 
 ## Epic summary
 
@@ -45,13 +43,13 @@ Active work remaining from v1:
 | — | 15 — Multi-Profile & Learning Program | — | Absorbed into Epics 18 & 21 |
 | — | 16 — Onboarding-to-Dashboard Perfect Flow | — | Delivered (pre-Linear) |
 | DNI-154 | 17 — V1 Roadmap Phase 1 (umbrella) | 8 | Canceled |
-| DNI-128 | 18 — Onboarding & Track Management Overhaul | 8 | Canceled (6 Todo, 1 In Review) |
+| DNI-128 | 18 — Onboarding & Track Management Overhaul | 8 | Canceled (all stories Canceled) |
 | — | 19 — Offline-First Architecture & Two-Database Split | — | Delivered (pre-Linear) |
 | DNI-210 | 20 — Dashboard & Progress Redesign — Multi-Track Isolation | 12 | Todo (all 12 Canceled) |
 | DNI-238 | 21 — Multi-Account Device — Account Switching, Session Management & Deletion | 0 | Backlog |
-| DNI-255 | 22 — Catch-up & Amnesty System | 22 | Backlog |
-| DNI-278 | 23 — Manual QA Verification | 18 | Backlog |
-| DNI-297 | 24 — Firestore Sync Schema & Multi-Device Data Restoration *(superseded)* | 10 | Backlog |
+| DNI-255 | 22 — Catch-up & Amnesty System | 22 | Canceled (all stories Canceled) |
+| DNI-278 | 23 — Manual QA Verification | 18 | Canceled (all stories Canceled) |
+| DNI-297 | 24 — Firestore Sync Schema & Multi-Device Data Restoration *(superseded)* | 10 | Canceled (all stories Canceled) |
 | DNI-312 | 24 — Stop-the-Bleeding (Phase 0) | 8 | Backlog |
 | DNI-313 | 25 — Schema + Core Foundation (Phases 1 + 2) | 22 | Backlog |
 | DNI-314 | 26 — Feature Rebuilds + Cleanups (Phases 3 + 4) | 35 | Backlog |
@@ -61,22 +59,7 @@ Active work remaining from v1:
 
 ## Active work
 
-### Epic 18 — Onboarding & Track Management Overhaul (DNI-128)
-
-The epic itself is **Canceled** in Linear, but 7 stories are still open:
-
-| ID | Story | Status |
-|---|---|---|
-| DNI-180 | 18.1: Add Track Flow — 8 Screens, One Concept Each | In Review |
-| DNI-164 | 18.13: Create Account Screen Layout Fix | Todo |
-| DNI-165 | 18.14: Magic Link Authentication (Remove Password Fields) | Todo |
-| DNI-111 | 18.15: New Curricula Support (Nach, Mussar, Halacha) | Todo |
-| DNI-115 | 18.16: Enhanced Bulk Mark Tool | Todo |
-| DNI-118 | 18.17: Dirshu Test Tracking | Todo |
-| DNI-122 | 18.18: Test Suite Health — Fix Failures & Harden | Todo |
-| DNI-194 | 18.8: Program-Aware AddTrackFlow | Duplicate |
-
-These stories predate the greenfield rebuild decision. Assess each against the rebuild plan before investing further.
+No open stories outside the greenfield rebuild epics (24–27). All pre-E24 stories are Canceled or Done.
 
 ## Upcoming work (ordered by priority)
 
@@ -84,8 +67,6 @@ These stories predate the greenfield rebuild decision. Assess each against the r
 2. **Epic 25 — Schema + Core Foundation (DNI-313)** — 22 stories, all Backlog. Wipe-install boundary; local DB v1, Firestore v1, ten rebuilt core subsystems, Hebrew UI infrastructure.
 3. **Epic 26 — Feature Rebuilds + Cleanups (DNI-314)** — 35 stories, all Backlog. Eight feature areas reorganized to consume the new core; label/ARB/naming/dead-code sweep.
 4. **Epic 27 — Discipline & Closure (DNI-315)** — 17 stories (16 Backlog, 1 Canceled). Test pyramid, CI gates, observability, docs reconciliation.
-5. **Epic 22 — Catch-up & Amnesty System (DNI-255)** — 22 stories, all Backlog. Stays relevant post-rebuild; design is complete.
-6. **Epic 23 — Manual QA Verification (DNI-278)** — 18 stories, all Backlog. Full QA pass; one story blocked on Epic 22.
 
 ## Canceled / superseded
 
@@ -101,10 +82,10 @@ The following epics are **Canceled** in Linear because their scope was either de
 | 13 — Cloud Sync | Delivered v1; rebuild replaces SyncEngine architecture (E25) |
 | 14 — Settings | Delivered v1; rebuild supersedes |
 | 17 — V1 Roadmap Phase 1 | Umbrella epic; no discrete stories; closed |
-| 18 — Onboarding & Track Management Overhaul | Superseded by E24–E26; 7 stories still open (see above) |
+| 18 — Onboarding & Track Management Overhaul | Superseded by E24–E26; all stories now Canceled |
 | 20 — Dashboard & Progress Redesign | All 12 stories Canceled; redesign scope reabsorbed into E26 |
 
-Epic 24 (DNI-297) — *Firestore Sync Schema & Multi-Device Data Restoration* — is the **old** Epic 24 created before the greenfield rebuild was scoped. It has 10 Backlog stories. Its scope is largely absorbed by E25 (Firestore v1 collection layout) and E26 (sync engine decomposition). Review each story before starting; most are superseded.
+Epic 24 (DNI-297) — *Firestore Sync Schema & Multi-Device Data Restoration* — is the **old** Epic 24 created before the greenfield rebuild was scoped. All 10 stories are now **Canceled**; scope is absorbed by E25 (Firestore v1 collection layout) and E26 (sync engine decomposition).
 
 ## Epic details — Greenfield Rebuild (Epics 24–27)
 
@@ -166,17 +147,15 @@ Selected highlights:
 | DNI-... | 27.15: docs/architecture.md rewrite | Backlog |
 | DNI-127 | 27.17: CI/CD — Play Store deployment pipeline | Canceled |
 
-## Backlog — pre-rebuild epics
+## Canceled — pre-rebuild epics
 
 ### Epic 22 — Catch-up & Amnesty System (DNI-255)
 
-22 stories, all Backlog. Design complete. Covers: rescope v2, amnesty primitive, pause mechanism, catch-up sheets (self-paced S1–S3 + program S4), review debt (S6–S7), triage (S9, S11), multi-track, setup seeding, cycle boundary, notification rewrite.
-
-Scenario specs: [`docs/scenarios/evolution/`](scenarios/evolution/) and [`docs/planning/catchup-and-amnesty-scenarios.md`](planning/catchup-and-amnesty-scenarios.md).
+22 stories, all **Canceled**. Design was complete but scope is superseded by the greenfield rebuild.
 
 ### Epic 23 — Manual QA Verification (DNI-278)
 
-18 stories, all Backlog. Full manual QA pass covering all v1 feature areas. Story 23.18 (Catch-up & Amnesty) is blocked on Epic 22.
+18 stories, all **Canceled**. Superseded; QA will be re-scoped against the rebuilt app (see E27).
 
 ## Orphaned stories
 
