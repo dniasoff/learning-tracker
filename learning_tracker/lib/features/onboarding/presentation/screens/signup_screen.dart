@@ -229,7 +229,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
 
       // Clear any cached Firebase user so offline local sessions are never
       // mistaken for cloud sign-in (downstream Firestore awaits would stall).
-      await FirebaseAuth.instance.signOut();
+      await ref.read(authRepositoryProvider).signOut();
 
       if (!mounted) return;
       final router = context.router;
@@ -321,7 +321,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
           );
         }
         // Sign out the just-signed-in Google user to avoid orphan state
-        await FirebaseAuth.instance.signOut();
+        await ref.read(authRepositoryProvider).signOut();
         return;
       }
 
@@ -337,7 +337,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
             'Use the Upgrade to Cloud option in Settings instead.',
           );
         }
-        await FirebaseAuth.instance.signOut();
+        await ref.read(authRepositoryProvider).signOut();
         return;
       }
 

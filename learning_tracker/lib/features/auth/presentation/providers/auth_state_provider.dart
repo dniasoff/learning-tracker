@@ -3,6 +3,7 @@ import 'package:learning_tracker/core/database/daos/user_profile_dao.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/features/auth/domain/models/auth_state.dart';
+import 'package:learning_tracker/features/auth/presentation/providers/auth_providers.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'auth_state_provider.g.dart';
@@ -47,7 +48,7 @@ class AuthStateNotifier extends _$AuthStateNotifier {
           return;
         }
       } else {
-        await FirebaseAuth.instance.signOut();
+        await ref.read(authRepositoryProvider).signOut();
       }
     }
 

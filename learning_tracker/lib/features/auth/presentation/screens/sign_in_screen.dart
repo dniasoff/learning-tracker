@@ -130,7 +130,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
       ref
           .read(auth_state.authStateProvider.notifier)
           .setLocalBornSession(profile: profile);
-      await FirebaseAuth.instance.signOut();
+      await ref.read(authRepositoryProvider).signOut();
       final profiles = await ref
           .read(userDatabaseProvider)
           .profileDao
@@ -272,7 +272,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
         ref
             .read(auth_state.authStateProvider.notifier)
             .setLocalBornSession(profile: profile);
-        await FirebaseAuth.instance.signOut();
+        await ref.read(authRepositoryProvider).signOut();
         ref.read(selectedProfileIdProvider.notifier).clear();
         final profiles = await ref
             .read(userDatabaseProvider)
@@ -492,7 +492,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
           if (mounted) {
             _showError(l10n.authMaxDeviceAccounts(kMaxDeviceAccounts));
           }
-          await FirebaseAuth.instance.signOut();
+          await ref.read(authRepositoryProvider).signOut();
           return;
         }
       }
@@ -503,7 +503,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
         if (mounted) {
           _showError(l10n.authOfflineUseUpgrade);
         }
-        await FirebaseAuth.instance.signOut();
+        await ref.read(authRepositoryProvider).signOut();
         return;
       }
 
