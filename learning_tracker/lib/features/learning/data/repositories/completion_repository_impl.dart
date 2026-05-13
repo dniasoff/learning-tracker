@@ -1,10 +1,11 @@
 import 'dart:async';
-import 'dart:math' as math;
 
 import 'package:drift/drift.dart' as drift;
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
+import 'package:learning_tracker/core/learning/completion_command.dart';
+import 'package:learning_tracker/core/learning/completion_writer.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 import 'package:learning_tracker/features/gamification/domain/models/reward_milestone.dart';
@@ -28,6 +29,7 @@ class CompletionRepositoryImpl implements CompletionRepository {
   final StreakService? _streakService;
   final RewardMilestoneService? _rewardMilestoneService;
   final int _activeProfileId;
+  final CompletionWriter _completionWriter;
 
   CompletionRepositoryImpl({
     required UserDatabase database,
@@ -38,6 +40,7 @@ class CompletionRepositoryImpl implements CompletionRepository {
     StreakService? streakService,
     RewardMilestoneService? rewardMilestoneService,
     int activeProfileId = 0,
+    CompletionWriter? completionWriter,
   }) : _database = database,
        _syncEngine = syncEngine,
        _contentRepository = contentRepository,
@@ -45,7 +48,8 @@ class CompletionRepositoryImpl implements CompletionRepository {
        _completionDetectionService = completionDetectionService,
        _streakService = streakService,
        _rewardMilestoneService = rewardMilestoneService,
-       _activeProfileId = activeProfileId;
+       _activeProfileId = activeProfileId,
+       _completionWriter = completionWriter ?? CompletionWriter(database);
 
   @override
   Future<MarkCompletionResult> markComplete(CompletionRequest request) async {
@@ -185,10 +189,6 @@ class CompletionRepositoryImpl implements CompletionRepository {
     );
   }
 
-  /// Bulk inserts with zero points (onboarding prior): batched sqlite writes,
-  /// one duplicate prefetch, single streak/update — avoid O(N) per-row path.
-  static const int _kBulkInsertChunkSize = 800;
-
   @override
   Future<List<Completion>> bulkMarkComplete(
     BulkCompletionRequest request,
@@ -298,26 +298,21 @@ class CompletionRepositoryImpl implements CompletionRepository {
 
     final now = DateTimeFactory.nowUtc();
 
-    for (var i = 0; i < toInsertUnique.length; i += _kBulkInsertChunkSize) {
-      final end = math.min(i + _kBulkInsertChunkSize, toInsertUnique.length);
-      final chunk = toInsertUnique.sublist(i, end);
-      await _database.transaction(() async {
-        final companions = chunk
-            .map(
-              (ref) => CompletionsCompanion.insert(
-                profileId: effectiveProfileId,
-                curriculumId: request.curriculumId,
-                sefariaRef: ref,
-                stageId: request.stageId,
-                trackType: request.trackType,
-                trackId: trackId,
-                completedAt: now,
-                points: const drift.Value(0),
-              ),
-            )
-            .toList();
-        await _database.completionDao.insertCompletionsBatch(companions);
-      });
+    // FR15: route all writes through CompletionWriter so each completion
+    // gets its own atomic (completion + outbox) transaction.
+    for (final ref in toInsertUnique) {
+      await _completionWriter.commit(
+        CompletionCommand(
+          profileId: effectiveProfileId,
+          curriculumId: request.curriculumId,
+          sefariaRef: ref,
+          stageId: request.stageId,
+          trackType: request.trackType,
+          trackId: trackId,
+          completedAt: now,
+          points: 0,
+        ),
+      );
     }
 
     // Bulk-mark-prior is "I learned this in the past" — these completions
@@ -556,6 +551,9 @@ class CompletionRepositoryImpl implements CompletionRepository {
   }
 
   /// Create the completion record in the database.
+  ///
+  /// Delegates to [CompletionWriter] (FR15) so the completion row + outbox
+  /// row are written in one transaction.
   Future<Completion> _createCompletion({
     required CompletionRequest request,
     required int trackId,
@@ -564,8 +562,8 @@ class CompletionRepositoryImpl implements CompletionRepository {
   }) async {
     final now = DateTimeFactory.nowUtc(); // P5: Store as UTC
 
-    final id = await _database.completionDao.insertCompletion(
-      CompletionsCompanion.insert(
+    final result = await _completionWriter.commit(
+      CompletionCommand(
         profileId: profileId,
         curriculumId: request.curriculumId,
         sefariaRef: request.sefariaRef,
@@ -573,22 +571,17 @@ class CompletionRepositoryImpl implements CompletionRepository {
         trackType: request.trackType,
         trackId: trackId,
         completedAt: now,
-        points: drift.Value(points),
+        points: points,
       ),
     );
 
     // Tee the completion into the append-only streak event log
     // so the streak reducer can derive state independent of the
     // cached Streaks table. Unique keys swallow duplicates silently.
+    // (Moves into CompletionWriter in DNI-337 / Story 25.16.)
     await _appendStreakEvent(profileId: profileId, at: now);
 
-    // Retrieve the created completion
-    final completion = await _database.completionDao.getCompletionById(id);
-    if (completion == null) {
-      throw StateError('Failed to retrieve created completion');
-    }
-
-    return completion;
+    return result.completion;
   }
 
   /// Append a streak event. Silently ignores the unique-key conflict
