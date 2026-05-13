@@ -308,6 +308,8 @@ _GroupedTasks _groupTasks(List<DailyTask> tasks) {
         todayProgram.add(task);
       case DailyTaskPriority.overdueChazara:
         overdueReview.add(task);
+      case DailyTaskPriority.overdueNewLearning:
+        overdueReview.add(task);
       case DailyTaskPriority.scheduledChazara:
         todayReview.add(task);
       case DailyTaskPriority.newLearning:

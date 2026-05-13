@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:learning_tracker/features/scheduler/domain/models/delta_value.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/pace_status.dart';
 import 'package:learning_tracker/features/scheduler/presentation/widgets/pace_indicator.dart';
 
@@ -13,6 +14,7 @@ void main() {
       final pace = PaceStatus(
         status: PaceStatusType.ahead,
         daysDelta: 5,
+        delta: const DateScheduleDelta(DateDelta(5)),
         rollingAverage: 2.0,
         projectedCompletionDate: DateTime.utc(2026, 5, 1),
       );
@@ -29,6 +31,7 @@ void main() {
       const pace = PaceStatus(
         status: PaceStatusType.onPace,
         daysDelta: 0,
+        delta: DateScheduleDelta(DateDelta(0)),
         rollingAverage: 1.0,
       );
 
@@ -45,6 +48,7 @@ void main() {
       const pace = PaceStatus(
         status: PaceStatusType.behind,
         daysDelta: -3,
+        delta: DateScheduleDelta(DateDelta(-3)),
         rollingAverage: 0.5,
       );
 

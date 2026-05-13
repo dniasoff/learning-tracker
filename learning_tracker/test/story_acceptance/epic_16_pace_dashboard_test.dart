@@ -9,6 +9,7 @@ import 'package:learning_tracker/core/services/cross_curriculum_aggregator.dart'
 import 'package:learning_tracker/features/learning/domain/entities/completion_request.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/day_type.dart';
+import 'package:learning_tracker/features/scheduler/domain/models/delta_value.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/goal_entity.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/pace_status.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/schedule_config.dart';
@@ -461,6 +462,7 @@ void main() {
         final pace = PaceStatus(
           status: PaceStatusType.ahead,
           daysDelta: 2,
+          delta: const DateScheduleDelta(DateDelta(2)),
           projectedCompletionDate: DateTime.utc(2026, 12, 1),
           rollingAverage: 3.0,
         );
@@ -472,6 +474,7 @@ void main() {
         const pace = PaceStatus(
           status: PaceStatusType.behind,
           daysDelta: -3,
+          delta: DateScheduleDelta(DateDelta(-3)),
           rollingAverage: 0.5,
         );
         expect(pace.daysDelta, -3);
@@ -482,6 +485,7 @@ void main() {
         const pace = PaceStatus(
           status: PaceStatusType.onPace,
           daysDelta: 0,
+          delta: DateScheduleDelta(DateDelta(0)),
           rollingAverage: 1.0,
         );
         expect(pace.daysDelta, 0);
@@ -681,6 +685,7 @@ void main() {
         final pace = PaceStatus(
           status: PaceStatusType.ahead,
           daysDelta: 2,
+          delta: const DateScheduleDelta(DateDelta(2)),
           projectedCompletionDate: DateTime.utc(2026, 10, 15),
           rollingAverage: 3.0,
         );

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:learning_tracker/features/scheduler/domain/models/delta_value.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/pace_status.dart';
 
 /// Color-coded pace indicator for curriculum cards.
@@ -44,14 +45,15 @@ class PaceIndicator extends StatelessWidget {
   }
 
   static String _labelForStatus(PaceStatus pace) {
-    switch (pace.status) {
-      case PaceStatusType.ahead:
-        return '+${pace.daysDelta} days ahead';
-      case PaceStatusType.onPace:
-        return 'On pace';
-      case PaceStatusType.behind:
-        return '${pace.daysDelta.abs()} days behind';
-    }
+    if (pace.status == PaceStatusType.onPace) return 'On pace';
+    return switch (pace.delta) {
+      DateScheduleDelta(:final value) => pace.status == PaceStatusType.ahead
+          ? '+${value.days} days ahead'
+          : '${value.days.abs()} days behind',
+      PaceScheduleDelta(:final value) => pace.status == PaceStatusType.ahead
+          ? '+${value.itemsPerWeek} items/week ahead'
+          : '${value.itemsPerWeek.abs()} items/week behind',
+    };
   }
 }
 

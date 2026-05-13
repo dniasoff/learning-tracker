@@ -26,6 +26,7 @@ import 'package:learning_tracker/features/dashboard/domain/models/momentum_statu
 import 'package:learning_tracker/features/dashboard/domain/models/track_progress.dart';
 import 'package:learning_tracker/features/profiles/data/repositories/profile_repository_impl.dart';
 import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
+import 'package:learning_tracker/features/scheduler/domain/models/delta_value.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/pace_status.dart';
 import 'package:test/test.dart';
 
@@ -360,6 +361,7 @@ void main() {
               paceStatus: PaceStatus(
                 status: PaceStatusType.onPace,
                 daysDelta: 0,
+                delta: DateScheduleDelta(DateDelta(0)),
                 rollingAverage: 0.71,
               ),
               tasksToday: 2,
@@ -375,6 +377,7 @@ void main() {
               paceStatus: PaceStatus(
                 status: PaceStatusType.behind,
                 daysDelta: -3,
+                delta: DateScheduleDelta(DateDelta(-3)),
                 rollingAverage: 0.4,
               ),
               tasksToday: 1,

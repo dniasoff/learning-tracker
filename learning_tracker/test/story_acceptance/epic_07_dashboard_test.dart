@@ -20,6 +20,7 @@ import 'package:learning_tracker/features/dashboard/presentation/widgets/todays_
 import 'package:learning_tracker/features/gamification/presentation/widgets/streak_widget.dart';
 import 'package:learning_tracker/features/progress/domain/services/chart_data_service.dart';
 import 'package:learning_tracker/features/progress/domain/services/curriculum_progress_service.dart';
+import 'package:learning_tracker/features/scheduler/domain/models/delta_value.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/pace_status.dart';
 import 'package:learning_tracker/features/scheduler/domain/services/pace_calculator.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -460,6 +461,7 @@ void main() {
                     paceStatus: const PaceStatus(
                       status: PaceStatusType.ahead,
                       daysDelta: 3,
+                      delta: DateScheduleDelta(DateDelta(3)),
                       rollingAverage: 2.0,
                     ),
                     nextDueItem: 'Berachos 1:1',

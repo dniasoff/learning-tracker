@@ -167,21 +167,38 @@ class SchedulerEngine {
       final pace = config.pacePerDay!.ceil();
       final priorlyShown = config.priorlyShownRefs;
 
+      // isStudyDay guard: on non-study days the snapshot path emits nothing.
+      if (!config.isStudyDay) {
+        return const [];
+      }
+
       // Carry-over overdue from prior-day snapshots. Preserve original
       // orderedRefs order so the list is stable across runs.
       for (final ref in orderedRefs) {
         if (!priorlyShown.contains(ref)) continue;
         final done = completionMap[ref]?.containsKey(firstStageOrder) ?? false;
         if (done) continue;
+
+        // Classification fix: only call it 'overdueChazara' if the item has
+        // been completed at least once before (i.e. it's a chazara task).
+        // Items that were shown in a prior snapshot but never completed at
+        // ANY stage are carry-over new-learning, not chazara.
+        final itemCompletions = completionMap[ref];
+        final hasAnyCompletion =
+            itemCompletions != null && itemCompletions.isNotEmpty;
+        final priority = hasAnyCompletion
+            ? DailyTaskPriority.overdueChazara
+            : DailyTaskPriority.overdueNewLearning;
+
         overdueTasks.add(
           DailyTask(
             curriculumId: config.curriculumId,
             contentItemSefariaRef: ref,
             stageOrder: firstStageOrder,
             stageDefinitionId: firstStage.id,
-            priority: DailyTaskPriority.overdueChazara,
+            priority: priority,
             isOverdue: true,
-            reason: 'Missed earlier',
+            reason: hasAnyCompletion ? 'Missed earlier' : 'New learning carry-over',
             stageName: firstStage.stageName,
             trackId: config.trackId,
             trackLabel: config.trackLabel,
@@ -459,9 +476,12 @@ class SchedulerEngine {
 
   /// Calculate new items per day with adaptive pacing.
   ///
-  /// When chazara load is heavy (exceeds half of daily capacity),
-  /// new items are reduced proportionally. Always returns at least 1
-  /// to ensure forward progress.
+  /// Returns the raw deadline-derived rate capped at [remainingNewItems].
+  /// Returns 0 when there are no remaining items or the base rate is ≤ 0
+  /// (e.g. deadline already passed). The chazara workload does NOT reduce
+  /// the new-learning obligation — chazara is extra work on top of the
+  /// pace the deadline demands.
+  ///
   /// Whether to use the snapshot-anchored self-paced new-learning path.
   /// True when both pacePerDay and trackStartedAt are set on the config —
   /// i.e. the caller has plumbed a self-paced goal. Program tracks land
@@ -604,15 +624,12 @@ class SchedulerEngine {
       }
     }
 
-    // Chazara load balancing: when chazara tasks exceed half of daily
-    // capacity (baseRate + chazaraCount), reduce new items proportionally.
-    final dailyCapacity = baseRate + chazaraCount;
-    if (dailyCapacity > 0 && chazaraCount > dailyCapacity ~/ 2) {
-      final chazaraRatio = chazaraCount / dailyCapacity;
-      baseRate = (baseRate * (1.0 - chazaraRatio)).ceil();
-    }
+    // Zero-floor: if baseRate is 0 or negative there is nothing to schedule.
+    // Do NOT force a minimum of 1 — a deep backlog user whose deadline math
+    // produces 0 is genuinely over-capacity and should get 0 new items.
+    if (baseRate <= 0) return 0;
 
-    // Always at least 1 new item for forward progress
-    return max(1, baseRate);
+    // Cap at remaining items so we never over-assign.
+    return min(baseRate, remainingNewItems);
   }
 }

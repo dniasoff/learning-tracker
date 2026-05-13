@@ -1,3 +1,4 @@
+import 'package:learning_tracker/features/scheduler/domain/models/delta_value.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/pace_status.dart';
 
 /// Callback invoked when pace drops to [PaceStatusType.behind].
@@ -44,6 +45,7 @@ class PaceCalculator {
       final result = PaceStatus(
         status: status,
         daysDelta: 0,
+        delta: const DateScheduleDelta(DateDelta(0)),
         projectedCompletionDate: null,
         rollingAverage: _rolling7DayAverage(dailyCompletionCounts, today),
       );
@@ -90,7 +92,8 @@ class PaceCalculator {
     // Rolling 7-day average
     final rollingAvg = _rolling7DayAverage(dailyCompletionCounts, today);
 
-    // Projected completion date
+    // Projected completion date — guard against day-1 (no events yet):
+    // only project when rollingAvg > 0 so we never emit NaN / Infinity.
     DateTime? projectedDate;
     if (rollingAvg > 0) {
       final remainingItems = totalItems - completedItems;
@@ -106,6 +109,7 @@ class PaceCalculator {
     final result = PaceStatus(
       status: status,
       daysDelta: daysDelta,
+      delta: DateScheduleDelta(DateDelta(daysDelta)),
       projectedCompletionDate: projectedDate,
       rollingAverage: rollingAvg,
     );
@@ -147,7 +151,9 @@ class PaceCalculator {
     // Weekly item surplus/deficit (not calendar days — see PaceStatus.daysDelta)
     final daysDelta = ((rollingAvg - targetPacePerDay) * 7).round();
 
-    // Projected completion date using target pace
+    // Projected completion date using target pace.
+    // Projection uses the fixed target rate (not rollingAvg) so it is always
+    // available from day 1 — rolling avg is used for status, not projection.
     DateTime? projectedDate;
     if (targetPacePerDay > 0 && remainingItems > 0) {
       final daysNeeded = (remainingItems / targetPacePerDay).ceil();
@@ -159,6 +165,7 @@ class PaceCalculator {
     return PaceStatus(
       status: status,
       daysDelta: daysDelta,
+      delta: PaceScheduleDelta(PaceDelta(daysDelta)),
       projectedCompletionDate: projectedDate,
       rollingAverage: rollingAvg,
     );

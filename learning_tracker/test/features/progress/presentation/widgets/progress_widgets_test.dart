@@ -8,6 +8,7 @@ import 'package:learning_tracker/features/progress/presentation/widgets/hierarch
 import 'package:learning_tracker/features/progress/presentation/widgets/overall_stats_card.dart';
 import 'package:learning_tracker/features/progress/presentation/widgets/pace_indicator.dart';
 import 'package:learning_tracker/features/progress/presentation/widgets/stage_breakdown_row.dart';
+import 'package:learning_tracker/features/scheduler/domain/models/delta_value.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/pace_status.dart';
 
 Widget _wrap(Widget child) {
@@ -50,6 +51,7 @@ void main() {
             paceStatus: PaceStatus(
               status: PaceStatusType.behind,
               daysDelta: -5,
+              delta: DateScheduleDelta(DateDelta(-5)),
               rollingAverage: 2.0,
             ),
           ),
@@ -67,6 +69,7 @@ void main() {
             paceStatus: PaceStatus(
               status: PaceStatusType.onPace,
               daysDelta: 0,
+              delta: DateScheduleDelta(DateDelta(0)),
               rollingAverage: 3.0,
             ),
           ),
@@ -84,6 +87,7 @@ void main() {
             paceStatus: PaceStatus(
               status: PaceStatusType.ahead,
               daysDelta: 3,
+              delta: DateScheduleDelta(DateDelta(3)),
               rollingAverage: 5.0,
             ),
           ),

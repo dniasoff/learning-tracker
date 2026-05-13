@@ -1,4 +1,5 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
+import 'package:learning_tracker/features/scheduler/domain/models/delta_value.dart';
 
 part 'pace_status.freezed.dart';
 
@@ -16,7 +17,14 @@ abstract class PaceStatus with _$PaceStatus {
     /// For pace goals: weekly item surplus (+) or deficit (−), i.e.
     /// `((rollingAverage − targetPacePerDay) * 7).round()`.
     /// Zero when on-pace.
+    /// Kept for backward compatibility — prefer [delta] for new code.
     required int daysDelta,
+
+    /// Typed delta — use this in UI code to avoid mixing calendar days
+    /// with items/week. See [ScheduleDelta] for the two sub-types:
+    /// [DateScheduleDelta] (deadline goals) and [PaceScheduleDelta]
+    /// (pace-rate goals).
+    required ScheduleDelta delta,
 
     /// Projected completion date based on rolling 7-day average.
     /// Null if no completions in the last 7 days (cannot project).

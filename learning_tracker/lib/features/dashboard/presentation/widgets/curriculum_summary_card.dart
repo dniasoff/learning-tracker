@@ -5,6 +5,7 @@ import 'package:learning_tracker/core/services/cross_curriculum_aggregator.dart'
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/utils/percentage_formatter.dart';
 import 'package:learning_tracker/core/widgets/animated_progress_bar.dart';
+import 'package:learning_tracker/features/scheduler/domain/models/delta_value.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/pace_status.dart';
 
 /// A summary card for one curriculum on the dashboard.
@@ -121,17 +122,19 @@ class _PaceBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     if (paceStatus == null) return const SizedBox.shrink();
 
+    final deltaLabel = switch (paceStatus!.delta) {
+      DateScheduleDelta(:final value) =>
+        paceStatus!.status == PaceStatusType.ahead
+            ? '${value.days}d ahead'
+            : '${value.days.abs()}d behind',
+      PaceScheduleDelta(:final value) =>
+        paceStatus!.status == PaceStatusType.ahead
+            ? '+${value.itemsPerWeek}/wk'
+            : '${value.itemsPerWeek.abs()}/wk behind',
+    };
     final (label, color, icon) = switch (paceStatus!.status) {
-      PaceStatusType.ahead => (
-        '${paceStatus!.daysDelta}d ahead',
-        Colors.green,
-        Icons.trending_up,
-      ),
-      PaceStatusType.behind => (
-        '${paceStatus!.daysDelta.abs()}d behind',
-        Colors.orange,
-        Icons.trending_down,
-      ),
+      PaceStatusType.ahead => (deltaLabel, Colors.green, Icons.trending_up),
+      PaceStatusType.behind => (deltaLabel, Colors.orange, Icons.trending_down),
       PaceStatusType.onPace => ('On pace', Colors.blue, Icons.trending_flat),
     };
 

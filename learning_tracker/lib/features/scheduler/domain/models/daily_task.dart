@@ -5,7 +5,8 @@ part 'daily_task.freezed.dart';
 
 /// Priority ranking for daily tasks.
 ///
-/// Ordering: overdueProgram > todayProgram > overdueChazara > scheduledChazara > newLearning
+/// Ordering: overdueProgram > todayProgram > overdueChazara >
+///   overdueNewLearning > scheduledChazara > newLearning
 enum DailyTaskPriority {
   /// Program item that is past due (missed a calendar day).
   overdueProgram,
@@ -15,6 +16,11 @@ enum DailyTaskPriority {
 
   /// Chazara that is past its scheduled review date.
   overdueChazara,
+
+  /// New learning item shown in a prior-day snapshot but not yet completed
+  /// (never-completed carry-over). Distinct from [overdueChazara] so the UI
+  /// does not display it as a review task.
+  overdueNewLearning,
 
   /// Chazara that is due today.
   scheduledChazara,

@@ -13,6 +13,7 @@ import 'package:learning_tracker/features/dashboard/presentation/widgets/points_
 import 'package:learning_tracker/features/dashboard/presentation/widgets/todays_tasks_widget.dart';
 import 'package:learning_tracker/features/gamification/presentation/widgets/streak_widget.dart';
 import 'package:learning_tracker/features/profiles/presentation/widgets/profile_avatar.dart';
+import 'package:learning_tracker/features/scheduler/domain/models/delta_value.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/pace_status.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -109,6 +110,7 @@ void main() {
           paceStatus: const PaceStatus(
             status: PaceStatusType.ahead,
             daysDelta: 3,
+            delta: DateScheduleDelta(DateDelta(3)),
             rollingAverage: 5.2,
           ),
           nextDueItem: 'Berachot 3:5',
@@ -121,6 +123,7 @@ void main() {
           paceStatus: const PaceStatus(
             status: PaceStatusType.onPace,
             daysDelta: 0,
+            delta: DateScheduleDelta(DateDelta(0)),
             rollingAverage: 1.1,
           ),
           nextDueItem: 'Brachot 24a',
@@ -133,6 +136,7 @@ void main() {
           paceStatus: const PaceStatus(
             status: PaceStatusType.ahead,
             daysDelta: 7,
+            delta: DateScheduleDelta(DateDelta(7)),
             rollingAverage: 8.0,
           ),
           nextDueItem: 'Bereishit 12:5',
@@ -145,6 +149,7 @@ void main() {
           paceStatus: const PaceStatus(
             status: PaceStatusType.behind,
             daysDelta: -2,
+            delta: DateScheduleDelta(DateDelta(-2)),
             rollingAverage: 2.3,
           ),
           nextDueItem: 'Siman 91:2',
