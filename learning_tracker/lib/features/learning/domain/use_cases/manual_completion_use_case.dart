@@ -33,7 +33,7 @@ class ManualCompletionUseCase {
   /// parent PIN session for this profile.
   Future<LearningLedgerData> call({
     required String curriculumId,
-    required String unitType,
+    required String entryScope,
     required String unitIdentifier,
     required String unitDisplayNameHe,
     required String unitDisplayNameEn,
@@ -52,7 +52,7 @@ class ManualCompletionUseCase {
 
     return _repository.recordCompletion(
       curriculumId: curriculumId,
-      unitType: unitType,
+      entryScope: entryScope,
       unitIdentifier: unitIdentifier,
       unitDisplayNameHe: unitDisplayNameHe,
       unitDisplayNameEn: unitDisplayNameEn,

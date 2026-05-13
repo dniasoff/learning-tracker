@@ -59,6 +59,6 @@ abstract class ScheduleConfig with _$ScheduleConfig {
     /// new-learning batch — so "1 perek/day" means a whole perek, not
     /// 1 mishna. When `null` or naming the curriculum's leaf, the engine
     /// uses the leaf-counted pace as before.
-    String? learningUnit,
+    String? paceGranularity,
   }) = _ScheduleConfig;
 }

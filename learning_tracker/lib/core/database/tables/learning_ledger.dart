@@ -31,7 +31,8 @@ class LearningLedger extends Table {
   TextColumn get ulid => text().clientDefault(newUlid)();
 
   TextColumn get curriculumId => text()();
-  TextColumn get unitType => text()(); // 'seder', 'masechta', 'sefer'
+  // SQL column: unit_type (preserved for schema compat)
+  TextColumn get entryScope => text().named('unit_type')(); // 'seder', 'masechta', 'sefer'
   TextColumn get unitIdentifier => text()(); // level1 or level2 value
   TextColumn get unitDisplayNameHe => text()();
   TextColumn get unitDisplayNameEn => text()();

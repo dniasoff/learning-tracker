@@ -86,7 +86,7 @@ class _GoalSetupFormState extends ConsumerState<GoalSetupForm> {
   late String _goalType;
   late int _paceValue;
   String _paceUnit = 'per_day';
-  late String _learningUnit;
+  late String _paceGranularity;
 
   @override
   void initState() {
@@ -100,8 +100,8 @@ class _GoalSetupFormState extends ConsumerState<GoalSetupForm> {
     _paceValue =
         widget.existingGoal?.paceValue ??
         (CurriculumDefaults.defaultDailyTargets[widget.curriculumId] ?? 1);
-    _paceUnit = widget.existingGoal?.paceUnit ?? 'per_day';
-    _learningUnit = _defaultUnit;
+    _paceUnit = widget.existingGoal?.pacePeriod ?? 'per_day';
+    _paceGranularity = _defaultUnit;
   }
 
   /// Whether this curriculum's pace is set in Pasuk/Perek units (Tanakh
@@ -135,10 +135,10 @@ class _GoalSetupFormState extends ConsumerState<GoalSetupForm> {
   /// Plural unit label shown in the pace input ("Pesukim per day", not
   /// "Pasuk per day") — the count is always > 1 in practice.
   String get _unitDisplayLabel {
-    if (_learningUnit == 'daf') return 'Dafim';
-    if (_learningUnit == 'amud') return 'Amudim';
-    if (_learningUnit == 'perek') return 'Perakim';
-    if (_learningUnit == 'pasuk') return 'Pesukim';
+    if (_paceGranularity == 'daf') return 'Dafim';
+    if (_paceGranularity == 'amud') return 'Amudim';
+    if (_paceGranularity == 'perek') return 'Perakim';
+    if (_paceGranularity == 'pasuk') return 'Pesukim';
     return CurriculumLabels.leaf(widget.curriculumId).enPlural;
   }
 
@@ -171,7 +171,7 @@ class _GoalSetupFormState extends ConsumerState<GoalSetupForm> {
 
   DateTime _now() => ref.read(clockProvider);
 
-  Future<void> _pickGregorianDate() async {
+  Future<void> _pickEnglishDate() async {
     final now = _now();
     final picked = await showLearningAppDatePicker(
       context: context,
@@ -203,8 +203,8 @@ class _GoalSetupFormState extends ConsumerState<GoalSetupForm> {
         dateType: ref.read(useHebrewDateProvider) ? 'hebrew' : 'gregorian',
         goalType: _goalType,
         paceValue: _goalType == 'pace' ? _paceValue : null,
-        paceUnit: _goalType == 'pace' ? _paceUnit : null,
-        learningUnit: _showUnitPicker ? _learningUnit : null,
+        pacePeriod: _goalType == 'pace' ? _paceUnit : null,
+        paceGranularity: _showUnitPicker ? _paceGranularity : null,
       ),
     );
   }
@@ -217,7 +217,7 @@ class _GoalSetupFormState extends ConsumerState<GoalSetupForm> {
         // Date selection — pick a date immediately
         Card(
           child: InkWell(
-            onTap: useHebrew ? _pickHebrewDate : _pickGregorianDate,
+            onTap: useHebrew ? _pickHebrewDate : _pickEnglishDate,
             borderRadius: BorderRadius.circular(12),
             child: Padding(
               padding: const EdgeInsets.all(16),
@@ -447,9 +447,9 @@ class _GoalSetupFormState extends ConsumerState<GoalSetupForm> {
                               ),
                               ButtonSegment(value: 'daf', label: Text(AppLocalizations.of(context)!.unitDafim)),
                             ],
-                      selected: {_learningUnit},
+                      selected: {_paceGranularity},
                       onSelectionChanged: (selected) {
-                        setState(() => _learningUnit = selected.first);
+                        setState(() => _paceGranularity = selected.first);
                       },
                     ),
                     const SizedBox(height: 24),

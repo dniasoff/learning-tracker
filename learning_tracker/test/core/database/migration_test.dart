@@ -47,7 +47,7 @@ void main() {
       // Verify default values for new columns
       expect(goal.goalType, 'deadline');
       expect(goal.paceValue, isNull);
-      expect(goal.paceUnit, isNull);
+      expect(goal.pacePeriod, isNull);
     });
 
     test('goal with pace fields persists correctly', () async {
@@ -59,7 +59,7 @@ void main() {
           trackId: trackId,
           goalType: const Value('pace'),
           paceValue: const Value(1),
-          paceUnit: const Value('per_day'),
+          pacePeriod: const Value('per_day'),
           createdAt: now,
           updatedAt: now,
         ),
@@ -71,7 +71,7 @@ void main() {
       final goal = goals.first;
       expect(goal.goalType, 'pace');
       expect(goal.paceValue, 1);
-      expect(goal.paceUnit, 'per_day');
+      expect(goal.pacePeriod, 'per_day');
     });
 
     test('goal with per_week pace unit persists correctly', () async {
@@ -83,7 +83,7 @@ void main() {
           trackId: trackId,
           goalType: const Value('pace'),
           paceValue: const Value(5),
-          paceUnit: const Value('per_week'),
+          pacePeriod: const Value('per_week'),
           createdAt: now,
           updatedAt: now,
         ),
@@ -93,7 +93,7 @@ void main() {
       final goal = goals.first;
       expect(goal.goalType, 'pace');
       expect(goal.paceValue, 5);
-      expect(goal.paceUnit, 'per_week');
+      expect(goal.pacePeriod, 'per_week');
     });
 
     test('deadline goal has null pace fields by default', () async {
@@ -115,7 +115,7 @@ void main() {
       expect(goal.goalType, 'deadline');
       expect(goal.targetDate, isNotNull);
       expect(goal.paceValue, isNull);
-      expect(goal.paceUnit, isNull);
+      expect(goal.pacePeriod, isNull);
     });
   });
 }

@@ -347,10 +347,10 @@ Future<PaceStatus?> dashboardPaceStatus(
   // Pace-based goal
   if (goal.goalType == 'pace' &&
       goal.paceValue != null &&
-      goal.paceUnit != null) {
+      goal.pacePeriod != null) {
     final dailyRate = PaceCalculator.paceToDaily(
       goal.paceValue!,
-      goal.paceUnit!,
+      goal.pacePeriod!,
     );
     return PaceCalculator.calculateForPaceGoal(
       targetPacePerDay: dailyRate,

@@ -433,7 +433,7 @@ final class SelfPacedSnapshot extends SchedulingStrategy {
   }
 
   bool _isCoarseMode(SchedulerInput input) {
-    final unit = input.learningUnit;
+    final unit = input.paceGranularity;
     if (unit == null) return false;
     final leafEn = CurriculumLabels.leaf(input.curriculumId).en.toLowerCase();
     return unit.toLowerCase() != leafEn;

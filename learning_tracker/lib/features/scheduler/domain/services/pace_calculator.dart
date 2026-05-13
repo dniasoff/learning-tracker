@@ -175,8 +175,8 @@ class PaceCalculator {
   ///
   /// For 'per_day', returns the value directly.
   /// For 'per_week', divides by 7.
-  static double paceToDaily(int paceValue, String paceUnit) {
-    if (paceUnit == 'per_week') {
+  static double paceToDaily(int paceValue, String pacePeriod) {
+    if (pacePeriod == 'per_week') {
       return paceValue / 7.0;
     }
     return paceValue.toDouble();

@@ -22,7 +22,7 @@ void main() {
           LearningLedgerCompanion.insert(
             profileId: 1,
             curriculumId: 'mishna',
-            unitType: 'masechta',
+            entryScope: 'masechta',
             unitIdentifier: 'Berakhot',
             unitDisplayNameHe: 'ברכות',
             unitDisplayNameEn: 'Berakhot',
@@ -41,7 +41,7 @@ void main() {
           LearningLedgerCompanion.insert(
             profileId: 1,
             curriculumId: 'mishna',
-            unitType: 'masechta',
+            entryScope: 'masechta',
             unitIdentifier: 'Berakhot',
             unitDisplayNameHe: 'ברכות',
             unitDisplayNameEn: 'Berakhot',
@@ -65,7 +65,7 @@ void main() {
           LearningLedgerCompanion.insert(
             profileId: 1,
             curriculumId: 'mishna',
-            unitType: 'masechta',
+            entryScope: 'masechta',
             unitIdentifier: 'Berakhot',
             unitDisplayNameHe: 'ברכות',
             unitDisplayNameEn: 'Berakhot',
@@ -80,7 +80,7 @@ void main() {
           LearningLedgerCompanion.insert(
             profileId: 2,
             curriculumId: 'mishna',
-            unitType: 'masechta',
+            entryScope: 'masechta',
             unitIdentifier: 'Shabbat',
             unitDisplayNameHe: 'שבת',
             unitDisplayNameEn: 'Shabbat',
@@ -101,7 +101,7 @@ void main() {
           LearningLedgerCompanion.insert(
             profileId: 1,
             curriculumId: 'mishna',
-            unitType: 'masechta',
+            entryScope: 'masechta',
             unitIdentifier: 'Berakhot',
             unitDisplayNameHe: 'ברכות',
             unitDisplayNameEn: 'Berakhot',
@@ -115,7 +115,7 @@ void main() {
           LearningLedgerCompanion.insert(
             profileId: 1,
             curriculumId: 'mishna',
-            unitType: 'masechta',
+            entryScope: 'masechta',
             unitIdentifier: 'Shabbat',
             unitDisplayNameHe: 'שבת',
             unitDisplayNameEn: 'Shabbat',
@@ -138,7 +138,7 @@ void main() {
           LearningLedgerCompanion.insert(
             profileId: 1,
             curriculumId: 'mishna',
-            unitType: 'masechta',
+            entryScope: 'masechta',
             unitIdentifier: 'Berakhot',
             unitDisplayNameHe: 'ברכות',
             unitDisplayNameEn: 'Berakhot',
@@ -152,7 +152,7 @@ void main() {
           LearningLedgerCompanion.insert(
             profileId: 1,
             curriculumId: 'daf_yomi',
-            unitType: 'masechta',
+            entryScope: 'masechta',
             unitIdentifier: 'Berakhot',
             unitDisplayNameHe: 'ברכות',
             unitDisplayNameEn: 'Berakhot',
@@ -189,7 +189,7 @@ void main() {
             LearningLedgerCompanion.insert(
               profileId: 1,
               curriculumId: 'mishna',
-              unitType: 'masechta',
+              entryScope: 'masechta',
               unitIdentifier: 'Berakhot',
               unitDisplayNameHe: 'ברכות',
               unitDisplayNameEn: 'Berakhot',
@@ -205,7 +205,7 @@ void main() {
           LearningLedgerCompanion.insert(
             profileId: 1,
             curriculumId: 'mishna',
-            unitType: 'masechta',
+            entryScope: 'masechta',
             unitIdentifier: 'Shabbat',
             unitDisplayNameHe: 'שבת',
             unitDisplayNameEn: 'Shabbat',
@@ -231,7 +231,7 @@ void main() {
           LearningLedgerCompanion.insert(
             profileId: 1,
             curriculumId: 'mishna',
-            unitType: 'masechta',
+            entryScope: 'masechta',
             unitIdentifier: 'Berakhot',
             unitDisplayNameHe: 'ברכות',
             unitDisplayNameEn: 'Berakhot',
@@ -245,7 +245,7 @@ void main() {
           LearningLedgerCompanion.insert(
             profileId: 1,
             curriculumId: 'daf_yomi',
-            unitType: 'masechta',
+            entryScope: 'masechta',
             unitIdentifier: 'Berakhot',
             unitDisplayNameHe: 'ברכות',
             unitDisplayNameEn: 'Berakhot',
@@ -271,7 +271,7 @@ void main() {
             LearningLedgerCompanion.insert(
               profileId: 1,
               curriculumId: 'mishna',
-              unitType: 'masechta',
+              entryScope: 'masechta',
               unitIdentifier: 'Unit$i',
               unitDisplayNameHe: 'יחידה$i',
               unitDisplayNameEn: 'Unit$i',
@@ -311,7 +311,7 @@ void main() {
           LearningLedgerCompanion.insert(
             profileId: 1,
             curriculumId: 'mishna',
-            unitType: 'masechta',
+            entryScope: 'masechta',
             unitIdentifier: 'Berakhot',
             unitDisplayNameHe: 'ברכות',
             unitDisplayNameEn: 'Berakhot',
@@ -339,7 +339,7 @@ void main() {
           LearningLedgerCompanion.insert(
             profileId: 1,
             curriculumId: 'mishna',
-            unitType: 'masechta',
+            entryScope: 'masechta',
             unitIdentifier: 'Berakhot',
             unitDisplayNameHe: 'ברכות',
             unitDisplayNameEn: 'Berakhot',
@@ -359,7 +359,7 @@ void main() {
           LearningLedgerCompanion.insert(
             profileId: 1,
             curriculumId: 'mishna',
-            unitType: 'masechta',
+            entryScope: 'masechta',
             unitIdentifier: 'Berakhot',
             unitDisplayNameHe: 'ברכות',
             unitDisplayNameEn: 'Berakhot',
@@ -382,7 +382,7 @@ void main() {
           LearningLedgerCompanion.insert(
             profileId: 1,
             curriculumId: 'mishna',
-            unitType: 'masechta',
+            entryScope: 'masechta',
             unitIdentifier: 'Berakhot',
             unitDisplayNameHe: 'ברכות',
             unitDisplayNameEn: 'Berakhot',
@@ -402,7 +402,7 @@ void main() {
           LearningLedgerCompanion.insert(
             profileId: 1,
             curriculumId: 'mishna',
-            unitType: 'masechta',
+            entryScope: 'masechta',
             unitIdentifier: 'Berakhot',
             unitDisplayNameHe: 'ברכות',
             unitDisplayNameEn: 'Berakhot',

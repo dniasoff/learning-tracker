@@ -416,7 +416,7 @@ void main() {
         LearningLedgerCompanion.insert(
           profileId: _p1,
           curriculumId: 'mishnayos',
-          unitType: 'masechta',
+          entryScope: 'masechta',
           unitIdentifier: 'Berachos',
           unitDisplayNameHe: 'ברכות',
           unitDisplayNameEn: 'Berachos',
@@ -431,7 +431,7 @@ void main() {
         LearningLedgerCompanion.insert(
           profileId: _p2,
           curriculumId: 'mishnayos',
-          unitType: 'masechta',
+          entryScope: 'masechta',
           unitIdentifier: 'Shabbos',
           unitDisplayNameHe: 'שבת',
           unitDisplayNameEn: 'Shabbos',

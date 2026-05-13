@@ -149,8 +149,8 @@ class TrackCreationService {
         dateType: goal.dateType,
         goalType: goal.goalType,
         paceValue: goal.paceValue,
-        paceUnit: goal.paceUnit,
-        learningUnit: goal.learningUnit,
+        pacePeriod: goal.pacePeriod,
+        paceGranularity: goal.paceGranularityKey,
       );
     }
 

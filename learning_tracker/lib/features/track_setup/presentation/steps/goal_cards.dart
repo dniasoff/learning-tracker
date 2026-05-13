@@ -79,7 +79,7 @@ class PaceGoalCard extends StatelessWidget {
   const PaceGoalCard({
     required this.isActive,
     required this.paceValue,
-    required this.paceUnit,
+    required this.pacePeriod,
     required this.unitSingular,
     required this.unitPlural,
     required this.hasUnitChoice,
@@ -87,18 +87,18 @@ class PaceGoalCard extends StatelessWidget {
     required this.coarseLabel,
     required this.fineKey,
     required this.fineLabel,
-    required this.learningUnit,
+    required this.paceGranularity,
     required this.projectedFinishLabel,
     required this.onPaceDecrease,
     required this.onPaceIncrease,
     required this.onPaceUnitChanged,
-    required this.onLearningUnitChanged,
+    required this.onPaceGranularityChanged,
     super.key,
   });
 
   final bool isActive;
   final int paceValue;
-  final String paceUnit;
+  final String pacePeriod;
   final String unitSingular;
   final String unitPlural;
   final bool hasUnitChoice;
@@ -106,12 +106,12 @@ class PaceGoalCard extends StatelessWidget {
   final String coarseLabel;
   final String? fineKey;
   final String? fineLabel;
-  final String learningUnit;
+  final String paceGranularity;
   final String projectedFinishLabel;
   final VoidCallback onPaceDecrease;
   final VoidCallback onPaceIncrease;
   final ValueChanged<String> onPaceUnitChanged;
-  final ValueChanged<String> onLearningUnitChanged;
+  final ValueChanged<String> onPaceGranularityChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -152,7 +152,7 @@ class PaceGoalCard extends StatelessWidget {
             ),
             const SizedBox(height: 10),
             Text(
-              '$unitPlural ${paceUnit == 'per_day' ? 'per day' : 'per week'}',
+              '$unitPlural ${pacePeriod == 'per_day' ? 'per day' : 'per week'}',
               style: theme.textTheme.bodyMedium
                   ?.copyWith(color: AppTheme.brandInkMuted),
             ),
@@ -163,8 +163,8 @@ class PaceGoalCard extends StatelessWidget {
                   ButtonSegment(value: coarseKey, label: Text(coarseLabel)),
                   ButtonSegment(value: fineKey!, label: Text(fineLabel!)),
                 ],
-                selected: {learningUnit},
-                onSelectionChanged: (v) => onLearningUnitChanged(v.first),
+                selected: {paceGranularity},
+                onSelectionChanged: (v) => onPaceGranularityChanged(v.first),
               ),
             ],
             const SizedBox(height: 10),
@@ -173,7 +173,7 @@ class PaceGoalCard extends StatelessWidget {
                 ButtonSegment(value: 'per_day', label: Text('Per day')),
                 ButtonSegment(value: 'per_week', label: Text('Per week')),
               ],
-              selected: {paceUnit},
+              selected: {pacePeriod},
               onSelectionChanged: (v) => onPaceUnitChanged(v.first),
             ),
             const SizedBox(height: 8),

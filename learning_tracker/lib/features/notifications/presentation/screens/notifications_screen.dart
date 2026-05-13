@@ -127,8 +127,8 @@ class NotificationsScreen extends ConsumerWidget {
                 icon: Icons.auto_awesome_rounded,
                 iconTint: const Color(0xFFB07A2A),
                 iconBg: const Color(0xFFFDF2DE),
-                title: l10n.notifRewardNotifications,
-                subtitle: l10n.notifRewardNotificationsSubtitle,
+                title: l10n.notifRewardMilestones,
+                subtitle: l10n.notifRewardMilestonesSubtitle,
                 value: rewardEnabled,
                 onChanged: (willEnable) async {
                   if (willEnable) {

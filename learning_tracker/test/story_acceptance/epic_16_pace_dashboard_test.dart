@@ -53,19 +53,19 @@ void main() {
 
     // AC-1: Pace goal creation
     test(
-      'AC-1: GoalEntity supports pace goalType with paceValue and paceUnit',
+      'AC-1: GoalEntity supports pace goalType with paceValue and pacePeriod',
       () {
         final entity = GoalEntity(
           curriculumId: CurriculumId.bavli,
           goalType: 'pace',
           paceValue: 1,
-          paceUnit: 'per_day',
+          pacePeriod: 'per_day',
           createdAt: today,
           updatedAt: today,
         );
         expect(entity.goalType, 'pace');
         expect(entity.paceValue, 1);
-        expect(entity.paceUnit, 'per_day');
+        expect(entity.pacePeriod, 'per_day');
         expect(entity.targetDate, isNull);
       },
     );
@@ -145,23 +145,23 @@ void main() {
       );
       expect(entity.goalType, 'deadline');
       expect(entity.paceValue, isNull);
-      expect(entity.paceUnit, isNull);
+      expect(entity.pacePeriod, isNull);
     });
 
     // AC-7: Firestore sync with new fields
-    test('AC-7: toFirestore includes goalType, paceValue, paceUnit', () {
+    test('AC-7: toFirestore includes goalType, paceValue, pacePeriod', () {
       final entity = GoalEntity(
         curriculumId: CurriculumId.bavli,
         goalType: 'pace',
         paceValue: 1,
-        paceUnit: 'per_day',
+        pacePeriod: 'per_day',
         createdAt: today,
         updatedAt: today,
       );
       final map = entity.toFirestore();
       expect(map.containsKey('goalType'), isTrue);
       expect(map.containsKey('paceValue'), isTrue);
-      expect(map.containsKey('paceUnit'), isTrue);
+      expect(map.containsKey('pacePeriod'), isTrue);
     });
 
     test('AC-7: existing deadline goals sync unchanged', () {
@@ -174,7 +174,7 @@ void main() {
       final map = entity.toFirestore();
       expect(map['goalType'], 'deadline');
       expect(map['paceValue'], isNull);
-      expect(map['paceUnit'], isNull);
+      expect(map['pacePeriod'], isNull);
       expect(map['targetDate'], isNotNull);
     });
 
@@ -187,7 +187,7 @@ void main() {
       });
       expect(entity.goalType, 'deadline');
       expect(entity.paceValue, isNull);
-      expect(entity.paceUnit, isNull);
+      expect(entity.pacePeriod, isNull);
     });
 
     // GoalProgressCalculator with pace
@@ -1042,13 +1042,13 @@ void main() {
           curriculumId: CurriculumId.bavli,
           goalType: 'pace',
           paceValue: 1,
-          paceUnit: 'per_day',
+          pacePeriod: 'per_day',
           createdAt: DateTime.utc(2026, 3, 25),
           updatedAt: DateTime.utc(2026, 3, 25),
         );
         expect(entity.goalType, 'pace');
         expect(entity.paceValue, 1);
-        expect(entity.paceUnit, 'per_day');
+        expect(entity.pacePeriod, 'per_day');
       });
 
       // AC-2: Pace mode goal persisted during onboarding

@@ -1423,10 +1423,10 @@ class AppLocalizationsHe extends AppLocalizations {
   String get notifStreakAlertTime => 'שעת התראת רצף';
 
   @override
-  String get notifRewardNotifications => 'התראות פרסים';
+  String get notifRewardMilestones => 'התראות פרסים';
 
   @override
-  String get notifRewardNotificationsSubtitle => 'כשאתם מרוויחים נק׳ למידה!';
+  String get notifRewardMilestonesSubtitle => 'כשאתם מרוויחים נק׳ למידה!';
 
   @override
   String get notifSacredTime => 'מצב שבת';

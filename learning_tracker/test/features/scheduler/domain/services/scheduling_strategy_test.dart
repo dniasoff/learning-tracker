@@ -40,7 +40,7 @@ SchedulerInput _baseInput({
   DateTime? goalDeadline,
   bool isStudyDay = true,
   Set<String> priorlyShownRefs = const {},
-  String? learningUnit,
+  String? paceGranularity,
   int defaultNewItemsPerDay = 5,
 }) {
   return SchedulerInput(
@@ -56,7 +56,7 @@ SchedulerInput _baseInput({
     goalDeadline: goalDeadline,
     isStudyDay: isStudyDay,
     priorlyShownRefs: priorlyShownRefs,
-    learningUnit: learningUnit,
+    paceGranularity: paceGranularity,
     defaultNewItemsPerDay: defaultNewItemsPerDay,
   );
 }

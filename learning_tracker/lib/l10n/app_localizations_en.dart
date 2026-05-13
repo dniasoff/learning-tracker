@@ -1436,10 +1436,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get notifStreakAlertTime => 'Streak Alert Time';
 
   @override
-  String get notifRewardNotifications => 'Reward Notifications';
+  String get notifRewardMilestones => 'Reward Notifications';
 
   @override
-  String get notifRewardNotificationsSubtitle =>
+  String get notifRewardMilestonesSubtitle =>
       'When you earn Learning Points!';
 
   @override

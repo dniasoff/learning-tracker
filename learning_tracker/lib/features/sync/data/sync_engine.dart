@@ -1178,7 +1178,7 @@ class SyncEngine {
                     : newUlid(completedAt),
               ),
               curriculumId: curriculumId,
-              unitType: remote['unitType'] as String? ?? 'masechta',
+              entryScope: remote['entryScope'] as String? ?? 'masechta',
               unitIdentifier: unitIdentifier,
               unitDisplayNameHe: remote['unitDisplayNameHe'] as String? ?? '',
               unitDisplayNameEn: remote['unitDisplayNameEn'] as String? ?? '',
@@ -1739,7 +1739,7 @@ class SyncEngine {
         final dateType = remote['date_type'] as String? ?? 'gregorian';
         final goalType = remote['goal_type'] as String? ?? 'deadline';
         final paceValue = (remote['pace_value'] as num?)?.toInt();
-        final paceUnit = remote['pace_unit'] as String?;
+        final pacePeriod = remote['pace_unit'] as String?;
         final createdAt = _parseTimestamp(remote['created_at']);
         final updatedAt = _parseTimestamp(remote['updated_at']);
 
@@ -1762,7 +1762,7 @@ class SyncEngine {
           dateType: dateType,
           goalType: goalType,
           paceValue: paceValue,
-          paceUnit: paceUnit,
+          pacePeriod: pacePeriod,
           createdAt: createdAt,
           updatedAt: updatedAt,
         );
@@ -3128,7 +3128,7 @@ class SyncEngine {
           'date_type': g.dateType,
           'goal_type': g.goalType,
           'pace_value': g.paceValue,
-          'pace_unit': g.paceUnit,
+          'pace_unit': g.pacePeriod,
           'created_at': g.createdAt.toIso8601String(),
           'updated_at': g.updatedAt.toIso8601String(),
         });
@@ -3179,7 +3179,7 @@ class SyncEngine {
       for (final e in ledgerEntries) {
         await pushLedgerEntry({
           'curriculumId': e.curriculumId,
-          'unitType': e.unitType,
+          'entryScope': e.entryScope,
           'unitIdentifier': e.unitIdentifier,
           'unitDisplayNameHe': e.unitDisplayNameHe,
           'unitDisplayNameEn': e.unitDisplayNameEn,

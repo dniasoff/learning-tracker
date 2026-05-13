@@ -157,7 +157,7 @@ class SchedulerEngine {
       //     completed at the first stage
       //   - today's new = next pacePerDay (leaf or coarse) units from
       //     CURRENT orderedRefs that haven't been shown before and aren't
-      //     completed. When the goal's learningUnit names a coarse level
+      //     completed. When the goal's paceGranularity names a coarse level
       //     (e.g. 'perek' on Mishnayos, 'daf' on Bavli), today's batch is
       //     ALL leaves under the next N coarse units — so "1 perek/day"
       //     emits a whole perek, not one mishna.
@@ -490,13 +490,13 @@ class SchedulerEngine {
     return config.pacePerDay != null && config.trackStartedAt != null;
   }
 
-  /// True when the goal's learningUnit names a level **above** the
+  /// True when the goal's paceGranularity names a level **above** the
   /// curriculum's leaf — meaning pacePerDay counts coarse units (perek /
   /// daf / siman) rather than individual leaves. When false (leaf mode,
-  /// or no learningUnit set), pacePerDay is interpreted as a count of
+  /// or no paceGranularity set), pacePerDay is interpreted as a count of
   /// leaf items.
   bool _isCoarseMode(ScheduleConfig config) {
-    final unit = config.learningUnit;
+    final unit = config.paceGranularity;
     if (unit == null) return false;
     final leafEn = CurriculumLabels.leaf(config.curriculumId).en.toLowerCase();
     return unit.toLowerCase() != leafEn;
@@ -569,7 +569,7 @@ class SchedulerEngine {
   /// Same ordering as [getOrderedRefs] but returns the full
   /// [SchedulerContentItem]s. Used by the back-fill builder so synthetic
   /// snapshots can group leaves by coarse unit (perek / daf / siman) when
-  /// the goal's learningUnit calls for it.
+  /// the goal's paceGranularity calls for it.
   Future<List<SchedulerContentItem>> getOrderedLeafItems(
     CurriculumId curriculumId,
   ) async {

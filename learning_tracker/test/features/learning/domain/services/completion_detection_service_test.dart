@@ -156,7 +156,7 @@ void main() {
         expect(entries.length, greaterThanOrEqualTo(1));
         expect(
           entries.any(
-            (e) => e.unitType == 'masechta' && e.unitIdentifier == 'Berakhot',
+            (e) => e.entryScope == 'masechta' && e.unitIdentifier == 'Berakhot',
           ),
           isTrue,
         );

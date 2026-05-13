@@ -46,7 +46,7 @@ void main() {
         final repo = createRepo();
         final entry = await repo.recordCompletion(
           curriculumId: 'mishna',
-          unitType: 'masechta',
+          entryScope: 'masechta',
           unitIdentifier: 'Berakhot',
           unitDisplayNameHe: 'ברכות',
           unitDisplayNameEn: 'Berakhot',
@@ -62,7 +62,7 @@ void main() {
         final repo = createRepo();
         await repo.recordCompletion(
           curriculumId: 'mishna',
-          unitType: 'masechta',
+          entryScope: 'masechta',
           unitIdentifier: 'Berakhot',
           unitDisplayNameHe: 'ברכות',
           unitDisplayNameEn: 'Berakhot',
@@ -73,7 +73,7 @@ void main() {
 
         final entry2 = await repo.recordCompletion(
           curriculumId: 'mishna',
-          unitType: 'masechta',
+          entryScope: 'masechta',
           unitIdentifier: 'Berakhot',
           unitDisplayNameHe: 'ברכות',
           unitDisplayNameEn: 'Berakhot',
@@ -89,7 +89,7 @@ void main() {
         final repo = createRepo();
         await repo.recordCompletion(
           curriculumId: 'mishna',
-          unitType: 'masechta',
+          entryScope: 'masechta',
           unitIdentifier: 'Berakhot',
           unitDisplayNameHe: 'ברכות',
           unitDisplayNameEn: 'Berakhot',
@@ -111,7 +111,7 @@ void main() {
           );
           final entry = await repo.recordCompletion(
             curriculumId: 'mishna',
-            unitType: 'masechta',
+            entryScope: 'masechta',
             unitIdentifier: 'Berakhot',
             unitDisplayNameHe: 'ברכות',
             unitDisplayNameEn: 'Berakhot',
@@ -131,7 +131,7 @@ void main() {
         expect(
           () => repo.recordCompletion(
             curriculumId: 'mishna',
-            unitType: 'masechta',
+            entryScope: 'masechta',
             unitIdentifier: 'Berakhot',
             unitDisplayNameHe: 'ברכות',
             unitDisplayNameEn: 'Berakhot',
@@ -147,7 +147,7 @@ void main() {
         final repo = createRepo(profileId: 1, profileMode: 'adult');
         final entry = await repo.recordCompletion(
           curriculumId: 'mishna',
-          unitType: 'masechta',
+          entryScope: 'masechta',
           unitIdentifier: 'Berakhot',
           unitDisplayNameHe: 'ברכות',
           unitDisplayNameEn: 'Berakhot',
@@ -165,7 +165,7 @@ void main() {
         final repo = createRepo(profileId: 1, profileMode: 'adult');
         final entry = await repo.recordCompletion(
           curriculumId: 'mishna',
-          unitType: 'masechta',
+          entryScope: 'masechta',
           unitIdentifier: 'Berakhot',
           unitDisplayNameHe: 'ברכות',
           unitDisplayNameEn: 'Berakhot',
@@ -182,7 +182,7 @@ void main() {
         final repo = createRepo(profileId: 5, profileMode: 'child');
         final entry = await repo.recordCompletion(
           curriculumId: 'mishna',
-          unitType: 'masechta',
+          entryScope: 'masechta',
           unitIdentifier: 'Berakhot',
           unitDisplayNameHe: 'ברכות',
           unitDisplayNameEn: 'Berakhot',
@@ -198,7 +198,7 @@ void main() {
         final repo = createRepo();
         final entry = await repo.recordCompletion(
           curriculumId: 'mishna',
-          unitType: 'masechta',
+          entryScope: 'masechta',
           unitIdentifier: 'Berakhot',
           unitDisplayNameHe: 'ברכות',
           unitDisplayNameEn: 'Berakhot',
@@ -218,7 +218,7 @@ void main() {
         final entries = await repo.recordCompletionsBatch([
           const LedgerManualBatchItem(
             curriculumId: 'mishna',
-            unitType: 'level1',
+            entryScope: 'level1',
             unitIdentifier: 'A',
             unitDisplayNameHe: 'א',
             unitDisplayNameEn: 'A',
@@ -228,7 +228,7 @@ void main() {
           ),
           const LedgerManualBatchItem(
             curriculumId: 'mishna',
-            unitType: 'level1',
+            entryScope: 'level1',
             unitIdentifier: 'B',
             unitDisplayNameHe: 'ב',
             unitDisplayNameEn: 'B',
@@ -251,7 +251,7 @@ void main() {
         final repo = createRepo();
         await repo.recordCompletion(
           curriculumId: 'mishna',
-          unitType: 'masechta',
+          entryScope: 'masechta',
           unitIdentifier: 'Berakhot',
           unitDisplayNameHe: 'ברכות',
           unitDisplayNameEn: 'Berakhot',
@@ -261,7 +261,7 @@ void main() {
         );
         await repo.recordCompletion(
           curriculumId: 'daf_yomi',
-          unitType: 'masechta',
+          entryScope: 'masechta',
           unitIdentifier: 'Shabbat',
           unitDisplayNameHe: 'שבת',
           unitDisplayNameEn: 'Shabbat',
@@ -280,7 +280,7 @@ void main() {
         final repo = createRepo();
         await repo.recordCompletion(
           curriculumId: 'mishna',
-          unitType: 'masechta',
+          entryScope: 'masechta',
           unitIdentifier: 'Berakhot',
           unitDisplayNameHe: 'ברכות',
           unitDisplayNameEn: 'Berakhot',
@@ -290,7 +290,7 @@ void main() {
         );
         await repo.recordCompletion(
           curriculumId: 'mishna',
-          unitType: 'masechta',
+          entryScope: 'masechta',
           unitIdentifier: 'Shabbat',
           unitDisplayNameHe: 'שבת',
           unitDisplayNameEn: 'Shabbat',

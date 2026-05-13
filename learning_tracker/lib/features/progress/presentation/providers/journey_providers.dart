@@ -19,8 +19,8 @@ part 'journey_providers.g.dart';
 // Helpers — derive UnitCompletion structural keys from ledger rows.
 // ---------------------------------------------------------------------------
 
-/// Entry scope: the ledger's [unitType] string verbatim (e.g. `'masechta'`).
-String _entryScope(LearningLedgerData e) => e.unitType;
+/// Entry scope: the ledger's [entryScope] string verbatim (e.g. `'masechta'`).
+String _entryScope(LearningLedgerData e) => e.entryScope;
 
 /// Entry key: the ledger's [unitIdentifier] verbatim.
 String _entryKey(LearningLedgerData e) => e.unitIdentifier;
@@ -32,7 +32,7 @@ String _entryKey(LearningLedgerData e) => e.unitIdentifier;
 /// and return its [level1]. Returns `null` for level-1 scope types.
 String? _parentL1Key(LearningLedgerData e, List<ContentItem> content) {
   const level2Types = {'masechta', 'sefer', 'parsha', 'book'};
-  if (!level2Types.contains(e.unitType)) return null;
+  if (!level2Types.contains(e.entryScope)) return null;
   for (final item in content) {
     if (item.level2 == e.unitIdentifier) return item.level1;
   }
@@ -99,7 +99,6 @@ Future<JourneyViewModel> journeyViewModel(Ref ref, int profileId) async {
         .map(
           (e) => UnitCompletion(
             unitIdentifier: e.unitIdentifier,
-            unitType: e.unitType,
             entryScope: _entryScope(e),
             entryKey: _entryKey(e),
             parentL1Key: _parentL1Key(e, content),
@@ -176,7 +175,7 @@ List<MilestoneAchievement> _detectMilestones(
   // unit-level ledger entries only. Item-level lifetime markers (e.g. daf/perek)
   // must not artificially complete a curriculum milestone.
   final unitLevelEntries = entries
-      .where((e) => e.unitType == 'masechta' || e.unitType == 'sefer')
+      .where((e) => e.entryScope == 'masechta' || e.entryScope == 'sefer')
       .toList();
   final completedUnits = unitLevelEntries.map((e) => e.unitIdentifier).toSet();
 

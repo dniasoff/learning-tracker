@@ -32,13 +32,13 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 part 'scheduler_providers.g.dart';
 
-/// True when the goal's [learningUnit] (e.g. 'perek', 'daf', 'siman')
+/// True when the goal's [paceGranularity] (e.g. 'perek', 'daf', 'siman')
 /// names a level above the curriculum's leaf, so pace is interpreted in
 /// coarse units. When false (leaf mode or no unit set) pace counts leaves.
-bool _isCoarseLearningUnit(CurriculumId curriculum, String? learningUnit) {
-  if (learningUnit == null) return false;
+bool _isCoarseLearningUnit(CurriculumId curriculum, String? paceGranularity) {
+  if (paceGranularity == null) return false;
   final leafEn = CurriculumLabels.leaf(curriculum).en.toLowerCase();
-  return learningUnit.toLowerCase() != leafEn;
+  return paceGranularity.toLowerCase() != leafEn;
 }
 
 /// Dashboard-driven task section filter for Scheduler screen.
@@ -501,7 +501,7 @@ Future<List<DailyTask>> _buildFreshPlan({
 
   final goalDeadlines = <CurriculumId, DateTime>{};
   final pacePerDayMap = <CurriculumId, double>{};
-  final learningUnitMap = <CurriculumId, String>{};
+  final paceGranularityMap = <CurriculumId, String>{};
   for (final curriculum in activeCurricula) {
     final trackId = trackIds[curriculum];
     if (trackId != null) {
@@ -509,18 +509,18 @@ Future<List<DailyTask>> _buildFreshPlan({
       if (goal != null) {
         if (goal.goalType == 'pace' &&
             goal.paceValue != null &&
-            goal.paceUnit != null) {
+            goal.pacePeriod != null) {
           final dailyRate = PaceCalculator.paceToDaily(
             goal.paceValue!,
-            goal.paceUnit!,
+            goal.pacePeriod!,
           );
           final existing = pacePerDayMap[curriculum];
           if (existing == null || dailyRate > existing) {
             pacePerDayMap[curriculum] = dailyRate;
-            if (goal.learningUnit != null) {
-              learningUnitMap[curriculum] = goal.learningUnit!;
+            if (goal.paceGranularity != null) {
+              paceGranularityMap[curriculum] = goal.paceGranularity!;
             } else {
-              learningUnitMap.remove(curriculum);
+              paceGranularityMap.remove(curriculum);
             }
           }
         } else if (goal.targetDate != null) {
@@ -541,18 +541,18 @@ Future<List<DailyTask>> _buildFreshPlan({
     for (final goal in goals) {
       if (goal.goalType == 'pace' &&
           goal.paceValue != null &&
-          goal.paceUnit != null) {
+          goal.pacePeriod != null) {
         final dailyRate = PaceCalculator.paceToDaily(
           goal.paceValue!,
-          goal.paceUnit!,
+          goal.pacePeriod!,
         );
         final existing = pacePerDayMap[curriculum];
         if (existing == null || dailyRate > existing) {
           pacePerDayMap[curriculum] = dailyRate;
-          if (goal.learningUnit != null) {
-            learningUnitMap[curriculum] = goal.learningUnit!;
+          if (goal.paceGranularity != null) {
+            paceGranularityMap[curriculum] = goal.paceGranularity!;
           } else {
-            learningUnitMap.remove(curriculum);
+            paceGranularityMap.remove(curriculum);
           }
         }
       } else if (goal.targetDate != null) {
@@ -633,11 +633,11 @@ Future<List<DailyTask>> _buildFreshPlan({
     );
 
     // Slot a day's worth of refs by either coarse unit (when the goal's
-    // learningUnit names a level above the leaf, e.g. 'perek' for
+    // paceGranularity names a level above the leaf, e.g. 'perek' for
     // Mishnayos or 'daf' for Bavli) or single leaves. Each day consumes
     // [paceCeil] slots.
-    final learningUnit = learningUnitMap[curriculum];
-    final isCoarse = _isCoarseLearningUnit(curriculum, learningUnit);
+    final paceGranularity = paceGranularityMap[curriculum];
+    final isCoarse = _isCoarseLearningUnit(curriculum, paceGranularity);
     final daySlots = <List<String>>[];
     if (isCoarse) {
       final byKey = <String, List<String>>{};
@@ -705,7 +705,7 @@ Future<List<DailyTask>> _buildFreshPlan({
     trackLabels: trackLabels,
     trackStartedAtMap: trackStartedAtMap,
     priorlyShownRefsMap: priorlyShownRefsMap,
-    learningUnitMap: learningUnitMap,
+    paceGranularityMap: paceGranularityMap,
   );
 
   final overridden = await _applyProgramCalendarOverrides(

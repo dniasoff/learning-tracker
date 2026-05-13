@@ -49,7 +49,7 @@ abstract class SchedulerInput with _$SchedulerInput {
     /// Coarse learning unit key (e.g. 'perek', 'daf'). When set and
     /// different from the curriculum leaf, [pacePerDay] is interpreted as
     /// coarse-unit count, not leaf count.
-    String? learningUnit,
+    String? paceGranularity,
 
     /// When the track was activated. Required for snapshot-based pacing.
     DateTime? trackStartedAt,

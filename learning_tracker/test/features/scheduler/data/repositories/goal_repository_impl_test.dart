@@ -131,12 +131,12 @@ void main() {
           targetPercent: 100.0,
           goalType: 'pace',
           paceValue: 1,
-          paceUnit: 'per_day',
+          pacePeriod: 'per_day',
         );
 
         expect(goal.goalType, 'pace');
         expect(goal.paceValue, 1);
-        expect(goal.paceUnit, 'per_day');
+        expect(goal.pacePeriod, 'per_day');
         expect(goal.targetDate, isNull);
       });
 
@@ -150,7 +150,7 @@ void main() {
 
         expect(goal.goalType, 'deadline');
         expect(goal.paceValue, isNull);
-        expect(goal.paceUnit, isNull);
+        expect(goal.pacePeriod, isNull);
       });
 
       test('updateGoal changes pace fields', () async {
@@ -161,17 +161,17 @@ void main() {
           targetPercent: 100.0,
           goalType: 'pace',
           paceValue: 1,
-          paceUnit: 'per_day',
+          pacePeriod: 'per_day',
         );
 
         final updated = await repo.updateGoal(
           goalId: goal.id!,
           paceValue: 5,
-          paceUnit: 'per_week',
+          pacePeriod: 'per_week',
         );
 
         expect(updated.paceValue, 5);
-        expect(updated.paceUnit, 'per_week');
+        expect(updated.pacePeriod, 'per_week');
       });
 
       test('updateGoal with clearPace nulls out pace fields', () async {
@@ -182,7 +182,7 @@ void main() {
           targetPercent: 100.0,
           goalType: 'pace',
           paceValue: 1,
-          paceUnit: 'per_day',
+          pacePeriod: 'per_day',
         );
 
         final updated = await repo.updateGoal(
@@ -193,7 +193,7 @@ void main() {
 
         expect(updated.goalType, 'deadline');
         expect(updated.paceValue, isNull);
-        expect(updated.paceUnit, isNull);
+        expect(updated.pacePeriod, isNull);
       });
 
       test('updateGoal preserves pace fields when not clearing', () async {
@@ -204,7 +204,7 @@ void main() {
           targetPercent: 100.0,
           goalType: 'pace',
           paceValue: 3,
-          paceUnit: 'per_week',
+          pacePeriod: 'per_week',
         );
 
         final updated = await repo.updateGoal(
@@ -214,7 +214,7 @@ void main() {
 
         expect(updated.goalType, 'pace');
         expect(updated.paceValue, 3);
-        expect(updated.paceUnit, 'per_week');
+        expect(updated.pacePeriod, 'per_week');
         expect(updated.description, 'Updated description');
       });
     });

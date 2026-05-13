@@ -2663,17 +2663,17 @@ abstract class AppLocalizations {
   /// **'Streak Alert Time'**
   String get notifStreakAlertTime;
 
-  /// No description provided for @notifRewardNotifications.
+  /// No description provided for @notifRewardMilestones.
   ///
   /// In en, this message translates to:
   /// **'Reward Notifications'**
-  String get notifRewardNotifications;
+  String get notifRewardMilestones;
 
-  /// No description provided for @notifRewardNotificationsSubtitle.
+  /// No description provided for @notifRewardMilestonesSubtitle.
   ///
   /// In en, this message translates to:
   /// **'When you earn Learning Points!'**
-  String get notifRewardNotificationsSubtitle;
+  String get notifRewardMilestonesSubtitle;
 
   /// No description provided for @notifSacredTime.
   ///

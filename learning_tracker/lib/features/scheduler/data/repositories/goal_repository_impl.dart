@@ -31,8 +31,8 @@ class GoalRepositoryImpl implements GoalRepository {
     String dateType = 'gregorian',
     String goalType = 'deadline',
     int? paceValue,
-    String? paceUnit,
-    String? learningUnit,
+    String? pacePeriod,
+    String? paceGranularity,
   }) async {
     return await _database.transaction(() async {
       final now = DateTimeFactory.nowUtc();
@@ -48,8 +48,8 @@ class GoalRepositoryImpl implements GoalRepository {
           dateType: drift.Value(dateType),
           goalType: drift.Value(goalType),
           paceValue: drift.Value(paceValue),
-          paceUnit: drift.Value(paceUnit),
-          learningUnit: drift.Value(learningUnit),
+          pacePeriod: drift.Value(pacePeriod),
+          paceGranularity: drift.Value(paceGranularity),
           createdAt: now,
           updatedAt: now,
         ),
@@ -87,7 +87,7 @@ class GoalRepositoryImpl implements GoalRepository {
     String? description,
     String? goalType,
     int? paceValue,
-    String? paceUnit,
+    String? pacePeriod,
     bool clearPace = false,
     PaceGranularity? paceGranularity,
     bool clearLearningUnit = false,
@@ -105,7 +105,7 @@ class GoalRepositoryImpl implements GoalRepository {
           ? null
           : (paceGranularity != null
                 ? paceGranularity.storageKey
-                : existing.learningUnit);
+                : existing.paceGranularity);
 
       await _database.goalDao.updateGoal(
         GoalsCompanion(
@@ -122,10 +122,10 @@ class GoalRepositoryImpl implements GoalRepository {
           paceValue: clearPace
               ? const drift.Value(null)
               : drift.Value(paceValue ?? existing.paceValue),
-          paceUnit: clearPace
+          pacePeriod: clearPace
               ? const drift.Value(null)
-              : drift.Value(paceUnit ?? existing.paceUnit),
-          learningUnit: drift.Value(resolvedLearningUnit),
+              : drift.Value(pacePeriod ?? existing.pacePeriod),
+          paceGranularity: drift.Value(resolvedLearningUnit),
           createdAt: drift.Value(existing.createdAt),
           updatedAt: drift.Value(now),
         ),
@@ -157,7 +157,7 @@ class GoalRepositoryImpl implements GoalRepository {
   }
 
   GoalEntity _toEntity(Goal goal) {
-    final rawUnit = goal.learningUnit;
+    final rawUnit = goal.paceGranularity;
     final granularity = PaceGranularity.fromStorageKey(rawUnit);
     return GoalEntity(
       id: goal.id,
@@ -170,7 +170,7 @@ class GoalRepositoryImpl implements GoalRepository {
       dateType: goal.dateType,
       goalType: goal.goalType,
       paceValue: goal.paceValue,
-      paceUnit: goal.paceUnit,
+      pacePeriod: goal.pacePeriod,
       paceGranularity: granularity,
       rawLearningUnit: granularity == null ? rawUnit : null,
       createdAt: goal.createdAt.toUtc(),

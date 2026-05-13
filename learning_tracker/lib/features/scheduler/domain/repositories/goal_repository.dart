@@ -20,8 +20,8 @@ abstract class GoalRepository {
     String dateType,
     String goalType,
     int? paceValue,
-    String? paceUnit,
-    String? learningUnit,
+    String? pacePeriod,
+    String? paceGranularity,
   });
 
   /// Get all goals for a curriculum, sorted by target date.
@@ -40,7 +40,7 @@ abstract class GoalRepository {
     String? description,
     String? goalType,
     int? paceValue,
-    String? paceUnit,
+    String? pacePeriod,
     bool clearPace,
     PaceGranularity? paceGranularity,
     bool clearLearningUnit,

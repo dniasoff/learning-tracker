@@ -48,7 +48,7 @@ class CompletionDetectionService {
       await _checkUnitCompletion(
         curriculum: curriculum,
         curriculumId: curriculumId,
-        unitType: 'masechta',
+        entryScope: 'masechta',
         unitIdentifier: item.level2!,
         level1: item.level1,
         level2: item.level2,
@@ -63,7 +63,7 @@ class CompletionDetectionService {
     await _checkUnitCompletion(
       curriculum: curriculum,
       curriculumId: curriculumId,
-      unitType: 'seder',
+      entryScope: 'seder',
       unitIdentifier: item.level1,
       level1: item.level1,
       level2: null,
@@ -77,7 +77,7 @@ class CompletionDetectionService {
   Future<void> _checkUnitCompletion({
     required CurriculumId curriculum,
     required String curriculumId,
-    required String unitType,
+    required String entryScope,
     required String unitIdentifier,
     required String level1,
     String? level2,
@@ -126,7 +126,7 @@ class CompletionDetectionService {
 
     // Find a representative item for display names at the unit level
     final unitItems = allItems.where((item) {
-      if (unitType == 'seder') {
+      if (entryScope == 'seder') {
         return item.level1 == level1 && item.level2 == null && !item.isLeaf;
       } else {
         return item.level2 == level2 && item.level3 == null && !item.isLeaf;
@@ -142,7 +142,7 @@ class CompletionDetectionService {
 
     await _ledgerRepository.recordCompletion(
       curriculumId: curriculumId,
-      unitType: unitType,
+      entryScope: entryScope,
       unitIdentifier: unitIdentifier,
       unitDisplayNameHe: unitDisplayHe,
       unitDisplayNameEn: unitDisplayEn,

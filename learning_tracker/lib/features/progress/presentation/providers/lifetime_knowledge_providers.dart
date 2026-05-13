@@ -406,13 +406,13 @@ Set<String> _learnedLeafRefs({
   final level4Actions = <String, bool>{};
 
   for (final entry in ledgerEntries) {
-    final unitType = entry.unitType;
+    final entryScope = entry.entryScope;
     final unitId = entry.unitIdentifier;
     if (unitId.isEmpty) continue;
-    final isUnmark = unitType.startsWith('unmark_');
+    final isUnmark = entryScope.startsWith('unmark_');
     final resolvedType = isUnmark
-        ? unitType.substring('unmark_'.length)
-        : unitType;
+        ? entryScope.substring('unmark_'.length)
+        : entryScope;
     final action = !isUnmark;
     switch (resolvedType) {
       case 'seder':

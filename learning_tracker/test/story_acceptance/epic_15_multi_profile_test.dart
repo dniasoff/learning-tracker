@@ -2789,7 +2789,7 @@ void main() {
             profileId: 1,
             curriculumId: 'mishnayos',
             trackId: Value(trackId),
-            unitType: 'masechta',
+            entryScope: 'masechta',
             unitIdentifier: 'Berakhot',
             unitDisplayNameHe: 'ברכות',
             unitDisplayNameEn: 'Berakhot',
@@ -2812,7 +2812,7 @@ void main() {
               profileId: 1,
               curriculumId: 'mishnayos',
               trackId: Value(trackId),
-              unitType: 'masechta',
+              entryScope: 'masechta',
               unitIdentifier: 'Berakhot',
               unitDisplayNameHe: 'ברכות',
               unitDisplayNameEn: 'Berakhot',
@@ -2853,7 +2853,7 @@ void main() {
             profileId: 5, // child
             curriculumId: 'mishnayos',
             trackId: Value(trackId),
-            unitType: 'masechta',
+            entryScope: 'masechta',
             unitIdentifier: 'Berakhot',
             unitDisplayNameHe: 'ברכות',
             unitDisplayNameEn: 'Berakhot',
@@ -2876,7 +2876,7 @@ void main() {
           LearningLedgerCompanion.insert(
             profileId: 1,
             curriculumId: 'mishnayos',
-            unitType: 'masechta',
+            entryScope: 'masechta',
             unitIdentifier: 'Berakhot',
             unitDisplayNameHe: 'ברכות',
             unitDisplayNameEn: 'Berakhot',
@@ -2904,7 +2904,7 @@ void main() {
             profileId: 1,
             curriculumId: 'mishnayos',
             trackId: Value(trackId),
-            unitType: 'masechta',
+            entryScope: 'masechta',
             unitIdentifier: 'Berakhot',
             unitDisplayNameHe: 'ברכות',
             unitDisplayNameEn: 'Berakhot',
@@ -2921,7 +2921,7 @@ void main() {
             profileId: 1,
             curriculumId: 'mishnayos',
             trackId: Value(trackId),
-            unitType: 'masechta',
+            entryScope: 'masechta',
             unitIdentifier: 'Berakhot',
             unitDisplayNameHe: 'ברכות',
             unitDisplayNameEn: 'Berakhot',
@@ -2959,7 +2959,6 @@ void main() {
         completions: [
           UnitCompletion(
             unitIdentifier: 'Berakhot',
-            unitType: 'masechta',
             entryScope: 'masechta',
             entryKey: 'Berakhot',
             parentL1Key: 'Zeraim',
@@ -2970,7 +2969,6 @@ void main() {
           ),
           UnitCompletion(
             unitIdentifier: 'Berakhot',
-            unitType: 'masechta',
             entryScope: 'masechta',
             entryKey: 'Berakhot',
             parentL1Key: 'Zeraim',
@@ -3029,7 +3027,6 @@ void main() {
     test('UnitCompletion carries track type', () {
       final completion = UnitCompletion(
         unitIdentifier: 'Shabbat',
-        unitType: 'masechta',
         entryScope: 'masechta',
         entryKey: 'Shabbat',
         parentL1Key: 'Moed',

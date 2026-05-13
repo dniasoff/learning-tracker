@@ -69,7 +69,7 @@ void main() {
           curriculumId: CurriculumId.bavli,
           goalType: 'pace',
           paceValue: 2,
-          paceUnit: 'per_week',
+          pacePeriod: 'per_week',
           createdAt: DateTime.utc(2026, 1, 1),
           updatedAt: DateTime.utc(2026, 1, 1),
         );
@@ -90,7 +90,7 @@ void main() {
       });
     });
 
-    group('learningUnit getter', () {
+    group('paceGranularity getter', () {
       test('returns paceGranularity storageKey when set', () {
         final entity = GoalEntity(
           curriculumId: CurriculumId.mishnayos,
@@ -98,7 +98,7 @@ void main() {
           createdAt: DateTime.utc(2026, 1, 1),
           updatedAt: DateTime.utc(2026, 1, 1),
         );
-        expect(entity.learningUnit, 'perek');
+        expect(entity.paceGranularityKey, 'perek');
       });
 
       test('falls back to rawLearningUnit for non-enum keys', () {
@@ -108,7 +108,7 @@ void main() {
           createdAt: DateTime.utc(2026, 1, 1),
           updatedAt: DateTime.utc(2026, 1, 1),
         );
-        expect(entity.learningUnit, 'amud');
+        expect(entity.paceGranularityKey, 'amud');
       });
 
       test('returns null when neither field is set', () {
@@ -117,7 +117,7 @@ void main() {
           createdAt: DateTime.utc(2026, 1, 1),
           updatedAt: DateTime.utc(2026, 1, 1),
         );
-        expect(entity.learningUnit, isNull);
+        expect(entity.paceGranularityKey, isNull);
       });
     });
   });
@@ -129,14 +129,14 @@ void main() {
           curriculumId: CurriculumId.bavli,
           goalType: 'pace',
           paceValue: 1,
-          paceUnit: 'per_day',
+          pacePeriod: 'per_day',
           createdAt: DateTime.utc(2026, 1, 1),
           updatedAt: DateTime.utc(2026, 1, 1),
         );
         final map = entity.toFirestore();
         expect(map['goalType'], 'pace');
         expect(map['paceValue'], 1);
-        expect(map['paceUnit'], 'per_day');
+        expect(map['pacePeriod'], 'per_day');
         expect(map['targetDate'], isNull);
       });
 
@@ -150,7 +150,7 @@ void main() {
         final map = entity.toFirestore();
         expect(map['goalType'], 'deadline');
         expect(map['paceValue'], isNull);
-        expect(map['paceUnit'], isNull);
+        expect(map['pacePeriod'], isNull);
         expect(map['targetDate'], isNotNull);
       });
 
@@ -159,12 +159,12 @@ void main() {
           curriculumId: CurriculumId.bavli,
           goalType: 'pace',
           paceValue: 5,
-          paceUnit: 'per_week',
+          pacePeriod: 'per_week',
           createdAt: DateTime.utc(2026, 1, 1),
           updatedAt: DateTime.utc(2026, 1, 1),
         );
         final map = entity.toFirestore();
-        expect(map['paceUnit'], 'per_week');
+        expect(map['pacePeriod'], 'per_week');
         expect(map['paceValue'], 5);
       });
     });
@@ -178,7 +178,7 @@ void main() {
         });
         expect(entity.goalType, 'deadline');
         expect(entity.paceValue, isNull);
-        expect(entity.paceUnit, isNull);
+        expect(entity.pacePeriod, isNull);
       });
 
       test('parses pace fields correctly', () {
@@ -186,13 +186,13 @@ void main() {
           'curriculumId': 'bavli',
           'goalType': 'pace',
           'paceValue': 1,
-          'paceUnit': 'per_day',
+          'pacePeriod': 'per_day',
           'createdAt': '2026-01-01T00:00:00.000Z',
           'updatedAt': '2026-01-01T00:00:00.000Z',
         });
         expect(entity.goalType, 'pace');
         expect(entity.paceValue, 1);
-        expect(entity.paceUnit, 'per_day');
+        expect(entity.pacePeriod, 'per_day');
       });
 
       test('round-trip preserves all fields', () {
@@ -200,7 +200,7 @@ void main() {
           curriculumId: CurriculumId.bavli,
           goalType: 'pace',
           paceValue: 3,
-          paceUnit: 'per_week',
+          pacePeriod: 'per_week',
           targetPercent: 80.0,
           description: 'test goal',
           createdAt: DateTime.utc(2026, 1, 1),
@@ -210,7 +210,7 @@ void main() {
         final restored = GoalEntity.fromFirestore(map);
         expect(restored.goalType, original.goalType);
         expect(restored.paceValue, original.paceValue);
-        expect(restored.paceUnit, original.paceUnit);
+        expect(restored.pacePeriod, original.pacePeriod);
         expect(restored.targetPercent, original.targetPercent);
         expect(restored.description, original.description);
       });

@@ -24,7 +24,6 @@ void main() {
             completions: [
               UnitCompletion(
                 unitIdentifier: 'Berakhot',
-                unitType: 'masechta',
                 entryScope: 'masechta',
                 entryKey: 'Berakhot',
                 parentL1Key: 'Zeraim',
@@ -35,7 +34,6 @@ void main() {
               ),
               UnitCompletion(
                 unitIdentifier: 'Berakhot',
-                unitType: 'masechta',
                 entryScope: 'masechta',
                 entryKey: 'Berakhot',
                 parentL1Key: 'Zeraim',
@@ -65,7 +63,6 @@ void main() {
     test('stores structural keys correctly', () {
       final completion = UnitCompletion(
         unitIdentifier: 'Shabbat',
-        unitType: 'masechta',
         entryScope: 'masechta',
         entryKey: 'Shabbat',
         parentL1Key: 'Moed',
@@ -87,7 +84,6 @@ void main() {
     test('equality works via freezed', () {
       final a = UnitCompletion(
         unitIdentifier: 'Berakhot',
-        unitType: 'masechta',
         entryScope: 'masechta',
         entryKey: 'Berakhot',
         parentL1Key: 'Zeraim',
@@ -98,7 +94,6 @@ void main() {
       );
       final b = UnitCompletion(
         unitIdentifier: 'Berakhot',
-        unitType: 'masechta',
         entryScope: 'masechta',
         entryKey: 'Berakhot',
         parentL1Key: 'Zeraim',
@@ -113,7 +108,6 @@ void main() {
     test('parentL1Key is null for seder-level entries', () {
       final completion = UnitCompletion(
         unitIdentifier: 'Zeraim',
-        unitType: 'seder',
         entryScope: 'seder',
         entryKey: 'Zeraim',
         trackType: TrackType.personal,

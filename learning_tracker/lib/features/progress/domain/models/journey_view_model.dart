@@ -42,7 +42,6 @@ abstract class CurriculumJourney with _$CurriculumJourney {
 abstract class UnitCompletion with _$UnitCompletion {
   const factory UnitCompletion({
     required String unitIdentifier,
-    required String unitType,
     required String entryScope,
     required String entryKey,
     String? parentL1Key,

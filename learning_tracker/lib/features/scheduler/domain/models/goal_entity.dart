@@ -7,7 +7,7 @@ part 'goal_entity.freezed.dart';
 
 /// Typed granularity for pace-based goals.
 ///
-/// Maps directly to the `learningUnit` column in the Goals table.
+/// Maps directly to the `paceGranularity` column in the Goals table.
 /// Values not listed here (e.g. 'amud', 'pasuk') map to `null` via
 /// [fromStorageKey] and are preserved as-is through [toFirestore].
 enum PaceGranularity {
@@ -17,7 +17,7 @@ enum PaceGranularity {
 
   const PaceGranularity(this.storageKey);
 
-  /// Storage key written to the DB / Firestore `learningUnit` column.
+  /// Storage key written to the DB / Firestore `paceGranularity` column.
   final String storageKey;
 
   /// Returns the [PaceGranularity] matching [key], or `null` for unknown keys.
@@ -87,7 +87,7 @@ final class PacePeriodTarget extends PaceTarget {
 /// Pesach, all Mishnayos by bar mitzvah").
 ///
 /// The typed [paceGranularity] field supersedes the legacy string
-/// `learningUnit` column. For curricula whose units are not yet covered by
+/// `paceGranularity` column. For curricula whose units are not yet covered by
 /// [PaceGranularity] (e.g. 'amud', 'pasuk') the field is `null` and the
 /// raw string is preserved via [rawLearningUnit] for DB round-trips.
 @freezed
@@ -112,7 +112,7 @@ abstract class GoalEntity with _$GoalEntity {
     int? paceValue,
 
     /// Pace unit: 'per_day' or 'per_week'. Only used when [goalType] == 'pace'.
-    String? paceUnit,
+    String? pacePeriod,
 
     /// Typed learning granularity. Covers perek / daf / seif.
     ///
@@ -137,17 +137,17 @@ abstract class GoalEntity with _$GoalEntity {
     if (goalType == 'deadline' && targetDate != null) {
       return DeadlineTarget(targetDate!);
     }
-    if (goalType == 'pace' && paceValue != null && paceUnit != null) {
-      return PacePeriodTarget(rate: paceValue!, period: paceUnit!);
+    if (goalType == 'pace' && paceValue != null && pacePeriod != null) {
+      return PacePeriodTarget(rate: paceValue!, period: pacePeriod!);
     }
     return null;
   }
 
-  /// The resolved learning unit string used for storage.
+  /// The resolved granularity storage key used for DB / Firestore writes.
   ///
   /// Prefers [paceGranularity.storageKey] when set, falls back to
   /// [rawLearningUnit] for granularities not yet covered by the enum.
-  String? get learningUnit => paceGranularity?.storageKey ?? rawLearningUnit;
+  String? get paceGranularityKey => paceGranularity?.storageKey ?? rawLearningUnit;
 
   /// Firestore document ID (deterministic per P4).
   /// Uses curriculum + targetPercent + createdAt for uniqueness
@@ -171,8 +171,8 @@ abstract class GoalEntity with _$GoalEntity {
       'dateType': dateType,
       'goalType': goalType,
       'paceValue': paceValue,
-      'paceUnit': paceUnit,
-      'learningUnit': learningUnit,
+      'pacePeriod': pacePeriod,
+      'paceGranularity': paceGranularityKey,
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
     };
@@ -180,7 +180,7 @@ abstract class GoalEntity with _$GoalEntity {
 
   /// Create from Firestore document.
   static GoalEntity fromFirestore(Map<String, dynamic> data) {
-    final rawUnit = data['learningUnit'] as String?;
+    final rawUnit = data['paceGranularity'] as String?;
     return GoalEntity(
       curriculumId: CurriculumId.values.firstWhere(
         (c) => c.storageKey == data['curriculumId'] as String,
@@ -196,7 +196,7 @@ abstract class GoalEntity with _$GoalEntity {
       dateType: data['dateType'] as String? ?? 'gregorian',
       goalType: data['goalType'] as String? ?? 'deadline',
       paceValue: data['paceValue'] as int?,
-      paceUnit: data['paceUnit'] as String?,
+      pacePeriod: data['pacePeriod'] as String?,
       paceGranularity: PaceGranularity.fromStorageKey(rawUnit),
       rawLearningUnit: PaceGranularity.fromStorageKey(rawUnit) == null
           ? rawUnit

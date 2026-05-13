@@ -38,7 +38,7 @@ class _SelfPacedGoalStepState extends ConsumerState<SelfPacedGoalStep> {
   String _paceUnit = 'per_week';
   DateTime? _deadline;
   String _mode = 'pace';
-  late String _learningUnit;
+  late String _paceGranularity;
 
   @override
   void initState() {
@@ -48,12 +48,12 @@ class _SelfPacedGoalStepState extends ConsumerState<SelfPacedGoalStep> {
     _paceValue = (daily * 7).clamp(1, 99);
     final now = DateTimeFactory.nowLocal();
     _deadline = DateTime(now.year, now.month, now.day);
-    _learningUnit = _opts.defaultKey;
+    _paceGranularity = _opts.defaultKey;
   }
 
   PaceUnitOptions get _opts => paceUnitOptionsFor(widget.curriculumId);
 
-  LevelLabels get _paceUnitLevel => _opts.levelFor(_learningUnit);
+  LevelLabels get _paceUnitLevel => _opts.levelFor(_paceGranularity);
 
   String get _unitSingular => _paceUnitLevel.en;
   String get _unitPlural => _paceUnitLevel.enPlural;
@@ -72,7 +72,7 @@ class _SelfPacedGoalStepState extends ConsumerState<SelfPacedGoalStep> {
     List<ContentItem>? scopedContent,
     int leafCountFallback,
   ) {
-    final isCoarse = _opts.hasChoice && _learningUnit != _opts.fineKey;
+    final isCoarse = _opts.hasChoice && _paceGranularity != _opts.fineKey;
     if (!isCoarse) return leafCountFallback;
     if (scopedContent == null) return leafCountFallback;
     final keys = <String>{};
@@ -155,7 +155,7 @@ class _SelfPacedGoalStepState extends ConsumerState<SelfPacedGoalStep> {
           goalType: 'deadline',
           targetDate: _deadline!.toUtc(),
           dateType: useHebrew ? 'hebrew' : 'gregorian',
-          learningUnit: _learningUnit,
+          paceGranularity: _paceGranularity,
         ),
       );
       return;
@@ -166,8 +166,8 @@ class _SelfPacedGoalStepState extends ConsumerState<SelfPacedGoalStep> {
         targetPercent: 100,
         goalType: 'pace',
         paceValue: _paceValue,
-        paceUnit: _paceUnit,
-        learningUnit: _learningUnit,
+        pacePeriod: _paceUnit,
+        paceGranularity: _paceGranularity,
       ),
     );
   }
@@ -204,7 +204,7 @@ class _SelfPacedGoalStepState extends ConsumerState<SelfPacedGoalStep> {
     final paceCard = PaceGoalCard(
       isActive: _mode == 'pace',
       paceValue: _paceValue,
-      paceUnit: _paceUnit,
+      pacePeriod: _paceUnit,
       unitSingular: _unitSingular,
       unitPlural: _unitPlural,
       hasUnitChoice: opts.hasChoice,
@@ -212,7 +212,7 @@ class _SelfPacedGoalStepState extends ConsumerState<SelfPacedGoalStep> {
       coarseLabel: opts.coarse.enPlural,
       fineKey: opts.fineKey,
       fineLabel: opts.fine?.enPlural,
-      learningUnit: _learningUnit,
+      paceGranularity: _paceGranularity,
       projectedFinishLabel: _projectedFinishLabel(
         useHebrew,
         totalScopeInLearningUnit,
@@ -229,9 +229,9 @@ class _SelfPacedGoalStepState extends ConsumerState<SelfPacedGoalStep> {
         _mode = 'pace';
         _paceUnit = v;
       }),
-      onLearningUnitChanged: (v) => setState(() {
+      onPaceGranularityChanged: (v) => setState(() {
         _mode = 'pace';
-        _learningUnit = v;
+        _paceGranularity = v;
       }),
     );
 

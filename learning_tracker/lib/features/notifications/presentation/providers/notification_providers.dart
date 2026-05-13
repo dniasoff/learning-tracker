@@ -217,7 +217,7 @@ Future<void> _persistNotificationSettingsToCloud(
 /// Sacred Time is active. Backed by [currentSacredWindowProvider] —
 /// notifications follow the same window the lock screen does.
 @riverpod
-bool isShabbosQuietActive(Ref ref) {
+bool isSacredTimeActive(Ref ref) {
   return ref.watch(currentSacredWindowProvider) != null;
 }
 
@@ -277,13 +277,13 @@ Future<void> reminderSyncEffect(Ref ref) async {
   final enabled = ref.watch(reminderEnabledProvider);
   final time = ref.watch(reminderTimeProvider);
   final scheduler = ref.watch(notificationSchedulerProvider);
-  final shabbosQuiet = ref.watch(isShabbosQuietActiveProvider);
+  final sacredTimeActive = ref.watch(isSacredTimeActiveProvider);
 
   if (!enabled) {
     await scheduler.cancel();
     return;
   }
-  if (shabbosQuiet) {
+  if (sacredTimeActive) {
     // Story 27.14 (DNI-390): fire suppression event when sacred time blocks.
     await scheduler.cancelForSacredTime();
     return;
@@ -335,7 +335,7 @@ StreakAlertService streakAlertService(Ref ref) {
 /// Watches streak alert settings and evaluates whether to schedule or cancel
 /// the streak protection alert.
 ///
-/// Also respects Shabbos quiet mode — cancels alerts during Shabbos.
+/// Also respects sacred time mode — cancels alerts during Shabbos.
 ///
 /// Kept alive so that time/enable changes always trigger a reschedule,
 /// even if no UI is watching this provider at the moment.
@@ -344,13 +344,13 @@ Future<void> streakAlertSyncEffect(Ref ref) async {
   final enabled = ref.watch(streakAlertEnabledProvider);
   final time = ref.watch(streakAlertTimeProvider);
   final service = ref.watch(streakAlertServiceProvider);
-  final shabbosQuiet = ref.watch(isShabbosQuietActiveProvider);
+  final sacredTimeActive = ref.watch(isSacredTimeActiveProvider);
 
   if (!enabled) {
     await service.cancelAlert();
     return;
   }
-  if (shabbosQuiet) {
+  if (sacredTimeActive) {
     // Story 27.14 (DNI-390): fire suppression event when sacred time blocks.
     await service.cancelAlert();
     final analytics = ref.read(analyticsServiceProvider);

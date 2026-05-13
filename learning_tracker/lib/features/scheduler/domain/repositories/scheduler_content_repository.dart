@@ -4,7 +4,7 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 ///
 /// Level fields are included so the engine can group leaves by their
 /// coarse parent (e.g. all mishnas under one perek) when a goal sets the
-/// pace in coarse units (`learningUnit == 'perek'` etc.). Only the levels
+/// pace in coarse units (`paceGranularity == 'perek'` etc.). Only the levels
 /// the source data populates are non-null; for 3-level books `level4` is
 /// null.
 class SchedulerContentItem {

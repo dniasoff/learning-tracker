@@ -40,7 +40,7 @@ class LearningLedgerRepositoryImpl implements LearningLedgerRepository {
 
   Map<String, dynamic> _ledgerDataToSyncMap(LearningLedgerData entry) => {
     'curriculumId': entry.curriculumId,
-    'unitType': entry.unitType,
+    'entryScope': entry.entryScope,
     'unitIdentifier': entry.unitIdentifier,
     'unitDisplayNameHe': entry.unitDisplayNameHe,
     'unitDisplayNameEn': entry.unitDisplayNameEn,
@@ -59,7 +59,7 @@ class LearningLedgerRepositoryImpl implements LearningLedgerRepository {
   @override
   Future<LearningLedgerData> recordCompletion({
     required String curriculumId,
-    required String unitType,
+    required String entryScope,
     required String unitIdentifier,
     required String unitDisplayNameHe,
     required String unitDisplayNameEn,
@@ -84,7 +84,7 @@ class LearningLedgerRepositoryImpl implements LearningLedgerRepository {
         profileId: _activeProfileId,
         ulid: drift.Value(newUlid(now)),
         curriculumId: curriculumId,
-        unitType: unitType,
+        entryScope: entryScope,
         unitIdentifier: unitIdentifier,
         unitDisplayNameHe: unitDisplayNameHe,
         unitDisplayNameEn: unitDisplayNameEn,
@@ -139,7 +139,7 @@ class LearningLedgerRepositoryImpl implements LearningLedgerRepository {
             profileId: _activeProfileId,
             ulid: drift.Value(newUlid(now)),
             curriculumId: item.curriculumId,
-            unitType: item.unitType,
+            entryScope: item.entryScope,
             unitIdentifier: item.unitIdentifier,
             unitDisplayNameHe: item.unitDisplayNameHe,
             unitDisplayNameEn: item.unitDisplayNameEn,

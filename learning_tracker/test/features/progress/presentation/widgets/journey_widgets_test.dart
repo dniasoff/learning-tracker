@@ -31,7 +31,6 @@ UnitCompletion _completion({
 }) {
   return UnitCompletion(
     unitIdentifier: identifier,
-    unitType: scope,
     entryScope: scope,
     entryKey: identifier,
     parentL1Key: parentL1,

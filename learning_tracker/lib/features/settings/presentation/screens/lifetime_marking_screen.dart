@@ -383,7 +383,7 @@ class _LifetimeCurriculumMarkingScreenState
     String value,
   ) {
     return ledger.any(
-      (e) => e.unitType == 'level$level' && e.unitIdentifier == value,
+      (e) => e.entryScope == 'level$level' && e.unitIdentifier == value,
     );
   }
 
@@ -413,7 +413,7 @@ class _LifetimeCurriculumMarkingScreenState
         batchItems.add(
           LedgerManualBatchItem(
             curriculumId: _curriculum.storageKey,
-            unitType: 'level${selection.level}',
+            entryScope: 'level${selection.level}',
             unitIdentifier: selection.value,
             unitDisplayNameHe: selection.value,
             unitDisplayNameEn: selection.value,

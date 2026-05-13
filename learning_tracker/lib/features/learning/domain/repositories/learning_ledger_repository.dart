@@ -15,7 +15,7 @@ abstract class LearningLedgerRepository {
   /// without an active parent PIN session for this profile.
   Future<LearningLedgerData> recordCompletion({
     required String curriculumId,
-    required String unitType,
+    required String entryScope,
     required String unitIdentifier,
     required String unitDisplayNameHe,
     required String unitDisplayNameEn,
@@ -49,7 +49,7 @@ abstract class LearningLedgerRepository {
 class LedgerManualBatchItem {
   const LedgerManualBatchItem({
     required this.curriculumId,
-    required this.unitType,
+    required this.entryScope,
     required this.unitIdentifier,
     required this.unitDisplayNameHe,
     required this.unitDisplayNameEn,
@@ -60,7 +60,7 @@ class LedgerManualBatchItem {
   });
 
   final String curriculumId;
-  final String unitType;
+  final String entryScope;
   final String unitIdentifier;
   final String unitDisplayNameHe;
   final String unitDisplayNameEn;

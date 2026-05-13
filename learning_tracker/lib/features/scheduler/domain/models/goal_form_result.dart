@@ -9,10 +9,10 @@ class GoalFormResult {
   final String dateType;
   final String goalType;
   final int? paceValue;
-  final String? paceUnit;
+  final String? pacePeriod;
 
   /// Learning unit for Bavli/Yerushalmi: 'amud' or 'daf'. Null for other curricula.
-  final String? learningUnit;
+  final String? paceGranularity;
 
   const GoalFormResult({
     required this.targetPercent,
@@ -21,7 +21,7 @@ class GoalFormResult {
     this.dateType = 'gregorian',
     this.goalType = 'deadline',
     this.paceValue,
-    this.paceUnit,
-    this.learningUnit,
+    this.pacePeriod,
+    this.paceGranularity,
   });
 }

@@ -72,7 +72,7 @@ void main() {
     required DateTime? startedAt,
     Set<String> priorlyShown = const <String>{},
     DateTime? now,
-    String? learningUnit,
+    String? paceGranularity,
   }) => ScheduleConfig(
     curriculumId: curriculum,
     trackId: 1,
@@ -81,7 +81,7 @@ void main() {
     pacePerDay: pace,
     trackStartedAt: startedAt,
     priorlyShownRefs: priorlyShown,
-    learningUnit: learningUnit,
+    paceGranularity: paceGranularity,
   );
 
   group('SchedulerEngine self-paced new-learning', () {
@@ -329,7 +329,7 @@ void main() {
             pace: 1,
             startedAt: today,
             priorlyShown: const {},
-            learningUnit: 'perek',
+            paceGranularity: 'perek',
           ),
         );
         final newRefs = tasks
@@ -358,7 +358,7 @@ void main() {
           pace: 2,
           startedAt: today,
           priorlyShown: const {},
-          learningUnit: 'perek',
+          paceGranularity: 'perek',
         ),
       );
       final newRefs = tasks
@@ -387,7 +387,7 @@ void main() {
               'Berachos 1.4',
               'Berachos 1.5',
             },
-            learningUnit: 'perek',
+            paceGranularity: 'perek',
           ),
         );
         final newRefs = tasks
@@ -407,8 +407,8 @@ void main() {
       },
     );
 
-    test('learningUnit==leaf falls back to leaf-counted pace', () async {
-      // For Mishnayos the leaf is 'Mishna'. Setting learningUnit='mishna'
+    test('paceGranularity==leaf falls back to leaf-counted pace', () async {
+      // For Mishnayos the leaf is 'Mishna'. Setting paceGranularity='mishna'
       // must NOT switch on coarse grouping — pace=5 should emit exactly
       // 5 mishnas.
       final tasks = await engine.generateDailyTasks(
@@ -416,7 +416,7 @@ void main() {
           pace: 5,
           startedAt: today,
           priorlyShown: const {},
-          learningUnit: 'mishna',
+          paceGranularity: 'mishna',
         ),
       );
       final newRefs = tasks

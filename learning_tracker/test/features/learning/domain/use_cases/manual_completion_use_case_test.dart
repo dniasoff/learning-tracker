@@ -51,7 +51,7 @@ void main() {
       final useCase = createUseCase(profileId: 1, profileMode: 'adult');
       final entry = await useCase(
         curriculumId: 'mishna',
-        unitType: 'masechta',
+        entryScope: 'masechta',
         unitIdentifier: 'Berakhot',
         unitDisplayNameHe: 'ברכות',
         unitDisplayNameEn: 'Berakhot',
@@ -71,7 +71,7 @@ void main() {
       );
       final entry = await useCase(
         curriculumId: 'mishna',
-        unitType: 'masechta',
+        entryScope: 'masechta',
         unitIdentifier: 'Berakhot',
         unitDisplayNameHe: 'ברכות',
         unitDisplayNameEn: 'Berakhot',
@@ -88,7 +88,7 @@ void main() {
       expect(
         () => useCase(
           curriculumId: 'mishna',
-          unitType: 'masechta',
+          entryScope: 'masechta',
           unitIdentifier: 'Berakhot',
           unitDisplayNameHe: 'ברכות',
           unitDisplayNameEn: 'Berakhot',
@@ -103,7 +103,7 @@ void main() {
       final useCase = createUseCase(profileId: 1, profileMode: 'adult');
       final entry = await useCase(
         curriculumId: 'mishna',
-        unitType: 'masechta',
+        entryScope: 'masechta',
         unitIdentifier: 'Berakhot',
         unitDisplayNameHe: 'ברכות',
         unitDisplayNameEn: 'Berakhot',
