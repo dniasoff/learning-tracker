@@ -54,7 +54,7 @@ class HebrewTerms {
   // ── UI Term Display (Hebrew script variants) ─────────────────────────────
   //
   // Strings in this section are the *only* ones swapped by the
-  // "Hebrew Terms" settings toggle (hebrewTermsScriptProvider).
+  // "Hebrew Terms" settings toggle (useHebrewTermsProvider).
   // The toggle is independent of the UI locale (en/he):
   //   ON  → use the Hebrew-script string defined here
   //   OFF → use the locale-driven ARB string (English transliteration in en)
@@ -66,7 +66,7 @@ class HebrewTerms {
   // To add a new term to the toggle:
   //   1. Add a `static const String uiXxx = 'עברית';` constant below.
   //   2. At the call site, swap with:
-  //        ref.watch(hebrewTermsScriptProvider)
+  //        ref.watch(useHebrewTermsProvider)
   //          ? HebrewTerms.uiXxx : l10n.xxx
   //   3. Add a row to the table below so the scope stays discoverable.
   //

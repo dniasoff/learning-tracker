@@ -6,6 +6,7 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/labels/curriculum_label_renderer.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
+import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/widgets/app_bar_title.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
@@ -17,8 +18,6 @@ import 'package:learning_tracker/features/progress/presentation/providers/journe
 import 'package:learning_tracker/features/progress/presentation/providers/lifetime_knowledge_providers.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/progress_providers.dart';
 import 'package:learning_tracker/features/progress/presentation/widgets/lifetime_folder_styled_widgets.dart';
-import 'package:learning_tracker/features/settings/presentation/providers/hebrew_terms_provider.dart';
-import 'package:learning_tracker/features/settings/presentation/providers/transliteration_variant_provider.dart';
 import 'package:learning_tracker/features/track_setup/domain/entities/add_track_result.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
@@ -132,7 +131,7 @@ class _LifetimeLibraryCategoryCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
-    final hebrewOnly = ref.watch(hebrewTermsScriptProvider);
+    final hebrewOnly = ref.watch(useHebrewTermsProvider);
     final summary =
         summariesAsync.asData?.value.firstWhere(
           (s) => s.curriculumId == curriculum,
@@ -502,7 +501,7 @@ class _LifetimeCurriculumMarkingScreenState
           data: (allItems) {
             final values = _valuesAtCurrentLevel(allItems);
             final canDrill = _currentLevel < 4;
-            final variant = ref.watch(transliterationVariantProvider);
+            final variant = ref.watch(currentTransliterationVariantProvider);
             // English forms for the row's secondary line. Built via the
             // centralized renderer so the result matches the rest of the
             // app's English-mode display.

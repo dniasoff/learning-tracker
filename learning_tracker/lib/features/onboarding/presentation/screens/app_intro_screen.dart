@@ -6,8 +6,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:learning_tracker/core/constants/hebrew_terms.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
+import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
-import 'package:learning_tracker/features/settings/presentation/providers/hebrew_terms_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 const kIntroSeen = 'intro_seen';
@@ -259,7 +259,7 @@ class _IntroPage extends ConsumerWidget {
 
   /// Pages 2 & 3: full-page scroll.
   Widget _buildScrolledPage(WidgetRef ref) {
-    final hebrewTerms = ref.watch(hebrewTermsScriptProvider);
+    final hebrewTerms = ref.watch(useHebrewTermsProvider);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: CustomScrollView(

@@ -5,6 +5,7 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dart';
 import 'package:learning_tracker/features/scheduler/presentation/widgets/daily_task_card.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 DailyTask _task({
   CurriculumId curriculum = CurriculumId.mishnayos,
@@ -39,6 +40,14 @@ Widget _wrap(Widget child) {
 }
 
 void main() {
+  // DNI-328 flipped the Hebrew-terms default to false. These tests assert on
+  // Hebrew labels, so seed the preference to true for the default profile.
+  setUp(() {
+    SharedPreferences.setMockInitialValues(<String, Object>{
+      'hebrew_terms_script_p0': true,
+    });
+  });
+
   group('DailyTaskCard', () {
     testWidgets('renders task content and curriculum badge', (tester) async {
       final task = _task();
@@ -48,6 +57,8 @@ void main() {
           DailyTaskCard(task: task, onDismissed: () {}, onCompleted: () {}),
         ),
       );
+      // Allow the core/preferences Hebrew-terms async load to propagate.
+      await tester.pumpAndSettle();
 
       // Content ref displayed (underscores replaced with spaces)
       expect(find.text('Mishnah Berakhot 1.1'), findsOneWidget);

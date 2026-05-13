@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
-import 'package:learning_tracker/features/settings/presentation/providers/hebrew_terms_provider.dart';
+import 'package:learning_tracker/core/preferences/preference_providers.dart';
 
 /// A list tile displaying a single track's summary info.
 class TrackListTile extends ConsumerWidget {
@@ -28,7 +28,7 @@ class TrackListTile extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final curriculum = _curriculumId;
-    final hebrewOnly = ref.watch(hebrewTermsScriptProvider);
+    final hebrewOnly = ref.watch(useHebrewTermsProvider);
 
     return Card(
       clipBehavior: Clip.antiAlias,

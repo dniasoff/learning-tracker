@@ -10,6 +10,7 @@ import 'package:learning_tracker/core/enums/user_mode.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/labels/curriculum_label_providers.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
+import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/core/utils/percentage_formatter.dart';
@@ -20,7 +21,6 @@ import 'package:learning_tracker/features/profiles/presentation/providers/profil
 import 'package:learning_tracker/features/progress/presentation/providers/lifetime_knowledge_providers.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dart';
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
-import 'package:learning_tracker/features/settings/presentation/providers/hebrew_terms_provider.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 CurriculumId _curriculumIdForTrack(CurriculumTrack track) {
@@ -237,7 +237,7 @@ class _DashboardBody extends ConsumerWidget {
     final lifetimeTotalsAsync = ref.watch(
       lifetimeTotalsAcrossAllCurriculaProvider(profileId),
     );
-    final hebrewTerms = ref.watch(hebrewTermsScriptProvider);
+    final hebrewTerms = ref.watch(useHebrewTermsProvider);
     final reviewSectionLabel = hebrewTerms
         ? HebrewTerms.uiReviewSection
         : l10n.reviewSection;
@@ -1653,7 +1653,7 @@ class _ActiveTrackCard extends ConsumerWidget {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context)!;
     final curriculum = _curriculumIdForTrack(track);
-    final hebrewOnly = ref.watch(hebrewTermsScriptProvider);
+    final hebrewOnly = ref.watch(useHebrewTermsProvider);
     final displayNamePrimary =
         '${_trackTypeLabelText(ref, track.trackType)} · '
         '${curriculumLabelText(ref, curriculum: curriculum)}';
@@ -1790,7 +1790,7 @@ class _ActiveTrackCard extends ConsumerWidget {
               _TrackStatGrid(
                 buckets: taskBuckets,
                 l10n: l10n,
-                chazaraLabel: ref.watch(hebrewTermsScriptProvider)
+                chazaraLabel: ref.watch(useHebrewTermsProvider)
                     ? HebrewTerms.uiActiveTrackChazara
                     : l10n.activeTrackMetricChazara,
               ),

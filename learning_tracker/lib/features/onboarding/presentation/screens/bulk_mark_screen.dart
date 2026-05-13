@@ -4,6 +4,7 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/labels/curriculum_label_renderer.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
+import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/widgets/app_bar_title.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
@@ -12,8 +13,6 @@ import 'package:learning_tracker/features/onboarding/presentation/providers/onbo
 import 'package:learning_tracker/features/progress/presentation/providers/progress_providers.dart';
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/curriculum_scope_providers.dart';
-import 'package:learning_tracker/features/settings/presentation/providers/hebrew_terms_provider.dart';
-import 'package:learning_tracker/features/settings/presentation/providers/transliteration_variant_provider.dart';
 import 'package:learning_tracker/features/stages/presentation/providers/stage_providers.dart';
 import 'package:learning_tracker/features/track_setup/domain/entities/add_track_result.dart';
 
@@ -410,8 +409,10 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
                 // Same renderer used by Browse Content and the reader —
                 // each crumb is the bare named segment ("זרעים", "ברכות")
                 // or the ordinal value with prefix ("פרק א").
-                final hebrewTerms = ref.watch(hebrewTermsScriptProvider);
-                final variant = ref.watch(transliterationVariantProvider);
+                final hebrewTerms = ref.watch(useHebrewTermsProvider);
+                final variant = ref.watch(
+                  currentTransliterationVariantProvider,
+                );
                 final segments = CurriculumLabelRenderer.renderBreadcrumb(
                   curriculumId: widget.curriculumId,
                   rawSegmentValues: _navigationStack,
@@ -467,7 +468,7 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
                   );
                 }
 
-                final hebrewOnly = ref.watch(hebrewTermsScriptProvider);
+                final hebrewOnly = ref.watch(useHebrewTermsProvider);
                 return ListView.builder(
                   itemCount: displayItems.length,
                   itemBuilder: (context, index) {
@@ -826,7 +827,7 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
     final currentDepth = _navigationStack.length;
     if (currentDepth >= 4) return items;
 
-    final variant = ref.read(transliterationVariantProvider);
+    final variant = ref.read(currentTransliterationVariantProvider);
     final uniqueItems = <String, ContentItem>{};
 
     for (final item in items) {

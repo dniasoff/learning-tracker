@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/database/seed/learning_program_seeds.dart';
+import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/services/calendar_program_registry.dart';
-import 'package:learning_tracker/features/settings/presentation/providers/hebrew_terms_provider.dart';
 
 /// In-memory learning program data, replacing the old ContentDatabase DAO.
 ///
@@ -45,7 +45,7 @@ String learningProgramLabelText(
   WidgetRef ref, {
   required LearningProgramData program,
 }) {
-  final useHebrew = ref.watch(hebrewTermsScriptProvider);
+  final useHebrew = ref.watch(useHebrewTermsProvider);
   if (!useHebrew) return program.displayName;
   final reg = CalendarProgramRegistry.byId(program.name);
   return reg?.displayNameHe ?? program.displayName;

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/navigation/router_provider.dart';
+import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/providers/firebase_providers.dart';
 import 'package:learning_tracker/core/providers/talker_provider.dart';
 import 'package:learning_tracker/core/services/pin_service.dart';
@@ -18,9 +19,6 @@ import 'package:learning_tracker/features/profiles/presentation/providers/active
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/widgets/sacred_time_settings_card.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/account_management_providers.dart';
-import 'package:learning_tracker/features/settings/presentation/providers/hebrew_date_provider.dart';
-import 'package:learning_tracker/features/settings/presentation/providers/hebrew_terms_provider.dart';
-import 'package:learning_tracker/features/settings/presentation/providers/transliteration_variant_provider.dart';
 import 'package:learning_tracker/features/settings/presentation/screens/lifetime_marking_screen.dart';
 import 'package:learning_tracker/features/settings/presentation/utils/account_actions.dart';
 import 'package:learning_tracker/features/settings/presentation/utils/send_logs_service.dart'
@@ -375,9 +373,7 @@ class _HebrewDateTile extends ConsumerWidget {
             selected: {useHebrew},
             onSelectionChanged: (selected) {
               if (selected.isEmpty) return;
-              ref
-                  .read(useHebrewDateProvider.notifier)
-                  .setUseHebrewDate(selected.first);
+              ref.read(useHebrewDateProvider.notifier).set(selected.first);
             },
             style: SegmentedButton.styleFrom(
               selectedBackgroundColor: AppTheme.brandBlueBright,
@@ -401,7 +397,7 @@ class _HebrewTermsTile extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
-    final useHebrew = ref.watch(hebrewTermsScriptProvider);
+    final useHebrew = ref.watch(useHebrewTermsProvider);
     return Padding(
       padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
       child: Column(
@@ -468,9 +464,7 @@ class _HebrewTermsTile extends ConsumerWidget {
             selected: {useHebrew},
             onSelectionChanged: (selected) {
               if (selected.isEmpty) return;
-              ref
-                  .read(hebrewTermsScriptProvider.notifier)
-                  .setHebrewTermsScript(selected.first);
+              ref.read(useHebrewTermsProvider.notifier).set(selected.first);
             },
             style: SegmentedButton.styleFrom(
               selectedBackgroundColor: AppTheme.brandBlueBright,
@@ -494,7 +488,7 @@ class _TransliterationVariantTileSection extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final useHebrew = ref.watch(hebrewTermsScriptProvider);
+    final useHebrew = ref.watch(useHebrewTermsProvider);
     if (useHebrew) return const SizedBox.shrink();
     return Column(
       children: [
@@ -515,7 +509,7 @@ class _TransliterationVariantTile extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final variant = ref.watch(transliterationVariantProvider);
+    final variant = ref.watch(currentTransliterationVariantProvider);
     return Padding(
       padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
       child: Column(
@@ -581,8 +575,8 @@ class _TransliterationVariantTile extends ConsumerWidget {
             onSelectionChanged: (selected) {
               if (selected.isEmpty) return;
               ref
-                  .read(transliterationVariantProvider.notifier)
-                  .setVariant(selected.first);
+                  .read(currentTransliterationVariantProvider.notifier)
+                  .set(selected.first);
             },
             style: SegmentedButton.styleFrom(
               selectedBackgroundColor: AppTheme.brandBlueBright,

@@ -6,7 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
 import 'package:learning_tracker/core/enums/user_mode.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
-import 'package:learning_tracker/core/providers/locale_provider.dart';
+import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/services/pin_service.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/widgets/app_bar_title.dart';
@@ -20,8 +20,6 @@ import 'package:learning_tracker/features/onboarding/presentation/providers/onbo
 import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
 import 'package:learning_tracker/features/profiles/domain/repositories/profile_repository.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
-import 'package:learning_tracker/features/settings/presentation/providers/hebrew_date_provider.dart';
-import 'package:learning_tracker/features/settings/presentation/providers/transliteration_variant_provider.dart';
 import 'package:learning_tracker/features/track_setup/domain/entities/add_track_result.dart';
 import 'package:learning_tracker/features/track_setup/presentation/screens/add_track_flow.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -248,15 +246,13 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     setState(() => _isCreatingProfile = true);
 
     await ref
-        .read(appLocaleProvider.notifier)
-        .setLocale(Locale(_selectedLanguage));
-    await ref
-        .read(useHebrewDateProvider.notifier)
-        .setUseHebrewDate(_useHebrewCalendar);
+        .read(currentAppLocaleProvider.notifier)
+        .set(Locale(_selectedLanguage));
+    await ref.read(useHebrewDateProvider.notifier).set(_useHebrewCalendar);
     await ref.read(showNikudProvider.notifier).set(_showNikud);
     await ref
-        .read(transliterationVariantProvider.notifier)
-        .setVariant(_transliterationVariant);
+        .read(currentTransliterationVariantProvider.notifier)
+        .set(_transliterationVariant);
 
     final repo = ref.read(profileRepositoryProvider);
     final ProfileModel profile;

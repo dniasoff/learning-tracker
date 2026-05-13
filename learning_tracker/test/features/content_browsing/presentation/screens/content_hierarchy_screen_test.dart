@@ -10,13 +10,19 @@ import 'package:learning_tracker/features/content_browsing/presentation/screens/
 import 'package:learning_tracker/features/content_browsing/presentation/widgets/breadcrumb_navigation.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/completion_providers.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class MockContentRepository extends Mock implements ContentRepository {}
 
 void main() {
   late ContentRepository mockRepo;
 
+  // DNI-328 flipped the Hebrew-terms default to false. These tests assert on
+  // Hebrew labels, so seed the preference to true for the default profile.
   setUp(() {
+    SharedPreferences.setMockInitialValues(<String, Object>{
+      'hebrew_terms_script_p0': true,
+    });
     mockRepo = MockContentRepository();
   });
 

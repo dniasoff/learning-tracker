@@ -2,6 +2,7 @@
 ///
 /// Story 25.3 (DNI-324): Composite indexes on hot-path queries.
 /// Story 25.5 (DNI-326): Outbox table and OutboxProcessor scaffolding.
+/// Story 25.7 (DNI-328): core/preferences/ ProfileScopedPreference primitives.
 /// Story 25.8 (DNI-329): ContentIndex + ProgramRefResolver.
 /// Story 25.10 (DNI-331): LocalDayClock — single time provider.
 /// Story 25.11 (DNI-332): AuthRepository — sole firebase_auth consumer.
@@ -10,22 +11,35 @@ library;
 
 import 'dart:convert';
 import 'dart:io';
+import 'dart:ui';
 
 import 'package:drift/drift.dart' show Variable;
 import 'package:drift/native.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart' show TestWidgetsFlutterBinding;
+import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
 import 'package:learning_tracker/core/content/content_index.dart';
 import 'package:learning_tracker/core/content/program_ref_resolver.dart';
 import 'package:learning_tracker/core/database/daos/outbox_dao.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
+import 'package:learning_tracker/core/preferences/app_locale_preference.dart';
+import 'package:learning_tracker/core/preferences/hebrew_date_preference.dart';
+import 'package:learning_tracker/core/preferences/hebrew_terms_preference.dart';
+import 'package:learning_tracker/core/preferences/nikud_preference.dart';
+import 'package:learning_tracker/core/preferences/profile_scoped_preference.dart';
+import 'package:learning_tracker/core/preferences/text_display_preference.dart';
+import 'package:learning_tracker/core/preferences/text_display_preferences.dart';
+import 'package:learning_tracker/core/preferences/transliteration_variant_preference.dart';
 import 'package:learning_tracker/core/sync/outbox/outbox_processor.dart';
 import 'package:learning_tracker/core/sync/outbox/push_pipeline.dart';
 import 'package:learning_tracker/core/time/local_day_clock.dart';
 import 'package:learning_tracker/features/auth/domain/models/app_user.dart';
 import 'package:learning_tracker/features/auth/domain/repositories/auth_repository.dart';
+import 'package:learning_tracker/features/sync/domain/profile_scoped_preference_keys.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:test/test.dart';
 
 // ── helpers ──────────────────────────────────────────────────────────────────
@@ -1096,6 +1110,274 @@ void main() {
       );
     });
   });
+
+  // --------------------------------------------------------------------------
+  // Story 25.7 — core/preferences/ ProfileScopedPreference primitives (DNI-328)
+  // --------------------------------------------------------------------------
+
+  group('Story 25.7 — ProfileScopedPreference primitives', tags: ['story_25_7'], () {
+    setUp(() {
+      // `SharedPreferences.getInstance` reads the platform channel; the in-memory
+      // mock binding is required for tests that exercise the file boundary.
+      TestWidgetsFlutterBinding.ensureInitialized();
+      SharedPreferences.setMockInitialValues(<String, Object>{});
+    });
+
+    group('defaults — new profiles start with the AC-mandated values', () {
+      test(
+        'HebrewTermsPreference defaults to false (English transliteration)',
+        () async {
+          final pref = HebrewTermsPreference();
+          expect(pref.defaultValue, isFalse);
+          expect(await pref.read(0), isFalse);
+          expect(await pref.read(7), isFalse);
+          await pref.dispose();
+        },
+      );
+
+      test(
+        'HebrewDatePreference defaults to false (English/Gregorian calendar)',
+        () async {
+          final pref = HebrewDatePreference();
+          expect(pref.defaultValue, isFalse);
+          expect(await pref.read(0), isFalse);
+          expect(await pref.read(7), isFalse);
+          await pref.dispose();
+        },
+      );
+
+      test('NikudPreference defaults to true (pointed text on)', () async {
+        final pref = NikudPreference();
+        expect(pref.defaultValue, isTrue);
+        expect(await pref.read(0), isTrue);
+        await pref.dispose();
+      });
+
+      test('AppLocalePreference defaults to en', () async {
+        final pref = AppLocalePreference();
+        expect(pref.defaultValue, const Locale('en'));
+        expect(await pref.read(0), const Locale('en'));
+        await pref.dispose();
+      });
+
+      test('TransliterationVariantPreference defaults to ashkenazi', () async {
+        final pref = TransliterationVariantPreference();
+        expect(pref.defaultValue, TransliterationVariant.ashkenazi);
+        expect(await pref.read(0), TransliterationVariant.ashkenazi);
+        await pref.dispose();
+      });
+
+      test('TextDisplayPreference defaults to FontSize.medium', () async {
+        final pref = TextDisplayPreference();
+        expect(pref.defaultValue, FontSize.medium);
+        expect(await pref.read(0), FontSize.medium);
+        await pref.dispose();
+      });
+    });
+
+    group('per-profile isolation — writes do not leak across profiles', () {
+      test('writing for profile A does not affect profile B (bool)', () async {
+        final pref = HebrewTermsPreference();
+        await pref.write(1, true);
+        expect(await pref.read(1), isTrue);
+        expect(
+          await pref.read(2),
+          isFalse,
+          reason: 'profile 2 must keep its default',
+        );
+        await pref.dispose();
+      });
+
+      test(
+        'writing for profile A does not affect profile B (string-coded enum)',
+        () async {
+          final pref = TransliterationVariantPreference();
+          await pref.write(1, TransliterationVariant.sephardi);
+          expect(await pref.read(1), TransliterationVariant.sephardi);
+          expect(await pref.read(2), TransliterationVariant.ashkenazi);
+          await pref.dispose();
+        },
+      );
+
+      test(
+        'writing for profile A does not affect profile B (int-coded enum)',
+        () async {
+          final pref = TextDisplayPreference();
+          await pref.write(1, FontSize.large);
+          expect(await pref.read(1), FontSize.large);
+          expect(await pref.read(2), FontSize.medium);
+          await pref.dispose();
+        },
+      );
+
+      test(
+        'writing for profile A does not affect profile B (Locale)',
+        () async {
+          final pref = AppLocalePreference();
+          await pref.write(1, const Locale('he'));
+          expect(await pref.read(1), const Locale('he'));
+          expect(await pref.read(2), const Locale('en'));
+          await pref.dispose();
+        },
+      );
+    });
+
+    group('round-trip — read after write returns the written value', () {
+      test('HebrewTermsPreference', () async {
+        final pref = HebrewTermsPreference();
+        await pref.write(0, true);
+        expect(await pref.read(0), isTrue);
+        await pref.write(0, false);
+        expect(await pref.read(0), isFalse);
+        await pref.dispose();
+      });
+
+      test('HebrewDatePreference', () async {
+        final pref = HebrewDatePreference();
+        await pref.write(3, true);
+        expect(await pref.read(3), isTrue);
+        await pref.dispose();
+      });
+
+      test('NikudPreference', () async {
+        final pref = NikudPreference();
+        await pref.write(0, false);
+        expect(await pref.read(0), isFalse);
+        await pref.dispose();
+      });
+
+      test('AppLocalePreference', () async {
+        final pref = AppLocalePreference();
+        await pref.write(0, const Locale('he'));
+        expect(await pref.read(0), const Locale('he'));
+        await pref.dispose();
+      });
+
+      test('TransliterationVariantPreference', () async {
+        final pref = TransliterationVariantPreference();
+        await pref.write(0, TransliterationVariant.sephardi);
+        expect(await pref.read(0), TransliterationVariant.sephardi);
+        await pref.dispose();
+      });
+
+      test('TextDisplayPreference', () async {
+        final pref = TextDisplayPreference();
+        await pref.write(0, FontSize.small);
+        expect(await pref.read(0), FontSize.small);
+        await pref.dispose();
+      });
+    });
+
+    group('observe — every write reaches the matching profile stream', () {
+      test(
+        'observers see writes for the requested profile and ignore others',
+        () async {
+          final pref = HebrewTermsPreference();
+          final fromProfile1 = <bool>[];
+          final fromProfile2 = <bool>[];
+          final sub1 = pref.observe(1).listen(fromProfile1.add);
+          final sub2 = pref.observe(2).listen(fromProfile2.add);
+          await pref.write(1, true);
+          await pref.write(2, true);
+          await pref.write(1, false);
+          // Allow microtasks to drain.
+          await Future<void>.delayed(Duration.zero);
+          expect(fromProfile1, equals([true, false]));
+          expect(fromProfile2, equals([true]));
+          await sub1.cancel();
+          await sub2.cancel();
+          await pref.dispose();
+        },
+      );
+
+      test('every primitive exposes a working observe stream', () async {
+        // Smoke test all six primitives share the same `(read, write, observe)`
+        // contract.
+        final cases = <ProfileScopedPreference<Object>>[
+          HebrewTermsPreference(),
+          HebrewDatePreference(),
+          NikudPreference(),
+          AppLocalePreference(),
+          TransliterationVariantPreference(),
+          TextDisplayPreference(),
+        ];
+        try {
+          for (final pref in cases) {
+            final seen = <Object>[];
+            final sub = pref.observe(5).listen(seen.add);
+            await pref.write(5, _flippedValue(pref));
+            await Future<void>.delayed(Duration.zero);
+            expect(
+              seen,
+              hasLength(1),
+              reason: '${pref.runtimeType} did not notify observers',
+            );
+            await sub.cancel();
+          }
+        } finally {
+          for (final p in cases) {
+            await p.dispose();
+          }
+        }
+      });
+    });
+
+    test(
+      'profile-switch scenario — preference resolves to the new profile value',
+      () async {
+        // AC: "When the user switches profiles, the new profile loads its own
+        // preference values (no global leakage)."
+        final pref = HebrewTermsPreference();
+        await pref.write(1, true);
+        await pref.write(2, false);
+        // Active profile starts at 1.
+        expect(await pref.read(1), isTrue);
+        // Switching to profile 2 must see its own stored value, not profile 1's.
+        expect(await pref.read(2), isFalse);
+        // Switching back to profile 1 still sees true.
+        expect(await pref.read(1), isTrue);
+        await pref.dispose();
+      },
+    );
+
+    test(
+      'storage key contract — writes land at `<key>_p<profileId>` so they survive a fresh read',
+      () async {
+        final pref = HebrewTermsPreference();
+        await pref.write(42, true);
+        final prefs = await SharedPreferences.getInstance();
+        expect(
+          prefs.getBool(ProfileScopedPreferenceKeys.hebrewTermsScript(42)),
+          isTrue,
+          reason: 'Writes must use the profile-scoped key namespace',
+        );
+        expect(
+          prefs.getBool(ProfileScopedPreferenceKeys.hebrewTermsScript(0)),
+          isNull,
+          reason: 'profile 0 row must remain absent',
+        );
+        await pref.dispose();
+      },
+    );
+  });
+}
+
+Object _flippedValue(ProfileScopedPreference<Object> pref) {
+  if (pref is HebrewTermsPreference ||
+      pref is HebrewDatePreference ||
+      pref is NikudPreference) {
+    return !(pref.defaultValue as bool);
+  }
+  if (pref is AppLocalePreference) {
+    return const Locale('he');
+  }
+  if (pref is TransliterationVariantPreference) {
+    return TransliterationVariant.sephardi;
+  }
+  if (pref is TextDisplayPreference) {
+    return FontSize.large;
+  }
+  throw StateError('Unhandled preference type: ${pref.runtimeType}');
 }
 
 // ── Story 25.8 helpers ───────────────────────────────────────────────────────

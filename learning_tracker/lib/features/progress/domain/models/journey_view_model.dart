@@ -2,7 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
-import 'package:learning_tracker/features/settings/presentation/providers/hebrew_terms_provider.dart';
+import 'package:learning_tracker/core/preferences/preference_providers.dart';
 
 part 'journey_view_model.freezed.dart';
 
@@ -49,7 +49,7 @@ String unitCompletionLabelText(
   WidgetRef ref, {
   required UnitCompletion completion,
 }) {
-  final useHebrew = ref.watch(hebrewTermsScriptProvider);
+  final useHebrew = ref.watch(useHebrewTermsProvider);
   return useHebrew ? completion.displayNameHe : completion.displayNameEn;
 }
 

@@ -48,9 +48,9 @@ class ProfileScopedPreferenceKeys {
     final scoped = prefs.getBool(useHebrewCalendar(profileId));
     if (scoped != null) return scoped;
     if (profileId == 0) {
-      return prefs.getBool(legacyUseHebrewCalendarKey) ?? true;
+      return prefs.getBool(legacyUseHebrewCalendarKey) ?? false;
     }
-    return true;
+    return false;
   }
 
   static int readFontSizeIndex(SharedPreferences prefs, int profileId) {
@@ -87,9 +87,9 @@ class ProfileScopedPreferenceKeys {
     final scoped = prefs.getBool(hebrewTermsScript(profileId));
     if (scoped != null) return scoped;
     if (profileId == 0) {
-      return prefs.getBool(legacyHebrewTermsScriptKey) ?? true;
+      return prefs.getBool(legacyHebrewTermsScriptKey) ?? false;
     }
-    return true;
+    return false;
   }
 
   /// Reads the saved transliteration variant ("ashkenazi" or "sephardi").

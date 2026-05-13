@@ -4,12 +4,12 @@ import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
+import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/widgets/item_review_breakdown.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/widgets/review_count_badge.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/completion_providers.dart';
-import 'package:learning_tracker/features/settings/presentation/providers/hebrew_terms_provider.dart';
 
 /// Displays a single content item in the hierarchy browser.
 ///
@@ -50,7 +50,7 @@ class ContentItemTile extends ConsumerWidget {
             .value ??
         0;
 
-    final hebrewOnly = ref.watch(hebrewTermsScriptProvider);
+    final hebrewOnly = ref.watch(useHebrewTermsProvider);
     return ListTile(
       minLeadingWidth: 48,
       minVerticalPadding: 14,

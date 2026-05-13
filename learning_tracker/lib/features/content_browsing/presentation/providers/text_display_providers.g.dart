@@ -145,15 +145,21 @@ final class TextContentFamily extends $Family
   String toString() => r'textContentProvider';
 }
 
-/// Provider for font size preference (per learner profile).
+/// Facade over [currentFontSizeProvider] kept under the existing
+/// `fontSizeProvider` name to avoid churning the text-display call sites.
+/// The single source of truth lives in `core/preferences/`.
 
 @ProviderFor(FontSizeNotifier)
 final fontSizeProvider = FontSizeNotifierProvider._();
 
-/// Provider for font size preference (per learner profile).
+/// Facade over [currentFontSizeProvider] kept under the existing
+/// `fontSizeProvider` name to avoid churning the text-display call sites.
+/// The single source of truth lives in `core/preferences/`.
 final class FontSizeNotifierProvider
     extends $NotifierProvider<FontSizeNotifier, FontSize> {
-  /// Provider for font size preference (per learner profile).
+  /// Facade over [currentFontSizeProvider] kept under the existing
+  /// `fontSizeProvider` name to avoid churning the text-display call sites.
+  /// The single source of truth lives in `core/preferences/`.
   FontSizeNotifierProvider._()
     : super(
         from: null,
@@ -181,9 +187,11 @@ final class FontSizeNotifierProvider
   }
 }
 
-String _$fontSizeNotifierHash() => r'18a312b6bd2a661b601046fe5e98b289119355a5';
+String _$fontSizeNotifierHash() => r'64cc147b8512d7c80dd0dbc989f10bce81efaabf';
 
-/// Provider for font size preference (per learner profile).
+/// Facade over [currentFontSizeProvider] kept under the existing
+/// `fontSizeProvider` name to avoid churning the text-display call sites.
+/// The single source of truth lives in `core/preferences/`.
 
 abstract class _$FontSizeNotifier extends $Notifier<FontSize> {
   FontSize build();
@@ -203,14 +211,17 @@ abstract class _$FontSizeNotifier extends $Notifier<FontSize> {
   }
 }
 
-/// Provider for nikud display preference (per learner profile).
+/// Facade over [showNikudPrefProvider] kept under the existing
+/// `showNikudProvider` name to avoid churning consumers.
 
 @ProviderFor(ShowNikud)
 final showNikudProvider = ShowNikudProvider._();
 
-/// Provider for nikud display preference (per learner profile).
+/// Facade over [showNikudPrefProvider] kept under the existing
+/// `showNikudProvider` name to avoid churning consumers.
 final class ShowNikudProvider extends $NotifierProvider<ShowNikud, bool> {
-  /// Provider for nikud display preference (per learner profile).
+  /// Facade over [showNikudPrefProvider] kept under the existing
+  /// `showNikudProvider` name to avoid churning consumers.
   ShowNikudProvider._()
     : super(
         from: null,
@@ -238,9 +249,10 @@ final class ShowNikudProvider extends $NotifierProvider<ShowNikud, bool> {
   }
 }
 
-String _$showNikudHash() => r'298451e7157a57c03acf9bb733a56b899069d089';
+String _$showNikudHash() => r'ce289c2aa555eb79f9c4d3d96ca3b72c7363a19e';
 
-/// Provider for nikud display preference (per learner profile).
+/// Facade over [showNikudPrefProvider] kept under the existing
+/// `showNikudProvider` name to avoid churning consumers.
 
 abstract class _$ShowNikud extends $Notifier<bool> {
   bool build();

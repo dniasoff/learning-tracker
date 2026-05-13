@@ -7,13 +7,12 @@ import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/labels/curriculum_label_renderer.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
+import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/widgets/app_bar_title.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/widgets/breadcrumb_navigation.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/widgets/content_item_tile.dart';
-import 'package:learning_tracker/features/settings/presentation/providers/hebrew_terms_provider.dart';
-import 'package:learning_tracker/features/settings/presentation/providers/transliteration_variant_provider.dart';
 
 @RoutePage()
 class ContentHierarchyScreen extends ConsumerStatefulWidget {
@@ -166,11 +165,9 @@ class _ContentHierarchyScreenState
                   Expanded(
                     child: configAsync.when(
                       data: (config) {
-                        final hebrewTerms = ref.watch(
-                          hebrewTermsScriptProvider,
-                        );
+                        final hebrewTerms = ref.watch(useHebrewTermsProvider);
                         final variant = ref.watch(
-                          transliterationVariantProvider,
+                          currentTransliterationVariantProvider,
                         );
                         final allCurriculumItems = ref
                             .watch(curriculumContentProvider(curriculum))
@@ -235,8 +232,10 @@ class _ContentHierarchyScreenState
                   );
                 }
 
-                final hebrewTerms = ref.watch(hebrewTermsScriptProvider);
-                final variant = ref.watch(transliterationVariantProvider);
+                final hebrewTerms = ref.watch(useHebrewTermsProvider);
+                final variant = ref.watch(
+                  currentTransliterationVariantProvider,
+                );
                 final groupedItems = _groupItemsByNextLevel(
                   items,
                   hebrewTerms,

@@ -5,12 +5,12 @@ import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
+import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/utils/percentage_formatter.dart';
 import 'package:learning_tracker/core/widgets/app_bar_title.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
-import 'package:learning_tracker/features/settings/presentation/providers/hebrew_terms_provider.dart';
 
 @RoutePage()
 class CurriculumListScreen extends ConsumerWidget {
@@ -199,7 +199,7 @@ class _CurriculumCard extends ConsumerWidget {
                           color: AppTheme.brandInk,
                         ),
                       ),
-                      if (!ref.watch(hebrewTermsScriptProvider)) ...[
+                      if (!ref.watch(useHebrewTermsProvider)) ...[
                         const SizedBox(height: 4),
                         Text(
                           curriculumHebrewName(curriculum),

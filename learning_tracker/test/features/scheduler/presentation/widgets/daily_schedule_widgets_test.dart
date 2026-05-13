@@ -8,6 +8,7 @@ import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dar
 import 'package:learning_tracker/features/scheduler/presentation/widgets/daily_schedule_header.dart';
 import 'package:learning_tracker/features/scheduler/presentation/widgets/grouped_daily_view.dart';
 import 'package:learning_tracker/features/scheduler/presentation/widgets/unified_daily_view.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 DailyTask _task(
   CurriculumId curriculum, {
@@ -44,6 +45,14 @@ Widget _wrap(Widget child) {
 }
 
 void main() {
+  // DNI-328 flipped the Hebrew-terms default to false. These tests assert on
+  // Hebrew labels, so seed the preference to true for the default profile.
+  setUp(() {
+    SharedPreferences.setMockInitialValues(<String, Object>{
+      'hebrew_terms_script_p0': true,
+    });
+  });
+
   group('UnifiedDailyView', () {
     testWidgets('renders single prioritized list with curriculum badge', (
       tester,
@@ -62,6 +71,8 @@ void main() {
           ),
         ),
       );
+      // Allow the core/preferences Hebrew-terms async load to propagate.
+      await tester.pumpAndSettle();
 
       // Both tasks should be visible
       expect(find.text('Mishnah Berakhot 1.0'), findsOneWidget);
@@ -107,6 +118,8 @@ void main() {
             ),
           ),
         );
+        // Allow the core/preferences Hebrew-terms async load to propagate.
+        await tester.pumpAndSettle();
 
         // Curriculum group headers with counts
         expect(find.text('תלמוד בבלי (2)'), findsOneWidget);

@@ -12,8 +12,8 @@ import 'package:learning_tracker/core/database/seed_manager.dart';
 import 'package:learning_tracker/core/logging/crashlytics_service.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/navigation/router_provider.dart';
+import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
-import 'package:learning_tracker/core/providers/locale_provider.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/auth/domain/services/pending_local_signup.dart';
 import 'package:learning_tracker/features/auth/domain/services/session_persistence_service.dart';
@@ -22,9 +22,6 @@ import 'package:learning_tracker/features/notifications/domain/services/notifica
 import 'package:learning_tracker/features/notifications/presentation/providers/notification_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/widgets/sacred_time_lock_overlay.dart';
-import 'package:learning_tracker/features/settings/presentation/providers/hebrew_date_provider.dart';
-import 'package:learning_tracker/features/settings/presentation/providers/hebrew_terms_provider.dart';
-import 'package:learning_tracker/features/settings/presentation/providers/transliteration_variant_provider.dart';
 import 'package:learning_tracker/features/sync/presentation/widgets/sync_lifecycle_observer.dart';
 import 'package:learning_tracker/firebase_options.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
@@ -138,12 +135,10 @@ void main() {
         );
       }
 
-      // Single prefs read so Hebrew date preference is in sync on first build
-      // of [useHebrewDateProvider] (deadline / goal date pickers).
-      final appPrefs = await SharedPreferences.getInstance();
-      syncHebrewCalendarPreferenceFromPrefs(appPrefs);
-      syncHebrewTermsScriptPreferenceFromPrefs(appPrefs);
-      syncTransliterationVariantPreferenceFromPrefs(appPrefs);
+      // Per-profile preferences are now loaded lazily by the
+      // `core/preferences/` Riverpod providers on first watch — no preload
+      // is required because `MaterialApp.locale` and the Hebrew-terms
+      // toggle both default to safe values until SharedPreferences resolves.
 
       final container = ProviderContainer(
         overrides: [
@@ -222,7 +217,7 @@ class _LearningTrackerAppState extends ConsumerState<LearningTrackerApp> {
   @override
   Widget build(BuildContext context) {
     ref.watch(magicLinkInitializationProvider);
-    final locale = ref.watch(appLocaleProvider);
+    final locale = ref.watch(currentAppLocaleProvider);
     final isChildMode =
         ref.watch(selectedProfileProvider).asData?.value?.mode == 'child';
 

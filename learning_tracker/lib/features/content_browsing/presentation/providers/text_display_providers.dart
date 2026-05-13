@@ -1,13 +1,10 @@
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/preferences/text_display_preferences.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/features/content_browsing/data/repositories/text_cache_repository.dart';
 import 'package:learning_tracker/features/content_browsing/data/services/text_download_service.dart';
-import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
-import 'package:learning_tracker/features/sync/domain/profile_scoped_preference_keys.dart';
-import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 part 'text_display_providers.g.dart';
 
@@ -29,77 +26,29 @@ Future<TextContent?> textContent(Ref ref, String sefariaRef) async {
   return repository.getText(sefariaRef);
 }
 
-/// Provider for font size preference (per learner profile).
+/// Facade over [currentFontSizeProvider] kept under the existing
+/// `fontSizeProvider` name to avoid churning the text-display call sites.
+/// The single source of truth lives in `core/preferences/`.
 @Riverpod(keepAlive: true)
 class FontSizeNotifier extends _$FontSizeNotifier {
   @override
-  FontSize build() {
-    final profileId = ref.watch(activeProfileIdProvider);
-    ref.listen(activeProfileIdProvider, (prev, next) {
-      if (prev != next) {
-        _reload(next);
-      }
-    });
-    _reload(profileId);
-    return FontSize.medium;
-  }
+  FontSize build() => ref.watch(currentFontSizeProvider);
 
-  Future<void> _reload(int profileId) async {
-    final prefs = await SharedPreferences.getInstance();
-    final idx = ProfileScopedPreferenceKeys.readFontSizeIndex(prefs, profileId);
-    if (idx >= 0 && idx < FontSize.values.length) {
-      state = FontSize.values[idx];
-    }
-  }
-
-  Future<void> setFontSize(FontSize size) async {
-    final profileId = ref.read(activeProfileIdProvider);
-    state = size;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setInt(
-      ProfileScopedPreferenceKeys.textFontSize(profileId),
-      size.index,
-    );
-    await ref.read(syncEngineProvider)?.pushUiPreferencesSnapshot();
-  }
+  Future<void> setFontSize(FontSize size) =>
+      ref.read(currentFontSizeProvider.notifier).set(size);
 }
 
-/// Provider for nikud display preference (per learner profile).
+/// Facade over [showNikudPrefProvider] kept under the existing
+/// `showNikudProvider` name to avoid churning consumers.
 @Riverpod(keepAlive: true)
 class ShowNikud extends _$ShowNikud {
   @override
-  bool build() {
-    final profileId = ref.watch(activeProfileIdProvider);
-    ref.listen(activeProfileIdProvider, (prev, next) {
-      if (prev != next) {
-        _reload(next);
-      }
-    });
-    _reload(profileId);
-    return true;
-  }
+  bool build() => ref.watch(showNikudPrefProvider);
 
-  Future<void> _reload(int profileId) async {
-    final prefs = await SharedPreferences.getInstance();
-    final v = ProfileScopedPreferenceKeys.readShowNikud(prefs, profileId);
-    if (v != state) {
-      state = v;
-    }
-  }
+  Future<void> toggle() => ref.read(showNikudPrefProvider.notifier).toggle();
 
-  Future<void> toggle() async => set(!state);
-
-  Future<void> set(bool value) async {
-    if (value == state) return;
-    final profileId = ref.read(activeProfileIdProvider);
-    state = value;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(
-      ProfileScopedPreferenceKeys.textShowNikud(profileId),
-      value,
-    );
-    await ref.read(syncEngineProvider)?.pushUiPreferencesSnapshot();
-  }
+  Future<void> set(bool value) =>
+      ref.read(showNikudPrefProvider.notifier).set(value);
 }
 
 /// Provider for the text download service.

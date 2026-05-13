@@ -8,10 +8,20 @@ import 'package:learning_tracker/features/content_browsing/presentation/provider
 import 'package:learning_tracker/features/content_browsing/presentation/screens/curriculum_list_screen.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class MockContentRepository extends Mock implements ContentRepository {}
 
 void main() {
+  // DNI-328 flipped the Hebrew-terms default to false (English transliteration).
+  // These tests assert on Hebrew strings so seed the per-profile preference to
+  // true before each test.
+  setUp(() {
+    SharedPreferences.setMockInitialValues(<String, Object>{
+      'hebrew_terms_script_p0': true,
+    });
+  });
+
   Widget createTestWidget({required ContentRepository repository}) {
     return ProviderScope(
       overrides: [

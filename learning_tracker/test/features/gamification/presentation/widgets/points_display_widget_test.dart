@@ -5,8 +5,17 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/user_mode.dart';
 import 'package:learning_tracker/features/gamification/presentation/providers/points_providers.dart';
 import 'package:learning_tracker/features/gamification/presentation/widgets/points_display_widget.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
+  // DNI-328 flipped the Hebrew-terms default to false. These tests assert on
+  // Hebrew labels, so seed the preference to true for the default profile.
+  setUp(() {
+    SharedPreferences.setMockInitialValues(<String, Object>{
+      'hebrew_terms_script_p0': true,
+    });
+  });
+
   group('PointsDisplayWidget', () {
     testWidgets('shows total points with breakdown in child mode', (
       tester,

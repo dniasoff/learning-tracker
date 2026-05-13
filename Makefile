@@ -1,4 +1,4 @@
-.PHONY: help test test-unit test-widget test-integration test-story-4.3 test-story-25.12 test-story-25.13 test-all ci analyze format schema-check linear-sync linear-story linear-check
+.PHONY: help test test-unit test-widget test-integration test-story-4.3 test-story-25.5 test-story-25.7 test-story-25.12 test-story-25.13 test-epic-25 test-all ci analyze format schema-check linear-sync linear-story linear-check
 
 help:
 	@echo "Learning Tracker - Make Commands"
@@ -39,6 +39,14 @@ test-story-4.3:
 	@echo "Running Story 4.3 acceptance tests..."
 	@cd learning_tracker && flutter test test/story_acceptance/epic_04_multi_track_test.dart --reporter=expanded
 
+test-story-25.5:
+	@echo "Running Story 25.5 acceptance tests..."
+	@cd learning_tracker && flutter test test/story_acceptance/epic_25_schema_core_test.dart --plain-name "Story 25.5" --reporter=expanded
+
+test-story-25.7:
+	@echo "Running Story 25.7 acceptance tests..."
+	@cd learning_tracker && flutter test test/story_acceptance/epic_25_schema_core_test.dart --plain-name "Story 25.7" --reporter=expanded
+
 test-story-25.12:
 	@echo "Running Story 25.12 acceptance tests (DNI-333 — SyncEngine decomp Part 1)..."
 	@cd learning_tracker && flutter test test/story_acceptance/epic_25_story_12_sync_decomp_part1_test.dart --reporter=expanded
@@ -46,6 +54,10 @@ test-story-25.12:
 test-story-25.13:
 	@echo "Running Story 25.13 acceptance tests (DNI-334 — MergeRouter + sealed EntityMerger)..."
 	@cd learning_tracker && flutter test test/story_acceptance/epic_25_story_13_merge_router_test.dart --reporter=expanded
+
+test-epic-25:
+	@echo "Running Epic 25 acceptance tests..."
+	@cd learning_tracker && flutter test test/story_acceptance/epic_25_schema_core_test.dart --reporter=expanded
 
 test-all:
 	@echo "Running all tests..."

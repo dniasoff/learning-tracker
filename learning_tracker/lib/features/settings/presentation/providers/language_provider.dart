@@ -1,6 +1,6 @@
 import 'dart:ui';
 
-import 'package:learning_tracker/core/providers/locale_provider.dart';
+import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'language_provider.g.dart';
@@ -14,15 +14,15 @@ const Map<String, String> supportedLanguages = <String, String>{
   'en': 'English',
 };
 
-/// Facade over [appLocaleProvider] exposing the selected language as a
+/// Facade over [currentAppLocaleProvider] exposing the selected language as a
 /// plain code (e.g. `en`, `he`) for UI pickers. Writes go through
-/// [AppLocale.setLocale] so the change actually propagates to
+/// [CurrentAppLocale.set] so the change actually propagates to
 /// `MaterialApp.locale`.
 @riverpod
 class LanguageNotifier extends _$LanguageNotifier {
   @override
   String build() {
-    final locale = ref.watch(appLocaleProvider);
+    final locale = ref.watch(currentAppLocaleProvider);
     return supportedLanguages.containsKey(locale.languageCode)
         ? locale.languageCode
         : 'en';
@@ -30,6 +30,6 @@ class LanguageNotifier extends _$LanguageNotifier {
 
   Future<void> setLanguage(String code) async {
     if (!supportedLanguages.containsKey(code)) return;
-    await ref.read(appLocaleProvider.notifier).setLocale(Locale(code));
+    await ref.read(currentAppLocaleProvider.notifier).set(Locale(code));
   }
 }

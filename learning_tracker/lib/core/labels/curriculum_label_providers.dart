@@ -2,9 +2,8 @@ import 'package:learning_tracker/core/content/content_index.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label_renderer.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
+import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
-import 'package:learning_tracker/features/settings/presentation/providers/hebrew_terms_provider.dart';
-import 'package:learning_tracker/features/settings/presentation/providers/transliteration_variant_provider.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'curriculum_label_providers.g.dart';
@@ -17,8 +16,8 @@ part 'curriculum_label_providers.g.dart';
 /// allows wrapping so the chain stays legible on narrow widgets.
 @riverpod
 Future<String> renderedDisplayForRef(Ref ref, String sefariaRef) async {
-  final useHebrew = ref.watch(hebrewTermsScriptProvider);
-  final variant = ref.watch(transliterationVariantProvider);
+  final useHebrew = ref.watch(useHebrewTermsProvider);
+  final variant = ref.watch(currentTransliterationVariantProvider);
   final item = await _findContentItem(ref, sefariaRef);
   if (item == null) {
     return sefariaRef.replaceAll('_', ' ');
@@ -57,8 +56,8 @@ Future<String> renderedDisplayForRef(Ref ref, String sefariaRef) async {
 /// want to duplicate it.
 @riverpod
 Future<String> renderedLeafForRef(Ref ref, String sefariaRef) async {
-  final useHebrew = ref.watch(hebrewTermsScriptProvider);
-  final variant = ref.watch(transliterationVariantProvider);
+  final useHebrew = ref.watch(useHebrewTermsProvider);
+  final variant = ref.watch(currentTransliterationVariantProvider);
   final item = await _findContentItem(ref, sefariaRef);
   if (item == null) {
     return sefariaRef.replaceAll('_', ' ');
@@ -75,8 +74,8 @@ Future<String> renderedLeafForRef(Ref ref, String sefariaRef) async {
 /// Returns null when the item is already at level 1.
 @riverpod
 Future<String?> renderedParentForRef(Ref ref, String sefariaRef) async {
-  final useHebrew = ref.watch(hebrewTermsScriptProvider);
-  final variant = ref.watch(transliterationVariantProvider);
+  final useHebrew = ref.watch(useHebrewTermsProvider);
+  final variant = ref.watch(currentTransliterationVariantProvider);
   final item = await _findContentItem(ref, sefariaRef);
   if (item == null) return null;
   return CurriculumLabelRenderer.renderParentForItem(
@@ -94,8 +93,8 @@ Future<List<String>> renderedBreadcrumbForRef(
   Ref ref,
   String sefariaRef,
 ) async {
-  final useHebrew = ref.watch(hebrewTermsScriptProvider);
-  final variant = ref.watch(transliterationVariantProvider);
+  final useHebrew = ref.watch(useHebrewTermsProvider);
+  final variant = ref.watch(currentTransliterationVariantProvider);
   final item = await _findContentItem(ref, sefariaRef);
   if (item == null) {
     return [sefariaRef.replaceAll('_', ' ')];

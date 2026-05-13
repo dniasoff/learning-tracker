@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
+import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/widgets/app_bar_title.dart';
 import 'package:learning_tracker/core/widgets/error_display.dart';
@@ -12,7 +13,6 @@ import 'package:learning_tracker/features/progress/presentation/providers/progre
 import 'package:learning_tracker/features/progress/presentation/widgets/hierarchy_progress_card.dart';
 import 'package:learning_tracker/features/progress/presentation/widgets/overall_stats_card.dart';
 import 'package:learning_tracker/features/progress/presentation/widgets/pace_indicator.dart';
-import 'package:learning_tracker/features/settings/presentation/providers/hebrew_terms_provider.dart';
 
 @RoutePage()
 class CurriculumProgressScreen extends ConsumerWidget {
@@ -33,7 +33,7 @@ class CurriculumProgressScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final curriculum = _curriculumEnum();
-    final hebrewOnly = ref.watch(hebrewTermsScriptProvider);
+    final hebrewOnly = ref.watch(useHebrewTermsProvider);
     final progressAsync = ref.watch(curriculumProgressProvider(curriculumId));
     final paceAsync = ref.watch(curriculumPaceStatusProvider(curriculumId));
     final curriculumColor = AppTheme.getCurriculumColorByKey(curriculumId);

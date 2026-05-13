@@ -22,6 +22,7 @@ import 'package:learning_tracker/features/progress/domain/services/chart_data_se
 import 'package:learning_tracker/features/progress/domain/services/curriculum_progress_service.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/pace_status.dart';
 import 'package:learning_tracker/features/scheduler/domain/services/pace_calculator.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:test/test.dart' hide isNotNull, isNull;
 
 import '../helpers/test_database.dart';
@@ -67,6 +68,12 @@ void main() {
     late CrossCurriculumAggregator aggregator;
 
     setUp(() async {
+      // DNI-328 flipped the Hebrew-terms default to false. The widget tests in
+      // this group assert on Hebrew labels, so seed the per-profile preference
+      // to true before each test.
+      SharedPreferences.setMockInitialValues(<String, Object>{
+        'hebrew_terms_script_p0': true,
+      });
       db = createTestDatabase();
       trackId = await _insertTrack(db);
       aggregator = CrossCurriculumAggregator();
@@ -464,6 +471,9 @@ void main() {
             ),
           ),
         );
+
+        // Allow the core/preferences Hebrew-terms async load to propagate.
+        await tester.pumpAndSettle();
 
         expect(find.text('משניות'), findsOneWidget);
         expect(find.text('75.00% complete'), findsOneWidget);

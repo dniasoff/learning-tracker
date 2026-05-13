@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/constants/hebrew_terms.dart';
 import 'package:learning_tracker/core/labels/curriculum_label_providers.dart';
+import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dart';
-import 'package:learning_tracker/features/settings/presentation/providers/hebrew_terms_provider.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// Individual task item card for the dashboard task list.
@@ -97,7 +97,7 @@ class DashboardTaskItem extends ConsumerWidget {
     final l10n = AppLocalizations.of(context)!;
     return Consumer(
       builder: (context, ref, _) {
-        final hebrewTerms = ref.watch(hebrewTermsScriptProvider);
+        final hebrewTerms = ref.watch(useHebrewTermsProvider);
         final chazaraReviewLabel = hebrewTerms
             ? HebrewTerms.uiChazaraReview
             : l10n.chazaraReview;

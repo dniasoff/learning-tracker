@@ -6,24 +6,19 @@ import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/core/labels/curriculum_label_providers.dart';
 import 'package:learning_tracker/core/labels/curriculum_label_renderer.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
+import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/services/calendar_program_registry.dart';
 import 'package:learning_tracker/core/services/calendar_program_service.dart';
 import 'package:learning_tracker/core/services/learning_program_service.dart';
-// TODO(DNI-328): swap to HebrewTermsPreference once core/preferences/ lands.
-// The two providers expose the same boolean — replace this import and the
-// `ref.watch(hebrewTermsScriptProvider)` calls with the preference primitive.
-import 'package:learning_tracker/features/settings/presentation/providers/hebrew_terms_provider.dart';
-import 'package:learning_tracker/features/settings/presentation/providers/transliteration_variant_provider.dart';
 
 /// The single entry point for rendering any curriculum-aware label in the UI.
 ///
 /// The widget exposes six modes — three sync ([curriculum], [trackType],
 /// [calendarProgram], [learningProgram], [level], [item]) and three async
 /// ([breadcrumb], [local], [parent]). Every mode picks the Hebrew vs English
-/// form from `hebrewTermsScriptProvider` (DNI-328 will swap this for
-/// `HebrewTermsPreference`). Whenever the rendered string is Hebrew script
-/// the underlying `Text` is forced to `TextDirection.rtl`, satisfying the
-/// AC even when surrounded by an LTR `Directionality`.
+/// form from [useHebrewTermsProvider]. Whenever the rendered string is Hebrew
+/// script the underlying `Text` is forced to `TextDirection.rtl`, satisfying
+/// the AC even when surrounded by an LTR `Directionality`.
 ///
 /// Async modes resolve `sefariaRef` through `contentIndexProvider` — an
 /// O(1) lookup across all 9 curricula. Loading state renders a zero-width
@@ -261,7 +256,7 @@ class CurriculumLabel extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     switch (_kind) {
       case _Kind.curriculum:
-        final useHebrew = ref.watch(hebrewTermsScriptProvider);
+        final useHebrew = ref.watch(useHebrewTermsProvider);
         return _text(
           useHebrew
               ? _curriculumId!.displayNameHe
@@ -269,13 +264,13 @@ class CurriculumLabel extends ConsumerWidget {
           useHebrew: useHebrew,
         );
       case _Kind.trackType:
-        final useHebrew = ref.watch(hebrewTermsScriptProvider);
+        final useHebrew = ref.watch(useHebrewTermsProvider);
         return _text(
           useHebrew ? _trackType!.displayNameHe : _trackType!.displayNameEn,
           useHebrew: useHebrew,
         );
       case _Kind.calendarProgram:
-        final useHebrew = ref.watch(hebrewTermsScriptProvider);
+        final useHebrew = ref.watch(useHebrewTermsProvider);
         return _text(
           useHebrew
               ? _calendarEntry!.displayNameHe
@@ -283,7 +278,7 @@ class CurriculumLabel extends ConsumerWidget {
           useHebrew: useHebrew,
         );
       case _Kind.learningProgram:
-        final useHebrew = ref.watch(hebrewTermsScriptProvider);
+        final useHebrew = ref.watch(useHebrewTermsProvider);
         final program = _learningProgram!;
         final text = !useHebrew
             ? program.displayName
@@ -291,8 +286,8 @@ class CurriculumLabel extends ConsumerWidget {
                   program.displayName);
         return _text(text, useHebrew: useHebrew);
       case _Kind.level:
-        final useHebrew = ref.watch(hebrewTermsScriptProvider);
-        final variant = ref.watch(transliterationVariantProvider);
+        final useHebrew = ref.watch(useHebrewTermsProvider);
+        final variant = ref.watch(currentTransliterationVariantProvider);
         return _text(
           CurriculumLabelRenderer.renderValue(
             curriculumId: _curriculumId!,
@@ -306,11 +301,11 @@ class CurriculumLabel extends ConsumerWidget {
           useHebrew: useHebrew,
         );
       case _Kind.item:
-        final useHebrew = ref.watch(hebrewTermsScriptProvider);
-        final variant = ref.watch(transliterationVariantProvider);
+        final useHebrew = ref.watch(useHebrewTermsProvider);
+        final variant = ref.watch(currentTransliterationVariantProvider);
         return _text(_renderItem(useHebrew, variant), useHebrew: useHebrew);
       case _Kind.breadcrumb:
-        final useHebrew = ref.watch(hebrewTermsScriptProvider);
+        final useHebrew = ref.watch(useHebrewTermsProvider);
         final r = _sefariaRef!;
         return ref
             .watch(renderedDisplayForRefProvider(r))
@@ -321,7 +316,7 @@ class CurriculumLabel extends ConsumerWidget {
                   _text(r.replaceAll('_', ' '), useHebrew: useHebrew),
             );
       case _Kind.local:
-        final useHebrew = ref.watch(hebrewTermsScriptProvider);
+        final useHebrew = ref.watch(useHebrewTermsProvider);
         final r = _sefariaRef!;
         return ref
             .watch(renderedLeafForRefProvider(r))
@@ -332,7 +327,7 @@ class CurriculumLabel extends ConsumerWidget {
                   _text(r.replaceAll('_', ' '), useHebrew: useHebrew),
             );
       case _Kind.parent:
-        final useHebrew = ref.watch(hebrewTermsScriptProvider);
+        final useHebrew = ref.watch(useHebrewTermsProvider);
         final r = _sefariaRef!;
         return ref
             .watch(renderedParentForRefProvider(r))
@@ -404,19 +399,19 @@ String _curriculumLabel(CurriculumId curriculum, bool useHebrew) =>
 
 /// Pure-string variant of [CurriculumLabel.curriculum] for AppBar titles,
 /// dialog messages, sort keys, semantics labels — places that need a `String`
-/// rather than a widget. Watches [hebrewTermsScriptProvider]. Use this from
+/// rather than a widget. Watches [useHebrewTermsProvider]. Use this from
 /// widgets (ConsumerWidget, Consumer, hooks_riverpod).
 String curriculumLabelText(WidgetRef ref, {required CurriculumId curriculum}) =>
-    _curriculumLabel(curriculum, ref.watch(hebrewTermsScriptProvider));
+    _curriculumLabel(curriculum, ref.watch(useHebrewTermsProvider));
 
 /// Same as [curriculumLabelText] but takes a provider-side [Ref]. Use this
 /// from inside provider/notifier closures where the closure parameter is
-/// [Ref] rather than [WidgetRef]. Watches [hebrewTermsScriptProvider] so the
+/// [Ref] rather than [WidgetRef]. Watches [useHebrewTermsProvider] so the
 /// containing provider re-runs when the toggle changes.
 String curriculumLabelTextFromRef(
   Ref ref, {
   required CurriculumId curriculum,
-}) => _curriculumLabel(curriculum, ref.watch(hebrewTermsScriptProvider));
+}) => _curriculumLabel(curriculum, ref.watch(useHebrewTermsProvider));
 
 /// Returns the Hebrew form of a curriculum's name unconditionally. Use only
 /// when both forms must be shown simultaneously (dual-language presentations
@@ -434,8 +429,8 @@ String curriculumEnglishName(CurriculumId curriculum) =>
     curriculum.displayNameEn;
 
 /// Pure-string variant of [CurriculumLabel.trackType]. Watches
-/// [hebrewTermsScriptProvider].
+/// [useHebrewTermsProvider].
 String trackTypeLabelText(WidgetRef ref, {required TrackType trackType}) {
-  final useHebrew = ref.watch(hebrewTermsScriptProvider);
+  final useHebrew = ref.watch(useHebrewTermsProvider);
   return useHebrew ? trackType.displayNameHe : trackType.displayNameEn;
 }

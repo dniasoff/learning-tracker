@@ -1,6 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/services/local_calendar_engine.dart';
-import 'package:learning_tracker/features/settings/presentation/providers/hebrew_terms_provider.dart';
 
 /// Unified calendar entry combining data from any source.
 ///
@@ -38,7 +38,7 @@ String calendarEntryLabelText(
   WidgetRef ref, {
   required CalendarProgramEntry entry,
 }) {
-  final useHebrew = ref.watch(hebrewTermsScriptProvider);
+  final useHebrew = ref.watch(useHebrewTermsProvider);
   return useHebrew ? entry.displayNameHe : entry.displayNameEn;
 }
 
@@ -49,7 +49,7 @@ String calendarEntryTodayRefText(
   WidgetRef ref, {
   required CalendarProgramEntry entry,
 }) {
-  final useHebrew = ref.watch(hebrewTermsScriptProvider);
+  final useHebrew = ref.watch(useHebrewTermsProvider);
   if (useHebrew && entry.todayRefHe.isNotEmpty) return entry.todayRefHe;
   return entry.todayRef;
 }
