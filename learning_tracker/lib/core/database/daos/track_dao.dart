@@ -182,13 +182,14 @@ class TrackDao extends DatabaseAccessor<UserDatabase> with _$TrackDaoMixin {
       await db.studyDayConfigDao.deleteConfigsForTrack(trackId);
       await db.trackLearningOrderDao.deleteByTrack(trackId);
       // Soft-delete: stamp deletedAt instead of removing the row.
-      await (update(curriculumTracks)..where((t) => t.id.equals(trackId)))
-          .write(
-            CurriculumTracksCompanion(
-              isActive: const Value(false),
-              deletedAt: Value(DateTimeFactory.nowUtc()),
-            ),
-          );
+      await (update(
+        curriculumTracks,
+      )..where((t) => t.id.equals(trackId))).write(
+        CurriculumTracksCompanion(
+          isActive: const Value(false),
+          deletedAt: Value(DateTimeFactory.nowUtc()),
+        ),
+      );
       final curriculum = CurriculumId.values
           .where((c) => c.storageKey == track.curriculumId)
           .firstOrNull;

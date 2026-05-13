@@ -155,9 +155,7 @@ class _LearningProcessWizardScreenState
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(
-          curriculumLabelText(ref, curriculum: widget.curriculumId),
-        ),
+        title: Text(curriculumLabelText(ref, curriculum: widget.curriculumId)),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () {

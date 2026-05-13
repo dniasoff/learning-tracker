@@ -46,6 +46,42 @@ class LearningOrderDao extends DatabaseAccessor<UserDatabase>
         ),
       );
 
+  /// Upsert only if [updatedAt] is strictly newer than the stored row.
+  ///
+  /// Returns `true` if the row was written, `false` if it was skipped
+  /// because the local row is already at the same timestamp or newer
+  /// (LWW conflict resolution for Firestore pulls — DNI-311).
+  Future<bool> upsertLearningOrderIfNewer(
+    LearningOrderCompanion entry, {
+    required DateTime updatedAt,
+  }) async {
+    final existing =
+        await (select(learningOrder)..where(
+              (t) =>
+                  t.profileId.equals(entry.profileId.value) &
+                  t.curriculumId.equals(entry.curriculumId.value) &
+                  t.sefariaRef.equals(entry.sefariaRef.value),
+            ))
+            .getSingleOrNull();
+
+    if (existing != null && !updatedAt.isAfter(existing.updatedAt)) {
+      return false;
+    }
+
+    await into(learningOrder).insert(
+      entry.copyWith(updatedAt: Value(updatedAt)),
+      onConflict: DoUpdate(
+        (_) => entry.copyWith(updatedAt: Value(updatedAt)),
+        target: [
+          learningOrder.profileId,
+          learningOrder.curriculumId,
+          learningOrder.sefariaRef,
+        ],
+      ),
+    );
+    return true;
+  }
+
   /// Count the total number of content items for a curriculum.
   Future<int> countByCurriculum(String curriculumId) async {
     final count = learningOrder.id.count();

@@ -161,13 +161,9 @@ void main() {
 
       // Story 24.4: Forward profileId to Crashlytics whenever a profile is
       // selected or cleared. Only the numeric ID is sent — no email or PII.
-      container.listen<int?>(
-        selectedProfileIdProvider,
-        (_, id) {
-          crashlytics.setUserIdentifier(id);
-        },
-        fireImmediately: true,
-      );
+      container.listen<int?>(selectedProfileIdProvider, (_, id) {
+        crashlytics.setUserIdentifier(id);
+      }, fireImmediately: true);
 
       // Initialize notification system (non-fatal).
       // IMPORTANT: use the provider-owned NotificationService instance so the

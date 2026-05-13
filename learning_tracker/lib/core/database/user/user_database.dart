@@ -93,7 +93,7 @@ class UserDatabase extends _$UserDatabase {
   UserDatabase(super.e);
 
   @override
-  int get schemaVersion => 10;
+  int get schemaVersion => 11;
 
   @override
   MigrationStrategy get migration {
@@ -156,10 +156,13 @@ class UserDatabase extends _$UserDatabase {
         // of completions is replaced by a soft-delete of the track row;
         // completions are append-only and must never be deleted (FR5, E24).
         if (from < 10) {
-          await m.addColumn(
-            curriculumTracks,
-            curriculumTracks.deletedAt,
-          );
+          await m.addColumn(curriculumTracks, curriculumTracks.deletedAt);
+        }
+        // v10 → v11: LWW sync for learning_order — add updated_at column so
+        // last-write-wins conflict resolution can compare timestamps when
+        // merging Firestore pulls (DNI-311).
+        if (from < 11) {
+          await m.addColumn(learningOrder, learningOrder.updatedAt);
         }
       },
     );

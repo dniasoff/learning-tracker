@@ -17,10 +17,7 @@ import 'package:test/test.dart';
 String _readRules() {
   // When running via `flutter test` the cwd is learning_tracker/.
   // When running from repo root it is the repo root itself.
-  final candidates = [
-    File('../firestore.rules'),
-    File('firestore.rules'),
-  ];
+  final candidates = [File('../firestore.rules'), File('firestore.rules')];
   for (final f in candidates) {
     if (f.existsSync()) return f.readAsStringSync();
   }
@@ -46,10 +43,7 @@ void main() {
 
       group('completions collection', () {
         test('has per-collection match for completions/{completionId}', () {
-          expect(
-            rules,
-            contains('match /completions/{completionId}'),
-          );
+          expect(rules, contains('match /completions/{completionId}'));
         });
 
         test('allows create (not wildcard read/write)', () {
@@ -105,14 +99,12 @@ void main() {
         });
 
         test('create-only with timestamp clamp', () {
-          final ledgerBlock =
-              _extractBlock(rules, 'learning_ledger/{entryId}');
+          final ledgerBlock = _extractBlock(rules, 'learning_ledger/{entryId}');
           expect(ledgerBlock, contains('createdAt <= request.time'));
         });
 
         test('denies delete on learning_ledger', () {
-          final ledgerBlock =
-              _extractBlock(rules, 'learning_ledger/{entryId}');
+          final ledgerBlock = _extractBlock(rules, 'learning_ledger/{entryId}');
           expect(
             ledgerBlock,
             anyOf(
@@ -161,10 +153,7 @@ void main() {
 
       group('global default deny rule', () {
         test('has wildcard deny-all rule', () {
-          expect(
-            rules,
-            contains('match /{document=**}'),
-          );
+          expect(rules, contains('match /{document=**}'));
           // The deny-all rule must come before any collection-specific rules.
           final denyPos = rules.indexOf('allow read, write: if false');
           expect(
@@ -218,11 +207,7 @@ void main() {
               break;
             }
           }
-          expect(
-            ciContent,
-            isNotNull,
-            reason: 'ci.yml not found',
-          );
+          expect(ciContent, isNotNull, reason: 'ci.yml not found');
           expect(
             ciContent,
             contains('firestore-rules:'),
@@ -246,13 +231,10 @@ void main() {
       });
 
       // AC1: setCrashlyticsCollectionEnabled(true) runs (interface level)
-      test(
-        'AC1: collection can be enabled without error',
-        () async {
-          await service.setCrashlyticsCollectionEnabled(true);
-          expect(service.collectionEnabled, isTrue);
-        },
-      );
+      test('AC1: collection can be enabled without error', () async {
+        await service.setCrashlyticsCollectionEnabled(true);
+        expect(service.collectionEnabled, isTrue);
+      });
 
       // AC2: FlutterError.onError forwards to Crashlytics (via interface)
       test(
@@ -299,33 +281,27 @@ void main() {
         },
       );
 
-      test(
-        'AC4: no email or non-numeric PII in identifier',
-        () async {
-          await service.setUserIdentifier(99);
-          final id = service.lastIdentifier!;
-          expect(
-            RegExp(r'^[0-9]*$').hasMatch(id),
-            isTrue,
-            reason: 'Identifier must be purely numeric. Got: "$id"',
-          );
-        },
-      );
+      test('AC4: no email or non-numeric PII in identifier', () async {
+        await service.setUserIdentifier(99);
+        final id = service.lastIdentifier!;
+        expect(
+          RegExp(r'^[0-9]*$').hasMatch(id),
+          isTrue,
+          reason: 'Identifier must be purely numeric. Got: "$id"',
+        );
+      });
 
       // AC5: Crash is reported even before any sign-in (no identifier set)
-      test(
-        'AC5: errors are captured before any profile is selected',
-        () async {
-          // Identifier was never set — simulates pre-auth crash
-          expect(service.lastIdentifier, isNull);
-          await service.recordError(
-            Exception('pre-auth crash'),
-            StackTrace.current,
-            fatal: true,
-          );
-          expect(service.errors, hasLength(1));
-        },
-      );
+      test('AC5: errors are captured before any profile is selected', () async {
+        // Identifier was never set — simulates pre-auth crash
+        expect(service.lastIdentifier, isNull);
+        await service.recordError(
+          Exception('pre-auth crash'),
+          StackTrace.current,
+          fatal: true,
+        );
+        expect(service.errors, hasLength(1));
+      });
 
       // NullCrashlyticsService is safe to use when Firebase is unavailable
       test(

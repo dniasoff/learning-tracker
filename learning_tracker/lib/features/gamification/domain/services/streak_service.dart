@@ -121,9 +121,9 @@ class StreakService {
   ///
   /// Idempotent: safe to call on every app launch and on every streak read.
   Future<Streak?> reconcileFromEvents() async {
-    final events = await (_db.select(_db.streakEvents)
-          ..where((t) => t.profileId.equals(_profileId)))
-        .get();
+    final events = await (_db.select(
+      _db.streakEvents,
+    )..where((t) => t.profileId.equals(_profileId))).get();
     final state = reduceStreakEvents(events);
     final existing = await _db.streakDao.getStreakByProfile(_profileId);
 

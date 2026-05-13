@@ -189,6 +189,16 @@ class OfflineQueue {
     );
   }
 
+  /// Enqueue a single learning-order item (LWW, deterministic doc ID).
+  Future<void> enqueueLearningOrderItem(Map<String, dynamic> item) async {
+    final payload = jsonEncode(item);
+    await _queue.enqueue('learning_order_item', payload);
+    _logger.info(
+      'Queued learning order item for offline sync: '
+      '${item["curriculum_id"]}_${item["sefaria_ref"]}',
+    );
+  }
+
   /// Flush queued operations to Firestore.
   ///
   /// If [batchSize] is provided, only processes that many items per flush
@@ -324,6 +334,9 @@ class OfflineQueue {
               break;
             case 'curriculum_track':
               await dataSource.pushCurriculumTrack(payload);
+              break;
+            case 'learning_order_item':
+              await dataSource.pushLearningOrderItem(payload);
               break;
             default:
               _logger.warning(

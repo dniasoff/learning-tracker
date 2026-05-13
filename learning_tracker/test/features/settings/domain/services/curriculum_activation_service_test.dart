@@ -206,7 +206,9 @@ void main() {
         await service.deactivate(CurriculumId.bavli);
 
         // The track row is soft-deleted (deletedAt IS NOT NULL), not hard-deleted.
-        final allTracks = await database.trackDao.getAllTracks(CurriculumId.bavli);
+        final allTracks = await database.trackDao.getAllTracks(
+          CurriculumId.bavli,
+        );
         expect(allTracks, hasLength(1));
         expect(allTracks.first.deletedAt, isNotNull);
 

@@ -198,9 +198,7 @@ class _OverviewStatCard extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(22),
-        splashColor: highlighted
-            ? Colors.white.withValues(alpha: 0.18)
-            : null,
+        splashColor: highlighted ? Colors.white.withValues(alpha: 0.18) : null,
         highlightColor: highlighted
             ? Colors.white.withValues(alpha: 0.08)
             : null,

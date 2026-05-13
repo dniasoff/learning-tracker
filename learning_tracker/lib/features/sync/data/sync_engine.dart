@@ -63,6 +63,7 @@ class SyncEngine {
   StreamSubscription<Map<String, dynamic>?>? _notificationSettingsSubscription;
   StreamSubscription<Map<String, dynamic>?>? _gamificationSettingsSubscription;
   StreamSubscription<Map<String, dynamic>?>? _uiPreferencesSubscription;
+  StreamSubscription<List<Map<String, dynamic>>>? _learningOrderSubscription;
 
   bool _isOnline = true;
   bool _listenersAttached = false;
@@ -96,6 +97,7 @@ class SyncEngine {
   bool _mergingNotificationSettings = false;
   bool _mergingGamificationSettings = false;
   bool _mergingUiPreferences = false;
+  bool _mergingLearningOrder = false;
 
   /// SharedPreferences key for persisted last-sync timestamp.
   static const _lastSyncKey = 'sync_engine_last_synced_at';
@@ -247,6 +249,10 @@ class SyncEngine {
     _uiPreferencesSubscription = _firestoreDataSource
         .listenToUiPreferences()
         .listen(_onUiPreferencesUpdate, onError: _handleListenerError);
+
+    _learningOrderSubscription = _firestoreDataSource
+        .listenToLearningOrder()
+        .listen(_onLearningOrderUpdate, onError: _handleListenerError);
   }
 
   /// Detach foreground listeners (on app background).
@@ -270,6 +276,7 @@ class SyncEngine {
     await _notificationSettingsSubscription?.cancel();
     await _gamificationSettingsSubscription?.cancel();
     await _uiPreferencesSubscription?.cancel();
+    await _learningOrderSubscription?.cancel();
 
     _completionsSubscription = null;
     _bookmarksSubscription = null;
@@ -282,6 +289,7 @@ class SyncEngine {
     _notificationSettingsSubscription = null;
     _gamificationSettingsSubscription = null;
     _uiPreferencesSubscription = null;
+    _learningOrderSubscription = null;
   }
 
   // ========== Pull-on-Launch ==========
@@ -408,6 +416,7 @@ class SyncEngine {
       ds.fetchNotificationSettings(),
       ds.fetchGamificationSettings(),
       ds.fetchUiPreferences(),
+      ds.fetchLearningOrder(),
     ]);
 
     await _mergeCompletions(
@@ -450,6 +459,10 @@ class SyncEngine {
     );
     await _mergeUiPreferences(
       results[10] as Map<String, dynamic>?,
+      profileId: profileId,
+    );
+    await _mergeLearningOrder(
+      results[11] as List<Map<String, dynamic>>,
       profileId: profileId,
     );
   }
@@ -914,6 +927,33 @@ class SyncEngine {
       _withQueueTargetProfile(payload),
     );
     await _afterEnqueueForBackgroundFlush(context: 'curriculum track');
+  }
+
+  /// Push all learning-order items for a curriculum after a drag-and-drop
+  /// reorder (DNI-311).
+  ///
+  /// Each item is enqueued as a separate `learning_order_item` operation so
+  /// that the offline queue can retry individual rows independently.
+  /// [profileId] must match the active learner profile at the time of the
+  /// write so the queue flushes to the correct Firestore sub-collection.
+  Future<void> pushLearningOrder({
+    required int profileId,
+    required String curriculumId,
+    required List<Map<String, dynamic>> items,
+    required DateTime updatedAt,
+  }) async {
+    for (final item in items) {
+      final payload = {
+        ...item,
+        'curriculum_id': curriculumId,
+        'updated_at': updatedAt.toIso8601String(),
+        '_target_profile_id': profileId,
+      };
+      await _offlineQueue.enqueueLearningOrderItem(payload);
+    }
+    if (items.isNotEmpty) {
+      await _afterEnqueueForBackgroundFlush(context: 'learning order');
+    }
   }
 
   // ========== Conflict Resolution & Merge ==========
@@ -2447,6 +2487,78 @@ class SyncEngine {
       );
     } finally {
       _mergingUiPreferences = false;
+    }
+  }
+
+  /// Merge learning-order items from Firestore (LWW per row — DNI-311).
+  ///
+  /// Each item is merged independently: the row is only written locally if
+  /// [updatedAt] from Firestore is strictly newer than the local row's
+  /// [updatedAt]. This prevents a stale cloud push from clobbering a fresh
+  /// local drag-and-drop reorder that hasn't reached Firestore yet.
+  Future<void> _mergeLearningOrder(
+    List<Map<String, dynamic>> remoteItems, {
+    required int profileId,
+  }) async {
+    _logger.debug(
+      'Merging ${remoteItems.length} learning-order items from Firestore',
+    );
+
+    for (final remote in remoteItems) {
+      try {
+        final curriculumId = remote['curriculum_id'] as String?;
+        final sefariaRef =
+            (remote['sefaria_ref'] ?? remote['sefariaRef']) as String?;
+        final rawSortOrder =
+            remote['user_sort_order'] ?? remote['userSortOrder'];
+        final sortOrder = rawSortOrder is int
+            ? rawSortOrder
+            : rawSortOrder is num
+            ? rawSortOrder.toInt()
+            : int.tryParse(rawSortOrder?.toString() ?? '');
+        final updatedAt = _parseTimestamp(remote['updated_at']);
+
+        if (curriculumId == null ||
+            sefariaRef == null ||
+            sortOrder == null ||
+            updatedAt == null) {
+          _logger.warning(
+            'Skipping invalid remote learning-order item: $remote',
+          );
+          continue;
+        }
+
+        final entry = LearningOrderCompanion(
+          profileId: Value(profileId),
+          curriculumId: Value(curriculumId),
+          sefariaRef: Value(sefariaRef),
+          userSortOrder: Value(sortOrder),
+        );
+        await _database.learningOrderDao.upsertLearningOrderIfNewer(
+          entry,
+          updatedAt: updatedAt,
+        );
+      } catch (e) {
+        // ignore: avoid_catches_without_on_clauses — intentional merge-loop error boundary
+        _logger.warning('Failed to merge learning-order item: $e');
+      }
+    }
+  }
+
+  Future<void> _onLearningOrderUpdate(List<Map<String, dynamic>> items) async {
+    if (_mergingLearningOrder) return;
+    _mergingLearningOrder = true;
+    _consecutiveListenerErrors = 0;
+    try {
+      _logger.debug(
+        'Received ${items.length} learning-order items from listener',
+      );
+      await _mergeLearningOrder(
+        items,
+        profileId: _firestoreDataSource.profileId,
+      );
+    } finally {
+      _mergingLearningOrder = false;
     }
   }
 

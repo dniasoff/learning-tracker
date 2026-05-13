@@ -10,9 +10,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 void main() {
   group('CurriculumPickerStep', () {
     Widget wrapWithL10n(Widget child) {
-      SharedPreferences.setMockInitialValues({
-        'hebrew_terms_script_p0': true,
-      });
+      SharedPreferences.setMockInitialValues({'hebrew_terms_script_p0': true});
       return ProviderScope(
         child: MaterialApp(
           localizationsDelegates: const [

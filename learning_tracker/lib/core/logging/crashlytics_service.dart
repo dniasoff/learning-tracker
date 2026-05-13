@@ -13,8 +13,11 @@ abstract class CrashlyticsService {
   Future<void> recordFlutterFatalError(FlutterErrorDetails details);
 
   /// Records an uncaught Dart/Platform error as a fatal crash.
-  Future<void> recordError(Object error, StackTrace? stack,
-      {bool fatal = false});
+  Future<void> recordError(
+    Object error,
+    StackTrace? stack, {
+    bool fatal = false,
+  });
 
   /// Sets the numeric user identifier (profileId).
   ///
@@ -37,9 +40,11 @@ class FirebaseCrashlyticsService implements CrashlyticsService {
       _crashlytics.recordFlutterFatalError(details);
 
   @override
-  Future<void> recordError(Object error, StackTrace? stack,
-          {bool fatal = false}) =>
-      _crashlytics.recordError(error, stack, fatal: fatal);
+  Future<void> recordError(
+    Object error,
+    StackTrace? stack, {
+    bool fatal = false,
+  }) => _crashlytics.recordError(error, stack, fatal: fatal);
 
   @override
   Future<void> setUserIdentifier(int? profileId) =>
@@ -57,8 +62,11 @@ class NullCrashlyticsService implements CrashlyticsService {
   Future<void> recordFlutterFatalError(FlutterErrorDetails details) async {}
 
   @override
-  Future<void> recordError(Object error, StackTrace? stack,
-      {bool fatal = false}) async {}
+  Future<void> recordError(
+    Object error,
+    StackTrace? stack, {
+    bool fatal = false,
+  }) async {}
 
   @override
   Future<void> setUserIdentifier(int? profileId) async {}

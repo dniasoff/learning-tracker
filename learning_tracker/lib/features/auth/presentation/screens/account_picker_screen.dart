@@ -12,7 +12,8 @@ import 'package:learning_tracker/core/providers/registry_provider.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/auth/domain/services/account_lifecycle_service.dart';
 import 'package:learning_tracker/features/auth/domain/services/session_persistence_service.dart';
-import 'package:learning_tracker/features/auth/presentation/providers/auth_providers.dart';
+import 'package:learning_tracker/features/auth/presentation/providers/auth_providers.dart'
+    hide authStateProvider;
 import 'package:learning_tracker/features/auth/presentation/providers/auth_state_provider.dart';
 import 'package:learning_tracker/features/onboarding/presentation/screens/onboarding_screen.dart'
     show kOnboardingComplete;

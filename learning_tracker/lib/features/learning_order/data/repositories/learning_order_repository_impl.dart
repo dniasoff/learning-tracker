@@ -1,3 +1,4 @@
+import 'package:drift/drift.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
@@ -10,15 +11,16 @@ class LearningOrderRepositoryImpl implements LearningOrderRepository {
     required UserDatabase database,
     required ContentRepository contentRepository,
     SyncEngine? syncEngine,
+    int profileId = 0,
   }) : _database = database,
        _contentRepository = contentRepository,
-       _syncEngine = syncEngine;
+       _syncEngine = syncEngine,
+       _profileId = profileId;
 
   final UserDatabase _database;
   final ContentRepository _contentRepository;
-  // ignore: unused_field, will be used once SyncEngine supports pushLearningOrder
-  // ignore: unused_field
   final SyncEngine? _syncEngine;
+  final int _profileId;
 
   /// Returns a map from sefariaRef → (displayNameHe, displayNameEn, sortOrder)
   /// for all drag-level (level2, non-leaf) items of a curriculum.
@@ -89,17 +91,29 @@ class LearningOrderRepositoryImpl implements LearningOrderRepository {
     CurriculumId curriculumId,
     List<LearningOrderItem> items,
   ) async {
+    final updatedAt = DateTime.now().toUtc();
+
     for (var i = 0; i < items.length; i++) {
       await _database.learningOrderDao.upsertLearningOrder(
         LearningOrderCompanion.insert(
           curriculumId: curriculumId.storageKey,
           sefariaRef: items[i].sefariaRef,
           userSortOrder: i,
+          profileId: Value(_profileId),
+          updatedAt: Value(updatedAt),
         ),
       );
     }
 
-    // TODO: Push learning order to Firestore once SyncEngine supports it.
+    // Push to Firestore (offline-queued, retry on reconnect).
+    await _syncEngine?.pushLearningOrder(
+      profileId: _profileId,
+      curriculumId: curriculumId.storageKey,
+      items: items.asMap().entries.map((e) {
+        return {'sefaria_ref': e.value.sefariaRef, 'user_sort_order': e.key};
+      }).toList(),
+      updatedAt: updatedAt,
+    );
   }
 
   @override
@@ -108,6 +122,13 @@ class LearningOrderRepositoryImpl implements LearningOrderRepository {
       curriculumId.storageKey,
     );
 
-    // TODO: Push empty learning order to Firestore once SyncEngine supports it.
+    // Push empty order to Firestore so other devices know custom ordering
+    // has been cleared (each device falls back to natural content sort).
+    await _syncEngine?.pushLearningOrder(
+      profileId: _profileId,
+      curriculumId: curriculumId.storageKey,
+      items: const [],
+      updatedAt: DateTime.now().toUtc(),
+    );
   }
 }

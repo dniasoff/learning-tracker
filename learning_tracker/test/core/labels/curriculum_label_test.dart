@@ -42,60 +42,65 @@ void main() {
     });
   });
 
-  group('CurriculumLabel.level — ordinal levels (no parent-name repetition)', () {
-    testWidgets('Mishnayos Perek 1 Hebrew → "פרק א" (not "משנה דמאי א")',
-        (tester) async {
-      await tester.pumpWidget(
-        wrap(
-          const CurriculumLabel.level(
-            curriculumId: CurriculumId.mishnayos,
-            level: 3, // Seder / Masechta / Perek / Mishna
-            rawValue: '1',
-            parentL1Value: 'Seder Zeraim',
+  group(
+    'CurriculumLabel.level — ordinal levels (no parent-name repetition)',
+    () {
+      testWidgets('Mishnayos Perek 1 Hebrew → "פרק א" (not "משנה דמאי א")', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          wrap(
+            const CurriculumLabel.level(
+              curriculumId: CurriculumId.mishnayos,
+              level: 3, // Seder / Masechta / Perek / Mishna
+              rawValue: '1',
+              parentL1Value: 'Seder Zeraim',
+            ),
+            hebrewTermsScript: true,
           ),
-          hebrewTermsScript: true,
-        ),
-      );
-      await tester.pumpAndSettle();
-      expect(find.text('פרק א'), findsOneWidget);
-    });
+        );
+        await tester.pumpAndSettle();
+        expect(find.text('פרק א'), findsOneWidget);
+      });
 
-    testWidgets('Mishnayos Mishnah 1 Hebrew → "משנה א"', (tester) async {
-      await tester.pumpWidget(
-        wrap(
-          const CurriculumLabel.level(
-            curriculumId: CurriculumId.mishnayos,
-            level: 4,
-            rawValue: '1',
-            parentL1Value: 'Seder Zeraim',
+      testWidgets('Mishnayos Mishnah 1 Hebrew → "משנה א"', (tester) async {
+        await tester.pumpWidget(
+          wrap(
+            const CurriculumLabel.level(
+              curriculumId: CurriculumId.mishnayos,
+              level: 4,
+              rawValue: '1',
+              parentL1Value: 'Seder Zeraim',
+            ),
+            hebrewTermsScript: true,
           ),
-          hebrewTermsScript: true,
-        ),
-      );
-      await tester.pumpAndSettle();
-      expect(find.text('משנה א'), findsOneWidget);
-    });
+        );
+        await tester.pumpAndSettle();
+        expect(find.text('משנה א'), findsOneWidget);
+      });
 
-    testWidgets('Mishnayos Perek 1 English → "Perek 1"', (tester) async {
-      await tester.pumpWidget(
-        wrap(
-          const CurriculumLabel.level(
-            curriculumId: CurriculumId.mishnayos,
-            level: 3,
-            rawValue: '1',
-            parentL1Value: 'Seder Zeraim',
+      testWidgets('Mishnayos Perek 1 English → "Perek 1"', (tester) async {
+        await tester.pumpWidget(
+          wrap(
+            const CurriculumLabel.level(
+              curriculumId: CurriculumId.mishnayos,
+              level: 3,
+              rawValue: '1',
+              parentL1Value: 'Seder Zeraim',
+            ),
+            hebrewTermsScript: false,
           ),
-          hebrewTermsScript: false,
-        ),
-      );
-      await tester.pumpAndSettle();
-      expect(find.text('Perek 1'), findsOneWidget);
-    });
-  });
+        );
+        await tester.pumpAndSettle();
+        expect(find.text('Perek 1'), findsOneWidget);
+      });
+    },
+  );
 
   group('CurriculumLabel.level — named levels (strips structural prefix)', () {
-    testWidgets('Mishnayos masechta Hebrew "מסכת ברכות" → "ברכות"',
-        (tester) async {
+    testWidgets('Mishnayos masechta Hebrew "מסכת ברכות" → "ברכות"', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         wrap(
           const CurriculumLabel.level(
@@ -130,7 +135,9 @@ void main() {
   });
 
   group('CurriculumLabel.item — leaf mode', () {
-    testWidgets('Mishnayos leaf Hebrew → last segment "משנה א"', (tester) async {
+    testWidgets('Mishnayos leaf Hebrew → last segment "משנה א"', (
+      tester,
+    ) async {
       const item = ContentItem(
         curriculumId: 'mishnayos',
         level1: 'Seder Zeraim',
@@ -144,10 +151,7 @@ void main() {
         isLeaf: true,
       );
       await tester.pumpWidget(
-        wrap(
-          const CurriculumLabel.item(item),
-          hebrewTermsScript: true,
-        ),
+        wrap(const CurriculumLabel.item(item), hebrewTermsScript: true),
       );
       await tester.pumpAndSettle();
       expect(find.text('משנה א'), findsOneWidget);

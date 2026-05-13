@@ -30,15 +30,15 @@ class CurriculumLabel extends ConsumerWidget {
     this.textAlign,
     this.textDirection,
     super.key,
-  })  : _kind = _Kind.curriculum,
-        _curriculumId = id,
-        _level = null,
-        _rawValue = null,
-        _parentL1Value = null,
-        _hebrewName = null,
-        _item = null,
-        _itemMode = null,
-        _sefariaRef = null;
+  }) : _kind = _Kind.curriculum,
+       _curriculumId = id,
+       _level = null,
+       _rawValue = null,
+       _parentL1Value = null,
+       _hebrewName = null,
+       _item = null,
+       _itemMode = null,
+       _sefariaRef = null;
 
   /// Renders a single segment from level metadata. Use inside trees and
   /// hierarchical lists where the row's position supplies parent context —
@@ -58,15 +58,15 @@ class CurriculumLabel extends ConsumerWidget {
     this.textAlign,
     this.textDirection,
     super.key,
-  })  : _kind = _Kind.level,
-        _curriculumId = curriculumId,
-        _level = level,
-        _rawValue = rawValue,
-        _parentL1Value = parentL1Value,
-        _hebrewName = hebrewName,
-        _item = null,
-        _itemMode = null,
-        _sefariaRef = null;
+  }) : _kind = _Kind.level,
+       _curriculumId = curriculumId,
+       _level = level,
+       _rawValue = rawValue,
+       _parentL1Value = parentL1Value,
+       _hebrewName = hebrewName,
+       _item = null,
+       _itemMode = null,
+       _sefariaRef = null;
 
   /// Renders a label from an already-loaded [ContentItem]. Sync.
   const CurriculumLabel.item(
@@ -78,15 +78,15 @@ class CurriculumLabel extends ConsumerWidget {
     this.textAlign,
     this.textDirection,
     super.key,
-  })  : _kind = _Kind.item,
-        _curriculumId = null,
-        _level = null,
-        _rawValue = null,
-        _parentL1Value = null,
-        _hebrewName = null,
-        _item = item,
-        _itemMode = mode,
-        _sefariaRef = null;
+  }) : _kind = _Kind.item,
+       _curriculumId = null,
+       _level = null,
+       _rawValue = null,
+       _parentL1Value = null,
+       _hebrewName = null,
+       _item = item,
+       _itemMode = mode,
+       _sefariaRef = null;
 
   /// Full breadcrumb for [sefariaRef] (e.g. "זרעים › ברכות › פרק א"). Async.
   const CurriculumLabel.breadcrumb(
@@ -97,15 +97,15 @@ class CurriculumLabel extends ConsumerWidget {
     this.textAlign,
     this.textDirection,
     super.key,
-  })  : _kind = _Kind.breadcrumb,
-        _curriculumId = null,
-        _level = null,
-        _rawValue = null,
-        _parentL1Value = null,
-        _hebrewName = null,
-        _item = null,
-        _itemMode = null,
-        _sefariaRef = sefariaRef;
+  }) : _kind = _Kind.breadcrumb,
+       _curriculumId = null,
+       _level = null,
+       _rawValue = null,
+       _parentL1Value = null,
+       _hebrewName = null,
+       _item = null,
+       _itemMode = null,
+       _sefariaRef = sefariaRef;
 
   /// Leaf segment of [sefariaRef] (e.g. "משנה א"). Async.
   const CurriculumLabel.local(
@@ -116,15 +116,15 @@ class CurriculumLabel extends ConsumerWidget {
     this.textAlign,
     this.textDirection,
     super.key,
-  })  : _kind = _Kind.local,
-        _curriculumId = null,
-        _level = null,
-        _rawValue = null,
-        _parentL1Value = null,
-        _hebrewName = null,
-        _item = null,
-        _itemMode = null,
-        _sefariaRef = sefariaRef;
+  }) : _kind = _Kind.local,
+       _curriculumId = null,
+       _level = null,
+       _rawValue = null,
+       _parentL1Value = null,
+       _hebrewName = null,
+       _item = null,
+       _itemMode = null,
+       _sefariaRef = sefariaRef;
 
   /// Parent segment of [sefariaRef] (one level above leaf). Async. Renders
   /// nothing if the ref is already at level 1.
@@ -136,15 +136,15 @@ class CurriculumLabel extends ConsumerWidget {
     this.textAlign,
     this.textDirection,
     super.key,
-  })  : _kind = _Kind.parent,
-        _curriculumId = null,
-        _level = null,
-        _rawValue = null,
-        _parentL1Value = null,
-        _hebrewName = null,
-        _item = null,
-        _itemMode = null,
-        _sefariaRef = sefariaRef;
+  }) : _kind = _Kind.parent,
+       _curriculumId = null,
+       _level = null,
+       _rawValue = null,
+       _parentL1Value = null,
+       _hebrewName = null,
+       _item = null,
+       _itemMode = null,
+       _sefariaRef = sefariaRef;
 
   final _Kind _kind;
   final CurriculumId? _curriculumId;
@@ -191,21 +191,27 @@ class CurriculumLabel extends ConsumerWidget {
         return _text(_renderItem(useHebrew, variant));
       case _Kind.breadcrumb:
         final r = _sefariaRef!;
-        return ref.watch(renderedDisplayForRefProvider(r)).when(
+        return ref
+            .watch(renderedDisplayForRefProvider(r))
+            .when(
               data: _text,
               loading: () => _text('​'),
               error: (_, __) => _text(r.replaceAll('_', ' ')),
             );
       case _Kind.local:
         final r = _sefariaRef!;
-        return ref.watch(renderedLeafForRefProvider(r)).when(
+        return ref
+            .watch(renderedLeafForRefProvider(r))
+            .when(
               data: _text,
               loading: () => _text('​'),
               error: (_, __) => _text(r.replaceAll('_', ' ')),
             );
       case _Kind.parent:
         final r = _sefariaRef!;
-        return ref.watch(renderedParentForRefProvider(r)).when(
+        return ref
+            .watch(renderedParentForRefProvider(r))
+            .when(
               data: (s) => _text(s ?? ''),
               loading: () => _text('​'),
               error: (_, __) => _text(''),
@@ -239,13 +245,13 @@ class CurriculumLabel extends ConsumerWidget {
   }
 
   Widget _text(String text) => Text(
-        text,
-        style: style,
-        maxLines: maxLines,
-        overflow: overflow,
-        textAlign: textAlign,
-        textDirection: textDirection,
-      );
+    text,
+    style: style,
+    maxLines: maxLines,
+    overflow: overflow,
+    textAlign: textAlign,
+    textDirection: textDirection,
+  );
 }
 
 enum _Kind { curriculum, level, item, breadcrumb, local, parent }
@@ -261,10 +267,7 @@ String _curriculumLabel(CurriculumId curriculum, bool useHebrew) =>
 /// dialog messages, sort keys, semantics labels — places that need a `String`
 /// rather than a widget. Watches [hebrewTermsScriptProvider]. Use this from
 /// widgets (ConsumerWidget, Consumer, hooks_riverpod).
-String curriculumLabelText(
-  WidgetRef ref, {
-  required CurriculumId curriculum,
-}) =>
+String curriculumLabelText(WidgetRef ref, {required CurriculumId curriculum}) =>
     _curriculumLabel(curriculum, ref.watch(hebrewTermsScriptProvider));
 
 /// Same as [curriculumLabelText] but takes a provider-side [Ref]. Use this
@@ -274,14 +277,14 @@ String curriculumLabelText(
 String curriculumLabelTextFromRef(
   Ref ref, {
   required CurriculumId curriculum,
-}) =>
-    _curriculumLabel(curriculum, ref.watch(hebrewTermsScriptProvider));
+}) => _curriculumLabel(curriculum, ref.watch(hebrewTermsScriptProvider));
 
 /// Returns the Hebrew form of a curriculum's name unconditionally. Use only
 /// when both forms must be shown simultaneously (dual-language presentations
 /// like the Lifetime curriculum row). Everywhere else, use [CurriculumLabel]
 /// or [curriculumLabelText] so the Hebrew Terms toggle is respected.
-String curriculumHebrewName(CurriculumId curriculum) => curriculum.displayNameHe;
+String curriculumHebrewName(CurriculumId curriculum) =>
+    curriculum.displayNameHe;
 
 /// Returns the English transliteration of a curriculum's name unconditionally.
 /// Use ONLY for stable English-locale sort keys / locale-independent identifiers

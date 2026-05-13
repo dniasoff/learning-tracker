@@ -115,9 +115,7 @@ void main() {
         totalUniqueUnits: 1,
       );
 
-      await tester.pumpWidget(
-        _wrap(JourneyGroupedView(viewModel: viewModel)),
-      );
+      await tester.pumpWidget(_wrap(JourneyGroupedView(viewModel: viewModel)));
       await tester.pumpAndSettle();
 
       expect(find.text('משניות'), findsWidgets);
@@ -171,9 +169,7 @@ void main() {
         totalUniqueUnits: 63,
       );
 
-      await tester.pumpWidget(
-        _wrap(JourneyGroupedView(viewModel: viewModel)),
-      );
+      await tester.pumpWidget(_wrap(JourneyGroupedView(viewModel: viewModel)));
       await tester.pumpAndSettle();
 
       expect(find.byType(MilestoneBadge), findsOneWidget);
@@ -215,9 +211,7 @@ void main() {
         totalUniqueUnits: 1,
       );
 
-      await tester.pumpWidget(
-        _wrap(JourneyGroupedView(viewModel: viewModel)),
-      );
+      await tester.pumpWidget(_wrap(JourneyGroupedView(viewModel: viewModel)));
       await tester.pumpAndSettle();
 
       expect(find.textContaining('2 completions'), findsOneWidget);
@@ -261,9 +255,7 @@ void main() {
         totalUniqueUnits: 2,
       );
 
-      await tester.pumpWidget(
-        _wrap(JourneyTimelineView(viewModel: viewModel)),
-      );
+      await tester.pumpWidget(_wrap(JourneyTimelineView(viewModel: viewModel)));
       await tester.pumpAndSettle();
 
       // Month headers should appear
@@ -315,9 +307,7 @@ void main() {
         totalUniqueUnits: 1,
       );
 
-      await tester.pumpWidget(
-        _wrap(JourneyTimelineView(viewModel: viewModel)),
-      );
+      await tester.pumpWidget(_wrap(JourneyTimelineView(viewModel: viewModel)));
       await tester.pumpAndSettle();
 
       expect(find.byType(TrackTypeBadge), findsOneWidget);

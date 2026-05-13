@@ -78,10 +78,8 @@ class ContentItemTile extends ConsumerWidget {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (_) => _StageBreakdownSheet(
-        curriculumId: curriculum.storageKey,
-        item: item,
-      ),
+      builder: (_) =>
+          _StageBreakdownSheet(curriculumId: curriculum.storageKey, item: item),
     );
   }
 
@@ -178,10 +176,7 @@ class AggregateCompletionIndicator extends StatelessWidget {
 
 /// Bottom sheet showing per-stage breakdown for a content item (AC-5).
 class _StageBreakdownSheet extends ConsumerWidget {
-  const _StageBreakdownSheet({
-    required this.curriculumId,
-    required this.item,
-  });
+  const _StageBreakdownSheet({required this.curriculumId, required this.item});
 
   final String curriculumId;
   final ContentItem item;

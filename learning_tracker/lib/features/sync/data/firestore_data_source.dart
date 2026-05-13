@@ -18,6 +18,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 ///   per-curriculum tracks. Document includes `schema_version` (see
 ///   [SyncEngine] gamification payload).
 /// - `users/{uid}/learner_profiles/{profileId}/ui_preferences/data` - Locale, calendar, text display, learning-order prefs
+/// - `users/{uid}/learner_profiles/{profileId}/learning_order/{curriculumId}_{sefariaRef}` - Learning order (LWW, deterministic doc ID)
 /// - `users/{uid}/learner_profiles/{profileId}/active_curricula/data` - Active curricula
 /// - `users/{uid}/learner_profiles/{profileId}/curriculum_tracks/{curriculumId}_{trackType}` - Track state + progress schema (LWW)
 /// - `users/{uid}/profile/data` - User profile (account-level, not profile-scoped)
@@ -886,6 +887,61 @@ class FirestoreDataSource {
 
     final snapshot = await collection.doc(curriculumId).get();
     return snapshot.data();
+  }
+
+  // ========== Learning Order Operations ==========
+
+  /// Get learning_order collection (profile-scoped).
+  CollectionReference<Map<String, dynamic>>? get _learningOrderCollection {
+    return _profileScopedDoc?.collection('learning_order');
+  }
+
+  /// Push a single learning-order item to Firestore (LWW).
+  ///
+  /// Doc ID is `{curriculumId}_{sefariaRef}` (Pattern P4 — deterministic).
+  Future<void> pushLearningOrderItem(Map<String, dynamic> itemData) async {
+    await _ensureProfilePathReady();
+    final collection = _learningOrderCollection;
+    if (collection == null) {
+      throw Exception('User not authenticated');
+    }
+
+    final curriculumId = itemData['curriculum_id']?.toString();
+    final sefariaRef = itemData['sefaria_ref']?.toString();
+    if (curriculumId == null || sefariaRef == null) {
+      throw Exception(
+        'Learning order item must have curriculum_id and sefaria_ref',
+      );
+    }
+
+    final docId = '${curriculumId}_$sefariaRef';
+    await collection.doc(docId).set({
+      ...itemData,
+      'updated_at': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+  }
+
+  /// Fetch all learning-order items from Firestore with pagination.
+  Future<List<Map<String, dynamic>>> fetchLearningOrder({
+    int pageSize = defaultPageSize,
+  }) async {
+    await _ensureProfilePathReady();
+    final collection = _learningOrderCollection;
+    if (collection == null) return [];
+
+    return _fetchPaginated(collection, pageSize: pageSize);
+  }
+
+  /// Listen to real-time learning-order updates.
+  Stream<List<Map<String, dynamic>>> listenToLearningOrder() {
+    final collection = _learningOrderCollection;
+    if (collection == null) {
+      return Stream.value([]);
+    }
+
+    return collection.snapshots().map(
+      (snapshot) => snapshot.docs.map((doc) => doc.data()).toList(),
+    );
   }
 
   // ========== Pagination Helper ==========

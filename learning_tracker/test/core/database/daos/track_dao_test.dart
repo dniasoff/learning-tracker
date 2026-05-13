@@ -171,20 +171,17 @@ void main() {
       },
     );
 
-    test(
-      'getActiveTracksForProfile excludes soft-deleted tracks',
-      () async {
-        final trackId = await insertTrack(profileId: 42);
+    test('getActiveTracksForProfile excludes soft-deleted tracks', () async {
+      final trackId = await insertTrack(profileId: 42);
 
-        final before = await database.trackDao.getActiveTracksForProfile(42);
-        expect(before, hasLength(1));
+      final before = await database.trackDao.getActiveTracksForProfile(42);
+      expect(before, hasLength(1));
 
-        await database.trackDao.deleteTrackAndData(trackId);
+      await database.trackDao.deleteTrackAndData(trackId);
 
-        final after = await database.trackDao.getActiveTracksForProfile(42);
-        expect(after, isEmpty);
-      },
-    );
+      final after = await database.trackDao.getActiveTracksForProfile(42);
+      expect(after, isEmpty);
+    });
 
     test('watchActiveTracksForProfile excludes soft-deleted tracks', () async {
       final trackId = await insertTrack(profileId: 7);
@@ -205,45 +202,36 @@ void main() {
     test('countActiveTracksForProfile excludes soft-deleted tracks', () async {
       final trackId = await insertTrack(profileId: 5);
 
-      expect(
-        await database.trackDao.countActiveTracksForProfile(5),
-        equals(1),
+      expect(await database.trackDao.countActiveTracksForProfile(5), equals(1));
+
+      await database.trackDao.deleteTrackAndData(trackId);
+
+      expect(await database.trackDao.countActiveTracksForProfile(5), equals(0));
+    });
+
+    test('completions are NOT deleted when a track is soft-deleted', () async {
+      final trackId = await insertTrack();
+
+      // Insert a completion referencing the track.
+      await database.completionDao.insertCompletion(
+        CompletionsCompanion.insert(
+          curriculumId: 'bavli',
+          sefariaRef: 'Berakhot.2a',
+          stageId: 1,
+          trackType: 'personal',
+          trackId: trackId,
+          completedAt: DateTime.now().toUtc(),
+        ),
       );
 
       await database.trackDao.deleteTrackAndData(trackId);
 
-      expect(
-        await database.trackDao.countActiveTracksForProfile(5),
-        equals(0),
+      // Completion must still exist (append-only invariant).
+      final completions = await database.completionDao.getCompletionsByTrack(
+        trackId,
       );
+      expect(completions, hasLength(1));
     });
-
-    test(
-      'completions are NOT deleted when a track is soft-deleted',
-      () async {
-        final trackId = await insertTrack();
-
-        // Insert a completion referencing the track.
-        await database.completionDao.insertCompletion(
-          CompletionsCompanion.insert(
-            curriculumId: 'bavli',
-            sefariaRef: 'Berakhot.2a',
-            stageId: 1,
-            trackType: 'personal',
-            trackId: trackId,
-            completedAt: DateTime.now().toUtc(),
-          ),
-        );
-
-        await database.trackDao.deleteTrackAndData(trackId);
-
-        // Completion must still exist (append-only invariant).
-        final completions = await database.completionDao.getCompletionsByTrack(
-          trackId,
-        );
-        expect(completions, hasLength(1));
-      },
-    );
 
     test(
       'deleteByTrack does not exist on CompletionDao (append-only invariant)',
@@ -254,7 +242,11 @@ void main() {
         // We can't test for a missing method at runtime; the build_runner
         // code-gen step (and dart analyze) would have caught any remaining
         // call-site. This test documents the invariant.
-        expect(true, isTrue, reason: 'deleteByTrack was removed from CompletionDao');
+        expect(
+          true,
+          isTrue,
+          reason: 'deleteByTrack was removed from CompletionDao',
+        );
       },
     );
   });

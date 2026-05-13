@@ -541,7 +541,8 @@ List<LifetimeTreeNode> _buildTree(
       // ordinal levels (Perek, Mishnah, Daf, Pasuk) and strips the structural
       // prefix for named levels (Masechta, Seder).
       final levelKey = _levelLookupKey(entry.value.first, level);
-      final hebrewName = heLabelLookup[levelKey] ??
+      final hebrewName =
+          heLabelLookup[levelKey] ??
           (level == 4 ? _hebrewLabelForLeafGroup(entry.value) : null);
       nodes.add(
         LifetimeTreeNode(
