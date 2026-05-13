@@ -8,6 +8,7 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/network/connectivity_service.dart';
+import 'package:learning_tracker/core/time/ulid.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/gamification/domain/services/reward_milestone_service.dart';
 import 'package:learning_tracker/features/sync/data/firestore_data_source.dart';
@@ -1160,9 +1161,15 @@ class SyncEngine {
         );
 
         if (!exists) {
+          final remoteUlid = remote['ulid'] as String?;
           await _database.learningLedgerDao.insertEntry(
             LearningLedgerCompanion.insert(
               profileId: profileId,
+              ulid: Value(
+                remoteUlid != null && remoteUlid.isNotEmpty
+                    ? remoteUlid
+                    : newUlid(completedAt),
+              ),
               curriculumId: curriculumId,
               unitType: remote['unitType'] as String? ?? 'masechta',
               unitIdentifier: unitIdentifier,

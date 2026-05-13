@@ -170,6 +170,7 @@ void main() {
             id: 0,
             profileId: 1,
             eventType: 'completion',
+            dayUtc: DateTime.utc(2026, 1, 1),
             eventTimestamp: DateTime.utc(2026, 1, 1),
             clientDeviceId: 'A',
             createdAt: DateTime.utc(2026, 1, 1),
@@ -178,6 +179,7 @@ void main() {
             id: 0,
             profileId: 1,
             eventType: 'completion',
+            dayUtc: DateTime.utc(2026, 1, 3),
             eventTimestamp: DateTime.utc(2026, 1, 3),
             clientDeviceId: 'B',
             createdAt: DateTime.utc(2026, 1, 3),
@@ -186,6 +188,7 @@ void main() {
             id: 0,
             profileId: 1,
             eventType: 'completion',
+            dayUtc: DateTime.utc(2026, 1, 2),
             eventTimestamp: DateTime.utc(2026, 1, 2),
             clientDeviceId: 'A',
             createdAt: DateTime.utc(2026, 1, 2),
@@ -232,6 +235,7 @@ void main() {
     group('Story 20.11 — completion tee pipeline', () {
       test('idempotent tee: same completion twice → one event row', () async {
         final at = DateTime.utc(2026, 3, 1);
+        final day = DateTime.utc(at.year, at.month, at.day);
         for (var i = 0; i < 3; i++) {
           await db
               .into(db.streakEvents)
@@ -239,6 +243,7 @@ void main() {
                 StreakEventsCompanion.insert(
                   profileId: 99,
                   eventType: 'completion',
+                  dayUtc: day,
                   eventTimestamp: at,
                 ),
                 mode: InsertMode.insertOrIgnore,

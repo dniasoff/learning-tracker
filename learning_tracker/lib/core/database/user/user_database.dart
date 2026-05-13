@@ -2,6 +2,7 @@ import 'package:drift/drift.dart';
 import 'package:learning_tracker/core/database/daos/active_curriculum_dao.dart';
 import 'package:learning_tracker/core/database/daos/bookmark_dao.dart';
 import 'package:learning_tracker/core/database/daos/completion_dao.dart';
+import 'package:learning_tracker/core/database/daos/completion_event_dao.dart';
 import 'package:learning_tracker/core/database/daos/curriculum_scope_dao.dart';
 import 'package:learning_tracker/core/database/daos/daily_plan_dao.dart';
 import 'package:learning_tracker/core/database/daos/goal_dao.dart';
@@ -13,6 +14,7 @@ import 'package:learning_tracker/core/database/daos/profile_dao.dart';
 import 'package:learning_tracker/core/database/daos/profile_program_dao.dart';
 import 'package:learning_tracker/core/database/daos/stage_dao.dart';
 import 'package:learning_tracker/core/database/daos/streak_dao.dart';
+import 'package:learning_tracker/core/database/daos/streak_event_dao.dart';
 import 'package:learning_tracker/core/database/daos/study_day_config_dao.dart';
 import 'package:learning_tracker/core/database/daos/sync_queue_dao.dart';
 import 'package:learning_tracker/core/database/daos/text_download_status_dao.dart';
@@ -21,6 +23,7 @@ import 'package:learning_tracker/core/database/daos/track_learning_order_dao.dar
 import 'package:learning_tracker/core/database/daos/user_profile_dao.dart';
 import 'package:learning_tracker/core/database/tables/accounts.dart';
 import 'package:learning_tracker/core/database/tables/bookmarks.dart';
+import 'package:learning_tracker/core/database/tables/completion_events.dart';
 import 'package:learning_tracker/core/database/tables/completions.dart';
 import 'package:learning_tracker/core/database/tables/curriculum_scopes.dart';
 import 'package:learning_tracker/core/database/tables/curriculum_tracks.dart';
@@ -39,6 +42,7 @@ import 'package:learning_tracker/core/database/tables/study_day_configs.dart';
 import 'package:learning_tracker/core/database/tables/sync_queue.dart';
 import 'package:learning_tracker/core/database/tables/text_download_status.dart';
 import 'package:learning_tracker/core/database/tables/track_learning_order.dart';
+import 'package:learning_tracker/core/time/ulid.dart';
 
 part 'user_database.g.dart';
 
@@ -64,6 +68,7 @@ part 'user_database.g.dart';
     PointConfigs,
     StudyDayConfigs,
     Completions,
+    CompletionEvents,
     DailyPlans,
     LearningLedger,
     Bookmarks,
@@ -80,6 +85,7 @@ part 'user_database.g.dart';
     ActiveCurriculumDao,
     CurriculumScopeDao,
     CompletionDao,
+    CompletionEventDao,
     DailyPlanDao,
     LearningLedgerDao,
     GoalDao,
@@ -92,6 +98,7 @@ part 'user_database.g.dart';
     ProfileDao,
     UserProfileDao,
     StreakDao,
+    StreakEventDao,
     SyncQueueDao,
     TextDownloadStatusDao,
     StudyDayConfigDao,
@@ -103,12 +110,10 @@ class UserDatabase extends _$UserDatabase {
   UserDatabase(super.e);
 
   @override
-  int get schemaVersion => 13;
+  int get schemaVersion => 14;
 
   @override
   MigrationStrategy get migration {
-    return MigrationStrategy(
-      onCreate: (Migrator m) => m.createAll(),
-    );
+    return MigrationStrategy(onCreate: (Migrator m) => m.createAll());
   }
 }

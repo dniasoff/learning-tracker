@@ -218,41 +218,35 @@ void main() {
 
     // ========== DNI-321: CrossProfileScope assertion tests ==========
 
-    test(
-      'getAllCompletions throws AssertionError in debug when scope is null '
-      '(bypassing type system via dynamic cast)',
-      () async {
-        // `scope` is required and non-nullable at the API level, but the
-        // assert inside _assertCrossProfileScope guards against any future
-        // nullable path or dynamic invocation.  We simulate a null scope via
-        // a dynamic cast to verify the assert fires in debug mode.
-        CrossProfileScope? nullableScope;
-        expect(
-          () => database.completionDao.getAllCompletions(
-            // ignore: null_check_always_fails — intentional null for assert test
-            scope: nullableScope!,
-          ),
-          throwsA(isA<TypeError>()),
-          // In Dart, `nullableScope!` where nullableScope is null throws
-          // TypeError (Null check operator used on a null value) which is
-          // what the assert-equivalent runtime check produces.
-        );
-      },
-    );
+    test('getAllCompletions throws AssertionError in debug when scope is null '
+        '(bypassing type system via dynamic cast)', () async {
+      // `scope` is required and non-nullable at the API level, but the
+      // assert inside _assertCrossProfileScope guards against any future
+      // nullable path or dynamic invocation.  We simulate a null scope via
+      // a dynamic cast to verify the assert fires in debug mode.
+      CrossProfileScope? nullableScope;
+      expect(
+        () => database.completionDao.getAllCompletions(
+          // ignore: null_check_always_fails — intentional null for assert test
+          scope: nullableScope!,
+        ),
+        throwsA(isA<TypeError>()),
+        // In Dart, `nullableScope!` where nullableScope is null throws
+        // TypeError (Null check operator used on a null value) which is
+        // what the assert-equivalent runtime check produces.
+      );
+    });
   });
 
   group('CrossProfileScope — debug guard', () {
-    test(
-      'passing explicit scope does not throw',
-      () async {
-        // All enum values should be accepted without error.
-        for (final scope in CrossProfileScope.values) {
-          await expectLater(
-            database.completionDao.getAllCompletions(scope: scope),
-            completes,
-          );
-        }
-      },
-    );
+    test('passing explicit scope does not throw', () async {
+      // All enum values should be accepted without error.
+      for (final scope in CrossProfileScope.values) {
+        await expectLater(
+          database.completionDao.getAllCompletions(scope: scope),
+          completes,
+        );
+      }
+    });
   });
 }

@@ -1,5 +1,6 @@
 import 'package:drift/drift.dart' as drift;
 import 'package:learning_tracker/core/database/user/user_database.dart';
+import 'package:learning_tracker/core/time/ulid.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/learning_ledger_repository.dart';
 import 'package:learning_tracker/features/sync/data/sync_engine.dart';
@@ -81,6 +82,7 @@ class LearningLedgerRepositoryImpl implements LearningLedgerRepository {
     final id = await _database.learningLedgerDao.insertEntry(
       LearningLedgerCompanion.insert(
         profileId: _activeProfileId,
+        ulid: drift.Value(newUlid(now)),
         curriculumId: curriculumId,
         unitType: unitType,
         unitIdentifier: unitIdentifier,
@@ -135,6 +137,7 @@ class LearningLedgerRepositoryImpl implements LearningLedgerRepository {
         final id = await _database.learningLedgerDao.insertEntry(
           LearningLedgerCompanion.insert(
             profileId: _activeProfileId,
+            ulid: drift.Value(newUlid(now)),
             curriculumId: item.curriculumId,
             unitType: item.unitType,
             unitIdentifier: item.unitIdentifier,

@@ -14,20 +14,18 @@ typedef ProfilesCompanion = LearnerProfilesCompanion;
 
 /// DAO for the learner_profiles table (was: profiles table).
 @DriftAccessor(tables: [LearnerProfiles])
-class ProfileDao extends DatabaseAccessor<UserDatabase>
-    with _$ProfileDaoMixin {
+class ProfileDao extends DatabaseAccessor<UserDatabase> with _$ProfileDaoMixin {
   ProfileDao(super.db);
 
   /// Get all profiles for an account.
-  Future<List<LearnerProfile>> getProfilesByAccount(int accountId) =>
-      (select(learnerProfiles)
-            ..where((t) => t.accountId.equals(accountId)))
-          .get();
+  Future<List<LearnerProfile>> getProfilesByAccount(int accountId) => (select(
+    learnerProfiles,
+  )..where((t) => t.accountId.equals(accountId))).get();
 
   /// Get a single profile by ID.
-  Future<LearnerProfile?> getProfileById(int id) =>
-      (select(learnerProfiles)..where((t) => t.id.equals(id)))
-          .getSingleOrNull();
+  Future<LearnerProfile?> getProfileById(int id) => (select(
+    learnerProfiles,
+  )..where((t) => t.id.equals(id))).getSingleOrNull();
 
   /// Count profiles for an account.
   Future<int> countProfilesForAccount(int accountId) async {
@@ -69,8 +67,7 @@ class ProfileDao extends DatabaseAccessor<UserDatabase>
   }
 
   /// Watch all profiles for an account.
-  Stream<List<LearnerProfile>> watchProfilesByAccount(int accountId) =>
-      (select(learnerProfiles)
-            ..where((t) => t.accountId.equals(accountId)))
-          .watch();
+  Stream<List<LearnerProfile>> watchProfilesByAccount(int accountId) => (select(
+    learnerProfiles,
+  )..where((t) => t.accountId.equals(accountId))).watch();
 }

@@ -36,10 +36,9 @@ class UserProfileDao extends DatabaseAccessor<UserDatabase>
   Future<Account?> getUserProfileById(int id) =>
       (select(accounts)..where((t) => t.id.equals(id))).getSingleOrNull();
 
-  Future<Account?> getUserProfileByFirebaseUid(String firebaseUid) =>
-      (select(
-        accounts,
-      )..where((t) => t.firebaseUid.equals(firebaseUid))).getSingleOrNull();
+  Future<Account?> getUserProfileByFirebaseUid(String firebaseUid) => (select(
+    accounts,
+  )..where((t) => t.firebaseUid.equals(firebaseUid))).getSingleOrNull();
 
   /// Find the local-born account matching an email. Returns null if no
   /// local-born row exists with that email (cloud-born rows are ignored).
@@ -120,9 +119,7 @@ class UserProfileDao extends DatabaseAccessor<UserDatabase>
         ),
       );
     } else if (updatedAt.isAfter(existing.updatedAt)) {
-      await (update(
-        accounts,
-      )..where((t) => t.id.equals(existing.id))).write(
+      await (update(accounts)..where((t) => t.id.equals(existing.id))).write(
         AccountsCompanion(
           displayName: Value(displayName),
           userMode: Value(userMode),

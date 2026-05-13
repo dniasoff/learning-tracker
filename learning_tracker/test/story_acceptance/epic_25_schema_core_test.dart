@@ -100,10 +100,7 @@ void main() {
         List<Variable> variables = const [],
       }) async {
         final rows = await db
-            .customSelect(
-              'EXPLAIN QUERY PLAN $sql',
-              variables: variables,
-            )
+            .customSelect('EXPLAIN QUERY PLAN $sql', variables: variables)
             .get();
         return rows.map((r) => r.data).toList();
       }
@@ -120,45 +117,44 @@ void main() {
 
       // ── 1. Index existence ───────────────────────────────────────────────
 
-      test(
-        'completions has composite index '
-        'completions_pidx_pid_cur_completed on '
-        '(profileId, curriculumId, completedAt DESC)',
-        () async {
-          final indexes = await indexNamesForTable('completions');
-          expect(
-            indexes,
-            contains('completions_pidx_pid_cur_completed'),
-            reason: 'AR4 hot-path composite index missing on completions',
-          );
+      test('completions has composite index '
+          'completions_pidx_pid_cur_completed on '
+          '(profileId, curriculumId, completedAt DESC)', () async {
+        final indexes = await indexNamesForTable('completions');
+        expect(
+          indexes,
+          contains('completions_pidx_pid_cur_completed'),
+          reason: 'AR4 hot-path composite index missing on completions',
+        );
 
-          final master = await db.customSelect(
-            "SELECT sql FROM sqlite_master WHERE type = 'index' "
-            "AND name = 'completions_pidx_pid_cur_completed'",
-          ).getSingleOrNull();
-          final sql = (master?.read<String?>('sql') ?? '').toLowerCase();
-          expect(
-            sql,
-            contains('profile_id'),
-            reason: 'Index must include profileId',
-          );
-          expect(
-            sql,
-            contains('curriculum_id'),
-            reason: 'Index must include curriculumId',
-          );
-          expect(
-            sql,
-            contains('completed_at'),
-            reason: 'Index must include completedAt',
-          );
-          expect(
-            sql,
-            contains('desc'),
-            reason: 'completedAt column must be ordered DESC for AR4',
-          );
-        },
-      );
+        final master = await db
+            .customSelect(
+              "SELECT sql FROM sqlite_master WHERE type = 'index' "
+              "AND name = 'completions_pidx_pid_cur_completed'",
+            )
+            .getSingleOrNull();
+        final sql = (master?.read<String?>('sql') ?? '').toLowerCase();
+        expect(
+          sql,
+          contains('profile_id'),
+          reason: 'Index must include profileId',
+        );
+        expect(
+          sql,
+          contains('curriculum_id'),
+          reason: 'Index must include curriculumId',
+        );
+        expect(
+          sql,
+          contains('completed_at'),
+          reason: 'Index must include completedAt',
+        );
+        expect(
+          sql,
+          contains('desc'),
+          reason: 'completedAt column must be ordered DESC for AR4',
+        );
+      });
 
       test(
         'completions has composite index on '
@@ -182,11 +178,13 @@ void main() {
                 '(profileId, sefariaRef, stageId, trackType)',
           );
 
-          final master = await db.customSelect(
-            'SELECT sql FROM sqlite_master '
-            "WHERE type = 'index' AND name = ?",
-            variables: [Variable.withString(natKey)],
-          ).getSingleOrNull();
+          final master = await db
+              .customSelect(
+                'SELECT sql FROM sqlite_master '
+                "WHERE type = 'index' AND name = ?",
+                variables: [Variable.withString(natKey)],
+              )
+              .getSingleOrNull();
           final sql = (master?.read<String?>('sql') ?? '').toLowerCase();
           expect(sql, contains('profile_id'));
           expect(sql, contains('sefaria_ref'));
@@ -210,11 +208,13 @@ void main() {
                 'AR4 hot-path index missing on learning_ledger(profileId, createdAt)',
           );
 
-          final master = await db.customSelect(
-            'SELECT sql FROM sqlite_master '
-            "WHERE type = 'index' AND name = ?",
-            variables: [Variable.withString(ledgerHotPath)],
-          ).getSingleOrNull();
+          final master = await db
+              .customSelect(
+                'SELECT sql FROM sqlite_master '
+                "WHERE type = 'index' AND name = ?",
+                variables: [Variable.withString(ledgerHotPath)],
+              )
+              .getSingleOrNull();
           final sql = (master?.read<String?>('sql') ?? '').toLowerCase();
           expect(sql, contains('profile_id'));
           expect(sql, contains('created_at'));
@@ -229,10 +229,12 @@ void main() {
           // via Drift's `uniqueKeys`, which produces an auto-index
           // (sqlite_autoindex_streak_events_*). Either shape satisfies AR4
           // as long as a UNIQUE composite index is present.
-          final pragmaRows = await db.customSelect(
-            'SELECT name, "unique" AS u FROM pragma_index_list(?)',
-            variables: [Variable.withString('streak_events')],
-          ).get();
+          final pragmaRows = await db
+              .customSelect(
+                'SELECT name, "unique" AS u FROM pragma_index_list(?)',
+                variables: [Variable.withString('streak_events')],
+              )
+              .get();
           final uniqueIndexes = pragmaRows
               .where((r) => r.read<int>('u') == 1)
               .map((r) => r.read<String>('name'))
@@ -250,24 +252,21 @@ void main() {
 
       // ── 2. EXPLAIN QUERY PLAN — SEARCH not SCAN ──────────────────────────
 
-      test(
-        'dashboard completions query uses index, not table scan',
-        () async {
-          final plan = await explain(
-            'SELECT * FROM completions '
-            'WHERE profile_id = ? AND curriculum_id = ? '
-            'ORDER BY completed_at DESC',
-            variables: [Variable.withInt(1), Variable.withString('shas-bavli')],
-          );
-          expect(
-            planUsesIndex(plan, 'completions'),
-            isTrue,
-            reason:
-                'EXPLAIN should report SEARCH ... USING INDEX, not SCAN '
-                'TABLE — got: $plan',
-          );
-        },
-      );
+      test('dashboard completions query uses index, not table scan', () async {
+        final plan = await explain(
+          'SELECT * FROM completions '
+          'WHERE profile_id = ? AND curriculum_id = ? '
+          'ORDER BY completed_at DESC',
+          variables: [Variable.withInt(1), Variable.withString('shas-bavli')],
+        );
+        expect(
+          planUsesIndex(plan, 'completions'),
+          isTrue,
+          reason:
+              'EXPLAIN should report SEARCH ... USING INDEX, not SCAN '
+              'TABLE — got: $plan',
+        );
+      });
 
       test(
         'learning_ledger lifetime aggregation query uses index, not scan',
@@ -288,23 +287,20 @@ void main() {
         },
       );
 
-      test(
-        'streak_events query uses index, not table scan',
-        () async {
-          // Use only profileId — the index leading column must enable SEARCH.
-          final plan = await explain(
-            'SELECT * FROM streak_events WHERE profile_id = ?',
-            variables: [Variable.withInt(1)],
-          );
-          expect(
-            planUsesIndex(plan, 'streak_events'),
-            isTrue,
-            reason:
-                'EXPLAIN should report SEARCH ... USING INDEX, not SCAN '
-                'TABLE — got: $plan',
-          );
-        },
-      );
+      test('streak_events query uses index, not table scan', () async {
+        // Use only profileId — the index leading column must enable SEARCH.
+        final plan = await explain(
+          'SELECT * FROM streak_events WHERE profile_id = ?',
+          variables: [Variable.withInt(1)],
+        );
+        expect(
+          planUsesIndex(plan, 'streak_events'),
+          isTrue,
+          reason:
+              'EXPLAIN should report SEARCH ... USING INDEX, not SCAN '
+              'TABLE — got: $plan',
+        );
+      });
     },
   );
 

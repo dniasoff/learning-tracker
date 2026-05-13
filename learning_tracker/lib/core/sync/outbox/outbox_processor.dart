@@ -35,8 +35,8 @@ class OutboxProcessor {
   OutboxProcessor({
     required OutboxDao outboxDao,
     required PushPipeline pipeline,
-  })  : _dao = outboxDao,
-        _pipeline = pipeline;
+  }) : _dao = outboxDao,
+       _pipeline = pipeline;
 
   final OutboxDao _dao;
   final PushPipeline _pipeline;

@@ -21,8 +21,7 @@ class BookmarkDao extends DatabaseAccessor<UserDatabase>
   ) =>
       (select(bookmarks)..where(
             (t) =>
-                t.curriculumId.equals(curriculumId) &
-                t.trackId.equals(trackId),
+                t.curriculumId.equals(curriculumId) & t.trackId.equals(trackId),
           ))
           .getSingleOrNull();
 

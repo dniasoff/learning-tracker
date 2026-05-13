@@ -47,14 +47,16 @@ void main() {
         );
     mishnayosTrackId = mishnayosTrack.id;
 
-    await database.into(database.curriculumTracks).insert(
-      CurriculumTracksCompanion.insert(
-        profileId: 0,
-        curriculumId: CurriculumId.bavli.storageKey,
-        trackType: 'personal',
-        activatedAt: DateTime.now(),
-      ),
-    );
+    await database
+        .into(database.curriculumTracks)
+        .insert(
+          CurriculumTracksCompanion.insert(
+            profileId: 0,
+            curriculumId: CurriculumId.bavli.storageKey,
+            trackType: 'personal',
+            activatedAt: DateTime.now(),
+          ),
+        );
 
     repository = BookmarkRepositoryImpl(
       database: database,

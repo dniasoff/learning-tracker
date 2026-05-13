@@ -44,8 +44,7 @@ class BookmarkRepositoryImpl implements BookmarkRepository {
     final match = tracks
         .where(
           (t) =>
-              t.trackType == trackType.storageKey &&
-              t.profileId == _profileId,
+              t.trackType == trackType.storageKey && t.profileId == _profileId,
         )
         .firstOrNull;
     return match?.id;

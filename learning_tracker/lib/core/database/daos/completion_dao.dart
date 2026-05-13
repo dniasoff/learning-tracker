@@ -33,9 +33,9 @@ class CompletionDao extends DatabaseAccessor<UserDatabase>
     required CrossProfileScope scope,
   }) {
     _assertCrossProfileScope(scope, 'getCompletionsByCurriculum');
-    return (select(completions)
-          ..where((t) => t.curriculumId.equals(curriculumId)))
-        .get();
+    return (select(
+      completions,
+    )..where((t) => t.curriculumId.equals(curriculumId))).get();
   }
 
   Future<List<Completion>> getCompletionsForContent(
@@ -43,8 +43,9 @@ class CompletionDao extends DatabaseAccessor<UserDatabase>
     required CrossProfileScope scope,
   }) {
     _assertCrossProfileScope(scope, 'getCompletionsForContent');
-    return (select(completions)..where((t) => t.sefariaRef.equals(sefariaRef)))
-        .get();
+    return (select(
+      completions,
+    )..where((t) => t.sefariaRef.equals(sefariaRef))).get();
   }
 
   // ========== Profile-Scoped Queries ==========
@@ -285,12 +286,11 @@ class CompletionDao extends DatabaseAccessor<UserDatabase>
     required CrossProfileScope scope,
   }) {
     _assertCrossProfileScope(scope, 'getCompletionsByDateRange');
-    return (select(completions)
-          ..where(
-            (t) =>
-                t.completedAt.isBiggerOrEqualValue(start) &
-                t.completedAt.isSmallerOrEqualValue(end),
-          ))
+    return (select(completions)..where(
+          (t) =>
+              t.completedAt.isBiggerOrEqualValue(start) &
+              t.completedAt.isSmallerOrEqualValue(end),
+        ))
         .get();
   }
 

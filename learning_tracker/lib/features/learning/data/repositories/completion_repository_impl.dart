@@ -591,12 +591,14 @@ class CompletionRepositoryImpl implements CompletionRepository {
     required DateTime at,
   }) async {
     try {
+      final dayUtc = DateTime.utc(at.year, at.month, at.day);
       await _database
           .into(_database.streakEvents)
           .insert(
             StreakEventsCompanion.insert(
               profileId: profileId,
               eventType: 'completion',
+              dayUtc: dayUtc,
               eventTimestamp: at,
             ),
             mode: drift.InsertMode.insertOrIgnore,

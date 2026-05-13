@@ -54,9 +54,11 @@ const _defaultTablesDir = 'learning_tracker/lib/core/database/tables';
 ///     for removal once OutboxProcessor (DNI-326) lands fully.
 const _defaultWhitelist = <String>{
   'Bookmarks',
+  'CompletionEvents',
   'CurriculumScopes',
   'CurriculumTracks',
   'DailyPlans',
+  'LearningLedger',
   'LearningOrder',
   'Outbox',
   'PointConfigs',

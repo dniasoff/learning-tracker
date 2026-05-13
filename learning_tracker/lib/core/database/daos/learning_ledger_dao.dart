@@ -14,8 +14,35 @@ class LearningLedgerDao extends DatabaseAccessor<UserDatabase>
   LearningLedgerDao(super.db);
 
   /// Insert a ledger entry. This is the only write operation allowed.
-  Future<int> insertEntry(LearningLedgerCompanion entry) =>
-      into(learningLedger).insert(entry);
+  ///
+  /// Idempotent on `(profileId, ulid)`: duplicate inserts of the same logical
+  /// entry collapse via `INSERT OR IGNORE` and return the existing row id
+  /// (Story 25.2 / DNI-323).
+  Future<int> insertEntry(LearningLedgerCompanion entry) async {
+    final newId = await into(
+      learningLedger,
+    ).insert(entry, mode: InsertMode.insertOrIgnore);
+    if (newId != 0) return newId;
+    // `INSERT OR IGNORE` collapsed onto an existing row. The companion's
+    // ulid must be present for the dedup to have triggered — look the row
+    // up by (profileId, ulid) and return its id.
+    if (!entry.ulid.present) {
+      throw StateError(
+        'INSERT OR IGNORE collided but the companion has no ulid set — '
+        'cannot resolve the existing row id',
+      );
+    }
+    final row =
+        await (select(learningLedger)
+              ..where(
+                (t) =>
+                    t.profileId.equals(entry.profileId.value) &
+                    t.ulid.equals(entry.ulid.value),
+              )
+              ..limit(1))
+            .getSingle();
+    return row.id;
+  }
 
   /// Fetch a single row by primary key (used after insert instead of loading
   /// the full profile ledger — avoids O(n²) when recording many units).

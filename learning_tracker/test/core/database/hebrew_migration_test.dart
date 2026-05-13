@@ -236,7 +236,7 @@ void main() {
         await db.stageDao.insertStageDefinition(
           StageDefinitionsCompanion.insert(
             profileId: 1,
-          curriculumId: 'bavli',
+            curriculumId: 'bavli',
             trackId: bavliTrackId,
             stageOrder: 1,
             stageName: 'Learn',
@@ -247,7 +247,7 @@ void main() {
         await db.stageDao.insertStageDefinition(
           StageDefinitionsCompanion.insert(
             profileId: 1,
-          curriculumId: 'bavli',
+            curriculumId: 'bavli',
             trackId: bavliTrackId,
             stageOrder: 2,
             stageName: 'Quick Review',
@@ -258,7 +258,7 @@ void main() {
         await db.stageDao.insertStageDefinition(
           StageDefinitionsCompanion.insert(
             profileId: 1,
-          curriculumId: 'bavli',
+            curriculumId: 'bavli',
             trackId: bavliTrackId,
             stageOrder: 3,
             stageName: 'Chazara 2',
