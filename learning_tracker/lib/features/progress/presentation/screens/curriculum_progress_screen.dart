@@ -33,7 +33,7 @@ class CurriculumProgressScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final curriculum = _curriculumEnum();
-    final hebrewOnly = ref.watch(useHebrewTermsProvider);
+    final useHebrew = ref.watch(useHebrewTermsProvider);
     final progressAsync = ref.watch(curriculumProgressProvider(curriculumId));
     final paceAsync = ref.watch(curriculumPaceStatusProvider(curriculumId));
     final curriculumColor = AppTheme.getCurriculumColorByKey(curriculumId);
@@ -73,7 +73,7 @@ class CurriculumProgressScreen extends ConsumerWidget {
                     color: AppTheme.brandInk,
                   ),
                 ),
-              if (curriculum != null && !hebrewOnly)
+              if (curriculum != null && !useHebrew)
                 Text(
                   curriculumHebrewName(curriculum),
                   style: plusJakartaTheme.textTheme.labelSmall?.copyWith(

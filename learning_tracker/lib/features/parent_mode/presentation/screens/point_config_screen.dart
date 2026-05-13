@@ -464,7 +464,7 @@ class _CurriculumPointsCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    final hebrewOnly = ref.watch(useHebrewTermsProvider);
+    final useHebrew = ref.watch(useHebrewTermsProvider);
     return Material(
       color: Colors.white,
       elevation: 2,
@@ -489,7 +489,7 @@ class _CurriculumPointsCard extends ConsumerWidget {
                           color: AppTheme.brandInk,
                         ),
                       ),
-                      if (!hebrewOnly) ...[
+                      if (!useHebrew) ...[
                         const SizedBox(height: 4),
                         Text(
                           curriculumHebrewName(data.curriculum),

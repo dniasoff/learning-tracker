@@ -127,7 +127,7 @@ class _CurriculumTile extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final style = _curriculumStyle(curriculum);
-    final hebrewOnly = ref.watch(useHebrewTermsProvider);
+    final useHebrew = ref.watch(useHebrewTermsProvider);
 
     return DecoratedBox(
       decoration: BoxDecoration(
@@ -181,7 +181,7 @@ class _CurriculumTile extends ConsumerWidget {
                                   fontWeight: FontWeight.w800,
                                 ),
                               ),
-                              if (!hebrewOnly) ...[
+                              if (!useHebrew) ...[
                                 const SizedBox(height: 2),
                                 Text(
                                   curriculumHebrewName(curriculum),

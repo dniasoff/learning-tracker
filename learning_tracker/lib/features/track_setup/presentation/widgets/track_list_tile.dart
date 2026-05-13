@@ -28,7 +28,7 @@ class TrackListTile extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final curriculum = _curriculumId;
-    final hebrewOnly = ref.watch(useHebrewTermsProvider);
+    final useHebrew = ref.watch(useHebrewTermsProvider);
 
     return Card(
       clipBehavior: Clip.antiAlias,
@@ -57,7 +57,7 @@ class TrackListTile extends ConsumerWidget {
                           fontWeight: FontWeight.w600,
                         ),
                       ),
-                    if (curriculum != null && !hebrewOnly) ...[
+                    if (curriculum != null && !useHebrew) ...[
                       const SizedBox(height: 2),
                       Text(
                         curriculumHebrewName(curriculum),

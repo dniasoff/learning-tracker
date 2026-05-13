@@ -131,7 +131,7 @@ class _LifetimeLibraryCategoryCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
-    final hebrewOnly = ref.watch(useHebrewTermsProvider);
+    final useHebrew = ref.watch(useHebrewTermsProvider);
     final summary =
         summariesAsync.asData?.value.firstWhere(
           (s) => s.curriculumId == curriculum,
@@ -205,7 +205,7 @@ class _LifetimeLibraryCategoryCard extends ConsumerWidget {
                             color: AppTheme.brandInk,
                           ),
                         ),
-                        if (!hebrewOnly) ...[
+                        if (!useHebrew) ...[
                           const SizedBox(height: 2),
                           Text(
                             curriculumHebrewName(curriculum),

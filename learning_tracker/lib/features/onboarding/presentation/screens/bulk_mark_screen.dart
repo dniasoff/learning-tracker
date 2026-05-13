@@ -409,14 +409,14 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
                 // Same renderer used by Browse Content and the reader —
                 // each crumb is the bare named segment ("זרעים", "ברכות")
                 // or the ordinal value with prefix ("פרק א").
-                final hebrewTerms = ref.watch(useHebrewTermsProvider);
+                final useHebrew = ref.watch(useHebrewTermsProvider);
                 final variant = ref.watch(
                   currentTransliterationVariantProvider,
                 );
                 final segments = CurriculumLabelRenderer.renderBreadcrumb(
                   curriculumId: widget.curriculumId,
                   rawSegmentValues: _navigationStack,
-                  useHebrew: hebrewTerms,
+                  useHebrew: useHebrew,
                   transliterationVariant: variant,
                 );
                 return Padding(
@@ -468,7 +468,7 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
                   );
                 }
 
-                final hebrewOnly = ref.watch(useHebrewTermsProvider);
+                final useHebrew = ref.watch(useHebrewTermsProvider);
                 return ListView.builder(
                   itemCount: displayItems.length,
                   itemBuilder: (context, index) {
@@ -482,10 +482,10 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
                       title: CurriculumLabel.item(
                         item,
                         mode: CurriculumLabelMode.breadcrumb,
-                        textDirection: hebrewOnly
+                        textDirection: useHebrew
                             ? TextDirection.rtl
                             : TextDirection.ltr,
-                        textAlign: hebrewOnly
+                        textAlign: useHebrew
                             ? TextAlign.right
                             : TextAlign.left,
                         style: theme.textTheme.titleLarge?.copyWith(

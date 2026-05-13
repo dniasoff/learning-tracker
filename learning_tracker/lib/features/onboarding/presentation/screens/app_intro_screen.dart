@@ -259,7 +259,7 @@ class _IntroPage extends ConsumerWidget {
 
   /// Pages 2 & 3: full-page scroll.
   Widget _buildScrolledPage(WidgetRef ref) {
-    final hebrewTerms = ref.watch(useHebrewTermsProvider);
+    final useHebrew = ref.watch(useHebrewTermsProvider);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: CustomScrollView(
@@ -280,9 +280,9 @@ class _IntroPage extends ConsumerWidget {
                 ],
                 _buildTitleBlock(),
                 const SizedBox(height: 14),
-                _buildSubtitleBlock(hebrewTerms: hebrewTerms),
+                _buildSubtitleBlock(useHebrew: useHebrew),
                 const SizedBox(height: 20),
-                _buildProgressArea(hebrewTerms: hebrewTerms),
+                _buildProgressArea(useHebrew: useHebrew),
                 const SizedBox(height: 24),
               ],
             ),
@@ -358,7 +358,7 @@ class _IntroPage extends ConsumerWidget {
     }
   }
 
-  Widget _buildSubtitleBlock({bool hebrewTerms = false}) {
+  Widget _buildSubtitleBlock({bool useHebrew = false}) {
     return AnimatedBuilder(
       animation: iconAnimation,
       builder: (context, _) {
@@ -368,13 +368,13 @@ class _IntroPage extends ConsumerWidget {
         ).value;
         return Opacity(
           opacity: fade,
-          child: _subtitleRich(hebrewTerms: hebrewTerms),
+          child: _subtitleRich(useHebrew: useHebrew),
         );
       },
     );
   }
 
-  Widget _subtitleRich({bool hebrewTerms = false}) {
+  Widget _subtitleRich({bool useHebrew = false}) {
     switch (data.variant) {
       case _IntroPageVariant.dailyPlan:
         return Text.rich(
@@ -416,7 +416,7 @@ class _IntroPage extends ConsumerWidget {
           textAlign: TextAlign.center,
         );
       case _IntroPageVariant.rewards:
-        final tierLabel = hebrewTerms
+        final tierLabel = useHebrew
             ? HebrewTerms.uiTalmidChochom
             : 'Talmid Chochom';
         return Text(
@@ -428,7 +428,7 @@ class _IntroPage extends ConsumerWidget {
     }
   }
 
-  Widget _buildProgressArea({bool hebrewTerms = false}) {
+  Widget _buildProgressArea({bool useHebrew = false}) {
     switch (data.variant) {
       case _IntroPageVariant.dailyPlan:
         return Column(
@@ -527,7 +527,7 @@ class _IntroPage extends ConsumerWidget {
           children: [
             const _FeatureCardsRow(),
             const SizedBox(height: 20),
-            _ScholarLevelCard(hebrewTerms: hebrewTerms),
+            _ScholarLevelCard(useHebrew: useHebrew),
           ],
         );
     }
@@ -1178,9 +1178,9 @@ class _ChildModeTag extends StatelessWidget {
 }
 
 class _ScholarLevelCard extends StatelessWidget {
-  const _ScholarLevelCard({required this.hebrewTerms});
+  const _ScholarLevelCard({required this.useHebrew});
 
-  final bool hebrewTerms;
+  final bool useHebrew;
 
   @override
   Widget build(BuildContext context) {
@@ -1265,12 +1265,12 @@ class _ScholarLevelCard extends StatelessWidget {
                 ),
               ),
               Text(
-                hebrewTerms ? HebrewTerms.uiTalmidChochom : 'TALMID CHOCHOM',
+                useHebrew ? HebrewTerms.uiTalmidChochom : 'TALMID CHOCHOM',
                 style: GoogleFonts.plusJakartaSans(
                   color: AppTheme.brandInkSoft,
-                  fontSize: hebrewTerms ? 11 : 9,
+                  fontSize: useHebrew ? 11 : 9,
                   fontWeight: FontWeight.w700,
-                  letterSpacing: hebrewTerms ? 0 : 0.3,
+                  letterSpacing: useHebrew ? 0 : 0.3,
                 ),
               ),
             ],

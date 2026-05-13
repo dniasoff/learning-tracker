@@ -23,13 +23,13 @@ class DraggableOrderItem extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final colorScheme = Theme.of(context).colorScheme;
-    final hebrewOnly = ref.watch(useHebrewTermsProvider);
+    final useHebrew = ref.watch(useHebrewTermsProvider);
 
     return ListTile(
       key: ValueKey(item.sefariaRef),
       title: CurriculumLabel.local(
         item.sefariaRef,
-        textDirection: hebrewOnly ? TextDirection.rtl : TextDirection.ltr,
+        textDirection: useHebrew ? TextDirection.rtl : TextDirection.ltr,
         style: Theme.of(context).textTheme.titleMedium,
       ),
       trailing: showDragHandle

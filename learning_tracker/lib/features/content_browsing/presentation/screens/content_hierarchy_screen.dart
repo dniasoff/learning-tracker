@@ -190,7 +190,7 @@ class _ContentHierarchyScreenState
                   Expanded(
                     child: configAsync.when(
                       data: (config) {
-                        final hebrewTerms = ref.watch(useHebrewTermsProvider);
+                        final useHebrew = ref.watch(useHebrewTermsProvider);
                         final variant = ref.watch(
                           currentTransliterationVariantProvider,
                         );
@@ -209,7 +209,7 @@ class _ContentHierarchyScreenState
                             CurriculumLabelRenderer.renderBreadcrumb(
                               curriculumId: curriculum,
                               rawSegmentValues: _navigationStack,
-                              useHebrew: hebrewTerms,
+                              useHebrew: useHebrew,
                               transliterationVariant: variant,
                               hebrewNamesPerSegment: hebrewNames,
                             );
@@ -257,13 +257,13 @@ class _ContentHierarchyScreenState
                   );
                 }
 
-                final hebrewTerms = ref.watch(useHebrewTermsProvider);
+                final useHebrew = ref.watch(useHebrewTermsProvider);
                 final variant = ref.watch(
                   currentTransliterationVariantProvider,
                 );
                 final groupedItems = _groupItemsByNextLevel(
                   items,
-                  hebrewTerms,
+                  useHebrew,
                   variant,
                 );
 
@@ -314,7 +314,7 @@ class _ContentHierarchyScreenState
   /// the perek-or-equivalent row opens the reader directly instead.
   List<ContentItem> _groupItemsByNextLevel(
     List<ContentItem> items,
-    bool hebrewTerms,
+    bool useHebrew,
     TransliterationVariant variant,
   ) {
     final curriculum = _curriculumOrNull;

@@ -221,7 +221,7 @@ class LifetimeCurriculumFolderRow extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    final hebrewOnly = ref.watch(useHebrewTermsProvider);
+    final useHebrew = ref.watch(useHebrewTermsProvider);
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -256,7 +256,7 @@ class LifetimeCurriculumFolderRow extends ConsumerWidget {
                           fontWeight: FontWeight.w700,
                         ),
                       ),
-                      if (!hebrewOnly) ...[
+                      if (!useHebrew) ...[
                         const SizedBox(height: 2),
                         Text(
                           curriculumHebrewName(curriculumId),

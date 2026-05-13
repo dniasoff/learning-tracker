@@ -97,8 +97,8 @@ class DashboardTaskItem extends ConsumerWidget {
     final l10n = AppLocalizations.of(context)!;
     return Consumer(
       builder: (context, ref, _) {
-        final hebrewTerms = ref.watch(useHebrewTermsProvider);
-        final chazaraReviewLabel = hebrewTerms
+        final useHebrew = ref.watch(useHebrewTermsProvider);
+        final chazaraReviewLabel = useHebrew
             ? HebrewTerms.uiChazaraReview
             : l10n.chazaraReview;
         return _buildSubtitleInner(theme, l10n, chazaraReviewLabel);

@@ -48,7 +48,7 @@ class _TrackLearningOrderScreenState
 
     final theme = Theme.of(context);
     final isLoading = sedarimAsync.isLoading || masechtosAsync.isLoading;
-    final hebrewOnly = ref.watch(useHebrewTermsProvider);
+    final useHebrew = ref.watch(useHebrewTermsProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -76,7 +76,7 @@ class _TrackLearningOrderScreenState
                       theme,
                       CurriculumLabels.topSectionHeader(
                         widget.curriculumId,
-                        useHebrew: hebrewOnly,
+                        useHebrew: useHebrew,
                       ),
                     ),
                     ReorderableListView(
@@ -103,7 +103,7 @@ class _TrackLearningOrderScreenState
                       theme,
                       CurriculumLabels.containerSectionHeader(
                             widget.curriculumId,
-                            useHebrew: hebrewOnly,
+                            useHebrew: useHebrew,
                           ) ??
                           '',
                     ),

@@ -50,7 +50,7 @@ class ContentItemTile extends ConsumerWidget {
             .value ??
         0;
 
-    final hebrewOnly = ref.watch(useHebrewTermsProvider);
+    final useHebrew = ref.watch(useHebrewTermsProvider);
     return ListTile(
       minLeadingWidth: 48,
       minVerticalPadding: 14,
@@ -60,8 +60,8 @@ class ContentItemTile extends ConsumerWidget {
         style: theme.textTheme.titleLarge?.copyWith(
           fontWeight: FontWeight.w700,
         ),
-        textDirection: hebrewOnly ? TextDirection.rtl : TextDirection.ltr,
-        textAlign: hebrewOnly ? TextAlign.right : TextAlign.left,
+        textDirection: useHebrew ? TextDirection.rtl : TextDirection.ltr,
+        textAlign: useHebrew ? TextAlign.right : TextAlign.left,
       ),
       trailing: _buildTrailing(theme, count),
       onTap: onTap,
