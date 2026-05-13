@@ -24,7 +24,6 @@ class TrackStatGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return Row(
       children: [
         Expanded(
@@ -35,7 +34,6 @@ class TrackStatGrid extends StatelessWidget {
                 ? const Color(0xFFB45309)
                 : AppTheme.brandInk,
             valueBg: const Color(0xFFFFE7D1),
-            labelStyle: theme.textTheme.labelSmall,
             onTap: buckets.review.isNotEmpty
                 ? () => _openFirst(context, buckets.review)
                 : null,
@@ -50,7 +48,6 @@ class TrackStatGrid extends StatelessWidget {
                 ? kActiveTrackPrimaryBlue
                 : AppTheme.brandInk,
             valueBg: const Color(0xFFDFE9FD),
-            labelStyle: theme.textTheme.labelSmall,
             onTap: buckets.dueTodayLane.isNotEmpty
                 ? () => _openFirst(context, buckets.dueTodayLane)
                 : null,
@@ -63,7 +60,6 @@ class TrackStatGrid extends StatelessWidget {
             label: l10n.activeTrackMetricOverdue,
             valueColor: const Color(0xFFD63C3C),
             valueBg: const Color(0xFFFFE0EB),
-            labelStyle: theme.textTheme.labelSmall,
             countMutedWhenZero: true,
             onTap: buckets.missedProgram.isNotEmpty
                 ? () => _openFirst(context, buckets.missedProgram)

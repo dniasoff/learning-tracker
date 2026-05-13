@@ -6,6 +6,7 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/widgets/empty_state.dart';
+import 'package:learning_tracker/core/widgets/stat_card.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/lifetime_knowledge_providers.dart';
@@ -165,6 +166,11 @@ class _StatGrid extends StatelessWidget {
   }
 }
 
+/// Thin screen-local alias that forwards directly to [StatCard].
+///
+/// Keeping the private name avoids touching call sites inside [_StatGrid]
+/// while still satisfying the story AC that the implementation is backed
+/// by the shared primitive (DNI-359 / 26.16).
 class _OverviewStatCard extends StatelessWidget {
   const _OverviewStatCard({
     required this.icon,
@@ -184,89 +190,13 @@ class _OverviewStatCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cardColor = highlighted ? const Color(0xFFFF6E76) : Colors.white;
-    final valueColor = highlighted ? Colors.white : const Color(0xFF11182C);
-    final labelColor = highlighted
-        ? Colors.white.withValues(alpha: 0.82)
-        : const Color(0xFF7C8595);
-
-    return Material(
-      color: cardColor,
-      borderRadius: BorderRadius.circular(22),
-      elevation: 0,
-      shadowColor: const Color(0xFF03174C).withValues(alpha: 0.08),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(22),
-        splashColor: highlighted ? Colors.white.withValues(alpha: 0.18) : null,
-        highlightColor: highlighted
-            ? Colors.white.withValues(alpha: 0.08)
-            : null,
-        child: Ink(
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: cardColor,
-            borderRadius: BorderRadius.circular(22),
-            boxShadow: [
-              BoxShadow(
-                color: const Color(0xFF03174C).withValues(alpha: 0.08),
-                blurRadius: 14,
-                offset: const Offset(0, 6),
-              ),
-            ],
-          ),
-          child: Stack(
-            children: [
-              if (highlighted)
-                Align(
-                  alignment: Alignment.topRight,
-                  child: Container(
-                    width: 22,
-                    height: 22,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.18),
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                ),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    width: 30,
-                    height: 30,
-                    decoration: BoxDecoration(
-                      color: iconColor.withValues(
-                        alpha: highlighted ? 0.18 : 0.14,
-                      ),
-                      borderRadius: BorderRadius.circular(9),
-                    ),
-                    child: Icon(icon, color: iconColor, size: 17),
-                  ),
-                  const Spacer(),
-                  Text(
-                    value,
-                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      color: valueColor,
-                      fontWeight: FontWeight.w800,
-                      height: 1,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    label,
-                    style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                      color: labelColor,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 0.6,
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
+    return StatCard(
+      icon: icon,
+      iconColor: iconColor,
+      value: value,
+      label: label,
+      highlighted: highlighted,
+      onTap: onTap,
     );
   }
 }
