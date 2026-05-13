@@ -11,6 +11,7 @@ service cloud.firestore {
       return isSignedIn() && request.auth.uid == uid;
     }
 
+    // Deny all reads and writes by default.
     match /{document=**} {
       allow read, write: if false;
     }
@@ -30,33 +31,130 @@ service cloud.firestore {
       }
 
       // Account-level learner profile documents (one doc per learner/profile).
+      // Individual profile fields are managed through per-collection rules below.
       match /learner_profiles/{profileId} {
         allow read, write: if isOwner(uid);
-      }
 
-      // Track-centric schema + profile-scoped state
-      // ------------------------------------------------------------------
-      // Canonical collections:
-      // - completions/{completionId}
-      // - learning_ledger/{entryId}
-      // - tracks/{trackId}
-      // - tracks/{trackId}/config/{scope|stage_plan|study_days|goal}
-      // - bookmarks/{trackId}
-      // - daily_plan/{yyyy-mm-dd}
-      // - notification_settings/preferences
-      // - gamification_settings/config
-      // - projections/{active_curricula|streak|progress_summary}
-      //
-      // Existing collections kept for backward compatibility:
-      // - settings/{curriculumId}
-      // - goals/{goalId}
-      // - active_curricula/data
-      // - curriculum_tracks/{curriculumId_trackType}
-      // - curriculum_imports/{curriculumId}
-      // - streak/data
-      // ------------------------------------------------------------------
-      match /learner_profiles/{profileId}/{document=**} {
-        allow read, write: if isOwner(uid);
+        // ── Completions — append-only event collection ──────────────────────
+        // Allows authenticated owner to create a completion with:
+        //   - points in [0, 100] (closes T1.3: prevents points: 999_999)
+        //   - completedAt at or before server time (prevents future-dating)
+        // Delete is denied; deletions must go through Cloud Functions.
+        match /completions/{completionId} {
+          allow read: if isOwner(uid);
+          allow create: if isOwner(uid)
+            && request.resource.data.points >= 0
+            && request.resource.data.points <= 100
+            && request.resource.data.completedAt <= request.time;
+          allow update, delete: if false;
+        }
+
+        // ── Streak events — append-only event collection ────────────────────
+        // Allows create only; timestamp must not exceed server time.
+        // Delete is denied; deletions must go through Cloud Functions.
+        match /streak_events/{eventId} {
+          allow read: if isOwner(uid);
+          allow create: if isOwner(uid)
+            && request.resource.data.createdAt <= request.time;
+          allow update, delete: if false;
+        }
+
+        // ── Learning ledger — append-only event collection ──────────────────
+        // Allows create only; timestamp must not exceed server time.
+        // Delete is denied; deletions must go through Cloud Functions.
+        match /learning_ledger/{entryId} {
+          allow read: if isOwner(uid);
+          allow create: if isOwner(uid)
+            && request.resource.data.createdAt <= request.time;
+          allow update, delete: if false;
+        }
+
+        // ── Settings — snapshot collection with field whitelist ─────────────
+        // Allows create and update, but only for the whitelisted fields.
+        // Prevents injection of arbitrary fields.
+        // Delete is denied; deletions must go through Cloud Functions.
+        match /settings/{settingId} {
+          allow read: if isOwner(uid);
+          allow create: if isOwner(uid)
+            && request.resource.data.keys().hasOnly([
+              'hebrewTerms', 'useHebrewDate', 'curriculum_id', 'updated_at',
+              'display_name', 'learning_order', 'daily_goal', 'review_enabled',
+              'chazara_interval', 'show_points', 'track_type'
+            ]);
+          allow update: if isOwner(uid)
+            && request.resource.data.keys().hasOnly([
+              'hebrewTerms', 'useHebrewDate', 'curriculum_id', 'updated_at',
+              'display_name', 'learning_order', 'daily_goal', 'review_enabled',
+              'chazara_interval', 'show_points', 'track_type'
+            ]);
+          allow delete: if false;
+        }
+
+        // ── Bookmarks — snapshot collection (last-write-wins) ───────────────
+        // Full read/write for owner; delete denied.
+        match /bookmarks/{bookmarkId} {
+          allow read: if isOwner(uid);
+          allow create, update: if isOwner(uid);
+          allow delete: if false;
+        }
+
+        // ── Goals — snapshot collection (last-write-wins) ───────────────────
+        // Full read/write for owner; delete denied.
+        match /goals/{goalId} {
+          allow read: if isOwner(uid);
+          allow create, update: if isOwner(uid);
+          allow delete: if false;
+        }
+
+        // ── Streak — single-doc snapshot (last-write-wins) ──────────────────
+        // Full read/write for owner; delete denied.
+        match /streak/{docId} {
+          allow read: if isOwner(uid);
+          allow create, update: if isOwner(uid);
+          allow delete: if false;
+        }
+
+        // ── Notification settings — single-doc snapshot ─────────────────────
+        match /notification_settings/{docId} {
+          allow read: if isOwner(uid);
+          allow create, update: if isOwner(uid);
+          allow delete: if false;
+        }
+
+        // ── Gamification settings — single-doc snapshot ─────────────────────
+        match /gamification_settings/{docId} {
+          allow read: if isOwner(uid);
+          allow create, update: if isOwner(uid);
+          allow delete: if false;
+        }
+
+        // ── UI preferences — single-doc snapshot ────────────────────────────
+        match /ui_preferences/{docId} {
+          allow read: if isOwner(uid);
+          allow create, update: if isOwner(uid);
+          allow delete: if false;
+        }
+
+        // ── Active curricula — single-doc snapshot ───────────────────────────
+        match /active_curricula/{docId} {
+          allow read: if isOwner(uid);
+          allow create, update: if isOwner(uid);
+          allow delete: if false;
+        }
+
+        // ── Curriculum tracks — snapshot collection (last-write-wins) ────────
+        match /curriculum_tracks/{trackId} {
+          allow read: if isOwner(uid);
+          allow create, update: if isOwner(uid);
+          allow delete: if false;
+        }
+
+        // ── Profiles (account-level sub-collection) ──────────────────────────
+        match /profiles/{profileDocId} {
+          allow read: if isOwner(uid);
+          allow create, update: if isOwner(uid);
+          allow delete: if false;
+        }
       }
     }
   }
