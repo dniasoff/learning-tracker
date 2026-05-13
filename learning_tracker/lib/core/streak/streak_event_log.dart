@@ -22,12 +22,15 @@ class StreakEventLog {
   /// Returns `true` if a row was inserted, `false` if the UNIQUE
   /// constraint dropped a duplicate.
   Future<bool> append(StreakEvent event) async {
+    final ts = event.eventTimestamp.toUtc();
+    final dayUtc = DateTime.utc(ts.year, ts.month, ts.day);
     final affected = await _db
         .into(_db.streakEvents)
         .insert(
           StreakEventsCompanion.insert(
             profileId: event.profileId,
             eventType: event.eventType,
+            dayUtc: dayUtc,
             eventTimestamp: event.eventTimestamp,
             clientDeviceId: event.clientDeviceId == null
                 ? const Value.absent()

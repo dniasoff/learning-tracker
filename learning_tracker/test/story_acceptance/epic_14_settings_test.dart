@@ -457,9 +457,10 @@ void main() {
         await service.importData(jsonString);
 
         // Verify restored
-        final completions = await db.completionDao.internalGetAllCompletionsCrossProfile(
-          scope: CrossProfileScope.dataExport,
-        );
+        final completions = await db.completionDao
+            .internalGetAllCompletionsCrossProfile(
+              scope: CrossProfileScope.dataExport,
+            );
         expect(completions.length, equals(2));
         expect(completions.first.curriculumId, equals('mishna'));
         expect(completions.first.sefariaRef, equals('Mishnah_Berakhot.1.1'));
@@ -541,9 +542,10 @@ void main() {
       expect(() => service.importData(badImport), throwsA(anything));
 
       // Original data should be preserved (transaction rolled back)
-      final completions = await db.completionDao.internalGetAllCompletionsCrossProfile(
-        scope: CrossProfileScope.dataExport,
-      );
+      final completions = await db.completionDao
+          .internalGetAllCompletionsCrossProfile(
+            scope: CrossProfileScope.dataExport,
+          );
       expect(completions.length, equals(2)); // Original 2 completions
     });
 

@@ -380,9 +380,10 @@ void main() {
 
       await syncEngine.pullOnLaunch();
 
-      final completions = await database.completionDao.internalGetAllCompletionsCrossProfile(
-        scope: CrossProfileScope.syncRestore,
-      );
+      final completions = await database.completionDao
+          .internalGetAllCompletionsCrossProfile(
+            scope: CrossProfileScope.syncRestore,
+          );
       expect(completions.length, 2);
     });
 
@@ -481,9 +482,10 @@ void main() {
         await syncEngine.pullOnLaunch();
 
         // Local data unchanged
-        final completions = await database.completionDao.internalGetAllCompletionsCrossProfile(
-          scope: CrossProfileScope.syncRestore,
-        );
+        final completions = await database.completionDao
+            .internalGetAllCompletionsCrossProfile(
+              scope: CrossProfileScope.syncRestore,
+            );
         expect(completions.length, 1);
         // No Firestore calls
         verifyNever(
@@ -638,9 +640,10 @@ void main() {
         // Allow async merge to process
         await Future<void>.delayed(const Duration(milliseconds: 50));
 
-        final completions = await database.completionDao.internalGetAllCompletionsCrossProfile(
-          scope: CrossProfileScope.syncRestore,
-        );
+        final completions = await database.completionDao
+            .internalGetAllCompletionsCrossProfile(
+              scope: CrossProfileScope.syncRestore,
+            );
         expect(completions.length, 1);
         expect(completions.first.sefariaRef, 'mishna-5');
 
@@ -921,9 +924,10 @@ void main() {
 
       await restoreService.restore();
 
-      final completions = await database.completionDao.internalGetAllCompletionsCrossProfile(
-        scope: CrossProfileScope.syncRestore,
-      );
+      final completions = await database.completionDao
+          .internalGetAllCompletionsCrossProfile(
+            scope: CrossProfileScope.syncRestore,
+          );
       expect(completions, hasLength(1));
       expect(completions.first.sefariaRef, 'mishna-1');
 

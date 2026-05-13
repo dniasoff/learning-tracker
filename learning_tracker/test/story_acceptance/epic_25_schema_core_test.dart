@@ -1385,7 +1385,8 @@ void main() {
           expect(
             libDir.existsSync(),
             isTrue,
-            reason: 'test must run from learning_tracker/ (Flutter project root)',
+            reason:
+                'test must run from learning_tracker/ (Flutter project root)',
           );
 
           // One single piped pipeline: grep for debugPrint/bare-print, strip
@@ -1409,75 +1410,69 @@ void main() {
 
       // ── AC: no raw `package:talker/talker.dart` import outside core/logging/
 
-      test(
-        'grep raw package:talker/talker.dart import outside core/logging/ '
-        'returns zero results',
-        () {
-          final libDir = Directory('lib');
-          expect(libDir.existsSync(), isTrue);
+      test('grep raw package:talker/talker.dart import outside core/logging/ '
+          'returns zero results', () {
+        final libDir = Directory('lib');
+        expect(libDir.existsSync(), isTrue);
 
-          final result = Process.runSync('grep', const [
-            '-rn',
-            "import 'package:talker/talker.dart'",
-            'lib/',
-            '--exclude-dir=logging',
-          ]);
+        final result = Process.runSync('grep', const [
+          '-rn',
+          "import 'package:talker/talker.dart'",
+          'lib/',
+          '--exclude-dir=logging',
+        ]);
 
-          // grep exits 1 when no matches — that is the green case.
-          expect(
-            result.exitCode,
-            equals(1),
-            reason:
-                "Raw `import 'package:talker/talker.dart'` is forbidden "
-                'outside lib/core/logging/. Inject an `AppLogger` instead '
-                '(or use `talker_flutter` when a raw Talker is genuinely '
-                'required by a third-party widget).\nFound:\n${result.stdout}',
-          );
-        },
-      );
+        // grep exits 1 when no matches — that is the green case.
+        expect(
+          result.exitCode,
+          equals(1),
+          reason:
+              "Raw `import 'package:talker/talker.dart'` is forbidden "
+              'outside lib/core/logging/. Inject an `AppLogger` instead '
+              '(or use `talker_flutter` when a raw Talker is genuinely '
+              'required by a third-party widget).\nFound:\n${result.stdout}',
+        );
+      });
 
       // ── AC: structured-event shape — the field-based redactor is applied ────
 
-      test(
-        'AppLogger.info(event:, fields:) builds {event field=value} message '
-        'and redacts sensitive keys',
-        () {
-          final talker = Talker(
-            settings: TalkerSettings(
-              enabled: true,
-              useConsoleLogs: false,
-              maxHistoryItems: 16,
-            ),
-          );
-          final log = AppLogger(talker);
+      test('AppLogger.info(event:, fields:) builds {event field=value} message '
+          'and redacts sensitive keys', () {
+        final talker = Talker(
+          settings: TalkerSettings(
+            enabled: true,
+            useConsoleLogs: false,
+            maxHistoryItems: 16,
+          ),
+        );
+        final log = AppLogger(talker);
 
-          log.info(
-            event: 'sync_pull_completed',
-            fields: const {
-              'profileId': 7,
-              'durationMs': 142,
-              'status': 'ok',
-              'email': 'leak@example.com',
-            },
-          );
+        log.info(
+          event: 'sync_pull_completed',
+          fields: const {
+            'profileId': 7,
+            'durationMs': 142,
+            'status': 'ok',
+            'email': 'leak@example.com',
+          },
+        );
 
-          // Wait until Talker drains its internal queue.
-          final entry = talker.history.firstWhere(
-            (e) => (e.message ?? '').startsWith('sync_pull_completed'),
-          );
-          final msg = entry.message ?? '';
+        // Wait until Talker drains its internal queue.
+        final entry = talker.history.firstWhere(
+          (e) => (e.message ?? '').startsWith('sync_pull_completed'),
+        );
+        final msg = entry.message ?? '';
 
-          // event prefix preserved verbatim
-          expect(msg, startsWith('sync_pull_completed '));
-          // non-sensitive fields preserved
-          expect(msg, contains('profileId: 7'));
-          expect(msg, contains('durationMs: 142'));
-          expect(msg, contains('status: ok'));
-          // sensitive value redacted by key
-          expect(msg, contains('email: [REDACTED]'));
-          expect(msg, isNot(contains('leak@example.com')));
-        },
-      );
+        // event prefix preserved verbatim
+        expect(msg, startsWith('sync_pull_completed '));
+        // non-sensitive fields preserved
+        expect(msg, contains('profileId: 7'));
+        expect(msg, contains('durationMs: 142'));
+        expect(msg, contains('status: ok'));
+        // sensitive value redacted by key
+        expect(msg, contains('email: [REDACTED]'));
+        expect(msg, isNot(contains('leak@example.com')));
+      });
 
       // ── AC: DeviceRestoreService consumes an AppLogger (not raw Talker) ─────
 
@@ -1513,17 +1508,15 @@ void main() {
       test(
         'SeedManager and ContentDbHealthChecker constructors take AppLogger',
         () {
-          final seed = File('lib/core/database/seed_manager.dart')
-              .readAsStringSync();
+          final seed = File(
+            'lib/core/database/seed_manager.dart',
+          ).readAsStringSync();
           expect(
             seed,
             contains('AppLogger? logger'),
             reason: 'SeedManager must accept an optional AppLogger.',
           );
-          expect(
-            seed,
-            isNot(contains("import 'package:talker/talker.dart'")),
-          );
+          expect(seed, isNot(contains("import 'package:talker/talker.dart'")));
 
           final hc = File(
             'lib/core/database/content_db_health_checker.dart',
@@ -1533,10 +1526,7 @@ void main() {
             contains('AppLogger? logger'),
             reason: 'ContentDbHealthChecker must accept an optional AppLogger.',
           );
-          expect(
-            hc,
-            isNot(contains("import 'package:talker/talker.dart'")),
-          );
+          expect(hc, isNot(contains("import 'package:talker/talker.dart'")));
         },
       );
 
@@ -1564,7 +1554,6 @@ void main() {
       );
     },
   );
-
 
   // --------------------------------------------------------------------------
   // Story 25.17 — BaseDao<T> + TrackScope; delete cross-profile DAO methods
@@ -1609,36 +1598,38 @@ void main() {
 
       // AC: BaseDao<T> is a Dart mixin offering getById, getByProfile,
       //     count, exists.
-      test('BaseDao<T> mixin provides count/exists/getById/getByProfile',
-          () async {
-        await db.streakDao.upsertStreakByProfile(
-          1,
-          StreaksCompanion.insert(
-            profileId: 1,
-            currentStreak: const Value(5),
-          ),
-        );
-        await db.streakDao.upsertStreakByProfile(
-          2,
-          StreaksCompanion.insert(
-            profileId: 2,
-            currentStreak: const Value(3),
-          ),
-        );
+      test(
+        'BaseDao<T> mixin provides count/exists/getById/getByProfile',
+        () async {
+          await db.streakDao.upsertStreakByProfile(
+            1,
+            StreaksCompanion.insert(
+              profileId: 1,
+              currentStreak: const Value(5),
+            ),
+          );
+          await db.streakDao.upsertStreakByProfile(
+            2,
+            StreaksCompanion.insert(
+              profileId: 2,
+              currentStreak: const Value(3),
+            ),
+          );
 
-        expect(await db.streakDao.count(profileId: 1), 1);
-        expect(await db.streakDao.exists(profileId: 1), isTrue);
-        expect(await db.streakDao.count(profileId: 99), 0);
-        expect(await db.streakDao.exists(profileId: 99), isFalse);
+          expect(await db.streakDao.count(profileId: 1), 1);
+          expect(await db.streakDao.exists(profileId: 1), isTrue);
+          expect(await db.streakDao.count(profileId: 99), 0);
+          expect(await db.streakDao.exists(profileId: 99), isFalse);
 
-        final byProfile = await db.streakDao.getByProfile(1);
-        expect(byProfile, hasLength(1));
-        expect(byProfile.first.profileId, 1);
+          final byProfile = await db.streakDao.getByProfile(1);
+          expect(byProfile, hasLength(1));
+          expect(byProfile.first.profileId, 1);
 
-        final byId = await db.streakDao.getById(byProfile.first.id);
-        expect(byId, isNotNull);
-        expect(byId!.profileId, 1);
-      });
+          final byId = await db.streakDao.getById(byProfile.first.id);
+          expect(byId, isNotNull);
+          expect(byId!.profileId, 1);
+        },
+      );
 
       // AC: The 6 cross-profile methods on CompletionDao are deleted (from
       //     the public surface).

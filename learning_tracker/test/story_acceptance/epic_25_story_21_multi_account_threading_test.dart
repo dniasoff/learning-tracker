@@ -22,7 +22,10 @@ import 'package:learning_tracker/features/profiles/presentation/providers/profil
 /// Resolves the repo root from the `learning_tracker/` sub-directory so the
 /// grep test can scan all of `lib/` without depending on the cwd.
 Directory _libDir() {
-  for (final candidate in [Directory('lib'), Directory('learning_tracker/lib')]) {
+  for (final candidate in [
+    Directory('lib'),
+    Directory('learning_tracker/lib'),
+  ]) {
     if (candidate.existsSync()) return candidate;
   }
   throw StateError('Could not locate learning_tracker/lib');
@@ -182,30 +185,32 @@ void main() {
       );
     });
 
-    test('no `getProfilesByAccount(1)` or `countProfilesForAccount(1)` hardcode',
-        () {
-      final libDir = _libDir();
-      final offenders = <String>[];
-      final pat = RegExp(
-        r'\b(getProfilesByAccount|countProfilesForAccount|watchProfilesByAccount|profileExistsByName)\s*\(\s*1\b',
-      );
-      for (final f in _dartFiles(libDir)) {
-        if (f.path.contains('.freezed.dart')) continue;
-        final lines = f.readAsLinesSync();
-        for (var i = 0; i < lines.length; i++) {
-          if (pat.hasMatch(lines[i])) {
-            offenders.add('${f.path}:${i + 1}: ${lines[i].trim()}');
+    test(
+      'no `getProfilesByAccount(1)` or `countProfilesForAccount(1)` hardcode',
+      () {
+        final libDir = _libDir();
+        final offenders = <String>[];
+        final pat = RegExp(
+          r'\b(getProfilesByAccount|countProfilesForAccount|watchProfilesByAccount|profileExistsByName)\s*\(\s*1\b',
+        );
+        for (final f in _dartFiles(libDir)) {
+          if (f.path.contains('.freezed.dart')) continue;
+          final lines = f.readAsLinesSync();
+          for (var i = 0; i < lines.length; i++) {
+            if (pat.hasMatch(lines[i])) {
+              offenders.add('${f.path}:${i + 1}: ${lines[i].trim()}');
+            }
           }
         }
-      }
-      expect(
-        offenders,
-        isEmpty,
-        reason:
-            'Hardcoded profile-DAO call with literal `1` accountId remains:\n'
-            '${offenders.join('\n')}',
-      );
-    });
+        expect(
+          offenders,
+          isEmpty,
+          reason:
+              'Hardcoded profile-DAO call with literal `1` accountId remains:\n'
+              '${offenders.join('\n')}',
+        );
+      },
+    );
   });
 
   // ── AC: tier-aware offline UX preserved ────────────────────────────────
@@ -221,75 +226,64 @@ void main() {
           child: MaterialApp(home: Scaffold(body: child)),
         );
 
-    testWidgets(
-      'OfflineTopBanner renders nothing for localBorn tier',
-      (tester) async {
-        await tester.pumpWidget(
-          wrap(
-            authState: _signedIn(1, Tier.localBorn),
-            child: const OfflineTopBanner(),
-          ),
-        );
-        await tester.pump();
-        // localBorn always hides the banner — see widget early-return.
-        expect(find.byIcon(Icons.cloud_off), findsNothing);
-      },
-    );
+    testWidgets('OfflineTopBanner renders nothing for localBorn tier', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        wrap(
+          authState: _signedIn(1, Tier.localBorn),
+          child: const OfflineTopBanner(),
+        ),
+      );
+      await tester.pump();
+      // localBorn always hides the banner — see widget early-return.
+      expect(find.byIcon(Icons.cloud_off), findsNothing);
+    });
 
-    testWidgets(
-      'OfflineTopBanner renders nothing for signed-out users',
-      (tester) async {
-        await tester.pumpWidget(
-          wrap(
-            authState: const AuthState.signedOut(),
-            child: const OfflineTopBanner(),
-          ),
-        );
-        await tester.pump();
-        expect(find.byIcon(Icons.cloud_off), findsNothing);
-      },
-    );
+    testWidgets('OfflineTopBanner renders nothing for signed-out users', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        wrap(
+          authState: const AuthState.signedOut(),
+          child: const OfflineTopBanner(),
+        ),
+      );
+      await tester.pump();
+      expect(find.byIcon(Icons.cloud_off), findsNothing);
+    });
 
-    testWidgets(
-      'NoBackupBadge renders for localBorn tier',
-      (tester) async {
-        await tester.pumpWidget(
-          wrap(
-            authState: _signedIn(1, Tier.localBorn),
-            child: const NoBackupBadge(),
-          ),
-        );
-        await tester.pump();
-        expect(find.text('No backup'), findsOneWidget);
-      },
-    );
+    testWidgets('NoBackupBadge renders for localBorn tier', (tester) async {
+      await tester.pumpWidget(
+        wrap(
+          authState: _signedIn(1, Tier.localBorn),
+          child: const NoBackupBadge(),
+        ),
+      );
+      await tester.pump();
+      expect(find.text('No backup'), findsOneWidget);
+    });
 
-    testWidgets(
-      'NoBackupBadge hidden for cloudBorn tier',
-      (tester) async {
-        await tester.pumpWidget(
-          wrap(
-            authState: _signedIn(1, Tier.cloudBorn),
-            child: const NoBackupBadge(),
-          ),
-        );
-        await tester.pump();
-        expect(find.text('No backup'), findsNothing);
-      },
-    );
+    testWidgets('NoBackupBadge hidden for cloudBorn tier', (tester) async {
+      await tester.pumpWidget(
+        wrap(
+          authState: _signedIn(1, Tier.cloudBorn),
+          child: const NoBackupBadge(),
+        ),
+      );
+      await tester.pump();
+      expect(find.text('No backup'), findsNothing);
+    });
 
-    testWidgets(
-      'NoBackupBadge hidden when signed out',
-      (tester) async {
-        await tester.pumpWidget(
-          wrap(
-            authState: const AuthState.signedOut(),
-            child: const NoBackupBadge(),
-          ),
-        );
-        await tester.pump();
-        expect(find.text('No backup'), findsNothing);
-      },
-    );
+    testWidgets('NoBackupBadge hidden when signed out', (tester) async {
+      await tester.pumpWidget(
+        wrap(
+          authState: const AuthState.signedOut(),
+          child: const NoBackupBadge(),
+        ),
+      );
+      await tester.pump();
+      expect(find.text('No backup'), findsNothing);
+    });
   });
 }

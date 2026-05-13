@@ -421,10 +421,11 @@ void main() {
         await service.deactivate(CurriculumId.bavli);
 
         // Data must still exist
-        final completions = await db.completionDao.internalGetCompletionsByCurriculumCrossProfile(
-          CurriculumId.bavli.storageKey,
-          scope: CrossProfileScope.dataExport,
-        );
+        final completions = await db.completionDao
+            .internalGetCompletionsByCurriculumCrossProfile(
+              CurriculumId.bavli.storageKey,
+              scope: CrossProfileScope.dataExport,
+            );
         expect(completions, hasLength(1));
 
         final bookmark = await db.bookmarkDao.getBookmarkByCurriculumAndTrack(
@@ -460,10 +461,11 @@ void main() {
         await service.activate(CurriculumId.bavli);
 
         // Data survives the round-trip
-        final completions = await db.completionDao.internalGetCompletionsByCurriculumCrossProfile(
-          CurriculumId.bavli.storageKey,
-          scope: CrossProfileScope.dataExport,
-        );
+        final completions = await db.completionDao
+            .internalGetCompletionsByCurriculumCrossProfile(
+              CurriculumId.bavli.storageKey,
+              scope: CrossProfileScope.dataExport,
+            );
         expect(completions, hasLength(1));
         expect(completions.first.sefariaRef, equals('Berakhot.2a'));
       },
@@ -781,10 +783,11 @@ void main() {
         ),
       );
 
-      final completions = await db.completionDao.internalGetCompletionsForContentCrossProfile(
-        'Mishnah Berakhot 1.1',
-        scope: CrossProfileScope.dataExport,
-      );
+      final completions = await db.completionDao
+          .internalGetCompletionsForContentCrossProfile(
+            'Mishnah Berakhot 1.1',
+            scope: CrossProfileScope.dataExport,
+          );
       expect(completions, hasLength(1));
       expect(completions.first.sefariaRef, equals('Mishnah Berakhot 1.1'));
     });

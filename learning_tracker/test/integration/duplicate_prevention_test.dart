@@ -134,9 +134,10 @@ void main() {
       );
 
       // Verify both completions exist
-      final allCompletions = await database.completionDao.internalGetAllCompletionsCrossProfile(
-        scope: CrossProfileScope.dataExport,
-      );
+      final allCompletions = await database.completionDao
+          .internalGetAllCompletionsCrossProfile(
+            scope: CrossProfileScope.dataExport,
+          );
       expect(allCompletions.length, 2);
       expect(
         allCompletions.any(

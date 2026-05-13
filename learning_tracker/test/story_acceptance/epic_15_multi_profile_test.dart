@@ -151,9 +151,10 @@ void main() {
           );
 
           // Query all completions — both exist
-          final all = await db.completionDao.internalGetAllCompletionsCrossProfile(
-            scope: CrossProfileScope.parentAnalytics,
-          );
+          final all = await db.completionDao
+              .internalGetAllCompletionsCrossProfile(
+                scope: CrossProfileScope.parentAnalytics,
+              );
           expect(all.length, 2);
 
           // Query by profile — each profile sees only its own
@@ -2679,10 +2680,11 @@ void main() {
           expect(newStageIds.intersection(oldStageIds), isEmpty);
 
           // Old completion should still exist (append-only table).
-          final completions = await db.completionDao.internalGetCompletionsByCurriculumCrossProfile(
-            'bavli',
-            scope: CrossProfileScope.parentAnalytics,
-          );
+          final completions = await db.completionDao
+              .internalGetCompletionsByCurriculumCrossProfile(
+                'bavli',
+                scope: CrossProfileScope.parentAnalytics,
+              );
           expect(completions.length, 1);
           expect(completions.first.sefariaRef, 'Berakhot 2a');
         },

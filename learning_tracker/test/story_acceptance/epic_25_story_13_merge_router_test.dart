@@ -21,6 +21,8 @@ library;
 
 import 'dart:io';
 
+import 'package:drift/native.dart';
+import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/sync/merge/bookmark_merger.dart';
 import 'package:learning_tracker/core/sync/merge/completion_event_merger.dart';
 import 'package:learning_tracker/core/sync/merge/entity_merger.dart';
@@ -145,9 +147,15 @@ void main() {
           expect(actual, equals(expected));
         });
 
-        test('each concrete merger is an EntityMerger', () {
+        test('each concrete merger is an EntityMerger', () async {
+          // StreakEventMerger (DNI-337) uses an in-memory DB instead of
+          // MergeStore — its constructor changed, but it still implements
+          // EntityMerger so the router can dispatch to it unchanged.
+          final db = UserDatabase(NativeDatabase.memory());
+          addTearDown(db.close);
+
           final completion = CompletionEventMerger(store: _NullMergeStore());
-          final streak = StreakEventMerger(store: _NullMergeStore());
+          final streak = StreakEventMerger(db);
           final learnerProfile = LearnerProfileMerger(store: _NullMergeStore());
           final trackConfig = TrackConfigMerger(store: _NullMergeStore());
           final bookmark = BookmarkMerger(store: _NullMergeStore());

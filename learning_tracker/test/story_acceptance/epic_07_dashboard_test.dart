@@ -310,9 +310,10 @@ void main() {
         ),
       );
 
-      final completions = await db.completionDao.internalGetAllCompletionsCrossProfile(
-        scope: CrossProfileScope.dataExport,
-      );
+      final completions = await db.completionDao
+          .internalGetAllCompletionsCrossProfile(
+            scope: CrossProfileScope.dataExport,
+          );
       final total = completions.fold<int>(0, (sum, c) => sum + c.points);
       expect(total, equals(18));
     });
@@ -857,10 +858,11 @@ void main() {
       final goals = await db.goalDao.getGoalsByCurriculum('mishnayos');
       final goal = goals.first;
 
-      final allCompletions = await db.completionDao.internalGetCompletionsByCurriculumCrossProfile(
-        'mishnayos',
-        scope: CrossProfileScope.parentAnalytics,
-      );
+      final allCompletions = await db.completionDao
+          .internalGetCompletionsByCurriculumCrossProfile(
+            'mishnayos',
+            scope: CrossProfileScope.parentAnalytics,
+          );
       final personalCompletions = allCompletions
           .where((c) => c.trackType == TrackType.personal.storageKey)
           .toList();

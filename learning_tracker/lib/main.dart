@@ -12,7 +12,6 @@ import 'package:learning_tracker/core/database/seed_manager.dart';
 import 'package:learning_tracker/core/logging/crashlytics_service.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/navigation/router_provider.dart';
-import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/auth/domain/services/pending_local_signup.dart';
@@ -87,10 +86,7 @@ void main() {
       String resolvedContentDbPath;
       final docsDir = await getApplicationDocumentsDirectory();
       try {
-        final seedManager = SeedManager(
-          dbDirectory: docsDir.path,
-          logger: log,
-        );
+        final seedManager = SeedManager(dbDirectory: docsDir.path, logger: log);
         resolvedContentDbPath = await seedManager.ensureContentDb();
         log.info(
           event: 'content_db_ready',

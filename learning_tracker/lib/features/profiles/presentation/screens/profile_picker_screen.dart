@@ -74,10 +74,7 @@ class _ProfilePickerScreenState extends ConsumerState<ProfilePickerScreen> {
             // DNI-342 / UX-DR20: persistent "no backup" badge for local-born
             // accounts (hidden for cloudBorn / signed-out via the widget's
             // internal tier gate).
-            const Align(
-              alignment: Alignment.center,
-              child: NoBackupBadge(),
-            ),
+            const Align(alignment: Alignment.center, child: NoBackupBadge()),
             const SizedBox(height: 6),
             Text(
               l10n.profilePickerTitle,

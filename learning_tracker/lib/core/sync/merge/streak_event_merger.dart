@@ -16,15 +16,20 @@ import 'package:learning_tracker/core/database/user/user_database.dart'
     hide StreakEvent;
 import 'package:learning_tracker/core/streak/streak_event.dart';
 import 'package:learning_tracker/core/streak/streak_event_log.dart';
+import 'package:learning_tracker/core/sync/merge/entity_merger.dart';
 
-class StreakEventMerger {
+class StreakEventMerger implements EntityMerger {
   StreakEventMerger(UserDatabase db) : _log = StreakEventLog(db);
+
+  @override
+  String get kind => EntityKind.streak;
 
   final StreakEventLog _log;
 
   /// Insert any unseen pulled rows. Each [rows] entry follows the
   /// Firestore shape (`event_type`, `event_timestamp` ISO-8601 string,
   /// optional `client_device_id`). UNIQUE silently collapses dupes.
+  @override
   Future<void> merge({
     required int profileId,
     required List<Map<String, dynamic>> rows,

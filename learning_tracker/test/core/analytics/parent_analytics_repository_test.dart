@@ -16,17 +16,16 @@ CompletionsCompanion _completion({
   String trackType = 'forwards',
   int trackId = 1,
   DateTime? completedAt,
-}) =>
-    CompletionsCompanion.insert(
-      profileId: profileId,
-      curriculumId: curriculumId,
-      sefariaRef: ref,
-      stageId: stageId,
-      trackType: trackType,
-      trackId: trackId,
-      completedAt: completedAt ?? DateTime.utc(2026, 5, 13),
-      points: const Value(10),
-    );
+}) => CompletionsCompanion.insert(
+  profileId: profileId,
+  curriculumId: curriculumId,
+  sefariaRef: ref,
+  stageId: stageId,
+  trackType: trackType,
+  trackId: trackId,
+  completedAt: completedAt ?? DateTime.utc(2026, 5, 13),
+  points: const Value(10),
+);
 
 void main() {
   group('ParentAnalyticsRepository (default impl)', () {
@@ -56,49 +55,53 @@ void main() {
       expect(profileIds, equals({1, 2}));
     });
 
-    test('getCompletionsByCurriculum filters by curriculum, across profiles',
-        () async {
-      await db.completionDao.insertCompletion(
-        _completion(profileId: 1, curriculumId: 'mishnayos'),
-      );
-      await db.completionDao.insertCompletion(
-        _completion(profileId: 2, curriculumId: 'bavli', ref: 'ref-2'),
-      );
+    test(
+      'getCompletionsByCurriculum filters by curriculum, across profiles',
+      () async {
+        await db.completionDao.insertCompletion(
+          _completion(profileId: 1, curriculumId: 'mishnayos'),
+        );
+        await db.completionDao.insertCompletion(
+          _completion(profileId: 2, curriculumId: 'bavli', ref: 'ref-2'),
+        );
 
-      final mishna = await repo.getCompletionsByCurriculum(
-        'mishnayos',
-        scope: CrossProfileScope.parentAnalytics,
-      );
-      expect(mishna, hasLength(1));
-      expect(mishna.first.profileId, 1);
-    });
+        final mishna = await repo.getCompletionsByCurriculum(
+          'mishnayos',
+          scope: CrossProfileScope.parentAnalytics,
+        );
+        expect(mishna, hasLength(1));
+        expect(mishna.first.profileId, 1);
+      },
+    );
 
-    test('getCompletionsByDateRange filters by date range, across profiles',
-        () async {
-      await db.completionDao.insertCompletion(
-        _completion(
-          profileId: 1,
-          curriculumId: 'mishnayos',
-          completedAt: DateTime.utc(2026, 1, 1),
-        ),
-      );
-      await db.completionDao.insertCompletion(
-        _completion(
-          profileId: 2,
-          curriculumId: 'mishnayos',
-          ref: 'ref-2',
-          completedAt: DateTime.utc(2026, 6, 1),
-        ),
-      );
+    test(
+      'getCompletionsByDateRange filters by date range, across profiles',
+      () async {
+        await db.completionDao.insertCompletion(
+          _completion(
+            profileId: 1,
+            curriculumId: 'mishnayos',
+            completedAt: DateTime.utc(2026, 1, 1),
+          ),
+        );
+        await db.completionDao.insertCompletion(
+          _completion(
+            profileId: 2,
+            curriculumId: 'mishnayos',
+            ref: 'ref-2',
+            completedAt: DateTime.utc(2026, 6, 1),
+          ),
+        );
 
-      final inRange = await repo.getCompletionsByDateRange(
-        DateTime.utc(2026, 5, 1),
-        DateTime.utc(2026, 7, 1),
-        scope: CrossProfileScope.parentAnalytics,
-      );
-      expect(inRange, hasLength(1));
-      expect(inRange.first.profileId, 2);
-    });
+        final inRange = await repo.getCompletionsByDateRange(
+          DateTime.utc(2026, 5, 1),
+          DateTime.utc(2026, 7, 1),
+          scope: CrossProfileScope.parentAnalytics,
+        );
+        expect(inRange, hasLength(1));
+        expect(inRange.first.profileId, 2);
+      },
+    );
 
     test('getAggregateCount counts across profiles', () async {
       await db.completionDao.insertCompletion(

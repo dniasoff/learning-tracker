@@ -171,21 +171,18 @@ void main() {
           StreakEvent(
             profileId: 1,
             eventType: 'completion',
-            dayUtc: DateTime.utc(2026, 1, 1),
             eventTimestamp: DateTime.utc(2026, 1, 1),
             clientDeviceId: 'A',
           ),
           StreakEvent(
             profileId: 1,
             eventType: 'completion',
-            dayUtc: DateTime.utc(2026, 1, 3),
             eventTimestamp: DateTime.utc(2026, 1, 3),
             clientDeviceId: 'B',
           ),
           StreakEvent(
             profileId: 1,
             eventType: 'completion',
-            dayUtc: DateTime.utc(2026, 1, 2),
             eventTimestamp: DateTime.utc(2026, 1, 2),
             clientDeviceId: 'A',
           ),

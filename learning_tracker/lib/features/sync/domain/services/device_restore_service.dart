@@ -105,10 +105,7 @@ class DeviceRestoreService {
       final prefs = await SharedPreferences.getInstance();
       return prefs.getString(restoreStatePrefKey);
     } catch (e) {
-      _logger.warning(
-        event: 'device_restore_read_state_failed',
-        exception: e,
-      );
+      _logger.warning(event: 'device_restore_read_state_failed', exception: e);
       return null;
     }
   }

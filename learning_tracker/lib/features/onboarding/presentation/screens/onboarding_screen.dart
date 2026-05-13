@@ -223,9 +223,6 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     if (name.isEmpty || _nameError != null || _isCreatingProfile) return;
     setState(() => _isCreatingProfile = true);
 
-    await ref
-        .read(currentAppLocaleProvider.notifier)
-        .set(Locale(_selectedLanguage));
     await ref.read(useHebrewDateProvider.notifier).set(_useHebrewCalendar);
     await ref.read(showNikudProvider.notifier).set(_showNikud);
     await ref

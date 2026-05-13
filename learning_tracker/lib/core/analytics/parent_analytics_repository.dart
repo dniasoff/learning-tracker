@@ -67,70 +67,63 @@ class ParentAnalyticsRepositoryImpl implements ParentAnalyticsRepository {
   @override
   Future<List<Completion>> getAllCompletions({
     required CrossProfileScope scope,
-  }) =>
-      _db.completionDao.internalGetAllCompletionsCrossProfile(scope: scope);
+  }) => _db.completionDao.internalGetAllCompletionsCrossProfile(scope: scope);
 
   @override
   Future<List<Completion>> getCompletionsByCurriculum(
     String curriculumId, {
     required CrossProfileScope scope,
-  }) =>
-      _db.completionDao.internalGetCompletionsByCurriculumCrossProfile(
-        curriculumId,
-        scope: scope,
-      );
+  }) => _db.completionDao.internalGetCompletionsByCurriculumCrossProfile(
+    curriculumId,
+    scope: scope,
+  );
 
   @override
   Future<List<Completion>> getCompletionsForContent(
     String sefariaRef, {
     required CrossProfileScope scope,
-  }) =>
-      _db.completionDao.internalGetCompletionsForContentCrossProfile(
-        sefariaRef,
-        scope: scope,
-      );
+  }) => _db.completionDao.internalGetCompletionsForContentCrossProfile(
+    sefariaRef,
+    scope: scope,
+  );
 
   @override
   Future<List<Completion>> getCompletionsByDateRange(
     DateTime start,
     DateTime end, {
     required CrossProfileScope scope,
-  }) =>
-      _db.completionDao.internalGetCompletionsByDateRangeCrossProfile(
-        start,
-        end,
-        scope: scope,
-      );
+  }) => _db.completionDao.internalGetCompletionsByDateRangeCrossProfile(
+    start,
+    end,
+    scope: scope,
+  );
 
   @override
   Future<bool> hasCompletionsInDateRange(
     DateTime start,
     DateTime end, {
     required CrossProfileScope scope,
-  }) =>
-      _db.completionDao.internalHasCompletionsInDateRangeCrossProfile(
-        start,
-        end,
-        scope: scope,
-      );
+  }) => _db.completionDao.internalHasCompletionsInDateRangeCrossProfile(
+    start,
+    end,
+    scope: scope,
+  );
 
   @override
   Future<int> getAggregateCount(
     String curriculumId, {
     required CrossProfileScope scope,
-  }) =>
-      _db.completionDao.internalGetAggregateCountCrossProfile(
-        curriculumId,
-        scope: scope,
-      );
+  }) => _db.completionDao.internalGetAggregateCountCrossProfile(
+    curriculumId,
+    scope: scope,
+  );
 
   @override
   Future<Map<String, int>> getTrackBreakdown(
     String curriculumId, {
     required CrossProfileScope scope,
-  }) =>
-      _db.completionDao.internalGetTrackBreakdownCrossProfile(
-        curriculumId,
-        scope: scope,
-      );
+  }) => _db.completionDao.internalGetTrackBreakdownCrossProfile(
+    curriculumId,
+    scope: scope,
+  );
 }

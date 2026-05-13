@@ -677,10 +677,11 @@ void main() {
       );
 
       // Existing completion still has 10 points
-      final completions = await db.completionDao.internalGetCompletionsByCurriculumCrossProfile(
-        CurriculumId.mishnayos.storageKey,
-        scope: CrossProfileScope.parentAnalytics,
-      );
+      final completions = await db.completionDao
+          .internalGetCompletionsByCurriculumCrossProfile(
+            CurriculumId.mishnayos.storageKey,
+            scope: CrossProfileScope.parentAnalytics,
+          );
       expect(completions.length, 1);
       expect(completions.first.points, 10);
 
@@ -833,10 +834,11 @@ void main() {
         );
 
         // Verify the completion has 15 points
-        final completions = await db.completionDao.internalGetCompletionsByCurriculumCrossProfile(
-          CurriculumId.mishnayos.storageKey,
-          scope: CrossProfileScope.parentAnalytics,
-        );
+        final completions = await db.completionDao
+            .internalGetCompletionsByCurriculumCrossProfile(
+              CurriculumId.mishnayos.storageKey,
+              scope: CrossProfileScope.parentAnalytics,
+            );
         expect(completions.last.points, 15);
 
         // Make the track reward-eligible so getCurriculumTotal counts it

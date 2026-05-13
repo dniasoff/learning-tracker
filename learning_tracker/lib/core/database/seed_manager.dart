@@ -165,13 +165,12 @@ class SeedManager {
       await File(targetPath).writeAsBytes(decompressed, flush: true);
       _logger?.info(
         event: 'seed_manager_seed_extracted',
-        fields: {'sizeMb': (decompressed.length / 1024 / 1024).toStringAsFixed(1)},
+        fields: {
+          'sizeMb': (decompressed.length / 1024 / 1024).toStringAsFixed(1),
+        },
       );
     } catch (e) {
-      _logger?.error(
-        event: 'seed_manager_extract_failed',
-        exception: e,
-      );
+      _logger?.error(event: 'seed_manager_extract_failed', exception: e);
       throw SeedManagerException(
         'Failed to extract content database. '
         'Please restart the app or reinstall.',
@@ -210,10 +209,7 @@ class SeedManager {
       );
     } catch (e) {
       // Extraction or verification failed — rollback
-      _logger?.error(
-        event: 'seed_manager_upgrade_failed',
-        exception: e,
-      );
+      _logger?.error(event: 'seed_manager_upgrade_failed', exception: e);
       await _rollback();
       // If rollback succeeded, we're on the old version (acceptable)
       // If no old version existed, re-throw
