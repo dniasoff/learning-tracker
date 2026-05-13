@@ -25,6 +25,7 @@ import 'package:learning_tracker/features/track_setup/presentation/steps/step_st
 import 'package:learning_tracker/features/track_setup/presentation/steps/step_study_days.dart';
 import 'package:learning_tracker/features/track_setup/presentation/widgets/curriculum_picker_step.dart';
 import 'package:learning_tracker/features/track_setup/presentation/widgets/program_selection_step.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 const _kAddTrackStep = 'add_track_step';
@@ -417,7 +418,7 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
                         ),
                         elevation: 2,
                       ),
-                      child: const Text('Exit'),
+                      child: Text(AppLocalizations.of(context)!.actionExit),
                     ),
                   ),
                   const SizedBox(height: 10),
@@ -433,7 +434,7 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
                           borderRadius: BorderRadius.circular(999),
                         ),
                       ),
-                      child: const Text('Cancel'),
+                      child: Text(AppLocalizations.of(context)!.actionCancel),
                     ),
                   ),
                 ],
@@ -536,7 +537,7 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
             color: theme.colorScheme.error,
             size: 32,
           ),
-          title: Text('Replace your $name track?'),
+          title: Text(AppLocalizations.of(ctx)!.trackReplaceTitle(name)),
           content: Text(
             'You already have a $name track. Continuing will replace its '
             'study days, scope, review schedule, and goals with the new '
@@ -546,7 +547,7 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
           actions: [
             TextButton(
               onPressed: () => Navigator.of(ctx).pop(false),
-              child: const Text('Cancel'),
+              child: Text(AppLocalizations.of(ctx)!.actionCancel),
             ),
             FilledButton(
               onPressed: () => Navigator.of(ctx).pop(true),
@@ -554,7 +555,7 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
                 backgroundColor: theme.colorScheme.error,
                 foregroundColor: theme.colorScheme.onError,
               ),
-              child: const Text('Replace'),
+              child: Text(AppLocalizations.of(ctx)!.actionReplace),
             ),
           ],
         );
@@ -626,8 +627,8 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text('Failed to save track. Please try again.'),
-          action: SnackBarAction(label: 'Retry', onPressed: _finishFlow),
+          content: Text(AppLocalizations.of(context)!.errorSaveTrackFailed),
+          action: SnackBarAction(label: AppLocalizations.of(context)!.actionRetry, onPressed: _finishFlow),
         ),
       );
     } finally {

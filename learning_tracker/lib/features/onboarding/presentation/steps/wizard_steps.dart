@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:learning_tracker/core/constants/hebrew_terms.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
@@ -260,7 +261,7 @@ class _SelectPresetWidgetState extends State<_SelectPresetWidget> {
                       ),
                     )
                   : null,
-              child: const Text('Confirm'),
+              child: Text(AppLocalizations.of(context)!.onboardingConfirm),
             ),
           ),
         ],
@@ -347,7 +348,7 @@ class _CustomStep1WidgetState extends State<_CustomStep1Widget> {
                 }
                 widget.ctx.advance();
               },
-              child: const Text('Next'),
+              child: Text(AppLocalizations.of(context)!.actionNext),
             ),
           ],
         ),
@@ -420,7 +421,7 @@ class _CustomStep2WidgetState extends State<_CustomStep2Widget> {
             ),
             FilledButton(
               onPressed: widget.ctx.advance,
-              child: const Text('Next'),
+              child: Text(AppLocalizations.of(context)!.actionNext),
             ),
           ],
         ),
@@ -558,7 +559,7 @@ class _CustomStep3Widget extends StatelessWidget {
                   ),
                 );
               },
-              child: const Text('Confirm'),
+              child: Text(AppLocalizations.of(context)!.onboardingConfirm),
             ),
           ],
         ),
@@ -718,9 +719,9 @@ class _RoundTimingCard extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             SegmentedButton<bool>(
-              segments: const [
-                ButtonSegment(value: false, label: Text('Days')),
-                ButtonSegment(value: true, label: Text('Weeks')),
+              segments: [
+                ButtonSegment(value: false, label: Text(AppLocalizations.of(context)!.schedulerDaysLabel)),
+                ButtonSegment(value: true, label: Text(AppLocalizations.of(context)!.schedulerWeeksLabel)),
               ],
               selected: {state.useWeekly},
               onSelectionChanged: (s) {

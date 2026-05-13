@@ -10,6 +10,7 @@ import 'package:learning_tracker/features/auth/presentation/providers/auth_state
 import 'package:learning_tracker/features/auth/presentation/providers/connectivity_providers.dart';
 import 'package:learning_tracker/features/auth/presentation/widgets/email_verification_confirm_panel.dart';
 import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// Local → cloud upgrade flow entry screen (Epic 20 v2 §4.3).
 ///
@@ -188,8 +189,8 @@ class _UpgradeToCloudScreenState extends ConsumerState<UpgradeToCloudScreen> {
       );
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Verification email sent. Check your inbox.'),
+          SnackBar(
+            content: Text(AppLocalizations.of(context)!.errorVerificationEmailSent),
           ),
         );
       }
@@ -304,7 +305,7 @@ class _UpgradeToCloudScreenState extends ConsumerState<UpgradeToCloudScreen> {
     final authState = ref.watch(authStateProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Upgrade to Cloud')),
+      appBar: AppBar(title: Text(AppLocalizations.of(context)!.upgradeToCloudTitle)),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24),
@@ -397,7 +398,7 @@ class _UpgradeToCloudScreenState extends ConsumerState<UpgradeToCloudScreen> {
                             width: 20,
                             child: CircularProgressIndicator(strokeWidth: 2),
                           )
-                        : const Text('Upgrade to Cloud'),
+                        : Text(AppLocalizations.of(context)!.upgradeToCloudButton),
                   ),
                 ],
               ],
@@ -576,7 +577,7 @@ class _CollisionBlock extends StatelessWidget {
           const SizedBox(height: 8),
           TextButton(
             onPressed: isLoading ? null : onCancel,
-            child: const Text('Cancel — keep offline account'),
+            child: Text(AppLocalizations.of(context)!.upgradeToCloudCancelKeepOffline),
           ),
         ],
       ),

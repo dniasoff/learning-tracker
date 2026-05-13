@@ -45,7 +45,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get pages => 'PAGES';
 
   @override
-  String get todaysLearning => 'Today\'s Learning';
+  String todaysLearning(int count) {
+    return 'Today\'s learning ($count)';
+  }
 
   @override
   String remaining(int count) {
@@ -1670,6 +1672,774 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get cannotDeactivateLastCurriculumDetail =>
       'You cannot remove your last active curriculum. Add another curriculum before removing this one.';
+
+  @override
+  String get actionStart => 'Start';
+
+  @override
+  String get actionCancel => 'Cancel';
+
+  @override
+  String get actionSave => 'Save';
+
+  @override
+  String get actionConfirm => 'Confirm';
+
+  @override
+  String get actionReset => 'Reset';
+
+  @override
+  String get actionNext => 'Next';
+
+  @override
+  String get actionBack => 'Back';
+
+  @override
+  String get actionContinue => 'Continue';
+
+  @override
+  String get actionSkip => 'Skip';
+
+  @override
+  String get actionRetry => 'Retry';
+
+  @override
+  String get actionExit => 'Exit';
+
+  @override
+  String get actionReplace => 'Replace';
+
+  @override
+  String get actionDelete => 'Delete';
+
+  @override
+  String get actionEdit => 'Edit';
+
+  @override
+  String get actionClose => 'Close';
+
+  @override
+  String get actionOk => 'OK';
+
+  @override
+  String get actionSkipForNow => 'Skip for now';
+
+  @override
+  String get actionRemove => 'Remove';
+
+  @override
+  String get actionUseToday => 'Use Today';
+
+  @override
+  String get actionStartHere => 'Start here';
+
+  @override
+  String get actionStartHereLabel => 'Start Here';
+
+  @override
+  String errorGeneric(String error) {
+    return 'Error: $error';
+  }
+
+  @override
+  String errorLoadingOrder(String error) {
+    return 'Error loading order: $error';
+  }
+
+  @override
+  String errorLoadingContent(String error) {
+    return 'Error loading content: $error';
+  }
+
+  @override
+  String get errorLoadingPoints => 'Error loading points';
+
+  @override
+  String get errorSaveFailed => 'Failed to save. Please try again.';
+
+  @override
+  String errorSearchFailed(String error) {
+    return 'Search failed: $error';
+  }
+
+  @override
+  String errorSearchError(String error) {
+    return 'Search error: $error';
+  }
+
+  @override
+  String errorUnknownCurriculum(String curriculumId) {
+    return 'Unknown curriculum: \"$curriculumId\"';
+  }
+
+  @override
+  String get errorCouldNotSaveRetry => 'Couldn\'t save — tap to retry';
+
+  @override
+  String get errorSaveTrackFailed => 'Failed to save track. Please try again.';
+
+  @override
+  String get errorSignOutFailed => 'Failed to sign out. Please try again.';
+
+  @override
+  String get errorReauthFailed => 'Re-authentication failed. Please try again.';
+
+  @override
+  String get errorResolveAccount =>
+      'Could not resolve this account. Try again.';
+
+  @override
+  String get errorOnlyOfflineDelete =>
+      'Only offline accounts can be deleted here.';
+
+  @override
+  String errorDeleteAccountFailed(String error) {
+    return 'Failed to delete account: $error';
+  }
+
+  @override
+  String get errorSendLogsMustBeSignedIn => 'Must be signed in to send logs';
+
+  @override
+  String errorSendLogsFailed(String error) {
+    return 'Failed to send logs: $error';
+  }
+
+  @override
+  String get errorNoEmailApp => 'No email app found. Copy address instead?';
+
+  @override
+  String errorMarkCompleteFailed(String error) {
+    return 'Failed to mark complete: $error';
+  }
+
+  @override
+  String get errorVerificationEmailSent =>
+      'Verification email sent. Check your inbox.';
+
+  @override
+  String get noData => 'No data';
+
+  @override
+  String get noTasksForToday => 'No tasks for today';
+
+  @override
+  String get noItemsToOrder => 'No items to order.';
+
+  @override
+  String get noProfilesYet => 'No profiles yet. Tap + to add one.';
+
+  @override
+  String get noCompletionsYet => 'No completions yet';
+
+  @override
+  String noResultsForQuery(String query) {
+    return 'No results for \"$query\"';
+  }
+
+  @override
+  String viewAllTasks(int count) {
+    return 'View all ($count) →';
+  }
+
+  @override
+  String tasksDueToday(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count tasks due today',
+      one: '1 task due today',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get tapToStartLearning => 'Tap to start learning';
+
+  @override
+  String get todaysLearningTitle => 'Today\'s Learning';
+
+  @override
+  String remainingCount(int count) {
+    return '$count remaining';
+  }
+
+  @override
+  String get allDoneForToday => 'All done for today!';
+
+  @override
+  String missedReview(int count) {
+    return 'Missed review ($count)';
+  }
+
+  @override
+  String todaysReview(int count) {
+    return 'Today\'s review ($count)';
+  }
+
+  @override
+  String get dailyTasksTitle => 'Daily Tasks';
+
+  @override
+  String get taskSkippedUntilTomorrow => 'Task skipped until tomorrow';
+
+  @override
+  String get tasksNoTasksRemainingTitle =>
+      'You have no tasks remaining for today.';
+
+  @override
+  String get undoLabel => 'Undo';
+
+  @override
+  String get searchTitle => 'Search';
+
+  @override
+  String get searchHintEnterTerm => 'Enter a search term above';
+
+  @override
+  String get loadingText => 'Loading text...';
+
+  @override
+  String get markedComplete => 'Marked complete';
+
+  @override
+  String couldNotSave(String error) {
+    return 'Couldn\'t save: $error';
+  }
+
+  @override
+  String get textReaderTooltipPrevious => 'Previous';
+
+  @override
+  String get textReaderTooltipNext => 'Next';
+
+  @override
+  String get textReaderHebrewTab => 'Hebrew Text';
+
+  @override
+  String get textReaderEnglishTab => 'English Translation';
+
+  @override
+  String get totalPointsLabel => 'Total Points';
+
+  @override
+  String get resetToDefaultOrder => 'Reset to Default Order';
+
+  @override
+  String get resetToDefaultOrderDialogTitle => 'Reset to Default Order';
+
+  @override
+  String get resetToDefaultOrderDialogBody =>
+      'This will restore the natural Sefaria order for this curriculum. Your custom ordering will be lost.';
+
+  @override
+  String get controlledByParent => 'Controlled by parent';
+
+  @override
+  String get sacredTimeDetect => 'Detect';
+
+  @override
+  String get sacredTimeChooseCity => 'Choose city';
+
+  @override
+  String get cityPickerTitle => 'Choose a city';
+
+  @override
+  String get cityPickerHint => 'Type a city name…';
+
+  @override
+  String get schedulerStudyLabel => 'Study';
+
+  @override
+  String get schedulerReviewOnlyLabel => 'Review only';
+
+  @override
+  String get schedulerPerDay => 'Per day';
+
+  @override
+  String get schedulerPerWeek => 'Per week';
+
+  @override
+  String get schedulerPerakimLabel => 'Perakim';
+
+  @override
+  String get schedulerPesukimLabel => 'Pesukim';
+
+  @override
+  String get schedulerAmudimLabel => 'Amudim';
+
+  @override
+  String get schedulerDafimLabel => 'Dafim';
+
+  @override
+  String get schedulerDeadlineLabel => 'Deadline';
+
+  @override
+  String get schedulerPaceLabel => 'Pace';
+
+  @override
+  String get schedulerNoDeadlineLabel => 'No deadline';
+
+  @override
+  String get schedulerGoalHint => 'e.g., Bar Mitzvah, Yahrzeit, Siyum';
+
+  @override
+  String get schedulerSelectDate => 'Select date';
+
+  @override
+  String get schedulerPickDeadlineFirst => 'Pick a deadline first.';
+
+  @override
+  String get schedulerDaysLabel => 'Days';
+
+  @override
+  String get schedulerWeeksLabel => 'Weeks';
+
+  @override
+  String get profilesEditLabel => 'Edit';
+
+  @override
+  String get profilesDeleteLabel => 'Delete';
+
+  @override
+  String get profilesChooseAvatar => 'Choose Avatar';
+
+  @override
+  String get profilesAddLearner => 'Add Learner';
+
+  @override
+  String get profilesEditLearner => 'Edit Learner';
+
+  @override
+  String get profilesChildLabel => 'Child';
+
+  @override
+  String get profilesAdultLabel => 'Adult';
+
+  @override
+  String get profilesEnterLearnerName => 'Enter learner name';
+
+  @override
+  String get trackNameThisTrack => 'Name This Track';
+
+  @override
+  String get trackNameLabel => 'Track Name';
+
+  @override
+  String get trackAddLabel => 'ADD TRACK';
+
+  @override
+  String get trackDeleteTitle => 'Delete Track?';
+
+  @override
+  String get trackMarkContentDone => 'Mark Content Done';
+
+  @override
+  String get trackReorderContent => 'Reorder Content';
+
+  @override
+  String trackReplaceTitle(String label) {
+    return 'Replace your $label track?';
+  }
+
+  @override
+  String get bulkMarkCompleteTitle => 'Bulk Mark Complete';
+
+  @override
+  String bulkMarkedComplete(int count) {
+    return 'Marked $count items as complete';
+  }
+
+  @override
+  String get bulkMarkConfirmBulkTitle => 'Confirm Bulk Mark';
+
+  @override
+  String get bulkMarkingCompletions => 'Marking completions...';
+
+  @override
+  String get bulkMarkDone => 'Done!';
+
+  @override
+  String get bulkMarkSkip => 'Skip';
+
+  @override
+  String get bulkMarkPriorLearning => 'Mark Prior Learning';
+
+  @override
+  String get completionButtonCompleted => 'Completed';
+
+  @override
+  String get completionButtonMarkComplete => 'Mark Complete';
+
+  @override
+  String get upgradeToCloudTitle => 'Upgrade to Cloud';
+
+  @override
+  String get upgradeToCloudButton => 'Upgrade to Cloud';
+
+  @override
+  String get upgradeToCloudCancelKeepOffline => 'Cancel — keep offline account';
+
+  @override
+  String get scopeSelectionSave => 'Save';
+
+  @override
+  String get scopeSelectionTrackEntireCurriculum => 'Track Entire Curriculum';
+
+  @override
+  String get scopeSelectionChooseHierarchyLevel =>
+      'Choose which hierarchy level to filter by';
+
+  @override
+  String get scopeSelectionChangeLevel => 'Change Level';
+
+  @override
+  String get curriculumSettingsLoadingProgram => 'Loading program...';
+
+  @override
+  String get curriculumSettingsProgramTitle => 'Program';
+
+  @override
+  String curriculumSettingsProgramError(String error) {
+    return 'Error: $error';
+  }
+
+  @override
+  String get curriculumSettingsChangeProgram => 'Change Program';
+
+  @override
+  String get curriculumSettingsChangeProgramSubtitle =>
+      'Switch to a different learning program';
+
+  @override
+  String get curriculumSettingsDontSeeProgram => 'Don\'t see your program?';
+
+  @override
+  String get curriculumSettingsRequestProgram => 'Request a new program';
+
+  @override
+  String get deleteAccountDialogTitle => 'Delete Account';
+
+  @override
+  String get deleteAccountTypeConfirm => 'Type DELETE to confirm:';
+
+  @override
+  String get deleteAccountHint => 'DELETE';
+
+  @override
+  String backupLastSynced(String timeAgo) {
+    return 'Last synced $timeAgo';
+  }
+
+  @override
+  String get backupSyncing => 'Syncing...';
+
+  @override
+  String backupPendingChanges(int count) {
+    return '$count changes pending';
+  }
+
+  @override
+  String backupSyncError(String message) {
+    return 'Sync error: $message';
+  }
+
+  @override
+  String get backupUpgradeToCloud => 'Upgrade to Cloud';
+
+  @override
+  String get reauthDialogTitle => 'Verify Your Identity';
+
+  @override
+  String get reauthDialogBody =>
+      'Please enter your current password to continue.';
+
+  @override
+  String get reauthVerify => 'Verify';
+
+  @override
+  String get linkAccountTitle => 'Link Account';
+
+  @override
+  String get linkAccountSubtitle =>
+      'Add another sign-in method to your account.';
+
+  @override
+  String get linkAccountGoogleLabel => 'Google';
+
+  @override
+  String get linkAccountEmailPasswordLabel => 'Email/Password';
+
+  @override
+  String get linkAccountLinkEmail => 'Link Email';
+
+  @override
+  String get linkAccountAllLinked =>
+      'All available sign-in methods are already linked.';
+
+  @override
+  String get linkAccountGoogleSuccess => 'Google account linked successfully.';
+
+  @override
+  String get linkAccountEmailSuccess =>
+      'Email/password account linked successfully.';
+
+  @override
+  String get changePasswordDialogTitle => 'Change Password';
+
+  @override
+  String get changePasswordButton => 'Change Password';
+
+  @override
+  String get accountDeletedTitle => 'Account deleted';
+
+  @override
+  String get signOutLabel => 'Sign Out';
+
+  @override
+  String get connectionLostTitle => 'Connection lost';
+
+  @override
+  String get tryAgainButton => 'Try Again';
+
+  @override
+  String get createOfflineAccount => 'Create Offline Account';
+
+  @override
+  String get onboardingConfirm => 'Confirm';
+
+  @override
+  String get onboardingStartLearning => 'Start Learning';
+
+  @override
+  String get onboardingAddAnotherTrack => 'Add Another Track';
+
+  @override
+  String get onboardingAddAnotherLearner => 'Add Another Learner';
+
+  @override
+  String get onboardingSkipNoReview => 'Skip (no review)';
+
+  @override
+  String get onboardingMarkCompleted => 'Mark Completed';
+
+  @override
+  String get onboardingStartingPosition => 'Starting Position';
+
+  @override
+  String get onboardingStudyDays => 'Study Days';
+
+  @override
+  String get filterByTrack => 'Filter by track';
+
+  @override
+  String get completionHistoryAllTracks => 'All Tracks';
+
+  @override
+  String get completionHistoryFilteredBy => 'Filtered by: ';
+
+  @override
+  String completionHistoryStagePrefix(int stageId) {
+    return 'Stage $stageId • ';
+  }
+
+  @override
+  String get stageNameLimud => 'לימוד';
+
+  @override
+  String get stageNameChazaraAleph => 'חזרה א׳';
+
+  @override
+  String get stageNameChazaraBet => 'חזרה ב׳';
+
+  @override
+  String get actionMarkCompleted => 'Mark Completed';
+
+  @override
+  String get actionSkipNoReview => 'Skip (no review)';
+
+  @override
+  String get studyDaysTitle => 'Study Days';
+
+  @override
+  String get studyDaysSubtitle => 'Which days do you learn?';
+
+  @override
+  String studyDaysSetByProgram(String programName) {
+    return 'Study days set by $programName';
+  }
+
+  @override
+  String get startingPositionTitle => 'Starting Position';
+
+  @override
+  String get startingPositionHint =>
+      'Can start up to 30 days back/forward from today';
+
+  @override
+  String startingPositionWhereAreYou(String programName) {
+    return 'Where are you in $programName?';
+  }
+
+  @override
+  String get priorLearningTitle => 'Mark Prior Learning';
+
+  @override
+  String get priorLearningSubtitle =>
+      'Do you want to mark parts you already learned as completed?';
+
+  @override
+  String get goalPickDeadlineFirst => 'Pick a deadline first.';
+
+  @override
+  String get trackSaveError => 'Failed to save track. Please try again.';
+
+  @override
+  String get pacePerDay => 'Per day';
+
+  @override
+  String get pacePerWeek => 'Per week';
+
+  @override
+  String get goalTypeDeadline => 'Deadline';
+
+  @override
+  String get goalTypePace => 'Pace';
+
+  @override
+  String get goalTypeNoDeadline => 'No deadline';
+
+  @override
+  String get goalEditTitle => 'Edit Goal';
+
+  @override
+  String get goalNewTitle => 'New Goal';
+
+  @override
+  String get goalUpdateButton => 'Update Goal';
+
+  @override
+  String get goalCreateButton => 'Create Goal';
+
+  @override
+  String get unitPerakim => 'Perakim';
+
+  @override
+  String get unitPesukim => 'Pesukim';
+
+  @override
+  String get unitAmudim => 'Amudim';
+
+  @override
+  String get unitDafim => 'Dafim';
+
+  @override
+  String get tasksUnableToLoad => 'Unable to load tasks';
+
+  @override
+  String get tasksAllCaughtUp => 'All caught up';
+
+  @override
+  String get tasksNoTasksRemainingToday => 'No tasks remaining for today.';
+
+  @override
+  String itemsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count Items',
+      one: '1 Item',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String scopeSelectionCountSelected(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count selected',
+      one: '1 selected',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String scopeSelectionItemCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count items',
+      one: '1 item',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String reviewStageDayDelay(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count day delay',
+      one: '1 day delay',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get applyToAll => 'Apply to All';
+
+  @override
+  String get trackNameSubtitle => 'Give your track a name to identify it.';
+
+  @override
+  String priorLearningChooseSections(String curriculumName) {
+    return 'Choose which sections to mark in $curriculumName.';
+  }
+
+  @override
+  String get priorLearningAlreadyCompleted =>
+      'Have you already completed some of these sections?';
+
+  @override
+  String get priorLearningMarkEverything => 'Mark everything as finished';
+
+  @override
+  String get priorLearningMarkEverythingSubtitle =>
+      'Best if you are starting a new review cycle';
+
+  @override
+  String get priorLearningNoFolders =>
+      'No specific folders were selected, but you can still mark all as completed.';
+
+  @override
+  String get priorLearningSelectedFolder => 'Selected folder';
+
+  @override
+  String scopeSelectionSelectLevel(String levelName) {
+    return 'Select $levelName';
+  }
+
+  @override
+  String get activeTracksLabel => 'Active Tracks';
+
+  @override
+  String activeTracksRunning(int count) {
+    return '$count RUNNING';
+  }
+
+  @override
+  String trackSince(String date) {
+    return 'Since $date';
+  }
+
+  @override
+  String get trackDeleteLabel => 'Delete Track';
+
+  @override
+  String trackDeleteContent(String name) {
+    return 'Permanently delete \"$name\"? All progress and data for this track will be removed. This cannot be undone.';
+  }
 
   @override
   String get notificationReminderTitle => 'Learning Reminder';

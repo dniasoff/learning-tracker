@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:learning_tracker/features/settings/domain/services/account_management_service.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// Shows a dialog that prompts the user to enter their current password
 /// to re-authenticate before a destructive operation.
@@ -60,11 +61,11 @@ class _ReauthenticateDialogState extends State<_ReauthenticateDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text('Verify Your Identity'),
+      title: Text(AppLocalizations.of(context)!.reauthDialogTitle),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Text('Please enter your current password to continue.'),
+          Text(AppLocalizations.of(context)!.reauthDialogBody),
           const SizedBox(height: 16),
           TextField(
             controller: _passwordController,
@@ -80,7 +81,7 @@ class _ReauthenticateDialogState extends State<_ReauthenticateDialog> {
       actions: [
         TextButton(
           onPressed: _loading ? null : () => Navigator.pop(context, false),
-          child: const Text('Cancel'),
+          child: Text(AppLocalizations.of(context)!.actionCancel),
         ),
         TextButton(
           onPressed: _loading ? null : _submit,
@@ -90,7 +91,7 @@ class _ReauthenticateDialogState extends State<_ReauthenticateDialog> {
                   height: 16,
                   child: CircularProgressIndicator(strokeWidth: 2),
                 )
-              : const Text('Verify'),
+              : Text(AppLocalizations.of(context)!.reauthVerify),
         ),
       ],
     );

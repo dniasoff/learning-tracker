@@ -10,6 +10,7 @@ import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/widgets/item_review_breakdown.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/widgets/review_count_badge.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/completion_providers.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// Displays a single content item in the hierarchy browser.
 ///
@@ -242,7 +243,7 @@ class _StageBreakdownSheet extends ConsumerWidget {
               );
             },
             loading: () => const Center(child: CircularProgressIndicator()),
-            error: (e, _) => Text('Error: $e'),
+            error: (e, _) => Text(AppLocalizations.of(context)!.errorWithMessage(e.toString())),
           ),
           const SizedBox(height: 16),
         ],

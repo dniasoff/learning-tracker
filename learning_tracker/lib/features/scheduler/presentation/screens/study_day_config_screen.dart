@@ -10,6 +10,7 @@ import 'package:learning_tracker/features/profiles/presentation/providers/active
 import 'package:learning_tracker/features/scheduler/domain/models/day_type.dart';
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
 import 'package:learning_tracker/features/scheduler/presentation/providers/study_day_config_providers.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// Day labels in display order: Sunday first (ISO weekday 7), then Mon(1)..Sat(6).
 const _displayOrder = [7, 1, 2, 3, 4, 5, 6];
@@ -71,14 +72,14 @@ class StudyDayConfigScreen extends ConsumerWidget {
                     children: [
                       _LegendDot(
                         color: theme.colorScheme.primary,
-                        label: 'Study',
+                        label: AppLocalizations.of(context)!.schedulerStudyLabel,
                       ),
                       const SizedBox(width: 16),
                       _LegendDot(
                         color: theme.colorScheme.onSurfaceVariant.withValues(
                           alpha: 0.4,
                         ),
-                        label: 'Review only',
+                        label: AppLocalizations.of(context)!.schedulerReviewOnlyLabel,
                       ),
                     ],
                   ),
@@ -126,7 +127,7 @@ class StudyDayConfigScreen extends ConsumerWidget {
             );
           },
           loading: () => const Center(child: CircularProgressIndicator()),
-          error: (e, _) => Center(child: Text('Error: $e')),
+          error: (e, _) => Center(child: Text(AppLocalizations.of(context)!.errorGeneric(e.toString()))),
         ),
       ),
     );

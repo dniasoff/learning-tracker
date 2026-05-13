@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// Confirmation dialog for resetting learning order to default.
 class ResetOrderDialog extends StatelessWidget {
@@ -15,20 +16,18 @@ class ResetOrderDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return AlertDialog(
-      title: const Text('Reset to Default Order'),
-      content: const Text(
-        'This will restore the natural Sefaria order for this curriculum. '
-        'Your custom ordering will be lost.',
-      ),
+      title: Text(l10n.resetToDefaultOrderDialogTitle),
+      content: Text(l10n.resetToDefaultOrderDialogBody),
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(false),
-          child: const Text('Cancel'),
+          child: Text(l10n.actionCancel),
         ),
         FilledButton(
           onPressed: () => Navigator.of(context).pop(true),
-          child: const Text('Reset'),
+          child: Text(l10n.actionReset),
         ),
       ],
     );

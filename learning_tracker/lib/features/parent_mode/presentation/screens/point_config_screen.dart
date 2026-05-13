@@ -213,7 +213,7 @@ class _PointConfigScreenState extends ConsumerState<PointConfigScreen> {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('Error: $e')));
+        ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context)!.errorGeneric(e.toString()))));
       }
     }
   }
@@ -252,7 +252,7 @@ class _PointConfigScreenState extends ConsumerState<PointConfigScreen> {
       ),
       body: pointsAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, stack) => Center(child: Text('Error: $error')),
+        error: (error, stack) => Center(child: Text(AppLocalizations.of(context)!.errorGeneric(error.toString()))),
         data: (pointData) {
           if (pointData.isEmpty) {
             return Center(

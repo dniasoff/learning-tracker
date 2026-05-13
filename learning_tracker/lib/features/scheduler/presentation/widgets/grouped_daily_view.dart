@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
@@ -25,7 +26,7 @@ class GroupedDailyView extends ConsumerWidget {
     final grouped = schedule.groupedByCurriculum;
 
     if (grouped.isEmpty) {
-      return const Center(child: Text('No tasks for today'));
+      return Center(child: Text(AppLocalizations.of(context)!.noTasksForToday));
     }
 
     // Canonical Jewish-learning order — never alphabetical. The

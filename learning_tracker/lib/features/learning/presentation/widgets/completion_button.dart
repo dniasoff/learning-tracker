@@ -13,6 +13,7 @@ import 'package:learning_tracker/features/learning/presentation/providers/optimi
 import 'package:learning_tracker/features/learning/presentation/widgets/completion_animation.dart';
 import 'package:learning_tracker/features/learning/presentation/widgets/completion_feedback_controller.dart';
 import 'package:learning_tracker/features/notifications/presentation/providers/notification_providers.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// Button widget for marking a content item as completed.
 ///
@@ -141,7 +142,7 @@ class _CompletionButtonState extends ConsumerState<CompletionButton> {
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text("Couldn't save — tap to retry"),
+            content: Text(AppLocalizations.of(context)!.errorCouldNotSaveRetry),
             backgroundColor: Colors.red,
             action: SnackBarAction(
               label: 'Retry',
@@ -204,15 +205,15 @@ class _CompletionButtonState extends ConsumerState<CompletionButton> {
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
                   : isAlreadyCompleted
-                  ? const Row(
+                  ? Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.check_circle, size: 18),
-                        SizedBox(width: 4),
-                        Text('Completed'),
+                        const Icon(Icons.check_circle, size: 18),
+                        const SizedBox(width: 4),
+                        Text(AppLocalizations.of(context)!.completionButtonCompleted),
                       ],
                     )
-                  : const Text('Mark Complete'),
+                  : Text(AppLocalizations.of(context)!.completionButtonMarkComplete),
             ),
             // H1: IgnorePointer so animation overlay doesn't block taps
             if (_feedbackController.phase == CompletionFeedbackPhase.checkmark)

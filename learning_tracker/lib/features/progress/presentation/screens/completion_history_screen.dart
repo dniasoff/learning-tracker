@@ -9,6 +9,7 @@ import 'package:learning_tracker/core/widgets/app_bar_title.dart';
 import 'package:learning_tracker/core/widgets/error_display.dart';
 import 'package:learning_tracker/core/widgets/loading_indicator.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/progress_providers.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
 
 @RoutePage()
 class CompletionHistoryScreen extends ConsumerStatefulWidget {
@@ -96,13 +97,13 @@ class _CompletionHistoryScreenState
       tooltip: 'Filter by track',
       onSelected: _onTrackFilterChanged,
       itemBuilder: (context) => [
-        const PopupMenuItem<TrackType?>(
+        PopupMenuItem<TrackType?>(
           value: null,
           child: Row(
             children: [
-              Icon(Icons.clear),
-              SizedBox(width: 8),
-              Text('All Tracks'),
+              const Icon(Icons.clear),
+              const SizedBox(width: 8),
+              Text(AppLocalizations.of(context)!.completionHistoryAllTracks),
             ],
           ),
         ),
@@ -136,7 +137,7 @@ class _CompletionHistoryScreenState
       color: AppTheme.getTrackColor(_trackFilter!).withValues(alpha: 0.1),
       child: Row(
         children: [
-          const Text('Filtered by: ', style: TextStyle(fontSize: 14)),
+          Text(AppLocalizations.of(context)!.completionHistoryFilteredBy, style: const TextStyle(fontSize: 14)),
           Chip(
             avatar: CircleAvatar(
               backgroundColor: AppTheme.getTrackColor(_trackFilter!),
@@ -164,7 +165,7 @@ class _CompletionHistoryScreenState
             ),
             const SizedBox(height: 16),
             Text(
-              'No completions yet',
+              AppLocalizations.of(context)!.noCompletionsYet,
               style: TextStyle(
                 fontSize: 18,
                 color: theme.colorScheme.onSurfaceVariant,
@@ -213,7 +214,7 @@ class _CompletionHistoryScreenState
             const SizedBox(height: 4),
             Row(
               children: [
-                Text('Stage ${completion.stageId} • '),
+                Text(AppLocalizations.of(context)!.completionHistoryStagePrefix(completion.stageId)),
                 CurriculumLabel.trackType(trackType),
               ],
             ),

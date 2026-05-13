@@ -10,6 +10,7 @@ import 'package:learning_tracker/features/scheduler/domain/models/goal_entity.da
 import 'package:learning_tracker/features/scheduler/domain/models/goal_form_result.dart';
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
 import 'package:learning_tracker/features/scheduler/presentation/widgets/hebrew_date_picker.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
 
 // Re-export from domain layer for backward compatibility.
 export 'package:learning_tracker/features/scheduler/domain/models/goal_form_result.dart'
@@ -37,7 +38,7 @@ class GoalSetupScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: AppBarTitle(
-          text: existingGoal != null ? 'Edit Goal' : 'New Goal',
+          text: existingGoal != null ? AppLocalizations.of(context)!.goalEditTitle : AppLocalizations.of(context)!.goalNewTitle,
         ),
       ),
       body: SafeArea(
@@ -333,9 +334,9 @@ class _GoalSetupFormState extends ConsumerState<GoalSetupForm> {
             const SizedBox(width: 16),
             // Per day / per week selector
             SegmentedButton<String>(
-              segments: const [
-                ButtonSegment(value: 'per_day', label: Text('Per day')),
-                ButtonSegment(value: 'per_week', label: Text('Per week')),
+              segments: [
+                ButtonSegment(value: 'per_day', label: Text(AppLocalizations.of(context)!.pacePerDay)),
+                ButtonSegment(value: 'per_week', label: Text(AppLocalizations.of(context)!.pacePerWeek)),
               ],
               selected: {_paceUnit},
               onSelectionChanged: (selected) {
@@ -429,22 +430,22 @@ class _GoalSetupFormState extends ConsumerState<GoalSetupForm> {
                     const SizedBox(height: 8),
                     SegmentedButton<String>(
                       segments: _isPasukPerekCurriculum
-                          ? const [
+                          ? [
                               ButtonSegment(
                                 value: 'perek',
-                                label: Text('Perakim'),
+                                label: Text(AppLocalizations.of(context)!.unitPerakim),
                               ),
                               ButtonSegment(
                                 value: 'pasuk',
-                                label: Text('Pesukim'),
+                                label: Text(AppLocalizations.of(context)!.unitPesukim),
                               ),
                             ]
-                          : const [
+                          : [
                               ButtonSegment(
                                 value: 'amud',
-                                label: Text('Amudim'),
+                                label: Text(AppLocalizations.of(context)!.unitAmudim),
                               ),
-                              ButtonSegment(value: 'daf', label: Text('Dafim')),
+                              ButtonSegment(value: 'daf', label: Text(AppLocalizations.of(context)!.unitDafim)),
                             ],
                       selected: {_learningUnit},
                       onSelectionChanged: (selected) {
@@ -455,21 +456,21 @@ class _GoalSetupFormState extends ConsumerState<GoalSetupForm> {
                   ],
                   // Goal type toggle
                   SegmentedButton<String>(
-                    segments: const [
+                    segments: [
                       ButtonSegment(
                         value: 'deadline',
-                        label: Text('Deadline'),
-                        icon: Icon(Icons.calendar_today),
+                        label: Text(AppLocalizations.of(context)!.goalTypeDeadline),
+                        icon: const Icon(Icons.calendar_today),
                       ),
                       ButtonSegment(
                         value: 'pace',
-                        label: Text('Pace'),
-                        icon: Icon(Icons.speed),
+                        label: Text(AppLocalizations.of(context)!.goalTypePace),
+                        icon: const Icon(Icons.speed),
                       ),
                       ButtonSegment(
                         value: 'none',
-                        label: Text('No deadline'),
-                        icon: Icon(Icons.all_inclusive),
+                        label: Text(AppLocalizations.of(context)!.goalTypeNoDeadline),
+                        icon: const Icon(Icons.all_inclusive),
                       ),
                     ],
                     selected: {_goalType},
@@ -499,7 +500,9 @@ class _GoalSetupFormState extends ConsumerState<GoalSetupForm> {
             onPressed: _submit,
             child: Text(
               widget.submitLabel ??
-                  (widget.existingGoal != null ? 'Update Goal' : 'Create Goal'),
+                  (widget.existingGoal != null
+                      ? AppLocalizations.of(context)!.goalUpdateButton
+                      : AppLocalizations.of(context)!.goalCreateButton),
             ),
           ),
         ],

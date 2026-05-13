@@ -186,7 +186,7 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      'Since $activatedDate',
+                      AppLocalizations.of(context)!.trackSince(activatedDate),
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: AppTheme.brandInkMuted,
                       ),
@@ -299,7 +299,7 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
                 Icons.check_circle_outline,
                 color: Color(0xFF1C47C4),
               ),
-              title: const Text('Mark Content Done'),
+              title: Text(AppLocalizations.of(context)!.trackMarkContentDone),
               trailing: const Icon(Icons.chevron_right_rounded),
               onTap: curriculum != null
                   ? () => _openBulkMark(track, curriculum)
@@ -311,7 +311,7 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
                 Icons.swap_vert_rounded,
                 color: Color(0xFF1C47C4),
               ),
-              title: const Text('Reorder Content'),
+              title: Text(AppLocalizations.of(context)!.trackReorderContent),
               trailing: const Icon(Icons.chevron_right_rounded),
               onTap: curriculum != null
                   ? () => Navigator.of(context).push<void>(
@@ -338,7 +338,7 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
               color: theme.colorScheme.error,
             ),
             title: Text(
-              'Delete Track',
+              AppLocalizations.of(context)!.trackDeleteLabel,
               style: theme.textTheme.bodyLarge?.copyWith(
                 color: theme.colorScheme.error,
               ),
@@ -390,22 +390,19 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete Track?'),
-        content: Text(
-          'Permanently delete "$name"? All progress and data for this track '
-          'will be removed. This cannot be undone.',
-        ),
+        title: Text(AppLocalizations.of(context)!.trackDeleteTitle),
+        content: Text(AppLocalizations.of(context)!.trackDeleteContent(name)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
+            child: Text(AppLocalizations.of(context)!.actionCancel),
           ),
           FilledButton(
             style: FilledButton.styleFrom(
               backgroundColor: Theme.of(context).colorScheme.error,
             ),
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Delete'),
+            child: Text(AppLocalizations.of(context)!.actionDelete),
           ),
         ],
       ),

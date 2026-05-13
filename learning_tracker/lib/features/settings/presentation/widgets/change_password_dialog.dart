@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:learning_tracker/features/settings/domain/services/account_management_service.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// Shows a dialog for changing the user's password.
 ///
@@ -59,7 +60,7 @@ class _ChangePasswordDialogState extends State<_ChangePasswordDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text('Change Password'),
+      title: Text(AppLocalizations.of(context)!.changePasswordDialogTitle),
       content: Form(
         key: _formKey,
         child: Column(
@@ -101,7 +102,7 @@ class _ChangePasswordDialogState extends State<_ChangePasswordDialog> {
       actions: [
         TextButton(
           onPressed: _loading ? null : () => Navigator.pop(context, false),
-          child: const Text('Cancel'),
+          child: Text(AppLocalizations.of(context)!.actionCancel),
         ),
         TextButton(
           onPressed: _loading ? null : _submit,
@@ -111,7 +112,7 @@ class _ChangePasswordDialogState extends State<_ChangePasswordDialog> {
                   height: 16,
                   child: CircularProgressIndicator(strokeWidth: 2),
                 )
-              : const Text('Change Password'),
+              : Text(AppLocalizations.of(context)!.changePasswordButton),
         ),
       ],
     );

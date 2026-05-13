@@ -299,7 +299,7 @@ final class ProgressOverviewStatsProvider
 }
 
 String _$progressOverviewStatsHash() =>
-    r'ef5b9e49cb75afbda8be038ff2aa4fdac197715d';
+    r'2054ce1841d0005f4af1841c80b19a3b71b8ff7b';
 
 /// Per-curriculum progress data provider (family keyed by curriculumId per P3).
 ///

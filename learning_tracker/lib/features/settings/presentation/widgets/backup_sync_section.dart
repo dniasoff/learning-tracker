@@ -6,6 +6,7 @@ import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/auth/presentation/providers/auth_state_provider.dart';
 import 'package:learning_tracker/features/sync/domain/models/sync_status.dart';
 import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// Sync status and optional upgrade-to-cloud CTA (DNI-188).
 class BackupSyncSection extends ConsumerWidget {
@@ -17,6 +18,7 @@ class BackupSyncSection extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
     final syncStatus = ref.watch(syncStatusProvider);
     final authState = ref.watch(authStateProvider);
     return switch (syncStatus) {
@@ -29,29 +31,29 @@ class BackupSyncSection extends ConsumerWidget {
       SyncStatusSynced(:final lastSyncedAt) => _buildCloudStatusCard(
         theme,
         icon: Icons.cloud_done_rounded,
-        subtitle: 'Last synced ${_formatTimeAgo(lastSyncedAt)}',
+        subtitle: l10n.backupLastSynced(_formatTimeAgo(lastSyncedAt)),
       ),
       SyncStatusSyncing() => _buildCloudStatusCard(
         theme,
         icon: Icons.sync_rounded,
-        subtitle: 'Syncing...',
+        subtitle: l10n.backupSyncing,
       ),
       SyncStatusPending(:final pendingChanges) => _buildCloudStatusCard(
         theme,
         icon: Icons.schedule_rounded,
-        subtitle: '$pendingChanges changes pending',
+        subtitle: l10n.backupPendingChanges(pendingChanges),
       ),
       SyncStatusOffline(:final pendingChanges) => _buildCloudStatusCard(
         theme,
         icon: Icons.cloud_off_rounded,
         subtitle: pendingChanges > 0
-            ? '$pendingChanges changes queued'
+            ? l10n.backupPendingChanges(pendingChanges)
             : 'Offline',
       ),
       SyncStatusError(:final message) => _buildCloudStatusCard(
         theme,
         icon: Icons.warning_amber_rounded,
-        subtitle: 'Sync error: $message',
+        subtitle: l10n.backupSyncError(message),
       ),
       SyncStatusDegraded(:final pendingChanges, :final reason) =>
         _buildCloudStatusCard(
@@ -149,7 +151,7 @@ class BackupSyncSection extends ConsumerWidget {
                     ),
                     onPressed: () =>
                         context.pushRoute(const UpgradeToCloudRoute()),
-                    child: const Text('Upgrade to Cloud'),
+                    child: Text(AppLocalizations.of(context)!.backupUpgradeToCloud),
                   ),
                 ),
               ],
@@ -242,7 +244,7 @@ class BackupSyncSection extends ConsumerWidget {
                         ),
                       ),
                       const SizedBox(width: 8),
-                      const Text('Upgrade to Cloud'),
+                      Text(AppLocalizations.of(context)!.upgradeToCloudButton),
                     ],
                   ),
                 ),

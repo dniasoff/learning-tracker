@@ -45,7 +45,9 @@ class AppLocalizationsHe extends AppLocalizations {
   String get pages => 'עמודים';
 
   @override
-  String get todaysLearning => 'הלימוד של היום';
+  String todaysLearning(int count) {
+    return 'לימוד היום ($count)';
+  }
 
   @override
   String remaining(int count) {
@@ -550,7 +552,7 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String errorLoadingTasks(String error) {
-    return 'שגיאה בטעינת המשימות: $error';
+    return 'שגיאה בטעינת משימות: $error';
   }
 
   @override
@@ -1650,6 +1652,767 @@ class AppLocalizationsHe extends AppLocalizations {
   @override
   String get cannotDeactivateLastCurriculumDetail =>
       'לא ניתן להסיר את קורס הלימוד האחרון הפעיל. הוסיפו קורס נוסף לפני הסרת זה.';
+
+  @override
+  String get actionStart => 'התחל';
+
+  @override
+  String get actionCancel => 'ביטול';
+
+  @override
+  String get actionSave => 'שמור';
+
+  @override
+  String get actionConfirm => 'אישור';
+
+  @override
+  String get actionReset => 'איפוס';
+
+  @override
+  String get actionNext => 'הבא';
+
+  @override
+  String get actionBack => 'חזור';
+
+  @override
+  String get actionContinue => 'המשך';
+
+  @override
+  String get actionSkip => 'דלג';
+
+  @override
+  String get actionRetry => 'נסה שוב';
+
+  @override
+  String get actionExit => 'יציאה';
+
+  @override
+  String get actionReplace => 'החלף';
+
+  @override
+  String get actionDelete => 'מחק';
+
+  @override
+  String get actionEdit => 'ערוך';
+
+  @override
+  String get actionClose => 'סגור';
+
+  @override
+  String get actionOk => 'אישור';
+
+  @override
+  String get actionSkipForNow => 'דלג לעכשיו';
+
+  @override
+  String get actionRemove => 'הסר';
+
+  @override
+  String get actionUseToday => 'השתמש בהיום';
+
+  @override
+  String get actionStartHere => 'התחל כאן';
+
+  @override
+  String get actionStartHereLabel => 'התחל כאן';
+
+  @override
+  String errorGeneric(String error) {
+    return 'שגיאה: $error';
+  }
+
+  @override
+  String errorLoadingOrder(String error) {
+    return 'שגיאה בטעינת הסדר: $error';
+  }
+
+  @override
+  String errorLoadingContent(String error) {
+    return 'שגיאה בטעינת תוכן: $error';
+  }
+
+  @override
+  String get errorLoadingPoints => 'שגיאה בטעינת נקודות';
+
+  @override
+  String get errorSaveFailed => 'השמירה נכשלה. נסו שוב.';
+
+  @override
+  String errorSearchFailed(String error) {
+    return 'החיפוש נכשל: $error';
+  }
+
+  @override
+  String errorSearchError(String error) {
+    return 'שגיאת חיפוש: $error';
+  }
+
+  @override
+  String errorUnknownCurriculum(String curriculumId) {
+    return 'קורס לימוד לא מוכר: \"$curriculumId\"';
+  }
+
+  @override
+  String get errorCouldNotSaveRetry => 'לא ניתן לשמור — לחצו לניסיון חוזר';
+
+  @override
+  String get errorSaveTrackFailed => 'שמירת המסלול נכשלה. נסו שוב.';
+
+  @override
+  String get errorSignOutFailed => 'יציאה נכשלה. נסו שוב.';
+
+  @override
+  String get errorReauthFailed => 'אימות מחדש נכשל. נסו שוב.';
+
+  @override
+  String get errorResolveAccount => 'לא ניתן לאמת את החשבון. נסו שוב.';
+
+  @override
+  String get errorOnlyOfflineDelete => 'ניתן למחוק כאן רק חשבונות לא מקוונים.';
+
+  @override
+  String errorDeleteAccountFailed(String error) {
+    return 'מחיקת החשבון נכשלה: $error';
+  }
+
+  @override
+  String get errorSendLogsMustBeSignedIn => 'יש להיות מחובר כדי לשלוח יומנים';
+
+  @override
+  String errorSendLogsFailed(String error) {
+    return 'שליחת היומנים נכשלה: $error';
+  }
+
+  @override
+  String get errorNoEmailApp =>
+      'לא נמצאה אפליקציית דוא\"ל. להעתיק כתובת במקום?';
+
+  @override
+  String errorMarkCompleteFailed(String error) {
+    return 'סימון כהושלם נכשל: $error';
+  }
+
+  @override
+  String get errorVerificationEmailSent =>
+      'נשלח אימייל אימות. בדקו את תיבת הדואר.';
+
+  @override
+  String get noData => 'אין נתונים';
+
+  @override
+  String get noTasksForToday => 'אין משימות להיום';
+
+  @override
+  String get noItemsToOrder => 'אין פריטים לסידור.';
+
+  @override
+  String get noProfilesYet => 'אין פרופילים עדיין. לחצו + להוספה.';
+
+  @override
+  String get noCompletionsYet => 'אין השלמות עדיין';
+
+  @override
+  String noResultsForQuery(String query) {
+    return 'אין תוצאות עבור \"$query\"';
+  }
+
+  @override
+  String viewAllTasks(int count) {
+    return 'הצג הכול ($count) →';
+  }
+
+  @override
+  String tasksDueToday(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count משימות להיום',
+      one: 'משימה אחת להיום',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get tapToStartLearning => 'לחצו להתחיל ללמוד';
+
+  @override
+  String get todaysLearningTitle => 'לימוד היום';
+
+  @override
+  String remainingCount(int count) {
+    return '$count נותרו';
+  }
+
+  @override
+  String get allDoneForToday => 'סיימתם להיום!';
+
+  @override
+  String missedReview(int count) {
+    return 'חזרה שהוחמצה ($count)';
+  }
+
+  @override
+  String todaysReview(int count) {
+    return 'חזרה של היום ($count)';
+  }
+
+  @override
+  String get dailyTasksTitle => 'משימות יומיות';
+
+  @override
+  String get taskSkippedUntilTomorrow => 'המשימה נדחתה למחר';
+
+  @override
+  String get tasksNoTasksRemainingTitle => 'אין משימות נותרות להיום.';
+
+  @override
+  String get undoLabel => 'בטל';
+
+  @override
+  String get searchTitle => 'חיפוש';
+
+  @override
+  String get searchHintEnterTerm => 'הזינו מונח חיפוש למעלה';
+
+  @override
+  String get loadingText => 'טוען טקסט...';
+
+  @override
+  String get markedComplete => 'סומן כהושלם';
+
+  @override
+  String couldNotSave(String error) {
+    return 'לא ניתן לשמור: $error';
+  }
+
+  @override
+  String get textReaderTooltipPrevious => 'הקודם';
+
+  @override
+  String get textReaderTooltipNext => 'הבא';
+
+  @override
+  String get textReaderHebrewTab => 'טקסט עברי';
+
+  @override
+  String get textReaderEnglishTab => 'תרגום לאנגלית';
+
+  @override
+  String get totalPointsLabel => 'סה\"כ נקודות';
+
+  @override
+  String get resetToDefaultOrder => 'איפוס לסדר ברירת מחדל';
+
+  @override
+  String get resetToDefaultOrderDialogTitle => 'איפוס לסדר ברירת מחדל';
+
+  @override
+  String get resetToDefaultOrderDialogBody =>
+      'פעולה זו תשחזר את הסדר הטבעי של ספריא עבור קורס לימוד זה. הסדר המותאם אישית שלכם יאבד.';
+
+  @override
+  String get controlledByParent => 'בשליטת ההורה';
+
+  @override
+  String get sacredTimeDetect => 'זיהוי אוטומטי';
+
+  @override
+  String get sacredTimeChooseCity => 'בחר עיר';
+
+  @override
+  String get cityPickerTitle => 'בחרו עיר';
+
+  @override
+  String get cityPickerHint => 'הקלד שם עיר…';
+
+  @override
+  String get schedulerStudyLabel => 'לימוד';
+
+  @override
+  String get schedulerReviewOnlyLabel => 'חזרה בלבד';
+
+  @override
+  String get schedulerPerDay => 'ליום';
+
+  @override
+  String get schedulerPerWeek => 'לשבוע';
+
+  @override
+  String get schedulerPerakimLabel => 'פרקים';
+
+  @override
+  String get schedulerPesukimLabel => 'פסוקים';
+
+  @override
+  String get schedulerAmudimLabel => 'עמודים';
+
+  @override
+  String get schedulerDafimLabel => 'דפים';
+
+  @override
+  String get schedulerDeadlineLabel => 'דד-ליין';
+
+  @override
+  String get schedulerPaceLabel => 'קצב';
+
+  @override
+  String get schedulerNoDeadlineLabel => 'ללא דד-ליין';
+
+  @override
+  String get schedulerGoalHint => 'לדוג׳, בר מצווה, יארצייט, סיום';
+
+  @override
+  String get schedulerSelectDate => 'בחר תאריך';
+
+  @override
+  String get schedulerPickDeadlineFirst => 'בחרו דד-ליין קודם.';
+
+  @override
+  String get schedulerDaysLabel => 'ימים';
+
+  @override
+  String get schedulerWeeksLabel => 'שבועות';
+
+  @override
+  String get profilesEditLabel => 'ערוך';
+
+  @override
+  String get profilesDeleteLabel => 'מחק';
+
+  @override
+  String get profilesChooseAvatar => 'בחרו אווטאר';
+
+  @override
+  String get profilesAddLearner => 'הוסף לומד';
+
+  @override
+  String get profilesEditLearner => 'ערוך לומד';
+
+  @override
+  String get profilesChildLabel => 'ילד';
+
+  @override
+  String get profilesAdultLabel => 'מבוגר';
+
+  @override
+  String get profilesEnterLearnerName => 'הזינו שם לומד';
+
+  @override
+  String get trackNameThisTrack => 'שמרו מסלול זה';
+
+  @override
+  String get trackNameLabel => 'שם המסלול';
+
+  @override
+  String get trackAddLabel => 'הוסף מסלול';
+
+  @override
+  String get trackDeleteTitle => 'למחוק מסלול?';
+
+  @override
+  String get trackMarkContentDone => 'סמן תוכן כהושלם';
+
+  @override
+  String get trackReorderContent => 'סדר מחדש תוכן';
+
+  @override
+  String trackReplaceTitle(String label) {
+    return 'להחליף את מסלול $label?';
+  }
+
+  @override
+  String get bulkMarkCompleteTitle => 'סימון המוני כהושלם';
+
+  @override
+  String bulkMarkedComplete(int count) {
+    return 'סומנו $count פריטים כהושלמו';
+  }
+
+  @override
+  String get bulkMarkConfirmBulkTitle => 'אישור סימון המוני';
+
+  @override
+  String get bulkMarkingCompletions => 'מסמן השלמות...';
+
+  @override
+  String get bulkMarkDone => 'סיום!';
+
+  @override
+  String get bulkMarkSkip => 'דלג';
+
+  @override
+  String get bulkMarkPriorLearning => 'סמן לימוד קודם';
+
+  @override
+  String get completionButtonCompleted => 'הושלם';
+
+  @override
+  String get completionButtonMarkComplete => 'סמן כהושלם';
+
+  @override
+  String get upgradeToCloudTitle => 'שדרג לענן';
+
+  @override
+  String get upgradeToCloudButton => 'שדרג לענן';
+
+  @override
+  String get upgradeToCloudCancelKeepOffline => 'ביטול — שמור חשבון לא מקוון';
+
+  @override
+  String get scopeSelectionSave => 'שמור';
+
+  @override
+  String get scopeSelectionTrackEntireCurriculum => 'עקוב אחר כל קורס הלימוד';
+
+  @override
+  String get scopeSelectionChooseHierarchyLevel =>
+      'בחרו לפי איזה רמת היררכיה לסנן';
+
+  @override
+  String get scopeSelectionChangeLevel => 'שנה רמה';
+
+  @override
+  String get curriculumSettingsLoadingProgram => 'טוען תוכנית...';
+
+  @override
+  String get curriculumSettingsProgramTitle => 'תוכנית';
+
+  @override
+  String curriculumSettingsProgramError(String error) {
+    return 'שגיאה: $error';
+  }
+
+  @override
+  String get curriculumSettingsChangeProgram => 'שנה תוכנית';
+
+  @override
+  String get curriculumSettingsChangeProgramSubtitle =>
+      'עברו לתוכנית לימוד אחרת';
+
+  @override
+  String get curriculumSettingsDontSeeProgram => 'לא רואים את התוכנית שלכם?';
+
+  @override
+  String get curriculumSettingsRequestProgram => 'בקשו תוכנית חדשה';
+
+  @override
+  String get deleteAccountDialogTitle => 'מחיקת חשבון';
+
+  @override
+  String get deleteAccountTypeConfirm => 'הקלידו DELETE לאישור:';
+
+  @override
+  String get deleteAccountHint => 'DELETE';
+
+  @override
+  String backupLastSynced(String timeAgo) {
+    return 'סונכרן לאחרונה $timeAgo';
+  }
+
+  @override
+  String get backupSyncing => 'מסנכרן...';
+
+  @override
+  String backupPendingChanges(int count) {
+    return '$count שינויים ממתינים';
+  }
+
+  @override
+  String backupSyncError(String message) {
+    return 'שגיאת סנכרון: $message';
+  }
+
+  @override
+  String get backupUpgradeToCloud => 'שדרג לענן';
+
+  @override
+  String get reauthDialogTitle => 'אמתו את זהותכם';
+
+  @override
+  String get reauthDialogBody => 'הזינו את הסיסמה הנוכחית כדי להמשיך.';
+
+  @override
+  String get reauthVerify => 'אמת';
+
+  @override
+  String get linkAccountTitle => 'קשר חשבון';
+
+  @override
+  String get linkAccountSubtitle => 'הוסיפו שיטת כניסה נוספת לחשבונכם.';
+
+  @override
+  String get linkAccountGoogleLabel => 'גוגל';
+
+  @override
+  String get linkAccountEmailPasswordLabel => 'דוא\"ל וסיסמה';
+
+  @override
+  String get linkAccountLinkEmail => 'קשר דוא\"ל';
+
+  @override
+  String get linkAccountAllLinked => 'כל שיטות הכניסה כבר מקושרות.';
+
+  @override
+  String get linkAccountGoogleSuccess => 'חשבון גוגל קושר בהצלחה.';
+
+  @override
+  String get linkAccountEmailSuccess => 'חשבון דוא\"ל וסיסמה קושר בהצלחה.';
+
+  @override
+  String get changePasswordDialogTitle => 'שנה סיסמה';
+
+  @override
+  String get changePasswordButton => 'שנה סיסמה';
+
+  @override
+  String get accountDeletedTitle => 'החשבון נמחק';
+
+  @override
+  String get signOutLabel => 'התנתק';
+
+  @override
+  String get connectionLostTitle => 'החיבור אבד';
+
+  @override
+  String get tryAgainButton => 'נסה שוב';
+
+  @override
+  String get createOfflineAccount => 'צור חשבון לא מקוון';
+
+  @override
+  String get onboardingConfirm => 'אישור';
+
+  @override
+  String get onboardingStartLearning => 'התחל ללמוד';
+
+  @override
+  String get onboardingAddAnotherTrack => 'הוסף מסלול נוסף';
+
+  @override
+  String get onboardingAddAnotherLearner => 'הוסף לומד נוסף';
+
+  @override
+  String get onboardingSkipNoReview => 'דלג (ללא חזרה)';
+
+  @override
+  String get onboardingMarkCompleted => 'סמן כהושלם';
+
+  @override
+  String get onboardingStartingPosition => 'נקודת התחלה';
+
+  @override
+  String get onboardingStudyDays => 'ימי לימוד';
+
+  @override
+  String get filterByTrack => 'סנן לפי מסלול';
+
+  @override
+  String get completionHistoryAllTracks => 'כל המסלולים';
+
+  @override
+  String get completionHistoryFilteredBy => 'מסונן לפי: ';
+
+  @override
+  String completionHistoryStagePrefix(int stageId) {
+    return 'שלב $stageId • ';
+  }
+
+  @override
+  String get stageNameLimud => 'לימוד';
+
+  @override
+  String get stageNameChazaraAleph => 'חזרה א׳';
+
+  @override
+  String get stageNameChazaraBet => 'חזרה ב׳';
+
+  @override
+  String get actionMarkCompleted => 'סמן כהושלם';
+
+  @override
+  String get actionSkipNoReview => 'דלג (ללא חזרה)';
+
+  @override
+  String get studyDaysTitle => 'ימי לימוד';
+
+  @override
+  String get studyDaysSubtitle => 'באילו ימים אתה לומד?';
+
+  @override
+  String studyDaysSetByProgram(String programName) {
+    return 'ימי הלימוד נקבעו על ידי $programName';
+  }
+
+  @override
+  String get startingPositionTitle => 'מיקום התחלתי';
+
+  @override
+  String get startingPositionHint => 'ניתן להתחיל עד 30 ימים אחורה/קדימה מהיום';
+
+  @override
+  String startingPositionWhereAreYou(String programName) {
+    return 'איפה אתה ב$programName?';
+  }
+
+  @override
+  String get priorLearningTitle => 'סימון לימוד קודם';
+
+  @override
+  String get priorLearningSubtitle =>
+      'האם ברצונך לסמן חלקים שכבר למדת כהושלמו?';
+
+  @override
+  String get goalPickDeadlineFirst => 'בחר תאריך יעד תחילה.';
+
+  @override
+  String get trackSaveError => 'שגיאה בשמירת המסלול. נסה שוב.';
+
+  @override
+  String get pacePerDay => 'ליום';
+
+  @override
+  String get pacePerWeek => 'לשבוע';
+
+  @override
+  String get goalTypeDeadline => 'תאריך יעד';
+
+  @override
+  String get goalTypePace => 'קצב';
+
+  @override
+  String get goalTypeNoDeadline => 'ללא יעד';
+
+  @override
+  String get goalEditTitle => 'עריכת יעד';
+
+  @override
+  String get goalNewTitle => 'יעד חדש';
+
+  @override
+  String get goalUpdateButton => 'עדכן יעד';
+
+  @override
+  String get goalCreateButton => 'צור יעד';
+
+  @override
+  String get unitPerakim => 'פרקים';
+
+  @override
+  String get unitPesukim => 'פסוקים';
+
+  @override
+  String get unitAmudim => 'עמודים';
+
+  @override
+  String get unitDafim => 'דפים';
+
+  @override
+  String get tasksUnableToLoad => 'לא ניתן לטעון משימות';
+
+  @override
+  String get tasksAllCaughtUp => 'עדכני לחלוטין';
+
+  @override
+  String get tasksNoTasksRemainingToday => 'אין משימות נותרות להיום.';
+
+  @override
+  String itemsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count פריטים',
+      one: 'פריט אחד',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String scopeSelectionCountSelected(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'נבחרו $count',
+      one: 'נבחר 1',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String scopeSelectionItemCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count פריטים',
+      one: 'פריט אחד',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String reviewStageDayDelay(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'עיכוב של $count ימים',
+      one: 'עיכוב של יום אחד',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get applyToAll => 'החל על הכל';
+
+  @override
+  String get trackNameSubtitle => 'תן למסלול שלך שם לזיהוי.';
+
+  @override
+  String priorLearningChooseSections(String curriculumName) {
+    return 'בחר אילו סעיפים לסמן ב$curriculumName.';
+  }
+
+  @override
+  String get priorLearningAlreadyCompleted =>
+      'האם כבר השלמת חלק מהסעיפים האלה?';
+
+  @override
+  String get priorLearningMarkEverything => 'סמן הכל כהושלם';
+
+  @override
+  String get priorLearningMarkEverythingSubtitle =>
+      'מומלץ אם אתה מתחיל מחזור חזרה חדש';
+
+  @override
+  String get priorLearningNoFolders =>
+      'לא נבחרו תיקיות ספציפיות, אך עדיין ניתן לסמן הכל כהושלם.';
+
+  @override
+  String get priorLearningSelectedFolder => 'תיקייה שנבחרה';
+
+  @override
+  String scopeSelectionSelectLevel(String levelName) {
+    return 'בחר $levelName';
+  }
+
+  @override
+  String get activeTracksLabel => 'מסלולים פעילים';
+
+  @override
+  String activeTracksRunning(int count) {
+    return '$count פעיל';
+  }
+
+  @override
+  String trackSince(String date) {
+    return 'מאז $date';
+  }
+
+  @override
+  String get trackDeleteLabel => 'מחק מסלול';
+
+  @override
+  String trackDeleteContent(String name) {
+    return 'למחוק לצמיתות את \"$name\"? כל ההתקדמות והנתונים של מסלול זה יוסרו. לא ניתן לבטל פעולה זו.';
+  }
 
   @override
   String get notificationReminderTitle => 'תזכורת לימוד';

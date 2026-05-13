@@ -15,6 +15,7 @@ import 'package:learning_tracker/features/scheduler/presentation/providers/sched
 import 'package:learning_tracker/features/settings/presentation/providers/curriculum_scope_providers.dart';
 import 'package:learning_tracker/features/stages/presentation/providers/stage_providers.dart';
 import 'package:learning_tracker/features/track_setup/domain/entities/add_track_result.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// Result returned from the bulk mark screen.
 class BulkMarkResult {
@@ -501,7 +502,7 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
                 );
               },
               loading: () => const Center(child: CircularProgressIndicator()),
-              error: (e, _) => Center(child: Text('Error: $e')),
+              error: (e, _) => Center(child: Text(AppLocalizations.of(context)!.errorGeneric(e.toString()))),
             ),
           ),
           if (_selections.isNotEmpty)
@@ -520,7 +521,7 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
                 Expanded(
                   child: OutlinedButton(
                     onPressed: () => Navigator.of(context).pop(null),
-                    child: const Text('Skip'),
+                    child: Text(AppLocalizations.of(context)!.bulkMarkSkip),
                   ),
                 ),
                 const SizedBox(width: 16),
@@ -529,7 +530,7 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
                     onPressed: _selections.isNotEmpty
                         ? _proceedToStageSelection
                         : null,
-                    child: const Text('Next'),
+                    child: Text(AppLocalizations.of(context)!.actionNext),
                   ),
                 ),
               ],
@@ -617,7 +618,7 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
                         },
                         title: Text(stage.stageName),
                         subtitle: stage.delayDays > 0
-                            ? Text('${stage.delayDays} day delay')
+                            ? Text(AppLocalizations.of(context)!.reviewStageDayDelay(stage.delayDays))
                             : null,
                       ),
                     const Divider(),
@@ -626,7 +627,7 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
                   Padding(
                     padding: const EdgeInsets.symmetric(vertical: 8),
                     child: Text(
-                      'Apply to All',
+                      AppLocalizations.of(context)!.applyToAll,
                       style: theme.textTheme.titleSmall?.copyWith(
                         fontWeight: FontWeight.bold,
                         color: theme.colorScheme.primary,
@@ -666,7 +667,7 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
                 ],
               ),
               loading: () => const Center(child: CircularProgressIndicator()),
-              error: (e, _) => Center(child: Text('Error: $e')),
+              error: (e, _) => Center(child: Text(AppLocalizations.of(context)!.errorGeneric(e.toString()))),
             ),
           ),
           Padding(
@@ -676,7 +677,7 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
                 Expanded(
                   child: OutlinedButton(
                     onPressed: () => setState(() => _phase = _Phase.selection),
-                    child: const Text('Back'),
+                    child: Text(AppLocalizations.of(context)!.actionBack),
                   ),
                 ),
                 const SizedBox(width: 16),
@@ -686,7 +687,7 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
                         _perSelectionStages.values.any((s) => s.isNotEmpty)
                         ? _proceedToConfirmation
                         : null,
-                    child: const Text('Next'),
+                    child: Text(AppLocalizations.of(context)!.actionNext),
                   ),
                 ),
               ],
@@ -712,7 +713,7 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
             children: [
               Icon(Icons.checklist, size: 64, color: theme.colorScheme.primary),
               const SizedBox(height: 24),
-              Text('Confirm Bulk Mark', style: theme.textTheme.headlineSmall),
+              Text(AppLocalizations.of(context)!.bulkMarkConfirmBulkTitle, style: theme.textTheme.headlineSmall),
               const SizedBox(height: 16),
               Text(
                 '$itemCount items across $stageCount stage(s)',
@@ -741,12 +742,12 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
                   OutlinedButton(
                     onPressed: () =>
                         setState(() => _phase = _Phase.stageSelection),
-                    child: const Text('Back'),
+                    child: Text(AppLocalizations.of(context)!.actionBack),
                   ),
                   const SizedBox(width: 16),
                   FilledButton(
                     onPressed: _executeBulkMark,
-                    child: const Text('Confirm'),
+                    child: Text(AppLocalizations.of(context)!.actionConfirm),
                   ),
                 ],
               ),
@@ -766,7 +767,7 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
           children: [
             const CircularProgressIndicator(),
             const SizedBox(height: 24),
-            Text('Marking completions...', style: theme.textTheme.titleMedium),
+            Text(AppLocalizations.of(context)!.bulkMarkingCompletions, style: theme.textTheme.titleMedium),
           ],
         ),
       ),
@@ -789,7 +790,7 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
                 color: theme.colorScheme.primary,
               ),
               const SizedBox(height: 16),
-              Text('Done!', style: theme.textTheme.headlineSmall),
+              Text(AppLocalizations.of(context)!.bulkMarkDone, style: theme.textTheme.headlineSmall),
               if (result != null) ...[
                 const SizedBox(height: 8),
                 Text(
@@ -809,7 +810,7 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
                         )
                       : null,
                 ),
-                child: const Text('Continue'),
+                child: Text(AppLocalizations.of(context)!.actionContinue),
               ),
             ],
           ),

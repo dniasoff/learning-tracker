@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
@@ -65,9 +66,9 @@ class _ContentSearchScreenState extends ConsumerState<ContentSearchScreen> {
 
     if (curriculum == null) {
       return Scaffold(
-        appBar: AppBar(title: const AppBarTitle(text: 'Search')),
+        appBar: AppBar(title: AppBarTitle(text: AppLocalizations.of(context)!.searchTitle)),
         body: Center(
-          child: Text('Unknown curriculum: "${widget.curriculumId}"'),
+          child: Text(AppLocalizations.of(context)!.errorUnknownCurriculum(widget.curriculumId)),
         ),
       );
     }
@@ -108,7 +109,7 @@ class _ContentSearchScreenState extends ConsumerState<ContentSearchScreen> {
     AsyncValue<List<ContentItem>>? resultsAsync,
   ) {
     if (resultsAsync == null) {
-      return const Center(child: Text('Enter a search term above'));
+      return Center(child: Text(AppLocalizations.of(context)!.searchHintEnterTerm));
     }
 
     return resultsAsync.when(
@@ -116,7 +117,7 @@ class _ContentSearchScreenState extends ConsumerState<ContentSearchScreen> {
         if (items.isEmpty) {
           return Center(
             child: Text(
-              'No results for "$_debouncedQuery"',
+              AppLocalizations.of(context)!.noResultsForQuery(_debouncedQuery),
               textAlign: TextAlign.center,
             ),
           );
@@ -150,7 +151,7 @@ class _ContentSearchScreenState extends ConsumerState<ContentSearchScreen> {
               color: AppTheme.brandCoralDeep,
             ),
             const SizedBox(height: 16),
-            Text('Search error: $error'),
+            Text(AppLocalizations.of(context)!.errorSearchError(error.toString())),
           ],
         ),
       ),

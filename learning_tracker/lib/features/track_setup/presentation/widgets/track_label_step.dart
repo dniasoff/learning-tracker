@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// Stage 7: Name the track with a smart default pre-filled.
 ///
@@ -50,10 +51,10 @@ class _TrackLabelStepState extends State<TrackLabelStep> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text('Name This Track', style: theme.textTheme.headlineSmall),
+            Text(AppLocalizations.of(context)!.trackNameThisTrack, style: theme.textTheme.headlineSmall),
             const SizedBox(height: 8),
             Text(
-              'Give your track a name to identify it.',
+              AppLocalizations.of(context)!.trackNameSubtitle,
               style: theme.textTheme.bodyMedium,
             ),
             const SizedBox(height: 24),
@@ -61,9 +62,9 @@ class _TrackLabelStepState extends State<TrackLabelStep> {
               controller: _controller,
               autofocus: true,
               textDirection: TextDirection.rtl,
-              decoration: const InputDecoration(
-                labelText: 'Track Name',
-                border: OutlineInputBorder(),
+              decoration: InputDecoration(
+                labelText: AppLocalizations.of(context)!.trackNameLabel,
+                border: const OutlineInputBorder(),
               ),
               validator: (value) {
                 if (value == null || value.trim().isEmpty) {
@@ -74,7 +75,7 @@ class _TrackLabelStepState extends State<TrackLabelStep> {
               onFieldSubmitted: (_) => _submit(),
             ),
             const Spacer(),
-            FilledButton(onPressed: _submit, child: const Text('Continue')),
+            FilledButton(onPressed: _submit, child: Text(AppLocalizations.of(context)!.actionContinue)),
           ],
         ),
       ),

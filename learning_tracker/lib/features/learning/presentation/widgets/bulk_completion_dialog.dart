@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:learning_tracker/core/enums/user_mode.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_request.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/completion_providers.dart';
@@ -57,7 +58,7 @@ class _BulkCompletionDialogState extends ConsumerState<BulkCompletionDialog> {
         // Show success message
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Marked ${completions.length} items as complete'),
+            content: Text(AppLocalizations.of(context)!.bulkMarkedComplete(completions.length)),
             backgroundColor: Colors.green,
           ),
         );
@@ -70,7 +71,7 @@ class _BulkCompletionDialogState extends ConsumerState<BulkCompletionDialog> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to mark complete: $e'),
+            content: Text(AppLocalizations.of(context)!.errorMarkCompleteFailed(e.toString())),
             backgroundColor: Colors.red,
           ),
         );
@@ -81,7 +82,7 @@ class _BulkCompletionDialogState extends ConsumerState<BulkCompletionDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text('Bulk Mark Complete'),
+      title: Text(AppLocalizations.of(context)!.bulkMarkCompleteTitle),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -103,7 +104,7 @@ class _BulkCompletionDialogState extends ConsumerState<BulkCompletionDialog> {
       actions: [
         TextButton(
           onPressed: _isLoading ? null : () => Navigator.of(context).pop(),
-          child: const Text('Cancel'),
+          child: Text(AppLocalizations.of(context)!.actionCancel),
         ),
         ElevatedButton(
           onPressed: _isLoading ? null : _handleConfirm,
@@ -113,7 +114,7 @@ class _BulkCompletionDialogState extends ConsumerState<BulkCompletionDialog> {
                   height: 16,
                   child: CircularProgressIndicator(strokeWidth: 2),
                 )
-              : const Text('Confirm'),
+              : Text(AppLocalizations.of(context)!.actionConfirm),
         ),
       ],
     );

@@ -14,6 +14,7 @@ import 'package:learning_tracker/core/widgets/app_bar_title.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/widgets/breadcrumb_navigation.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/widgets/content_item_tile.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
 
 @RoutePage()
 class ContentHierarchyScreen extends ConsumerStatefulWidget {
@@ -291,7 +292,7 @@ class _ContentHierarchyScreenState
                       color: AppTheme.brandCoralDeep,
                     ),
                     const SizedBox(height: 16),
-                    Text('Error loading content: $error'),
+                    Text(AppLocalizations.of(context)!.errorLoadingContent(error.toString())),
                   ],
                 ),
               ),

@@ -173,8 +173,8 @@ abstract class AppLocalizations {
   /// No description provided for @todaysLearning.
   ///
   /// In en, this message translates to:
-  /// **'Today\'s Learning'**
-  String get todaysLearning;
+  /// **'Today\'s learning ({count})'**
+  String todaysLearning(int count);
 
   /// No description provided for @remaining.
   ///
@@ -3076,6 +3076,1314 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'You cannot remove your last active curriculum. Add another curriculum before removing this one.'**
   String get cannotDeactivateLastCurriculumDetail;
+
+  /// No description provided for @actionStart.
+  ///
+  /// In en, this message translates to:
+  /// **'Start'**
+  String get actionStart;
+
+  /// No description provided for @actionCancel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get actionCancel;
+
+  /// No description provided for @actionSave.
+  ///
+  /// In en, this message translates to:
+  /// **'Save'**
+  String get actionSave;
+
+  /// No description provided for @actionConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm'**
+  String get actionConfirm;
+
+  /// No description provided for @actionReset.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset'**
+  String get actionReset;
+
+  /// No description provided for @actionNext.
+  ///
+  /// In en, this message translates to:
+  /// **'Next'**
+  String get actionNext;
+
+  /// No description provided for @actionBack.
+  ///
+  /// In en, this message translates to:
+  /// **'Back'**
+  String get actionBack;
+
+  /// No description provided for @actionContinue.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue'**
+  String get actionContinue;
+
+  /// No description provided for @actionSkip.
+  ///
+  /// In en, this message translates to:
+  /// **'Skip'**
+  String get actionSkip;
+
+  /// No description provided for @actionRetry.
+  ///
+  /// In en, this message translates to:
+  /// **'Retry'**
+  String get actionRetry;
+
+  /// No description provided for @actionExit.
+  ///
+  /// In en, this message translates to:
+  /// **'Exit'**
+  String get actionExit;
+
+  /// No description provided for @actionReplace.
+  ///
+  /// In en, this message translates to:
+  /// **'Replace'**
+  String get actionReplace;
+
+  /// No description provided for @actionDelete.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete'**
+  String get actionDelete;
+
+  /// No description provided for @actionEdit.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit'**
+  String get actionEdit;
+
+  /// No description provided for @actionClose.
+  ///
+  /// In en, this message translates to:
+  /// **'Close'**
+  String get actionClose;
+
+  /// No description provided for @actionOk.
+  ///
+  /// In en, this message translates to:
+  /// **'OK'**
+  String get actionOk;
+
+  /// No description provided for @actionSkipForNow.
+  ///
+  /// In en, this message translates to:
+  /// **'Skip for now'**
+  String get actionSkipForNow;
+
+  /// No description provided for @actionRemove.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove'**
+  String get actionRemove;
+
+  /// No description provided for @actionUseToday.
+  ///
+  /// In en, this message translates to:
+  /// **'Use Today'**
+  String get actionUseToday;
+
+  /// No description provided for @actionStartHere.
+  ///
+  /// In en, this message translates to:
+  /// **'Start here'**
+  String get actionStartHere;
+
+  /// No description provided for @actionStartHereLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Start Here'**
+  String get actionStartHereLabel;
+
+  /// No description provided for @errorGeneric.
+  ///
+  /// In en, this message translates to:
+  /// **'Error: {error}'**
+  String errorGeneric(String error);
+
+  /// No description provided for @errorLoadingOrder.
+  ///
+  /// In en, this message translates to:
+  /// **'Error loading order: {error}'**
+  String errorLoadingOrder(String error);
+
+  /// No description provided for @errorLoadingContent.
+  ///
+  /// In en, this message translates to:
+  /// **'Error loading content: {error}'**
+  String errorLoadingContent(String error);
+
+  /// No description provided for @errorLoadingPoints.
+  ///
+  /// In en, this message translates to:
+  /// **'Error loading points'**
+  String get errorLoadingPoints;
+
+  /// No description provided for @errorSaveFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to save. Please try again.'**
+  String get errorSaveFailed;
+
+  /// No description provided for @errorSearchFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Search failed: {error}'**
+  String errorSearchFailed(String error);
+
+  /// No description provided for @errorSearchError.
+  ///
+  /// In en, this message translates to:
+  /// **'Search error: {error}'**
+  String errorSearchError(String error);
+
+  /// No description provided for @errorUnknownCurriculum.
+  ///
+  /// In en, this message translates to:
+  /// **'Unknown curriculum: \"{curriculumId}\"'**
+  String errorUnknownCurriculum(String curriculumId);
+
+  /// No description provided for @errorCouldNotSaveRetry.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t save — tap to retry'**
+  String get errorCouldNotSaveRetry;
+
+  /// No description provided for @errorSaveTrackFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to save track. Please try again.'**
+  String get errorSaveTrackFailed;
+
+  /// No description provided for @errorSignOutFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to sign out. Please try again.'**
+  String get errorSignOutFailed;
+
+  /// No description provided for @errorReauthFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Re-authentication failed. Please try again.'**
+  String get errorReauthFailed;
+
+  /// No description provided for @errorResolveAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not resolve this account. Try again.'**
+  String get errorResolveAccount;
+
+  /// No description provided for @errorOnlyOfflineDelete.
+  ///
+  /// In en, this message translates to:
+  /// **'Only offline accounts can be deleted here.'**
+  String get errorOnlyOfflineDelete;
+
+  /// No description provided for @errorDeleteAccountFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to delete account: {error}'**
+  String errorDeleteAccountFailed(String error);
+
+  /// No description provided for @errorSendLogsMustBeSignedIn.
+  ///
+  /// In en, this message translates to:
+  /// **'Must be signed in to send logs'**
+  String get errorSendLogsMustBeSignedIn;
+
+  /// No description provided for @errorSendLogsFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to send logs: {error}'**
+  String errorSendLogsFailed(String error);
+
+  /// No description provided for @errorNoEmailApp.
+  ///
+  /// In en, this message translates to:
+  /// **'No email app found. Copy address instead?'**
+  String get errorNoEmailApp;
+
+  /// No description provided for @errorMarkCompleteFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to mark complete: {error}'**
+  String errorMarkCompleteFailed(String error);
+
+  /// No description provided for @errorVerificationEmailSent.
+  ///
+  /// In en, this message translates to:
+  /// **'Verification email sent. Check your inbox.'**
+  String get errorVerificationEmailSent;
+
+  /// No description provided for @noData.
+  ///
+  /// In en, this message translates to:
+  /// **'No data'**
+  String get noData;
+
+  /// No description provided for @noTasksForToday.
+  ///
+  /// In en, this message translates to:
+  /// **'No tasks for today'**
+  String get noTasksForToday;
+
+  /// No description provided for @noItemsToOrder.
+  ///
+  /// In en, this message translates to:
+  /// **'No items to order.'**
+  String get noItemsToOrder;
+
+  /// No description provided for @noProfilesYet.
+  ///
+  /// In en, this message translates to:
+  /// **'No profiles yet. Tap + to add one.'**
+  String get noProfilesYet;
+
+  /// No description provided for @noCompletionsYet.
+  ///
+  /// In en, this message translates to:
+  /// **'No completions yet'**
+  String get noCompletionsYet;
+
+  /// No description provided for @noResultsForQuery.
+  ///
+  /// In en, this message translates to:
+  /// **'No results for \"{query}\"'**
+  String noResultsForQuery(String query);
+
+  /// No description provided for @viewAllTasks.
+  ///
+  /// In en, this message translates to:
+  /// **'View all ({count}) →'**
+  String viewAllTasks(int count);
+
+  /// No description provided for @tasksDueToday.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, one{1 task due today} other{{count} tasks due today}}'**
+  String tasksDueToday(int count);
+
+  /// No description provided for @tapToStartLearning.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap to start learning'**
+  String get tapToStartLearning;
+
+  /// No description provided for @todaysLearningTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Today\'s Learning'**
+  String get todaysLearningTitle;
+
+  /// No description provided for @remainingCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} remaining'**
+  String remainingCount(int count);
+
+  /// No description provided for @allDoneForToday.
+  ///
+  /// In en, this message translates to:
+  /// **'All done for today!'**
+  String get allDoneForToday;
+
+  /// No description provided for @missedReview.
+  ///
+  /// In en, this message translates to:
+  /// **'Missed review ({count})'**
+  String missedReview(int count);
+
+  /// No description provided for @todaysReview.
+  ///
+  /// In en, this message translates to:
+  /// **'Today\'s review ({count})'**
+  String todaysReview(int count);
+
+  /// No description provided for @dailyTasksTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Daily Tasks'**
+  String get dailyTasksTitle;
+
+  /// No description provided for @taskSkippedUntilTomorrow.
+  ///
+  /// In en, this message translates to:
+  /// **'Task skipped until tomorrow'**
+  String get taskSkippedUntilTomorrow;
+
+  /// No description provided for @tasksNoTasksRemainingTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'You have no tasks remaining for today.'**
+  String get tasksNoTasksRemainingTitle;
+
+  /// No description provided for @undoLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Undo'**
+  String get undoLabel;
+
+  /// No description provided for @searchTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Search'**
+  String get searchTitle;
+
+  /// No description provided for @searchHintEnterTerm.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a search term above'**
+  String get searchHintEnterTerm;
+
+  /// No description provided for @loadingText.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading text...'**
+  String get loadingText;
+
+  /// No description provided for @markedComplete.
+  ///
+  /// In en, this message translates to:
+  /// **'Marked complete'**
+  String get markedComplete;
+
+  /// No description provided for @couldNotSave.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t save: {error}'**
+  String couldNotSave(String error);
+
+  /// No description provided for @textReaderTooltipPrevious.
+  ///
+  /// In en, this message translates to:
+  /// **'Previous'**
+  String get textReaderTooltipPrevious;
+
+  /// No description provided for @textReaderTooltipNext.
+  ///
+  /// In en, this message translates to:
+  /// **'Next'**
+  String get textReaderTooltipNext;
+
+  /// No description provided for @textReaderHebrewTab.
+  ///
+  /// In en, this message translates to:
+  /// **'Hebrew Text'**
+  String get textReaderHebrewTab;
+
+  /// No description provided for @textReaderEnglishTab.
+  ///
+  /// In en, this message translates to:
+  /// **'English Translation'**
+  String get textReaderEnglishTab;
+
+  /// No description provided for @totalPointsLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Total Points'**
+  String get totalPointsLabel;
+
+  /// No description provided for @resetToDefaultOrder.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset to Default Order'**
+  String get resetToDefaultOrder;
+
+  /// No description provided for @resetToDefaultOrderDialogTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset to Default Order'**
+  String get resetToDefaultOrderDialogTitle;
+
+  /// No description provided for @resetToDefaultOrderDialogBody.
+  ///
+  /// In en, this message translates to:
+  /// **'This will restore the natural Sefaria order for this curriculum. Your custom ordering will be lost.'**
+  String get resetToDefaultOrderDialogBody;
+
+  /// No description provided for @controlledByParent.
+  ///
+  /// In en, this message translates to:
+  /// **'Controlled by parent'**
+  String get controlledByParent;
+
+  /// No description provided for @sacredTimeDetect.
+  ///
+  /// In en, this message translates to:
+  /// **'Detect'**
+  String get sacredTimeDetect;
+
+  /// No description provided for @sacredTimeChooseCity.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose city'**
+  String get sacredTimeChooseCity;
+
+  /// No description provided for @cityPickerTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a city'**
+  String get cityPickerTitle;
+
+  /// No description provided for @cityPickerHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Type a city name…'**
+  String get cityPickerHint;
+
+  /// No description provided for @schedulerStudyLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Study'**
+  String get schedulerStudyLabel;
+
+  /// No description provided for @schedulerReviewOnlyLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Review only'**
+  String get schedulerReviewOnlyLabel;
+
+  /// No description provided for @schedulerPerDay.
+  ///
+  /// In en, this message translates to:
+  /// **'Per day'**
+  String get schedulerPerDay;
+
+  /// No description provided for @schedulerPerWeek.
+  ///
+  /// In en, this message translates to:
+  /// **'Per week'**
+  String get schedulerPerWeek;
+
+  /// No description provided for @schedulerPerakimLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Perakim'**
+  String get schedulerPerakimLabel;
+
+  /// No description provided for @schedulerPesukimLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Pesukim'**
+  String get schedulerPesukimLabel;
+
+  /// No description provided for @schedulerAmudimLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Amudim'**
+  String get schedulerAmudimLabel;
+
+  /// No description provided for @schedulerDafimLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Dafim'**
+  String get schedulerDafimLabel;
+
+  /// No description provided for @schedulerDeadlineLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Deadline'**
+  String get schedulerDeadlineLabel;
+
+  /// No description provided for @schedulerPaceLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Pace'**
+  String get schedulerPaceLabel;
+
+  /// No description provided for @schedulerNoDeadlineLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'No deadline'**
+  String get schedulerNoDeadlineLabel;
+
+  /// No description provided for @schedulerGoalHint.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g., Bar Mitzvah, Yahrzeit, Siyum'**
+  String get schedulerGoalHint;
+
+  /// No description provided for @schedulerSelectDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Select date'**
+  String get schedulerSelectDate;
+
+  /// No description provided for @schedulerPickDeadlineFirst.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick a deadline first.'**
+  String get schedulerPickDeadlineFirst;
+
+  /// No description provided for @schedulerDaysLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Days'**
+  String get schedulerDaysLabel;
+
+  /// No description provided for @schedulerWeeksLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Weeks'**
+  String get schedulerWeeksLabel;
+
+  /// No description provided for @profilesEditLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit'**
+  String get profilesEditLabel;
+
+  /// No description provided for @profilesDeleteLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete'**
+  String get profilesDeleteLabel;
+
+  /// No description provided for @profilesChooseAvatar.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose Avatar'**
+  String get profilesChooseAvatar;
+
+  /// No description provided for @profilesAddLearner.
+  ///
+  /// In en, this message translates to:
+  /// **'Add Learner'**
+  String get profilesAddLearner;
+
+  /// No description provided for @profilesEditLearner.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit Learner'**
+  String get profilesEditLearner;
+
+  /// No description provided for @profilesChildLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Child'**
+  String get profilesChildLabel;
+
+  /// No description provided for @profilesAdultLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Adult'**
+  String get profilesAdultLabel;
+
+  /// No description provided for @profilesEnterLearnerName.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter learner name'**
+  String get profilesEnterLearnerName;
+
+  /// No description provided for @trackNameThisTrack.
+  ///
+  /// In en, this message translates to:
+  /// **'Name This Track'**
+  String get trackNameThisTrack;
+
+  /// No description provided for @trackNameLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Track Name'**
+  String get trackNameLabel;
+
+  /// No description provided for @trackAddLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'ADD TRACK'**
+  String get trackAddLabel;
+
+  /// No description provided for @trackDeleteTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete Track?'**
+  String get trackDeleteTitle;
+
+  /// No description provided for @trackMarkContentDone.
+  ///
+  /// In en, this message translates to:
+  /// **'Mark Content Done'**
+  String get trackMarkContentDone;
+
+  /// No description provided for @trackReorderContent.
+  ///
+  /// In en, this message translates to:
+  /// **'Reorder Content'**
+  String get trackReorderContent;
+
+  /// No description provided for @trackReplaceTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Replace your {label} track?'**
+  String trackReplaceTitle(String label);
+
+  /// No description provided for @bulkMarkCompleteTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Bulk Mark Complete'**
+  String get bulkMarkCompleteTitle;
+
+  /// No description provided for @bulkMarkedComplete.
+  ///
+  /// In en, this message translates to:
+  /// **'Marked {count} items as complete'**
+  String bulkMarkedComplete(int count);
+
+  /// No description provided for @bulkMarkConfirmBulkTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm Bulk Mark'**
+  String get bulkMarkConfirmBulkTitle;
+
+  /// No description provided for @bulkMarkingCompletions.
+  ///
+  /// In en, this message translates to:
+  /// **'Marking completions...'**
+  String get bulkMarkingCompletions;
+
+  /// No description provided for @bulkMarkDone.
+  ///
+  /// In en, this message translates to:
+  /// **'Done!'**
+  String get bulkMarkDone;
+
+  /// No description provided for @bulkMarkSkip.
+  ///
+  /// In en, this message translates to:
+  /// **'Skip'**
+  String get bulkMarkSkip;
+
+  /// No description provided for @bulkMarkPriorLearning.
+  ///
+  /// In en, this message translates to:
+  /// **'Mark Prior Learning'**
+  String get bulkMarkPriorLearning;
+
+  /// No description provided for @completionButtonCompleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Completed'**
+  String get completionButtonCompleted;
+
+  /// No description provided for @completionButtonMarkComplete.
+  ///
+  /// In en, this message translates to:
+  /// **'Mark Complete'**
+  String get completionButtonMarkComplete;
+
+  /// No description provided for @upgradeToCloudTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Upgrade to Cloud'**
+  String get upgradeToCloudTitle;
+
+  /// No description provided for @upgradeToCloudButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Upgrade to Cloud'**
+  String get upgradeToCloudButton;
+
+  /// No description provided for @upgradeToCloudCancelKeepOffline.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel — keep offline account'**
+  String get upgradeToCloudCancelKeepOffline;
+
+  /// No description provided for @scopeSelectionSave.
+  ///
+  /// In en, this message translates to:
+  /// **'Save'**
+  String get scopeSelectionSave;
+
+  /// No description provided for @scopeSelectionTrackEntireCurriculum.
+  ///
+  /// In en, this message translates to:
+  /// **'Track Entire Curriculum'**
+  String get scopeSelectionTrackEntireCurriculum;
+
+  /// No description provided for @scopeSelectionChooseHierarchyLevel.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose which hierarchy level to filter by'**
+  String get scopeSelectionChooseHierarchyLevel;
+
+  /// No description provided for @scopeSelectionChangeLevel.
+  ///
+  /// In en, this message translates to:
+  /// **'Change Level'**
+  String get scopeSelectionChangeLevel;
+
+  /// No description provided for @curriculumSettingsLoadingProgram.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading program...'**
+  String get curriculumSettingsLoadingProgram;
+
+  /// No description provided for @curriculumSettingsProgramTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Program'**
+  String get curriculumSettingsProgramTitle;
+
+  /// No description provided for @curriculumSettingsProgramError.
+  ///
+  /// In en, this message translates to:
+  /// **'Error: {error}'**
+  String curriculumSettingsProgramError(String error);
+
+  /// No description provided for @curriculumSettingsChangeProgram.
+  ///
+  /// In en, this message translates to:
+  /// **'Change Program'**
+  String get curriculumSettingsChangeProgram;
+
+  /// No description provided for @curriculumSettingsChangeProgramSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Switch to a different learning program'**
+  String get curriculumSettingsChangeProgramSubtitle;
+
+  /// No description provided for @curriculumSettingsDontSeeProgram.
+  ///
+  /// In en, this message translates to:
+  /// **'Don\'t see your program?'**
+  String get curriculumSettingsDontSeeProgram;
+
+  /// No description provided for @curriculumSettingsRequestProgram.
+  ///
+  /// In en, this message translates to:
+  /// **'Request a new program'**
+  String get curriculumSettingsRequestProgram;
+
+  /// No description provided for @deleteAccountDialogTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete Account'**
+  String get deleteAccountDialogTitle;
+
+  /// No description provided for @deleteAccountTypeConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Type DELETE to confirm:'**
+  String get deleteAccountTypeConfirm;
+
+  /// No description provided for @deleteAccountHint.
+  ///
+  /// In en, this message translates to:
+  /// **'DELETE'**
+  String get deleteAccountHint;
+
+  /// No description provided for @backupLastSynced.
+  ///
+  /// In en, this message translates to:
+  /// **'Last synced {timeAgo}'**
+  String backupLastSynced(String timeAgo);
+
+  /// No description provided for @backupSyncing.
+  ///
+  /// In en, this message translates to:
+  /// **'Syncing...'**
+  String get backupSyncing;
+
+  /// No description provided for @backupPendingChanges.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} changes pending'**
+  String backupPendingChanges(int count);
+
+  /// No description provided for @backupSyncError.
+  ///
+  /// In en, this message translates to:
+  /// **'Sync error: {message}'**
+  String backupSyncError(String message);
+
+  /// No description provided for @backupUpgradeToCloud.
+  ///
+  /// In en, this message translates to:
+  /// **'Upgrade to Cloud'**
+  String get backupUpgradeToCloud;
+
+  /// No description provided for @reauthDialogTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Verify Your Identity'**
+  String get reauthDialogTitle;
+
+  /// No description provided for @reauthDialogBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter your current password to continue.'**
+  String get reauthDialogBody;
+
+  /// No description provided for @reauthVerify.
+  ///
+  /// In en, this message translates to:
+  /// **'Verify'**
+  String get reauthVerify;
+
+  /// No description provided for @linkAccountTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Link Account'**
+  String get linkAccountTitle;
+
+  /// No description provided for @linkAccountSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Add another sign-in method to your account.'**
+  String get linkAccountSubtitle;
+
+  /// No description provided for @linkAccountGoogleLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Google'**
+  String get linkAccountGoogleLabel;
+
+  /// No description provided for @linkAccountEmailPasswordLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Email/Password'**
+  String get linkAccountEmailPasswordLabel;
+
+  /// No description provided for @linkAccountLinkEmail.
+  ///
+  /// In en, this message translates to:
+  /// **'Link Email'**
+  String get linkAccountLinkEmail;
+
+  /// No description provided for @linkAccountAllLinked.
+  ///
+  /// In en, this message translates to:
+  /// **'All available sign-in methods are already linked.'**
+  String get linkAccountAllLinked;
+
+  /// No description provided for @linkAccountGoogleSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Google account linked successfully.'**
+  String get linkAccountGoogleSuccess;
+
+  /// No description provided for @linkAccountEmailSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Email/password account linked successfully.'**
+  String get linkAccountEmailSuccess;
+
+  /// No description provided for @changePasswordDialogTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Change Password'**
+  String get changePasswordDialogTitle;
+
+  /// No description provided for @changePasswordButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Change Password'**
+  String get changePasswordButton;
+
+  /// No description provided for @accountDeletedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Account deleted'**
+  String get accountDeletedTitle;
+
+  /// No description provided for @signOutLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign Out'**
+  String get signOutLabel;
+
+  /// No description provided for @connectionLostTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Connection lost'**
+  String get connectionLostTitle;
+
+  /// No description provided for @tryAgainButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Try Again'**
+  String get tryAgainButton;
+
+  /// No description provided for @createOfflineAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Create Offline Account'**
+  String get createOfflineAccount;
+
+  /// No description provided for @onboardingConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm'**
+  String get onboardingConfirm;
+
+  /// No description provided for @onboardingStartLearning.
+  ///
+  /// In en, this message translates to:
+  /// **'Start Learning'**
+  String get onboardingStartLearning;
+
+  /// No description provided for @onboardingAddAnotherTrack.
+  ///
+  /// In en, this message translates to:
+  /// **'Add Another Track'**
+  String get onboardingAddAnotherTrack;
+
+  /// No description provided for @onboardingAddAnotherLearner.
+  ///
+  /// In en, this message translates to:
+  /// **'Add Another Learner'**
+  String get onboardingAddAnotherLearner;
+
+  /// No description provided for @onboardingSkipNoReview.
+  ///
+  /// In en, this message translates to:
+  /// **'Skip (no review)'**
+  String get onboardingSkipNoReview;
+
+  /// No description provided for @onboardingMarkCompleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Mark Completed'**
+  String get onboardingMarkCompleted;
+
+  /// No description provided for @onboardingStartingPosition.
+  ///
+  /// In en, this message translates to:
+  /// **'Starting Position'**
+  String get onboardingStartingPosition;
+
+  /// No description provided for @onboardingStudyDays.
+  ///
+  /// In en, this message translates to:
+  /// **'Study Days'**
+  String get onboardingStudyDays;
+
+  /// No description provided for @filterByTrack.
+  ///
+  /// In en, this message translates to:
+  /// **'Filter by track'**
+  String get filterByTrack;
+
+  /// No description provided for @completionHistoryAllTracks.
+  ///
+  /// In en, this message translates to:
+  /// **'All Tracks'**
+  String get completionHistoryAllTracks;
+
+  /// No description provided for @completionHistoryFilteredBy.
+  ///
+  /// In en, this message translates to:
+  /// **'Filtered by: '**
+  String get completionHistoryFilteredBy;
+
+  /// No description provided for @completionHistoryStagePrefix.
+  ///
+  /// In en, this message translates to:
+  /// **'Stage {stageId} • '**
+  String completionHistoryStagePrefix(int stageId);
+
+  /// No description provided for @stageNameLimud.
+  ///
+  /// In en, this message translates to:
+  /// **'לימוד'**
+  String get stageNameLimud;
+
+  /// No description provided for @stageNameChazaraAleph.
+  ///
+  /// In en, this message translates to:
+  /// **'חזרה א׳'**
+  String get stageNameChazaraAleph;
+
+  /// No description provided for @stageNameChazaraBet.
+  ///
+  /// In en, this message translates to:
+  /// **'חזרה ב׳'**
+  String get stageNameChazaraBet;
+
+  /// No description provided for @actionMarkCompleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Mark Completed'**
+  String get actionMarkCompleted;
+
+  /// No description provided for @actionSkipNoReview.
+  ///
+  /// In en, this message translates to:
+  /// **'Skip (no review)'**
+  String get actionSkipNoReview;
+
+  /// No description provided for @studyDaysTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Study Days'**
+  String get studyDaysTitle;
+
+  /// No description provided for @studyDaysSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Which days do you learn?'**
+  String get studyDaysSubtitle;
+
+  /// No description provided for @studyDaysSetByProgram.
+  ///
+  /// In en, this message translates to:
+  /// **'Study days set by {programName}'**
+  String studyDaysSetByProgram(String programName);
+
+  /// No description provided for @startingPositionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Starting Position'**
+  String get startingPositionTitle;
+
+  /// No description provided for @startingPositionHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Can start up to 30 days back/forward from today'**
+  String get startingPositionHint;
+
+  /// No description provided for @startingPositionWhereAreYou.
+  ///
+  /// In en, this message translates to:
+  /// **'Where are you in {programName}?'**
+  String startingPositionWhereAreYou(String programName);
+
+  /// No description provided for @priorLearningTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Mark Prior Learning'**
+  String get priorLearningTitle;
+
+  /// No description provided for @priorLearningSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Do you want to mark parts you already learned as completed?'**
+  String get priorLearningSubtitle;
+
+  /// No description provided for @goalPickDeadlineFirst.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick a deadline first.'**
+  String get goalPickDeadlineFirst;
+
+  /// No description provided for @trackSaveError.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to save track. Please try again.'**
+  String get trackSaveError;
+
+  /// No description provided for @pacePerDay.
+  ///
+  /// In en, this message translates to:
+  /// **'Per day'**
+  String get pacePerDay;
+
+  /// No description provided for @pacePerWeek.
+  ///
+  /// In en, this message translates to:
+  /// **'Per week'**
+  String get pacePerWeek;
+
+  /// No description provided for @goalTypeDeadline.
+  ///
+  /// In en, this message translates to:
+  /// **'Deadline'**
+  String get goalTypeDeadline;
+
+  /// No description provided for @goalTypePace.
+  ///
+  /// In en, this message translates to:
+  /// **'Pace'**
+  String get goalTypePace;
+
+  /// No description provided for @goalTypeNoDeadline.
+  ///
+  /// In en, this message translates to:
+  /// **'No deadline'**
+  String get goalTypeNoDeadline;
+
+  /// No description provided for @goalEditTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit Goal'**
+  String get goalEditTitle;
+
+  /// No description provided for @goalNewTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'New Goal'**
+  String get goalNewTitle;
+
+  /// No description provided for @goalUpdateButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Update Goal'**
+  String get goalUpdateButton;
+
+  /// No description provided for @goalCreateButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Create Goal'**
+  String get goalCreateButton;
+
+  /// No description provided for @unitPerakim.
+  ///
+  /// In en, this message translates to:
+  /// **'Perakim'**
+  String get unitPerakim;
+
+  /// No description provided for @unitPesukim.
+  ///
+  /// In en, this message translates to:
+  /// **'Pesukim'**
+  String get unitPesukim;
+
+  /// No description provided for @unitAmudim.
+  ///
+  /// In en, this message translates to:
+  /// **'Amudim'**
+  String get unitAmudim;
+
+  /// No description provided for @unitDafim.
+  ///
+  /// In en, this message translates to:
+  /// **'Dafim'**
+  String get unitDafim;
+
+  /// No description provided for @tasksUnableToLoad.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to load tasks'**
+  String get tasksUnableToLoad;
+
+  /// No description provided for @tasksAllCaughtUp.
+  ///
+  /// In en, this message translates to:
+  /// **'All caught up'**
+  String get tasksAllCaughtUp;
+
+  /// No description provided for @tasksNoTasksRemainingToday.
+  ///
+  /// In en, this message translates to:
+  /// **'No tasks remaining for today.'**
+  String get tasksNoTasksRemainingToday;
+
+  /// No description provided for @itemsCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, one{1 Item} other{{count} Items}}'**
+  String itemsCount(int count);
+
+  /// No description provided for @scopeSelectionCountSelected.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, one{1 selected} other{{count} selected}}'**
+  String scopeSelectionCountSelected(int count);
+
+  /// No description provided for @scopeSelectionItemCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, one{1 item} other{{count} items}}'**
+  String scopeSelectionItemCount(int count);
+
+  /// No description provided for @reviewStageDayDelay.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, one{1 day delay} other{{count} day delay}}'**
+  String reviewStageDayDelay(int count);
+
+  /// No description provided for @applyToAll.
+  ///
+  /// In en, this message translates to:
+  /// **'Apply to All'**
+  String get applyToAll;
+
+  /// No description provided for @trackNameSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Give your track a name to identify it.'**
+  String get trackNameSubtitle;
+
+  /// No description provided for @priorLearningChooseSections.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose which sections to mark in {curriculumName}.'**
+  String priorLearningChooseSections(String curriculumName);
+
+  /// No description provided for @priorLearningAlreadyCompleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Have you already completed some of these sections?'**
+  String get priorLearningAlreadyCompleted;
+
+  /// No description provided for @priorLearningMarkEverything.
+  ///
+  /// In en, this message translates to:
+  /// **'Mark everything as finished'**
+  String get priorLearningMarkEverything;
+
+  /// No description provided for @priorLearningMarkEverythingSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Best if you are starting a new review cycle'**
+  String get priorLearningMarkEverythingSubtitle;
+
+  /// No description provided for @priorLearningNoFolders.
+  ///
+  /// In en, this message translates to:
+  /// **'No specific folders were selected, but you can still mark all as completed.'**
+  String get priorLearningNoFolders;
+
+  /// No description provided for @priorLearningSelectedFolder.
+  ///
+  /// In en, this message translates to:
+  /// **'Selected folder'**
+  String get priorLearningSelectedFolder;
+
+  /// No description provided for @scopeSelectionSelectLevel.
+  ///
+  /// In en, this message translates to:
+  /// **'Select {levelName}'**
+  String scopeSelectionSelectLevel(String levelName);
+
+  /// No description provided for @activeTracksLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Active Tracks'**
+  String get activeTracksLabel;
+
+  /// No description provided for @activeTracksRunning.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} RUNNING'**
+  String activeTracksRunning(int count);
+
+  /// No description provided for @trackSince.
+  ///
+  /// In en, this message translates to:
+  /// **'Since {date}'**
+  String trackSince(String date);
+
+  /// No description provided for @trackDeleteLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete Track'**
+  String get trackDeleteLabel;
+
+  /// No description provided for @trackDeleteContent.
+  ///
+  /// In en, this message translates to:
+  /// **'Permanently delete \"{name}\"? All progress and data for this track will be removed. This cannot be undone.'**
+  String trackDeleteContent(String name);
 
   /// No description provided for @notificationReminderTitle.
   ///

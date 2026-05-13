@@ -74,7 +74,7 @@ class TextDisplayScreen extends ConsumerWidget {
         actions: [
           IconButton(
             icon: const Icon(Icons.chevron_left),
-            tooltip: 'Previous',
+            tooltip: AppLocalizations.of(context)!.textReaderTooltipPrevious,
             onPressed: adj?.prev != null
                 ? () => context.router.replace(
                     TextDisplayRoute(sefariaRef: adj!.prev!),
@@ -83,7 +83,7 @@ class TextDisplayScreen extends ConsumerWidget {
           ),
           IconButton(
             icon: const Icon(Icons.chevron_right),
-            tooltip: 'Next',
+            tooltip: AppLocalizations.of(context)!.textReaderTooltipNext,
             onPressed: adj?.next != null
                 ? () => context.router.replace(
                     TextDisplayRoute(sefariaRef: adj!.next!),
@@ -120,13 +120,13 @@ class _LoadingView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Center(
+    return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          CircularProgressIndicator(),
-          SizedBox(height: 16),
-          Text('Loading text...'),
+          const CircularProgressIndicator(),
+          const SizedBox(height: 16),
+          Text(AppLocalizations.of(context)!.loadingText),
         ],
       ),
     );
@@ -259,7 +259,7 @@ class _TextContentView extends StatelessWidget {
               children: [
                 if (textContent.hebrewText.isNotEmpty) ...[
                   _ReaderSectionCard(
-                    label: 'Hebrew Text',
+                    label: AppLocalizations.of(context)!.textReaderHebrewTab,
                     labelBackground: const Color(0xFFF26666),
                     alignLabelRight: false,
                     child: _NumberedSegmentColumn(
@@ -302,7 +302,7 @@ class _TextContentView extends StatelessWidget {
 
                 if (textContent.englishText.isNotEmpty) ...[
                   _ReaderSectionCard(
-                    label: 'English Translation',
+                    label: AppLocalizations.of(context)!.textReaderEnglishTab,
                     labelBackground: AppTheme.brandBlue,
                     alignLabelRight: true,
                     child: Column(
@@ -665,9 +665,9 @@ class _CompletionSectionState extends ConsumerState<_CompletionSection> {
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Marked complete'),
-            duration: Duration(seconds: 2),
+          SnackBar(
+            content: Text(AppLocalizations.of(context)!.markedComplete),
+            duration: const Duration(seconds: 2),
           ),
         );
       }
@@ -677,7 +677,7 @@ class _CompletionSectionState extends ConsumerState<_CompletionSection> {
         setState(() => _saving = false);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text("Couldn't save: $e"),
+            content: Text(AppLocalizations.of(context)!.couldNotSave(e.toString())),
             backgroundColor: AppTheme.brandCoralDeep,
           ),
         );

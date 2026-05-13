@@ -14,6 +14,7 @@ import 'package:learning_tracker/features/onboarding/presentation/screens/bulk_m
 import 'package:learning_tracker/features/onboarding/presentation/screens/learning_process_wizard_screen.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/stages/presentation/providers/stage_providers.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 @RoutePage()
@@ -59,14 +60,14 @@ class _CurriculumSettingsScreenState
           children: [
             // Task 1: Program display
             programInfo.when(
-              loading: () => const ListTile(
-                leading: Icon(Icons.school),
-                title: Text('Loading program...'),
+              loading: () => ListTile(
+                leading: const Icon(Icons.school),
+                title: Text(AppLocalizations.of(context)!.curriculumSettingsLoadingProgram),
               ),
               error: (e, _) => ListTile(
                 leading: const Icon(Icons.school),
-                title: const Text('Program'),
-                subtitle: Text('Error: $e'),
+                title: Text(AppLocalizations.of(context)!.curriculumSettingsProgramTitle),
+                subtitle: Text(AppLocalizations.of(context)!.curriculumSettingsProgramError(e.toString())),
               ),
               data: (info) => ListTile(
                 leading: const Icon(Icons.school),
@@ -82,8 +83,8 @@ class _CurriculumSettingsScreenState
             // Task 2: Change Program button
             ListTile(
               leading: const Icon(Icons.swap_horiz),
-              title: const Text('Change Program'),
-              subtitle: const Text('Switch to a different learning program'),
+              title: Text(AppLocalizations.of(context)!.curriculumSettingsChangeProgram),
+              subtitle: Text(AppLocalizations.of(context)!.curriculumSettingsChangeProgramSubtitle),
               trailing: const Icon(Icons.chevron_right),
               onTap: () => _onChangeProgram(context),
             ),
@@ -93,8 +94,8 @@ class _CurriculumSettingsScreenState
             // Task 4: Request New Program
             ListTile(
               leading: const Icon(Icons.mail_outline),
-              title: const Text("Don't see your program?"),
-              subtitle: const Text('Request a new program'),
+              title: Text(AppLocalizations.of(context)!.curriculumSettingsDontSeeProgram),
+              subtitle: Text(AppLocalizations.of(context)!.curriculumSettingsRequestProgram),
               trailing: const Icon(Icons.open_in_new),
               onTap: () => _onRequestProgram(context),
             ),
@@ -172,7 +173,7 @@ class _CurriculumSettingsScreenState
     } else if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text('No email app found. Copy address instead?'),
+          content: Text(AppLocalizations.of(context)!.errorNoEmailApp),
           action: SnackBarAction(
             label: 'Copy',
             onPressed: () {

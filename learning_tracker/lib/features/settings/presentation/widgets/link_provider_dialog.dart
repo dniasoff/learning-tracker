@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:google_sign_in/google_sign_in.dart'
     show GoogleSignInException, GoogleSignInExceptionCode;
 import 'package:learning_tracker/features/settings/domain/services/account_management_service.dart';
@@ -15,8 +16,8 @@ Future<void> showLinkProviderDialog({
   if (hasPassword && hasGoogle) {
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('All available sign-in methods are already linked.'),
+        SnackBar(
+          content: Text(AppLocalizations.of(context)!.linkAccountAllLinked),
         ),
       );
     }
@@ -73,7 +74,7 @@ class _LinkProviderDialogState extends State<_LinkProviderDialog> {
       if (mounted) {
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Google account linked successfully.')),
+          SnackBar(content: Text(AppLocalizations.of(context)!.linkAccountGoogleSuccess)),
         );
       }
     } on GoogleSignInException catch (e) {
@@ -113,8 +114,8 @@ class _LinkProviderDialogState extends State<_LinkProviderDialog> {
       if (mounted) {
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Email/password account linked successfully.'),
+          SnackBar(
+            content: Text(AppLocalizations.of(context)!.linkAccountEmailSuccess),
           ),
         );
       }
@@ -129,11 +130,11 @@ class _LinkProviderDialogState extends State<_LinkProviderDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text('Link Account'),
+      title: Text(AppLocalizations.of(context)!.linkAccountTitle),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Text('Add another sign-in method to your account.'),
+          Text(AppLocalizations.of(context)!.linkAccountSubtitle),
           if (_error != null)
             Padding(
               padding: const EdgeInsets.only(top: 8),
@@ -143,7 +144,7 @@ class _LinkProviderDialogState extends State<_LinkProviderDialog> {
           if (!widget.hasGoogle)
             ListTile(
               leading: const Icon(Icons.account_circle),
-              title: const Text('Google'),
+              title: Text(AppLocalizations.of(context)!.linkAccountGoogleLabel),
               trailing: _loading
                   ? const SizedBox(
                       width: 16,
@@ -156,7 +157,7 @@ class _LinkProviderDialogState extends State<_LinkProviderDialog> {
           if (!widget.hasPassword) ...[
             ListTile(
               leading: const Icon(Icons.email),
-              title: const Text('Email/Password'),
+              title: Text(AppLocalizations.of(context)!.linkAccountEmailPasswordLabel),
               trailing: const Icon(Icons.add),
               onTap: _loading
                   ? null
@@ -183,7 +184,7 @@ class _LinkProviderDialogState extends State<_LinkProviderDialog> {
                         height: 16,
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
-                    : const Text('Link Email'),
+                    : Text(AppLocalizations.of(context)!.linkAccountLinkEmail),
               ),
             ],
           ],
@@ -192,7 +193,7 @@ class _LinkProviderDialogState extends State<_LinkProviderDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: const Text('Close'),
+          child: Text(AppLocalizations.of(context)!.actionClose),
         ),
       ],
     );

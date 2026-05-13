@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:kosher_dart/kosher_dart.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/core/utils/hebrew_calendar_utils.dart';
@@ -321,7 +322,7 @@ class _HebrewDatePickerState extends State<HebrewDatePicker> {
                           fontWeight: FontWeight.w600,
                         ),
                       ),
-                      child: const Text('Cancel'),
+                      child: Text(AppLocalizations.of(context)!.actionCancel),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -346,7 +347,7 @@ class _HebrewDatePickerState extends State<HebrewDatePicker> {
                         ),
                         elevation: 0,
                       ),
-                      child: const Text('Select date'),
+                      child: Text(AppLocalizations.of(context)!.schedulerSelectDate),
                     ),
                   ),
                 ],

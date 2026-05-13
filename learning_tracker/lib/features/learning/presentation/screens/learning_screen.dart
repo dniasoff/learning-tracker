@@ -253,7 +253,7 @@ class _DailyTasksSection extends ConsumerWidget {
           children: [
             Expanded(
               child: Text(
-                'Today’s Tasks',
+                AppLocalizations.of(context)!.dailyTasksTitle,
                 style: theme.textTheme.titleLarge?.copyWith(
                   fontWeight: FontWeight.w700,
                   fontSize: 36,
@@ -270,9 +270,9 @@ class _DailyTasksSection extends ConsumerWidget {
                 ),
               ),
               child: dailyTasksAsync.when(
-                data: (tasks) => Text('${tasks.length} Items'),
+                data: (tasks) => Text(AppLocalizations.of(context)!.itemsCount(tasks.length)),
                 loading: () => const Text('...'),
-                error: (_, __) => const Text('0 Items'),
+                error: (_, __) => Text(AppLocalizations.of(context)!.itemsCount(0)),
               ),
             ),
           ],
@@ -285,15 +285,15 @@ class _DailyTasksSection extends ConsumerWidget {
           ),
           error: (e, _) => _InfoCard(
             icon: Icons.error_outline,
-            title: 'Unable to load tasks',
+            title: AppLocalizations.of(context)!.tasksUnableToLoad,
             subtitle: e.toString(),
           ),
           data: (tasks) {
             if (tasks.isEmpty) {
-              return const _InfoCard(
+              return _InfoCard(
                 icon: Icons.celebration_outlined,
-                title: 'All caught up',
-                subtitle: 'No tasks remaining for today.',
+                title: AppLocalizations.of(context)!.tasksAllCaughtUp,
+                subtitle: AppLocalizations.of(context)!.tasksNoTasksRemainingToday,
               );
             }
 

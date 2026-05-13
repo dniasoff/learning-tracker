@@ -19,6 +19,7 @@ import 'package:learning_tracker/features/profiles/presentation/providers/profil
 import 'package:learning_tracker/features/settings/presentation/providers/account_management_providers.dart';
 import 'package:learning_tracker/features/settings/presentation/widgets/delete_account_dialog.dart';
 import 'package:learning_tracker/features/settings/presentation/widgets/reauthenticate_dialog.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -119,7 +120,7 @@ Future<void> showSignOutConfirmation(
                     ),
                     elevation: 2,
                   ),
-                  child: const Text('Sign Out'),
+                  child: Text(AppLocalizations.of(context)!.signOutLabel),
                 ),
               ),
               const SizedBox(height: 10),
@@ -135,7 +136,7 @@ Future<void> showSignOutConfirmation(
                       borderRadius: BorderRadius.circular(999),
                     ),
                   ),
-                  child: const Text('Cancel'),
+                  child: Text(AppLocalizations.of(context)!.actionCancel),
                 ),
               ),
             ],
@@ -169,8 +170,8 @@ Future<void> showSignOutConfirmation(
   } catch (e) {
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Failed to sign out. Please try again.'),
+        SnackBar(
+          content: Text(AppLocalizations.of(context)!.errorSignOutFailed),
           backgroundColor: AppTheme.brandCoralDeep,
         ),
       );
@@ -220,8 +221,8 @@ Future<void> showDeleteAccountFlow(
         // User cancelled — do nothing.
       } else if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Re-authentication failed. Please try again.'),
+          SnackBar(
+            content: Text(AppLocalizations.of(context)!.errorReauthFailed),
             backgroundColor: Colors.red,
           ),
         );
@@ -229,8 +230,8 @@ Future<void> showDeleteAccountFlow(
     } catch (_) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Re-authentication failed. Please try again.'),
+          SnackBar(
+            content: Text(AppLocalizations.of(context)!.errorReauthFailed),
             backgroundColor: Colors.red,
           ),
         );
@@ -274,14 +275,14 @@ Future<void> showDeleteAccountFlow(
       context: context,
       barrierDismissible: false,
       builder: (ctx) => AlertDialog(
-        title: const Text('Account deleted'),
+        title: Text(AppLocalizations.of(context)!.accountDeletedTitle),
         content: const Text(
           'Your account and all associated data have been permanently deleted.',
         ),
         actions: [
           FilledButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('OK'),
+            child: Text(AppLocalizations.of(context)!.actionOk),
           ),
         ],
       ),
@@ -317,8 +318,8 @@ Future<void> showDeleteLocalAccountFlow(
     if (accountId == null) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Could not resolve this account. Try again.'),
+          SnackBar(
+            content: Text(AppLocalizations.of(context)!.errorResolveAccount),
             backgroundColor: Colors.red,
           ),
         );
@@ -330,8 +331,8 @@ Future<void> showDeleteLocalAccountFlow(
     if (account == null || account.tier != 'localBorn') {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Only offline accounts can be deleted here.'),
+          SnackBar(
+            content: Text(AppLocalizations.of(context)!.errorOnlyOfflineDelete),
             backgroundColor: Colors.red,
           ),
         );
@@ -371,7 +372,7 @@ Future<void> showDeleteLocalAccountFlow(
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Failed to delete account: $e'),
+          content: Text(AppLocalizations.of(context)!.errorDeleteAccountFailed(e.toString())),
           backgroundColor: Colors.red,
         ),
       );

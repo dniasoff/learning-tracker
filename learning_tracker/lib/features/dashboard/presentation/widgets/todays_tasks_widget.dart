@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// Displays "X tasks due today" with a quick-start button.
 class TodaysTasksWidget extends StatelessWidget {
@@ -14,6 +15,7 @@ class TodaysTasksWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
 
     return Card(
       child: Padding(
@@ -39,14 +41,14 @@ class TodaysTasksWidget extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    '$taskCount task${taskCount == 1 ? '' : 's'} due today',
+                    l10n.tasksDueToday(taskCount),
                     style: theme.textTheme.titleSmall?.copyWith(
                       fontWeight: FontWeight.w600,
                     ),
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    'Tap to start learning',
+                    l10n.tapToStartLearning,
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: theme.colorScheme.onSurfaceVariant,
                     ),
@@ -62,7 +64,7 @@ class TodaysTasksWidget extends StatelessWidget {
                   vertical: 10,
                 ),
               ),
-              child: const Text('Start'),
+              child: Text(l10n.actionStart),
             ),
           ],
         ),

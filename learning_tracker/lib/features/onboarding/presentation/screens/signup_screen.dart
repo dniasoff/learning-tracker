@@ -27,6 +27,7 @@ import 'package:learning_tracker/features/onboarding/presentation/screens/onboar
 import 'package:learning_tracker/features/settings/presentation/providers/curriculum_activation_providers.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:uuid/uuid.dart';
 
 @RoutePage()
@@ -273,7 +274,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
     showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Connection lost'),
+        title: Text(AppLocalizations.of(context)!.connectionLostTitle),
         content: const Text(
           'The internet connection dropped during signup. '
           'Would you like to create an offline account instead?',
@@ -284,7 +285,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
               Navigator.of(ctx).pop();
               _signUpCloud(email, password, displayName);
             },
-            child: const Text('Try Again'),
+            child: Text(AppLocalizations.of(context)!.tryAgainButton),
           ),
           FilledButton(
             onPressed: () {
@@ -292,7 +293,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
               setState(() => _offlineAcknowledged = true);
               _signUpLocal(email, password, displayName);
             },
-            child: const Text('Create Offline Account'),
+            child: Text(AppLocalizations.of(context)!.createOfflineAccount),
           ),
         ],
       ),

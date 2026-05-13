@@ -10,6 +10,7 @@ import 'package:learning_tracker/core/widgets/app_bar_title.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/curriculum_scope_providers.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// Screen for selecting which parts of a curriculum to track.
 ///
@@ -84,14 +85,14 @@ class _ScopeSelectionScreenState extends ConsumerState<ScopeSelectionScreen> {
               'Learning Scope — '
               '${curriculumLabelText(ref, curriculum: widget.curriculumId)}',
         ),
-        actions: [TextButton(onPressed: _save, child: const Text('Save'))],
+        actions: [TextButton(onPressed: _save, child: Text(AppLocalizations.of(context)!.scopeSelectionSave))],
       ),
       body: SafeArea(
         top: false,
         child: contentAsync.when(
           data: (items) => _buildBody(items),
           loading: () => const Center(child: CircularProgressIndicator()),
-          error: (e, _) => Center(child: Text('Error: $e')),
+          error: (e, _) => Center(child: Text(AppLocalizations.of(context)!.errorGeneric(e.toString()))),
         ),
       ),
     );
@@ -102,7 +103,7 @@ class _ScopeSelectionScreenState extends ConsumerState<ScopeSelectionScreen> {
       children: [
         // "All" option
         SwitchListTile(
-          title: const Text('Track Entire Curriculum'),
+          title: Text(AppLocalizations.of(context)!.scopeSelectionTrackEntireCurriculum),
           subtitle: Text(
             _selectAll
                 ? 'All content is included'
@@ -124,12 +125,12 @@ class _ScopeSelectionScreenState extends ConsumerState<ScopeSelectionScreen> {
         if (!_selectAll) ...[
           // Level selection
           if (_selectedLevel == null) ...[
-            const ListTile(
-              title: Text(
+            ListTile(
+              title: const Text(
                 'Select Scope Level',
                 style: TextStyle(fontWeight: FontWeight.bold),
               ),
-              subtitle: Text('Choose which hierarchy level to filter by'),
+              subtitle: Text(AppLocalizations.of(context)!.scopeSelectionChooseHierarchyLevel),
             ),
             // Only show levels that make sense for scoping (not leaf level)
             for (var level = 1; level < _maxLevels; level++)
@@ -150,10 +151,10 @@ class _ScopeSelectionScreenState extends ConsumerState<ScopeSelectionScreen> {
             // Show values at selected level for multi-select
             ListTile(
               title: Text(
-                'Select ${_labelForLevel(_selectedLevel!)}',
+                AppLocalizations.of(context)!.scopeSelectionSelectLevel(_labelForLevel(_selectedLevel!)),
                 style: const TextStyle(fontWeight: FontWeight.bold),
               ),
-              subtitle: Text('${_selectedValues.length} selected'),
+              subtitle: Text(AppLocalizations.of(context)!.scopeSelectionCountSelected(_selectedValues.length)),
               trailing: TextButton(
                 onPressed: () {
                   setState(() {
@@ -161,7 +162,7 @@ class _ScopeSelectionScreenState extends ConsumerState<ScopeSelectionScreen> {
                     _selectedValues.clear();
                   });
                 },
-                child: const Text('Change Level'),
+                child: Text(AppLocalizations.of(context)!.scopeSelectionChangeLevel),
               ),
             ),
             const Divider(),
@@ -198,7 +199,7 @@ class _ScopeSelectionScreenState extends ConsumerState<ScopeSelectionScreen> {
       final leafCount = _countLeafItemsForValue(allItems, value);
       return CheckboxListTile(
         title: Text(value),
-        subtitle: Text('$leafCount items'),
+        subtitle: Text(AppLocalizations.of(context)!.scopeSelectionItemCount(leafCount)),
         value: isSelected,
         onChanged: (checked) {
           setState(() {

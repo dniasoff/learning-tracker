@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/auth/domain/repositories/auth_repository.dart';
 import 'package:package_info_plus/package_info_plus.dart';
@@ -23,7 +24,7 @@ Future<void> sendLogsToFirebase({
   if (uid == null) {
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Must be signed in to send logs')),
+        SnackBar(content: Text(AppLocalizations.of(context)!.errorSendLogsMustBeSignedIn)),
       );
     }
     return;
@@ -85,7 +86,7 @@ Future<void> sendLogsToFirebase({
     if (context.mounted) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text('Failed to send logs: $e')));
+      ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context)!.errorSendLogsFailed(e.toString()))));
     }
   }
 }

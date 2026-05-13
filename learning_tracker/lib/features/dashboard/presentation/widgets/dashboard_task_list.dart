@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/enums/user_mode.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:learning_tracker/features/dashboard/presentation/widgets/dashboard_task_item.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dart';
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
@@ -26,6 +27,7 @@ class DashboardTaskList extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
     final dailyTasksAsync = ref.watch(allDailyTasksProvider);
 
     return Column(
@@ -33,9 +35,9 @@ class DashboardTaskList extends ConsumerWidget {
       children: [
         // Section header
         dailyTasksAsync.when(
-          loading: () => _sectionHeader(theme, null),
-          error: (_, __) => _sectionHeader(theme, null),
-          data: (tasks) => _sectionHeader(theme, tasks.length),
+          loading: () => _sectionHeader(theme, l10n, null),
+          error: (_, __) => _sectionHeader(theme, l10n, null),
+          data: (tasks) => _sectionHeader(theme, l10n, tasks.length),
         ),
         const SizedBox(height: 12),
 
@@ -50,12 +52,12 @@ class DashboardTaskList extends ConsumerWidget {
           error: (e, _) => Center(
             child: Padding(
               padding: const EdgeInsets.all(24),
-              child: Text('Error loading tasks: $e'),
+              child: Text(l10n.errorLoadingTasks(e.toString())),
             ),
           ),
           data: (tasks) {
             if (tasks.isEmpty) {
-              return _buildEmptyState(theme);
+              return _buildEmptyState(theme, l10n);
             }
 
             final grouped = _groupTasks(tasks);
@@ -113,7 +115,7 @@ class DashboardTaskList extends ConsumerWidget {
                     _subHeader(
                       theme,
                       icon: Icons.history,
-                      title: 'Missed review (${grouped.overdueReview.length})',
+                      title: l10n.missedReview(grouped.overdueReview.length),
                       color: theme.colorScheme.error,
                     ),
                     const SizedBox(height: 6),
@@ -132,7 +134,7 @@ class DashboardTaskList extends ConsumerWidget {
                     _subHeader(
                       theme,
                       icon: Icons.refresh,
-                      title: "Today's review (${grouped.todayReview.length})",
+                      title: l10n.todaysReview(grouped.todayReview.length),
                       color: theme.colorScheme.primary,
                     ),
                     const SizedBox(height: 6),
@@ -152,7 +154,7 @@ class DashboardTaskList extends ConsumerWidget {
                       theme,
                       icon: Icons.menu_book,
                       title:
-                          "Today's learning (${grouped.todayLearning.length})",
+                          l10n.todaysLearning(grouped.todayLearning.length),
                       color: theme.colorScheme.primary,
                     ),
                     const SizedBox(height: 6),
@@ -187,7 +189,7 @@ class DashboardTaskList extends ConsumerWidget {
                     padding: const EdgeInsets.only(top: 4),
                     child: TextButton(
                       onPressed: onViewAll,
-                      child: Text('View all (${tasks.length}) →'),
+                      child: Text(l10n.viewAllTasks(tasks.length)),
                     ),
                   ),
               ],
@@ -198,12 +200,12 @@ class DashboardTaskList extends ConsumerWidget {
     );
   }
 
-  Widget _sectionHeader(ThemeData theme, int? remaining) {
+  Widget _sectionHeader(ThemeData theme, AppLocalizations l10n, int? remaining) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(
-          "Today's Learning",
+          l10n.todaysLearningTitle,
           style: theme.textTheme.titleMedium?.copyWith(
             fontWeight: FontWeight.w600,
           ),
@@ -216,7 +218,7 @@ class DashboardTaskList extends ConsumerWidget {
               borderRadius: BorderRadius.circular(12),
             ),
             child: Text(
-              '$remaining remaining',
+              l10n.remainingCount(remaining),
               style: TextStyle(
                 color: theme.colorScheme.primary,
                 fontSize: 12,
@@ -228,7 +230,7 @@ class DashboardTaskList extends ConsumerWidget {
     );
   }
 
-  Widget _buildEmptyState(ThemeData theme) {
+  Widget _buildEmptyState(ThemeData theme, AppLocalizations l10n) {
     final icon = userMode == UserMode.child
         ? Icons.celebration
         : Icons.check_circle;
@@ -243,7 +245,7 @@ class DashboardTaskList extends ConsumerWidget {
               Icon(icon, size: 48, color: color),
               const SizedBox(height: 8),
               Text(
-                'All done for today!',
+                l10n.allDoneForToday,
                 style: theme.textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.w500,
                 ),

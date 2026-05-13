@@ -134,7 +134,7 @@ class _TrackManagementBodyState extends ConsumerState<TrackManagementBody> {
         ),
         child: const Icon(Icons.add, color: Colors.white),
       ),
-      label: const Text('ADD TRACK'),
+      label: Text(AppLocalizations.of(context)!.trackAddLabel),
       backgroundColor: AppTheme.brandBlue,
       foregroundColor: Colors.white,
       extendedPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
@@ -149,7 +149,7 @@ class _TrackManagementBodyState extends ConsumerState<TrackManagementBody> {
         children: [
           Expanded(
             child: Text(
-              'Active Tracks',
+              AppLocalizations.of(context)!.activeTracksLabel,
               style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                 fontWeight: FontWeight.w800,
                 color: AppTheme.brandInk,
@@ -163,7 +163,7 @@ class _TrackManagementBodyState extends ConsumerState<TrackManagementBody> {
               borderRadius: BorderRadius.circular(999),
             ),
             child: Text(
-              '$activeCount RUNNING',
+              AppLocalizations.of(context)!.activeTracksRunning(activeCount),
               style: Theme.of(context).textTheme.labelSmall?.copyWith(
                 color: const Color(0xFFE9A42A),
                 fontWeight: FontWeight.w800,
@@ -233,22 +233,19 @@ class _TrackManagementBodyState extends ConsumerState<TrackManagementBody> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Delete Track?'),
-        content: Text(
-          'Permanently delete "$name"? All progress and data for this track '
-          'will be removed. This cannot be undone.',
-        ),
+        title: Text(AppLocalizations.of(context)!.trackDeleteTitle),
+        content: Text(AppLocalizations.of(context)!.trackDeleteContent(name)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel'),
+            child: Text(AppLocalizations.of(context)!.actionCancel),
           ),
           FilledButton(
             style: FilledButton.styleFrom(
               backgroundColor: Theme.of(ctx).colorScheme.error,
             ),
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Delete'),
+            child: Text(AppLocalizations.of(context)!.actionDelete),
           ),
         ],
       ),

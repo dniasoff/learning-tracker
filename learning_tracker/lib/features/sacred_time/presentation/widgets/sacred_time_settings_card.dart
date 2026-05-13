@@ -1,6 +1,7 @@
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/features/sacred_time/data/services/location_service.dart';
 import 'package:learning_tracker/features/sacred_time/domain/models/sacred_location.dart';
@@ -177,7 +178,7 @@ class _LocationActionsState extends ConsumerState<_LocationActions> {
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
                 : const Icon(Icons.my_location, size: 18),
-            label: const Text('Detect'),
+            label: Text(AppLocalizations.of(context)!.sacredTimeDetect),
           ),
         ),
         const SizedBox(width: 10),
@@ -185,7 +186,7 @@ class _LocationActionsState extends ConsumerState<_LocationActions> {
           child: OutlinedButton.icon(
             onPressed: _detecting ? null : _pickCity,
             icon: const Icon(Icons.search, size: 18),
-            label: const Text('Choose city'),
+            label: Text(AppLocalizations.of(context)!.sacredTimeChooseCity),
           ),
         ),
       ],

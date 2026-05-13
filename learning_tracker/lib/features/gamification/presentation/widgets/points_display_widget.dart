@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/enums/user_mode.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/features/gamification/presentation/providers/points_providers.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// Displays total points with curriculum breakdown.
 ///
@@ -33,7 +34,7 @@ class PointsDisplayWidget extends ConsumerWidget {
               color: Theme.of(context).colorScheme.primary,
             ),
           ),
-          Text('Total Points', style: Theme.of(context).textTheme.labelMedium),
+          Text(AppLocalizations.of(context)!.totalPointsLabel, style: Theme.of(context).textTheme.labelMedium),
           const SizedBox(height: 8),
           breakdown.when(
             data: (map) => Wrap(
@@ -55,7 +56,7 @@ class PointsDisplayWidget extends ConsumerWidget {
         ],
       ),
       loading: () => const CircularProgressIndicator(),
-      error: (_, __) => const Text('Error loading points'),
+      error: (_, __) => Text(AppLocalizations.of(context)!.errorLoadingPoints),
     );
   }
 }

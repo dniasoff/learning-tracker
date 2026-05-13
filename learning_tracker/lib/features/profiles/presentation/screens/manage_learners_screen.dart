@@ -7,6 +7,7 @@ import 'package:learning_tracker/features/parent_mode/presentation/widgets/paren
 import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/widgets/profile_avatar.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
 
 @RoutePage()
 class ManageLearnersScreen extends ConsumerWidget {
@@ -29,11 +30,11 @@ class ManageLearnersScreen extends ConsumerWidget {
       ),
       body: profilesAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, s) => Center(child: Text('Error: $e')),
+        error: (e, s) => Center(child: Text(AppLocalizations.of(context)!.errorGeneric(e.toString()))),
         data: (profiles) {
           if (profiles.isEmpty) {
-            return const Center(
-              child: Text('No profiles yet. Tap + to add one.'),
+            return Center(
+              child: Text(AppLocalizations.of(context)!.noProfilesYet),
             );
           }
           return ListView.builder(
@@ -55,7 +56,7 @@ class ManageLearnersScreen extends ConsumerWidget {
   ) async {
     final result = await showDialog<({String name, String mode, int avatar})>(
       context: context,
-      builder: (ctx) => const _ProfileFormDialog(title: 'Add Learner'),
+      builder: (ctx) => _ProfileFormDialog(title: AppLocalizations.of(context)!.profilesAddLearner),
     );
     if (result == null) return;
 
@@ -105,8 +106,8 @@ class _ProfileListTile extends ConsumerWidget {
             }
           },
           itemBuilder: (context) => [
-            const PopupMenuItem(value: 'edit', child: Text('Edit')),
-            const PopupMenuItem(value: 'delete', child: Text('Delete')),
+            PopupMenuItem(value: 'edit', child: Text(AppLocalizations.of(context)!.profilesEditLabel)),
+            PopupMenuItem(value: 'delete', child: Text(AppLocalizations.of(context)!.profilesDeleteLabel)),
           ],
         ),
       ),
@@ -117,7 +118,7 @@ class _ProfileListTile extends ConsumerWidget {
     final result = await showDialog<({String name, String mode, int avatar})>(
       context: context,
       builder: (ctx) => _ProfileFormDialog(
-        title: 'Edit Learner',
+        title: AppLocalizations.of(context)!.profilesEditLearner,
         initialName: profile.displayName,
         initialMode: profile.mode,
         initialAvatar: profile.avatarIndex,
@@ -160,14 +161,14 @@ class _ProfileListTile extends ConsumerWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('Cancel'),
+            child: Text(AppLocalizations.of(context)!.actionCancel),
           ),
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(true),
             style: TextButton.styleFrom(
               foregroundColor: AppTheme.brandCoralDeep,
             ),
-            child: Text(isLast ? 'Delete anyway' : 'Delete'),
+            child: Text(isLast ? 'Delete anyway' : AppLocalizations.of(context)!.actionDelete),
           ),
         ],
       ),
@@ -232,17 +233,17 @@ class _ProfileFormDialogState extends State<_ProfileFormDialog> {
           children: [
             TextField(
               controller: _nameController,
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 labelText: 'Name',
-                hintText: 'Enter learner name',
+                hintText: AppLocalizations.of(context)!.profilesEnterLearnerName,
               ),
               autofocus: true,
             ),
             const SizedBox(height: 16),
             SegmentedButton<String>(
-              segments: const [
-                ButtonSegment(value: 'child', label: Text('Child')),
-                ButtonSegment(value: 'adult', label: Text('Adult')),
+              segments: [
+                ButtonSegment(value: 'child', label: Text(AppLocalizations.of(context)!.profilesChildLabel)),
+                ButtonSegment(value: 'adult', label: Text(AppLocalizations.of(context)!.profilesAdultLabel)),
               ],
               selected: {_mode},
               onSelectionChanged: (selected) {
@@ -250,7 +251,7 @@ class _ProfileFormDialogState extends State<_ProfileFormDialog> {
               },
             ),
             const SizedBox(height: 16),
-            const Text('Choose Avatar'),
+            Text(AppLocalizations.of(context)!.profilesChooseAvatar),
             const SizedBox(height: 8),
             SizedBox(
               height: 60,
@@ -284,7 +285,7 @@ class _ProfileFormDialogState extends State<_ProfileFormDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancel'),
+          child: Text(AppLocalizations.of(context)!.actionCancel),
         ),
         FilledButton(
           onPressed: () {
@@ -294,7 +295,7 @@ class _ProfileFormDialogState extends State<_ProfileFormDialog> {
               context,
             ).pop((name: name, mode: _mode, avatar: _avatarIndex));
           },
-          child: const Text('Save'),
+          child: Text(AppLocalizations.of(context)!.actionSave),
         ),
       ],
     );

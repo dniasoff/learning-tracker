@@ -8,6 +8,7 @@ import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dar
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
 import 'package:learning_tracker/features/scheduler/presentation/widgets/daily_task_card.dart';
 import 'package:learning_tracker/features/scheduler/presentation/widgets/grouped_daily_view.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
 
 @RoutePage()
 class SchedulerScreen extends ConsumerStatefulWidget {
@@ -33,9 +34,9 @@ class _SchedulerScreenState extends ConsumerState<SchedulerScreen> {
           data: (tasks) {
             final visibleTasks = _filterTasks(tasks, section);
             if (visibleTasks.isEmpty) {
-              return const EmptyState(
-                message: 'All caught up! Great work!',
-                subtitle: 'You have no tasks remaining for today.',
+              return EmptyState(
+                message: AppLocalizations.of(context)!.dashboardAllCaughtUpTitle,
+                subtitle: AppLocalizations.of(context)!.tasksNoTasksRemainingTitle,
                 icon: Icons.celebration_outlined,
               );
             }
@@ -92,11 +93,11 @@ class _SchedulerScreenState extends ConsumerState<SchedulerScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text('Error loading tasks: $error'),
+                Text(AppLocalizations.of(context)!.errorLoadingTasks(error.toString())),
                 const SizedBox(height: 16),
                 ElevatedButton(
                   onPressed: () => ref.invalidate(allDailyTasksProvider),
-                  child: const Text('Retry'),
+                  child: Text(AppLocalizations.of(context)!.actionRetry),
                 ),
               ],
             ),
@@ -110,9 +111,9 @@ class _SchedulerScreenState extends ConsumerState<SchedulerScreen> {
     ref.read(skippedTasksProvider.notifier).skip(task.contentItemSefariaRef);
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: const Text('Task skipped until tomorrow'),
+        content: Text(AppLocalizations.of(context)!.taskSkippedUntilTomorrow),
         action: SnackBarAction(
-          label: 'Undo',
+          label: AppLocalizations.of(context)!.undoLabel,
           onPressed: () {
             ref
                 .read(skippedTasksProvider.notifier)
@@ -188,9 +189,9 @@ class _TaskList extends ConsumerWidget {
                   .skip(task.contentItemSefariaRef);
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content: const Text('Task skipped until tomorrow'),
+                  content: Text(AppLocalizations.of(context)!.taskSkippedUntilTomorrow),
                   action: SnackBarAction(
-                    label: 'Undo',
+                    label: AppLocalizations.of(context)!.undoLabel,
                     onPressed: () {
                       ref
                           .read(skippedTasksProvider.notifier)
@@ -217,7 +218,7 @@ class _HeaderRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Text('Daily Tasks', style: titleStyle);
+    return Text(AppLocalizations.of(context)!.dailyTasksTitle, style: titleStyle);
   }
 }
 

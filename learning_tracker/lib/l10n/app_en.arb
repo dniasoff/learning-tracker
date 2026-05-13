@@ -762,6 +762,450 @@
   },
   "cannotDeactivateLastCurriculum": "At least one curriculum must remain active",
   "cannotDeactivateLastCurriculumDetail": "You cannot remove your last active curriculum. Add another curriculum before removing this one.",
+
+  "actionStart": "Start",
+  "actionCancel": "Cancel",
+  "actionSave": "Save",
+  "actionConfirm": "Confirm",
+  "actionReset": "Reset",
+  "actionNext": "Next",
+  "actionBack": "Back",
+  "actionContinue": "Continue",
+  "actionSkip": "Skip",
+  "actionRetry": "Retry",
+  "actionExit": "Exit",
+  "actionReplace": "Replace",
+  "actionDelete": "Delete",
+  "actionEdit": "Edit",
+  "actionClose": "Close",
+  "actionOk": "OK",
+  "actionSkipForNow": "Skip for now",
+  "actionRemove": "Remove",
+  "actionUseToday": "Use Today",
+  "actionStartHere": "Start here",
+  "actionStartHereLabel": "Start Here",
+
+  "errorGeneric": "Error: {error}",
+  "@errorGeneric": {
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "errorLoadingTasks": "Error loading tasks: {error}",
+  "@errorLoadingTasks": {
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "errorLoadingOrder": "Error loading order: {error}",
+  "@errorLoadingOrder": {
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "errorLoadingContent": "Error loading content: {error}",
+  "@errorLoadingContent": {
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "errorLoadingPoints": "Error loading points",
+  "errorSaveFailed": "Failed to save. Please try again.",
+  "errorSearchFailed": "Search failed: {error}",
+  "@errorSearchFailed": {
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "errorSearchError": "Search error: {error}",
+  "@errorSearchError": {
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "errorUnknownCurriculum": "Unknown curriculum: \"{curriculumId}\"",
+  "@errorUnknownCurriculum": {
+    "placeholders": {
+      "curriculumId": { "type": "String" }
+    }
+  },
+  "errorCouldNotSaveRetry": "Couldn't save — tap to retry",
+  "errorSaveTrackFailed": "Failed to save track. Please try again.",
+  "errorSignOutFailed": "Failed to sign out. Please try again.",
+  "errorReauthFailed": "Re-authentication failed. Please try again.",
+  "errorResolveAccount": "Could not resolve this account. Try again.",
+  "errorOnlyOfflineDelete": "Only offline accounts can be deleted here.",
+  "errorDeleteAccountFailed": "Failed to delete account: {error}",
+  "@errorDeleteAccountFailed": {
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "errorSendLogsMustBeSignedIn": "Must be signed in to send logs",
+  "errorSendLogsFailed": "Failed to send logs: {error}",
+  "@errorSendLogsFailed": {
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "errorNoEmailApp": "No email app found. Copy address instead?",
+  "errorMarkCompleteFailed": "Failed to mark complete: {error}",
+  "@errorMarkCompleteFailed": {
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "errorVerificationEmailSent": "Verification email sent. Check your inbox.",
+
+  "noData": "No data",
+  "noTasksForToday": "No tasks for today",
+  "noItemsToOrder": "No items to order.",
+  "noProfilesYet": "No profiles yet. Tap + to add one.",
+  "noCompletionsYet": "No completions yet",
+  "noResultsForQuery": "No results for \"{query}\"",
+  "@noResultsForQuery": {
+    "placeholders": {
+      "query": { "type": "String" }
+    }
+  },
+
+  "viewAllTasks": "View all ({count}) →",
+  "@viewAllTasks": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "tasksDueToday": "{count, plural, one{1 task due today} other{{count} tasks due today}}",
+  "@tasksDueToday": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "tapToStartLearning": "Tap to start learning",
+  "todaysLearningTitle": "Today's Learning",
+  "remainingCount": "{count} remaining",
+  "@remainingCount": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "allDoneForToday": "All done for today!",
+  "missedReview": "Missed review ({count})",
+  "@missedReview": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "todaysReview": "Today's review ({count})",
+  "@todaysReview": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "todaysLearning": "Today's learning ({count})",
+  "@todaysLearning": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+
+  "dailyTasksTitle": "Daily Tasks",
+  "taskSkippedUntilTomorrow": "Task skipped until tomorrow",
+  "tasksNoTasksRemainingTitle": "You have no tasks remaining for today.",
+  "undoLabel": "Undo",
+
+  "searchTitle": "Search",
+  "searchHintEnterTerm": "Enter a search term above",
+
+  "loadingText": "Loading text...",
+  "markedComplete": "Marked complete",
+  "couldNotSave": "Couldn't save: {error}",
+  "@couldNotSave": {
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "textReaderTooltipPrevious": "Previous",
+  "textReaderTooltipNext": "Next",
+  "textReaderHebrewTab": "Hebrew Text",
+  "textReaderEnglishTab": "English Translation",
+
+  "totalPointsLabel": "Total Points",
+
+  "resetToDefaultOrder": "Reset to Default Order",
+  "resetToDefaultOrderDialogTitle": "Reset to Default Order",
+  "resetToDefaultOrderDialogBody": "This will restore the natural Sefaria order for this curriculum. Your custom ordering will be lost.",
+  "controlledByParent": "Controlled by parent",
+
+  "sacredTimeDetect": "Detect",
+  "sacredTimeChooseCity": "Choose city",
+  "cityPickerTitle": "Choose a city",
+  "cityPickerHint": "Type a city name…",
+
+  "schedulerStudyLabel": "Study",
+  "schedulerReviewOnlyLabel": "Review only",
+  "schedulerPerDay": "Per day",
+  "schedulerPerWeek": "Per week",
+  "schedulerPerakimLabel": "Perakim",
+  "schedulerPesukimLabel": "Pesukim",
+  "schedulerAmudimLabel": "Amudim",
+  "schedulerDafimLabel": "Dafim",
+  "schedulerDeadlineLabel": "Deadline",
+  "schedulerPaceLabel": "Pace",
+  "schedulerNoDeadlineLabel": "No deadline",
+  "schedulerGoalHint": "e.g., Bar Mitzvah, Yahrzeit, Siyum",
+  "schedulerSelectDate": "Select date",
+  "schedulerPickDeadlineFirst": "Pick a deadline first.",
+  "schedulerDaysLabel": "Days",
+  "schedulerWeeksLabel": "Weeks",
+
+  "profilesEditLabel": "Edit",
+  "profilesDeleteLabel": "Delete",
+  "profilesChooseAvatar": "Choose Avatar",
+  "profilesAddLearner": "Add Learner",
+  "profilesEditLearner": "Edit Learner",
+  "profilesChildLabel": "Child",
+  "profilesAdultLabel": "Adult",
+  "profilesEnterLearnerName": "Enter learner name",
+
+  "trackNameThisTrack": "Name This Track",
+  "trackNameLabel": "Track Name",
+  "trackAddLabel": "ADD TRACK",
+  "trackDeleteTitle": "Delete Track?",
+  "trackMarkContentDone": "Mark Content Done",
+  "trackReorderContent": "Reorder Content",
+  "trackReplaceTitle": "Replace your {label} track?",
+  "@trackReplaceTitle": {
+    "placeholders": {
+      "label": { "type": "String" }
+    }
+  },
+
+  "bulkMarkCompleteTitle": "Bulk Mark Complete",
+  "bulkMarkedComplete": "Marked {count} items as complete",
+  "@bulkMarkedComplete": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "bulkMarkConfirmBulkTitle": "Confirm Bulk Mark",
+  "bulkMarkingCompletions": "Marking completions...",
+  "bulkMarkDone": "Done!",
+  "bulkMarkSkip": "Skip",
+  "bulkMarkPriorLearning": "Mark Prior Learning",
+
+  "completionButtonCompleted": "Completed",
+  "completionButtonMarkComplete": "Mark Complete",
+
+  "upgradeToCloudTitle": "Upgrade to Cloud",
+  "upgradeToCloudButton": "Upgrade to Cloud",
+  "upgradeToCloudCancelKeepOffline": "Cancel — keep offline account",
+
+  "scopeSelectionSave": "Save",
+  "scopeSelectionTrackEntireCurriculum": "Track Entire Curriculum",
+  "scopeSelectionChooseHierarchyLevel": "Choose which hierarchy level to filter by",
+  "scopeSelectionChangeLevel": "Change Level",
+
+  "curriculumSettingsLoadingProgram": "Loading program...",
+  "curriculumSettingsProgramTitle": "Program",
+  "curriculumSettingsProgramError": "Error: {error}",
+  "@curriculumSettingsProgramError": {
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "curriculumSettingsChangeProgram": "Change Program",
+  "curriculumSettingsChangeProgramSubtitle": "Switch to a different learning program",
+  "curriculumSettingsDontSeeProgram": "Don't see your program?",
+  "curriculumSettingsRequestProgram": "Request a new program",
+
+  "deleteAccountDialogTitle": "Delete Account",
+  "deleteAccountTypeConfirm": "Type DELETE to confirm:",
+  "deleteAccountHint": "DELETE",
+
+  "backupLastSynced": "Last synced {timeAgo}",
+  "@backupLastSynced": {
+    "placeholders": {
+      "timeAgo": { "type": "String" }
+    }
+  },
+  "backupSyncing": "Syncing...",
+  "backupPendingChanges": "{count} changes pending",
+  "@backupPendingChanges": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "backupSyncError": "Sync error: {message}",
+  "@backupSyncError": {
+    "placeholders": {
+      "message": { "type": "String" }
+    }
+  },
+  "backupUpgradeToCloud": "Upgrade to Cloud",
+
+  "reauthDialogTitle": "Verify Your Identity",
+  "reauthDialogBody": "Please enter your current password to continue.",
+  "reauthVerify": "Verify",
+
+  "linkAccountTitle": "Link Account",
+  "linkAccountSubtitle": "Add another sign-in method to your account.",
+  "linkAccountGoogleLabel": "Google",
+  "linkAccountEmailPasswordLabel": "Email/Password",
+  "linkAccountLinkEmail": "Link Email",
+  "linkAccountAllLinked": "All available sign-in methods are already linked.",
+  "linkAccountGoogleSuccess": "Google account linked successfully.",
+  "linkAccountEmailSuccess": "Email/password account linked successfully.",
+
+  "changePasswordDialogTitle": "Change Password",
+  "changePasswordButton": "Change Password",
+
+  "accountDeletedTitle": "Account deleted",
+  "signOutLabel": "Sign Out",
+
+  "connectionLostTitle": "Connection lost",
+  "tryAgainButton": "Try Again",
+  "createOfflineAccount": "Create Offline Account",
+
+  "onboardingConfirm": "Confirm",
+  "onboardingStartLearning": "Start Learning",
+  "onboardingAddAnotherTrack": "Add Another Track",
+  "onboardingAddAnotherLearner": "Add Another Learner",
+  "onboardingSkipNoReview": "Skip (no review)",
+  "onboardingMarkCompleted": "Mark Completed",
+  "onboardingStartingPosition": "Starting Position",
+  "onboardingStudyDays": "Study Days",
+
+  "filterByTrack": "Filter by track",
+  "completionHistoryAllTracks": "All Tracks",
+  "completionHistoryFilteredBy": "Filtered by: ",
+  "completionHistoryStagePrefix": "Stage {stageId} • ",
+  "@completionHistoryStagePrefix": {
+    "placeholders": {
+      "stageId": { "type": "int" }
+    }
+  },
+
+  "stageNameLimud": "לימוד",
+  "stageNameChazaraAleph": "חזרה א׳",
+  "stageNameChazaraBet": "חזרה ב׳",
+
+  "actionMarkCompleted": "Mark Completed",
+  "actionSkipNoReview": "Skip (no review)",
+
+  "studyDaysTitle": "Study Days",
+  "studyDaysSubtitle": "Which days do you learn?",
+  "studyDaysSetByProgram": "Study days set by {programName}",
+  "@studyDaysSetByProgram": {
+    "placeholders": {
+      "programName": { "type": "String" }
+    }
+  },
+
+  "startingPositionTitle": "Starting Position",
+  "startingPositionHint": "Can start up to 30 days back/forward from today",
+  "startingPositionWhereAreYou": "Where are you in {programName}?",
+  "@startingPositionWhereAreYou": {
+    "placeholders": {
+      "programName": { "type": "String" }
+    }
+  },
+
+  "priorLearningTitle": "Mark Prior Learning",
+  "priorLearningSubtitle": "Do you want to mark parts you already learned as completed?",
+
+  "goalPickDeadlineFirst": "Pick a deadline first.",
+  "trackSaveError": "Failed to save track. Please try again.",
+
+  "pacePerDay": "Per day",
+  "pacePerWeek": "Per week",
+
+  "goalTypeDeadline": "Deadline",
+  "goalTypePace": "Pace",
+  "goalTypeNoDeadline": "No deadline",
+  "goalEditTitle": "Edit Goal",
+  "goalNewTitle": "New Goal",
+  "goalUpdateButton": "Update Goal",
+  "goalCreateButton": "Create Goal",
+
+  "unitPerakim": "Perakim",
+  "unitPesukim": "Pesukim",
+  "unitAmudim": "Amudim",
+  "unitDafim": "Dafim",
+
+  "tasksUnableToLoad": "Unable to load tasks",
+  "tasksAllCaughtUp": "All caught up",
+  "tasksNoTasksRemainingToday": "No tasks remaining for today.",
+  "itemsCount": "{count, plural, one{1 Item} other{{count} Items}}",
+  "@itemsCount": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+
+  "scopeSelectionCountSelected": "{count, plural, one{1 selected} other{{count} selected}}",
+  "@scopeSelectionCountSelected": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "scopeSelectionItemCount": "{count, plural, one{1 item} other{{count} items}}",
+  "@scopeSelectionItemCount": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+
+  "reviewStageDayDelay": "{count, plural, one{1 day delay} other{{count} day delay}}",
+  "@reviewStageDayDelay": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "applyToAll": "Apply to All",
+
+  "trackNameSubtitle": "Give your track a name to identify it.",
+
+  "priorLearningChooseSections": "Choose which sections to mark in {curriculumName}.",
+  "@priorLearningChooseSections": {
+    "placeholders": {
+      "curriculumName": { "type": "String" }
+    }
+  },
+  "priorLearningAlreadyCompleted": "Have you already completed some of these sections?",
+  "priorLearningMarkEverything": "Mark everything as finished",
+  "priorLearningMarkEverythingSubtitle": "Best if you are starting a new review cycle",
+  "priorLearningNoFolders": "No specific folders were selected, but you can still mark all as completed.",
+  "priorLearningSelectedFolder": "Selected folder",
+
+  "scopeSelectionSelectLevel": "Select {levelName}",
+  "@scopeSelectionSelectLevel": {
+    "placeholders": {
+      "levelName": { "type": "String" }
+    }
+  },
+
+  "activeTracksLabel": "Active Tracks",
+  "activeTracksRunning": "{count} RUNNING",
+  "@activeTracksRunning": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+
+  "trackSince": "Since {date}",
+  "@trackSince": {
+    "placeholders": {
+      "date": { "type": "String" }
+    }
+  },
+  "trackDeleteLabel": "Delete Track",
+  "trackDeleteContent": "Permanently delete \"{name}\"? All progress and data for this track will be removed. This cannot be undone.",
+  "@trackDeleteContent": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
   "notificationReminderTitle": "Learning Reminder",
   "notificationReminderBody": "{taskCount,plural, =0{No tasks today — stay on track!} =1{You have 1 task across {curriculumCount,plural, =1{1 curriculum} other{{curriculumCount} curricula}} today} other{You have {taskCount} tasks across {curriculumCount,plural, =1{1 curriculum} other{{curriculumCount} curricula}} today}}",
   "@notificationReminderBody": {

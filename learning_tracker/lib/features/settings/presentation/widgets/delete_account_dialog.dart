@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// Shows a dialog requiring the user to type "DELETE" to confirm account deletion.
 ///
@@ -60,7 +61,7 @@ class _DeleteAccountDialogState extends State<_DeleteAccountDialog> {
         : '';
 
     return AlertDialog(
-      title: const Text('Delete Account'),
+      title: Text(AppLocalizations.of(context)!.deleteAccountDialogTitle),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -70,18 +71,18 @@ class _DeleteAccountDialogState extends State<_DeleteAccountDialog> {
             style: const TextStyle(color: Colors.red),
           ),
           const SizedBox(height: 16),
-          const Text('Type DELETE to confirm:'),
+          Text(AppLocalizations.of(context)!.deleteAccountTypeConfirm),
           const SizedBox(height: 8),
           TextField(
             controller: _controller,
-            decoration: const InputDecoration(hintText: 'DELETE'),
+            decoration: InputDecoration(hintText: AppLocalizations.of(context)!.deleteAccountHint),
           ),
         ],
       ),
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context, false),
-          child: const Text('Cancel'),
+          child: Text(AppLocalizations.of(context)!.actionCancel),
         ),
         TextButton(
           onPressed: _canDelete ? () => Navigator.pop(context, true) : null,

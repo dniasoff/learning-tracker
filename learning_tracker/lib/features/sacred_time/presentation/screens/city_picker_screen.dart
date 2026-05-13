@@ -2,6 +2,7 @@ import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/features/sacred_time/domain/models/city.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/providers/cities_provider.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/providers/sacred_location_provider.dart';
 
@@ -34,7 +35,7 @@ class _CityPickerScreenState extends ConsumerState<CityPickerScreen> {
         : ref.watch(citySearchProvider(_query));
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Choose a city'), elevation: 0),
+      appBar: AppBar(title: Text(AppLocalizations.of(context)!.cityPickerTitle), elevation: 0),
       body: Column(
         children: [
           Padding(
@@ -43,7 +44,7 @@ class _CityPickerScreenState extends ConsumerState<CityPickerScreen> {
               controller: _controller,
               autofocus: true,
               decoration: InputDecoration(
-                hintText: 'Type a city name…',
+                hintText: AppLocalizations.of(context)!.cityPickerHint,
                 prefixIcon: const Icon(Icons.search),
                 filled: true,
                 fillColor: theme.colorScheme.surfaceContainerHighest,
@@ -58,7 +59,7 @@ class _CityPickerScreenState extends ConsumerState<CityPickerScreen> {
           Expanded(
             child: results.when(
               loading: () => const Center(child: CircularProgressIndicator()),
-              error: (e, _) => Center(child: Text('Search failed: $e')),
+              error: (e, _) => Center(child: Text(AppLocalizations.of(context)!.errorSearchFailed(e.toString()))),
               data: (cities) {
                 if (_query.length < 2) {
                   return _IdleHint(theme: theme);

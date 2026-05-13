@@ -8,6 +8,7 @@ import 'package:learning_tracker/features/learning_order/domain/models/learning_
 import 'package:learning_tracker/features/learning_order/presentation/providers/learning_order_providers.dart';
 import 'package:learning_tracker/features/learning_order/presentation/widgets/draggable_order_item.dart';
 import 'package:learning_tracker/features/learning_order/presentation/widgets/reset_order_dialog.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
 
 @RoutePage()
 class LearningOrderScreen extends ConsumerStatefulWidget {
@@ -49,18 +50,18 @@ class _LearningOrderScreenState extends ConsumerState<LearningOrderScreen> {
           if (!isRestricted)
             IconButton(
               icon: const Icon(Icons.refresh),
-              tooltip: 'Reset to Default Order',
+              tooltip: AppLocalizations.of(context)!.resetToDefaultOrder,
               onPressed: () => _resetToDefault(context),
             ),
         ],
       ),
       body: orderAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('Error loading order: $e')),
+        error: (e, _) => Center(child: Text(AppLocalizations.of(context)!.errorLoadingOrder(e.toString()))),
         data: (_) {
           final items = _localOrder;
           if (items == null || items.isEmpty) {
-            return const Center(child: Text('No items to order.'));
+            return Center(child: Text(AppLocalizations.of(context)!.noItemsToOrder));
           }
 
           if (isRestricted) {

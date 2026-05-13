@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:learning_tracker/core/services/daily_schedule_composer.dart';
 import 'package:learning_tracker/features/scheduler/presentation/widgets/daily_task_card.dart';
 
@@ -19,7 +20,7 @@ class UnifiedDailyView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (schedule.tasks.isEmpty) {
-      return const Center(child: Text('No tasks for today'));
+      return Center(child: Text(AppLocalizations.of(context)!.noTasksForToday));
     }
 
     return ListView.builder(

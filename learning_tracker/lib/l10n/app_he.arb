@@ -762,6 +762,450 @@
   },
   "cannotDeactivateLastCurriculum": "חייב להישאר לפחות קורס לימוד אחד פעיל",
   "cannotDeactivateLastCurriculumDetail": "לא ניתן להסיר את קורס הלימוד האחרון הפעיל. הוסיפו קורס נוסף לפני הסרת זה.",
+
+  "actionStart": "התחל",
+  "actionCancel": "ביטול",
+  "actionSave": "שמור",
+  "actionConfirm": "אישור",
+  "actionReset": "איפוס",
+  "actionNext": "הבא",
+  "actionBack": "חזור",
+  "actionContinue": "המשך",
+  "actionSkip": "דלג",
+  "actionRetry": "נסה שוב",
+  "actionExit": "יציאה",
+  "actionReplace": "החלף",
+  "actionDelete": "מחק",
+  "actionEdit": "ערוך",
+  "actionClose": "סגור",
+  "actionOk": "אישור",
+  "actionSkipForNow": "דלג לעכשיו",
+  "actionRemove": "הסר",
+  "actionUseToday": "השתמש בהיום",
+  "actionStartHere": "התחל כאן",
+  "actionStartHereLabel": "התחל כאן",
+
+  "errorGeneric": "שגיאה: {error}",
+  "@errorGeneric": {
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "errorLoadingTasks": "שגיאה בטעינת משימות: {error}",
+  "@errorLoadingTasks": {
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "errorLoadingOrder": "שגיאה בטעינת הסדר: {error}",
+  "@errorLoadingOrder": {
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "errorLoadingContent": "שגיאה בטעינת תוכן: {error}",
+  "@errorLoadingContent": {
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "errorLoadingPoints": "שגיאה בטעינת נקודות",
+  "errorSaveFailed": "השמירה נכשלה. נסו שוב.",
+  "errorSearchFailed": "החיפוש נכשל: {error}",
+  "@errorSearchFailed": {
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "errorSearchError": "שגיאת חיפוש: {error}",
+  "@errorSearchError": {
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "errorUnknownCurriculum": "קורס לימוד לא מוכר: \"{curriculumId}\"",
+  "@errorUnknownCurriculum": {
+    "placeholders": {
+      "curriculumId": { "type": "String" }
+    }
+  },
+  "errorCouldNotSaveRetry": "לא ניתן לשמור — לחצו לניסיון חוזר",
+  "errorSaveTrackFailed": "שמירת המסלול נכשלה. נסו שוב.",
+  "errorSignOutFailed": "יציאה נכשלה. נסו שוב.",
+  "errorReauthFailed": "אימות מחדש נכשל. נסו שוב.",
+  "errorResolveAccount": "לא ניתן לאמת את החשבון. נסו שוב.",
+  "errorOnlyOfflineDelete": "ניתן למחוק כאן רק חשבונות לא מקוונים.",
+  "errorDeleteAccountFailed": "מחיקת החשבון נכשלה: {error}",
+  "@errorDeleteAccountFailed": {
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "errorSendLogsMustBeSignedIn": "יש להיות מחובר כדי לשלוח יומנים",
+  "errorSendLogsFailed": "שליחת היומנים נכשלה: {error}",
+  "@errorSendLogsFailed": {
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "errorNoEmailApp": "לא נמצאה אפליקציית דוא\"ל. להעתיק כתובת במקום?",
+  "errorMarkCompleteFailed": "סימון כהושלם נכשל: {error}",
+  "@errorMarkCompleteFailed": {
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "errorVerificationEmailSent": "נשלח אימייל אימות. בדקו את תיבת הדואר.",
+
+  "noData": "אין נתונים",
+  "noTasksForToday": "אין משימות להיום",
+  "noItemsToOrder": "אין פריטים לסידור.",
+  "noProfilesYet": "אין פרופילים עדיין. לחצו + להוספה.",
+  "noCompletionsYet": "אין השלמות עדיין",
+  "noResultsForQuery": "אין תוצאות עבור \"{query}\"",
+  "@noResultsForQuery": {
+    "placeholders": {
+      "query": { "type": "String" }
+    }
+  },
+
+  "viewAllTasks": "הצג הכול ({count}) →",
+  "@viewAllTasks": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "tasksDueToday": "{count, plural, one{משימה אחת להיום} other{{count} משימות להיום}}",
+  "@tasksDueToday": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "tapToStartLearning": "לחצו להתחיל ללמוד",
+  "todaysLearningTitle": "לימוד היום",
+  "remainingCount": "{count} נותרו",
+  "@remainingCount": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "allDoneForToday": "סיימתם להיום!",
+  "missedReview": "חזרה שהוחמצה ({count})",
+  "@missedReview": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "todaysReview": "חזרה של היום ({count})",
+  "@todaysReview": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "todaysLearning": "לימוד היום ({count})",
+  "@todaysLearning": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+
+  "dailyTasksTitle": "משימות יומיות",
+  "taskSkippedUntilTomorrow": "המשימה נדחתה למחר",
+  "tasksNoTasksRemainingTitle": "אין משימות נותרות להיום.",
+  "undoLabel": "בטל",
+
+  "searchTitle": "חיפוש",
+  "searchHintEnterTerm": "הזינו מונח חיפוש למעלה",
+
+  "loadingText": "טוען טקסט...",
+  "markedComplete": "סומן כהושלם",
+  "couldNotSave": "לא ניתן לשמור: {error}",
+  "@couldNotSave": {
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "textReaderTooltipPrevious": "הקודם",
+  "textReaderTooltipNext": "הבא",
+  "textReaderHebrewTab": "טקסט עברי",
+  "textReaderEnglishTab": "תרגום לאנגלית",
+
+  "totalPointsLabel": "סה\"כ נקודות",
+
+  "resetToDefaultOrder": "איפוס לסדר ברירת מחדל",
+  "resetToDefaultOrderDialogTitle": "איפוס לסדר ברירת מחדל",
+  "resetToDefaultOrderDialogBody": "פעולה זו תשחזר את הסדר הטבעי של ספריא עבור קורס לימוד זה. הסדר המותאם אישית שלכם יאבד.",
+  "controlledByParent": "בשליטת ההורה",
+
+  "sacredTimeDetect": "זיהוי אוטומטי",
+  "sacredTimeChooseCity": "בחר עיר",
+  "cityPickerTitle": "בחרו עיר",
+  "cityPickerHint": "הקלד שם עיר…",
+
+  "schedulerStudyLabel": "לימוד",
+  "schedulerReviewOnlyLabel": "חזרה בלבד",
+  "schedulerPerDay": "ליום",
+  "schedulerPerWeek": "לשבוע",
+  "schedulerPerakimLabel": "פרקים",
+  "schedulerPesukimLabel": "פסוקים",
+  "schedulerAmudimLabel": "עמודים",
+  "schedulerDafimLabel": "דפים",
+  "schedulerDeadlineLabel": "דד-ליין",
+  "schedulerPaceLabel": "קצב",
+  "schedulerNoDeadlineLabel": "ללא דד-ליין",
+  "schedulerGoalHint": "לדוג׳, בר מצווה, יארצייט, סיום",
+  "schedulerSelectDate": "בחר תאריך",
+  "schedulerPickDeadlineFirst": "בחרו דד-ליין קודם.",
+  "schedulerDaysLabel": "ימים",
+  "schedulerWeeksLabel": "שבועות",
+
+  "profilesEditLabel": "ערוך",
+  "profilesDeleteLabel": "מחק",
+  "profilesChooseAvatar": "בחרו אווטאר",
+  "profilesAddLearner": "הוסף לומד",
+  "profilesEditLearner": "ערוך לומד",
+  "profilesChildLabel": "ילד",
+  "profilesAdultLabel": "מבוגר",
+  "profilesEnterLearnerName": "הזינו שם לומד",
+
+  "trackNameThisTrack": "שמרו מסלול זה",
+  "trackNameLabel": "שם המסלול",
+  "trackAddLabel": "הוסף מסלול",
+  "trackDeleteTitle": "למחוק מסלול?",
+  "trackMarkContentDone": "סמן תוכן כהושלם",
+  "trackReorderContent": "סדר מחדש תוכן",
+  "trackReplaceTitle": "להחליף את מסלול {label}?",
+  "@trackReplaceTitle": {
+    "placeholders": {
+      "label": { "type": "String" }
+    }
+  },
+
+  "bulkMarkCompleteTitle": "סימון המוני כהושלם",
+  "bulkMarkedComplete": "סומנו {count} פריטים כהושלמו",
+  "@bulkMarkedComplete": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "bulkMarkConfirmBulkTitle": "אישור סימון המוני",
+  "bulkMarkingCompletions": "מסמן השלמות...",
+  "bulkMarkDone": "סיום!",
+  "bulkMarkSkip": "דלג",
+  "bulkMarkPriorLearning": "סמן לימוד קודם",
+
+  "completionButtonCompleted": "הושלם",
+  "completionButtonMarkComplete": "סמן כהושלם",
+
+  "upgradeToCloudTitle": "שדרג לענן",
+  "upgradeToCloudButton": "שדרג לענן",
+  "upgradeToCloudCancelKeepOffline": "ביטול — שמור חשבון לא מקוון",
+
+  "scopeSelectionSave": "שמור",
+  "scopeSelectionTrackEntireCurriculum": "עקוב אחר כל קורס הלימוד",
+  "scopeSelectionChooseHierarchyLevel": "בחרו לפי איזה רמת היררכיה לסנן",
+  "scopeSelectionChangeLevel": "שנה רמה",
+
+  "curriculumSettingsLoadingProgram": "טוען תוכנית...",
+  "curriculumSettingsProgramTitle": "תוכנית",
+  "curriculumSettingsProgramError": "שגיאה: {error}",
+  "@curriculumSettingsProgramError": {
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "curriculumSettingsChangeProgram": "שנה תוכנית",
+  "curriculumSettingsChangeProgramSubtitle": "עברו לתוכנית לימוד אחרת",
+  "curriculumSettingsDontSeeProgram": "לא רואים את התוכנית שלכם?",
+  "curriculumSettingsRequestProgram": "בקשו תוכנית חדשה",
+
+  "deleteAccountDialogTitle": "מחיקת חשבון",
+  "deleteAccountTypeConfirm": "הקלידו DELETE לאישור:",
+  "deleteAccountHint": "DELETE",
+
+  "backupLastSynced": "סונכרן לאחרונה {timeAgo}",
+  "@backupLastSynced": {
+    "placeholders": {
+      "timeAgo": { "type": "String" }
+    }
+  },
+  "backupSyncing": "מסנכרן...",
+  "backupPendingChanges": "{count} שינויים ממתינים",
+  "@backupPendingChanges": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "backupSyncError": "שגיאת סנכרון: {message}",
+  "@backupSyncError": {
+    "placeholders": {
+      "message": { "type": "String" }
+    }
+  },
+  "backupUpgradeToCloud": "שדרג לענן",
+
+  "reauthDialogTitle": "אמתו את זהותכם",
+  "reauthDialogBody": "הזינו את הסיסמה הנוכחית כדי להמשיך.",
+  "reauthVerify": "אמת",
+
+  "linkAccountTitle": "קשר חשבון",
+  "linkAccountSubtitle": "הוסיפו שיטת כניסה נוספת לחשבונכם.",
+  "linkAccountGoogleLabel": "גוגל",
+  "linkAccountEmailPasswordLabel": "דוא\"ל וסיסמה",
+  "linkAccountLinkEmail": "קשר דוא\"ל",
+  "linkAccountAllLinked": "כל שיטות הכניסה כבר מקושרות.",
+  "linkAccountGoogleSuccess": "חשבון גוגל קושר בהצלחה.",
+  "linkAccountEmailSuccess": "חשבון דוא\"ל וסיסמה קושר בהצלחה.",
+
+  "changePasswordDialogTitle": "שנה סיסמה",
+  "changePasswordButton": "שנה סיסמה",
+
+  "accountDeletedTitle": "החשבון נמחק",
+  "signOutLabel": "התנתק",
+
+  "connectionLostTitle": "החיבור אבד",
+  "tryAgainButton": "נסה שוב",
+  "createOfflineAccount": "צור חשבון לא מקוון",
+
+  "onboardingConfirm": "אישור",
+  "onboardingStartLearning": "התחל ללמוד",
+  "onboardingAddAnotherTrack": "הוסף מסלול נוסף",
+  "onboardingAddAnotherLearner": "הוסף לומד נוסף",
+  "onboardingSkipNoReview": "דלג (ללא חזרה)",
+  "onboardingMarkCompleted": "סמן כהושלם",
+  "onboardingStartingPosition": "נקודת התחלה",
+  "onboardingStudyDays": "ימי לימוד",
+
+  "filterByTrack": "סנן לפי מסלול",
+  "completionHistoryAllTracks": "כל המסלולים",
+  "completionHistoryFilteredBy": "מסונן לפי: ",
+  "completionHistoryStagePrefix": "שלב {stageId} • ",
+  "@completionHistoryStagePrefix": {
+    "placeholders": {
+      "stageId": { "type": "int" }
+    }
+  },
+
+  "stageNameLimud": "לימוד",
+  "stageNameChazaraAleph": "חזרה א׳",
+  "stageNameChazaraBet": "חזרה ב׳",
+
+  "actionMarkCompleted": "סמן כהושלם",
+  "actionSkipNoReview": "דלג (ללא חזרה)",
+
+  "studyDaysTitle": "ימי לימוד",
+  "studyDaysSubtitle": "באילו ימים אתה לומד?",
+  "studyDaysSetByProgram": "ימי הלימוד נקבעו על ידי {programName}",
+  "@studyDaysSetByProgram": {
+    "placeholders": {
+      "programName": { "type": "String" }
+    }
+  },
+
+  "startingPositionTitle": "מיקום התחלתי",
+  "startingPositionHint": "ניתן להתחיל עד 30 ימים אחורה/קדימה מהיום",
+  "startingPositionWhereAreYou": "איפה אתה ב{programName}?",
+  "@startingPositionWhereAreYou": {
+    "placeholders": {
+      "programName": { "type": "String" }
+    }
+  },
+
+  "priorLearningTitle": "סימון לימוד קודם",
+  "priorLearningSubtitle": "האם ברצונך לסמן חלקים שכבר למדת כהושלמו?",
+
+  "goalPickDeadlineFirst": "בחר תאריך יעד תחילה.",
+  "trackSaveError": "שגיאה בשמירת המסלול. נסה שוב.",
+
+  "pacePerDay": "ליום",
+  "pacePerWeek": "לשבוע",
+
+  "goalTypeDeadline": "תאריך יעד",
+  "goalTypePace": "קצב",
+  "goalTypeNoDeadline": "ללא יעד",
+  "goalEditTitle": "עריכת יעד",
+  "goalNewTitle": "יעד חדש",
+  "goalUpdateButton": "עדכן יעד",
+  "goalCreateButton": "צור יעד",
+
+  "unitPerakim": "פרקים",
+  "unitPesukim": "פסוקים",
+  "unitAmudim": "עמודים",
+  "unitDafim": "דפים",
+
+  "tasksUnableToLoad": "לא ניתן לטעון משימות",
+  "tasksAllCaughtUp": "עדכני לחלוטין",
+  "tasksNoTasksRemainingToday": "אין משימות נותרות להיום.",
+  "itemsCount": "{count, plural, one{פריט אחד} other{{count} פריטים}}",
+  "@itemsCount": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+
+  "scopeSelectionCountSelected": "{count, plural, one{נבחר 1} other{נבחרו {count}}}",
+  "@scopeSelectionCountSelected": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "scopeSelectionItemCount": "{count, plural, one{פריט אחד} other{{count} פריטים}}",
+  "@scopeSelectionItemCount": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+
+  "reviewStageDayDelay": "{count, plural, one{עיכוב של יום אחד} other{עיכוב של {count} ימים}}",
+  "@reviewStageDayDelay": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "applyToAll": "החל על הכל",
+
+  "trackNameSubtitle": "תן למסלול שלך שם לזיהוי.",
+
+  "priorLearningChooseSections": "בחר אילו סעיפים לסמן ב{curriculumName}.",
+  "@priorLearningChooseSections": {
+    "placeholders": {
+      "curriculumName": { "type": "String" }
+    }
+  },
+  "priorLearningAlreadyCompleted": "האם כבר השלמת חלק מהסעיפים האלה?",
+  "priorLearningMarkEverything": "סמן הכל כהושלם",
+  "priorLearningMarkEverythingSubtitle": "מומלץ אם אתה מתחיל מחזור חזרה חדש",
+  "priorLearningNoFolders": "לא נבחרו תיקיות ספציפיות, אך עדיין ניתן לסמן הכל כהושלם.",
+  "priorLearningSelectedFolder": "תיקייה שנבחרה",
+
+  "scopeSelectionSelectLevel": "בחר {levelName}",
+  "@scopeSelectionSelectLevel": {
+    "placeholders": {
+      "levelName": { "type": "String" }
+    }
+  },
+
+  "activeTracksLabel": "מסלולים פעילים",
+  "activeTracksRunning": "{count} פעיל",
+  "@activeTracksRunning": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+
+  "trackSince": "מאז {date}",
+  "@trackSince": {
+    "placeholders": {
+      "date": { "type": "String" }
+    }
+  },
+  "trackDeleteLabel": "מחק מסלול",
+  "trackDeleteContent": "למחוק לצמיתות את \"{name}\"? כל ההתקדמות והנתונים של מסלול זה יוסרו. לא ניתן לבטל פעולה זו.",
+  "@trackDeleteContent": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
   "notificationReminderTitle": "תזכורת לימוד",
   "notificationReminderBody": "{taskCount,plural, =0{אין משימות להיום — שמרו על הרצף!} =1{יש לכם משימה אחת ב{curriculumCount,plural, =1{תוכנית לימוד אחת} other{{curriculumCount} תוכניות לימוד}} היום} other{יש לכם {taskCount} משימות ב{curriculumCount,plural, =1{תוכנית לימוד אחת} other{{curriculumCount} תוכניות לימוד}} היום}}",
   "@notificationReminderBody": {

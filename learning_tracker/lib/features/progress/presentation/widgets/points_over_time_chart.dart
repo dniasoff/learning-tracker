@@ -1,6 +1,7 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:learning_tracker/features/progress/domain/models/chart_data.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// Bar chart showing points earned per day (child mode only).
 class PointsOverTimeChart extends StatelessWidget {
@@ -11,7 +12,7 @@ class PointsOverTimeChart extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (data.isEmpty) {
-      return const Center(child: Text('No data'));
+      return Center(child: Text(AppLocalizations.of(context)!.noData));
     }
 
     final maxPoints = data.fold<int>(
