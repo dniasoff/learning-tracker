@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/labels/curriculum_label_renderer.dart';
@@ -335,7 +334,7 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
               )
             : AppBarTitle(
                 text:
-                    'Mark Prior Completions — ${CurriculumLabels.curriculumName(widget.curriculumId, useHebrew: ref.watch(hebrewTermsScriptProvider))}',
+                    'Mark Prior Completions — ${curriculumLabelText(ref, curriculum: widget.curriculumId)}',
               ),
         leading: _phase == _Phase.selection && _navigationStack.isNotEmpty
             ? IconButton(

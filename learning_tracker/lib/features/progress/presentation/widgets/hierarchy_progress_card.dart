@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
+import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/utils/percentage_formatter.dart';
 import 'package:learning_tracker/features/progress/domain/models/curriculum_progress_data.dart';
@@ -289,12 +290,24 @@ class _TrackBreakdownLine extends StatelessWidget {
               decoration: BoxDecoration(color: color, shape: BoxShape.circle),
             ),
             const SizedBox(width: 4),
-            Text(
-              '${entry.key.displayNameEn}: ${entry.value}',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: AppTheme.brandInkMuted,
-                fontWeight: FontWeight.w500,
-              ),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CurriculumLabel.trackType(
+                  entry.key,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: AppTheme.brandInkMuted,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                Text(
+                  ': ${entry.value}',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: AppTheme.brandInkMuted,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
             ),
           ],
         );

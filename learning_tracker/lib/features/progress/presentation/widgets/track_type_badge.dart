@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
+import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 
 /// Small chip displaying the track type (v1: always `personal`) with color.
@@ -18,8 +19,8 @@ class TrackTypeBadge extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: color.withValues(alpha: 0.4)),
       ),
-      child: Text(
-        trackType.displayNameEn,
+      child: CurriculumLabel.trackType(
+        trackType,
         style: TextStyle(
           fontSize: 11,
           fontWeight: FontWeight.w500,

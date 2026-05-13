@@ -23,28 +23,31 @@ void main() {
   group('TrackTypeBadge', () {
     testWidgets('displays personal track', (tester) async {
       await tester.pumpWidget(
-        const MaterialApp(
-          home: Scaffold(body: TrackTypeBadge(trackType: TrackType.personal)),
+        _wrap(
+          const TrackTypeBadge(trackType: TrackType.personal),
+          hebrewTermsScript: false,
         ),
       );
+      await tester.pumpAndSettle();
       expect(find.text('Personal'), findsOneWidget);
     });
 
     testWidgets('displays personal track badge color', (tester) async {
       await tester.pumpWidget(
-        const MaterialApp(
-          home: Scaffold(body: TrackTypeBadge(trackType: TrackType.personal)),
+        _wrap(
+          const TrackTypeBadge(trackType: TrackType.personal),
+          hebrewTermsScript: false,
         ),
       );
+      await tester.pumpAndSettle();
       expect(find.text('Personal'), findsOneWidget);
     });
 
     testWidgets('personal badge is styled with a Container', (tester) async {
       await tester.pumpWidget(
-        const MaterialApp(
-          home: Scaffold(body: TrackTypeBadge(trackType: TrackType.personal)),
-        ),
+        _wrap(const TrackTypeBadge(trackType: TrackType.personal)),
       );
+      await tester.pumpAndSettle();
       expect(find.byType(Container), findsWidgets);
     });
   });
@@ -307,7 +310,12 @@ void main() {
         totalUniqueUnits: 1,
       );
 
-      await tester.pumpWidget(_wrap(JourneyTimelineView(viewModel: viewModel)));
+      await tester.pumpWidget(
+        _wrap(
+          JourneyTimelineView(viewModel: viewModel),
+          hebrewTermsScript: false,
+        ),
+      );
       await tester.pumpAndSettle();
 
       expect(find.byType(TrackTypeBadge), findsOneWidget);

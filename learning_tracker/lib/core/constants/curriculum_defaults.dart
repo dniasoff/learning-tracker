@@ -536,15 +536,6 @@ class CurriculumLabels {
     return _englishNameTransliterations[variant]?[rawValue] ?? rawValue;
   }
 
-  /// Single-script curriculum display name based on the user's Hebrew
-  /// Terms toggle. Anywhere a screen would have written
-  /// `curriculumId.displayNameHe` directly should now call this so the
-  /// English mode receives the transliterated form, never the Hebrew, and
-  /// the Hebrew mode never receives a bilingual "•" concatenation.
-  static String curriculumName(CurriculumId id, {required bool useHebrew}) {
-    return useHebrew ? id.displayNameHe : id.displayNameEn;
-  }
-
   /// Per-book level overrides for curricula whose hierarchy varies by L1 book.
   /// Mussar is the only one today — Shaarei Teshuvah uses Shaarim (gates),
   /// Tanya uses Parts (named), the rest use Perakim like the default.

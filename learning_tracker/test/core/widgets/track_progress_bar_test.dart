@@ -1,22 +1,34 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/widgets/track_progress_bar.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
   group('TrackProgressBar (v1 — personal only)', () {
+    setUp(() {
+      // Force Hebrew Terms off so the bar's label renders the English form
+      // ("Personal") rather than the Hebrew script the provider defaults to
+      // for non-zero profiles in tests.
+      SharedPreferences.setMockInitialValues({'hebrew_terms_script_p0': false});
+    });
+
     testWidgets('renders bar with personal-track count and label', (
       tester,
     ) async {
       final trackCounts = {TrackType.personal: 150};
 
       await tester.pumpWidget(
-        MaterialApp(
-          theme: AppTheme.lightTheme(),
-          home: Scaffold(body: TrackProgressBar(trackCounts: trackCounts)),
+        ProviderScope(
+          child: MaterialApp(
+            theme: AppTheme.lightTheme(),
+            home: Scaffold(body: TrackProgressBar(trackCounts: trackCounts)),
+          ),
         ),
       );
+      await tester.pumpAndSettle();
 
       expect(find.byType(TrackProgressBar), findsOneWidget);
       expect(find.text('Personal: 150'), findsOneWidget);
@@ -26,9 +38,11 @@ void main() {
       final trackCounts = {TrackType.personal: 0};
 
       await tester.pumpWidget(
-        MaterialApp(
-          theme: AppTheme.lightTheme(),
-          home: Scaffold(body: TrackProgressBar(trackCounts: trackCounts)),
+        ProviderScope(
+          child: MaterialApp(
+            theme: AppTheme.lightTheme(),
+            home: Scaffold(body: TrackProgressBar(trackCounts: trackCounts)),
+          ),
         ),
       );
 
@@ -40,12 +54,14 @@ void main() {
       final trackCounts = {TrackType.personal: 10};
 
       await tester.pumpWidget(
-        MaterialApp(
-          theme: AppTheme.lightTheme(),
-          home: Scaffold(
-            body: TrackProgressBar(
-              trackCounts: trackCounts,
-              height: customHeight,
+        ProviderScope(
+          child: MaterialApp(
+            theme: AppTheme.lightTheme(),
+            home: Scaffold(
+              body: TrackProgressBar(
+                trackCounts: trackCounts,
+                height: customHeight,
+              ),
             ),
           ),
         ),
@@ -68,10 +84,15 @@ void main() {
       final trackCounts = {TrackType.personal: 10};
 
       await tester.pumpWidget(
-        MaterialApp(
-          theme: AppTheme.lightTheme(),
-          home: Scaffold(
-            body: TrackProgressBar(trackCounts: trackCounts, showLabels: false),
+        ProviderScope(
+          child: MaterialApp(
+            theme: AppTheme.lightTheme(),
+            home: Scaffold(
+              body: TrackProgressBar(
+                trackCounts: trackCounts,
+                showLabels: false,
+              ),
+            ),
           ),
         ),
       );
@@ -83,9 +104,11 @@ void main() {
       final trackCounts = {TrackType.personal: 1};
 
       await tester.pumpWidget(
-        MaterialApp(
-          theme: AppTheme.lightTheme(),
-          home: Scaffold(body: TrackProgressBar(trackCounts: trackCounts)),
+        ProviderScope(
+          child: MaterialApp(
+            theme: AppTheme.lightTheme(),
+            home: Scaffold(body: TrackProgressBar(trackCounts: trackCounts)),
+          ),
         ),
       );
 

@@ -30,9 +30,12 @@ CurriculumId _curriculumIdForTrack(CurriculumTrack track) {
   );
 }
 
-String _trackTypeLabel(String trackTypeStorageKey) {
+String _trackTypeLabelText(WidgetRef ref, String trackTypeStorageKey) {
   try {
-    return TrackType.fromStorageKey(trackTypeStorageKey).displayNameEn;
+    return trackTypeLabelText(
+      ref,
+      trackType: TrackType.fromStorageKey(trackTypeStorageKey),
+    );
   } on Object {
     return trackTypeStorageKey;
   }
@@ -1652,7 +1655,7 @@ class _ActiveTrackCard extends ConsumerWidget {
     final curriculum = _curriculumIdForTrack(track);
     final hebrewOnly = ref.watch(hebrewTermsScriptProvider);
     final displayNamePrimary =
-        '${_trackTypeLabel(track.trackType)} · '
+        '${_trackTypeLabelText(ref, track.trackType)} · '
         '${curriculumLabelText(ref, curriculum: curriculum)}';
     final displayNameSecondary = hebrewOnly
         ? null

@@ -24,4 +24,9 @@ enum TrackType {
   String get displayNameEn => switch (this) {
     TrackType.personal => 'Personal',
   };
+
+  /// Display name in Hebrew script.
+  String get displayNameHe => switch (this) {
+    TrackType.personal => 'אישי',
+  };
 }

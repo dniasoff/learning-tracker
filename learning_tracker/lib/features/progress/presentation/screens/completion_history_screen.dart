@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
+import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/widgets/app_bar_title.dart';
 import 'package:learning_tracker/core/widgets/error_display.dart';
@@ -120,7 +121,7 @@ class _CompletionHistoryScreenState
                   ),
                 ),
                 const SizedBox(width: 8),
-                Text(trackType.displayNameEn),
+                CurriculumLabel.trackType(trackType),
               ],
             ),
           );
@@ -140,7 +141,7 @@ class _CompletionHistoryScreenState
             avatar: CircleAvatar(
               backgroundColor: AppTheme.getTrackColor(_trackFilter!),
             ),
-            label: Text(_trackFilter!.displayNameEn),
+            label: CurriculumLabel.trackType(_trackFilter!),
             onDeleted: () => _onTrackFilterChanged(null),
             deleteIcon: const Icon(Icons.close, size: 18),
           ),
@@ -210,7 +211,12 @@ class _CompletionHistoryScreenState
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const SizedBox(height: 4),
-            Text('Stage ${completion.stageId} • ${trackType.displayNameEn}'),
+            Row(
+              children: [
+                Text('Stage ${completion.stageId} • '),
+                CurriculumLabel.trackType(trackType),
+              ],
+            ),
             const SizedBox(height: 2),
             Text(
               formattedDate,

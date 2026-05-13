@@ -1,3 +1,4 @@
+import 'package:learning_tracker/core/content/content_index.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label_renderer.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
@@ -148,14 +149,12 @@ List<String?> _hebrewNamesForPath(
   return result;
 }
 
+/// Locate the [ContentItem] for [sefariaRef] in O(1) via
+/// [contentIndexProvider]. Replaces the previous O(N × 9-curriculum) scan
+/// (NFR22).
 Future<ContentItem?> _findContentItem(Ref ref, String sefariaRef) async {
-  for (final curriculum in CurriculumId.values) {
-    final items = await ref.watch(curriculumContentProvider(curriculum).future);
-    for (final i in items) {
-      if (i.sefariaRef == sefariaRef) return i;
-    }
-  }
-  return null;
+  final index = await ref.watch(contentIndexProvider.future);
+  return index.lookup(sefariaRef);
 }
 
 CurriculumId? _curriculumIdFromStorageKey(String key) {

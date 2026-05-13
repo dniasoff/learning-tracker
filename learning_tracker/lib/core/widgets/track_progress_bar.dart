@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
+import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 
 /// A segmented progress bar showing completion breakdown by track type.
 ///
 /// V1 has one track type (`personal`), so this collapses to a single-color
 /// bar; the widget is kept in this shape for forward compatibility.
-class TrackProgressBar extends StatelessWidget {
+class TrackProgressBar extends ConsumerWidget {
   const TrackProgressBar({
     super.key,
     required this.trackCounts,
@@ -24,7 +26,7 @@ class TrackProgressBar extends StatelessWidget {
   final bool showLabels;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final total = trackCounts.values.fold<int>(0, (sum, count) => sum + count);
 
     if (total == 0) {
@@ -42,7 +44,7 @@ class TrackProgressBar extends StatelessWidget {
             child: Row(children: _buildSegments(total)),
           ),
         ),
-        if (showLabels) ...[const SizedBox(height: 8), _buildLabels()],
+        if (showLabels) ...[const SizedBox(height: 8), _buildLabels(ref)],
       ],
     );
   }
@@ -79,12 +81,13 @@ class TrackProgressBar extends StatelessWidget {
     return segments;
   }
 
-  Widget _buildLabels() {
+  Widget _buildLabels(WidgetRef ref) {
     return Wrap(
       spacing: 16,
       runSpacing: 4,
       children: TrackType.values.map((trackType) {
         final count = trackCounts[trackType] ?? 0;
+        final label = trackTypeLabelText(ref, trackType: trackType);
         return Row(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -97,10 +100,7 @@ class TrackProgressBar extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 4),
-            Text(
-              '${trackType.displayNameEn}: $count',
-              style: const TextStyle(fontSize: 12),
-            ),
+            Text('$label: $count', style: const TextStyle(fontSize: 12)),
           ],
         );
       }).toList(),

@@ -2,25 +2,32 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/core/labels/curriculum_label_providers.dart';
 import 'package:learning_tracker/core/labels/curriculum_label_renderer.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
+import 'package:learning_tracker/core/services/calendar_program_registry.dart';
+import 'package:learning_tracker/core/services/calendar_program_service.dart';
+import 'package:learning_tracker/core/services/learning_program_service.dart';
+// TODO(DNI-328): swap to HebrewTermsPreference once core/preferences/ lands.
+// The two providers expose the same boolean — replace this import and the
+// `ref.watch(hebrewTermsScriptProvider)` calls with the preference primitive.
 import 'package:learning_tracker/features/settings/presentation/providers/hebrew_terms_provider.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/transliteration_variant_provider.dart';
 
 /// The single entry point for rendering any curriculum-aware label in the UI.
 ///
-/// All six constructors delegate to [CurriculumLabelRenderer] and watch
-/// [hebrewTermsScriptProvider] + [transliterationVariantProvider]. Callers
-/// pass structured data ([CurriculumId], a level/value pair, a [ContentItem],
-/// or a sefariaRef) — never a pre-rendered string. Screens that render labels
-/// directly from enum fields are bypasses; the enforcement greps in the v1.0.60
-/// release plan catch them.
+/// The widget exposes six modes — three sync ([curriculum], [trackType],
+/// [calendarProgram], [learningProgram], [level], [item]) and three async
+/// ([breadcrumb], [local], [parent]). Every mode picks the Hebrew vs English
+/// form from `hebrewTermsScriptProvider` (DNI-328 will swap this for
+/// `HebrewTermsPreference`). Whenever the rendered string is Hebrew script
+/// the underlying `Text` is forced to `TextDirection.rtl`, satisfying the
+/// AC even when surrounded by an LTR `Directionality`.
 ///
-/// Sync modes ([curriculum], [level], [item]) render immediately. Async modes
-/// ([breadcrumb], [local], [parent]) look up a [ContentItem] from the
-/// curriculum content provider and show a zero-width-space placeholder while
-/// loading so line height stays stable across the fetch.
+/// Async modes resolve `sefariaRef` through `contentIndexProvider` — an
+/// O(1) lookup across all 9 curricula. Loading state renders a zero-width
+/// space so line height stays stable.
 class CurriculumLabel extends ConsumerWidget {
   const CurriculumLabel.curriculum(
     CurriculumId id, {
@@ -32,6 +39,77 @@ class CurriculumLabel extends ConsumerWidget {
     super.key,
   }) : _kind = _Kind.curriculum,
        _curriculumId = id,
+       _trackType = null,
+       _calendarEntry = null,
+       _learningProgram = null,
+       _level = null,
+       _rawValue = null,
+       _parentL1Value = null,
+       _hebrewName = null,
+       _item = null,
+       _itemMode = null,
+       _sefariaRef = null;
+
+  /// Renders a `TrackType` label (e.g. "Personal" / "אישי").
+  const CurriculumLabel.trackType(
+    TrackType trackType, {
+    this.style,
+    this.maxLines,
+    this.overflow,
+    this.textAlign,
+    this.textDirection,
+    super.key,
+  }) : _kind = _Kind.trackType,
+       _curriculumId = null,
+       _trackType = trackType,
+       _calendarEntry = null,
+       _learningProgram = null,
+       _level = null,
+       _rawValue = null,
+       _parentL1Value = null,
+       _hebrewName = null,
+       _item = null,
+       _itemMode = null,
+       _sefariaRef = null;
+
+  /// Renders a calendar program entry (e.g. "Daf Yomi" / "דף יומי").
+  const CurriculumLabel.calendarProgram(
+    CalendarProgramEntry entry, {
+    this.style,
+    this.maxLines,
+    this.overflow,
+    this.textAlign,
+    this.textDirection,
+    super.key,
+  }) : _kind = _Kind.calendarProgram,
+       _curriculumId = null,
+       _trackType = null,
+       _calendarEntry = entry,
+       _learningProgram = null,
+       _level = null,
+       _rawValue = null,
+       _parentL1Value = null,
+       _hebrewName = null,
+       _item = null,
+       _itemMode = null,
+       _sefariaRef = null;
+
+  /// Renders a learning program (e.g. "Daf Yomi" / "דף יומי"). The Hebrew
+  /// form comes from [CalendarProgramRegistry] keyed by
+  /// [LearningProgramData.name].
+  const CurriculumLabel.learningProgram(
+    LearningProgramData program, {
+    this.style,
+    this.maxLines,
+    this.overflow,
+    this.textAlign,
+    this.textDirection,
+    super.key,
+  }) : _kind = _Kind.learningProgram,
+       _curriculumId = null,
+       _trackType = null,
+       _calendarEntry = null,
+       _learningProgram = program,
        _level = null,
        _rawValue = null,
        _parentL1Value = null,
@@ -60,6 +138,9 @@ class CurriculumLabel extends ConsumerWidget {
     super.key,
   }) : _kind = _Kind.level,
        _curriculumId = curriculumId,
+       _trackType = null,
+       _calendarEntry = null,
+       _learningProgram = null,
        _level = level,
        _rawValue = rawValue,
        _parentL1Value = parentL1Value,
@@ -80,6 +161,9 @@ class CurriculumLabel extends ConsumerWidget {
     super.key,
   }) : _kind = _Kind.item,
        _curriculumId = null,
+       _trackType = null,
+       _calendarEntry = null,
+       _learningProgram = null,
        _level = null,
        _rawValue = null,
        _parentL1Value = null,
@@ -99,6 +183,9 @@ class CurriculumLabel extends ConsumerWidget {
     super.key,
   }) : _kind = _Kind.breadcrumb,
        _curriculumId = null,
+       _trackType = null,
+       _calendarEntry = null,
+       _learningProgram = null,
        _level = null,
        _rawValue = null,
        _parentL1Value = null,
@@ -118,6 +205,9 @@ class CurriculumLabel extends ConsumerWidget {
     super.key,
   }) : _kind = _Kind.local,
        _curriculumId = null,
+       _trackType = null,
+       _calendarEntry = null,
+       _learningProgram = null,
        _level = null,
        _rawValue = null,
        _parentL1Value = null,
@@ -138,6 +228,9 @@ class CurriculumLabel extends ConsumerWidget {
     super.key,
   }) : _kind = _Kind.parent,
        _curriculumId = null,
+       _trackType = null,
+       _calendarEntry = null,
+       _learningProgram = null,
        _level = null,
        _rawValue = null,
        _parentL1Value = null,
@@ -148,6 +241,9 @@ class CurriculumLabel extends ConsumerWidget {
 
   final _Kind _kind;
   final CurriculumId? _curriculumId;
+  final TrackType? _trackType;
+  final CalendarProgramEntry? _calendarEntry;
+  final LearningProgramData? _learningProgram;
   final int? _level;
   final String? _rawValue;
   final String? _parentL1Value;
@@ -170,7 +266,30 @@ class CurriculumLabel extends ConsumerWidget {
           useHebrew
               ? _curriculumId!.displayNameHe
               : _curriculumId!.displayNameEn,
+          useHebrew: useHebrew,
         );
+      case _Kind.trackType:
+        final useHebrew = ref.watch(hebrewTermsScriptProvider);
+        return _text(
+          useHebrew ? _trackType!.displayNameHe : _trackType!.displayNameEn,
+          useHebrew: useHebrew,
+        );
+      case _Kind.calendarProgram:
+        final useHebrew = ref.watch(hebrewTermsScriptProvider);
+        return _text(
+          useHebrew
+              ? _calendarEntry!.displayNameHe
+              : _calendarEntry!.displayNameEn,
+          useHebrew: useHebrew,
+        );
+      case _Kind.learningProgram:
+        final useHebrew = ref.watch(hebrewTermsScriptProvider);
+        final program = _learningProgram!;
+        final text = !useHebrew
+            ? program.displayName
+            : (CalendarProgramRegistry.byId(program.name)?.displayNameHe ??
+                  program.displayName);
+        return _text(text, useHebrew: useHebrew);
       case _Kind.level:
         final useHebrew = ref.watch(hebrewTermsScriptProvider);
         final variant = ref.watch(transliterationVariantProvider);
@@ -184,37 +303,43 @@ class CurriculumLabel extends ConsumerWidget {
             parentL1Value: _parentL1Value,
             transliterationVariant: variant,
           ),
+          useHebrew: useHebrew,
         );
       case _Kind.item:
         final useHebrew = ref.watch(hebrewTermsScriptProvider);
         final variant = ref.watch(transliterationVariantProvider);
-        return _text(_renderItem(useHebrew, variant));
+        return _text(_renderItem(useHebrew, variant), useHebrew: useHebrew);
       case _Kind.breadcrumb:
+        final useHebrew = ref.watch(hebrewTermsScriptProvider);
         final r = _sefariaRef!;
         return ref
             .watch(renderedDisplayForRefProvider(r))
             .when(
-              data: _text,
-              loading: () => _text('​'),
-              error: (_, __) => _text(r.replaceAll('_', ' ')),
+              data: (s) => _text(s, useHebrew: useHebrew),
+              loading: () => _text('​', useHebrew: useHebrew),
+              error: (_, __) =>
+                  _text(r.replaceAll('_', ' '), useHebrew: useHebrew),
             );
       case _Kind.local:
+        final useHebrew = ref.watch(hebrewTermsScriptProvider);
         final r = _sefariaRef!;
         return ref
             .watch(renderedLeafForRefProvider(r))
             .when(
-              data: _text,
-              loading: () => _text('​'),
-              error: (_, __) => _text(r.replaceAll('_', ' ')),
+              data: (s) => _text(s, useHebrew: useHebrew),
+              loading: () => _text('​', useHebrew: useHebrew),
+              error: (_, __) =>
+                  _text(r.replaceAll('_', ' '), useHebrew: useHebrew),
             );
       case _Kind.parent:
+        final useHebrew = ref.watch(hebrewTermsScriptProvider);
         final r = _sefariaRef!;
         return ref
             .watch(renderedParentForRefProvider(r))
             .when(
-              data: (s) => _text(s ?? ''),
-              loading: () => _text('​'),
-              error: (_, __) => _text(''),
+              data: (s) => _text(s ?? '', useHebrew: useHebrew),
+              loading: () => _text('​', useHebrew: useHebrew),
+              error: (_, __) => _text('', useHebrew: useHebrew),
             );
     }
   }
@@ -244,17 +369,31 @@ class CurriculumLabel extends ConsumerWidget {
     }
   }
 
-  Widget _text(String text) => Text(
+  /// Build the underlying `Text` widget. Forces `TextDirection.rtl` whenever
+  /// the rendered string is Hebrew script, so the script reads correctly
+  /// even when the ambient `Directionality` is LTR. Explicit
+  /// `textDirection:` on the constructor overrides this default.
+  Widget _text(String text, {required bool useHebrew}) => Text(
     text,
     style: style,
     maxLines: maxLines,
     overflow: overflow,
     textAlign: textAlign,
-    textDirection: textDirection,
+    textDirection: textDirection ?? (useHebrew ? TextDirection.rtl : null),
   );
 }
 
-enum _Kind { curriculum, level, item, breadcrumb, local, parent }
+enum _Kind {
+  curriculum,
+  trackType,
+  calendarProgram,
+  learningProgram,
+  level,
+  item,
+  breadcrumb,
+  local,
+  parent,
+}
 
 /// Mode for [CurriculumLabel.item]: which segment(s) of the item's path to
 /// render.
@@ -293,3 +432,10 @@ String curriculumHebrewName(CurriculumId curriculum) =>
 /// [CurriculumLabel] or [curriculumLabelText].
 String curriculumEnglishName(CurriculumId curriculum) =>
     curriculum.displayNameEn;
+
+/// Pure-string variant of [CurriculumLabel.trackType]. Watches
+/// [hebrewTermsScriptProvider].
+String trackTypeLabelText(WidgetRef ref, {required TrackType trackType}) {
+  final useHebrew = ref.watch(hebrewTermsScriptProvider);
+  return useHebrew ? trackType.displayNameHe : trackType.displayNameEn;
+}
