@@ -6,7 +6,7 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart'
-    hide expect, group, setUp, test;
+    hide expect, group, setUp, setUpAll, test;
 import 'package:learning_tracker/core/logging/crashlytics_service.dart';
 import 'package:test/test.dart';
 
