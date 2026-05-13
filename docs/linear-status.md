@@ -1,7 +1,7 @@
 ---
 title: "Project Status (Linear)"
-description: "Canonical epic and story status, reconciled against local sprint-status.yaml and linear-mapping.yaml."
-date: 2026-04-19
+description: "Canonical epic and story status, reconciled against local sprint-status.yaml."
+date: 2026-05-13
 ---
 
 # Project Status (Linear)
@@ -10,151 +10,195 @@ date: 2026-04-19
 
 - **Team:** DNI (Dniasoff)
 - **Linear project:** learning-tracker
-- **Status sources:**
-  - Machine-readable: [`docs/status/sprint-status.yaml`](status/sprint-status.yaml) (updated 2026-04-15)
-  - Linear ID mapping: [`docs/status/linear-mapping.yaml`](status/linear-mapping.yaml) (managed by `tool/linear-sync.sh`)
-  - Detailed epic breakdowns: [`docs/planning/epics.md`](planning/epics.md)
-- **Last reconciled:** 2026-04-19
+- **Status source:** [`docs/status/sprint-status.yaml`](status/sprint-status.yaml) (synced 2026-05-13)
+- **Last reconciled:** 2026-05-13
+- **Totals:** 18 epics · 194 stories tracked in Linear
 
 This document is the narrative summary. `sprint-status.yaml` is the machine-readable source of truth — if the two disagree, trust the YAML.
 
+## Project phase
+
+The v1 build (Epics 1–23) was completed and shipped to internal testers. Most of those epics are now **Canceled** in Linear, meaning their scope was superseded by the **Greenfield Rebuild** (Epics 24–27). The rebuild carries greenfield permission: wipe-install boundary, new DB schema, Firebase reset acceptable.
+
+Active work remaining from v1:
+- Epic 18 still has 6 Todo and 1 In Review story that predate the rebuild decision.
+- Epic 22 (Catch-up & Amnesty) and Epic 23 QA are fully scoped and remain relevant to the rebuild.
+
 ## Epic summary
 
-| Epic | Title | Stories | Status |
+| Linear ID | Epic | Stories | Status |
 |---|---|---|---|
-| 1 | Foundation & Infrastructure | 12 | Done |
-| 2 | Content Import & Browsing | 5 | Done |
-| 3 | Core Learning Cycle | 3 | Done |
-| 4 | Multi-Track Learning | 3 | Done |
-| 5 | Configurable Stages & Learning Order | 2 | Done |
-| 6 | Smart Scheduler | 5 | Done |
-| 7 | Dashboard & Progress | 3 | Done |
-| 8 | Gamification & Engagement | 3 | Done |
-| 9 | Onboarding Flow | 5 | Done |
-| 10 | Parent Mode | 6 | Done |
-| 11 | Tutor Mode | 4 | Done — **deprioritized**, see [archive](_archive/scrapped-ideas/tutor-mode-epic-11.md) |
-| 12 | Notifications | 3 | Done |
-| 13 | Cloud Sync | 3 | Done |
-| 14 | Settings | 4 | Done |
-| 15 | (Multi-Profile & Learning Program) | — | Absorbed into Epics 18 & 21 — see [archive](_archive/scrapped-ideas/epic-15-multi-profile-original-stories.md) |
-| 16 | Onboarding-to-Dashboard Perfect Flow | 6 | Done |
-| 17 | V1 Roadmap Phase 1: Foundation & Onboarding | 0 | Linear-tracked umbrella, no discrete stories |
-| 18 | Onboarding & Track Management Overhaul | 12 | In progress (all 12 in review) |
-| 19 | Offline-First Architecture & Two-Database Split | 13 | Done |
-| 20 | Dashboard & Progress Redesign — Multi-Track Isolation | 12 | All 12 stories canceled 2026-04-15; UI redesign not yet re-scoped |
-| 21 | Multi-Account Device — Account Switching, Session Management & Deletion | 16 | Done |
-| 22 | Catch-up & Amnesty System | 22 planned | Backlog (design complete) |
-| 23 | Offline-First Architecture v2 — Hard-Tier Auth Refactor | 0 | Done (completed 2026-04-15) |
+| — | 1 — Foundation & Infrastructure | — | Delivered (pre-Linear) |
+| — | 2 — Content Import & Browsing | — | Delivered (pre-Linear) |
+| — | 3 — Core Learning Cycle | — | Delivered (pre-Linear) |
+| — | 4 — Multi-Track Learning | — | Delivered (pre-Linear) |
+| — | 5 — Configurable Stages & Learning Order | — | Delivered (pre-Linear) |
+| — | 6 — Smart Scheduler | — | Delivered (pre-Linear) |
+| — | 7 — Dashboard & Progress | — | Delivered (pre-Linear) |
+| DNI-12 | 8 — Gamification & Engagement | 3 | Canceled |
+| DNI-13 | 9 — Onboarding Flow | 5 | Canceled |
+| DNI-14 | 10 — Parent Mode | 6 | Canceled |
+| DNI-15 | 11 — Tutor Mode | 4 | Canceled |
+| DNI-16 | 12 — Notifications | 3 | Canceled |
+| DNI-17 | 13 — Cloud Sync | 3 | Canceled |
+| DNI-18 | 14 — Settings | 4 | Canceled |
+| — | 15 — Multi-Profile & Learning Program | — | Absorbed into Epics 18 & 21 |
+| — | 16 — Onboarding-to-Dashboard Perfect Flow | — | Delivered (pre-Linear) |
+| DNI-154 | 17 — V1 Roadmap Phase 1 (umbrella) | 8 | Canceled |
+| DNI-128 | 18 — Onboarding & Track Management Overhaul | 8 | Canceled (6 Todo, 1 In Review) |
+| — | 19 — Offline-First Architecture & Two-Database Split | — | Delivered (pre-Linear) |
+| DNI-210 | 20 — Dashboard & Progress Redesign — Multi-Track Isolation | 12 | Todo (all 12 Canceled) |
+| DNI-238 | 21 — Multi-Account Device — Account Switching, Session Management & Deletion | 0 | Backlog |
+| DNI-255 | 22 — Catch-up & Amnesty System | 22 | Backlog |
+| DNI-278 | 23 — Manual QA Verification | 18 | Backlog |
+| DNI-297 | 24 — Firestore Sync Schema & Multi-Device Data Restoration *(superseded)* | 10 | Backlog |
+| DNI-312 | 24 — Stop-the-Bleeding (Phase 0) | 8 | Backlog |
+| DNI-313 | 25 — Schema + Core Foundation (Phases 1 + 2) | 22 | Backlog |
+| DNI-314 | 26 — Feature Rebuilds + Cleanups (Phases 3 + 4) | 35 | Backlog |
+| DNI-315 | 27 — Discipline & Closure (Phases 5 + 6 + 7) | 17 | Backlog |
 
-## Epic details
+> Epics 1–7, 16, and 19 were delivered before Linear ticket tracking was in place. Their Linear IDs were never created; status is inferred from git history and the old epic docs.
 
-### Epic 1 — Foundation & Infrastructure (DNI-5)
-Flutter project init, Drift schema and DAOs, Firebase Auth + Firestore, Sefaria client, auto_route shell, Riverpod, Talker, CI/CD, sync engine foundation, theme, security infrastructure (bcrypt, secure storage), Hebrew calendar utilities. All 12 stories done.
+## Active work
 
-### Epic 2 — Content Import & Browsing (DNI-6)
-Sefaria content import pipeline, hierarchical browser, text display (Hebrew/English), curriculum activation, bundled-content JSON + dev seed script. 5 stories done. Epic 2 retrospective complete.
+### Epic 18 — Onboarding & Track Management Overhaul (DNI-128)
 
-### Epic 3 — Core Learning Cycle (DNI-7)
-Mark completion (single item), completion history & stage progression, bookmark management. 3 stories done. The completions table uses `sefariaRef` (String), not `content_item_id`.
+The epic itself is **Canceled** in Linear, but 7 stories are still open:
 
-### Epic 4 — Multi-Track Learning (DNI-8)
-Track management, track assignment & duplicate prevention, track-specific progress views. 3 stories done. Retrospective: `docs/_archive/epic-qa-reports/epic-4-retrospective-2026-03-12.md`.
+| ID | Story | Status |
+|---|---|---|
+| DNI-180 | 18.1: Add Track Flow — 8 Screens, One Concept Each | In Review |
+| DNI-164 | 18.13: Create Account Screen Layout Fix | Todo |
+| DNI-165 | 18.14: Magic Link Authentication (Remove Password Fields) | Todo |
+| DNI-111 | 18.15: New Curricula Support (Nach, Mussar, Halacha) | Todo |
+| DNI-115 | 18.16: Enhanced Bulk Mark Tool | Todo |
+| DNI-118 | 18.17: Dirshu Test Tracking | Todo |
+| DNI-122 | 18.18: Test Suite Health — Fix Failures & Harden | Todo |
+| DNI-194 | 18.8: Program-Aware AddTrackFlow | Duplicate |
 
-### Epic 5 — Configurable Stages & Learning Order (DNI-9)
-Stage definition configuration, drag-and-drop learning order. 2 stories done.
-
-### Epic 6 — Smart Scheduler (DNI-10)
-Parametric scheduler engine, daily task generation, goal management (per-curriculum deadlines), pace tracking, cross-curriculum daily schedule composer. 5 stories done. Three schedule types: **delay**, **Friday/Shabbos Review**, **Shabbos Review**.
-
-### Epic 7 — Dashboard & Progress (DNI-11)
-Cross-curriculum dashboard, per-curriculum progress views, progress charts and statistics. 3 stories done.
-
-### Epic 8 — Gamification & Engagement (DNI-12)
-Points system, streak tracking, mystery rewards. 3 stories done.
-
-### Epic 9 — Onboarding Flow (DNI-13)
-Welcome & user mode selection, curriculum selection, per-curriculum goal setup, bulk mark prior completions, initial rewards setup (child mode). 5 stories done.
-
-### Epic 10 — Parent Mode (DNI-14)
-PIN setup & auth, parent dashboard, reward management CRUD, point value configuration, track management, parent analytics. 6 stories done.
-
-### Epic 11 — Tutor Mode (DNI-15) — deprioritized
-PIN setup & auth, tutor dashboard, completion history views, chazara due & progress views. 4 stories done — but the feature has been deprioritized as of 2026-04-19. Code remains functional; no new investment. See [`_archive/scrapped-ideas/tutor-mode-epic-11.md`](_archive/scrapped-ideas/tutor-mode-epic-11.md).
-
-### Epic 12 — Notifications (DNI-16)
-Daily learning reminders, streak protection alerts, reward milestone notifications. 3 stories done. Shabbos/Yom Tov quiet mode via kosher_dart zmanim.
-
-### Epic 13 — Cloud Sync (DNI-17)
-Push-on-write, pull-on-launch, foreground real-time listeners. 3 stories done.
-
-### Epic 14 — Settings (DNI-18)
-General settings, notification preferences, data export/import, account management. 4 stories done.
-
-### Epic 15 — (was Multi-Profile & Learning Program)
-No Linear epic. 14 design stories were drafted in early March; the work was absorbed by Epics 18 and 21 with different numbering. The original story files are archived under [`_archive/superseded/epic-15-stories/`](_archive/superseded/epic-15-stories/). See [`_archive/scrapped-ideas/epic-15-multi-profile-original-stories.md`](_archive/scrapped-ideas/epic-15-multi-profile-original-stories.md) for the mapping.
-
-### Epic 16 — Onboarding-to-Dashboard Perfect Flow (DNI-128)
-Pace-based goal mode, study day configuration, dashboard pace/progress integration, per-item review count display, onboarding goal & study day steps, dashboard polish. 6 stories done.
-
-### Epic 17 — V1 Roadmap Phase 1 (DNI-154)
-An umbrella epic with no discrete stories. Used as a roadmap placeholder.
-
-### Epic 18 — Onboarding & Track Management Overhaul (DNI-128) — **in progress**
-12 stories, all currently in review:
-- 18.1 Extract reusable add-track flow
-- 18.2 Slim global onboarding
-- 18.3 Track management hub
-- 18.4 Hebrew terms, chazara, curriculum names
-- 18.5 Track editing from Settings
-- 18.6 Child mode onboarding post-setup rewards
-- 18.7 Navigation state cleanup
-- 18.8 Instant mark complete
-- 18.9 Prevent duplicate profile names
-- 18.10 Add/delete profile from profile picker
-- 18.11 Fix edit profile button in Settings
-- 18.12 Delete account redirects to Welcome
-
-Story specs: [`docs/stories/implementation/18-*.md`](stories/implementation/).
-
-### Epic 19 — Offline-First Architecture & Two-Database Split (DNI-182) — **done**
-13 stories delivered. Split the monolithic database into a read-only Content DB (bundled as `assets/seed.db.gz`, 4 tables) and a read-write User DB (22 tables, schema v15). Local calendar engine removes runtime dependency on Sefaria/Hebcal. Startup hardened to ~140ms with zero network calls.
-
-> **Tech debt flag:** Stories 19.5 (local-first auth abstraction) and 19.7 (optional account creation in Settings) implement the anonymous-localUid auth model. That model has since been superseded by the hard-tier cloud-born/local-born design in [`planning/architecture-offline-v2.md`](planning/architecture-offline-v2.md). Epic 20 (b) is the refactor. Epic 19 all other stories (two-DB split, seed DB, calendar engine, startup hardening, SyncEngine conditional activation, content DB resilience, E2E testing) remain canonical.
-
-### Epic 20 — Dashboard & Progress Redesign — Multi-Track Isolation (DNI-210) — **backlog**
-12 stories, all backlog. Per-track scoping of DAOs, domain models, providers; per-track scheduler; dashboard stats row + unified task list; 4 track-card variants; recovery actions; redesigned progress and track-detail screens; charts with track filter; Learning Journey rework. Scenario specs: [`docs/scenarios/dashboard-redesign-set/`](scenarios/dashboard-redesign-set/).
-
-### Epic 21 — Multi-Account Device — Account Switching, Session Management & Deletion (DNI-238) — **done**
-16 stories delivered. Device account registry, per-account database isolation, session auto-resume and persistence, unified sign-up (email/password + Google), smart sign-in routing, account picker, sign-out to picker, multi-account upgrade, and the full deletion path (local, cloud, and cloud function). Story specs: [`docs/stories/implementation/21-*.md`](stories/implementation/).
-
-### Epic 22 — Catch-up & Amnesty System (DNI-255) — **backlog, design complete**
-22 stories planned across 14 groups covering rescope v2, amnesty primitive, pause mechanism, catch-up sheets (self-paced + program), review debt, multi-track triage, setup seeding, cycle boundary, and a notification rewrite. Scenario-level specs at [`docs/scenarios/evolution/`](scenarios/evolution/); scenarios at [`docs/planning/catchup-and-amnesty-scenarios.md`](planning/catchup-and-amnesty-scenarios.md).
-
-### Epic 23 — Offline-First Architecture v2 — Hard-Tier Auth Refactor (DNI-223) — **done**
-Completed 2026-04-15. Dropped `AppAuthState` sealed hierarchy, added `passwordHash` + `tier` columns, made signup mandatory at first launch, tier-gated SyncEngine. Originally filed as "Epic 20" — renamed to Epic 23 on 2026-04-19 to resolve the numbering collision with DNI-210 (Dashboard Redesign). Canonical design doc: [`planning/architecture-offline-v2.md`](planning/architecture-offline-v2.md).
-
-## In review right now
-
-From `sprint-status.yaml` (2026-04-15):
-
-- All 12 stories of Epic 18.
-
-Recent git history (last 40 commits) shows active theme, onboarding, notifications, parent-mode, and auth work — consistent with Epic 18 in review and Epic 21 recently completed.
+These stories predate the greenfield rebuild decision. Assess each against the rebuild plan before investing further.
 
 ## Upcoming work (ordered by priority)
 
-1. **Epic 18 finalization** — bring the 12 in-review stories to done.
-2. **Epic 20 — Dashboard & Progress Redesign** — 12 stories, per-track isolation. Unblocked now that Epic 23 (v2 auth refactor) has shipped.
-3. **Epic 22 — Catch-up & Amnesty System** — 22 stories planned; ready to start breaking out.
+1. **Epic 24 — Stop-the-Bleeding (Phase 0) (DNI-312)** — 8 stories, all Backlog. Critical fixes under the existing schema; ships first to close data-loss / security holes before the schema wipe. See [`planning/epics-greenfield-rebuild.md`](planning/epics-greenfield-rebuild.md).
+2. **Epic 25 — Schema + Core Foundation (DNI-313)** — 22 stories, all Backlog. Wipe-install boundary; local DB v1, Firestore v1, ten rebuilt core subsystems, Hebrew UI infrastructure.
+3. **Epic 26 — Feature Rebuilds + Cleanups (DNI-314)** — 35 stories, all Backlog. Eight feature areas reorganized to consume the new core; label/ARB/naming/dead-code sweep.
+4. **Epic 27 — Discipline & Closure (DNI-315)** — 17 stories (16 Backlog, 1 Canceled). Test pyramid, CI gates, observability, docs reconciliation.
+5. **Epic 22 — Catch-up & Amnesty System (DNI-255)** — 22 stories, all Backlog. Stays relevant post-rebuild; design is complete.
+6. **Epic 23 — Manual QA Verification (DNI-278)** — 18 stories, all Backlog. Full QA pass; one story blocked on Epic 22.
+
+## Canceled / superseded
+
+The following epics are **Canceled** in Linear because their scope was either delivered and superseded by the rebuild, or deprioritized:
+
+| Epic | Reason |
+|---|---|
+| 8 — Gamification & Engagement | Delivered v1; rebuild rewrites this area |
+| 9 — Onboarding Flow | Delivered v1; rebuild replaces with new Add Track flow |
+| 10 — Parent Mode | Delivered v1; rebuild supersedes |
+| 11 — Tutor Mode | Deprioritized; code functional but no new investment |
+| 12 — Notifications | Delivered v1; rebuild includes notification system rewrite (E27) |
+| 13 — Cloud Sync | Delivered v1; rebuild replaces SyncEngine architecture (E25) |
+| 14 — Settings | Delivered v1; rebuild supersedes |
+| 17 — V1 Roadmap Phase 1 | Umbrella epic; no discrete stories; closed |
+| 18 — Onboarding & Track Management Overhaul | Superseded by E24–E26; 7 stories still open (see above) |
+| 20 — Dashboard & Progress Redesign | All 12 stories Canceled; redesign scope reabsorbed into E26 |
+
+Epic 24 (DNI-297) — *Firestore Sync Schema & Multi-Device Data Restoration* — is the **old** Epic 24 created before the greenfield rebuild was scoped. It has 10 Backlog stories. Its scope is largely absorbed by E25 (Firestore v1 collection layout) and E26 (sync engine decomposition). Review each story before starting; most are superseded.
+
+## Epic details — Greenfield Rebuild (Epics 24–27)
+
+Design doc: [`docs/planning/epics-greenfield-rebuild.md`](planning/epics-greenfield-rebuild.md)
+
+### Epic 24 — Stop-the-Bleeding (Phase 0) (DNI-312)
+
+Critical fixes under the existing schema. No new architecture. Ships first to close data-loss / security holes before the wipe-install boundary in E25.
+
+| ID | Story | Status |
+|---|---|---|
+| DNI-316 | 24.1: Per-collection Firestore rules with field validators and emulator test job | Backlog |
+| DNI-317 | 24.2: Soft-delete tracks; stop cascading into append-only tables | Backlog |
+| DNI-318 | 24.3: Centralize sign-out through AuthRepository | Backlog |
+| DNI-319 | 24.4: Wire Crashlytics in main.dart before any other init | Backlog |
+| DNI-320 | 24.5: Migrate sync_engine and OfflineQueue to AppLogger; rewrite PII redactor | Backlog |
+| DNI-321 | 24.6: Multi-profile leak band-aid via cross-profile scope assertions | Backlog |
+| DNI-310 | 24.7: Sync curriculum track activation to Firestore | Backlog |
+| DNI-311 | 24.8: Sync learning order to Firestore | Backlog |
+
+### Epic 25 — Schema + Core Foundation (Phases 1 + 2) (DNI-313)
+
+Wipe-install boundary. Local DB v1, Firestore v1, ten rebuilt core subsystems. Hebrew UI core infrastructure.
+
+22 stories: 25.1–25.22. All Backlog. Highlights:
+- **25.1**: Schema-v1 user DB skeleton (renamed tables, profileId PKs, no defaults, FKs)
+- **25.4**: Firestore v1 collection layout and per-collection rules
+- **25.5**: Outbox table and OutboxProcessor scaffolding
+- **25.11**: core/auth/AuthRepository — sole Firebase Auth consumer
+- **25.12–25.14**: SyncEngine decomposition (FirestoreGateway, PushPipeline, PullPipeline, MergeRouter, ListenerSupervisor)
+- **25.15**: core/learning/CompletionWriter — single transactional commit path
+- **25.20**: MaterialApp locale auto-detection + Noto Sans Hebrew bundling + direction-aware CurriculumLabel + real dark theme
+- **25.22**: Wipe-install cutover end-to-end verification
+
+### Epic 26 — Feature Rebuilds + Cleanups (Phases 3 + 4) (DNI-314)
+
+35 stories. Eight feature areas reorganized to consume the new core. Label/ARB/naming/dead-code sweep. RTL audit.
+
+Selected highlights:
+- **26.1–26.4**: Scheduler strategy pattern, pace math fix, classification fixes, GoalEntity refactor
+- **26.5–26.8**: Dashboard decomposition (20 widgets extracted, TrackCard, dashboardModelProvider, TrackProgressVariant deleted)
+- **26.9–26.12**: AddTrackController state machine, OnboardingController, ProfileCreationUseCase
+- **26.13–26.16**: Reader purity, ContentTree lookup, CompositeCurriculumStrategy, Tappable Progress stats
+- **26.33**: Dead code purge — ≥10,000 LOC across reducers, services, tables, widgets, ARB keys, themes, network modules
+- **26.34**: Delete deprecated TextDownloadService
+- **26.35**: Remove promoteToCloud / demoteToLocal auth shims
+
+### Epic 27 — Discipline & Closure (Phases 5 + 6 + 7) (DNI-315)
+
+17 stories (16 Backlog, 1 Canceled). Test pyramid, CI gates, observability, docs.
+
+| ID | Story | Status |
+|---|---|---|
+| DNI-322 | 27.1: Test infrastructure — fake_cloud_firestore, golden scaffolding, real-Drift in-memory helper | Backlog |
+| DNI-... | 27.2–27.9: Unit, DAO, widget/golden, integration test suites | Backlog |
+| DNI-... | 27.10–27.11: Custom lints Parts 1 & 2 | Backlog |
+| DNI-... | 27.12–27.13: CI matrix + make audit target | Backlog |
+| DNI-... | 27.14: 12 analytics events + Crashlytics user ID | Backlog |
+| DNI-... | 27.15: docs/architecture.md rewrite | Backlog |
+| DNI-127 | 27.17: CI/CD — Play Store deployment pipeline | Canceled |
+
+## Backlog — pre-rebuild epics
+
+### Epic 22 — Catch-up & Amnesty System (DNI-255)
+
+22 stories, all Backlog. Design complete. Covers: rescope v2, amnesty primitive, pause mechanism, catch-up sheets (self-paced S1–S3 + program S4), review debt (S6–S7), triage (S9, S11), multi-track, setup seeding, cycle boundary, notification rewrite.
+
+Scenario specs: [`docs/scenarios/evolution/`](scenarios/evolution/) and [`docs/planning/catchup-and-amnesty-scenarios.md`](planning/catchup-and-amnesty-scenarios.md).
+
+### Epic 23 — Manual QA Verification (DNI-278)
+
+18 stories, all Backlog. Full manual QA pass covering all v1 feature areas. Story 23.18 (Catch-up & Amnesty) is blocked on Epic 22.
+
+## Orphaned stories
+
+6 stories have `epic: none` — all Canceled. No action required.
+
+| ID | Title | Status |
+|---|---|---|
+| DNI-106 | 14.2: Data Export & Import (JSON) | Canceled |
+| DNI-121 | 15.13: Cloud Content Storage & Multilingual Fetch | Canceled |
+| DNI-166 | 18.1: Extract Reusable Add Track Flow (הוספת מסלול) | Canceled |
+| DNI-167 | 18.2: Slim Global Onboarding (Global Settings Only) | Canceled |
+| DNI-168 | 18.3: Track Management Hub (ניהול מסלולים) | Canceled |
+| DNI-176 | 18.11: Replace "Browse Curricula" with "Add Track" on Empty States | Canceled |
 
 ## How to sync
 
 ```bash
 # Refresh Linear ticket cache
-./tool/linear-sync.sh
+./tool/linear-sync.sh sync
 
 # Cache location
 ~/.local/share/linear-sync/dniasoff/learning-tracker/
 ```
 
-Status YAML files live in [`docs/status/`](status/) and are managed by BMAD workflows. Do not hand-edit `linear-mapping.yaml`.
+The YAML cache at `docs/status/sprint-status.yaml` is managed by `tool/linear-sync.sh`. Do not hand-edit `linear-mapping.yaml`.

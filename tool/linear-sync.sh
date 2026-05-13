@@ -110,7 +110,7 @@ gen_story_map() {
       etitle=$(echo "$epic_line" | awk -F'|' '{print $2}')
       # Extract short name from title
       local short_name
-      short_name=$(echo "$etitle" | sed 's/^\[Epic[- ][0-9]*\] //')
+      short_name=$(echo "$etitle" | sed 's/^\[Epic[- ][0-9]*\] //; s/^Epic [0-9]* — //')
 
       local ecount=0
       for story_file in "$CACHE_DIR/stories"/*.yaml; do
@@ -172,7 +172,7 @@ gen_epic_list() {
       eid=$(echo "$epic_line" | awk -F'|' '{print $1}')
       etitle=$(echo "$epic_line" | awk -F'|' '{print $2}')
       epic_num=$(echo "$etitle" | grep -oP 'Epic[- ]\K\d+')
-      short_name=$(echo "$etitle" | sed 's/^\[Epic[- ][0-9]*\] //')
+      short_name=$(echo "$etitle" | sed 's/^\[Epic[- ][0-9]*\] //; s/^Epic [0-9]* — //')
 
       # Read epic summary from companion file
       local summary=""
@@ -252,7 +252,29 @@ cmd_sync() {
   local tmpfile
   tmpfile=$(mktemp)
 
-  linearis issues search "" --team "$TEAM_KEY" --project "$LINEAR_PROJECT" --limit 200 > "$tmpfile"
+  # Paginate until all issues are fetched
+  local cursor="" has_next=true page=0
+  # Start with an empty JSON array
+  echo '[]' > "$tmpfile"
+  while [[ "$has_next" == "true" ]]; do
+    page=$((page + 1))
+    local page_file
+    page_file=$(mktemp)
+    if [[ -n "$cursor" ]]; then
+      linearis issues list --team "$TEAM_KEY" --project "$LINEAR_PROJECT" --limit 200 --after "$cursor" > "$page_file"
+    else
+      linearis issues list --team "$TEAM_KEY" --project "$LINEAR_PROJECT" --limit 200 > "$page_file"
+    fi
+    local count
+    count=$(jq '.nodes | length' "$page_file")
+    echo "  Page $page: $count issues"
+    # Merge nodes into tmpfile
+    jq -s '.[0] + .[1]' "$tmpfile" <(jq '.nodes' "$page_file") > "${tmpfile}.merged"
+    mv "${tmpfile}.merged" "$tmpfile"
+    has_next=$(jq -r '.pageInfo.hasNextPage' "$page_file")
+    cursor=$(jq -r '.pageInfo.endCursor' "$page_file")
+    rm -f "$page_file"
+  done
 
   local synced_at
   synced_at=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
@@ -267,11 +289,11 @@ cmd_sync() {
     echo "epics:"
 
     jq -r '
-      [.[] | select(.title | test("^\\[Epic"))] |
+      [.[] | select(.title | test("^(\\[Epic|Epic [0-9])"))] |
       sort_by(.identifier | split("-") | last | tonumber) |
       .[] |
       "  " + .identifier + ":\n" +
-      "    key: " + (.title | capture("\\[Epic[- ](?<num>\\d+)\\]") | "epic-\(.num)") + "\n" +
+      "    key: " + ((.title | capture("(?:^\\[Epic[- ]|^Epic )(?<num>\\d+)")) | "epic-\(.num)") + "\n" +
       "    title: \"" + .title + "\"\n" +
       "    status: " + .state.name
     ' "$tmpfile"
@@ -280,14 +302,20 @@ cmd_sync() {
     echo "stories:"
 
     jq -r '
-      [.[] | select(.title | test("^\\[\\d+\\.\\d+\\]"))] |
+      [.[] | select(.title | test("^(\\[\\d+\\.\\d+\\]|\\d+\\.\\d+:)"))] |
       sort_by(.identifier | split("-") | last | tonumber) |
       .[] |
       "  " + .identifier + ":\n" +
-      "    key: " + (try (.title | capture("\\[(?<e>\\d+)\\.(?<s>\\d+)\\]\\s*(?<rest>.*)") |
-        "\(.e)-\(.s)-" + (.rest | ascii_downcase | gsub("[^a-z0-9]+"; "-") | gsub("(^-|-$)"; "")))
-        catch "unknown") + "\n" +
-      "    epic: " + (.parentIssue.identifier // "none") + "\n" +
+      "    key: " + (try (
+        if (.title | test("^\\[")) then
+          .title | capture("\\[(?<e>\\d+)\\.(?<s>\\d+)\\]\\s*(?<rest>.*)") |
+          "\(.e)-\(.s)-" + (.rest | ascii_downcase | gsub("[^a-z0-9]+"; "-") | gsub("(^-|-$)"; ""))
+        else
+          .title | capture("(?<e>\\d+)\\.(?<s>\\d+):\\s*(?<rest>.*)") |
+          "\(.e)-\(.s)-" + (.rest | ascii_downcase | gsub("[^a-z0-9]+"; "-") | gsub("(^-|-$)"; ""))
+        end
+      ) catch "unknown") + "\n" +
+      "    epic: " + (.parent.identifier // "none") + "\n" +
       "    title: \"" + .title + "\"\n" +
       "    status: " + .state.name
     ' "$tmpfile"
@@ -303,19 +331,19 @@ cmd_sync() {
       "identifier: " + .identifier,
       "title: \"" + .title + "\"",
       "status: " + .state.name,
-      "epic: " + (.parentIssue.identifier // "none"),
+      "epic: " + (.parent.identifier // "none"),
       (if (.description // "") == "" then "description: \"\""
        else "description: |\n" + (.description | split("\n") | map("  " + .) | join("\n"))
        end)
     ' > "$CACHE_DIR/stories/$id.yaml"
 
     story_count=$((story_count + 1))
-  done < <(jq -c '.[] | select(.title | test("^\\[\\d+\\.\\d+\\]"))' "$tmpfile")
+  done < <(jq -c '.[] | select(.title | test("^(\\[\\d+\\.\\d+\\]|\\d+\\.\\d+:)"))' "$tmpfile")
 
   echo "$synced_at" > "$CACHE_DIR/.last-sync"
 
   local epic_count
-  epic_count=$(jq '[.[] | select(.title | test("^\\[Epic"))] | length' "$tmpfile")
+  epic_count=$(jq '[.[] | select(.title | test("^(\\[Epic|Epic [0-9])"))] | length' "$tmpfile")
 
   rm -f "$tmpfile"
 
