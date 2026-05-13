@@ -192,9 +192,13 @@ class CompletionRepositoryImpl implements CompletionRepository {
     final effectiveProfileId = request.profileId ?? _activeProfileId;
     final isChildProfile = await _isProfileChild(effectiveProfileId);
 
-    if (!request.awardGamificationPoints &&
-        request.stageId == 1 &&
-        request.sefariaRefs.isNotEmpty) {
+    // Route ALL bulk-mark-prior writes (awardGamificationPoints == false)
+    // through the streak-suppressing optimised path regardless of stage.
+    // Previously the guard included `request.stageId == 1`, which caused
+    // stages 2 and 3 to fall through to the slow path and wrongly insert a
+    // streak event via `_createCompletion → _appendStreakEvent`.
+    // See DNI-370 / Story 26.27.
+    if (!request.awardGamificationPoints && request.sefariaRefs.isNotEmpty) {
       return _bulkMarkCompletePriorOptimized(
         request,
         effectiveProfileId: effectiveProfileId,
