@@ -580,7 +580,9 @@ class _ParentalControlsSectionState
                 );
               } else {
                 ok =
-                    (await context.pushRoute<bool>(const PinSetupRoute())) ??
+                    (await context.pushRoute<bool>(
+                      const PinFlowSetupRoute(),
+                    )) ??
                     false;
               }
               if (ok && mounted) await _load();

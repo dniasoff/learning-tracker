@@ -2381,6 +2381,18 @@ abstract class AppLocalizations {
   /// **'PIN changed successfully'**
   String get pinChangedSuccessfully;
 
+  /// No description provided for @pinFlowSetupSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Set a new 4-digit PIN to enable parent mode.'**
+  String get pinFlowSetupSubtitle;
+
+  /// No description provided for @pinFlowSetupDeviceLocalBanner.
+  ///
+  /// In en, this message translates to:
+  /// **'Parent PINs live only on this device. Set a new 4-digit PIN to enable parent mode here. Other devices keep their own PIN.'**
+  String get pinFlowSetupDeviceLocalBanner;
+
   /// No description provided for @deviceRestoreChecking.
   ///
   /// In en, this message translates to:

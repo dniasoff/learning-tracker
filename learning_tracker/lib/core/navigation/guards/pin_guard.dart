@@ -89,7 +89,7 @@ class PinGuard extends AutoRouteGuard {
 
     final hasPinSet = await _hasPin(scope);
     if (!hasPinSet) {
-      final result = await router.push<bool>(const PinSetupRoute());
+      final result = await router.push<bool>(const PinFlowSetupRoute());
       final ok = result ?? false;
       if (ok) {
         _authenticatedScope = scope;

@@ -1284,6 +1284,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get pinChangedSuccessfully => 'PIN changed successfully';
 
   @override
+  String get pinFlowSetupSubtitle =>
+      'Set a new 4-digit PIN to enable parent mode.';
+
+  @override
+  String get pinFlowSetupDeviceLocalBanner =>
+      'Parent PINs live only on this device. Set a new 4-digit PIN to enable parent mode here. Other devices keep their own PIN.';
+
+  @override
   String get deviceRestoreChecking => 'Checking device...';
 
   @override

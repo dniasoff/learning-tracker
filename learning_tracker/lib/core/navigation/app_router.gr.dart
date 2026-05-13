@@ -800,49 +800,96 @@ class ParentTrackManagementRoute extends PageRouteInfo<void> {
 }
 
 /// generated route for
-/// [PinChangeScreen]
-class PinChangeRoute extends PageRouteInfo<void> {
-  const PinChangeRoute({List<PageRouteInfo>? children})
-    : super(PinChangeRoute.name, initialChildren: children);
+/// [PinFlowChangeScreen]
+class PinFlowChangeRoute extends PageRouteInfo<void> {
+  const PinFlowChangeRoute({List<PageRouteInfo>? children})
+    : super(PinFlowChangeRoute.name, initialChildren: children);
 
-  static const String name = 'PinChangeRoute';
+  static const String name = 'PinFlowChangeRoute';
 
   static PageInfo page = PageInfo(
     name,
     builder: (data) {
-      return const PinChangeScreen();
+      return const PinFlowChangeScreen();
     },
   );
 }
 
 /// generated route for
-/// [PinEntryScreen]
-class PinEntryRoute extends PageRouteInfo<void> {
-  const PinEntryRoute({List<PageRouteInfo>? children})
-    : super(PinEntryRoute.name, initialChildren: children);
+/// [PinFlowScreen]
+class PinFlowRoute extends PageRouteInfo<PinFlowRouteArgs> {
+  PinFlowRoute({
+    Key? key,
+    required PinFlowMode mode,
+    List<PageRouteInfo>? children,
+  }) : super(
+         PinFlowRoute.name,
+         args: PinFlowRouteArgs(key: key, mode: mode),
+         initialChildren: children,
+       );
 
-  static const String name = 'PinEntryRoute';
+  static const String name = 'PinFlowRoute';
 
   static PageInfo page = PageInfo(
     name,
     builder: (data) {
-      return const PinEntryScreen();
+      final args = data.argsAs<PinFlowRouteArgs>();
+      return PinFlowScreen(key: args.key, mode: args.mode);
+    },
+  );
+}
+
+class PinFlowRouteArgs {
+  const PinFlowRouteArgs({this.key, required this.mode});
+
+  final Key? key;
+
+  final PinFlowMode mode;
+
+  @override
+  String toString() {
+    return 'PinFlowRouteArgs{key: $key, mode: $mode}';
+  }
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    if (other is! PinFlowRouteArgs) return false;
+    return key == other.key && mode == other.mode;
+  }
+
+  @override
+  int get hashCode => key.hashCode ^ mode.hashCode;
+}
+
+/// generated route for
+/// [PinFlowSetupScreen]
+class PinFlowSetupRoute extends PageRouteInfo<void> {
+  const PinFlowSetupRoute({List<PageRouteInfo>? children})
+    : super(PinFlowSetupRoute.name, initialChildren: children);
+
+  static const String name = 'PinFlowSetupRoute';
+
+  static PageInfo page = PageInfo(
+    name,
+    builder: (data) {
+      return const PinFlowSetupScreen();
     },
   );
 }
 
 /// generated route for
-/// [PinSetupScreen]
-class PinSetupRoute extends PageRouteInfo<void> {
-  const PinSetupRoute({List<PageRouteInfo>? children})
-    : super(PinSetupRoute.name, initialChildren: children);
+/// [PinFlowVerifyScreen]
+class PinFlowVerifyRoute extends PageRouteInfo<void> {
+  const PinFlowVerifyRoute({List<PageRouteInfo>? children})
+    : super(PinFlowVerifyRoute.name, initialChildren: children);
 
-  static const String name = 'PinSetupRoute';
+  static const String name = 'PinFlowVerifyRoute';
 
   static PageInfo page = PageInfo(
     name,
     builder: (data) {
-      return const PinSetupScreen();
+      return const PinFlowVerifyScreen();
     },
   );
 }

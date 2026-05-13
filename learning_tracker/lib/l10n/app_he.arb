@@ -605,6 +605,8 @@
   "confirmNewPinSubtitle": "הזינו שוב את אותו קוד לאישור.",
   "changeParentPin": "שינוי קוד הורה",
   "pinChangedSuccessfully": "הקוד שונה בהצלחה",
+  "pinFlowSetupSubtitle": "הגדירו קוד חדש בן 4 ספרות להפעלת מצב הורה.",
+  "pinFlowSetupDeviceLocalBanner": "קודי ההורה נשמרים רק במכשיר זה. הגדירו קוד חדש בן 4 ספרות להפעלת מצב הורה. מכשירים אחרים שומרים קוד משלהם.",
   "deviceRestoreChecking": "בודקים מכשיר...",
   "deviceRestoreComplete": "השחזור הושלם!",
   "deviceRestoreFailed": "השחזור נכשל",

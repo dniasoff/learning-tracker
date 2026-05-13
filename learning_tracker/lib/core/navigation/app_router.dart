@@ -24,9 +24,7 @@ import 'package:learning_tracker/features/onboarding/presentation/screens/onboar
 import 'package:learning_tracker/features/onboarding/presentation/screens/signup_screen.dart';
 import 'package:learning_tracker/features/parent_mode/presentation/screens/parent_settings_screen.dart';
 import 'package:learning_tracker/features/parent_mode/presentation/screens/parent_track_management_screen.dart';
-import 'package:learning_tracker/features/parent_mode/presentation/screens/pin_change_screen.dart';
-import 'package:learning_tracker/features/parent_mode/presentation/screens/pin_entry_screen.dart';
-import 'package:learning_tracker/features/parent_mode/presentation/screens/pin_setup_screen.dart';
+import 'package:learning_tracker/features/parent_mode/presentation/screens/pin_flow_screen.dart';
 import 'package:learning_tracker/features/parent_mode/presentation/screens/point_config_screen.dart';
 import 'package:learning_tracker/features/parent_mode/presentation/screens/reward_configuration_screen.dart';
 import 'package:learning_tracker/features/profiles/presentation/screens/manage_learners_screen.dart';
@@ -219,17 +217,17 @@ class AppRouter extends RootStackRouter {
     ),
     AutoRoute(
       path: '/parent-mode/pin-setup',
-      page: PinSetupRoute.page,
+      page: PinFlowSetupRoute.page,
       guards: [authGuard, childModeGuard],
     ),
     AutoRoute(
       path: '/parent-mode/pin-entry',
-      page: PinEntryRoute.page,
+      page: PinFlowVerifyRoute.page,
       guards: [authGuard, childModeGuard],
     ),
     AutoRoute(
       path: '/parent-mode/pin-change',
-      page: PinChangeRoute.page,
+      page: PinFlowChangeRoute.page,
       guards: [authGuard, childModeGuard],
     ),
     AutoRoute(

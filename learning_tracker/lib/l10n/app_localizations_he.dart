@@ -1271,6 +1271,14 @@ class AppLocalizationsHe extends AppLocalizations {
   String get pinChangedSuccessfully => 'הקוד שונה בהצלחה';
 
   @override
+  String get pinFlowSetupSubtitle =>
+      'הגדירו קוד חדש בן 4 ספרות להפעלת מצב הורה.';
+
+  @override
+  String get pinFlowSetupDeviceLocalBanner =>
+      'קודי ההורה נשמרים רק במכשיר זה. הגדירו קוד חדש בן 4 ספרות להפעלת מצב הורה. מכשירים אחרים שומרים קוד משלהם.';
+
+  @override
   String get deviceRestoreChecking => 'בודקים מכשיר...';
 
   @override

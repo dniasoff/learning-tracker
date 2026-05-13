@@ -18,7 +18,7 @@ import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/services/pin_service.dart';
 import 'package:learning_tracker/features/gamification/domain/services/points_service.dart';
 import 'package:learning_tracker/features/parent_mode/domain/services/parent_dashboard_aggregator.dart';
-import 'package:learning_tracker/features/parent_mode/presentation/screens/pin_setup_screen.dart';
+import 'package:learning_tracker/features/parent_mode/presentation/screens/pin_flow_screen.dart';
 import 'package:learning_tracker/features/parent_mode/presentation/screens/point_config_screen.dart';
 import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
@@ -241,7 +241,7 @@ void main() {
       ).called(1);
     });
 
-    testWidgets('PinSetupScreen shows error on mismatched PINs', (
+    testWidgets('PinFlowScreen (setup) shows error on mismatched PINs', (
       tester,
     ) async {
       final mockStorage = _createMockStorage();
@@ -251,30 +251,32 @@ void main() {
           overrides: [
             flutterSecureStorageProvider.overrideWithValue(mockStorage),
           ],
-          child: const MaterialApp(home: PinSetupScreen()),
+          child: const MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: PinFlowScreen(mode: PinFlowMode.setup),
+          ),
         ),
       );
+      await tester.pump();
 
-      // Enter first PIN: 1234 — one digit per TextField
-      final fields = find.byType(TextField);
-      await tester.enterText(fields.at(0), '1');
-      await tester.pump();
-      await tester.enterText(fields.at(1), '2');
-      await tester.pump();
-      await tester.enterText(fields.at(2), '3');
-      await tester.pump();
-      await tester.enterText(fields.at(3), '4');
+      // Enter first PIN via the keypad: tap 1-2-3-4
+      Future<void> tapDigit(String d) async {
+        await tester.tap(find.text(d).first);
+        await tester.pump();
+      }
+
+      await tapDigit('1');
+      await tapDigit('2');
+      await tapDigit('3');
+      await tapDigit('4');
       await tester.pumpAndSettle();
 
-      // Now in confirm step — enter mismatched PIN: 5678
-      final confirmFields = find.byType(TextField);
-      await tester.enterText(confirmFields.at(0), '5');
-      await tester.pump();
-      await tester.enterText(confirmFields.at(1), '6');
-      await tester.pump();
-      await tester.enterText(confirmFields.at(2), '7');
-      await tester.pump();
-      await tester.enterText(confirmFields.at(3), '8');
+      // Now in confirm step — enter mismatched PIN: 5-6-7-8
+      await tapDigit('5');
+      await tapDigit('6');
+      await tapDigit('7');
+      await tapDigit('8');
       await tester.pumpAndSettle();
 
       // Verify error message is displayed
