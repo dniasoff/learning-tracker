@@ -44,16 +44,19 @@ void main() {
         expect(rows.first.eventType, 'completion');
       });
 
-      test('is idempotent on the natural key (profileId, dayUtc, eventType)', () async {
-        final id1 = await db.streakEventDao.appendEvent(makeEvent());
-        final id2 = await db.streakEventDao.appendEvent(makeEvent());
+      test(
+        'is idempotent on the natural key (profileId, dayUtc, eventType)',
+        () async {
+          final id1 = await db.streakEventDao.appendEvent(makeEvent());
+          final id2 = await db.streakEventDao.appendEvent(makeEvent());
 
-        // Same natural key — should collapse to one row.
-        final rows = await db.select(db.streakEvents).get();
-        expect(rows, hasLength(1));
-        // Both calls return the same row id.
-        expect(id1, id2);
-      });
+          // Same natural key — should collapse to one row.
+          final rows = await db.select(db.streakEvents).get();
+          expect(rows, hasLength(1));
+          // Both calls return the same row id.
+          expect(id1, id2);
+        },
+      );
 
       test('allows different dayUtc to produce separate rows', () async {
         await db.streakEventDao.appendEvent(
@@ -67,17 +70,20 @@ void main() {
         expect(rows, hasLength(2));
       });
 
-      test('allows different eventType on same day to produce separate rows', () async {
-        await db.streakEventDao.appendEvent(
-          makeEvent(eventType: 'completion'),
-        );
-        await db.streakEventDao.appendEvent(
-          makeEvent(eventType: 'day_boundary'),
-        );
+      test(
+        'allows different eventType on same day to produce separate rows',
+        () async {
+          await db.streakEventDao.appendEvent(
+            makeEvent(eventType: 'completion'),
+          );
+          await db.streakEventDao.appendEvent(
+            makeEvent(eventType: 'day_boundary'),
+          );
 
-        final rows = await db.select(db.streakEvents).get();
-        expect(rows, hasLength(2));
-      });
+          final rows = await db.select(db.streakEvents).get();
+          expect(rows, hasLength(2));
+        },
+      );
     });
 
     group('getEventsByProfile', () {

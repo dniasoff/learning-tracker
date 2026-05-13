@@ -129,15 +129,12 @@ void main() {
         },
       );
 
-      test(
-        'AC: getCompletionsForContentAndProfile(ref, B) returns empty even '
-        'though A completed that exact ref',
-        () async {
-          final results = await db.completionDao
-              .getCompletionsForContentAndProfile(_refForA, profileB.id);
-          expect(results, isEmpty);
-        },
-      );
+      test('AC: getCompletionsForContentAndProfile(ref, B) returns empty even '
+          'though A completed that exact ref', () async {
+        final results = await db.completionDao
+            .getCompletionsForContentAndProfile(_refForA, profileB.id);
+        expect(results, isEmpty);
+      });
 
       test(
         'AC: getAggregateCountByProfile(curriculum, B) returns 0 even though '
@@ -162,41 +159,38 @@ void main() {
         },
       );
 
-      test(
-        'AC: completionExistsByProfile(B) returns false for the exact '
-        'composite-key tuple that A committed',
-        () async {
-          final exists = await db.completionDao.completionExistsByProfile(
-            curriculumId: _curriculumId,
-            sefariaRef: _refForA,
-            stageId: _stageId,
-            trackType: _trackType,
-            completedAt: DateTime.utc(2026, 5, 13, 12),
-            profileId: profileB.id,
-          );
-          expect(exists, isFalse);
-        },
-      );
+      test('AC: completionExistsByProfile(B) returns false for the exact '
+          'composite-key tuple that A committed', () async {
+        final exists = await db.completionDao.completionExistsByProfile(
+          curriculumId: _curriculumId,
+          sefariaRef: _refForA,
+          stageId: _stageId,
+          trackType: _trackType,
+          completedAt: DateTime.utc(2026, 5, 13, 12),
+          profileId: profileB.id,
+        );
+        expect(exists, isFalse);
+      });
 
-      test(
-        'AC: getCompletionsByDateRangeAndProfile(±1d, B) returns empty even '
-        'though A has a completion inside that window',
-        () async {
-          final start = DateTime.utc(2026, 5, 12);
-          final end = DateTime.utc(2026, 5, 14);
-          final results = await db.completionDao
-              .getCompletionsByDateRangeAndProfile(start, end, profileB.id);
-          expect(results, isEmpty);
-        },
-      );
+      test('AC: getCompletionsByDateRangeAndProfile(±1d, B) returns empty even '
+          'though A has a completion inside that window', () async {
+        final start = DateTime.utc(2026, 5, 12);
+        final end = DateTime.utc(2026, 5, 14);
+        final results = await db.completionDao
+            .getCompletionsByDateRangeAndProfile(start, end, profileB.id);
+        expect(results, isEmpty);
+      });
 
       test(
         'AC: hasCompletionsInDateRangeByProfile(±1d, B) returns false',
         () async {
           final start = DateTime.utc(2026, 5, 12);
           final end = DateTime.utc(2026, 5, 14);
-          final has = await db.completionDao
-              .hasCompletionsInDateRangeByProfile(start, end, profileB.id);
+          final has = await db.completionDao.hasCompletionsInDateRangeByProfile(
+            start,
+            end,
+            profileB.id,
+          );
           expect(has, isFalse);
         },
       );
@@ -217,45 +211,40 @@ void main() {
         'AC: getExistingSefariaRefsForBulkStage(B) returns empty even when '
         'A has a completion for the same ref / stage / track / curriculum',
         () async {
-          final refs = await db.completionDao.getExistingSefariaRefsForBulkStage(
-            profileId: profileB.id,
-            curriculumId: _curriculumId,
-            stageId: _stageId,
-            trackType: _trackType,
-            sefariaRefs: const [_refForA],
-          );
+          final refs = await db.completionDao
+              .getExistingSefariaRefsForBulkStage(
+                profileId: profileB.id,
+                curriculumId: _curriculumId,
+                stageId: _stageId,
+                trackType: _trackType,
+                sefariaRefs: const [_refForA],
+              );
           expect(refs, isEmpty);
         },
       );
 
-      test(
-        'AC: getCompletionsByProfileForSefariaRefs(B) returns empty even '
-        'when querying the exact ref A completed',
-        () async {
-          final rows = await db.completionDao
-              .getCompletionsByProfileForSefariaRefs(profileB.id, const {
-                _refForA,
-              });
-          expect(rows, isEmpty);
-        },
-      );
+      test('AC: getCompletionsByProfileForSefariaRefs(B) returns empty even '
+          'when querying the exact ref A completed', () async {
+        final rows = await db.completionDao
+            .getCompletionsByProfileForSefariaRefs(profileB.id, const {
+              _refForA,
+            });
+        expect(rows, isEmpty);
+      });
 
-      test(
-        'AC: dashboard percentage surface — the data CompletionDao feeds '
-        'dashboardCompletionPercentageProvider — yields 0 for Profile B '
-        'when A has the only completion (proves the dashboard provider '
-        'cannot surface A\'s data into B\'s screen)',
-        () async {
-          // dashboardCompletionPercentageProvider at
-          // dashboard_providers.dart:131-152 reads completions exclusively
-          // through getCompletionsByCurriculumAndProfile(curriculumId,
-          // profileId). Asserting the DAO returns empty for B is sufficient
-          // and provider-stack-free.
-          final rowsForB = await db.completionDao
-              .getCompletionsByCurriculumAndProfile(_curriculumId, profileB.id);
-          expect(rowsForB, isEmpty);
-        },
-      );
+      test('AC: dashboard percentage surface — the data CompletionDao feeds '
+          'dashboardCompletionPercentageProvider — yields 0 for Profile B '
+          'when A has the only completion (proves the dashboard provider '
+          'cannot surface A\'s data into B\'s screen)', () async {
+        // dashboardCompletionPercentageProvider at
+        // dashboard_providers.dart:131-152 reads completions exclusively
+        // through getCompletionsByCurriculumAndProfile(curriculumId,
+        // profileId). Asserting the DAO returns empty for B is sufficient
+        // and provider-stack-free.
+        final rowsForB = await db.completionDao
+            .getCompletionsByCurriculumAndProfile(_curriculumId, profileB.id);
+        expect(rowsForB, isEmpty);
+      });
 
       test(
         'AC: dashboardLastCompletion surface — the data source the dashboard '
@@ -275,51 +264,43 @@ void main() {
         },
       );
 
-      test(
-        'AC: cross-table isolation — a bookmark written under A does not '
-        'surface in any profile-scoped bookmark read for B',
-        () async {
-          await db
-              .into(db.bookmarks)
-              .insert(
-                BookmarksCompanion.insert(
-                  profileId: profileA.id,
-                  curriculumId: _curriculumId,
-                  trackId: trackIdA,
-                  sefariaRef: _refForA,
-                  updatedAt: DateTime.utc(2026, 5, 13, 12),
-                ),
-              );
-          final bookmarksForB =
-              await (db.select(
-                db.bookmarks,
-              )..where((t) => t.profileId.equals(profileB.id))).get();
-          expect(bookmarksForB, isEmpty);
-        },
-      );
+      test('AC: cross-table isolation — a bookmark written under A does not '
+          'surface in any profile-scoped bookmark read for B', () async {
+        await db
+            .into(db.bookmarks)
+            .insert(
+              BookmarksCompanion.insert(
+                profileId: profileA.id,
+                curriculumId: _curriculumId,
+                trackId: trackIdA,
+                sefariaRef: _refForA,
+                updatedAt: DateTime.utc(2026, 5, 13, 12),
+              ),
+            );
+        final bookmarksForB = await (db.select(
+          db.bookmarks,
+        )..where((t) => t.profileId.equals(profileB.id))).get();
+        expect(bookmarksForB, isEmpty);
+      });
 
-      test(
-        'AC: cross-table isolation — a goal written under A does not '
-        'surface in any profile-scoped goal read for B',
-        () async {
-          await db
-              .into(db.goals)
-              .insert(
-                GoalsCompanion.insert(
-                  profileId: profileA.id,
-                  curriculumId: _curriculumId,
-                  trackId: trackIdA,
-                  createdAt: DateTime.utc(2026, 5, 13, 12),
-                  updatedAt: DateTime.utc(2026, 5, 13, 12),
-                ),
-              );
-          final goalsForB =
-              await (db.select(
-                db.goals,
-              )..where((t) => t.profileId.equals(profileB.id))).get();
-          expect(goalsForB, isEmpty);
-        },
-      );
+      test('AC: cross-table isolation — a goal written under A does not '
+          'surface in any profile-scoped goal read for B', () async {
+        await db
+            .into(db.goals)
+            .insert(
+              GoalsCompanion.insert(
+                profileId: profileA.id,
+                curriculumId: _curriculumId,
+                trackId: trackIdA,
+                createdAt: DateTime.utc(2026, 5, 13, 12),
+                updatedAt: DateTime.utc(2026, 5, 13, 12),
+              ),
+            );
+        final goalsForB = await (db.select(
+          db.goals,
+        )..where((t) => t.profileId.equals(profileB.id))).get();
+        expect(goalsForB, isEmpty);
+      });
     },
   );
 
@@ -460,41 +441,38 @@ void main() {
         },
       );
 
-      test(
-        'resolveVariant() routes (programId, goalType) tuples to the 4 '
-        'canonical variants — pins UX-DR10 routing logic for the future '
-        'TrackCardViewModel composer',
-        () {
-          expect(
-            resolveVariant(programId: 42, goalType: null),
-            TrackProgressVariant.programCalendar,
-          );
-          expect(
-            resolveVariant(programId: 42, goalType: 'deadline'),
-            TrackProgressVariant.programCalendar,
-            reason:
-                'A program track always wins, even when goalType is set — '
-                'the permutation matrix gates programId first.',
-          );
-          expect(
-            resolveVariant(programId: null, goalType: 'deadline'),
-            TrackProgressVariant.deadlineGoal,
-          );
-          expect(
-            resolveVariant(programId: null, goalType: 'pace'),
-            TrackProgressVariant.velocityGoal,
-          );
-          expect(
-            resolveVariant(programId: null, goalType: null),
-            TrackProgressVariant.momentum,
-          );
-          expect(
-            resolveVariant(programId: null, goalType: 'unknown'),
-            TrackProgressVariant.momentum,
-            reason: 'Unrecognised goalType falls through to momentum.',
-          );
-        },
-      );
+      test('resolveVariant() routes (programId, goalType) tuples to the 4 '
+          'canonical variants — pins UX-DR10 routing logic for the future '
+          'TrackCardViewModel composer', () {
+        expect(
+          resolveVariant(programId: 42, goalType: null),
+          TrackProgressVariant.programCalendar,
+        );
+        expect(
+          resolveVariant(programId: 42, goalType: 'deadline'),
+          TrackProgressVariant.programCalendar,
+          reason:
+              'A program track always wins, even when goalType is set — '
+              'the permutation matrix gates programId first.',
+        );
+        expect(
+          resolveVariant(programId: null, goalType: 'deadline'),
+          TrackProgressVariant.deadlineGoal,
+        );
+        expect(
+          resolveVariant(programId: null, goalType: 'pace'),
+          TrackProgressVariant.velocityGoal,
+        );
+        expect(
+          resolveVariant(programId: null, goalType: null),
+          TrackProgressVariant.momentum,
+        );
+        expect(
+          resolveVariant(programId: null, goalType: 'unknown'),
+          TrackProgressVariant.momentum,
+          reason: 'Unrecognised goalType falls through to momentum.',
+        );
+      });
 
       test(
         'TrackCard widget-tree canonical-layout assertion (UX-DR10)',
@@ -515,7 +493,8 @@ void main() {
           // Matches the DNI-378 / 27.2 skip-stub precedent for
           // StreakReducer which was activated once DNI-337 landed.
         },
-        skip: 'Activated after Story 26.6 / DNI-388 — TrackCardViewModel + '
+        skip:
+            'Activated after Story 26.6 / DNI-388 — TrackCardViewModel + '
             '5 canonical subcomponents do not yet exist on dev.',
       );
     },

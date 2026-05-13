@@ -60,25 +60,15 @@ void _stubFirestoreEmpty(_MockFirestoreDataSource mock) {
     () => mock.fetchProfilePrograms(pageSize: ps),
   ).thenAnswer((_) async => []);
   when(() => mock.fetchStreak()).thenAnswer((_) async => null);
-  when(
-    () => mock.fetchLedgerEntries(pageSize: ps),
-  ).thenAnswer((_) async => []);
+  when(() => mock.fetchLedgerEntries(pageSize: ps)).thenAnswer((_) async => []);
   when(
     () => mock.fetchCurriculumTracks(pageSize: ps),
   ).thenAnswer((_) async => []);
-  when(
-    () => mock.fetchCurriculumTracks(),
-  ).thenAnswer((_) async => []);
-  when(
-    () => mock.fetchNotificationSettings(),
-  ).thenAnswer((_) async => null);
-  when(
-    () => mock.fetchGamificationSettings(),
-  ).thenAnswer((_) async => null);
+  when(() => mock.fetchCurriculumTracks()).thenAnswer((_) async => []);
+  when(() => mock.fetchNotificationSettings()).thenAnswer((_) async => null);
+  when(() => mock.fetchGamificationSettings()).thenAnswer((_) async => null);
   when(() => mock.fetchUiPreferences()).thenAnswer((_) async => null);
-  when(
-    () => mock.fetchLearningOrder(pageSize: ps),
-  ).thenAnswer((_) async => []);
+  when(() => mock.fetchLearningOrder(pageSize: ps)).thenAnswer((_) async => []);
 }
 
 /// Creates a SyncEngine wired to the given database and Firestore mock.
@@ -118,138 +108,125 @@ void main() {
   //        all UNIQUE indexes exist, no migration error thrown.
   // --------------------------------------------------------------------------
 
-  group(
-    'Story 25.22 — AC1: Schema migration',
-    tags: ['story_25_22'],
-    () {
-      late UserDatabase db;
+  group('Story 25.22 — AC1: Schema migration', tags: ['story_25_22'], () {
+    late UserDatabase db;
 
-      setUp(() => db = inMemoryDb());
-      tearDown(() => db.close());
+    setUp(() => db = inMemoryDb());
+    tearDown(() => db.close());
 
-      test(
-        'UserDatabase.schemaVersion is 14 (E25 wipe-install boundary)',
-        () {
-          // schemaVersion is a Dart constant — no I/O needed.
-          expect(db.schemaVersion, equals(14));
-        },
+    test('UserDatabase.schemaVersion is 14 (E25 wipe-install boundary)', () {
+      // schemaVersion is a Dart constant — no I/O needed.
+      expect(db.schemaVersion, equals(14));
+    });
+
+    test(
+      'PRAGMA user_version matches schemaVersion 14 after first query',
+      () async {
+        // Trigger schema materialisation by issuing any query.
+        await db.customSelect('SELECT 1').get();
+
+        final row = await db.customSelect('PRAGMA user_version').getSingle();
+        expect(row.read<int>('user_version'), equals(14));
+      },
+    );
+
+    test('all 21 Drift-registered tables exist in sqlite_master', () async {
+      final rows = await db
+          .customSelect(
+            "SELECT name FROM sqlite_master WHERE type='table' ORDER BY name",
+          )
+          .get();
+      final tableNames = rows.map((r) => r.read<String>('name')).toSet();
+
+      // The 21 tables registered in @DriftDatabase(tables: [...]).
+      const expected = {
+        'accounts',
+        'learner_profiles',
+        'curriculum_tracks',
+        'curriculum_scopes',
+        'profile_programs',
+        'stage_definitions',
+        'point_configs',
+        'study_day_configs',
+        'completions',
+        'completion_events',
+        'daily_plans',
+        'learning_ledger',
+        'bookmarks',
+        'learning_order',
+        'track_learning_order',
+        'goals',
+        'streaks',
+        'streak_events',
+        'sync_queue',
+        'text_download_statuses',
+        'outbox',
+      };
+
+      for (final name in expected) {
+        expect(
+          tableNames,
+          contains(name),
+          reason: 'Table "$name" missing from schema v14',
+        );
+      }
+    });
+
+    test('UNIQUE indexes exist on completion_events, curriculum_tracks, '
+        'streak_events (DNI-323 append-only / dedup contracts)', () async {
+      Future<List<String>> uniqueIndexesOn(String table) async {
+        final rows = await db
+            .customSelect(
+              'SELECT name FROM pragma_index_list(?) WHERE "unique" = 1',
+              variables: [Variable.withString(table)],
+            )
+            .get();
+        return rows.map((r) => r.read<String>('name')).toList();
+      }
+
+      // completion_events must have its UNIQUE natural-key constraint.
+      final ceIndexes = await uniqueIndexesOn('completion_events');
+      expect(
+        ceIndexes,
+        isNotEmpty,
+        reason:
+            'completion_events must have at least one UNIQUE index '
+            '(DNI-323 append-only event table)',
       );
 
-      test(
-        'PRAGMA user_version matches schemaVersion 14 after first query',
-        () async {
-          // Trigger schema materialisation by issuing any query.
-          await db.customSelect('SELECT 1').get();
-
-          final row = await db.customSelect('PRAGMA user_version').getSingle();
-          expect(row.read<int>('user_version'), equals(14));
-        },
+      // curriculum_tracks: UNIQUE(profileId, curriculumId, trackType).
+      final ctIndexes = await uniqueIndexesOn('curriculum_tracks');
+      expect(
+        ctIndexes,
+        isNotEmpty,
+        reason:
+            'curriculum_tracks must have its UNIQUE composite index '
+            '(profileId, curriculumId, trackType)',
       );
 
-      test(
-        'all 21 Drift-registered tables exist in sqlite_master',
-        () async {
-          final rows = await db
-              .customSelect(
-                "SELECT name FROM sqlite_master WHERE type='table' ORDER BY name",
-              )
-              .get();
-          final tableNames = rows.map((r) => r.read<String>('name')).toSet();
-
-          // The 21 tables registered in @DriftDatabase(tables: [...]).
-          const expected = {
-            'accounts',
-            'learner_profiles',
-            'curriculum_tracks',
-            'curriculum_scopes',
-            'profile_programs',
-            'stage_definitions',
-            'point_configs',
-            'study_day_configs',
-            'completions',
-            'completion_events',
-            'daily_plans',
-            'learning_ledger',
-            'bookmarks',
-            'learning_order',
-            'track_learning_order',
-            'goals',
-            'streaks',
-            'streak_events',
-            'sync_queue',
-            'text_download_statuses',
-            'outbox',
-          };
-
-          for (final name in expected) {
-            expect(
-              tableNames,
-              contains(name),
-              reason: 'Table "$name" missing from schema v14',
-            );
-          }
-        },
+      // streak_events: UNIQUE natural-key (DNI-323).
+      final seIndexes = await uniqueIndexesOn('streak_events');
+      expect(
+        seIndexes,
+        isNotEmpty,
+        reason:
+            'streak_events must have at least one UNIQUE index '
+            '(DNI-323 dedup contract)',
       );
+    });
 
-      test(
-        'UNIQUE indexes exist on completion_events, curriculum_tracks, '
-        'streak_events (DNI-323 append-only / dedup contracts)',
-        () async {
-          Future<List<String>> uniqueIndexesOn(String table) async {
-            final rows = await db
-                .customSelect(
-                  'SELECT name FROM pragma_index_list(?) WHERE "unique" = 1',
-                  variables: [Variable.withString(table)],
-                )
-                .get();
-            return rows.map((r) => r.read<String>('name')).toList();
-          }
-
-          // completion_events must have its UNIQUE natural-key constraint.
-          final ceIndexes = await uniqueIndexesOn('completion_events');
-          expect(
-            ceIndexes,
-            isNotEmpty,
-            reason:
-                'completion_events must have at least one UNIQUE index '
-                '(DNI-323 append-only event table)',
-          );
-
-          // curriculum_tracks: UNIQUE(profileId, curriculumId, trackType).
-          final ctIndexes = await uniqueIndexesOn('curriculum_tracks');
-          expect(
-            ctIndexes,
-            isNotEmpty,
-            reason:
-                'curriculum_tracks must have its UNIQUE composite index '
-                '(profileId, curriculumId, trackType)',
-          );
-
-          // streak_events: UNIQUE natural-key (DNI-323).
-          final seIndexes = await uniqueIndexesOn('streak_events');
-          expect(
-            seIndexes,
-            isNotEmpty,
-            reason:
-                'streak_events must have at least one UNIQUE index '
-                '(DNI-323 dedup contract)',
-          );
-        },
-      );
-
-      test(
-        'no migration error is thrown on fresh install (onCreate only)',
-        () async {
-          // The MigrationStrategy uses only onCreate with createAll().
-          // Simply running a query confirms no error was raised.
-          await expectLater(
-            () => db.customSelect('SELECT count(*) FROM accounts').getSingle(),
-            returnsNormally,
-          );
-        },
-      );
-    },
-  );
+    test(
+      'no migration error is thrown on fresh install (onCreate only)',
+      () async {
+        // The MigrationStrategy uses only onCreate with createAll().
+        // Simply running a query confirms no error was raised.
+        await expectLater(
+          () => db.customSelect('SELECT count(*) FROM accounts').getSingle(),
+          returnsNormally,
+        );
+      },
+    );
+  });
 
   // --------------------------------------------------------------------------
   // AC2 — Onboarding flow: create account → create profile → activate
@@ -270,132 +247,119 @@ void main() {
 
       tearDown(() => db.close());
 
-      test(
-        'create account, profile and activate curriculum — all rows present '
-        'in local DB without exceptions',
-        () async {
-          final now = DateTime.utc(2026, 5, 13, 12);
+      test('create account, profile and activate curriculum — all rows present '
+          'in local DB without exceptions', () async {
+        final now = DateTime.utc(2026, 5, 13, 12);
 
-          // Step 1: Create account (cloud-born, simulating post-Firebase-auth).
-          final accountId = await db.into(db.accounts).insert(
-            AccountsCompanion.insert(
-              email: 'new-user@example.com',
-              firebaseUid: const Value('uid_firewall_001'),
-              tier: 'cloudBorn',
-              displayName: 'New User',
-              userMode: 'adult',
-              createdAt: now,
-              updatedAt: now,
-            ),
-          );
-          expect(accountId, greaterThan(0));
+        // Step 1: Create account (cloud-born, simulating post-Firebase-auth).
+        final accountId = await db
+            .into(db.accounts)
+            .insert(
+              AccountsCompanion.insert(
+                email: 'new-user@example.com',
+                firebaseUid: const Value('uid_firewall_001'),
+                tier: 'cloudBorn',
+                displayName: 'New User',
+                userMode: 'adult',
+                createdAt: now,
+                updatedAt: now,
+              ),
+            );
+        expect(accountId, greaterThan(0));
 
-          // Step 2: Create learner profile.
-          final profileId = await db.into(db.learnerProfiles).insert(
-            LearnerProfilesCompanion.insert(
-              accountId: accountId,
-              displayName: 'My Profile',
-              mode: 'adult',
-              createdAt: now,
-              updatedAt: now,
-            ),
-          );
-          expect(profileId, greaterThan(0));
+        // Step 2: Create learner profile.
+        final profileId = await db
+            .into(db.learnerProfiles)
+            .insert(
+              LearnerProfilesCompanion.insert(
+                accountId: accountId,
+                displayName: 'My Profile',
+                mode: 'adult',
+                createdAt: now,
+                updatedAt: now,
+              ),
+            );
+        expect(profileId, greaterThan(0));
 
-          // Step 3: Activate a curriculum (create track_config row).
-          final trackId = await db.into(db.curriculumTracks).insert(
-            CurriculumTracksCompanion.insert(
-              profileId: profileId,
-              curriculumId: CurriculumId.mishnayos.storageKey,
-              trackType: 'personal',
-              activatedAt: now,
-            ),
-          );
-          expect(trackId, greaterThan(0));
+        // Step 3: Activate a curriculum (create track_config row).
+        final trackId = await db
+            .into(db.curriculumTracks)
+            .insert(
+              CurriculumTracksCompanion.insert(
+                profileId: profileId,
+                curriculumId: CurriculumId.mishnayos.storageKey,
+                trackType: 'personal',
+                activatedAt: now,
+              ),
+            );
+        expect(trackId, greaterThan(0));
 
-          // Assert local DB state matches AC2 shape.
-          final profiles = await db
-              .select(db.learnerProfiles)
-              .get();
-          expect(
-            profiles,
-            hasLength(1),
-            reason: 'local DB must have exactly 1 learner_profiles row',
-          );
-          expect(profiles.first.displayName, equals('My Profile'));
+        // Assert local DB state matches AC2 shape.
+        final profiles = await db.select(db.learnerProfiles).get();
+        expect(
+          profiles,
+          hasLength(1),
+          reason: 'local DB must have exactly 1 learner_profiles row',
+        );
+        expect(profiles.first.displayName, equals('My Profile'));
 
-          final tracks = await db.select(db.curriculumTracks).get();
-          expect(
-            tracks,
-            hasLength(1),
-            reason: 'local DB must have exactly 1 curriculum_tracks row',
-          );
-          expect(
-            tracks.first.curriculumId,
-            equals(CurriculumId.mishnayos.storageKey),
-          );
-          expect(tracks.first.profileId, equals(profileId));
-        },
-      );
+        final tracks = await db.select(db.curriculumTracks).get();
+        expect(
+          tracks,
+          hasLength(1),
+          reason: 'local DB must have exactly 1 curriculum_tracks row',
+        );
+        expect(
+          tracks.first.curriculumId,
+          equals(CurriculumId.mishnayos.storageKey),
+        );
+        expect(tracks.first.profileId, equals(profileId));
+      });
 
-      test(
-        'SyncEngine.pullOnLaunch on empty Firestore does not throw '
-        'and leaves DB in a clean state',
-        () async {
-          final fsMock = _MockFirestoreDataSource();
-          _stubFirestoreEmpty(fsMock);
+      test('SyncEngine.pullOnLaunch on empty Firestore does not throw '
+          'and leaves DB in a clean state', () async {
+        final fsMock = _MockFirestoreDataSource();
+        _stubFirestoreEmpty(fsMock);
 
-          final engine = _makeSyncEngine(db, fsMock, logger);
-          addTearDown(() => engine.dispose());
+        final engine = _makeSyncEngine(db, fsMock, logger);
+        addTearDown(() => engine.dispose());
 
-          // pullOnLaunch must complete cleanly even with no remote data.
-          await expectLater(
-            () => engine.pullOnLaunch(),
-            returnsNormally,
-          );
+        // pullOnLaunch must complete cleanly even with no remote data.
+        await expectLater(() => engine.pullOnLaunch(), returnsNormally);
 
-          // DB should have no rows written (all collections were empty).
-          final profiles = await db.select(db.learnerProfiles).get();
-          expect(
-            profiles,
-            isEmpty,
-            reason: 'no profiles should be written when Firestore is empty',
-          );
-        },
-      );
+        // DB should have no rows written (all collections were empty).
+        final profiles = await db.select(db.learnerProfiles).get();
+        expect(
+          profiles,
+          isEmpty,
+          reason: 'no profiles should be written when Firestore is empty',
+        );
+      });
 
-      test(
-        'DeviceRestoreService with unauthenticated Firestore skips restore '
-        'without throwing',
-        () async {
-          final fsMock = _MockFirestoreDataSource();
-          when(() => fsMock.isAuthenticated).thenReturn(false);
-          when(() => fsMock.fetchCurriculumTracks()).thenAnswer(
-            (_) async => [],
-          );
+      test('DeviceRestoreService with unauthenticated Firestore skips restore '
+          'without throwing', () async {
+        final fsMock = _MockFirestoreDataSource();
+        when(() => fsMock.isAuthenticated).thenReturn(false);
+        when(() => fsMock.fetchCurriculumTracks()).thenAnswer((_) async => []);
 
-          final importService = _MockCurriculumImportService();
+        final importService = _MockCurriculumImportService();
 
-          final engine = _makeSyncEngine(db, fsMock, logger);
-          addTearDown(() => engine.dispose());
+        final engine = _makeSyncEngine(db, fsMock, logger);
+        addTearDown(() => engine.dispose());
 
-          final svc = DeviceRestoreService(
-            database: db,
-            syncEngine: engine,
-            firestoreDataSource: fsMock,
-            curriculumImportService: importService,
-            logger: logger,
-          );
-          addTearDown(() => svc.dispose());
+        final svc = DeviceRestoreService(
+          database: db,
+          syncEngine: engine,
+          firestoreDataSource: fsMock,
+          curriculumImportService: importService,
+          logger: logger,
+        );
+        addTearDown(() => svc.dispose());
 
-          // isNewDevice: no completions + not authenticated => no session.
-          // The service should either skip or complete without error.
-          await expectLater(
-            () => svc.restore(),
-            returnsNormally,
-          );
-        },
-      );
+        // isNewDevice: no completions + not authenticated => no session.
+        // The service should either skip or complete without error.
+        await expectLater(() => svc.restore(), returnsNormally);
+      });
     },
   );
 
@@ -404,161 +368,153 @@ void main() {
   //        writes the same profile and track row to a fresh local DB.
   // --------------------------------------------------------------------------
 
-  group(
-    'Story 25.22 — AC3: Second-device restore',
-    tags: ['story_25_22'],
-    () {
-      late UserDatabase db;
-      late AppLogger logger;
+  group('Story 25.22 — AC3: Second-device restore', tags: ['story_25_22'], () {
+    late UserDatabase db;
+    late AppLogger logger;
 
-      setUp(() {
-        db = inMemoryDb();
-        logger = AppLogger(Talker());
-      });
+    setUp(() {
+      db = inMemoryDb();
+      logger = AppLogger(Talker());
+    });
 
-      tearDown(() => db.close());
+    tearDown(() => db.close());
 
-      test(
-        'pullOnLaunch with Firestore learner_profile doc creates matching '
-        'local learner_profiles row',
-        () async {
-          final fsMock = _MockFirestoreDataSource();
-          _stubFirestoreEmpty(fsMock);
+    test('pullOnLaunch with Firestore learner_profile doc creates matching '
+        'local learner_profiles row', () async {
+      final fsMock = _MockFirestoreDataSource();
+      _stubFirestoreEmpty(fsMock);
 
-          // Override fetchLearnerProfiles to return one profile doc.
-          const remoteProfileId = 42;
-          final profileTs = DateTime.utc(2026, 5, 1);
-          when(() => fsMock.fetchLearnerProfiles()).thenAnswer(
-            (_) async => [
-              {
-                'id': remoteProfileId,
-                'account_id': 1,
-                'display_name': 'Restored Profile',
-                'mode': 'adult',
-                'avatar_index': 0,
-                'created_at': profileTs,
-                'updated_at': profileTs,
-              },
-            ],
-          );
-
-          final engine = _makeSyncEngine(db, fsMock, logger);
-          addTearDown(() => engine.dispose());
-
-          await engine.pullOnLaunch();
-
-          // Verify the restored profile row exists with the correct id.
-          final profiles = await db.select(db.learnerProfiles).get();
-          expect(
-            profiles.any((p) => p.id == remoteProfileId),
-            isTrue,
-            reason:
-                'second device must have the same profileId ($remoteProfileId) '
-                'after pullOnLaunch restores the Firestore doc',
-          );
-          final profile = profiles.firstWhere((p) => p.id == remoteProfileId);
-          expect(profile.displayName, equals('Restored Profile'));
-        },
+      // Override fetchLearnerProfiles to return one profile doc.
+      const remoteProfileId = 42;
+      final profileTs = DateTime.utc(2026, 5, 1);
+      when(() => fsMock.fetchLearnerProfiles()).thenAnswer(
+        (_) async => [
+          {
+            'id': remoteProfileId,
+            'account_id': 1,
+            'display_name': 'Restored Profile',
+            'mode': 'adult',
+            'avatar_index': 0,
+            'created_at': profileTs,
+            'updated_at': profileTs,
+          },
+        ],
       );
 
-      test(
-        'pullOnLaunch with Firestore curriculum_tracks doc creates matching '
-        'local curriculum_tracks row on second device',
-        () async {
-          const remoteProfileId = 42;
-          const remoteCurriculumId = 'mishnayos';
-          const remoteTrackType = 'personal';
-          final activatedAt = DateTime.utc(2026, 5, 1);
+      final engine = _makeSyncEngine(db, fsMock, logger);
+      addTearDown(() => engine.dispose());
 
-          final fsMock = _MockFirestoreDataSource();
-          _stubFirestoreEmpty(fsMock);
+      await engine.pullOnLaunch();
 
-          // Return the profile so the sync engine resolves a profileId.
-          when(() => fsMock.fetchLearnerProfiles()).thenAnswer(
-            (_) async => [
-              {
-                'id': remoteProfileId,
-                'account_id': 1,
-                'display_name': 'Restored Profile',
-                'mode': 'adult',
-                'avatar_index': 0,
-                // Use DateTime directly — _parseTimestamp handles DateTime,
-                // String, and Firestore Timestamp but NOT raw int millis.
-                'created_at': activatedAt,
-                'updated_at': activatedAt,
-              },
-            ],
-          );
+      // Verify the restored profile row exists with the correct id.
+      final profiles = await db.select(db.learnerProfiles).get();
+      expect(
+        profiles.any((p) => p.id == remoteProfileId),
+        isTrue,
+        reason:
+            'second device must have the same profileId ($remoteProfileId) '
+            'after pullOnLaunch restores the Firestore doc',
+      );
+      final profile = profiles.firstWhere((p) => p.id == remoteProfileId);
+      expect(profile.displayName, equals('Restored Profile'));
+    });
 
-          // Return one curriculum track for the profile's sub-tree pull.
-          const ps = FirestoreDataSource.defaultPageSize;
-          when(
-            () => fsMock.fetchCurriculumTracks(pageSize: ps),
-          ).thenAnswer(
-            (_) async => [
-              {
-                'curriculum_id': remoteCurriculumId,
-                'track_type': remoteTrackType,
-                'is_active': true,
-                // Use DateTime directly — _parseTimestamp handles DateTime but
-                // NOT raw int millisecondsSinceEpoch.
-                'activated_at': activatedAt,
-              },
-            ],
-          );
+    test('pullOnLaunch with Firestore curriculum_tracks doc creates matching '
+        'local curriculum_tracks row on second device', () async {
+      const remoteProfileId = 42;
+      const remoteCurriculumId = 'mishnayos';
+      const remoteTrackType = 'personal';
+      final activatedAt = DateTime.utc(2026, 5, 1);
 
-          final engine = _makeSyncEngine(db, fsMock, logger);
-          addTearDown(() => engine.dispose());
+      final fsMock = _MockFirestoreDataSource();
+      _stubFirestoreEmpty(fsMock);
 
-          await engine.pullOnLaunch();
-
-          // Verify the curriculum_tracks row is present on "second device".
-          final tracks = await db.select(db.curriculumTracks).get();
-          expect(
-            tracks.any(
-              (t) =>
-                  t.profileId == remoteProfileId &&
-                  t.curriculumId == remoteCurriculumId &&
-                  t.trackType == remoteTrackType,
-            ),
-            isTrue,
-            reason:
-                'second device must have the restored curriculum_tracks row '
-                '(profileId=$remoteProfileId, curriculumId=$remoteCurriculumId)',
-          );
-        },
+      // Return the profile so the sync engine resolves a profileId.
+      when(() => fsMock.fetchLearnerProfiles()).thenAnswer(
+        (_) async => [
+          {
+            'id': remoteProfileId,
+            'account_id': 1,
+            'display_name': 'Restored Profile',
+            'mode': 'adult',
+            'avatar_index': 0,
+            // Use DateTime directly — _parseTimestamp handles DateTime,
+            // String, and Firestore Timestamp but NOT raw int millis.
+            'created_at': activatedAt,
+            'updated_at': activatedAt,
+          },
+        ],
       );
 
-      test(
-        'two in-memory DB instances are independent — second device starts clean',
-        () async {
-          // Device 1 has data; device 2 (second inMemoryDb()) must be empty.
-          final device1 = inMemoryDb();
-          addTearDown(() => device1.close());
-
-          final now = DateTime.utc(2026, 5, 13, 12);
-          await device1.into(device1.curriculumTracks).insert(
-            CurriculumTracksCompanion.insert(
-              profileId: 1,
-              curriculumId: CurriculumId.bavli.storageKey,
-              trackType: 'personal',
-              activatedAt: now,
-            ),
-          );
-
-          final device2 = inMemoryDb();
-          addTearDown(() => device2.close());
-
-          final device2Tracks = await device2.select(device2.curriculumTracks).get();
-          expect(
-            device2Tracks,
-            isEmpty,
-            reason:
-                'second in-memory DB must be a completely fresh install '
-                '(no data leakage from device 1)',
-          );
-        },
+      // Return one curriculum track for the profile's sub-tree pull.
+      const ps = FirestoreDataSource.defaultPageSize;
+      when(() => fsMock.fetchCurriculumTracks(pageSize: ps)).thenAnswer(
+        (_) async => [
+          {
+            'curriculum_id': remoteCurriculumId,
+            'track_type': remoteTrackType,
+            'is_active': true,
+            // Use DateTime directly — _parseTimestamp handles DateTime but
+            // NOT raw int millisecondsSinceEpoch.
+            'activated_at': activatedAt,
+          },
+        ],
       );
-    },
-  );
+
+      final engine = _makeSyncEngine(db, fsMock, logger);
+      addTearDown(() => engine.dispose());
+
+      await engine.pullOnLaunch();
+
+      // Verify the curriculum_tracks row is present on "second device".
+      final tracks = await db.select(db.curriculumTracks).get();
+      expect(
+        tracks.any(
+          (t) =>
+              t.profileId == remoteProfileId &&
+              t.curriculumId == remoteCurriculumId &&
+              t.trackType == remoteTrackType,
+        ),
+        isTrue,
+        reason:
+            'second device must have the restored curriculum_tracks row '
+            '(profileId=$remoteProfileId, curriculumId=$remoteCurriculumId)',
+      );
+    });
+
+    test(
+      'two in-memory DB instances are independent — second device starts clean',
+      () async {
+        // Device 1 has data; device 2 (second inMemoryDb()) must be empty.
+        final device1 = inMemoryDb();
+        addTearDown(() => device1.close());
+
+        final now = DateTime.utc(2026, 5, 13, 12);
+        await device1
+            .into(device1.curriculumTracks)
+            .insert(
+              CurriculumTracksCompanion.insert(
+                profileId: 1,
+                curriculumId: CurriculumId.bavli.storageKey,
+                trackType: 'personal',
+                activatedAt: now,
+              ),
+            );
+
+        final device2 = inMemoryDb();
+        addTearDown(() => device2.close());
+
+        final device2Tracks = await device2
+            .select(device2.curriculumTracks)
+            .get();
+        expect(
+          device2Tracks,
+          isEmpty,
+          reason:
+              'second in-memory DB must be a completely fresh install '
+              '(no data leakage from device 1)',
+        );
+      },
+    );
+  });
 }

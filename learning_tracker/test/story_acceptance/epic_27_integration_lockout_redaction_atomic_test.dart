@@ -36,7 +36,10 @@ _MockSecureStorage _createInMemorySecureStorage() {
   final store = <String, String>{};
 
   when(
-    () => mock.write(key: any(named: 'key'), value: any(named: 'value')),
+    () => mock.write(
+      key: any(named: 'key'),
+      value: any(named: 'value'),
+    ),
   ).thenAnswer((invocation) async {
     final key = invocation.namedArguments[#key] as String;
     final value = invocation.namedArguments[#value] as String?;
@@ -92,40 +95,34 @@ void main() {
         resetLocalDayClock();
       });
 
-      test(
-        '5 failed attempts trigger the 15-minute cooldown — '
-        'next attempt throws PinLockoutException',
-        () async {
-          // 5 wrong PINs — the fifth flips the service into lockout.
-          for (var i = 0; i < 5; i++) {
-            expect(await pinService.verifyParentPin('0000'), isFalse);
-          }
-          // Even the *correct* PIN is rejected while the cooldown is active.
-          await expectLater(
-            pinService.verifyParentPin('1234'),
-            throwsA(isA<PinLockoutException>()),
-          );
-          final remaining = await pinService.getParentLockoutRemainingMinutes();
-          expect(remaining, equals(15));
-        },
-      );
+      test('5 failed attempts trigger the 15-minute cooldown — '
+          'next attempt throws PinLockoutException', () async {
+        // 5 wrong PINs — the fifth flips the service into lockout.
+        for (var i = 0; i < 5; i++) {
+          expect(await pinService.verifyParentPin('0000'), isFalse);
+        }
+        // Even the *correct* PIN is rejected while the cooldown is active.
+        await expectLater(
+          pinService.verifyParentPin('1234'),
+          throwsA(isA<PinLockoutException>()),
+        );
+        final remaining = await pinService.getParentLockoutRemainingMinutes();
+        expect(remaining, equals(15));
+      });
 
-      test(
-        'attempts during the cooldown window are rejected — '
-        'tested at the boundary (14m59s after lockout)',
-        () async {
-          for (var i = 0; i < 5; i++) {
-            await pinService.verifyParentPin('0000');
-          }
+      test('attempts during the cooldown window are rejected — '
+          'tested at the boundary (14m59s after lockout)', () async {
+        for (var i = 0; i < 5; i++) {
+          await pinService.verifyParentPin('0000');
+        }
 
-          // Advance to 14m59s — still inside the 15-minute window.
-          fakeClock.advance(const Duration(minutes: 14, seconds: 59));
-          await expectLater(
-            pinService.verifyParentPin('1234'),
-            throwsA(isA<PinLockoutException>()),
-          );
-        },
-      );
+        // Advance to 14m59s — still inside the 15-minute window.
+        fakeClock.advance(const Duration(minutes: 14, seconds: 59));
+        await expectLater(
+          pinService.verifyParentPin('1234'),
+          throwsA(isA<PinLockoutException>()),
+        );
+      });
 
       test(
         'the correct PIN is accepted once the 15-minute cooldown elapses',
@@ -159,27 +156,21 @@ void main() {
 
       setUp(() {
         // A fresh Talker per test so history assertions are deterministic.
-        talker = Talker(
-          settings: TalkerSettings(useConsoleLogs: false),
-        );
+        talker = Talker(settings: TalkerSettings(useConsoleLogs: false));
         logger = AppLogger(talker);
       });
 
-      String lastMessage() =>
-          talker.history.last.generateTextMessage();
+      String lastMessage() => talker.history.last.generateTextMessage();
 
-      test(
-        'event string is preserved verbatim — '
-        '`PIN setup screen opened` is NOT redacted by substring match',
-        () {
-          logger.info(event: 'PIN setup screen opened');
-          // The event text contains the word "PIN" — the legacy bug used a
-          // substring scan that would have redacted the whole line. The new
-          // redactor matches *keys*, never message content.
-          expect(lastMessage(), contains('PIN setup screen opened'));
-          expect(lastMessage(), isNot(contains('[REDACTED]')));
-        },
-      );
+      test('event string is preserved verbatim — '
+          '`PIN setup screen opened` is NOT redacted by substring match', () {
+        logger.info(event: 'PIN setup screen opened');
+        // The event text contains the word "PIN" — the legacy bug used a
+        // substring scan that would have redacted the whole line. The new
+        // redactor matches *keys*, never message content.
+        expect(lastMessage(), contains('PIN setup screen opened'));
+        expect(lastMessage(), isNot(contains('[REDACTED]')));
+      });
 
       test(
         'sensitive field values are redacted; non-sensitive values pass through',
@@ -207,29 +198,26 @@ void main() {
         },
       );
 
-      test(
-        'every key in PiiRedactor.sensitiveKeys is redacted',
-        () {
-          // Build a fields map containing every sensitive key — values are
-          // unique markers so we can confirm none of them leaks into the
-          // rendered log line.
-          final fields = <String, dynamic>{
-            for (final k in PiiRedactor.sensitiveKeys) k: 'SENSITIVE_$k',
-          };
-          logger.info(event: 'sensitive_field_sweep', fields: fields);
-          final msg = lastMessage();
+      test('every key in PiiRedactor.sensitiveKeys is redacted', () {
+        // Build a fields map containing every sensitive key — values are
+        // unique markers so we can confirm none of them leaks into the
+        // rendered log line.
+        final fields = <String, dynamic>{
+          for (final k in PiiRedactor.sensitiveKeys) k: 'SENSITIVE_$k',
+        };
+        logger.info(event: 'sensitive_field_sweep', fields: fields);
+        final msg = lastMessage();
 
-          for (final k in PiiRedactor.sensitiveKeys) {
-            expect(
-              msg,
-              isNot(contains('SENSITIVE_$k')),
-              reason: 'Key "$k" value must be redacted in log output.',
-            );
-          }
-          // Event itself is intact.
-          expect(msg, contains('sensitive_field_sweep'));
-        },
-      );
+        for (final k in PiiRedactor.sensitiveKeys) {
+          expect(
+            msg,
+            isNot(contains('SENSITIVE_$k')),
+            reason: 'Key "$k" value must be redacted in log output.',
+          );
+        }
+        // Event itself is intact.
+        expect(msg, contains('sensitive_field_sweep'));
+      });
 
       test(
         'legacy string API still scrubs bare email addresses from messages',

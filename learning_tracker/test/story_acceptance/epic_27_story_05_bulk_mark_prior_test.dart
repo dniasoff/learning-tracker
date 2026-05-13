@@ -34,194 +34,185 @@ void main() {
     registerFallbackValue(CurriculumId.mishnayos);
   });
 
-  group(
-    'Story 27.5 — bulk_mark_prior_does_not_credit_streak',
-    () {
-      late UserDatabase db;
-      late _MockSyncEngine sync;
-      late _MockContentRepository content;
-      late CompletionRepositoryImpl repo;
-      late int profileId;
-      late int trackId;
+  group('Story 27.5 — bulk_mark_prior_does_not_credit_streak', () {
+    late UserDatabase db;
+    late _MockSyncEngine sync;
+    late _MockContentRepository content;
+    late CompletionRepositoryImpl repo;
+    late int profileId;
+    late int trackId;
 
-      const curriculumId = 'mishnayos';
-      const trackType = 'personal';
+    const curriculumId = 'mishnayos';
+    const trackType = 'personal';
 
-      // Frozen "today" for the reducer; the test must not depend on
-      // wall-clock time.
-      final today = DateTime.utc(2026, 5, 13, 9);
+    // Frozen "today" for the reducer; the test must not depend on
+    // wall-clock time.
+    final today = DateTime.utc(2026, 5, 13, 9);
 
-      setUp(() async {
-        db = createTestDatabase();
-        sync = _MockSyncEngine();
-        content = _MockContentRepository();
+    setUp(() async {
+      db = createTestDatabase();
+      sync = _MockSyncEngine();
+      content = _MockContentRepository();
 
-        when(
-          () => content.getContentForCurriculum(any()),
-        ).thenAnswer((_) async => []);
-        when(
-          () => sync.pushCompletion(any()),
-        ).thenAnswer((_) async => Future.value());
-        when(
-          () => sync.pushCompletionsBatch(any()),
-        ).thenAnswer((_) async => Future.value());
-        when(
-          () => sync.pushBookmark(any()),
-        ).thenAnswer((_) async => Future.value());
+      when(
+        () => content.getContentForCurriculum(any()),
+      ).thenAnswer((_) async => []);
+      when(
+        () => sync.pushCompletion(any()),
+      ).thenAnswer((_) async => Future.value());
+      when(
+        () => sync.pushCompletionsBatch(any()),
+      ).thenAnswer((_) async => Future.value());
+      when(
+        () => sync.pushBookmark(any()),
+      ).thenAnswer((_) async => Future.value());
 
-        final now = DateTime.utc(2026, 5, 13);
-        final profile = await db
-            .into(db.learnerProfiles)
-            .insertReturning(
-              LearnerProfilesCompanion.insert(
-                accountId: 1,
-                displayName: 'Tester',
-                // Adult mode — keeps the reward-milestone branch off the
-                // hot path so we are testing the streak-tee behaviour
-                // in isolation.
-                mode: 'adult',
-                createdAt: now,
-                updatedAt: now,
-              ),
-            );
-        profileId = profile.id;
-
-        final track = await db
-            .into(db.curriculumTracks)
-            .insertReturning(
-              CurriculumTracksCompanion.insert(
-                profileId: profileId,
-                curriculumId: curriculumId,
-                trackType: trackType,
-                activatedAt: now,
-              ),
-            );
-        trackId = track.id;
-
-        await db
-            .into(db.goals)
-            .insert(
-              GoalsCompanion.insert(
-                profileId: profileId,
-                curriculumId: curriculumId,
-                trackId: trackId,
-                createdAt: now,
-                updatedAt: now,
-              ),
-            );
-
-        repo = CompletionRepositoryImpl(
-          database: db,
-          syncEngine: sync,
-          contentRepository: content,
-          activeProfileId: profileId,
-        );
-      });
-
-      tearDown(() async {
-        await db.close();
-      });
-
-      test(
-        '50 items × 3 stages with awardGamificationPoints=false → '
-        'currentStreak==0, maxStreak==0, zero streak_events',
-        () async {
-          final sefariaRefs = List<String>.generate(
-            50,
-            (i) => 'Mishnah Berachot ${(i ~/ 10) + 1}:${(i % 10) + 1}',
+      final now = DateTime.utc(2026, 5, 13);
+      final profile = await db
+          .into(db.learnerProfiles)
+          .insertReturning(
+            LearnerProfilesCompanion.insert(
+              accountId: 1,
+              displayName: 'Tester',
+              // Adult mode — keeps the reward-milestone branch off the
+              // hot path so we are testing the streak-tee behaviour
+              // in isolation.
+              mode: 'adult',
+              createdAt: now,
+              updatedAt: now,
+            ),
           );
+      profileId = profile.id;
 
-          for (final stageId in const [1, 2, 3]) {
-            await repo.bulkMarkComplete(
-              BulkCompletionRequest(
-                curriculumId: curriculumId,
-                sefariaRefs: sefariaRefs,
-                stageId: stageId,
-                trackType: trackType,
-                awardGamificationPoints: false,
-              ),
-            );
-          }
-
-          // 150 completion rows should exist (50 refs × 3 stages).
-          final completionRows = await (db.select(
-            db.completions,
-          )..where((t) => t.profileId.equals(profileId))).get();
-          expect(
-            completionRows,
-            hasLength(150),
-            reason:
-                'Sanity: bulk-mark-prior must still persist completions; '
-                'streak is the only side-effect we expect to suppress.',
-          );
-
-          // AC: zero rows in streak_events attributable to the batch.
-          // We check this BEFORE invoking StreakStateProvider so the
-          // `StreakRestorer` (which synthesises rows from `completions`
-          // on first read) does not pollute the count we are asserting.
-          final streakRows = await (db.select(
-            db.streakEvents,
-          )..where((t) => t.profileId.equals(profileId))).get();
-          expect(
-            streakRows,
-            isEmpty,
-            reason:
-                'bulk-mark-prior must not append `streak_events` at any '
-                'stage — those rows would credit a streak the user did '
-                'not actually earn (NFR13).',
-          );
-
-          // AC: derived streak state is zero in both fields.
-          //
-          // Pinning the reducer directly against the empty event log
-          // is what NFR13 is really asking: replay over the events
-          // *attributable to the batch* must yield zero. The
-          // `StreakStateProvider` path additionally exercises
-          // `StreakRestorer`, which is independently the subject of
-          // Story 26.27 (and Story 27.6's cloud-restore test) — its
-          // behaviour on prior-only completion logs is verified there,
-          // not here, to keep this canary focused on the one bug it
-          // exists to catch.
-          final reducerState = const StreakReducer().reduce(
-            const <StreakEvent>[],
-            today: today,
-          );
-          expect(reducerState.currentStreak, 0);
-          expect(reducerState.maxStreak, 0);
-        },
-      );
-
-      test(
-        'happy-path single completion (awardGamificationPoints=true) DOES '
-        'credit a streak — guards against accidentally over-fixing',
-        () async {
-          // This guard test keeps the production behaviour honest: the
-          // streak-tee is suppressed *only* for prior-learning bulk marks.
-          // A normal "I learned this today" mark must still credit.
-          await repo.markComplete(
-            const CompletionRequest(
+      final track = await db
+          .into(db.curriculumTracks)
+          .insertReturning(
+            CurriculumTracksCompanion.insert(
+              profileId: profileId,
               curriculumId: curriculumId,
-              sefariaRef: 'Mishnah Berachot 1:1',
-              stageId: 1,
               trackType: trackType,
+              activatedAt: now,
+            ),
+          );
+      trackId = track.id;
+
+      await db
+          .into(db.goals)
+          .insert(
+            GoalsCompanion.insert(
+              profileId: profileId,
+              curriculumId: curriculumId,
+              trackId: trackId,
+              createdAt: now,
+              updatedAt: now,
             ),
           );
 
-          final streakRows = await (db.select(
-            db.streakEvents,
-          )..where((t) => t.profileId.equals(profileId))).get();
-          expect(streakRows, hasLength(1));
-
-          final state = await StreakStateProvider(
-            db: db,
-            clock: FakeLocalDayClock(today),
-          ).read(profileId: profileId);
-          // The completion landed "today" (DateTimeFactory.nowUtc() at
-          // test execution time) — which is at most a few seconds before
-          // `today`. The reducer counts that UTC day as the current run.
-          expect(state.maxStreak, 1);
-        },
+      repo = CompletionRepositoryImpl(
+        database: db,
+        syncEngine: sync,
+        contentRepository: content,
+        activeProfileId: profileId,
       );
-    },
-  );
+    });
+
+    tearDown(() async {
+      await db.close();
+    });
+
+    test('50 items × 3 stages with awardGamificationPoints=false → '
+        'currentStreak==0, maxStreak==0, zero streak_events', () async {
+      final sefariaRefs = List<String>.generate(
+        50,
+        (i) => 'Mishnah Berachot ${(i ~/ 10) + 1}:${(i % 10) + 1}',
+      );
+
+      for (final stageId in const [1, 2, 3]) {
+        await repo.bulkMarkComplete(
+          BulkCompletionRequest(
+            curriculumId: curriculumId,
+            sefariaRefs: sefariaRefs,
+            stageId: stageId,
+            trackType: trackType,
+            awardGamificationPoints: false,
+          ),
+        );
+      }
+
+      // 150 completion rows should exist (50 refs × 3 stages).
+      final completionRows = await (db.select(
+        db.completions,
+      )..where((t) => t.profileId.equals(profileId))).get();
+      expect(
+        completionRows,
+        hasLength(150),
+        reason:
+            'Sanity: bulk-mark-prior must still persist completions; '
+            'streak is the only side-effect we expect to suppress.',
+      );
+
+      // AC: zero rows in streak_events attributable to the batch.
+      // We check this BEFORE invoking StreakStateProvider so the
+      // `StreakRestorer` (which synthesises rows from `completions`
+      // on first read) does not pollute the count we are asserting.
+      final streakRows = await (db.select(
+        db.streakEvents,
+      )..where((t) => t.profileId.equals(profileId))).get();
+      expect(
+        streakRows,
+        isEmpty,
+        reason:
+            'bulk-mark-prior must not append `streak_events` at any '
+            'stage — those rows would credit a streak the user did '
+            'not actually earn (NFR13).',
+      );
+
+      // AC: derived streak state is zero in both fields.
+      //
+      // Pinning the reducer directly against the empty event log
+      // is what NFR13 is really asking: replay over the events
+      // *attributable to the batch* must yield zero. The
+      // `StreakStateProvider` path additionally exercises
+      // `StreakRestorer`, which is independently the subject of
+      // Story 26.27 (and Story 27.6's cloud-restore test) — its
+      // behaviour on prior-only completion logs is verified there,
+      // not here, to keep this canary focused on the one bug it
+      // exists to catch.
+      final reducerState = const StreakReducer().reduce(
+        const <StreakEvent>[],
+        today: today,
+      );
+      expect(reducerState.currentStreak, 0);
+      expect(reducerState.maxStreak, 0);
+    });
+
+    test('happy-path single completion (awardGamificationPoints=true) DOES '
+        'credit a streak — guards against accidentally over-fixing', () async {
+      // This guard test keeps the production behaviour honest: the
+      // streak-tee is suppressed *only* for prior-learning bulk marks.
+      // A normal "I learned this today" mark must still credit.
+      await repo.markComplete(
+        const CompletionRequest(
+          curriculumId: curriculumId,
+          sefariaRef: 'Mishnah Berachot 1:1',
+          stageId: 1,
+          trackType: trackType,
+        ),
+      );
+
+      final streakRows = await (db.select(
+        db.streakEvents,
+      )..where((t) => t.profileId.equals(profileId))).get();
+      expect(streakRows, hasLength(1));
+
+      final state = await StreakStateProvider(
+        db: db,
+        clock: FakeLocalDayClock(today),
+      ).read(profileId: profileId);
+      // The completion landed "today" (DateTimeFactory.nowUtc() at
+      // test execution time) — which is at most a few seconds before
+      // `today`. The reducer counts that UTC day as the current run.
+      expect(state.maxStreak, 1);
+    });
+  });
 }

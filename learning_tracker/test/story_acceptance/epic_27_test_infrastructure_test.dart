@@ -187,51 +187,54 @@ void main() {
 
   // ─── Story 27.3 — DAO tests use real in-memory Drift (DNI-379) ───────────
 
-  group('Story 27.3 — DAO + repository test suite uses real in-memory Drift',
-      tags: ['story_27_3'], () {
-    late Directory daoSrcDir;
-    late Directory daoTestDir;
-    late Directory testRoot;
+  group(
+    'Story 27.3 — DAO + repository test suite uses real in-memory Drift',
+    tags: ['story_27_3'],
+    () {
+      late Directory daoSrcDir;
+      late Directory daoTestDir;
+      late Directory testRoot;
 
-    setUpAll(() {
-      // The test runs from learning_tracker/ when invoked via
-      // `flutter test`, or from the repo root when invoked via
-      // `flutter test learning_tracker/test/…`. Detect which.
-      final candidates = [
-        Directory('lib/core/database/daos'),
-        Directory('learning_tracker/lib/core/database/daos'),
-      ];
-      daoSrcDir = candidates.firstWhere(
-        (d) => d.existsSync(),
-        orElse: () => throw StateError(
-          'DAO source directory not found; searched: '
-          '${candidates.map((d) => d.path)}',
-        ),
-      );
-      final testRoots = [Directory('test'), Directory('learning_tracker/test')];
-      testRoot = testRoots.firstWhere(
-        (d) => d.existsSync(),
-        orElse: () => throw StateError(
-          'test/ directory not found; searched: '
-          '${testRoots.map((d) => d.path)}',
-        ),
-      );
-      daoTestDir = Directory('${testRoot.path}/core/database/daos');
-    });
+      setUpAll(() {
+        // The test runs from learning_tracker/ when invoked via
+        // `flutter test`, or from the repo root when invoked via
+        // `flutter test learning_tracker/test/…`. Detect which.
+        final candidates = [
+          Directory('lib/core/database/daos'),
+          Directory('learning_tracker/lib/core/database/daos'),
+        ];
+        daoSrcDir = candidates.firstWhere(
+          (d) => d.existsSync(),
+          orElse: () => throw StateError(
+            'DAO source directory not found; searched: '
+            '${candidates.map((d) => d.path)}',
+          ),
+        );
+        final testRoots = [
+          Directory('test'),
+          Directory('learning_tracker/test'),
+        ];
+        testRoot = testRoots.firstWhere(
+          (d) => d.existsSync(),
+          orElse: () => throw StateError(
+            'test/ directory not found; searched: '
+            '${testRoots.map((d) => d.path)}',
+          ),
+        );
+        daoTestDir = Directory('${testRoot.path}/core/database/daos');
+      });
 
-    /// Lists DAO source files (`*_dao.dart`) excluding generated `.g.dart`.
-    List<File> listDaoSources() {
-      return daoSrcDir
-          .listSync()
-          .whereType<File>()
-          .where((f) => f.path.endsWith('_dao.dart'))
-          .toList();
-    }
+      /// Lists DAO source files (`*_dao.dart`) excluding generated `.g.dart`.
+      List<File> listDaoSources() {
+        return daoSrcDir
+            .listSync()
+            .whereType<File>()
+            .where((f) => f.path.endsWith('_dao.dart'))
+            .toList();
+      }
 
-    test(
-      'AC1: every DAO has a sibling test file under '
-      'test/core/database/daos/',
-      () {
+      test('AC1: every DAO has a sibling test file under '
+          'test/core/database/daos/', () {
         final daos = listDaoSources();
         expect(
           daos,
@@ -241,8 +244,7 @@ void main() {
 
         final missing = <String>[];
         for (final dao in daos) {
-          final base = dao.uri.pathSegments.last
-              .replaceAll('.dart', '');
+          final base = dao.uri.pathSegments.last.replaceAll('.dart', '');
           final testFile = File('${daoTestDir.path}/${base}_test.dart');
           if (!testFile.existsSync()) missing.add(base);
         }
@@ -254,39 +256,36 @@ void main() {
               'These DAOs are missing test files at '
               '${daoTestDir.path}/<dao>_test.dart: $missing',
         );
-      },
-    );
+      });
 
-    test(
-      'AC2: every DAO test file uses inMemoryDb() from drift_memory.dart',
-      () {
-        final daos = listDaoSources();
-        final notUsingHelper = <String>[];
-        for (final dao in daos) {
-          final base = dao.uri.pathSegments.last
-              .replaceAll('.dart', '');
-          final testFile = File('${daoTestDir.path}/${base}_test.dart');
-          if (!testFile.existsSync()) continue; // AC1 reports this
-          final src = testFile.readAsStringSync();
-          final usesHelper = src.contains('inMemoryDb()')
-              && src.contains('helpers/drift_memory.dart');
-          if (!usesHelper) notUsingHelper.add(base);
-        }
-        expect(
-          notUsingHelper,
-          isEmpty,
-          reason:
-              'These DAO test files must use inMemoryDb() from '
-              'test/helpers/drift_memory.dart: $notUsingHelper. '
-              'Replace inline UserDatabase(NativeDatabase.memory()) and '
-              'older createTestDatabase() calls with inMemoryDb().',
-        );
-      },
-    );
+      test(
+        'AC2: every DAO test file uses inMemoryDb() from drift_memory.dart',
+        () {
+          final daos = listDaoSources();
+          final notUsingHelper = <String>[];
+          for (final dao in daos) {
+            final base = dao.uri.pathSegments.last.replaceAll('.dart', '');
+            final testFile = File('${daoTestDir.path}/${base}_test.dart');
+            if (!testFile.existsSync()) continue; // AC1 reports this
+            final src = testFile.readAsStringSync();
+            final usesHelper =
+                src.contains('inMemoryDb()') &&
+                src.contains('helpers/drift_memory.dart');
+            if (!usesHelper) notUsingHelper.add(base);
+          }
+          expect(
+            notUsingHelper,
+            isEmpty,
+            reason:
+                'These DAO test files must use inMemoryDb() from '
+                'test/helpers/drift_memory.dart: $notUsingHelper. '
+                'Replace inline UserDatabase(NativeDatabase.memory()) and '
+                'older createTestDatabase() calls with inMemoryDb().',
+          );
+        },
+      );
 
-    test(
-      'AC3: zero MockUserDatabase references survive in test/',
-      () {
+      test('AC3: zero MockUserDatabase references survive in test/', () {
         final offenders = <String>[];
         for (final entity in testRoot.listSync(recursive: true)) {
           if (entity is! File) continue;
@@ -310,7 +309,7 @@ void main() {
               'These files still reference it: $offenders. Replace '
               'mocked instances with real inMemoryDb()-backed databases.',
         );
-      },
-    );
-  });
+      });
+    },
+  );
 }

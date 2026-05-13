@@ -16,7 +16,9 @@ void main() {
     db = inMemoryDb();
     // The service defaults to profileId=0, so we own a track at that
     // profile to satisfy the completions.trackId FK.
-    trackId = await db.into(db.curriculumTracks).insert(
+    trackId = await db
+        .into(db.curriculumTracks)
+        .insert(
           CurriculumTracksCompanion.insert(
             profileId: profileId,
             curriculumId: 'mishnayos',
@@ -39,7 +41,9 @@ void main() {
     String sefariaRef = 'ref_1',
     int? trackIdOverride,
   }) async {
-    return db.into(db.completions).insert(
+    return db
+        .into(db.completions)
+        .insert(
           CompletionsCompanion.insert(
             profileId: profileId,
             curriculumId: curriculumId,
@@ -91,7 +95,9 @@ void main() {
 
       test('filters by curriculumId when provided', () async {
         // Bavli track for the same profile.
-        final bavliTrack = await db.into(db.curriculumTracks).insert(
+        final bavliTrack = await db
+            .into(db.curriculumTracks)
+            .insert(
               CurriculumTracksCompanion.insert(
                 profileId: profileId,
                 curriculumId: 'bavli',

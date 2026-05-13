@@ -9,7 +9,9 @@ void main() {
 
   setUp(() async {
     db = inMemoryDb();
-    trackId = await db.into(db.curriculumTracks).insert(
+    trackId = await db
+        .into(db.curriculumTracks)
+        .insert(
           CurriculumTracksCompanion.insert(
             profileId: 1,
             curriculumId: 'bavli',
@@ -26,13 +28,19 @@ void main() {
   group('TrackLearningOrderDao', () {
     group('upsertOrder', () {
       test('inserts rows with sequential sortOrder indices', () async {
-        await db.trackLearningOrderDao
-            .upsertOrder(trackId, ['Berakhot 2a', 'Berakhot 2b', 'Berakhot 3a']);
+        await db.trackLearningOrderDao.upsertOrder(trackId, [
+          'Berakhot 2a',
+          'Berakhot 2b',
+          'Berakhot 3a',
+        ]);
 
         final rows = await db.trackLearningOrderDao.getByTrack(trackId);
         expect(rows, hasLength(3));
-        expect(rows.map((r) => r.sefariaRef),
-            ['Berakhot 2a', 'Berakhot 2b', 'Berakhot 3a']);
+        expect(rows.map((r) => r.sefariaRef), [
+          'Berakhot 2a',
+          'Berakhot 2b',
+          'Berakhot 3a',
+        ]);
         expect(rows.map((r) => r.sortOrder), [0, 1, 2]);
       });
 
@@ -45,12 +53,10 @@ void main() {
       });
 
       test('updates sortOrder on conflict with a new order', () async {
-        await db.trackLearningOrderDao
-            .upsertOrder(trackId, ['a', 'b', 'c']);
+        await db.trackLearningOrderDao.upsertOrder(trackId, ['a', 'b', 'c']);
         // Now swap a and c — same refs, different order. The unique key is
         // (trackId, sefariaRef) so this should update sortOrder in place.
-        await db.trackLearningOrderDao
-            .upsertOrder(trackId, ['c', 'b', 'a']);
+        await db.trackLearningOrderDao.upsertOrder(trackId, ['c', 'b', 'a']);
 
         final rows = await db.trackLearningOrderDao.getByTrack(trackId);
         expect(rows, hasLength(3));
@@ -71,8 +77,7 @@ void main() {
       });
 
       test('orders rows by sortOrder ascending', () async {
-        await db.trackLearningOrderDao
-            .upsertOrder(trackId, ['z', 'a', 'm']);
+        await db.trackLearningOrderDao.upsertOrder(trackId, ['z', 'a', 'm']);
         final rows = await db.trackLearningOrderDao.getByTrack(trackId);
         // upsertOrder writes sortOrder=0..n-1 in the list order, so
         // the result must echo that.
@@ -82,7 +87,9 @@ void main() {
 
     group('deleteByTrack', () {
       test('removes all rows for the given track only', () async {
-        final otherTrackId = await db.into(db.curriculumTracks).insert(
+        final otherTrackId = await db
+            .into(db.curriculumTracks)
+            .insert(
               CurriculumTracksCompanion.insert(
                 profileId: 1,
                 curriculumId: 'mishnayos',
@@ -91,18 +98,15 @@ void main() {
               ),
             );
         await db.trackLearningOrderDao.upsertOrder(trackId, ['a', 'b']);
-        await db.trackLearningOrderDao
-            .upsertOrder(otherTrackId, ['x', 'y']);
+        await db.trackLearningOrderDao.upsertOrder(otherTrackId, ['x', 'y']);
 
         await db.trackLearningOrderDao.deleteByTrack(trackId);
 
+        expect(await db.trackLearningOrderDao.getByTrack(trackId), isEmpty);
         expect(
-          await db.trackLearningOrderDao.getByTrack(trackId),
-          isEmpty,
-        );
-        expect(
-          (await db.trackLearningOrderDao.getByTrack(otherTrackId))
-              .map((r) => r.sefariaRef),
+          (await db.trackLearningOrderDao.getByTrack(
+            otherTrackId,
+          )).map((r) => r.sefariaRef),
           ['x', 'y'],
         );
       });

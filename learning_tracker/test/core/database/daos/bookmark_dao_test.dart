@@ -10,15 +10,16 @@ void main() {
 
   setUp(() async {
     database = inMemoryDb();
-    trackId = await database.into(database.curriculumTracks).insert(
-      CurriculumTracksCompanion.insert(
-        profileId: 1,
-        curriculumId: 'bavli',
-        trackType: 'personal',
-        activatedAt: DateTime.utc(2026, 1, 1),
-      ),
-    );
-
+    trackId = await database
+        .into(database.curriculumTracks)
+        .insert(
+          CurriculumTracksCompanion.insert(
+            profileId: 1,
+            curriculumId: 'bavli',
+            trackType: 'personal',
+            activatedAt: DateTime.utc(2026, 1, 1),
+          ),
+        );
   });
 
   tearDown(() async {

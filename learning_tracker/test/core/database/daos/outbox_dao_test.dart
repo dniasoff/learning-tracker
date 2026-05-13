@@ -48,8 +48,10 @@ void main() {
 
     group('getPendingByKind', () {
       test('returns empty list when no rows match', () async {
-        final rows =
-            await db.outboxDao.getPendingByKind('completion', /*profileId*/ 1);
+        final rows = await db.outboxDao.getPendingByKind(
+          'completion',
+          /*profileId*/ 1,
+        );
         expect(rows, isEmpty);
       });
 
@@ -64,15 +66,10 @@ void main() {
           ),
         );
         // Different kind / profile — should NOT come back.
-        await db.outboxDao.insertOutboxRow(
-          makeRow(entityKind: 'streak'),
-        );
-        await db.outboxDao.insertOutboxRow(
-          makeRow(profileId: 2),
-        );
+        await db.outboxDao.insertOutboxRow(makeRow(entityKind: 'streak'));
+        await db.outboxDao.insertOutboxRow(makeRow(profileId: 2));
 
-        final rows =
-            await db.outboxDao.getPendingByKind('completion', 1);
+        final rows = await db.outboxDao.getPendingByKind('completion', 1);
         expect(rows.map((r) => r.id), [a, b]);
       });
 
@@ -85,8 +82,11 @@ void main() {
             ),
           );
         }
-        final rows =
-            await db.outboxDao.getPendingByKind('completion', 1, limit: 2);
+        final rows = await db.outboxDao.getPendingByKind(
+          'completion',
+          1,
+          limit: 2,
+        );
         expect(rows, hasLength(2));
       });
     });
@@ -97,9 +97,9 @@ void main() {
 
         await db.outboxDao.markAttempted(id, error: 'network down');
 
-        final row = await (db.select(db.outbox)
-              ..where((t) => t.id.equals(id)))
-            .getSingle();
+        final row = await (db.select(
+          db.outbox,
+        )..where((t) => t.id.equals(id))).getSingle();
         expect(row.attempts, 1);
         expect(row.lastError, 'network down');
         expect(row.lastAttemptAt, isNotNull);
@@ -110,9 +110,9 @@ void main() {
         await db.outboxDao.markAttempted(id, error: 'first try');
         await db.outboxDao.markAttempted(id); // no error this time
 
-        final row = await (db.select(db.outbox)
-              ..where((t) => t.id.equals(id)))
-            .getSingle();
+        final row = await (db.select(
+          db.outbox,
+        )..where((t) => t.id.equals(id))).getSingle();
         expect(row.attempts, 2);
         expect(row.lastError, isNull);
       });

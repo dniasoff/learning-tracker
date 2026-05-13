@@ -67,66 +67,64 @@ void main() {
 
       // ── AC1: reducer reconciles a known event sequence ─────────────────
 
-      test(
-        'AC1 — StreakEventLog.append + StreakReducer.reduce produces the '
-        'expected (currentStreak, maxStreak)',
-        () async {
-          final log = StreakEventLog(db);
+      test('AC1 — StreakEventLog.append + StreakReducer.reduce produces the '
+          'expected (currentStreak, maxStreak)', () async {
+        final log = StreakEventLog(db);
 
-          // A known sequence on profile 1:
-          //   May 1, 2, 3       — three consecutive UTC days   → streak 3
-          //   (four-day gap)
-          //   May 8, 9, 10      — three more consecutive days  → streak 3
-          //
-          // Today = May 10 (UTC). currentStreak should reflect the most
-          // recent run; maxStreak should be the overall best (tie = 3).
-          final sequence = <DateTime>[
-            DateTime.utc(2026, 5, 1, 9),
-            DateTime.utc(2026, 5, 2, 9),
-            DateTime.utc(2026, 5, 3, 9),
-            DateTime.utc(2026, 5, 8, 9),
-            DateTime.utc(2026, 5, 9, 9),
-            DateTime.utc(2026, 5, 10, 9),
-          ];
-          for (final ts in sequence) {
-            await log.append(
-              StreakEvent(
-                profileId: _profileId,
-                eventType: 'completion',
-                eventTimestamp: ts,
-              ),
-            );
-          }
-
-          // Read back from the in-memory database and reduce.
-          final rows = await (db.select(
-            db.streakEvents,
-          )..where((t) => t.profileId.equals(_profileId))).get();
-          expect(
-            rows,
-            hasLength(sequence.length),
-            reason: 'every appended event must persist (UNIQUE allows them, '
-                'they have distinct eventTimestamps)',
-          );
-          final events = rows.map(
-            (r) => StreakEvent(
-              profileId: r.profileId,
-              eventType: r.eventType,
-              eventTimestamp: r.eventTimestamp,
-              clientDeviceId: r.clientDeviceId,
+        // A known sequence on profile 1:
+        //   May 1, 2, 3       — three consecutive UTC days   → streak 3
+        //   (four-day gap)
+        //   May 8, 9, 10      — three more consecutive days  → streak 3
+        //
+        // Today = May 10 (UTC). currentStreak should reflect the most
+        // recent run; maxStreak should be the overall best (tie = 3).
+        final sequence = <DateTime>[
+          DateTime.utc(2026, 5, 1, 9),
+          DateTime.utc(2026, 5, 2, 9),
+          DateTime.utc(2026, 5, 3, 9),
+          DateTime.utc(2026, 5, 8, 9),
+          DateTime.utc(2026, 5, 9, 9),
+          DateTime.utc(2026, 5, 10, 9),
+        ];
+        for (final ts in sequence) {
+          await log.append(
+            StreakEvent(
+              profileId: _profileId,
+              eventType: 'completion',
+              eventTimestamp: ts,
             ),
           );
+        }
 
-          final state = const StreakReducer().reduce(
-            events,
-            today: DateTime.utc(2026, 5, 10),
-          );
+        // Read back from the in-memory database and reduce.
+        final rows = await (db.select(
+          db.streakEvents,
+        )..where((t) => t.profileId.equals(_profileId))).get();
+        expect(
+          rows,
+          hasLength(sequence.length),
+          reason:
+              'every appended event must persist (UNIQUE allows them, '
+              'they have distinct eventTimestamps)',
+        );
+        final events = rows.map(
+          (r) => StreakEvent(
+            profileId: r.profileId,
+            eventType: r.eventType,
+            eventTimestamp: r.eventTimestamp,
+            clientDeviceId: r.clientDeviceId,
+          ),
+        );
 
-          expect(state.currentStreak, 3);
-          expect(state.maxStreak, 3);
-          expect(state.lastCompletionDayUtc, DateTime.utc(2026, 5, 10));
-        },
-      );
+        final state = const StreakReducer().reduce(
+          events,
+          today: DateTime.utc(2026, 5, 10),
+        );
+
+        expect(state.currentStreak, 3);
+        expect(state.maxStreak, 3);
+        expect(state.lastCompletionDayUtc, DateTime.utc(2026, 5, 10));
+      });
 
       // ── AC2: cloud restore reconstitutes streak from completion_events ─
 
@@ -228,7 +226,8 @@ void main() {
           expect(
             restored,
             hasLength(2),
-            reason: 'three completions across TWO distinct UTC days '
+            reason:
+                'three completions across TWO distinct UTC days '
                 '→ exactly two streak_events rows',
           );
           // Drift serialises DateTime columns through a local-epoch
@@ -242,10 +241,10 @@ void main() {
                 ),
               )
               .toSet();
-          expect(
-            utcDays,
-            {DateTime.utc(2026, 5, 9), DateTime.utc(2026, 5, 10)},
-          );
+          expect(utcDays, {
+            DateTime.utc(2026, 5, 9),
+            DateTime.utc(2026, 5, 10),
+          });
 
           // 6. Reducer over the restored log must compute the right streak.
           //    May 9 → May 10 is a 2-day consecutive run; today = May 10.

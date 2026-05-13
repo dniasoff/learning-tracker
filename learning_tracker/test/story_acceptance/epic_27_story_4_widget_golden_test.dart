@@ -232,145 +232,131 @@ void main() {
 
   // ── AC: Interaction tests ────────────────────────────────────────────────
 
-  group(
-    'Story 27.4 — interaction tests',
-    tags: ['story_27_4'],
-    () {
-      test(
-        'CompletionButton — constructor surface locks required fields',
-        () {
-          // The full CompletionButton interaction (tap → optimistic update
-          // → background persist) needs MarkCompletionUseCase + DAO stack;
-          // that's exercised in story 27.5 (DNI-381). Here we just confirm
-          // the class type so a rename surfaces at compile time, not at
-          // runtime in downstream features.
-          expect(CompletionButton, isNotNull);
-        },
-      );
+  group('Story 27.4 — interaction tests', tags: ['story_27_4'], () {
+    test('CompletionButton — constructor surface locks required fields', () {
+      // The full CompletionButton interaction (tap → optimistic update
+      // → background persist) needs MarkCompletionUseCase + DAO stack;
+      // that's exercised in story 27.5 (DNI-381). Here we just confirm
+      // the class type so a rename surfaces at compile time, not at
+      // runtime in downstream features.
+      expect(CompletionButton, isNotNull);
+    });
 
-      test(
-        'BulkMarkScreen — type is exported and constructable from features',
-        () {
-          // Full BulkMarkScreen flow lives in story 27.5 / 27.6 because it
-          // needs the content-hierarchy provider stack + completion writer.
-          expect(BulkMarkScreen, isNotNull);
-        },
-      );
+    test(
+      'BulkMarkScreen — type is exported and constructable from features',
+      () {
+        // Full BulkMarkScreen flow lives in story 27.5 / 27.6 because it
+        // needs the content-hierarchy provider stack + completion writer.
+        expect(BulkMarkScreen, isNotNull);
+      },
+    );
 
-      testWidgets(
-        'DraggableOrderItem — renders drag handle when showDragHandle is true',
-        (tester) async {
-          await tester.pumpWidget(
-            _pumpHarness(
-              locale: const Locale('en'),
-              child: ReorderableListView(
-                onReorder: _noOpReorder,
-                children: const [
-                  DraggableOrderItem(
-                    key: ValueKey('item-0'),
-                    item: LearningOrderItem(
-                      sefariaRef: 'Berakhot',
-                      displayNameHe: 'ברכות',
-                      displayNameEn: 'Berakhot',
-                      userSortOrder: 0,
-                    ),
-                    index: 0,
-                  ),
-                ],
-              ),
-            ),
-          );
-          await tester.pumpAndSettle();
-          expect(find.byIcon(Icons.drag_handle), findsOneWidget);
-        },
-      );
-
-      testWidgets(
-        'DraggableOrderItem — omits drag handle when showDragHandle is false',
-        (tester) async {
-          await tester.pumpWidget(
-            _pumpHarness(
-              locale: const Locale('en'),
-              child: const Material(
-                child: DraggableOrderItem(
+    testWidgets(
+      'DraggableOrderItem — renders drag handle when showDragHandle is true',
+      (tester) async {
+        await tester.pumpWidget(
+          _pumpHarness(
+            locale: const Locale('en'),
+            child: ReorderableListView(
+              onReorder: _noOpReorder,
+              children: const [
+                DraggableOrderItem(
+                  key: ValueKey('item-0'),
                   item: LearningOrderItem(
-                    sefariaRef: 'Shabbat',
-                    displayNameHe: 'שבת',
-                    displayNameEn: 'Shabbat',
-                    userSortOrder: 1,
+                    sefariaRef: 'Berakhot',
+                    displayNameHe: 'ברכות',
+                    displayNameEn: 'Berakhot',
+                    userSortOrder: 0,
                   ),
                   index: 0,
-                  showDragHandle: false,
                 ),
-              ),
-            ),
-          );
-          await tester.pumpAndSettle();
-          expect(find.byIcon(Icons.drag_handle), findsNothing);
-        },
-      );
-
-      testWidgets(
-        'DraggableOrderItem — respects Hebrew RTL directionality',
-        (tester) async {
-          await tester.pumpWidget(
-            _pumpHarness(
-              locale: const Locale('he'),
-              overrides: [
-                useHebrewTermsProvider.overrideWith(_AlwaysHebrew.new),
               ],
-              child: const Material(
-                child: DraggableOrderItem(
-                  item: LearningOrderItem(
-                    sefariaRef: 'Eruvin',
-                    displayNameHe: 'עירובין',
-                    displayNameEn: 'Eruvin',
-                    userSortOrder: 2,
-                  ),
-                  index: 0,
-                  showDragHandle: false,
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        expect(find.byIcon(Icons.drag_handle), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'DraggableOrderItem — omits drag handle when showDragHandle is false',
+      (tester) async {
+        await tester.pumpWidget(
+          _pumpHarness(
+            locale: const Locale('en'),
+            child: const Material(
+              child: DraggableOrderItem(
+                item: LearningOrderItem(
+                  sefariaRef: 'Shabbat',
+                  displayNameHe: 'שבת',
+                  displayNameEn: 'Shabbat',
+                  userSortOrder: 1,
                 ),
+                index: 0,
+                showDragHandle: false,
               ),
             ),
-          );
-          await tester.pumpAndSettle();
-          expect(find.byType(DraggableOrderItem), findsOneWidget);
-        },
+          ),
+        );
+        await tester.pumpAndSettle();
+        expect(find.byIcon(Icons.drag_handle), findsNothing);
+      },
+    );
+
+    testWidgets('DraggableOrderItem — respects Hebrew RTL directionality', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _pumpHarness(
+          locale: const Locale('he'),
+          overrides: [useHebrewTermsProvider.overrideWith(_AlwaysHebrew.new)],
+          child: const Material(
+            child: DraggableOrderItem(
+              item: LearningOrderItem(
+                sefariaRef: 'Eruvin',
+                displayNameHe: 'עירובין',
+                displayNameEn: 'Eruvin',
+                userSortOrder: 2,
+              ),
+              index: 0,
+              showDragHandle: false,
+            ),
+          ),
+        ),
       );
-    },
-  );
+      await tester.pumpAndSettle();
+      expect(find.byType(DraggableOrderItem), findsOneWidget);
+    });
+  });
 
   // ── Structural AC checks (do not need golden baselines) ─────────────────
 
-  group(
-    'Story 27.4 — AC structural verification',
-    tags: ['story_27_4'],
-    () {
-      test('golden test for TrackCard covers exactly 4 data shapes', () {
-        // The 4 shapes are encoded in the goldenTest loop above.
-        // This documents intent; the real assertion is the number of
-        // testWidgets entries `goldenTest` emits, which `flutter test`
-        // makes visible in its output (8 entries: 4 shapes × en/he).
-        const shapes = [
-          'personal_no_progress',
-          'school_no_progress',
-          'advanced_with_progress',
-          'program_with_progress',
-        ];
-        expect(shapes, hasLength(4));
-      });
+  group('Story 27.4 — AC structural verification', tags: ['story_27_4'], () {
+    test('golden test for TrackCard covers exactly 4 data shapes', () {
+      // The 4 shapes are encoded in the goldenTest loop above.
+      // This documents intent; the real assertion is the number of
+      // testWidgets entries `goldenTest` emits, which `flutter test`
+      // makes visible in its output (8 entries: 4 shapes × en/he).
+      const shapes = [
+        'personal_no_progress',
+        'school_no_progress',
+        'advanced_with_progress',
+        'program_with_progress',
+      ];
+      expect(shapes, hasLength(4));
+    });
 
-      test('Hebrew variant ships for every golden widget', () {
-        // The `goldenTest()` helper emits exactly one en and one he entry
-        // per call (see test/helpers/golden_runner.dart). The fact that
-        // this group contains the goldenTest calls (above) is the proof.
-        // This sentinel test fails fast if someone ever changes the
-        // helper to skip the he variant.
-        const expectedLocales = ['en', 'he'];
-        expect(expectedLocales, contains('he'));
-      });
-    },
-  );
+    test('Hebrew variant ships for every golden widget', () {
+      // The `goldenTest()` helper emits exactly one en and one he entry
+      // per call (see test/helpers/golden_runner.dart). The fact that
+      // this group contains the goldenTest calls (above) is the proof.
+      // This sentinel test fails fast if someone ever changes the
+      // helper to skip the he variant.
+      const expectedLocales = ['en', 'he'];
+      expect(expectedLocales, contains('he'));
+    });
+  });
 }
 
 // ─── Fixtures / helpers ─────────────────────────────────────────────────────

@@ -44,8 +44,7 @@ void main() {
         expect(rows.first.sefariaRef, 'Berakhot.2a');
       });
 
-      test(
-          'is idempotent on the natural key '
+      test('is idempotent on the natural key '
           '(profileId, sefariaRef, stageId, trackType)', () async {
         final id1 = await db.completionEventDao.appendEvent(makeEvent());
         final id2 = await db.completionEventDao.appendEvent(makeEvent());
@@ -73,9 +72,7 @@ void main() {
         await db.completionEventDao.appendEvent(
           makeEvent(trackType: 'personal'),
         );
-        await db.completionEventDao.appendEvent(
-          makeEvent(trackType: 'shared'),
-        );
+        await db.completionEventDao.appendEvent(makeEvent(trackType: 'shared'));
 
         final rows = await db.select(db.completionEvents).get();
         expect(rows, hasLength(2));

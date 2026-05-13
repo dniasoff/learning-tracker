@@ -10,7 +10,9 @@ void main() {
 
   setUp(() async {
     db = inMemoryDb();
-    trackId = await db.into(db.curriculumTracks).insert(
+    trackId = await db
+        .into(db.curriculumTracks)
+        .insert(
           CurriculumTracksCompanion.insert(
             profileId: 1,
             curriculumId: 'bavli',
@@ -77,19 +79,21 @@ void main() {
     });
 
     group('getPlanForDay', () {
-      test('returns rows for the (profile, date) ordered by sortOrder',
-          () async {
-        await db.dailyPlanDao.insertEntries([
-          makeEntry(sefariaRef: 'z', sortOrder: 2),
-          makeEntry(sefariaRef: 'a', stageOrder: 1, sortOrder: 0),
-          makeEntry(sefariaRef: 'm', stageOrder: 2, sortOrder: 1),
-        ]);
-        final plan = await db.dailyPlanDao.getPlanForDay(
-          profileId: 1,
-          planDate: DateTime.utc(2026, 5, 13),
-        );
-        expect(plan.map((e) => e.sefariaRef), ['a', 'm', 'z']);
-      });
+      test(
+        'returns rows for the (profile, date) ordered by sortOrder',
+        () async {
+          await db.dailyPlanDao.insertEntries([
+            makeEntry(sefariaRef: 'z', sortOrder: 2),
+            makeEntry(sefariaRef: 'a', stageOrder: 1, sortOrder: 0),
+            makeEntry(sefariaRef: 'm', stageOrder: 2, sortOrder: 1),
+          ]);
+          final plan = await db.dailyPlanDao.getPlanForDay(
+            profileId: 1,
+            planDate: DateTime.utc(2026, 5, 13),
+          );
+          expect(plan.map((e) => e.sefariaRef), ['a', 'm', 'z']);
+        },
+      );
 
       test('excludes other profiles and dates', () async {
         await db.dailyPlanDao.insertEntries([
@@ -140,7 +144,9 @@ void main() {
       test('per-track granularity — same day, different track', () async {
         // Need a second track for the same profile (UNIQUE allows
         // distinct curricula) so we use a different curriculumId.
-        final otherTrackId = await db.into(db.curriculumTracks).insert(
+        final otherTrackId = await db
+            .into(db.curriculumTracks)
+            .insert(
               CurriculumTracksCompanion.insert(
                 profileId: 1,
                 curriculumId: 'mishnayos',
@@ -193,7 +199,9 @@ void main() {
 
     group('delete operations', () {
       test('deletePlansByTrack removes only rows for that track', () async {
-        final otherTrackId = await db.into(db.curriculumTracks).insert(
+        final otherTrackId = await db
+            .into(db.curriculumTracks)
+            .insert(
               CurriculumTracksCompanion.insert(
                 profileId: 1,
                 curriculumId: 'mishnayos',

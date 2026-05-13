@@ -11,7 +11,9 @@ void main() {
 
   setUp(() async {
     db = inMemoryDb();
-    trackId = await db.into(db.curriculumTracks).insert(
+    trackId = await db
+        .into(db.curriculumTracks)
+        .insert(
           CurriculumTracksCompanion.insert(
             profileId: profileId,
             curriculumId: curriculumId,
@@ -74,21 +76,25 @@ void main() {
         expect(rows.every((r) => r.dayType == 'study'), isTrue);
       });
 
-      test('seedDefaultsForTrack resolves profile+curriculum from track',
-          () async {
-        await db.studyDayConfigDao.seedDefaultsForTrack(trackId: trackId);
-        final rows = await db.studyDayConfigDao
-            .getConfigsByCurriculumAndProfile(curriculumId, profileId);
-        expect(rows, hasLength(7));
-      });
+      test(
+        'seedDefaultsForTrack resolves profile+curriculum from track',
+        () async {
+          await db.studyDayConfigDao.seedDefaultsForTrack(trackId: trackId);
+          final rows = await db.studyDayConfigDao
+              .getConfigsByCurriculumAndProfile(curriculumId, profileId);
+          expect(rows, hasLength(7));
+        },
+      );
 
-      test('seedDefaultsForTrack throws StateError when track not found',
-          () async {
-        expect(
-          () => db.studyDayConfigDao.seedDefaultsForTrack(trackId: 9999),
-          throwsA(isA<StateError>()),
-        );
-      });
+      test(
+        'seedDefaultsForTrack throws StateError when track not found',
+        () async {
+          expect(
+            () => db.studyDayConfigDao.seedDefaultsForTrack(trackId: 9999),
+            throwsA(isA<StateError>()),
+          );
+        },
+      );
     });
 
     group('getConfigsByCurriculumAndProfile / watch', () {
@@ -129,23 +135,20 @@ void main() {
         expect(rows, hasLength(7));
 
         // empty for a different track
-        expect(
-          await db.studyDayConfigDao.getConfigsByTrack(9999),
-          isEmpty,
-        );
+        expect(await db.studyDayConfigDao.getConfigsByTrack(9999), isEmpty);
       });
 
       test('watchConfigsByTrack emits the current rows', () async {
         await db.studyDayConfigDao.seedDefaultsForTrack(trackId: trackId);
-        final first =
-            await db.studyDayConfigDao.watchConfigsByTrack(trackId).first;
+        final first = await db.studyDayConfigDao
+            .watchConfigsByTrack(trackId)
+            .first;
         expect(first, hasLength(7));
       });
     });
 
     group('isStudyDay / isStudyDayForTrack', () {
-      test('returns true by default (no config row → assume study)',
-          () async {
+      test('returns true by default (no config row → assume study)', () async {
         final isStudy = await db.studyDayConfigDao.isStudyDay(
           profileId: profileId,
           curriculumId: curriculumId,
@@ -170,30 +173,32 @@ void main() {
         expect(isStudy, isFalse);
       });
 
-      test('isStudyDayForTrack works the same way against the track key',
-          () async {
-        await db.studyDayConfigDao.upsertDayConfig(
-          profileId: profileId,
-          curriculumId: curriculumId,
-          trackId: trackId,
-          dayOfWeek: 7,
-          dayType: 'rest',
-        );
-        expect(
-          await db.studyDayConfigDao.isStudyDayForTrack(
+      test(
+        'isStudyDayForTrack works the same way against the track key',
+        () async {
+          await db.studyDayConfigDao.upsertDayConfig(
+            profileId: profileId,
+            curriculumId: curriculumId,
             trackId: trackId,
             dayOfWeek: 7,
-          ),
-          isFalse,
-        );
-        expect(
-          await db.studyDayConfigDao.isStudyDayForTrack(
-            trackId: trackId,
-            dayOfWeek: 1,
-          ),
-          isTrue,
-        );
-      });
+            dayType: 'rest',
+          );
+          expect(
+            await db.studyDayConfigDao.isStudyDayForTrack(
+              trackId: trackId,
+              dayOfWeek: 7,
+            ),
+            isFalse,
+          );
+          expect(
+            await db.studyDayConfigDao.isStudyDayForTrack(
+              trackId: trackId,
+              dayOfWeek: 1,
+            ),
+            isTrue,
+          );
+        },
+      );
     });
 
     group('getStudyDaysPerWeek', () {
@@ -231,36 +236,41 @@ void main() {
         expect(n, 5);
       });
 
-      test('getStudyDaysPerWeekForTrack mirrors the profile-scoped variant',
-          () async {
-        await db.studyDayConfigDao.seedDefaultsForTrack(trackId: trackId);
-        final n = await db.studyDayConfigDao
-            .getStudyDaysPerWeekForTrack(trackId: trackId);
-        expect(n, 7);
-      });
+      test(
+        'getStudyDaysPerWeekForTrack mirrors the profile-scoped variant',
+        () async {
+          await db.studyDayConfigDao.seedDefaultsForTrack(trackId: trackId);
+          final n = await db.studyDayConfigDao.getStudyDaysPerWeekForTrack(
+            trackId: trackId,
+          );
+          expect(n, 7);
+        },
+      );
     });
 
     group('countStudyDaysInInclusiveDateRangeForTrack', () {
       test('returns 0 when start is after end', () async {
         final n = await db.studyDayConfigDao
             .countStudyDaysInInclusiveDateRangeForTrack(
-          trackId: trackId,
-          startInclusive: DateTime.utc(2026, 5, 10),
-          endInclusive: DateTime.utc(2026, 5, 5),
-        );
+              trackId: trackId,
+              startInclusive: DateTime.utc(2026, 5, 10),
+              endInclusive: DateTime.utc(2026, 5, 5),
+            );
         expect(n, 0);
       });
 
-      test('counts all 7 days inclusive when no configs (default = all study)',
-          () async {
-        final n = await db.studyDayConfigDao
-            .countStudyDaysInInclusiveDateRangeForTrack(
-          trackId: trackId,
-          startInclusive: DateTime.utc(2026, 5, 4), // Mon
-          endInclusive: DateTime.utc(2026, 5, 10), // Sun
-        );
-        expect(n, 7);
-      });
+      test(
+        'counts all 7 days inclusive when no configs (default = all study)',
+        () async {
+          final n = await db.studyDayConfigDao
+              .countStudyDaysInInclusiveDateRangeForTrack(
+                trackId: trackId,
+                startInclusive: DateTime.utc(2026, 5, 4), // Mon
+                endInclusive: DateTime.utc(2026, 5, 10), // Sun
+              );
+          expect(n, 7);
+        },
+      );
 
       test('excludes rest days from the count', () async {
         // Mark Saturday (Dart weekday 6) as rest.
@@ -290,10 +300,10 @@ void main() {
         // Mon 2026-05-04 .. Sun 2026-05-10 → 7 days, 1 rest → 6 study.
         final n = await db.studyDayConfigDao
             .countStudyDaysInInclusiveDateRangeForTrack(
-          trackId: trackId,
-          startInclusive: DateTime.utc(2026, 5, 4),
-          endInclusive: DateTime.utc(2026, 5, 10),
-        );
+              trackId: trackId,
+              startInclusive: DateTime.utc(2026, 5, 4),
+              endInclusive: DateTime.utc(2026, 5, 10),
+            );
         expect(n, 6);
       });
     });
@@ -301,25 +311,27 @@ void main() {
     group('delete operations', () {
       test('deleteConfigsForTrack removes all rows for the track', () async {
         await db.studyDayConfigDao.seedDefaultsForTrack(trackId: trackId);
-        final removed =
-            await db.studyDayConfigDao.deleteConfigsForTrack(trackId);
+        final removed = await db.studyDayConfigDao.deleteConfigsForTrack(
+          trackId,
+        );
         expect(removed, 7);
         final rows = await db.select(db.studyDayConfigs).get();
         expect(rows, isEmpty);
       });
 
       test(
-          'deleteConfigsByCurriculumAndProfile removes all rows for that pair',
-          () async {
-        await db.studyDayConfigDao.seedDefaults(
-          profileId: profileId,
-          curriculumId: curriculumId,
-          trackId: trackId,
-        );
-        final removed = await db.studyDayConfigDao
-            .deleteConfigsByCurriculumAndProfile(curriculumId, profileId);
-        expect(removed, 7);
-      });
+        'deleteConfigsByCurriculumAndProfile removes all rows for that pair',
+        () async {
+          await db.studyDayConfigDao.seedDefaults(
+            profileId: profileId,
+            curriculumId: curriculumId,
+            trackId: trackId,
+          );
+          final removed = await db.studyDayConfigDao
+              .deleteConfigsByCurriculumAndProfile(curriculumId, profileId);
+          expect(removed, 7);
+        },
+      );
     });
 
     group('getLatestUpdatedAt', () {
