@@ -1,5 +1,6 @@
 /// Story acceptance tests for Epic 25 — Schema + Core Foundation.
 ///
+/// Story 25.3 (DNI-324): Composite indexes on hot-path queries.
 /// Story 25.5 (DNI-326): Outbox table and OutboxProcessor scaffolding.
 /// Story 25.8 (DNI-329): ContentIndex + ProgramRefResolver.
 /// Story 25.11 (DNI-332): AuthRepository — sole firebase_auth consumer.
@@ -8,6 +9,7 @@ library;
 
 import 'dart:convert';
 
+import 'package:drift/drift.dart' show Variable;
 import 'package:drift/native.dart';
 import 'package:learning_tracker/core/content/content_index.dart';
 import 'package:learning_tracker/core/content/program_ref_resolver.dart';
@@ -44,6 +46,246 @@ class MockPushPipeline extends Mock implements PushPipeline {}
 // ── tests ─────────────────────────────────────────────────────────────────────
 
 void main() {
+  // --------------------------------------------------------------------------
+  // Story 25.3 — Composite indexes on hot-path queries (DNI-324)
+  // --------------------------------------------------------------------------
+
+  group(
+    'Story 25.3 — Composite indexes on hot-path queries',
+    tags: ['story_25_3'],
+    () {
+      late UserDatabase db;
+
+      setUp(() => db = _createDb());
+      tearDown(() => db.close());
+
+      // ── Helpers ──────────────────────────────────────────────────────────
+
+      Future<List<String>> indexNamesForTable(String tableName) async {
+        final rows = await db
+            .customSelect(
+              'SELECT name FROM sqlite_master '
+              "WHERE type = 'index' AND tbl_name = ? "
+              'ORDER BY name',
+              variables: [Variable.withString(tableName)],
+            )
+            .get();
+        return rows.map((r) => r.read<String>('name')).toList();
+      }
+
+      Future<List<Map<String, Object?>>> explain(
+        String sql, {
+        List<Variable> variables = const [],
+      }) async {
+        final rows = await db
+            .customSelect(
+              'EXPLAIN QUERY PLAN $sql',
+              variables: variables,
+            )
+            .get();
+        return rows.map((r) => r.data).toList();
+      }
+
+      bool planUsesIndex(List<Map<String, Object?>> plan, String table) {
+        return plan.any((row) {
+          final detail = (row['detail'] as String?) ?? '';
+          return detail.contains('SEARCH') &&
+              detail.contains(table) &&
+              detail.contains('USING') &&
+              detail.contains('INDEX');
+        });
+      }
+
+      // ── 1. Index existence ───────────────────────────────────────────────
+
+      test(
+        'completions has composite index '
+        'completions_pidx_pid_cur_completed on '
+        '(profileId, curriculumId, completedAt DESC)',
+        () async {
+          final indexes = await indexNamesForTable('completions');
+          expect(
+            indexes,
+            contains('completions_pidx_pid_cur_completed'),
+            reason: 'AR4 hot-path composite index missing on completions',
+          );
+
+          final master = await db.customSelect(
+            "SELECT sql FROM sqlite_master WHERE type = 'index' "
+            "AND name = 'completions_pidx_pid_cur_completed'",
+          ).getSingleOrNull();
+          final sql = (master?.read<String?>('sql') ?? '').toLowerCase();
+          expect(
+            sql,
+            contains('profile_id'),
+            reason: 'Index must include profileId',
+          );
+          expect(
+            sql,
+            contains('curriculum_id'),
+            reason: 'Index must include curriculumId',
+          );
+          expect(
+            sql,
+            contains('completed_at'),
+            reason: 'Index must include completedAt',
+          );
+          expect(
+            sql,
+            contains('desc'),
+            reason: 'completedAt column must be ordered DESC for AR4',
+          );
+        },
+      );
+
+      test(
+        'completions has composite index on '
+        '(profileId, sefariaRef, stageId, trackType) — natural-key lookups',
+        () async {
+          // Note: the UNIQUE part of Story 25.2 lives on the new
+          // `completion_events` table introduced by DNI-323. DNI-324 keeps
+          // this composite NON-UNIQUE on the existing `completions`
+          // history table so review-count semantics (multiple completions
+          // of the same natural key) continue to work.
+          final indexes = await indexNamesForTable('completions');
+          final natKey = indexes.firstWhere(
+            (n) => n.contains('completions') && n.contains('natural'),
+            orElse: () => '',
+          );
+          expect(
+            natKey,
+            isNotEmpty,
+            reason:
+                'Expected a composite index covering '
+                '(profileId, sefariaRef, stageId, trackType)',
+          );
+
+          final master = await db.customSelect(
+            'SELECT sql FROM sqlite_master '
+            "WHERE type = 'index' AND name = ?",
+            variables: [Variable.withString(natKey)],
+          ).getSingleOrNull();
+          final sql = (master?.read<String?>('sql') ?? '').toLowerCase();
+          expect(sql, contains('profile_id'));
+          expect(sql, contains('sefaria_ref'));
+          expect(sql, contains('stage_id'));
+          expect(sql, contains('track_type'));
+        },
+      );
+
+      test(
+        'learning_ledger has composite index on (profileId, createdAt)',
+        () async {
+          final indexes = await indexNamesForTable('learning_ledger');
+          final ledgerHotPath = indexes.firstWhere(
+            (n) => n.startsWith('learning_ledger') && n.contains('created'),
+            orElse: () => '',
+          );
+          expect(
+            ledgerHotPath,
+            isNotEmpty,
+            reason:
+                'AR4 hot-path index missing on learning_ledger(profileId, createdAt)',
+          );
+
+          final master = await db.customSelect(
+            'SELECT sql FROM sqlite_master '
+            "WHERE type = 'index' AND name = ?",
+            variables: [Variable.withString(ledgerHotPath)],
+          ).getSingleOrNull();
+          final sql = (master?.read<String?>('sql') ?? '').toLowerCase();
+          expect(sql, contains('profile_id'));
+          expect(sql, contains('created_at'));
+        },
+      );
+
+      test(
+        'streak_events has UNIQUE composite index on natural-key columns',
+        () async {
+          // DNI-323 (parallel) renames the day column to dayUtc; today the
+          // table exposes (profileId, eventTimestamp, eventType) declared
+          // via Drift's `uniqueKeys`, which produces an auto-index
+          // (sqlite_autoindex_streak_events_*). Either shape satisfies AR4
+          // as long as a UNIQUE composite index is present.
+          final pragmaRows = await db.customSelect(
+            'SELECT name, "unique" AS u FROM pragma_index_list(?)',
+            variables: [Variable.withString('streak_events')],
+          ).get();
+          final uniqueIndexes = pragmaRows
+              .where((r) => r.read<int>('u') == 1)
+              .map((r) => r.read<String>('name'))
+              .toList();
+          expect(
+            uniqueIndexes,
+            isNotEmpty,
+            reason:
+                'AR4 UNIQUE composite index missing on streak_events '
+                '(pragma_index_list returned: '
+                '${pragmaRows.map((r) => r.data).toList()})',
+          );
+        },
+      );
+
+      // ── 2. EXPLAIN QUERY PLAN — SEARCH not SCAN ──────────────────────────
+
+      test(
+        'dashboard completions query uses index, not table scan',
+        () async {
+          final plan = await explain(
+            'SELECT * FROM completions '
+            'WHERE profile_id = ? AND curriculum_id = ? '
+            'ORDER BY completed_at DESC',
+            variables: [Variable.withInt(1), Variable.withString('shas-bavli')],
+          );
+          expect(
+            planUsesIndex(plan, 'completions'),
+            isTrue,
+            reason:
+                'EXPLAIN should report SEARCH ... USING INDEX, not SCAN '
+                'TABLE — got: $plan',
+          );
+        },
+      );
+
+      test(
+        'learning_ledger lifetime aggregation query uses index, not scan',
+        () async {
+          final plan = await explain(
+            'SELECT * FROM learning_ledger '
+            'WHERE profile_id = ? '
+            'ORDER BY created_at',
+            variables: [Variable.withInt(1)],
+          );
+          expect(
+            planUsesIndex(plan, 'learning_ledger'),
+            isTrue,
+            reason:
+                'EXPLAIN should report SEARCH ... USING INDEX, not SCAN '
+                'TABLE — got: $plan',
+          );
+        },
+      );
+
+      test(
+        'streak_events query uses index, not table scan',
+        () async {
+          // Use only profileId — the index leading column must enable SEARCH.
+          final plan = await explain(
+            'SELECT * FROM streak_events WHERE profile_id = ?',
+            variables: [Variable.withInt(1)],
+          );
+          expect(
+            planUsesIndex(plan, 'streak_events'),
+            isTrue,
+            reason:
+                'EXPLAIN should report SEARCH ... USING INDEX, not SCAN '
+                'TABLE — got: $plan',
+          );
+        },
+      );
+    },
+  );
+
   // --------------------------------------------------------------------------
   // Story 25.5 — Outbox table and OutboxProcessor scaffolding (DNI-326)
   // --------------------------------------------------------------------------

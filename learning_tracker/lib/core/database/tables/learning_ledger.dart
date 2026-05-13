@@ -6,6 +6,10 @@ import 'package:learning_tracker/core/database/tables/curriculum_tracks.dart';
 /// This table is INSERT-only. No UPDATE or DELETE operations
 /// should be performed on ledger records. Entries survive track deletion
 /// and curriculum deactivation (no foreign keys to those tables).
+@TableIndex(
+  name: 'learning_ledger_profile_created',
+  columns: {#profileId, #createdAt},
+)
 class LearningLedger extends Table {
   IntColumn get id => integer().autoIncrement()();
   IntColumn get profileId => integer()();
