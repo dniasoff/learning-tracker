@@ -4522,6 +4522,48 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'ADD NEW'**
   String get chazaraAddNew;
+
+  /// No description provided for @authSignInTimeout.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign-in is taking too long. Check your connection and try again.'**
+  String get authSignInTimeout;
+
+  /// No description provided for @reauthGoogleTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm with Google to delete your account'**
+  String get reauthGoogleTitle;
+
+  /// No description provided for @reauthGoogleBody.
+  ///
+  /// In en, this message translates to:
+  /// **'We need you to sign in with Google one more time to confirm it\'s really you. After signing in, your account and all data will be permanently deleted.'**
+  String get reauthGoogleBody;
+
+  /// No description provided for @reauthGoogleContinue.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue to Google'**
+  String get reauthGoogleContinue;
+
+  /// No description provided for @deletingAccountTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Deleting your account…'**
+  String get deletingAccountTitle;
+
+  /// No description provided for @deletingAccountBody.
+  ///
+  /// In en, this message translates to:
+  /// **'This may take a few seconds. Please don\'t close the app.'**
+  String get deletingAccountBody;
+
+  /// No description provided for @deletingAccountError.
+  ///
+  /// In en, this message translates to:
+  /// **'Deletion encountered an issue. You have been signed out.'**
+  String get deletingAccountError;
 }
 
 class _AppLocalizationsDelegate

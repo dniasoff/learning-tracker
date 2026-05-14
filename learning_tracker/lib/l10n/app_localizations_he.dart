@@ -2514,4 +2514,30 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String get chazaraAddNew => 'הוסף';
+
+  @override
+  String get authSignInTimeout =>
+      'הכניסה לוקחת יותר מדי זמן. בדוק את החיבור ונסה שוב.';
+
+  @override
+  String get reauthGoogleTitle =>
+      'אמת עם גוגל כדי למחוק את חשבונך';
+
+  @override
+  String get reauthGoogleBody =>
+      'אנו צריכים שתיכנס עם גוגל עוד פעם אחת כדי לאמת שזה באמת אתה. לאחר הכניסה, חשבונך וכל הנתונים יימחקו לצמיתות.';
+
+  @override
+  String get reauthGoogleContinue => 'המשך לגוגל';
+
+  @override
+  String get deletingAccountTitle => 'מוחק את חשבונך…';
+
+  @override
+  String get deletingAccountBody =>
+      'זה עשוי לקחת מספר שניות. אנא אל תסגור את האפליקציה.';
+
+  @override
+  String get deletingAccountError =>
+      'המחיקה נתקלה בבעיה. התנתקת מהחשבון.';
 }

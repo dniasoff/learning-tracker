@@ -217,6 +217,16 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
 
     setState(() => _isLoading = true);
     final l10n = AppLocalizations.of(context)!;
+
+    // Watchdog: if sign-in takes more than 15 seconds, show an error and
+    // revert the spinner so the user is not stuck waiting indefinitely.
+    final watchdog = Timer(const Duration(seconds: 15), () {
+      if (mounted && _isLoading) {
+        setState(() => _isLoading = false);
+        _showError(l10n.authSignInTimeout);
+      }
+    });
+
     try {
       // Step 1: check device registry for this email
       final registry = ref.read(deviceRegistryProvider);
@@ -295,7 +305,12 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
         final isOnline = await InternetConnectionChecker.instance.hasConnection;
         if (isOnline) {
           final authRepo = ref.read(authRepositoryProvider);
-          await authRepo.signInWithEmail(email, password);
+          await authRepo
+              .signInWithEmail(email, password)
+              .timeout(
+                const Duration(seconds: 10),
+                onTimeout: () => throw TimeoutException('Sign-in timed out'),
+              );
           final verified = await _ensureCloudEmailVerified();
           if (verified && mounted) await _navigateAfterSignIn();
         } else {
@@ -316,7 +331,12 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
         final isOnline = await InternetConnectionChecker.instance.hasConnection;
         if (isOnline) {
           final authRepo = ref.read(authRepositoryProvider);
-          await authRepo.signInWithEmail(email, password);
+          await authRepo
+              .signInWithEmail(email, password)
+              .timeout(
+                const Duration(seconds: 10),
+                onTimeout: () => throw TimeoutException('Sign-in timed out'),
+              );
           final verified = await _ensureCloudEmailVerified();
           if (verified && mounted) await _navigateAfterSignIn();
         } else {
@@ -328,6 +348,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
     } catch (e) {
       if (mounted) _showError(_mapAuthErrorFromException(e, l10n));
     } finally {
+      watchdog.cancel();
       if (mounted) setState(() => _isLoading = false);
     }
   }
@@ -470,6 +491,15 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
   Future<void> _signInWithGoogle() async {
     setState(() => _isLoading = true);
     final l10n = AppLocalizations.of(context)!;
+
+    // Watchdog: Google Sign-In can hang silently on slow connections.
+    final watchdog = Timer(const Duration(seconds: 15), () {
+      if (mounted && _isLoading) {
+        setState(() => _isLoading = false);
+        _showError(l10n.authSignInTimeout);
+      }
+    });
+
     try {
       final authRepo = ref.read(authRepositoryProvider);
       await authRepo.signInWithGoogle();
@@ -517,6 +547,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
         _showError(_mapAuthErrorFromException(e, l10n));
       }
     } finally {
+      watchdog.cancel();
       if (mounted) setState(() => _isLoading = false);
     }
   }
@@ -572,12 +603,15 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
 
     // Sync profiles from Firestore into local DB before navigating.
     // Invalidate the sync engine so it picks up the just-swapped DB +
-    // auth state, then pull synchronously so the next route decision
+    // auth state, then pull with a timeout so the next route decision
     // sees the real profile count rather than an empty local table.
+    // A bounded 8s timeout prevents a slow network from blocking navigation.
     ref.invalidate(syncEngineProvider);
     final orchestrator = ref.read(syncOrchestratorProvider);
     if (orchestrator != null) {
-      await orchestrator.pullOnLaunch();
+      await orchestrator
+          .pullOnLaunch()
+          .timeout(const Duration(seconds: 8), onTimeout: () {});
     }
     if (!mounted) return;
 
@@ -599,7 +633,8 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
           const <Map<String, dynamic>>[];
 
       if (remoteProfiles.isNotEmpty && orchestrator != null) {
-        await orchestrator.pullOnLaunch();
+        // Fire the second pull in the background — don't block navigation.
+        unawaited(orchestrator.pullOnLaunch());
         profileCount = await ref
             .read(userDatabaseProvider)
             .profileDao
@@ -627,7 +662,9 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
       ref.invalidate(syncEngineProvider);
       final selectedOrchestrator = ref.read(syncOrchestratorProvider);
       if (selectedOrchestrator != null) {
-        await selectedOrchestrator.pullOnLaunch();
+        // Fire the single-profile re-pull in the background — navigation
+        // proceeds immediately; sync completes after the user is in the app.
+        unawaited(selectedOrchestrator.pullOnLaunch());
       }
     } else {
       // Multiple profiles: user chooses in profile picker.

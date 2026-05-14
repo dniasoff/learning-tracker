@@ -2542,4 +2542,30 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get chazaraAddNew => 'ADD NEW';
+
+  @override
+  String get authSignInTimeout =>
+      'Sign-in is taking too long. Check your connection and try again.';
+
+  @override
+  String get reauthGoogleTitle =>
+      'Confirm with Google to delete your account';
+
+  @override
+  String get reauthGoogleBody =>
+      'We need you to sign in with Google one more time to confirm it\'s really you. After signing in, your account and all data will be permanently deleted.';
+
+  @override
+  String get reauthGoogleContinue => 'Continue to Google';
+
+  @override
+  String get deletingAccountTitle => 'Deleting your account…';
+
+  @override
+  String get deletingAccountBody =>
+      'This may take a few seconds. Please don\'t close the app.';
+
+  @override
+  String get deletingAccountError =>
+      'Deletion encountered an issue. You have been signed out.';
 }

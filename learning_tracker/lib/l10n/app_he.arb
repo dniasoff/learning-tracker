@@ -1264,5 +1264,15 @@
       "count": { "type": "int" }
     }
   },
-  "chazaraAddNew": "הוסף"
+  "chazaraAddNew": "הוסף",
+
+  "authSignInTimeout": "הכניסה לוקחת יותר מדי זמן. בדוק את החיבור ונסה שוב.",
+
+  "reauthGoogleTitle": "אמת עם גוגל כדי למחוק את חשבונך",
+  "reauthGoogleBody": "אנו צריכים שתיכנס עם גוגל עוד פעם אחת כדי לאמת שזה באמת אתה. לאחר הכניסה, חשבונך וכל הנתונים יימחקו לצמיתות.",
+  "reauthGoogleContinue": "המשך לגוגל",
+
+  "deletingAccountTitle": "מוחק את חשבונך…",
+  "deletingAccountBody": "זה עשוי לקחת מספר שניות. אנא אל תסגור את האפליקציה.",
+  "deletingAccountError": "המחיקה נתקלה בבעיה. התנתקת מהחשבון."
 }

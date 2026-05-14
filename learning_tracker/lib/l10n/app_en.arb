@@ -1264,5 +1264,15 @@
       "count": { "type": "int" }
     }
   },
-  "chazaraAddNew": "ADD NEW"
+  "chazaraAddNew": "ADD NEW",
+
+  "authSignInTimeout": "Sign-in is taking too long. Check your connection and try again.",
+
+  "reauthGoogleTitle": "Confirm with Google to delete your account",
+  "reauthGoogleBody": "We need you to sign in with Google one more time to confirm it's really you. After signing in, your account and all data will be permanently deleted.",
+  "reauthGoogleContinue": "Continue to Google",
+
+  "deletingAccountTitle": "Deleting your account…",
+  "deletingAccountBody": "This may take a few seconds. Please don't close the app.",
+  "deletingAccountError": "Deletion encountered an issue. You have been signed out."
 }
