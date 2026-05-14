@@ -772,7 +772,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                 ],
               ),
             ),
-            const SizedBox(height: 28);
+            const SizedBox(height: 28),
             FilledButton(
               style: FilledButton.styleFrom(
                 backgroundColor: AppTheme.brandBlue,
