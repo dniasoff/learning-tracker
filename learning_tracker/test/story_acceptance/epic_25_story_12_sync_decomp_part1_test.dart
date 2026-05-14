@@ -331,12 +331,51 @@ class _RecordingGateway implements FirestoreGateway {
   }) async {}
 
   @override
+  Future<void> pushLearnerProfile({
+    required int profileId,
+    required Map<String, dynamic> data,
+  }) async {}
+
+  @override
+  Future<void> deleteLearnerProfile(int profileId) async {}
+
+  @override
+  Future<void> pushLedgerEntry({
+    required int profileId,
+    required Map<String, dynamic> data,
+  }) async {}
+
+  @override
+  Future<void> pushLedgerEntriesBatch({
+    required int profileId,
+    required List<Map<String, dynamic>> entries,
+  }) async {}
+
+  @override
+  Future<void> pushProfileProgram({
+    required int profileId,
+    required Map<String, dynamic> data,
+  }) async {}
+
+  @override
+  Future<void> removeProfileProgramAssignment({
+    required int profileId,
+    required String curriculumStorageKey,
+  }) async {}
+
+  @override
   Future<FirestorePage> fetchPage({
     required int profileId,
     required String collection,
     required int pageSize,
     Map<String, dynamic>? cursor,
   }) async => const FirestorePage(rows: <Map<String, dynamic>>[]);
+
+  @override
+  Future<List<Map<String, dynamic>>> fetchAll({
+    required int profileId,
+    required String collection,
+  }) async => const <Map<String, dynamic>>[];
 }
 
 class _FetchCall {
@@ -413,6 +452,45 @@ class _PagingGateway implements FirestoreGateway {
     required int profileId,
     required Map<String, dynamic> data,
   }) async {}
+
+  @override
+  Future<void> pushLearnerProfile({
+    required int profileId,
+    required Map<String, dynamic> data,
+  }) async {}
+
+  @override
+  Future<void> deleteLearnerProfile(int profileId) async {}
+
+  @override
+  Future<void> pushLedgerEntry({
+    required int profileId,
+    required Map<String, dynamic> data,
+  }) async {}
+
+  @override
+  Future<void> pushLedgerEntriesBatch({
+    required int profileId,
+    required List<Map<String, dynamic>> entries,
+  }) async {}
+
+  @override
+  Future<void> pushProfileProgram({
+    required int profileId,
+    required Map<String, dynamic> data,
+  }) async {}
+
+  @override
+  Future<void> removeProfileProgramAssignment({
+    required int profileId,
+    required String curriculumStorageKey,
+  }) async {}
+
+  @override
+  Future<List<Map<String, dynamic>>> fetchAll({
+    required int profileId,
+    required String collection,
+  }) async => const <Map<String, dynamic>>[];
 }
 
 class _DispatchedPage {

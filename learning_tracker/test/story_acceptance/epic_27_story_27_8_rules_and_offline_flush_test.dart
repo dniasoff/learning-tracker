@@ -469,10 +469,98 @@ class _ToggleableFakeGateway implements FirestoreGateway {
   }
 
   @override
+  Future<void> pushLearnerProfile({
+    required int profileId,
+    required Map<String, dynamic> data,
+  }) async {
+    pushAttempts++;
+    if (!online) throw Exception('offline');
+    await _fs
+        .collection('users')
+        .doc(uid)
+        .collection('learner_profiles')
+        .doc(profileId.toString())
+        .set({...data});
+  }
+
+  @override
+  Future<void> deleteLearnerProfile(int profileId) async {
+    pushAttempts++;
+    if (!online) throw Exception('offline');
+    await _fs
+        .collection('users')
+        .doc(uid)
+        .collection('learner_profiles')
+        .doc(profileId.toString())
+        .delete();
+  }
+
+  @override
+  Future<void> pushLedgerEntry({
+    required int profileId,
+    required Map<String, dynamic> data,
+  }) async {
+    pushAttempts++;
+    if (!online) throw Exception('offline');
+    await _fs.collection('learning_ledger').add({...data, 'uid': uid});
+  }
+
+  @override
+  Future<void> pushLedgerEntriesBatch({
+    required int profileId,
+    required List<Map<String, dynamic>> entries,
+  }) async {
+    for (final entry in entries) {
+      await pushLedgerEntry(profileId: profileId, data: entry);
+    }
+  }
+
+  @override
+  Future<void> pushProfileProgram({
+    required int profileId,
+    required Map<String, dynamic> data,
+  }) async {
+    pushAttempts++;
+    if (!online) throw Exception('offline');
+    final curriculumId = data['curriculum_id']?.toString() ?? '';
+    await _fs
+        .collection('users')
+        .doc(uid)
+        .collection('learner_profiles')
+        .doc(profileId.toString())
+        .collection('profile_programs')
+        .doc(curriculumId)
+        .set({...data});
+  }
+
+  @override
+  Future<void> removeProfileProgramAssignment({
+    required int profileId,
+    required String curriculumStorageKey,
+  }) async {
+    pushAttempts++;
+    if (!online) throw Exception('offline');
+    await _fs
+        .collection('users')
+        .doc(uid)
+        .collection('learner_profiles')
+        .doc(profileId.toString())
+        .collection('profile_programs')
+        .doc(curriculumStorageKey)
+        .delete();
+  }
+
+  @override
   Future<FirestorePage> fetchPage({
     required int profileId,
     required String collection,
     required int pageSize,
     Map<String, dynamic>? cursor,
   }) async => const FirestorePage(rows: []);
+
+  @override
+  Future<List<Map<String, dynamic>>> fetchAll({
+    required int profileId,
+    required String collection,
+  }) async => const <Map<String, dynamic>>[];
 }

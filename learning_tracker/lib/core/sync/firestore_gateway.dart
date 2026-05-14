@@ -53,6 +53,39 @@ abstract class FirestoreGateway {
     required Map<String, dynamic> data,
   });
 
+  // ── P2b additions ──────────────────────────────────────────────────────────
+
+  Future<void> pushLearnerProfile({
+    required int profileId,
+    required Map<String, dynamic> data,
+  });
+
+  Future<void> deleteLearnerProfile(int profileId);
+
+  // ── P2c additions ──────────────────────────────────────────────────────────
+
+  Future<void> pushLedgerEntry({
+    required int profileId,
+    required Map<String, dynamic> data,
+  });
+
+  Future<void> pushLedgerEntriesBatch({
+    required int profileId,
+    required List<Map<String, dynamic>> entries,
+  });
+
+  // ── P2d additions ──────────────────────────────────────────────────────────
+
+  Future<void> pushProfileProgram({
+    required int profileId,
+    required Map<String, dynamic> data,
+  });
+
+  Future<void> removeProfileProgramAssignment({
+    required int profileId,
+    required String curriculumStorageKey,
+  });
+
   /// Fetch one page of documents from [collection] for [profileId].
   ///
   /// Pages are ordered server-side by document key. Pass the previous
@@ -63,6 +96,17 @@ abstract class FirestoreGateway {
     required String collection,
     required int pageSize,
     Map<String, dynamic>? cursor,
+  });
+
+  // ── P2e additions ──────────────────────────────────────────────────────────
+
+  /// Fetch all documents from [collection] for [profileId] without pagination.
+  ///
+  /// Use for small collections only (bookmarks, etc.) where the total document
+  /// count is bounded and pagination overhead is not warranted.
+  Future<List<Map<String, dynamic>>> fetchAll({
+    required int profileId,
+    required String collection,
   });
 }
 
