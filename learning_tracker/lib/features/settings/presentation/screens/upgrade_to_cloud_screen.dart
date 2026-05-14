@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/providers/registry_provider.dart';
+import 'package:learning_tracker/core/sync/providers/sync_orchestrator_providers.dart';
 import 'package:learning_tracker/features/auth/domain/services/upgrade_to_cloud_service.dart';
 import 'package:learning_tracker/features/auth/presentation/providers/auth_providers.dart'
     show authRepositoryProvider;
@@ -63,7 +64,10 @@ class _UpgradeToCloudScreenState extends ConsumerState<UpgradeToCloudScreen> {
     final syncEngine = ref.read(syncEngineProvider);
     if (syncEngine == null) return;
     await syncEngine.pushAllLocalData();
-    await syncEngine.pullOnLaunch();
+    final orchestrator = ref.read(syncOrchestratorProvider);
+    if (orchestrator != null) {
+      await orchestrator.pullOnLaunch();
+    }
   }
 
   @override

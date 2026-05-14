@@ -10,6 +10,7 @@ import 'package:learning_tracker/core/database/registry/device_registry_database
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/providers/registry_provider.dart';
+import 'package:learning_tracker/core/sync/providers/sync_orchestrator_providers.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/auth/data/services/magic_link_service.dart';
 import 'package:learning_tracker/features/auth/domain/services/local_auth_service.dart';
@@ -260,7 +261,10 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
             final syncEngine = ref.read(syncEngineProvider);
             if (syncEngine != null) {
               await syncEngine.pushAllLocalData();
-              await syncEngine.pullOnLaunch();
+            }
+            final orchestrator = ref.read(syncOrchestratorProvider);
+            if (orchestrator != null) {
+              await orchestrator.pullOnLaunch();
             }
             if (mounted) await _navigateAfterSignIn();
             return;
@@ -574,9 +578,9 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
     // auth state, then pull synchronously so the next route decision
     // sees the real profile count rather than an empty local table.
     ref.invalidate(syncEngineProvider);
-    final syncEngine = ref.read(syncEngineProvider);
-    if (syncEngine != null) {
-      await syncEngine.pullOnLaunch();
+    final orchestrator = ref.read(syncOrchestratorProvider);
+    if (orchestrator != null) {
+      await orchestrator.pullOnLaunch();
     }
     if (!mounted) return;
 
@@ -597,8 +601,8 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
           await ref.read(firestoreDataSourceProvider)?.fetchLearnerProfiles() ??
           const <Map<String, dynamic>>[];
 
-      if (remoteProfiles.isNotEmpty && syncEngine != null) {
-        await syncEngine.pullOnLaunch();
+      if (remoteProfiles.isNotEmpty && orchestrator != null) {
+        await orchestrator.pullOnLaunch();
         profileCount = await ref
             .read(userDatabaseProvider)
             .profileDao
@@ -624,9 +628,9 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
     if (profiles.length == 1) {
       ref.read(selectedProfileIdProvider.notifier).select(profiles.first.id);
       ref.invalidate(syncEngineProvider);
-      final selectedSyncEngine = ref.read(syncEngineProvider);
-      if (selectedSyncEngine != null) {
-        await selectedSyncEngine.pullOnLaunch();
+      final selectedOrchestrator = ref.read(syncOrchestratorProvider);
+      if (selectedOrchestrator != null) {
+        await selectedOrchestrator.pullOnLaunch();
       }
     } else {
       // Multiple profiles: user chooses in profile picker.

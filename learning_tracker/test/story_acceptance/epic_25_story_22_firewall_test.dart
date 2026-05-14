@@ -20,6 +20,7 @@ import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/network/connectivity_service.dart';
+import 'package:learning_tracker/core/sync/sync_orchestrator.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/curriculum_import_service.dart';
 import 'package:learning_tracker/features/sync/data/firestore_data_source.dart';
 import 'package:learning_tracker/features/sync/data/offline_queue.dart';
@@ -350,7 +351,7 @@ void main() {
 
         final svc = DeviceRestoreService(
           database: db,
-          syncEngine: engine,
+          syncOrchestrator: SyncOrchestratorImpl(engine: engine),
           firestoreDataSource: fsMock,
           curriculumImportService: importService,
           logger: logger,

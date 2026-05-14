@@ -6,9 +6,9 @@ import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/cross_profile_scope.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
+import 'package:learning_tracker/core/sync/sync_orchestrator.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/curriculum_import_service.dart';
 import 'package:learning_tracker/features/sync/data/firestore_data_source.dart';
-import 'package:learning_tracker/features/sync/data/sync_engine.dart';
 import 'package:learning_tracker/features/sync/domain/models/restore_status.dart';
 import 'package:learning_tracker/features/sync/domain/models/sync_status.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -31,20 +31,20 @@ import 'package:shared_preferences/shared_preferences.dart';
 class DeviceRestoreService {
   DeviceRestoreService({
     required UserDatabase database,
-    required SyncEngine syncEngine,
+    required SyncOrchestrator syncOrchestrator,
     required FirestoreDataSource firestoreDataSource,
     required CurriculumImportService curriculumImportService,
     required AppLogger logger,
     AnalyticsService? analytics,
   }) : _database = database,
-       _syncEngine = syncEngine,
+       _syncOrchestrator = syncOrchestrator,
        _firestoreDataSource = firestoreDataSource,
        _curriculumImportService = curriculumImportService,
        _logger = logger,
        _analytics = analytics ?? const NullAnalyticsService();
 
   final UserDatabase _database;
-  final SyncEngine _syncEngine;
+  final SyncOrchestrator _syncOrchestrator;
   final FirestoreDataSource _firestoreDataSource;
   final CurriculumImportService _curriculumImportService;
   final AppLogger _logger;
@@ -166,10 +166,10 @@ class DeviceRestoreService {
           totalSteps: totalSteps,
         ),
       );
-      await _syncEngine.pullOnLaunch();
+      await _syncOrchestrator.pullOnLaunch();
 
       // Check if pullOnLaunch failed (it catches errors internally)
-      if (_syncEngine.currentStatus case SyncStatusError(:final message)) {
+      if (_syncOrchestrator.currentStatus case SyncStatusError(:final message)) {
         throw Exception('Data pull failed: $message');
       }
 

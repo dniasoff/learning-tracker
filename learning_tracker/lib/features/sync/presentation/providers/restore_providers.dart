@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/analytics/analytics_provider.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/providers/talker_provider.dart';
+import 'package:learning_tracker/core/sync/providers/sync_orchestrator_providers.dart';
 import 'package:learning_tracker/features/onboarding/presentation/providers/onboarding_providers.dart';
 import 'package:learning_tracker/features/sync/domain/models/restore_status.dart';
 import 'package:learning_tracker/features/sync/domain/services/device_restore_service.dart';
@@ -11,9 +12,9 @@ import 'package:learning_tracker/features/sync/presentation/providers/sync_provi
 ///
 /// Returns null when user has no cloud account (restore requires Firestore).
 final deviceRestoreServiceProvider = Provider<DeviceRestoreService?>((ref) {
-  final syncEngine = ref.watch(syncEngineProvider);
+  final syncOrchestrator = ref.watch(syncOrchestratorProvider);
   final firestoreDataSource = ref.watch(firestoreDataSourceProvider);
-  if (syncEngine == null || firestoreDataSource == null) return null;
+  if (syncOrchestrator == null || firestoreDataSource == null) return null;
 
   final database = ref.watch(userDatabaseProvider);
   final curriculumImportService = ref.watch(curriculumImportServiceProvider);
@@ -23,7 +24,7 @@ final deviceRestoreServiceProvider = Provider<DeviceRestoreService?>((ref) {
 
   final service = DeviceRestoreService(
     database: database,
-    syncEngine: syncEngine,
+    syncOrchestrator: syncOrchestrator,
     firestoreDataSource: firestoreDataSource,
     curriculumImportService: curriculumImportService,
     logger: logger,

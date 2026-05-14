@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:learning_tracker/core/sync/providers/sync_orchestrator_providers.dart';
 import 'package:learning_tracker/features/auth/presentation/providers/connectivity_providers.dart';
 import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
 
@@ -59,7 +60,11 @@ class _SyncLifecycleObserverState extends ConsumerState<SyncLifecycleObserver>
     switch (state) {
       case AppLifecycleState.resumed:
         engine.attachListeners();
-        unawaited(engine.pullOnLaunch(triggeredFromResume: true));
+        unawaited(
+          ref
+              .read(syncOrchestratorProvider)
+              ?.pullOnLaunch(triggeredFromResume: true),
+        );
         break;
       case AppLifecycleState.inactive:
         break;
