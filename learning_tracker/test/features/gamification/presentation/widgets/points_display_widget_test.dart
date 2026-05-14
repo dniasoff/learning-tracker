@@ -32,9 +32,7 @@ void main() {
           child: const MaterialApp(
             localizationsDelegates: AppLocalizations.localizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
-            home: Scaffold(
-              body: PointsDisplayWidget(userMode: UserMode.child),
-            ),
+            home: Scaffold(body: PointsDisplayWidget(userMode: UserMode.child)),
           ),
         ),
       );
@@ -59,9 +57,7 @@ void main() {
           child: const MaterialApp(
             localizationsDelegates: AppLocalizations.localizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
-            home: Scaffold(
-              body: PointsDisplayWidget(userMode: UserMode.adult),
-            ),
+            home: Scaffold(body: PointsDisplayWidget(userMode: UserMode.adult)),
           ),
         ),
       );
