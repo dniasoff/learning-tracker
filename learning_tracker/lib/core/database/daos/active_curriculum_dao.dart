@@ -15,7 +15,8 @@ part 'active_curriculum_dao.g.dart';
 /// This eliminates the former `active_curricula` table and its split-brain risk.
 @DriftAccessor(tables: [CurriculumTracks])
 class ActiveCurriculumDao extends DatabaseAccessor<UserDatabase>
-    with _$ActiveCurriculumDaoMixin,
+    with
+        _$ActiveCurriculumDaoMixin,
         BaseDao<$CurriculumTracksTable, CurriculumTrack, UserDatabase> {
   ActiveCurriculumDao(super.db);
 

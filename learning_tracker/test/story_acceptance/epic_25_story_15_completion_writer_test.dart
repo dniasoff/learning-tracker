@@ -97,89 +97,83 @@ void main() {
 
       // ── AC: writer is the single path; writes both rows atomically ──────
 
-      test(
-        'commit() inserts a completion row, an outbox row, AND a '
-        'completion_events row in one atomic transaction',
-        () async {
-          final result = await writer.commit(_cmd(trackId: trackId));
+      test('commit() inserts a completion row, an outbox row, AND a '
+          'completion_events row in one atomic transaction', () async {
+        final result = await writer.commit(_cmd(trackId: trackId));
 
-          expect(result.isNew, isTrue);
-          expect(result.completion.sefariaRef, equals('Mishnah Berakhot 1'));
+        expect(result.isNew, isTrue);
+        expect(result.completion.sefariaRef, equals('Mishnah Berakhot 1'));
 
-          final completions = await db.select(db.completions).get();
-          expect(completions, hasLength(1));
-          expect(completions.first.profileId, equals(1));
-          expect(completions.first.points, equals(5));
+        final completions = await db.select(db.completions).get();
+        expect(completions, hasLength(1));
+        expect(completions.first.profileId, equals(1));
+        expect(completions.first.points, equals(5));
 
-          final outboxRows = await db.select(db.outbox).get();
-          expect(outboxRows, hasLength(1));
-          expect(
-            outboxRows.first.entityKind,
-            equals(OutboxEntityKind.completion),
-          );
-          expect(
-            outboxRows.first.entityKey,
-            equals('1:Mishnah Berakhot 1:1:personal'),
-          );
+        final outboxRows = await db.select(db.outbox).get();
+        expect(outboxRows, hasLength(1));
+        expect(
+          outboxRows.first.entityKind,
+          equals(OutboxEntityKind.completion),
+        );
+        expect(
+          outboxRows.first.entityKey,
+          equals('1:Mishnah Berakhot 1:1:personal'),
+        );
 
-          final payload =
-              jsonDecode(outboxRows.first.payload) as Map<String, dynamic>;
-          expect(payload['profileId'], equals(1));
-          expect(payload['sefariaRef'], equals('Mishnah Berakhot 1'));
-          expect(payload['stageId'], equals(1));
-          expect(payload['trackType'], equals('personal'));
-          expect(payload['points'], equals(5));
-          expect(payload['curriculumId'], equals('mishnah_yomit'));
+        final payload =
+            jsonDecode(outboxRows.first.payload) as Map<String, dynamic>;
+        expect(payload['profileId'], equals(1));
+        expect(payload['sefariaRef'], equals('Mishnah Berakhot 1'));
+        expect(payload['stageId'], equals(1));
+        expect(payload['trackType'], equals('personal'));
+        expect(payload['points'], equals(5));
+        expect(payload['curriculumId'], equals('mishnah_yomit'));
 
-          // AC 25.15: completion_events row must be inserted atomically.
-          final events = await db.select(db.completionEvents).get();
-          expect(events, hasLength(1));
-          expect(events.first.profileId, equals(1));
-          expect(events.first.sefariaRef, equals('Mishnah Berakhot 1'));
-          expect(events.first.stageId, equals(1));
-          expect(events.first.trackType, equals('personal'));
-          expect(events.first.curriculumId, equals('mishnah_yomit'));
-          expect(
-            events.first.eventTimestamp.toUtc().microsecondsSinceEpoch,
-            equals(DateTime.utc(2026, 5, 13, 12).microsecondsSinceEpoch),
-          );
-        },
-      );
+        // AC 25.15: completion_events row must be inserted atomically.
+        final events = await db.select(db.completionEvents).get();
+        expect(events, hasLength(1));
+        expect(events.first.profileId, equals(1));
+        expect(events.first.sefariaRef, equals('Mishnah Berakhot 1'));
+        expect(events.first.stageId, equals(1));
+        expect(events.first.trackType, equals('personal'));
+        expect(events.first.curriculumId, equals('mishnah_yomit'));
+        expect(
+          events.first.eventTimestamp.toUtc().microsecondsSinceEpoch,
+          equals(DateTime.utc(2026, 5, 13, 12).microsecondsSinceEpoch),
+        );
+      });
 
       // ── AC: idempotency on duplicate command ─────────────────────────────
 
-      test(
-        'commit() returns existing row without writing a second outbox row '
-        'or completion_events row for a duplicate '
-        '(profileId, sefariaRef, stageId, trackType)',
-        () async {
-          final first = await writer.commit(_cmd(trackId: trackId));
-          final second = await writer.commit(_cmd(trackId: trackId));
+      test('commit() returns existing row without writing a second outbox row '
+          'or completion_events row for a duplicate '
+          '(profileId, sefariaRef, stageId, trackType)', () async {
+        final first = await writer.commit(_cmd(trackId: trackId));
+        final second = await writer.commit(_cmd(trackId: trackId));
 
-          expect(first.isNew, isTrue);
-          expect(second.isNew, isFalse);
-          expect(second.completion.id, equals(first.completion.id));
+        expect(first.isNew, isTrue);
+        expect(second.isNew, isFalse);
+        expect(second.completion.id, equals(first.completion.id));
 
-          final completions = await db.select(db.completions).get();
-          expect(completions, hasLength(1));
+        final completions = await db.select(db.completions).get();
+        expect(completions, hasLength(1));
 
-          final outboxRows = await db.select(db.outbox).get();
-          expect(
-            outboxRows,
-            hasLength(1),
-            reason: 'duplicate command must NOT enqueue a second outbox push',
-          );
+        final outboxRows = await db.select(db.outbox).get();
+        expect(
+          outboxRows,
+          hasLength(1),
+          reason: 'duplicate command must NOT enqueue a second outbox push',
+        );
 
-          // AC 25.15: completion_events UNIQUE constraint — still exactly one row.
-          final events = await db.select(db.completionEvents).get();
-          expect(
-            events,
-            hasLength(1),
-            reason:
-                'duplicate command must NOT append a second completion_events row',
-          );
-        },
-      );
+        // AC 25.15: completion_events UNIQUE constraint — still exactly one row.
+        final events = await db.select(db.completionEvents).get();
+        expect(
+          events,
+          hasLength(1),
+          reason:
+              'duplicate command must NOT append a second completion_events row',
+        );
+      });
 
       // ── AC: rollback if the outbox insert fails ─────────────────────────
 

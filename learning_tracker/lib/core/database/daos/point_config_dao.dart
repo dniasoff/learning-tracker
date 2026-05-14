@@ -7,7 +7,9 @@ part 'point_config_dao.g.dart';
 
 @DriftAccessor(tables: [PointConfigs])
 class PointConfigDao extends DatabaseAccessor<UserDatabase>
-    with _$PointConfigDaoMixin, BaseDao<$PointConfigsTable, PointConfig, UserDatabase> {
+    with
+        _$PointConfigDaoMixin,
+        BaseDao<$PointConfigsTable, PointConfig, UserDatabase> {
   PointConfigDao(super.db);
 
   @override

@@ -7,7 +7,8 @@ part 'learning_order_dao.g.dart';
 
 @DriftAccessor(tables: [LearningOrder])
 class LearningOrderDao extends DatabaseAccessor<UserDatabase>
-    with _$LearningOrderDaoMixin,
+    with
+        _$LearningOrderDaoMixin,
         BaseDao<$LearningOrderTable, LearningOrderData, UserDatabase> {
   LearningOrderDao(super.db);
 

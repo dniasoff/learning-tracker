@@ -16,7 +16,9 @@ part 'completion_dao.g.dart';
 /// No update or delete methods are provided to enforce immutability.
 @DriftAccessor(tables: [Completions])
 class CompletionDao extends DatabaseAccessor<UserDatabase>
-    with _$CompletionDaoMixin, BaseDao<$CompletionsTable, Completion, UserDatabase> {
+    with
+        _$CompletionDaoMixin,
+        BaseDao<$CompletionsTable, Completion, UserDatabase> {
   CompletionDao(super.db);
 
   @override

@@ -11,7 +11,9 @@ part 'daily_plan_dao.g.dart';
 /// hot path: returns the full plan for a profile on a given local date.
 @DriftAccessor(tables: [DailyPlans])
 class DailyPlanDao extends DatabaseAccessor<UserDatabase>
-    with _$DailyPlanDaoMixin, BaseDao<$DailyPlansTable, DailyPlan, UserDatabase> {
+    with
+        _$DailyPlanDaoMixin,
+        BaseDao<$DailyPlansTable, DailyPlan, UserDatabase> {
   DailyPlanDao(super.db);
 
   @override

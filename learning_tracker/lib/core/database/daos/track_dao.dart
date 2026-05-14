@@ -10,7 +10,9 @@ part 'track_dao.g.dart';
 
 @DriftAccessor(tables: [CurriculumTracks])
 class TrackDao extends DatabaseAccessor<UserDatabase>
-    with _$TrackDaoMixin, BaseDao<$CurriculumTracksTable, CurriculumTrack, UserDatabase> {
+    with
+        _$TrackDaoMixin,
+        BaseDao<$CurriculumTracksTable, CurriculumTrack, UserDatabase> {
   TrackDao(super.db);
 
   @override

@@ -13,9 +13,7 @@ GoogleSignIn googleSignIn(Ref ref) {
 
 @Riverpod(keepAlive: true)
 AuthRepository authRepository(Ref ref) {
-  return AuthRepositoryImpl(
-    googleSignIn: ref.watch(googleSignInProvider),
-  );
+  return AuthRepositoryImpl(googleSignIn: ref.watch(googleSignInProvider));
 }
 
 @Riverpod(keepAlive: true)
