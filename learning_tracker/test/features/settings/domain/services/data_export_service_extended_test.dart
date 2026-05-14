@@ -71,12 +71,12 @@ void main() {
 
       final data = jsonDecode(await service.exportData()) as Map<String, dynamic>;
 
-      expect((data['userProfiles'] as List), isEmpty);
-      expect((data['completions'] as List), isEmpty);
-      expect((data['goals'] as List), isEmpty);
-      expect((data['streaks'] as List), isEmpty);
-      expect((data['curriculumTracks'] as List), isEmpty);
-      expect((data['stageDefinitions'] as List), isEmpty);
+      expect(data['userProfiles'] as List<dynamic>, isEmpty);
+      expect(data['completions'] as List<dynamic>, isEmpty);
+      expect(data['goals'] as List<dynamic>, isEmpty);
+      expect(data['streaks'] as List<dynamic>, isEmpty);
+      expect(data['curriculumTracks'] as List<dynamic>, isEmpty);
+      expect(data['stageDefinitions'] as List<dynamic>, isEmpty);
     });
 
     test('exported JSON can be decoded by validateAndPreview', () async {
@@ -124,7 +124,7 @@ void main() {
 
   group('ImportPreview', () {
     test('totalRecords sums all individual counts', () {
-      final preview = ImportPreview(
+      const preview = ImportPreview(
         completionCount: 10,
         goalCount: 2,
         stageCount: 3,

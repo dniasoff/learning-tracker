@@ -49,7 +49,7 @@ void main() {
     return row.id;
   }
 
-  Future<int> _insertTrack({
+  Future<int> insertRawTrack({
     String curriculumId = 'bavli',
     String trackType = 'personal',
     int profileId = 0,
@@ -102,7 +102,7 @@ void main() {
     test('reactivates an inactive personal track instead of creating a new one',
         () async {
       // Insert a track as inactive.
-      await _insertTrack(
+      await insertRawTrack(
         curriculumId: 'bavli',
         trackType: 'personal',
         profileId: 0,
@@ -299,7 +299,7 @@ void main() {
 
   group('TrackDao.resetPace', () {
     test('stamps paceResetDate on the track row', () async {
-      final trackId = await _insertTrack(profileId: 1);
+      final trackId = await insertTrack(profileId: 1);
 
       await db.trackDao.resetPace(trackId);
 
@@ -336,9 +336,9 @@ void main() {
 
   group('TrackDao.getAllForProfile', () {
     test('returns all tracks (active and inactive) for the profile', () async {
-      await _insertTrack(curriculumId: 'bavli', trackType: 'personal', profileId: 1, isActive: true);
-      await _insertTrack(curriculumId: 'mishnayos', trackType: 'personal', profileId: 1, isActive: false);
-      await _insertTrack(curriculumId: 'bavli', trackType: 'personal', profileId: 2, isActive: true);
+      await insertRawTrack(curriculumId: 'bavli', trackType: 'personal', profileId: 1, isActive: true);
+      await insertRawTrack(curriculumId: 'mishnayos', trackType: 'personal', profileId: 1, isActive: false);
+      await insertRawTrack(curriculumId: 'bavli', trackType: 'personal', profileId: 2, isActive: true);
 
       final tracks = await db.trackDao.getAllForProfile(1);
       expect(tracks, hasLength(2));
@@ -354,8 +354,8 @@ void main() {
 
   group('TrackDao.countActiveTracksForProfile', () {
     test('counts only active non-deleted tracks for profile', () async {
-      await _insertTrack(curriculumId: 'bavli', profileId: 3, isActive: true);
-      await _insertTrack(curriculumId: 'mishnayos', profileId: 3, isActive: false);
+      await insertRawTrack(curriculumId: 'bavli', profileId: 3, isActive: true);
+      await insertRawTrack(curriculumId: 'mishnayos', profileId: 3, isActive: false);
 
       final count = await db.trackDao.countActiveTracksForProfile(3);
       expect(count, 1);
@@ -364,8 +364,8 @@ void main() {
 
   group('TrackDao.getActiveTracksForProfile', () {
     test('returns tracks ordered by curriculumId ascending', () async {
-      await _insertTrack(curriculumId: 'mishnayos', profileId: 10, isActive: true);
-      await _insertTrack(curriculumId: 'bavli', profileId: 10, isActive: true);
+      await insertRawTrack(curriculumId: 'mishnayos', profileId: 10, isActive: true);
+      await insertRawTrack(curriculumId: 'bavli', profileId: 10, isActive: true);
 
       final tracks = await db.trackDao.getActiveTracksForProfile(10);
       expect(tracks, hasLength(2));

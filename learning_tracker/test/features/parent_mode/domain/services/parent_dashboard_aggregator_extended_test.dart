@@ -2,7 +2,7 @@
 /// computeCompletionPercentage() which require a live UserDatabase.
 library;
 
-import 'package:drift/drift.dart' hide isNull, isNotNull;
+import 'package:drift/drift.dart' hide isNotNull, isNull;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
@@ -26,7 +26,7 @@ void main() {
 
   // ── helpers ──────────────────────────────────────────────────────────────
 
-  Future<int> _insertTrack({
+  Future<int> insertTrack({
     String curriculumId = 'mishnayos',
     bool isActive = true,
   }) {
@@ -41,7 +41,7 @@ void main() {
         );
   }
 
-  Future<void> _insertCompletion({
+  Future<void> insertCompletion({
     String curriculumId = 'mishnayos',
     String sefariaRef = 'Berakhot 1:1',
     int stageId = 1,
@@ -79,13 +79,13 @@ void main() {
     });
 
     test('sums globalPoints across all completions', () async {
-      final trackId = await _insertTrack(curriculumId: 'mishnayos');
-      await _insertCompletion(
+      final trackId = await insertTrack(curriculumId: 'mishnayos');
+      await insertCompletion(
         curriculumId: 'mishnayos',
         trackId: trackId,
         points: 5,
       );
-      await _insertCompletion(
+      await insertCompletion(
         curriculumId: 'mishnayos',
         sefariaRef: 'Berakhot 1:2',
         trackId: trackId,
@@ -98,18 +98,18 @@ void main() {
     });
 
     test('includes recent completions within 7-day window', () async {
-      final trackId = await _insertTrack(curriculumId: 'mishnayos');
+      final trackId = await insertTrack(curriculumId: 'mishnayos');
       final now = DateTime.utc(2026, 5, 14);
       final recent = now.subtract(const Duration(days: 3));
       final old = now.subtract(const Duration(days: 30));
 
-      await _insertCompletion(
+      await insertCompletion(
         curriculumId: 'mishnayos',
         sefariaRef: 'Berakhot 1:1',
         trackId: trackId,
         completedAt: recent,
       );
-      await _insertCompletion(
+      await insertCompletion(
         curriculumId: 'mishnayos',
         sefariaRef: 'Berakhot 1:2',
         trackId: trackId,
@@ -124,16 +124,16 @@ void main() {
     });
 
     test('recent completions are sorted newest-first', () async {
-      final trackId = await _insertTrack(curriculumId: 'mishnayos');
+      final trackId = await insertTrack(curriculumId: 'mishnayos');
       final now = DateTime.utc(2026, 5, 14);
 
-      await _insertCompletion(
+      await insertCompletion(
         curriculumId: 'mishnayos',
         sefariaRef: 'Berakhot 1:1',
         trackId: trackId,
         completedAt: now.subtract(const Duration(days: 2)),
       );
-      await _insertCompletion(
+      await insertCompletion(
         curriculumId: 'mishnayos',
         sefariaRef: 'Berakhot 1:2',
         trackId: trackId,
@@ -147,8 +147,8 @@ void main() {
     });
 
     test('builds per-curriculum summary for active tracks', () async {
-      final trackId = await _insertTrack(curriculumId: 'mishnayos');
-      await _insertCompletion(
+      final trackId = await insertTrack(curriculumId: 'mishnayos');
+      await insertCompletion(
         curriculumId: 'mishnayos',
         trackId: trackId,
         points: 20,
@@ -164,7 +164,7 @@ void main() {
     });
 
     test('inactive track is not included in curricula summaries', () async {
-      await _insertTrack(curriculumId: 'mishnayos', isActive: false);
+      await insertTrack(curriculumId: 'mishnayos', isActive: false);
 
       final data = await aggregator.compute(now: DateTime.utc(2026, 5, 14));
       expect(data.curricula, isEmpty);
@@ -205,8 +205,8 @@ void main() {
     });
 
     test('returns 0.0 when no stages (stageRepository is null)', () async {
-      final trackId = await _insertTrack(curriculumId: 'mishnayos');
-      await _insertCompletion(
+      final trackId = await insertTrack(curriculumId: 'mishnayos');
+      await insertCompletion(
         curriculumId: 'mishnayos',
         trackId: trackId,
       );
@@ -220,8 +220,8 @@ void main() {
     test('returns 0.0 when no learning order items', () async {
       // completions + stages exist but learningOrderDao.countByCurriculum == 0
       // → early return 0.0
-      final trackId = await _insertTrack(curriculumId: 'mishnayos');
-      await _insertCompletion(
+      final trackId = await insertTrack(curriculumId: 'mishnayos');
+      await insertCompletion(
         curriculumId: 'mishnayos',
         trackId: trackId,
       );

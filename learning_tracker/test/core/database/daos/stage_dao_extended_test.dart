@@ -38,7 +38,7 @@ void main() {
 
   const curriculumId = 'mishnayos';
 
-  Future<int> _insertStage({
+  Future<int> insertStage({
     int stageOrder = 1,
     String stageName = 'Learn',
     int delayDays = 0,
@@ -59,7 +59,7 @@ void main() {
 
   group('StageDao.getStageDefinitionById', () {
     test('returns the stage with the given id', () async {
-      final id = await _insertStage(stageOrder: 1, stageName: 'Learn');
+      final id = await insertStage(stageOrder: 1, stageName: 'Learn');
       final stage = await db.stageDao.getStageDefinitionById(id);
       expect(stage, isNotNull);
       expect(stage!.id, id);
@@ -76,7 +76,7 @@ void main() {
 
   group('StageDao.updateStageDefinition', () {
     test('updates an existing stage definition', () async {
-      final id = await _insertStage(stageOrder: 1, stageName: 'Original');
+      final id = await insertStage(stageOrder: 1, stageName: 'Original');
 
       final original = await db.stageDao.getStageDefinitionById(id);
       expect(original, isNotNull);
@@ -85,7 +85,7 @@ void main() {
         StageDefinitionsCompanion(
           id: Value(id),
           profileId: const Value(1),
-          curriculumId: Value(curriculumId),
+          curriculumId: const Value(curriculumId),
           trackId: Value(trackId),
           stageOrder: const Value(1),
           stageName: const Value('Updated Name'),
@@ -104,8 +104,8 @@ void main() {
 
   group('StageDao.deleteStageDefinition', () {
     test('removes the stage by id', () async {
-      final id = await _insertStage(stageOrder: 1);
-      await _insertStage(stageOrder: 2, stageName: 'Chazara');
+      final id = await insertStage(stageOrder: 1);
+      await insertStage(stageOrder: 2, stageName: 'Chazara');
 
       final deleted = await db.stageDao.deleteStageDefinition(id);
       expect(deleted, 1);
@@ -136,9 +136,9 @@ void main() {
             ),
           );
 
-      await _insertStage(stageOrder: 3, stageName: 'Chazara 2', tid: trackId);
-      await _insertStage(stageOrder: 1, stageName: 'Learn', tid: trackId);
-      await _insertStage(stageOrder: 1, stageName: 'Other', tid: otherTrackId);
+      await insertStage(stageOrder: 3, stageName: 'Chazara 2', tid: trackId);
+      await insertStage(stageOrder: 1, stageName: 'Learn', tid: trackId);
+      await insertStage(stageOrder: 1, stageName: 'Other', tid: otherTrackId);
 
       final stages = await db.stageDao.getStagesByTrack(trackId);
       expect(stages, hasLength(2));
@@ -164,9 +164,9 @@ void main() {
             ),
           );
 
-      await _insertStage(stageOrder: 1, tid: trackId);
-      await _insertStage(stageOrder: 2, tid: trackId);
-      await _insertStage(stageOrder: 1, tid: otherTrackId);
+      await insertStage(stageOrder: 1, tid: trackId);
+      await insertStage(stageOrder: 2, tid: trackId);
+      await insertStage(stageOrder: 1, tid: otherTrackId);
 
       final deleted = await db.stageDao.deleteStagesForTrack(trackId);
       expect(deleted, 2);
@@ -186,8 +186,8 @@ void main() {
 
   group('StageDao.replaceStagesForTrack', () {
     test('replaces existing stages for the track with new ones', () async {
-      await _insertStage(stageOrder: 1, stageName: 'Old Learn');
-      await _insertStage(stageOrder: 2, stageName: 'Old Chazara');
+      await insertStage(stageOrder: 1, stageName: 'Old Learn');
+      await insertStage(stageOrder: 2, stageName: 'Old Chazara');
 
       final newStages = [
         StageDefinitionsCompanion.insert(
@@ -208,7 +208,7 @@ void main() {
     });
 
     test('deletes all stages when replacement list is empty', () async {
-      await _insertStage(stageOrder: 1);
+      await insertStage(stageOrder: 1);
 
       await db.stageDao.replaceStagesForTrack(trackId, []);
 
@@ -226,8 +226,8 @@ void main() {
     });
 
     test('returns count of stages for track', () async {
-      await _insertStage(stageOrder: 1);
-      await _insertStage(stageOrder: 2, stageName: 'Chazara');
+      await insertStage(stageOrder: 1);
+      await insertStage(stageOrder: 2, stageName: 'Chazara');
 
       final count = await db.stageDao.countStagesForTrack(trackId);
       expect(count, 2);
@@ -243,8 +243,8 @@ void main() {
             ),
           );
 
-      await _insertStage(stageOrder: 1, tid: trackId);
-      await _insertStage(stageOrder: 1, tid: otherTrackId);
+      await insertStage(stageOrder: 1, tid: trackId);
+      await insertStage(stageOrder: 1, tid: otherTrackId);
 
       expect(await db.stageDao.countStagesForTrack(trackId), 1);
       expect(await db.stageDao.countStagesForTrack(otherTrackId), 1);
@@ -260,9 +260,9 @@ void main() {
     });
 
     test('returns maximum stageOrder for the track', () async {
-      await _insertStage(stageOrder: 1);
-      await _insertStage(stageOrder: 5, stageName: 'Chazara 4');
-      await _insertStage(stageOrder: 3, stageName: 'Chazara 2');
+      await insertStage(stageOrder: 1);
+      await insertStage(stageOrder: 5, stageName: 'Chazara 4');
+      await insertStage(stageOrder: 3, stageName: 'Chazara 2');
 
       final max = await db.stageDao.getMaxStageOrderForTrack(trackId);
       expect(max, 5);
@@ -274,7 +274,7 @@ void main() {
   group('StageDao.runTransaction', () {
     test('runs body inside a database transaction and returns result', () async {
       final result = await db.stageDao.runTransaction(() async {
-        final id = await _insertStage(stageOrder: 1, stageName: 'Txn Stage');
+        final id = await insertStage(stageOrder: 1, stageName: 'Txn Stage');
         return id;
       });
 

@@ -1,7 +1,7 @@
 /// Extended tests for ChartDataService covering the getTargetLine method.
 library;
 
-import 'package:drift/drift.dart' hide isNull, isNotNull;
+import 'package:drift/drift.dart' hide isNotNull, isNull;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/features/progress/domain/services/chart_data_service.dart';
@@ -23,7 +23,7 @@ void main() {
   });
 
   // Insert a basic curriculum track (needed for FK if any, but not always required).
-  Future<int> _insertTrack({String curriculumId = 'mishnayos'}) {
+  Future<int> insertTrack({String curriculumId = 'mishnayos'}) {
     return db.into(db.curriculumTracks).insert(
           CurriculumTracksCompanion.insert(
             profileId: profileId,
@@ -35,7 +35,7 @@ void main() {
         );
   }
 
-  Future<void> _insertCompletion({
+  Future<void> insertCompletion({
     String curriculumId = 'mishnayos',
     String sefariaRef = 'Berakhot 1:1',
     DateTime? completedAt,
@@ -55,7 +55,7 @@ void main() {
         );
   }
 
-  Future<void> _insertGoal({
+  Future<void> insertGoal({
     String curriculumId = 'mishnayos',
     DateTime? createdAt,
     DateTime? targetDate,
@@ -85,7 +85,7 @@ void main() {
     });
 
     test('returns null when goal has no targetDate', () async {
-      await _insertGoal(curriculumId: 'mishnayos', targetDate: null);
+      await insertGoal(curriculumId: 'mishnayos', targetDate: null);
 
       final result = await service.getTargetLine(
         curriculumId: 'mishnayos',
@@ -98,7 +98,7 @@ void main() {
     test('returns null when goal targetDate is same as createdAt (0 days)',
         () async {
       final d = DateTime.utc(2026, 5, 14);
-      await _insertGoal(
+      await insertGoal(
         curriculumId: 'mishnayos',
         createdAt: d,
         targetDate: d, // totalDays == 0 → null
@@ -114,16 +114,16 @@ void main() {
 
     test('returns target line points when goal and targetDate are set',
         () async {
-      final trackId = await _insertTrack();
+      final trackId = await insertTrack();
       final goalCreatedAt = DateTime.utc(2026, 5, 1);
       final goalTargetDate = DateTime.utc(2026, 5, 31);
 
-      await _insertGoal(
+      await insertGoal(
         curriculumId: 'mishnayos',
         createdAt: goalCreatedAt,
         targetDate: goalTargetDate,
       );
-      await _insertCompletion(
+      await insertCompletion(
         curriculumId: 'mishnayos',
         trackId: trackId,
         completedAt: DateTime.utc(2026, 5, 10),
@@ -142,17 +142,17 @@ void main() {
     });
 
     test('target line is monotonically non-decreasing within range', () async {
-      final trackId = await _insertTrack();
+      final trackId = await insertTrack();
       final goalCreated = DateTime.utc(2026, 1, 1);
       final goalTarget = DateTime.utc(2026, 12, 31);
 
-      await _insertGoal(
+      await insertGoal(
         curriculumId: 'mishnayos',
         createdAt: goalCreated,
         targetDate: goalTarget,
       );
       for (var i = 1; i <= 10; i++) {
-        await _insertCompletion(
+        await insertCompletion(
           curriculumId: 'mishnayos',
           trackId: trackId,
           sefariaRef: 'Berakhot 1:$i',

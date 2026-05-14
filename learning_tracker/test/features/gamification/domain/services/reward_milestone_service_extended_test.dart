@@ -7,7 +7,7 @@ library;
 
 import 'dart:convert';
 
-import 'package:drift/drift.dart' hide isNull, isNotNull;
+import 'package:drift/drift.dart' hide isNotNull, isNull;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/features/gamification/domain/models/reward_milestone.dart';
@@ -33,7 +33,7 @@ void main() {
 
   // ── helpers ──────────────────────────────────────────────────────────────
 
-  Future<int> _insertTrack({
+  Future<int> insertTrack({
     String curriculumId = 'mishnayos',
     bool isActive = true,
   }) {
@@ -48,7 +48,7 @@ void main() {
         );
   }
 
-  Future<void> _insertCompletion({
+  Future<void> insertCompletion({
     required int trackId,
     String curriculumId = 'mishnayos',
     String sefariaRef = 'Berakhot 1:1',
@@ -70,7 +70,7 @@ void main() {
         );
   }
 
-  Future<void> _insertGoal(int trackId) async {
+  Future<void> insertGoal(int trackId) async {
     await db.into(db.goals).insert(
           GoalsCompanion.insert(
             profileId: profileId,
@@ -91,9 +91,9 @@ void main() {
     });
 
     test('sums points for a given track', () async {
-      final trackId = await _insertTrack();
-      await _insertCompletion(trackId: trackId, points: 5);
-      await _insertCompletion(
+      final trackId = await insertTrack();
+      await insertCompletion(trackId: trackId, points: 5);
+      await insertCompletion(
         trackId: trackId,
         sefariaRef: 'Berakhot 1:2',
         points: 15,
@@ -104,7 +104,7 @@ void main() {
     });
 
     test('does not include points from other profiles', () async {
-      final trackId = await _insertTrack();
+      final trackId = await insertTrack();
       // Insert a completion for profile 2 in the same track.
       await db.into(db.completions).insert(
             CompletionsCompanion.insert(
@@ -118,7 +118,7 @@ void main() {
               points: const Value(100),
             ),
           );
-      await _insertCompletion(trackId: trackId, points: 7);
+      await insertCompletion(trackId: trackId, points: 7);
 
       final total = await service.getTrackPointsTotal(trackId);
       // Service is scoped to profileId=1, so only the 7-point completion counts.
@@ -135,15 +135,15 @@ void main() {
     });
 
     test('returns true when track has a learning goal', () async {
-      final trackId = await _insertTrack(curriculumId: 'mishnayos');
-      await _insertGoal(trackId);
+      final trackId = await insertTrack(curriculumId: 'mishnayos');
+      await insertGoal(trackId);
 
       final result = await service.trackCountsTowardRewardPoints(trackId);
       expect(result, isTrue);
     });
 
     test('returns false for track with no goal and no program', () async {
-      final trackId = await _insertTrack(curriculumId: 'mishnayos');
+      final trackId = await insertTrack(curriculumId: 'mishnayos');
 
       final result = await service.trackCountsTowardRewardPoints(trackId);
       expect(result, isFalse);
@@ -154,8 +154,8 @@ void main() {
 
   group('RewardMilestoneService.getTrackPointsTotalForRewards', () {
     test('returns 0 for non-reward-eligible track', () async {
-      final trackId = await _insertTrack(curriculumId: 'mishnayos');
-      await _insertCompletion(trackId: trackId, points: 50);
+      final trackId = await insertTrack(curriculumId: 'mishnayos');
+      await insertCompletion(trackId: trackId, points: 50);
 
       // No goal → not reward-eligible → returns 0
       final total = await service.getTrackPointsTotalForRewards(trackId);
@@ -163,10 +163,10 @@ void main() {
     });
 
     test('returns total points for reward-eligible track (with goal)', () async {
-      final trackId = await _insertTrack(curriculumId: 'mishnayos');
-      await _insertGoal(trackId);
-      await _insertCompletion(trackId: trackId, points: 30);
-      await _insertCompletion(
+      final trackId = await insertTrack(curriculumId: 'mishnayos');
+      await insertGoal(trackId);
+      await insertCompletion(trackId: trackId, points: 30);
+      await insertCompletion(
         trackId: trackId,
         sefariaRef: 'Berakhot 1:2',
         points: 20,
@@ -186,18 +186,18 @@ void main() {
     });
 
     test('returns 0 for completions on non-reward-eligible track', () async {
-      final trackId = await _insertTrack(curriculumId: 'mishnayos');
-      await _insertCompletion(trackId: trackId, points: 100);
+      final trackId = await insertTrack(curriculumId: 'mishnayos');
+      await insertCompletion(trackId: trackId, points: 100);
       // No goal → not eligible → 0
       final total = await service.getGlobalPointsForRewards();
       expect(total, 0);
     });
 
     test('sums points across eligible tracks', () async {
-      final trackId = await _insertTrack(curriculumId: 'mishnayos');
-      await _insertGoal(trackId);
-      await _insertCompletion(trackId: trackId, points: 25);
-      await _insertCompletion(
+      final trackId = await insertTrack(curriculumId: 'mishnayos');
+      await insertGoal(trackId);
+      await insertCompletion(trackId: trackId, points: 25);
+      await insertCompletion(
         trackId: trackId,
         sefariaRef: 'Berakhot 1:2',
         points: 25,
@@ -212,7 +212,7 @@ void main() {
 
   group('RewardMilestoneService.evaluateUnlocksForTrack', () {
     test('returns empty when track is not reward-eligible (no goal)', () async {
-      final trackId = await _insertTrack(curriculumId: 'mishnayos');
+      final trackId = await insertTrack(curriculumId: 'mishnayos');
       await service.upsertMilestone(
         trackId: trackId,
         title: 'Test',
@@ -224,17 +224,17 @@ void main() {
     });
 
     test('returns empty when no milestones configured for track', () async {
-      final trackId = await _insertTrack(curriculumId: 'mishnayos');
-      await _insertGoal(trackId);
+      final trackId = await insertTrack(curriculumId: 'mishnayos');
+      await insertGoal(trackId);
 
       final unlocks = await service.evaluateUnlocksForTrack(trackId);
       expect(unlocks, isEmpty);
     });
 
     test('unlocks milestone when points exceed threshold', () async {
-      final trackId = await _insertTrack(curriculumId: 'mishnayos');
-      await _insertGoal(trackId);
-      await _insertCompletion(trackId: trackId, points: 50);
+      final trackId = await insertTrack(curriculumId: 'mishnayos');
+      await insertGoal(trackId);
+      await insertCompletion(trackId: trackId, points: 50);
 
       await service.upsertMilestone(
         trackId: trackId,
@@ -250,9 +250,9 @@ void main() {
     });
 
     test('does not unlock milestone when points are below threshold', () async {
-      final trackId = await _insertTrack(curriculumId: 'mishnayos');
-      await _insertGoal(trackId);
-      await _insertCompletion(trackId: trackId, points: 10);
+      final trackId = await insertTrack(curriculumId: 'mishnayos');
+      await insertGoal(trackId);
+      await insertCompletion(trackId: trackId, points: 10);
 
       await service.upsertMilestone(
         trackId: trackId,
@@ -266,9 +266,9 @@ void main() {
     });
 
     test('does not re-unlock an already-unlocked milestone', () async {
-      final trackId = await _insertTrack(curriculumId: 'mishnayos');
-      await _insertGoal(trackId);
-      await _insertCompletion(trackId: trackId, points: 50);
+      final trackId = await insertTrack(curriculumId: 'mishnayos');
+      await insertGoal(trackId);
+      await insertCompletion(trackId: trackId, points: 50);
 
       await service.upsertMilestone(
         trackId: trackId,
@@ -287,9 +287,9 @@ void main() {
     });
 
     test('skips disabled milestones', () async {
-      final trackId = await _insertTrack(curriculumId: 'mishnayos');
-      await _insertGoal(trackId);
-      await _insertCompletion(trackId: trackId, points: 100);
+      final trackId = await insertTrack(curriculumId: 'mishnayos');
+      await insertGoal(trackId);
+      await insertCompletion(trackId: trackId, points: 100);
 
       await service.upsertMilestone(
         trackId: trackId,
@@ -310,9 +310,9 @@ void main() {
       () {
     test('unlocks global milestone when global points exceed threshold',
         () async {
-      final trackId = await _insertTrack(curriculumId: 'mishnayos');
-      await _insertGoal(trackId);
-      await _insertCompletion(trackId: trackId, points: 200);
+      final trackId = await insertTrack(curriculumId: 'mishnayos');
+      await insertGoal(trackId);
+      await insertCompletion(trackId: trackId, points: 200);
 
       await service.upsertMilestone(
         trackId: RewardMilestone.kGlobalTrackSentinel,
@@ -328,9 +328,9 @@ void main() {
     });
 
     test('does not re-unlock global milestone on second evaluation', () async {
-      final trackId = await _insertTrack(curriculumId: 'mishnayos');
-      await _insertGoal(trackId);
-      await _insertCompletion(trackId: trackId, points: 200);
+      final trackId = await insertTrack(curriculumId: 'mishnayos');
+      await insertGoal(trackId);
+      await insertCompletion(trackId: trackId, points: 200);
 
       await service.upsertMilestone(
         trackId: RewardMilestone.kGlobalTrackSentinel,

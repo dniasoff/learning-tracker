@@ -27,7 +27,7 @@ void main() {
 
   // ── helpers ───────────────────────────────────────────────────────────────
 
-  Future<int> _insert({
+  Future<int> insert({
     int profileId = 1,
     String curriculumId = 'mishnayos',
     String sefariaRef = 'Berakhot',
@@ -50,8 +50,8 @@ void main() {
     });
 
     test('returns all inserted rows across curricula', () async {
-      await _insert(curriculumId: 'mishnayos', sefariaRef: 'A');
-      await _insert(curriculumId: 'bavli', sefariaRef: 'B');
+      await insert(curriculumId: 'mishnayos', sefariaRef: 'A');
+      await insert(curriculumId: 'bavli', sefariaRef: 'B');
 
       final all = await db.learningOrderDao.getAllLearningOrders();
       expect(all, hasLength(2));
@@ -62,7 +62,7 @@ void main() {
 
   group('LearningOrderDao.getLearningOrderById', () {
     test('returns the row with the given id', () async {
-      final id = await _insert(sefariaRef: 'Shabbat');
+      final id = await insert(sefariaRef: 'Shabbat');
       final row = await db.learningOrderDao.getLearningOrderById(id);
       expect(row, isNotNull);
       expect(row!.id, id);
@@ -79,13 +79,13 @@ void main() {
 
   group('LearningOrderDao.insertLearningOrder', () {
     test('inserts a row and returns an id > 0', () async {
-      final id = await _insert();
+      final id = await insert();
       expect(id, greaterThan(0));
     });
 
     test('multiple inserts return distinct ids', () async {
-      final id1 = await _insert(sefariaRef: 'A');
-      final id2 = await _insert(sefariaRef: 'B');
+      final id1 = await insert(sefariaRef: 'A');
+      final id2 = await insert(sefariaRef: 'B');
       expect(id1, isNot(id2));
     });
   });
@@ -94,7 +94,7 @@ void main() {
 
   group('LearningOrderDao.updateLearningOrder', () {
     test('updates the userSortOrder of an existing row', () async {
-      final id = await _insert(sefariaRef: 'Berakhot', sortOrder: 0);
+      final id = await insert(sefariaRef: 'Berakhot', sortOrder: 0);
       final row = await db.learningOrderDao.getLearningOrderById(id);
       expect(row, isNotNull);
 
@@ -118,8 +118,8 @@ void main() {
 
   group('LearningOrderDao.deleteLearningOrder', () {
     test('removes the row with the given id', () async {
-      final id = await _insert(sefariaRef: 'Berakhot');
-      await _insert(sefariaRef: 'Shabbat');
+      final id = await insert(sefariaRef: 'Berakhot');
+      await insert(sefariaRef: 'Shabbat');
 
       final deleted = await db.learningOrderDao.deleteLearningOrder(id);
       expect(deleted, 1);
@@ -139,9 +139,9 @@ void main() {
 
   group('LearningOrderDao.deleteAllForCurriculum', () {
     test('removes all rows for the specified curriculum', () async {
-      await _insert(curriculumId: 'mishnayos', sefariaRef: 'A');
-      await _insert(curriculumId: 'mishnayos', sefariaRef: 'B');
-      await _insert(curriculumId: 'bavli', sefariaRef: 'C');
+      await insert(curriculumId: 'mishnayos', sefariaRef: 'A');
+      await insert(curriculumId: 'mishnayos', sefariaRef: 'B');
+      await insert(curriculumId: 'bavli', sefariaRef: 'C');
 
       final deleted = await db.learningOrderDao.deleteAllForCurriculum(
         'mishnayos',

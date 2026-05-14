@@ -4,7 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/features/gamification/domain/models/reward_milestone.dart';
 
 void main() {
-  final _now = DateTime.utc(2026, 5, 14, 10, 0, 0);
+  final now = DateTime.utc(2026, 5, 14, 10, 0, 0);
 
   final base = RewardMilestone(
     id: 'ms_1',
@@ -19,20 +19,20 @@ void main() {
   );
 
   group('RewardMilestone', () {
-    RewardMilestone _base() => RewardMilestone(
+    RewardMilestone base() => RewardMilestone(
       id: 'milestone-1',
       profileId: 1,
       trackId: 42,
       title: 'First 100',
       thresholdPoints: 100,
       isEnabled: true,
-      createdAt: _now,
-      updatedAt: _now,
+      createdAt: now,
+      updatedAt: now,
       iconIndex: 3,
     );
 
     test('toJson serialises all fields correctly', () {
-      final json = _base().toJson();
+      final json = base().toJson();
       expect(json['id'], 'milestone-1');
       expect(json['profile_id'], 1);
       expect(json['track_id'], 42);
@@ -40,12 +40,12 @@ void main() {
       expect(json['threshold_points'], 100);
       expect(json['is_enabled'], isTrue);
       expect(json['icon_index'], 3);
-      expect(json['created_at'], _now.toIso8601String());
-      expect(json['updated_at'], _now.toIso8601String());
+      expect(json['created_at'], now.toIso8601String());
+      expect(json['updated_at'], now.toIso8601String());
     });
 
     test('fromJson round-trips through toJson', () {
-      final original = _base();
+      final original = base();
       final decoded = RewardMilestone.fromJson(original.toJson());
 
       expect(decoded.id, original.id);
@@ -58,7 +58,7 @@ void main() {
     });
 
     test('fromJson handles int ids stored as strings', () {
-      final json = _base().toJson();
+      final json = base().toJson();
       json['profile_id'] = '2';
       json['track_id'] = '99';
       json['threshold_points'] = '500';
@@ -83,7 +83,7 @@ void main() {
     });
 
     test('copyWith overrides only the specified fields', () {
-      final original = _base();
+      final original = base();
       final updated = original.copyWith(title: 'Gold', thresholdPoints: 500);
 
       expect(updated.title, 'Gold');
@@ -209,29 +209,29 @@ void main() {
   // ── RewardUnlockRecord ────────────────────────────────────────────────────
 
   group('RewardUnlockRecord', () {
-    RewardUnlockRecord _baseUnlock() => RewardUnlockRecord(
+    RewardUnlockRecord baseUnlock() => RewardUnlockRecord(
       milestoneId: 'milestone-1',
       profileId: 1,
       trackId: 42,
       title: 'First 100',
       thresholdPoints: 100,
       pointsAtUnlock: 115,
-      unlockedAt: _now,
+      unlockedAt: now,
     );
 
     test('toJson serialises all fields correctly', () {
-      final json = _baseUnlock().toJson();
+      final json = baseUnlock().toJson();
       expect(json['milestone_id'], 'milestone-1');
       expect(json['profile_id'], 1);
       expect(json['track_id'], 42);
       expect(json['title'], 'First 100');
       expect(json['threshold_points'], 100);
       expect(json['points_at_unlock'], 115);
-      expect(json['unlocked_at'], _now.toIso8601String());
+      expect(json['unlocked_at'], now.toIso8601String());
     });
 
     test('fromJson round-trips through toJson', () {
-      final original = _baseUnlock();
+      final original = baseUnlock();
       final decoded = RewardUnlockRecord.fromJson(original.toJson());
 
       expect(decoded.milestoneId, original.milestoneId);
@@ -243,7 +243,7 @@ void main() {
     });
 
     test('fromJson handles numeric fields stored as strings', () {
-      final json = _baseUnlock().toJson();
+      final json = baseUnlock().toJson();
       json['profile_id'] = '3';
       json['points_at_unlock'] = '200';
 

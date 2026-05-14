@@ -248,7 +248,7 @@ void main() {
     /// Build 4-level items (seder|masechta|perekA|mishna_N) where two mishnas
     /// share perekA and one mishna is under perekB.
     /// coarseUnitKey = level1|level2|level3 → 'seder|masechta|perekA' or 'seder|masechta|perekB'.
-    List<SchedulerContentItem> _coarseItems() => [
+    List<SchedulerContentItem> coarseItems() => [
           const SchedulerContentItem(
             sefariaRef: 'perekA_mishna_1',
             sortOrder: 0,
@@ -279,7 +279,7 @@ void main() {
       // paceGranularity 'perek' != curriculum leaf name → coarse mode.
       // With pacePerDay=1 coarse unit, should pick both leaves of perekA.
       final input = _selfPaced(
-        contentItems: _coarseItems(),
+        contentItems: coarseItems(),
         stages: _oneStage(),
         pacePerDay: 1,
         paceGranularity: 'perek',
@@ -297,7 +297,7 @@ void main() {
     test('coarse mode skips coarse units already in priorlyShownRefs', () {
       // perekA was already shown — should skip to perekB.
       final input = _selfPaced(
-        contentItems: _coarseItems(),
+        contentItems: coarseItems(),
         stages: _oneStage(),
         pacePerDay: 1,
         paceGranularity: 'perek',
@@ -317,7 +317,7 @@ void main() {
     test('coarse mode skips already-completed coarse units', () {
       // perekA fully completed at stage 1 — coarse batch should skip it.
       final input = _selfPaced(
-        contentItems: _coarseItems(),
+        contentItems: coarseItems(),
         stages: _oneStage(),
         pacePerDay: 1,
         paceGranularity: 'perek',
@@ -458,7 +458,7 @@ void main() {
         stages: const [], // empty
       );
 
-      final strategy = ProgramCalendar(programRefs: ['ref_0', 'ref_1']);
+      const strategy = ProgramCalendar(programRefs: ['ref_0', 'ref_1']);
       final analysis = strategy.analyse(input);
       final assembly = strategy.assemble(input, analysis);
       expect(assembly.tasks, isEmpty);
@@ -482,7 +482,7 @@ void main() {
         ],
       );
 
-      final strategy = ProgramCalendar(programRefs: ['ref_0', 'ref_1']);
+      const strategy = ProgramCalendar(programRefs: ['ref_0', 'ref_1']);
       final analysis = strategy.analyse(input);
       final assembly = strategy.assemble(input, analysis);
 
@@ -512,7 +512,7 @@ void main() {
         ],
       );
 
-      final strategy = ProgramCalendar(
+      const strategy = ProgramCalendar(
         programRefs: ['ref_0'],
         isOverdueProgram: true,
       );

@@ -25,7 +25,7 @@ void main() {
 
   // ── helpers ───────────────────────────────────────────────────────────────
 
-  Future<void> _upsertStreak({
+  Future<void> upsertStreak({
     int current = 5,
     int max = 10,
     DateTime? lastCompletion,
@@ -51,7 +51,7 @@ void main() {
     });
 
     test('returns the streak row for the profile', () async {
-      await _upsertStreak(current: 7, max: 12);
+      await upsertStreak(current: 7, max: 12);
 
       final streak = await service.getStreak();
       expect(streak, isNotNull);
@@ -70,7 +70,7 @@ void main() {
     });
 
     test('emits the streak when one is inserted', () async {
-      await _upsertStreak(current: 3, max: 5);
+      await upsertStreak(current: 3, max: 5);
 
       final streak = await service.watchStreak().first;
       expect(streak, isNotNull);
@@ -87,7 +87,7 @@ void main() {
       await Future<void>.delayed(Duration.zero);
       expect(emitted, isNotEmpty);
 
-      await _upsertStreak(current: 8, max: 8);
+      await upsertStreak(current: 8, max: 8);
       await Future<void>.delayed(Duration.zero);
 
       expect(emitted.last, 8);
@@ -106,7 +106,7 @@ void main() {
     });
 
     test('returns wasRecovered=false when graceUsedDate is null', () async {
-      await _upsertStreak(current: 5, max: 5);
+      await upsertStreak(current: 5, max: 5);
 
       final info = await service.getRecoveryInfo();
       expect(info.wasRecovered, isFalse);
@@ -116,7 +116,7 @@ void main() {
     test('returns wasRecovered=false when graceUsedDate was on a different day',
         () async {
       // graceUsedDate set to a past day, not today
-      await _upsertStreak(
+      await upsertStreak(
         current: 5,
         max: 5,
         graceUsedDate: DateTime.utc(2020, 1, 1),
@@ -127,7 +127,7 @@ void main() {
     });
 
     test('returns correct currentStreak even without recovery', () async {
-      await _upsertStreak(current: 15, max: 20);
+      await upsertStreak(current: 15, max: 20);
 
       final info = await service.getRecoveryInfo();
       expect(info.currentStreak, 15);

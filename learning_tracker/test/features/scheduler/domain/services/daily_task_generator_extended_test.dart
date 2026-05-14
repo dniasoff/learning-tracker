@@ -45,7 +45,7 @@ void main() {
     (i) => SchedulerContentItem(sefariaRef: 'B_$i', sortOrder: i),
   );
 
-  Future<int> _insertTrack(CurriculumId curriculum) => db
+  Future<int> insertTrack(CurriculumId curriculum) => db
       .into(db.curriculumTracks)
       .insert(
         CurriculumTracksCompanion.insert(
@@ -56,7 +56,7 @@ void main() {
         ),
       );
 
-  Future<void> _insertStage(CurriculumId curriculum, int trackId) =>
+  Future<void> insertStage(CurriculumId curriculum, int trackId) =>
       db.stageDao.insertStageDefinition(
         StageDefinitionsCompanion.insert(
           profileId: 0,
@@ -71,11 +71,11 @@ void main() {
   setUp(() async {
     db = createTestDatabase();
 
-    trackIdMishnayos = await _insertTrack(mishnayos);
-    trackIdBavli = await _insertTrack(bavli);
+    trackIdMishnayos = await insertTrack(mishnayos);
+    trackIdBavli = await insertTrack(bavli);
 
-    await _insertStage(mishnayos, trackIdMishnayos);
-    await _insertStage(bavli, trackIdBavli);
+    await insertStage(mishnayos, trackIdMishnayos);
+    await insertStage(bavli, trackIdBavli);
 
     final engine = SchedulerEngine(
       contentRepository: _InMemoryContentRepo({

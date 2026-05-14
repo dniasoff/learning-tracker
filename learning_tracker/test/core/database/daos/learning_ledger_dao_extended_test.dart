@@ -20,7 +20,7 @@ void main() {
   });
 
   // Helper to build a minimal LearningLedgerCompanion.
-  LearningLedgerCompanion _entry({
+  LearningLedgerCompanion entry({
     int profileId = 1,
     String curriculumId = 'mishnayos',
     String entryScope = 'masechta',
@@ -46,8 +46,8 @@ void main() {
 
   group('LearningLedgerDao.insertEntry — dedup path', () {
     test('returns same id when inserting duplicate (profileId, ulid)', () async {
-      final firstId = await db.learningLedgerDao.insertEntry(_entry(ulid: 'ulid-abc'));
-      final secondId = await db.learningLedgerDao.insertEntry(_entry(ulid: 'ulid-abc'));
+      final firstId = await db.learningLedgerDao.insertEntry(entry(ulid: 'ulid-abc'));
+      final secondId = await db.learningLedgerDao.insertEntry(entry(ulid: 'ulid-abc'));
 
       // Should return the same id on duplicate.
       expect(secondId, firstId);
@@ -58,8 +58,8 @@ void main() {
     });
 
     test('inserts two distinct entries with different ulids', () async {
-      final id1 = await db.learningLedgerDao.insertEntry(_entry(ulid: 'ulid-1'));
-      final id2 = await db.learningLedgerDao.insertEntry(_entry(ulid: 'ulid-2'));
+      final id1 = await db.learningLedgerDao.insertEntry(entry(ulid: 'ulid-1'));
+      final id2 = await db.learningLedgerDao.insertEntry(entry(ulid: 'ulid-2'));
 
       expect(id1, isNot(id2));
 
@@ -83,14 +83,14 @@ void main() {
         () async {
       // Insert two entries for track 1.
       await db.learningLedgerDao.insertEntry(
-        _entry(trackId: 1, ulid: 'a1', unitIdentifier: 'Berakhot'),
+        entry(trackId: 1, ulid: 'a1', unitIdentifier: 'Berakhot'),
       );
       await db.learningLedgerDao.insertEntry(
-        _entry(trackId: 1, ulid: 'a2', unitIdentifier: 'Berakhot'),
+        entry(trackId: 1, ulid: 'a2', unitIdentifier: 'Berakhot'),
       );
       // Insert one entry for track 2 (should not be counted).
       await db.learningLedgerDao.insertEntry(
-        _entry(trackId: 2, ulid: 'b1', unitIdentifier: 'Berakhot'),
+        entry(trackId: 2, ulid: 'b1', unitIdentifier: 'Berakhot'),
       );
 
       final count = await db.learningLedgerDao.getCompletionCountByTrack(
@@ -104,10 +104,10 @@ void main() {
 
     test('does not count entries for different unit', () async {
       await db.learningLedgerDao.insertEntry(
-        _entry(trackId: 1, ulid: 'x1', unitIdentifier: 'Berakhot'),
+        entry(trackId: 1, ulid: 'x1', unitIdentifier: 'Berakhot'),
       );
       await db.learningLedgerDao.insertEntry(
-        _entry(trackId: 1, ulid: 'x2', unitIdentifier: 'Shabbat'),
+        entry(trackId: 1, ulid: 'x2', unitIdentifier: 'Shabbat'),
       );
 
       final countBerakhot = await db.learningLedgerDao.getCompletionCountByTrack(

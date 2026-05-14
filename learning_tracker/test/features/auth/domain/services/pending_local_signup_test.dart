@@ -15,7 +15,7 @@ void main() {
   // ── PendingLocalRegistration ──────────────────────────────────────────────
 
   group('PendingLocalRegistration', () {
-    const _sample = PendingLocalRegistration(
+    const sample = PendingLocalRegistration(
       accountId: 'acc-123',
       dbFileName: 'learning_tracker_abc.db',
       email: 'test@example.com',
@@ -23,7 +23,7 @@ void main() {
     );
 
     test('toJson serialises all fields', () {
-      final json = _sample.toJson();
+      final json = sample.toJson();
       expect(json['accountId'], 'acc-123');
       expect(json['dbFileName'], 'learning_tracker_abc.db');
       expect(json['email'], 'test@example.com');
@@ -31,7 +31,7 @@ void main() {
     });
 
     test('tryParse succeeds with valid JSON', () {
-      final raw = jsonEncode(_sample.toJson());
+      final raw = jsonEncode(sample.toJson());
       final parsed = PendingLocalRegistration.tryParse(raw);
 
       expect(parsed, isNotNull);
@@ -72,13 +72,13 @@ void main() {
     });
 
     test('round-trip through JSON encoding preserves all fields', () {
-      final raw = jsonEncode(_sample.toJson());
+      final raw = jsonEncode(sample.toJson());
       final decoded = PendingLocalRegistration.tryParse(raw)!;
 
-      expect(decoded.accountId, _sample.accountId);
-      expect(decoded.dbFileName, _sample.dbFileName);
-      expect(decoded.email, _sample.email);
-      expect(decoded.displayName, _sample.displayName);
+      expect(decoded.accountId, sample.accountId);
+      expect(decoded.dbFileName, sample.dbFileName);
+      expect(decoded.email, sample.email);
+      expect(decoded.displayName, sample.displayName);
     });
   });
 

@@ -7,7 +7,7 @@
 ///   - getCachedRefs with data (line 170)
 library;
 
-import 'package:drift/drift.dart' hide isNull, isNotNull;
+import 'package:drift/drift.dart' hide isNotNull, isNull;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/content/content_database.dart';
 import 'package:learning_tracker/features/content_browsing/data/repositories/text_cache_repository.dart';

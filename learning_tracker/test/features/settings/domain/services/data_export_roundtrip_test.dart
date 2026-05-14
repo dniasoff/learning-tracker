@@ -43,7 +43,7 @@ void main() {
       );
 
       final data = jsonDecode(await service.exportData()) as Map<String, dynamic>;
-      final tracks = data['curriculumTracks'] as List;
+      final tracks = data['curriculumTracks'] as List<Map<String, dynamic>>;
 
       expect(tracks, hasLength(1));
       expect(tracks.first['curriculumId'], 'mishnayos');
@@ -74,7 +74,7 @@ void main() {
       );
 
       final data = jsonDecode(await service.exportData()) as Map<String, dynamic>;
-      final goals = data['goals'] as List;
+      final goals = data['goals'] as List<Map<String, dynamic>>;
 
       expect(goals, hasLength(1));
       expect(goals.first['curriculumId'], 'mishnayos');
@@ -104,7 +104,7 @@ void main() {
       );
 
       final data = jsonDecode(await service.exportData()) as Map<String, dynamic>;
-      final bookmarks = data['bookmarks'] as List;
+      final bookmarks = data['bookmarks'] as List<Map<String, dynamic>>;
 
       expect(bookmarks, hasLength(1));
       expect(bookmarks.first['sefariaRef'], 'Berakhot.1.1');
@@ -121,7 +121,7 @@ void main() {
       );
 
       final data = jsonDecode(await service.exportData()) as Map<String, dynamic>;
-      final learningOrder = data['learningOrder'] as List;
+      final learningOrder = data['learningOrder'] as List<Map<String, dynamic>>;
 
       expect(learningOrder, hasLength(1));
       expect(learningOrder.first['sefariaRef'], 'Berakhot');
@@ -130,14 +130,14 @@ void main() {
     test('exports streak rows', () async {
       await db.streakDao.upsertStreakByProfile(
         1,
-        StreaksCompanion(
-          currentStreak: const Value(5),
-          maxStreak: const Value(10),
+        const StreaksCompanion(
+          currentStreak: Value(5),
+          maxStreak: Value(10),
         ),
       );
 
       final data = jsonDecode(await service.exportData()) as Map<String, dynamic>;
-      final streaks = data['streaks'] as List;
+      final streaks = data['streaks'] as List<Map<String, dynamic>>;
 
       expect(streaks, hasLength(1));
       expect(streaks.first['currentStreak'], 5);
@@ -149,7 +149,7 @@ void main() {
 
   group('DataExportImportService.importData', () {
     /// Build a minimal valid import payload.
-    String _buildImportJson({
+    String buildImportJson({
       List<Map<String, dynamic>> userProfiles = const [],
       List<Map<String, dynamic>> curriculumTracks = const [],
       List<Map<String, dynamic>> goals = const [],
@@ -165,23 +165,23 @@ void main() {
         'exportedAt': '2026-01-01T00:00:00.000Z',
         'appVersion': '1.0.0',
         'userProfiles': userProfiles,
-        'learnerProfiles': [],
+        'learnerProfiles': <dynamic>[],
         'curriculumTracks': curriculumTracks,
-        'curriculumScopes': [],
-        'profilePrograms': [],
+        'curriculumScopes': <dynamic>[],
+        'profilePrograms': <dynamic>[],
         'stageDefinitions': stageDefinitions,
         'pointConfigs': pointConfigs,
-        'studyDayConfigs': [],
+        'studyDayConfigs': <dynamic>[],
         'completions': completions,
-        'completionEvents': [],
-        'dailyPlans': [],
-        'learningLedger': [],
+        'completionEvents': <dynamic>[],
+        'dailyPlans': <dynamic>[],
+        'learningLedger': <dynamic>[],
         'bookmarks': bookmarks,
         'learningOrder': learningOrder,
-        'trackLearningOrder': [],
+        'trackLearningOrder': <dynamic>[],
         'goals': goals,
         'streaks': streaks,
-        'streakEvents': [],
+        'streakEvents': <dynamic>[],
       });
     }
 
@@ -197,14 +197,14 @@ void main() {
         ),
       );
 
-      await service.importData(_buildImportJson());
+      await service.importData(buildImportJson());
 
       final tracks = await db.trackDao.getAllForProfile(1);
       expect(tracks, isEmpty);
     });
 
     test('importData imports curriculum tracks', () async {
-      final payload = _buildImportJson(
+      final payload = buildImportJson(
         curriculumTracks: [
           {
             'id': 1,
@@ -229,7 +229,7 @@ void main() {
 
     test('importData imports goals', () async {
       // First import a track (goals have trackId FK).
-      final payload = _buildImportJson(
+      final payload = buildImportJson(
         curriculumTracks: [
           {
             'id': 1,
@@ -272,7 +272,7 @@ void main() {
 
     test('importData imports bookmarks', () async {
       // Insert a track first so the bookmark FK is valid.
-      final trackPayload = _buildImportJson(
+      final trackPayload = buildImportJson(
         curriculumTracks: [
           {
             'id': 1,
@@ -306,7 +306,7 @@ void main() {
     });
 
     test('importData imports learning order', () async {
-      final payload = _buildImportJson(
+      final payload = buildImportJson(
         learningOrder: [
           {
             'id': 1,
@@ -327,7 +327,7 @@ void main() {
     });
 
     test('importData imports streaks', () async {
-      final payload = _buildImportJson(
+      final payload = buildImportJson(
         streaks: [
           {
             'id': 1,

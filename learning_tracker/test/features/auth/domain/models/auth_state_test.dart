@@ -10,7 +10,7 @@ import '../../../../helpers/drift_memory.dart';
 void main() {
   // Build a minimal UserProfile so AuthUser.fromProfile can be tested
   // without a real database.
-  UserProfile _fakeProfile({
+  UserProfile fakeProfile({
     int id = 1,
     String email = 'test@example.com',
     String displayName = 'Tester',
@@ -31,7 +31,7 @@ void main() {
 
   group('AuthUser', () {
     test('fromProfile maps all fields correctly', () {
-      final profile = _fakeProfile(
+      final profile = fakeProfile(
         id: 42,
         email: 'user@example.com',
         displayName: 'Jane',
@@ -48,7 +48,7 @@ void main() {
     });
 
     test('fromProfile handles null firebaseUid', () {
-      final profile = _fakeProfile(firebaseUid: null);
+      final profile = fakeProfile(firebaseUid: null);
       final user = AuthUser.fromProfile(profile);
       expect(user.firebaseUid, isNull);
     });
@@ -89,7 +89,7 @@ void main() {
   // ── AuthState constructors ────────────────────────────────────────────────
 
   group('AuthState', () {
-    final testUser = AuthUser(
+    const testUser = AuthUser(
       profileId: 1,
       email: 'user@example.com',
       displayName: 'Test',
@@ -110,7 +110,7 @@ void main() {
     });
 
     test('AuthState.signedIn sets sessionStatus=signedIn', () {
-      final state = AuthState.signedIn(
+      const state = AuthState.signedIn(
         user: testUser,
         tier: UserTier.localBorn,
       );
@@ -120,7 +120,7 @@ void main() {
     });
 
     test('isSignedIn is true only when signedIn', () {
-      final signedIn = AuthState.signedIn(
+      const signedIn = AuthState.signedIn(
         user: testUser,
         tier: UserTier.localBorn,
       );
@@ -135,11 +135,11 @@ void main() {
     });
 
     test('isCloudBorn and isLocalBorn reflect tier', () {
-      final cloudState = AuthState.signedIn(
+      const cloudState = AuthState.signedIn(
         user: testUser,
         tier: UserTier.cloudBorn,
       );
-      final localState = AuthState.signedIn(
+      const localState = AuthState.signedIn(
         user: testUser,
         tier: UserTier.localBorn,
       );
@@ -151,7 +151,7 @@ void main() {
     });
 
     test('displayIdentifier returns display name when present', () {
-      final state = AuthState.signedIn(
+      const state = AuthState.signedIn(
         user: testUser,
         tier: UserTier.localBorn,
       );
@@ -159,13 +159,13 @@ void main() {
     });
 
     test('displayIdentifier falls back to email when displayName is empty', () {
-      final user = AuthUser(
+      const user = AuthUser(
         profileId: 1,
         email: 'user@example.com',
         displayName: '',
         userMode: 'parent',
       );
-      final state = AuthState.signedIn(user: user, tier: UserTier.localBorn);
+      const state = AuthState.signedIn(user: user, tier: UserTier.localBorn);
       expect(state.displayIdentifier, 'user@example.com');
     });
 
@@ -174,7 +174,7 @@ void main() {
     });
 
     test('copyWith changes sessionStatus', () {
-      final initial = AuthState.signedIn(
+      const initial = AuthState.signedIn(
         user: testUser,
         tier: UserTier.localBorn,
       );
@@ -187,7 +187,7 @@ void main() {
     });
 
     test('copyWith with clearUser=true nulls out currentUser', () {
-      final state = AuthState.signedIn(
+      const state = AuthState.signedIn(
         user: testUser,
         tier: UserTier.localBorn,
       );
@@ -196,7 +196,7 @@ void main() {
     });
 
     test('copyWith with clearTier=true nulls out tier', () {
-      final state = AuthState.signedIn(
+      const state = AuthState.signedIn(
         user: testUser,
         tier: UserTier.localBorn,
       );

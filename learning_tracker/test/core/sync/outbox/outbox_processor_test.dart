@@ -8,7 +8,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/sync/outbox/outbox_processor.dart';
 import 'package:learning_tracker/core/sync/outbox/push_pipeline.dart';
-import 'package:mocktail/mocktail.dart';
 
 import '../../../helpers/drift_memory.dart';
 
@@ -98,7 +97,7 @@ void main() {
     await db.close();
   });
 
-  Future<void> _insertRow({
+  Future<void> insertRow({
     String entityKind = OutboxEntityKind.completion,
     String entityKey = 'key1',
     Map<String, dynamic>? payload,
@@ -122,7 +121,7 @@ void main() {
     });
 
     test('pushes completion rows and returns 1', () async {
-      await _insertRow(
+      await insertRow(
         entityKind: OutboxEntityKind.completion,
         entityKey: 'c1',
       );
@@ -133,7 +132,7 @@ void main() {
     });
 
     test('pushes streak rows', () async {
-      await _insertRow(
+      await insertRow(
         entityKind: OutboxEntityKind.streak,
         entityKey: 's1',
       );
@@ -143,7 +142,7 @@ void main() {
     });
 
     test('pushes track rows', () async {
-      await _insertRow(
+      await insertRow(
         entityKind: OutboxEntityKind.track,
         entityKey: 't1',
       );
@@ -153,7 +152,7 @@ void main() {
     });
 
     test('pushes learning_order rows', () async {
-      await _insertRow(
+      await insertRow(
         entityKind: OutboxEntityKind.learningOrder,
         entityKey: 'lo1',
       );
@@ -163,7 +162,7 @@ void main() {
     });
 
     test('pushes bookmark rows', () async {
-      await _insertRow(
+      await insertRow(
         entityKind: OutboxEntityKind.bookmark,
         entityKey: 'bm1',
       );
@@ -173,7 +172,7 @@ void main() {
     });
 
     test('pushes settings rows', () async {
-      await _insertRow(
+      await insertRow(
         entityKind: OutboxEntityKind.settings,
         entityKey: 'st1',
       );
@@ -183,7 +182,7 @@ void main() {
     });
 
     test('deletes row from outbox after successful push', () async {
-      await _insertRow(entityKind: OutboxEntityKind.completion, entityKey: 'c1');
+      await insertRow(entityKind: OutboxEntityKind.completion, entityKey: 'c1');
 
       await processor.drain(profileId);
 
@@ -197,7 +196,7 @@ void main() {
 
     test('keeps row in outbox when push fails', () async {
       pipeline.failNextPush = true;
-      await _insertRow(entityKind: OutboxEntityKind.completion, entityKey: 'fail1');
+      await insertRow(entityKind: OutboxEntityKind.completion, entityKey: 'fail1');
 
       final count = await processor.drain(profileId);
       expect(count, 0); // failed push does not count
@@ -212,8 +211,8 @@ void main() {
     test('continues draining remaining rows after a single failure', () async {
       pipeline.failNextPush = true;
       // Insert a completion (will fail) and then a streak (should succeed).
-      await _insertRow(entityKind: OutboxEntityKind.completion, entityKey: 'fail1');
-      await _insertRow(entityKind: OutboxEntityKind.streak, entityKey: 's1');
+      await insertRow(entityKind: OutboxEntityKind.completion, entityKey: 'fail1');
+      await insertRow(entityKind: OutboxEntityKind.streak, entityKey: 's1');
 
       final count = await processor.drain(profileId);
       // Only streak succeeded.
@@ -222,7 +221,7 @@ void main() {
     });
 
     test('does not process rows for a different profileId', () async {
-      await _insertRow(entityKind: OutboxEntityKind.completion, entityKey: 'c1');
+      await insertRow(entityKind: OutboxEntityKind.completion, entityKey: 'c1');
 
       // Drain for profile 2 — should not touch profile 1's row.
       final count = await processor.drain(2);
@@ -231,9 +230,9 @@ void main() {
     });
 
     test('pushes multiple rows of different kinds', () async {
-      await _insertRow(entityKind: OutboxEntityKind.completion, entityKey: 'c1');
-      await _insertRow(entityKind: OutboxEntityKind.streak, entityKey: 's1');
-      await _insertRow(entityKind: OutboxEntityKind.bookmark, entityKey: 'bm1');
+      await insertRow(entityKind: OutboxEntityKind.completion, entityKey: 'c1');
+      await insertRow(entityKind: OutboxEntityKind.streak, entityKey: 's1');
+      await insertRow(entityKind: OutboxEntityKind.bookmark, entityKey: 'bm1');
 
       final count = await processor.drain(profileId);
       expect(count, 3);

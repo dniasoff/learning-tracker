@@ -239,7 +239,7 @@ void main() {
     });
 
     test('redacts pinHash key', () {
-      final result = PiiRedactor.redactFields({'pinHash': '\$2b\$10\$...'});
+      final result = PiiRedactor.redactFields({'pinHash': r'$2b$10$...'});
       expect(result['pinHash'], '[REDACTED]');
     });
 

@@ -1234,14 +1234,14 @@ void main() {
       expect(payload.containsKey('updated_at'), isTrue);
       expect(payload.containsKey('milestones'), isTrue);
       expect(payload.containsKey('unlocks'), isTrue);
-      expect(payload['milestones'], isA<List>());
-      expect((payload['milestones'] as List), hasLength(1));
+      expect(payload['milestones'], isA<List<dynamic>>());
+      expect(payload['milestones'] as List<dynamic>, hasLength(1));
     });
 
     test('export of empty service returns empty lists', () async {
       final payload = await service.exportCloudPayload();
-      expect((payload['milestones'] as List), isEmpty);
-      expect((payload['unlocks'] as List), isEmpty);
+      expect(payload['milestones'] as List<dynamic>, isEmpty);
+      expect(payload['unlocks'] as List<dynamic>, isEmpty);
     });
   });
 

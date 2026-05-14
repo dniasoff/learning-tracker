@@ -24,7 +24,7 @@ void main() {
 
   // ── helpers ────────────────────────────────────────────────────────────────
 
-  Future<int> _insertTrack({
+  Future<int> insertTrack({
     String curriculumId = 'mishnayos',
     String trackType = 'personal',
     int profileId = 1,
@@ -40,7 +40,7 @@ void main() {
         ),
       );
 
-  Future<int> _insertGoal(int trackId) =>
+  Future<int> insertGoal(int trackId) =>
       db.goalDao.insertGoal(
         GoalsCompanion.insert(
           profileId: 1,
@@ -51,7 +51,7 @@ void main() {
         ),
       );
 
-  Future<int> _insertStage(int trackId) =>
+  Future<int> insertStage(int trackId) =>
       db.into(db.stageDefinitions).insert(
         StageDefinitionsCompanion.insert(
           profileId: 1,
@@ -67,7 +67,7 @@ void main() {
 
   group('TrackDao.deleteTrackAndData', () {
     test('soft-deletes the track row (stamps deletedAt)', () async {
-      final trackId = await _insertTrack();
+      final trackId = await insertTrack();
 
       await db.trackDao.deleteTrackAndData(trackId);
 
@@ -78,8 +78,8 @@ void main() {
     });
 
     test('hard-deletes associated goals', () async {
-      final trackId = await _insertTrack();
-      await _insertGoal(trackId);
+      final trackId = await insertTrack();
+      await insertGoal(trackId);
 
       final goalsBefore = await db.goalDao.getGoalsByTrack(trackId);
       expect(goalsBefore, hasLength(1));
@@ -91,8 +91,8 @@ void main() {
     });
 
     test('hard-deletes associated stage definitions', () async {
-      final trackId = await _insertTrack();
-      await _insertStage(trackId);
+      final trackId = await insertTrack();
+      await insertStage(trackId);
 
       final stagesBefore = await db.stageDao.getStagesByTrack(trackId);
       expect(stagesBefore, hasLength(1));
@@ -109,7 +109,7 @@ void main() {
     });
 
     test('track row is preserved after soft-delete (not removed)', () async {
-      final trackId = await _insertTrack();
+      final trackId = await insertTrack();
 
       await db.trackDao.deleteTrackAndData(trackId);
 
@@ -120,7 +120,7 @@ void main() {
 
     test('soft-deleted track does not appear in getActiveTracksForProfile',
         () async {
-      final trackId = await _insertTrack();
+      final trackId = await insertTrack();
 
       final activeBefore = await db.trackDao.getActiveTracksForProfile(1);
       expect(activeBefore, isNotEmpty);
@@ -150,7 +150,7 @@ void main() {
     test('is a no-op when tracks already exist for the curriculum+profile',
         () async {
       // Pre-insert a track.
-      await _insertTrack(curriculumId: 'mishnayos', profileId: 1);
+      await insertTrack(curriculumId: 'mishnayos', profileId: 1);
 
       await db.trackDao.initializeDefaultTracks(
         CurriculumId.mishnayos,

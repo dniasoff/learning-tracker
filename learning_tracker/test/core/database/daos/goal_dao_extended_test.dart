@@ -5,7 +5,7 @@
 /// - deleteGoalsForTrack
 library;
 
-import 'package:drift/drift.dart' hide isNull, isNotNull;
+import 'package:drift/drift.dart' hide isNotNull, isNull;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 
@@ -24,9 +24,9 @@ void main() {
 
   // ── helpers ──────────────────────────────────────────────────────────────
 
-  final _now = DateTime.utc(2026, 1, 1);
+  final now = DateTime.utc(2026, 1, 1);
 
-  Future<int> _insertTrack({
+  Future<int> insertTrack({
     int profileId = 1,
     String curriculumId = 'mishnayos',
   }) {
@@ -35,12 +35,12 @@ void main() {
             profileId: profileId,
             curriculumId: curriculumId,
             trackType: 'personal',
-            activatedAt: _now,
+            activatedAt: now,
           ),
         );
   }
 
-  Future<int> _insertGoal({
+  Future<int> insertGoal({
     int profileId = 1,
     String curriculumId = 'mishnayos',
     int trackId = 0,
@@ -52,8 +52,8 @@ void main() {
         curriculumId: curriculumId,
         trackId: trackId,
         targetDate: Value(targetDate),
-        createdAt: _now,
-        updatedAt: _now,
+        createdAt: now,
+        updatedAt: now,
       ),
     );
   }
@@ -62,13 +62,13 @@ void main() {
 
   group('GoalDao.getGoalsByCurriculumAndProfile', () {
     test('returns only goals matching both curriculum and profile', () async {
-      final trackId1 = await _insertTrack(profileId: 1, curriculumId: 'mishnayos');
-      final trackId2 = await _insertTrack(profileId: 2, curriculumId: 'mishnayos');
-      final trackId3 = await _insertTrack(profileId: 1, curriculumId: 'bavli');
+      final trackId1 = await insertTrack(profileId: 1, curriculumId: 'mishnayos');
+      final trackId2 = await insertTrack(profileId: 2, curriculumId: 'mishnayos');
+      final trackId3 = await insertTrack(profileId: 1, curriculumId: 'bavli');
 
-      await _insertGoal(profileId: 1, curriculumId: 'mishnayos', trackId: trackId1);
-      await _insertGoal(profileId: 2, curriculumId: 'mishnayos', trackId: trackId2);
-      await _insertGoal(profileId: 1, curriculumId: 'bavli', trackId: trackId3);
+      await insertGoal(profileId: 1, curriculumId: 'mishnayos', trackId: trackId1);
+      await insertGoal(profileId: 2, curriculumId: 'mishnayos', trackId: trackId2);
+      await insertGoal(profileId: 1, curriculumId: 'bavli', trackId: trackId3);
 
       final goals = await db.goalDao.getGoalsByCurriculumAndProfile(
         'mishnayos',
@@ -89,19 +89,19 @@ void main() {
 
     test('orders results by targetDate ascending', () async {
       // Use a single track and insert two goals with different targetDates.
-      final trackId1 = await _insertTrack(profileId: 1, curriculumId: 'bavli');
+      final trackId1 = await insertTrack(profileId: 1, curriculumId: 'bavli');
 
       final d1 = DateTime.utc(2026, 12, 31);
       final d2 = DateTime.utc(2026, 6, 1);
 
       // Insert later date first, then earlier — expect ascending order in result.
-      await _insertGoal(
+      await insertGoal(
         profileId: 1,
         curriculumId: 'bavli',
         trackId: trackId1,
         targetDate: d1,
       );
-      await _insertGoal(
+      await insertGoal(
         profileId: 1,
         curriculumId: 'bavli',
         trackId: trackId1,
@@ -121,13 +121,13 @@ void main() {
 
   group('GoalDao.getGoalsByProfile', () {
     test('returns all goals for a profile', () async {
-      final t1 = await _insertTrack(profileId: 1, curriculumId: 'mishnayos');
-      final t2 = await _insertTrack(profileId: 1, curriculumId: 'bavli');
-      final t3 = await _insertTrack(profileId: 2, curriculumId: 'mishnayos');
+      final t1 = await insertTrack(profileId: 1, curriculumId: 'mishnayos');
+      final t2 = await insertTrack(profileId: 1, curriculumId: 'bavli');
+      final t3 = await insertTrack(profileId: 2, curriculumId: 'mishnayos');
 
-      await _insertGoal(profileId: 1, curriculumId: 'mishnayos', trackId: t1);
-      await _insertGoal(profileId: 1, curriculumId: 'bavli', trackId: t2);
-      await _insertGoal(profileId: 2, curriculumId: 'mishnayos', trackId: t3);
+      await insertGoal(profileId: 1, curriculumId: 'mishnayos', trackId: t1);
+      await insertGoal(profileId: 1, curriculumId: 'bavli', trackId: t2);
+      await insertGoal(profileId: 2, curriculumId: 'mishnayos', trackId: t3);
 
       final goals = await db.goalDao.getGoalsByProfile(1);
       expect(goals, hasLength(2));
@@ -144,11 +144,11 @@ void main() {
 
   group('GoalDao.getGoalsByTrack', () {
     test('returns goals for a specific track', () async {
-      final trackId = await _insertTrack(profileId: 1, curriculumId: 'mishnayos');
-      final other = await _insertTrack(profileId: 1, curriculumId: 'bavli');
+      final trackId = await insertTrack(profileId: 1, curriculumId: 'mishnayos');
+      final other = await insertTrack(profileId: 1, curriculumId: 'bavli');
 
-      await _insertGoal(profileId: 1, curriculumId: 'mishnayos', trackId: trackId);
-      await _insertGoal(profileId: 1, curriculumId: 'bavli', trackId: other);
+      await insertGoal(profileId: 1, curriculumId: 'mishnayos', trackId: trackId);
+      await insertGoal(profileId: 1, curriculumId: 'bavli', trackId: other);
 
       final goals = await db.goalDao.getGoalsByTrack(trackId);
       expect(goals, hasLength(1));
@@ -165,11 +165,11 @@ void main() {
 
   group('GoalDao.deleteGoalsForTrack', () {
     test('deletes all goals for the specified track', () async {
-      final trackId = await _insertTrack(profileId: 1, curriculumId: 'mishnayos');
-      final other = await _insertTrack(profileId: 1, curriculumId: 'bavli');
+      final trackId = await insertTrack(profileId: 1, curriculumId: 'mishnayos');
+      final other = await insertTrack(profileId: 1, curriculumId: 'bavli');
 
-      await _insertGoal(profileId: 1, curriculumId: 'mishnayos', trackId: trackId);
-      await _insertGoal(profileId: 1, curriculumId: 'bavli', trackId: other);
+      await insertGoal(profileId: 1, curriculumId: 'mishnayos', trackId: trackId);
+      await insertGoal(profileId: 1, curriculumId: 'bavli', trackId: other);
 
       final deleted = await db.goalDao.deleteGoalsForTrack(trackId);
       expect(deleted, 1);

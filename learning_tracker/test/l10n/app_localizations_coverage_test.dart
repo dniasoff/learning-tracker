@@ -13,6 +13,7 @@ void main() {
     test('exercises every EN translation key', () {
       final en = AppLocalizationsEn();
       // Assign to a local variable to avoid unused-expression warnings.
+      // ignore: unused_local_variable
       String ignore;
 
       ignore = en.appTitle;
@@ -754,6 +755,7 @@ void main() {
   group('AppLocalizationsHe — all keys return a non-empty string', () {
     test('exercises every HE translation key', () {
       final he = AppLocalizationsHe();
+      // ignore: unused_local_variable
       String ignore;
 
       ignore = he.appTitle;

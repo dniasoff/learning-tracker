@@ -30,7 +30,7 @@ void main() {
   });
 
   // Helper: insert a personal curriculum track and return its id.
-  Future<int> _insertTrack({
+  Future<int> insertTrack({
     int profileId = 1,
     String curriculumId = 'mishnayos',
   }) =>
@@ -48,7 +48,7 @@ void main() {
 
   group('exportData — curriculumScopes', () {
     test('exports curriculum scopes', () async {
-      final trackId = await _insertTrack();
+      final trackId = await insertTrack();
       await db.into(db.curriculumScopes).insert(
         CurriculumScopesCompanion.insert(
           profileId: 1,
@@ -62,7 +62,7 @@ void main() {
 
       final data =
           jsonDecode(await service.exportData()) as Map<String, dynamic>;
-      final scopes = data['curriculumScopes'] as List;
+      final scopes = data['curriculumScopes'] as List<Map<String, dynamic>>;
 
       expect(scopes, hasLength(1));
       expect(scopes.first['scopeValue'], 'Zeraim');
@@ -84,7 +84,7 @@ void main() {
 
       final data =
           jsonDecode(await service.exportData()) as Map<String, dynamic>;
-      final programs = data['profilePrograms'] as List;
+      final programs = data['profilePrograms'] as List<Map<String, dynamic>>;
 
       expect(programs, hasLength(1));
       expect(programs.first['programId'], 42);
@@ -96,7 +96,7 @@ void main() {
 
   group('exportData — studyDayConfigs', () {
     test('exports study day config rows', () async {
-      final trackId = await _insertTrack();
+      final trackId = await insertTrack();
       await db.into(db.studyDayConfigs).insert(
         StudyDayConfigsCompanion.insert(
           profileId: 1,
@@ -110,7 +110,7 @@ void main() {
 
       final data =
           jsonDecode(await service.exportData()) as Map<String, dynamic>;
-      final configs = data['studyDayConfigs'] as List;
+      final configs = data['studyDayConfigs'] as List<Map<String, dynamic>>;
 
       expect(configs, hasLength(1));
       expect(configs.first['dayOfWeek'], 1);
@@ -123,7 +123,7 @@ void main() {
   group('exportData — completionEvents', () {
     test('exports completion event rows', () async {
       // Insert a stage first so stageId is a real FK.
-      final trackId = await _insertTrack();
+      final trackId = await insertTrack();
       final stageId = await db.stageDao.insertStageDefinition(
         StageDefinitionsCompanion.insert(
           profileId: 1,
@@ -148,7 +148,7 @@ void main() {
 
       final data =
           jsonDecode(await service.exportData()) as Map<String, dynamic>;
-      final events = data['completionEvents'] as List;
+      final events = data['completionEvents'] as List<Map<String, dynamic>>;
 
       expect(events, hasLength(1));
       expect(events.first['sefariaRef'], 'Berakhot.1');
@@ -170,7 +170,7 @@ void main() {
 
       final data =
           jsonDecode(await service.exportData()) as Map<String, dynamic>;
-      final events = data['streakEvents'] as List;
+      final events = data['streakEvents'] as List<Map<String, dynamic>>;
 
       expect(events, hasLength(1));
       expect(events.first['eventType'], 'completion');
@@ -198,7 +198,7 @@ void main() {
 
       final data =
           jsonDecode(await service.exportData()) as Map<String, dynamic>;
-      final ledger = data['learningLedger'] as List;
+      final ledger = data['learningLedger'] as List<Map<String, dynamic>>;
 
       expect(ledger, hasLength(1));
       expect(ledger.first['unitIdentifier'], 'Berakhot');
@@ -209,13 +209,13 @@ void main() {
   // ── importData — curriculumScopes ─────────────────────────────────────────
 
   group('importData — curriculumScopes', () {
-    String _payload({required List<Map<String, dynamic>> scopes}) =>
+    String payload({required List<Map<String, dynamic>> scopes}) =>
         jsonEncode({
           'formatVersion': 'schemaV1',
           'exportedAt': '2026-01-01T00:00:00.000Z',
           'appVersion': '1.0.0',
-          'userProfiles': [],
-          'learnerProfiles': [],
+          'userProfiles': <dynamic>[],
+          'learnerProfiles': <dynamic>[],
           'curriculumTracks': [
             {
               'id': 1,
@@ -230,25 +230,25 @@ void main() {
             },
           ],
           'curriculumScopes': scopes,
-          'profilePrograms': [],
-          'stageDefinitions': [],
-          'pointConfigs': [],
-          'studyDayConfigs': [],
-          'completions': [],
-          'completionEvents': [],
-          'dailyPlans': [],
-          'learningLedger': [],
-          'bookmarks': [],
-          'learningOrder': [],
-          'trackLearningOrder': [],
-          'goals': [],
-          'streaks': [],
-          'streakEvents': [],
+          'profilePrograms': <dynamic>[],
+          'stageDefinitions': <dynamic>[],
+          'pointConfigs': <dynamic>[],
+          'studyDayConfigs': <dynamic>[],
+          'completions': <dynamic>[],
+          'completionEvents': <dynamic>[],
+          'dailyPlans': <dynamic>[],
+          'learningLedger': <dynamic>[],
+          'bookmarks': <dynamic>[],
+          'learningOrder': <dynamic>[],
+          'trackLearningOrder': <dynamic>[],
+          'goals': <dynamic>[],
+          'streaks': <dynamic>[],
+          'streakEvents': <dynamic>[],
         });
 
     test('imports curriculum scopes', () async {
       await service.importData(
-        _payload(
+        payload(
           scopes: [
             {
               'id': 1,
@@ -272,12 +272,12 @@ void main() {
   // ── importData — studyDayConfigs ──────────────────────────────────────────
 
   group('importData — studyDayConfigs', () {
-    String _payload() => jsonEncode({
+    String payload() => jsonEncode({
       'formatVersion': 'schemaV1',
       'exportedAt': '2026-01-01T00:00:00.000Z',
       'appVersion': '1.0.0',
-      'userProfiles': [],
-      'learnerProfiles': [],
+      'userProfiles': <dynamic>[],
+      'learnerProfiles': <dynamic>[],
       'curriculumTracks': [
         {
           'id': 1,
@@ -291,10 +291,10 @@ void main() {
           'deletedAt': null,
         },
       ],
-      'curriculumScopes': [],
-      'profilePrograms': [],
-      'stageDefinitions': [],
-      'pointConfigs': [],
+      'curriculumScopes': <dynamic>[],
+      'profilePrograms': <dynamic>[],
+      'stageDefinitions': <dynamic>[],
+      'pointConfigs': <dynamic>[],
       'studyDayConfigs': [
         {
           'profileId': 1,
@@ -305,20 +305,20 @@ void main() {
           'updatedAt': '2026-01-01T00:00:00.000Z',
         },
       ],
-      'completions': [],
-      'completionEvents': [],
-      'dailyPlans': [],
-      'learningLedger': [],
-      'bookmarks': [],
-      'learningOrder': [],
-      'trackLearningOrder': [],
-      'goals': [],
-      'streaks': [],
-      'streakEvents': [],
+      'completions': <dynamic>[],
+      'completionEvents': <dynamic>[],
+      'dailyPlans': <dynamic>[],
+      'learningLedger': <dynamic>[],
+      'bookmarks': <dynamic>[],
+      'learningOrder': <dynamic>[],
+      'trackLearningOrder': <dynamic>[],
+      'goals': <dynamic>[],
+      'streaks': <dynamic>[],
+      'streakEvents': <dynamic>[],
     });
 
     test('imports study day configs', () async {
-      await service.importData(_payload());
+      await service.importData(payload());
 
       final configs =
           await db.studyDayConfigDao.getConfigsByCurriculumAndProfile(
@@ -333,27 +333,27 @@ void main() {
   // ── importData — streakEvents ─────────────────────────────────────────────
 
   group('importData — streakEvents', () {
-    String _payload() => jsonEncode({
+    String payload() => jsonEncode({
       'formatVersion': 'schemaV1',
       'exportedAt': '2026-01-01T00:00:00.000Z',
       'appVersion': '1.0.0',
-      'userProfiles': [],
-      'learnerProfiles': [],
-      'curriculumTracks': [],
-      'curriculumScopes': [],
-      'profilePrograms': [],
-      'stageDefinitions': [],
-      'pointConfigs': [],
-      'studyDayConfigs': [],
-      'completions': [],
-      'completionEvents': [],
-      'dailyPlans': [],
-      'learningLedger': [],
-      'bookmarks': [],
-      'learningOrder': [],
-      'trackLearningOrder': [],
-      'goals': [],
-      'streaks': [],
+      'userProfiles': <dynamic>[],
+      'learnerProfiles': <dynamic>[],
+      'curriculumTracks': <dynamic>[],
+      'curriculumScopes': <dynamic>[],
+      'profilePrograms': <dynamic>[],
+      'stageDefinitions': <dynamic>[],
+      'pointConfigs': <dynamic>[],
+      'studyDayConfigs': <dynamic>[],
+      'completions': <dynamic>[],
+      'completionEvents': <dynamic>[],
+      'dailyPlans': <dynamic>[],
+      'learningLedger': <dynamic>[],
+      'bookmarks': <dynamic>[],
+      'learningOrder': <dynamic>[],
+      'trackLearningOrder': <dynamic>[],
+      'goals': <dynamic>[],
+      'streaks': <dynamic>[],
       'streakEvents': [
         {
           'id': 1,
@@ -368,7 +368,7 @@ void main() {
     });
 
     test('imports streak events', () async {
-      await service.importData(_payload());
+      await service.importData(payload());
 
       final events = await db.streakEventDao.getEventsByProfile(1);
       expect(events, hasLength(1));
@@ -379,21 +379,21 @@ void main() {
   // ── importData — learningLedger ───────────────────────────────────────────
 
   group('importData — learningLedger', () {
-    String _payload() => jsonEncode({
+    String payload() => jsonEncode({
       'formatVersion': 'schemaV1',
       'exportedAt': '2026-01-01T00:00:00.000Z',
       'appVersion': '1.0.0',
-      'userProfiles': [],
-      'learnerProfiles': [],
-      'curriculumTracks': [],
-      'curriculumScopes': [],
-      'profilePrograms': [],
-      'stageDefinitions': [],
-      'pointConfigs': [],
-      'studyDayConfigs': [],
-      'completions': [],
-      'completionEvents': [],
-      'dailyPlans': [],
+      'userProfiles': <dynamic>[],
+      'learnerProfiles': <dynamic>[],
+      'curriculumTracks': <dynamic>[],
+      'curriculumScopes': <dynamic>[],
+      'profilePrograms': <dynamic>[],
+      'stageDefinitions': <dynamic>[],
+      'pointConfigs': <dynamic>[],
+      'studyDayConfigs': <dynamic>[],
+      'completions': <dynamic>[],
+      'completionEvents': <dynamic>[],
+      'dailyPlans': <dynamic>[],
       'learningLedger': [
         {
           'id': 1,
@@ -413,16 +413,16 @@ void main() {
           'createdAt': '2026-01-01T00:00:00.000Z',
         },
       ],
-      'bookmarks': [],
-      'learningOrder': [],
-      'trackLearningOrder': [],
-      'goals': [],
-      'streaks': [],
-      'streakEvents': [],
+      'bookmarks': <dynamic>[],
+      'learningOrder': <dynamic>[],
+      'trackLearningOrder': <dynamic>[],
+      'goals': <dynamic>[],
+      'streaks': <dynamic>[],
+      'streakEvents': <dynamic>[],
     });
 
     test('imports learning ledger entries', () async {
-      await service.importData(_payload());
+      await service.importData(payload());
 
       final entries = await db.learningLedgerDao.getEntriesByProfile(1);
       expect(entries, hasLength(1));
@@ -433,12 +433,12 @@ void main() {
   // ── importData — trackLearningOrder ───────────────────────────────────────
 
   group('importData — trackLearningOrder', () {
-    String _payload() => jsonEncode({
+    String payload() => jsonEncode({
       'formatVersion': 'schemaV1',
       'exportedAt': '2026-01-01T00:00:00.000Z',
       'appVersion': '1.0.0',
-      'userProfiles': [],
-      'learnerProfiles': [],
+      'userProfiles': <dynamic>[],
+      'learnerProfiles': <dynamic>[],
       'curriculumTracks': [
         {
           'id': 1,
@@ -452,27 +452,27 @@ void main() {
           'deletedAt': null,
         },
       ],
-      'curriculumScopes': [],
-      'profilePrograms': [],
-      'stageDefinitions': [],
-      'pointConfigs': [],
-      'studyDayConfigs': [],
-      'completions': [],
-      'completionEvents': [],
-      'dailyPlans': [],
-      'learningLedger': [],
-      'bookmarks': [],
-      'learningOrder': [],
+      'curriculumScopes': <dynamic>[],
+      'profilePrograms': <dynamic>[],
+      'stageDefinitions': <dynamic>[],
+      'pointConfigs': <dynamic>[],
+      'studyDayConfigs': <dynamic>[],
+      'completions': <dynamic>[],
+      'completionEvents': <dynamic>[],
+      'dailyPlans': <dynamic>[],
+      'learningLedger': <dynamic>[],
+      'bookmarks': <dynamic>[],
+      'learningOrder': <dynamic>[],
       'trackLearningOrder': [
         {'id': 1, 'trackId': 1, 'sefariaRef': 'Berakhot', 'sortOrder': 0},
       ],
-      'goals': [],
-      'streaks': [],
-      'streakEvents': [],
+      'goals': <dynamic>[],
+      'streaks': <dynamic>[],
+      'streakEvents': <dynamic>[],
     });
 
     test('imports track learning order entries', () async {
-      await service.importData(_payload());
+      await service.importData(payload());
 
       final orders = await db.trackLearningOrderDao.getByTrack(1);
       expect(orders, hasLength(1));
