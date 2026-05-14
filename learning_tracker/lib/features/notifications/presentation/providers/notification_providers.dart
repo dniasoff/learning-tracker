@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/analytics/analytics_provider.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
+import 'package:learning_tracker/core/sync/providers/outbox_providers.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/notifications/data/services/sacred_window_repository.dart';
 import 'package:learning_tracker/features/notifications/domain/services/notification_scheduler.dart';
@@ -13,7 +14,6 @@ import 'package:learning_tracker/features/profiles/presentation/providers/active
 import 'package:learning_tracker/features/sacred_time/presentation/providers/sacred_location_provider.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/providers/sacred_windows_provider.dart';
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
-import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -178,39 +178,44 @@ Future<void> _persistNotificationSettingsToCloud(
   Ref ref, {
   required SharedPreferences prefs,
 }) async {
-  final syncEngine = () {
+  // P2a: use FirestoreGateway directly instead of SyncEngine for this write.
+  final gateway = () {
     try {
-      return ref.read(syncEngineProvider);
+      return ref.read(firestoreGatewayProvider);
     } catch (_) {
       // Some tests build notification providers without full sync dependencies.
       return null;
     }
   }();
-  if (syncEngine == null) return;
+  if (gateway == null) return;
 
+  final profileId = ref.read(activeProfileIdProvider);
   final updatedAtMs = DateTimeFactory.nowUtc().millisecondsSinceEpoch;
   await prefs.setInt(_notificationSettingsUpdatedAtMsKey, updatedAtMs);
 
-  await syncEngine.pushNotificationSettings({
-    'schema_version': 1,
-    'daily_reminder': {
-      'enabled': prefs.getBool(_reminderEnabledKey) ?? true,
-      'hour': prefs.getInt(_reminderHourKey) ?? defaultReminderHour,
-      'minute': prefs.getInt(_reminderMinuteKey) ?? defaultReminderMinute,
+  await gateway.pushNotificationSettings(
+    profileId: profileId,
+    data: {
+      'schema_version': 1,
+      'daily_reminder': {
+        'enabled': prefs.getBool(_reminderEnabledKey) ?? true,
+        'hour': prefs.getInt(_reminderHourKey) ?? defaultReminderHour,
+        'minute': prefs.getInt(_reminderMinuteKey) ?? defaultReminderMinute,
+      },
+      'streak_alert': {
+        'enabled': prefs.getBool(_streakAlertEnabledKey) ?? true,
+        'hour': prefs.getInt(_streakAlertHourKey) ?? defaultStreakAlertHour,
+        'minute': prefs.getInt(_streakAlertMinuteKey) ?? defaultStreakAlertMinute,
+      },
+      'reward_notifications': {
+        'enabled': prefs.getBool(_rewardNotificationEnabledKey) ?? true,
+      },
+      'updated_at': DateTime.fromMillisecondsSinceEpoch(
+        updatedAtMs,
+        isUtc: true,
+      ).toIso8601String(),
     },
-    'streak_alert': {
-      'enabled': prefs.getBool(_streakAlertEnabledKey) ?? true,
-      'hour': prefs.getInt(_streakAlertHourKey) ?? defaultStreakAlertHour,
-      'minute': prefs.getInt(_streakAlertMinuteKey) ?? defaultStreakAlertMinute,
-    },
-    'reward_notifications': {
-      'enabled': prefs.getBool(_rewardNotificationEnabledKey) ?? true,
-    },
-    'updated_at': DateTime.fromMillisecondsSinceEpoch(
-      updatedAtMs,
-      isUtc: true,
-    ).toIso8601String(),
-  });
+  );
 }
 
 /// Returns true if notifications should currently be suppressed because

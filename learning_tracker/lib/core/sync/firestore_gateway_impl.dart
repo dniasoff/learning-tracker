@@ -110,6 +110,34 @@ class FirestoreGatewayImpl implements FirestoreGateway {
     }, SetOptions(merge: true));
   }
 
+  // ── P2a additions ──────────────────────────────────────────────────────────
+
+  @override
+  Future<void> pushNotificationSettings({
+    required int profileId,
+    required Map<String, dynamic> data,
+  }) async {
+    final doc = _doc(profileId, 'notification_settings', 'preferences');
+    if (doc == null) throw _notAuthenticated;
+    await doc.set({
+      ...data,
+      'synced_at': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+  }
+
+  @override
+  Future<void> pushGamificationSettings({
+    required int profileId,
+    required Map<String, dynamic> data,
+  }) async {
+    final doc = _doc(profileId, 'gamification_settings', 'config');
+    if (doc == null) throw _notAuthenticated;
+    await doc.set({
+      ...data,
+      'synced_at': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+  }
+
   // ── pull ──────────────────────────────────────────────────────────────────
 
   @override

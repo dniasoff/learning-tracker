@@ -41,6 +41,18 @@ abstract class FirestoreGateway {
     required Map<String, dynamic> data,
   });
 
+  // ── P2a additions ──────────────────────────────────────────────────────────
+
+  Future<void> pushNotificationSettings({
+    required int profileId,
+    required Map<String, dynamic> data,
+  });
+
+  Future<void> pushGamificationSettings({
+    required int profileId,
+    required Map<String, dynamic> data,
+  });
+
   /// Fetch one page of documents from [collection] for [profileId].
   ///
   /// Pages are ordered server-side by document key. Pass the previous

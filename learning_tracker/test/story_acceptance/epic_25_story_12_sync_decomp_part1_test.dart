@@ -319,6 +319,18 @@ class _RecordingGateway implements FirestoreGateway {
   }) async {}
 
   @override
+  Future<void> pushNotificationSettings({
+    required int profileId,
+    required Map<String, dynamic> data,
+  }) async {}
+
+  @override
+  Future<void> pushGamificationSettings({
+    required int profileId,
+    required Map<String, dynamic> data,
+  }) async {}
+
+  @override
   Future<FirestorePage> fetchPage({
     required int profileId,
     required String collection,
@@ -386,6 +398,18 @@ class _PagingGateway implements FirestoreGateway {
 
   @override
   Future<void> pushBookmark({
+    required int profileId,
+    required Map<String, dynamic> data,
+  }) async {}
+
+  @override
+  Future<void> pushNotificationSettings({
+    required int profileId,
+    required Map<String, dynamic> data,
+  }) async {}
+
+  @override
+  Future<void> pushGamificationSettings({
     required int profileId,
     required Map<String, dynamic> data,
   }) async {}

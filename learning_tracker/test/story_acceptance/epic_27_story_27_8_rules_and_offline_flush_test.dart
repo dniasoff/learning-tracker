@@ -443,6 +443,32 @@ class _ToggleableFakeGateway implements FirestoreGateway {
   }
 
   @override
+  Future<void> pushNotificationSettings({
+    required int profileId,
+    required Map<String, dynamic> data,
+  }) async {
+    pushAttempts++;
+    if (!online) throw Exception('offline');
+    await _fs
+        .collection('notification_settings')
+        .doc('${uid}_$profileId')
+        .set(data);
+  }
+
+  @override
+  Future<void> pushGamificationSettings({
+    required int profileId,
+    required Map<String, dynamic> data,
+  }) async {
+    pushAttempts++;
+    if (!online) throw Exception('offline');
+    await _fs
+        .collection('gamification_settings')
+        .doc('${uid}_$profileId')
+        .set(data);
+  }
+
+  @override
   Future<FirestorePage> fetchPage({
     required int profileId,
     required String collection,
