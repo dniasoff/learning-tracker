@@ -27,9 +27,9 @@ void main() {
     exit(1);
   }
 
-  final Map<String, dynamic> enMap =
+  final enMap =
       jsonDecode(enFile.readAsStringSync()) as Map<String, dynamic>;
-  final Map<String, dynamic> heMap =
+  final heMap =
       jsonDecode(heFile.readAsStringSync()) as Map<String, dynamic>;
 
   // Collect all translatable keys from English (skip @-prefixed metadata keys).
