@@ -6,6 +6,7 @@ import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
+import 'package:learning_tracker/core/sync/firestore_gateway.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/onboarding/domain/models/wizard_result_wrapper.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/learning_process_wizard_service.dart';
@@ -13,7 +14,6 @@ import 'package:learning_tracker/features/scheduler/domain/models/goal_entity.da
 import 'package:learning_tracker/features/scheduler/domain/repositories/goal_repository.dart';
 import 'package:learning_tracker/features/settings/domain/services/curriculum_activation_service.dart';
 import 'package:learning_tracker/features/stages/domain/repositories/stage_definition_repository.dart';
-import 'package:learning_tracker/features/sync/data/sync_engine.dart';
 import 'package:learning_tracker/features/track_setup/domain/entities/add_track_result.dart';
 
 /// Default study days: all 7 days active (Sun–Shabbos).
@@ -41,14 +41,14 @@ class TrackCreationService {
     required LearningProcessWizardService wizardService,
     required GoalRepository goalRepository,
     required StageDefinitionRepository stageRepository,
-    SyncEngine? syncEngine,
+    FirestoreGateway? gateway,
     AnalyticsService? analytics,
   }) : _database = database,
        _activationService = activationService,
        _wizardService = wizardService,
        _goalRepository = goalRepository,
        _stageRepository = stageRepository,
-       _syncEngine = syncEngine,
+       _gateway = gateway,
        _analytics = analytics ?? const NullAnalyticsService();
 
   final UserDatabase _database;
@@ -56,7 +56,7 @@ class TrackCreationService {
   final LearningProcessWizardService _wizardService;
   final GoalRepository _goalRepository;
   final StageDefinitionRepository _stageRepository;
-  final SyncEngine? _syncEngine;
+  final FirestoreGateway? _gateway;
   final AnalyticsService _analytics;
 
   /// Persist all track configuration from the AddTrackFlow result.
@@ -166,8 +166,9 @@ class TrackCreationService {
             curriculum.storageKey,
           );
       if (removed > 0) {
-        await _syncEngine?.removeProfileProgramAssignment(
-          curriculum.storageKey,
+        await _gateway?.removeProfileProgramAssignment(
+          profileId: profileId,
+          curriculumStorageKey: curriculum.storageKey,
         );
       }
     }
@@ -228,21 +229,27 @@ class TrackCreationService {
           sefariaRef: bookmarkRef,
           updatedAt: updatedAt,
         );
-        await _syncEngine?.pushBookmark({
-          'curriculum_id': curriculum.storageKey,
-          'track_type': TrackType.personal.storageKey,
-          'content_item_id': bookmarkRef,
-          'updated_at': updatedAt.toIso8601String(),
-        });
+        await _gateway?.pushBookmark(
+          profileId: profileId,
+          data: {
+            'curriculum_id': curriculum.storageKey,
+            'track_type': TrackType.personal.storageKey,
+            'content_item_id': bookmarkRef,
+            'updated_at': updatedAt.toIso8601String(),
+          },
+        );
       }
 
-      await _syncEngine?.pushProfileProgram({
-        'profile_id': profileId,
-        'curriculum_id': curriculum.storageKey,
-        'program_id': programId,
-        'tracking_start_date': trackingStartDate?.toIso8601String(),
-        'tracking_start_ref': bookmarkRef,
-      });
+      await _gateway?.pushProfileProgram(
+        profileId: profileId,
+        data: {
+          'profile_id': profileId,
+          'curriculum_id': curriculum.storageKey,
+          'program_id': programId,
+          'tracking_start_date': trackingStartDate?.toIso8601String(),
+          'tracking_start_ref': bookmarkRef,
+        },
+      );
     }
 
     AppLogger.instance.info(

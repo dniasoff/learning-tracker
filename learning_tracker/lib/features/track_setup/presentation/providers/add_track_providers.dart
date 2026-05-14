@@ -1,10 +1,10 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/analytics/analytics_provider.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
+import 'package:learning_tracker/core/sync/providers/outbox_providers.dart';
 import 'package:learning_tracker/features/onboarding/presentation/providers/onboarding_providers.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/curriculum_activation_providers.dart';
 import 'package:learning_tracker/features/stages/presentation/providers/stage_providers.dart';
-import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
 import 'package:learning_tracker/features/track_setup/domain/services/track_creation_service.dart';
 
 /// Provider for [TrackCreationService] used by AddTrackFlow.
@@ -13,7 +13,7 @@ final trackCreationServiceProvider = Provider<TrackCreationService>((ref) {
   final activationService = ref.watch(curriculumActivationServiceProvider);
   final wizardService = ref.watch(learningProcessWizardServiceProvider);
   final goalRepo = ref.watch(goalRepositoryProvider);
-  final syncEngine = ref.watch(syncEngineProvider);
+  final gateway = ref.watch(firestoreGatewayProvider);
   final analytics = ref.watch(analyticsServiceProvider);
 
   final stageRepository = ref.watch(globalStageRepositoryProvider);
@@ -24,7 +24,7 @@ final trackCreationServiceProvider = Provider<TrackCreationService>((ref) {
     wizardService: wizardService,
     goalRepository: goalRepo,
     stageRepository: stageRepository,
-    syncEngine: syncEngine,
+    gateway: gateway,
     analytics: analytics,
   );
 });
