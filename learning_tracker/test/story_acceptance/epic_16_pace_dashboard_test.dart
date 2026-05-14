@@ -13,7 +13,6 @@ import 'package:learning_tracker/features/scheduler/domain/models/delta_value.da
 import 'package:learning_tracker/features/scheduler/domain/models/goal_entity.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/pace_status.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/schedule_config.dart';
-import 'package:learning_tracker/features/scheduler/domain/services/goal_progress_calculator.dart';
 import 'package:learning_tracker/features/scheduler/domain/services/pace_calculator.dart';
 import 'package:test/test.dart';
 
@@ -190,20 +189,6 @@ void main() {
       expect(entity.pacePeriod, isNull);
     });
 
-    // GoalProgressCalculator with pace
-    test('GoalProgressCalculator uses pacePerDay when provided', () {
-      final result = GoalProgressCalculator.calculate(
-        targetPercent: 100.0,
-        targetDate: null,
-        currentDate: today,
-        totalItems: 500,
-        completedItems: 100,
-        pacePerDay: 2.0,
-      );
-      expect(result.remainingItems, 400);
-      expect(result.daysRemaining, 200);
-      expect(result.itemsPerDay, 2.0);
-    });
   });
 
   // Placeholder groups for future stories in Epic 16

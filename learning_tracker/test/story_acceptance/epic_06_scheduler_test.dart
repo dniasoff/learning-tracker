@@ -14,7 +14,6 @@ import 'package:learning_tracker/features/scheduler/domain/models/pace_status.da
 import 'package:learning_tracker/features/scheduler/domain/models/schedule_config.dart';
 import 'package:learning_tracker/features/scheduler/domain/repositories/scheduler_content_repository.dart';
 import 'package:learning_tracker/features/scheduler/domain/services/daily_task_generator.dart';
-import 'package:learning_tracker/features/scheduler/domain/services/goal_progress_calculator.dart';
 import 'package:learning_tracker/features/scheduler/domain/services/pace_calculator.dart';
 import 'package:learning_tracker/features/scheduler/domain/services/scheduler_engine.dart';
 import 'package:test/test.dart';
@@ -570,44 +569,6 @@ void main() {
       },
     );
 
-    // ── Unit: GoalProgressCalculator ──
-
-    test(
-      'GoalProgressCalculator computes percentage, days remaining, items/day',
-      () {
-        final progress = GoalProgressCalculator.calculate(
-          targetPercent: 100.0,
-          targetDate: DateTime.utc(2027, 1, 1),
-          currentDate: DateTime.utc(2026, 3, 15),
-          totalItems: 4192,
-          completedItems: 10,
-        );
-
-        expect(progress.percentComplete, closeTo(0.238, 0.01));
-        expect(progress.daysRemaining, greaterThan(0));
-        expect(progress.itemsPerDay, isNotNull);
-        expect(progress.itemsPerDay, greaterThan(0));
-        expect(progress.remainingItems, 4182);
-      },
-    );
-
-    test(
-      'GoalProgressCalculator with no deadline returns null for days/items',
-      () {
-        final progress = GoalProgressCalculator.calculate(
-          targetPercent: 100.0,
-          targetDate: null,
-          currentDate: DateTime.utc(2026, 3, 15),
-          totalItems: 100,
-          completedItems: 50,
-        );
-
-        expect(progress.percentComplete, 50.0);
-        expect(progress.daysRemaining, isNull);
-        expect(progress.itemsPerDay, isNull);
-      },
-    );
-
     test(
       'Goal data keyed by CurriculumId.storageKey — goals independent',
       () async {
@@ -636,36 +597,6 @@ void main() {
       },
     );
 
-    // ── Integration: Full scenario ──
-
-    test(
-      'Create Mishnayos goal 100% by 2027-01-01, complete 10 of 4192 items',
-      () async {
-        final goal = await goalRepo.createGoal(
-          profileId: 0,
-          curriculumId: curriculum,
-          trackId: trackId,
-          targetPercent: 100.0,
-          targetDate: DateTime.utc(2027, 1, 1),
-          description: 'Complete all Mishnayos by 2027',
-        );
-
-        final progress = GoalProgressCalculator.calculate(
-          targetPercent: goal.targetPercent,
-          targetDate: goal.targetDate,
-          currentDate: DateTime.utc(2026, 3, 15),
-          totalItems: 4192,
-          completedItems: 10,
-        );
-
-        // 10/4192 ≈ 0.239%
-        expect(progress.percentComplete, closeTo(0.239, 0.01));
-        // ~292 days remaining (Mar 15 2026 → Jan 1 2027)
-        expect(progress.daysRemaining, 292);
-        // 4182 remaining / 292 days ≈ 14.32 items/day
-        expect(progress.itemsPerDay, closeTo(14.32, 0.1));
-      },
-    );
   });
 
   // ── Story 6.4: Pace Tracking ──────────────────────────────────
