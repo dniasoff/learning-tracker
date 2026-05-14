@@ -473,6 +473,7 @@ class _LearnTaskCard extends ConsumerWidget {
       DailyTaskPriority.overdueProgram => Icons.priority_high_rounded,
       DailyTaskPriority.todayProgram => Icons.menu_book_rounded,
       DailyTaskPriority.overdueChazara => Icons.history_rounded,
+      // overdueNewLearning: not yet studied — use new-learning icon, not review
       DailyTaskPriority.overdueNewLearning => Icons.auto_stories_rounded,
       DailyTaskPriority.scheduledChazara => Icons.history_rounded,
       DailyTaskPriority.newLearning => Icons.auto_stories_rounded,

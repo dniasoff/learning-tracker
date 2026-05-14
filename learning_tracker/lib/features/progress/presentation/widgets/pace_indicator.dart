@@ -12,29 +12,26 @@ class PaceIndicator extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final deltaLabel = switch (paceStatus.delta) {
-      DateScheduleDelta(:final value) =>
-        paceStatus.status == PaceStatusType.ahead
-            ? 'Ahead by ${value.days} days'
-            : 'Behind by ${value.days.abs()} days',
-      PaceScheduleDelta(:final value) =>
-        paceStatus.status == PaceStatusType.ahead
-            ? 'Ahead by ${value.itemsPerWeek} items/week'
-            : 'Behind by ${value.itemsPerWeek.abs()} items/week',
+    final label = switch (paceStatus.status) {
+      PaceStatusType.ahead => switch (paceStatus.delta) {
+        DateScheduleDelta(:final value) => 'Ahead by ${value.days} days',
+        PaceScheduleDelta(:final value) =>
+          'Ahead by ${value.itemsPerWeek} items/week',
+      },
+      PaceStatusType.onPace => 'On pace',
+      PaceStatusType.behind => switch (paceStatus.delta) {
+        DateScheduleDelta(:final value) => 'Behind by ${value.days.abs()} days',
+        PaceScheduleDelta(:final value) =>
+          'Behind by ${value.itemsPerWeek.abs()} items/week',
+      },
     };
-    final (label, color, icon) = switch (paceStatus.status) {
-      PaceStatusType.ahead => (
-        deltaLabel,
-        AppTheme.brandGold,
-        Icons.trending_up_rounded,
-      ),
+    final (color, icon) = switch (paceStatus.status) {
+      PaceStatusType.ahead => (AppTheme.brandGold, Icons.trending_up_rounded),
       PaceStatusType.onPace => (
-        'On pace',
         AppTheme.brandBlue,
         Icons.check_circle_outline_rounded,
       ),
       PaceStatusType.behind => (
-        deltaLabel,
         AppTheme.brandCoralDeep,
         Icons.trending_down_rounded,
       ),

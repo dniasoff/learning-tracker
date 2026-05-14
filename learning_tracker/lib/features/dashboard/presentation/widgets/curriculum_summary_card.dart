@@ -122,20 +122,24 @@ class _PaceBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     if (paceStatus == null) return const SizedBox.shrink();
 
-    final deltaLabel = switch (paceStatus!.delta) {
-      DateScheduleDelta(:final value) =>
-        paceStatus!.status == PaceStatusType.ahead
-            ? '${value.days}d ahead'
-            : '${value.days.abs()}d behind',
-      PaceScheduleDelta(:final value) =>
-        paceStatus!.status == PaceStatusType.ahead
-            ? '+${value.itemsPerWeek}/wk'
-            : '${value.itemsPerWeek.abs()}/wk behind',
+    final pace = paceStatus!;
+    final label = switch (pace.status) {
+      PaceStatusType.onPace => 'On pace',
+      PaceStatusType.ahead => switch (pace.delta) {
+        DateScheduleDelta(:final value) => '${value.days}d ahead',
+        PaceScheduleDelta(:final value) =>
+          '+${value.itemsPerWeek}/wk ahead',
+      },
+      PaceStatusType.behind => switch (pace.delta) {
+        DateScheduleDelta(:final value) => '${value.days.abs()}d behind',
+        PaceScheduleDelta(:final value) =>
+          '${value.itemsPerWeek.abs()}/wk behind',
+      },
     };
-    final (label, color, icon) = switch (paceStatus!.status) {
-      PaceStatusType.ahead => (deltaLabel, Colors.green, Icons.trending_up),
-      PaceStatusType.behind => (deltaLabel, Colors.orange, Icons.trending_down),
-      PaceStatusType.onPace => ('On pace', Colors.blue, Icons.trending_flat),
+    final (color, icon) = switch (pace.status) {
+      PaceStatusType.ahead => (Colors.green, Icons.trending_up),
+      PaceStatusType.behind => (Colors.orange, Icons.trending_down),
+      PaceStatusType.onPace => (Colors.blue, Icons.trending_flat),
     };
 
     return Container(

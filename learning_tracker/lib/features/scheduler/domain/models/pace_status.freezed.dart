@@ -19,11 +19,15 @@ mixin _$PaceStatus {
 /// For pace goals: weekly item surplus (+) or deficit (−), i.e.
 /// `((rollingAverage − targetPacePerDay) * 7).round()`.
 /// Zero when on-pace.
-/// Kept for backward compatibility — prefer [delta] for new code.
- int get daysDelta;/// Typed delta — use this in UI code to avoid mixing calendar days
-/// with items/week. See [ScheduleDelta] for the two sub-types:
-/// [DateScheduleDelta] (deadline goals) and [PaceScheduleDelta]
-/// (pace-rate goals).
+///
+/// Deprecated in favour of [delta]. UIs MUST switch on [delta] to render
+/// a correct label — [daysDelta] is ambiguous between calendar-days and
+/// items-per-week.
+ int get daysDelta;/// Typed delta: [DateScheduleDelta] for deadline goals (calendar days),
+/// [PaceScheduleDelta] for pace goals (items per week).
+///
+/// UIs MUST pattern-match on this to display the correct unit label.
+/// [daysDelta] carries the raw integer for backward compatibility only.
  ScheduleDelta get delta;/// Projected completion date based on rolling 7-day average.
 /// Null if no completions in the last 7 days (cannot project).
  DateTime? get projectedCompletionDate;/// Rolling 7-day average of daily completions.
@@ -232,12 +236,16 @@ class _PaceStatus implements PaceStatus {
 /// For pace goals: weekly item surplus (+) or deficit (−), i.e.
 /// `((rollingAverage − targetPacePerDay) * 7).round()`.
 /// Zero when on-pace.
-/// Kept for backward compatibility — prefer [delta] for new code.
+///
+/// Deprecated in favour of [delta]. UIs MUST switch on [delta] to render
+/// a correct label — [daysDelta] is ambiguous between calendar-days and
+/// items-per-week.
 @override final  int daysDelta;
-/// Typed delta — use this in UI code to avoid mixing calendar days
-/// with items/week. See [ScheduleDelta] for the two sub-types:
-/// [DateScheduleDelta] (deadline goals) and [PaceScheduleDelta]
-/// (pace-rate goals).
+/// Typed delta: [DateScheduleDelta] for deadline goals (calendar days),
+/// [PaceScheduleDelta] for pace goals (items per week).
+///
+/// UIs MUST pattern-match on this to display the correct unit label.
+/// [daysDelta] carries the raw integer for backward compatibility only.
 @override final  ScheduleDelta delta;
 /// Projected completion date based on rolling 7-day average.
 /// Null if no completions in the last 7 days (cannot project).

@@ -5,7 +5,8 @@ part 'daily_task.freezed.dart';
 
 /// Priority ranking for daily tasks.
 ///
-/// Ordering: overdueProgram > todayProgram > overdueChazara >
+/// Ordering:
+///   overdueProgram > todayProgram > overdueChazara >
 ///   overdueNewLearning > scheduledChazara > newLearning
 enum DailyTaskPriority {
   /// Program item that is past due (missed a calendar day).
@@ -17,9 +18,15 @@ enum DailyTaskPriority {
   /// Chazara that is past its scheduled review date.
   overdueChazara,
 
-  /// New learning item shown in a prior-day snapshot but not yet completed
-  /// (never-completed carry-over). Distinct from [overdueChazara] so the UI
-  /// does not display it as a review task.
+  /// New content that was shown in a prior-day snapshot but never completed.
+  ///
+  /// Distinguished from [overdueChazara]: the item has no completion history
+  /// at all — it was scheduled for a previous day but has never been studied.
+  /// The UI should present this as "pick up where you left off" rather than
+  /// "review something you already know".
+  ///
+  /// Added by DNI-346 to fix the bug where brand-new never-completed items
+  /// in the snapshot path were incorrectly labelled as [overdueChazara].
   overdueNewLearning,
 
   /// Chazara that is due today.

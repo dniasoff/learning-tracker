@@ -37,7 +37,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           fetch-depth: 10
 
@@ -68,7 +68,7 @@ jobs:
         uses: actions/setup-java@v5
         with:
           distribution: 'temurin'
-          java-version: '17'
+          java-version: '21'
 
       - name: Cache pub dependencies
         uses: actions/cache@v5
@@ -183,7 +183,7 @@ jobs:
             --build-number=${{ steps.version.outputs.code }}
 
       - name: Upload AAB artifact
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: app-release-aab-${{ github.ref_name }}
           path: learning_tracker/build/app/outputs/bundle/release/app-release.aab

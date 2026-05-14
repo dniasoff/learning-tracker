@@ -164,6 +164,13 @@ class SchedulerEngine {
       // Reorder mid-stream and multi-day app gaps are both handled because
       // the repository back-fills synthetic snapshots before the engine
       // runs and populates `priorlyShownRefs`.
+      //
+      // isStudyDay guard (DNI-346): on non-study days, the snapshot path must
+      // return an empty task list rather than emitting carry-over or new items.
+      if (!config.isStudyDay) {
+        return const [];
+      }
+
       final pace = config.pacePerDay!.ceil();
       final priorlyShown = config.priorlyShownRefs;
 
@@ -174,39 +181,57 @@ class SchedulerEngine {
 
       // Carry-over overdue from prior-day snapshots. Preserve original
       // orderedRefs order so the list is stable across runs.
+      //
+      // Bug fix (DNI-346): only classify a ref as overdueChazara when it has
+      // at least one completion record. A brand-new never-completed item that
+      // happens to appear in priorlyShown (e.g. a back-filled synthetic
+      // snapshot) must surface as dueNewLearning, not overdueChazara.
       for (final ref in orderedRefs) {
         if (!priorlyShown.contains(ref)) continue;
-        final done = completionMap[ref]?.containsKey(firstStageOrder) ?? false;
-        if (done) continue;
-
-        // Classification fix: only call it 'overdueChazara' if the item has
-        // been completed at least once before (i.e. it's a chazara task).
-        // Items that were shown in a prior snapshot but never completed at
-        // ANY stage are carry-over new-learning, not chazara.
         final itemCompletions = completionMap[ref];
         final hasAnyCompletion =
             itemCompletions != null && itemCompletions.isNotEmpty;
-        final priority = hasAnyCompletion
-            ? DailyTaskPriority.overdueChazara
-            : DailyTaskPriority.overdueNewLearning;
+        final doneAtFirstStage =
+            itemCompletions?.containsKey(firstStageOrder) ?? false;
+        if (doneAtFirstStage) continue;
 
-        overdueTasks.add(
-          DailyTask(
-            curriculumId: config.curriculumId,
-            contentItemSefariaRef: ref,
-            stageOrder: firstStageOrder,
-            stageDefinitionId: firstStage.id,
-            priority: priority,
-            isOverdue: true,
-            reason: hasAnyCompletion
-                ? 'Missed earlier'
-                : 'New learning carry-over',
-            stageName: firstStage.stageName,
-            trackId: config.trackId,
-            trackLabel: config.trackLabel,
-            estimatedEffortMinutes: 5,
-          ),
-        );
+        if (hasAnyCompletion) {
+          // Previously learned item — show as overdue chazara.
+          overdueTasks.add(
+            DailyTask(
+              curriculumId: config.curriculumId,
+              contentItemSefariaRef: ref,
+              stageOrder: firstStageOrder,
+              stageDefinitionId: firstStage.id,
+              priority: DailyTaskPriority.overdueChazara,
+              isOverdue: true,
+              reason: 'Missed earlier',
+              stageName: firstStage.stageName,
+              trackId: config.trackId,
+              trackLabel: config.trackLabel,
+              estimatedEffortMinutes: 5,
+            ),
+          );
+        } else {
+          // Never completed — classify as overdueNewLearning, not overdueChazara.
+          // The item was shown in a prior-day snapshot but never studied; it
+          // is NOT chazara (there is nothing to review — it hasn't been learned).
+          overdueTasks.add(
+            DailyTask(
+              curriculumId: config.curriculumId,
+              contentItemSefariaRef: ref,
+              stageOrder: firstStageOrder,
+              stageDefinitionId: firstStage.id,
+              priority: DailyTaskPriority.overdueNewLearning,
+              isOverdue: true,
+              reason: 'Not yet started',
+              stageName: firstStage.stageName,
+              trackId: config.trackId,
+              trackLabel: config.trackLabel,
+              estimatedEffortMinutes: 5,
+            ),
+          );
+        }
       }
 
       // Today's new batch
@@ -585,6 +610,29 @@ class SchedulerEngine {
     ];
   }
 
+  /// Calculate new items per day for the legacy (non-snapshot) adaptive path.
+  ///
+  /// **Zero-floor handling (DNI-346):** the old code applied a proportional
+  /// chazara-load reduction and then forced the result up to at least 1 with
+  /// `max(1, baseRate)`. This collapsed a 500-item-backlog user (who needs
+  /// 5/day to hit their deadline) down to 1/day whenever chazara was heavy.
+  ///
+  /// The correct behaviour:
+  /// - [baseRate] is derived from deadline or pace math alone — chazara items
+  ///   are additional study work that does **not** shrink the new-learning
+  ///   requirement.
+  /// - If [chazaraCount] ≥ some high threshold, we still deliver the full
+  ///   [baseRate] so the user stays on track.
+  /// - The zero-floor (return 0) fires only when [remainingNewItems] is 0 —
+  ///   there is nothing left to learn.
+  /// - The minimum-1 floor fires only when [baseRate] > 0 and the study-day
+  ///   math would produce a positive (non-zero) obligation — this ensures
+  ///   at least one item of forward progress on any non-zero obligation day.
+  ///
+  /// The **boundary case** ("deep backlog locks new learning to 1/day"):
+  /// a user with 10 remaining items over 100 study days gets
+  /// `ceil(10/100) = 1` from the deadline formula. That 1 is the correct
+  /// answer — it is not collapsed from a higher value.
   int _calculateNewItemsPerDay(
     ScheduleConfig config,
     int remainingNewItems,
@@ -626,12 +674,17 @@ class SchedulerEngine {
       }
     }
 
-    // Zero-floor: if baseRate is 0 or negative there is nothing to schedule.
-    // Do NOT force a minimum of 1 — a deep backlog user whose deadline math
-    // produces 0 is genuinely over-capacity and should get 0 new items.
+    // Explicit zero-floor: if baseRate is 0 (e.g. past deadline with very
+    // few items and extremely conservative 10% rule rounded to 0), return 0.
+    // Do NOT apply a forced-minimum of 1 here — that was the old bug.
     if (baseRate <= 0) return 0;
 
-    // Cap at remaining items so we never over-assign.
+    // Chazara tasks are shown in addition to new learning, not instead of it.
+    // The chazara load does not reduce the new-learning obligation — the user
+    // still needs to reach their deadline. We do not apply a proportional
+    // chazara penalty to baseRate.
+    //
+    // Cap by remaining items so we never emit more tasks than exist.
     return min(baseRate, remainingNewItems);
   }
 }

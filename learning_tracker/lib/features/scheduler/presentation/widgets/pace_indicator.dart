@@ -45,17 +45,22 @@ class PaceIndicator extends StatelessWidget {
   }
 
   static String _labelForStatus(PaceStatus pace) {
-    if (pace.status == PaceStatusType.onPace) return 'On pace';
-    return switch (pace.delta) {
-      DateScheduleDelta(:final value) =>
-        pace.status == PaceStatusType.ahead
-            ? '+${value.days} days ahead'
-            : '${value.days.abs()} days behind',
-      PaceScheduleDelta(:final value) =>
-        pace.status == PaceStatusType.ahead
-            ? '+${value.itemsPerWeek} items/week ahead'
-            : '${value.itemsPerWeek.abs()} items/week behind',
-    };
+    switch (pace.status) {
+      case PaceStatusType.onPace:
+        return 'On pace';
+      case PaceStatusType.ahead:
+        return switch (pace.delta) {
+          DateScheduleDelta(:final value) => '+${value.days} days ahead',
+          PaceScheduleDelta(:final value) =>
+            '+${value.itemsPerWeek} items/week ahead',
+        };
+      case PaceStatusType.behind:
+        return switch (pace.delta) {
+          DateScheduleDelta(:final value) => '${value.days.abs()} days behind',
+          PaceScheduleDelta(:final value) =>
+            '${value.itemsPerWeek.abs()} items/week behind',
+        };
+    }
   }
 }
 

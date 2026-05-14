@@ -313,6 +313,8 @@ _GroupedTasks _groupTasks(List<DailyTask> tasks) {
         todayProgram.add(task);
       case DailyTaskPriority.overdueChazara:
         overdueReview.add(task);
+      // overdueNewLearning items were never studied — group with overdue review
+      // so they surface before today's fresh new-learning.
       case DailyTaskPriority.overdueNewLearning:
         overdueReview.add(task);
       case DailyTaskPriority.scheduledChazara:

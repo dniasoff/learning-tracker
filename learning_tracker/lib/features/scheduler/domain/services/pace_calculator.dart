@@ -92,8 +92,7 @@ class PaceCalculator {
     // Rolling 7-day average
     final rollingAvg = _rolling7DayAverage(dailyCompletionCounts, today);
 
-    // Projected completion date — guard against day-1 (no events yet):
-    // only project when rollingAvg > 0 so we never emit NaN / Infinity.
+    // Projected completion date — guard: no projection until ≥1 event exists
     DateTime? projectedDate;
     if (rollingAvg > 0) {
       final remainingItems = totalItems - completedItems;
@@ -104,7 +103,7 @@ class PaceCalculator {
         projectedDate = today.add(Duration(days: daysNeeded));
       }
     }
-    // If rollingAvg == 0, projectedDate stays null (cannot project)
+    // rollingAvg == 0 (day-1 / no events): projectedDate stays null (cannot project)
 
     final result = PaceStatus(
       status: status,
@@ -149,13 +148,12 @@ class PaceCalculator {
     }
 
     // Weekly item surplus/deficit (not calendar days — see PaceStatus.daysDelta)
-    final daysDelta = ((rollingAvg - targetPacePerDay) * 7).round();
+    final itemsPerWeekDelta = ((rollingAvg - targetPacePerDay) * 7).round();
 
-    // Projected completion date using target pace.
-    // Projection uses the fixed target rate (not rollingAvg) so it is always
-    // available from day 1 — rolling avg is used for status, not projection.
+    // Projected completion date using target pace
+    // Guard: no projection on day-1 (rollingAvg == 0 means no events yet)
     DateTime? projectedDate;
-    if (targetPacePerDay > 0 && remainingItems > 0) {
+    if (rollingAvg > 0 && targetPacePerDay > 0 && remainingItems > 0) {
       final daysNeeded = (remainingItems / targetPacePerDay).ceil();
       projectedDate = today.add(Duration(days: daysNeeded));
     } else if (remainingItems <= 0) {
@@ -164,8 +162,8 @@ class PaceCalculator {
 
     return PaceStatus(
       status: status,
-      daysDelta: daysDelta,
-      delta: PaceScheduleDelta(PaceDelta(daysDelta)),
+      daysDelta: itemsPerWeekDelta,
+      delta: PaceScheduleDelta(PaceDelta(itemsPerWeekDelta)),
       projectedCompletionDate: projectedDate,
       rollingAverage: rollingAvg,
     );

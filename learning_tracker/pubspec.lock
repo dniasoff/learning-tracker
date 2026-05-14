@@ -29,10 +29,10 @@ packages:
     dependency: transitive
     description:
       name: analyzer_buffer
-      sha256: ff4bd291778c7417fe53fe24ee0d0a1f1ffe281a2d4ea887e7094f16e36eace7
+      sha256: bf559bc54530827a92cc4d9ee340fc76b4f17f386218c2b9e7cd33ed468a7e4d
       url: "https://pub.dev"
     source: hosted
-    version: "0.3.0"
+    version: "0.3.2"
   analyzer_plugin:
     dependency: transitive
     description:
@@ -125,10 +125,10 @@ packages:
     dependency: "direct dev"
     description:
       name: auto_route_generator
-      sha256: "04300eaf5821962aae8b5cd94f67013fd2fd326dc3be212d3ec1ae7470f09834"
+      sha256: "7aa0e90874928e78709f0a21a69fb5bc2ae1aa932dec862930d2af85c40adb01"
       url: "https://pub.dev"
     source: hosted
-    version: "10.4.0"
+    version: "10.5.0"
   bcrypt:
     dependency: "direct main"
     description:
@@ -434,7 +434,7 @@ packages:
     source: hosted
     version: "1.0.0+9.0.0"
   dart_style:
-    dependency: transitive
+    dependency: "direct overridden"
     description:
       name: dart_style
       sha256: a9c30492da18ff84efe2422ba2d319a89942d93e58eb0b73d32abe822ef54b7b
@@ -716,18 +716,18 @@ packages:
     dependency: "direct main"
     description:
       name: flutter_secure_storage
-      sha256: "8b302d17096ba88f911b7eb317c71d5e691da60a259549f42b38c658d1776d87"
+      sha256: "6848263f9744072d0977347c383fb8b57d9780319a6bf5238b5a2866a029de62"
       url: "https://pub.dev"
     source: hosted
-    version: "10.1.0"
+    version: "10.2.0"
   flutter_secure_storage_darwin:
     dependency: transitive
     description:
       name: flutter_secure_storage_darwin
-      sha256: "3af15a3cb2bf5b8b776832bd01776f8018766aece55623176e28b406481fb320"
+      sha256: "67cd1ff671add31dc13e45194398187a04bb63804b37fa47866afae296d73fcb"
       url: "https://pub.dev"
     source: hosted
-    version: "0.3.0"
+    version: "0.3.1"
   flutter_secure_storage_linux:
     dependency: transitive
     description:
@@ -1152,10 +1152,10 @@ packages:
     dependency: transitive
     description:
       name: lean_builder
-      sha256: "6af3cfbf34400eb14b89fe20111e5981e7083362f00ea10b9ed2a6e833250d76"
+      sha256: ee4117b03e93a4eb83e1a78c8e7a1dc22188d43bb142309982be48673a1b3a53
       url: "https://pub.dev"
     source: hosted
-    version: "0.1.6"
+    version: "0.1.7"
   learning_tracker_lints:
     dependency: "direct dev"
     description:
@@ -1228,7 +1228,7 @@ packages:
     source: hosted
     version: "0.8.2"
   mockito:
-    dependency: transitive
+    dependency: "direct overridden"
     description:
       name: mockito
       sha256: eff30d002f0c8bf073b6f929df4483b543133fcafce056870163587b03f1d422
@@ -1900,10 +1900,10 @@ packages:
     dependency: transitive
     description:
       name: watcher
-      sha256: "592ab6e2892f67760543fb712ff0177f4ec76c031f02f5b4ff8d3fc5eb9fb61a"
+      sha256: "1398c9f081a753f9226febe8900fce8f7d0a67163334e1c94a2438339d79d635"
       url: "https://pub.dev"
     source: hosted
-    version: "1.1.4"
+    version: "1.2.1"
   web:
     dependency: transitive
     description:
