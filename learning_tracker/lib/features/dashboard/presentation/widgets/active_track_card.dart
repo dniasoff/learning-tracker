@@ -26,6 +26,22 @@ CurriculumId _curriculumIdForTrack(CurriculumTrack track) {
   );
 }
 
+/// Drops the top-level seder segment from a breadcrumb string so the
+/// curriculum chip (already visible above) is not duplicated in the pill.
+///
+/// The breadcrumb separator produced by [renderedDisplayForRef] is ` › `
+/// (space + U+203A + space). When there are 2+ segments, the first is
+/// removed. Single-segment labels (e.g. a top-level tractate with no
+/// sub-units) are returned unchanged.
+///
+/// Example: "קודשים › חולין › דף יד › עמוד א" → "חולין › דף יד › עמוד א"
+String _trimSederFromBreadcrumb(String breadcrumb) {
+  const sep = ' › ';
+  final idx = breadcrumb.indexOf(sep);
+  if (idx == -1) return breadcrumb; // single segment — nothing to trim
+  return breadcrumb.substring(idx + sep.length);
+}
+
 /// Active track card: program (task metrics) vs self-paced (completion) layouts.
 class ActiveTrackCard extends ConsumerWidget {
   final CurriculumTrack track;
@@ -88,10 +104,16 @@ class ActiveTrackCard extends ConsumerWidget {
         : l10n.activeTrackCurrentFocus;
     final focusRef = todayTask?.contentItemSefariaRef;
     // Renderer-driven: same path as reader, browse rows, daily task card.
+    // The full breadcrumb starts with the seder (e.g. "קודשים › חולין › …"),
+    // which duplicates context already shown by the curriculum chip above.
+    // Drop the top-level segment when the breadcrumb has 2+ parts so only
+    // the sub-seder onwards is displayed (e.g. "חולין › דף יד › עמוד א").
     final focusValue = focusRef == null
         ? l10n.noProjection
-        : (ref.watch(renderedDisplayForRefProvider(focusRef)).asData?.value ??
-              focusRef);
+        : _trimSederFromBreadcrumb(
+            ref.watch(renderedDisplayForRefProvider(focusRef)).asData?.value ??
+                focusRef,
+          );
     final lifetimeFull =
         lifetimeFraction != null && (lifetimeFraction - 1.0).abs() < 1e-6;
 

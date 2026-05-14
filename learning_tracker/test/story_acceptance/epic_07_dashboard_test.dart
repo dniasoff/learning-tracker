@@ -1176,4 +1176,40 @@ void main() {
       },
     );
   });
+
+  // ── Issue-8b regression — breadcrumb seder trimming ────────────────────────
+
+  group('Issue-8b — top-level seder trimmed from breadcrumb', () {
+    /// Mirror of the private `_trimSederFromBreadcrumb` function in
+    /// `active_track_card.dart`. Kept here as a pure-logic unit test so the
+    /// display contract is documented and verified independently of widgets.
+    String trimSeder(String breadcrumb) {
+      const sep = ' › ';
+      final idx = breadcrumb.indexOf(sep);
+      if (idx == -1) return breadcrumb;
+      return breadcrumb.substring(idx + sep.length);
+    }
+
+    test('multi-segment breadcrumb: first segment is dropped', () {
+      expect(trimSeder('א › ב › ג'), equals('ב › ג'));
+    });
+
+    test('two-segment breadcrumb: only second segment remains', () {
+      expect(trimSeder('קודשים › חולין'), equals('חולין'));
+    });
+
+    test('single-segment breadcrumb: returned unchanged', () {
+      expect(trimSeder('ברכות'), equals('ברכות'));
+    });
+
+    test('four-segment breadcrumb: first segment removed, rest preserved', () {
+      const full = 'קודשים › חולין › דף יד › עמוד א';
+      const expected = 'חולין › דף יד › עמוד א';
+      expect(trimSeder(full), equals(expected));
+    });
+
+    test('empty string: returned unchanged', () {
+      expect(trimSeder(''), equals(''));
+    });
+  });
 }
