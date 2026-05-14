@@ -1,0 +1,15 @@
+name: learning_tracker_lints
+version: 0.1.0
+description: Custom lint rules for the Learning Tracker project.
+publish_to: none
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  analyzer: ^8.0.0
+  analyzer_plugin: ^0.13.0
+  custom_lint_builder: ^0.8.1
+
+dev_dependencies:
+  test: ^1.24.0

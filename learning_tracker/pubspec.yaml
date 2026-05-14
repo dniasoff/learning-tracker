@@ -134,6 +134,19 @@ dev_dependencies:
   # Story 19.3: Seed Content DB build tool
   crypto: ^3.0.6
 
+  # Custom lint rules (DNI-386)
+  # custom_lint needs analyzer ^8 but riverpod_generator needs analyzer ^9;
+  # a dependency_override below reconciles these.
+  custom_lint: ^0.8.1
+  learning_tracker_lints:
+    path: ../packages/custom_lints
+
+# custom_lint needs analyzer ^8 but json_serializable 6.13.x needs analyzer >=9.
+# Pin to 9.x so the dev toolchain (build_runner, json_serializable, riverpod_generator)
+# resolve; custom_lint invocation uses dart run custom_lint, not the analysis server.
+dependency_overrides:
+  analyzer: ^9.0.0
+
 flutter_launcher_icons:
   image_path: "assets/images/icon.png"
   image_path_android: "assets/images/icon.png"
