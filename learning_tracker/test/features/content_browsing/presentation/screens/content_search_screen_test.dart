@@ -8,11 +8,11 @@ void main() {
   group('ContentSearchScreen', () {
     testWidgets('renders without error', (tester) async {
       await tester.pumpWidget(
-        ProviderScope(
+        const ProviderScope(
           child: MaterialApp(
             localizationsDelegates: AppLocalizations.localizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
-            home: const ContentSearchScreen(curriculumId: 'mishnayos'),
+            home: ContentSearchScreen(curriculumId: 'mishnayos'),
           ),
         ),
       );

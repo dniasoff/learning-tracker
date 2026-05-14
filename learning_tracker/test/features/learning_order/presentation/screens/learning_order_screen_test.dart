@@ -19,10 +19,10 @@ void main() {
               (ref) => Future.value(false),
             ),
           ],
-          child: MaterialApp(
+          child: const MaterialApp(
             localizationsDelegates: AppLocalizations.localizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
-            home: const LearningOrderScreen(
+            home: LearningOrderScreen(
               curriculumId: CurriculumId.mishnayos,
             ),
           ),

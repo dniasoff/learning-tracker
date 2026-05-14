@@ -28,10 +28,10 @@ void main() {
             ),
             contentSearchProvider.overrideWith((ref, args) => Future.value([])),
           ],
-          child: MaterialApp(
+          child: const MaterialApp(
             localizationsDelegates: AppLocalizations.localizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
-            home: const BulkMarkScreen(curriculumId: CurriculumId.mishnayos),
+            home: BulkMarkScreen(curriculumId: CurriculumId.mishnayos),
           ),
         ),
       );

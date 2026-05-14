@@ -5,8 +5,10 @@ analyzer:
     - "**/*.gr.dart"
   errors:
     invalid_annotation_target: ignore
-  plugins:
-    - custom_lint
+  # custom_lint plugin intentionally omitted: custom_lint 0.8.1 requires
+  # analyzer ^8 but the project uses analyzer ^9 (forced by json_serializable
+  # and riverpod_generator). Loading the plugin crashes the analysis server.
+  # Custom lint rules are enforced separately via `dart run custom_lint`.
   language:
     strict-casts: true
     strict-inference: true

@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/widgets/app_bar_title.dart';
 import 'package:learning_tracker/features/onboarding/presentation/steps/profile_creation_step.dart';
 import 'package:learning_tracker/features/track_setup/domain/entities/add_track_result.dart';
 import 'package:learning_tracker/features/track_setup/presentation/screens/add_track_flow_screen.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// Step that hosts the [AddTrackFlow] sub-flow.
 ///

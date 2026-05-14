@@ -29,10 +29,10 @@ void main() {
               (_) async => {CurriculumId.mishnayos: 15, CurriculumId.bavli: 10},
             ),
           ],
-          child: MaterialApp(
+          child: const MaterialApp(
             localizationsDelegates: AppLocalizations.localizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
-            home: const Scaffold(
+            home: Scaffold(
               body: PointsDisplayWidget(userMode: UserMode.child),
             ),
           ),
@@ -56,10 +56,10 @@ void main() {
               (_) async => {CurriculumId.mishnayos: 25},
             ),
           ],
-          child: MaterialApp(
+          child: const MaterialApp(
             localizationsDelegates: AppLocalizations.localizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
-            home: const Scaffold(
+            home: Scaffold(
               body: PointsDisplayWidget(userMode: UserMode.adult),
             ),
           ),

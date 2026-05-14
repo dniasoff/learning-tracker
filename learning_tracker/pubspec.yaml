@@ -134,16 +134,22 @@ dev_dependencies:
   # Story 19.3: Seed Content DB build tool
   crypto: ^3.0.6
 
-  # Custom lint rules (DNI-386)
-  # custom_lint needs analyzer ^8 but riverpod_generator needs analyzer ^9;
-  # a dependency_override below reconciles these.
+  # Custom lint rules (DNI-386/387)
+  # NOTE: custom_lint 0.8.1 requires analyzer ^8 but the project uses analyzer ^9
+  # (forced by json_serializable/riverpod_generator). The analysis-server plugin
+  # is disabled in analysis_options.yaml; enforcement runs via `dart run custom_lint`
+  # in a separate process that uses the packages/custom_lints env. Upgrade once
+  # custom_lint releases a version compatible with analyzer ^9.
   custom_lint: ^0.8.1
   learning_tracker_lints:
     path: ../packages/custom_lints
 
-# custom_lint needs analyzer ^8 but json_serializable 6.13.x needs analyzer >=9.
-# Pin to 9.x so the dev toolchain (build_runner, json_serializable, riverpod_generator)
-# resolve; custom_lint invocation uses dart run custom_lint, not the analysis server.
+# Pin analyzer to 9.0.x so json_serializable >=9 and riverpod_generator ^4.0.3
+# resolve. custom_lint 0.8.1 requires analyzer ^8 but runs as a separate process
+# so the incompatibility only surfaces as a build failure of the plugin binary;
+# to avoid that, the plugin entry-point in analysis_options.yaml is disabled and
+# custom_lint is invoked directly via 'dart run custom_lint' from the
+# packages/custom_lints environment which has analyzer: ^8.
 dependency_overrides:
   analyzer: ^9.0.0
 

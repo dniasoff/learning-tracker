@@ -330,11 +330,11 @@ void main() {
     ) async {
       SharedPreferences.setMockInitialValues({});
       await tester.pumpWidget(
-        ProviderScope(
+        const ProviderScope(
           child: MaterialApp(
             localizationsDelegates: AppLocalizations.localizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
-            home: const GoalSetupScreen(
+            home: GoalSetupScreen(
               curriculumId: CurriculumId.mishnayos,
               totalItems: 4192,
             ),
@@ -382,11 +382,11 @@ void main() {
       // Default is Hebrew calendar; explicitly opt into Gregorian for this case.
       SharedPreferences.setMockInitialValues({'use_hebrew_calendar_p0': false});
       await tester.pumpWidget(
-        ProviderScope(
+        const ProviderScope(
           child: MaterialApp(
             localizationsDelegates: AppLocalizations.localizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
-            home: const GoalSetupScreen(
+            home: GoalSetupScreen(
               curriculumId: CurriculumId.mishnayos,
               totalItems: 365,
             ),
@@ -414,10 +414,10 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [useHebrewDateProvider.overrideWithValue(true)],
-          child: MaterialApp(
+          child: const MaterialApp(
             localizationsDelegates: AppLocalizations.localizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
-            home: const GoalSetupScreen(
+            home: GoalSetupScreen(
               curriculumId: CurriculumId.mishnayos,
               totalItems: 365,
             ),

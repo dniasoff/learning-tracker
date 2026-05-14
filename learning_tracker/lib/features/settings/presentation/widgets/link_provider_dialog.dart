@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:google_sign_in/google_sign_in.dart'
     show GoogleSignInException, GoogleSignInExceptionCode;
 import 'package:learning_tracker/features/settings/domain/services/account_management_service.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// Shows a dialog listing available providers that can be linked.
 Future<void> showLinkProviderDialog({

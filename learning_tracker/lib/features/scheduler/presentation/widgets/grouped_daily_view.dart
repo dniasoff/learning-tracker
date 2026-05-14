@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/services/daily_schedule_composer.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/scheduler/presentation/widgets/daily_task_card.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// Displays composed daily tasks organized by curriculum with collapsible
 /// sections.

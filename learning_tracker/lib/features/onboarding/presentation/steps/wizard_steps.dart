@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:learning_tracker/core/constants/hebrew_terms.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
@@ -9,6 +8,7 @@ import 'package:learning_tracker/features/onboarding/domain/models/wizard_result
 import 'package:learning_tracker/features/onboarding/domain/services/learning_process_wizard_service.dart';
 import 'package:learning_tracker/features/onboarding/presentation/steps/onboarding_step.dart';
 import 'package:learning_tracker/features/stages/domain/models/schedule_type.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// Mutable state shared across wizard steps.
 class WizardStepData {

@@ -10,8 +10,6 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:timezone/data/latest_all.dart' as tz;
-import 'package:timezone/timezone.dart' as tz_lib;
 import 'package:learning_tracker/core/analytics/analytics_service.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/learning/completion_command.dart';
@@ -21,6 +19,8 @@ import 'package:learning_tracker/features/notifications/domain/services/notifica
 import 'package:learning_tracker/features/notifications/domain/services/notification_service.dart';
 import 'package:learning_tracker/features/notifications/domain/services/streak_alert_service.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:timezone/data/latest_all.dart' as tz;
+import 'package:timezone/timezone.dart' as tz_lib;
 
 import '../helpers/test_database.dart';
 

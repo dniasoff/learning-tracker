@@ -2,9 +2,9 @@ import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/features/sacred_time/domain/models/city.dart';
-import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/providers/cities_provider.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/providers/sacred_location_provider.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// Typeahead picker over the bundled cities dataset (~33k cities).
 /// On selection, persists as the user's manual location and pops the route

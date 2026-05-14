@@ -25,9 +25,9 @@ import 'package:learning_tracker/features/onboarding/presentation/providers/onbo
 import 'package:learning_tracker/features/onboarding/presentation/screens/onboarding_screen.dart'
     show kOnboardingComplete;
 import 'package:learning_tracker/features/settings/presentation/providers/curriculum_activation_providers.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:uuid/uuid.dart';
 
 @RoutePage()
