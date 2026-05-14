@@ -146,6 +146,17 @@ class SettingsScreen extends ConsumerWidget {
                 onTap: () => context.pushRoute(const NotificationsRoute()),
               ),
             ),
+            const SizedBox(height: 12),
+            _SurfaceCard(
+              child: PreferenceListTile.withIcon(
+                icon: Icons.security_rounded,
+                iconColor: const Color(0xFF1E7B5A),
+                iconBackground: const Color(0xFFDDF3EB),
+                title: 'App Permissions',
+                subtitle: 'Notifications and location access',
+                onTap: () => context.pushRoute(PermissionPromptRoute()),
+              ),
+            ),
             const SizedBox(height: 16),
             const SacredTimeSettingsCard(),
             if (!isChildProfile) ...[

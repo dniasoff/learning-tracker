@@ -16,10 +16,13 @@ import 'package:learning_tracker/features/auth/presentation/providers/auth_provi
     show authRepositoryProvider;
 import 'package:learning_tracker/features/auth/presentation/providers/auth_state_provider.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/text_display_providers.dart';
+import 'package:learning_tracker/features/notifications/presentation/providers/notification_providers.dart';
 import 'package:learning_tracker/features/onboarding/presentation/providers/onboarding_providers.dart';
 import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
 import 'package:learning_tracker/features/profiles/domain/repositories/profile_repository.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
+import 'package:learning_tracker/features/sacred_time/data/services/location_service.dart';
+import 'package:learning_tracker/features/sacred_time/presentation/providers/sacred_location_provider.dart';
 import 'package:learning_tracker/features/track_setup/domain/entities/add_track_result.dart';
 import 'package:learning_tracker/features/track_setup/presentation/screens/add_track_flow_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -54,6 +57,7 @@ enum _ScreenPhase {
   parentPinSetup,
   addTrack,
   addAnotherPrompt,
+  permissionPrompt,
   handoff,
   done,
 }
@@ -357,7 +361,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     if (_isChildMode) {
       setState(() => _phase = _ScreenPhase.handoff);
     } else {
-      _navigateToDashboard();
+      setState(() => _phase = _ScreenPhase.permissionPrompt);
     }
     _saveState();
   }
@@ -406,14 +410,18 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       _ScreenPhase.parentPinSetup => const AppBarTitle(text: 'Set Parent PIN'),
       _ScreenPhase.addTrack => const AppBarTitle(text: 'Set Up a Track'),
       _ScreenPhase.addAnotherPrompt => const AppBarTitle(text: 'Track Ready!'),
+      _ScreenPhase.permissionPrompt => const AppBarTitle(text: 'Almost Done!'),
       _ScreenPhase.handoff => const AppBarTitle(text: 'Setup Complete!'),
       _ScreenPhase.done => const AppBarTitle(text: 'All Set!'),
     };
 
     // Hide app bar during AddTrackFlow (it has its own progress indicator).
     // Combined profile step has no app bar (back lives in the scroll content).
+    // Permission prompt also has its own app bar (rendered inside _buildPermissionPrompt).
     final showAppBar =
-        _phase != _ScreenPhase.addTrack && !isCombinedProfilePhase;
+        _phase != _ScreenPhase.addTrack &&
+        _phase != _ScreenPhase.permissionPrompt &&
+        !isCombinedProfilePhase;
 
     return Scaffold(
       appBar: showAppBar ? AppBar(title: appBarTitle) : null,
@@ -435,6 +443,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
             _ScreenPhase.parentPinSetup => _buildParentPinSetup(theme),
             _ScreenPhase.addTrack => _buildAddTrack(),
             _ScreenPhase.addAnotherPrompt => _buildAddAnotherPrompt(theme),
+            _ScreenPhase.permissionPrompt => _buildPermissionPrompt(theme),
             _ScreenPhase.handoff => _buildHandoff(theme),
             _ScreenPhase.done => _buildDone(theme),
           },
@@ -861,6 +870,10 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     );
   }
 
+  Widget _buildPermissionPrompt(ThemeData theme) {
+    return _OnboardingPermissionStep(onFinish: _navigateToDashboard);
+  }
+
   Widget _buildHandoff(ThemeData theme) {
     return SafeArea(
       top: false,
@@ -935,5 +948,269 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
         ],
       ),
     );
+  }
+}
+
+// ── Inline permission step for the onboarding flow ────────────────────────────
+
+enum _PermStatus { idle, requesting, granted, denied }
+
+class _OnboardingPermissionStep extends ConsumerStatefulWidget {
+  const _OnboardingPermissionStep({required this.onFinish});
+
+  final VoidCallback onFinish;
+
+  @override
+  ConsumerState<_OnboardingPermissionStep> createState() =>
+      _OnboardingPermissionStepState();
+}
+
+class _OnboardingPermissionStepState
+    extends ConsumerState<_OnboardingPermissionStep> {
+  _PermStatus _notifStatus = _PermStatus.idle;
+  _PermStatus _locationStatus = _PermStatus.idle;
+
+  bool get _notifDone =>
+      _notifStatus == _PermStatus.granted || _notifStatus == _PermStatus.denied;
+  bool get _locationDone =>
+      _locationStatus == _PermStatus.granted ||
+      _locationStatus == _PermStatus.denied;
+
+  Future<void> _requestNotifications() async {
+    if (_notifStatus == _PermStatus.requesting) return;
+    setState(() => _notifStatus = _PermStatus.requesting);
+    final service = ref.read(notificationServiceProvider);
+    final granted = await service.requestPermission();
+    if (!mounted) return;
+    setState(
+      () => _notifStatus = granted ? _PermStatus.granted : _PermStatus.denied,
+    );
+  }
+
+  Future<void> _requestLocation() async {
+    if (_locationStatus == _PermStatus.requesting) return;
+    setState(() => _locationStatus = _PermStatus.requesting);
+    final result = await ref.read(sacredLocationProvider.notifier).detect();
+    if (!mounted) return;
+    setState(() {
+      _locationStatus = result is LocationFetchSuccess
+          ? _PermStatus.granted
+          : _PermStatus.denied;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return SafeArea(
+      top: false,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              'Almost Done!',
+              style: theme.textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.w800,
+                color: AppTheme.brandInk,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Allow these optional permissions so Learning Tracker can '
+              'remind you to learn and compute Shabbos times for your location.',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+                height: 1.45,
+              ),
+            ),
+            const SizedBox(height: 20),
+            _PermCard(
+              icon: Icons.notifications_active_outlined,
+              iconColor: const Color(0xFF2A4BB3),
+              iconBackground: const Color(0xFFE8EBFF),
+              title: 'Notifications',
+              subtitle: 'Daily reminders and streak alerts.',
+              status: _notifStatus,
+              onTap: _notifDone ? null : _requestNotifications,
+            ),
+            const SizedBox(height: 12),
+            _PermCard(
+              icon: Icons.location_on_outlined,
+              iconColor: const Color(0xFF1E7B5A),
+              iconBackground: const Color(0xFFDDF3EB),
+              title: 'Location',
+              subtitle: 'Accurate Shabbos and Yom Tov times.',
+              status: _locationStatus,
+              onTap: _locationDone ? null : _requestLocation,
+            ),
+            const Spacer(),
+            FilledButton(
+              style: FilledButton.styleFrom(
+                backgroundColor: AppTheme.brandBlue,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: const StadiumBorder(),
+                elevation: 3,
+                shadowColor: AppTheme.brandBlue.withValues(alpha: 0.35),
+              ),
+              onPressed: widget.onFinish,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    'Start Learning',
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  const Icon(
+                    Icons.arrow_forward_rounded,
+                    color: Colors.white,
+                    size: 22,
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 8),
+            TextButton(
+              onPressed: widget.onFinish,
+              child: Text(
+                'Skip for now',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PermCard extends StatelessWidget {
+  const _PermCard({
+    required this.icon,
+    required this.iconColor,
+    required this.iconBackground,
+    required this.title,
+    required this.subtitle,
+    required this.status,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final Color iconColor;
+  final Color iconBackground;
+  final String title;
+  final String subtitle;
+  final _PermStatus status;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x12061D56),
+            blurRadius: 14,
+            offset: Offset(0, 5),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
+        child: Row(
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: iconBackground,
+                borderRadius: BorderRadius.circular(22),
+              ),
+              child: Icon(icon, color: iconColor, size: 22),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF151B2D),
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: const Color(0xFF7A8293),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 10),
+            _PermStatusWidget(status: status, onTap: onTap),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PermStatusWidget extends StatelessWidget {
+  const _PermStatusWidget({required this.status, required this.onTap});
+
+  final _PermStatus status;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return switch (status) {
+      _PermStatus.idle => FilledButton(
+        onPressed: onTap,
+        style: FilledButton.styleFrom(
+          backgroundColor: const Color(0xFF123CA5),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+          shape: const StadiumBorder(),
+        ),
+        child: const Text(
+          'Allow',
+          style: TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.w700,
+            fontSize: 13,
+          ),
+        ),
+      ),
+      _PermStatus.requesting => const SizedBox(
+        width: 22,
+        height: 22,
+        child: CircularProgressIndicator(strokeWidth: 2),
+      ),
+      _PermStatus.granted => const Icon(
+        Icons.check_circle_rounded,
+        color: Color(0xFF1E7B5A),
+        size: 26,
+      ),
+      _PermStatus.denied => const Icon(
+        Icons.cancel_outlined,
+        color: Color(0xFF9CA3B4),
+        size: 26,
+      ),
+    };
   }
 }

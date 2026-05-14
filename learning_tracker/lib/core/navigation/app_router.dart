@@ -20,6 +20,7 @@ import 'package:learning_tracker/features/learning_order/presentation/screens/le
 import 'package:learning_tracker/features/notifications/presentation/screens/notifications_screen.dart';
 import 'package:learning_tracker/features/onboarding/presentation/screens/app_intro_screen.dart';
 import 'package:learning_tracker/features/onboarding/presentation/screens/onboarding_screen.dart';
+import 'package:learning_tracker/features/onboarding/presentation/screens/permission_prompt_screen.dart';
 import 'package:learning_tracker/features/onboarding/presentation/screens/signup_screen.dart';
 import 'package:learning_tracker/features/parent_mode/presentation/screens/parent_settings_screen.dart';
 import 'package:learning_tracker/features/parent_mode/presentation/screens/parent_track_management_screen.dart';
@@ -86,6 +87,7 @@ class AppRouter extends RootStackRouter {
       guards: [authGuard],
     ),
     AutoRoute(path: '/onboarding', page: OnboardingRoute.page),
+    AutoRoute(path: '/permission-prompt', page: PermissionPromptRoute.page),
     AutoRoute(path: '/restore', page: DeviceRestoreRoute.page),
     AutoRoute(
       path: '/profile-picker',

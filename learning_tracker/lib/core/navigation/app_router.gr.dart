@@ -740,6 +740,58 @@ class ParentTrackManagementRoute extends PageRouteInfo<void> {
 }
 
 /// generated route for
+/// [PermissionPromptScreen]
+class PermissionPromptRoute extends PageRouteInfo<PermissionPromptRouteArgs> {
+  PermissionPromptRoute({
+    Key? key,
+    bool isOnboarding = false,
+    List<PageRouteInfo>? children,
+  }) : super(
+         PermissionPromptRoute.name,
+         args: PermissionPromptRouteArgs(key: key, isOnboarding: isOnboarding),
+         initialChildren: children,
+       );
+
+  static const String name = 'PermissionPromptRoute';
+
+  static PageInfo page = PageInfo(
+    name,
+    builder: (data) {
+      final args = data.argsAs<PermissionPromptRouteArgs>(
+        orElse: () => const PermissionPromptRouteArgs(),
+      );
+      return PermissionPromptScreen(
+        key: args.key,
+        isOnboarding: args.isOnboarding,
+      );
+    },
+  );
+}
+
+class PermissionPromptRouteArgs {
+  const PermissionPromptRouteArgs({this.key, this.isOnboarding = false});
+
+  final Key? key;
+
+  final bool isOnboarding;
+
+  @override
+  String toString() {
+    return 'PermissionPromptRouteArgs{key: $key, isOnboarding: $isOnboarding}';
+  }
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    if (other is! PermissionPromptRouteArgs) return false;
+    return key == other.key && isOnboarding == other.isOnboarding;
+  }
+
+  @override
+  int get hashCode => key.hashCode ^ isOnboarding.hashCode;
+}
+
+/// generated route for
 /// [PinFlowChangeScreen]
 class PinFlowChangeRoute extends PageRouteInfo<void> {
   const PinFlowChangeRoute({List<PageRouteInfo>? children})
