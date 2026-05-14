@@ -64,15 +64,14 @@ void main() {
         ),
       );
 
-  Future<int> makeTrack(int profileId) =>
-      db.managers.curriculumTracks.create(
-        (o) => o(
-          profileId: profileId,
-          curriculumId: 'bavli',
-          trackType: 'personal',
-          activatedAt: now,
-        ),
-      );
+  Future<int> makeTrack(int profileId) => db.managers.curriculumTracks.create(
+    (o) => o(
+      profileId: profileId,
+      curriculumId: 'bavli',
+      trackType: 'personal',
+      activatedAt: now,
+    ),
+  );
 
   Future<void> makeScope(int profileId, int trackId) =>
       db.managers.curriculumScopes.create(
@@ -161,16 +160,15 @@ void main() {
         ),
       );
 
-  Future<void> makeGoal(int profileId, int trackId) =>
-      db.managers.goals.create(
-        (o) => o(
-          profileId: profileId,
-          trackId: trackId,
-          curriculumId: 'bavli',
-          createdAt: now,
-          updatedAt: now,
-        ),
-      );
+  Future<void> makeGoal(int profileId, int trackId) => db.managers.goals.create(
+    (o) => o(
+      profileId: profileId,
+      trackId: trackId,
+      curriculumId: 'bavli',
+      createdAt: now,
+      updatedAt: now,
+    ),
+  );
 
   // ── LearnerProfiles filter displayName ────────────────────────────────────
 
@@ -290,9 +288,7 @@ void main() {
       final field = db.managers.curriculumTracks.computedField(
         (a) => a.curriculumScopesRefs((s) => s.id),
       );
-      final rows = await db.managers.curriculumTracks
-          .withFields([field])
-          .get();
+      final rows = await db.managers.curriculumTracks.withFields([field]).get();
       expect(rows, isNotEmpty);
     });
 
@@ -300,9 +296,7 @@ void main() {
       final field = db.managers.curriculumTracks.computedField(
         (a) => a.stageDefinitionsRefs((s) => s.id),
       );
-      final rows = await db.managers.curriculumTracks
-          .withFields([field])
-          .get();
+      final rows = await db.managers.curriculumTracks.withFields([field]).get();
       expect(rows, isNotEmpty);
     });
 
@@ -310,9 +304,7 @@ void main() {
       final field = db.managers.curriculumTracks.computedField(
         (a) => a.pointConfigsRefs((s) => s.id),
       );
-      final rows = await db.managers.curriculumTracks
-          .withFields([field])
-          .get();
+      final rows = await db.managers.curriculumTracks.withFields([field]).get();
       expect(rows, isNotEmpty);
     });
 
@@ -320,9 +312,7 @@ void main() {
       final field = db.managers.curriculumTracks.computedField(
         (a) => a.studyDayConfigsRefs((s) => s.profileId),
       );
-      final rows = await db.managers.curriculumTracks
-          .withFields([field])
-          .get();
+      final rows = await db.managers.curriculumTracks.withFields([field]).get();
       expect(rows, isNotEmpty);
     });
 
@@ -330,9 +320,7 @@ void main() {
       final field = db.managers.curriculumTracks.computedField(
         (a) => a.completionsRefs((s) => s.id),
       );
-      final rows = await db.managers.curriculumTracks
-          .withFields([field])
-          .get();
+      final rows = await db.managers.curriculumTracks.withFields([field]).get();
       expect(rows, isNotEmpty);
     });
 
@@ -340,9 +328,7 @@ void main() {
       final field = db.managers.curriculumTracks.computedField(
         (a) => a.learningLedgerRefs((s) => s.id),
       );
-      final rows = await db.managers.curriculumTracks
-          .withFields([field])
-          .get();
+      final rows = await db.managers.curriculumTracks.withFields([field]).get();
       expect(rows, isNotEmpty);
     });
 
@@ -350,9 +336,7 @@ void main() {
       final field = db.managers.curriculumTracks.computedField(
         (a) => a.bookmarksRefs((s) => s.id),
       );
-      final rows = await db.managers.curriculumTracks
-          .withFields([field])
-          .get();
+      final rows = await db.managers.curriculumTracks.withFields([field]).get();
       expect(rows, isNotEmpty);
     });
 
@@ -360,9 +344,7 @@ void main() {
       final field = db.managers.curriculumTracks.computedField(
         (a) => a.goalsRefs((s) => s.id),
       );
-      final rows = await db.managers.curriculumTracks
-          .withFields([field])
-          .get();
+      final rows = await db.managers.curriculumTracks.withFields([field]).get();
       expect(rows, isNotEmpty);
     });
   });
@@ -486,8 +468,7 @@ void main() {
       final trackId = await makeTrack(profId);
       await makeStage(profId, trackId);
 
-      final rows =
-          await db.managers.stageDefinitions.withReferences().get();
+      final rows = await db.managers.stageDefinitions.withReferences().get();
       expect(rows, isNotEmpty);
       final manager = rows.first.$2.trackId;
       expect(manager, isNotNull);
@@ -515,8 +496,7 @@ void main() {
       final trackId = await makeTrack(profId);
       await makeStudyDayConfig(profId, trackId);
 
-      final rows =
-          await db.managers.studyDayConfigs.withReferences().get();
+      final rows = await db.managers.studyDayConfigs.withReferences().get();
       expect(rows, isNotEmpty);
       final manager = rows.first.$2.trackId;
       expect(manager, isNotNull);

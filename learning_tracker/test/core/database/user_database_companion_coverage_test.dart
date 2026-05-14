@@ -31,8 +31,9 @@ void main() {
 
   // ─── Helper inserts ───────────────────────────────────────────────────────
 
-  Future<int> makeAccount({String email = 'a@test.local'}) =>
-      db.into(db.accounts).insert(
+  Future<int> makeAccount({String email = 'a@test.local'}) => db
+      .into(db.accounts)
+      .insert(
         AccountsCompanion.insert(
           email: email,
           tier: 'localBorn',
@@ -43,15 +44,17 @@ void main() {
         ),
       );
 
-  Future<int> makeProfile(int accountId) => db.into(db.learnerProfiles).insert(
-    LearnerProfilesCompanion.insert(
-      accountId: accountId,
-      displayName: 'Learner',
-      mode: 'adult',
-      createdAt: now,
-      updatedAt: now,
-    ),
-  );
+  Future<int> makeProfile(int accountId) => db
+      .into(db.learnerProfiles)
+      .insert(
+        LearnerProfilesCompanion.insert(
+          accountId: accountId,
+          displayName: 'Learner',
+          mode: 'adult',
+          createdAt: now,
+          updatedAt: now,
+        ),
+      );
 
   // ─── AccountsCompanion ────────────────────────────────────────────────────
 
@@ -691,19 +694,22 @@ void main() {
       expect(cols.containsKey('grace_used_date'), isTrue);
     });
 
-    test('toColumns with optional fields (lastCompletionDate, graceUsedDate)', () {
-      final c = StreaksCompanion(
-        profileId: const Value(1),
-        currentStreak: const Value(5),
-        maxStreak: const Value(10),
-        lastCompletionDate: Value(now),
-        graceUsedDate: Value(now),
-        gracePeriodDays: const Value(1),
-      );
-      final cols = c.toColumns(false);
-      expect(cols.containsKey('last_completion_date'), isTrue);
-      expect(cols.containsKey('grace_used_date'), isTrue);
-    });
+    test(
+      'toColumns with optional fields (lastCompletionDate, graceUsedDate)',
+      () {
+        final c = StreaksCompanion(
+          profileId: const Value(1),
+          currentStreak: const Value(5),
+          maxStreak: const Value(10),
+          lastCompletionDate: Value(now),
+          graceUsedDate: Value(now),
+          gracePeriodDays: const Value(1),
+        );
+        final cols = c.toColumns(false);
+        expect(cols.containsKey('last_completion_date'), isTrue);
+        expect(cols.containsKey('grace_used_date'), isTrue);
+      },
+    );
   });
 
   // ─── StreakEventsCompanion ────────────────────────────────────────────────
@@ -948,20 +954,24 @@ void main() {
 
   group('managers — syncQueue', () {
     test('insert, filter, orderBy', () async {
-      await db.into(db.syncQueue).insert(
-        SyncQueueCompanion.insert(
-          operationType: 'completion',
-          payload: '{"a":1}',
-          queuedAt: now,
-        ),
-      );
-      await db.into(db.syncQueue).insert(
-        SyncQueueCompanion.insert(
-          operationType: 'bookmark',
-          payload: '{"b":2}',
-          queuedAt: now.add(const Duration(minutes: 1)),
-        ),
-      );
+      await db
+          .into(db.syncQueue)
+          .insert(
+            SyncQueueCompanion.insert(
+              operationType: 'completion',
+              payload: '{"a":1}',
+              queuedAt: now,
+            ),
+          );
+      await db
+          .into(db.syncQueue)
+          .insert(
+            SyncQueueCompanion.insert(
+              operationType: 'bookmark',
+              payload: '{"b":2}',
+              queuedAt: now.add(const Duration(minutes: 1)),
+            ),
+          );
 
       final completions = await db.managers.syncQueue
           .filter((f) => f.operationType('completion'))
@@ -977,16 +987,18 @@ void main() {
     });
 
     test('DataClass CRUD round-trip', () async {
-      final id = await db.into(db.syncQueue).insert(
-        SyncQueueCompanion.insert(
-          operationType: 'streak',
-          payload: '{"streak":5}',
-          queuedAt: now,
-        ),
-      );
-      final row = await (db.select(db.syncQueue)
-            ..where((t) => t.id.equals(id)))
-          .getSingleOrNull();
+      final id = await db
+          .into(db.syncQueue)
+          .insert(
+            SyncQueueCompanion.insert(
+              operationType: 'streak',
+              payload: '{"streak":5}',
+              queuedAt: now,
+            ),
+          );
+      final row = await (db.select(
+        db.syncQueue,
+      )..where((t) => t.id.equals(id))).getSingleOrNull();
       expect(row, isNotNull);
       expect(row!.operationType, 'streak');
       expect(row.retryCount, 0);
@@ -995,31 +1007,35 @@ void main() {
       await (db.update(db.syncQueue)..where((t) => t.id.equals(id))).write(
         const SyncQueueCompanion(retryCount: Value(3)),
       );
-      final updated = await (db.select(db.syncQueue)
-            ..where((t) => t.id.equals(id)))
-          .getSingleOrNull();
+      final updated = await (db.select(
+        db.syncQueue,
+      )..where((t) => t.id.equals(id))).getSingleOrNull();
       expect(updated!.retryCount, 3);
     });
   });
 
   group('managers — textDownloadStatuses', () {
     test('insert, filter, and DataClass round-trip', () async {
-      await db.into(db.textDownloadStatuses).insert(
-        TextDownloadStatusesCompanion.insert(
-          curriculumId: 'bavli',
-          itemCount: 2711,
-          textVersion: '1.2.3',
-          downloadedAt: now,
-        ),
-      );
-      await db.into(db.textDownloadStatuses).insert(
-        TextDownloadStatusesCompanion.insert(
-          curriculumId: 'mishnah',
-          itemCount: 4192,
-          textVersion: '2.0.0',
-          downloadedAt: now,
-        ),
-      );
+      await db
+          .into(db.textDownloadStatuses)
+          .insert(
+            TextDownloadStatusesCompanion.insert(
+              curriculumId: 'bavli',
+              itemCount: 2711,
+              textVersion: '1.2.3',
+              downloadedAt: now,
+            ),
+          );
+      await db
+          .into(db.textDownloadStatuses)
+          .insert(
+            TextDownloadStatusesCompanion.insert(
+              curriculumId: 'mishnah',
+              itemCount: 4192,
+              textVersion: '2.0.0',
+              downloadedAt: now,
+            ),
+          );
 
       final bavli = await db.managers.textDownloadStatuses
           .filter((f) => f.curriculumId('bavli'))
@@ -1034,15 +1050,17 @@ void main() {
     });
 
     test('with storedItemCount (nullable column)', () async {
-      await db.into(db.textDownloadStatuses).insert(
-        TextDownloadStatusesCompanion.insert(
-          curriculumId: 'yerushalmi',
-          itemCount: 100,
-          textVersion: '0.5',
-          downloadedAt: now,
-          storedItemCount: const Value(42),
-        ),
-      );
+      await db
+          .into(db.textDownloadStatuses)
+          .insert(
+            TextDownloadStatusesCompanion.insert(
+              curriculumId: 'yerushalmi',
+              itemCount: 100,
+              textVersion: '0.5',
+              downloadedAt: now,
+              storedItemCount: const Value(42),
+            ),
+          );
 
       final rows = await db.managers.textDownloadStatuses
           .filter((f) => f.curriculumId('yerushalmi'))
@@ -1056,24 +1074,28 @@ void main() {
       final accId = await makeAccount(email: 'ob@test.local');
       final profileId = await makeProfile(accId);
 
-      await db.into(db.outbox).insert(
-        OutboxCompanion.insert(
-          profileId: profileId,
-          entityKind: 'completion',
-          entityKey: 'Berakhot_2a_limud',
-          payload: '{"sefariaRef":"Berakhot 2a"}',
-          createdAt: now,
-        ),
-      );
-      await db.into(db.outbox).insert(
-        OutboxCompanion.insert(
-          profileId: profileId,
-          entityKind: 'bookmark',
-          entityKey: 'bk-bavli',
-          payload: '{"ref":"Berakhot 5a"}',
-          createdAt: now.add(const Duration(minutes: 5)),
-        ),
-      );
+      await db
+          .into(db.outbox)
+          .insert(
+            OutboxCompanion.insert(
+              profileId: profileId,
+              entityKind: 'completion',
+              entityKey: 'Berakhot_2a_limud',
+              payload: '{"sefariaRef":"Berakhot 2a"}',
+              createdAt: now,
+            ),
+          );
+      await db
+          .into(db.outbox)
+          .insert(
+            OutboxCompanion.insert(
+              profileId: profileId,
+              entityKind: 'bookmark',
+              entityKey: 'bk-bavli',
+              payload: '{"ref":"Berakhot 5a"}',
+              createdAt: now.add(const Duration(minutes: 5)),
+            ),
+          );
 
       final completions = await db.managers.outbox
           .filter((f) => f.entityKind('completion'))
@@ -1093,15 +1115,17 @@ void main() {
       final accId = await makeAccount(email: 'ob2@test.local');
       final profileId = await makeProfile(accId);
 
-      final id = await db.into(db.outbox).insert(
-        OutboxCompanion.insert(
-          profileId: profileId,
-          entityKind: 'streak',
-          entityKey: 'streak-1',
-          payload: '{}',
-          createdAt: now,
-        ),
-      );
+      final id = await db
+          .into(db.outbox)
+          .insert(
+            OutboxCompanion.insert(
+              profileId: profileId,
+              entityKind: 'streak',
+              entityKey: 'streak-1',
+              payload: '{}',
+              createdAt: now,
+            ),
+          );
 
       await (db.update(db.outbox)..where((t) => t.id.equals(id))).write(
         OutboxCompanion(
@@ -1111,9 +1135,9 @@ void main() {
         ),
       );
 
-      final updated = await (db.select(db.outbox)
-            ..where((t) => t.id.equals(id)))
-          .getSingleOrNull();
+      final updated = await (db.select(
+        db.outbox,
+      )..where((t) => t.id.equals(id))).getSingleOrNull();
       expect(updated!.attempts, 1);
       expect(updated.lastError, 'Network timeout');
       expect(updated.lastAttemptAt, isNotNull);
@@ -1127,24 +1151,28 @@ void main() {
       final start2 = now.add(const Duration(days: 7));
       final end2 = now.add(const Duration(days: 7, hours: 25));
 
-      await db.into(db.sacredWindowEntries).insert(
-        SacredWindowEntriesCompanion.insert(
-          startUtc: start1,
-          endUtc: end1,
-          kind: 'shabbat',
-          inIsrael: false,
-        ),
-      );
-      await db.into(db.sacredWindowEntries).insert(
-        SacredWindowEntriesCompanion.insert(
-          startUtc: start2,
-          endUtc: end2,
-          kind: 'yom_tov',
-          inIsrael: true,
-          lat: const Value(31.7683),
-          lng: const Value(35.2137),
-        ),
-      );
+      await db
+          .into(db.sacredWindowEntries)
+          .insert(
+            SacredWindowEntriesCompanion.insert(
+              startUtc: start1,
+              endUtc: end1,
+              kind: 'shabbat',
+              inIsrael: false,
+            ),
+          );
+      await db
+          .into(db.sacredWindowEntries)
+          .insert(
+            SacredWindowEntriesCompanion.insert(
+              startUtc: start2,
+              endUtc: end2,
+              kind: 'yom_tov',
+              inIsrael: true,
+              lat: const Value(31.7683),
+              lng: const Value(35.2137),
+            ),
+          );
 
       final shabbatRows = await db.managers.sacredWindowEntries
           .filter((f) => f.kind('shabbat'))
@@ -1171,18 +1199,14 @@ void main() {
   group('validateIntegrity — missing required fields', () {
     test('syncQueue missing operationType triggers insert error', () async {
       expect(
-        () => db
-            .into(db.syncQueue)
-            .insert(const SyncQueueCompanion()),
+        () => db.into(db.syncQueue).insert(const SyncQueueCompanion()),
         throwsA(anything),
       );
     });
 
     test('outbox missing entityKind triggers insert error', () async {
       expect(
-        () => db
-            .into(db.outbox)
-            .insert(const OutboxCompanion()),
+        () => db.into(db.outbox).insert(const OutboxCompanion()),
         throwsA(anything),
       );
     });

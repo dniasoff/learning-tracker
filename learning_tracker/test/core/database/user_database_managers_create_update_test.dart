@@ -43,26 +43,24 @@ void main() {
         ),
       );
 
-  Future<int> makeProfile(int accountId) =>
-      db.managers.learnerProfiles.create(
-        (o) => o(
-          accountId: accountId,
-          displayName: 'Learner',
-          mode: 'adult',
-          createdAt: now,
-          updatedAt: now,
-        ),
-      );
+  Future<int> makeProfile(int accountId) => db.managers.learnerProfiles.create(
+    (o) => o(
+      accountId: accountId,
+      displayName: 'Learner',
+      mode: 'adult',
+      createdAt: now,
+      updatedAt: now,
+    ),
+  );
 
-  Future<int> makeTrack(int profileId) =>
-      db.managers.curriculumTracks.create(
-        (o) => o(
-          profileId: profileId,
-          curriculumId: 'bavli',
-          trackType: 'personal',
-          activatedAt: now,
-        ),
-      );
+  Future<int> makeTrack(int profileId) => db.managers.curriculumTracks.create(
+    (o) => o(
+      profileId: profileId,
+      curriculumId: 'bavli',
+      trackType: 'personal',
+      activatedAt: now,
+    ),
+  );
 
   Future<int> makeStage(int profileId, int trackId) =>
       db.managers.stageDefinitions.create(
@@ -93,10 +91,8 @@ void main() {
       final count = await db.managers.accounts
           .filter((f) => f.id(accId))
           .update(
-            (o) => o(
-              displayName: const Value('Updated'),
-              updatedAt: Value(now),
-            ),
+            (o) =>
+                o(displayName: const Value('Updated'), updatedAt: Value(now)),
           );
       expect(count, 1);
     });
@@ -126,10 +122,8 @@ void main() {
       final count = await db.managers.learnerProfiles
           .filter((f) => f.id(profId))
           .update(
-            (o) => o(
-              displayName: const Value('NewName'),
-              updatedAt: Value(now),
-            ),
+            (o) =>
+                o(displayName: const Value('NewName'), updatedAt: Value(now)),
           );
       expect(count, 1);
     });
@@ -171,21 +165,21 @@ void main() {
 
     test('filter by reverse ref curriculumScopesRefs', () async {
       // Insert a scope to trigger the curriculumScopesRefs filter method
-      await db.into(db.curriculumScopes).insert(
-        CurriculumScopesCompanion.insert(
-          profileId: profId,
-          curriculumId: 'bavli',
-          trackId: trackId,
-          scopeLevel: 1,
-          scopeValue: 'masechet',
-          createdAt: now,
-        ),
-      );
+      await db
+          .into(db.curriculumScopes)
+          .insert(
+            CurriculumScopesCompanion.insert(
+              profileId: profId,
+              curriculumId: 'bavli',
+              trackId: trackId,
+              scopeLevel: 1,
+              scopeValue: 'masechet',
+              createdAt: now,
+            ),
+          );
       final rows = await db.managers.curriculumTracks
           .filter(
-            (f) => f.curriculumScopesRefs(
-              (s) => s.scopeValue('masechet'),
-            ),
+            (f) => f.curriculumScopesRefs((s) => s.scopeValue('masechet')),
           )
           .get();
       expect(rows, isNotEmpty);
@@ -239,11 +233,7 @@ void main() {
       final accId = await makeAccount(email: 'pp-mgr@test.local');
       final profId = await makeProfile(accId);
       ppId = await db.managers.profilePrograms.create(
-        (o) => o(
-          profileId: profId,
-          curriculumType: 'daf',
-          programId: 1,
-        ),
+        (o) => o(profileId: profId, curriculumType: 'daf', programId: 1),
       );
     });
 
@@ -355,8 +345,9 @@ void main() {
     });
 
     test('update via manager callback', () async {
-      final count = await db.managers.studyDayConfigs
-          .update((o) => o(dayType: const Value('always')));
+      final count = await db.managers.studyDayConfigs.update(
+        (o) => o(dayType: const Value('always')),
+      );
       expect(count, isNonNegative);
     });
 
@@ -615,11 +606,7 @@ void main() {
       final profId = await makeProfile(accId);
       final trackId = await makeTrack(profId);
       tloId = await db.managers.trackLearningOrder.create(
-        (o) => o(
-          trackId: trackId,
-          sefariaRef: 'Berakhot 2a',
-          sortOrder: 1,
-        ),
+        (o) => o(trackId: trackId, sefariaRef: 'Berakhot 2a', sortOrder: 1),
       );
     });
 
@@ -635,8 +622,7 @@ void main() {
     });
 
     test('withReferences returns rows', () async {
-      final rows =
-          await db.managers.trackLearningOrder.withReferences().get();
+      final rows = await db.managers.trackLearningOrder.withReferences().get();
       expect(rows, isNotEmpty);
     });
   });
@@ -756,11 +742,7 @@ void main() {
 
     setUp(() async {
       sqId = await db.managers.syncQueue.create(
-        (o) => o(
-          operationType: 'upsert',
-          payload: '{}',
-          queuedAt: now,
-        ),
+        (o) => o(operationType: 'upsert', payload: '{}', queuedAt: now),
       );
     });
 
@@ -801,14 +783,16 @@ void main() {
     });
 
     test('update via manager callback', () async {
-      final count = await db.managers.textDownloadStatuses
-          .update((o) => o(storedItemCount: const Value(100)));
+      final count = await db.managers.textDownloadStatuses.update(
+        (o) => o(storedItemCount: const Value(100)),
+      );
       expect(count, isNonNegative);
     });
 
     test('withReferences returns rows', () async {
-      final rows =
-          await db.managers.textDownloadStatuses.withReferences().get();
+      final rows = await db.managers.textDownloadStatuses
+          .withReferences()
+          .get();
       expect(rows, isNotEmpty);
     });
   });
@@ -878,8 +862,7 @@ void main() {
     });
 
     test('withReferences returns rows', () async {
-      final rows =
-          await db.managers.sacredWindowEntries.withReferences().get();
+      final rows = await db.managers.sacredWindowEntries.withReferences().get();
       expect(rows, isNotEmpty);
     });
   });

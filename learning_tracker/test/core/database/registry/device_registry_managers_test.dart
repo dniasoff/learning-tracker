@@ -123,7 +123,9 @@ void main() {
 
   group('DeviceAccount DataClass', () {
     Future<DeviceAccount> insertAndGet(String id, {String? firebaseUid}) async {
-      await db.addAccount(makeAccountCompanion(id: id, firebaseUid: firebaseUid));
+      await db.addAccount(
+        makeAccountCompanion(id: id, firebaseUid: firebaseUid),
+      );
       return (await db.findById(id))!;
     }
 
@@ -191,20 +193,26 @@ void main() {
       expect(cols.containsKey('firebase_uid'), isTrue);
     });
 
-    test('toCompanion with nullToAbsent=false includes nullable field', () async {
-      final account = await insertAndGet('da7', firebaseUid: 'fb-da7');
-      final companion = account.toCompanion(false);
-      expect(companion.accountId.value, 'da7');
-      expect(companion.firebaseUid.value, 'fb-da7');
-      expect(companion.firebaseUid.present, isTrue);
-    });
+    test(
+      'toCompanion with nullToAbsent=false includes nullable field',
+      () async {
+        final account = await insertAndGet('da7', firebaseUid: 'fb-da7');
+        final companion = account.toCompanion(false);
+        expect(companion.accountId.value, 'da7');
+        expect(companion.firebaseUid.value, 'fb-da7');
+        expect(companion.firebaseUid.present, isTrue);
+      },
+    );
 
-    test('toCompanion with nullToAbsent=true omits null nullable field', () async {
-      final account = await insertAndGet('da8');
-      final companion = account.toCompanion(true);
-      expect(companion.accountId.value, 'da8');
-      expect(companion.firebaseUid.present, isFalse);
-    });
+    test(
+      'toCompanion with nullToAbsent=true omits null nullable field',
+      () async {
+        final account = await insertAndGet('da8');
+        final companion = account.toCompanion(true);
+        expect(companion.accountId.value, 'da8');
+        expect(companion.firebaseUid.present, isFalse);
+      },
+    );
 
     test('toString covers StringBuffer body', () async {
       final account = await insertAndGet('da9', firebaseUid: 'fb-da9');
@@ -364,27 +372,33 @@ void main() {
 
   group('managers.deviceAccounts — filter', () {
     setUp(() async {
-      await db.addAccount(makeAccountCompanion(
-        id: 'f1',
-        email: 'a@test.local',
-        tier: 'localBorn',
-        firebaseUid: null,
-        avatarIndex: 1,
-      ));
-      await db.addAccount(makeAccountCompanion(
-        id: 'f2',
-        email: 'b@test.local',
-        tier: 'cloudBorn',
-        firebaseUid: 'fb-f2',
-        avatarIndex: 2,
-      ));
-      await db.addAccount(makeAccountCompanion(
-        id: 'f3',
-        email: 'c@test.local',
-        tier: 'cloudBorn',
-        firebaseUid: 'fb-f3',
-        avatarIndex: 0,
-      ));
+      await db.addAccount(
+        makeAccountCompanion(
+          id: 'f1',
+          email: 'a@test.local',
+          tier: 'localBorn',
+          firebaseUid: null,
+          avatarIndex: 1,
+        ),
+      );
+      await db.addAccount(
+        makeAccountCompanion(
+          id: 'f2',
+          email: 'b@test.local',
+          tier: 'cloudBorn',
+          firebaseUid: 'fb-f2',
+          avatarIndex: 2,
+        ),
+      );
+      await db.addAccount(
+        makeAccountCompanion(
+          id: 'f3',
+          email: 'c@test.local',
+          tier: 'cloudBorn',
+          firebaseUid: 'fb-f3',
+          avatarIndex: 0,
+        ),
+      );
     });
 
     test('filter by accountId', () async {
@@ -586,7 +600,8 @@ void main() {
   group('validateIntegrity missing paths', () {
     test('insert DeviceAccount without accountId throws', () {
       expect(
-        () => db.into(db.deviceAccounts).insert(const DeviceAccountsCompanion()),
+        () =>
+            db.into(db.deviceAccounts).insert(const DeviceAccountsCompanion()),
         throwsA(anything),
       );
     });

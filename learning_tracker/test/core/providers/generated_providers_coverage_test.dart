@@ -49,25 +49,27 @@ void main() {
   // ── curriculum_label_providers.g.dart ─────────────────────────────────────
 
   group('curriculum label provider instances', () {
-    test('renderedDisplayForRefProvider family and instance toString/==/hash',
-        () {
-      // Family toString (line 111)
-      expect(
-        renderedDisplayForRefProvider.toString(),
-        contains('renderedDisplayForRef'),
-      );
-      // Instance toString (lines 146-150 in g.dart)
-      final p1 = renderedDisplayForRefProvider('Berakhot 2a');
-      final p2 = renderedDisplayForRefProvider('Berakhot 2a');
-      final p3 = renderedDisplayForRefProvider('Sanhedrin 2a');
-      expect(p1.toString(), contains('Berakhot 2a'));
-      // == (lines 164-166)
-      expect(p1, equals(p2));
-      expect(p1 == p3, isFalse);
-      // hashCode (lines 169-172)
-      expect(p1.hashCode, equals(p2.hashCode));
-      expect(p1.debugGetCreateSourceHash(), isNotEmpty);
-    });
+    test(
+      'renderedDisplayForRefProvider family and instance toString/==/hash',
+      () {
+        // Family toString (line 111)
+        expect(
+          renderedDisplayForRefProvider.toString(),
+          contains('renderedDisplayForRef'),
+        );
+        // Instance toString (lines 146-150 in g.dart)
+        final p1 = renderedDisplayForRefProvider('Berakhot 2a');
+        final p2 = renderedDisplayForRefProvider('Berakhot 2a');
+        final p3 = renderedDisplayForRefProvider('Sanhedrin 2a');
+        expect(p1.toString(), contains('Berakhot 2a'));
+        // == (lines 164-166)
+        expect(p1, equals(p2));
+        expect(p1 == p3, isFalse);
+        // hashCode (lines 169-172)
+        expect(p1.hashCode, equals(p2.hashCode));
+        expect(p1.debugGetCreateSourceHash(), isNotEmpty);
+      },
+    );
 
     test('renderedLeafForRefProvider family and instance toString/==/hash', () {
       expect(
@@ -84,38 +86,41 @@ void main() {
       expect(p1.debugGetCreateSourceHash(), isNotEmpty);
     });
 
-    test('renderedParentForRefProvider family and instance toString/==/hash',
-        () {
-      expect(
-        renderedParentForRefProvider.toString(),
-        contains('renderedParentForRef'),
-      );
-      final p1 = renderedParentForRefProvider('Berakhot 2a');
-      final p2 = renderedParentForRefProvider('Berakhot 2a');
-      final p3 = renderedParentForRefProvider('Moed 1');
-      expect(p1.toString(), contains('Berakhot'));
-      expect(p1, equals(p2));
-      expect(p1 == p3, isFalse);
-      expect(p1.hashCode, equals(p2.hashCode));
-      expect(p1.debugGetCreateSourceHash(), isNotEmpty);
-    });
+    test(
+      'renderedParentForRefProvider family and instance toString/==/hash',
+      () {
+        expect(
+          renderedParentForRefProvider.toString(),
+          contains('renderedParentForRef'),
+        );
+        final p1 = renderedParentForRefProvider('Berakhot 2a');
+        final p2 = renderedParentForRefProvider('Berakhot 2a');
+        final p3 = renderedParentForRefProvider('Moed 1');
+        expect(p1.toString(), contains('Berakhot'));
+        expect(p1, equals(p2));
+        expect(p1 == p3, isFalse);
+        expect(p1.hashCode, equals(p2.hashCode));
+        expect(p1.debugGetCreateSourceHash(), isNotEmpty);
+      },
+    );
 
     test(
-        'renderedBreadcrumbForRefProvider family and instance toString/==/hash',
-        () {
-      expect(
-        renderedBreadcrumbForRefProvider.toString(),
-        contains('renderedBreadcrumbForRef'),
-      );
-      final p1 = renderedBreadcrumbForRefProvider('Berakhot 2a');
-      final p2 = renderedBreadcrumbForRefProvider('Berakhot 2a');
-      final p3 = renderedBreadcrumbForRefProvider('Beitzah 1a');
-      expect(p1.toString(), contains('Berakhot'));
-      expect(p1, equals(p2));
-      expect(p1 == p3, isFalse);
-      expect(p1.hashCode, equals(p2.hashCode));
-      expect(p1.debugGetCreateSourceHash(), isNotEmpty);
-    });
+      'renderedBreadcrumbForRefProvider family and instance toString/==/hash',
+      () {
+        expect(
+          renderedBreadcrumbForRefProvider.toString(),
+          contains('renderedBreadcrumbForRef'),
+        );
+        final p1 = renderedBreadcrumbForRefProvider('Berakhot 2a');
+        final p2 = renderedBreadcrumbForRefProvider('Berakhot 2a');
+        final p3 = renderedBreadcrumbForRefProvider('Beitzah 1a');
+        expect(p1.toString(), contains('Berakhot'));
+        expect(p1, equals(p2));
+        expect(p1 == p3, isFalse);
+        expect(p1.hashCode, equals(p2.hashCode));
+        expect(p1.debugGetCreateSourceHash(), isNotEmpty);
+      },
+    );
   });
 
   // ── preference_providers.g.dart ───────────────────────────────────────────
@@ -147,7 +152,10 @@ void main() {
 
     test('appLocalePreferenceProvider init and overrideWithValue', () {
       // accessing it covers lines 158, 168-169
-      expect(appLocalePreferenceProvider.debugGetCreateSourceHash(), isNotEmpty);
+      expect(
+        appLocalePreferenceProvider.debugGetCreateSourceHash(),
+        isNotEmpty,
+      );
       // overrideWithValue covers 194-197
       final override = appLocalePreferenceProvider.overrideWithValue(
         AppLocalePreference(),
@@ -157,10 +165,8 @@ void main() {
 
     test('transliterationVariantPreferenceProvider overrideWithValue', () {
       // covers lines 243-246
-      final override =
-          transliterationVariantPreferenceProvider.overrideWithValue(
-        TransliterationVariantPreference(),
-      );
+      final override = transliterationVariantPreferenceProvider
+          .overrideWithValue(TransliterationVariantPreference());
       expect(override, isNotNull);
     });
 
@@ -204,7 +210,9 @@ void main() {
 
     test('currentFontSizeProvider overrideWithValue FontSize', () {
       // covers lines 610-613
-      final override = currentFontSizeProvider.overrideWithValue(FontSize.large);
+      final override = currentFontSizeProvider.overrideWithValue(
+        FontSize.large,
+      );
       expect(override, isNotNull);
     });
   });
@@ -401,19 +409,21 @@ void main() {
       expect(p1.debugGetCreateSourceHash(), isNotEmpty);
     });
 
-    test('curriculumPaceStatusProvider family and instance toString/==/hash',
-        () {
-      expect(
-        curriculumPaceStatusProvider.toString(),
-        contains('curriculumPaceStatus'),
-      );
-      final p1 = curriculumPaceStatusProvider('bavli');
-      final p2 = curriculumPaceStatusProvider('bavli');
-      expect(p1.toString(), contains('bavli'));
-      expect(p1, equals(p2));
-      expect(p1.hashCode, equals(p2.hashCode));
-      expect(p1.debugGetCreateSourceHash(), isNotEmpty);
-    });
+    test(
+      'curriculumPaceStatusProvider family and instance toString/==/hash',
+      () {
+        expect(
+          curriculumPaceStatusProvider.toString(),
+          contains('curriculumPaceStatus'),
+        );
+        final p1 = curriculumPaceStatusProvider('bavli');
+        final p2 = curriculumPaceStatusProvider('bavli');
+        expect(p1.toString(), contains('bavli'));
+        expect(p1, equals(p2));
+        expect(p1.hashCode, equals(p2.hashCode));
+        expect(p1.debugGetCreateSourceHash(), isNotEmpty);
+      },
+    );
   });
 
   // ── dashboard_providers.g.dart ────────────────────────────────────────────
@@ -427,21 +437,23 @@ void main() {
       );
     });
 
-    test('dashboardTrackCompletionPercentageProvider family toString/==/hash',
-        () {
-      expect(
-        dashboardTrackCompletionPercentageProvider.toString(),
-        contains('dashboardTrackCompletionPercentage'),
-      );
-      final p1 = dashboardTrackCompletionPercentageProvider(1);
-      final p2 = dashboardTrackCompletionPercentageProvider(1);
-      final p3 = dashboardTrackCompletionPercentageProvider(2);
-      expect(p1.toString(), contains('dashboardTrackCompletion'));
-      expect(p1, equals(p2));
-      expect(p1 == p3, isFalse);
-      expect(p1.hashCode, equals(p2.hashCode));
-      expect(p1.debugGetCreateSourceHash(), isNotEmpty);
-    });
+    test(
+      'dashboardTrackCompletionPercentageProvider family toString/==/hash',
+      () {
+        expect(
+          dashboardTrackCompletionPercentageProvider.toString(),
+          contains('dashboardTrackCompletionPercentage'),
+        );
+        final p1 = dashboardTrackCompletionPercentageProvider(1);
+        final p2 = dashboardTrackCompletionPercentageProvider(1);
+        final p3 = dashboardTrackCompletionPercentageProvider(2);
+        expect(p1.toString(), contains('dashboardTrackCompletion'));
+        expect(p1, equals(p2));
+        expect(p1 == p3, isFalse);
+        expect(p1.hashCode, equals(p2.hashCode));
+        expect(p1.debugGetCreateSourceHash(), isNotEmpty);
+      },
+    );
 
     test('dashboardCompletionPercentageProvider family toString/==/hash', () {
       expect(
@@ -524,7 +536,10 @@ void main() {
   group('text display provider instances', () {
     test('textCacheRepositoryProvider debugGetCreateSourceHash', () {
       // covers lines 38-39, 41, 45, 47, 49
-      expect(textCacheRepositoryProvider.debugGetCreateSourceHash(), isNotEmpty);
+      expect(
+        textCacheRepositoryProvider.debugGetCreateSourceHash(),
+        isNotEmpty,
+      );
     });
 
     test('textContentProvider family and instance toString/==/hash', () {
@@ -566,16 +581,18 @@ void main() {
   // ── journey_providers.g.dart ──────────────────────────────────────────────
 
   group('journey provider instances', () {
-    test('journeySortModeProvider debugGetCreateSourceHash and overrideWithValue',
-        () {
-      // covers lines 14, 20-21, 31-32, 34, 36, 39-40, 42
-      expect(journeySortModeProvider.debugGetCreateSourceHash(), isNotEmpty);
-      // covers lines 38-42
-      final override = journeySortModeProvider.overrideWithValue(
-        JourneySortModeValue.grouped,
-      );
-      expect(override, isNotNull);
-    });
+    test(
+      'journeySortModeProvider debugGetCreateSourceHash and overrideWithValue',
+      () {
+        // covers lines 14, 20-21, 31-32, 34, 36, 39-40, 42
+        expect(journeySortModeProvider.debugGetCreateSourceHash(), isNotEmpty);
+        // covers lines 38-42
+        final override = journeySortModeProvider.overrideWithValue(
+          JourneySortModeValue.grouped,
+        );
+        expect(override, isNotNull);
+      },
+    );
 
     test('journeyViewModelProvider family and instance toString/==/hash', () {
       // covers lines 55, 58-68, 87-99, 101-106, 120-129, 151-152
@@ -678,10 +695,7 @@ void main() {
 
     test('dailyTaskGeneratorProvider debugGetCreateSourceHash', () {
       // covers lines 100, 110-111, 122
-      expect(
-        dailyTaskGeneratorProvider.debugGetCreateSourceHash(),
-        isNotEmpty,
-      );
+      expect(dailyTaskGeneratorProvider.debugGetCreateSourceHash(), isNotEmpty);
     });
   });
 

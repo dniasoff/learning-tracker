@@ -81,9 +81,7 @@ void main() {
     test('update via manager callback', () async {
       final count = await db.managers.calendarCycles
           .filter((f) => f.programKey('daf-yomi'))
-          .update(
-            (o) => o(displayName: const Value('Berakhot 2')),
-          );
+          .update((o) => o(displayName: const Value('Berakhot 2')));
       expect(count, isNonNegative);
     });
 
@@ -110,9 +108,7 @@ void main() {
     test('update via manager callback', () async {
       final count = await db.managers.dailyContent
           .filter((f) => f.sefariaRef('Berakhot 2a'))
-          .update(
-            (o) => o(englishText: const Value('Updated text')),
-          );
+          .update((o) => o(englishText: const Value('Updated text')));
       expect(count, isNonNegative);
     });
 
@@ -142,14 +138,13 @@ void main() {
     });
 
     test('update via manager callback', () async {
-      final count = await db.managers.seedMetadata
-          .update(
-            (o) => o(
-              version: const Value(2),
-              contentHash: const Value('abc123'),
-              minAppVersion: const Value('1.0.0'),
-            ),
-          );
+      final count = await db.managers.seedMetadata.update(
+        (o) => o(
+          version: const Value(2),
+          contentHash: const Value('abc123'),
+          minAppVersion: const Value('1.0.0'),
+        ),
+      );
       expect(count, isNonNegative);
     });
 

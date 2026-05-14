@@ -2528,13 +2528,13 @@ abstract class AppLocalizations {
   /// No description provided for @journeyEmptyTitle.
   ///
   /// In en, this message translates to:
-  /// **'Your learning journey starts here!'**
+  /// **'No siyumim yet'**
   String get journeyEmptyTitle;
 
   /// No description provided for @journeyEmptyBody.
   ///
   /// In en, this message translates to:
-  /// **'Complete your first masechta to see it recorded forever.'**
+  /// **'When you complete a masechta or sefer, it will be recorded here as a permanent milestone.'**
   String get journeyEmptyBody;
 
   /// No description provided for @progressChartsTitle.

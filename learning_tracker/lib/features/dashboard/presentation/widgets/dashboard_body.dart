@@ -129,10 +129,8 @@ class DashboardBody extends ConsumerWidget {
     final name = profileName ?? l10n.learner;
     final now = DateTimeFactory.nowLocal();
 
-    final totalPoints = globalPointsAsync.hasValue ? globalPointsAsync.value : 0;
-    final allTasks = dailyTasksAsync.hasValue
-        ? dailyTasksAsync.value
-        : const <DailyTask>[];
+    final totalPoints = globalPointsAsync.value ?? 0;
+    final allTasks = dailyTasksAsync.value ?? const <DailyTask>[];
     final lifetimeTotals = lifetimeTotalsAsync.hasValue
         ? lifetimeTotalsAsync.value
         : null;

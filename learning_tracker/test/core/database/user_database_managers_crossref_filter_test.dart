@@ -41,26 +41,24 @@ void main() {
         ),
       );
 
-  Future<int> makeProfile(int accountId) =>
-      db.managers.learnerProfiles.create(
-        (o) => o(
-          accountId: accountId,
-          displayName: 'XRefLearner',
-          mode: 'adult',
-          createdAt: now,
-          updatedAt: now,
-        ),
-      );
+  Future<int> makeProfile(int accountId) => db.managers.learnerProfiles.create(
+    (o) => o(
+      accountId: accountId,
+      displayName: 'XRefLearner',
+      mode: 'adult',
+      createdAt: now,
+      updatedAt: now,
+    ),
+  );
 
-  Future<int> makeTrack(int profileId) =>
-      db.managers.curriculumTracks.create(
-        (o) => o(
-          profileId: profileId,
-          curriculumId: 'bavli',
-          trackType: 'personal',
-          activatedAt: now,
-        ),
-      );
+  Future<int> makeTrack(int profileId) => db.managers.curriculumTracks.create(
+    (o) => o(
+      profileId: profileId,
+      curriculumId: 'bavli',
+      trackType: 'personal',
+      activatedAt: now,
+    ),
+  );
 
   Future<int> makeStage(int profileId, int trackId) =>
       db.managers.stageDefinitions.create(
@@ -164,36 +162,28 @@ void main() {
 
     test('filter by stageDefinitionsRefs', () async {
       final rows = await db.managers.curriculumTracks
-          .filter(
-            (f) => f.stageDefinitionsRefs((s) => s.stageName('limud')),
-          )
+          .filter((f) => f.stageDefinitionsRefs((s) => s.stageName('limud')))
           .get();
       expect(rows, isNotEmpty);
     });
 
     test('filter by pointConfigsRefs', () async {
       final rows = await db.managers.curriculumTracks
-          .filter(
-            (f) => f.pointConfigsRefs((s) => s.stageOrder(1)),
-          )
+          .filter((f) => f.pointConfigsRefs((s) => s.stageOrder(1)))
           .get();
       expect(rows, isNotEmpty);
     });
 
     test('filter by studyDayConfigsRefs', () async {
       final rows = await db.managers.curriculumTracks
-          .filter(
-            (f) => f.studyDayConfigsRefs((s) => s.dayOfWeek(0)),
-          )
+          .filter((f) => f.studyDayConfigsRefs((s) => s.dayOfWeek(0)))
           .get();
       expect(rows, isNotEmpty);
     });
 
     test('filter by completionsRefs', () async {
       final rows = await db.managers.curriculumTracks
-          .filter(
-            (f) => f.completionsRefs((s) => s.sefariaRef('Berakhot 2a')),
-          )
+          .filter((f) => f.completionsRefs((s) => s.sefariaRef('Berakhot 2a')))
           .get();
       expect(rows, isNotEmpty);
     });
@@ -209,18 +199,14 @@ void main() {
 
     test('filter by bookmarksRefs', () async {
       final rows = await db.managers.curriculumTracks
-          .filter(
-            (f) => f.bookmarksRefs((s) => s.sefariaRef('Berakhot 2a')),
-          )
+          .filter((f) => f.bookmarksRefs((s) => s.sefariaRef('Berakhot 2a')))
           .get();
       expect(rows, isNotEmpty);
     });
 
     test('filter by goalsRefs', () async {
       final rows = await db.managers.curriculumTracks
-          .filter(
-            (f) => f.goalsRefs((s) => s.profileId(profId)),
-          )
+          .filter((f) => f.goalsRefs((s) => s.profileId(profId)))
           .get();
       expect(rows, isNotEmpty);
     });
@@ -241,9 +227,7 @@ void main() {
     });
 
     test('orderBy id ascending', () async {
-      final rows = await db.managers.accounts
-          .orderBy((o) => o.id.asc())
-          .get();
+      final rows = await db.managers.accounts.orderBy((o) => o.id.asc()).get();
       expect(rows, isNotEmpty);
     });
   });
@@ -378,10 +362,7 @@ void main() {
     });
 
     test('StreaksCompanion id present in toColumns', () {
-      const c = StreaksCompanion(
-        id: Value(19),
-        profileId: Value(1),
-      );
+      const c = StreaksCompanion(id: Value(19), profileId: Value(1));
       final cols = c.toColumns(false);
       expect(cols.containsKey('id'), isTrue);
     });
@@ -443,16 +424,19 @@ void main() {
       accountId = await makeAccount(email: 'cwc@test.local');
     });
 
-    test('copyWithCompanion with firebaseUid present covers ? branch', () async {
-      final account = await db.managers.accounts
-          .filter((f) => f.id(accountId))
-          .getSingle();
-      // Pass firebaseUid as present to cover L386 "? data.firebaseUid.value"
-      final copy = account.copyWithCompanion(
-        const AccountsCompanion(firebaseUid: Value('new-fb-uid')),
-      );
-      expect(copy.firebaseUid, 'new-fb-uid');
-    });
+    test(
+      'copyWithCompanion with firebaseUid present covers ? branch',
+      () async {
+        final account = await db.managers.accounts
+            .filter((f) => f.id(accountId))
+            .getSingle();
+        // Pass firebaseUid as present to cover L386 "? data.firebaseUid.value"
+        final copy = account.copyWithCompanion(
+          const AccountsCompanion(firebaseUid: Value('new-fb-uid')),
+        );
+        expect(copy.firebaseUid, 'new-fb-uid');
+      },
+    );
 
     test('copyWithCompanion without displayName covers else branch', () async {
       final account = await db.managers.accounts

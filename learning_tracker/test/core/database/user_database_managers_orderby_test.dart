@@ -29,8 +29,9 @@ void main() {
 
   // ── shared setup helpers ──────────────────────────────────────────────────
 
-  Future<int> makeAccount({String email = 'a@test.local'}) =>
-      db.into(db.accounts).insert(
+  Future<int> makeAccount({String email = 'a@test.local'}) => db
+      .into(db.accounts)
+      .insert(
         AccountsCompanion.insert(
           email: email,
           tier: 'cloudBorn',
@@ -42,27 +43,32 @@ void main() {
         ),
       );
 
-  Future<int> makeProfile(int accountId) => db.into(db.learnerProfiles).insert(
-    LearnerProfilesCompanion.insert(
-      accountId: accountId,
-      displayName: 'Learner',
-      mode: 'adult',
-      createdAt: now,
-      updatedAt: now,
-    ),
-  );
+  Future<int> makeProfile(int accountId) => db
+      .into(db.learnerProfiles)
+      .insert(
+        LearnerProfilesCompanion.insert(
+          accountId: accountId,
+          displayName: 'Learner',
+          mode: 'adult',
+          createdAt: now,
+          updatedAt: now,
+        ),
+      );
 
-  Future<int> makeTrack(int profileId) => db.into(db.curriculumTracks).insert(
-    CurriculumTracksCompanion.insert(
-      profileId: profileId,
-      curriculumId: 'bavli',
-      trackType: 'personal',
-      activatedAt: now,
-    ),
-  );
+  Future<int> makeTrack(int profileId) => db
+      .into(db.curriculumTracks)
+      .insert(
+        CurriculumTracksCompanion.insert(
+          profileId: profileId,
+          curriculumId: 'bavli',
+          trackType: 'personal',
+          activatedAt: now,
+        ),
+      );
 
-  Future<int> makeStageDef(int profileId, int trackId) =>
-      db.into(db.stageDefinitions).insert(
+  Future<int> makeStageDef(int profileId, int trackId) => db
+      .into(db.stageDefinitions)
+      .insert(
         StageDefinitionsCompanion.insert(
           profileId: profileId,
           trackId: trackId,
@@ -396,16 +402,18 @@ void main() {
       final accId = await makeAccount(email: 'cs-ob@test.local');
       final profId = await makeProfile(accId);
       final trackId = await makeTrack(profId);
-      await db.into(db.curriculumScopes).insert(
-        CurriculumScopesCompanion.insert(
-          profileId: profId,
-          curriculumId: 'bavli',
-          trackId: trackId,
-          scopeLevel: 1,
-          scopeValue: 'Seder Zeraim',
-          createdAt: now,
-        ),
-      );
+      await db
+          .into(db.curriculumScopes)
+          .insert(
+            CurriculumScopesCompanion.insert(
+              profileId: profId,
+              curriculumId: 'bavli',
+              trackId: trackId,
+              scopeLevel: 1,
+              scopeValue: 'Seder Zeraim',
+              createdAt: now,
+            ),
+          );
     });
 
     test('orderBy id', () async {
@@ -492,15 +500,17 @@ void main() {
     setUp(() async {
       final accId = await makeAccount(email: 'pp-ob@test.local');
       final profId = await makeProfile(accId);
-      await db.into(db.profilePrograms).insert(
-        ProfileProgramsCompanion.insert(
-          profileId: profId,
-          curriculumType: 'bavli',
-          programId: 1,
-          trackingStartDate: Value(now),
-          trackingStartRef: const Value('Berakhot 2a'),
-        ),
-      );
+      await db
+          .into(db.profilePrograms)
+          .insert(
+            ProfileProgramsCompanion.insert(
+              profileId: profId,
+              curriculumType: 'bavli',
+              programId: 1,
+              trackingStartDate: Value(now),
+              trackingStartRef: const Value('Berakhot 2a'),
+            ),
+          );
     });
 
     test('orderBy id', () async {
@@ -725,15 +735,17 @@ void main() {
       final accId = await makeAccount(email: 'pc-ob@test.local');
       final profId = await makeProfile(accId);
       final trackId = await makeTrack(profId);
-      await db.into(db.pointConfigs).insert(
-        PointConfigsCompanion.insert(
-          profileId: profId,
-          curriculumId: 'bavli',
-          trackId: trackId,
-          stageOrder: 1,
-          points: 10,
-        ),
-      );
+      await db
+          .into(db.pointConfigs)
+          .insert(
+            PointConfigsCompanion.insert(
+              profileId: profId,
+              curriculumId: 'bavli',
+              trackId: trackId,
+              stageOrder: 1,
+              points: 10,
+            ),
+          );
     });
 
     test('orderBy id', () async {
@@ -765,9 +777,7 @@ void main() {
     });
 
     test('filter by id', () async {
-      final rows = await db.managers.pointConfigs
-          .filter((f) => f.id(1))
-          .get();
+      final rows = await db.managers.pointConfigs.filter((f) => f.id(1)).get();
       expect(rows, hasLength(1));
     });
 
@@ -800,16 +810,18 @@ void main() {
       final accId = await makeAccount(email: 'sdc-ob@test.local');
       final profId = await makeProfile(accId);
       final trackId = await makeTrack(profId);
-      await db.into(db.studyDayConfigs).insert(
-        StudyDayConfigsCompanion.insert(
-          profileId: profId,
-          curriculumId: 'bavli',
-          trackId: trackId,
-          dayOfWeek: 0,
-          dayType: const Value('always'),
-          updatedAt: now,
-        ),
-      );
+      await db
+          .into(db.studyDayConfigs)
+          .insert(
+            StudyDayConfigsCompanion.insert(
+              profileId: profId,
+              curriculumId: 'bavli',
+              trackId: trackId,
+              dayOfWeek: 0,
+              dayType: const Value('always'),
+              updatedAt: now,
+            ),
+          );
     });
 
     test('orderBy profileId', () async {
@@ -877,17 +889,19 @@ void main() {
       final profId = await makeProfile(accId);
       final trackId = await makeTrack(profId);
       final stageDefId = await makeStageDef(profId, trackId);
-      await db.into(db.completions).insert(
-        CompletionsCompanion.insert(
-          profileId: profId,
-          curriculumId: 'bavli',
-          sefariaRef: 'Berakhot 2a',
-          stageId: stageDefId,
-          trackType: 'personal',
-          trackId: trackId,
-          completedAt: now,
-        ),
-      );
+      await db
+          .into(db.completions)
+          .insert(
+            CompletionsCompanion.insert(
+              profileId: profId,
+              curriculumId: 'bavli',
+              sefariaRef: 'Berakhot 2a',
+              stageId: stageDefId,
+              trackType: 'personal',
+              trackId: trackId,
+              completedAt: now,
+            ),
+          );
     });
 
     test('orderBy id', () async {
@@ -947,9 +961,7 @@ void main() {
     });
 
     test('filter by id', () async {
-      final rows = await db.managers.completions
-          .filter((f) => f.id(1))
-          .get();
+      final rows = await db.managers.completions.filter((f) => f.id(1)).get();
       expect(rows, hasLength(1));
     });
 
@@ -1011,16 +1023,18 @@ void main() {
       final profId = await makeProfile(accId);
       final trackId = await makeTrack(profId);
       final stageDefId = await makeStageDef(profId, trackId);
-      await db.into(db.completionEvents).insert(
-        CompletionEventsCompanion.insert(
-          profileId: profId,
-          curriculumId: 'bavli',
-          sefariaRef: 'Berakhot 2a',
-          stageId: stageDefId,
-          trackType: 'personal',
-          eventTimestamp: now,
-        ),
-      );
+      await db
+          .into(db.completionEvents)
+          .insert(
+            CompletionEventsCompanion.insert(
+              profileId: profId,
+              curriculumId: 'bavli',
+              sefariaRef: 'Berakhot 2a',
+              stageId: stageDefId,
+              trackType: 'personal',
+              eventTimestamp: now,
+            ),
+          );
     });
 
     test('orderBy id', () async {
@@ -1131,19 +1145,21 @@ void main() {
       final profId = await makeProfile(accId);
       final trackId = await makeTrack(profId);
       final stageDefId = await makeStageDef(profId, trackId);
-      await db.into(db.dailyPlans).insert(
-        DailyPlansCompanion.insert(
-          profileId: profId,
-          curriculumId: 'bavli',
-          planDate: now,
-          sefariaRef: 'Berakhot 2a',
-          stageOrder: 1,
-          stageDefinitionId: stageDefId,
-          trackId: trackId,
-          priority: 'regular',
-          createdAt: now,
-        ),
-      );
+      await db
+          .into(db.dailyPlans)
+          .insert(
+            DailyPlansCompanion.insert(
+              profileId: profId,
+              curriculumId: 'bavli',
+              planDate: now,
+              sefariaRef: 'Berakhot 2a',
+              stageOrder: 1,
+              stageDefinitionId: stageDefId,
+              trackId: trackId,
+              priority: 'regular',
+              createdAt: now,
+            ),
+          );
     });
 
     test('orderBy id', () async {
@@ -1252,9 +1268,7 @@ void main() {
     });
 
     test('filter by id', () async {
-      final rows = await db.managers.dailyPlans
-          .filter((f) => f.id(1))
-          .get();
+      final rows = await db.managers.dailyPlans.filter((f) => f.id(1)).get();
       expect(rows, hasLength(1));
     });
 
@@ -1328,20 +1342,22 @@ void main() {
     setUp(() async {
       final accId = await makeAccount(email: 'll-ob@test.local');
       final profId = await makeProfile(accId);
-      await db.into(db.learningLedger).insert(
-        LearningLedgerCompanion.insert(
-          profileId: profId,
-          curriculumId: 'bavli',
-          entryScope: 'masechta',
-          unitIdentifier: 'Berakhot',
-          unitDisplayNameHe: 'ברכות',
-          unitDisplayNameEn: 'Berakhot',
-          trackType: 'personal',
-          completedAt: now,
-          completionNumber: 1,
-          markedBy: profId,
-        ),
-      );
+      await db
+          .into(db.learningLedger)
+          .insert(
+            LearningLedgerCompanion.insert(
+              profileId: profId,
+              curriculumId: 'bavli',
+              entryScope: 'masechta',
+              unitIdentifier: 'Berakhot',
+              unitDisplayNameHe: 'ברכות',
+              unitDisplayNameEn: 'Berakhot',
+              trackType: 'personal',
+              completedAt: now,
+              completionNumber: 1,
+              markedBy: profId,
+            ),
+          );
     });
 
     test('orderBy id', () async {
@@ -1506,21 +1522,21 @@ void main() {
       final accId = await makeAccount(email: 'bm-ob@test.local');
       final profId = await makeProfile(accId);
       final trackId = await makeTrack(profId);
-      await db.into(db.bookmarks).insert(
-        BookmarksCompanion.insert(
-          profileId: profId,
-          curriculumId: 'bavli',
-          trackId: trackId,
-          sefariaRef: 'Berakhot 2a',
-          updatedAt: now,
-        ),
-      );
+      await db
+          .into(db.bookmarks)
+          .insert(
+            BookmarksCompanion.insert(
+              profileId: profId,
+              curriculumId: 'bavli',
+              trackId: trackId,
+              sefariaRef: 'Berakhot 2a',
+              updatedAt: now,
+            ),
+          );
     });
 
     test('orderBy id', () async {
-      final rows = await db.managers.bookmarks
-          .orderBy((o) => o.id.asc())
-          .get();
+      final rows = await db.managers.bookmarks.orderBy((o) => o.id.asc()).get();
       expect(rows, hasLength(1));
     });
 
@@ -1546,9 +1562,7 @@ void main() {
     });
 
     test('filter by id', () async {
-      final rows = await db.managers.bookmarks
-          .filter((f) => f.id(1))
-          .get();
+      final rows = await db.managers.bookmarks.filter((f) => f.id(1)).get();
       expect(rows, hasLength(1));
     });
 
@@ -1580,15 +1594,17 @@ void main() {
     setUp(() async {
       final accId = await makeAccount(email: 'lo-ob@test.local');
       final profId = await makeProfile(accId);
-      await db.into(db.learningOrder).insert(
-        LearningOrderCompanion.insert(
-          profileId: profId,
-          curriculumId: 'bavli',
-          sefariaRef: 'Berakhot 2a',
-          userSortOrder: 1,
-          updatedAt: Value(now),
-        ),
-      );
+      await db
+          .into(db.learningOrder)
+          .insert(
+            LearningOrderCompanion.insert(
+              profileId: profId,
+              curriculumId: 'bavli',
+              sefariaRef: 'Berakhot 2a',
+              userSortOrder: 1,
+              updatedAt: Value(now),
+            ),
+          );
     });
 
     test('orderBy id', () async {
@@ -1627,9 +1643,7 @@ void main() {
     });
 
     test('filter by id', () async {
-      final rows = await db.managers.learningOrder
-          .filter((f) => f.id(1))
-          .get();
+      final rows = await db.managers.learningOrder.filter((f) => f.id(1)).get();
       expect(rows, hasLength(1));
     });
 
@@ -1669,13 +1683,15 @@ void main() {
       final accId = await makeAccount(email: 'tlo-ob@test.local');
       final profId = await makeProfile(accId);
       final trackId = await makeTrack(profId);
-      await db.into(db.trackLearningOrder).insert(
-        TrackLearningOrderCompanion.insert(
-          trackId: trackId,
-          sefariaRef: 'Berakhot 2a',
-          sortOrder: 1,
-        ),
-      );
+      await db
+          .into(db.trackLearningOrder)
+          .insert(
+            TrackLearningOrderCompanion.insert(
+              trackId: trackId,
+              sefariaRef: 'Berakhot 2a',
+              sortOrder: 1,
+            ),
+          );
     });
 
     test('orderBy id', () async {
@@ -1728,25 +1744,25 @@ void main() {
       final accId = await makeAccount(email: 'gl-ob@test.local');
       final profId = await makeProfile(accId);
       final trackId = await makeTrack(profId);
-      await db.into(db.goals).insert(
-        GoalsCompanion.insert(
-          profileId: profId,
-          curriculumId: 'bavli',
-          trackId: trackId,
-          targetDate: Value(now),
-          paceValue: const Value(5),
-          pacePeriod: const Value('week'),
-          paceGranularity: const Value('daf'),
-          createdAt: now,
-          updatedAt: now,
-        ),
-      );
+      await db
+          .into(db.goals)
+          .insert(
+            GoalsCompanion.insert(
+              profileId: profId,
+              curriculumId: 'bavli',
+              trackId: trackId,
+              targetDate: Value(now),
+              paceValue: const Value(5),
+              pacePeriod: const Value('week'),
+              paceGranularity: const Value('daf'),
+              createdAt: now,
+              updatedAt: now,
+            ),
+          );
     });
 
     test('orderBy id', () async {
-      final rows = await db.managers.goals
-          .orderBy((o) => o.id.asc())
-          .get();
+      final rows = await db.managers.goals.orderBy((o) => o.id.asc()).get();
       expect(rows, hasLength(1));
     });
 
@@ -1828,16 +1844,12 @@ void main() {
     });
 
     test('filter by id', () async {
-      final rows = await db.managers.goals
-          .filter((f) => f.id(1))
-          .get();
+      final rows = await db.managers.goals.filter((f) => f.id(1)).get();
       expect(rows, hasLength(1));
     });
 
     test('filter by profileId', () async {
-      final rows = await db.managers.goals
-          .filter((f) => f.profileId(1))
-          .get();
+      final rows = await db.managers.goals.filter((f) => f.profileId(1)).get();
       expect(rows, hasLength(1));
     });
 
@@ -1877,9 +1889,7 @@ void main() {
     });
 
     test('filter by paceValue', () async {
-      final rows = await db.managers.goals
-          .filter((f) => f.paceValue(5))
-          .get();
+      final rows = await db.managers.goals.filter((f) => f.paceValue(5)).get();
       expect(rows, hasLength(1));
     });
 
@@ -1918,20 +1928,20 @@ void main() {
     setUp(() async {
       final accId = await makeAccount(email: 'sk-ob@test.local');
       final profId = await makeProfile(accId);
-      await db.into(db.streaks).insert(
-        StreaksCompanion.insert(
-          profileId: profId,
-          currentStreak: const Value(5),
-          maxStreak: const Value(10),
-          gracePeriodDays: const Value(1),
-        ),
-      );
+      await db
+          .into(db.streaks)
+          .insert(
+            StreaksCompanion.insert(
+              profileId: profId,
+              currentStreak: const Value(5),
+              maxStreak: const Value(10),
+              gracePeriodDays: const Value(1),
+            ),
+          );
     });
 
     test('orderBy id', () async {
-      final rows = await db.managers.streaks
-          .orderBy((o) => o.id.asc())
-          .get();
+      final rows = await db.managers.streaks.orderBy((o) => o.id.asc()).get();
       expect(rows, hasLength(1));
     });
 
@@ -1978,9 +1988,7 @@ void main() {
     });
 
     test('filter by id', () async {
-      final rows = await db.managers.streaks
-          .filter((f) => f.id(1))
-          .get();
+      final rows = await db.managers.streaks.filter((f) => f.id(1)).get();
       expect(rows, hasLength(1));
     });
 
@@ -2026,15 +2034,17 @@ void main() {
     setUp(() async {
       final accId = await makeAccount(email: 'se-ob@test.local');
       final profId = await makeProfile(accId);
-      await db.into(db.streakEvents).insert(
-        StreakEventsCompanion.insert(
-          profileId: profId,
-          eventType: 'completion',
-          dayUtc: DateTime.utc(2026, 3, 1),
-          eventTimestamp: now,
-          clientDeviceId: const Value('dev-1'),
-        ),
-      );
+      await db
+          .into(db.streakEvents)
+          .insert(
+            StreakEventsCompanion.insert(
+              profileId: profId,
+              eventType: 'completion',
+              dayUtc: DateTime.utc(2026, 3, 1),
+              eventTimestamp: now,
+              clientDeviceId: const Value('dev-1'),
+            ),
+          );
     });
 
     test('orderBy id', () async {
@@ -2087,9 +2097,7 @@ void main() {
     });
 
     test('filter by id', () async {
-      final rows = await db.managers.streakEvents
-          .filter((f) => f.id(1))
-          .get();
+      final rows = await db.managers.streakEvents.filter((f) => f.id(1)).get();
       expect(rows, hasLength(1));
     });
 
@@ -2140,19 +2148,19 @@ void main() {
 
   group('syncQueue — remaining orderBy fields', () {
     setUp(() async {
-      await db.into(db.syncQueue).insert(
-        SyncQueueCompanion.insert(
-          operationType: 'upsert',
-          payload: '{}',
-          queuedAt: now,
-        ),
-      );
+      await db
+          .into(db.syncQueue)
+          .insert(
+            SyncQueueCompanion.insert(
+              operationType: 'upsert',
+              payload: '{}',
+              queuedAt: now,
+            ),
+          );
     });
 
     test('orderBy id', () async {
-      final rows = await db.managers.syncQueue
-          .orderBy((o) => o.id.asc())
-          .get();
+      final rows = await db.managers.syncQueue.orderBy((o) => o.id.asc()).get();
       expect(rows, hasLength(1));
     });
 
@@ -2185,9 +2193,7 @@ void main() {
     });
 
     test('filter by id', () async {
-      final rows = await db.managers.syncQueue
-          .filter((f) => f.id(1))
-          .get();
+      final rows = await db.managers.syncQueue.filter((f) => f.id(1)).get();
       expect(rows, hasLength(1));
     });
 
@@ -2217,15 +2223,17 @@ void main() {
 
   group('textDownloadStatuses — remaining orderBy fields', () {
     setUp(() async {
-      await db.into(db.textDownloadStatuses).insert(
-        TextDownloadStatusesCompanion.insert(
-          curriculumId: 'bavli',
-          itemCount: 50,
-          textVersion: 'v1',
-          downloadedAt: now,
-          storedItemCount: const Value(100),
-        ),
-      );
+      await db
+          .into(db.textDownloadStatuses)
+          .insert(
+            TextDownloadStatusesCompanion.insert(
+              curriculumId: 'bavli',
+              itemCount: 50,
+              textVersion: 'v1',
+              downloadedAt: now,
+              storedItemCount: const Value(100),
+            ),
+          );
     });
 
     test('orderBy curriculumId', () async {
@@ -2291,21 +2299,21 @@ void main() {
     setUp(() async {
       final accId = await makeAccount(email: 'ob2-ob@test.local');
       final profId = await makeProfile(accId);
-      await db.into(db.outbox).insert(
-        OutboxCompanion.insert(
-          profileId: profId,
-          entityKind: 'completion',
-          entityKey: 'key-1',
-          payload: '{}',
-          createdAt: now,
-        ),
-      );
+      await db
+          .into(db.outbox)
+          .insert(
+            OutboxCompanion.insert(
+              profileId: profId,
+              entityKind: 'completion',
+              entityKey: 'key-1',
+              payload: '{}',
+              createdAt: now,
+            ),
+          );
     });
 
     test('orderBy id', () async {
-      final rows = await db.managers.outbox
-          .orderBy((o) => o.id.asc())
-          .get();
+      final rows = await db.managers.outbox.orderBy((o) => o.id.asc()).get();
       expect(rows, hasLength(1));
     });
 
@@ -2359,16 +2367,12 @@ void main() {
     });
 
     test('filter by id', () async {
-      final rows = await db.managers.outbox
-          .filter((f) => f.id(1))
-          .get();
+      final rows = await db.managers.outbox.filter((f) => f.id(1)).get();
       expect(rows, hasLength(1));
     });
 
     test('filter by profileId', () async {
-      final rows = await db.managers.outbox
-          .filter((f) => f.profileId(1))
-          .get();
+      final rows = await db.managers.outbox.filter((f) => f.profileId(1)).get();
       expect(rows, hasLength(1));
     });
 
@@ -2394,9 +2398,7 @@ void main() {
     });
 
     test('filter by attempts', () async {
-      final rows = await db.managers.outbox
-          .filter((f) => f.attempts(0))
-          .get();
+      final rows = await db.managers.outbox.filter((f) => f.attempts(0)).get();
       expect(rows, hasLength(1));
     });
 
@@ -2419,15 +2421,17 @@ void main() {
 
   group('sacredWindowEntries — remaining orderBy fields', () {
     setUp(() async {
-      await db.into(db.sacredWindowEntries).insert(
-        SacredWindowEntriesCompanion.insert(
-          startUtc: now,
-          endUtc: now.add(const Duration(hours: 25)),
-          kind: 'shabbos',
-          inIsrael: true,
-          createdAt: Value(now),
-        ),
-      );
+      await db
+          .into(db.sacredWindowEntries)
+          .insert(
+            SacredWindowEntriesCompanion.insert(
+              startUtc: now,
+              endUtc: now.add(const Duration(hours: 25)),
+              kind: 'shabbos',
+              inIsrael: true,
+              createdAt: Value(now),
+            ),
+          );
     });
 
     test('orderBy id', () async {

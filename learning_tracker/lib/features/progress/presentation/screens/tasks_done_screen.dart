@@ -51,9 +51,7 @@ Map<CurriculumId, List<_UniqueItem>> _groupUnique(List<Completion> all) {
     final curriculumKey = entry.key.split(':').first;
     CurriculumId? id;
     try {
-      id = CurriculumId.values.firstWhere(
-        (e) => e.storageKey == curriculumKey,
-      );
+      id = CurriculumId.values.firstWhere((e) => e.storageKey == curriculumKey);
     } on StateError {
       continue;
     }
@@ -64,8 +62,7 @@ Map<CurriculumId, List<_UniqueItem>> _groupUnique(List<Completion> all) {
   }
   // Sort curricula by canonical enum order
   final sorted = Map.fromEntries(
-    result.entries.toList()
-      ..sort((a, b) => a.key.index.compareTo(b.key.index)),
+    result.entries.toList()..sort((a, b) => a.key.index.compareTo(b.key.index)),
   );
   return sorted;
 }
@@ -242,9 +239,9 @@ class _ItemRow extends StatelessWidget {
           ),
           Text(
             formatted,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: AppTheme.brandInkMuted,
-            ),
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: AppTheme.brandInkMuted),
           ),
         ],
       ),

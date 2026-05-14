@@ -33,8 +33,9 @@ void main() {
 
   // ── helpers ─────────────────────────────────────────────────────────────────
 
-  Future<int> insertAccount({String email = 'a@test.local'}) =>
-      db.into(db.accounts).insert(
+  Future<int> insertAccount({String email = 'a@test.local'}) => db
+      .into(db.accounts)
+      .insert(
         AccountsCompanion.insert(
           email: email,
           tier: 'localBorn',
@@ -45,32 +46,36 @@ void main() {
         ),
       );
 
-  Future<int> insertProfile(int accountId) => db.into(db.learnerProfiles).insert(
-    LearnerProfilesCompanion.insert(
-      accountId: accountId,
-      displayName: 'Learner',
-      mode: 'adult',
-      createdAt: now,
-      updatedAt: now,
-    ),
-  );
+  Future<int> insertProfile(int accountId) => db
+      .into(db.learnerProfiles)
+      .insert(
+        LearnerProfilesCompanion.insert(
+          accountId: accountId,
+          displayName: 'Learner',
+          mode: 'adult',
+          createdAt: now,
+          updatedAt: now,
+        ),
+      );
 
-  Future<int> insertTrack(int profileId) => db.into(db.curriculumTracks).insert(
-    CurriculumTracksCompanion.insert(
-      profileId: profileId,
-      curriculumId: 'bavli',
-      trackType: 'personal',
-      activatedAt: now,
-    ),
-  );
+  Future<int> insertTrack(int profileId) => db
+      .into(db.curriculumTracks)
+      .insert(
+        CurriculumTracksCompanion.insert(
+          profileId: profileId,
+          curriculumId: 'bavli',
+          trackType: 'personal',
+          activatedAt: now,
+        ),
+      );
 
   // ─── Account DataClass ────────────────────────────────────────────────────
 
   group('Account DataClass', () {
     Future<Account> getAccount(int id) async {
-      return (await (db.select(db.accounts)
-                ..where((t) => t.id.equals(id)))
-              .getSingleOrNull())!;
+      return (await (db.select(
+        db.accounts,
+      )..where((t) => t.id.equals(id))).getSingleOrNull())!;
     }
 
     test('toColumns with null firebaseUid and nullToAbsent=true', () async {
@@ -86,33 +91,39 @@ void main() {
       expect(cols.containsKey('password_hash'), isFalse);
     });
 
-    test('toColumns with nullToAbsent=false includes null nullable fields',
-        () async {
-      final id = await insertAccount(email: 'ac2@test.local');
-      final account = await getAccount(id);
-      final cols = account.toColumns(false);
-      expect(cols.containsKey('firebase_uid'), isTrue);
-      expect(cols.containsKey('password_hash'), isTrue);
-    });
+    test(
+      'toColumns with nullToAbsent=false includes null nullable fields',
+      () async {
+        final id = await insertAccount(email: 'ac2@test.local');
+        final account = await getAccount(id);
+        final cols = account.toColumns(false);
+        expect(cols.containsKey('firebase_uid'), isTrue);
+        expect(cols.containsKey('password_hash'), isTrue);
+      },
+    );
 
-    test('toCompanion with nullToAbsent=true omits absent nullable fields',
-        () async {
-      final id = await insertAccount(email: 'ac3@test.local');
-      final account = await getAccount(id);
-      final comp = account.toCompanion(true);
-      expect(comp.email.value, 'ac3@test.local');
-      expect(comp.firebaseUid.present, isFalse);
-      expect(comp.passwordHash.present, isFalse);
-    });
+    test(
+      'toCompanion with nullToAbsent=true omits absent nullable fields',
+      () async {
+        final id = await insertAccount(email: 'ac3@test.local');
+        final account = await getAccount(id);
+        final comp = account.toCompanion(true);
+        expect(comp.email.value, 'ac3@test.local');
+        expect(comp.firebaseUid.present, isFalse);
+        expect(comp.passwordHash.present, isFalse);
+      },
+    );
 
-    test('toCompanion with nullToAbsent=false includes nullable fields',
-        () async {
-      final id = await insertAccount(email: 'ac4@test.local');
-      final account = await getAccount(id);
-      final comp = account.toCompanion(false);
-      expect(comp.firebaseUid.present, isTrue);
-      expect(comp.passwordHash.present, isTrue);
-    });
+    test(
+      'toCompanion with nullToAbsent=false includes nullable fields',
+      () async {
+        final id = await insertAccount(email: 'ac4@test.local');
+        final account = await getAccount(id);
+        final comp = account.toCompanion(false);
+        expect(comp.firebaseUid.present, isTrue);
+        expect(comp.passwordHash.present, isTrue);
+      },
+    );
 
     test('copyWith changes fields', () async {
       final id = await insertAccount(email: 'ac5@test.local');
@@ -171,9 +182,9 @@ void main() {
 
   group('LearnerProfile DataClass', () {
     Future<LearnerProfile> getProfile(int id) async {
-      return (await (db.select(db.learnerProfiles)
-                ..where((t) => t.id.equals(id)))
-              .getSingleOrNull())!;
+      return (await (db.select(
+        db.learnerProfiles,
+      )..where((t) => t.id.equals(id))).getSingleOrNull())!;
     }
 
     test('toColumns covers all fields', () async {
@@ -248,9 +259,9 @@ void main() {
 
   group('CurriculumTrack DataClass', () {
     Future<CurriculumTrack> getTrack(int id) async {
-      return (await (db.select(db.curriculumTracks)
-                ..where((t) => t.id.equals(id)))
-              .getSingleOrNull())!;
+      return (await (db.select(
+        db.curriculumTracks,
+      )..where((t) => t.id.equals(id))).getSingleOrNull())!;
     }
 
     test('toColumns with null nullable fields and nullToAbsent=true', () async {
@@ -271,29 +282,33 @@ void main() {
       expect(cols.containsKey('deleted_at'), isFalse);
     });
 
-    test('toColumns with nullToAbsent=false includes all nullable fields',
-        () async {
-      final accId = await insertAccount(email: 'ct2@test.local');
-      final profId = await insertProfile(accId);
-      final trackId = await insertTrack(profId);
-      final track = await getTrack(trackId);
-      final cols = track.toColumns(false);
-      expect(cols.containsKey('deactivated_at'), isTrue);
-      expect(cols.containsKey('pace_reset_date'), isTrue);
-      expect(cols.containsKey('deleted_at'), isTrue);
-    });
+    test(
+      'toColumns with nullToAbsent=false includes all nullable fields',
+      () async {
+        final accId = await insertAccount(email: 'ct2@test.local');
+        final profId = await insertProfile(accId);
+        final trackId = await insertTrack(profId);
+        final track = await getTrack(trackId);
+        final cols = track.toColumns(false);
+        expect(cols.containsKey('deactivated_at'), isTrue);
+        expect(cols.containsKey('pace_reset_date'), isTrue);
+        expect(cols.containsKey('deleted_at'), isTrue);
+      },
+    );
 
-    test('toCompanion with nullToAbsent=true omits null nullable fields',
-        () async {
-      final accId = await insertAccount(email: 'ct3@test.local');
-      final profId = await insertProfile(accId);
-      final trackId = await insertTrack(profId);
-      final track = await getTrack(trackId);
-      final comp = track.toCompanion(true);
-      expect(comp.curriculumId.value, 'bavli');
-      expect(comp.deactivatedAt.present, isFalse);
-      expect(comp.paceResetDate.present, isFalse);
-    });
+    test(
+      'toCompanion with nullToAbsent=true omits null nullable fields',
+      () async {
+        final accId = await insertAccount(email: 'ct3@test.local');
+        final profId = await insertProfile(accId);
+        final trackId = await insertTrack(profId);
+        final track = await getTrack(trackId);
+        final comp = track.toCompanion(true);
+        expect(comp.curriculumId.value, 'bavli');
+        expect(comp.deactivatedAt.present, isFalse);
+        expect(comp.paceResetDate.present, isFalse);
+      },
+    );
 
     test('copyWith changes isActive and deactivatedAt', () async {
       final accId = await insertAccount(email: 'ct4@test.local');
@@ -347,20 +362,25 @@ void main() {
   // ─── CurriculumScope DataClass ────────────────────────────────────────────
 
   group('CurriculumScope DataClass', () {
-    Future<CurriculumScope> insertAndGetScope(int profileId, int trackId) async {
-      final id = await db.into(db.curriculumScopes).insert(
-        CurriculumScopesCompanion.insert(
-          profileId: profileId,
-          curriculumId: 'bavli',
-          trackId: trackId,
-          scopeLevel: 1,
-          scopeValue: 'Seder Zeraim',
-          createdAt: now,
-        ),
-      );
-      return (await (db.select(db.curriculumScopes)
-                ..where((t) => t.id.equals(id)))
-              .getSingleOrNull())!;
+    Future<CurriculumScope> insertAndGetScope(
+      int profileId,
+      int trackId,
+    ) async {
+      final id = await db
+          .into(db.curriculumScopes)
+          .insert(
+            CurriculumScopesCompanion.insert(
+              profileId: profileId,
+              curriculumId: 'bavli',
+              trackId: trackId,
+              scopeLevel: 1,
+              scopeValue: 'Seder Zeraim',
+              createdAt: now,
+            ),
+          );
+      return (await (db.select(
+        db.curriculumScopes,
+      )..where((t) => t.id.equals(id))).getSingleOrNull())!;
     }
 
     test('toColumns covers all fields', () async {
@@ -429,9 +449,9 @@ void main() {
       final profId = await insertProfile(accId);
       final trackId = await insertTrack(profId);
       final s1 = await insertAndGetScope(profId, trackId);
-      final s2 = await (db.select(db.curriculumScopes)
-                ..where((t) => t.id.equals(s1.id)))
-              .getSingleOrNull();
+      final s2 = await (db.select(
+        db.curriculumScopes,
+      )..where((t) => t.id.equals(s1.id))).getSingleOrNull();
       expect(s1.toString(), contains('CurriculumScope'));
       expect(s1, equals(s2));
       expect(s1.hashCode, equals(s2!.hashCode));
@@ -442,45 +462,52 @@ void main() {
 
   group('ProfileProgram DataClass', () {
     Future<ProfileProgram> insertAndGetProgram(int profileId) async {
-      await db.into(db.profilePrograms).insert(
-        ProfileProgramsCompanion.insert(
-          profileId: profileId,
-          curriculumType: 'bavli',
-          programId: 1,
-          trackingStartDate: Value(now),
-          trackingStartRef: const Value('Berakhot 2a'),
-        ),
-      );
-      return (await (db.select(db.profilePrograms)
-                ..where((t) => t.profileId.equals(profileId)))
-              .getSingleOrNull())!;
+      await db
+          .into(db.profilePrograms)
+          .insert(
+            ProfileProgramsCompanion.insert(
+              profileId: profileId,
+              curriculumType: 'bavli',
+              programId: 1,
+              trackingStartDate: Value(now),
+              trackingStartRef: const Value('Berakhot 2a'),
+            ),
+          );
+      return (await (db.select(
+        db.profilePrograms,
+      )..where((t) => t.profileId.equals(profileId))).getSingleOrNull())!;
     }
 
-    test('toColumns with non-null nullable fields and nullToAbsent=true',
-        () async {
-      final accId = await insertAccount(email: 'pp1@test.local');
-      final profId = await insertProfile(accId);
-      final prog = await insertAndGetProgram(profId);
-      final cols = prog.toColumns(true);
-      expect(cols.containsKey('id'), isTrue);
-      expect(cols.containsKey('curriculum_type'), isTrue);
-      expect(cols.containsKey('program_id'), isTrue);
-      // Non-null nullable → present
-      expect(cols.containsKey('tracking_start_date'), isTrue);
-      expect(cols.containsKey('tracking_start_ref'), isTrue);
-    });
+    test(
+      'toColumns with non-null nullable fields and nullToAbsent=true',
+      () async {
+        final accId = await insertAccount(email: 'pp1@test.local');
+        final profId = await insertProfile(accId);
+        final prog = await insertAndGetProgram(profId);
+        final cols = prog.toColumns(true);
+        expect(cols.containsKey('id'), isTrue);
+        expect(cols.containsKey('curriculum_type'), isTrue);
+        expect(cols.containsKey('program_id'), isTrue);
+        // Non-null nullable → present
+        expect(cols.containsKey('tracking_start_date'), isTrue);
+        expect(cols.containsKey('tracking_start_ref'), isTrue);
+      },
+    );
 
     test('toColumns with null nullable fields and nullToAbsent=true', () async {
       final accId = await insertAccount(email: 'pp2@test.local');
       final profId = await insertProfile(accId);
-      await db.into(db.profilePrograms).insert(
-        ProfileProgramsCompanion.insert(
-          profileId: profId,
-          curriculumType: 'mishnayos',
-          programId: 2,
-        ),
-      );
-      final prog = (await (db.select(db.profilePrograms)
+      await db
+          .into(db.profilePrograms)
+          .insert(
+            ProfileProgramsCompanion.insert(
+              profileId: profId,
+              curriculumType: 'mishnayos',
+              programId: 2,
+            ),
+          );
+      final prog =
+          (await (db.select(db.profilePrograms)
                 ..where((t) => t.curriculumType.equals('mishnayos')))
               .getSingleOrNull())!;
       final cols = prog.toColumns(true);
@@ -488,34 +515,41 @@ void main() {
       expect(cols.containsKey('tracking_start_ref'), isFalse);
     });
 
-    test('toColumns with nullToAbsent=false includes null nullable fields',
-        () async {
-      final accId = await insertAccount(email: 'pp3@test.local');
-      final profId = await insertProfile(accId);
-      await db.into(db.profilePrograms).insert(
-        ProfileProgramsCompanion.insert(
-          profileId: profId,
-          curriculumType: 'yerushalmi',
-          programId: 3,
-        ),
-      );
-      final prog = (await (db.select(db.profilePrograms)
-                ..where((t) => t.curriculumType.equals('yerushalmi')))
-              .getSingleOrNull())!;
-      final cols = prog.toColumns(false);
-      expect(cols.containsKey('tracking_start_date'), isTrue);
-      expect(cols.containsKey('tracking_start_ref'), isTrue);
-    });
+    test(
+      'toColumns with nullToAbsent=false includes null nullable fields',
+      () async {
+        final accId = await insertAccount(email: 'pp3@test.local');
+        final profId = await insertProfile(accId);
+        await db
+            .into(db.profilePrograms)
+            .insert(
+              ProfileProgramsCompanion.insert(
+                profileId: profId,
+                curriculumType: 'yerushalmi',
+                programId: 3,
+              ),
+            );
+        final prog =
+            (await (db.select(db.profilePrograms)
+                  ..where((t) => t.curriculumType.equals('yerushalmi')))
+                .getSingleOrNull())!;
+        final cols = prog.toColumns(false);
+        expect(cols.containsKey('tracking_start_date'), isTrue);
+        expect(cols.containsKey('tracking_start_ref'), isTrue);
+      },
+    );
 
-    test('toCompanion with nullToAbsent=true omits null nullable fields',
-        () async {
-      final accId = await insertAccount(email: 'pp4@test.local');
-      final profId = await insertProfile(accId);
-      final prog = await insertAndGetProgram(profId);
-      final comp = prog.toCompanion(true);
-      expect(comp.curriculumType.value, 'bavli');
-      expect(comp.trackingStartDate.present, isTrue);
-    });
+    test(
+      'toCompanion with nullToAbsent=true omits null nullable fields',
+      () async {
+        final accId = await insertAccount(email: 'pp4@test.local');
+        final profId = await insertProfile(accId);
+        final prog = await insertAndGetProgram(profId);
+        final comp = prog.toCompanion(true);
+        expect(comp.curriculumType.value, 'bavli');
+        expect(comp.trackingStartDate.present, isTrue);
+      },
+    );
 
     test('copyWith changes programId', () async {
       final accId = await insertAccount(email: 'pp5@test.local');
@@ -553,9 +587,9 @@ void main() {
       final accId = await insertAccount(email: 'pp8@test.local');
       final profId = await insertProfile(accId);
       final p1 = await insertAndGetProgram(profId);
-      final p2 = await (db.select(db.profilePrograms)
-                ..where((t) => t.id.equals(p1.id)))
-              .getSingleOrNull();
+      final p2 = await (db.select(
+        db.profilePrograms,
+      )..where((t) => t.id.equals(p1.id))).getSingleOrNull();
       expect(p1.toString(), contains('ProfileProgram'));
       expect(p1, equals(p2));
       expect(p1.hashCode, equals(p2!.hashCode));
@@ -565,8 +599,9 @@ void main() {
   // ─── DailyPlan DataClass ──────────────────────────────────────────────────
 
   group('DailyPlan DataClass', () {
-    Future<int> insertStageDef(int profileId, int trackId) =>
-        db.into(db.stageDefinitions).insert(
+    Future<int> insertStageDef(int profileId, int trackId) => db
+        .into(db.stageDefinitions)
+        .insert(
           StageDefinitionsCompanion.insert(
             profileId: profileId,
             trackId: trackId,
@@ -582,22 +617,24 @@ void main() {
       int trackId,
       int stageDefId,
     ) async {
-      await db.into(db.dailyPlans).insert(
-        DailyPlansCompanion.insert(
-          profileId: profileId,
-          curriculumId: 'bavli',
-          planDate: now,
-          sefariaRef: 'Berakhot 2a',
-          stageOrder: 1,
-          stageDefinitionId: stageDefId,
-          trackId: trackId,
-          priority: 'regular',
-          createdAt: now,
-        ),
-      );
-      return (await (db.select(db.dailyPlans)
-                ..where((t) => t.sefariaRef.equals('Berakhot 2a')))
-              .getSingleOrNull())!;
+      await db
+          .into(db.dailyPlans)
+          .insert(
+            DailyPlansCompanion.insert(
+              profileId: profileId,
+              curriculumId: 'bavli',
+              planDate: now,
+              sefariaRef: 'Berakhot 2a',
+              stageOrder: 1,
+              stageDefinitionId: stageDefId,
+              trackId: trackId,
+              priority: 'regular',
+              createdAt: now,
+            ),
+          );
+      return (await (db.select(
+        db.dailyPlans,
+      )..where((t) => t.sefariaRef.equals('Berakhot 2a'))).getSingleOrNull())!;
     }
 
     test('toColumns covers all fields', () async {
@@ -687,9 +724,9 @@ void main() {
       final trackId = await insertTrack(profId);
       final stageDefId = await insertStageDef(profId, trackId);
       final p1 = await insertAndGetPlan(profId, trackId, stageDefId);
-      final p2 = await (db.select(db.dailyPlans)
-                ..where((t) => t.id.equals(p1.id)))
-              .getSingleOrNull();
+      final p2 = await (db.select(
+        db.dailyPlans,
+      )..where((t) => t.id.equals(p1.id))).getSingleOrNull();
       expect(p1.toString(), contains('DailyPlan'));
       expect(p1, equals(p2));
       expect(p1.hashCode, equals(p2!.hashCode));
@@ -700,23 +737,25 @@ void main() {
 
   group('LearningLedgerData DataClass', () {
     Future<LearningLedgerData> insertAndGetEntry(int profileId) async {
-      await db.into(db.learningLedger).insert(
-        LearningLedgerCompanion.insert(
-          profileId: profileId,
-          curriculumId: 'bavli',
-          entryScope: 'masechta',
-          unitIdentifier: 'Berakhot',
-          unitDisplayNameHe: 'ברכות',
-          unitDisplayNameEn: 'Berakhot',
-          trackType: 'personal',
-          completedAt: now,
-          completionNumber: 1,
-          markedBy: profileId,
-        ),
-      );
-      return (await (db.select(db.learningLedger)
-                ..where((t) => t.profileId.equals(profileId)))
-              .getSingleOrNull())!;
+      await db
+          .into(db.learningLedger)
+          .insert(
+            LearningLedgerCompanion.insert(
+              profileId: profileId,
+              curriculumId: 'bavli',
+              entryScope: 'masechta',
+              unitIdentifier: 'Berakhot',
+              unitDisplayNameHe: 'ברכות',
+              unitDisplayNameEn: 'Berakhot',
+              trackType: 'personal',
+              completedAt: now,
+              completionNumber: 1,
+              markedBy: profileId,
+            ),
+          );
+      return (await (db.select(
+        db.learningLedger,
+      )..where((t) => t.profileId.equals(profileId))).getSingleOrNull())!;
     }
 
     test('toColumns with null trackId and nullToAbsent=true', () async {
@@ -799,9 +838,9 @@ void main() {
       final accId = await insertAccount(email: 'll8@test.local');
       final profId = await insertProfile(accId);
       final e1 = await insertAndGetEntry(profId);
-      final e2 = await (db.select(db.learningLedger)
-                ..where((t) => t.id.equals(e1.id)))
-              .getSingleOrNull();
+      final e2 = await (db.select(
+        db.learningLedger,
+      )..where((t) => t.id.equals(e1.id))).getSingleOrNull();
       expect(e1.toString(), contains('LearningLedgerData'));
       expect(e1, equals(e2));
       expect(e1.hashCode, equals(e2!.hashCode));
@@ -812,40 +851,44 @@ void main() {
 
   group('Goal DataClass', () {
     Future<Goal> insertAndGetGoal(int profileId, int trackId) async {
-      final id = await db.into(db.goals).insert(
-        GoalsCompanion.insert(
-          profileId: profileId,
-          curriculumId: 'bavli',
-          trackId: trackId,
-          createdAt: now,
-          updatedAt: now,
-        ),
-      );
-      return (await (db.select(db.goals)
-                ..where((t) => t.id.equals(id)))
-              .getSingleOrNull())!;
+      final id = await db
+          .into(db.goals)
+          .insert(
+            GoalsCompanion.insert(
+              profileId: profileId,
+              curriculumId: 'bavli',
+              trackId: trackId,
+              createdAt: now,
+              updatedAt: now,
+            ),
+          );
+      return (await (db.select(
+        db.goals,
+      )..where((t) => t.id.equals(id))).getSingleOrNull())!;
     }
 
     Future<Goal> insertAndGetGoalWithNullables(
       int profileId,
       int trackId,
     ) async {
-      final id = await db.into(db.goals).insert(
-        GoalsCompanion.insert(
-          profileId: profileId,
-          curriculumId: 'bavli',
-          trackId: trackId,
-          targetDate: Value(now),
-          paceValue: const Value(5),
-          pacePeriod: const Value('week'),
-          paceGranularity: const Value('daf'),
-          createdAt: now,
-          updatedAt: now,
-        ),
-      );
-      return (await (db.select(db.goals)
-                ..where((t) => t.id.equals(id)))
-              .getSingleOrNull())!;
+      final id = await db
+          .into(db.goals)
+          .insert(
+            GoalsCompanion.insert(
+              profileId: profileId,
+              curriculumId: 'bavli',
+              trackId: trackId,
+              targetDate: Value(now),
+              paceValue: const Value(5),
+              pacePeriod: const Value('week'),
+              paceGranularity: const Value('daf'),
+              createdAt: now,
+              updatedAt: now,
+            ),
+          );
+      return (await (db.select(
+        db.goals,
+      )..where((t) => t.id.equals(id))).getSingleOrNull())!;
     }
 
     test('toColumns with null nullable fields and nullToAbsent=true', () async {
@@ -980,9 +1023,9 @@ void main() {
       final profId = await insertProfile(accId);
       final trackId = await insertTrack(profId);
       final g1 = await insertAndGetGoal(profId, trackId);
-      final g2 = await (db.select(db.goals)
-                ..where((t) => t.id.equals(g1.id)))
-              .getSingleOrNull();
+      final g2 = await (db.select(
+        db.goals,
+      )..where((t) => t.id.equals(g1.id))).getSingleOrNull();
       expect(g1.toString(), contains('Goal'));
       expect(g1, equals(g2));
       expect(g1.hashCode, equals(g2!.hashCode));
@@ -1037,17 +1080,15 @@ void main() {
 
     test('DailyPlans insert without profileId throws', () {
       expect(
-        () =>
-            db.into(db.dailyPlans).insert(const DailyPlansCompanion()),
+        () => db.into(db.dailyPlans).insert(const DailyPlansCompanion()),
         throwsA(anything),
       );
     });
 
     test('LearningLedger insert without profileId throws', () {
       expect(
-        () => db
-            .into(db.learningLedger)
-            .insert(const LearningLedgerCompanion()),
+        () =>
+            db.into(db.learningLedger).insert(const LearningLedgerCompanion()),
         throwsA(anything),
       );
     });
@@ -1070,9 +1111,7 @@ void main() {
 
     test('PointConfigs insert without profileId throws', () {
       expect(
-        () => db
-            .into(db.pointConfigs)
-            .insert(const PointConfigsCompanion()),
+        () => db.into(db.pointConfigs).insert(const PointConfigsCompanion()),
         throwsA(anything),
       );
     });
@@ -1088,9 +1127,7 @@ void main() {
 
     test('Completions insert without profileId throws', () {
       expect(
-        () => db
-            .into(db.completions)
-            .insert(const CompletionsCompanion()),
+        () => db.into(db.completions).insert(const CompletionsCompanion()),
         throwsA(anything),
       );
     });
@@ -1113,9 +1150,7 @@ void main() {
 
     test('LearningOrder insert without profileId throws', () {
       expect(
-        () => db
-            .into(db.learningOrder)
-            .insert(const LearningOrderCompanion()),
+        () => db.into(db.learningOrder).insert(const LearningOrderCompanion()),
         throwsA(anything),
       );
     });
@@ -1129,9 +1164,7 @@ void main() {
 
     test('StreakEvents insert without profileId throws', () {
       expect(
-        () => db
-            .into(db.streakEvents)
-            .insert(const StreakEventsCompanion()),
+        () => db.into(db.streakEvents).insert(const StreakEventsCompanion()),
         throwsA(anything),
       );
     });

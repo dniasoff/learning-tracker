@@ -97,14 +97,16 @@ void main() {
 
   group('TextCacheData DataClass', () {
     Future<TextCacheData> insertAndGet(String ref) async {
-      await db.into(db.textCache).insert(
-        TextCacheCompanion.insert(
-          sefariaRef: ref,
-          hebrewText: 'עברית',
-          englishText: 'English',
-          fetchedAt: now,
-        ),
-      );
+      await db
+          .into(db.textCache)
+          .insert(
+            TextCacheCompanion.insert(
+              sefariaRef: ref,
+              hebrewText: 'עברית',
+              englishText: 'English',
+              fetchedAt: now,
+            ),
+          );
       return (await db.contentTextCacheDao.getText(ref))!;
     }
 
@@ -222,20 +224,22 @@ void main() {
 
   group('CalendarCycle DataClass', () {
     Future<CalendarCycle> insertAndGet(String program, String date) async {
-      await db.into(db.calendarCycles).insert(
-        CalendarCyclesCompanion.insert(
-          programKey: program,
-          dateKey: date,
-          sefariaRef: 'Berakhot 2a',
-          sefariaRefHe: const Value('ברכות ב׳'),
-          displayName: const Value('Daf Yomi'),
-        ),
-      );
-      final rows = await (db.select(db.calendarCycles)
-            ..where(
-              (t) => t.programKey.equals(program) & t.dateKey.equals(date),
-            ))
-          .getSingleOrNull();
+      await db
+          .into(db.calendarCycles)
+          .insert(
+            CalendarCyclesCompanion.insert(
+              programKey: program,
+              dateKey: date,
+              sefariaRef: 'Berakhot 2a',
+              sefariaRefHe: const Value('ברכות ב׳'),
+              displayName: const Value('Daf Yomi'),
+            ),
+          );
+      final rows =
+          await (db.select(db.calendarCycles)..where(
+                (t) => t.programKey.equals(program) & t.dateKey.equals(date),
+              ))
+              .getSingleOrNull();
       return rows!;
     }
 
@@ -279,13 +283,13 @@ void main() {
 
     test('hashCode and == work correctly', () async {
       final c1 = await insertAndGet('daf_yomi', '2026-03-03');
-      final c2 = await (db.select(db.calendarCycles)
-            ..where(
-              (t) =>
-                  t.programKey.equals('daf_yomi') &
-                  t.dateKey.equals('2026-03-03'),
-            ))
-          .getSingleOrNull();
+      final c2 =
+          await (db.select(db.calendarCycles)..where(
+                (t) =>
+                    t.programKey.equals('daf_yomi') &
+                    t.dateKey.equals('2026-03-03'),
+              ))
+              .getSingleOrNull();
       expect(c1, equals(c2));
       expect(c1.hashCode, equals(c2!.hashCode));
     });
@@ -350,16 +354,18 @@ void main() {
 
   group('DailyContentData DataClass', () {
     Future<DailyContentData> insertAndGet(String ref) async {
-      await db.into(db.dailyContent).insert(
-        DailyContentCompanion.insert(
-          sefariaRef: ref,
-          englishText: const Value('English text'),
-          hebrewText: const Value('טקסט עברי'),
-        ),
-      );
-      final rows = await (db.select(db.dailyContent)
-            ..where((t) => t.sefariaRef.equals(ref)))
-          .getSingleOrNull();
+      await db
+          .into(db.dailyContent)
+          .insert(
+            DailyContentCompanion.insert(
+              sefariaRef: ref,
+              englishText: const Value('English text'),
+              hebrewText: const Value('טקסט עברי'),
+            ),
+          );
+      final rows = await (db.select(
+        db.dailyContent,
+      )..where((t) => t.sefariaRef.equals(ref))).getSingleOrNull();
       return rows!;
     }
 
@@ -380,9 +386,7 @@ void main() {
     test('copyWithCompanion covers field paths', () async {
       final d = await insertAndGet('Berakhot 12a');
       final copy = d.copyWithCompanion(
-        const DailyContentCompanion(
-          englishText: Value('Updated English'),
-        ),
+        const DailyContentCompanion(englishText: Value('Updated English')),
       );
       expect(copy.sefariaRef, 'Berakhot 12a');
       expect(copy.englishText, 'Updated English');
@@ -417,9 +421,9 @@ void main() {
 
     test('hashCode and == work correctly', () async {
       final d1 = await insertAndGet('Berakhot 16a');
-      final d2 = await (db.select(db.dailyContent)
-            ..where((t) => t.sefariaRef.equals('Berakhot 16a')))
-          .getSingleOrNull();
+      final d2 = await (db.select(
+        db.dailyContent,
+      )..where((t) => t.sefariaRef.equals('Berakhot 16a'))).getSingleOrNull();
       expect(d1, equals(d2));
       expect(d1.hashCode, equals(d2!.hashCode));
     });
@@ -502,16 +506,18 @@ void main() {
 
   group('SeedMetadataData DataClass', () {
     Future<SeedMetadataData> insertAndGet() async {
-      await db.into(db.seedMetadata).insert(
-        SeedMetadataCompanion.insert(
-          builtAt: '2026-03-01T00:00:00Z',
-          buildId: 'build-xyz',
-          textCacheCount: 1500,
-          calendarCycleCount: 300,
-          contentHash: const Value('sha256-test'),
-          minAppVersion: const Value('2.5.0'),
-        ),
-      );
+      await db
+          .into(db.seedMetadata)
+          .insert(
+            SeedMetadataCompanion.insert(
+              builtAt: '2026-03-01T00:00:00Z',
+              buildId: 'build-xyz',
+              textCacheCount: 1500,
+              calendarCycleCount: 300,
+              contentHash: const Value('sha256-test'),
+              minAppVersion: const Value('2.5.0'),
+            ),
+          );
       return (await db.select(db.seedMetadata).getSingleOrNull())!;
     }
 
@@ -591,27 +597,22 @@ void main() {
 
     test('CalendarCycles insert without programKey throws', () {
       expect(
-        () => db
-            .into(db.calendarCycles)
-            .insert(const CalendarCyclesCompanion()),
+        () =>
+            db.into(db.calendarCycles).insert(const CalendarCyclesCompanion()),
         throwsA(anything),
       );
     });
 
     test('DailyContent insert without sefariaRef throws', () {
       expect(
-        () => db
-            .into(db.dailyContent)
-            .insert(const DailyContentCompanion()),
+        () => db.into(db.dailyContent).insert(const DailyContentCompanion()),
         throwsA(anything),
       );
     });
 
     test('SeedMetadata insert without builtAt throws', () {
       expect(
-        () => db
-            .into(db.seedMetadata)
-            .insert(const SeedMetadataCompanion()),
+        () => db.into(db.seedMetadata).insert(const SeedMetadataCompanion()),
         throwsA(anything),
       );
     });
@@ -621,22 +622,26 @@ void main() {
 
   group('managers — textCache filter by hebrewText and englishText', () {
     setUp(() async {
-      await db.into(db.textCache).insert(
-        TextCacheCompanion.insert(
-          sefariaRef: 'Berakhot 2a',
-          hebrewText: 'ברכות',
-          englishText: 'Berakhot Chapter 1',
-          fetchedAt: now,
-        ),
-      );
-      await db.into(db.textCache).insert(
-        TextCacheCompanion.insert(
-          sefariaRef: 'Shabbat 2a',
-          hebrewText: 'שבת',
-          englishText: 'Shabbat Chapter 1',
-          fetchedAt: now,
-        ),
-      );
+      await db
+          .into(db.textCache)
+          .insert(
+            TextCacheCompanion.insert(
+              sefariaRef: 'Berakhot 2a',
+              hebrewText: 'ברכות',
+              englishText: 'Berakhot Chapter 1',
+              fetchedAt: now,
+            ),
+          );
+      await db
+          .into(db.textCache)
+          .insert(
+            TextCacheCompanion.insert(
+              sefariaRef: 'Shabbat 2a',
+              hebrewText: 'שבת',
+              englishText: 'Shabbat Chapter 1',
+              fetchedAt: now,
+            ),
+          );
     });
 
     test('filter by hebrewText', () async {
@@ -686,24 +691,28 @@ void main() {
 
   group('managers — calendarCycles extended filter fields', () {
     setUp(() async {
-      await db.into(db.calendarCycles).insert(
-        CalendarCyclesCompanion.insert(
-          programKey: 'daf_yomi',
-          dateKey: '2026-03-01',
-          sefariaRef: 'Berakhot 2a',
-          sefariaRefHe: const Value('ברכות ב׳'),
-          displayName: const Value('Daf Yomi'),
-        ),
-      );
-      await db.into(db.calendarCycles).insert(
-        CalendarCyclesCompanion.insert(
-          programKey: 'mishna_yomit',
-          dateKey: '2026-03-01',
-          sefariaRef: 'Mishnah Berakhot 1.1',
-          sefariaRefHe: const Value('משנה ברכות'),
-          displayName: const Value('Mishna Yomit'),
-        ),
-      );
+      await db
+          .into(db.calendarCycles)
+          .insert(
+            CalendarCyclesCompanion.insert(
+              programKey: 'daf_yomi',
+              dateKey: '2026-03-01',
+              sefariaRef: 'Berakhot 2a',
+              sefariaRefHe: const Value('ברכות ב׳'),
+              displayName: const Value('Daf Yomi'),
+            ),
+          );
+      await db
+          .into(db.calendarCycles)
+          .insert(
+            CalendarCyclesCompanion.insert(
+              programKey: 'mishna_yomit',
+              dateKey: '2026-03-01',
+              sefariaRef: 'Mishnah Berakhot 1.1',
+              sefariaRefHe: const Value('משנה ברכות'),
+              displayName: const Value('Mishna Yomit'),
+            ),
+          );
     });
 
     test('filter by sefariaRefHe', () async {
@@ -745,16 +754,18 @@ void main() {
 
   group('managers — seedMetadata extended filter fields', () {
     setUp(() async {
-      await db.into(db.seedMetadata).insert(
-        SeedMetadataCompanion.insert(
-          builtAt: '2026-03-01T00:00:00Z',
-          buildId: 'build-mgr-1',
-          textCacheCount: 1000,
-          calendarCycleCount: 200,
-          contentHash: const Value('hash-1'),
-          minAppVersion: const Value('1.5.0'),
-        ),
-      );
+      await db
+          .into(db.seedMetadata)
+          .insert(
+            SeedMetadataCompanion.insert(
+              builtAt: '2026-03-01T00:00:00Z',
+              buildId: 'build-mgr-1',
+              textCacheCount: 1000,
+              calendarCycleCount: 200,
+              contentHash: const Value('hash-1'),
+              minAppVersion: const Value('1.5.0'),
+            ),
+          );
     });
 
     test('filter by builtAt', () async {
