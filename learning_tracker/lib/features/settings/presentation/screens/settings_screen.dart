@@ -110,8 +110,10 @@ class SettingsScreen extends ConsumerWidget {
               child: Column(
                 children: [
                   const _HebrewDateTile(),
-                  _tileDivider(theme),
-                  const _HebrewTermsTile(),
+                  if (Localizations.localeOf(context).languageCode != 'he') ...[
+                    _tileDivider(theme),
+                    const _HebrewTermsTile(),
+                  ],
                   _TransliterationVariantTileSection(theme: theme),
                   _tileDivider(theme),
                   _NikudTile(theme: theme),
@@ -306,8 +308,7 @@ class SettingsScreen extends ConsumerWidget {
 /// Calendar preference toggle (Hebrew vs English date display).
 ///
 /// Default: `useHebrewDate: false` (English calendar).
-/// Surfaced via [PreferenceListTile] with a [Switch] trailing widget so the
-/// user can toggle without navigating away.
+/// Surfaced via [PreferenceSegmentedTile] with English/Hebrew pills.
 class _HebrewDateTile extends ConsumerWidget {
   const _HebrewDateTile();
 
@@ -315,18 +316,18 @@ class _HebrewDateTile extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
     final useHebrew = ref.watch(useHebrewDateProvider);
-    return PreferenceListTile(
+    return PreferenceSegmentedTile<bool>(
+      icon: Icons.calendar_month_rounded,
+      iconColor: AppTheme.brandBlueBright,
+      iconBackground: AppTheme.brandBlueSoft,
       title: l10n.calendarPreference,
       subtitle: l10n.calendarPreferenceSubtitle,
-      leading: const PreferenceIconPill(
-        icon: Icons.calendar_month_rounded,
-        iconColor: AppTheme.brandBlueBright,
-        iconBackground: AppTheme.brandBlueSoft,
-      ),
-      trailing: Switch(
-        value: useHebrew,
-        onChanged: (v) => ref.read(useHebrewDateProvider.notifier).set(v),
-      ),
+      options: [
+        (value: false, label: l10n.calendarGregorian),
+        (value: true, label: l10n.calendarHebrew),
+      ],
+      value: useHebrew,
+      onChanged: (v) => ref.read(useHebrewDateProvider.notifier).set(v),
     );
   }
 }

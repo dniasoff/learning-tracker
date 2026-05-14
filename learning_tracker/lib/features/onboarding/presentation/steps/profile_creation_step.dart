@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/enums/user_mode.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart'
-    show showNikudPrefProvider;
+    show showNikudPrefProvider, useHebrewDateProvider, useHebrewTermsProvider;
 import 'package:learning_tracker/core/services/pin_service.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/widgets/app_bar_title.dart';
@@ -55,6 +55,8 @@ class OnboardingProfileData extends ChangeNotifier {
   int? createdProfileId;
   String? profileName;
   bool showNikud = true;
+  bool useHebrewDate = false;
+  bool useHebrewTerms = false;
 
   bool get isChildMode => profileMode == 'child';
 }
@@ -137,6 +139,12 @@ class _ProfileCreationStepWidgetState
     setState(() => _isCreatingProfile = true);
 
     await ref.read(showNikudPrefProvider.notifier).set(widget.data.showNikud);
+    await ref
+        .read(useHebrewDateProvider.notifier)
+        .set(widget.data.useHebrewDate);
+    await ref
+        .read(useHebrewTermsProvider.notifier)
+        .set(widget.data.useHebrewTerms);
 
     final repo = ref.read(profileRepositoryProvider);
     final accountId = ref.read(currentAccountIdProvider);
@@ -452,6 +460,64 @@ class _ProfileCreationStepWidgetState
                     onLeft: () => setState(() => widget.data.showNikud = false),
                     onRight: () => setState(() => widget.data.showNikud = true),
                   ),
+                  const SizedBox(height: 14),
+                  Row(
+                    children: [
+                      const Icon(
+                        Icons.calendar_month_rounded,
+                        size: 22,
+                        color: AppTheme.brandInk,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Calendar',
+                        style: theme.textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w800,
+                          color: AppTheme.brandInk,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  pillPair(
+                    leftLabel: 'English',
+                    rightLabel: 'Hebrew',
+                    leftSelected: !widget.data.useHebrewDate,
+                    onLeft: () =>
+                        setState(() => widget.data.useHebrewDate = false),
+                    onRight: () =>
+                        setState(() => widget.data.useHebrewDate = true),
+                  ),
+                  if (Localizations.localeOf(context).languageCode != 'he') ...[
+                    const SizedBox(height: 14),
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.translate_rounded,
+                          size: 22,
+                          color: AppTheme.brandInk,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Hebrew Terms',
+                          style: theme.textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.w800,
+                            color: AppTheme.brandInk,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    pillPair(
+                      leftLabel: 'English',
+                      rightLabel: 'Hebrew',
+                      leftSelected: !widget.data.useHebrewTerms,
+                      onLeft: () =>
+                          setState(() => widget.data.useHebrewTerms = false),
+                      onRight: () =>
+                          setState(() => widget.data.useHebrewTerms = true),
+                    ),
+                  ],
                 ],
               ),
             ),
