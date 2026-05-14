@@ -22,18 +22,20 @@ class CompletionWriteResult {
 
 /// Single, authoritative path for recording a completion (FR15, T2.7).
 ///
-/// [commit] opens one Drift transaction that inserts the `completions`
-/// projection row and the `outbox` row that drives the cloud push. Either
-/// both rows commit or both roll back; the writer never leaves a completion
-/// without its outbox companion.
+/// [commit] opens one Drift transaction that atomically inserts three rows:
+///  1. `completions` — projection row for review-count semantics.
+///  2. `outbox` — drives the cloud push pipeline.
+///  3. `completion_events` — append-only FR5 event log (DNI-336 / AC 25.15).
+///
+/// All three rows commit or all three roll back; the writer never leaves a
+/// completion without its outbox and event-log companions.
 ///
 /// Idempotency: the writer checks for an existing
 /// `(profileId, sefariaRef, stageId, trackType)` row inside the transaction.
 /// A duplicate command returns the existing completion with `isNew = false`
-/// and does NOT enqueue a second outbox push.
+/// and does NOT enqueue a second outbox push or event-log row.
 ///
-/// Out of scope for this story:
-///  - `completion_events` append-only row (added by DNI-323).
+/// Out of scope for this writer:
 ///  - Streak-event tee (moved into CompletionWriter by DNI-337).
 ///  - Reader-screen `completionCommittedProvider` notifier swap (Story 26.13).
 ///
@@ -82,6 +84,21 @@ class CompletionWriter {
           entityKey: _outboxEntityKey(cmd),
           payload: jsonEncode(_outboxPayload(cmd)),
           createdAt: cmd.completedAt,
+        ),
+      );
+
+      // DNI-336 / AC 25.15: completion_events is the third atomic leg.
+      // INSERT OR IGNORE so a duplicate natural key (profileId, sefariaRef,
+      // stageId, trackType) is a silent no-op rather than an error — the
+      // completions check above already guards against re-entrant duplicates.
+      await _db.completionEventDao.appendEvent(
+        CompletionEventsCompanion.insert(
+          profileId: cmd.profileId,
+          curriculumId: cmd.curriculumId,
+          sefariaRef: cmd.sefariaRef,
+          stageId: cmd.stageId,
+          trackType: cmd.trackType,
+          eventTimestamp: cmd.completedAt,
         ),
       );
 
