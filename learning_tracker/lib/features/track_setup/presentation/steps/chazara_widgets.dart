@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
 
 class ReviewPresetCard extends StatelessWidget {
   const ReviewPresetCard({
@@ -100,6 +101,7 @@ class CustomDayEditorChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
     return SizedBox(
       width: 96,
       child: Column(
@@ -122,7 +124,7 @@ class CustomDayEditorChip extends StatelessWidget {
                   ),
                 ),
                 Text(
-                  'DAYS',
+                  l10n.schedulerDaysLabel.toUpperCase(),
                   style: theme.textTheme.labelSmall?.copyWith(
                     color: AppTheme.brandInkMuted,
                     fontWeight: FontWeight.w700,
@@ -148,7 +150,7 @@ class CustomDayEditorChip extends StatelessWidget {
                 minimumSize: const Size(0, 24),
                 padding: const EdgeInsets.symmetric(horizontal: 6),
               ),
-              child: const Text('Remove', style: TextStyle(fontSize: 11)),
+              child: Text(l10n.actionRemove, style: const TextStyle(fontSize: 11)),
             ),
           ],
         ],
@@ -165,6 +167,7 @@ class AddRoundChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
     return GestureDetector(
       onTap: onTap,
       child: SizedBox(
@@ -186,7 +189,7 @@ class AddRoundChip extends StatelessWidget {
                 children: [
                   const Icon(Icons.add, color: AppTheme.brandInkMuted),
                   Text(
-                    'ADD NEW',
+                    l10n.chazaraAddNew,
                     style: theme.textTheme.labelSmall?.copyWith(
                       color: AppTheme.brandInkMuted,
                       fontWeight: FontWeight.w700,

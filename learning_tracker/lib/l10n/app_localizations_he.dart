@@ -2440,4 +2440,66 @@ class AppLocalizationsHe extends AppLocalizations {
     );
     return '$_temp2';
   }
+
+  @override
+  String get startingPositionTargetDate => 'תאריך יעד';
+
+  @override
+  String get goalPaceOrDeadlineTitle => 'מה הקצב או המועד שלך?';
+
+  @override
+  String get goalPaceOrDeadlineSubtitle => 'הגדר יעד, או דלג לעכשיו.';
+
+  @override
+  String get goalTargetPace => 'קצב יעד';
+
+  @override
+  String goalPaceDescriptionLine(String unit, String period) {
+    return '$unit $period';
+  }
+
+  @override
+  String goalEstimatedFinish(String date) {
+    return 'סיום משוער: $date';
+  }
+
+  @override
+  String get goalSetDeadline => 'קבע מועד יעד';
+
+  @override
+  String get reviewScheduleTitle => 'לוח חזרות';
+
+  @override
+  String reviewScheduleSetByProgram(String programName) {
+    return 'שלבי החזרה נקבעו על ידי $programName';
+  }
+
+  @override
+  String get reviewScheduleFixedHint =>
+      'לוח זה קבוע על ידי התוכנית ולא ניתן לעריכה.';
+
+  @override
+  String get reviewScheduleNoStages => 'לא מוגדרים שלבי חזרה לתוכנית זו.';
+
+  @override
+  String get reviewScheduleAfterOneDay => 'אחרי יום אחד';
+
+  @override
+  String reviewScheduleAfterNDays(String count) {
+    return 'אחרי $count ימים';
+  }
+
+  @override
+  String get reviewScheduleScheduledByProgram => 'מתוזמן על ידי התוכנית';
+
+  @override
+  String get chazaraCustomCycle => 'מחזור מותאם אישית';
+
+  @override
+  String chazaraSessionsCount(int count) {
+    return '$count סבבים';
+  }
+
+  @override
+  String get chazaraAddNew => 'הוסף';
 }

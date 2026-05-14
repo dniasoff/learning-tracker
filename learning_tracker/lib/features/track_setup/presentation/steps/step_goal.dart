@@ -146,7 +146,7 @@ class _SelfPacedGoalStepState extends ConsumerState<SelfPacedGoalStep> {
       if (_deadline == null) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(const SnackBar(content: Text('Pick a deadline first.')));
+        ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context)!.goalPickDeadlineFirst)));
         return;
       }
       final useHebrew = ref.read(useHebrewDateProvider);
@@ -267,14 +267,14 @@ class _SelfPacedGoalStepState extends ConsumerState<SelfPacedGoalStep> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text(
-            "What's your pace or deadline?",
+            l10n.goalPaceOrDeadlineTitle,
             style: theme.textTheme.headlineLarge?.copyWith(
               fontWeight: FontWeight.w800,
             ),
           ),
           const SizedBox(height: 6),
           Text(
-            'Set a goal, or skip for now.',
+            l10n.goalPaceOrDeadlineSubtitle,
             style: theme.textTheme.titleMedium?.copyWith(
               color: AppTheme.brandInkMuted,
             ),
@@ -304,12 +304,12 @@ class _SelfPacedGoalStepState extends ConsumerState<SelfPacedGoalStep> {
                 borderRadius: BorderRadius.circular(28),
               ),
             ),
-            child: const Text('Continue'),
+            child: Text(l10n.actionContinue),
           ),
           const SizedBox(height: 8),
           TextButton(
             onPressed: () => widget.onComplete(null),
-            child: const Text('Skip for now'),
+            child: Text(l10n.actionSkipForNow),
           ),
         ],
       ),

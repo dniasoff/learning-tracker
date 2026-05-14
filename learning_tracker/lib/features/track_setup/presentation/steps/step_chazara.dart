@@ -6,6 +6,7 @@ import 'package:learning_tracker/features/onboarding/domain/models/wizard_result
 import 'package:learning_tracker/features/onboarding/domain/services/learning_process_wizard_service.dart';
 import 'package:learning_tracker/features/stages/domain/models/schedule_type.dart';
 import 'package:learning_tracker/features/track_setup/presentation/steps/chazara_widgets.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
 
 // ── Chazara Inline Setup ───────────────────────────────────────────────────
 //
@@ -131,6 +132,7 @@ class _ChazaraInlineSetupState extends State<ChazaraInlineSetup> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
@@ -211,7 +213,7 @@ class _ChazaraInlineSetupState extends State<ChazaraInlineSetup> {
                                 ),
                                 const SizedBox(width: 10),
                                 Text(
-                                  'Custom Cycle',
+                                  l10n.chazaraCustomCycle,
                                   style: theme.textTheme.titleLarge?.copyWith(
                                     fontWeight: FontWeight.w800,
                                   ),
@@ -227,7 +229,7 @@ class _ChazaraInlineSetupState extends State<ChazaraInlineSetup> {
                                     borderRadius: BorderRadius.circular(10),
                                   ),
                                   child: Text(
-                                    '${_customDelays.length} Sessions',
+                                    l10n.chazaraSessionsCount(_customDelays.length),
                                     style: theme.textTheme.labelMedium
                                         ?.copyWith(
                                           color: AppTheme.brandBlueDeep,
@@ -298,7 +300,7 @@ class _ChazaraInlineSetupState extends State<ChazaraInlineSetup> {
                 borderRadius: BorderRadius.circular(24),
               ),
             ),
-            child: const Text('Skip (no review)'),
+            child: Text(l10n.actionSkipNoReview),
           ),
           const SizedBox(height: 8),
           FilledButton(
@@ -309,7 +311,7 @@ class _ChazaraInlineSetupState extends State<ChazaraInlineSetup> {
                 borderRadius: BorderRadius.circular(26),
               ),
             ),
-            child: const Text('Continue'),
+            child: Text(l10n.actionContinue),
           ),
         ],
       ),

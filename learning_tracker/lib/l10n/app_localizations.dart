@@ -4396,6 +4396,108 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{taskCount,plural, =0{No tasks today — stay on track!} =1{You have 1 task across {curriculumCount,plural, =1{1 curriculum} other{{curriculumCount} curricula}} today} other{You have {taskCount} tasks across {curriculumCount,plural, =1{1 curriculum} other{{curriculumCount} curricula}} today}}'**
   String notificationReminderBody(int taskCount, int curriculumCount);
+
+  /// No description provided for @startingPositionTargetDate.
+  ///
+  /// In en, this message translates to:
+  /// **'TARGET DATE'**
+  String get startingPositionTargetDate;
+
+  /// No description provided for @goalPaceOrDeadlineTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'What\'s your pace or deadline?'**
+  String get goalPaceOrDeadlineTitle;
+
+  /// No description provided for @goalPaceOrDeadlineSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Set a goal, or skip for now.'**
+  String get goalPaceOrDeadlineSubtitle;
+
+  /// No description provided for @goalTargetPace.
+  ///
+  /// In en, this message translates to:
+  /// **'Target Pace'**
+  String get goalTargetPace;
+
+  /// No description provided for @goalPaceDescriptionLine.
+  ///
+  /// In en, this message translates to:
+  /// **'{unit} {period}'**
+  String goalPaceDescriptionLine(String unit, String period);
+
+  /// No description provided for @goalEstimatedFinish.
+  ///
+  /// In en, this message translates to:
+  /// **'Estimated finish: {date}'**
+  String goalEstimatedFinish(String date);
+
+  /// No description provided for @goalSetDeadline.
+  ///
+  /// In en, this message translates to:
+  /// **'Set Deadline'**
+  String get goalSetDeadline;
+
+  /// No description provided for @reviewScheduleTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Review Schedule'**
+  String get reviewScheduleTitle;
+
+  /// No description provided for @reviewScheduleSetByProgram.
+  ///
+  /// In en, this message translates to:
+  /// **'Review stages set by {programName}'**
+  String reviewScheduleSetByProgram(String programName);
+
+  /// No description provided for @reviewScheduleFixedHint.
+  ///
+  /// In en, this message translates to:
+  /// **'This schedule is fixed by the program and cannot be edited.'**
+  String get reviewScheduleFixedHint;
+
+  /// No description provided for @reviewScheduleNoStages.
+  ///
+  /// In en, this message translates to:
+  /// **'No review stages are configured for this program.'**
+  String get reviewScheduleNoStages;
+
+  /// No description provided for @reviewScheduleAfterOneDay.
+  ///
+  /// In en, this message translates to:
+  /// **'After 1 day'**
+  String get reviewScheduleAfterOneDay;
+
+  /// No description provided for @reviewScheduleAfterNDays.
+  ///
+  /// In en, this message translates to:
+  /// **'After {count} days'**
+  String reviewScheduleAfterNDays(String count);
+
+  /// No description provided for @reviewScheduleScheduledByProgram.
+  ///
+  /// In en, this message translates to:
+  /// **'Scheduled by program'**
+  String get reviewScheduleScheduledByProgram;
+
+  /// No description provided for @chazaraCustomCycle.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom Cycle'**
+  String get chazaraCustomCycle;
+
+  /// No description provided for @chazaraSessionsCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} Sessions'**
+  String chazaraSessionsCount(int count);
+
+  /// No description provided for @chazaraAddNew.
+  ///
+  /// In en, this message translates to:
+  /// **'ADD NEW'**
+  String get chazaraAddNew;
 }
 
 class _AppLocalizationsDelegate

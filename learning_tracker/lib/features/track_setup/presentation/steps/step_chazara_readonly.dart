@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// Read-only review schedule display for program tracks that have
 /// defined chazara stages (chazara is fixed by the program).
@@ -34,6 +35,7 @@ class ChazaraReadOnlyStep extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
@@ -41,14 +43,14 @@ class ChazaraReadOnlyStep extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text(
-            'Review Schedule',
+            l10n.reviewScheduleTitle,
             style: theme.textTheme.headlineLarge?.copyWith(
               fontWeight: FontWeight.w800,
             ),
           ),
           const SizedBox(height: 6),
           Text(
-            'Review stages set by $programName',
+            l10n.reviewScheduleSetByProgram(programName),
             style: theme.textTheme.titleMedium?.copyWith(
               color: AppTheme.brandInkMuted,
             ),
@@ -70,7 +72,7 @@ class ChazaraReadOnlyStep extends StatelessWidget {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    'This schedule is fixed by the program and cannot be edited.',
+                    l10n.reviewScheduleFixedHint,
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: AppTheme.brandBlueDeep,
                       fontWeight: FontWeight.w600,
@@ -85,7 +87,7 @@ class ChazaraReadOnlyStep extends StatelessWidget {
             child: stages.isEmpty
                 ? Center(
                     child: Text(
-                      'No review stages are configured for this program.',
+                      l10n.reviewScheduleNoStages,
                       textAlign: TextAlign.center,
                       style: theme.textTheme.bodyMedium?.copyWith(
                         color: AppTheme.brandInkMuted,
@@ -102,10 +104,10 @@ class ChazaraReadOnlyStep extends StatelessWidget {
                       );
                       final delay = stage['delay_days'];
                       final delayLabel = switch (delay) {
-                        final int value when value == 1 => 'After 1 day',
-                        final int value => 'After $value days',
-                        final String value => 'After $value days',
-                        _ => 'Scheduled by program',
+                        final int value when value == 1 => l10n.reviewScheduleAfterOneDay,
+                        final int value => l10n.reviewScheduleAfterNDays('$value'),
+                        final String value => l10n.reviewScheduleAfterNDays(value),
+                        _ => l10n.reviewScheduleScheduledByProgram,
                       };
 
                       return DecoratedBox(
@@ -178,7 +180,7 @@ class ChazaraReadOnlyStep extends StatelessWidget {
                 borderRadius: BorderRadius.circular(28),
               ),
             ),
-            child: const Text('Continue'),
+            child: Text(l10n.actionContinue),
           ),
         ],
       ),

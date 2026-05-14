@@ -8,6 +8,7 @@ import 'package:learning_tracker/core/services/calendar_program_service.dart';
 import 'package:learning_tracker/core/services/learning_program_service.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
 
 const _kWeekdayNames = [
   'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday',
@@ -112,6 +113,7 @@ class _StartingPositionCalendarModeState
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
     final absDays = _offsetDays.abs();
     final daysLabel = absDays == 1 ? '1 Day' : '$absDays Days';
     final canStart = _calendarEntry != null && !_calendarLoading;
@@ -122,20 +124,20 @@ class _StartingPositionCalendarModeState
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text(
-            'Starting Position',
+            l10n.startingPositionTitle,
             style: theme.textTheme.headlineLarge?.copyWith(
               fontWeight: FontWeight.w800,
             ),
           ),
           const SizedBox(height: 6),
           Text(
-            'Can start up to 30 days back/forward from today',
+            l10n.startingPositionHint,
             style: theme.textTheme.titleMedium?.copyWith(
               color: AppTheme.brandInkMuted,
             ),
           ),
           const SizedBox(height: 18),
-          _buildDateCard(theme),
+          _buildDateCard(theme, l10n),
           const SizedBox(height: 14),
           _buildOffsetStepper(theme, daysLabel),
           const Spacer(),
@@ -152,7 +154,7 @@ class _StartingPositionCalendarModeState
               backgroundColor: const Color(0xFFE9EBF1),
               foregroundColor: AppTheme.brandInk,
             ),
-            child: const Text('Use Today'),
+            child: Text(l10n.actionUseToday),
           ),
           const SizedBox(height: 10),
           FilledButton(
@@ -167,12 +169,12 @@ class _StartingPositionCalendarModeState
                 borderRadius: BorderRadius.circular(28),
               ),
             ),
-            child: const Row(
+            child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Text('Start Here'),
-                SizedBox(width: 8),
-                Icon(Icons.rocket_launch_rounded, size: 18),
+                Text(l10n.actionStartHereLabel),
+                const SizedBox(width: 8),
+                const Icon(Icons.rocket_launch_rounded, size: 18),
               ],
             ),
           ),
@@ -181,7 +183,7 @@ class _StartingPositionCalendarModeState
     );
   }
 
-  Widget _buildDateCard(ThemeData theme) {
+  Widget _buildDateCard(ThemeData theme, AppLocalizations l10n) {
     return Stack(
       clipBehavior: Clip.none,
       children: [
@@ -203,7 +205,7 @@ class _StartingPositionCalendarModeState
                   child: Icon(Icons.calendar_today_rounded, size: 28, color: AppTheme.brandBlueDeep),
                 ),
                 const SizedBox(height: 14),
-                Text('TARGET DATE', style: theme.textTheme.titleSmall?.copyWith(
+                Text(l10n.startingPositionTargetDate, style: theme.textTheme.titleSmall?.copyWith(
                   letterSpacing: 1.1, color: AppTheme.brandInkMuted, fontWeight: FontWeight.w700,
                 )),
                 const SizedBox(height: 8),

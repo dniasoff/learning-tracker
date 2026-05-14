@@ -2466,4 +2466,67 @@ class AppLocalizationsEn extends AppLocalizations {
     );
     return '$_temp2';
   }
+
+  @override
+  String get startingPositionTargetDate => 'TARGET DATE';
+
+  @override
+  String get goalPaceOrDeadlineTitle => 'What\'s your pace or deadline?';
+
+  @override
+  String get goalPaceOrDeadlineSubtitle => 'Set a goal, or skip for now.';
+
+  @override
+  String get goalTargetPace => 'Target Pace';
+
+  @override
+  String goalPaceDescriptionLine(String unit, String period) {
+    return '$unit $period';
+  }
+
+  @override
+  String goalEstimatedFinish(String date) {
+    return 'Estimated finish: $date';
+  }
+
+  @override
+  String get goalSetDeadline => 'Set Deadline';
+
+  @override
+  String get reviewScheduleTitle => 'Review Schedule';
+
+  @override
+  String reviewScheduleSetByProgram(String programName) {
+    return 'Review stages set by $programName';
+  }
+
+  @override
+  String get reviewScheduleFixedHint =>
+      'This schedule is fixed by the program and cannot be edited.';
+
+  @override
+  String get reviewScheduleNoStages =>
+      'No review stages are configured for this program.';
+
+  @override
+  String get reviewScheduleAfterOneDay => 'After 1 day';
+
+  @override
+  String reviewScheduleAfterNDays(String count) {
+    return 'After $count days';
+  }
+
+  @override
+  String get reviewScheduleScheduledByProgram => 'Scheduled by program';
+
+  @override
+  String get chazaraCustomCycle => 'Custom Cycle';
+
+  @override
+  String chazaraSessionsCount(int count) {
+    return '$count Sessions';
+  }
+
+  @override
+  String get chazaraAddNew => 'ADD NEW';
 }

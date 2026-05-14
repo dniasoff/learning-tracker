@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/track_setup/domain/services/track_creation_service.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// Day labels in Jewish week order (Sunday first, Shabbos last).
 const kStepStudyDayLabels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Shabbos'];
@@ -34,6 +35,7 @@ class _StudyDaysEditableState extends State<StudyDaysEditable> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
@@ -41,14 +43,14 @@ class _StudyDaysEditableState extends State<StudyDaysEditable> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text(
-            'Study Days',
+            l10n.studyDaysTitle,
             style: theme.textTheme.headlineLarge?.copyWith(
               fontWeight: FontWeight.w800,
             ),
           ),
           const SizedBox(height: 8),
           Text(
-            'Which days do you learn?',
+            l10n.studyDaysSubtitle,
             style: theme.textTheme.titleMedium?.copyWith(
               color: AppTheme.brandInkMuted,
             ),
@@ -93,7 +95,7 @@ class _StudyDaysEditableState extends State<StudyDaysEditable> {
                       borderRadius: BorderRadius.circular(28),
                     ),
                   ),
-                  child: const Text('Continue'),
+                  child: Text(l10n.actionContinue),
                 ),
               ),
             ],
@@ -233,16 +235,17 @@ class StudyDaysReadOnly extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
 
     return Padding(
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text('Study Days', style: theme.textTheme.headlineSmall),
+          Text(l10n.studyDaysTitle, style: theme.textTheme.headlineSmall),
           const SizedBox(height: 8),
           Text(
-            'Study days set by $programName',
+            l10n.studyDaysSetByProgram(programName),
             style: theme.textTheme.bodyMedium?.copyWith(
               color: theme.colorScheme.onSurfaceVariant,
               fontStyle: FontStyle.italic,
@@ -267,7 +270,7 @@ class StudyDaysReadOnly extends StatelessWidget {
               },
             ),
           ),
-          FilledButton(onPressed: onContinue, child: const Text('Continue')),
+          FilledButton(onPressed: onContinue, child: Text(l10n.actionContinue)),
         ],
       ),
     );

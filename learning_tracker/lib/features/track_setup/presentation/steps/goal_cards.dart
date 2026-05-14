@@ -116,6 +116,7 @@ class PaceGoalCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
     return DecoratedBox(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -143,7 +144,7 @@ class PaceGoalCard extends StatelessWidget {
                 ),
                 const SizedBox(width: 10),
                 Text(
-                  'Target Pace',
+                  l10n.goalTargetPace,
                   style: theme.textTheme.titleLarge?.copyWith(
                     fontWeight: FontWeight.w800,
                   ),
@@ -152,7 +153,10 @@ class PaceGoalCard extends StatelessWidget {
             ),
             const SizedBox(height: 10),
             Text(
-              '$unitPlural ${pacePeriod == 'per_day' ? 'per day' : 'per week'}',
+              l10n.goalPaceDescriptionLine(
+                unitPlural,
+                pacePeriod == 'per_day' ? l10n.pacePerDay : l10n.pacePerWeek,
+              ),
               style: theme.textTheme.bodyMedium
                   ?.copyWith(color: AppTheme.brandInkMuted),
             ),
@@ -169,9 +173,9 @@ class PaceGoalCard extends StatelessWidget {
             ],
             const SizedBox(height: 10),
             SegmentedButton<String>(
-              segments: const [
-                ButtonSegment(value: 'per_day', label: Text('Per day')),
-                ButtonSegment(value: 'per_week', label: Text('Per week')),
+              segments: [
+                ButtonSegment(value: 'per_day', label: Text(l10n.pacePerDay)),
+                ButtonSegment(value: 'per_week', label: Text(l10n.pacePerWeek)),
               ],
               selected: {pacePeriod},
               onSelectionChanged: (v) => onPaceUnitChanged(v.first),
@@ -199,7 +203,7 @@ class PaceGoalCard extends StatelessWidget {
               ],
             ),
             Text(
-              'Estimated finish: $projectedFinishLabel',
+              l10n.goalEstimatedFinish(projectedFinishLabel),
               style: theme.textTheme.bodySmall?.copyWith(
                 color: AppTheme.brandInkMuted,
                 fontStyle: FontStyle.italic,
@@ -271,7 +275,7 @@ class DeadlineGoalCard extends StatelessWidget {
                 ),
                 const SizedBox(width: 10),
                 Text(
-                  'Set Deadline',
+                  l10n.goalSetDeadline,
                   style: theme.textTheme.titleLarge
                       ?.copyWith(fontWeight: FontWeight.w800),
                 ),

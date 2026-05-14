@@ -6,6 +6,7 @@ import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/services/learning_program_service.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/track_setup/presentation/steps/step_starting_position_calendar.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// Starting position step for program tracks (Screen 8 program mode).
 ///
@@ -141,6 +142,7 @@ class _StartingPositionStepState
     }
 
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
 
     if (_loading) {
       return const Center(child: CircularProgressIndicator());
@@ -151,10 +153,10 @@ class _StartingPositionStepState
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text('Starting Position', style: theme.textTheme.headlineSmall),
+          Text(l10n.startingPositionTitle, style: theme.textTheme.headlineSmall),
           const SizedBox(height: 8),
           Text(
-            'Where are you in ${widget.programName}?',
+            l10n.startingPositionWhereAreYou(widget.programName),
             style: theme.textTheme.bodyMedium,
           ),
           const SizedBox(height: 4),
@@ -226,7 +228,7 @@ class _StartingPositionStepState
             onPressed: _selectedLeaf != null
                 ? () => widget.onComplete(_selectedLeaf!.sefariaRef)
                 : null,
-            child: const Text('Start here'),
+            child: Text(l10n.actionStartHere),
           ),
         ],
       ),

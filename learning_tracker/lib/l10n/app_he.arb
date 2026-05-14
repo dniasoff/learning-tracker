@@ -1213,5 +1213,52 @@
       "taskCount": { "type": "int" },
       "curriculumCount": { "type": "int" }
     }
-  }
+  },
+
+  "startingPositionTargetDate": "תאריך יעד",
+
+  "goalPaceOrDeadlineTitle": "מה הקצב או המועד שלך?",
+  "goalPaceOrDeadlineSubtitle": "הגדר יעד, או דלג לעכשיו.",
+  "goalTargetPace": "קצב יעד",
+  "goalPaceDescriptionLine": "{unit} {period}",
+  "@goalPaceDescriptionLine": {
+    "placeholders": {
+      "unit": { "type": "String" },
+      "period": { "type": "String" }
+    }
+  },
+  "goalEstimatedFinish": "סיום משוער: {date}",
+  "@goalEstimatedFinish": {
+    "placeholders": {
+      "date": { "type": "String" }
+    }
+  },
+  "goalSetDeadline": "קבע מועד יעד",
+
+  "reviewScheduleTitle": "לוח חזרות",
+  "reviewScheduleSetByProgram": "שלבי החזרה נקבעו על ידי {programName}",
+  "@reviewScheduleSetByProgram": {
+    "placeholders": {
+      "programName": { "type": "String" }
+    }
+  },
+  "reviewScheduleFixedHint": "לוח זה קבוע על ידי התוכנית ולא ניתן לעריכה.",
+  "reviewScheduleNoStages": "לא מוגדרים שלבי חזרה לתוכנית זו.",
+  "reviewScheduleAfterOneDay": "אחרי יום אחד",
+  "reviewScheduleAfterNDays": "אחרי {count} ימים",
+  "@reviewScheduleAfterNDays": {
+    "placeholders": {
+      "count": { "type": "String" }
+    }
+  },
+  "reviewScheduleScheduledByProgram": "מתוזמן על ידי התוכנית",
+
+  "chazaraCustomCycle": "מחזור מותאם אישית",
+  "chazaraSessionsCount": "{count} סבבים",
+  "@chazaraSessionsCount": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "chazaraAddNew": "הוסף"
 }

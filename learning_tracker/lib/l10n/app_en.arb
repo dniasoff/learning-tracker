@@ -1213,5 +1213,52 @@
       "taskCount": { "type": "int" },
       "curriculumCount": { "type": "int" }
     }
-  }
+  },
+
+  "startingPositionTargetDate": "TARGET DATE",
+
+  "goalPaceOrDeadlineTitle": "What's your pace or deadline?",
+  "goalPaceOrDeadlineSubtitle": "Set a goal, or skip for now.",
+  "goalTargetPace": "Target Pace",
+  "goalPaceDescriptionLine": "{unit} {period}",
+  "@goalPaceDescriptionLine": {
+    "placeholders": {
+      "unit": { "type": "String" },
+      "period": { "type": "String" }
+    }
+  },
+  "goalEstimatedFinish": "Estimated finish: {date}",
+  "@goalEstimatedFinish": {
+    "placeholders": {
+      "date": { "type": "String" }
+    }
+  },
+  "goalSetDeadline": "Set Deadline",
+
+  "reviewScheduleTitle": "Review Schedule",
+  "reviewScheduleSetByProgram": "Review stages set by {programName}",
+  "@reviewScheduleSetByProgram": {
+    "placeholders": {
+      "programName": { "type": "String" }
+    }
+  },
+  "reviewScheduleFixedHint": "This schedule is fixed by the program and cannot be edited.",
+  "reviewScheduleNoStages": "No review stages are configured for this program.",
+  "reviewScheduleAfterOneDay": "After 1 day",
+  "reviewScheduleAfterNDays": "After {count} days",
+  "@reviewScheduleAfterNDays": {
+    "placeholders": {
+      "count": { "type": "String" }
+    }
+  },
+  "reviewScheduleScheduledByProgram": "Scheduled by program",
+
+  "chazaraCustomCycle": "Custom Cycle",
+  "chazaraSessionsCount": "{count} Sessions",
+  "@chazaraSessionsCount": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "chazaraAddNew": "ADD NEW"
 }

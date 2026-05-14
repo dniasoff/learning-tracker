@@ -4,6 +4,7 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/track_setup/domain/entities/add_track_result.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// Selection result from the self-paced prior progress step.
 class SelfPacedPriorCompletionSelection {
@@ -33,6 +34,7 @@ class SelfPacedPriorProgressStep extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
     final hasExplicitScopes =
         scopeSelections != null && scopeSelections!.isNotEmpty;
     final generatedScopesAsync = hasExplicitScopes
@@ -44,7 +46,7 @@ class SelfPacedPriorProgressStep extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text('Mark Prior Learning', style: theme.textTheme.headlineSmall),
+          Text(l10n.priorLearningTitle, style: theme.textTheme.headlineSmall),
           const SizedBox(height: 8),
           Text(
             'Do you want to mark parts you already learned as completed?',
@@ -138,21 +140,22 @@ class _SelfPacedSelectionListState extends State<SelfPacedSelectionList> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
     final canMark = _markAll || _selectedIndexes.isNotEmpty;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Text(
-          'Have you already completed some of these sections?',
+          l10n.priorLearningAlreadyCompleted,
           style: theme.textTheme.bodyMedium?.copyWith(
             color: theme.colorScheme.onSurfaceVariant,
           ),
         ),
         const SizedBox(height: 14),
         SelectionCard(
-          title: 'Mark everything as finished',
-          subtitle: 'Best if you are starting a new review cycle',
+          title: l10n.priorLearningMarkEverything,
+          subtitle: l10n.priorLearningMarkEverythingSubtitle,
           selected: _markAll,
           onChanged: (checked) {
             setState(() {
@@ -172,7 +175,7 @@ class _SelfPacedSelectionListState extends State<SelfPacedSelectionList> {
           child: _entries.isEmpty
               ? Center(
                   child: Text(
-                    'No specific folders were selected, but you can still mark all as completed.',
+                    l10n.priorLearningNoFolders,
                     textAlign: TextAlign.center,
                     style: theme.textTheme.bodyMedium?.copyWith(
                       color: theme.colorScheme.onSurfaceVariant,
@@ -187,7 +190,7 @@ class _SelfPacedSelectionListState extends State<SelfPacedSelectionList> {
                     final selected = _selectedIndexes.contains(index);
                     return SelectionCard(
                       title: entry.value,
-                      subtitle: 'Selected folder',
+                      subtitle: l10n.priorLearningSelectedFolder,
                       selected: selected,
                       onChanged: (checked) {
                         setState(() {
@@ -209,7 +212,7 @@ class _SelfPacedSelectionListState extends State<SelfPacedSelectionList> {
             Expanded(
               child: OutlinedButton(
                 onPressed: widget.onSkip,
-                child: const Text('Skip for now'),
+                child: Text(l10n.actionSkipForNow),
               ),
             ),
             const SizedBox(width: 12),
@@ -228,7 +231,7 @@ class _SelfPacedSelectionListState extends State<SelfPacedSelectionList> {
                         );
                       }
                     : null,
-                child: const Text('Mark Completed'),
+                child: Text(l10n.actionMarkCompleted),
               ),
             ),
           ],
