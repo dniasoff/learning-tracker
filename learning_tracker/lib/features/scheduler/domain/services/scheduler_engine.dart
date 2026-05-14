@@ -40,8 +40,11 @@ class SchedulerEngine {
   /// `==` because Drift may return a local-timezone [DateTime] when the
   /// underlying column stores an integer epoch, causing UTC-vs-local
   /// inequality even for the same instant.
-  static final int kBulkPriorSentinelMs =
-      DateTime.utc(2000, 1, 1).millisecondsSinceEpoch;
+  static final int kBulkPriorSentinelMs = DateTime.utc(
+    2000,
+    1,
+    1,
+  ).millisecondsSinceEpoch;
 
   /// Sentinel [DateTime] instance for callers that need it (e.g. tests).
   static final DateTime kBulkPriorSentinel = DateTime.utc(2000, 1, 1);

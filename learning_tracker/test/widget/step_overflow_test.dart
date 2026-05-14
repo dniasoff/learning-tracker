@@ -4,8 +4,9 @@ import 'package:learning_tracker/core/widgets/scrollable_step_body.dart';
 
 void main() {
   group('ScrollableStepBody', () {
-    testWidgets('renders children without overflow in normal viewport',
-        (tester) async {
+    testWidgets('renders children without overflow in normal viewport', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
@@ -63,11 +64,11 @@ void main() {
     testWidgets('accepts custom padding', (tester) async {
       const customPadding = EdgeInsets.all(32);
       await tester.pumpWidget(
-        MaterialApp(
+        const MaterialApp(
           home: Scaffold(
             body: ScrollableStepBody(
               padding: customPadding,
-              child: const Text('Hello'),
+              child: Text('Hello'),
             ),
           ),
         ),
@@ -82,10 +83,8 @@ void main() {
 
     testWidgets('keyboardDismissBehavior is onDrag', (tester) async {
       await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: ScrollableStepBody(child: const Text('test')),
-          ),
+        const MaterialApp(
+          home: Scaffold(body: ScrollableStepBody(child: Text('test'))),
         ),
       );
 

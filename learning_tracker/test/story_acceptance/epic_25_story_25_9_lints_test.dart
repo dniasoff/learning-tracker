@@ -89,6 +89,10 @@ void main() {
       // CurriculumLabel.level (named segment Hebrew lookup), and builds
       // synthetic ContentItem instances to feed back through the renderer.
       'lib/features/content_browsing/presentation/screens/content_hierarchy_screen.dart',
+      // Renderer-bridge: same pattern as content_hierarchy_screen — passes
+      // item.displayNameHe as hebrewName: to CurriculumLabelRenderer.renderValue
+      // and constructs synthetic ContentItem rows for the browse tree. DNI-issue-6.
+      'lib/features/content_browsing/presentation/widgets/content_browser_tree.dart',
       'lib/features/onboarding/presentation/screens/bulk_mark_screen.dart',
       'lib/features/settings/presentation/screens/lifetime_marking_screen.dart',
       'lib/features/progress/presentation/providers/lifetime_knowledge_providers.dart',
