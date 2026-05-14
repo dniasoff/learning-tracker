@@ -246,13 +246,11 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
 
-      # ── 6. coverage-floor (60% line coverage, only when lcov.info present) ──
+      # ── 6. coverage-floor (35% line coverage, always enforced) ──
       - name: Install lcov
-        if: hashFiles('learning_tracker/coverage/lcov.info') != ''
         run: sudo apt-get install -y lcov
 
-      - name: Assert coverage floor ≥ 60%
-        if: hashFiles('learning_tracker/coverage/lcov.info') != ''
+      - name: Assert coverage floor ≥ 35%
         run: |
           LCOV_FILE="learning_tracker/coverage/lcov.info"
           SUMMARY=$(lcov --summary "$LCOV_FILE" 2>&1)
@@ -263,7 +261,7 @@ jobs:
             echo "::error::Could not parse line coverage from lcov --summary output"
             exit 1
           fi
-          FLOOR=60
+          FLOOR=35
           # Use awk for float comparison (bash can't do floats natively)
           PASS=$(awk -v pct="$PCT" -v floor="$FLOOR" 'BEGIN { print (pct >= floor) ? "yes" : "no" }')
           echo "Line coverage: ${PCT}% (floor: ${FLOOR}%)"

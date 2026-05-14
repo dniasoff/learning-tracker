@@ -6,8 +6,8 @@ help: ## Show this help message
 	@echo 'Available targets:'
 	@grep -E '^[a-zA-Z0-9_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  %-20s %s\n", $$1, $$2}'
 
-test: ## Run all tests
-	flutter test
+test: ## Run all tests with coverage instrumentation
+	flutter test --coverage
 
 test-story-4.1: ## Run Story 4.1 (Track Management) acceptance tests
 	flutter test test/story_acceptance/epic_04_multi_track_test.dart
