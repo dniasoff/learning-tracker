@@ -4,6 +4,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/features/gamification/domain/models/reward_milestone.dart';
 
 void main() {
+  final _now = DateTime.utc(2026, 5, 14, 10, 0, 0);
+
   final base = RewardMilestone(
     id: 'ms_1',
     profileId: 1,
@@ -16,9 +18,90 @@ void main() {
     iconIndex: 3,
   );
 
-  // =========================================================================
-  // RewardMilestone.copyWith
-  // =========================================================================
+  group('RewardMilestone', () {
+    RewardMilestone _base() => RewardMilestone(
+      id: 'milestone-1',
+      profileId: 1,
+      trackId: 42,
+      title: 'First 100',
+      thresholdPoints: 100,
+      isEnabled: true,
+      createdAt: _now,
+      updatedAt: _now,
+      iconIndex: 3,
+    );
+
+    test('toJson serialises all fields correctly', () {
+      final json = _base().toJson();
+      expect(json['id'], 'milestone-1');
+      expect(json['profile_id'], 1);
+      expect(json['track_id'], 42);
+      expect(json['title'], 'First 100');
+      expect(json['threshold_points'], 100);
+      expect(json['is_enabled'], isTrue);
+      expect(json['icon_index'], 3);
+      expect(json['created_at'], _now.toIso8601String());
+      expect(json['updated_at'], _now.toIso8601String());
+    });
+
+    test('fromJson round-trips through toJson', () {
+      final original = _base();
+      final decoded = RewardMilestone.fromJson(original.toJson());
+
+      expect(decoded.id, original.id);
+      expect(decoded.profileId, original.profileId);
+      expect(decoded.trackId, original.trackId);
+      expect(decoded.title, original.title);
+      expect(decoded.thresholdPoints, original.thresholdPoints);
+      expect(decoded.isEnabled, original.isEnabled);
+      expect(decoded.iconIndex, original.iconIndex);
+    });
+
+    test('fromJson handles int ids stored as strings', () {
+      final json = _base().toJson();
+      json['profile_id'] = '2';
+      json['track_id'] = '99';
+      json['threshold_points'] = '500';
+
+      final m = RewardMilestone.fromJson(json);
+      expect(m.profileId, 2);
+      expect(m.trackId, 99);
+      expect(m.thresholdPoints, 500);
+    });
+
+    test('fromJson handles null/missing optional fields gracefully', () {
+      final m = RewardMilestone.fromJson({
+        'id': 'x',
+        'title': 'test',
+        // profile_id, track_id, threshold_points absent
+      });
+      expect(m.profileId, 0);
+      expect(m.trackId, 0);
+      expect(m.thresholdPoints, 0);
+      expect(m.isEnabled, isTrue); // default
+      expect(m.iconIndex, 0);    // default
+    });
+
+    test('copyWith overrides only the specified fields', () {
+      final original = _base();
+      final updated = original.copyWith(title: 'Gold', thresholdPoints: 500);
+
+      expect(updated.title, 'Gold');
+      expect(updated.thresholdPoints, 500);
+      // unchanged fields
+      expect(updated.id, original.id);
+      expect(updated.profileId, original.profileId);
+      expect(updated.trackId, original.trackId);
+      expect(updated.isEnabled, original.isEnabled);
+      expect(updated.iconIndex, original.iconIndex);
+    });
+
+    test('kGlobalTrackSentinel is 0', () {
+      expect(RewardMilestone.kGlobalTrackSentinel, 0);
+    });
+  });
+
+  // ── RewardMilestone.copyWith ──────────────────────────────────────────────
 
   group('RewardMilestone.copyWith', () {
     test('returns identical values when no fields overridden', () {
@@ -44,9 +127,7 @@ void main() {
     });
   });
 
-  // =========================================================================
-  // RewardMilestone.fromJson — _asInt edge cases
-  // =========================================================================
+  // ── RewardMilestone.fromJson — _asInt edge cases ──────────────────────────
 
   group('RewardMilestone.fromJson', () {
     test('round-trips via toJson/fromJson', () {
@@ -125,9 +206,60 @@ void main() {
     });
   });
 
-  // =========================================================================
-  // RewardUnlockRecord.fromJson
-  // =========================================================================
+  // ── RewardUnlockRecord ────────────────────────────────────────────────────
+
+  group('RewardUnlockRecord', () {
+    RewardUnlockRecord _baseUnlock() => RewardUnlockRecord(
+      milestoneId: 'milestone-1',
+      profileId: 1,
+      trackId: 42,
+      title: 'First 100',
+      thresholdPoints: 100,
+      pointsAtUnlock: 115,
+      unlockedAt: _now,
+    );
+
+    test('toJson serialises all fields correctly', () {
+      final json = _baseUnlock().toJson();
+      expect(json['milestone_id'], 'milestone-1');
+      expect(json['profile_id'], 1);
+      expect(json['track_id'], 42);
+      expect(json['title'], 'First 100');
+      expect(json['threshold_points'], 100);
+      expect(json['points_at_unlock'], 115);
+      expect(json['unlocked_at'], _now.toIso8601String());
+    });
+
+    test('fromJson round-trips through toJson', () {
+      final original = _baseUnlock();
+      final decoded = RewardUnlockRecord.fromJson(original.toJson());
+
+      expect(decoded.milestoneId, original.milestoneId);
+      expect(decoded.profileId, original.profileId);
+      expect(decoded.trackId, original.trackId);
+      expect(decoded.title, original.title);
+      expect(decoded.thresholdPoints, original.thresholdPoints);
+      expect(decoded.pointsAtUnlock, original.pointsAtUnlock);
+    });
+
+    test('fromJson handles numeric fields stored as strings', () {
+      final json = _baseUnlock().toJson();
+      json['profile_id'] = '3';
+      json['points_at_unlock'] = '200';
+
+      final r = RewardUnlockRecord.fromJson(json);
+      expect(r.profileId, 3);
+      expect(r.pointsAtUnlock, 200);
+    });
+
+    test('fromJson handles missing optional fields gracefully', () {
+      final r = RewardUnlockRecord.fromJson({'milestone_id': 'abc'});
+      expect(r.profileId, 0);
+      expect(r.thresholdPoints, 0);
+      expect(r.pointsAtUnlock, 0);
+      expect(r.title, '');
+    });
+  });
 
   group('RewardUnlockRecord.fromJson', () {
     test('round-trips via toJson/fromJson', () {

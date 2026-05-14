@@ -28,6 +28,10 @@ void main() {
       expect(const DateDelta(5) == const PaceDelta(5), isFalse);
     });
 
+    test('equality: DateDelta != PaceDelta with same numeric value', () {
+      expect(const DateDelta(5) == const PaceDelta(5), isFalse);
+    });
+
     test('equality: DateDelta != non-DateDelta', () {
       expect(const DateDelta(5), isNot(equals('five')));
     });
@@ -40,7 +44,15 @@ void main() {
       expect(const DateDelta(5).hashCode, isNot(const DateDelta(6).hashCode));
     });
 
+    test('hashCode is stable for same value', () {
+      expect(const DateDelta(5).hashCode, equals(const DateDelta(5).hashCode));
+    });
+
     test('toString includes days value', () {
+      expect(const DateDelta(7).toString(), contains('7'));
+    });
+
+    test('toString contains the days value', () {
       expect(const DateDelta(7).toString(), contains('7'));
     });
 
@@ -143,6 +155,13 @@ void main() {
       const a = DateScheduleDelta(DateDelta(5));
       const b = PaceScheduleDelta(PaceDelta(5));
       expect(a == b, isFalse);
+    });
+
+    test('equality: DateScheduleDelta != PaceScheduleDelta', () {
+      expect(
+        const DateScheduleDelta(DateDelta(3)),
+        isNot(equals(const PaceScheduleDelta(PaceDelta(3)))),
+      );
     });
 
     test('hashCode: equal objects have equal hash', () {

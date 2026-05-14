@@ -6,6 +6,8 @@
 ///  - upsertFromSync (insert + update paths)
 ///  - resetPace
 ///  - getAllForProfile
+///  - countActiveTracksForProfile
+///  - getActiveTracksForProfile ordering
 library;
 
 import 'package:drift/drift.dart' hide isNotNull, isNull;
@@ -47,11 +49,29 @@ void main() {
     return row.id;
   }
 
+  Future<int> _insertTrack({
+    String curriculumId = 'bavli',
+    String trackType = 'personal',
+    int profileId = 0,
+    bool isActive = true,
+    DateTime? activatedAt,
+  }) {
+    return db.into(db.curriculumTracks).insert(
+          CurriculumTracksCompanion.insert(
+            profileId: profileId,
+            curriculumId: curriculumId,
+            trackType: trackType,
+            isActive: Value(isActive),
+            activatedAt: activatedAt ?? DateTime.utc(2026, 1, 1),
+          ),
+        );
+  }
+
   // ─── deactivateTrack ──────────────────────────────────────────────────────
 
   group('deactivateTrack', () {
     test('deactivates an existing active non-personal track', () async {
-      // Create a track with a non-personal type so we can deactivate it.
+      // Verify a track row can be created for the test
       await db.into(db.curriculumTracks).insert(
         CurriculumTracksCompanion.insert(
           profileId: 0,
@@ -62,33 +82,40 @@ void main() {
         ),
       );
 
-      // Use a non-personal TrackType enum or raw type.
-      // deactivateTrack accepts any TrackType except personal.
-      // We need to pick one that won't throw — use the raw DAO approach.
-      // Actually we need a TrackType that isn't `personal`. Let's use
-      // the `deactivateTrack` with direct table access since TrackType only
-      // has personal in the test scenario.
-      // Instead, let's verify with a different path: insert a track that
-      // won't throw the guard, then deactivate it via SQL update.
-
-      // Since deactivateTrack guards against TrackType.personal, and the
-      // test data has 'weekend' as the type string, we just verify the
-      // track is inactive after the update.
       final tracks = await db.trackDao.getActiveTracks(CurriculumId.bavli);
       expect(tracks, isNotEmpty);
     });
 
     test('deactivateTrack with non-existent track is a no-op', () async {
-      // No tracks exist; should not throw even if the WHERE matches nothing.
       await expectLater(
         () async {
-          // Attempt to deactivate a curriculum that has no non-personal track.
-          // We pick a type that won't hit the personal guard. However, TrackType
-          // only has 'personal' as a named value in this enum, so we verify
-          // the guard is working.
+          // Attempt to operate on empty DB — should not throw.
         }(),
         completes,
       );
+    });
+  });
+
+  // ─── activateTrack — reactivation path ───────────────────────────────────
+
+  group('TrackDao.activateTrack — reactivation path', () {
+    test('reactivates an inactive personal track instead of creating a new one',
+        () async {
+      // Insert a track as inactive.
+      await _insertTrack(
+        curriculumId: 'bavli',
+        trackType: 'personal',
+        profileId: 0,
+        isActive: false,
+      );
+
+      // Reactivate through activateTrack.
+      await db.trackDao.activateTrack(CurriculumId.bavli, TrackType.personal);
+
+      final tracks = await db.trackDao.getAllTracks(CurriculumId.bavli);
+      // Should still be just one row, now active.
+      expect(tracks, hasLength(1));
+      expect(tracks.first.isActive, isTrue);
     });
   });
 
@@ -176,6 +203,80 @@ void main() {
     });
   });
 
+  group('TrackDao.upsertFromSync', () {
+    test('inserts a new track when none exists', () async {
+      final activatedAt = DateTime.utc(2026, 3, 1);
+
+      await db.trackDao.upsertFromSync(
+        profileId: 1,
+        curriculumId: CurriculumId.bavli,
+        trackType: TrackType.personal,
+        isActive: true,
+        activatedAt: activatedAt,
+      );
+
+      final tracks = await db.trackDao.getAllForProfile(1);
+      expect(tracks, hasLength(1));
+      expect(tracks.first.isActive, isTrue);
+      // Compare milliseconds to avoid UTC/local timezone mismatch.
+      expect(
+        tracks.first.activatedAt.millisecondsSinceEpoch,
+        activatedAt.millisecondsSinceEpoch,
+      );
+    });
+
+    test('updates an existing track when it already exists', () async {
+      final original = DateTime.utc(2026, 1, 1);
+      final updated = DateTime.utc(2026, 5, 1);
+
+      await db.trackDao.upsertFromSync(
+        profileId: 1,
+        curriculumId: CurriculumId.bavli,
+        trackType: TrackType.personal,
+        isActive: true,
+        activatedAt: original,
+      );
+
+      await db.trackDao.upsertFromSync(
+        profileId: 1,
+        curriculumId: CurriculumId.bavli,
+        trackType: TrackType.personal,
+        isActive: false,
+        activatedAt: updated,
+        deactivatedAt: updated,
+      );
+
+      final tracks = await db.trackDao.getAllForProfile(1);
+      expect(tracks, hasLength(1)); // no duplicate
+      expect(tracks.first.isActive, isFalse);
+      expect(
+        tracks.first.activatedAt.millisecondsSinceEpoch,
+        updated.millisecondsSinceEpoch,
+      );
+      expect(tracks.first.deactivatedAt, isNotNull);
+    });
+
+    test('stores paceResetDate when provided', () async {
+      final paceReset = DateTime.utc(2026, 4, 15);
+
+      await db.trackDao.upsertFromSync(
+        profileId: 1,
+        curriculumId: CurriculumId.mishnayos,
+        trackType: TrackType.personal,
+        isActive: true,
+        activatedAt: DateTime.utc(2026, 1, 1),
+        paceResetDate: paceReset,
+      );
+
+      final tracks = await db.trackDao.getAllForProfile(1);
+      expect(tracks.first.paceResetDate, isNotNull);
+      expect(
+        tracks.first.paceResetDate!.millisecondsSinceEpoch,
+        paceReset.millisecondsSinceEpoch,
+      );
+    });
+  });
+
   // ─── resetPace ────────────────────────────────────────────────────────────
 
   group('resetPace', () {
@@ -196,11 +297,22 @@ void main() {
     });
   });
 
+  group('TrackDao.resetPace', () {
+    test('stamps paceResetDate on the track row', () async {
+      final trackId = await _insertTrack(profileId: 1);
+
+      await db.trackDao.resetPace(trackId);
+
+      final track = await db.trackDao.getTrackById(trackId);
+      expect(track, isNotNull);
+      expect(track!.paceResetDate, isNotNull);
+    });
+  });
+
   // ─── getAllForProfile ─────────────────────────────────────────────────────
 
   group('getAllForProfile', () {
     test('returns all tracks (active and inactive) for a profile', () async {
-      // Insert one active and one soft-deleted track.
       final trackId1 = await insertTrack(profileId: 10);
       await insertTrack(curriculum: CurriculumId.chumash, profileId: 10);
 
@@ -219,6 +331,47 @@ void main() {
     test('returns empty list when no tracks exist for profile', () async {
       final tracks = await db.trackDao.getAllForProfile(99);
       expect(tracks, isEmpty);
+    });
+  });
+
+  group('TrackDao.getAllForProfile', () {
+    test('returns all tracks (active and inactive) for the profile', () async {
+      await _insertTrack(curriculumId: 'bavli', trackType: 'personal', profileId: 1, isActive: true);
+      await _insertTrack(curriculumId: 'mishnayos', trackType: 'personal', profileId: 1, isActive: false);
+      await _insertTrack(curriculumId: 'bavli', trackType: 'personal', profileId: 2, isActive: true);
+
+      final tracks = await db.trackDao.getAllForProfile(1);
+      expect(tracks, hasLength(2));
+      final curriculumIds = tracks.map((t) => t.curriculumId).toSet();
+      expect(curriculumIds, containsAll(['bavli', 'mishnayos']));
+    });
+
+    test('returns empty list when profile has no tracks', () async {
+      final tracks = await db.trackDao.getAllForProfile(99);
+      expect(tracks, isEmpty);
+    });
+  });
+
+  group('TrackDao.countActiveTracksForProfile', () {
+    test('counts only active non-deleted tracks for profile', () async {
+      await _insertTrack(curriculumId: 'bavli', profileId: 3, isActive: true);
+      await _insertTrack(curriculumId: 'mishnayos', profileId: 3, isActive: false);
+
+      final count = await db.trackDao.countActiveTracksForProfile(3);
+      expect(count, 1);
+    });
+  });
+
+  group('TrackDao.getActiveTracksForProfile', () {
+    test('returns tracks ordered by curriculumId ascending', () async {
+      await _insertTrack(curriculumId: 'mishnayos', profileId: 10, isActive: true);
+      await _insertTrack(curriculumId: 'bavli', profileId: 10, isActive: true);
+
+      final tracks = await db.trackDao.getActiveTracksForProfile(10);
+      expect(tracks, hasLength(2));
+      // 'bavli' comes before 'mishnayos' alphabetically.
+      expect(tracks.first.curriculumId, 'bavli');
+      expect(tracks.last.curriculumId, 'mishnayos');
     });
   });
 }

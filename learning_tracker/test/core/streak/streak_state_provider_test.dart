@@ -1,51 +1,151 @@
-// Tests for StreakStateProvider.watch() — the reactive stream path (lines 50-68)
-// that was uncovered because only read() had tests via StreakService.
+/// Tests for StreakStateProvider covering read() and watch().
+library;
+
+import 'package:drift/drift.dart' show Value;
 import 'package:flutter_test/flutter_test.dart';
+import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/streak/streak_state_provider.dart';
 import 'package:learning_tracker/core/time/local_day_clock.dart';
 
 import '../../helpers/drift_memory.dart';
 
 void main() {
+  late UserDatabase db;
   late FakeLocalDayClock clock;
+  late StreakStateProvider provider;
+  const profileId = 1;
+
+  // Helper to insert a streak event.
+  Future<void> insertEvent(UserDatabase db, DateTime timestamp) async {
+    await db.streakEventDao.appendEvent(
+      StreakEventsCompanion.insert(
+        profileId: profileId,
+        eventType: 'completion',
+        dayUtc: DateTime.utc(
+          timestamp.year,
+          timestamp.month,
+          timestamp.day,
+        ),
+        eventTimestamp: timestamp,
+        clientDeviceId: const Value(null),
+      ),
+    );
+  }
 
   setUp(() {
-    clock = FakeLocalDayClock(DateTime.utc(2026, 3, 15, 12));
+    db = inMemoryDb();
+    clock = FakeLocalDayClock(DateTime.utc(2026, 5, 14, 12));
+    provider = StreakStateProvider(db: db, clock: clock);
   });
+
+  tearDown(() async {
+    await db.close();
+  });
+
+  // ── read() ────────────────────────────────────────────────────────────────
 
   group('StreakStateProvider.read', () {
     test('returns zero streak when no events exist', () async {
-      final db = inMemoryDb();
-      final provider = StreakStateProvider(db: db, clock: clock);
-
-      final state = await provider.read(profileId: 1);
-
+      final state = await provider.read(profileId: profileId);
       expect(state.currentStreak, 0);
-      await db.close();
+    });
+
+    test('returns empty state when no events', () async {
+      final state = await provider.read(profileId: profileId);
+      expect(state.currentStreak, 0);
+      expect(state.maxStreak, 0);
+      expect(state.lastCompletionDayUtc, isNull);
+    });
+
+    test('returns streak of 1 for a single completion today', () async {
+      await insertEvent(db, DateTime.utc(2026, 5, 14));
+
+      final state = await provider.read(profileId: profileId);
+      expect(state.currentStreak, 1);
+      expect(state.maxStreak, 1);
+    });
+
+    test('returns streak of 2 for completions on two consecutive days', () async {
+      await insertEvent(db, DateTime.utc(2026, 5, 13));
+      await insertEvent(db, DateTime.utc(2026, 5, 14));
+
+      final state = await provider.read(profileId: profileId);
+      expect(state.currentStreak, 2);
+      expect(state.maxStreak, 2);
+    });
+
+    test('streak lapses when last completion was 2+ days ago', () async {
+      // Last completion 3 days ago, today is May 14.
+      await insertEvent(db, DateTime.utc(2026, 5, 11));
+
+      final state = await provider.read(profileId: profileId);
+      expect(state.currentStreak, 0);
+      expect(state.maxStreak, 1);
+    });
+
+    test('does not count events from another profile', () async {
+      // Insert event for profile 2.
+      await db.streakEventDao.appendEvent(
+        StreakEventsCompanion.insert(
+          profileId: 2,
+          eventType: 'completion',
+          dayUtc: DateTime.utc(2026, 5, 14),
+          eventTimestamp: DateTime.utc(2026, 5, 14),
+          clientDeviceId: const Value(null),
+        ),
+      );
+
+      final state = await provider.read(profileId: profileId);
+      expect(state.currentStreak, 0);
     });
   });
 
+  // ── watch() ───────────────────────────────────────────────────────────────
+
   group('StreakStateProvider.watch', () {
     test('emits streak state as a stream', () async {
-      final db = inMemoryDb();
-      final provider = StreakStateProvider(db: db, clock: clock);
-
       // First emission should be the initial state (no events = 0 streak).
-      final firstState = await provider.watch(profileId: 1).first;
-
+      final firstState = await provider.watch(profileId: profileId).first;
       expect(firstState.currentStreak, 0);
-      await db.close();
+    });
+
+    test('emits empty state when no events', () async {
+      final state = await provider.watch(profileId: profileId).first;
+      expect(state.currentStreak, 0);
+      expect(state.maxStreak, 0);
     });
 
     test('emits zero streak when profile has no events', () async {
-      final db = inMemoryDb();
-      final provider = StreakStateProvider(db: db, clock: clock);
-
       final states = provider.watch(profileId: 99);
       final first = await states.first;
-
       expect(first.currentStreak, 0);
-      await db.close();
+    });
+
+    test('emits updated state after event is inserted', () async {
+      await insertEvent(db, DateTime.utc(2026, 5, 14));
+
+      final state = await provider.watch(profileId: profileId).first;
+      expect(state.currentStreak, 1);
+      expect(state.maxStreak, 1);
+    });
+
+    test('stream emits new value when event is added while watching', () async {
+      final states = <int>[];
+      final sub = provider.watch(profileId: profileId).listen(
+        (s) => states.add(s.currentStreak),
+      );
+      addTearDown(sub.cancel);
+
+      // Give the first emission time to arrive.
+      await Future<void>.delayed(Duration.zero);
+      expect(states, isNotEmpty); // zero at start
+
+      await insertEvent(db, DateTime.utc(2026, 5, 14));
+      await Future<void>.delayed(Duration.zero);
+
+      // Should have received at least 2 emissions.
+      expect(states.length, greaterThanOrEqualTo(2));
+      expect(states.last, 1);
     });
   });
 }

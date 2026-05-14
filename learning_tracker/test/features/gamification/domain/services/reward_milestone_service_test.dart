@@ -528,6 +528,12 @@ void main() {
       expect(milestones, isEmpty);
     });
 
+    test('returns empty list when prefs value is empty string', () async {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('reward_milestones_config_v1_$profileId', '');
+      expect(await service.getAllMilestones(), isEmpty);
+    });
+
     test('returns empty list when prefs value is invalid JSON', () async {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(
@@ -538,7 +544,7 @@ void main() {
       expect(milestones, isEmpty);
     });
 
-    test('returns empty list when prefs value is JSON object (not list)', () async {
+    test('returns empty list when prefs contain non-list JSON', () async {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(
         'reward_milestones_config_v1_$profileId',
@@ -608,6 +614,25 @@ void main() {
       final trackMilestones = await service.getMilestonesForTrack(trackId);
       expect(trackMilestones, hasLength(1));
       expect(trackMilestones.first.title, 'Track Milestone');
+    });
+
+    test('returns only global-sentinel milestones (F2 variant)', () async {
+      await service.upsertMilestone(
+        trackId: RewardMilestone.kGlobalTrackSentinel,
+        title: 'Global',
+        thresholdPoints: 500,
+        milestoneId: 'global-1',
+      );
+      await service.upsertMilestone(
+        trackId: 10,
+        title: 'Track',
+        thresholdPoints: 200,
+        milestoneId: 'track-1',
+      );
+
+      final globalMs = await service.getGlobalMilestones();
+      expect(globalMs, hasLength(1));
+      expect(globalMs.first.id, 'global-1');
     });
   });
 
@@ -816,6 +841,11 @@ void main() {
       final second = await service.evaluateUnlocksForGlobal();
       expect(second, isEmpty);
     });
+
+    test('returns empty when no global milestones configured (F2 variant)', () async {
+      final unlocks = await service.evaluateUnlocksForGlobal();
+      expect(unlocks, isEmpty);
+    });
   });
 
   // ─── getAllUnlocks (extended) ─────────────────────────────────────────────
@@ -959,6 +989,50 @@ void main() {
 
       final remaining = await service.getMilestonesForTrack(trackId);
       expect(remaining, isEmpty);
+    });
+
+    test('removes milestones matching the default ladder (F2 variant)', () async {
+      await service.upsertMilestone(
+        trackId: 10,
+        title: 'Bronze Star',
+        thresholdPoints: 500,
+        milestoneId: 'stock-1',
+      );
+
+      final result = await service.stripStockTemplateMilestones();
+
+      expect(result, isTrue);
+      expect(await service.getMilestonesForTrack(10), isEmpty);
+    });
+
+    test('removes the legacy 50/150/300 tier set when exactly 3 match', () async {
+      for (final t in [50, 150, 300]) {
+        await service.upsertMilestone(
+          trackId: 7,
+          title: 'Legacy $t',
+          thresholdPoints: t,
+          milestoneId: 'leg-$t',
+        );
+      }
+
+      final result = await service.stripStockTemplateMilestones();
+
+      expect(result, isTrue);
+      expect(await service.getMilestonesForTrack(7), isEmpty);
+    });
+
+    test('keeps milestones that do not match stock entries', () async {
+      await service.upsertMilestone(
+        trackId: 10,
+        title: 'My Custom Reward',
+        thresholdPoints: 999,
+        milestoneId: 'custom',
+      );
+
+      final result = await service.stripStockTemplateMilestones();
+
+      expect(result, isFalse);
+      expect(await service.getMilestonesForTrack(10), hasLength(1));
     });
   });
 
@@ -1146,6 +1220,29 @@ void main() {
       expect(milestones.length, 1);
       expect(milestones.first['title'], 'Exported');
     });
+
+    test('returns map with updated_at, milestones, unlocks keys (F2 variant)', () async {
+      await service.upsertMilestone(
+        trackId: 10,
+        title: 'Export Test',
+        thresholdPoints: 100,
+        milestoneId: 'exp-1',
+      );
+
+      final payload = await service.exportCloudPayload();
+
+      expect(payload.containsKey('updated_at'), isTrue);
+      expect(payload.containsKey('milestones'), isTrue);
+      expect(payload.containsKey('unlocks'), isTrue);
+      expect(payload['milestones'], isA<List>());
+      expect((payload['milestones'] as List), hasLength(1));
+    });
+
+    test('export of empty service returns empty lists', () async {
+      final payload = await service.exportCloudPayload();
+      expect((payload['milestones'] as List), isEmpty);
+      expect((payload['unlocks'] as List), isEmpty);
+    });
   });
 
   // ─── kGlobalTrackSentinel ─────────────────────────────────────────────────
@@ -1171,6 +1268,24 @@ void main() {
       await service.ensureDefaultsForTrack(RewardMilestone.kGlobalTrackSentinel);
       final milestones = await service.getGlobalMilestones();
       expect(milestones, isEmpty);
+    });
+
+    test('is a no-op for non-global tracks (F2 variant)', () async {
+      // Should not throw and not add milestones.
+      await service.ensureDefaultsForTrack(42);
+      expect(await service.getMilestonesForTrack(42), isEmpty);
+    });
+
+    test('is a no-op for global sentinel (F2 variant)', () async {
+      await service.ensureDefaultsForTrack(
+        RewardMilestone.kGlobalTrackSentinel,
+      );
+      expect(
+        await service.getMilestonesForTrack(
+          RewardMilestone.kGlobalTrackSentinel,
+        ),
+        isEmpty,
+      );
     });
   });
 }

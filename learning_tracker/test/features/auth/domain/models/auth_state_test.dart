@@ -1,5 +1,5 @@
-// Tests for AuthUser and AuthState — covers AuthUser.fromProfile (lines 31-37),
-// displayIdentifier (lines 80-84), and AuthState.copyWith (lines 86-98).
+// Tests for AuthUser and AuthState — covers AuthUser.fromProfile,
+// displayIdentifier, and AuthState.copyWith.
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/daos/user_profile_dao.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
@@ -8,18 +8,59 @@ import 'package:learning_tracker/features/auth/domain/models/auth_state.dart';
 import '../../../../helpers/drift_memory.dart';
 
 void main() {
-  // =========================================================================
-  // AuthUser.fromProfile
-  // =========================================================================
+  // Build a minimal UserProfile so AuthUser.fromProfile can be tested
+  // without a real database.
+  UserProfile _fakeProfile({
+    int id = 1,
+    String email = 'test@example.com',
+    String displayName = 'Tester',
+    String userMode = 'parent',
+    String? firebaseUid,
+  }) => UserProfile(
+    id: id,
+    email: email,
+    displayName: displayName,
+    userMode: userMode,
+    tier: 'localBorn',
+    firebaseUid: firebaseUid,
+    createdAt: DateTime.utc(2026, 1, 1),
+    updatedAt: DateTime.utc(2026, 1, 1),
+  );
 
-  group('AuthUser.fromProfile', () {
+  // ── AuthUser.fromProfile ──────────────────────────────────────────────────
+
+  group('AuthUser', () {
+    test('fromProfile maps all fields correctly', () {
+      final profile = _fakeProfile(
+        id: 42,
+        email: 'user@example.com',
+        displayName: 'Jane',
+        userMode: 'child',
+        firebaseUid: 'uid-abc',
+      );
+      final user = AuthUser.fromProfile(profile);
+
+      expect(user.profileId, 42);
+      expect(user.email, 'user@example.com');
+      expect(user.displayName, 'Jane');
+      expect(user.userMode, 'child');
+      expect(user.firebaseUid, 'uid-abc');
+    });
+
+    test('fromProfile handles null firebaseUid', () {
+      final profile = _fakeProfile(firebaseUid: null);
+      final user = AuthUser.fromProfile(profile);
+      expect(user.firebaseUid, isNull);
+    });
+  });
+
+  group('AuthUser.fromProfile (DB-based)', () {
     late UserDatabase db;
 
     setUp(() => db = inMemoryDb());
     tearDown(() => db.close());
 
     test('maps Account fields to AuthUser', () async {
-      // Insert a profile account row.
       final now = DateTime.utc(2026, 1, 1);
       final profileId = await db.into(db.accounts).insert(
             AccountsCompanion.insert(
@@ -42,13 +83,127 @@ void main() {
       expect(user.displayName, 'Test User');
       expect(user.userMode, 'parent');
       expect(user.profileId, profileId);
-      expect(user.firebaseUid, isNull);
     });
   });
 
-  // =========================================================================
-  // AuthState constructors
-  // =========================================================================
+  // ── AuthState constructors ────────────────────────────────────────────────
+
+  group('AuthState', () {
+    final testUser = AuthUser(
+      profileId: 1,
+      email: 'user@example.com',
+      displayName: 'Test',
+      userMode: 'parent',
+    );
+
+    test('AuthState.initializing sets sessionStatus=initializing', () {
+      const state = AuthState.initializing();
+      expect(state.sessionStatus, SessionStatus.initializing);
+      expect(state.currentUser, isNull);
+      expect(state.tier, isNull);
+    });
+
+    test('AuthState.signedOut sets sessionStatus=signedOut', () {
+      const state = AuthState.signedOut();
+      expect(state.sessionStatus, SessionStatus.signedOut);
+      expect(state.currentUser, isNull);
+    });
+
+    test('AuthState.signedIn sets sessionStatus=signedIn', () {
+      final state = AuthState.signedIn(
+        user: testUser,
+        tier: UserTier.localBorn,
+      );
+      expect(state.sessionStatus, SessionStatus.signedIn);
+      expect(state.currentUser, testUser);
+      expect(state.tier, UserTier.localBorn);
+    });
+
+    test('isSignedIn is true only when signedIn', () {
+      final signedIn = AuthState.signedIn(
+        user: testUser,
+        tier: UserTier.localBorn,
+      );
+      expect(signedIn.isSignedIn, isTrue);
+      expect(const AuthState.signedOut().isSignedIn, isFalse);
+      expect(const AuthState.initializing().isSignedIn, isFalse);
+    });
+
+    test('isInitializing is true only when initializing', () {
+      expect(const AuthState.initializing().isInitializing, isTrue);
+      expect(const AuthState.signedOut().isInitializing, isFalse);
+    });
+
+    test('isCloudBorn and isLocalBorn reflect tier', () {
+      final cloudState = AuthState.signedIn(
+        user: testUser,
+        tier: UserTier.cloudBorn,
+      );
+      final localState = AuthState.signedIn(
+        user: testUser,
+        tier: UserTier.localBorn,
+      );
+
+      expect(cloudState.isCloudBorn, isTrue);
+      expect(cloudState.isLocalBorn, isFalse);
+      expect(localState.isLocalBorn, isTrue);
+      expect(localState.isCloudBorn, isFalse);
+    });
+
+    test('displayIdentifier returns display name when present', () {
+      final state = AuthState.signedIn(
+        user: testUser,
+        tier: UserTier.localBorn,
+      );
+      expect(state.displayIdentifier, 'Test');
+    });
+
+    test('displayIdentifier falls back to email when displayName is empty', () {
+      final user = AuthUser(
+        profileId: 1,
+        email: 'user@example.com',
+        displayName: '',
+        userMode: 'parent',
+      );
+      final state = AuthState.signedIn(user: user, tier: UserTier.localBorn);
+      expect(state.displayIdentifier, 'user@example.com');
+    });
+
+    test('displayIdentifier returns anon when signed out', () {
+      expect(const AuthState.signedOut().displayIdentifier, 'anon');
+    });
+
+    test('copyWith changes sessionStatus', () {
+      final initial = AuthState.signedIn(
+        user: testUser,
+        tier: UserTier.localBorn,
+      );
+      final updated = initial.copyWith(
+        sessionStatus: SessionStatus.signedOut,
+      );
+      expect(updated.sessionStatus, SessionStatus.signedOut);
+      // Other fields preserved
+      expect(updated.tier, UserTier.localBorn);
+    });
+
+    test('copyWith with clearUser=true nulls out currentUser', () {
+      final state = AuthState.signedIn(
+        user: testUser,
+        tier: UserTier.localBorn,
+      );
+      final cleared = state.copyWith(clearUser: true);
+      expect(cleared.currentUser, isNull);
+    });
+
+    test('copyWith with clearTier=true nulls out tier', () {
+      final state = AuthState.signedIn(
+        user: testUser,
+        tier: UserTier.localBorn,
+      );
+      final cleared = state.copyWith(clearTier: true);
+      expect(cleared.tier, isNull);
+    });
+  });
 
   group('AuthState.initializing', () {
     test('has sessionStatus=initializing and null user/tier', () {
@@ -70,10 +225,6 @@ void main() {
       expect(state.isSignedIn, isFalse);
     });
   });
-
-  // =========================================================================
-  // AuthState.displayIdentifier
-  // =========================================================================
 
   group('AuthState.displayIdentifier', () {
     const authUser = AuthUser(
@@ -107,10 +258,6 @@ void main() {
       expect(state.displayIdentifier, 'anon');
     });
   });
-
-  // =========================================================================
-  // AuthState.copyWith
-  // =========================================================================
 
   group('AuthState.copyWith', () {
     const authUser = AuthUser(

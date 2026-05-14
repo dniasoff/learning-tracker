@@ -100,6 +100,21 @@ ContentItem _masechta(String seder, String ref, {int sortOrder = 0}) =>
       level4: null,
     );
 
+/// Builds a leaf item — should be excluded from seder/masechta index building.
+ContentItem _leaf(String ref, {required String seder, String? masechta}) =>
+    ContentItem(
+      sefariaRef: ref,
+      displayNameEn: ref,
+      displayNameHe: ref,
+      curriculumId: CurriculumId.mishnayos.storageKey,
+      sortOrder: 0,
+      isLeaf: true,
+      level1: seder,
+      level2: masechta,
+      level3: ref,
+      level4: null,
+    );
+
 LearningOrderItem _item(String ref, [int order = 0]) => LearningOrderItem(
   sefariaRef: ref,
   displayNameHe: ref,
@@ -203,6 +218,20 @@ void main() {
       final result = await repo.getSedarimOrder(trackId, CurriculumId.mishnayos);
       expect(result, isEmpty);
     });
+
+    test('excludes masechtos and leaves from seder list', () async {
+      final items = [
+        _seder('Zeraim', sortOrder: 0),
+        _masechta('Zeraim', 'Berakhot', sortOrder: 0),
+        _leaf('Berakhot 1:1', seder: 'Zeraim', masechta: 'Berakhot'),
+      ];
+      final repo = _makeRepo(db, items);
+
+      final result = await repo.getSedarimOrder(trackId, CurriculumId.mishnayos);
+
+      expect(result, hasLength(1));
+      expect(result.first.sefariaRef, 'Zeraim');
+    });
   });
 
   // ─── getSedarimOrder — custom user order ───────────────────────────────────
@@ -228,6 +257,22 @@ void main() {
         result.map((i) => i.sefariaRef).toList(),
         ['Nashim', 'Moed', 'Zeraim'],
       );
+      expect(result.every((i) => i.isCustomOrdered), isTrue);
+    });
+
+    test('returns custom sedarim order when rows exist in DAO', () async {
+      final items = [
+        _seder('Zeraim', sortOrder: 0),
+        _seder('Moed', sortOrder: 1),
+      ];
+      final repo = _makeRepo(db, items);
+
+      // Store custom order: Moed first
+      await db.trackLearningOrderDao.upsertOrder(trackId, ['Moed', 'Zeraim']);
+
+      final result = await repo.getSedarimOrder(trackId, CurriculumId.mishnayos);
+
+      expect(result.map((i) => i.sefariaRef).toList(), ['Moed', 'Zeraim']);
       expect(result.every((i) => i.isCustomOrdered), isTrue);
     });
   });
@@ -258,6 +303,43 @@ void main() {
         CurriculumId.mishnayos,
       );
       expect(result, isEmpty);
+    });
+
+    test('excludes level-3/leaf rows from masechtos index', () async {
+      final items = [
+        _seder('Zeraim', sortOrder: 0),
+        _masechta('Zeraim', 'Berakhot', sortOrder: 0),
+        _leaf('Berakhot 1:1', seder: 'Zeraim', masechta: 'Berakhot'),
+      ];
+      final repo = _makeRepo(db, items);
+
+      final result = await repo.getMasechtosOrder(
+        trackId,
+        CurriculumId.mishnayos,
+      );
+
+      expect(result, hasLength(1));
+      expect(result.first.sefariaRef, 'Berakhot');
+    });
+
+    test('returns custom masechtos order when DAO rows exist', () async {
+      final items = [
+        _seder('Zeraim', sortOrder: 0),
+        _masechta('Zeraim', 'Berakhot', sortOrder: 0),
+        _masechta('Zeraim', 'Peah', sortOrder: 1),
+      ];
+      final repo = _makeRepo(db, items);
+
+      // Custom: Peah first
+      await db.trackLearningOrderDao.upsertOrder(trackId, ['Peah', 'Berakhot']);
+
+      final result = await repo.getMasechtosOrder(
+        trackId,
+        CurriculumId.mishnayos,
+      );
+
+      expect(result.map((i) => i.sefariaRef).toList(), ['Peah', 'Berakhot']);
+      expect(result.every((i) => i.isCustomOrdered), isTrue);
     });
   });
 
@@ -298,6 +380,33 @@ void main() {
       final rows = await db.trackLearningOrderDao.getByTrack(trackId);
       expect(rows, isEmpty);
     });
+
+    test('persists refs via DAO in the given order (F2 variant)', () async {
+      final repo = _makeRepo(db, [
+        _seder('Moed', sortOrder: 1),
+        _seder('Zeraim', sortOrder: 0),
+      ]);
+      final items = [
+        const LearningOrderItem(
+          sefariaRef: 'Moed',
+          displayNameHe: 'מועד',
+          displayNameEn: 'Moed',
+          userSortOrder: 0,
+        ),
+        const LearningOrderItem(
+          sefariaRef: 'Zeraim',
+          displayNameHe: 'זרעים',
+          displayNameEn: 'Zeraim',
+          userSortOrder: 1,
+        ),
+      ];
+
+      await repo.saveSedarimOrder(trackId, items);
+
+      final rows = await db.trackLearningOrderDao.getByTrack(trackId);
+      expect(rows.map((r) => r.sefariaRef).toList(), ['Moed', 'Zeraim']);
+      expect(rows.map((r) => r.sortOrder).toList(), [0, 1]);
+    });
   });
 
   group('saveMasechtosOrder', () {
@@ -319,6 +428,33 @@ void main() {
         stored.map((r) => r.sefariaRef).toSet(),
         containsAll(['Peah', 'Berakhot']),
       );
+    });
+
+    test('persists masechtos refs via DAO (F2 variant)', () async {
+      final repo = _makeRepo(db, [
+        _seder('Zeraim', sortOrder: 0),
+        _masechta('Zeraim', 'Berakhot', sortOrder: 1),
+        _masechta('Moed', 'Shabbat', sortOrder: 0),
+      ]);
+      final items = [
+        const LearningOrderItem(
+          sefariaRef: 'Shabbat',
+          displayNameHe: 'שבת',
+          displayNameEn: 'Shabbat',
+          userSortOrder: 0,
+        ),
+        const LearningOrderItem(
+          sefariaRef: 'Berakhot',
+          displayNameHe: 'ברכות',
+          displayNameEn: 'Berakhot',
+          userSortOrder: 1,
+        ),
+      ];
+
+      await repo.saveMasechtosOrder(trackId, items);
+
+      final rows = await db.trackLearningOrderDao.getByTrack(trackId);
+      expect(rows.map((r) => r.sefariaRef).toList(), ['Shabbat', 'Berakhot']);
     });
   });
 
@@ -378,6 +514,38 @@ void main() {
         ['Zeraim', 'Moed'],
       );
       expect(result.every((i) => !i.isCustomOrdered), isTrue);
+    });
+
+    test('deletes all custom order rows for the track (F2 variant)', () async {
+      await db.trackLearningOrderDao.upsertOrder(trackId, ['Moed', 'Zeraim']);
+      expect(await db.trackLearningOrderDao.getByTrack(trackId), hasLength(2));
+
+      final repo = _makeRepo(db, []);
+      await repo.resetToDefault(trackId);
+
+      expect(await db.trackLearningOrderDao.getByTrack(trackId), isEmpty);
+    });
+
+    test('does not affect rows for a different track (F2 variant)', () async {
+      final otherTrackId = await db.into(db.curriculumTracks).insert(
+        CurriculumTracksCompanion.insert(
+          profileId: 2,
+          curriculumId: 'bavli',
+          trackType: 'personal',
+          activatedAt: DateTime.utc(2026, 1, 1),
+        ),
+      );
+      await db.trackLearningOrderDao.upsertOrder(trackId, ['Zeraim']);
+      await db.trackLearningOrderDao.upsertOrder(otherTrackId, ['Moed']);
+
+      final repo = _makeRepo(db, []);
+      await repo.resetToDefault(trackId);
+
+      expect(await db.trackLearningOrderDao.getByTrack(trackId), isEmpty);
+      expect(
+        await db.trackLearningOrderDao.getByTrack(otherTrackId),
+        hasLength(1),
+      );
     });
   });
 
