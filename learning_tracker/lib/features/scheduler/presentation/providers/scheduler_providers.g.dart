@@ -650,4 +650,124 @@ final class AllDailyTasksProvider
   }
 }
 
-String _$allDailyTasksHash() => r'007259d7d538e2c726d1fa44a7af6cd07250c9bc';
+String _$allDailyTasksHash() => r'10d567a7750c468340170af16d2d38be549ebdb7';
+
+/// Returns the first [DailyTask] for [trackId] that falls in [category],
+/// or null when the bucket is empty.
+///
+/// Sourced from [allDailyTasksProvider] so it shares the frozen daily snapshot
+/// and benefits from the same skip-filtering logic.
+
+@ProviderFor(firstTaskInTrackForCategory)
+final firstTaskInTrackForCategoryProvider =
+    FirstTaskInTrackForCategoryFamily._();
+
+/// Returns the first [DailyTask] for [trackId] that falls in [category],
+/// or null when the bucket is empty.
+///
+/// Sourced from [allDailyTasksProvider] so it shares the frozen daily snapshot
+/// and benefits from the same skip-filtering logic.
+
+final class FirstTaskInTrackForCategoryProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<DailyTask?>,
+          DailyTask?,
+          FutureOr<DailyTask?>
+        >
+    with $FutureModifier<DailyTask?>, $FutureProvider<DailyTask?> {
+  /// Returns the first [DailyTask] for [trackId] that falls in [category],
+  /// or null when the bucket is empty.
+  ///
+  /// Sourced from [allDailyTasksProvider] so it shares the frozen daily snapshot
+  /// and benefits from the same skip-filtering logic.
+  FirstTaskInTrackForCategoryProvider._({
+    required FirstTaskInTrackForCategoryFamily super.from,
+    required ({int trackId, TrackTaskCategory category}) super.argument,
+  }) : super(
+         retry: null,
+         name: r'firstTaskInTrackForCategoryProvider',
+         isAutoDispose: true,
+         dependencies: null,
+         $allTransitiveDependencies: null,
+       );
+
+  @override
+  String debugGetCreateSourceHash() => _$firstTaskInTrackForCategoryHash();
+
+  @override
+  String toString() {
+    return r'firstTaskInTrackForCategoryProvider'
+        ''
+        '$argument';
+  }
+
+  @$internal
+  @override
+  $FutureProviderElement<DailyTask?> $createElement($ProviderPointer pointer) =>
+      $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<DailyTask?> create(Ref ref) {
+    final argument =
+        this.argument as ({int trackId, TrackTaskCategory category});
+    return firstTaskInTrackForCategory(
+      ref,
+      trackId: argument.trackId,
+      category: argument.category,
+    );
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is FirstTaskInTrackForCategoryProvider &&
+        other.argument == argument;
+  }
+
+  @override
+  int get hashCode {
+    return argument.hashCode;
+  }
+}
+
+String _$firstTaskInTrackForCategoryHash() =>
+    r'5856c50987d26eb5b53c4424976c9bb59854db33';
+
+/// Returns the first [DailyTask] for [trackId] that falls in [category],
+/// or null when the bucket is empty.
+///
+/// Sourced from [allDailyTasksProvider] so it shares the frozen daily snapshot
+/// and benefits from the same skip-filtering logic.
+
+final class FirstTaskInTrackForCategoryFamily extends $Family
+    with
+        $FunctionalFamilyOverride<
+          FutureOr<DailyTask?>,
+          ({int trackId, TrackTaskCategory category})
+        > {
+  FirstTaskInTrackForCategoryFamily._()
+    : super(
+        retry: null,
+        name: r'firstTaskInTrackForCategoryProvider',
+        dependencies: null,
+        $allTransitiveDependencies: null,
+        isAutoDispose: true,
+      );
+
+  /// Returns the first [DailyTask] for [trackId] that falls in [category],
+  /// or null when the bucket is empty.
+  ///
+  /// Sourced from [allDailyTasksProvider] so it shares the frozen daily snapshot
+  /// and benefits from the same skip-filtering logic.
+
+  FirstTaskInTrackForCategoryProvider call({
+    required int trackId,
+    required TrackTaskCategory category,
+  }) => FirstTaskInTrackForCategoryProvider._(
+    argument: (trackId: trackId, category: category),
+    from: this,
+  );
+
+  @override
+  String toString() => r'firstTaskInTrackForCategoryProvider';
+}

@@ -357,32 +357,32 @@ abstract class _$RewardNotificationEnabled extends $Notifier<bool> {
 /// Sacred Time is active. Backed by [currentSacredWindowProvider] —
 /// notifications follow the same window the lock screen does.
 
-@ProviderFor(isShabbosQuietActive)
-final isShabbosQuietActiveProvider = IsShabbosQuietActiveProvider._();
+@ProviderFor(isSacredTimeActive)
+final isSacredTimeActiveProvider = IsSacredTimeActiveProvider._();
 
 /// Returns true if notifications should currently be suppressed because
 /// Sacred Time is active. Backed by [currentSacredWindowProvider] —
 /// notifications follow the same window the lock screen does.
 
-final class IsShabbosQuietActiveProvider
+final class IsSacredTimeActiveProvider
     extends $FunctionalProvider<bool, bool, bool>
     with $Provider<bool> {
   /// Returns true if notifications should currently be suppressed because
   /// Sacred Time is active. Backed by [currentSacredWindowProvider] —
   /// notifications follow the same window the lock screen does.
-  IsShabbosQuietActiveProvider._()
+  IsSacredTimeActiveProvider._()
     : super(
         from: null,
         argument: null,
         retry: null,
-        name: r'isShabbosQuietActiveProvider',
+        name: r'isSacredTimeActiveProvider',
         isAutoDispose: true,
         dependencies: null,
         $allTransitiveDependencies: null,
       );
 
   @override
-  String debugGetCreateSourceHash() => _$isShabbosQuietActiveHash();
+  String debugGetCreateSourceHash() => _$isSacredTimeActiveHash();
 
   @$internal
   @override
@@ -391,7 +391,7 @@ final class IsShabbosQuietActiveProvider
 
   @override
   bool create(Ref ref) {
-    return isShabbosQuietActive(ref);
+    return isSacredTimeActive(ref);
   }
 
   /// {@macro riverpod.override_with_value}
@@ -403,8 +403,73 @@ final class IsShabbosQuietActiveProvider
   }
 }
 
-String _$isShabbosQuietActiveHash() =>
-    r'c0ff93c843be96474b547761aaf28f2350dffdc2';
+String _$isSacredTimeActiveHash() =>
+    r'd1c02e4f2f10995baf550dbfde9fbfd589492dc6';
+
+/// Provides the [SacredWindowRepository] singleton.
+///
+/// Kept alive so the in-memory cache survives across provider rebuilds.
+/// [TimezoneLifecycleObserver] calls [SacredWindowRepository.invalidate]
+/// on resume (DNI-367).
+
+@ProviderFor(sacredWindowRepository)
+final sacredWindowRepositoryProvider = SacredWindowRepositoryProvider._();
+
+/// Provides the [SacredWindowRepository] singleton.
+///
+/// Kept alive so the in-memory cache survives across provider rebuilds.
+/// [TimezoneLifecycleObserver] calls [SacredWindowRepository.invalidate]
+/// on resume (DNI-367).
+
+final class SacredWindowRepositoryProvider
+    extends
+        $FunctionalProvider<
+          SacredWindowRepository,
+          SacredWindowRepository,
+          SacredWindowRepository
+        >
+    with $Provider<SacredWindowRepository> {
+  /// Provides the [SacredWindowRepository] singleton.
+  ///
+  /// Kept alive so the in-memory cache survives across provider rebuilds.
+  /// [TimezoneLifecycleObserver] calls [SacredWindowRepository.invalidate]
+  /// on resume (DNI-367).
+  SacredWindowRepositoryProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'sacredWindowRepositoryProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$sacredWindowRepositoryHash();
+
+  @$internal
+  @override
+  $ProviderElement<SacredWindowRepository> $createElement(
+    $ProviderPointer pointer,
+  ) => $ProviderElement(pointer);
+
+  @override
+  SacredWindowRepository create(Ref ref) {
+    return sacredWindowRepository(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(SacredWindowRepository value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<SacredWindowRepository>(value),
+    );
+  }
+}
+
+String _$sacredWindowRepositoryHash() =>
+    r'352f72aa0a86150457c461db1bea1a2ad7b69a86';
 
 /// Provides the [NotificationScheduler] instance.
 
@@ -457,12 +522,17 @@ final class NotificationSchedulerProvider
 }
 
 String _$notificationSchedulerHash() =>
-    r'c7c31ebd396145bcec7513ef79d2c12cce5c22a3';
+    r'03597a17d9f0f098a5e5e09a941b7b808db154bb';
 
 /// Watches reminder settings and daily tasks, then schedules or cancels
 /// the notification accordingly.
 ///
-/// Also respects Shabbos quiet mode — cancels notifications during Shabbos.
+/// DNI-367 (Story 26.24): now schedules a rolling 14-day batch of pre-filtered
+/// one-shots instead of a repeating notification. Sacred Time windows are
+/// checked per-fire-time by [NotificationScheduler.scheduleReminder].
+///
+/// Also respects Shabbos quiet mode — cancels all notifications when Sacred
+/// Time is currently active (the live lock-screen guard).
 ///
 /// Kept alive so that time/enable changes always trigger a reschedule,
 /// even if no UI is watching this provider at the moment.
@@ -473,7 +543,12 @@ final reminderSyncEffectProvider = ReminderSyncEffectProvider._();
 /// Watches reminder settings and daily tasks, then schedules or cancels
 /// the notification accordingly.
 ///
-/// Also respects Shabbos quiet mode — cancels notifications during Shabbos.
+/// DNI-367 (Story 26.24): now schedules a rolling 14-day batch of pre-filtered
+/// one-shots instead of a repeating notification. Sacred Time windows are
+/// checked per-fire-time by [NotificationScheduler.scheduleReminder].
+///
+/// Also respects Shabbos quiet mode — cancels all notifications when Sacred
+/// Time is currently active (the live lock-screen guard).
 ///
 /// Kept alive so that time/enable changes always trigger a reschedule,
 /// even if no UI is watching this provider at the moment.
@@ -484,7 +559,12 @@ final class ReminderSyncEffectProvider
   /// Watches reminder settings and daily tasks, then schedules or cancels
   /// the notification accordingly.
   ///
-  /// Also respects Shabbos quiet mode — cancels notifications during Shabbos.
+  /// DNI-367 (Story 26.24): now schedules a rolling 14-day batch of pre-filtered
+  /// one-shots instead of a repeating notification. Sacred Time windows are
+  /// checked per-fire-time by [NotificationScheduler.scheduleReminder].
+  ///
+  /// Also respects Shabbos quiet mode — cancels all notifications when Sacred
+  /// Time is currently active (the live lock-screen guard).
   ///
   /// Kept alive so that time/enable changes always trigger a reschedule,
   /// even if no UI is watching this provider at the moment.
@@ -514,7 +594,7 @@ final class ReminderSyncEffectProvider
 }
 
 String _$reminderSyncEffectHash() =>
-    r'91dd352771341ee2f05e6bdb4f2a6dfd39c25203';
+    r'5f0f609acad2a00aa45b11fd6fc88abb95c398a6';
 
 /// Provides the [StreakAlertService] instance.
 
@@ -567,12 +647,12 @@ final class StreakAlertServiceProvider
 }
 
 String _$streakAlertServiceHash() =>
-    r'69100ba731ee440aa6962da5a87dbbe4f59604d6';
+    r'095dcecb6259740ab0957146fc6abde80d0f8d7a';
 
 /// Watches streak alert settings and evaluates whether to schedule or cancel
 /// the streak protection alert.
 ///
-/// Also respects Shabbos quiet mode — cancels alerts during Shabbos.
+/// Also respects sacred time mode — cancels alerts during Shabbos.
 ///
 /// Kept alive so that time/enable changes always trigger a reschedule,
 /// even if no UI is watching this provider at the moment.
@@ -583,7 +663,7 @@ final streakAlertSyncEffectProvider = StreakAlertSyncEffectProvider._();
 /// Watches streak alert settings and evaluates whether to schedule or cancel
 /// the streak protection alert.
 ///
-/// Also respects Shabbos quiet mode — cancels alerts during Shabbos.
+/// Also respects sacred time mode — cancels alerts during Shabbos.
 ///
 /// Kept alive so that time/enable changes always trigger a reschedule,
 /// even if no UI is watching this provider at the moment.
@@ -594,7 +674,7 @@ final class StreakAlertSyncEffectProvider
   /// Watches streak alert settings and evaluates whether to schedule or cancel
   /// the streak protection alert.
   ///
-  /// Also respects Shabbos quiet mode — cancels alerts during Shabbos.
+  /// Also respects sacred time mode — cancels alerts during Shabbos.
   ///
   /// Kept alive so that time/enable changes always trigger a reschedule,
   /// even if no UI is watching this provider at the moment.
@@ -624,4 +704,4 @@ final class StreakAlertSyncEffectProvider
 }
 
 String _$streakAlertSyncEffectHash() =>
-    r'73fd730261dd54dcb5a9f6455b6e4792458ad7ad';
+    r'7f4c477313f8129fe6b49a64be24a2d336a76030';

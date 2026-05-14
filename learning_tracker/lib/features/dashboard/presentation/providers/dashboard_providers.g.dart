@@ -369,7 +369,7 @@ final class DashboardCompletionPercentageProvider
 }
 
 String _$dashboardCompletionPercentageHash() =>
-    r'6efa6cddbea645766b524e1d84d9cbfb5e710297';
+    r'88fd9fc1e24e52eec08e6003a1c5540efdeccf94';
 
 /// Per-curriculum completion percentage, scoped to active profile.
 ///
@@ -464,7 +464,7 @@ final class DashboardLastCompletionProvider
 }
 
 String _$dashboardLastCompletionHash() =>
-    r'7c1b1bd065a319bc338ed8ac893e903faf55acaa';
+    r'd82f958f1ed1485d553b61f7aa929c5832255004';
 
 /// Per-curriculum last completion timestamp, scoped to active profile.
 
@@ -547,7 +547,7 @@ final class DashboardStreakProvider
   }
 }
 
-String _$dashboardStreakHash() => r'0370557f7b040536a349a20b951070cb1fefa7f1';
+String _$dashboardStreakHash() => r'5d30985d5cf41fcbb11c1001e57e240a3804c3a2';
 
 /// Global points total, scoped to active profile.
 ///
@@ -595,7 +595,7 @@ final class DashboardGlobalPointsProvider
 }
 
 String _$dashboardGlobalPointsHash() =>
-    r'c43526771961c0076acd51f60182f620a839860a';
+    r'936c0e8d7b3adac83f55c2b6debf265fef08768f';
 
 /// Next reward milestone for the child dashboard (closest threshold not yet met).
 
@@ -642,7 +642,7 @@ final class DashboardChildNextRewardProvider
 }
 
 String _$dashboardChildNextRewardHash() =>
-    r'9a9255d440416abf6ba46de2bf3f3a2ffd7109fa';
+    r'be7471959903a2497d61a012336d25f258395a4f';
 
 /// Streak recovery info — whether the streak was just saved by grace period.
 
@@ -761,7 +761,7 @@ final class DashboardPaceStatusProvider
 }
 
 String _$dashboardPaceStatusHash() =>
-    r'807eb9cacf3233fae7f8bae20a19ec6ed8a6ed7b';
+    r'85c63b585f4f6d9678b64f02af058bfc6566ccdd';
 
 /// Per-curriculum pace status for the dashboard.
 ///

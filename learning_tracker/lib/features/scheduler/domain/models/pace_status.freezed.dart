@@ -19,7 +19,12 @@ mixin _$PaceStatus {
 /// For pace goals: weekly item surplus (+) or deficit (−), i.e.
 /// `((rollingAverage − targetPacePerDay) * 7).round()`.
 /// Zero when on-pace.
- int get daysDelta;/// Projected completion date based on rolling 7-day average.
+/// Kept for backward compatibility — prefer [delta] for new code.
+ int get daysDelta;/// Typed delta — use this in UI code to avoid mixing calendar days
+/// with items/week. See [ScheduleDelta] for the two sub-types:
+/// [DateScheduleDelta] (deadline goals) and [PaceScheduleDelta]
+/// (pace-rate goals).
+ ScheduleDelta get delta;/// Projected completion date based on rolling 7-day average.
 /// Null if no completions in the last 7 days (cannot project).
  DateTime? get projectedCompletionDate;/// Rolling 7-day average of daily completions.
  double get rollingAverage;
@@ -33,16 +38,16 @@ $PaceStatusCopyWith<PaceStatus> get copyWith => _$PaceStatusCopyWithImpl<PaceSta
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is PaceStatus&&(identical(other.status, status) || other.status == status)&&(identical(other.daysDelta, daysDelta) || other.daysDelta == daysDelta)&&(identical(other.projectedCompletionDate, projectedCompletionDate) || other.projectedCompletionDate == projectedCompletionDate)&&(identical(other.rollingAverage, rollingAverage) || other.rollingAverage == rollingAverage));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is PaceStatus&&(identical(other.status, status) || other.status == status)&&(identical(other.daysDelta, daysDelta) || other.daysDelta == daysDelta)&&(identical(other.delta, delta) || other.delta == delta)&&(identical(other.projectedCompletionDate, projectedCompletionDate) || other.projectedCompletionDate == projectedCompletionDate)&&(identical(other.rollingAverage, rollingAverage) || other.rollingAverage == rollingAverage));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,status,daysDelta,projectedCompletionDate,rollingAverage);
+int get hashCode => Object.hash(runtimeType,status,daysDelta,delta,projectedCompletionDate,rollingAverage);
 
 @override
 String toString() {
-  return 'PaceStatus(status: $status, daysDelta: $daysDelta, projectedCompletionDate: $projectedCompletionDate, rollingAverage: $rollingAverage)';
+  return 'PaceStatus(status: $status, daysDelta: $daysDelta, delta: $delta, projectedCompletionDate: $projectedCompletionDate, rollingAverage: $rollingAverage)';
 }
 
 
@@ -53,7 +58,7 @@ abstract mixin class $PaceStatusCopyWith<$Res>  {
   factory $PaceStatusCopyWith(PaceStatus value, $Res Function(PaceStatus) _then) = _$PaceStatusCopyWithImpl;
 @useResult
 $Res call({
- PaceStatusType status, int daysDelta, DateTime? projectedCompletionDate, double rollingAverage
+ PaceStatusType status, int daysDelta, ScheduleDelta delta, DateTime? projectedCompletionDate, double rollingAverage
 });
 
 
@@ -70,11 +75,12 @@ class _$PaceStatusCopyWithImpl<$Res>
 
 /// Create a copy of PaceStatus
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? status = null,Object? daysDelta = null,Object? projectedCompletionDate = freezed,Object? rollingAverage = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? status = null,Object? daysDelta = null,Object? delta = null,Object? projectedCompletionDate = freezed,Object? rollingAverage = null,}) {
   return _then(_self.copyWith(
 status: null == status ? _self.status : status // ignore: cast_nullable_to_non_nullable
 as PaceStatusType,daysDelta: null == daysDelta ? _self.daysDelta : daysDelta // ignore: cast_nullable_to_non_nullable
-as int,projectedCompletionDate: freezed == projectedCompletionDate ? _self.projectedCompletionDate : projectedCompletionDate // ignore: cast_nullable_to_non_nullable
+as int,delta: null == delta ? _self.delta : delta // ignore: cast_nullable_to_non_nullable
+as ScheduleDelta,projectedCompletionDate: freezed == projectedCompletionDate ? _self.projectedCompletionDate : projectedCompletionDate // ignore: cast_nullable_to_non_nullable
 as DateTime?,rollingAverage: null == rollingAverage ? _self.rollingAverage : rollingAverage // ignore: cast_nullable_to_non_nullable
 as double,
   ));
@@ -161,10 +167,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( PaceStatusType status,  int daysDelta,  DateTime? projectedCompletionDate,  double rollingAverage)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( PaceStatusType status,  int daysDelta,  ScheduleDelta delta,  DateTime? projectedCompletionDate,  double rollingAverage)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _PaceStatus() when $default != null:
-return $default(_that.status,_that.daysDelta,_that.projectedCompletionDate,_that.rollingAverage);case _:
+return $default(_that.status,_that.daysDelta,_that.delta,_that.projectedCompletionDate,_that.rollingAverage);case _:
   return orElse();
 
 }
@@ -182,10 +188,10 @@ return $default(_that.status,_that.daysDelta,_that.projectedCompletionDate,_that
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( PaceStatusType status,  int daysDelta,  DateTime? projectedCompletionDate,  double rollingAverage)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( PaceStatusType status,  int daysDelta,  ScheduleDelta delta,  DateTime? projectedCompletionDate,  double rollingAverage)  $default,) {final _that = this;
 switch (_that) {
 case _PaceStatus():
-return $default(_that.status,_that.daysDelta,_that.projectedCompletionDate,_that.rollingAverage);case _:
+return $default(_that.status,_that.daysDelta,_that.delta,_that.projectedCompletionDate,_that.rollingAverage);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -202,10 +208,10 @@ return $default(_that.status,_that.daysDelta,_that.projectedCompletionDate,_that
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( PaceStatusType status,  int daysDelta,  DateTime? projectedCompletionDate,  double rollingAverage)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( PaceStatusType status,  int daysDelta,  ScheduleDelta delta,  DateTime? projectedCompletionDate,  double rollingAverage)?  $default,) {final _that = this;
 switch (_that) {
 case _PaceStatus() when $default != null:
-return $default(_that.status,_that.daysDelta,_that.projectedCompletionDate,_that.rollingAverage);case _:
+return $default(_that.status,_that.daysDelta,_that.delta,_that.projectedCompletionDate,_that.rollingAverage);case _:
   return null;
 
 }
@@ -217,7 +223,7 @@ return $default(_that.status,_that.daysDelta,_that.projectedCompletionDate,_that
 
 
 class _PaceStatus implements PaceStatus {
-  const _PaceStatus({required this.status, required this.daysDelta, this.projectedCompletionDate, required this.rollingAverage});
+  const _PaceStatus({required this.status, required this.daysDelta, required this.delta, this.projectedCompletionDate, required this.rollingAverage});
   
 
 /// Whether the user is ahead, on-pace, or behind.
@@ -226,7 +232,13 @@ class _PaceStatus implements PaceStatus {
 /// For pace goals: weekly item surplus (+) or deficit (−), i.e.
 /// `((rollingAverage − targetPacePerDay) * 7).round()`.
 /// Zero when on-pace.
+/// Kept for backward compatibility — prefer [delta] for new code.
 @override final  int daysDelta;
+/// Typed delta — use this in UI code to avoid mixing calendar days
+/// with items/week. See [ScheduleDelta] for the two sub-types:
+/// [DateScheduleDelta] (deadline goals) and [PaceScheduleDelta]
+/// (pace-rate goals).
+@override final  ScheduleDelta delta;
 /// Projected completion date based on rolling 7-day average.
 /// Null if no completions in the last 7 days (cannot project).
 @override final  DateTime? projectedCompletionDate;
@@ -243,16 +255,16 @@ _$PaceStatusCopyWith<_PaceStatus> get copyWith => __$PaceStatusCopyWithImpl<_Pac
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _PaceStatus&&(identical(other.status, status) || other.status == status)&&(identical(other.daysDelta, daysDelta) || other.daysDelta == daysDelta)&&(identical(other.projectedCompletionDate, projectedCompletionDate) || other.projectedCompletionDate == projectedCompletionDate)&&(identical(other.rollingAverage, rollingAverage) || other.rollingAverage == rollingAverage));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _PaceStatus&&(identical(other.status, status) || other.status == status)&&(identical(other.daysDelta, daysDelta) || other.daysDelta == daysDelta)&&(identical(other.delta, delta) || other.delta == delta)&&(identical(other.projectedCompletionDate, projectedCompletionDate) || other.projectedCompletionDate == projectedCompletionDate)&&(identical(other.rollingAverage, rollingAverage) || other.rollingAverage == rollingAverage));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,status,daysDelta,projectedCompletionDate,rollingAverage);
+int get hashCode => Object.hash(runtimeType,status,daysDelta,delta,projectedCompletionDate,rollingAverage);
 
 @override
 String toString() {
-  return 'PaceStatus(status: $status, daysDelta: $daysDelta, projectedCompletionDate: $projectedCompletionDate, rollingAverage: $rollingAverage)';
+  return 'PaceStatus(status: $status, daysDelta: $daysDelta, delta: $delta, projectedCompletionDate: $projectedCompletionDate, rollingAverage: $rollingAverage)';
 }
 
 
@@ -263,7 +275,7 @@ abstract mixin class _$PaceStatusCopyWith<$Res> implements $PaceStatusCopyWith<$
   factory _$PaceStatusCopyWith(_PaceStatus value, $Res Function(_PaceStatus) _then) = __$PaceStatusCopyWithImpl;
 @override @useResult
 $Res call({
- PaceStatusType status, int daysDelta, DateTime? projectedCompletionDate, double rollingAverage
+ PaceStatusType status, int daysDelta, ScheduleDelta delta, DateTime? projectedCompletionDate, double rollingAverage
 });
 
 
@@ -280,11 +292,12 @@ class __$PaceStatusCopyWithImpl<$Res>
 
 /// Create a copy of PaceStatus
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? status = null,Object? daysDelta = null,Object? projectedCompletionDate = freezed,Object? rollingAverage = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? status = null,Object? daysDelta = null,Object? delta = null,Object? projectedCompletionDate = freezed,Object? rollingAverage = null,}) {
   return _then(_PaceStatus(
 status: null == status ? _self.status : status // ignore: cast_nullable_to_non_nullable
 as PaceStatusType,daysDelta: null == daysDelta ? _self.daysDelta : daysDelta // ignore: cast_nullable_to_non_nullable
-as int,projectedCompletionDate: freezed == projectedCompletionDate ? _self.projectedCompletionDate : projectedCompletionDate // ignore: cast_nullable_to_non_nullable
+as int,delta: null == delta ? _self.delta : delta // ignore: cast_nullable_to_non_nullable
+as ScheduleDelta,projectedCompletionDate: freezed == projectedCompletionDate ? _self.projectedCompletionDate : projectedCompletionDate // ignore: cast_nullable_to_non_nullable
 as DateTime?,rollingAverage: null == rollingAverage ? _self.rollingAverage : rollingAverage // ignore: cast_nullable_to_non_nullable
 as double,
   ));
