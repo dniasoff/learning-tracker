@@ -875,7 +875,7 @@
       "count": { "type": "int" }
     }
   },
-  "tasksDueToday": "{count, plural, one{משימה אחת להיום} other{{count} משימות להיום}}",
+  "tasksDueToday": "{count, plural, =1{משימה אחת היום} other{{count} משימות היום}}",
   "@tasksDueToday": {
     "placeholders": {
       "count": { "type": "int" }

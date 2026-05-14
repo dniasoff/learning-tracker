@@ -3368,7 +3368,7 @@ abstract class AppLocalizations {
   /// No description provided for @tasksDueToday.
   ///
   /// In en, this message translates to:
-  /// **'{count, plural, one{1 task due today} other{{count} tasks due today}}'**
+  /// **'{count, plural, =1{1 task today} other{{count} tasks today}}'**
   String tasksDueToday(int count);
 
   /// No description provided for @tapToStartLearning.

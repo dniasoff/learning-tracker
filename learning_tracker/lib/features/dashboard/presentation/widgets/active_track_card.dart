@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/constants/hebrew_terms.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/labels/curriculum_label_providers.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
@@ -44,9 +43,7 @@ class ActiveTrackCard extends ConsumerWidget {
     final l10n = AppLocalizations.of(context)!;
     final curriculum = _curriculumIdForTrack(track);
     final useHebrew = ref.watch(useHebrewTermsProvider);
-    final displayNamePrimary =
-        '${_trackTypeLabelText(ref, track.trackType)} · '
-        '${curriculumLabelText(ref, curriculum: curriculum)}';
+    final displayNamePrimary = curriculumLabelText(ref, curriculum: curriculum);
     final displayNameSecondary = useHebrew
         ? null
         : curriculumHebrewName(curriculum);
@@ -269,16 +266,5 @@ class ActiveTrackCard extends ConsumerWidget {
         ),
       ),
     );
-  }
-}
-
-String _trackTypeLabelText(WidgetRef ref, String trackTypeStorageKey) {
-  try {
-    return trackTypeLabelText(
-      ref,
-      trackType: TrackType.fromStorageKey(trackTypeStorageKey),
-    );
-  } on Object {
-    return trackTypeStorageKey;
   }
 }

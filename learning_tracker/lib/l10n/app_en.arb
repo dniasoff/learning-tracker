@@ -875,7 +875,7 @@
       "count": { "type": "int" }
     }
   },
-  "tasksDueToday": "{count, plural, one{1 task due today} other{{count} tasks due today}}",
+  "tasksDueToday": "{count, plural, =1{1 task today} other{{count} tasks today}}",
   "@tasksDueToday": {
     "placeholders": {
       "count": { "type": "int" }
