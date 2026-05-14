@@ -100,8 +100,10 @@ final dashboardModelProvider = Provider.autoDispose<AsyncValue<DashboardModel>>(
       lifetimeTotalsAcrossAllCurriculaProvider(profileId),
     );
 
-    // Propagate loading from critical leaf providers.
-    if (activeTracksAsync is AsyncLoading || dailyTasksAsync is AsyncLoading) {
+    // Propagate loading only on true initial load (no cached value yet).
+    // During a reload with a cached previous value, keep the stale data visible
+    // to avoid a flicker to an empty / "all caught up" state.
+    if (!activeTracksAsync.hasValue || !dailyTasksAsync.hasValue) {
       return const AsyncValue.loading();
     }
 
