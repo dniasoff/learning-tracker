@@ -212,6 +212,31 @@ Future<void> showDeleteAccountFlow(
         ) ??
         false;
   } else if (hasGoogle) {
+    // Show an explanation before invoking Google Sign-In so the user
+    // understands WHY they are being redirected to Google.
+    final proceed = await showDialog<bool>(
+      context: context,
+      barrierColor: Colors.black.withValues(alpha: 0.46),
+      builder: (ctx) {
+        final l10n = AppLocalizations.of(ctx)!;
+        return AlertDialog(
+          title: Text(l10n.reauthGoogleTitle),
+          content: Text(l10n.reauthGoogleBody),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: Text(l10n.actionCancel),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: Text(l10n.reauthGoogleContinue),
+            ),
+          ],
+        );
+      },
+    );
+    if (proceed != true || !context.mounted) return;
+
     try {
       await service.reauthenticateWithGoogle();
       reauthenticated = true;
