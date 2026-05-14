@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
@@ -224,36 +223,38 @@ class _TrackManagementBodyState extends ConsumerState<TrackManagementBody> {
     final curriculum = CurriculumId.values
         .where((c) => c.storageKey == track.curriculumId)
         .firstOrNull;
-    final name = curriculum != null
-        ? curriculumLabelText(ref, curriculum: curriculum)
-        : track.curriculumId;
 
     final l10n = AppLocalizations.of(context)!;
 
-    final confirmed = await showDialog<bool>(
+    // 'archive' = keep history; 'wipe' = hard-delete completions; null = cancel
+    final choice = await showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text(AppLocalizations.of(context)!.trackDeleteTitle),
-        content: Text(AppLocalizations.of(context)!.trackDeleteContent(name)),
+        title: Text(l10n.deleteTrackArchiveTitle),
+        content: Text(l10n.deleteTrackArchiveBody),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: Text(AppLocalizations.of(context)!.actionCancel),
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(l10n.actionCancel),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, 'archive'),
+            child: Text(l10n.deleteTrackArchive),
           ),
           FilledButton(
             style: FilledButton.styleFrom(
               backgroundColor: Theme.of(ctx).colorScheme.error,
             ),
-            onPressed: () => Navigator.pop(ctx, true),
-            child: Text(AppLocalizations.of(context)!.actionDelete),
+            onPressed: () => Navigator.pop(ctx, 'wipe'),
+            child: Text(l10n.deleteTrackWipe),
           ),
         ],
       ),
     );
 
-    if (!(confirmed ?? false) || !mounted) return;
+    if (choice == null || !mounted) return;
 
-    if (curriculum != null) {
+    if (curriculum != null && choice == 'archive') {
       try {
         await ref
             .read(curriculumActivationServiceProvider)
@@ -264,11 +265,12 @@ class _TrackManagementBodyState extends ConsumerState<TrackManagementBody> {
         _showLastCurriculumError(l10n);
       }
     } else {
-      // Unknown curriculum — fall back to direct track deletion.
-      await ref
-          .read(userDatabaseProvider)
-          .trackDao
-          .deleteTrackAndData(track.id);
+      final dao = ref.read(userDatabaseProvider).trackDao;
+      if (choice == 'wipe') {
+        await dao.purgeHistory(track.id);
+      } else {
+        await dao.deleteTrackAndData(track.id);
+      }
       await onTrackChanged(ref, track.profileId);
     }
   }

@@ -1208,7 +1208,7 @@ abstract class AppLocalizations {
   /// No description provided for @statUnitsDone.
   ///
   /// In en, this message translates to:
-  /// **'UNITS DONE'**
+  /// **'TASKS DONE'**
   String get statUnitsDone;
 
   /// No description provided for @statDayStreak.
@@ -4384,6 +4384,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Permanently delete \"{name}\"? All progress and data for this track will be removed. This cannot be undone.'**
   String trackDeleteContent(String name);
+
+  /// No description provided for @deleteTrackArchiveTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete Track'**
+  String get deleteTrackArchiveTitle;
+
+  /// No description provided for @deleteTrackArchiveBody.
+  ///
+  /// In en, this message translates to:
+  /// **'What should happen to your completion history?'**
+  String get deleteTrackArchiveBody;
+
+  /// No description provided for @deleteTrackArchive.
+  ///
+  /// In en, this message translates to:
+  /// **'Archive (keep history)'**
+  String get deleteTrackArchive;
+
+  /// No description provided for @deleteTrackWipe.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete and wipe history'**
+  String get deleteTrackWipe;
 
   /// No description provided for @notificationReminderTitle.
   ///

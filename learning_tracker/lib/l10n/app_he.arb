@@ -320,7 +320,7 @@
   "progressNoDataTitle": "עדיין אין התקדמות",
   "progressNoDataSubtitle": "התחילו ללמוד כדי לראות את ההתקדמות כאן.",
   "statCompletions": "השלמות",
-  "statUnitsDone": "יחידות",
+  "statUnitsDone": "משימות",
   "statDayStreak": "רצף ימים",
   "statActiveTracks": "מסלולים פעילים",
   "progressChartsTile": "גרפי התקדמות",
@@ -340,7 +340,7 @@
   "lifetimeStartAdding": "התחל להוסיף",
   "lifetimeBrowseFullLibrary": "עיון בספרייה המלאה",
   "lifetimeHowItWorksStep1": "בחרו קטגוריה מרשת הקטגוריות כדי לראות את כל המסלולים.",
-  "lifetimeHowItWorksStep2": "סמנו יחידות שסיימתם כדי לעדכן את מפת ההתקדמות לכל החיים.",
+  "lifetimeHowItWorksStep2": "סמנו משימות שסיימתם כדי לעדכן את מפת ההתקדמות לכל החיים.",
   "lifetimeHowItWorksStep3": "קבלו תגי אבן דרך מיוחדים על השלמת ספרים או מסכתות שלמות.",
   "lifetimeNotStarted": "טרם התחיל",
   "lifetimeAddHeaderTitle": "הוסיפו מה שלמדתם",
@@ -1206,6 +1206,10 @@
       "name": { "type": "String" }
     }
   },
+  "deleteTrackArchiveTitle": "מחיקת מסלול",
+  "deleteTrackArchiveBody": "מה לעשות עם היסטוריית ההשלמות שלך?",
+  "deleteTrackArchive": "ארכיון (שמור היסטוריה)",
+  "deleteTrackWipe": "מחק ומחה היסטוריה",
   "notificationReminderTitle": "תזכורת לימוד",
   "notificationReminderBody": "{taskCount,plural, =0{אין משימות להיום — שמרו על הרצף!} =1{יש לכם משימה אחת ב{curriculumCount,plural, =1{תוכנית לימוד אחת} other{{curriculumCount} תוכניות לימוד}} היום} other{יש לכם {taskCount} משימות ב{curriculumCount,plural, =1{תוכנית לימוד אחת} other{{curriculumCount} תוכניות לימוד}} היום}}",
   "@notificationReminderBody": {

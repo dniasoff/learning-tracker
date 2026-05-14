@@ -320,7 +320,7 @@
   "progressNoDataTitle": "No progress yet",
   "progressNoDataSubtitle": "Start learning to see your progress here.",
   "statCompletions": "COMPLETIONS",
-  "statUnitsDone": "UNITS DONE",
+  "statUnitsDone": "TASKS DONE",
   "statDayStreak": "DAY STREAK",
   "statActiveTracks": "ACTIVE TRACKS",
   "progressChartsTile": "Progress Charts",
@@ -340,7 +340,7 @@
   "lifetimeStartAdding": "Start Adding",
   "lifetimeBrowseFullLibrary": "Browse Full Library",
   "lifetimeHowItWorksStep1": "Select a category from the library grid to see all available tracks.",
-  "lifetimeHowItWorksStep2": "Toggle units you've finished to update your lifetime progress map.",
+  "lifetimeHowItWorksStep2": "Toggle tasks you've finished to update your lifetime progress map.",
   "lifetimeHowItWorksStep3": "Earn special milestone badges for completing whole volumes or tractates.",
   "lifetimeNotStarted": "Not started",
   "lifetimeAddHeaderTitle": "Add what you've learned",
@@ -1206,6 +1206,10 @@
       "name": { "type": "String" }
     }
   },
+  "deleteTrackArchiveTitle": "Delete Track",
+  "deleteTrackArchiveBody": "What should happen to your completion history?",
+  "deleteTrackArchive": "Archive (keep history)",
+  "deleteTrackWipe": "Delete and wipe history",
   "notificationReminderTitle": "Learning Reminder",
   "notificationReminderBody": "{taskCount,plural, =0{No tasks today — stay on track!} =1{You have 1 task across {curriculumCount,plural, =1{1 curriculum} other{{curriculumCount} curricula}} today} other{You have {taskCount} tasks across {curriculumCount,plural, =1{1 curriculum} other{{curriculumCount} curricula}} today}}",
   "@notificationReminderBody": {

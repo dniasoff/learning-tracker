@@ -628,7 +628,7 @@ class AppLocalizationsHe extends AppLocalizations {
   String get statCompletions => 'השלמות';
 
   @override
-  String get statUnitsDone => 'יחידות';
+  String get statUnitsDone => 'משימות';
 
   @override
   String get statDayStreak => 'רצף ימים';
@@ -2413,6 +2413,18 @@ class AppLocalizationsHe extends AppLocalizations {
   String trackDeleteContent(String name) {
     return 'למחוק לצמיתות את \"$name\"? כל ההתקדמות והנתונים של מסלול זה יוסרו. לא ניתן לבטל פעולה זו.';
   }
+
+  @override
+  String get deleteTrackArchiveTitle => 'מחיקת מסלול';
+
+  @override
+  String get deleteTrackArchiveBody => 'מה לעשות עם היסטוריית ההשלמות שלך?';
+
+  @override
+  String get deleteTrackArchive => 'ארכיון (שמור היסטוריה)';
+
+  @override
+  String get deleteTrackWipe => 'מחק ומחה היסטוריה';
 
   @override
   String get notificationReminderTitle => 'תזכורת לימוד';

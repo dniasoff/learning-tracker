@@ -633,7 +633,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get statCompletions => 'COMPLETIONS';
 
   @override
-  String get statUnitsDone => 'UNITS DONE';
+  String get statUnitsDone => 'TASKS DONE';
 
   @override
   String get statDayStreak => 'DAY STREAK';
@@ -2439,6 +2439,18 @@ class AppLocalizationsEn extends AppLocalizations {
   String trackDeleteContent(String name) {
     return 'Permanently delete \"$name\"? All progress and data for this track will be removed. This cannot be undone.';
   }
+
+  @override
+  String get deleteTrackArchiveTitle => 'Delete Track';
+
+  @override
+  String get deleteTrackArchiveBody => 'What should happen to your completion history?';
+
+  @override
+  String get deleteTrackArchive => 'Archive (keep history)';
+
+  @override
+  String get deleteTrackWipe => 'Delete and wipe history';
 
   @override
   String get notificationReminderTitle => 'Learning Reminder';

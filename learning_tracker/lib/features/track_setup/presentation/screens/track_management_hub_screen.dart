@@ -2,8 +2,6 @@ import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
-import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
@@ -13,6 +11,7 @@ import 'package:learning_tracker/features/track_setup/presentation/providers/aft
 import 'package:learning_tracker/features/track_setup/presentation/providers/track_management_providers.dart';
 import 'package:learning_tracker/features/track_setup/presentation/screens/add_track_flow_screen.dart';
 import 'package:learning_tracker/features/track_setup/presentation/widgets/learning_track_card.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// Central hub for viewing and managing tracks.
 @RoutePage()
@@ -201,43 +200,42 @@ class _TrackManagementHubScreenState
   }
 
   Future<void> _showDeleteDialog(CurriculumTrack track) async {
-    final curriculum = CurriculumId.values
-        .where((c) => c.storageKey == track.curriculumId)
-        .firstOrNull;
-    final name = curriculum != null
-        ? curriculumLabelText(ref, curriculum: curriculum)
-        : track.curriculumId;
+    final l10n = AppLocalizations.of(context)!;
 
-    final confirmed = await showDialog<bool>(
+    // 'archive' = keep history; 'wipe' = hard-delete completions; null = cancel
+    final choice = await showDialog<String>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Delete Track?'),
-        content: Text(
-          'Permanently delete "$name"? All progress and data for this track '
-          'will be removed. This cannot be undone.',
-        ),
+      builder: (ctx) => AlertDialog(
+        title: Text(l10n.deleteTrackArchiveTitle),
+        content: Text(l10n.deleteTrackArchiveBody),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(l10n.actionCancel),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, 'archive'),
+            child: Text(l10n.deleteTrackArchive),
           ),
           FilledButton(
             style: FilledButton.styleFrom(
-              backgroundColor: Theme.of(context).colorScheme.error,
+              backgroundColor: Theme.of(ctx).colorScheme.error,
             ),
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Delete'),
+            onPressed: () => Navigator.pop(ctx, 'wipe'),
+            child: Text(l10n.deleteTrackWipe),
           ),
         ],
       ),
     );
 
-    if ((confirmed ?? false) && mounted) {
-      await ref
-          .read(userDatabaseProvider)
-          .trackDao
-          .deleteTrackAndData(track.id);
-      await invalidateAfterTrackDataChange(ref, track.profileId);
+    if (choice == null || !mounted) return;
+
+    final dao = ref.read(userDatabaseProvider).trackDao;
+    if (choice == 'wipe') {
+      await dao.purgeHistory(track.id);
+    } else {
+      await dao.deleteTrackAndData(track.id);
     }
+    await invalidateAfterTrackDataChange(ref, track.profileId);
   }
 }

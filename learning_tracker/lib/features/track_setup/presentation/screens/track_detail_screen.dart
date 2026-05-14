@@ -384,38 +384,43 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
     CurriculumTrack track,
     CurriculumId? curriculum,
   ) async {
-    final name = curriculum != null
-        ? curriculumLabelText(ref, curriculum: curriculum)
-        : track.curriculumId;
+    final l10n = AppLocalizations.of(context)!;
 
-    final confirmed = await showDialog<bool>(
+    // 'archive' = keep history; 'wipe' = hard-delete completions; null = cancel
+    final choice = await showDialog<String>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text(AppLocalizations.of(context)!.trackDeleteTitle),
-        content: Text(AppLocalizations.of(context)!.trackDeleteContent(name)),
+      builder: (ctx) => AlertDialog(
+        title: Text(l10n.deleteTrackArchiveTitle),
+        content: Text(l10n.deleteTrackArchiveBody),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: Text(AppLocalizations.of(context)!.actionCancel),
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(l10n.actionCancel),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, 'archive'),
+            child: Text(l10n.deleteTrackArchive),
           ),
           FilledButton(
             style: FilledButton.styleFrom(
-              backgroundColor: Theme.of(context).colorScheme.error,
+              backgroundColor: Theme.of(ctx).colorScheme.error,
             ),
-            onPressed: () => Navigator.pop(context, true),
-            child: Text(AppLocalizations.of(context)!.actionDelete),
+            onPressed: () => Navigator.pop(ctx, 'wipe'),
+            child: Text(l10n.deleteTrackWipe),
           ),
         ],
       ),
     );
 
-    if ((confirmed ?? false) && mounted) {
-      await ref
-          .read(userDatabaseProvider)
-          .trackDao
-          .deleteTrackAndData(track.id);
-      await onTrackChanged(ref, track.profileId);
-      if (mounted) context.router.pop();
+    if (choice == null || !mounted) return;
+
+    final dao = ref.read(userDatabaseProvider).trackDao;
+    if (choice == 'wipe') {
+      await dao.purgeHistory(track.id);
+    } else {
+      await dao.deleteTrackAndData(track.id);
     }
+    await onTrackChanged(ref, track.profileId);
+    if (mounted) context.router.pop();
   }
 }
