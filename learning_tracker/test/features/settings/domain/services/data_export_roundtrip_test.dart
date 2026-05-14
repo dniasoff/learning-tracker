@@ -46,7 +46,8 @@ void main() {
 
       final data =
           jsonDecode(await service.exportData()) as Map<String, dynamic>;
-      final tracks = data['curriculumTracks'] as List<Map<String, dynamic>>;
+      final tracks = (data['curriculumTracks'] as List)
+          .cast<Map<String, dynamic>>();
 
       expect(tracks, hasLength(1));
       expect(tracks.first['curriculumId'], 'mishnayos');
@@ -80,7 +81,7 @@ void main() {
 
       final data =
           jsonDecode(await service.exportData()) as Map<String, dynamic>;
-      final goals = data['goals'] as List<Map<String, dynamic>>;
+      final goals = (data['goals'] as List).cast<Map<String, dynamic>>();
 
       expect(goals, hasLength(1));
       expect(goals.first['curriculumId'], 'mishnayos');
@@ -113,7 +114,8 @@ void main() {
 
       final data =
           jsonDecode(await service.exportData()) as Map<String, dynamic>;
-      final bookmarks = data['bookmarks'] as List<Map<String, dynamic>>;
+      final bookmarks = (data['bookmarks'] as List)
+          .cast<Map<String, dynamic>>();
 
       expect(bookmarks, hasLength(1));
       expect(bookmarks.first['sefariaRef'], 'Berakhot.1.1');
@@ -131,7 +133,8 @@ void main() {
 
       final data =
           jsonDecode(await service.exportData()) as Map<String, dynamic>;
-      final learningOrder = data['learningOrder'] as List<Map<String, dynamic>>;
+      final learningOrder = (data['learningOrder'] as List)
+          .cast<Map<String, dynamic>>();
 
       expect(learningOrder, hasLength(1));
       expect(learningOrder.first['sefariaRef'], 'Berakhot');
@@ -145,7 +148,7 @@ void main() {
 
       final data =
           jsonDecode(await service.exportData()) as Map<String, dynamic>;
-      final streaks = data['streaks'] as List<Map<String, dynamic>>;
+      final streaks = (data['streaks'] as List).cast<Map<String, dynamic>>();
 
       expect(streaks, hasLength(1));
       expect(streaks.first['currentStreak'], 5);

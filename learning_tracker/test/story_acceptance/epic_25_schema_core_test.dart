@@ -1312,23 +1312,25 @@ void main() {
 
     group('defaults — new profiles start with the AC-mandated values', () {
       test(
-        'HebrewTermsPreference defaults to false (English transliteration)',
+        // Updated by fix(issue-7a): new profiles default to Hebrew script/calendar
+        'HebrewTermsPreference defaults to true (Hebrew script on first launch)',
         () async {
           final pref = HebrewTermsPreference();
-          expect(pref.defaultValue, isFalse);
-          expect(await pref.read(0), isFalse);
-          expect(await pref.read(7), isFalse);
+          expect(pref.defaultValue, isTrue);
+          expect(await pref.read(0), isTrue);
+          expect(await pref.read(7), isTrue);
           await pref.dispose();
         },
       );
 
       test(
-        'HebrewDatePreference defaults to false (English/Gregorian calendar)',
+        // Updated by fix(issue-7a): new profiles default to Hebrew calendar
+        'HebrewDatePreference defaults to true (Hebrew calendar on first launch)',
         () async {
           final pref = HebrewDatePreference();
-          expect(pref.defaultValue, isFalse);
-          expect(await pref.read(0), isFalse);
-          expect(await pref.read(7), isFalse);
+          expect(pref.defaultValue, isTrue);
+          expect(await pref.read(0), isTrue);
+          expect(await pref.read(7), isTrue);
           await pref.dispose();
         },
       );
@@ -1365,12 +1367,15 @@ void main() {
     group('per-profile isolation — writes do not leak across profiles', () {
       test('writing for profile A does not affect profile B (bool)', () async {
         final pref = HebrewTermsPreference();
-        await pref.write(1, true);
-        expect(await pref.read(1), isTrue);
+        await pref.write(
+          1,
+          false,
+        ); // explicitly write false so profile 2's true default is distinct
+        expect(await pref.read(1), isFalse);
         expect(
           await pref.read(2),
-          isFalse,
-          reason: 'profile 2 must keep its default',
+          isTrue,
+          reason: 'profile 2 must keep its default (true since fix(issue-7a))',
         );
         await pref.dispose();
       });

@@ -188,24 +188,25 @@ void main() {
     },
   );
 
-  // ── AC5: hebrewTerms and useHebrewDate default to false ─────────────────────
+  // ── AC5: hebrewTerms and useHebrewDate default (updated by fix(issue-7a)) ───
+  // fix(issue-7a) changed defaults to true so new users launch with Hebrew UI.
   group(
-    'Story 26.20 AC5 — hebrewTerms and useHebrewDate default to false',
+    'Story 26.20 AC5 — hebrewTerms and useHebrewDate default to true (issue-7a)',
     tags: ['story_26_20'],
     () {
-      test('HebrewTermsPreference.defaultValue is false', () {
+      test('HebrewTermsPreference.defaultValue is true', () {
         expect(
           HebrewTermsPreference().defaultValue,
-          isFalse,
-          reason: 'hebrewTerms must default to false per story AC',
+          isTrue,
+          reason: 'hebrewTerms defaults to true since fix(issue-7a)',
         );
       });
 
-      test('HebrewDatePreference.defaultValue is false', () {
+      test('HebrewDatePreference.defaultValue is true', () {
         expect(
           HebrewDatePreference().defaultValue,
-          isFalse,
-          reason: 'useHebrewDate must default to false per story AC',
+          isTrue,
+          reason: 'useHebrewDate defaults to true since fix(issue-7a)',
         );
       });
     },

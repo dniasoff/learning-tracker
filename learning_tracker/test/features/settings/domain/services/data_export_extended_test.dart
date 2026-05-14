@@ -65,7 +65,8 @@ void main() {
 
       final data =
           jsonDecode(await service.exportData()) as Map<String, dynamic>;
-      final scopes = data['curriculumScopes'] as List<Map<String, dynamic>>;
+      final scopes = (data['curriculumScopes'] as List)
+          .cast<Map<String, dynamic>>();
 
       expect(scopes, hasLength(1));
       expect(scopes.first['scopeValue'], 'Zeraim');
@@ -89,7 +90,8 @@ void main() {
 
       final data =
           jsonDecode(await service.exportData()) as Map<String, dynamic>;
-      final programs = data['profilePrograms'] as List<Map<String, dynamic>>;
+      final programs = (data['profilePrograms'] as List)
+          .cast<Map<String, dynamic>>();
 
       expect(programs, hasLength(1));
       expect(programs.first['programId'], 42);
@@ -117,7 +119,8 @@ void main() {
 
       final data =
           jsonDecode(await service.exportData()) as Map<String, dynamic>;
-      final configs = data['studyDayConfigs'] as List<Map<String, dynamic>>;
+      final configs = (data['studyDayConfigs'] as List)
+          .cast<Map<String, dynamic>>();
 
       expect(configs, hasLength(1));
       expect(configs.first['dayOfWeek'], 1);
@@ -155,7 +158,8 @@ void main() {
 
       final data =
           jsonDecode(await service.exportData()) as Map<String, dynamic>;
-      final events = data['completionEvents'] as List<Map<String, dynamic>>;
+      final events = (data['completionEvents'] as List)
+          .cast<Map<String, dynamic>>();
 
       expect(events, hasLength(1));
       expect(events.first['sefariaRef'], 'Berakhot.1');
@@ -177,7 +181,8 @@ void main() {
 
       final data =
           jsonDecode(await service.exportData()) as Map<String, dynamic>;
-      final events = data['streakEvents'] as List<Map<String, dynamic>>;
+      final events = (data['streakEvents'] as List)
+          .cast<Map<String, dynamic>>();
 
       expect(events, hasLength(1));
       expect(events.first['eventType'], 'completion');
@@ -205,7 +210,8 @@ void main() {
 
       final data =
           jsonDecode(await service.exportData()) as Map<String, dynamic>;
-      final ledger = data['learningLedger'] as List<Map<String, dynamic>>;
+      final ledger = (data['learningLedger'] as List)
+          .cast<Map<String, dynamic>>();
 
       expect(ledger, hasLength(1));
       expect(ledger.first['unitIdentifier'], 'Berakhot');

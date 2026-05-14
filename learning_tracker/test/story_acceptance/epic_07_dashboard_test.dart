@@ -561,7 +561,7 @@ void main() {
         ),
       );
 
-      expect(find.text('12 tasks due today'), findsOneWidget);
+      expect(find.text('12 tasks today'), findsOneWidget);
       expect(find.text('Start'), findsOneWidget);
 
       await tester.tap(find.text('Start'));

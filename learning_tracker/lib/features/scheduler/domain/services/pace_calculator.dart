@@ -150,14 +150,15 @@ class PaceCalculator {
     // Weekly item surplus/deficit (not calendar days — see PaceStatus.daysDelta)
     final itemsPerWeekDelta = ((rollingAvg - targetPacePerDay) * 7).round();
 
-    // Projected completion date using target pace
-    // Guard: no projection on day-1 (rollingAvg == 0 means no events yet)
+    // Projected completion date using target pace (not rolling average).
+    // Unlike deadline goals, pace goals always have a targetPacePerDay so
+    // projection is available from day-1 — no rolling-average guard needed.
     DateTime? projectedDate;
-    if (rollingAvg > 0 && targetPacePerDay > 0 && remainingItems > 0) {
+    if (remainingItems <= 0) {
+      projectedDate = today;
+    } else if (targetPacePerDay > 0) {
       final daysNeeded = (remainingItems / targetPacePerDay).ceil();
       projectedDate = today.add(Duration(days: daysNeeded));
-    } else if (remainingItems <= 0) {
-      projectedDate = today;
     }
 
     return PaceStatus(
