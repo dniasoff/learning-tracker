@@ -3,6 +3,7 @@ import 'package:learning_tracker/core/content/content_index.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
+import 'package:learning_tracker/core/sync/providers/outbox_providers.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/learning/data/repositories/bookmark_repository_impl.dart';
 import 'package:learning_tracker/features/learning/domain/entities/bookmark.dart';
@@ -17,6 +18,7 @@ import 'package:learning_tracker/features/sync/presentation/providers/sync_provi
 final bookmarkRepositoryProvider = Provider<BookmarkRepository>((ref) {
   final database = ref.watch(userDatabaseProvider);
   final syncEngine = ref.watch(syncEngineProvider);
+  final firestoreGateway = ref.watch(firestoreGatewayProvider);
   final contentRepository = ref.watch(contentRepositoryProvider);
   final profileId = ref.watch(activeProfileIdProvider);
   // ContentIndex may still be loading — pass null until it's ready so the
@@ -27,6 +29,7 @@ final bookmarkRepositoryProvider = Provider<BookmarkRepository>((ref) {
   return BookmarkRepositoryImpl(
     database: database,
     syncEngine: syncEngine,
+    firestoreGateway: firestoreGateway,
     contentRepository: contentRepository,
     profileId: profileId,
     contentIndex: contentIndex,

@@ -5,6 +5,7 @@ import 'package:learning_tracker/core/content/content_index.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
+import 'package:learning_tracker/core/sync/firestore_gateway.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 import 'package:learning_tracker/features/learning/domain/entities/bookmark.dart';
@@ -26,6 +27,7 @@ import 'package:learning_tracker/features/sync/data/sync_engine.dart';
 class BookmarkRepositoryImpl implements BookmarkRepository {
   final UserDatabase _database;
   final SyncEngine? _syncEngine;
+  final FirestoreGateway? _firestoreGateway;
   final ContentRepository _contentRepository;
   final int _profileId;
 
@@ -40,8 +42,10 @@ class BookmarkRepositoryImpl implements BookmarkRepository {
     required ContentRepository contentRepository,
     int profileId = 0,
     ContentIndex? contentIndex,
+    FirestoreGateway? firestoreGateway,
   }) : _database = database,
        _syncEngine = syncEngine,
+       _firestoreGateway = firestoreGateway,
        _contentRepository = contentRepository,
        _profileId = profileId,
        _contentIndex = contentIndex;
@@ -221,7 +225,11 @@ class BookmarkRepositoryImpl implements BookmarkRepository {
   @override
   Future<int> syncFromFirestore() async {
     final remoteBookmarks =
-        await _syncEngine?.fetchBookmarksFromFirestore() ?? [];
+        await _firestoreGateway?.fetchAll(
+          profileId: _profileId,
+          collection: 'bookmarks',
+        ) ??
+        [];
     for (final remote in remoteBookmarks) {
       await mergeRemoteBookmark(remote);
     }
