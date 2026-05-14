@@ -78,6 +78,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   /// `true` = render Hebrew text with nikud (vowel marks); `false` = strip.
   bool _showNikud = true;
 
+  bool _useHebrewTerms = true;
+
   TransliterationVariant _transliterationVariant =
       TransliterationVariant.ashkenazi;
   var _phase = _ScreenPhase.profileCreation;
@@ -227,6 +229,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     // (DNI-341). No user-driven setLocale call here.
     await ref.read(useHebrewDateProvider.notifier).set(_useHebrewCalendar);
     await ref.read(showNikudProvider.notifier).set(_showNikud);
+    await ref.read(useHebrewTermsProvider.notifier).set(_useHebrewTerms);
     await ref
         .read(currentTransliterationVariantProvider.notifier)
         .set(_transliterationVariant);
@@ -712,10 +715,64 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                     onLeft: () => setState(() => _showNikud = false),
                     onRight: () => setState(() => _showNikud = true),
                   ),
+                  const SizedBox(height: 14),
+                  Row(
+                    children: [
+                      const Icon(
+                        Icons.calendar_month_rounded,
+                        size: 22,
+                        color: AppTheme.brandInk,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Calendar',
+                        style: theme.textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w800,
+                          color: AppTheme.brandInk,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  pillPair(
+                    leftLabel: 'English',
+                    rightLabel: 'Hebrew',
+                    leftSelected: !_useHebrewCalendar,
+                    onLeft: () => setState(() => _useHebrewCalendar = false),
+                    onRight: () => setState(() => _useHebrewCalendar = true),
+                  ),
+                  if (Localizations.localeOf(context).languageCode != 'he') ...[
+                    const SizedBox(height: 14),
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.translate_rounded,
+                          size: 22,
+                          color: AppTheme.brandInk,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Hebrew Terms',
+                          style: theme.textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.w800,
+                            color: AppTheme.brandInk,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    pillPair(
+                      leftLabel: 'English',
+                      rightLabel: 'Hebrew',
+                      leftSelected: !_useHebrewTerms,
+                      onLeft: () => setState(() => _useHebrewTerms = false),
+                      onRight: () => setState(() => _useHebrewTerms = true),
+                    ),
+                  ],
                 ],
               ),
             ),
-            const SizedBox(height: 28),
+            const SizedBox(height: 28);
             FilledButton(
               style: FilledButton.styleFrom(
                 backgroundColor: AppTheme.brandBlue,
