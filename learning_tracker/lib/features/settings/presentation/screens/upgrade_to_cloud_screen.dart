@@ -61,13 +61,10 @@ class _UpgradeToCloudScreenState extends ConsumerState<UpgradeToCloudScreen> {
   Future<void> _pushLocalDataAfterUpgrade() async {
     // Rebuild provider graph with cloud-born tier before initial push.
     ref.invalidate(syncEngineProvider);
-    final syncEngine = ref.read(syncEngineProvider);
-    if (syncEngine == null) return;
-    await syncEngine.pushAllLocalData();
     final orchestrator = ref.read(syncOrchestratorProvider);
-    if (orchestrator != null) {
-      await orchestrator.pullOnLaunch();
-    }
+    if (orchestrator == null) return;
+    await orchestrator.pushAllLocalData();
+    await orchestrator.pullOnLaunch();
   }
 
   @override

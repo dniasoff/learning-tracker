@@ -258,12 +258,9 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
           );
           if (finalized != null && mounted) {
             ref.invalidate(syncEngineProvider);
-            final syncEngine = ref.read(syncEngineProvider);
-            if (syncEngine != null) {
-              await syncEngine.pushAllLocalData();
-            }
             final orchestrator = ref.read(syncOrchestratorProvider);
             if (orchestrator != null) {
+              await orchestrator.pushAllLocalData();
               await orchestrator.pullOnLaunch();
             }
             if (mounted) await _navigateAfterSignIn();
