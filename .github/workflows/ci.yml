@@ -250,7 +250,7 @@ jobs:
       - name: Install lcov
         run: sudo apt-get install -y lcov
 
-      - name: Assert coverage floor ≥ 50%
+      - name: Assert coverage floor ≥ 60%
         run: |
           LCOV_FILE="learning_tracker/coverage/lcov.info"
           SUMMARY=$(lcov --summary "$LCOV_FILE" 2>&1)
@@ -261,7 +261,7 @@ jobs:
             echo "::error::Could not parse line coverage from lcov --summary output"
             exit 1
           fi
-          FLOOR=50
+          FLOOR=60
           # Use awk for float comparison (bash can't do floats natively)
           PASS=$(awk -v pct="$PCT" -v floor="$FLOOR" 'BEGIN { print (pct >= floor) ? "yes" : "no" }')
           echo "Line coverage: ${PCT}% (floor: ${FLOOR}%)"
