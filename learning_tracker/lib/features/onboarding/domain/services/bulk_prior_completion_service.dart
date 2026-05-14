@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:learning_tracker/core/analytics/analytics_service.dart';
+import 'package:learning_tracker/core/content/hierarchy_selection.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
@@ -11,6 +12,8 @@ import 'package:learning_tracker/features/learning/data/repositories/bookmark_re
 import 'package:learning_tracker/features/learning/domain/entities/completion_request.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/bookmark_repository.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/completion_repository.dart';
+
+export 'package:learning_tracker/core/content/hierarchy_selection.dart';
 
 /// Result of a bulk prior completion operation.
 class BulkPriorCompletionResult {
@@ -203,32 +206,4 @@ class BulkPriorCompletionService {
     }
     return null; // All items completed
   }
-}
-
-/// Represents a hierarchy-level selection (e.g., "Seder Zeraim" or
-/// "Masechta Berachos" or individual "Berachos 1:1").
-class HierarchySelection {
-  final String? level1;
-  final String? level2;
-  final String? level3;
-  final String? level4;
-
-  const HierarchySelection({
-    this.level1,
-    this.level2,
-    this.level3,
-    this.level4,
-  });
-
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is HierarchySelection &&
-          level1 == other.level1 &&
-          level2 == other.level2 &&
-          level3 == other.level3 &&
-          level4 == other.level4;
-
-  @override
-  int get hashCode => Object.hash(level1, level2, level3, level4);
 }
