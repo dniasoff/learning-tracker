@@ -28,6 +28,24 @@ class SchedulerEngine {
   /// the overdue queue and surfaces tomorrow.
   static const int kMaxOverdueChazarahPerDay = 20;
 
+  /// Unix-milliseconds timestamp for the sentinel date used by
+  /// [BulkPriorCompletionService] to mark items that were "learned before this
+  /// app" without a real study date (`DateTime.utc(2000, 1, 1)`).
+  ///
+  /// The engine treats stage-1 completions recorded at this timestamp as if the
+  /// item has not yet been learned — so it surfaces as a new-learning task
+  /// rather than disappearing silently from the schedule.
+  ///
+  /// We compare via [DateTime.millisecondsSinceEpoch] rather than direct
+  /// `==` because Drift may return a local-timezone [DateTime] when the
+  /// underlying column stores an integer epoch, causing UTC-vs-local
+  /// inequality even for the same instant.
+  static final int kBulkPriorSentinelMs =
+      DateTime.utc(2000, 1, 1).millisecondsSinceEpoch;
+
+  /// Sentinel [DateTime] instance for callers that need it (e.g. tests).
+  static final DateTime kBulkPriorSentinel = DateTime.utc(2000, 1, 1);
+
   const SchedulerEngine({
     required SchedulerContentRepository contentRepository,
     required SchedulerCompletionRepository completionRepository,
@@ -94,6 +112,19 @@ class SchedulerEngine {
 
       if (itemCompletions == null || itemCompletions.isEmpty) {
         // Never started — candidate for new learning
+        newLearningRefs.add(ref);
+        continue;
+      }
+
+      // Items bulk-marked "prior" with the sentinel date (DateTime.utc(2000,1,1))
+      // at stage 1 have not actually been studied in this app. Treat them as
+      // new-learning candidates so deadline and self-paced tracks both surface
+      // them instead of silently dropping them from the schedule.
+      final firstStageCompletedAt = itemCompletions[firstStageOrder];
+      if (firstStageCompletedAt != null &&
+          firstStageCompletedAt.millisecondsSinceEpoch ==
+              kBulkPriorSentinelMs &&
+          itemCompletions.length == 1) {
         newLearningRefs.add(ref);
         continue;
       }
@@ -191,8 +222,10 @@ class SchedulerEngine {
         final itemCompletions = completionMap[ref];
         final hasAnyCompletion =
             itemCompletions != null && itemCompletions.isNotEmpty;
-        final doneAtFirstStage =
-            itemCompletions?.containsKey(firstStageOrder) ?? false;
+        final doneAtFirstStage = _isGenuinelyCompletedAtStage(
+          itemCompletions,
+          firstStageOrder,
+        );
         if (doneAtFirstStage) continue;
 
         if (hasAnyCompletion) {
@@ -249,8 +282,10 @@ class SchedulerEngine {
         todaysNewRefs = <String>[];
         for (final ref in orderedRefs) {
           if (priorlyShown.contains(ref)) continue;
-          final done =
-              completionMap[ref]?.containsKey(firstStageOrder) ?? false;
+          final done = _isGenuinelyCompletedAtStage(
+            completionMap[ref],
+            firstStageOrder,
+          );
           if (done) continue;
           todaysNewRefs.add(ref);
           if (todaysNewRefs.length >= pace) break;
@@ -430,13 +465,14 @@ class SchedulerEngine {
     final windowSize = stage.rollingWindowSize!;
     final firstStageOrder = sortedStages.first.stageOrder;
 
-    // Collect refs that have completed the first stage, sorted by completion date (most recent first)
+    // Collect refs that have completed the first stage, sorted by completion date (most recent first).
+    // Sentinel-dated completions (bulk-prior mark) are excluded — those items
+    // have not actually been studied and must not enter the rolling window.
     final completedRefs = <MapEntry<String, DateTime>>[];
     for (final ref in orderedRefs) {
       final itemCompletions = completionMap[ref];
-      if (itemCompletions != null &&
-          itemCompletions.containsKey(firstStageOrder)) {
-        completedRefs.add(MapEntry(ref, itemCompletions[firstStageOrder]!));
+      if (_isGenuinelyCompletedAtStage(itemCompletions, firstStageOrder)) {
+        completedRefs.add(MapEntry(ref, itemCompletions![firstStageOrder]!));
       }
     }
 
@@ -573,7 +609,10 @@ class SchedulerEngine {
       final anyShown = leaves.any(priorlyShown.contains);
       if (anyShown) continue;
       final remaining = leaves.where((r) {
-        final done = completionMap[r]?.containsKey(firstStageOrder) ?? false;
+        final done = _isGenuinelyCompletedAtStage(
+          completionMap[r],
+          firstStageOrder,
+        );
         return !done;
       }).toList();
       if (remaining.isEmpty) continue;
@@ -686,5 +725,25 @@ class SchedulerEngine {
     //
     // Cap by remaining items so we never emit more tasks than exist.
     return min(baseRate, remainingNewItems);
+  }
+
+  /// Returns `true` when [itemCompletions] contains a **genuine** completion
+  /// at [stageOrder] — i.e. one that is not the bulk-prior sentinel date.
+  ///
+  /// Sentinel completions (`DateTime.utc(2000, 1, 1)`) indicate that the item
+  /// was "marked prior" in bulk before this app was used. They must not be
+  /// counted as real first-stage completions when deciding whether to surface
+  /// new-learning tasks for that item.
+  ///
+  /// Comparison uses [DateTime.millisecondsSinceEpoch] to avoid UTC-vs-local
+  /// inequality introduced by Drift reading integer epoch columns as local time.
+  bool _isGenuinelyCompletedAtStage(
+    Map<int, DateTime>? itemCompletions,
+    int stageOrder,
+  ) {
+    if (itemCompletions == null) return false;
+    final completedAt = itemCompletions[stageOrder];
+    if (completedAt == null) return false;
+    return completedAt.millisecondsSinceEpoch != kBulkPriorSentinelMs;
   }
 }

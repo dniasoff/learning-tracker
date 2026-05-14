@@ -856,4 +856,164 @@ void main() {
       },
     );
   });
+
+  // ── Regression: Issue-5 — bulk-prior sentinel does not suppress tasks ───────
+
+  group(
+    'Issue-5 regression — bulk-prior sentinel generates > 0 tasks',
+    tags: ['story_6_1'],
+    () {
+      late UserDatabase db;
+      late int trackId;
+      late SchedulerEngine engine;
+      final now = DateTime.utc(2026, 5, 14);
+      const curriculum = CurriculumId.mishnayos;
+
+      // Sentinel date used by BulkPriorCompletionService.
+      final sentinel = SchedulerEngine.kBulkPriorSentinel;
+
+      final contentItems = List.generate(
+        5,
+        (i) => SchedulerContentItem(
+          sefariaRef: 'Mishnah_Berakhot_1.$i',
+          sortOrder: i,
+        ),
+      );
+
+      setUp(() async {
+        db = createTestDatabase();
+        trackId = await _insertTrack(db);
+
+        // Single "Learn only" stage — no chazara stages.
+        await db.stageDao.insertStageDefinition(
+          StageDefinitionsCompanion.insert(
+            profileId: 1,
+            curriculumId: curriculum.storageKey,
+            trackId: trackId,
+            stageOrder: 1,
+            stageName: 'Learn',
+            delayDays: 0,
+          ),
+        );
+
+        engine = SchedulerEngine(
+          contentRepository: _InMemoryContentRepo(contentItems),
+          completionRepository: SchedulerCompletionRepositoryImpl(
+            completionDao: db.completionDao,
+            stageDao: db.stageDao,
+          ),
+          stageRepository: SchedulerStageRepositoryImpl(stageDao: db.stageDao),
+          learningOrderRepository: SchedulerLearningOrderRepositoryImpl(
+            learningOrderDao: db.learningOrderDao,
+          ),
+        );
+      });
+
+      tearDown(() async {
+        await db.close();
+      });
+
+      test(
+        'deadline track: all items bulk-marked with sentinel still get tasks',
+        () async {
+          final stages = await db.stageDao.getStageDefinitionsByCurriculum(
+            curriculum.storageKey,
+          );
+          final learnId = stages.firstWhere((s) => s.stageOrder == 1).id;
+
+          // Bulk-mark ALL items with sentinel date.
+          for (final item in contentItems) {
+            await db.completionDao.insertCompletion(
+              CompletionsCompanion.insert(
+                profileId: 0,
+                curriculumId: curriculum.storageKey,
+                sefariaRef: item.sefariaRef,
+                stageId: learnId,
+                trackType: 'personal',
+                trackId: trackId,
+                completedAt: sentinel, // bulk-prior sentinel
+                points: const Value(10),
+              ),
+            );
+          }
+
+          // Deadline track config (no pacePerDay, no trackStartedAt).
+          final config = ScheduleConfig(
+            curriculumId: curriculum,
+            trackId: trackId,
+            trackLabel: 'personal',
+            goalDeadline: now.add(const Duration(days: 30)),
+            currentDate: now,
+          );
+
+          final tasks = await engine.generateDailyTasks(config);
+
+          // Must produce at least one new-learning task.
+          expect(
+            tasks,
+            isNotEmpty,
+            reason:
+                'Sentinel-marked items must appear as new-learning tasks, '
+                'not disappear silently',
+          );
+          expect(
+            tasks.any((t) => t.priority == DailyTaskPriority.newLearning),
+            isTrue,
+          );
+        },
+      );
+
+      test(
+        'self-paced snapshot track: sentinel items appear as new-learning, not overdue chazara',
+        () async {
+          final stages = await db.stageDao.getStageDefinitionsByCurriculum(
+            curriculum.storageKey,
+          );
+          final learnId = stages.firstWhere((s) => s.stageOrder == 1).id;
+
+          // Bulk-mark first 3 items with sentinel date.
+          for (var i = 0; i < 3; i++) {
+            await db.completionDao.insertCompletion(
+              CompletionsCompanion.insert(
+                profileId: 0,
+                curriculumId: curriculum.storageKey,
+                sefariaRef: contentItems[i].sefariaRef,
+                stageId: learnId,
+                trackType: 'personal',
+                trackId: trackId,
+                completedAt: sentinel,
+                points: const Value(10),
+              ),
+            );
+          }
+
+          // Self-paced config with pacePerDay AND trackStartedAt (snapshot path).
+          final config = ScheduleConfig(
+            curriculumId: curriculum,
+            trackId: trackId,
+            trackLabel: 'personal',
+            currentDate: now,
+            pacePerDay: 2,
+            trackStartedAt: now.subtract(const Duration(days: 1)),
+            // priorlyShownRefs empty — first run today
+          );
+
+          final tasks = await engine.generateDailyTasks(config);
+
+          // Sentinel items are NOT genuinely completed — they must NOT appear
+          // as overdueChazara.
+          expect(
+            tasks.any((t) => t.priority == DailyTaskPriority.overdueChazara),
+            isFalse,
+            reason: 'Sentinel items must not be classified as overdueChazara',
+          );
+          // Some new-learning tasks should exist (items 0..4 are all candidates).
+          expect(
+            tasks.any((t) => t.priority == DailyTaskPriority.newLearning),
+            isTrue,
+          );
+        },
+      );
+    },
+  );
 }
