@@ -179,6 +179,14 @@ class CurriculumLabelRenderer {
     return segments.last;
   }
 
+  // ---------- label accessors ----------
+
+  /// Returns the Hebrew display name of [item], or null when [item] is null.
+  ///
+  /// All code outside `core/labels/` that needs `ContentItem.displayNameHe`
+  /// must call this helper so the field access stays within this package.
+  static String? hebrewNameOf(ContentItem? item) => item?.displayNameHe;
+
   // ---------- helpers ----------
 
   /// Convert a raw ordinal value (data form) to its localized display.

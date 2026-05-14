@@ -98,7 +98,9 @@ class ProfileRepositoryImpl implements ProfileRepository {
     // Profile creation must succeed offline-first even if cloud push fails.
     try {
       await _syncEngine?.pushLearnerProfile(_toFirestorePayload(model));
-    } catch (_) {}
+    } catch (_) {
+      // no-op: cloud push failure is non-fatal; local write already succeeded (offline-first)
+    }
     return model;
   }
 
@@ -148,7 +150,9 @@ class ProfileRepositoryImpl implements ProfileRepository {
     final model = ProfileModel.fromDriftRow(updated!);
     try {
       await _syncEngine?.pushLearnerProfile(_toFirestorePayload(model));
-    } catch (_) {}
+    } catch (_) {
+      // no-op: cloud push failure is non-fatal; local write already succeeded (offline-first)
+    }
     return model;
   }
 

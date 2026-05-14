@@ -17,7 +17,7 @@ class SyncQueue extends Table {
   DateTimeColumn get queuedAt => dateTime()();
 
   /// Number of retry attempts
-  IntColumn get retryCount => integer().withDefault(const Constant(0))();
+  IntColumn get retryCount => integer().withDefault(const Constant<int>(0))();
 
   /// Last error message (if any)
   TextColumn get lastError => text().nullable()();

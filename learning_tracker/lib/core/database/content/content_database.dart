@@ -81,11 +81,15 @@ class ContentDatabase extends _$ContentDatabase {
               'display_name TEXT NOT NULL DEFAULT \'\', '
               'PRIMARY KEY (program_key, date_key))',
             );
-          } catch (_) {}
+          } catch (_) {
+            // no-op: CREATE IF NOT EXISTS is defensive; failure here is non-fatal
+          }
           for (final table in ['learning_programs', 'test_dates']) {
             try {
               await customStatement('DROP TABLE IF EXISTS $table');
-            } catch (_) {}
+            } catch (_) {
+              // no-op: DROP IF EXISTS is defensive; table may already be absent
+            }
           }
         }
         if (from < 4) {
@@ -97,7 +101,9 @@ class ContentDatabase extends _$ContentDatabase {
               'ALTER TABLE calendar_cycles '
               "ADD COLUMN sefaria_ref_he TEXT NOT NULL DEFAULT ''",
             );
-          } catch (_) {}
+          } catch (_) {
+            // no-op: ALTER TABLE fails if column already exists (prior upgrade path); non-fatal
+          }
         }
         if (from < 5) {
           // v5: introduce daily_content — pre-resolved bilingual text keyed
@@ -112,7 +118,9 @@ class ContentDatabase extends _$ContentDatabase {
               "english_text TEXT NOT NULL DEFAULT '', "
               "hebrew_text TEXT NOT NULL DEFAULT '')",
             );
-          } catch (_) {}
+          } catch (_) {
+            // no-op: CREATE IF NOT EXISTS is defensive; failure here is non-fatal
+          }
         }
       },
     );

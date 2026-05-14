@@ -30,7 +30,7 @@ class DailyPlans extends Table {
       integer().withDefault(const Constant(3))();
 
   /// Position within the day's plan (stable ordering for rendering).
-  IntColumn get sortOrder => integer().withDefault(const Constant(0))();
+  IntColumn get sortOrder => integer().withDefault(const Constant<int>(0))();
 
   DateTimeColumn get createdAt => dateTime()();
 

@@ -100,7 +100,9 @@ class AchievementUnlockCelebration {
         if (list != null) {
           done = list.map((e) => e.toString()).toSet();
         }
-      } catch (_) {}
+      } catch (_) {
+        // no-op: SharedPreferences read failure is non-fatal; proceed with empty set
+      }
     }
     final merged = done.union(addIds);
     await prefs.setString(doneKey, jsonEncode(merged.toList()..sort()));

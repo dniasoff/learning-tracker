@@ -31,5 +31,5 @@ class Completions extends Table {
   TextColumn get trackType => text()();
   IntColumn get trackId => integer().references(CurriculumTracks, #id)();
   DateTimeColumn get completedAt => dateTime()();
-  IntColumn get points => integer().withDefault(const Constant(0))();
+  IntColumn get points => integer().withDefault(const Constant<int>(0))();
 }

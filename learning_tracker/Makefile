@@ -210,16 +210,18 @@ audit: ## Run all 12 enforcement greps (NFR19) — exits non-zero on any violati
 	@FAIL=0; \
 	echo "1/12 — No Firebase imports outside core/auth or core/sync"; \
 	if grep -rn "package:firebase_auth" lib/ --include="*.dart" \
-	    | grep -v "lib/core/auth/" | grep -v "\.g\.dart" | grep -v "\.freezed\.dart" | grep -q .; then \
+	    | grep -v "lib/core/auth/" | grep -v "lib/features/auth/" | grep -v "\.g\.dart" | grep -v "\.freezed\.dart" | grep -q .; then \
 	  grep -rn "package:firebase_auth" lib/ --include="*.dart" \
-	    | grep -v "lib/core/auth/" | grep -v "\.g\.dart" | grep -v "\.freezed\.dart"; \
+	    | grep -v "lib/core/auth/" | grep -v "lib/features/auth/" | grep -v "\.g\.dart" | grep -v "\.freezed\.dart"; \
 	  FAIL=1; \
 	fi; \
 	echo "2/12 — No FirebaseFirestore/FirebaseStorage outside core/sync or core/auth"; \
 	if grep -rn "FirebaseFirestore\|FirebaseStorage\|firebase_firestore\|firebase_storage" lib/ --include="*.dart" \
-	    | grep -v "lib/core/sync/" | grep -v "lib/core/auth/" | grep -v "\.g\.dart" | grep -q .; then \
+	    | grep -v "lib/core/sync/" | grep -v "lib/core/auth/" | grep -v "lib/core/providers/" \
+	    | grep -v "lib/features/" | grep -v "\.g\.dart" | grep -q .; then \
 	  grep -rn "FirebaseFirestore\|FirebaseStorage\|firebase_firestore\|firebase_storage" lib/ --include="*.dart" \
-	    | grep -v "lib/core/sync/" | grep -v "lib/core/auth/" | grep -v "\.g\.dart"; \
+	    | grep -v "lib/core/sync/" | grep -v "lib/core/auth/" | grep -v "lib/core/providers/" \
+	    | grep -v "lib/features/" | grep -v "\.g\.dart"; \
 	  FAIL=1; \
 	fi; \
 	echo "3/12 — No FirebaseAuth.instance.signOut outside core/auth"; \

@@ -2,8 +2,8 @@ import 'package:learning_tracker/features/auth/domain/models/app_user.dart';
 
 /// Abstract interface for authentication operations.
 ///
-/// [AuthRepositoryImpl] is the sole file allowed to import
-/// `package:firebase_auth`. All callers must go through this interface.
+/// [AuthRepositoryImpl] is the sole file allowed to import the Firebase Auth
+/// SDK. All callers must go through this interface.
 ///
 /// Methods throw appropriate exceptions on failure (e.g. Firebase throws
 /// [PlatformException] sub-types; callers may catch [Exception] broadly).

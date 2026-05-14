@@ -636,7 +636,7 @@ class $LearnerProfilesTable extends LearnerProfiles
     false,
     type: DriftSqlType.int,
     requiredDuringInsert: false,
-    defaultValue: const Constant(0),
+    defaultValue: const Constant<int>(0),
   );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
@@ -4181,7 +4181,7 @@ class $CompletionsTable extends Completions
     false,
     type: DriftSqlType.int,
     requiredDuringInsert: false,
-    defaultValue: const Constant(0),
+    defaultValue: const Constant<int>(0),
   );
   @override
   List<GeneratedColumn> get $columns => [
@@ -5325,7 +5325,7 @@ class $DailyPlansTable extends DailyPlans
     false,
     type: DriftSqlType.int,
     requiredDuringInsert: false,
-    defaultValue: const Constant(0),
+    defaultValue: const Constant<int>(0),
   );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
@@ -8938,7 +8938,7 @@ class $StreaksTable extends Streaks with TableInfo<$StreaksTable, Streak> {
     false,
     type: DriftSqlType.int,
     requiredDuringInsert: false,
-    defaultValue: const Constant(0),
+    defaultValue: const Constant<int>(0),
   );
   static const VerificationMeta _maxStreakMeta = const VerificationMeta(
     'maxStreak',
@@ -8950,7 +8950,7 @@ class $StreaksTable extends Streaks with TableInfo<$StreaksTable, Streak> {
     false,
     type: DriftSqlType.int,
     requiredDuringInsert: false,
-    defaultValue: const Constant(0),
+    defaultValue: const Constant<int>(0),
   );
   static const VerificationMeta _lastCompletionDateMeta =
       const VerificationMeta('lastCompletionDate');
@@ -9915,7 +9915,7 @@ class $SyncQueueTable extends SyncQueue
     false,
     type: DriftSqlType.int,
     requiredDuringInsert: false,
-    defaultValue: const Constant(0),
+    defaultValue: const Constant<int>(0),
   );
   static const VerificationMeta _lastErrorMeta = const VerificationMeta(
     'lastError',
@@ -10760,7 +10760,7 @@ class $OutboxTable extends Outbox with TableInfo<$OutboxTable, OutboxData> {
     false,
     type: DriftSqlType.int,
     requiredDuringInsert: false,
-    defaultValue: const Constant(0),
+    defaultValue: const Constant<int>(0),
   );
   static const VerificationMeta _lastErrorMeta = const VerificationMeta(
     'lastError',

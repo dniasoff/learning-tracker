@@ -464,7 +464,7 @@ class _ContentHierarchyScreenState
         for (var depth = 0; depth < _navigationStack.length; depth++) {
           final prefixStack = _navigationStack.sublist(0, depth + 1);
           final container = treeValue.containerFor(curriculum, prefixStack);
-          result.add(container?.displayNameHe);
+          result.add(CurriculumLabelRenderer.hebrewNameOf(container));
         }
         return result;
       }
@@ -489,7 +489,7 @@ class _ContentHierarchyScreenState
         match = item;
         break;
       }
-      result.add(match?.displayNameHe);
+      result.add(CurriculumLabelRenderer.hebrewNameOf(match));
     }
     return result;
   }

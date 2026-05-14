@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/services.dart';
 import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/core/labels/curriculum_label_renderer.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/network/sefaria/models/curriculum_hierarchy_config.dart';
 import 'package:learning_tracker/core/utils/hebrew_utils.dart';
@@ -155,7 +156,9 @@ class ContentRepositoryImpl implements ContentRepository {
     final key = curriculumId.storageKey;
     if (!_strippedHeCache.containsKey(key)) {
       _strippedHeCache[key] = items
-          .map((item) => HebrewUtils.stripNikud(item.displayNameHe))
+          .map((item) => HebrewUtils.stripNikud(
+                CurriculumLabelRenderer.hebrewNameOf(item) ?? '',
+              ))
           .toList();
     }
     final strippedHeNames = _strippedHeCache[key]!;

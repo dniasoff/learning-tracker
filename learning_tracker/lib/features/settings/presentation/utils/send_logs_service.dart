@@ -43,7 +43,9 @@ Future<void> sendLogsToFirebase({
   PackageInfo? pkgInfo;
   try {
     pkgInfo = await PackageInfo.fromPlatform();
-  } catch (_) {}
+  } catch (_) {
+    // no-op: PackageInfo failure is non-fatal; log upload proceeds without version metadata
+  }
 
   final entries = recent
       .map(

@@ -12,7 +12,7 @@ class LearnerProfiles extends Table {
   IntColumn get accountId => integer()();
   TextColumn get displayName => text()();
   TextColumn get mode => text()(); // 'child' or 'adult'
-  IntColumn get avatarIndex => integer().withDefault(const Constant(0))();
+  IntColumn get avatarIndex => integer().withDefault(const Constant<int>(0))();
   DateTimeColumn get createdAt => dateTime()();
   DateTimeColumn get updatedAt => dateTime()();
 }

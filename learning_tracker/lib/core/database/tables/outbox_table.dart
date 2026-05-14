@@ -29,7 +29,7 @@ class Outbox extends Table {
   DateTimeColumn get createdAt => dateTime()();
 
   /// Number of push attempts made so far.
-  IntColumn get attempts => integer().withDefault(const Constant(0))();
+  IntColumn get attempts => integer().withDefault(const Constant<int>(0))();
 
   /// Last error message, if any push attempt failed.
   TextColumn get lastError => text().nullable()();
