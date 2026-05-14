@@ -4,14 +4,14 @@ import 'package:learning_tracker/core/enums/cross_profile_scope.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
+import 'package:learning_tracker/core/sync/sync_write_facade.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 import 'package:learning_tracker/features/learning/data/repositories/bookmark_repository_impl.dart';
-import 'package:learning_tracker/features/sync/data/sync_engine.dart';
 import 'package:mocktail/mocktail.dart';
 
 import '../../../../helpers/test_database.dart';
 
-class MockSyncEngine extends Mock implements SyncEngine {}
+class MockSyncEngine extends Mock implements SyncWriteFacade {}
 
 class MockContentRepository extends Mock implements ContentRepository {}
 

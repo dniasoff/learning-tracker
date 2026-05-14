@@ -2,21 +2,21 @@ import 'package:learning_tracker/core/database/daos/track_dao.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
+import 'package:learning_tracker/core/sync/sync_write_facade.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/track_repository.dart';
-import 'package:learning_tracker/features/sync/data/sync_engine.dart';
 
 /// Implementation of [TrackRepository] using Drift database.
 class TrackRepositoryImpl implements TrackRepository {
   TrackRepositoryImpl({
     required UserDatabase database,
-    SyncEngine? syncEngine,
+    SyncWriteFacade? syncEngine,
     int activeProfileId = 0,
   }) : _database = database,
        _syncEngine = syncEngine,
        _activeProfileId = activeProfileId;
 
   final UserDatabase _database;
-  final SyncEngine? _syncEngine;
+  final SyncWriteFacade? _syncEngine;
   final int _activeProfileId;
 
   Future<CurriculumTrack?> _resolveTrackRowForSync(

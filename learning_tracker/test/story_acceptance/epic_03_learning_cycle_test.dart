@@ -6,17 +6,17 @@ import 'package:learning_tracker/core/database/daos/profile_dao.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
+import 'package:learning_tracker/core/sync/sync_write_facade.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 import 'package:learning_tracker/features/learning/data/repositories/completion_repository_impl.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_request.dart';
 import 'package:learning_tracker/features/progress/data/repositories/progress_repository_impl.dart';
-import 'package:learning_tracker/features/sync/data/sync_engine.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:test/test.dart';
 
 import '../helpers/test_database.dart';
 
-class _MockSyncEngine extends Mock implements SyncEngine {}
+class _MockSyncEngine extends Mock implements SyncWriteFacade {}
 
 class _MockContentRepository extends Mock implements ContentRepository {}
 
@@ -24,7 +24,7 @@ UserDatabase _db() => createTestDatabase();
 
 CompletionRepositoryImpl _repo(
   UserDatabase db,
-  SyncEngine engine,
+  SyncWriteFacade engine,
   ContentRepository content,
 ) => CompletionRepositoryImpl(
   database: db,

@@ -1,18 +1,18 @@
 import 'package:drift/drift.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/core/sync/sync_write_facade.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 import 'package:learning_tracker/features/learning_order/domain/models/learning_order_item.dart';
 import 'package:learning_tracker/features/learning_order/domain/repositories/learning_order_repository.dart'
     show LearningOrderRepository, ParentControlException;
-import 'package:learning_tracker/features/sync/data/sync_engine.dart';
 
 class LearningOrderRepositoryImpl implements LearningOrderRepository {
   LearningOrderRepositoryImpl({
     required UserDatabase database,
     required ContentRepository contentRepository,
-    SyncEngine? syncEngine,
+    SyncWriteFacade? syncEngine,
     int profileId = 0,
   }) : _database = database,
        _contentRepository = contentRepository,
@@ -21,7 +21,7 @@ class LearningOrderRepositoryImpl implements LearningOrderRepository {
 
   final UserDatabase _database;
   final ContentRepository _contentRepository;
-  final SyncEngine? _syncEngine;
+  final SyncWriteFacade? _syncEngine;
   final int _profileId;
 
   /// Returns a map from sefariaRef → (displayNameHe, displayNameEn, sortOrder)

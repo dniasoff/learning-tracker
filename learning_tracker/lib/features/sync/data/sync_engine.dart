@@ -11,6 +11,7 @@ import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/network/connectivity_service.dart';
 import 'package:learning_tracker/core/sync/outbox/outbox_processor.dart';
+import 'package:learning_tracker/core/sync/sync_write_facade.dart';
 import 'package:learning_tracker/core/time/ulid.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/gamification/domain/services/reward_milestone_service.dart';
@@ -30,7 +31,11 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// - **Pull-on-launch**: App startup pulls latest data and merges locally
 /// - **Foreground listeners**: Real-time sync while app is in foreground
 /// - **Offline queue**: When offline or push-suppressed, writes stay queued until flush
-class SyncEngine {
+///
+/// @deprecated — DNI-333 Phase 6: External code should depend on [SyncWriteFacade]
+/// (for push operations) or [SyncOrchestrator] (for pull/status). This class is
+/// scheduled for deletion once all entity mergers have migrated to [MergeRouter].
+class SyncEngine implements SyncWriteFacade {
   SyncEngine({
     required UserDatabase database,
     required FirestoreDataSource firestoreDataSource,
@@ -720,6 +725,7 @@ class SyncEngine {
   }
 
   /// Push a completion to Firestore after local write.
+  @override
   Future<void> pushCompletion(Map<String, dynamic> completion) async {
     await _offlineQueue.enqueueCompletion(_withQueueTargetProfile(completion));
     await _afterEnqueueForBackgroundFlush(context: 'completion');
@@ -728,6 +734,7 @@ class SyncEngine {
   /// After bulk local completion inserts (prior learning / batch marks),
   /// enqueue all payloads and run a single background flush instead of N
   /// separate schedules.
+  @override
   Future<void> pushCompletionsBatch(
     List<Map<String, dynamic>> completions,
   ) async {
@@ -773,6 +780,7 @@ class SyncEngine {
       _firestoreDataSource.fetchBookmarks();
 
   /// Push a bookmark to Firestore after local write.
+  @override
   Future<void> pushBookmark(Map<String, dynamic> bookmark) async {
     if (!_firestoreDataSource.isAuthenticated) {
       _logger.debug(event: 'sync_bookmark_skipped_unauthenticated');
@@ -785,6 +793,7 @@ class SyncEngine {
   }
 
   /// Push settings to Firestore after local write.
+  @override
   Future<void> pushSettings(Map<String, dynamic> settings) async {
     await _offlineQueue.enqueueSettings(_withQueueTargetProfile(settings));
     await _afterEnqueueForBackgroundFlush(context: 'settings');
@@ -811,6 +820,7 @@ class SyncEngine {
   }
 
   /// Build and push the current gamification snapshot from local storage.
+  @override
   Future<void> pushGamificationSettingsSnapshot() async {
     final payload = await _buildGamificationSettingsPayload();
     await pushGamificationSettings(payload);
@@ -858,6 +868,7 @@ class SyncEngine {
 
   /// Push a learner profile (profiles table) to Firestore.
   /// Local row remains authoritative; cloud push is background/queued.
+  @override
   Future<void> pushLearnerProfile(Map<String, dynamic> profile) async {
     final payload = await _enrichLearnerProfilePayload(profile);
 
@@ -873,6 +884,7 @@ class SyncEngine {
   ///
   /// Step 2 (fire-and-forget): kicks off the actual Firestore delete in the
   /// background so the UI can respond immediately after the local DB write.
+  @override
   Future<void> deleteLearnerProfile(int profileId) async {
     _logger.info(
       event: 'sync_delete_learner_profile_start',
@@ -974,6 +986,7 @@ class SyncEngine {
   }
 
   /// Push curriculum-track state to Firestore after local write.
+  @override
   Future<void> pushCurriculumTrack(Map<String, dynamic> trackData) async {
     final payload = await _withTrackProgressSchema(trackData);
     await _offlineQueue.enqueueCurriculumTrack(
@@ -989,6 +1002,7 @@ class SyncEngine {
   /// that the offline queue can retry individual rows independently.
   /// [profileId] must match the active learner profile at the time of the
   /// write so the queue flushes to the correct Firestore sub-collection.
+  @override
   Future<void> pushLearningOrder({
     required int profileId,
     required String curriculumId,

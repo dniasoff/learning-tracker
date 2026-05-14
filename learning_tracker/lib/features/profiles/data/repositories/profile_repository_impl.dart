@@ -1,24 +1,24 @@
 import 'package:drift/drift.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
+import 'package:learning_tracker/core/sync/sync_write_facade.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
 import 'package:learning_tracker/features/profiles/domain/repositories/profile_repository.dart';
-import 'package:learning_tracker/features/sync/data/sync_engine.dart';
 
 final _log = AppLogger(AppLogger.instance);
 
 /// Implementation of [ProfileRepository] using Drift database.
 ///
-/// When a [SyncEngine] is provided (cloud-born accounts), create / update /
+/// When a [SyncWriteFacade] is provided (cloud-born accounts), create / update /
 /// delete operations are mirrored to Firestore so learner profiles survive
 /// re-install and sync across devices. Local-born accounts pass null and
 /// the repo stays local-only.
 class ProfileRepositoryImpl implements ProfileRepository {
   final UserDatabase _db;
-  final SyncEngine? _syncEngine;
+  final SyncWriteFacade? _syncEngine;
 
-  ProfileRepositoryImpl(this._db, {SyncEngine? syncEngine})
+  ProfileRepositoryImpl(this._db, {SyncWriteFacade? syncEngine})
     : _syncEngine = syncEngine;
 
   static const int maxProfilesPerAccount = 10;

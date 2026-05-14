@@ -6,6 +6,7 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/core/learning/completion_command.dart';
 import 'package:learning_tracker/core/learning/completion_writer.dart';
+import 'package:learning_tracker/core/sync/sync_write_facade.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 import 'package:learning_tracker/features/gamification/domain/models/reward_milestone.dart';
@@ -19,12 +20,11 @@ import 'package:learning_tracker/features/learning/domain/services/completion_de
 import 'package:learning_tracker/features/stages/domain/models/stage_definition.dart'
     as stage_model;
 import 'package:learning_tracker/features/stages/domain/repositories/stage_definition_repository.dart';
-import 'package:learning_tracker/features/sync/data/sync_engine.dart';
 
 /// Implementation of [CompletionRepository] using Drift database and sync engine.
 class CompletionRepositoryImpl implements CompletionRepository {
   final UserDatabase _database;
-  final SyncEngine? _syncEngine;
+  final SyncWriteFacade? _syncEngine;
   final ContentRepository _contentRepository;
   final BookmarkRepository? _bookmarkRepository;
   final CompletionDetectionService? _completionDetectionService;
@@ -35,7 +35,7 @@ class CompletionRepositoryImpl implements CompletionRepository {
 
   CompletionRepositoryImpl({
     required UserDatabase database,
-    required SyncEngine? syncEngine,
+    required SyncWriteFacade? syncEngine,
     required ContentRepository contentRepository,
     BookmarkRepository? bookmarkRepository,
     CompletionDetectionService? completionDetectionService,

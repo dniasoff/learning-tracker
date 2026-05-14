@@ -6,11 +6,11 @@ import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/core/sync/firestore_gateway.dart';
+import 'package:learning_tracker/core/sync/sync_write_facade.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 import 'package:learning_tracker/features/learning/domain/entities/bookmark.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/bookmark_repository.dart';
-import 'package:learning_tracker/features/sync/data/sync_engine.dart';
 
 /// Implementation of [BookmarkRepository] using Drift database and sync engine.
 ///
@@ -26,7 +26,7 @@ import 'package:learning_tracker/features/sync/data/sync_engine.dart';
 /// eliminating the O(N) scan over all curriculum items per call.
 class BookmarkRepositoryImpl implements BookmarkRepository {
   final UserDatabase _database;
-  final SyncEngine? _syncEngine;
+  final SyncWriteFacade? _syncEngine;
   final FirestoreGateway? _firestoreGateway;
   final ContentRepository _contentRepository;
   final int _profileId;
@@ -38,7 +38,7 @@ class BookmarkRepositoryImpl implements BookmarkRepository {
 
   BookmarkRepositoryImpl({
     required UserDatabase database,
-    required SyncEngine? syncEngine,
+    required SyncWriteFacade? syncEngine,
     required ContentRepository contentRepository,
     int profileId = 0,
     ContentIndex? contentIndex,
