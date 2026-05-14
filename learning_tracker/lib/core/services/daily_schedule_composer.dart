@@ -20,4 +20,3 @@ class ComposedDailySchedule {
     return Map<CurriculumId, List<DailyTask>>.unmodifiable(grouped);
   }();
 }
-

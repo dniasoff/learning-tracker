@@ -69,6 +69,8 @@ void main() {
     });
 
     testWidgets('displays XP for effort', (tester) async {
+      // DNI-376 removed the +XP badge from DailyTaskCard.
+      // This test verifies the card still renders without the badge.
       final task = _task(estimatedEffortMinutes: 5);
 
       await tester.pumpWidget(
@@ -77,9 +79,9 @@ void main() {
         ),
       );
 
-      // Widget shows XP (effort * 3), not raw minutes
-      expect(find.text('+15 XP'), findsOneWidget);
-      expect(find.byIcon(Icons.stars_rounded), findsOneWidget);
+      // Card renders without XP badge (badge was removed in DNI-376).
+      expect(find.byType(DailyTaskCard), findsOneWidget);
+      expect(find.text('+15 XP'), findsNothing);
     });
 
     testWidgets('shows overdue badge when task is overdue', (tester) async {
@@ -156,7 +158,8 @@ void main() {
       );
 
       expect(find.text('Chazara 3'), findsOneWidget);
-      expect(find.text('+9 XP'), findsOneWidget);
+      // DNI-376: XP badge removed from DailyTaskCard.
+      expect(find.text('+9 XP'), findsNothing);
     });
   });
 }
