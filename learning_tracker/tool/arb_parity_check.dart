@@ -27,10 +27,8 @@ void main() {
     exit(1);
   }
 
-  final enMap =
-      jsonDecode(enFile.readAsStringSync()) as Map<String, dynamic>;
-  final heMap =
-      jsonDecode(heFile.readAsStringSync()) as Map<String, dynamic>;
+  final enMap = jsonDecode(enFile.readAsStringSync()) as Map<String, dynamic>;
+  final heMap = jsonDecode(heFile.readAsStringSync()) as Map<String, dynamic>;
 
   // Collect all translatable keys from English (skip @-prefixed metadata keys).
   final enKeys = enMap.keys.where((k) => !k.startsWith('@')).toSet();

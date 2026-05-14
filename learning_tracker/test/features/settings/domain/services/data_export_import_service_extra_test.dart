@@ -35,20 +35,21 @@ void main() {
     String curriculumId = 'bavli',
     String trackType = 'personal',
   }) {
-    return db.into(db.curriculumTracks).insert(
-      CurriculumTracksCompanion.insert(
-        profileId: profileId,
-        curriculumId: curriculumId,
-        trackType: trackType,
-        activatedAt: DateTime.utc(2026, 1, 1),
-      ),
-    );
+    return db
+        .into(db.curriculumTracks)
+        .insert(
+          CurriculumTracksCompanion.insert(
+            profileId: profileId,
+            curriculumId: curriculumId,
+            trackType: trackType,
+            activatedAt: DateTime.utc(2026, 1, 1),
+          ),
+        );
   }
 
   // Convenience: decode JSON then fetch a typed list section.
   List<Map<String, dynamic>> section(Map<String, dynamic> decoded, String key) {
-    return (decoded[key] as List<dynamic>)
-        .cast<Map<String, dynamic>>();
+    return (decoded[key] as List<dynamic>).cast<Map<String, dynamic>>();
   }
 
   // ---------------------------------------------------------------------------
@@ -73,11 +74,19 @@ void main() {
       final decoded = jsonDecode(raw) as Map<String, dynamic>;
 
       for (final key in <String>[
-        'completions', 'goals', 'stageDefinitions', 'streaks',
-        'curriculumTracks', 'learnerProfiles', 'userProfiles',
+        'completions',
+        'goals',
+        'stageDefinitions',
+        'streaks',
+        'curriculumTracks',
+        'learnerProfiles',
+        'userProfiles',
       ]) {
-        expect(decoded[key] as List<dynamic>, isEmpty,
-            reason: '$key should be empty');
+        expect(
+          decoded[key] as List<dynamic>,
+          isEmpty,
+          reason: '$key should be empty',
+        );
       }
     });
   });
@@ -89,16 +98,18 @@ void main() {
   group('DataExportImportService.exportData — curriculumScopes', () {
     test('serializes curriculum scope rows', () async {
       final trackId = await insertTrack();
-      await db.into(db.curriculumScopes).insert(
-        CurriculumScopesCompanion.insert(
-          profileId: 1,
-          curriculumId: 'bavli',
-          trackId: trackId,
-          scopeLevel: 1,
-          scopeValue: 'Berakhot',
-          createdAt: DateTime.utc(2026, 1, 1),
-        ),
-      );
+      await db
+          .into(db.curriculumScopes)
+          .insert(
+            CurriculumScopesCompanion.insert(
+              profileId: 1,
+              curriculumId: 'bavli',
+              trackId: trackId,
+              scopeLevel: 1,
+              scopeValue: 'Berakhot',
+              createdAt: DateTime.utc(2026, 1, 1),
+            ),
+          );
 
       final raw = await service.exportData();
       final decoded = jsonDecode(raw) as Map<String, dynamic>;
@@ -115,13 +126,15 @@ void main() {
 
   group('DataExportImportService.exportData — profilePrograms', () {
     test('serializes profile program rows', () async {
-      await db.into(db.profilePrograms).insert(
-        ProfileProgramsCompanion.insert(
-          profileId: 1,
-          curriculumType: 'bavli',
-          programId: 42,
-        ),
-      );
+      await db
+          .into(db.profilePrograms)
+          .insert(
+            ProfileProgramsCompanion.insert(
+              profileId: 1,
+              curriculumType: 'bavli',
+              programId: 42,
+            ),
+          );
 
       final raw = await service.exportData();
       final decoded = jsonDecode(raw) as Map<String, dynamic>;
@@ -163,16 +176,18 @@ void main() {
   group('DataExportImportService.exportData — completionEvents', () {
     test('serializes completion event rows', () async {
       final ts = DateTime.utc(2026, 3, 1);
-      await db.into(db.completionEvents).insert(
-        CompletionEventsCompanion.insert(
-          profileId: 1,
-          curriculumId: 'bavli',
-          sefariaRef: 'Berakhot.2a',
-          stageId: 1,
-          trackType: 'personal',
-          eventTimestamp: ts,
-        ),
-      );
+      await db
+          .into(db.completionEvents)
+          .insert(
+            CompletionEventsCompanion.insert(
+              profileId: 1,
+              curriculumId: 'bavli',
+              sefariaRef: 'Berakhot.2a',
+              stageId: 1,
+              trackType: 'personal',
+              eventTimestamp: ts,
+            ),
+          );
 
       final raw = await service.exportData();
       final decoded = jsonDecode(raw) as Map<String, dynamic>;

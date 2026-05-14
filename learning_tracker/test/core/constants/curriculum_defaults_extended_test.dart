@@ -29,19 +29,25 @@ void main() {
       leaf = CurriculumLabels.leaf(CurriculumId.mishnayos);
     });
 
-    test('bilingualPlural includes Hebrew plural and English plural separated by bullet', () {
-      final bilingual = leaf.bilingualPlural;
-      expect(bilingual, contains('•'));
-      expect(bilingual, contains(leaf.hePlural));
-      expect(bilingual, contains(leaf.enPlural));
-    });
+    test(
+      'bilingualPlural includes Hebrew plural and English plural separated by bullet',
+      () {
+        final bilingual = leaf.bilingualPlural;
+        expect(bilingual, contains('•'));
+        expect(bilingual, contains(leaf.hePlural));
+        expect(bilingual, contains(leaf.enPlural));
+      },
+    );
 
-    test('bilingualSingular includes Hebrew singular and English singular separated by bullet', () {
-      final bilingual = leaf.bilingualSingular;
-      expect(bilingual, contains('•'));
-      expect(bilingual, contains(leaf.he));
-      expect(bilingual, contains(leaf.en));
-    });
+    test(
+      'bilingualSingular includes Hebrew singular and English singular separated by bullet',
+      () {
+        final bilingual = leaf.bilingualSingular;
+        expect(bilingual, contains('•'));
+        expect(bilingual, contains(leaf.he));
+        expect(bilingual, contains(leaf.en));
+      },
+    );
 
     test('inLanguage with useHebrew=false plural returns enPlural', () {
       final result = leaf.inLanguage(useHebrew: false, plural: true);
@@ -216,11 +222,11 @@ void main() {
 
   group('CurriculumLabels.fullPath', () {
     test('builds path with default separator for mishnayos', () {
-      final path = CurriculumLabels.fullPath(
-        CurriculumId.mishnayos,
-        ['Zeraim', 'Berakhot', '1'],
-        useHebrew: false,
-      );
+      final path = CurriculumLabels.fullPath(CurriculumId.mishnayos, [
+        'Zeraim',
+        'Berakhot',
+        '1',
+      ], useHebrew: false);
       expect(path, contains('→'));
       expect(path, contains('Zeraim'));
       expect(path, contains('Berakhot'));
@@ -228,11 +234,11 @@ void main() {
     });
 
     test('skips null entries in path segments', () {
-      final path = CurriculumLabels.fullPath(
-        CurriculumId.mishnayos,
-        ['Zeraim', null, '3'],
-        useHebrew: false,
-      );
+      final path = CurriculumLabels.fullPath(CurriculumId.mishnayos, [
+        'Zeraim',
+        null,
+        '3',
+      ], useHebrew: false);
       // Should contain Zeraim and 3 but skip the null segment.
       expect(path, contains('Zeraim'));
       expect(path, contains('3'));
@@ -249,11 +255,10 @@ void main() {
     });
 
     test('returns empty string for all-null segments', () {
-      final path = CurriculumLabels.fullPath(
-        CurriculumId.mishnayos,
-        [null, null],
-        useHebrew: false,
-      );
+      final path = CurriculumLabels.fullPath(CurriculumId.mishnayos, [
+        null,
+        null,
+      ], useHebrew: false);
       expect(path, isEmpty);
     });
 

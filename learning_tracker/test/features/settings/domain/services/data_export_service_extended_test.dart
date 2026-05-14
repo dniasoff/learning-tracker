@@ -56,7 +56,8 @@ void main() {
         appVersionFetcher: () async => '3.5.2',
       );
 
-      final data = jsonDecode(await service.exportData()) as Map<String, dynamic>;
+      final data =
+          jsonDecode(await service.exportData()) as Map<String, dynamic>;
       expect(data['appVersion'], '3.5.2');
     });
 
@@ -69,7 +70,8 @@ void main() {
         appVersionFetcher: () async => '1.0.0',
       );
 
-      final data = jsonDecode(await service.exportData()) as Map<String, dynamic>;
+      final data =
+          jsonDecode(await service.exportData()) as Map<String, dynamic>;
 
       expect(data['userProfiles'] as List<dynamic>, isEmpty);
       expect(data['completions'] as List<dynamic>, isEmpty);
@@ -103,7 +105,8 @@ void main() {
         appVersionFetcher: () async => '1.0.0',
       );
 
-      final data = jsonDecode(await service.exportData()) as Map<String, dynamic>;
+      final data =
+          jsonDecode(await service.exportData()) as Map<String, dynamic>;
       expect(data['formatVersion'], 'schemaV1');
     });
 
@@ -116,7 +119,8 @@ void main() {
         appVersionFetcher: () async => '1.0.0',
       );
 
-      final data = jsonDecode(await service.exportData()) as Map<String, dynamic>;
+      final data =
+          jsonDecode(await service.exportData()) as Map<String, dynamic>;
       final exportedAt = data['exportedAt'] as String;
       expect(DateTime.tryParse(exportedAt), isNotNull);
     });

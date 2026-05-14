@@ -123,21 +123,24 @@ void main() {
       expect(result, isNull);
     });
 
-    test('writePayload then readPayload returns the stored registration', () async {
-      const reg = PendingLocalRegistration(
-        accountId: 'acc-123',
-        dbFileName: 'lt_abc.sqlite',
-        email: 'carol@example.com',
-        displayName: 'Carol',
-      );
+    test(
+      'writePayload then readPayload returns the stored registration',
+      () async {
+        const reg = PendingLocalRegistration(
+          accountId: 'acc-123',
+          dbFileName: 'lt_abc.sqlite',
+          email: 'carol@example.com',
+          displayName: 'Carol',
+        );
 
-      await PendingLocalSignupStore.writePayload(prefs, reg);
-      final result = await PendingLocalSignupStore.readPayload(prefs);
+        await PendingLocalSignupStore.writePayload(prefs, reg);
+        final result = await PendingLocalSignupStore.readPayload(prefs);
 
-      expect(result, isNotNull);
-      expect(result!.accountId, reg.accountId);
-      expect(result.email, reg.email);
-    });
+        expect(result, isNotNull);
+        expect(result!.accountId, reg.accountId);
+        expect(result.email, reg.email);
+      },
+    );
 
     test('clearPayload removes the stored registration', () async {
       const reg = PendingLocalRegistration(
@@ -154,28 +157,46 @@ void main() {
     });
 
     test('tryReserveEmail succeeds when email not yet reserved', () async {
-      final ok = await PendingLocalSignupStore.tryReserveEmail(prefs, 'eve@example.com');
+      final ok = await PendingLocalSignupStore.tryReserveEmail(
+        prefs,
+        'eve@example.com',
+      );
       expect(ok, isTrue);
     });
 
     test('tryReserveEmail fails when email already reserved', () async {
       await PendingLocalSignupStore.tryReserveEmail(prefs, 'eve@example.com');
-      final ok = await PendingLocalSignupStore.tryReserveEmail(prefs, 'EVE@example.com');
+      final ok = await PendingLocalSignupStore.tryReserveEmail(
+        prefs,
+        'EVE@example.com',
+      );
       expect(ok, isFalse);
     });
 
     test('tryReserveEmail is case-insensitive', () async {
       await PendingLocalSignupStore.tryReserveEmail(prefs, 'Frank@Example.Com');
-      final ok = await PendingLocalSignupStore.tryReserveEmail(prefs, 'frank@example.com');
+      final ok = await PendingLocalSignupStore.tryReserveEmail(
+        prefs,
+        'frank@example.com',
+      );
       expect(ok, isFalse);
     });
 
-    test('releaseEmail allows re-reservation of previously held email', () async {
-      await PendingLocalSignupStore.tryReserveEmail(prefs, 'grace@example.com');
-      await PendingLocalSignupStore.releaseEmail(prefs, 'grace@example.com');
-      final ok = await PendingLocalSignupStore.tryReserveEmail(prefs, 'grace@example.com');
-      expect(ok, isTrue);
-    });
+    test(
+      'releaseEmail allows re-reservation of previously held email',
+      () async {
+        await PendingLocalSignupStore.tryReserveEmail(
+          prefs,
+          'grace@example.com',
+        );
+        await PendingLocalSignupStore.releaseEmail(prefs, 'grace@example.com');
+        final ok = await PendingLocalSignupStore.tryReserveEmail(
+          prefs,
+          'grace@example.com',
+        );
+        expect(ok, isTrue);
+      },
+    );
 
     test('releaseEmail is a no-op for unknown email', () async {
       // Should not throw.
@@ -183,8 +204,14 @@ void main() {
     });
 
     test('multiple emails can be reserved simultaneously', () async {
-      final ok1 = await PendingLocalSignupStore.tryReserveEmail(prefs, 'alice@x.com');
-      final ok2 = await PendingLocalSignupStore.tryReserveEmail(prefs, 'bob@x.com');
+      final ok1 = await PendingLocalSignupStore.tryReserveEmail(
+        prefs,
+        'alice@x.com',
+      );
+      final ok2 = await PendingLocalSignupStore.tryReserveEmail(
+        prefs,
+        'bob@x.com',
+      );
       expect(ok1, isTrue);
       expect(ok2, isTrue);
     });

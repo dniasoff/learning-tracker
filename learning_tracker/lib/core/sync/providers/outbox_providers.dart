@@ -19,10 +19,7 @@ final firestoreGatewayProvider = Provider<FirestoreGatewayImpl?>((ref) {
   final firestore = ref.watch(firebaseFirestoreProvider);
   final auth = ref.watch(authRepositoryProvider);
 
-  return FirestoreGatewayImpl(
-    firestore: firestore,
-    authRepository: auth,
-  );
+  return FirestoreGatewayImpl(firestore: firestore, authRepository: auth);
 });
 
 /// Provider for [OutboxPushPipeline].
@@ -47,8 +44,5 @@ final outboxProcessorProvider = Provider<OutboxProcessor?>((ref) {
 
   final database = ref.watch(userDatabaseProvider);
 
-  return OutboxProcessor(
-    outboxDao: database.outboxDao,
-    pipeline: pipeline,
-  );
+  return OutboxProcessor(outboxDao: database.outboxDao, pipeline: pipeline);
 });

@@ -370,13 +370,13 @@ void main() {
       );
 
       final aggregator = ParentDashboardAggregator(
-          db,
-          stageRepository: StageDefinitionRepositoryImpl(
-            stageDao: db.stageDao,
-            completionDao: db.completionDao,
-            pushSettings: null,
-          ),
-        );
+        db,
+        stageRepository: StageDefinitionRepositoryImpl(
+          stageDao: db.stageDao,
+          completionDao: db.completionDao,
+          pushSettings: null,
+        ),
+      );
       final pct = await aggregator.computeCompletionPercentage(
         CurriculumId.mishnayos,
       );
@@ -452,13 +452,13 @@ void main() {
     test('aggregator returns 0% when no completions', () async {
       await db.activeCurriculumDao.activate(CurriculumId.mishnayos);
       final aggregator = ParentDashboardAggregator(
-          db,
-          stageRepository: StageDefinitionRepositoryImpl(
-            stageDao: db.stageDao,
-            completionDao: db.completionDao,
-            pushSettings: null,
-          ),
-        );
+        db,
+        stageRepository: StageDefinitionRepositoryImpl(
+          stageDao: db.stageDao,
+          completionDao: db.completionDao,
+          pushSettings: null,
+        ),
+      );
       final pct = await aggregator.computeCompletionPercentage(
         CurriculumId.mishnayos,
       );
@@ -525,13 +525,13 @@ void main() {
       }
 
       final aggregator = ParentDashboardAggregator(
-          db,
-          stageRepository: StageDefinitionRepositoryImpl(
-            stageDao: db.stageDao,
-            completionDao: db.completionDao,
-            pushSettings: null,
-          ),
-        );
+        db,
+        stageRepository: StageDefinitionRepositoryImpl(
+          stageDao: db.stageDao,
+          completionDao: db.completionDao,
+          pushSettings: null,
+        ),
+      );
       final data = await aggregator.compute();
 
       // Only 3 recent completions should appear (not the 2 old ones)
@@ -568,13 +568,13 @@ void main() {
       );
 
       final aggregator = ParentDashboardAggregator(
-          db,
-          stageRepository: StageDefinitionRepositoryImpl(
-            stageDao: db.stageDao,
-            completionDao: db.completionDao,
-            pushSettings: null,
-          ),
-        );
+        db,
+        stageRepository: StageDefinitionRepositoryImpl(
+          stageDao: db.stageDao,
+          completionDao: db.completionDao,
+          pushSettings: null,
+        ),
+      );
       final data = await aggregator.compute();
 
       expect(data.currentStreak, equals(5));

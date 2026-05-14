@@ -84,9 +84,7 @@ void main() {
       });
 
       test('nullable lat/lng stored as null', () async {
-        await db.sacredWindowDao.insertAll([
-          makeRow(lat: null, lng: null),
-        ]);
+        await db.sacredWindowDao.insertAll([makeRow(lat: null, lng: null)]);
 
         final row = (await db.sacredWindowDao.getAll()).first;
         expect(row.lat, isNull);
@@ -133,16 +131,19 @@ void main() {
     });
 
     group('clearAll then insertAll (replace cycle)', () {
-      test('old rows are gone and new rows are present after replace', () async {
-        await db.sacredWindowDao.insertAll([makeRow(kind: 'shabbos')]);
+      test(
+        'old rows are gone and new rows are present after replace',
+        () async {
+          await db.sacredWindowDao.insertAll([makeRow(kind: 'shabbos')]);
 
-        await db.sacredWindowDao.clearAll();
-        await db.sacredWindowDao.insertAll([makeRow(kind: 'yomKippur')]);
+          await db.sacredWindowDao.clearAll();
+          await db.sacredWindowDao.insertAll([makeRow(kind: 'yomKippur')]);
 
-        final rows = await db.sacredWindowDao.getAll();
-        expect(rows, hasLength(1));
-        expect(rows.first.kind, equals('yomKippur'));
-      });
+          final rows = await db.sacredWindowDao.getAll();
+          expect(rows, hasLength(1));
+          expect(rows.first.kind, equals('yomKippur'));
+        },
+      );
     });
   });
 }

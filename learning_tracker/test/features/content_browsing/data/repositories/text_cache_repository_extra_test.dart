@@ -30,7 +30,9 @@ void main() {
     required String hebrewText,
     String englishText = '',
   }) async {
-    await database.into(database.textCache).insert(
+    await database
+        .into(database.textCache)
+        .insert(
           TextCacheCompanion.insert(
             sefariaRef: sefariaRef,
             hebrewText: hebrewText,
@@ -46,7 +48,9 @@ void main() {
     String hebrewText = '',
     String englishText = '',
   }) async {
-    await database.into(database.dailyContent).insert(
+    await database
+        .into(database.dailyContent)
+        .insert(
           DailyContentCompanion.insert(
             sefariaRef: sefariaRef,
             hebrewText: Value(hebrewText),
@@ -90,10 +94,7 @@ void main() {
     });
 
     test('segment has correct verse number for colon-separated ref', () async {
-      await insertTextCache(
-        sefariaRef: 'Genesis 1:5',
-        hebrewText: 'some text',
-      );
+      await insertTextCache(sefariaRef: 'Genesis 1:5', hebrewText: 'some text');
 
       final result = await repository.getText('Genesis 1:5');
 
@@ -119,34 +120,31 @@ void main() {
   // =========================================================================
 
   group('TextCacheRepository.getText — child-verse aggregation', () {
-    test(
-      'aggregates child verse rows when chapter ref is requested',
-      () async {
-        await insertTextCache(
-          sefariaRef: 'Genesis 1:1',
-          hebrewText: 'פסוק א',
-          englishText: 'Verse 1',
-        );
-        await insertTextCache(
-          sefariaRef: 'Genesis 1:2',
-          hebrewText: 'פסוק ב',
-          englishText: 'Verse 2',
-        );
-        await insertTextCache(
-          sefariaRef: 'Genesis 1:3',
-          hebrewText: 'פסוק ג',
-          englishText: 'Verse 3',
-        );
+    test('aggregates child verse rows when chapter ref is requested', () async {
+      await insertTextCache(
+        sefariaRef: 'Genesis 1:1',
+        hebrewText: 'פסוק א',
+        englishText: 'Verse 1',
+      );
+      await insertTextCache(
+        sefariaRef: 'Genesis 1:2',
+        hebrewText: 'פסוק ב',
+        englishText: 'Verse 2',
+      );
+      await insertTextCache(
+        sefariaRef: 'Genesis 1:3',
+        hebrewText: 'פסוק ג',
+        englishText: 'Verse 3',
+      );
 
-        // Request the chapter ref — no exact match, has child rows.
-        final result = await repository.getText('Genesis 1');
+      // Request the chapter ref — no exact match, has child rows.
+      final result = await repository.getText('Genesis 1');
 
-        expect(result, isNotNull);
-        expect(result!.sefariaRef, 'Genesis 1');
-        // All 3 child rows aggregated.
-        expect(result.segments, hasLength(3));
-      },
-    );
+      expect(result, isNotNull);
+      expect(result!.sefariaRef, 'Genesis 1');
+      // All 3 child rows aggregated.
+      expect(result.segments, hasLength(3));
+    });
 
     test('child verses are sorted by verse number', () async {
       // Insert out of order.

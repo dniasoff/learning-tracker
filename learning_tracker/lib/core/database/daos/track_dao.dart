@@ -190,9 +190,9 @@ class TrackDao extends DatabaseAccessor<UserDatabase>
 
     await db.transaction(() async {
       await db.goalDao.deleteGoalsForTrack(trackId);
-      await (db.delete(db.stageDefinitions)
-            ..where((t) => t.trackId.equals(trackId)))
-          .go();
+      await (db.delete(
+        db.stageDefinitions,
+      )..where((t) => t.trackId.equals(trackId))).go();
       // Completions are NOT deleted — they are append-only (FR5 / E24).
       await db.dailyPlanDao.deletePlansByTrack(trackId);
       await db.pointConfigDao.deleteAllForTrack(trackId);
@@ -318,9 +318,9 @@ class TrackDao extends DatabaseAccessor<UserDatabase>
 
     if (existing != null) {
       if (existing.deletedAt != null) {
-        await (update(curriculumTracks)
-              ..where((t) => t.id.equals(existing.id)))
-            .write(
+        await (update(
+          curriculumTracks,
+        )..where((t) => t.id.equals(existing.id))).write(
           CurriculumTracksCompanion(
             isActive: const Value(true),
             activatedAt: Value(DateTimeFactory.nowUtc()),
@@ -354,20 +354,21 @@ class TrackDao extends DatabaseAccessor<UserDatabase>
   /// [deleteTrackAndData].
   Future<void> purgeHistory(int trackId) async {
     await db.transaction(() async {
-      await (db.delete(db.completions)
-            ..where((t) => t.trackId.equals(trackId)))
-          .go();
+      await (db.delete(
+        db.completions,
+      )..where((t) => t.trackId.equals(trackId))).go();
       await db.goalDao.deleteGoalsForTrack(trackId);
-      await (db.delete(db.stageDefinitions)
-            ..where((t) => t.trackId.equals(trackId)))
-          .go();
+      await (db.delete(
+        db.stageDefinitions,
+      )..where((t) => t.trackId.equals(trackId))).go();
       await db.dailyPlanDao.deletePlansByTrack(trackId);
       await db.pointConfigDao.deleteAllForTrack(trackId);
       await db.curriculumScopeDao.clearScopesForTrack(trackId);
       await db.studyDayConfigDao.deleteConfigsForTrack(trackId);
       await db.trackLearningOrderDao.deleteByTrack(trackId);
-      await (update(curriculumTracks)..where((t) => t.id.equals(trackId)))
-          .write(
+      await (update(
+        curriculumTracks,
+      )..where((t) => t.id.equals(trackId))).write(
         CurriculumTracksCompanion(
           isActive: const Value(false),
           deletedAt: Value(DateTimeFactory.nowUtc()),

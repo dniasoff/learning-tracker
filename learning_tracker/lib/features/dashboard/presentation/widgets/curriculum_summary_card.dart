@@ -127,8 +127,7 @@ class _PaceBadge extends StatelessWidget {
       PaceStatusType.onPace => 'On pace',
       PaceStatusType.ahead => switch (pace.delta) {
         DateScheduleDelta(:final value) => '${value.days}d ahead',
-        PaceScheduleDelta(:final value) =>
-          '+${value.itemsPerWeek}/wk ahead',
+        PaceScheduleDelta(:final value) => '+${value.itemsPerWeek}/wk ahead',
       },
       PaceStatusType.behind => switch (pace.delta) {
         DateScheduleDelta(:final value) => '${value.days.abs()}d behind',

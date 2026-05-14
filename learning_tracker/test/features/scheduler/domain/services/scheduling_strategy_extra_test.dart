@@ -143,14 +143,8 @@ void main() {
             .where((t) => t.priority == DailyTaskPriority.overdueChazara)
             .toList();
         expect(overdue, isNotEmpty);
-        expect(
-          overdue.any((t) => t.contentItemSefariaRef == 'ref_0'),
-          isTrue,
-        );
-        expect(
-          overdue.any((t) => t.contentItemSefariaRef == 'ref_1'),
-          isTrue,
-        );
+        expect(overdue.any((t) => t.contentItemSefariaRef == 'ref_0'), isTrue);
+        expect(overdue.any((t) => t.contentItemSefariaRef == 'ref_1'), isTrue);
       },
     );
 
@@ -193,53 +187,50 @@ void main() {
   // =========================================================================
 
   group('SelfPacedSnapshot — coarse mode', () {
-    test(
-      'coarse paceGranularity=perek schedules items from the coarse unit',
-      () {
-        // Items with coarseUnitKey grouping. We create content items where
-        // the first part of the sefariaRef groups them by perek.
-        // Since SchedulerContentItem.coarseUnitKey defaults to sefariaRef,
-        // we can't easily test multi-leaf coarse grouping without a custom
-        // subclass. The test verifies that the coarse path does not throw
-        // and returns newLearning tasks.
-        final items = List.generate(
-          6,
-          (i) => SchedulerContentItem(
-            sefariaRef: 'Berakhot 1:${i + 1}',
-            sortOrder: i,
+    test('coarse paceGranularity=perek schedules items from the coarse unit', () {
+      // Items with coarseUnitKey grouping. We create content items where
+      // the first part of the sefariaRef groups them by perek.
+      // Since SchedulerContentItem.coarseUnitKey defaults to sefariaRef,
+      // we can't easily test multi-leaf coarse grouping without a custom
+      // subclass. The test verifies that the coarse path does not throw
+      // and returns newLearning tasks.
+      final items = List.generate(
+        6,
+        (i) => SchedulerContentItem(
+          sefariaRef: 'Berakhot 1:${i + 1}',
+          sortOrder: i,
+        ),
+      );
+
+      final input = _baseInput(
+        contentItems: items,
+        completions: const [],
+        stages: [
+          const SchedulerStage(
+            id: 1,
+            stageOrder: 1,
+            stageName: 'Learn',
+            delayDays: 0,
           ),
-        );
+        ],
+        pacePerDay: 2.0,
+        paceGranularity: 'perek', // coarse — differs from leaf ('mishna')
+        trackStartedAt: _today.subtract(const Duration(days: 1)),
+      );
 
-        final input = _baseInput(
-          contentItems: items,
-          completions: const [],
-          stages: [
-            const SchedulerStage(
-              id: 1,
-              stageOrder: 1,
-              stageName: 'Learn',
-              delayDays: 0,
-            ),
-          ],
-          pacePerDay: 2.0,
-          paceGranularity: 'perek', // coarse — differs from leaf ('mishna')
-          trackStartedAt: _today.subtract(const Duration(days: 1)),
-        );
+      // The runner selects SelfPacedSnapshot because pacePerDay+trackStartedAt
+      // are both set.
+      final assembly = SchedulingStrategyRunner.run(input);
 
-        // The runner selects SelfPacedSnapshot because pacePerDay+trackStartedAt
-        // are both set.
-        final assembly = SchedulingStrategyRunner.run(input);
-
-        // Coarse mode picks whole units. With each leaf as its own coarseUnitKey
-        // this degenerates to picking 2 individual leaves (pacePerDay=2).
-        expect(
-          assembly.tasks.where(
-            (t) => t.priority == DailyTaskPriority.newLearning,
-          ),
-          isNotEmpty,
-        );
-      },
-    );
+      // Coarse mode picks whole units. With each leaf as its own coarseUnitKey
+      // this degenerates to picking 2 individual leaves (pacePerDay=2).
+      expect(
+        assembly.tasks.where(
+          (t) => t.priority == DailyTaskPriority.newLearning,
+        ),
+        isNotEmpty,
+      );
+    });
   });
 
   // =========================================================================
@@ -316,7 +307,9 @@ void main() {
       final assembly = SchedulingStrategyRunner.run(input);
 
       expect(
-        assembly.tasks.where((t) => t.priority == DailyTaskPriority.newLearning),
+        assembly.tasks.where(
+          (t) => t.priority == DailyTaskPriority.newLearning,
+        ),
         isEmpty,
       );
     });
@@ -331,7 +324,8 @@ void main() {
       );
       final completions = List.generate(
         25,
-        (i) => _comp('ref_$i', 1, daysAgo: 10), // 10 days ago, delay=1 → overdue
+        (i) =>
+            _comp('ref_$i', 1, daysAgo: 10), // 10 days ago, delay=1 → overdue
       );
 
       final input = _baseInput(

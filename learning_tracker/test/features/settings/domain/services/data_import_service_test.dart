@@ -44,66 +44,70 @@ void main() {
       );
     });
 
-    test('importData throws FormatException when formatVersion missing',
-        () async {
-      final db = inMemoryDb();
-      addTearDown(() => db.close());
+    test(
+      'importData throws FormatException when formatVersion missing',
+      () async {
+        final db = inMemoryDb();
+        addTearDown(() => db.close());
 
-      final service = DataExportImportService(
-        database: db,
-        appVersionFetcher: () async => '1.0.0',
-      );
+        final service = DataExportImportService(
+          database: db,
+          appVersionFetcher: () async => '1.0.0',
+        );
 
-      final payload = jsonEncode({
-        'exportedAt': '2026-01-01T00:00:00Z',
-        'appVersion': '1.0.0',
-        'userProfiles': <dynamic>[],
-        'curriculumTracks': <dynamic>[],
-        'stageDefinitions': <dynamic>[],
-        'completions': <dynamic>[],
-        'goals': <dynamic>[],
-        'bookmarks': <dynamic>[],
-        'learningOrder': <dynamic>[],
-        'streaks': <dynamic>[],
-        'pointConfigs': <dynamic>[],
-      });
+        final payload = jsonEncode({
+          'exportedAt': '2026-01-01T00:00:00Z',
+          'appVersion': '1.0.0',
+          'userProfiles': <dynamic>[],
+          'curriculumTracks': <dynamic>[],
+          'stageDefinitions': <dynamic>[],
+          'completions': <dynamic>[],
+          'goals': <dynamic>[],
+          'bookmarks': <dynamic>[],
+          'learningOrder': <dynamic>[],
+          'streaks': <dynamic>[],
+          'pointConfigs': <dynamic>[],
+        });
 
-      expect(
-        () => service.importData(payload),
-        throwsA(isA<FormatException>()),
-      );
-    });
+        expect(
+          () => service.importData(payload),
+          throwsA(isA<FormatException>()),
+        );
+      },
+    );
 
-    test('importData throws FormatException when required section missing',
-        () async {
-      final db = inMemoryDb();
-      addTearDown(() => db.close());
+    test(
+      'importData throws FormatException when required section missing',
+      () async {
+        final db = inMemoryDb();
+        addTearDown(() => db.close());
 
-      final service = DataExportImportService(
-        database: db,
-        appVersionFetcher: () async => '1.0.0',
-      );
+        final service = DataExportImportService(
+          database: db,
+          appVersionFetcher: () async => '1.0.0',
+        );
 
-      // Missing 'completions' section.
-      final payload = jsonEncode({
-        'formatVersion': 'schemaV1',
-        'exportedAt': '2026-01-01T00:00:00Z',
-        'appVersion': '1.0.0',
-        'userProfiles': <dynamic>[],
-        'curriculumTracks': <dynamic>[],
-        'stageDefinitions': <dynamic>[],
-        'goals': <dynamic>[],
-        'bookmarks': <dynamic>[],
-        'learningOrder': <dynamic>[],
-        'streaks': <dynamic>[],
-        'pointConfigs': <dynamic>[],
-      });
+        // Missing 'completions' section.
+        final payload = jsonEncode({
+          'formatVersion': 'schemaV1',
+          'exportedAt': '2026-01-01T00:00:00Z',
+          'appVersion': '1.0.0',
+          'userProfiles': <dynamic>[],
+          'curriculumTracks': <dynamic>[],
+          'stageDefinitions': <dynamic>[],
+          'goals': <dynamic>[],
+          'bookmarks': <dynamic>[],
+          'learningOrder': <dynamic>[],
+          'streaks': <dynamic>[],
+          'pointConfigs': <dynamic>[],
+        });
 
-      expect(
-        () => service.importData(payload),
-        throwsA(isA<FormatException>()),
-      );
-    });
+        expect(
+          () => service.importData(payload),
+          throwsA(isA<FormatException>()),
+        );
+      },
+    );
   });
 
   group('DataExportImportService.importData — with data', () {
@@ -130,7 +134,7 @@ void main() {
             'userMode': 'adult',
             'createdAt': '2026-01-01T00:00:00.000Z',
             'updatedAt': '2026-01-01T00:00:00.000Z',
-          }
+          },
         ],
         'learnerProfiles': <dynamic>[],
         'curriculumTracks': <dynamic>[],
@@ -169,38 +173,38 @@ void main() {
       );
 
       Map<String, dynamic> buildPayload(String displayName) => {
-            'formatVersion': 'schemaV1',
-            'exportedAt': '2026-01-01T00:00:00Z',
-            'appVersion': '1.0.0',
-            'userProfiles': [
-              {
-                'id': 1,
-                'profileId': 1,
-                'displayName': displayName,
-                'tier': 'localBorn',
-                'userMode': 'adult',
-                'createdAt': '2026-01-01T00:00:00.000Z',
-                'updatedAt': '2026-01-01T00:00:00.000Z',
-              }
-            ],
-            'learnerProfiles': <dynamic>[],
-            'curriculumTracks': <dynamic>[],
-            'curriculumScopes': <dynamic>[],
-            'profilePrograms': <dynamic>[],
-            'stageDefinitions': <dynamic>[],
-            'pointConfigs': <dynamic>[],
-            'studyDayConfigs': <dynamic>[],
-            'completions': <dynamic>[],
-            'completionEvents': <dynamic>[],
-            'dailyPlans': <dynamic>[],
-            'learningLedger': <dynamic>[],
-            'bookmarks': <dynamic>[],
-            'learningOrder': <dynamic>[],
-            'trackLearningOrder': <dynamic>[],
-            'goals': <dynamic>[],
-            'streaks': <dynamic>[],
-            'streakEvents': <dynamic>[],
-          };
+        'formatVersion': 'schemaV1',
+        'exportedAt': '2026-01-01T00:00:00Z',
+        'appVersion': '1.0.0',
+        'userProfiles': [
+          {
+            'id': 1,
+            'profileId': 1,
+            'displayName': displayName,
+            'tier': 'localBorn',
+            'userMode': 'adult',
+            'createdAt': '2026-01-01T00:00:00.000Z',
+            'updatedAt': '2026-01-01T00:00:00.000Z',
+          },
+        ],
+        'learnerProfiles': <dynamic>[],
+        'curriculumTracks': <dynamic>[],
+        'curriculumScopes': <dynamic>[],
+        'profilePrograms': <dynamic>[],
+        'stageDefinitions': <dynamic>[],
+        'pointConfigs': <dynamic>[],
+        'studyDayConfigs': <dynamic>[],
+        'completions': <dynamic>[],
+        'completionEvents': <dynamic>[],
+        'dailyPlans': <dynamic>[],
+        'learningLedger': <dynamic>[],
+        'bookmarks': <dynamic>[],
+        'learningOrder': <dynamic>[],
+        'trackLearningOrder': <dynamic>[],
+        'goals': <dynamic>[],
+        'streaks': <dynamic>[],
+        'streakEvents': <dynamic>[],
+      };
 
       await service.importData(jsonEncode(buildPayload('First')));
       await service.importData(jsonEncode(buildPayload('Second')));

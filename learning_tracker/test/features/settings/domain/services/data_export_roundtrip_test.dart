@@ -32,17 +32,20 @@ void main() {
 
   group('DataExportImportService.exportData — with data', () {
     test('exports curriculum track with all fields serialized', () async {
-      await db.into(db.curriculumTracks).insert(
-        CurriculumTracksCompanion.insert(
-          profileId: 1,
-          curriculumId: 'mishnayos',
-          trackType: 'personal',
-          isActive: const Value(true),
-          activatedAt: DateTime.utc(2026, 1, 1),
-        ),
-      );
+      await db
+          .into(db.curriculumTracks)
+          .insert(
+            CurriculumTracksCompanion.insert(
+              profileId: 1,
+              curriculumId: 'mishnayos',
+              trackType: 'personal',
+              isActive: const Value(true),
+              activatedAt: DateTime.utc(2026, 1, 1),
+            ),
+          );
 
-      final data = jsonDecode(await service.exportData()) as Map<String, dynamic>;
+      final data =
+          jsonDecode(await service.exportData()) as Map<String, dynamic>;
       final tracks = data['curriculumTracks'] as List<Map<String, dynamic>>;
 
       expect(tracks, hasLength(1));
@@ -53,15 +56,17 @@ void main() {
 
     test('exports goal with all fields serialized', () async {
       // Need a track first.
-      final trackId = await db.into(db.curriculumTracks).insert(
-        CurriculumTracksCompanion.insert(
-          profileId: 1,
-          curriculumId: 'mishnayos',
-          trackType: 'personal',
-          isActive: const Value(true),
-          activatedAt: DateTime.utc(2026, 1, 1),
-        ),
-      );
+      final trackId = await db
+          .into(db.curriculumTracks)
+          .insert(
+            CurriculumTracksCompanion.insert(
+              profileId: 1,
+              curriculumId: 'mishnayos',
+              trackType: 'personal',
+              isActive: const Value(true),
+              activatedAt: DateTime.utc(2026, 1, 1),
+            ),
+          );
 
       await db.goalDao.insertGoal(
         GoalsCompanion.insert(
@@ -73,7 +78,8 @@ void main() {
         ),
       );
 
-      final data = jsonDecode(await service.exportData()) as Map<String, dynamic>;
+      final data =
+          jsonDecode(await service.exportData()) as Map<String, dynamic>;
       final goals = data['goals'] as List<Map<String, dynamic>>;
 
       expect(goals, hasLength(1));
@@ -83,15 +89,17 @@ void main() {
 
     test('exports bookmark rows', () async {
       // Insert a track first (bookmark requires trackId).
-      final trackId = await db.into(db.curriculumTracks).insert(
-        CurriculumTracksCompanion.insert(
-          profileId: 1,
-          curriculumId: 'mishnayos',
-          trackType: 'personal',
-          isActive: const Value(true),
-          activatedAt: DateTime.utc(2026, 1, 1),
-        ),
-      );
+      final trackId = await db
+          .into(db.curriculumTracks)
+          .insert(
+            CurriculumTracksCompanion.insert(
+              profileId: 1,
+              curriculumId: 'mishnayos',
+              trackType: 'personal',
+              isActive: const Value(true),
+              activatedAt: DateTime.utc(2026, 1, 1),
+            ),
+          );
 
       await db.bookmarkDao.insertBookmark(
         BookmarksCompanion.insert(
@@ -103,7 +111,8 @@ void main() {
         ),
       );
 
-      final data = jsonDecode(await service.exportData()) as Map<String, dynamic>;
+      final data =
+          jsonDecode(await service.exportData()) as Map<String, dynamic>;
       final bookmarks = data['bookmarks'] as List<Map<String, dynamic>>;
 
       expect(bookmarks, hasLength(1));
@@ -120,7 +129,8 @@ void main() {
         ),
       );
 
-      final data = jsonDecode(await service.exportData()) as Map<String, dynamic>;
+      final data =
+          jsonDecode(await service.exportData()) as Map<String, dynamic>;
       final learningOrder = data['learningOrder'] as List<Map<String, dynamic>>;
 
       expect(learningOrder, hasLength(1));
@@ -130,13 +140,11 @@ void main() {
     test('exports streak rows', () async {
       await db.streakDao.upsertStreakByProfile(
         1,
-        const StreaksCompanion(
-          currentStreak: Value(5),
-          maxStreak: Value(10),
-        ),
+        const StreaksCompanion(currentStreak: Value(5), maxStreak: Value(10)),
       );
 
-      final data = jsonDecode(await service.exportData()) as Map<String, dynamic>;
+      final data =
+          jsonDecode(await service.exportData()) as Map<String, dynamic>;
       final streaks = data['streaks'] as List<Map<String, dynamic>>;
 
       expect(streaks, hasLength(1));
@@ -187,15 +195,17 @@ void main() {
 
     test('importData on empty payload clears DB and leaves it empty', () async {
       // Pre-insert a track so DB is not empty.
-      await db.into(db.curriculumTracks).insert(
-        CurriculumTracksCompanion.insert(
-          profileId: 1,
-          curriculumId: 'mishnayos',
-          trackType: 'personal',
-          isActive: const Value(true),
-          activatedAt: DateTime.utc(2026, 1, 1),
-        ),
-      );
+      await db
+          .into(db.curriculumTracks)
+          .insert(
+            CurriculumTracksCompanion.insert(
+              profileId: 1,
+              curriculumId: 'mishnayos',
+              trackType: 'personal',
+              isActive: const Value(true),
+              activatedAt: DateTime.utc(2026, 1, 1),
+            ),
+          );
 
       await service.importData(buildImportJson());
 
@@ -349,25 +359,26 @@ void main() {
       expect(streak.maxStreak, 14);
     });
 
-    test('importData is a no-op on invalid JSON (throws FormatException)',
-        () async {
-      expect(
-        () => service.importData('not json'),
-        throwsA(isA<Exception>()),
-      );
-    });
+    test(
+      'importData is a no-op on invalid JSON (throws FormatException)',
+      () async {
+        expect(() => service.importData('not json'), throwsA(isA<Exception>()));
+      },
+    );
 
     test('round-trip: exportData → importData preserves track count', () async {
       // Insert a track.
-      await db.into(db.curriculumTracks).insert(
-        CurriculumTracksCompanion.insert(
-          profileId: 1,
-          curriculumId: 'mishnayos',
-          trackType: 'personal',
-          isActive: const Value(true),
-          activatedAt: DateTime.utc(2026, 1, 1),
-        ),
-      );
+      await db
+          .into(db.curriculumTracks)
+          .insert(
+            CurriculumTracksCompanion.insert(
+              profileId: 1,
+              curriculumId: 'mishnayos',
+              trackType: 'personal',
+              isActive: const Value(true),
+              activatedAt: DateTime.utc(2026, 1, 1),
+            ),
+          );
 
       final jsonStr = await service.exportData();
 

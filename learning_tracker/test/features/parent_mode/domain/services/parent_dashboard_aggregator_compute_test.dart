@@ -19,7 +19,9 @@ void main() {
   setUp(() async {
     db = inMemoryDb();
 
-    trackId = await db.into(db.curriculumTracks).insert(
+    trackId = await db
+        .into(db.curriculumTracks)
+        .insert(
           CurriculumTracksCompanion.insert(
             profileId: profileId,
             curriculumId: curriculumId,
@@ -112,7 +114,9 @@ void main() {
     });
 
     test('returns streak from db', () async {
-      await db.into(db.streaks).insert(
+      await db
+          .into(db.streaks)
+          .insert(
             StreaksCompanion.insert(
               profileId: profileId,
               currentStreak: const Value(5),
@@ -157,42 +161,48 @@ void main() {
       expect(data.curricula.first.curriculum, CurriculumId.mishnayos);
     });
 
-    test('computes paceStatus with a future deadline (no goals = empty curricula summary list)', () async {
-      final now = DateTime.utc(2026, 3, 20);
-      await insertCompletion();
+    test(
+      'computes paceStatus with a future deadline (no goals = empty curricula summary list)',
+      () async {
+        final now = DateTime.utc(2026, 3, 20);
+        await insertCompletion();
 
-      final aggregator = ParentDashboardAggregator(db, profileId: profileId);
-      final data = await aggregator.compute(now: now);
+        final aggregator = ParentDashboardAggregator(db, profileId: profileId);
+        final data = await aggregator.compute(now: now);
 
-      // Curriculum is active, so there will be one summary.
-      expect(data.curricula, hasLength(1));
-    });
+        // Curriculum is active, so there will be one summary.
+        expect(data.curricula, hasLength(1));
+      },
+    );
 
-    test('computes paceStatus when goal has a targetDate (exercises lines 220-249)', () async {
-      final now = DateTime.utc(2026, 3, 20);
+    test(
+      'computes paceStatus when goal has a targetDate (exercises lines 220-249)',
+      () async {
+        final now = DateTime.utc(2026, 3, 20);
 
-      // Insert a goal WITH a targetDate — triggers the PaceCalculator path.
-      await db.goalDao.insertGoal(
-        GoalsCompanion.insert(
-          profileId: profileId,
-          curriculumId: curriculumId,
-          trackId: trackId,
-          createdAt: DateTime.utc(2026, 1, 1),
-          updatedAt: DateTime.utc(2026, 3, 20),
-          targetDate: Value(DateTime.utc(2026, 12, 31)),
-        ),
-      );
+        // Insert a goal WITH a targetDate — triggers the PaceCalculator path.
+        await db.goalDao.insertGoal(
+          GoalsCompanion.insert(
+            profileId: profileId,
+            curriculumId: curriculumId,
+            trackId: trackId,
+            createdAt: DateTime.utc(2026, 1, 1),
+            updatedAt: DateTime.utc(2026, 3, 20),
+            targetDate: Value(DateTime.utc(2026, 12, 31)),
+          ),
+        );
 
-      await insertCompletion();
+        await insertCompletion();
 
-      final aggregator = ParentDashboardAggregator(db, profileId: profileId);
-      final data = await aggregator.compute(now: now);
+        final aggregator = ParentDashboardAggregator(db, profileId: profileId);
+        final data = await aggregator.compute(now: now);
 
-      // Curriculum is active and has a goal with deadline — pace status computed.
-      expect(data.curricula, hasLength(1));
-      // PaceStatusType will be onPace, behind, or ahead depending on pace calc.
-      expect(data.curricula.first.paceStatus, isNotNull);
-    });
+        // Curriculum is active and has a goal with deadline — pace status computed.
+        expect(data.curricula, hasLength(1));
+        // PaceStatusType will be onPace, behind, or ahead depending on pace calc.
+        expect(data.curricula.first.paceStatus, isNotNull);
+      },
+    );
   });
 
   // =========================================================================

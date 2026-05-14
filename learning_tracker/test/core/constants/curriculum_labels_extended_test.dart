@@ -25,21 +25,30 @@ void main() {
       expect(labels.bilingualSingular, 'מסכת • Masechta');
     });
 
-    test('inLanguage returns Hebrew singular when useHebrew=true, plural=false', () {
-      expect(labels.inLanguage(useHebrew: true), 'מסכת');
-    });
+    test(
+      'inLanguage returns Hebrew singular when useHebrew=true, plural=false',
+      () {
+        expect(labels.inLanguage(useHebrew: true), 'מסכת');
+      },
+    );
 
-    test('inLanguage returns Hebrew plural when useHebrew=true, plural=true', () {
-      expect(labels.inLanguage(useHebrew: true, plural: true), 'מסכתות');
-    });
+    test(
+      'inLanguage returns Hebrew plural when useHebrew=true, plural=true',
+      () {
+        expect(labels.inLanguage(useHebrew: true, plural: true), 'מסכתות');
+      },
+    );
 
     test('inLanguage returns English singular when useHebrew=false', () {
       expect(labels.inLanguage(useHebrew: false), 'Masechta');
     });
 
-    test('inLanguage returns English plural when useHebrew=false, plural=true', () {
-      expect(labels.inLanguage(useHebrew: false, plural: true), 'Masechtos');
-    });
+    test(
+      'inLanguage returns English plural when useHebrew=false, plural=true',
+      () {
+        expect(labels.inLanguage(useHebrew: false, plural: true), 'Masechtos');
+      },
+    );
   });
 
   group('CurriculumLabels.labelsEnPlural', () {
@@ -144,22 +153,24 @@ void main() {
 
   group('CurriculumLabels.fullPath', () {
     test('builds full path with labels in English', () {
-      final path = CurriculumLabels.fullPath(
-        CurriculumId.mishnayos,
-        ['Zeraim', 'Berakhot', null, null],
-        useHebrew: false,
-      );
+      final path = CurriculumLabels.fullPath(CurriculumId.mishnayos, [
+        'Zeraim',
+        'Berakhot',
+        null,
+        null,
+      ], useHebrew: false);
       expect(path, contains('Zeraim'));
       expect(path, contains('Berakhot'));
       expect(path, contains(' → '));
     });
 
     test('skips null segments', () {
-      final path = CurriculumLabels.fullPath(
-        CurriculumId.mishnayos,
-        ['Zeraim', null, null, null],
-        useHebrew: false,
-      );
+      final path = CurriculumLabels.fullPath(CurriculumId.mishnayos, [
+        'Zeraim',
+        null,
+        null,
+        null,
+      ], useHebrew: false);
       expect(path.split(' → '), hasLength(1));
     });
 

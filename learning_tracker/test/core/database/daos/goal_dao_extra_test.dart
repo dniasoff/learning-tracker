@@ -17,7 +17,9 @@ void main() {
 
   setUp(() async {
     db = inMemoryDb();
-    trackId = await db.into(db.curriculumTracks).insert(
+    trackId = await db
+        .into(db.curriculumTracks)
+        .insert(
           CurriculumTracksCompanion.insert(
             profileId: profileId,
             curriculumId: 'mishnayos',
@@ -39,15 +41,15 @@ void main() {
     String curriculumId = 'mishnayos',
     DateTime? targetDate,
   }) => db.goalDao.insertGoal(
-        GoalsCompanion.insert(
-          profileId: pid,
-          curriculumId: curriculumId,
-          trackId: tId ?? trackId,
-          createdAt: now,
-          updatedAt: now,
-          targetDate: Value(targetDate),
-        ),
-      );
+    GoalsCompanion.insert(
+      profileId: pid,
+      curriculumId: curriculumId,
+      trackId: tId ?? trackId,
+      createdAt: now,
+      updatedAt: now,
+      targetDate: Value(targetDate),
+    ),
+  );
 
   // =========================================================================
   // getAllGoals — post-insertion
@@ -73,7 +75,9 @@ void main() {
       await insertGoal(pid: 1);
       await insertGoal(pid: 1);
       // Insert for profile 2 — needs its own track.
-      final track2 = await db.into(db.curriculumTracks).insert(
+      final track2 = await db
+          .into(db.curriculumTracks)
+          .insert(
             CurriculumTracksCompanion.insert(
               profileId: 2,
               curriculumId: 'bavli',
@@ -119,7 +123,9 @@ void main() {
     });
 
     test('does not include goals from other tracks', () async {
-      final track2 = await db.into(db.curriculumTracks).insert(
+      final track2 = await db
+          .into(db.curriculumTracks)
+          .insert(
             CurriculumTracksCompanion.insert(
               profileId: profileId,
               curriculumId: 'bavli',
@@ -157,7 +163,9 @@ void main() {
     });
 
     test('does not delete goals from other tracks', () async {
-      final track2 = await db.into(db.curriculumTracks).insert(
+      final track2 = await db
+          .into(db.curriculumTracks)
+          .insert(
             CurriculumTracksCompanion.insert(
               profileId: profileId,
               curriculumId: 'bavli',

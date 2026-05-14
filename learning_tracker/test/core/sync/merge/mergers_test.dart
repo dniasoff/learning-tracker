@@ -29,7 +29,10 @@ class _FakeMergeStore implements MergeStore {
     required String naturalKey,
     required DateTime? at,
   }) {
-    _timestamps.putIfAbsent(kind, () => {}).putIfAbsent(profileId, () => {})[naturalKey] = at;
+    _timestamps
+            .putIfAbsent(kind, () => {})
+            .putIfAbsent(profileId, () => {})[naturalKey] =
+        at;
   }
 
   @override
@@ -90,7 +93,7 @@ void main() {
             'curriculum_id': 'bavli',
             'track_type': 'personal',
             'updated_at': _dt(2026).toIso8601String(),
-          }
+          },
         ],
       );
 
@@ -112,7 +115,7 @@ void main() {
             'curriculum_id': 'bavli',
             'track_type': 'personal',
             'updated_at': _dt(2026).toIso8601String(),
-          }
+          },
         ],
       );
 
@@ -134,7 +137,7 @@ void main() {
             'curriculum_id': 'bavli',
             'track_type': 'personal',
             'updated_at': _dt(2025).toIso8601String(), // older
-          }
+          },
         ],
       );
 
@@ -149,7 +152,7 @@ void main() {
             'curriculum_id': 'bavli',
             'track_type': 'personal',
             // no updated_at
-          }
+          },
         ],
       );
 
@@ -164,7 +167,7 @@ void main() {
             'curriculum_id': 'bavli',
             'track_type': 'personal',
             'updated_at': _dt(2026), // DateTime, not String
-          }
+          },
         ],
       );
 
@@ -191,7 +194,7 @@ void main() {
             'curriculum_id': 'mishnayos',
             'track_type': 'personal',
             'updated_at': _dt(2026).toIso8601String(), // upsert — no local
-          }
+          },
         ],
       );
 
@@ -221,7 +224,7 @@ void main() {
           {
             'curriculum_id': 'mishnayos',
             'updated_at': _dt(2026).toIso8601String(),
-          }
+          },
         ],
       );
 
@@ -242,7 +245,7 @@ void main() {
           {
             'curriculum_id': 'mishnayos',
             'updated_at': _dt(2026).toIso8601String(),
-          }
+          },
         ],
       );
 
@@ -256,7 +259,7 @@ void main() {
           {
             // No curriculum_id
             'updated_at': _dt(2026).toIso8601String(),
-          }
+          },
         ],
       );
       // Should upsert with naturalKey=''
@@ -270,7 +273,7 @@ void main() {
           {
             'curriculum_id': 'bavli',
             'updated_at': _dt(2026), // DateTime
-          }
+          },
         ],
       );
       expect(store.upserted, hasLength(1));
@@ -300,7 +303,7 @@ void main() {
             'profile_id': 1,
             'display_name': 'Alice',
             'updated_at': _dt(2026).toIso8601String(),
-          }
+          },
         ],
       );
       expect(store.upserted, hasLength(1));
@@ -321,7 +324,7 @@ void main() {
             'profile_id': 1,
             'display_name': 'Bob',
             'updated_at': _dt(2026).toIso8601String(),
-          }
+          },
         ],
       );
       expect(store.upserted, isEmpty);
@@ -335,7 +338,7 @@ void main() {
           {
             'display_name': 'Fallback',
             'updated_at': _dt(2026).toIso8601String(),
-          }
+          },
         ],
       );
       expect(store.upserted, hasLength(1));
@@ -348,7 +351,7 @@ void main() {
           {
             'profile_id': 1,
             'updated_at': _dt(2026), // DateTime, not String
-          }
+          },
         ],
       );
       expect(store.upserted, hasLength(1));

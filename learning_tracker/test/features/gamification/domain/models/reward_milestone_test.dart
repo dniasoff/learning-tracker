@@ -79,7 +79,7 @@ void main() {
       expect(m.trackId, 0);
       expect(m.thresholdPoints, 0);
       expect(m.isEnabled, isTrue); // default
-      expect(m.iconIndex, 0);    // default
+      expect(m.iconIndex, 0); // default
     });
 
     test('copyWith overrides only the specified fields', () {

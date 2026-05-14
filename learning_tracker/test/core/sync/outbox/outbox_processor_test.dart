@@ -87,10 +87,7 @@ void main() {
   setUp(() {
     db = inMemoryDb();
     pipeline = _FakePipeline();
-    processor = OutboxProcessor(
-      outboxDao: db.outboxDao,
-      pipeline: pipeline,
-    );
+    processor = OutboxProcessor(outboxDao: db.outboxDao, pipeline: pipeline);
   });
 
   tearDown(() async {
@@ -121,10 +118,7 @@ void main() {
     });
 
     test('pushes completion rows and returns 1', () async {
-      await insertRow(
-        entityKind: OutboxEntityKind.completion,
-        entityKey: 'c1',
-      );
+      await insertRow(entityKind: OutboxEntityKind.completion, entityKey: 'c1');
 
       final count = await processor.drain(profileId);
       expect(count, 1);
@@ -132,20 +126,14 @@ void main() {
     });
 
     test('pushes streak rows', () async {
-      await insertRow(
-        entityKind: OutboxEntityKind.streak,
-        entityKey: 's1',
-      );
+      await insertRow(entityKind: OutboxEntityKind.streak, entityKey: 's1');
 
       await processor.drain(profileId);
       expect(pipeline.calls, [('streak', 's1')]);
     });
 
     test('pushes track rows', () async {
-      await insertRow(
-        entityKind: OutboxEntityKind.track,
-        entityKey: 't1',
-      );
+      await insertRow(entityKind: OutboxEntityKind.track, entityKey: 't1');
 
       await processor.drain(profileId);
       expect(pipeline.calls, [('track', 't1')]);
@@ -162,20 +150,14 @@ void main() {
     });
 
     test('pushes bookmark rows', () async {
-      await insertRow(
-        entityKind: OutboxEntityKind.bookmark,
-        entityKey: 'bm1',
-      );
+      await insertRow(entityKind: OutboxEntityKind.bookmark, entityKey: 'bm1');
 
       await processor.drain(profileId);
       expect(pipeline.calls, [('bookmark', 'bm1')]);
     });
 
     test('pushes settings rows', () async {
-      await insertRow(
-        entityKind: OutboxEntityKind.settings,
-        entityKey: 'st1',
-      );
+      await insertRow(entityKind: OutboxEntityKind.settings, entityKey: 'st1');
 
       await processor.drain(profileId);
       expect(pipeline.calls, [('settings', 'st1')]);
@@ -196,7 +178,10 @@ void main() {
 
     test('keeps row in outbox when push fails', () async {
       pipeline.failNextPush = true;
-      await insertRow(entityKind: OutboxEntityKind.completion, entityKey: 'fail1');
+      await insertRow(
+        entityKind: OutboxEntityKind.completion,
+        entityKey: 'fail1',
+      );
 
       final count = await processor.drain(profileId);
       expect(count, 0); // failed push does not count
@@ -211,7 +196,10 @@ void main() {
     test('continues draining remaining rows after a single failure', () async {
       pipeline.failNextPush = true;
       // Insert a completion (will fail) and then a streak (should succeed).
-      await insertRow(entityKind: OutboxEntityKind.completion, entityKey: 'fail1');
+      await insertRow(
+        entityKind: OutboxEntityKind.completion,
+        entityKey: 'fail1',
+      );
       await insertRow(entityKind: OutboxEntityKind.streak, entityKey: 's1');
 
       final count = await processor.drain(profileId);

@@ -116,11 +116,7 @@ void main() {
     });
 
     test('remaps nach item: passes through all levels unchanged', () {
-      final remapped = tanach.remap(
-        item: nachItem,
-        source: 'nach',
-        offset: 10,
-      );
+      final remapped = tanach.remap(item: nachItem, source: 'nach', offset: 10);
 
       expect(remapped.curriculumId, 'tanach');
       expect(remapped.level1, nachItem.level1); // Nevi'im

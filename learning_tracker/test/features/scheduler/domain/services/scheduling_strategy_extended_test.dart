@@ -56,16 +56,13 @@ List<SchedulerStage> _twoStages({int delayDays = 1}) => [
   ),
 ];
 
-SchedulerCompletion _completion(
-  String ref,
-  int stage,
-  DateTime completedAt,
-) => SchedulerCompletion(
-  sefariaRef: ref,
-  stageOrder: stage,
-  trackType: 'personal',
-  completedAt: completedAt,
-);
+SchedulerCompletion _completion(String ref, int stage, DateTime completedAt) =>
+    SchedulerCompletion(
+      sefariaRef: ref,
+      stageOrder: stage,
+      trackType: 'personal',
+      completedAt: completedAt,
+    );
 
 SchedulerInput _selfPaced({
   List<SchedulerContentItem>? contentItems,
@@ -141,11 +138,11 @@ void main() {
       );
 
       final assembly = SchedulingStrategyRunner.run(input);
-      final refs =
-          assembly.tasks.map((t) => t.contentItemSefariaRef).toList();
+      final refs = assembly.tasks.map((t) => t.contentItemSefariaRef).toList();
       expect(refs, contains('ref_0'));
-      final task =
-          assembly.tasks.firstWhere((t) => t.contentItemSefariaRef == 'ref_0');
+      final task = assembly.tasks.firstWhere(
+        (t) => t.contentItemSefariaRef == 'ref_0',
+      );
       expect(task.priority, DailyTaskPriority.scheduledChazara);
       expect(task.isOverdue, isFalse);
     });
@@ -159,8 +156,9 @@ void main() {
       );
 
       final assembly = SchedulingStrategyRunner.run(input);
-      final task =
-          assembly.tasks.firstWhere((t) => t.contentItemSefariaRef == 'ref_0');
+      final task = assembly.tasks.firstWhere(
+        (t) => t.contentItemSefariaRef == 'ref_0',
+      );
       expect(task.priority, DailyTaskPriority.overdueChazara);
       expect(task.isOverdue, isTrue);
     });
@@ -187,42 +185,50 @@ void main() {
 
   group('SelfPacedSnapshot.assemble — priorlyShownRefs overdue', () {
     test(
-        'uncompleted ref in priorlyShownRefs appears as overdueChazara in assemble',
-        () {
-      // ref_0 was shown before but not completed — should appear overdue.
-      final input = _selfPaced(
-        priorlyShownRefs: {'ref_0'},
-        completions: const [], // ref_0 not completed
-      );
+      'uncompleted ref in priorlyShownRefs appears as overdueChazara in assemble',
+      () {
+        // ref_0 was shown before but not completed — should appear overdue.
+        final input = _selfPaced(
+          priorlyShownRefs: {'ref_0'},
+          completions: const [], // ref_0 not completed
+        );
 
-      final assembly = SchedulingStrategyRunner.run(input);
-      final overdueTasks = assembly.tasks.where(
-        (t) =>
-            t.contentItemSefariaRef == 'ref_0' &&
-            t.priority == DailyTaskPriority.overdueChazara,
-      );
-      expect(overdueTasks, isNotEmpty,
-          reason: 'ref_0 was shown but not completed — should be overdue');
-    });
+        final assembly = SchedulingStrategyRunner.run(input);
+        final overdueTasks = assembly.tasks.where(
+          (t) =>
+              t.contentItemSefariaRef == 'ref_0' &&
+              t.priority == DailyTaskPriority.overdueChazara,
+        );
+        expect(
+          overdueTasks,
+          isNotEmpty,
+          reason: 'ref_0 was shown but not completed — should be overdue',
+        );
+      },
+    );
 
     test(
-        'completed ref in priorlyShownRefs does not appear as overdue in assemble',
-        () {
-      // ref_0 completed stage 1 — should NOT show as overdue
-      final input = _selfPaced(
-        priorlyShownRefs: {'ref_0'},
-        completions: [_completion('ref_0', 1, _today)],
-      );
+      'completed ref in priorlyShownRefs does not appear as overdue in assemble',
+      () {
+        // ref_0 completed stage 1 — should NOT show as overdue
+        final input = _selfPaced(
+          priorlyShownRefs: {'ref_0'},
+          completions: [_completion('ref_0', 1, _today)],
+        );
 
-      final assembly = SchedulingStrategyRunner.run(input);
-      final overdueTasks = assembly.tasks.where(
-        (t) =>
-            t.contentItemSefariaRef == 'ref_0' &&
-            t.priority == DailyTaskPriority.overdueChazara,
-      );
-      expect(overdueTasks, isEmpty,
-          reason: 'ref_0 is completed — should not appear as overdue');
-    });
+        final assembly = SchedulingStrategyRunner.run(input);
+        final overdueTasks = assembly.tasks.where(
+          (t) =>
+              t.contentItemSefariaRef == 'ref_0' &&
+              t.priority == DailyTaskPriority.overdueChazara,
+        );
+        expect(
+          overdueTasks,
+          isEmpty,
+          reason: 'ref_0 is completed — should not appear as overdue',
+        );
+      },
+    );
 
     test('non-study day still emits overdue tasks from priorlyShownRefs', () {
       final input = _selfPaced(
@@ -249,31 +255,31 @@ void main() {
     /// share perekA and one mishna is under perekB.
     /// coarseUnitKey = level1|level2|level3 → 'seder|masechta|perekA' or 'seder|masechta|perekB'.
     List<SchedulerContentItem> coarseItems() => [
-          const SchedulerContentItem(
-            sefariaRef: 'perekA_mishna_1',
-            sortOrder: 0,
-            level1: 'seder',
-            level2: 'masechta',
-            level3: 'perekA',
-            level4: 'mishna_1',
-          ),
-          const SchedulerContentItem(
-            sefariaRef: 'perekA_mishna_2',
-            sortOrder: 1,
-            level1: 'seder',
-            level2: 'masechta',
-            level3: 'perekA',
-            level4: 'mishna_2',
-          ),
-          const SchedulerContentItem(
-            sefariaRef: 'perekB_mishna_1',
-            sortOrder: 2,
-            level1: 'seder',
-            level2: 'masechta',
-            level3: 'perekB',
-            level4: 'mishna_1',
-          ),
-        ];
+      const SchedulerContentItem(
+        sefariaRef: 'perekA_mishna_1',
+        sortOrder: 0,
+        level1: 'seder',
+        level2: 'masechta',
+        level3: 'perekA',
+        level4: 'mishna_1',
+      ),
+      const SchedulerContentItem(
+        sefariaRef: 'perekA_mishna_2',
+        sortOrder: 1,
+        level1: 'seder',
+        level2: 'masechta',
+        level3: 'perekA',
+        level4: 'mishna_2',
+      ),
+      const SchedulerContentItem(
+        sefariaRef: 'perekB_mishna_1',
+        sortOrder: 2,
+        level1: 'seder',
+        level2: 'masechta',
+        level3: 'perekB',
+        level4: 'mishna_1',
+      ),
+    ];
 
     test('coarse mode includes all leaves of the first coarse unit', () {
       // paceGranularity 'perek' != curriculum leaf name → coarse mode.
@@ -404,11 +410,8 @@ void main() {
       // Make 8 items overdue for chazara (completed stage 1, three days ago).
       final completions = List.generate(
         8,
-        (i) => _completion(
-          'ref_$i',
-          1,
-          _today.subtract(const Duration(days: 3)),
-        ),
+        (i) =>
+            _completion('ref_$i', 1, _today.subtract(const Duration(days: 3))),
       );
 
       final input = _legacyInput(
@@ -431,10 +434,7 @@ void main() {
       final completions = items
           .map((item) => _completion(item.sefariaRef, 1, _today))
           .toList();
-      final input = _legacyInput(
-        contentItems: items,
-        completions: completions,
-      );
+      final input = _legacyInput(contentItems: items, completions: completions);
 
       final assembly = SchedulingStrategyRunner.run(input);
       final newTasks = assembly.tasks.where(
@@ -488,43 +488,44 @@ void main() {
 
       expect(assembly.tasks, hasLength(2));
       expect(
-        assembly.tasks.every((t) => t.priority == DailyTaskPriority.todayProgram),
+        assembly.tasks.every(
+          (t) => t.priority == DailyTaskPriority.todayProgram,
+        ),
         isTrue,
       );
     });
 
-    test('ProgramCalendar with isOverdueProgram uses overdueProgram priority',
-        () {
-      final input = SchedulerInput(
-        curriculumId: _curriculum,
-        trackId: 1,
-        trackLabel: 'personal',
-        today: _today,
-        contentItems: _items(5),
-        completions: const [],
-        stages: [
-          const SchedulerStage(
-            id: 1,
-            stageOrder: 1,
-            stageName: 'Learn',
-            delayDays: 0,
-          ),
-        ],
-      );
+    test(
+      'ProgramCalendar with isOverdueProgram uses overdueProgram priority',
+      () {
+        final input = SchedulerInput(
+          curriculumId: _curriculum,
+          trackId: 1,
+          trackLabel: 'personal',
+          today: _today,
+          contentItems: _items(5),
+          completions: const [],
+          stages: [
+            const SchedulerStage(
+              id: 1,
+              stageOrder: 1,
+              stageName: 'Learn',
+              delayDays: 0,
+            ),
+          ],
+        );
 
-      const strategy = ProgramCalendar(
-        programRefs: ['ref_0'],
-        isOverdueProgram: true,
-      );
-      final analysis = strategy.analyse(input);
-      final assembly = strategy.assemble(input, analysis);
+        const strategy = ProgramCalendar(
+          programRefs: ['ref_0'],
+          isOverdueProgram: true,
+        );
+        final analysis = strategy.analyse(input);
+        final assembly = strategy.assemble(input, analysis);
 
-      expect(assembly.tasks, hasLength(1));
-      expect(
-        assembly.tasks.first.priority,
-        DailyTaskPriority.overdueProgram,
-      );
-    });
+        expect(assembly.tasks, hasLength(1));
+        expect(assembly.tasks.first.priority, DailyTaskPriority.overdueProgram);
+      },
+    );
   });
 
   // ── SchedulingStrategy static helper coverage ───────────────────────────────
@@ -592,9 +593,7 @@ void main() {
 
       final assembly = SchedulingStrategyRunner.run(input);
       final weeklyTask = assembly.tasks.where(
-        (t) =>
-            t.contentItemSefariaRef == 'ref_0' &&
-            t.stageOrder == 2,
+        (t) => t.contentItemSefariaRef == 'ref_0' && t.stageOrder == 2,
       );
       expect(weeklyTask, isNotEmpty);
     });
@@ -625,9 +624,7 @@ void main() {
 
       final assembly = SchedulingStrategyRunner.run(input);
       final weeklyTask = assembly.tasks.where(
-        (t) =>
-            t.contentItemSefariaRef == 'ref_0' &&
-            t.stageOrder == 2,
+        (t) => t.contentItemSefariaRef == 'ref_0' && t.stageOrder == 2,
       );
       expect(weeklyTask, isEmpty);
     });
@@ -656,9 +653,7 @@ void main() {
 
       final assembly = SchedulingStrategyRunner.run(input);
       final weeklyTask = assembly.tasks.where(
-        (t) =>
-            t.contentItemSefariaRef == 'ref_0' &&
-            t.stageOrder == 2,
+        (t) => t.contentItemSefariaRef == 'ref_0' && t.stageOrder == 2,
       );
       expect(weeklyTask, isEmpty);
     });

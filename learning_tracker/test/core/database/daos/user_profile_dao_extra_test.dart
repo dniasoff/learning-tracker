@@ -50,7 +50,9 @@ void main() {
 
     test('returns cloud-born account by firebaseUid', () async {
       final now = DateTime.utc(2026, 1, 1);
-      await db.into(db.accounts).insert(
+      await db
+          .into(db.accounts)
+          .insert(
             AccountsCompanion.insert(
               email: 'cloud@example.com',
               displayName: 'Cloud User',
@@ -72,7 +74,9 @@ void main() {
 
     test('does not return local-born row with same email', () async {
       final now = DateTime.utc(2026, 1, 1);
-      await db.into(db.accounts).insert(
+      await db
+          .into(db.accounts)
+          .insert(
             AccountsCompanion.insert(
               email: 'local@example.com',
               displayName: 'Local User',
@@ -102,7 +106,9 @@ void main() {
 
     test('returns only cloud-born accounts', () async {
       final now = DateTime.utc(2026, 1, 1);
-      await db.into(db.accounts).insert(
+      await db
+          .into(db.accounts)
+          .insert(
             AccountsCompanion.insert(
               email: 'cloud@example.com',
               displayName: 'Cloud',
@@ -113,7 +119,9 @@ void main() {
               updatedAt: now,
             ),
           );
-      await db.into(db.accounts).insert(
+      await db
+          .into(db.accounts)
+          .insert(
             AccountsCompanion.insert(
               email: 'local@example.com',
               displayName: 'Local',

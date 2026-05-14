@@ -30,15 +30,17 @@ void main() {
     String trackType = 'personal',
     bool isActive = true,
   }) {
-    return db.into(db.curriculumTracks).insert(
-      CurriculumTracksCompanion.insert(
-        profileId: profileId,
-        curriculumId: curriculumId,
-        trackType: trackType,
-        isActive: Value(isActive),
-        activatedAt: DateTime.utc(2026, 1, 1),
-      ),
-    );
+    return db
+        .into(db.curriculumTracks)
+        .insert(
+          CurriculumTracksCompanion.insert(
+            profileId: profileId,
+            curriculumId: curriculumId,
+            trackType: trackType,
+            isActive: Value(isActive),
+            activatedAt: DateTime.utc(2026, 1, 1),
+          ),
+        );
   }
 
   // ---------------------------------------------------------------------------
@@ -46,21 +48,24 @@ void main() {
   // ---------------------------------------------------------------------------
 
   group('TrackDao.activateTrack — reactivation path', () {
-    test('reactivates an inactive track without creating a duplicate', () async {
-      // Insert an inactive personal track directly.
-      await insertTrack(isActive: false);
+    test(
+      'reactivates an inactive track without creating a duplicate',
+      () async {
+        // Insert an inactive personal track directly.
+        await insertTrack(isActive: false);
 
-      await db.trackDao.activateTrack(
-        CurriculumId.bavli,
-        TrackType.personal,
-        profileId: 1,
-      );
+        await db.trackDao.activateTrack(
+          CurriculumId.bavli,
+          TrackType.personal,
+          profileId: 1,
+        );
 
-      final tracks = await db.trackDao.getAllTracks(CurriculumId.bavli);
-      // Only one row should exist (no duplicate inserted).
-      expect(tracks, hasLength(1));
-      expect(tracks.first.isActive, isTrue);
-    });
+        final tracks = await db.trackDao.getAllTracks(CurriculumId.bavli);
+        // Only one row should exist (no duplicate inserted).
+        expect(tracks, hasLength(1));
+        expect(tracks.first.isActive, isTrue);
+      },
+    );
 
     test('activateTrack on an already-active track is idempotent', () async {
       await insertTrack(isActive: true);

@@ -22,7 +22,9 @@ void main() {
 
   setUp(() async {
     db = inMemoryDb();
-    trackId = await db.into(db.curriculumTracks).insert(
+    trackId = await db
+        .into(db.curriculumTracks)
+        .insert(
           CurriculumTracksCompanion.insert(
             profileId: 1,
             curriculumId: 'mishnayos',
@@ -43,17 +45,16 @@ void main() {
     String stageName = 'Learn',
     int delayDays = 0,
     int? tid,
-  }) =>
-      db.stageDao.insertStageDefinition(
-        StageDefinitionsCompanion.insert(
-          profileId: 1,
-          curriculumId: curriculumId,
-          trackId: tid ?? trackId,
-          stageOrder: stageOrder,
-          stageName: stageName,
-          delayDays: delayDays,
-        ),
-      );
+  }) => db.stageDao.insertStageDefinition(
+    StageDefinitionsCompanion.insert(
+      profileId: 1,
+      curriculumId: curriculumId,
+      trackId: tid ?? trackId,
+      stageOrder: stageOrder,
+      stageName: stageName,
+      delayDays: delayDays,
+    ),
+  );
 
   // ── getStageDefinitionById ────────────────────────────────────────────────
 
@@ -124,26 +125,30 @@ void main() {
   // ── getStagesByTrack ──────────────────────────────────────────────────────
 
   group('StageDao.getStagesByTrack', () {
-    test('returns stages for the specified track ordered by stageOrder',
-        () async {
-      // Insert a second track.
-      final otherTrackId = await db.into(db.curriculumTracks).insert(
-            CurriculumTracksCompanion.insert(
-              profileId: 1,
-              curriculumId: 'bavli',
-              trackType: 'personal',
-              activatedAt: DateTime.utc(2026, 1, 1),
-            ),
-          );
+    test(
+      'returns stages for the specified track ordered by stageOrder',
+      () async {
+        // Insert a second track.
+        final otherTrackId = await db
+            .into(db.curriculumTracks)
+            .insert(
+              CurriculumTracksCompanion.insert(
+                profileId: 1,
+                curriculumId: 'bavli',
+                trackType: 'personal',
+                activatedAt: DateTime.utc(2026, 1, 1),
+              ),
+            );
 
-      await insertStage(stageOrder: 3, stageName: 'Chazara 2', tid: trackId);
-      await insertStage(stageOrder: 1, stageName: 'Learn', tid: trackId);
-      await insertStage(stageOrder: 1, stageName: 'Other', tid: otherTrackId);
+        await insertStage(stageOrder: 3, stageName: 'Chazara 2', tid: trackId);
+        await insertStage(stageOrder: 1, stageName: 'Learn', tid: trackId);
+        await insertStage(stageOrder: 1, stageName: 'Other', tid: otherTrackId);
 
-      final stages = await db.stageDao.getStagesByTrack(trackId);
-      expect(stages, hasLength(2));
-      expect(stages.map((s) => s.stageOrder).toList(), [1, 3]);
-    });
+        final stages = await db.stageDao.getStagesByTrack(trackId);
+        expect(stages, hasLength(2));
+        expect(stages.map((s) => s.stageOrder).toList(), [1, 3]);
+      },
+    );
 
     test('returns empty list when no stages for track', () async {
       final stages = await db.stageDao.getStagesByTrack(9999);
@@ -155,7 +160,9 @@ void main() {
 
   group('StageDao.deleteStagesForTrack', () {
     test('deletes only stages for the specified track', () async {
-      final otherTrackId = await db.into(db.curriculumTracks).insert(
+      final otherTrackId = await db
+          .into(db.curriculumTracks)
+          .insert(
             CurriculumTracksCompanion.insert(
               profileId: 1,
               curriculumId: 'bavli',
@@ -234,7 +241,9 @@ void main() {
     });
 
     test('does not count stages from other tracks', () async {
-      final otherTrackId = await db.into(db.curriculumTracks).insert(
+      final otherTrackId = await db
+          .into(db.curriculumTracks)
+          .insert(
             CurriculumTracksCompanion.insert(
               profileId: 1,
               curriculumId: 'bavli',
@@ -272,16 +281,19 @@ void main() {
   // ── runTransaction ────────────────────────────────────────────────────────
 
   group('StageDao.runTransaction', () {
-    test('runs body inside a database transaction and returns result', () async {
-      final result = await db.stageDao.runTransaction(() async {
-        final id = await insertStage(stageOrder: 1, stageName: 'Txn Stage');
-        return id;
-      });
+    test(
+      'runs body inside a database transaction and returns result',
+      () async {
+        final result = await db.stageDao.runTransaction(() async {
+          final id = await insertStage(stageOrder: 1, stageName: 'Txn Stage');
+          return id;
+        });
 
-      expect(result, isA<int>());
-      final stage = await db.stageDao.getStageDefinitionById(result);
-      expect(stage, isNotNull);
-      expect(stage!.stageName, 'Txn Stage');
-    });
+        expect(result, isA<int>());
+        final stage = await db.stageDao.getStageDefinitionById(result);
+        expect(stage, isNotNull);
+        expect(stage!.stageName, 'Txn Stage');
+      },
+    );
   });
 }

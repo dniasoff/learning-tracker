@@ -35,7 +35,10 @@ void main() {
     test('progress is non-empty', () => expect(en.progress, isNotEmpty));
     test('settings is non-empty', () => expect(en.settings, isNotEmpty));
     test('goodMorning is non-empty', () => expect(en.goodMorning, isNotEmpty));
-    test('goodAfternoon is non-empty', () => expect(en.goodAfternoon, isNotEmpty));
+    test(
+      'goodAfternoon is non-empty',
+      () => expect(en.goodAfternoon, isNotEmpty),
+    );
     test('goodEvening is non-empty', () => expect(en.goodEvening, isNotEmpty));
     test('streak is non-empty', () => expect(en.streak, isNotEmpty));
     test('done is non-empty', () => expect(en.done, isNotEmpty));
@@ -64,7 +67,10 @@ void main() {
     test('progress is non-empty', () => expect(he.progress, isNotEmpty));
     test('settings is non-empty', () => expect(he.settings, isNotEmpty));
     test('goodMorning is non-empty', () => expect(he.goodMorning, isNotEmpty));
-    test('goodAfternoon is non-empty', () => expect(he.goodAfternoon, isNotEmpty));
+    test(
+      'goodAfternoon is non-empty',
+      () => expect(he.goodAfternoon, isNotEmpty),
+    );
     test('goodEvening is non-empty', () => expect(he.goodEvening, isNotEmpty));
     test('streak is non-empty', () => expect(he.streak, isNotEmpty));
     test('done is non-empty', () => expect(he.done, isNotEmpty));

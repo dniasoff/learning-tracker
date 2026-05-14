@@ -37,7 +37,9 @@ void main() {
     String curriculumId = 'mishnayos',
     bool isActive = true,
   }) {
-    return db.into(db.curriculumTracks).insert(
+    return db
+        .into(db.curriculumTracks)
+        .insert(
           CurriculumTracksCompanion.insert(
             profileId: profileId,
             curriculumId: curriculumId,
@@ -56,7 +58,9 @@ void main() {
     int points = 10,
     DateTime? completedAt,
   }) {
-    return db.into(db.completions).insert(
+    return db
+        .into(db.completions)
+        .insert(
           CompletionsCompanion.insert(
             profileId: profileId,
             curriculumId: curriculumId,
@@ -71,7 +75,9 @@ void main() {
   }
 
   Future<void> insertGoal(int trackId) async {
-    await db.into(db.goals).insert(
+    await db
+        .into(db.goals)
+        .insert(
           GoalsCompanion.insert(
             profileId: profileId,
             curriculumId: 'mishnayos',
@@ -106,7 +112,9 @@ void main() {
     test('does not include points from other profiles', () async {
       final trackId = await insertTrack();
       // Insert a completion for profile 2 in the same track.
-      await db.into(db.completions).insert(
+      await db
+          .into(db.completions)
+          .insert(
             CompletionsCompanion.insert(
               profileId: 2,
               curriculumId: 'mishnayos',
@@ -162,19 +170,22 @@ void main() {
       expect(total, 0);
     });
 
-    test('returns total points for reward-eligible track (with goal)', () async {
-      final trackId = await insertTrack(curriculumId: 'mishnayos');
-      await insertGoal(trackId);
-      await insertCompletion(trackId: trackId, points: 30);
-      await insertCompletion(
-        trackId: trackId,
-        sefariaRef: 'Berakhot 1:2',
-        points: 20,
-      );
+    test(
+      'returns total points for reward-eligible track (with goal)',
+      () async {
+        final trackId = await insertTrack(curriculumId: 'mishnayos');
+        await insertGoal(trackId);
+        await insertCompletion(trackId: trackId, points: 30);
+        await insertCompletion(
+          trackId: trackId,
+          sefariaRef: 'Berakhot 1:2',
+          points: 20,
+        );
 
-      final total = await service.getTrackPointsTotalForRewards(trackId);
-      expect(total, 50);
-    });
+        final total = await service.getTrackPointsTotalForRewards(trackId);
+        expect(total, 50);
+      },
+    );
   });
 
   // ── getGlobalPointsForRewards ─────────────────────────────────────────────
@@ -306,44 +317,51 @@ void main() {
 
   // ── evaluateUnlocksForGlobal ──────────────────────────────────────────────
 
-  group('RewardMilestoneService.evaluateUnlocksForGlobal (with milestones)',
-      () {
-    test('unlocks global milestone when global points exceed threshold',
+  group(
+    'RewardMilestoneService.evaluateUnlocksForGlobal (with milestones)',
+    () {
+      test(
+        'unlocks global milestone when global points exceed threshold',
         () async {
-      final trackId = await insertTrack(curriculumId: 'mishnayos');
-      await insertGoal(trackId);
-      await insertCompletion(trackId: trackId, points: 200);
+          final trackId = await insertTrack(curriculumId: 'mishnayos');
+          await insertGoal(trackId);
+          await insertCompletion(trackId: trackId, points: 200);
 
-      await service.upsertMilestone(
-        trackId: RewardMilestone.kGlobalTrackSentinel,
-        title: 'Global Bronze',
-        thresholdPoints: 100,
-        milestoneId: 'global-bronze',
+          await service.upsertMilestone(
+            trackId: RewardMilestone.kGlobalTrackSentinel,
+            title: 'Global Bronze',
+            thresholdPoints: 100,
+            milestoneId: 'global-bronze',
+          );
+
+          final unlocks = await service.evaluateUnlocksForGlobal();
+          expect(unlocks, hasLength(1));
+          expect(unlocks.first.milestoneId, 'global-bronze');
+          expect(unlocks.first.trackId, RewardMilestone.kGlobalTrackSentinel);
+        },
       );
 
-      final unlocks = await service.evaluateUnlocksForGlobal();
-      expect(unlocks, hasLength(1));
-      expect(unlocks.first.milestoneId, 'global-bronze');
-      expect(unlocks.first.trackId, RewardMilestone.kGlobalTrackSentinel);
-    });
+      test(
+        'does not re-unlock global milestone on second evaluation',
+        () async {
+          final trackId = await insertTrack(curriculumId: 'mishnayos');
+          await insertGoal(trackId);
+          await insertCompletion(trackId: trackId, points: 200);
 
-    test('does not re-unlock global milestone on second evaluation', () async {
-      final trackId = await insertTrack(curriculumId: 'mishnayos');
-      await insertGoal(trackId);
-      await insertCompletion(trackId: trackId, points: 200);
+          await service.upsertMilestone(
+            trackId: RewardMilestone.kGlobalTrackSentinel,
+            title: 'Global Bronze',
+            thresholdPoints: 100,
+            milestoneId: 'global-bronze',
+          );
 
-      await service.upsertMilestone(
-        trackId: RewardMilestone.kGlobalTrackSentinel,
-        title: 'Global Bronze',
-        thresholdPoints: 100,
-        milestoneId: 'global-bronze',
+          await service.evaluateUnlocksForGlobal();
+          final second = await service.evaluateUnlocksForGlobal();
+          expect(second, isEmpty);
+        },
       );
-
-      await service.evaluateUnlocksForGlobal();
-      final second = await service.evaluateUnlocksForGlobal();
-      expect(second, isEmpty);
-    });
-  });
+    },
+  );
 
   // ── getAllUnlocks (with stored data) ──────────────────────────────────────
 
@@ -391,15 +409,18 @@ void main() {
       expect(unlocks, isEmpty);
     });
 
-    test('returns empty when prefs value is not a list (invalid JSON)', () async {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(
-        'reward_milestones_unlocks_v1_$profileId',
-        'not json',
-      );
-      final unlocks = await service.getAllUnlocks();
-      expect(unlocks, isEmpty);
-    });
+    test(
+      'returns empty when prefs value is not a list (invalid JSON)',
+      () async {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString(
+          'reward_milestones_unlocks_v1_$profileId',
+          'not json',
+        );
+        final unlocks = await service.getAllUnlocks();
+        expect(unlocks, isEmpty);
+      },
+    );
 
     test('filters out records for other profiles', () async {
       final records = [

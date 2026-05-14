@@ -62,24 +62,28 @@ class _DeleteAccountDialogState extends State<_DeleteAccountDialog> {
 
     return AlertDialog(
       title: Text(AppLocalizations.of(context)!.deleteAccountDialogTitle),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            'This action is permanent and cannot be undone. '
-            'All your data will be deleted.$reauthNote',
-            style: const TextStyle(color: Colors.red),
-          ),
-          const SizedBox(height: 16),
-          Text(AppLocalizations.of(context)!.deleteAccountTypeConfirm),
-          const SizedBox(height: 8),
-          TextField(
-            controller: _controller,
-            decoration: InputDecoration(
-              hintText: AppLocalizations.of(context)!.deleteAccountHint,
+      // SingleChildScrollView lets the content scroll up when the soft keyboard
+      // appears, preventing the RenderFlex overflow on the TextField.
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'This action is permanent and cannot be undone. '
+              'All your data will be deleted.$reauthNote',
+              style: const TextStyle(color: Colors.red),
             ),
-          ),
-        ],
+            const SizedBox(height: 16),
+            Text(AppLocalizations.of(context)!.deleteAccountTypeConfirm),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _controller,
+              decoration: InputDecoration(
+                hintText: AppLocalizations.of(context)!.deleteAccountHint,
+              ),
+            ),
+          ],
+        ),
       ),
       actions: [
         TextButton(

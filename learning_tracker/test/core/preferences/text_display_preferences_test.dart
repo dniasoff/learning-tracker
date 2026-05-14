@@ -107,14 +107,17 @@ void main() {
       expect(TextDisplayPreferences.instance.showNikud, isFalse);
     });
 
-    test('is idempotent — second call does not override in-memory state', () async {
-      await TextDisplayPreferences.instance.initialize();
-      // Change in-memory state
-      await TextDisplayPreferences.instance.setFontSize(FontSize.large);
-      // Re-initialize — should not reset the in-memory value since already initialized.
-      await TextDisplayPreferences.instance.initialize();
-      expect(TextDisplayPreferences.instance.fontSize, FontSize.large);
-    });
+    test(
+      'is idempotent — second call does not override in-memory state',
+      () async {
+        await TextDisplayPreferences.instance.initialize();
+        // Change in-memory state
+        await TextDisplayPreferences.instance.setFontSize(FontSize.large);
+        // Re-initialize — should not reset the in-memory value since already initialized.
+        await TextDisplayPreferences.instance.initialize();
+        expect(TextDisplayPreferences.instance.fontSize, FontSize.large);
+      },
+    );
   });
 
   group('TextDisplayPreferences.setFontSize', () {

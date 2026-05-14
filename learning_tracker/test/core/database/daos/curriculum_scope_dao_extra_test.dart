@@ -21,7 +21,9 @@ void main() {
 
   setUp(() async {
     db = inMemoryDb();
-    trackId = await db.into(db.curriculumTracks).insert(
+    trackId = await db
+        .into(db.curriculumTracks)
+        .insert(
           CurriculumTracksCompanion.insert(
             profileId: profileId,
             curriculumId: curriculum.storageKey,
@@ -63,7 +65,9 @@ void main() {
     });
 
     test('does not return scopes from another track', () async {
-      final otherTrack = await db.into(db.curriculumTracks).insert(
+      final otherTrack = await db
+          .into(db.curriculumTracks)
+          .insert(
             CurriculumTracksCompanion.insert(
               profileId: profileId,
               curriculumId: 'bavli',
@@ -90,13 +94,17 @@ void main() {
 
   group('CurriculumScopeDao.watchScopesByTrack', () {
     test('emits empty list initially', () async {
-      final first = await db.curriculumScopeDao.watchScopesByTrack(trackId).first;
+      final first = await db.curriculumScopeDao
+          .watchScopesByTrack(trackId)
+          .first;
       expect(first, isEmpty);
     });
 
     test('emits updated scopes after insertion', () async {
       await addScope('Berakhot');
-      final first = await db.curriculumScopeDao.watchScopesByTrack(trackId).first;
+      final first = await db.curriculumScopeDao
+          .watchScopesByTrack(trackId)
+          .first;
       expect(first, hasLength(1));
       expect(first.first.scopeValue, 'Berakhot');
     });
@@ -144,20 +152,21 @@ void main() {
 
   group('CurriculumScopeDao.getScopeValuesForTrack', () {
     test('returns empty list when no scopes set', () async {
-      final values = await db.curriculumScopeDao.getScopeValuesForTrack(trackId);
+      final values = await db.curriculumScopeDao.getScopeValuesForTrack(
+        trackId,
+      );
       expect(values, isEmpty);
     });
 
     test('returns scope values as strings', () async {
-      await db.curriculumScopeDao.setScopes(
-        profileId,
-        curriculum,
-        trackId,
-        1,
-        ['Seder Zeraim', 'Seder Moed'],
-      );
+      await db.curriculumScopeDao.setScopes(profileId, curriculum, trackId, 1, [
+        'Seder Zeraim',
+        'Seder Moed',
+      ]);
 
-      final values = await db.curriculumScopeDao.getScopeValuesForTrack(trackId);
+      final values = await db.curriculumScopeDao.getScopeValuesForTrack(
+        trackId,
+      );
       expect(values, containsAll(['Seder Zeraim', 'Seder Moed']));
     });
   });
@@ -173,13 +182,9 @@ void main() {
     });
 
     test('returns the scope level when scopes exist', () async {
-      await db.curriculumScopeDao.setScopes(
-        profileId,
-        curriculum,
-        trackId,
-        2,
-        ['Berakhot'],
-      );
+      await db.curriculumScopeDao.setScopes(profileId, curriculum, trackId, 2, [
+        'Berakhot',
+      ]);
       final level = await db.curriculumScopeDao.getScopeLevelForTrack(trackId);
       expect(level, 2);
     });

@@ -65,8 +65,7 @@ class _StubContentRepository implements ContentRepository {
   Future<ContentItem?> getContentByRef({
     required CurriculumId curriculumId,
     required String sefariaRef,
-  }) async =>
-      _items.where((i) => i.sefariaRef == sefariaRef).firstOrNull;
+  }) async => _items.where((i) => i.sefariaRef == sefariaRef).firstOrNull;
 }
 
 // ---------------------------------------------------------------------------
@@ -135,38 +134,38 @@ TrackLearningOrderRepositoryImpl _makeRepo(
 ///     └── Berakhot (L2 container, no L3)
 ///           └── Berakhot 1:1 (leaf)
 List<ContentItem> _mishnaItems() => [
-      const ContentItem(
-        curriculumId: 'mishnayos',
-        level1: 'Seder Zeraim',
-        displayNameHe: 'סדר זרעים',
-        displayNameEn: 'Seder Zeraim',
-        sefariaRef: 'Seder Zeraim',
-        sortOrder: 0,
-        isLeaf: false,
-      ),
-      const ContentItem(
-        curriculumId: 'mishnayos',
-        level1: 'Seder Zeraim',
-        level2: 'Berakhot',
-        displayNameHe: 'ברכות',
-        displayNameEn: 'Berakhot',
-        sefariaRef: 'Berakhot',
-        sortOrder: 1,
-        isLeaf: false,
-      ),
-      const ContentItem(
-        curriculumId: 'mishnayos',
-        level1: 'Seder Zeraim',
-        level2: 'Berakhot',
-        level3: '1',
-        level4: '1',
-        displayNameHe: 'ברכות א׃א',
-        displayNameEn: 'Berakhot 1:1',
-        sefariaRef: 'Mishnah Berakhot 1:1',
-        sortOrder: 2,
-        isLeaf: true,
-      ),
-    ];
+  const ContentItem(
+    curriculumId: 'mishnayos',
+    level1: 'Seder Zeraim',
+    displayNameHe: 'סדר זרעים',
+    displayNameEn: 'Seder Zeraim',
+    sefariaRef: 'Seder Zeraim',
+    sortOrder: 0,
+    isLeaf: false,
+  ),
+  const ContentItem(
+    curriculumId: 'mishnayos',
+    level1: 'Seder Zeraim',
+    level2: 'Berakhot',
+    displayNameHe: 'ברכות',
+    displayNameEn: 'Berakhot',
+    sefariaRef: 'Berakhot',
+    sortOrder: 1,
+    isLeaf: false,
+  ),
+  const ContentItem(
+    curriculumId: 'mishnayos',
+    level1: 'Seder Zeraim',
+    level2: 'Berakhot',
+    level3: '1',
+    level4: '1',
+    displayNameHe: 'ברכות א׃א',
+    displayNameEn: 'Berakhot 1:1',
+    sefariaRef: 'Mishnah Berakhot 1:1',
+    sortOrder: 2,
+    isLeaf: true,
+  ),
+];
 
 // ---------------------------------------------------------------------------
 // Tests
@@ -204,18 +203,25 @@ void main() {
       ];
       final repo = _makeRepo(db, items);
 
-      final result = await repo.getSedarimOrder(trackId, CurriculumId.mishnayos);
-
-      expect(
-        result.map((i) => i.sefariaRef).toList(),
-        ['Zeraim', 'Moed', 'Nashim'],
+      final result = await repo.getSedarimOrder(
+        trackId,
+        CurriculumId.mishnayos,
       );
+
+      expect(result.map((i) => i.sefariaRef).toList(), [
+        'Zeraim',
+        'Moed',
+        'Nashim',
+      ]);
       expect(result.every((i) => !i.isCustomOrdered), isTrue);
     });
 
     test('returns empty list when content has no sedarim containers', () async {
       final repo = _makeRepo(db, []);
-      final result = await repo.getSedarimOrder(trackId, CurriculumId.mishnayos);
+      final result = await repo.getSedarimOrder(
+        trackId,
+        CurriculumId.mishnayos,
+      );
       expect(result, isEmpty);
     });
 
@@ -227,7 +233,10 @@ void main() {
       ];
       final repo = _makeRepo(db, items);
 
-      final result = await repo.getSedarimOrder(trackId, CurriculumId.mishnayos);
+      final result = await repo.getSedarimOrder(
+        trackId,
+        CurriculumId.mishnayos,
+      );
 
       expect(result, hasLength(1));
       expect(result.first.sefariaRef, 'Zeraim');
@@ -252,11 +261,15 @@ void main() {
         _item('Zeraim', 2),
       ]);
 
-      final result = await repo.getSedarimOrder(trackId, CurriculumId.mishnayos);
-      expect(
-        result.map((i) => i.sefariaRef).toList(),
-        ['Nashim', 'Moed', 'Zeraim'],
+      final result = await repo.getSedarimOrder(
+        trackId,
+        CurriculumId.mishnayos,
       );
+      expect(result.map((i) => i.sefariaRef).toList(), [
+        'Nashim',
+        'Moed',
+        'Zeraim',
+      ]);
       expect(result.every((i) => i.isCustomOrdered), isTrue);
     });
 
@@ -270,7 +283,10 @@ void main() {
       // Store custom order: Moed first
       await db.trackLearningOrderDao.upsertOrder(trackId, ['Moed', 'Zeraim']);
 
-      final result = await repo.getSedarimOrder(trackId, CurriculumId.mishnayos);
+      final result = await repo.getSedarimOrder(
+        trackId,
+        CurriculumId.mishnayos,
+      );
 
       expect(result.map((i) => i.sefariaRef).toList(), ['Moed', 'Zeraim']);
       expect(result.every((i) => i.isCustomOrdered), isTrue);
@@ -471,25 +487,16 @@ void main() {
         _item('Moed', 0),
         _item('Zeraim', 1),
       ]);
-      expect(
-        (await db.trackLearningOrderDao.getByTrack(trackId)).length,
-        2,
-      );
+      expect((await db.trackLearningOrderDao.getByTrack(trackId)).length, 2);
 
       await repo.resetToDefault(trackId);
-      expect(
-        (await db.trackLearningOrderDao.getByTrack(trackId)).length,
-        0,
-      );
+      expect((await db.trackLearningOrderDao.getByTrack(trackId)).length, 0);
     });
 
     test('is a no-op when no custom order exists', () async {
       final repo = _makeRepo(db, []);
       await repo.resetToDefault(trackId);
-      expect(
-        await db.trackLearningOrderDao.getByTrack(trackId),
-        isEmpty,
-      );
+      expect(await db.trackLearningOrderDao.getByTrack(trackId), isEmpty);
     });
 
     test('after reset getSedarimOrder returns default content order', () async {
@@ -508,11 +515,11 @@ void main() {
       await repo.resetToDefault(trackId);
 
       // Default is by sortOrder: Zeraim (0) then Moed (1).
-      final result = await repo.getSedarimOrder(trackId, CurriculumId.mishnayos);
-      expect(
-        result.map((i) => i.sefariaRef).toList(),
-        ['Zeraim', 'Moed'],
+      final result = await repo.getSedarimOrder(
+        trackId,
+        CurriculumId.mishnayos,
       );
+      expect(result.map((i) => i.sefariaRef).toList(), ['Zeraim', 'Moed']);
       expect(result.every((i) => !i.isCustomOrdered), isTrue);
     });
 
@@ -527,14 +534,16 @@ void main() {
     });
 
     test('does not affect rows for a different track (F2 variant)', () async {
-      final otherTrackId = await db.into(db.curriculumTracks).insert(
-        CurriculumTracksCompanion.insert(
-          profileId: 2,
-          curriculumId: 'bavli',
-          trackType: 'personal',
-          activatedAt: DateTime.utc(2026, 1, 1),
-        ),
-      );
+      final otherTrackId = await db
+          .into(db.curriculumTracks)
+          .insert(
+            CurriculumTracksCompanion.insert(
+              profileId: 2,
+              curriculumId: 'bavli',
+              trackType: 'personal',
+              activatedAt: DateTime.utc(2026, 1, 1),
+            ),
+          );
       await db.trackLearningOrderDao.upsertOrder(trackId, ['Zeraim']);
       await db.trackLearningOrderDao.upsertOrder(otherTrackId, ['Moed']);
 
@@ -551,65 +560,82 @@ void main() {
 
   // ─── F1 additional tests using _mishnaItems() ─────────────────────────────
 
-  group('TrackLearningOrderRepositoryImpl.getSedarimOrder (mishna hierarchy)', () {
-    test('returns sedarim in default sort order when no custom order saved',
+  group(
+    'TrackLearningOrderRepositoryImpl.getSedarimOrder (mishna hierarchy)',
+    () {
+      test(
+        'returns sedarim in default sort order when no custom order saved',
         () async {
-      final repo = _makeRepo(db, _mishnaItems());
-      final result = await repo.getSedarimOrder(trackId, CurriculumId.mishnayos);
+          final repo = _makeRepo(db, _mishnaItems());
+          final result = await repo.getSedarimOrder(
+            trackId,
+            CurriculumId.mishnayos,
+          );
 
-      // The fake content has "Seder Zeraim" as the only L1-only container.
-      expect(result, hasLength(1));
-      expect(result.first.sefariaRef, 'Seder Zeraim');
-      expect(result.first.isCustomOrdered, isFalse);
-    });
+          // The fake content has "Seder Zeraim" as the only L1-only container.
+          expect(result, hasLength(1));
+          expect(result.first.sefariaRef, 'Seder Zeraim');
+          expect(result.first.isCustomOrdered, isFalse);
+        },
+      );
 
-    test('returns sedarim in custom order after saveSedarimOrder', () async {
-      final repo = _makeRepo(db, _mishnaItems());
-      // Our fake only has one seder so we just verify the ref is present.
-      await repo.saveSedarimOrder(trackId, [_item('Seder Zeraim')]);
-
-      final result = await repo.getSedarimOrder(trackId, CurriculumId.mishnayos);
-
-      expect(result, hasLength(1));
-      expect(result.first.isCustomOrdered, isTrue);
-    });
-  });
-
-  group('TrackLearningOrderRepositoryImpl.getMasechtosOrder (mishna hierarchy)', () {
-    test('returns masechtos in default sort order when no custom order saved',
-        () async {
-      final repo = _makeRepo(db, _mishnaItems());
-      final result =
-          await repo.getMasechtosOrder(trackId, CurriculumId.mishnayos);
-
-      // The fake content has "Berakhot" as the only L2 container.
-      expect(result, hasLength(1));
-      expect(result.first.sefariaRef, 'Berakhot');
-      expect(result.first.isCustomOrdered, isFalse);
-    });
-
-    test(
-      'returns masechtos in custom order after saveMasechtosOrder',
-      () async {
+      test('returns sedarim in custom order after saveSedarimOrder', () async {
         final repo = _makeRepo(db, _mishnaItems());
-        await repo.saveMasechtosOrder(trackId, [_item('Berakhot')]);
+        // Our fake only has one seder so we just verify the ref is present.
+        await repo.saveSedarimOrder(trackId, [_item('Seder Zeraim')]);
 
-        final result =
-            await repo.getMasechtosOrder(trackId, CurriculumId.mishnayos);
+        final result = await repo.getSedarimOrder(
+          trackId,
+          CurriculumId.mishnayos,
+        );
 
         expect(result, hasLength(1));
         expect(result.first.isCustomOrdered, isTrue);
-      },
-    );
-  });
+      });
+    },
+  );
+
+  group(
+    'TrackLearningOrderRepositoryImpl.getMasechtosOrder (mishna hierarchy)',
+    () {
+      test(
+        'returns masechtos in default sort order when no custom order saved',
+        () async {
+          final repo = _makeRepo(db, _mishnaItems());
+          final result = await repo.getMasechtosOrder(
+            trackId,
+            CurriculumId.mishnayos,
+          );
+
+          // The fake content has "Berakhot" as the only L2 container.
+          expect(result, hasLength(1));
+          expect(result.first.sefariaRef, 'Berakhot');
+          expect(result.first.isCustomOrdered, isFalse);
+        },
+      );
+
+      test(
+        'returns masechtos in custom order after saveMasechtosOrder',
+        () async {
+          final repo = _makeRepo(db, _mishnaItems());
+          await repo.saveMasechtosOrder(trackId, [_item('Berakhot')]);
+
+          final result = await repo.getMasechtosOrder(
+            trackId,
+            CurriculumId.mishnayos,
+          );
+
+          expect(result, hasLength(1));
+          expect(result.first.isCustomOrdered, isTrue);
+        },
+      );
+    },
+  );
 
   group('TrackLearningOrderRepositoryImpl.saveSedarimOrder (F1 extra)', () {
     test('persists sedarim order to the database', () async {
       final repo = _makeRepo(db, _mishnaItems());
-      final items = [
-        _item('Seder Zeraim', 0),
-        _item('Seder Moed', 1),
-      ];
+      final items = [_item('Seder Zeraim', 0), _item('Seder Moed', 1)];
 
       await repo.saveSedarimOrder(trackId, items);
 
@@ -625,10 +651,7 @@ void main() {
   group('TrackLearningOrderRepositoryImpl.saveMasechtosOrder (F1 extra)', () {
     test('persists masechtos order to the database', () async {
       final repo = _makeRepo(db, _mishnaItems());
-      final items = [
-        _item('Berakhot', 0),
-        _item('Peah', 1),
-      ];
+      final items = [_item('Berakhot', 0), _item('Peah', 1)];
 
       await repo.saveMasechtosOrder(trackId, items);
 
@@ -642,17 +665,11 @@ void main() {
     test('deletes all custom order rows for the track', () async {
       final repo = _makeRepo(db, _mishnaItems());
       await repo.saveSedarimOrder(trackId, [_item('Seder Zeraim')]);
-      expect(
-        await db.trackLearningOrderDao.getByTrack(trackId),
-        hasLength(1),
-      );
+      expect(await db.trackLearningOrderDao.getByTrack(trackId), hasLength(1));
 
       await repo.resetToDefault(trackId);
 
-      expect(
-        await db.trackLearningOrderDao.getByTrack(trackId),
-        isEmpty,
-      );
+      expect(await db.trackLearningOrderDao.getByTrack(trackId), isEmpty);
     });
   });
 }

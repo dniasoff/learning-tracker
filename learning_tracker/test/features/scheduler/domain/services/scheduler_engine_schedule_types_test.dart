@@ -45,10 +45,8 @@ class FakeLearningOrderRepo implements SchedulerLearningOrderRepository {
 // Helpers
 // ---------------------------------------------------------------------------
 
-ScheduleConfig baseConfig({
-  required DateTime currentDate,
-  int trackId = 1,
-}) => ScheduleConfig(
+ScheduleConfig baseConfig({required DateTime currentDate, int trackId = 1}) =>
+    ScheduleConfig(
       curriculumId: CurriculumId.mishnayos,
       trackId: trackId,
       trackLabel: 'Personal',
@@ -61,11 +59,11 @@ SchedulerCompletion completion({
   required int stageOrder,
   required DateTime completedAt,
 }) => SchedulerCompletion(
-      sefariaRef: ref,
-      stageOrder: stageOrder,
-      trackType: 'personal',
-      completedAt: completedAt,
-    );
+  sefariaRef: ref,
+  stageOrder: stageOrder,
+  trackType: 'personal',
+  completedAt: completedAt,
+);
 
 void main() {
   late FakeContentRepo contentRepo;
@@ -95,50 +93,47 @@ void main() {
     // Monday = 1 in Dart DateTime.weekday (ISO weekday)
     final monday = DateTime.utc(2026, 3, 16); // a Monday
 
-    test(
-      'schedules a weekly-stage item on the correct day of week',
-      () async {
-        contentRepo.items = [
-          const SchedulerContentItem(sefariaRef: 'ref_0', sortOrder: 0),
-        ];
+    test('schedules a weekly-stage item on the correct day of week', () async {
+      contentRepo.items = [
+        const SchedulerContentItem(sefariaRef: 'ref_0', sortOrder: 0),
+      ];
 
-        // Stage 1: learn (delay). Stage 2: weekly on Mondays.
-        stageRepo.stages = [
-          const SchedulerStage(
-            id: 1,
-            stageOrder: 1,
-            stageName: 'Learn',
-            delayDays: 0,
-          ),
-          const SchedulerStage(
-            id: 2,
-            stageOrder: 2,
-            stageName: 'Weekly Review',
-            delayDays: 0,
-            scheduleType: ScheduleType.weekly,
-            daysOfWeek: [DateTime.monday], // Monday = 1
-          ),
-        ];
+      // Stage 1: learn (delay). Stage 2: weekly on Mondays.
+      stageRepo.stages = [
+        const SchedulerStage(
+          id: 1,
+          stageOrder: 1,
+          stageName: 'Learn',
+          delayDays: 0,
+        ),
+        const SchedulerStage(
+          id: 2,
+          stageOrder: 2,
+          stageName: 'Weekly Review',
+          delayDays: 0,
+          scheduleType: ScheduleType.weekly,
+          daysOfWeek: [DateTime.monday], // Monday = 1
+        ),
+      ];
 
-        // Stage 1 was completed yesterday → stage 2 not yet completed.
-        completionRepo.completions = [
-          completion(
-            ref: 'ref_0',
-            stageOrder: 1,
-            completedAt: monday.subtract(const Duration(days: 1)),
-          ),
-        ];
+      // Stage 1 was completed yesterday → stage 2 not yet completed.
+      completionRepo.completions = [
+        completion(
+          ref: 'ref_0',
+          stageOrder: 1,
+          completedAt: monday.subtract(const Duration(days: 1)),
+        ),
+      ];
 
-        final tasks = await engine.generateDailyTasks(
-          baseConfig(currentDate: monday),
-        );
+      final tasks = await engine.generateDailyTasks(
+        baseConfig(currentDate: monday),
+      );
 
-        // Expect one chazara task for the weekly stage.
-        final weeklyTasks = tasks.where((t) => t.stageOrder == 2).toList();
-        expect(weeklyTasks, hasLength(1));
-        expect(weeklyTasks.first.contentItemSefariaRef, 'ref_0');
-      },
-    );
+      // Expect one chazara task for the weekly stage.
+      final weeklyTasks = tasks.where((t) => t.stageOrder == 2).toList();
+      expect(weeklyTasks, hasLength(1));
+      expect(weeklyTasks.first.contentItemSefariaRef, 'ref_0');
+    });
 
     test(
       'does NOT schedule a weekly-stage item on a non-matching day',
@@ -277,52 +272,49 @@ void main() {
   group('SchedulerEngine — rolling schedule type', () {
     final today = DateTime.utc(2026, 3, 15);
 
-    test(
-      'rolling stage schedules items within the rolling window',
-      () async {
-        // 5 content items.
-        contentRepo.items = List.generate(
-          5,
-          (i) => SchedulerContentItem(sefariaRef: 'ref_$i', sortOrder: i),
-        );
+    test('rolling stage schedules items within the rolling window', () async {
+      // 5 content items.
+      contentRepo.items = List.generate(
+        5,
+        (i) => SchedulerContentItem(sefariaRef: 'ref_$i', sortOrder: i),
+      );
 
-        stageRepo.stages = [
-          const SchedulerStage(
-            id: 1,
-            stageOrder: 1,
-            stageName: 'Learn',
-            delayDays: 0,
-          ),
-          const SchedulerStage(
-            id: 2,
-            stageOrder: 2,
-            stageName: 'Rolling Review',
-            delayDays: 0,
-            scheduleType: ScheduleType.rolling,
-            rollingWindowSize: 3,
-          ),
-        ];
+      stageRepo.stages = [
+        const SchedulerStage(
+          id: 1,
+          stageOrder: 1,
+          stageName: 'Learn',
+          delayDays: 0,
+        ),
+        const SchedulerStage(
+          id: 2,
+          stageOrder: 2,
+          stageName: 'Rolling Review',
+          delayDays: 0,
+          scheduleType: ScheduleType.rolling,
+          rollingWindowSize: 3,
+        ),
+      ];
 
-        // Stage 1 completed for all 5 items. Stage 2 not yet done.
-        completionRepo.completions = List.generate(
-          5,
-          (i) => completion(
-            ref: 'ref_$i',
-            stageOrder: 1,
-            completedAt: today.subtract(Duration(days: i)),
-          ),
-        );
+      // Stage 1 completed for all 5 items. Stage 2 not yet done.
+      completionRepo.completions = List.generate(
+        5,
+        (i) => completion(
+          ref: 'ref_$i',
+          stageOrder: 1,
+          completedAt: today.subtract(Duration(days: i)),
+        ),
+      );
 
-        final tasks = await engine.generateDailyTasks(
-          baseConfig(currentDate: today),
-        );
+      final tasks = await engine.generateDailyTasks(
+        baseConfig(currentDate: today),
+      );
 
-        // Rolling window = 3 → only the 3 most recently completed items
-        // should be scheduled for stage 2.
-        final rollingTasks = tasks.where((t) => t.stageOrder == 2).toList();
-        expect(rollingTasks.length, 3);
-      },
-    );
+      // Rolling window = 3 → only the 3 most recently completed items
+      // should be scheduled for stage 2.
+      final rollingTasks = tasks.where((t) => t.stageOrder == 2).toList();
+      expect(rollingTasks.length, 3);
+    });
 
     test(
       'rolling stage excludes items already completed at that stage',
@@ -378,10 +370,10 @@ void main() {
         final rollingTasks = tasks.where((t) => t.stageOrder == 2).toList();
         // ref_0 is already done → only ref_1 and ref_2 should appear.
         expect(rollingTasks.length, 2);
-        expect(
-          rollingTasks.map((t) => t.contentItemSefariaRef).toSet(),
-          {'ref_1', 'ref_2'},
-        );
+        expect(rollingTasks.map((t) => t.contentItemSefariaRef).toSet(), {
+          'ref_1',
+          'ref_2',
+        });
       },
     );
 
@@ -494,7 +486,12 @@ void main() {
         );
 
         // Delay: ref_B is 1 day past stage 1 completion → stage 2 due.
-        expect(tasks.any((t) => t.stageOrder == 2 && t.contentItemSefariaRef == 'ref_B'), isTrue);
+        expect(
+          tasks.any(
+            (t) => t.stageOrder == 2 && t.contentItemSefariaRef == 'ref_B',
+          ),
+          isTrue,
+        );
 
         // Weekly stage (stage 3): ref_A and ref_B haven't done stage 3 yet,
         // stage 2 done for ref_A. We need previous stage completed for weekly.

@@ -2444,7 +2444,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get deleteTrackArchiveTitle => 'Delete Track';
 
   @override
-  String get deleteTrackArchiveBody => 'What should happen to your completion history?';
+  String get deleteTrackArchiveBody =>
+      'What should happen to your completion history?';
 
   @override
   String get deleteTrackArchive => 'Archive (keep history)';

@@ -56,7 +56,9 @@ void main() {
     bool isActive = true,
     DateTime? activatedAt,
   }) {
-    return db.into(db.curriculumTracks).insert(
+    return db
+        .into(db.curriculumTracks)
+        .insert(
           CurriculumTracksCompanion.insert(
             profileId: profileId,
             curriculumId: curriculumId,
@@ -72,51 +74,52 @@ void main() {
   group('deactivateTrack', () {
     test('deactivates an existing active non-personal track', () async {
       // Verify a track row can be created for the test
-      await db.into(db.curriculumTracks).insert(
-        CurriculumTracksCompanion.insert(
-          profileId: 0,
-          curriculumId: CurriculumId.bavli.storageKey,
-          trackType: 'weekend',
-          activatedAt: DateTime.utc(2026, 1, 1),
-          isActive: const Value(true),
-        ),
-      );
+      await db
+          .into(db.curriculumTracks)
+          .insert(
+            CurriculumTracksCompanion.insert(
+              profileId: 0,
+              curriculumId: CurriculumId.bavli.storageKey,
+              trackType: 'weekend',
+              activatedAt: DateTime.utc(2026, 1, 1),
+              isActive: const Value(true),
+            ),
+          );
 
       final tracks = await db.trackDao.getActiveTracks(CurriculumId.bavli);
       expect(tracks, isNotEmpty);
     });
 
     test('deactivateTrack with non-existent track is a no-op', () async {
-      await expectLater(
-        () async {
-          // Attempt to operate on empty DB — should not throw.
-        }(),
-        completes,
-      );
+      await expectLater(() async {
+        // Attempt to operate on empty DB — should not throw.
+      }(), completes);
     });
   });
 
   // ─── activateTrack — reactivation path ───────────────────────────────────
 
   group('TrackDao.activateTrack — reactivation path', () {
-    test('reactivates an inactive personal track instead of creating a new one',
-        () async {
-      // Insert a track as inactive.
-      await insertRawTrack(
-        curriculumId: 'bavli',
-        trackType: 'personal',
-        profileId: 0,
-        isActive: false,
-      );
+    test(
+      'reactivates an inactive personal track instead of creating a new one',
+      () async {
+        // Insert a track as inactive.
+        await insertRawTrack(
+          curriculumId: 'bavli',
+          trackType: 'personal',
+          profileId: 0,
+          isActive: false,
+        );
 
-      // Reactivate through activateTrack.
-      await db.trackDao.activateTrack(CurriculumId.bavli, TrackType.personal);
+        // Reactivate through activateTrack.
+        await db.trackDao.activateTrack(CurriculumId.bavli, TrackType.personal);
 
-      final tracks = await db.trackDao.getAllTracks(CurriculumId.bavli);
-      // Should still be just one row, now active.
-      expect(tracks, hasLength(1));
-      expect(tracks.first.isActive, isTrue);
-    });
+        final tracks = await db.trackDao.getAllTracks(CurriculumId.bavli);
+        // Should still be just one row, now active.
+        expect(tracks, hasLength(1));
+        expect(tracks.first.isActive, isTrue);
+      },
+    );
   });
 
   // ─── upsertFromSync ───────────────────────────────────────────────────────
@@ -139,32 +142,35 @@ void main() {
       expect(tracks.first.isActive, isTrue);
     });
 
-    test('updates existing track when one matches (profileId, curriculumId, trackType)', () async {
-      // First insert via upsert
-      await db.trackDao.upsertFromSync(
-        profileId: 1,
-        curriculumId: CurriculumId.mishnayos,
-        trackType: TrackType.personal,
-        isActive: true,
-        activatedAt: activatedAt,
-      );
+    test(
+      'updates existing track when one matches (profileId, curriculumId, trackType)',
+      () async {
+        // First insert via upsert
+        await db.trackDao.upsertFromSync(
+          profileId: 1,
+          curriculumId: CurriculumId.mishnayos,
+          trackType: TrackType.personal,
+          isActive: true,
+          activatedAt: activatedAt,
+        );
 
-      // Now update via second upsert — should toggle isActive
-      final laterDate = DateTime.utc(2026, 4, 1);
-      await db.trackDao.upsertFromSync(
-        profileId: 1,
-        curriculumId: CurriculumId.mishnayos,
-        trackType: TrackType.personal,
-        isActive: false,
-        activatedAt: laterDate,
-        deactivatedAt: laterDate,
-      );
+        // Now update via second upsert — should toggle isActive
+        final laterDate = DateTime.utc(2026, 4, 1);
+        await db.trackDao.upsertFromSync(
+          profileId: 1,
+          curriculumId: CurriculumId.mishnayos,
+          trackType: TrackType.personal,
+          isActive: false,
+          activatedAt: laterDate,
+          deactivatedAt: laterDate,
+        );
 
-      final tracks = await db.trackDao.getAllForProfile(1);
-      // Should still be only one track (updated, not duplicated).
-      expect(tracks, hasLength(1));
-      expect(tracks.first.isActive, isFalse);
-    });
+        final tracks = await db.trackDao.getAllForProfile(1);
+        // Should still be only one track (updated, not duplicated).
+        expect(tracks, hasLength(1));
+        expect(tracks.first.isActive, isFalse);
+      },
+    );
 
     test('stores deactivatedAt when provided', () async {
       final deactivatedAt = DateTime.utc(2026, 5, 1);
@@ -336,9 +342,24 @@ void main() {
 
   group('TrackDao.getAllForProfile', () {
     test('returns all tracks (active and inactive) for the profile', () async {
-      await insertRawTrack(curriculumId: 'bavli', trackType: 'personal', profileId: 1, isActive: true);
-      await insertRawTrack(curriculumId: 'mishnayos', trackType: 'personal', profileId: 1, isActive: false);
-      await insertRawTrack(curriculumId: 'bavli', trackType: 'personal', profileId: 2, isActive: true);
+      await insertRawTrack(
+        curriculumId: 'bavli',
+        trackType: 'personal',
+        profileId: 1,
+        isActive: true,
+      );
+      await insertRawTrack(
+        curriculumId: 'mishnayos',
+        trackType: 'personal',
+        profileId: 1,
+        isActive: false,
+      );
+      await insertRawTrack(
+        curriculumId: 'bavli',
+        trackType: 'personal',
+        profileId: 2,
+        isActive: true,
+      );
 
       final tracks = await db.trackDao.getAllForProfile(1);
       expect(tracks, hasLength(2));
@@ -355,7 +376,11 @@ void main() {
   group('TrackDao.countActiveTracksForProfile', () {
     test('counts only active non-deleted tracks for profile', () async {
       await insertRawTrack(curriculumId: 'bavli', profileId: 3, isActive: true);
-      await insertRawTrack(curriculumId: 'mishnayos', profileId: 3, isActive: false);
+      await insertRawTrack(
+        curriculumId: 'mishnayos',
+        profileId: 3,
+        isActive: false,
+      );
 
       final count = await db.trackDao.countActiveTracksForProfile(3);
       expect(count, 1);
@@ -364,8 +389,16 @@ void main() {
 
   group('TrackDao.getActiveTracksForProfile', () {
     test('returns tracks ordered by curriculumId ascending', () async {
-      await insertRawTrack(curriculumId: 'mishnayos', profileId: 10, isActive: true);
-      await insertRawTrack(curriculumId: 'bavli', profileId: 10, isActive: true);
+      await insertRawTrack(
+        curriculumId: 'mishnayos',
+        profileId: 10,
+        isActive: true,
+      );
+      await insertRawTrack(
+        curriculumId: 'bavli',
+        profileId: 10,
+        isActive: true,
+      );
 
       final tracks = await db.trackDao.getActiveTracksForProfile(10);
       expect(tracks, hasLength(2));

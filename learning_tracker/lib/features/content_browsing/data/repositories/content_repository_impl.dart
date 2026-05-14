@@ -156,9 +156,11 @@ class ContentRepositoryImpl implements ContentRepository {
     final key = curriculumId.storageKey;
     if (!_strippedHeCache.containsKey(key)) {
       _strippedHeCache[key] = items
-          .map((item) => HebrewUtils.stripNikud(
-                CurriculumLabelRenderer.hebrewNameOf(item) ?? '',
-              ))
+          .map(
+            (item) => HebrewUtils.stripNikud(
+              CurriculumLabelRenderer.hebrewNameOf(item) ?? '',
+            ),
+          )
           .toList();
     }
     final strippedHeNames = _strippedHeCache[key]!;

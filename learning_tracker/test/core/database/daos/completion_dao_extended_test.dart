@@ -27,16 +27,15 @@ CompletionsCompanion _completion({
   String trackType = 'personal',
   int trackId = 10,
   DateTime? completedAt,
-}) =>
-    CompletionsCompanion.insert(
-      profileId: profileId,
-      curriculumId: curriculumId,
-      sefariaRef: sefariaRef,
-      stageId: stageId,
-      trackType: trackType,
-      trackId: trackId,
-      completedAt: completedAt ?? DateTime.utc(2026, 5, 14),
-    );
+}) => CompletionsCompanion.insert(
+  profileId: profileId,
+  curriculumId: curriculumId,
+  sefariaRef: sefariaRef,
+  stageId: stageId,
+  trackType: trackType,
+  trackId: trackId,
+  completedAt: completedAt ?? DateTime.utc(2026, 5, 14),
+);
 
 void main() {
   late UserDatabase db;
@@ -80,7 +79,9 @@ void main() {
     });
 
     test('inserts a single completion via batch', () async {
-      await db.completionDao.insertCompletionsBatch([makeCompletion(ref: 'Berakhot.1.1')]);
+      await db.completionDao.insertCompletionsBatch([
+        makeCompletion(ref: 'Berakhot.1.1'),
+      ]);
       final all = await db.completionDao.getCompletionsByProfile(1);
       expect(all, hasLength(1));
       expect(all.first.sefariaRef, 'Berakhot.1.1');
@@ -95,7 +96,10 @@ void main() {
       final all = await db.completionDao.getCompletionsByProfile(1);
       expect(all, hasLength(3));
       final refs = all.map((c) => c.sefariaRef).toSet();
-      expect(refs, containsAll(['Berakhot.1.1', 'Berakhot.1.2', 'Berakhot.1.3']));
+      expect(
+        refs,
+        containsAll(['Berakhot.1.1', 'Berakhot.1.2', 'Berakhot.1.3']),
+      );
     });
   });
 
@@ -144,7 +148,9 @@ void main() {
     });
 
     test('returns only the refs that have existing completions', () async {
-      await db.completionDao.insertCompletion(makeCompletion(ref: 'Berakhot.1.1'));
+      await db.completionDao.insertCompletion(
+        makeCompletion(ref: 'Berakhot.1.1'),
+      );
 
       final result = await db.completionDao.getExistingSefariaRefsForBulkStage(
         profileId: 1,
@@ -172,18 +178,24 @@ void main() {
       expect(result, {'Berakhot.1.1', 'Berakhot.1.2'});
     });
 
-    test('filters by profileId — does not return other profiles completions', () async {
-      await db.completionDao.insertCompletion(makeCompletion(ref: 'Berakhot.1.1', profileId: 2));
+    test(
+      'filters by profileId — does not return other profiles completions',
+      () async {
+        await db.completionDao.insertCompletion(
+          makeCompletion(ref: 'Berakhot.1.1', profileId: 2),
+        );
 
-      final result = await db.completionDao.getExistingSefariaRefsForBulkStage(
-        profileId: 1, // querying profile 1
-        curriculumId: 'mishnayos',
-        stageId: 1,
-        trackType: 'personal',
-        sefariaRefs: ['Berakhot.1.1'],
-      );
-      expect(result, isEmpty);
-    });
+        final result = await db.completionDao
+            .getExistingSefariaRefsForBulkStage(
+              profileId: 1, // querying profile 1
+              curriculumId: 'mishnayos',
+              stageId: 1,
+              trackType: 'personal',
+              sefariaRefs: ['Berakhot.1.1'],
+            );
+        expect(result, isEmpty);
+      },
+    );
 
     test('filters by curriculumId', () async {
       await db.completionDao.insertCompletion(
@@ -216,10 +228,16 @@ void main() {
     });
 
     test('returns matching completions', () async {
-      await db.completionDao.insertCompletion(makeCompletion(ref: 'Berakhot.1.1'));
-      await db.completionDao.insertCompletion(makeCompletion(ref: 'Berakhot.1.2'));
+      await db.completionDao.insertCompletion(
+        makeCompletion(ref: 'Berakhot.1.1'),
+      );
+      await db.completionDao.insertCompletion(
+        makeCompletion(ref: 'Berakhot.1.2'),
+      );
       // This ref is not in the query list.
-      await db.completionDao.insertCompletion(makeCompletion(ref: 'Berakhot.1.3'));
+      await db.completionDao.insertCompletion(
+        makeCompletion(ref: 'Berakhot.1.3'),
+      );
 
       final result = await db.completionDao.getCompletionsForRefsBulkStage(
         profileId: 1,
@@ -238,8 +256,12 @@ void main() {
 
   group('CompletionDao.getCompletionsByTrack', () {
     test('returns only completions for the specified track', () async {
-      await db.completionDao.insertCompletion(_completion(trackId: 10, sefariaRef: 'A.1'));
-      await db.completionDao.insertCompletion(_completion(trackId: 20, sefariaRef: 'B.1'));
+      await db.completionDao.insertCompletion(
+        _completion(trackId: 10, sefariaRef: 'A.1'),
+      );
+      await db.completionDao.insertCompletion(
+        _completion(trackId: 20, sefariaRef: 'B.1'),
+      );
 
       final forTrack10 = await db.completionDao.getCompletionsByTrack(10);
       expect(forTrack10, hasLength(1));
@@ -261,7 +283,10 @@ void main() {
         _completion(trackId: 10, profileId: 2, sefariaRef: 'B.1'),
       );
 
-      final profile1 = await db.completionDao.getCompletionsByTrackAndProfile(10, 1);
+      final profile1 = await db.completionDao.getCompletionsByTrackAndProfile(
+        10,
+        1,
+      );
       expect(profile1, hasLength(1));
       expect(profile1.first.sefariaRef, 'A.1');
     });
@@ -269,9 +294,15 @@ void main() {
 
   group('CompletionDao.getAggregateCountByTrack', () {
     test('returns count of completions for track+profile', () async {
-      await db.completionDao.insertCompletion(_completion(trackId: 5, profileId: 1, sefariaRef: 'A.1'));
-      await db.completionDao.insertCompletion(_completion(trackId: 5, profileId: 1, sefariaRef: 'A.2'));
-      await db.completionDao.insertCompletion(_completion(trackId: 5, profileId: 2, sefariaRef: 'A.3'));
+      await db.completionDao.insertCompletion(
+        _completion(trackId: 5, profileId: 1, sefariaRef: 'A.1'),
+      );
+      await db.completionDao.insertCompletion(
+        _completion(trackId: 5, profileId: 1, sefariaRef: 'A.2'),
+      );
+      await db.completionDao.insertCompletion(
+        _completion(trackId: 5, profileId: 2, sefariaRef: 'A.3'),
+      );
 
       expect(await db.completionDao.getAggregateCountByTrack(5, 1), 2);
       expect(await db.completionDao.getAggregateCountByTrack(5, 2), 1);
@@ -286,7 +317,13 @@ void main() {
     test('returns true when matching completion exists', () async {
       final at = DateTime.utc(2026, 5, 14);
       await db.completionDao.insertCompletion(
-        _completion(trackId: 7, curriculumId: 'bavli', sefariaRef: 'X.1', stageId: 1, completedAt: at),
+        _completion(
+          trackId: 7,
+          curriculumId: 'bavli',
+          sefariaRef: 'X.1',
+          stageId: 1,
+          completedAt: at,
+        ),
       );
 
       final exists = await db.completionDao.completionExistsByTrack(
@@ -318,13 +355,28 @@ void main() {
       final late = DateTime.utc(2026, 12, 31);
 
       await db.completionDao.insertCompletion(
-        _completion(trackId: 10, profileId: 1, sefariaRef: 'A.1', completedAt: early),
+        _completion(
+          trackId: 10,
+          profileId: 1,
+          sefariaRef: 'A.1',
+          completedAt: early,
+        ),
       );
       await db.completionDao.insertCompletion(
-        _completion(trackId: 10, profileId: 1, sefariaRef: 'A.2', completedAt: mid),
+        _completion(
+          trackId: 10,
+          profileId: 1,
+          sefariaRef: 'A.2',
+          completedAt: mid,
+        ),
       );
       await db.completionDao.insertCompletion(
-        _completion(trackId: 10, profileId: 1, sefariaRef: 'A.3', completedAt: late),
+        _completion(
+          trackId: 10,
+          profileId: 1,
+          sefariaRef: 'A.3',
+          completedAt: late,
+        ),
       );
 
       final inRange = await db.completionDao.getCompletionsByDateRangeAndTrack(
@@ -414,9 +466,7 @@ void main() {
 
   group('CompletionDao.hasCompletionsForStage', () {
     test('returns true when completions exist for the stage', () async {
-      await db.completionDao.insertCompletion(
-        _completion(stageId: 42),
-      );
+      await db.completionDao.insertCompletion(_completion(stageId: 42));
       expect(await db.completionDao.hasCompletionsForStage(42), isTrue);
     });
 

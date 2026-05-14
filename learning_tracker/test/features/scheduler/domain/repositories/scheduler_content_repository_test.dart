@@ -64,10 +64,7 @@ void main() {
     });
 
     test('returns null when all level fields are null', () {
-      const item = SchedulerContentItem(
-        sefariaRef: 'ref-1',
-        sortOrder: 0,
-      );
+      const item = SchedulerContentItem(sefariaRef: 'ref-1', sortOrder: 0);
       expect(item.coarseUnitKey, isNull);
     });
   });
@@ -123,7 +120,11 @@ void main() {
       );
 
       final items = await repo.getLeafItems(CurriculumId.mishnayos);
-      expect(items.map((i) => i.sefariaRef).toList(), ['leaf-1', 'leaf-2', 'leaf-3']);
+      expect(items.map((i) => i.sefariaRef).toList(), [
+        'leaf-1',
+        'leaf-2',
+        'leaf-3',
+      ]);
     });
 
     test('returns empty list when content has no leaf items', () async {
@@ -138,9 +139,7 @@ void main() {
     });
 
     test('returns empty list when content is empty', () async {
-      final repo = SchedulerContentRepositoryImpl(
-        getContent: (_) async => [],
-      );
+      final repo = SchedulerContentRepositoryImpl(getContent: (_) async => []);
 
       final items = await repo.getLeafItems(CurriculumId.mishnayos);
       expect(items, isEmpty);

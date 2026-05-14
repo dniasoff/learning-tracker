@@ -26,7 +26,9 @@ void main() {
     DateTime? graceUsedDate,
     int maxStreak = 10,
   }) async {
-    await db.into(db.streaks).insert(
+    await db
+        .into(db.streaks)
+        .insert(
           StreaksCompanion.insert(
             profileId: profileId,
             currentStreak: Value(currentStreak),
@@ -41,14 +43,16 @@ void main() {
   // =========================================================================
 
   group('StreakService.getRecoveryInfo', () {
-    test('returns wasRecovered:false and streak:0 when no streak row exists',
-        () async {
-      final info = await service.getRecoveryInfo();
+    test(
+      'returns wasRecovered:false and streak:0 when no streak row exists',
+      () async {
+        final info = await service.getRecoveryInfo();
 
-      expect(info.wasRecovered, isFalse);
-      expect(info.currentStreak, 0);
-      expect(info.missedDate, isNull);
-    });
+        expect(info.wasRecovered, isFalse);
+        expect(info.currentStreak, 0);
+        expect(info.missedDate, isNull);
+      },
+    );
 
     test('returns wasRecovered:false when graceUsedDate is null', () async {
       await insertStreak(graceUsedDate: null, currentStreak: 7);

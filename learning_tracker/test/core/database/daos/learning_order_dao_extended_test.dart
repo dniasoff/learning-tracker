@@ -32,15 +32,14 @@ void main() {
     String curriculumId = 'mishnayos',
     String sefariaRef = 'Berakhot',
     int sortOrder = 0,
-  }) =>
-      db.learningOrderDao.insertLearningOrder(
-        LearningOrderCompanion.insert(
-          profileId: profileId,
-          curriculumId: curriculumId,
-          sefariaRef: sefariaRef,
-          userSortOrder: sortOrder,
-        ),
-      );
+  }) => db.learningOrderDao.insertLearningOrder(
+    LearningOrderCompanion.insert(
+      profileId: profileId,
+      curriculumId: curriculumId,
+      sefariaRef: sefariaRef,
+      userSortOrder: sortOrder,
+    ),
+  );
 
   // ── getAllLearningOrders ───────────────────────────────────────────────────
 

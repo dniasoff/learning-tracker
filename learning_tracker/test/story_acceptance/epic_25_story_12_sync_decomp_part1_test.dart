@@ -28,8 +28,11 @@ void main() {
       test('firestore_gateway_impl.dart is the canonical importer; no new '
           'leaks outside the documented transition allowlist', () {
         final libDir = Directory('lib');
-        expect(libDir.existsSync(), isTrue,
-            reason: 'must run from learning_tracker/ working dir');
+        expect(
+          libDir.existsSync(),
+          isTrue,
+          reason: 'must run from learning_tracker/ working dir',
+        );
 
         const canonical = 'core/sync/firestore_gateway_impl.dart';
         const transitionalAllowlist = <String>{
@@ -55,37 +58,62 @@ void main() {
               .replaceFirst(RegExp(r'^\.[\\/]?'), '')
               .replaceAll(r'\', '/')
               .replaceFirst(RegExp('^lib/'), '');
-          if (rel == canonical) { canonicalFile = entity; continue; }
+          if (rel == canonical) {
+            canonicalFile = entity;
+            continue;
+          }
           if (transitionalAllowlist.contains(rel)) continue;
           offenders.add(rel);
         }
 
-        expect(canonicalFile, isNotNull,
-            reason: 'DNI-333: core/sync/firestore_gateway_impl.dart must exist '
-                'and import cloud_firestore (it is the canonical importer)');
-        expect(offenders, isEmpty,
-            reason: 'DNI-333 AC: only firestore_gateway_impl.dart and the '
-                'documented transitional allowlist may import '
-                'cloud_firestore. New offenders: $offenders');
+        expect(
+          canonicalFile,
+          isNotNull,
+          reason:
+              'DNI-333: core/sync/firestore_gateway_impl.dart must exist '
+              'and import cloud_firestore (it is the canonical importer)',
+        );
+        expect(
+          offenders,
+          isEmpty,
+          reason:
+              'DNI-333 AC: only firestore_gateway_impl.dart and the '
+              'documented transitional allowlist may import '
+              'cloud_firestore. New offenders: $offenders',
+        );
       });
     });
 
     group('OutboxPushPipeline single-flight', () {
-      test('overlapping calls for the same entity kind are serialized', () async {
-        final gateway = _RecordingGateway();
-        final pipeline = OutboxPushPipeline(gateway: gateway);
-        final order = <String>[];
-        gateway.onPushCompletion = (data) async {
-          order.add('start:${data['id']}');
-          await Future<void>.delayed(const Duration(milliseconds: 10));
-          order.add('end:${data['id']}');
-        };
-        final f1 = pipeline.pushCompletion(profileId: 1, entityKey: 'a', payload: {'id': 'a'});
-        final f2 = pipeline.pushCompletion(profileId: 1, entityKey: 'b', payload: {'id': 'b'});
-        await Future.wait(<Future<void>>[f1, f2]);
-        expect(order, equals(['start:a', 'end:a', 'start:b', 'end:b']),
-            reason: 'same-kind pushes must not overlap');
-      });
+      test(
+        'overlapping calls for the same entity kind are serialized',
+        () async {
+          final gateway = _RecordingGateway();
+          final pipeline = OutboxPushPipeline(gateway: gateway);
+          final order = <String>[];
+          gateway.onPushCompletion = (data) async {
+            order.add('start:${data['id']}');
+            await Future<void>.delayed(const Duration(milliseconds: 10));
+            order.add('end:${data['id']}');
+          };
+          final f1 = pipeline.pushCompletion(
+            profileId: 1,
+            entityKey: 'a',
+            payload: {'id': 'a'},
+          );
+          final f2 = pipeline.pushCompletion(
+            profileId: 1,
+            entityKey: 'b',
+            payload: {'id': 'b'},
+          );
+          await Future.wait(<Future<void>>[f1, f2]);
+          expect(
+            order,
+            equals(['start:a', 'end:a', 'start:b', 'end:b']),
+            reason: 'same-kind pushes must not overlap',
+          );
+        },
+      );
 
       test('different entity kinds may push concurrently', () async {
         final gateway = _RecordingGateway();
@@ -104,56 +132,102 @@ void main() {
           order.add('streak:end');
           streakAllowedToStart.complete();
         };
-        final f1 = pipeline.pushCompletion(profileId: 1, entityKey: 'a', payload: {'id': 'a'});
+        final f1 = pipeline.pushCompletion(
+          profileId: 1,
+          entityKey: 'a',
+          payload: {'id': 'a'},
+        );
         await completionStarted.future;
-        final f2 = pipeline.pushStreak(profileId: 1, entityKey: 's', payload: {'id': 's'});
+        final f2 = pipeline.pushStreak(
+          profileId: 1,
+          entityKey: 's',
+          payload: {'id': 's'},
+        );
         await Future.wait(<Future<void>>[f1, f2]);
-        expect(order, equals(['completion:start', 'streak:start', 'streak:end', 'completion:end']),
-            reason: 'different kinds run in parallel');
+        expect(
+          order,
+          equals([
+            'completion:start',
+            'streak:start',
+            'streak:end',
+            'completion:end',
+          ]),
+          reason: 'different kinds run in parallel',
+        );
       });
 
-      test('failing push releases the single-flight slot for the next call', () async {
-        final gateway = _RecordingGateway();
-        final pipeline = OutboxPushPipeline(gateway: gateway);
-        var calls = 0;
-        gateway.onPushCompletion = (data) async {
-          calls++;
-          if (calls == 1) throw StateError('boom');
-        };
-        await expectLater(
-          pipeline.pushCompletion(profileId: 1, entityKey: 'a', payload: {'id': 'a'}),
-          throwsA(isA<StateError>()),
-        );
-        await pipeline.pushCompletion(profileId: 1, entityKey: 'b', payload: {'id': 'b'});
-        expect(calls, 2);
-      });
+      test(
+        'failing push releases the single-flight slot for the next call',
+        () async {
+          final gateway = _RecordingGateway();
+          final pipeline = OutboxPushPipeline(gateway: gateway);
+          var calls = 0;
+          gateway.onPushCompletion = (data) async {
+            calls++;
+            if (calls == 1) throw StateError('boom');
+          };
+          await expectLater(
+            pipeline.pushCompletion(
+              profileId: 1,
+              entityKey: 'a',
+              payload: {'id': 'a'},
+            ),
+            throwsA(isA<StateError>()),
+          );
+          await pipeline.pushCompletion(
+            profileId: 1,
+            entityKey: 'b',
+            payload: {'id': 'b'},
+          );
+          expect(calls, 2);
+        },
+      );
     });
 
     group('PullPipeline pagination + dispatch', () {
-      test('paginates through the gateway and dispatches each page to MergeDispatcher', () async {
-        final gateway = _PagingGateway(pages: [
-          [{'id': '1'}, {'id': '2'}],
-          [{'id': '3'}],
-          <Map<String, dynamic>>[],
-        ]);
-        final dispatcher = _RecordingDispatcher();
-        final pipeline = PullPipeline(gateway: gateway, dispatcher: dispatcher);
-        await pipeline.pullCompletions(profileId: 7, pageSize: 2);
-        expect(gateway.fetchCalls.length, 3);
-        expect(gateway.fetchCalls[0].cursor, isNull);
-        expect(gateway.fetchCalls[1].cursor, equals({'id': '2'}));
-        expect(gateway.fetchCalls[2].cursor, equals({'id': '3'}));
-        expect(dispatcher.dispatched.length, 2);
-        expect(dispatcher.dispatched[0].kind, 'completion');
-        expect(dispatcher.dispatched[0].rows, hasLength(2));
-        expect(dispatcher.dispatched[1].rows, hasLength(1));
-      });
+      test(
+        'paginates through the gateway and dispatches each page to MergeDispatcher',
+        () async {
+          final gateway = _PagingGateway(
+            pages: [
+              [
+                {'id': '1'},
+                {'id': '2'},
+              ],
+              [
+                {'id': '3'},
+              ],
+              <Map<String, dynamic>>[],
+            ],
+          );
+          final dispatcher = _RecordingDispatcher();
+          final pipeline = PullPipeline(
+            gateway: gateway,
+            dispatcher: dispatcher,
+          );
+          await pipeline.pullCompletions(profileId: 7, pageSize: 2);
+          expect(gateway.fetchCalls.length, 3);
+          expect(gateway.fetchCalls[0].cursor, isNull);
+          expect(gateway.fetchCalls[1].cursor, equals({'id': '2'}));
+          expect(gateway.fetchCalls[2].cursor, equals({'id': '3'}));
+          expect(dispatcher.dispatched.length, 2);
+          expect(dispatcher.dispatched[0].kind, 'completion');
+          expect(dispatcher.dispatched[0].rows, hasLength(2));
+          expect(dispatcher.dispatched[1].rows, hasLength(1));
+        },
+      );
 
       test('pull stops cleanly when the dispatcher signals halt', () async {
-        final gateway = _PagingGateway(pages: [
-          [{'id': '1'}],
-          [{'id': '2'}],
-        ]);
+        final gateway = _PagingGateway(
+          pages: [
+            [
+              {'id': '1'},
+            ],
+            [
+              {'id': '2'},
+            ],
+          ],
+        );
         final dispatcher = _RecordingDispatcher()..haltAfterFirst = true;
         final pipeline = PullPipeline(gateway: gateway, dispatcher: dispatcher);
         await pipeline.pullCompletions(profileId: 7, pageSize: 1);
@@ -170,22 +244,91 @@ class _RecordingGateway implements FirestoreGateway {
   Future<void> Function(Map<String, dynamic> data)? onPushCompletion;
   Future<void> Function(Map<String, dynamic> data)? onPushStreak;
 
-  @override Future<void> pushCompletion({required int profileId, required Map<String, dynamic> data}) async { if (onPushCompletion != null) await onPushCompletion!(data); }
-  @override Future<void> pushStreak({required int profileId, required Map<String, dynamic> data}) async { if (onPushStreak != null) await onPushStreak!(data); }
-  @override Future<void> pushSettings({required int profileId, required Map<String, dynamic> data}) async {}
-  @override Future<void> pushTrack({required int profileId, required Map<String, dynamic> data}) async {}
-  @override Future<void> pushLearningOrder({required int profileId, required Map<String, dynamic> data}) async {}
-  @override Future<void> pushBookmark({required int profileId, required Map<String, dynamic> data}) async {}
-  @override Future<void> pushNotificationSettings({required int profileId, required Map<String, dynamic> data}) async {}
-  @override Future<void> pushGamificationSettings({required int profileId, required Map<String, dynamic> data}) async {}
-  @override Future<void> pushLearnerProfile({required int profileId, required Map<String, dynamic> data}) async {}
-  @override Future<void> deleteLearnerProfile(int profileId) async {}
-  @override Future<void> pushLedgerEntry({required int profileId, required Map<String, dynamic> data}) async {}
-  @override Future<void> pushLedgerEntriesBatch({required int profileId, required List<Map<String, dynamic>> entries}) async {}
-  @override Future<void> pushProfileProgram({required int profileId, required Map<String, dynamic> data}) async {}
-  @override Future<void> removeProfileProgramAssignment({required int profileId, required String curriculumStorageKey}) async {}
-  @override Future<FirestorePage> fetchPage({required int profileId, required String collection, required int pageSize, Map<String, dynamic>? cursor}) async => const FirestorePage(rows: <Map<String, dynamic>>[]);
-  @override Future<List<Map<String, dynamic>>> fetchAll({required int profileId, required String collection}) async => const <Map<String, dynamic>>[];
+  @override
+  Future<void> pushCompletion({
+    required int profileId,
+    required Map<String, dynamic> data,
+  }) async {
+    if (onPushCompletion != null) await onPushCompletion!(data);
+  }
+
+  @override
+  Future<void> pushStreak({
+    required int profileId,
+    required Map<String, dynamic> data,
+  }) async {
+    if (onPushStreak != null) await onPushStreak!(data);
+  }
+
+  @override
+  Future<void> pushSettings({
+    required int profileId,
+    required Map<String, dynamic> data,
+  }) async {}
+  @override
+  Future<void> pushTrack({
+    required int profileId,
+    required Map<String, dynamic> data,
+  }) async {}
+  @override
+  Future<void> pushLearningOrder({
+    required int profileId,
+    required Map<String, dynamic> data,
+  }) async {}
+  @override
+  Future<void> pushBookmark({
+    required int profileId,
+    required Map<String, dynamic> data,
+  }) async {}
+  @override
+  Future<void> pushNotificationSettings({
+    required int profileId,
+    required Map<String, dynamic> data,
+  }) async {}
+  @override
+  Future<void> pushGamificationSettings({
+    required int profileId,
+    required Map<String, dynamic> data,
+  }) async {}
+  @override
+  Future<void> pushLearnerProfile({
+    required int profileId,
+    required Map<String, dynamic> data,
+  }) async {}
+  @override
+  Future<void> deleteLearnerProfile(int profileId) async {}
+  @override
+  Future<void> pushLedgerEntry({
+    required int profileId,
+    required Map<String, dynamic> data,
+  }) async {}
+  @override
+  Future<void> pushLedgerEntriesBatch({
+    required int profileId,
+    required List<Map<String, dynamic>> entries,
+  }) async {}
+  @override
+  Future<void> pushProfileProgram({
+    required int profileId,
+    required Map<String, dynamic> data,
+  }) async {}
+  @override
+  Future<void> removeProfileProgramAssignment({
+    required int profileId,
+    required String curriculumStorageKey,
+  }) async {}
+  @override
+  Future<FirestorePage> fetchPage({
+    required int profileId,
+    required String collection,
+    required int pageSize,
+    Map<String, dynamic>? cursor,
+  }) async => const FirestorePage(rows: <Map<String, dynamic>>[]);
+  @override
+  Future<List<Map<String, dynamic>>> fetchAll({
+    required int profileId,
+    required String collection,
+  }) async => const <Map<String, dynamic>>[];
 }
 
 class _FetchCall {
@@ -201,28 +344,91 @@ class _PagingGateway implements FirestoreGateway {
   int _index = 0;
 
   @override
-  Future<FirestorePage> fetchPage({required int profileId, required String collection, required int pageSize, Map<String, dynamic>? cursor}) async {
+  Future<FirestorePage> fetchPage({
+    required int profileId,
+    required String collection,
+    required int pageSize,
+    Map<String, dynamic>? cursor,
+  }) async {
     fetchCalls.add(_FetchCall(collection: collection, cursor: cursor));
-    if (_index >= pages.length) return const FirestorePage(rows: <Map<String, dynamic>>[]);
+    if (_index >= pages.length)
+      return const FirestorePage(rows: <Map<String, dynamic>>[]);
     final rows = pages[_index++];
     return FirestorePage(rows: rows);
   }
 
-  @override Future<void> pushCompletion({required int profileId, required Map<String, dynamic> data}) async {}
-  @override Future<void> pushStreak({required int profileId, required Map<String, dynamic> data}) async {}
-  @override Future<void> pushSettings({required int profileId, required Map<String, dynamic> data}) async {}
-  @override Future<void> pushTrack({required int profileId, required Map<String, dynamic> data}) async {}
-  @override Future<void> pushLearningOrder({required int profileId, required Map<String, dynamic> data}) async {}
-  @override Future<void> pushBookmark({required int profileId, required Map<String, dynamic> data}) async {}
-  @override Future<void> pushNotificationSettings({required int profileId, required Map<String, dynamic> data}) async {}
-  @override Future<void> pushGamificationSettings({required int profileId, required Map<String, dynamic> data}) async {}
-  @override Future<void> pushLearnerProfile({required int profileId, required Map<String, dynamic> data}) async {}
-  @override Future<void> deleteLearnerProfile(int profileId) async {}
-  @override Future<void> pushLedgerEntry({required int profileId, required Map<String, dynamic> data}) async {}
-  @override Future<void> pushLedgerEntriesBatch({required int profileId, required List<Map<String, dynamic>> entries}) async {}
-  @override Future<void> pushProfileProgram({required int profileId, required Map<String, dynamic> data}) async {}
-  @override Future<void> removeProfileProgramAssignment({required int profileId, required String curriculumStorageKey}) async {}
-  @override Future<List<Map<String, dynamic>>> fetchAll({required int profileId, required String collection}) async => const <Map<String, dynamic>>[];
+  @override
+  Future<void> pushCompletion({
+    required int profileId,
+    required Map<String, dynamic> data,
+  }) async {}
+  @override
+  Future<void> pushStreak({
+    required int profileId,
+    required Map<String, dynamic> data,
+  }) async {}
+  @override
+  Future<void> pushSettings({
+    required int profileId,
+    required Map<String, dynamic> data,
+  }) async {}
+  @override
+  Future<void> pushTrack({
+    required int profileId,
+    required Map<String, dynamic> data,
+  }) async {}
+  @override
+  Future<void> pushLearningOrder({
+    required int profileId,
+    required Map<String, dynamic> data,
+  }) async {}
+  @override
+  Future<void> pushBookmark({
+    required int profileId,
+    required Map<String, dynamic> data,
+  }) async {}
+  @override
+  Future<void> pushNotificationSettings({
+    required int profileId,
+    required Map<String, dynamic> data,
+  }) async {}
+  @override
+  Future<void> pushGamificationSettings({
+    required int profileId,
+    required Map<String, dynamic> data,
+  }) async {}
+  @override
+  Future<void> pushLearnerProfile({
+    required int profileId,
+    required Map<String, dynamic> data,
+  }) async {}
+  @override
+  Future<void> deleteLearnerProfile(int profileId) async {}
+  @override
+  Future<void> pushLedgerEntry({
+    required int profileId,
+    required Map<String, dynamic> data,
+  }) async {}
+  @override
+  Future<void> pushLedgerEntriesBatch({
+    required int profileId,
+    required List<Map<String, dynamic>> entries,
+  }) async {}
+  @override
+  Future<void> pushProfileProgram({
+    required int profileId,
+    required Map<String, dynamic> data,
+  }) async {}
+  @override
+  Future<void> removeProfileProgramAssignment({
+    required int profileId,
+    required String curriculumStorageKey,
+  }) async {}
+  @override
+  Future<List<Map<String, dynamic>>> fetchAll({
+    required int profileId,
+    required String collection,
+  }) async => const <Map<String, dynamic>>[];
 }
 
 class _DispatchedPage {
@@ -236,7 +442,11 @@ class _RecordingDispatcher implements MergeDispatcher {
   bool haltAfterFirst = false;
 
   @override
-  Future<MergeOutcome> dispatch({required int profileId, required String kind, required List<Map<String, dynamic>> rows}) async {
+  Future<MergeOutcome> dispatch({
+    required int profileId,
+    required String kind,
+    required List<Map<String, dynamic>> rows,
+  }) async {
     dispatched.add(_DispatchedPage(kind: kind, rows: rows));
     return haltAfterFirst ? MergeOutcome.halt : MergeOutcome.continueNext;
   }

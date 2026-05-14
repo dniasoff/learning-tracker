@@ -37,14 +37,16 @@ void main() {
     required String hebrewText,
     String englishText = '',
   }) async {
-    await database.into(database.textCache).insertOnConflictUpdate(
-      TextCacheCompanion.insert(
-        sefariaRef: sefariaRef,
-        hebrewText: hebrewText,
-        englishText: englishText,
-        fetchedAt: DateTime.utc(2026, 5, 14),
-      ),
-    );
+    await database
+        .into(database.textCache)
+        .insertOnConflictUpdate(
+          TextCacheCompanion.insert(
+            sefariaRef: sefariaRef,
+            hebrewText: hebrewText,
+            englishText: englishText,
+            fetchedAt: DateTime.utc(2026, 5, 14),
+          ),
+        );
   }
 
   Future<void> insertDailyContent({
@@ -52,13 +54,15 @@ void main() {
     required String hebrewText,
     String englishText = '',
   }) async {
-    await database.into(database.dailyContent).insertOnConflictUpdate(
-      DailyContentCompanion.insert(
-        sefariaRef: sefariaRef,
-        hebrewText: Value(hebrewText),
-        englishText: Value(englishText),
-      ),
-    );
+    await database
+        .into(database.dailyContent)
+        .insertOnConflictUpdate(
+          DailyContentCompanion.insert(
+            sefariaRef: sefariaRef,
+            hebrewText: Value(hebrewText),
+            englishText: Value(englishText),
+          ),
+        );
   }
 
   // ── Exact match in textCacheDao ───────────────────────────────────────────
@@ -80,18 +84,21 @@ void main() {
       expect(result.segments, hasLength(1));
     });
 
-    test('cached segment has correct verse number for colon-suffixed ref', () async {
-      await insertTextCache(
-        sefariaRef: 'Genesis 1:5',
-        hebrewText: 'יום',
-        englishText: 'day',
-      );
+    test(
+      'cached segment has correct verse number for colon-suffixed ref',
+      () async {
+        await insertTextCache(
+          sefariaRef: 'Genesis 1:5',
+          hebrewText: 'יום',
+          englishText: 'day',
+        );
 
-      final result = await repository.getText('Genesis 1:5');
+        final result = await repository.getText('Genesis 1:5');
 
-      expect(result, isNotNull);
-      expect(result!.segments.first.number, 5);
-    });
+        expect(result, isNotNull);
+        expect(result!.segments.first.number, 5);
+      },
+    );
 
     test('cached segment has null number for ref without colon', () async {
       await insertTextCache(
@@ -208,26 +215,26 @@ void main() {
   // ── daily_content fallback ────────────────────────────────────────────────
 
   group('getText — daily_content fallback', () {
-    test('returns daily_content when textCache and children are absent', () async {
-      await insertDailyContent(
-        sefariaRef: 'Chullin 7',
-        hebrewText: 'daf text',
-        englishText: 'daf en',
-      );
+    test(
+      'returns daily_content when textCache and children are absent',
+      () async {
+        await insertDailyContent(
+          sefariaRef: 'Chullin 7',
+          hebrewText: 'daf text',
+          englishText: 'daf en',
+        );
 
-      final result = await repository.getText('Chullin 7');
+        final result = await repository.getText('Chullin 7');
 
-      expect(result, isNotNull);
-      expect(result!.sefariaRef, 'Chullin 7');
-      expect(result.hebrewText, 'daf text');
-      expect(result.englishText, 'daf en');
-    });
+        expect(result, isNotNull);
+        expect(result!.sefariaRef, 'Chullin 7');
+        expect(result.hebrewText, 'daf text');
+        expect(result.englishText, 'daf en');
+      },
+    );
 
     test('daily_content verse number is null for non-colon ref', () async {
-      await insertDailyContent(
-        sefariaRef: 'Chullin 7',
-        hebrewText: 'text',
-      );
+      await insertDailyContent(sefariaRef: 'Chullin 7', hebrewText: 'text');
 
       final result = await repository.getText('Chullin 7');
 
@@ -235,10 +242,7 @@ void main() {
     });
 
     test('daily_content verse number is parsed for colon ref', () async {
-      await insertDailyContent(
-        sefariaRef: 'Psalms 1:3',
-        hebrewText: 'והיה',
-      );
+      await insertDailyContent(sefariaRef: 'Psalms 1:3', hebrewText: 'והיה');
 
       final result = await repository.getText('Psalms 1:3');
 
@@ -264,14 +268,8 @@ void main() {
 
   group('TextContent', () {
     test('hebrewText joins multiple segments with newline', () async {
-      await insertTextCache(
-        sefariaRef: 'Gen 1:1',
-        hebrewText: 'line one',
-      );
-      await insertTextCache(
-        sefariaRef: 'Gen 1:2',
-        hebrewText: 'line two',
-      );
+      await insertTextCache(sefariaRef: 'Gen 1:1', hebrewText: 'line one');
+      await insertTextCache(sefariaRef: 'Gen 1:2', hebrewText: 'line two');
 
       final result = await repository.getText('Gen 1');
 

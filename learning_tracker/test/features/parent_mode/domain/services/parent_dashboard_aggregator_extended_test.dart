@@ -30,7 +30,9 @@ void main() {
     String curriculumId = 'mishnayos',
     bool isActive = true,
   }) {
-    return db.into(db.curriculumTracks).insert(
+    return db
+        .into(db.curriculumTracks)
+        .insert(
           CurriculumTracksCompanion.insert(
             profileId: profileId,
             curriculumId: curriculumId,
@@ -49,7 +51,9 @@ void main() {
     int points = 10,
     DateTime? completedAt,
   }) {
-    return db.into(db.completions).insert(
+    return db
+        .into(db.completions)
+        .insert(
           CompletionsCompanion.insert(
             profileId: profileId,
             curriculumId: curriculumId,
@@ -66,17 +70,19 @@ void main() {
   // ── compute() ────────────────────────────────────────────────────────────
 
   group('ParentDashboardAggregator.compute', () {
-    test('returns empty data for profile with no tracks or completions',
-        () async {
-      final data = await aggregator.compute(now: DateTime.utc(2026, 5, 14));
+    test(
+      'returns empty data for profile with no tracks or completions',
+      () async {
+        final data = await aggregator.compute(now: DateTime.utc(2026, 5, 14));
 
-      expect(data.curricula, isEmpty);
-      expect(data.globalPoints, 0);
-      expect(data.currentStreak, 0);
-      expect(data.maxStreak, 0);
-      expect(data.recentCompletions, isEmpty);
-      expect(data.engagement.daysActiveThisWeek, 0);
-    });
+        expect(data.curricula, isEmpty);
+        expect(data.globalPoints, 0);
+        expect(data.currentStreak, 0);
+        expect(data.maxStreak, 0);
+        expect(data.recentCompletions, isEmpty);
+        expect(data.engagement.daysActiveThisWeek, 0);
+      },
+    );
 
     test('sums globalPoints across all completions', () async {
       final trackId = await insertTrack(curriculumId: 'mishnayos');
@@ -178,7 +184,9 @@ void main() {
 
     test('unknown curriculum storageKey is filtered out gracefully', () async {
       // Insert a track with a key that does not map to any CurriculumId enum value.
-      await db.into(db.curriculumTracks).insert(
+      await db
+          .into(db.curriculumTracks)
+          .insert(
             CurriculumTracksCompanion.insert(
               profileId: profileId,
               curriculumId: 'unknown_curriculum_xyz',
@@ -206,10 +214,7 @@ void main() {
 
     test('returns 0.0 when no stages (stageRepository is null)', () async {
       final trackId = await insertTrack(curriculumId: 'mishnayos');
-      await insertCompletion(
-        curriculumId: 'mishnayos',
-        trackId: trackId,
-      );
+      await insertCompletion(curriculumId: 'mishnayos', trackId: trackId);
       // No stageRepository → stages.isEmpty → returns 0.0
       final pct = await aggregator.computeCompletionPercentage(
         CurriculumId.mishnayos,
@@ -221,10 +226,7 @@ void main() {
       // completions + stages exist but learningOrderDao.countByCurriculum == 0
       // → early return 0.0
       final trackId = await insertTrack(curriculumId: 'mishnayos');
-      await insertCompletion(
-        curriculumId: 'mishnayos',
-        trackId: trackId,
-      );
+      await insertCompletion(curriculumId: 'mishnayos', trackId: trackId);
       final pct = await aggregator.computeCompletionPercentage(
         CurriculumId.mishnayos,
       );

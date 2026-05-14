@@ -74,11 +74,13 @@ void main() {
       () async {
         const testUlid = '01HQZZ000000000000000001';
 
-        final id1 = await db.learningLedgerDao
-            .insertEntry(makeEntry(ulid: testUlid));
+        final id1 = await db.learningLedgerDao.insertEntry(
+          makeEntry(ulid: testUlid),
+        );
         // Same profile + ulid => INSERT OR IGNORE collapses; must return id1.
-        final id2 = await db.learningLedgerDao
-            .insertEntry(makeEntry(ulid: testUlid));
+        final id2 = await db.learningLedgerDao.insertEntry(
+          makeEntry(ulid: testUlid),
+        );
 
         expect(id1, greaterThan(0));
         expect(id2, equals(id1));
@@ -89,27 +91,25 @@ void main() {
       },
     );
 
-    test(
-      'different ulids produce two distinct rows',
-      () async {
-        const ulid1 = '01HQZZ000000000000000002';
-        const ulid2 = '01HQZZ000000000000000003';
+    test('different ulids produce two distinct rows', () async {
+      const ulid1 = '01HQZZ000000000000000002';
+      const ulid2 = '01HQZZ000000000000000003';
 
-        final id1 = await db.learningLedgerDao
-            .insertEntry(makeEntry(ulid: ulid1));
-        final id2 = await db.learningLedgerDao.insertEntry(
-          makeEntry(
-            ulid: ulid2,
-            unitIdentifier: 'Shabbat',
-            completedAt: DateTime.utc(2026, 2, 1),
-          ),
-        );
+      final id1 = await db.learningLedgerDao.insertEntry(
+        makeEntry(ulid: ulid1),
+      );
+      final id2 = await db.learningLedgerDao.insertEntry(
+        makeEntry(
+          ulid: ulid2,
+          unitIdentifier: 'Shabbat',
+          completedAt: DateTime.utc(2026, 2, 1),
+        ),
+      );
 
-        expect(id1, isNot(id2));
-        final rows = await db.learningLedgerDao.getEntriesByProfile(1);
-        expect(rows, hasLength(2));
-      },
-    );
+      expect(id1, isNot(id2));
+      final rows = await db.learningLedgerDao.getEntriesByProfile(1);
+      expect(rows, hasLength(2));
+    });
   });
 
   // ---------------------------------------------------------------------------
@@ -120,14 +120,16 @@ void main() {
     late int trackId;
 
     setUp(() async {
-      trackId = await db.into(db.curriculumTracks).insert(
-        CurriculumTracksCompanion.insert(
-          profileId: 1,
-          curriculumId: 'bavli',
-          trackType: 'personal',
-          activatedAt: DateTime.utc(2026, 1, 1),
-        ),
-      );
+      trackId = await db
+          .into(db.curriculumTracks)
+          .insert(
+            CurriculumTracksCompanion.insert(
+              profileId: 1,
+              curriculumId: 'bavli',
+              trackType: 'personal',
+              activatedAt: DateTime.utc(2026, 1, 1),
+            ),
+          );
     });
 
     test('returns 0 when no entries exist for the track', () async {
@@ -140,42 +142,51 @@ void main() {
       expect(count, 0);
     });
 
-    test('counts only entries matching track + profile + curriculum + unit',
-        () async {
-      // Two completions of Berakhot on this track.
-      await db.learningLedgerDao
-          .insertEntry(makeEntry(trackId: trackId, completedAt: DateTime.utc(2026, 1, 1)));
-      await db.learningLedgerDao.insertEntry(makeEntry(
-        trackId: trackId,
-        completedAt: DateTime.utc(2026, 2, 1),
-        ulid: '01HQZZ000000000000000010',
-      ));
-      // One completion of a different unit — should not count.
-      await db.learningLedgerDao.insertEntry(makeEntry(
-        trackId: trackId,
-        unitIdentifier: 'Shabbat',
-        completedAt: DateTime.utc(2026, 3, 1),
-        ulid: '01HQZZ000000000000000011',
-      ));
+    test(
+      'counts only entries matching track + profile + curriculum + unit',
+      () async {
+        // Two completions of Berakhot on this track.
+        await db.learningLedgerDao.insertEntry(
+          makeEntry(trackId: trackId, completedAt: DateTime.utc(2026, 1, 1)),
+        );
+        await db.learningLedgerDao.insertEntry(
+          makeEntry(
+            trackId: trackId,
+            completedAt: DateTime.utc(2026, 2, 1),
+            ulid: '01HQZZ000000000000000010',
+          ),
+        );
+        // One completion of a different unit — should not count.
+        await db.learningLedgerDao.insertEntry(
+          makeEntry(
+            trackId: trackId,
+            unitIdentifier: 'Shabbat',
+            completedAt: DateTime.utc(2026, 3, 1),
+            ulid: '01HQZZ000000000000000011',
+          ),
+        );
 
-      final count = await db.learningLedgerDao.getCompletionCountByTrack(
-        trackId,
-        1,
-        'bavli',
-        'Berakhot',
-      );
-      expect(count, 2);
-    });
+        final count = await db.learningLedgerDao.getCompletionCountByTrack(
+          trackId,
+          1,
+          'bavli',
+          'Berakhot',
+        );
+        expect(count, 2);
+      },
+    );
 
     test('is scoped to the correct track', () async {
-      final otherTrackId = await db.into(db.curriculumTracks).insert(
-        CurriculumTracksCompanion.insert(
-          profileId: 1,
-          curriculumId: 'bavli',
-          trackType: 'amud',
-          activatedAt: DateTime.utc(2026, 1, 1),
-        ),
-      );
+      final otherTrackId = await db
+          .into(db.curriculumTracks)
+          .insert(
+            CurriculumTracksCompanion.insert(
+              profileId: 1,
+              curriculumId: 'bavli',
+              trackType: 'amud',
+              activatedAt: DateTime.utc(2026, 1, 1),
+            ),
+          );
 
       await db.learningLedgerDao.insertEntry(makeEntry(trackId: otherTrackId));
 
@@ -197,14 +208,16 @@ void main() {
     late int trackId;
 
     setUp(() async {
-      trackId = await db.into(db.curriculumTracks).insert(
-        CurriculumTracksCompanion.insert(
-          profileId: 1,
-          curriculumId: 'bavli',
-          trackType: 'personal',
-          activatedAt: DateTime.utc(2026, 1, 1),
-        ),
-      );
+      trackId = await db
+          .into(db.curriculumTracks)
+          .insert(
+            CurriculumTracksCompanion.insert(
+              profileId: 1,
+              curriculumId: 'bavli',
+              trackType: 'personal',
+              activatedAt: DateTime.utc(2026, 1, 1),
+            ),
+          );
     });
 
     test('returns entries for the given track', () async {

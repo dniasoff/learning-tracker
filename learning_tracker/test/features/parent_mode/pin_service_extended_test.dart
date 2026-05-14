@@ -21,7 +21,10 @@ MockFlutterSecureStorage createMockStorage() {
   final store = <String, String>{};
 
   when(
-    () => mock.write(key: any(named: 'key'), value: any(named: 'value')),
+    () => mock.write(
+      key: any(named: 'key'),
+      value: any(named: 'value'),
+    ),
   ).thenAnswer((invocation) async {
     final key = invocation.namedArguments[#key] as String;
     final value = invocation.namedArguments[#value] as String?;
@@ -37,7 +40,9 @@ MockFlutterSecureStorage createMockStorage() {
     return store[key];
   });
 
-  when(() => mock.delete(key: any(named: 'key'))).thenAnswer((invocation) async {
+  when(() => mock.delete(key: any(named: 'key'))).thenAnswer((
+    invocation,
+  ) async {
     final key = invocation.namedArguments[#key] as String;
     store.remove(key);
   });
@@ -98,7 +103,10 @@ void main() {
 
   group('PinService profile PIN', () {
     test('setProfilePin validates 4-digit numeric PIN', () async {
-      expect(() => service.setProfilePin(profileId, '123'), throwsArgumentError);
+      expect(
+        () => service.setProfilePin(profileId, '123'),
+        throwsArgumentError,
+      );
       expect(
         () => service.setProfilePin(profileId, 'abcd'),
         throwsArgumentError,
@@ -173,26 +181,30 @@ void main() {
       );
     });
 
-    test('getProfileLockoutRemainingMinutes returns 0 when not locked out',
-        () async {
-      final remaining = await service.getProfileLockoutRemainingMinutes(
-        profileId,
-      );
-      expect(remaining, 0);
-    });
+    test(
+      'getProfileLockoutRemainingMinutes returns 0 when not locked out',
+      () async {
+        final remaining = await service.getProfileLockoutRemainingMinutes(
+          profileId,
+        );
+        expect(remaining, 0);
+      },
+    );
 
-    test('getProfileLockoutRemainingMinutes returns positive value when locked out',
-        () async {
-      await service.setProfilePin(profileId, '1234');
-      for (var i = 0; i < 5; i++) {
-        await service.verifyProfilePin(profileId, '0000');
-      }
+    test(
+      'getProfileLockoutRemainingMinutes returns positive value when locked out',
+      () async {
+        await service.setProfilePin(profileId, '1234');
+        for (var i = 0; i < 5; i++) {
+          await service.verifyProfilePin(profileId, '0000');
+        }
 
-      final remaining = await service.getProfileLockoutRemainingMinutes(
-        profileId,
-      );
-      expect(remaining, greaterThan(0));
-    });
+        final remaining = await service.getProfileLockoutRemainingMinutes(
+          profileId,
+        );
+        expect(remaining, greaterThan(0));
+      },
+    );
 
     test('profile PINs are scoped by profileId', () async {
       const otherProfileId = 99;
@@ -210,10 +222,7 @@ void main() {
 
   group('PinService tutor PIN', () {
     test('setTutorPin validates 4-digit numeric PIN', () async {
-      expect(
-        () => service.setTutorPin(profileId, '12'),
-        throwsArgumentError,
-      );
+      expect(() => service.setTutorPin(profileId, '12'), throwsArgumentError);
     });
 
     test('setTutorPin stores a hash', () async {
@@ -261,22 +270,30 @@ void main() {
       );
     });
 
-    test('getTutorLockoutRemainingMinutes returns 0 when not locked out',
-        () async {
-      final remaining = await service.getTutorLockoutRemainingMinutes(profileId);
-      expect(remaining, 0);
-    });
+    test(
+      'getTutorLockoutRemainingMinutes returns 0 when not locked out',
+      () async {
+        final remaining = await service.getTutorLockoutRemainingMinutes(
+          profileId,
+        );
+        expect(remaining, 0);
+      },
+    );
 
-    test('getTutorLockoutRemainingMinutes returns positive value when locked out',
-        () async {
-      await service.setTutorPin(profileId, '1234');
-      for (var i = 0; i < 5; i++) {
-        await service.verifyTutorPin(profileId, '0000');
-      }
+    test(
+      'getTutorLockoutRemainingMinutes returns positive value when locked out',
+      () async {
+        await service.setTutorPin(profileId, '1234');
+        for (var i = 0; i < 5; i++) {
+          await service.verifyTutorPin(profileId, '0000');
+        }
 
-      final remaining = await service.getTutorLockoutRemainingMinutes(profileId);
-      expect(remaining, greaterThan(0));
-    });
+        final remaining = await service.getTutorLockoutRemainingMinutes(
+          profileId,
+        );
+        expect(remaining, greaterThan(0));
+      },
+    );
 
     test('tutor PIN is independent from parent PIN', () async {
       await service.setParentPin('1111');

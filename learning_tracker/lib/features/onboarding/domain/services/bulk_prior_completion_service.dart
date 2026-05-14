@@ -126,7 +126,11 @@ class BulkPriorCompletionService {
         trackType: TrackType.personal.storageKey,
         profileId: profileId,
         awardGamificationPoints: awardGamificationPoints,
-        completedAt: DateTime.utc(2000, 1, 1), // sentinel: "learned in the past, not today"
+        completedAt: DateTime.utc(
+          2000,
+          1,
+          1,
+        ), // sentinel: "learned in the past, not today"
       );
       final completions = await _completionRepository.bulkMarkComplete(request);
       totalCompletions += completions.length;

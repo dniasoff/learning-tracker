@@ -15,7 +15,9 @@ void main() {
 
   setUp(() async {
     db = inMemoryDb();
-    trackId = await db.into(db.curriculumTracks).insert(
+    trackId = await db
+        .into(db.curriculumTracks)
+        .insert(
           CurriculumTracksCompanion.insert(
             profileId: profileId,
             curriculumId: 'mishnayos',
@@ -36,7 +38,9 @@ void main() {
     int points = 10,
     int stageId = 1,
   }) async {
-    await db.into(db.completions).insert(
+    await db
+        .into(db.completions)
+        .insert(
           CompletionsCompanion.insert(
             profileId: profileId,
             curriculumId: curriculumId,
@@ -124,40 +128,40 @@ void main() {
   // =========================================================================
 
   group('ChartDataService.getTargetLine — with valid goal', () {
-    test('returns a target line with one point per day in the date range',
-        () async {
-      final goalCreated = DateTime.utc(2026, 1, 1);
-      final goalEnd = DateTime.utc(2026, 1, 11); // 10 days span
-      await db.goalDao.insertGoal(
-        GoalsCompanion.insert(
-          profileId: profileId,
-          curriculumId: 'mishnayos',
-          trackId: trackId,
-          createdAt: goalCreated,
-          updatedAt: goalCreated,
-          targetDate: Value(goalEnd),
-        ),
-      );
-
-      // Insert 5 completions within the goal window.
-      for (var i = 1; i <= 5; i++) {
-        await insertCompletion(
-          completedAt: DateTime.utc(2026, 1, i),
+    test(
+      'returns a target line with one point per day in the date range',
+      () async {
+        final goalCreated = DateTime.utc(2026, 1, 1);
+        final goalEnd = DateTime.utc(2026, 1, 11); // 10 days span
+        await db.goalDao.insertGoal(
+          GoalsCompanion.insert(
+            profileId: profileId,
+            curriculumId: 'mishnayos',
+            trackId: trackId,
+            createdAt: goalCreated,
+            updatedAt: goalCreated,
+            targetDate: Value(goalEnd),
+          ),
         );
-      }
 
-      final startDate = DateTime.utc(2026, 1, 1);
-      final endDate = DateTime.utc(2026, 1, 5);
-      final result = await service.getTargetLine(
-        curriculumId: 'mishnayos',
-        startDate: startDate,
-        endDate: endDate,
-      );
+        // Insert 5 completions within the goal window.
+        for (var i = 1; i <= 5; i++) {
+          await insertCompletion(completedAt: DateTime.utc(2026, 1, i));
+        }
 
-      expect(result, isNotNull);
-      // One point per day for 5 days inclusive.
-      expect(result!.length, 5);
-    });
+        final startDate = DateTime.utc(2026, 1, 1);
+        final endDate = DateTime.utc(2026, 1, 5);
+        final result = await service.getTargetLine(
+          curriculumId: 'mishnayos',
+          startDate: startDate,
+          endDate: endDate,
+        );
+
+        expect(result, isNotNull);
+        // One point per day for 5 days inclusive.
+        expect(result!.length, 5);
+      },
+    );
 
     test('expectedTotal increases monotonically over time', () async {
       final goalCreated = DateTime.utc(2026, 1, 1);

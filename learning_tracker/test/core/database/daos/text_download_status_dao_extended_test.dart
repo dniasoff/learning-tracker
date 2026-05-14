@@ -48,34 +48,39 @@ void main() {
       expect(status!.storedItemCount, 500);
     });
 
-    test('partial progress creates an entry with itemCount=0 and empty version',
-        () async {
-      await db.textDownloadStatusDao.savePartialProgress(
-        curriculumId: curriculumId,
-        storedItemCount: 50,
-      );
+    test(
+      'partial progress creates an entry with itemCount=0 and empty version',
+      () async {
+        await db.textDownloadStatusDao.savePartialProgress(
+          curriculumId: curriculumId,
+          storedItemCount: 50,
+        );
 
-      final status = await db.textDownloadStatusDao.getStatus(curriculumId);
-      expect(status!.itemCount, 0);
-      expect(status.textVersion, '');
-    });
+        final status = await db.textDownloadStatusDao.getStatus(curriculumId);
+        expect(status!.itemCount, 0);
+        expect(status.textVersion, '');
+      },
+    );
 
-    test('marking downloaded after partial progress updates the record', () async {
-      await db.textDownloadStatusDao.savePartialProgress(
-        curriculumId: curriculumId,
-        storedItemCount: 1000,
-      );
+    test(
+      'marking downloaded after partial progress updates the record',
+      () async {
+        await db.textDownloadStatusDao.savePartialProgress(
+          curriculumId: curriculumId,
+          storedItemCount: 1000,
+        );
 
-      await db.textDownloadStatusDao.markDownloaded(
-        curriculumId: curriculumId,
-        itemCount: 4219,
-        textVersion: '2.0.0',
-      );
+        await db.textDownloadStatusDao.markDownloaded(
+          curriculumId: curriculumId,
+          itemCount: 4219,
+          textVersion: '2.0.0',
+        );
 
-      final status = await db.textDownloadStatusDao.getStatus(curriculumId);
-      expect(status!.itemCount, 4219);
-      expect(status.textVersion, '2.0.0');
-    });
+        final status = await db.textDownloadStatusDao.getStatus(curriculumId);
+        expect(status!.itemCount, 4219);
+        expect(status.textVersion, '2.0.0');
+      },
+    );
   });
 
   // ── getPartialItemCount ───────────────────────────────────────────────────
@@ -100,19 +105,22 @@ void main() {
       expect(count, 750);
     });
 
-    test('returns null storedItemCount when markDownloaded clears it', () async {
-      // markDownloaded sets storedItemCount to null.
-      await db.textDownloadStatusDao.markDownloaded(
-        curriculumId: curriculumId,
-        itemCount: 4219,
-        textVersion: '1.0.0',
-      );
+    test(
+      'returns null storedItemCount when markDownloaded clears it',
+      () async {
+        // markDownloaded sets storedItemCount to null.
+        await db.textDownloadStatusDao.markDownloaded(
+          curriculumId: curriculumId,
+          itemCount: 4219,
+          textVersion: '1.0.0',
+        );
 
-      final count = await db.textDownloadStatusDao.getPartialItemCount(
-        curriculumId,
-      );
-      expect(count, isNull);
-    });
+        final count = await db.textDownloadStatusDao.getPartialItemCount(
+          curriculumId,
+        );
+        expect(count, isNull);
+      },
+    );
 
     test('returns 0 storedItemCount when explicitly set to 0', () async {
       await db.textDownloadStatusDao.savePartialProgress(

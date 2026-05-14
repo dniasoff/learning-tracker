@@ -88,10 +88,7 @@ void main() {
       final tasks = await gen.generateAll(
         [CurriculumId.mishnayos, CurriculumId.bavli],
         today,
-        trackIds: {
-          CurriculumId.mishnayos: 1,
-          CurriculumId.bavli: 2,
-        },
+        trackIds: {CurriculumId.mishnayos: 1, CurriculumId.bavli: 2},
         trackLabels: {
           CurriculumId.mishnayos: 'Mishnayos',
           CurriculumId.bavli: 'Bavli',
@@ -166,14 +163,8 @@ void main() {
       final tasks = await gen.generateAll(
         [CurriculumId.mishnayos, CurriculumId.bavli],
         today,
-        trackIds: {
-          CurriculumId.mishnayos: 1,
-          CurriculumId.bavli: 2,
-        },
-        trackLabels: {
-          CurriculumId.mishnayos: 'A',
-          CurriculumId.bavli: 'B',
-        },
+        trackIds: {CurriculumId.mishnayos: 1, CurriculumId.bavli: 2},
+        trackLabels: {CurriculumId.mishnayos: 'A', CurriculumId.bavli: 'B'},
       );
 
       for (var i = 1; i < tasks.length; i++) {

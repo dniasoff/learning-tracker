@@ -21,24 +21,21 @@ void main() {
     });
 
     test('logEvent completes without error', () async {
-      await expectLater(
-        service.logEvent('test_event'),
-        completes,
-      );
+      await expectLater(service.logEvent('test_event'), completes);
     });
 
     test('logEvent with parameters completes without error', () async {
       await expectLater(
-        service.logEvent('test_event', parameters: {'key': 'value', 'count': 3}),
+        service.logEvent(
+          'test_event',
+          parameters: {'key': 'value', 'count': 3},
+        ),
         completes,
       );
     });
 
     test('logEvent without parameters completes without error', () async {
-      await expectLater(
-        service.logEvent('screen_view'),
-        completes,
-      );
+      await expectLater(service.logEvent('screen_view'), completes);
     });
   });
 
@@ -63,7 +60,11 @@ void main() {
       await fake.logEvent('second');
       await fake.logEvent('third');
 
-      expect(fake.events.map((e) => e.name).toList(), ['first', 'second', 'third']);
+      expect(fake.events.map((e) => e.name).toList(), [
+        'first',
+        'second',
+        'third',
+      ]);
     });
   });
 }

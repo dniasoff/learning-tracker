@@ -157,11 +157,16 @@ void main() {
 
     test('returns only active programs for a curriculum type (bavli)', () {
       final programs = repo.getActiveProgramsByCurriculumType('bavli');
-      expect(programs.every((p) => p.isActive && p.curriculumType == 'bavli'), isTrue);
+      expect(
+        programs.every((p) => p.isActive && p.curriculumType == 'bavli'),
+        isTrue,
+      );
     });
 
     test('returns empty list for unknown curriculum type', () {
-      final programs = repo.getActiveProgramsByCurriculumType('no_such_curriculum');
+      final programs = repo.getActiveProgramsByCurriculumType(
+        'no_such_curriculum',
+      );
       expect(programs, isEmpty);
     });
 

@@ -45,8 +45,7 @@ class DashboardScreen extends ConsumerWidget {
             error: (e, s) =>
                 Center(child: Text(l10n.errorWithMessage(e.toString()))),
             data: (activeTracks) {
-              final userMode =
-                  userModeAsync.asData?.value ?? UserMode.adult;
+              final userMode = userModeAsync.asData?.value ?? UserMode.adult;
               final streakData = streakAsync.asData?.value;
               final currentStreak = streakData?.currentStreak ?? 0;
               final profileId = ref.watch(activeProfileIdProvider);

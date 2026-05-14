@@ -19,10 +19,7 @@ void main() {
 
   group('ProfileScopedPreferenceKeys — key generators', () {
     test('appLocale key is scoped by profileId', () {
-      expect(
-        ProfileScopedPreferenceKeys.appLocale(5),
-        'app_locale_p5',
-      );
+      expect(ProfileScopedPreferenceKeys.appLocale(5), 'app_locale_p5');
     });
 
     test('appLocale key includes profileId', () {
@@ -136,25 +133,22 @@ void main() {
     test('returns scoped value when set', () async {
       SharedPreferences.setMockInitialValues({'app_locale_p1': 'he'});
       final prefs = await SharedPreferences.getInstance();
-      expect(
-        ProfileScopedPreferenceKeys.readAppLocale(prefs, 1),
-        'he',
-      );
+      expect(ProfileScopedPreferenceKeys.readAppLocale(prefs, 1), 'he');
     });
 
     test('falls back to legacy key for profileId 0', () async {
       SharedPreferences.setMockInitialValues({'app_locale': 'he'});
       final prefs = await SharedPreferences.getInstance();
-      expect(
-        ProfileScopedPreferenceKeys.readAppLocale(prefs, 0),
-        'he',
-      );
+      expect(ProfileScopedPreferenceKeys.readAppLocale(prefs, 0), 'he');
     });
 
-    test('returns default en when nothing is set (non-zero profileId)', () async {
-      final prefs = await SharedPreferences.getInstance();
-      expect(ProfileScopedPreferenceKeys.readAppLocale(prefs, 5), 'en');
-    });
+    test(
+      'returns default en when nothing is set (non-zero profileId)',
+      () async {
+        final prefs = await SharedPreferences.getInstance();
+        expect(ProfileScopedPreferenceKeys.readAppLocale(prefs, 5), 'en');
+      },
+    );
 
     test('returns default en when nothing is set (profileId 0)', () async {
       final prefs = await SharedPreferences.getInstance();
@@ -166,10 +160,7 @@ void main() {
     test('returns scoped value when set', () async {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('app_locale_p1', 'he');
-      expect(
-        ProfileScopedPreferenceKeys.readAppLocale(prefs, 1),
-        'he',
-      );
+      expect(ProfileScopedPreferenceKeys.readAppLocale(prefs, 1), 'he');
     });
 
     test('falls back to legacy key for profile 0', () async {
@@ -177,26 +168,20 @@ void main() {
         ProfileScopedPreferenceKeys.legacyAppLocaleKey: 'he',
       });
       final prefs = await SharedPreferences.getInstance();
-      expect(
-        ProfileScopedPreferenceKeys.readAppLocale(prefs, 0),
-        'he',
-      );
+      expect(ProfileScopedPreferenceKeys.readAppLocale(prefs, 0), 'he');
     });
 
-    test('returns "en" by default for non-zero profile with no value', () async {
-      final prefs = await SharedPreferences.getInstance();
-      expect(
-        ProfileScopedPreferenceKeys.readAppLocale(prefs, 5),
-        'en',
-      );
-    });
+    test(
+      'returns "en" by default for non-zero profile with no value',
+      () async {
+        final prefs = await SharedPreferences.getInstance();
+        expect(ProfileScopedPreferenceKeys.readAppLocale(prefs, 5), 'en');
+      },
+    );
 
     test('returns "en" for profile 0 when no legacy key present', () async {
       final prefs = await SharedPreferences.getInstance();
-      expect(
-        ProfileScopedPreferenceKeys.readAppLocale(prefs, 0),
-        'en',
-      );
+      expect(ProfileScopedPreferenceKeys.readAppLocale(prefs, 0), 'en');
     });
   });
 
@@ -287,10 +272,13 @@ void main() {
       expect(ProfileScopedPreferenceKeys.readFontSizeIndex(prefs, 0), 3);
     });
 
-    test('returns default 1 when nothing is set (non-zero profileId)', () async {
-      final prefs = await SharedPreferences.getInstance();
-      expect(ProfileScopedPreferenceKeys.readFontSizeIndex(prefs, 5), 1);
-    });
+    test(
+      'returns default 1 when nothing is set (non-zero profileId)',
+      () async {
+        final prefs = await SharedPreferences.getInstance();
+        expect(ProfileScopedPreferenceKeys.readFontSizeIndex(prefs, 5), 1);
+      },
+    );
 
     test('returns default 1 when nothing is set (profileId 0)', () async {
       final prefs = await SharedPreferences.getInstance();
@@ -325,23 +313,28 @@ void main() {
 
   group('ProfileScopedPreferenceKeys.readShowNikud', () {
     test('returns scoped value when set to false', () async {
-      SharedPreferences.setMockInitialValues(
-        {'text_display_show_nikud_p1': false},
-      );
+      SharedPreferences.setMockInitialValues({
+        'text_display_show_nikud_p1': false,
+      });
       final prefs = await SharedPreferences.getInstance();
       expect(ProfileScopedPreferenceKeys.readShowNikud(prefs, 1), isFalse);
     });
 
     test('falls back to legacy key for profileId 0', () async {
-      SharedPreferences.setMockInitialValues({'text_display_show_nikud': false});
+      SharedPreferences.setMockInitialValues({
+        'text_display_show_nikud': false,
+      });
       final prefs = await SharedPreferences.getInstance();
       expect(ProfileScopedPreferenceKeys.readShowNikud(prefs, 0), isFalse);
     });
 
-    test('returns default true when nothing is set (non-zero profileId)', () async {
-      final prefs = await SharedPreferences.getInstance();
-      expect(ProfileScopedPreferenceKeys.readShowNikud(prefs, 6), isTrue);
-    });
+    test(
+      'returns default true when nothing is set (non-zero profileId)',
+      () async {
+        final prefs = await SharedPreferences.getInstance();
+        expect(ProfileScopedPreferenceKeys.readShowNikud(prefs, 6), isTrue);
+      },
+    );
 
     test('returns default true when nothing is set (profileId 0)', () async {
       final prefs = await SharedPreferences.getInstance();
@@ -353,10 +346,7 @@ void main() {
     test('returns scoped value when set', () async {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool('text_display_show_nikud_p1', false);
-      expect(
-        ProfileScopedPreferenceKeys.readShowNikud(prefs, 1),
-        isFalse,
-      );
+      expect(ProfileScopedPreferenceKeys.readShowNikud(prefs, 1), isFalse);
     });
 
     test('falls back to legacy key for profile 0', () async {
@@ -364,10 +354,7 @@ void main() {
         ProfileScopedPreferenceKeys.legacyShowNikudKey: false,
       });
       final prefs = await SharedPreferences.getInstance();
-      expect(
-        ProfileScopedPreferenceKeys.readShowNikud(prefs, 0),
-        isFalse,
-      );
+      expect(ProfileScopedPreferenceKeys.readShowNikud(prefs, 0), isFalse);
     });
 
     test('returns true by default for non-zero profile', () async {
@@ -382,9 +369,9 @@ void main() {
 
   group('ProfileScopedPreferenceKeys.readLearningOrderParentControls', () {
     test('returns scoped value when set', () async {
-      SharedPreferences.setMockInitialValues(
-        {'learning_order_parent_controls_p3': true},
-      );
+      SharedPreferences.setMockInitialValues({
+        'learning_order_parent_controls_p3': true,
+      });
       final prefs = await SharedPreferences.getInstance();
       expect(
         ProfileScopedPreferenceKeys.readLearningOrderParentControls(prefs, 3),
@@ -393,9 +380,9 @@ void main() {
     });
 
     test('falls back to legacy key for profileId 0', () async {
-      SharedPreferences.setMockInitialValues(
-        {'learning_order_parent_controls': true},
-      );
+      SharedPreferences.setMockInitialValues({
+        'learning_order_parent_controls': true,
+      });
       final prefs = await SharedPreferences.getInstance();
       expect(
         ProfileScopedPreferenceKeys.readLearningOrderParentControls(prefs, 0),
@@ -526,9 +513,9 @@ void main() {
 
   group('ProfileScopedPreferenceKeys.readTransliterationVariant', () {
     test('returns stored value when set', () async {
-      SharedPreferences.setMockInitialValues(
-        {'transliteration_variant_p1': 'sephardi'},
-      );
+      SharedPreferences.setMockInitialValues({
+        'transliteration_variant_p1': 'sephardi',
+      });
       final prefs = await SharedPreferences.getInstance();
       expect(
         ProfileScopedPreferenceKeys.readTransliterationVariant(prefs, 1),

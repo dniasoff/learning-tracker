@@ -15,6 +15,7 @@ import 'package:learning_tracker/features/sync/data/firestore_data_source.dart';
 import 'package:learning_tracker/features/sync/data/offline_queue.dart';
 import 'package:learning_tracker/features/sync/data/sync_engine.dart';
 import 'package:learning_tracker/features/sync/domain/models/sync_status.dart';
+
 /// Provider for FirestoreDataSource, scoped to the active profile.
 ///
 /// Returns null when the user is not cloud-born (v2 §4.5 tier gate).

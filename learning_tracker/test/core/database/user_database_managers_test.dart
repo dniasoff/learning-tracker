@@ -29,8 +29,9 @@ void main() {
 
   // ─── Shared helpers ──────────────────────────────────────────────────────
 
-  Future<int> makeAccount({String email = 'a@test.local'}) =>
-      db.into(db.accounts).insert(
+  Future<int> makeAccount({String email = 'a@test.local'}) => db
+      .into(db.accounts)
+      .insert(
         AccountsCompanion.insert(
           email: email,
           tier: 'localBorn',
@@ -41,8 +42,9 @@ void main() {
         ),
       );
 
-  Future<int> makeProfile(int accountId, {String mode = 'adult'}) =>
-      db.into(db.learnerProfiles).insert(
+  Future<int> makeProfile(int accountId, {String mode = 'adult'}) => db
+      .into(db.learnerProfiles)
+      .insert(
         ProfilesCompanion.insert(
           accountId: accountId,
           displayName: 'Learner',
@@ -52,8 +54,9 @@ void main() {
         ),
       );
 
-  Future<int> makeTrack(int profileId, {String curriculum = 'bavli'}) =>
-      db.into(db.curriculumTracks).insert(
+  Future<int> makeTrack(int profileId, {String curriculum = 'bavli'}) => db
+      .into(db.curriculumTracks)
+      .insert(
         CurriculumTracksCompanion.insert(
           profileId: profileId,
           curriculumId: curriculum,
@@ -74,17 +77,19 @@ void main() {
 
     test('filter by tier', () async {
       await makeAccount(email: 'local@test.local');
-      await db.into(db.accounts).insert(
-        AccountsCompanion.insert(
-          email: 'cloud@test.local',
-          tier: 'cloudBorn',
-          displayName: 'Cloud',
-          userMode: 'adult',
-          createdAt: now,
-          updatedAt: now,
-          firebaseUid: const Value('fb-1'),
-        ),
-      );
+      await db
+          .into(db.accounts)
+          .insert(
+            AccountsCompanion.insert(
+              email: 'cloud@test.local',
+              tier: 'cloudBorn',
+              displayName: 'Cloud',
+              userMode: 'adult',
+              createdAt: now,
+              updatedAt: now,
+              firebaseUid: const Value('fb-1'),
+            ),
+          );
 
       final localRows = await db.managers.accounts
           .filter((f) => f.tier('localBorn'))
@@ -121,24 +126,28 @@ void main() {
 
     test('orderBy displayName desc', () async {
       final accId = await makeAccount();
-      await db.into(db.learnerProfiles).insert(
-        ProfilesCompanion.insert(
-          accountId: accId,
-          displayName: 'Alice',
-          mode: 'adult',
-          createdAt: now,
-          updatedAt: now,
-        ),
-      );
-      await db.into(db.learnerProfiles).insert(
-        ProfilesCompanion.insert(
-          accountId: accId,
-          displayName: 'Zach',
-          mode: 'adult',
-          createdAt: now,
-          updatedAt: now,
-        ),
-      );
+      await db
+          .into(db.learnerProfiles)
+          .insert(
+            ProfilesCompanion.insert(
+              accountId: accId,
+              displayName: 'Alice',
+              mode: 'adult',
+              createdAt: now,
+              updatedAt: now,
+            ),
+          );
+      await db
+          .into(db.learnerProfiles)
+          .insert(
+            ProfilesCompanion.insert(
+              accountId: accId,
+              displayName: 'Zach',
+              mode: 'adult',
+              createdAt: now,
+              updatedAt: now,
+            ),
+          );
       final rows = await db.managers.learnerProfiles
           .orderBy((o) => o.displayName.desc())
           .get();
@@ -179,8 +188,9 @@ void main() {
       int trackId, {
       String stageName = 'limud',
       int stageOrder = 1,
-    }) =>
-        db.into(db.stageDefinitions).insert(
+    }) => db
+        .into(db.stageDefinitions)
+        .insert(
           StageDefinitionsCompanion.insert(
             profileId: profileId,
             trackId: trackId,
@@ -197,9 +207,9 @@ void main() {
       final trackId = await makeTrack(profileId);
       final sdId = await makeStageDef(profileId, trackId);
 
-      final rows = await (db.select(db.stageDefinitions)
-            ..where((t) => t.id.equals(sdId)))
-          .get();
+      final rows = await (db.select(
+        db.stageDefinitions,
+      )..where((t) => t.id.equals(sdId))).get();
       final sd = rows.first;
 
       final json = sd.toJson();
@@ -214,14 +224,18 @@ void main() {
       final accId = await makeAccount(email: 'sd2@test.local');
       final profileId = await makeProfile(accId);
       final trackId = await makeTrack(profileId);
-      final sdId = await makeStageDef(profileId, trackId, stageName: 'chazara1');
+      final sdId = await makeStageDef(
+        profileId,
+        trackId,
+        stageName: 'chazara1',
+      );
 
-      final sd = await (db.select(db.stageDefinitions)
-            ..where((t) => t.id.equals(sdId)))
-          .getSingle();
-      final sd2 = await (db.select(db.stageDefinitions)
-            ..where((t) => t.id.equals(sdId)))
-          .getSingle();
+      final sd = await (db.select(
+        db.stageDefinitions,
+      )..where((t) => t.id.equals(sdId))).getSingle();
+      final sd2 = await (db.select(
+        db.stageDefinitions,
+      )..where((t) => t.id.equals(sdId))).getSingle();
 
       expect(sd, equals(sd2));
       expect(sd.hashCode, equals(sd2.hashCode));
@@ -238,9 +252,9 @@ void main() {
       final trackId = await makeTrack(profileId);
       final sdId = await makeStageDef(profileId, trackId);
 
-      final sd = await (db.select(db.stageDefinitions)
-            ..where((t) => t.id.equals(sdId)))
-          .getSingle();
+      final sd = await (db.select(
+        db.stageDefinitions,
+      )..where((t) => t.id.equals(sdId))).getSingle();
 
       final companion = sd.toCompanion(true);
       expect(companion.profileId.value, profileId);
@@ -256,7 +270,12 @@ void main() {
       final profileId = await makeProfile(accId);
       final trackId = await makeTrack(profileId);
       await makeStageDef(profileId, trackId, stageName: 'limud', stageOrder: 1);
-      await makeStageDef(profileId, trackId, stageName: 'chazara1', stageOrder: 2);
+      await makeStageDef(
+        profileId,
+        trackId,
+        stageName: 'chazara1',
+        stageOrder: 2,
+      );
 
       final rows = await db.managers.stageDefinitions
           .filter((f) => f.profileId(profileId))
@@ -265,7 +284,9 @@ void main() {
       expect(rows, hasLength(2));
       expect(rows.first.stageName, 'limud');
 
-      final StageDefinitionsCompanion(:delayDays) = rows.first.toCompanion(true);
+      final StageDefinitionsCompanion(:delayDays) = rows.first.toCompanion(
+        true,
+      );
       expect(delayDays.value, 0);
     });
   });
@@ -278,24 +299,28 @@ void main() {
       final profileId = await makeProfile(accId);
       final trackId = await makeTrack(profileId);
 
-      await db.into(db.pointConfigs).insert(
-        PointConfigsCompanion.insert(
-          profileId: profileId,
-          curriculumId: 'bavli',
-          trackId: trackId,
-          stageOrder: 1,
-          points: 10,
-        ),
-      );
-      await db.into(db.pointConfigs).insert(
-        PointConfigsCompanion.insert(
-          profileId: profileId,
-          curriculumId: 'bavli',
-          trackId: trackId,
-          stageOrder: 2,
-          points: 5,
-        ),
-      );
+      await db
+          .into(db.pointConfigs)
+          .insert(
+            PointConfigsCompanion.insert(
+              profileId: profileId,
+              curriculumId: 'bavli',
+              trackId: trackId,
+              stageOrder: 1,
+              points: 10,
+            ),
+          );
+      await db
+          .into(db.pointConfigs)
+          .insert(
+            PointConfigsCompanion.insert(
+              profileId: profileId,
+              curriculumId: 'bavli',
+              trackId: trackId,
+              stageOrder: 2,
+              points: 5,
+            ),
+          );
 
       final rows = await db.managers.pointConfigs
           .filter((f) => f.profileId(profileId))
@@ -348,15 +373,17 @@ void main() {
       final trackId = await makeTrack(profileId);
 
       for (var day = 1; day <= 5; day++) {
-        await db.into(db.studyDayConfigs).insert(
-          StudyDayConfigsCompanion.insert(
-            profileId: profileId,
-            curriculumId: 'bavli',
-            trackId: trackId,
-            dayOfWeek: day,
-            updatedAt: now,
-          ),
-        );
+        await db
+            .into(db.studyDayConfigs)
+            .insert(
+              StudyDayConfigsCompanion.insert(
+                profileId: profileId,
+                curriculumId: 'bavli',
+                trackId: trackId,
+                dayOfWeek: day,
+                updatedAt: now,
+              ),
+            );
       }
 
       final rows = await db.managers.studyDayConfigs
@@ -409,17 +436,19 @@ void main() {
       final profileId = await makeProfile(accId);
       final trackId = await makeTrack(profileId);
 
-      await db.into(db.completions).insert(
-        CompletionsCompanion.insert(
-          profileId: profileId,
-          curriculumId: 'bavli',
-          sefariaRef: 'Berakhot 2a',
-          stageId: 1,
-          trackType: 'personal',
-          trackId: trackId,
-          completedAt: now,
-        ),
-      );
+      await db
+          .into(db.completions)
+          .insert(
+            CompletionsCompanion.insert(
+              profileId: profileId,
+              curriculumId: 'bavli',
+              sefariaRef: 'Berakhot 2a',
+              stageId: 1,
+              trackType: 'personal',
+              trackId: trackId,
+              completedAt: now,
+            ),
+          );
 
       final rows = await db.managers.completions
           .filter((f) => f.profileId(profileId))
@@ -468,16 +497,18 @@ void main() {
       final accId = await makeAccount(email: 'ce@test.local');
       final profileId = await makeProfile(accId);
 
-      await db.into(db.completionEvents).insert(
-        CompletionEventsCompanion.insert(
-          profileId: profileId,
-          curriculumId: 'bavli',
-          sefariaRef: 'Berakhot 3a',
-          stageId: 1,
-          trackType: 'personal',
-          eventTimestamp: now,
-        ),
-      );
+      await db
+          .into(db.completionEvents)
+          .insert(
+            CompletionEventsCompanion.insert(
+              profileId: profileId,
+              curriculumId: 'bavli',
+              sefariaRef: 'Berakhot 3a',
+              stageId: 1,
+              trackType: 'personal',
+              eventTimestamp: now,
+            ),
+          );
 
       final rows = await db.managers.completionEvents
           .filter((f) => f.profileId(profileId))
@@ -527,15 +558,17 @@ void main() {
       final profileId = await makeProfile(accId);
       final trackId = await makeTrack(profileId);
 
-      await db.into(db.bookmarks).insert(
-        BookmarksCompanion.insert(
-          profileId: profileId,
-          curriculumId: 'bavli',
-          trackId: trackId,
-          sefariaRef: 'Berakhot 5a',
-          updatedAt: now,
-        ),
-      );
+      await db
+          .into(db.bookmarks)
+          .insert(
+            BookmarksCompanion.insert(
+              profileId: profileId,
+              curriculumId: 'bavli',
+              trackId: trackId,
+              sefariaRef: 'Berakhot 5a',
+              updatedAt: now,
+            ),
+          );
 
       final rows = await db.managers.bookmarks
           .filter((f) => f.profileId(profileId))
@@ -584,14 +617,16 @@ void main() {
       final accId = await makeAccount(email: 'lo@test.local');
       final profileId = await makeProfile(accId);
 
-      await db.into(db.learningOrder).insert(
-        LearningOrderCompanion.insert(
-          profileId: profileId,
-          curriculumId: 'bavli',
-          sefariaRef: 'Berakhot 2a',
-          userSortOrder: 1,
-        ),
-      );
+      await db
+          .into(db.learningOrder)
+          .insert(
+            LearningOrderCompanion.insert(
+              profileId: profileId,
+              curriculumId: 'bavli',
+              sefariaRef: 'Berakhot 2a',
+              userSortOrder: 1,
+            ),
+          );
 
       final rows = await db.managers.learningOrder
           .filter((f) => f.profileId(profileId))
@@ -642,13 +677,15 @@ void main() {
       final profileId = await makeProfile(accId);
       final trackId = await makeTrack(profileId);
 
-      await db.into(db.trackLearningOrder).insert(
-        TrackLearningOrderCompanion.insert(
-          trackId: trackId,
-          sefariaRef: 'Berakhot 10a',
-          sortOrder: 1,
-        ),
-      );
+      await db
+          .into(db.trackLearningOrder)
+          .insert(
+            TrackLearningOrderCompanion.insert(
+              trackId: trackId,
+              sefariaRef: 'Berakhot 10a',
+              sortOrder: 1,
+            ),
+          );
 
       final rows = await db.managers.trackLearningOrder
           .filter((f) => f.trackId(trackId))
@@ -698,14 +735,16 @@ void main() {
       final accId = await makeAccount(email: 'str@test.local');
       final profileId = await makeProfile(accId);
 
-      await db.into(db.streaks).insert(
-        StreaksCompanion.insert(
-          profileId: profileId,
-          currentStreak: const Value(5),
-          maxStreak: const Value(10),
-          lastCompletionDate: Value(DateTime.utc(2026, 3, 1)),
-        ),
-      );
+      await db
+          .into(db.streaks)
+          .insert(
+            StreaksCompanion.insert(
+              profileId: profileId,
+              currentStreak: const Value(5),
+              maxStreak: const Value(10),
+              lastCompletionDate: Value(DateTime.utc(2026, 3, 1)),
+            ),
+          );
 
       final rows = await db.managers.streaks
           .filter((f) => f.profileId(profileId))
@@ -741,9 +780,9 @@ void main() {
       final accId = await makeAccount(email: 'str2@test.local');
       final profileId = await makeProfile(accId);
 
-      await db.into(db.streaks).insert(
-        StreaksCompanion.insert(profileId: profileId),
-      );
+      await db
+          .into(db.streaks)
+          .insert(StreaksCompanion.insert(profileId: profileId));
 
       final rows = await db.managers.streaks
           .filter((f) => f.profileId(profileId))
@@ -777,15 +816,17 @@ void main() {
       final accId = await makeAccount(email: 'sev@test.local');
       final profileId = await makeProfile(accId);
 
-      await db.into(db.streakEvents).insert(
-        StreakEventsCompanion.insert(
-          profileId: profileId,
-          eventType: 'completion',
-          dayUtc: DateTime.utc(2026, 3, 1),
-          eventTimestamp: now,
-          clientDeviceId: const Value('device-123'),
-        ),
-      );
+      await db
+          .into(db.streakEvents)
+          .insert(
+            StreakEventsCompanion.insert(
+              profileId: profileId,
+              eventType: 'completion',
+              dayUtc: DateTime.utc(2026, 3, 1),
+              eventTimestamp: now,
+              clientDeviceId: const Value('device-123'),
+            ),
+          );
 
       final rows = await db.managers.streakEvents
           .filter((f) => f.profileId(profileId))
@@ -822,14 +863,16 @@ void main() {
       final accId = await makeAccount(email: 'sev2@test.local');
       final profileId = await makeProfile(accId);
 
-      await db.into(db.streakEvents).insert(
-        StreakEventsCompanion.insert(
-          profileId: profileId,
-          eventType: 'completion',
-          dayUtc: DateTime.utc(2026, 3, 2),
-          eventTimestamp: now,
-        ),
-      );
+      await db
+          .into(db.streakEvents)
+          .insert(
+            StreakEventsCompanion.insert(
+              profileId: profileId,
+              eventType: 'completion',
+              dayUtc: DateTime.utc(2026, 3, 2),
+              eventTimestamp: now,
+            ),
+          );
 
       final rows = await db.managers.streakEvents
           .filter((f) => f.profileId(profileId))
@@ -862,31 +905,35 @@ void main() {
       final accId = await makeAccount(email: 'dp@test.local');
       final profileId = await makeProfile(accId);
       final trackId = await makeTrack(profileId);
-      final sdId = await db.into(db.stageDefinitions).insert(
-        StageDefinitionsCompanion.insert(
-          profileId: profileId,
-          trackId: trackId,
-          curriculumId: 'bavli',
-          stageName: 'limud',
-          stageOrder: 1,
-          delayDays: 0,
-        ),
-      );
+      final sdId = await db
+          .into(db.stageDefinitions)
+          .insert(
+            StageDefinitionsCompanion.insert(
+              profileId: profileId,
+              trackId: trackId,
+              curriculumId: 'bavli',
+              stageName: 'limud',
+              stageOrder: 1,
+              delayDays: 0,
+            ),
+          );
 
       for (var i = 1; i <= 3; i++) {
-        await db.into(db.dailyPlans).insert(
-          DailyPlansCompanion.insert(
-            profileId: profileId,
-            curriculumId: 'bavli',
-            planDate: DateTime.utc(2026, 3, i),
-            sefariaRef: 'Berakhot ${i}a',
-            stageOrder: 1,
-            stageDefinitionId: sdId,
-            trackId: trackId,
-            priority: 'newLearning',
-            createdAt: now,
-          ),
-        );
+        await db
+            .into(db.dailyPlans)
+            .insert(
+              DailyPlansCompanion.insert(
+                profileId: profileId,
+                curriculumId: 'bavli',
+                planDate: DateTime.utc(2026, 3, i),
+                sefariaRef: 'Berakhot ${i}a',
+                stageOrder: 1,
+                stageDefinitionId: sdId,
+                trackId: trackId,
+                priority: 'newLearning',
+                createdAt: now,
+              ),
+            );
       }
 
       final rows = await db.managers.dailyPlans
@@ -906,20 +953,22 @@ void main() {
       final profileId = await makeProfile(accId);
 
       for (var i = 1; i <= 3; i++) {
-        await db.into(db.learningLedger).insert(
-          LearningLedgerCompanion.insert(
-            profileId: profileId,
-            curriculumId: 'bavli',
-            entryScope: 'masechta',
-            unitIdentifier: 'Berakhot',
-            unitDisplayNameHe: 'ברכות',
-            unitDisplayNameEn: 'Berakhot',
-            trackType: 'personal',
-            completedAt: DateTime.utc(2026, 3, i),
-            completionNumber: i,
-            markedBy: profileId,
-          ),
-        );
+        await db
+            .into(db.learningLedger)
+            .insert(
+              LearningLedgerCompanion.insert(
+                profileId: profileId,
+                curriculumId: 'bavli',
+                entryScope: 'masechta',
+                unitIdentifier: 'Berakhot',
+                unitDisplayNameHe: 'ברכות',
+                unitDisplayNameEn: 'Berakhot',
+                trackType: 'personal',
+                completedAt: DateTime.utc(2026, 3, i),
+                completionNumber: i,
+                markedBy: profileId,
+              ),
+            );
       }
 
       final rows = await db.managers.learningLedger
@@ -939,16 +988,18 @@ void main() {
       final profileId = await makeProfile(accId);
       final trackId = await makeTrack(profileId);
 
-      await db.into(db.curriculumScopes).insert(
-        CurriculumScopesCompanion.insert(
-          profileId: profileId,
-          curriculumId: 'bavli',
-          trackId: trackId,
-          scopeLevel: 1,
-          scopeValue: 'Moed',
-          createdAt: now,
-        ),
-      );
+      await db
+          .into(db.curriculumScopes)
+          .insert(
+            CurriculumScopesCompanion.insert(
+              profileId: profileId,
+              curriculumId: 'bavli',
+              trackId: trackId,
+              scopeLevel: 1,
+              scopeValue: 'Moed',
+              createdAt: now,
+            ),
+          );
 
       final rows = await db.managers.curriculumScopes
           .filter((f) => f.profileId(profileId))
@@ -965,13 +1016,15 @@ void main() {
       final accId = await makeAccount(email: 'ppm@test.local');
       final profileId = await makeProfile(accId);
 
-      await db.into(db.profilePrograms).insert(
-        ProfileProgramsCompanion.insert(
-          profileId: profileId,
-          curriculumType: 'bavli',
-          programId: 1,
-        ),
-      );
+      await db
+          .into(db.profilePrograms)
+          .insert(
+            ProfileProgramsCompanion.insert(
+              profileId: profileId,
+              curriculumType: 'bavli',
+              programId: 1,
+            ),
+          );
 
       final rows = await db.managers.profilePrograms
           .filter((f) => f.curriculumType('bavli'))
@@ -990,16 +1043,18 @@ void main() {
       final trackId = await makeTrack(profileId);
 
       for (final pct in [50.0, 80.0, 100.0]) {
-        await db.into(db.goals).insert(
-          GoalsCompanion.insert(
-            profileId: profileId,
-            curriculumId: 'bavli',
-            trackId: trackId,
-            targetPercent: Value(pct),
-            createdAt: now,
-            updatedAt: now,
-          ),
-        );
+        await db
+            .into(db.goals)
+            .insert(
+              GoalsCompanion.insert(
+                profileId: profileId,
+                curriculumId: 'bavli',
+                trackId: trackId,
+                targetPercent: Value(pct),
+                createdAt: now,
+                updatedAt: now,
+              ),
+            );
       }
 
       final rows = await db.managers.goals
@@ -1020,15 +1075,17 @@ void main() {
       final trackId = await makeTrack(profileId);
 
       for (final ref in ['Berakhot 2a', 'Shabbat 1a']) {
-        await db.into(db.bookmarks).insert(
-          BookmarksCompanion.insert(
-            profileId: profileId,
-            curriculumId: ref.contains('Shabbat') ? 'mishnah' : 'bavli',
-            trackId: trackId,
-            sefariaRef: ref,
-            updatedAt: now,
-          ),
-        );
+        await db
+            .into(db.bookmarks)
+            .insert(
+              BookmarksCompanion.insert(
+                profileId: profileId,
+                curriculumId: ref.contains('Shabbat') ? 'mishnah' : 'bavli',
+                trackId: trackId,
+                sefariaRef: ref,
+                updatedAt: now,
+              ),
+            );
       }
 
       final rows = await db.managers.bookmarks
@@ -1047,14 +1104,16 @@ void main() {
       final profileId = await makeProfile(accId);
 
       for (var i = 3; i >= 1; i--) {
-        await db.into(db.learningOrder).insert(
-          LearningOrderCompanion.insert(
-            profileId: profileId,
-            curriculumId: 'bavli',
-            sefariaRef: 'Berakhot ${i}a',
-            userSortOrder: i,
-          ),
-        );
+        await db
+            .into(db.learningOrder)
+            .insert(
+              LearningOrderCompanion.insert(
+                profileId: profileId,
+                curriculumId: 'bavli',
+                sefariaRef: 'Berakhot ${i}a',
+                userSortOrder: i,
+              ),
+            );
       }
 
       final rows = await db.managers.learningOrder
@@ -1075,13 +1134,15 @@ void main() {
       final trackId = await makeTrack(profileId);
 
       for (var i = 3; i >= 1; i--) {
-        await db.into(db.trackLearningOrder).insert(
-          TrackLearningOrderCompanion.insert(
-            trackId: trackId,
-            sefariaRef: 'Ref $i',
-            sortOrder: i,
-          ),
-        );
+        await db
+            .into(db.trackLearningOrder)
+            .insert(
+              TrackLearningOrderCompanion.insert(
+                trackId: trackId,
+                sefariaRef: 'Ref $i',
+                sortOrder: i,
+              ),
+            );
       }
 
       final rows = await db.managers.trackLearningOrder

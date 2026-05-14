@@ -29,8 +29,9 @@ void main() {
     String trackType = 'personal',
     int profileId = 1,
     bool isActive = true,
-  }) =>
-      db.into(db.curriculumTracks).insert(
+  }) => db
+      .into(db.curriculumTracks)
+      .insert(
         CurriculumTracksCompanion.insert(
           profileId: profileId,
           curriculumId: curriculumId,
@@ -40,19 +41,19 @@ void main() {
         ),
       );
 
-  Future<int> insertGoal(int trackId) =>
-      db.goalDao.insertGoal(
-        GoalsCompanion.insert(
-          profileId: 1,
-          curriculumId: 'mishnayos',
-          trackId: trackId,
-          createdAt: DateTime.utc(2026, 1, 1),
-          updatedAt: DateTime.utc(2026, 1, 1),
-        ),
-      );
+  Future<int> insertGoal(int trackId) => db.goalDao.insertGoal(
+    GoalsCompanion.insert(
+      profileId: 1,
+      curriculumId: 'mishnayos',
+      trackId: trackId,
+      createdAt: DateTime.utc(2026, 1, 1),
+      updatedAt: DateTime.utc(2026, 1, 1),
+    ),
+  );
 
-  Future<int> insertStage(int trackId) =>
-      db.into(db.stageDefinitions).insert(
+  Future<int> insertStage(int trackId) => db
+      .into(db.stageDefinitions)
+      .insert(
         StageDefinitionsCompanion.insert(
           profileId: 1,
           curriculumId: 'mishnayos',
@@ -118,18 +119,20 @@ void main() {
       expect(all.any((t) => t.id == trackId), isTrue);
     });
 
-    test('soft-deleted track does not appear in getActiveTracksForProfile',
-        () async {
-      final trackId = await insertTrack();
+    test(
+      'soft-deleted track does not appear in getActiveTracksForProfile',
+      () async {
+        final trackId = await insertTrack();
 
-      final activeBefore = await db.trackDao.getActiveTracksForProfile(1);
-      expect(activeBefore, isNotEmpty);
+        final activeBefore = await db.trackDao.getActiveTracksForProfile(1);
+        expect(activeBefore, isNotEmpty);
 
-      await db.trackDao.deleteTrackAndData(trackId);
+        await db.trackDao.deleteTrackAndData(trackId);
 
-      final activeAfter = await db.trackDao.getActiveTracksForProfile(1);
-      expect(activeAfter, isEmpty);
-    });
+        final activeAfter = await db.trackDao.getActiveTracksForProfile(1);
+        expect(activeAfter, isEmpty);
+      },
+    );
   });
 
   // ── initializeDefaultTracks ───────────────────────────────────────────────
@@ -147,20 +150,22 @@ void main() {
       expect(tracks.first.isActive, isTrue);
     });
 
-    test('is a no-op when tracks already exist for the curriculum+profile',
-        () async {
-      // Pre-insert a track.
-      await insertTrack(curriculumId: 'mishnayos', profileId: 1);
+    test(
+      'is a no-op when tracks already exist for the curriculum+profile',
+      () async {
+        // Pre-insert a track.
+        await insertTrack(curriculumId: 'mishnayos', profileId: 1);
 
-      await db.trackDao.initializeDefaultTracks(
-        CurriculumId.mishnayos,
-        profileId: 1,
-      );
+        await db.trackDao.initializeDefaultTracks(
+          CurriculumId.mishnayos,
+          profileId: 1,
+        );
 
-      // Still only one track.
-      final tracks = await db.trackDao.getAllTracks(CurriculumId.mishnayos);
-      expect(tracks, hasLength(1));
-    });
+        // Still only one track.
+        final tracks = await db.trackDao.getAllTracks(CurriculumId.mishnayos);
+        expect(tracks, hasLength(1));
+      },
+    );
 
     test('does not affect tracks for other profiles', () async {
       await db.trackDao.initializeDefaultTracks(
@@ -189,27 +194,28 @@ void main() {
   // ── deactivateTrack ──────────────────────────────────────────────────────
 
   group('TrackDao.deactivateTrack', () {
-    test('throws InvalidOperationException when deactivating personal track',
-        () async {
-      await db.trackDao.activateTrack(
-        CurriculumId.mishnayos,
-        TrackType.personal,
-      );
-
-      expect(
-        () => db.trackDao.deactivateTrack(
+    test(
+      'throws InvalidOperationException when deactivating personal track',
+      () async {
+        await db.trackDao.activateTrack(
           CurriculumId.mishnayos,
           TrackType.personal,
-        ),
-        throwsA(isA<InvalidOperationException>()),
-      );
-    });
+        );
+
+        expect(
+          () => db.trackDao.deactivateTrack(
+            CurriculumId.mishnayos,
+            TrackType.personal,
+          ),
+          throwsA(isA<InvalidOperationException>()),
+        );
+      },
+    );
 
     test('InvalidOperationException.toString contains message', () {
       const e = InvalidOperationException('test message');
       expect(e.toString(), contains('test message'));
       expect(e.toString(), contains('InvalidOperationException'));
     });
-
   });
 }

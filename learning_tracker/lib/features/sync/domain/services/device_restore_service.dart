@@ -169,7 +169,9 @@ class DeviceRestoreService {
       await _syncOrchestrator.pullOnLaunch();
 
       // Check if pullOnLaunch failed (it catches errors internally)
-      if (_syncOrchestrator.currentStatus case SyncStatusError(:final message)) {
+      if (_syncOrchestrator.currentStatus case SyncStatusError(
+        :final message,
+      )) {
         throw Exception('Data pull failed: $message');
       }
 

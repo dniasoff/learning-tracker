@@ -205,7 +205,8 @@ Future<void> _persistNotificationSettingsToCloud(
       'streak_alert': {
         'enabled': prefs.getBool(_streakAlertEnabledKey) ?? true,
         'hour': prefs.getInt(_streakAlertHourKey) ?? defaultStreakAlertHour,
-        'minute': prefs.getInt(_streakAlertMinuteKey) ?? defaultStreakAlertMinute,
+        'minute':
+            prefs.getInt(_streakAlertMinuteKey) ?? defaultStreakAlertMinute,
       },
       'reward_notifications': {
         'enabled': prefs.getBool(_rewardNotificationEnabledKey) ?? true,

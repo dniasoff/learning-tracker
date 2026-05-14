@@ -47,9 +47,7 @@ ContentItem _item(
 void main() {
   group('SchedulerContentRepositoryImpl.getLeafItems', () {
     test('returns empty list when content is empty', () async {
-      final repo = SchedulerContentRepositoryImpl(
-        getContent: (_) async => [],
-      );
+      final repo = SchedulerContentRepositoryImpl(getContent: (_) async => []);
 
       final items = await repo.getLeafItems(CurriculumId.mishnayos);
       expect(items, isEmpty);
@@ -146,9 +144,7 @@ void main() {
 
     test('getLeafItems returns empty list when no leaf items exist', () async {
       final repo = SchedulerContentRepositoryImpl(
-        getContent: (_) async => [
-          _item('Zeraim', isLeaf: false, sortOrder: 0),
-        ],
+        getContent: (_) async => [_item('Zeraim', isLeaf: false, sortOrder: 0)],
       );
 
       final items = await repo.getLeafItems(CurriculumId.mishnayos);

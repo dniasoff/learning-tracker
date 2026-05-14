@@ -771,12 +771,14 @@ Future<List<DailyTask>> _applyProgramCalendarOverrides({
     final contentItems = await getScopedContent(curriculum);
     final stages = await stageRepository.getStagesByTrack(trackId);
     if (stages.isEmpty) continue;
-    final firstStage = (stages.toList()
-          ..sort(
-            (domain_stage.StageDefinition a, domain_stage.StageDefinition b) =>
-                a.stageOrder.compareTo(b.stageOrder),
-          ))
-        .first;
+    final firstStage =
+        (stages.toList()..sort(
+              (
+                domain_stage.StageDefinition a,
+                domain_stage.StageDefinition b,
+              ) => a.stageOrder.compareTo(b.stageOrder),
+            ))
+            .first;
 
     final todayDate = DateUtils.extractLocalDate(now);
     final DateTime configuredStartDate;

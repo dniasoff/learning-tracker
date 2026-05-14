@@ -32,25 +32,35 @@ void main() {
       String hebrew = 'ברכות',
       String english = 'Berakhot',
     }) async {
-      await db.into(db.textCache).insert(
-        TextCacheCompanion.insert(
-          sefariaRef: ref,
-          hebrewText: hebrew,
-          englishText: english,
-          fetchedAt: fetchedAt,
-        ),
-      );
+      await db
+          .into(db.textCache)
+          .insert(
+            TextCacheCompanion.insert(
+              sefariaRef: ref,
+              hebrewText: hebrew,
+              englishText: english,
+              fetchedAt: fetchedAt,
+            ),
+          );
     }
 
     test('insert and retrieve single row', () async {
-      await insertText(db, ref: 'Genesis 1.1', hebrew: 'בראשית', english: 'Genesis');
+      await insertText(
+        db,
+        ref: 'Genesis 1.1',
+        hebrew: 'בראשית',
+        english: 'Genesis',
+      );
 
       final row = await db.contentTextCacheDao.getText('Genesis 1.1');
       expect(row, isNotNull);
       expect(row!.sefariaRef, 'Genesis 1.1');
       expect(row.hebrewText, 'בראשית');
       expect(row.englishText, 'Genesis');
-      expect(row.fetchedAt.millisecondsSinceEpoch, fetchedAt.millisecondsSinceEpoch);
+      expect(
+        row.fetchedAt.millisecondsSinceEpoch,
+        fetchedAt.millisecondsSinceEpoch,
+      );
     });
 
     test('getText returns null for missing ref', () async {
@@ -81,10 +91,7 @@ void main() {
 
     test('watchText emits null then value', () async {
       final stream = db.contentTextCacheDao.watchText('Berakhot 2a');
-      expect(
-        stream,
-        emitsInOrder([isNull, isNotNull]),
-      );
+      expect(stream, emitsInOrder([isNull, isNotNull]));
       await Future<void>.delayed(Duration.zero);
       await insertText(db, ref: 'Berakhot 2a');
     });
@@ -161,15 +168,17 @@ void main() {
       String sefariaRefHe = 'ברכות ב׳',
       String displayName = 'Daf Yomi',
     }) async {
-      await db.into(db.calendarCycles).insert(
-        CalendarCyclesCompanion.insert(
-          programKey: programKey,
-          dateKey: dateKey,
-          sefariaRef: sefariaRef,
-          sefariaRefHe: Value(sefariaRefHe),
-          displayName: Value(displayName),
-        ),
-      );
+      await db
+          .into(db.calendarCycles)
+          .insert(
+            CalendarCyclesCompanion.insert(
+              programKey: programKey,
+              dateKey: dateKey,
+              sefariaRef: sefariaRef,
+              sefariaRefHe: Value(sefariaRefHe),
+              displayName: Value(displayName),
+            ),
+          );
     }
 
     test('insert and getEntry', () async {
@@ -180,7 +189,10 @@ void main() {
         sefariaRef: 'Berakhot 4a',
       );
 
-      final entry = await db.calendarCycleDao.getEntry('daf_yomi', '2026-01-15');
+      final entry = await db.calendarCycleDao.getEntry(
+        'daf_yomi',
+        '2026-01-15',
+      );
       expect(entry, isNotNull);
       expect(entry!.sefariaRef, 'Berakhot 4a');
       expect(entry.programKey, 'daf_yomi');
@@ -357,13 +369,15 @@ void main() {
       String english = 'Chullin text',
       String hebrew = 'חולין',
     }) async {
-      await db.into(db.dailyContent).insert(
-        DailyContentCompanion.insert(
-          sefariaRef: ref,
-          englishText: Value(english),
-          hebrewText: Value(hebrew),
-        ),
-      );
+      await db
+          .into(db.dailyContent)
+          .insert(
+            DailyContentCompanion.insert(
+              sefariaRef: ref,
+              englishText: Value(english),
+              hebrewText: Value(hebrew),
+            ),
+          );
     }
 
     test('insert and getByRef', () async {
@@ -439,9 +453,7 @@ void main() {
     });
 
     test('DailyContentCompanion.copyWith', () {
-      const original = DailyContentCompanion(
-        sefariaRef: Value('original'),
-      );
+      const original = DailyContentCompanion(sefariaRef: Value('original'));
       final copy = original.copyWith(englishText: const Value('new'));
       expect(copy.sefariaRef.value, 'original');
       expect(copy.englishText.value, 'new');
@@ -452,17 +464,19 @@ void main() {
 
   group('SeedMetadata CRUD', () {
     Future<void> insertMeta(ContentDatabase db) async {
-      await db.into(db.seedMetadata).insert(
-        SeedMetadataCompanion.insert(
-          version: const Value(42),
-          builtAt: '2026-01-01T00:00:00Z',
-          buildId: 'abc123',
-          textCacheCount: 50000,
-          calendarCycleCount: 35000,
-          contentHash: const Value('sha256hash'),
-          minAppVersion: const Value('2.0.0'),
-        ),
-      );
+      await db
+          .into(db.seedMetadata)
+          .insert(
+            SeedMetadataCompanion.insert(
+              version: const Value(42),
+              builtAt: '2026-01-01T00:00:00Z',
+              buildId: 'abc123',
+              textCacheCount: 50000,
+              calendarCycleCount: 35000,
+              contentHash: const Value('sha256hash'),
+              minAppVersion: const Value('2.0.0'),
+            ),
+          );
     }
 
     test('insert and getVersion', () async {
@@ -556,14 +570,16 @@ void main() {
 
   group('ContentDatabase managers', () {
     test('managers.textCache.filter works', () async {
-      await db.into(db.textCache).insert(
-        TextCacheCompanion.insert(
-          sefariaRef: 'Genesis 1:1',
-          hebrewText: 'בראשית',
-          englishText: 'In the beginning',
-          fetchedAt: DateTime.utc(2026, 1, 1),
-        ),
-      );
+      await db
+          .into(db.textCache)
+          .insert(
+            TextCacheCompanion.insert(
+              sefariaRef: 'Genesis 1:1',
+              hebrewText: 'בראשית',
+              englishText: 'In the beginning',
+              fetchedAt: DateTime.utc(2026, 1, 1),
+            ),
+          );
 
       final rows = await db.managers.textCache
           .filter((f) => f.sefariaRef('Genesis 1:1'))
@@ -573,13 +589,15 @@ void main() {
     });
 
     test('managers.calendarCycles.filter works', () async {
-      await db.into(db.calendarCycles).insert(
-        CalendarCyclesCompanion.insert(
-          programKey: 'test_program',
-          dateKey: '2026-01-01',
-          sefariaRef: 'Test 1',
-        ),
-      );
+      await db
+          .into(db.calendarCycles)
+          .insert(
+            CalendarCyclesCompanion.insert(
+              programKey: 'test_program',
+              dateKey: '2026-01-01',
+              sefariaRef: 'Test 1',
+            ),
+          );
 
       final rows = await db.managers.calendarCycles
           .filter((f) => f.programKey('test_program'))
@@ -588,12 +606,14 @@ void main() {
     });
 
     test('managers.dailyContent.filter works', () async {
-      await db.into(db.dailyContent).insert(
-        DailyContentCompanion.insert(
-          sefariaRef: 'Manager Test 1',
-          englishText: const Value('English'),
-        ),
-      );
+      await db
+          .into(db.dailyContent)
+          .insert(
+            DailyContentCompanion.insert(
+              sefariaRef: 'Manager Test 1',
+              englishText: const Value('English'),
+            ),
+          );
 
       final rows = await db.managers.dailyContent
           .filter((f) => f.sefariaRef('Manager Test 1'))
@@ -602,15 +622,17 @@ void main() {
     });
 
     test('managers.seedMetadata.filter works', () async {
-      await db.into(db.seedMetadata).insert(
-        SeedMetadataCompanion.insert(
-          version: const Value(10),
-          builtAt: '2026-01-01T00:00:00Z',
-          buildId: 'mgr-build',
-          textCacheCount: 1000,
-          calendarCycleCount: 2000,
-        ),
-      );
+      await db
+          .into(db.seedMetadata)
+          .insert(
+            SeedMetadataCompanion.insert(
+              version: const Value(10),
+              builtAt: '2026-01-01T00:00:00Z',
+              buildId: 'mgr-build',
+              textCacheCount: 1000,
+              calendarCycleCount: 2000,
+            ),
+          );
 
       final rows = await db.managers.seedMetadata
           .filter((f) => f.version(10))
@@ -620,13 +642,15 @@ void main() {
 
     test('managers ordering works for calendarCycles', () async {
       for (final d in ['2026-03-03', '2026-03-01', '2026-03-02']) {
-        await db.into(db.calendarCycles).insert(
-          CalendarCyclesCompanion.insert(
-            programKey: 'ord_test',
-            dateKey: d,
-            sefariaRef: 'Ref $d',
-          ),
-        );
+        await db
+            .into(db.calendarCycles)
+            .insert(
+              CalendarCyclesCompanion.insert(
+                programKey: 'ord_test',
+                dateKey: d,
+                sefariaRef: 'Ref $d',
+              ),
+            );
       }
 
       final rows = await db.managers.calendarCycles

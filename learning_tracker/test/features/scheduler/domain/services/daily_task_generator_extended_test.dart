@@ -122,14 +122,8 @@ void main() {
       final tasks = await generator.generateAll(
         [mishnayos, bavli],
         now,
-        trackIds: {
-          mishnayos: trackIdMishnayos,
-          bavli: trackIdBavli,
-        },
-        trackLabels: {
-          mishnayos: 'personal',
-          bavli: 'personal',
-        },
+        trackIds: {mishnayos: trackIdMishnayos, bavli: trackIdBavli},
+        trackLabels: {mishnayos: 'personal', bavli: 'personal'},
       );
 
       expect(tasks, isNotEmpty);
@@ -172,14 +166,8 @@ void main() {
       final tasks = await generator.generateAll(
         [mishnayos, bavli],
         now,
-        trackIds: {
-          mishnayos: trackIdMishnayos,
-          bavli: trackIdBavli,
-        },
-        trackLabels: {
-          mishnayos: 'personal',
-          bavli: 'personal',
-        },
+        trackIds: {mishnayos: trackIdMishnayos, bavli: trackIdBavli},
+        trackLabels: {mishnayos: 'personal', bavli: 'personal'},
       );
 
       // Verify sort order: lower priority index = higher priority.
@@ -196,14 +184,8 @@ void main() {
       final tasks = await generator.generateAll(
         [mishnayos, bavli],
         now,
-        trackIds: {
-          mishnayos: trackIdMishnayos,
-          bavli: trackIdBavli,
-        },
-        trackLabels: {
-          mishnayos: 'personal',
-          bavli: 'personal',
-        },
+        trackIds: {mishnayos: trackIdMishnayos, bavli: trackIdBavli},
+        trackLabels: {mishnayos: 'personal', bavli: 'personal'},
         skippedRefs: {'M_0', 'B_0'},
       );
 
@@ -211,54 +193,52 @@ void main() {
       expect(tasks.any((t) => t.contentItemSefariaRef == 'B_0'), isFalse);
     });
 
-    test('non-study day for a curriculum produces no new tasks for that one',
-        () async {
-      final tasks = await generator.generateAll(
-        [mishnayos, bavli],
-        now,
-        trackIds: {
-          mishnayos: trackIdMishnayos,
-          bavli: trackIdBavli,
-        },
-        trackLabels: {
-          mishnayos: 'personal',
-          bavli: 'personal',
-        },
-        isStudyDayMap: {
-          mishnayos: false, // mishnayos is a non-study day
-          bavli: true,
-        },
-      );
+    test(
+      'non-study day for a curriculum produces no new tasks for that one',
+      () async {
+        final tasks = await generator.generateAll(
+          [mishnayos, bavli],
+          now,
+          trackIds: {mishnayos: trackIdMishnayos, bavli: trackIdBavli},
+          trackLabels: {mishnayos: 'personal', bavli: 'personal'},
+          isStudyDayMap: {
+            mishnayos: false, // mishnayos is a non-study day
+            bavli: true,
+          },
+        );
 
-      // mishnayos non-study day → no new learning tasks for mishnayos.
-      final mishnayosNewTasks = tasks.where(
-        (t) =>
-            t.curriculumId == mishnayos &&
-            t.priority == DailyTaskPriority.newLearning,
-      );
-      expect(mishnayosNewTasks, isEmpty);
+        // mishnayos non-study day → no new learning tasks for mishnayos.
+        final mishnayosNewTasks = tasks.where(
+          (t) =>
+              t.curriculumId == mishnayos &&
+              t.priority == DailyTaskPriority.newLearning,
+        );
+        expect(mishnayosNewTasks, isEmpty);
 
-      // bavli study day → has new tasks.
-      final bavliNewTasks = tasks.where(
-        (t) =>
-            t.curriculumId == bavli &&
-            t.priority == DailyTaskPriority.newLearning,
-      );
-      expect(bavliNewTasks, isNotEmpty);
-    });
+        // bavli study day → has new tasks.
+        final bavliNewTasks = tasks.where(
+          (t) =>
+              t.curriculumId == bavli &&
+              t.priority == DailyTaskPriority.newLearning,
+        );
+        expect(bavliNewTasks, isNotEmpty);
+      },
+    );
 
-    test('uses default trackId=0 and empty trackLabel when not in maps',
-        () async {
-      // Should not throw when trackIds/trackLabels maps don't contain entry.
-      final tasks = await generator.generateAll(
-        [mishnayos],
-        now,
-        // No trackIds or trackLabels maps → defaults to 0 and ''.
-      );
-      // May be empty (no stages for trackId=0 match) or non-empty;
-      // the important thing is it doesn't throw.
-      expect(tasks, isA<List<DailyTask>>());
-    });
+    test(
+      'uses default trackId=0 and empty trackLabel when not in maps',
+      () async {
+        // Should not throw when trackIds/trackLabels maps don't contain entry.
+        final tasks = await generator.generateAll(
+          [mishnayos],
+          now,
+          // No trackIds or trackLabels maps → defaults to 0 and ''.
+        );
+        // May be empty (no stages for trackId=0 match) or non-empty;
+        // the important thing is it doesn't throw.
+        expect(tasks, isA<List<DailyTask>>());
+      },
+    );
   });
 
   // ── generate skipped-refs filter ─────────────────────────────────────────

@@ -29,8 +29,9 @@ void main() {
 
   // ─── Helpers ──────────────────────────────────────────────────────────────
 
-  Future<int> insertAccount({String email = 'a@test.local'}) =>
-      db.into(db.accounts).insert(
+  Future<int> insertAccount({String email = 'a@test.local'}) => db
+      .into(db.accounts)
+      .insert(
         AccountsCompanion.insert(
           email: email,
           tier: 'localBorn',
@@ -41,8 +42,9 @@ void main() {
         ),
       );
 
-  Future<int> insertProfile(int accountId, {String mode = 'adult'}) =>
-      db.into(db.learnerProfiles).insert(
+  Future<int> insertProfile(int accountId, {String mode = 'adult'}) => db
+      .into(db.learnerProfiles)
+      .insert(
         LearnerProfilesCompanion.insert(
           accountId: accountId,
           displayName: 'Profile',
@@ -52,8 +54,9 @@ void main() {
         ),
       );
 
-  Future<int> insertTrack(int profileId, {String curriculumId = 'bavli'}) =>
-      db.into(db.curriculumTracks).insert(
+  Future<int> insertTrack(int profileId, {String curriculumId = 'bavli'}) => db
+      .into(db.curriculumTracks)
+      .insert(
         CurriculumTracksCompanion.insert(
           profileId: profileId,
           curriculumId: curriculumId,
@@ -67,8 +70,9 @@ void main() {
     int trackId, {
     int stageOrder = 1,
     String stageName = 'limud',
-  }) =>
-      db.into(db.stageDefinitions).insert(
+  }) => db
+      .into(db.stageDefinitions)
+      .insert(
         StageDefinitionsCompanion.insert(
           profileId: profileId,
           trackId: trackId,
@@ -83,9 +87,9 @@ void main() {
 
   group('StageDefinition DataClass', () {
     Future<StageDefinition> getStageDef(int id) async {
-      final rows = await (db.select(db.stageDefinitions)
-            ..where((t) => t.id.equals(id)))
-          .get();
+      final rows = await (db.select(
+        db.stageDefinitions,
+      )..where((t) => t.id.equals(id))).get();
       return rows.first;
     }
 
@@ -110,18 +114,20 @@ void main() {
       final accId = await insertAccount(email: 'sd2@test.local');
       final profileId = await insertProfile(accId);
       final trackId = await insertTrack(profileId);
-      final sdId = await db.into(db.stageDefinitions).insert(
-        StageDefinitionsCompanion.insert(
-          profileId: profileId,
-          trackId: trackId,
-          curriculumId: 'bavli',
-          stageName: 'chazara',
-          stageOrder: 2,
-          delayDays: 3,
-          daysOfWeek: const Value('1,3,5'),
-          rollingWindowSize: const Value(7),
-        ),
-      );
+      final sdId = await db
+          .into(db.stageDefinitions)
+          .insert(
+            StageDefinitionsCompanion.insert(
+              profileId: profileId,
+              trackId: trackId,
+              curriculumId: 'bavli',
+              stageName: 'chazara',
+              stageOrder: 2,
+              delayDays: 3,
+              daysOfWeek: const Value('1,3,5'),
+              rollingWindowSize: const Value(7),
+            ),
+          );
       final sd = await getStageDef(sdId);
 
       expect(sd.daysOfWeek, '1,3,5');
@@ -196,9 +202,9 @@ void main() {
 
   group('PointConfig DataClass', () {
     Future<PointConfig> getPointConfig(int id) async {
-      final rows = await (db.select(db.pointConfigs)
-            ..where((t) => t.id.equals(id)))
-          .get();
+      final rows = await (db.select(
+        db.pointConfigs,
+      )..where((t) => t.id.equals(id))).get();
       return rows.first;
     }
 
@@ -207,15 +213,17 @@ void main() {
       final profileId = await insertProfile(accId);
       final trackId = await insertTrack(profileId);
 
-      final pcId = await db.into(db.pointConfigs).insert(
-        PointConfigsCompanion.insert(
-          profileId: profileId,
-          curriculumId: 'bavli',
-          trackId: trackId,
-          stageOrder: 1,
-          points: 10,
-        ),
-      );
+      final pcId = await db
+          .into(db.pointConfigs)
+          .insert(
+            PointConfigsCompanion.insert(
+              profileId: profileId,
+              curriculumId: 'bavli',
+              trackId: trackId,
+              stageOrder: 1,
+              points: 10,
+            ),
+          );
       final pc = await getPointConfig(pcId);
 
       final json = pc.toJson();
@@ -232,15 +240,17 @@ void main() {
       final profileId = await insertProfile(accId);
       final trackId = await insertTrack(profileId);
 
-      final pcId = await db.into(db.pointConfigs).insert(
-        PointConfigsCompanion.insert(
-          profileId: profileId,
-          curriculumId: 'bavli',
-          trackId: trackId,
-          stageOrder: 2,
-          points: 5,
-        ),
-      );
+      final pcId = await db
+          .into(db.pointConfigs)
+          .insert(
+            PointConfigsCompanion.insert(
+              profileId: profileId,
+              curriculumId: 'bavli',
+              trackId: trackId,
+              stageOrder: 2,
+              points: 5,
+            ),
+          );
       final pc1 = await getPointConfig(pcId);
       final pc2 = await getPointConfig(pcId);
 
@@ -261,15 +271,17 @@ void main() {
       final profileId = await insertProfile(accId);
       final trackId = await insertTrack(profileId);
 
-      final pcId = await db.into(db.pointConfigs).insert(
-        PointConfigsCompanion.insert(
-          profileId: profileId,
-          curriculumId: 'bavli',
-          trackId: trackId,
-          stageOrder: 1,
-          points: 15,
-        ),
-      );
+      final pcId = await db
+          .into(db.pointConfigs)
+          .insert(
+            PointConfigsCompanion.insert(
+              profileId: profileId,
+              curriculumId: 'bavli',
+              trackId: trackId,
+              stageOrder: 1,
+              points: 15,
+            ),
+          );
       final pc = await getPointConfig(pcId);
 
       final companion = pc.toCompanion(true);
@@ -300,11 +312,13 @@ void main() {
       int profileId,
       int dayOfWeek,
     ) async {
-      final rows = await (db.select(db.studyDayConfigs)
-            ..where(
-              (t) => t.profileId.equals(profileId) & t.dayOfWeek.equals(dayOfWeek),
-            ))
-          .get();
+      final rows =
+          await (db.select(db.studyDayConfigs)..where(
+                (t) =>
+                    t.profileId.equals(profileId) &
+                    t.dayOfWeek.equals(dayOfWeek),
+              ))
+              .get();
       return rows.first;
     }
 
@@ -313,16 +327,18 @@ void main() {
       final profileId = await insertProfile(accId);
       final trackId = await insertTrack(profileId);
 
-      await db.into(db.studyDayConfigs).insert(
-        StudyDayConfigsCompanion.insert(
-          profileId: profileId,
-          curriculumId: 'bavli',
-          trackId: trackId,
-          dayOfWeek: 1,
-          dayType: const Value('study'),
-          updatedAt: now,
-        ),
-      );
+      await db
+          .into(db.studyDayConfigs)
+          .insert(
+            StudyDayConfigsCompanion.insert(
+              profileId: profileId,
+              curriculumId: 'bavli',
+              trackId: trackId,
+              dayOfWeek: 1,
+              dayType: const Value('study'),
+              updatedAt: now,
+            ),
+          );
       final sdc = await getStudyDayConfig(profileId, 1);
 
       final json = sdc.toJson();
@@ -339,16 +355,18 @@ void main() {
       final profileId = await insertProfile(accId);
       final trackId = await insertTrack(profileId);
 
-      await db.into(db.studyDayConfigs).insert(
-        StudyDayConfigsCompanion.insert(
-          profileId: profileId,
-          curriculumId: 'bavli',
-          trackId: trackId,
-          dayOfWeek: 5,
-          dayType: const Value('rest'),
-          updatedAt: now,
-        ),
-      );
+      await db
+          .into(db.studyDayConfigs)
+          .insert(
+            StudyDayConfigsCompanion.insert(
+              profileId: profileId,
+              curriculumId: 'bavli',
+              trackId: trackId,
+              dayOfWeek: 5,
+              dayType: const Value('rest'),
+              updatedAt: now,
+            ),
+          );
       final sdc1 = await getStudyDayConfig(profileId, 5);
       final sdc2 = await getStudyDayConfig(profileId, 5);
 
@@ -366,16 +384,18 @@ void main() {
       final profileId = await insertProfile(accId);
       final trackId = await insertTrack(profileId);
 
-      await db.into(db.studyDayConfigs).insert(
-        StudyDayConfigsCompanion.insert(
-          profileId: profileId,
-          curriculumId: 'bavli',
-          trackId: trackId,
-          dayOfWeek: 7,
-          dayType: const Value('study'),
-          updatedAt: now,
-        ),
-      );
+      await db
+          .into(db.studyDayConfigs)
+          .insert(
+            StudyDayConfigsCompanion.insert(
+              profileId: profileId,
+              curriculumId: 'bavli',
+              trackId: trackId,
+              dayOfWeek: 7,
+              dayType: const Value('study'),
+              updatedAt: now,
+            ),
+          );
       final sdc = await getStudyDayConfig(profileId, 7);
 
       final companion = sdc.toCompanion(true);
@@ -406,8 +426,9 @@ void main() {
 
   group('Completion DataClass', () {
     Future<Completion> getCompletion(int id) async {
-      final rows = await (db.select(db.completions)..where((t) => t.id.equals(id)))
-          .get();
+      final rows = await (db.select(
+        db.completions,
+      )..where((t) => t.id.equals(id))).get();
       return rows.first;
     }
 
@@ -416,8 +437,9 @@ void main() {
       required int trackId,
       String ref = 'Berakhot 2a',
       int stageId = 1,
-    }) =>
-        db.into(db.completions).insert(
+    }) => db
+        .into(db.completions)
+        .insert(
           CompletionsCompanion.insert(
             profileId: profileId,
             curriculumId: 'bavli',
@@ -508,17 +530,18 @@ void main() {
 
   group('CompletionEvent DataClass', () {
     Future<CompletionEvent> getCompletionEvent(int id) async {
-      final rows = await (db.select(db.completionEvents)
-            ..where((t) => t.id.equals(id)))
-          .get();
+      final rows = await (db.select(
+        db.completionEvents,
+      )..where((t) => t.id.equals(id))).get();
       return rows.first;
     }
 
     Future<int> insertCompletionEvent({
       required int profileId,
       String ref = 'Berakhot 2a',
-    }) =>
-        db.into(db.completionEvents).insert(
+    }) => db
+        .into(db.completionEvents)
+        .insert(
           CompletionEventsCompanion.insert(
             profileId: profileId,
             curriculumId: 'bavli',
@@ -596,8 +619,9 @@ void main() {
 
   group('Bookmark DataClass', () {
     Future<Bookmark> getBookmark(int id) async {
-      final rows = await (db.select(db.bookmarks)..where((t) => t.id.equals(id)))
-          .get();
+      final rows = await (db.select(
+        db.bookmarks,
+      )..where((t) => t.id.equals(id))).get();
       return rows.first;
     }
 
@@ -606,15 +630,17 @@ void main() {
       final profileId = await insertProfile(accId);
       final trackId = await insertTrack(profileId);
 
-      final bmId = await db.into(db.bookmarks).insert(
-        BookmarksCompanion.insert(
-          profileId: profileId,
-          curriculumId: 'bavli',
-          trackId: trackId,
-          sefariaRef: 'Berakhot 10a',
-          updatedAt: now,
-        ),
-      );
+      final bmId = await db
+          .into(db.bookmarks)
+          .insert(
+            BookmarksCompanion.insert(
+              profileId: profileId,
+              curriculumId: 'bavli',
+              trackId: trackId,
+              sefariaRef: 'Berakhot 10a',
+              updatedAt: now,
+            ),
+          );
       final bm = await getBookmark(bmId);
 
       final json = bm.toJson();
@@ -630,15 +656,17 @@ void main() {
       final profileId = await insertProfile(accId);
       final trackId = await insertTrack(profileId);
 
-      final bmId = await db.into(db.bookmarks).insert(
-        BookmarksCompanion.insert(
-          profileId: profileId,
-          curriculumId: 'bavli',
-          trackId: trackId,
-          sefariaRef: 'Berakhot 20a',
-          updatedAt: now,
-        ),
-      );
+      final bmId = await db
+          .into(db.bookmarks)
+          .insert(
+            BookmarksCompanion.insert(
+              profileId: profileId,
+              curriculumId: 'bavli',
+              trackId: trackId,
+              sefariaRef: 'Berakhot 20a',
+              updatedAt: now,
+            ),
+          );
       final bm1 = await getBookmark(bmId);
       final bm2 = await getBookmark(bmId);
 
@@ -656,15 +684,17 @@ void main() {
       final profileId = await insertProfile(accId);
       final trackId = await insertTrack(profileId);
 
-      final bmId = await db.into(db.bookmarks).insert(
-        BookmarksCompanion.insert(
-          profileId: profileId,
-          curriculumId: 'bavli',
-          trackId: trackId,
-          sefariaRef: 'Berakhot 30a',
-          updatedAt: now,
-        ),
-      );
+      final bmId = await db
+          .into(db.bookmarks)
+          .insert(
+            BookmarksCompanion.insert(
+              profileId: profileId,
+              curriculumId: 'bavli',
+              trackId: trackId,
+              sefariaRef: 'Berakhot 30a',
+              updatedAt: now,
+            ),
+          );
       final bm = await getBookmark(bmId);
 
       final companion = bm.toCompanion(true);
@@ -694,9 +724,9 @@ void main() {
 
   group('LearningOrderData DataClass', () {
     Future<LearningOrderData> getLearningOrder(int id) async {
-      final rows = await (db.select(db.learningOrder)
-            ..where((t) => t.id.equals(id)))
-          .get();
+      final rows = await (db.select(
+        db.learningOrder,
+      )..where((t) => t.id.equals(id))).get();
       return rows.first;
     }
 
@@ -704,15 +734,17 @@ void main() {
       final accId = await insertAccount(email: 'lo@test.local');
       final profileId = await insertProfile(accId);
 
-      final loId = await db.into(db.learningOrder).insert(
-        LearningOrderCompanion.insert(
-          profileId: profileId,
-          curriculumId: 'bavli',
-          sefariaRef: 'Berakhot 2a',
-          userSortOrder: 1,
-          updatedAt: Value(now),
-        ),
-      );
+      final loId = await db
+          .into(db.learningOrder)
+          .insert(
+            LearningOrderCompanion.insert(
+              profileId: profileId,
+              curriculumId: 'bavli',
+              sefariaRef: 'Berakhot 2a',
+              userSortOrder: 1,
+              updatedAt: Value(now),
+            ),
+          );
       final lo = await getLearningOrder(loId);
 
       final json = lo.toJson();
@@ -727,15 +759,17 @@ void main() {
       final accId = await insertAccount(email: 'lo2@test.local');
       final profileId = await insertProfile(accId);
 
-      final loId = await db.into(db.learningOrder).insert(
-        LearningOrderCompanion.insert(
-          profileId: profileId,
-          curriculumId: 'bavli',
-          sefariaRef: 'Shabbat 2a',
-          userSortOrder: 2,
-          updatedAt: Value(now),
-        ),
-      );
+      final loId = await db
+          .into(db.learningOrder)
+          .insert(
+            LearningOrderCompanion.insert(
+              profileId: profileId,
+              curriculumId: 'bavli',
+              sefariaRef: 'Shabbat 2a',
+              userSortOrder: 2,
+              updatedAt: Value(now),
+            ),
+          );
       final lo1 = await getLearningOrder(loId);
       final lo2 = await getLearningOrder(loId);
 
@@ -752,15 +786,17 @@ void main() {
       final accId = await insertAccount(email: 'lo3@test.local');
       final profileId = await insertProfile(accId);
 
-      final loId = await db.into(db.learningOrder).insert(
-        LearningOrderCompanion.insert(
-          profileId: profileId,
-          curriculumId: 'bavli',
-          sefariaRef: 'Eruvin 2a',
-          userSortOrder: 3,
-          updatedAt: Value(now),
-        ),
-      );
+      final loId = await db
+          .into(db.learningOrder)
+          .insert(
+            LearningOrderCompanion.insert(
+              profileId: profileId,
+              curriculumId: 'bavli',
+              sefariaRef: 'Eruvin 2a',
+              userSortOrder: 3,
+              updatedAt: Value(now),
+            ),
+          );
       final lo = await getLearningOrder(loId);
 
       final companion = lo.toCompanion(true);
@@ -791,9 +827,9 @@ void main() {
 
   group('TrackLearningOrderData DataClass', () {
     Future<TrackLearningOrderData> getTrackLearningOrder(int id) async {
-      final rows = await (db.select(db.trackLearningOrder)
-            ..where((t) => t.id.equals(id)))
-          .get();
+      final rows = await (db.select(
+        db.trackLearningOrder,
+      )..where((t) => t.id.equals(id))).get();
       return rows.first;
     }
 
@@ -802,13 +838,15 @@ void main() {
       final profileId = await insertProfile(accId);
       final trackId = await insertTrack(profileId);
 
-      final tloId = await db.into(db.trackLearningOrder).insert(
-        TrackLearningOrderCompanion.insert(
-          trackId: trackId,
-          sefariaRef: 'Berakhot 2a',
-          sortOrder: 1,
-        ),
-      );
+      final tloId = await db
+          .into(db.trackLearningOrder)
+          .insert(
+            TrackLearningOrderCompanion.insert(
+              trackId: trackId,
+              sefariaRef: 'Berakhot 2a',
+              sortOrder: 1,
+            ),
+          );
       final tlo = await getTrackLearningOrder(tloId);
 
       final json = tlo.toJson();
@@ -824,13 +862,15 @@ void main() {
       final profileId = await insertProfile(accId);
       final trackId = await insertTrack(profileId);
 
-      final tloId = await db.into(db.trackLearningOrder).insert(
-        TrackLearningOrderCompanion.insert(
-          trackId: trackId,
-          sefariaRef: 'Shabbat 2a',
-          sortOrder: 2,
-        ),
-      );
+      final tloId = await db
+          .into(db.trackLearningOrder)
+          .insert(
+            TrackLearningOrderCompanion.insert(
+              trackId: trackId,
+              sefariaRef: 'Shabbat 2a',
+              sortOrder: 2,
+            ),
+          );
       final tlo1 = await getTrackLearningOrder(tloId);
       final tlo2 = await getTrackLearningOrder(tloId);
 
@@ -848,13 +888,15 @@ void main() {
       final profileId = await insertProfile(accId);
       final trackId = await insertTrack(profileId);
 
-      final tloId = await db.into(db.trackLearningOrder).insert(
-        TrackLearningOrderCompanion.insert(
-          trackId: trackId,
-          sefariaRef: 'Eruvin 2a',
-          sortOrder: 3,
-        ),
-      );
+      final tloId = await db
+          .into(db.trackLearningOrder)
+          .insert(
+            TrackLearningOrderCompanion.insert(
+              trackId: trackId,
+              sefariaRef: 'Eruvin 2a',
+              sortOrder: 3,
+            ),
+          );
       final tlo = await getTrackLearningOrder(tloId);
 
       final companion = tlo.toCompanion(true);
@@ -884,8 +926,9 @@ void main() {
 
   group('Streak DataClass', () {
     Future<Streak> getStreak(int id) async {
-      final rows = await (db.select(db.streaks)..where((t) => t.id.equals(id)))
-          .get();
+      final rows = await (db.select(
+        db.streaks,
+      )..where((t) => t.id.equals(id))).get();
       return rows.first;
     }
 
@@ -893,14 +936,16 @@ void main() {
       final accId = await insertAccount(email: 'str@test.local');
       final profileId = await insertProfile(accId);
 
-      final strId = await db.into(db.streaks).insert(
-        StreaksCompanion.insert(
-          profileId: profileId,
-          currentStreak: const Value(5),
-          maxStreak: const Value(10),
-          lastCompletionDate: Value(DateTime.utc(2026, 1, 14)),
-        ),
-      );
+      final strId = await db
+          .into(db.streaks)
+          .insert(
+            StreaksCompanion.insert(
+              profileId: profileId,
+              currentStreak: const Value(5),
+              maxStreak: const Value(10),
+              lastCompletionDate: Value(DateTime.utc(2026, 1, 14)),
+            ),
+          );
       final str = await getStreak(strId);
 
       final json = str.toJson();
@@ -916,14 +961,16 @@ void main() {
       final accId = await insertAccount(email: 'str2@test.local');
       final profileId = await insertProfile(accId);
 
-      final strId = await db.into(db.streaks).insert(
-        StreaksCompanion.insert(
-          profileId: profileId,
-          currentStreak: const Value(3),
-          maxStreak: const Value(7),
-          graceUsedDate: Value(DateTime.utc(2026, 1, 10)),
-        ),
-      );
+      final strId = await db
+          .into(db.streaks)
+          .insert(
+            StreaksCompanion.insert(
+              profileId: profileId,
+              currentStreak: const Value(3),
+              maxStreak: const Value(7),
+              graceUsedDate: Value(DateTime.utc(2026, 1, 10)),
+            ),
+          );
       final str = await getStreak(strId);
 
       expect(str.graceUsedDate, isNotNull);
@@ -942,13 +989,15 @@ void main() {
       final accId = await insertAccount(email: 'str3@test.local');
       final profileId = await insertProfile(accId);
 
-      final strId = await db.into(db.streaks).insert(
-        StreaksCompanion.insert(
-          profileId: profileId,
-          currentStreak: const Value(0),
-          maxStreak: const Value(0),
-        ),
-      );
+      final strId = await db
+          .into(db.streaks)
+          .insert(
+            StreaksCompanion.insert(
+              profileId: profileId,
+              currentStreak: const Value(0),
+              maxStreak: const Value(0),
+            ),
+          );
       final str = await getStreak(strId);
 
       // No dates set — nullToAbsent=true
@@ -966,13 +1015,15 @@ void main() {
       final accId = await insertAccount(email: 'str4@test.local');
       final profileId = await insertProfile(accId);
 
-      final strId = await db.into(db.streaks).insert(
-        StreaksCompanion.insert(
-          profileId: profileId,
-          currentStreak: const Value(7),
-          maxStreak: const Value(14),
-        ),
-      );
+      final strId = await db
+          .into(db.streaks)
+          .insert(
+            StreaksCompanion.insert(
+              profileId: profileId,
+              currentStreak: const Value(7),
+              maxStreak: const Value(14),
+            ),
+          );
       final str1 = await getStreak(strId);
       final str2 = await getStreak(strId);
 
@@ -985,13 +1036,15 @@ void main() {
       final accId = await insertAccount(email: 'str5@test.local');
       final profileId = await insertProfile(accId);
 
-      final strId = await db.into(db.streaks).insert(
-        StreaksCompanion.insert(
-          profileId: profileId,
-          currentStreak: const Value(1),
-          maxStreak: const Value(5),
-        ),
-      );
+      final strId = await db
+          .into(db.streaks)
+          .insert(
+            StreaksCompanion.insert(
+              profileId: profileId,
+              currentStreak: const Value(1),
+              maxStreak: const Value(5),
+            ),
+          );
       final str = await getStreak(strId);
 
       final companion = str.toCompanion(true);
@@ -1019,9 +1072,9 @@ void main() {
 
   group('StreakEvent DataClass', () {
     Future<StreakEvent> getStreakEvent(int id) async {
-      final rows = await (db.select(db.streakEvents)
-            ..where((t) => t.id.equals(id)))
-          .get();
+      final rows = await (db.select(
+        db.streakEvents,
+      )..where((t) => t.id.equals(id))).get();
       return rows.first;
     }
 
@@ -1029,15 +1082,17 @@ void main() {
       final accId = await insertAccount(email: 'se@test.local');
       final profileId = await insertProfile(accId);
 
-      final seId = await db.into(db.streakEvents).insert(
-        StreakEventsCompanion.insert(
-          profileId: profileId,
-          eventType: 'completion',
-          dayUtc: DateTime.utc(2026, 1, 14),
-          eventTimestamp: now,
-          createdAt: Value(now),
-        ),
-      );
+      final seId = await db
+          .into(db.streakEvents)
+          .insert(
+            StreakEventsCompanion.insert(
+              profileId: profileId,
+              eventType: 'completion',
+              dayUtc: DateTime.utc(2026, 1, 14),
+              eventTimestamp: now,
+              createdAt: Value(now),
+            ),
+          );
       final se = await getStreakEvent(seId);
 
       final json = se.toJson();
@@ -1053,16 +1108,18 @@ void main() {
       final accId = await insertAccount(email: 'se2@test.local');
       final profileId = await insertProfile(accId);
 
-      final seId = await db.into(db.streakEvents).insert(
-        StreakEventsCompanion.insert(
-          profileId: profileId,
-          eventType: 'day_boundary',
-          dayUtc: DateTime.utc(2026, 1, 13),
-          eventTimestamp: now,
-          createdAt: Value(now),
-          clientDeviceId: const Value('device-abc'),
-        ),
-      );
+      final seId = await db
+          .into(db.streakEvents)
+          .insert(
+            StreakEventsCompanion.insert(
+              profileId: profileId,
+              eventType: 'day_boundary',
+              dayUtc: DateTime.utc(2026, 1, 13),
+              eventTimestamp: now,
+              createdAt: Value(now),
+              clientDeviceId: const Value('device-abc'),
+            ),
+          );
       final se = await getStreakEvent(seId);
 
       expect(se.clientDeviceId, 'device-abc');
@@ -1076,15 +1133,17 @@ void main() {
       final accId = await insertAccount(email: 'se3@test.local');
       final profileId = await insertProfile(accId);
 
-      final seId = await db.into(db.streakEvents).insert(
-        StreakEventsCompanion.insert(
-          profileId: profileId,
-          eventType: 'completion',
-          dayUtc: DateTime.utc(2026, 1, 12),
-          eventTimestamp: now,
-          createdAt: Value(now),
-        ),
-      );
+      final seId = await db
+          .into(db.streakEvents)
+          .insert(
+            StreakEventsCompanion.insert(
+              profileId: profileId,
+              eventType: 'completion',
+              dayUtc: DateTime.utc(2026, 1, 12),
+              eventTimestamp: now,
+              createdAt: Value(now),
+            ),
+          );
       final se = await getStreakEvent(seId);
 
       // nullToAbsent=true, clientDeviceId is null
@@ -1099,15 +1158,17 @@ void main() {
       final accId = await insertAccount(email: 'se4@test.local');
       final profileId = await insertProfile(accId);
 
-      final seId = await db.into(db.streakEvents).insert(
-        StreakEventsCompanion.insert(
-          profileId: profileId,
-          eventType: 'completion',
-          dayUtc: DateTime.utc(2026, 1, 11),
-          eventTimestamp: now,
-          createdAt: Value(now),
-        ),
-      );
+      final seId = await db
+          .into(db.streakEvents)
+          .insert(
+            StreakEventsCompanion.insert(
+              profileId: profileId,
+              eventType: 'completion',
+              dayUtc: DateTime.utc(2026, 1, 11),
+              eventTimestamp: now,
+              createdAt: Value(now),
+            ),
+          );
       final se1 = await getStreakEvent(seId);
       final se2 = await getStreakEvent(seId);
 
@@ -1134,20 +1195,23 @@ void main() {
 
   group('SyncQueueData DataClass', () {
     Future<SyncQueueData> getSyncQueue(int id) async {
-      final rows = await (db.select(db.syncQueue)..where((t) => t.id.equals(id)))
-          .get();
+      final rows = await (db.select(
+        db.syncQueue,
+      )..where((t) => t.id.equals(id))).get();
       return rows.first;
     }
 
     test('toJson / fromJson round-trip', () async {
-      final sqId = await db.into(db.syncQueue).insert(
-        SyncQueueCompanion.insert(
-          operationType: 'completion',
-          payload: '{"ref":"Berakhot 2a"}',
-          queuedAt: now,
-          retryCount: const Value(0),
-        ),
-      );
+      final sqId = await db
+          .into(db.syncQueue)
+          .insert(
+            SyncQueueCompanion.insert(
+              operationType: 'completion',
+              payload: '{"ref":"Berakhot 2a"}',
+              queuedAt: now,
+              retryCount: const Value(0),
+            ),
+          );
       final sq = await getSyncQueue(sqId);
 
       final json = sq.toJson();
@@ -1161,15 +1225,17 @@ void main() {
     });
 
     test('copyWith with nullable lastError', () async {
-      final sqId = await db.into(db.syncQueue).insert(
-        SyncQueueCompanion.insert(
-          operationType: 'bookmark',
-          payload: '{}',
-          queuedAt: now,
-          retryCount: const Value(2),
-          lastError: const Value('Network error'),
-        ),
-      );
+      final sqId = await db
+          .into(db.syncQueue)
+          .insert(
+            SyncQueueCompanion.insert(
+              operationType: 'bookmark',
+              payload: '{}',
+              queuedAt: now,
+              retryCount: const Value(2),
+              lastError: const Value('Network error'),
+            ),
+          );
       final sq = await getSyncQueue(sqId);
 
       expect(sq.lastError, 'Network error');
@@ -1183,14 +1249,16 @@ void main() {
     });
 
     test('toColumns with nullable lastError', () async {
-      final sqId = await db.into(db.syncQueue).insert(
-        SyncQueueCompanion.insert(
-          operationType: 'settings',
-          payload: '{}',
-          queuedAt: now,
-          retryCount: const Value(0),
-        ),
-      );
+      final sqId = await db
+          .into(db.syncQueue)
+          .insert(
+            SyncQueueCompanion.insert(
+              operationType: 'settings',
+              payload: '{}',
+              queuedAt: now,
+              retryCount: const Value(0),
+            ),
+          );
       final sq = await getSyncQueue(sqId);
 
       final cols = sq.toColumns(true);
@@ -1200,30 +1268,35 @@ void main() {
       expect(colsAll.containsKey('last_error'), isTrue);
     });
 
-    test('equality, hashCode, toString, toCompanion, copyWithCompanion', () async {
-      final sqId = await db.into(db.syncQueue).insert(
-        SyncQueueCompanion.insert(
-          operationType: 'streak',
-          payload: '{"streakId":1}',
-          queuedAt: now,
-          retryCount: const Value(1),
-        ),
-      );
-      final sq1 = await getSyncQueue(sqId);
-      final sq2 = await getSyncQueue(sqId);
+    test(
+      'equality, hashCode, toString, toCompanion, copyWithCompanion',
+      () async {
+        final sqId = await db
+            .into(db.syncQueue)
+            .insert(
+              SyncQueueCompanion.insert(
+                operationType: 'streak',
+                payload: '{"streakId":1}',
+                queuedAt: now,
+                retryCount: const Value(1),
+              ),
+            );
+        final sq1 = await getSyncQueue(sqId);
+        final sq2 = await getSyncQueue(sqId);
 
-      expect(sq1, equals(sq2));
-      expect(sq1.hashCode, equals(sq2.hashCode));
-      expect(sq1.toString(), contains('streak'));
+        expect(sq1, equals(sq2));
+        expect(sq1.hashCode, equals(sq2.hashCode));
+        expect(sq1.toString(), contains('streak'));
 
-      final companion = sq1.toCompanion(true);
-      expect(companion.operationType.value, 'streak');
+        final companion = sq1.toCompanion(true);
+        expect(companion.operationType.value, 'streak');
 
-      final copy = sq1.copyWithCompanion(
-        const SyncQueueCompanion(retryCount: Value(5)),
-      );
-      expect(copy.retryCount, 5);
-    });
+        final copy = sq1.copyWithCompanion(
+          const SyncQueueCompanion(retryCount: Value(5)),
+        );
+        expect(copy.retryCount, 5);
+      },
+    );
 
     test('SyncQueueCompanion.copyWith', () {
       const original = SyncQueueCompanion(
@@ -1239,22 +1312,26 @@ void main() {
   // ─── TextDownloadStatuse DataClass ────────────────────────────────────────
 
   group('TextDownloadStatuse DataClass', () {
-    Future<TextDownloadStatuse> getTextDownloadStatus(String curriculumId) async {
-      final rows = await (db.select(db.textDownloadStatuses)
-            ..where((t) => t.curriculumId.equals(curriculumId)))
-          .get();
+    Future<TextDownloadStatuse> getTextDownloadStatus(
+      String curriculumId,
+    ) async {
+      final rows = await (db.select(
+        db.textDownloadStatuses,
+      )..where((t) => t.curriculumId.equals(curriculumId))).get();
       return rows.first;
     }
 
     test('toJson / fromJson round-trip', () async {
-      await db.into(db.textDownloadStatuses).insert(
-        TextDownloadStatusesCompanion.insert(
-          curriculumId: 'bavli',
-          itemCount: 1000,
-          textVersion: '2.1.0',
-          downloadedAt: now,
-        ),
-      );
+      await db
+          .into(db.textDownloadStatuses)
+          .insert(
+            TextDownloadStatusesCompanion.insert(
+              curriculumId: 'bavli',
+              itemCount: 1000,
+              textVersion: '2.1.0',
+              downloadedAt: now,
+            ),
+          );
       final tds = await getTextDownloadStatus('bavli');
 
       final json = tds.toJson();
@@ -1268,15 +1345,17 @@ void main() {
     });
 
     test('copyWith with nullable storedItemCount', () async {
-      await db.into(db.textDownloadStatuses).insert(
-        TextDownloadStatusesCompanion.insert(
-          curriculumId: 'mishnah',
-          itemCount: 500,
-          textVersion: '1.0.0',
-          downloadedAt: now,
-          storedItemCount: const Value(250),
-        ),
-      );
+      await db
+          .into(db.textDownloadStatuses)
+          .insert(
+            TextDownloadStatusesCompanion.insert(
+              curriculumId: 'mishnah',
+              itemCount: 500,
+              textVersion: '1.0.0',
+              downloadedAt: now,
+              storedItemCount: const Value(250),
+            ),
+          );
       final tds = await getTextDownloadStatus('mishnah');
 
       expect(tds.storedItemCount, 250);
@@ -1290,14 +1369,16 @@ void main() {
     });
 
     test('toColumns with nullable storedItemCount', () async {
-      await db.into(db.textDownloadStatuses).insert(
-        TextDownloadStatusesCompanion.insert(
-          curriculumId: 'yerushalmi',
-          itemCount: 200,
-          textVersion: '1.2.3',
-          downloadedAt: now,
-        ),
-      );
+      await db
+          .into(db.textDownloadStatuses)
+          .insert(
+            TextDownloadStatusesCompanion.insert(
+              curriculumId: 'yerushalmi',
+              itemCount: 200,
+              textVersion: '1.2.3',
+              downloadedAt: now,
+            ),
+          );
       final tds = await getTextDownloadStatus('yerushalmi');
 
       final cols = tds.toColumns(true);
@@ -1307,30 +1388,35 @@ void main() {
       expect(colsAll.containsKey('stored_item_count'), isTrue);
     });
 
-    test('equality, hashCode, toString, toCompanion, copyWithCompanion', () async {
-      await db.into(db.textDownloadStatuses).insert(
-        TextDownloadStatusesCompanion.insert(
-          curriculumId: 'tanach',
-          itemCount: 750,
-          textVersion: '3.0.0',
-          downloadedAt: now,
-        ),
-      );
-      final tds1 = await getTextDownloadStatus('tanach');
-      final tds2 = await getTextDownloadStatus('tanach');
+    test(
+      'equality, hashCode, toString, toCompanion, copyWithCompanion',
+      () async {
+        await db
+            .into(db.textDownloadStatuses)
+            .insert(
+              TextDownloadStatusesCompanion.insert(
+                curriculumId: 'tanach',
+                itemCount: 750,
+                textVersion: '3.0.0',
+                downloadedAt: now,
+              ),
+            );
+        final tds1 = await getTextDownloadStatus('tanach');
+        final tds2 = await getTextDownloadStatus('tanach');
 
-      expect(tds1, equals(tds2));
-      expect(tds1.hashCode, equals(tds2.hashCode));
-      expect(tds1.toString(), contains('tanach'));
+        expect(tds1, equals(tds2));
+        expect(tds1.hashCode, equals(tds2.hashCode));
+        expect(tds1.toString(), contains('tanach'));
 
-      final companion = tds1.toCompanion(true);
-      expect(companion.itemCount.value, 750);
+        final companion = tds1.toCompanion(true);
+        expect(companion.itemCount.value, 750);
 
-      final copy = tds1.copyWithCompanion(
-        const TextDownloadStatusesCompanion(itemCount: Value(900)),
-      );
-      expect(copy.itemCount, 900);
-    });
+        final copy = tds1.copyWithCompanion(
+          const TextDownloadStatusesCompanion(itemCount: Value(900)),
+        );
+        expect(copy.itemCount, 900);
+      },
+    );
 
     test('TextDownloadStatusesCompanion.copyWith', () {
       final original = TextDownloadStatusesCompanion(
@@ -1348,8 +1434,9 @@ void main() {
 
   group('OutboxData DataClass', () {
     Future<OutboxData> getOutbox(int id) async {
-      final rows = await (db.select(db.outbox)..where((t) => t.id.equals(id)))
-          .get();
+      final rows = await (db.select(
+        db.outbox,
+      )..where((t) => t.id.equals(id))).get();
       return rows.first;
     }
 
@@ -1357,15 +1444,17 @@ void main() {
       final accId = await insertAccount(email: 'ob@test.local');
       final profileId = await insertProfile(accId);
 
-      final obId = await db.into(db.outbox).insert(
-        OutboxCompanion.insert(
-          profileId: profileId,
-          entityKind: 'completion',
-          entityKey: 'bavli-Berakhot 2a-1',
-          payload: '{"ref":"Berakhot 2a"}',
-          createdAt: now,
-        ),
-      );
+      final obId = await db
+          .into(db.outbox)
+          .insert(
+            OutboxCompanion.insert(
+              profileId: profileId,
+              entityKind: 'completion',
+              entityKey: 'bavli-Berakhot 2a-1',
+              payload: '{"ref":"Berakhot 2a"}',
+              createdAt: now,
+            ),
+          );
       final ob = await getOutbox(obId);
 
       final json = ob.toJson();
@@ -1383,17 +1472,19 @@ void main() {
       final accId = await insertAccount(email: 'ob2@test.local');
       final profileId = await insertProfile(accId);
 
-      final obId = await db.into(db.outbox).insert(
-        OutboxCompanion.insert(
-          profileId: profileId,
-          entityKind: 'streak',
-          entityKey: 'streak-1',
-          payload: '{}',
-          createdAt: now,
-          lastError: const Value('Push failed'),
-          lastAttemptAt: Value(now),
-        ),
-      );
+      final obId = await db
+          .into(db.outbox)
+          .insert(
+            OutboxCompanion.insert(
+              profileId: profileId,
+              entityKind: 'streak',
+              entityKey: 'streak-1',
+              payload: '{}',
+              createdAt: now,
+              lastError: const Value('Push failed'),
+              lastAttemptAt: Value(now),
+            ),
+          );
       final ob = await getOutbox(obId);
 
       expect(ob.lastError, 'Push failed');
@@ -1415,15 +1506,17 @@ void main() {
       final accId = await insertAccount(email: 'ob3@test.local');
       final profileId = await insertProfile(accId);
 
-      final obId = await db.into(db.outbox).insert(
-        OutboxCompanion.insert(
-          profileId: profileId,
-          entityKind: 'settings',
-          entityKey: 'settings-1',
-          payload: '{}',
-          createdAt: now,
-        ),
-      );
+      final obId = await db
+          .into(db.outbox)
+          .insert(
+            OutboxCompanion.insert(
+              profileId: profileId,
+              entityKind: 'settings',
+              entityKey: 'settings-1',
+              payload: '{}',
+              createdAt: now,
+            ),
+          );
       final ob = await getOutbox(obId);
 
       final cols = ob.toColumns(true);
@@ -1435,34 +1528,39 @@ void main() {
       expect(colsAll.containsKey('last_attempt_at'), isTrue);
     });
 
-    test('equality, hashCode, toString, toCompanion, copyWithCompanion', () async {
-      final accId = await insertAccount(email: 'ob4@test.local');
-      final profileId = await insertProfile(accId);
+    test(
+      'equality, hashCode, toString, toCompanion, copyWithCompanion',
+      () async {
+        final accId = await insertAccount(email: 'ob4@test.local');
+        final profileId = await insertProfile(accId);
 
-      final obId = await db.into(db.outbox).insert(
-        OutboxCompanion.insert(
-          profileId: profileId,
-          entityKind: 'track',
-          entityKey: 'track-1',
-          payload: '{"trackId":1}',
-          createdAt: now,
-        ),
-      );
-      final ob1 = await getOutbox(obId);
-      final ob2 = await getOutbox(obId);
+        final obId = await db
+            .into(db.outbox)
+            .insert(
+              OutboxCompanion.insert(
+                profileId: profileId,
+                entityKind: 'track',
+                entityKey: 'track-1',
+                payload: '{"trackId":1}',
+                createdAt: now,
+              ),
+            );
+        final ob1 = await getOutbox(obId);
+        final ob2 = await getOutbox(obId);
 
-      expect(ob1, equals(ob2));
-      expect(ob1.hashCode, equals(ob2.hashCode));
-      expect(ob1.toString(), contains('track'));
+        expect(ob1, equals(ob2));
+        expect(ob1.hashCode, equals(ob2.hashCode));
+        expect(ob1.toString(), contains('track'));
 
-      final companion = ob1.toCompanion(true);
-      expect(companion.entityKind.value, 'track');
+        final companion = ob1.toCompanion(true);
+        expect(companion.entityKind.value, 'track');
 
-      final copy = ob1.copyWithCompanion(
-        const OutboxCompanion(attempts: Value(2)),
-      );
-      expect(copy.attempts, 2);
-    });
+        final copy = ob1.copyWithCompanion(
+          const OutboxCompanion(attempts: Value(2)),
+        );
+        expect(copy.attempts, 2);
+      },
+    );
 
     test('OutboxCompanion.copyWith', () {
       const original = OutboxCompanion(
@@ -1479,9 +1577,9 @@ void main() {
 
   group('SacredWindowEntry DataClass', () {
     Future<SacredWindowEntry> getSacredWindowEntry(int id) async {
-      final rows = await (db.select(db.sacredWindowEntries)
-            ..where((t) => t.id.equals(id)))
-          .get();
+      final rows = await (db.select(
+        db.sacredWindowEntries,
+      )..where((t) => t.id.equals(id))).get();
       return rows.first;
     }
 
@@ -1489,15 +1587,17 @@ void main() {
       final start = DateTime.utc(2026, 3, 27, 18);
       final end = DateTime.utc(2026, 3, 28, 20);
 
-      final sweId = await db.into(db.sacredWindowEntries).insert(
-        SacredWindowEntriesCompanion.insert(
-          startUtc: start,
-          endUtc: end,
-          kind: 'shabbos',
-          inIsrael: true,
-          createdAt: Value(now),
-        ),
-      );
+      final sweId = await db
+          .into(db.sacredWindowEntries)
+          .insert(
+            SacredWindowEntriesCompanion.insert(
+              startUtc: start,
+              endUtc: end,
+              kind: 'shabbos',
+              inIsrael: true,
+              createdAt: Value(now),
+            ),
+          );
       final swe = await getSacredWindowEntry(sweId);
 
       final json = swe.toJson();
@@ -1515,17 +1615,19 @@ void main() {
       final start = DateTime.utc(2026, 4, 10, 19);
       final end = DateTime.utc(2026, 4, 11, 21);
 
-      final sweId = await db.into(db.sacredWindowEntries).insert(
-        SacredWindowEntriesCompanion.insert(
-          startUtc: start,
-          endUtc: end,
-          kind: 'yomTov',
-          inIsrael: false,
-          createdAt: Value(now),
-          lat: const Value(51.5),
-          lng: const Value(-0.1),
-        ),
-      );
+      final sweId = await db
+          .into(db.sacredWindowEntries)
+          .insert(
+            SacredWindowEntriesCompanion.insert(
+              startUtc: start,
+              endUtc: end,
+              kind: 'yomTov',
+              inIsrael: false,
+              createdAt: Value(now),
+              lat: const Value(51.5),
+              lng: const Value(-0.1),
+            ),
+          );
       final swe = await getSacredWindowEntry(sweId);
 
       expect(swe.lat, closeTo(51.5, 0.01));
@@ -1535,7 +1637,10 @@ void main() {
       expect(copy.kind, 'shabbosYomTov');
       expect(copy.lat, swe.lat);
 
-      final cleared = swe.copyWith(lat: const Value(null), lng: const Value(null));
+      final cleared = swe.copyWith(
+        lat: const Value(null),
+        lng: const Value(null),
+      );
       expect(cleared.lat, isNull);
       expect(cleared.lng, isNull);
     });
@@ -1544,15 +1649,17 @@ void main() {
       final start = DateTime.utc(2026, 9, 22, 18);
       final end = DateTime.utc(2026, 9, 23, 19);
 
-      final sweId = await db.into(db.sacredWindowEntries).insert(
-        SacredWindowEntriesCompanion.insert(
-          startUtc: start,
-          endUtc: end,
-          kind: 'yomKippur',
-          inIsrael: true,
-          createdAt: Value(now),
-        ),
-      );
+      final sweId = await db
+          .into(db.sacredWindowEntries)
+          .insert(
+            SacredWindowEntriesCompanion.insert(
+              startUtc: start,
+              endUtc: end,
+              kind: 'yomKippur',
+              inIsrael: true,
+              createdAt: Value(now),
+            ),
+          );
       final swe = await getSacredWindowEntry(sweId);
 
       // nullToAbsent=true, no lat/lng
@@ -1565,35 +1672,40 @@ void main() {
       expect(colsAll.containsKey('lng'), isTrue);
     });
 
-    test('equality, hashCode, toString, toCompanion, copyWithCompanion', () async {
-      final start = DateTime.utc(2026, 2, 6, 17);
-      final end = DateTime.utc(2026, 2, 7, 18);
+    test(
+      'equality, hashCode, toString, toCompanion, copyWithCompanion',
+      () async {
+        final start = DateTime.utc(2026, 2, 6, 17);
+        final end = DateTime.utc(2026, 2, 7, 18);
 
-      final sweId = await db.into(db.sacredWindowEntries).insert(
-        SacredWindowEntriesCompanion.insert(
-          startUtc: start,
-          endUtc: end,
-          kind: 'shabbos',
-          inIsrael: false,
-          createdAt: Value(now),
-        ),
-      );
-      final swe1 = await getSacredWindowEntry(sweId);
-      final swe2 = await getSacredWindowEntry(sweId);
+        final sweId = await db
+            .into(db.sacredWindowEntries)
+            .insert(
+              SacredWindowEntriesCompanion.insert(
+                startUtc: start,
+                endUtc: end,
+                kind: 'shabbos',
+                inIsrael: false,
+                createdAt: Value(now),
+              ),
+            );
+        final swe1 = await getSacredWindowEntry(sweId);
+        final swe2 = await getSacredWindowEntry(sweId);
 
-      expect(swe1, equals(swe2));
-      expect(swe1.hashCode, equals(swe2.hashCode));
-      expect(swe1.toString(), contains('shabbos'));
+        expect(swe1, equals(swe2));
+        expect(swe1.hashCode, equals(swe2.hashCode));
+        expect(swe1.toString(), contains('shabbos'));
 
-      final companion = swe1.toCompanion(true);
-      expect(companion.kind.value, 'shabbos');
-      expect(companion.lat.present, isFalse);
+        final companion = swe1.toCompanion(true);
+        expect(companion.kind.value, 'shabbos');
+        expect(companion.lat.present, isFalse);
 
-      final copy = swe1.copyWithCompanion(
-        const SacredWindowEntriesCompanion(inIsrael: Value(true)),
-      );
-      expect(copy.inIsrael, isTrue);
-    });
+        final copy = swe1.copyWithCompanion(
+          const SacredWindowEntriesCompanion(inIsrael: Value(true)),
+        );
+        expect(copy.inIsrael, isTrue);
+      },
+    );
 
     test('SacredWindowEntriesCompanion.copyWith', () {
       final original = SacredWindowEntriesCompanion(
@@ -1615,18 +1727,20 @@ void main() {
       final profileId = await insertProfile(accId);
       final trackId = await insertTrack(profileId);
 
-      await db.into(db.completions).insert(
-        CompletionsCompanion.insert(
-          profileId: profileId,
-          curriculumId: 'bavli',
-          sefariaRef: 'Berakhot 2a',
-          stageId: 1,
-          trackType: 'personal',
-          trackId: trackId,
-          completedAt: now,
-          points: const Value(10),
-        ),
-      );
+      await db
+          .into(db.completions)
+          .insert(
+            CompletionsCompanion.insert(
+              profileId: profileId,
+              curriculumId: 'bavli',
+              sefariaRef: 'Berakhot 2a',
+              stageId: 1,
+              trackType: 'personal',
+              trackId: trackId,
+              completedAt: now,
+              points: const Value(10),
+            ),
+          );
 
       final rows = await db.managers.completions
           .filter((f) => f.profileId(profileId))
@@ -1638,13 +1752,15 @@ void main() {
       final accId = await insertAccount(email: 'mgr-str@test.local');
       final profileId = await insertProfile(accId);
 
-      await db.into(db.streaks).insert(
-        StreaksCompanion.insert(
-          profileId: profileId,
-          currentStreak: const Value(5),
-          maxStreak: const Value(10),
-        ),
-      );
+      await db
+          .into(db.streaks)
+          .insert(
+            StreaksCompanion.insert(
+              profileId: profileId,
+              currentStreak: const Value(5),
+              maxStreak: const Value(10),
+            ),
+          );
 
       final rows = await db.managers.streaks
           .filter((f) => f.profileId(profileId))
@@ -1657,15 +1773,17 @@ void main() {
       final accId = await insertAccount(email: 'mgr-se@test.local');
       final profileId = await insertProfile(accId);
 
-      await db.into(db.streakEvents).insert(
-        StreakEventsCompanion.insert(
-          profileId: profileId,
-          eventType: 'completion',
-          dayUtc: DateTime.utc(2026, 1, 14),
-          eventTimestamp: now,
-          createdAt: Value(now),
-        ),
-      );
+      await db
+          .into(db.streakEvents)
+          .insert(
+            StreakEventsCompanion.insert(
+              profileId: profileId,
+              eventType: 'completion',
+              dayUtc: DateTime.utc(2026, 1, 14),
+              eventTimestamp: now,
+              createdAt: Value(now),
+            ),
+          );
 
       final rows = await db.managers.streakEvents
           .filter((f) => f.profileId(profileId))
@@ -1678,15 +1796,17 @@ void main() {
       final accId = await insertAccount(email: 'mgr-ob@test.local');
       final profileId = await insertProfile(accId);
 
-      await db.into(db.outbox).insert(
-        OutboxCompanion.insert(
-          profileId: profileId,
-          entityKind: 'completion',
-          entityKey: 'k1',
-          payload: '{}',
-          createdAt: now,
-        ),
-      );
+      await db
+          .into(db.outbox)
+          .insert(
+            OutboxCompanion.insert(
+              profileId: profileId,
+              entityKind: 'completion',
+              entityKey: 'k1',
+              payload: '{}',
+              createdAt: now,
+            ),
+          );
 
       final rows = await db.managers.outbox
           .filter((f) => f.profileId(profileId))
@@ -1695,14 +1815,16 @@ void main() {
     });
 
     test('managers.syncQueue.filter works', () async {
-      await db.into(db.syncQueue).insert(
-        SyncQueueCompanion.insert(
-          operationType: 'completion',
-          payload: '{}',
-          queuedAt: now,
-          retryCount: const Value(0),
-        ),
-      );
+      await db
+          .into(db.syncQueue)
+          .insert(
+            SyncQueueCompanion.insert(
+              operationType: 'completion',
+              payload: '{}',
+              queuedAt: now,
+              retryCount: const Value(0),
+            ),
+          );
 
       final rows = await db.managers.syncQueue
           .filter((f) => f.operationType('completion'))
@@ -1715,15 +1837,17 @@ void main() {
       final profileId = await insertProfile(accId);
       final trackId = await insertTrack(profileId);
 
-      await db.into(db.bookmarks).insert(
-        BookmarksCompanion.insert(
-          profileId: profileId,
-          curriculumId: 'bavli',
-          trackId: trackId,
-          sefariaRef: 'Berakhot 5a',
-          updatedAt: now,
-        ),
-      );
+      await db
+          .into(db.bookmarks)
+          .insert(
+            BookmarksCompanion.insert(
+              profileId: profileId,
+              curriculumId: 'bavli',
+              trackId: trackId,
+              sefariaRef: 'Berakhot 5a',
+              updatedAt: now,
+            ),
+          );
 
       final rows = await db.managers.bookmarks
           .filter((f) => f.profileId(profileId))
@@ -1733,14 +1857,16 @@ void main() {
     });
 
     test('managers.textDownloadStatuses.filter works', () async {
-      await db.into(db.textDownloadStatuses).insert(
-        TextDownloadStatusesCompanion.insert(
-          curriculumId: 'mgr-tds',
-          itemCount: 100,
-          textVersion: '1.0',
-          downloadedAt: now,
-        ),
-      );
+      await db
+          .into(db.textDownloadStatuses)
+          .insert(
+            TextDownloadStatusesCompanion.insert(
+              curriculumId: 'mgr-tds',
+              itemCount: 100,
+              textVersion: '1.0',
+              downloadedAt: now,
+            ),
+          );
 
       final rows = await db.managers.textDownloadStatuses
           .filter((f) => f.curriculumId('mgr-tds'))
@@ -1753,15 +1879,17 @@ void main() {
       final start = DateTime.utc(2026, 1, 9, 17);
       final end = DateTime.utc(2026, 1, 10, 18);
 
-      await db.into(db.sacredWindowEntries).insert(
-        SacredWindowEntriesCompanion.insert(
-          startUtc: start,
-          endUtc: end,
-          kind: 'shabbos',
-          inIsrael: true,
-          createdAt: Value(now),
-        ),
-      );
+      await db
+          .into(db.sacredWindowEntries)
+          .insert(
+            SacredWindowEntriesCompanion.insert(
+              startUtc: start,
+              endUtc: end,
+              kind: 'shabbos',
+              inIsrael: true,
+              createdAt: Value(now),
+            ),
+          );
 
       final rows = await db.managers.sacredWindowEntries
           .filter((f) => f.kind('shabbos'))

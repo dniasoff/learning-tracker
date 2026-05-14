@@ -25,14 +25,16 @@ void main() {
         storedItemCount: 250,
       );
 
-      final count =
-          await db.textDownloadStatusDao.getPartialItemCount(curriculumId);
+      final count = await db.textDownloadStatusDao.getPartialItemCount(
+        curriculumId,
+      );
       expect(count, 250);
     });
 
     test('getPartialItemCount returns null when no row exists', () async {
-      final count =
-          await db.textDownloadStatusDao.getPartialItemCount('nonexistent');
+      final count = await db.textDownloadStatusDao.getPartialItemCount(
+        'nonexistent',
+      );
       expect(count, isNull);
     });
 
@@ -48,8 +50,9 @@ void main() {
           storedItemCount: 300,
         );
 
-        final count =
-            await db.textDownloadStatusDao.getPartialItemCount(curriculumId);
+        final count = await db.textDownloadStatusDao.getPartialItemCount(
+          curriculumId,
+        );
         expect(count, 300);
       },
     );
@@ -78,16 +81,20 @@ void main() {
       },
     );
 
-    test('getPartialItemCount returns null after clearDownloadStatus', () async {
-      await db.textDownloadStatusDao.savePartialProgress(
-        curriculumId: curriculumId,
-        storedItemCount: 123,
-      );
-      await db.textDownloadStatusDao.clearDownloadStatus(curriculumId);
+    test(
+      'getPartialItemCount returns null after clearDownloadStatus',
+      () async {
+        await db.textDownloadStatusDao.savePartialProgress(
+          curriculumId: curriculumId,
+          storedItemCount: 123,
+        );
+        await db.textDownloadStatusDao.clearDownloadStatus(curriculumId);
 
-      final count =
-          await db.textDownloadStatusDao.getPartialItemCount(curriculumId);
-      expect(count, isNull);
-    });
+        final count = await db.textDownloadStatusDao.getPartialItemCount(
+          curriculumId,
+        );
+        expect(count, isNull);
+      },
+    );
   });
 }

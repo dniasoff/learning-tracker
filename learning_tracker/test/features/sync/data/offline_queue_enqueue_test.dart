@@ -149,7 +149,10 @@ void main() {
   // ── enqueueProfileProgram ─────────────────────────────────────────────────
 
   test('enqueueProfileProgram stores correct operationType', () async {
-    await queue.enqueueProfileProgram({'curriculum_id': 'mishnayos', 'program_id': 1});
+    await queue.enqueueProfileProgram({
+      'curriculum_id': 'mishnayos',
+      'program_id': 1,
+    });
     final items = await db.syncQueueDao.getAllPending();
     expect(items.first.operationType, 'profile_program');
   });
@@ -172,11 +175,16 @@ void main() {
 
   // ── enqueueCurriculumImportMetadata ───────────────────────────────────────
 
-  test('enqueueCurriculumImportMetadata stores correct operationType', () async {
-    await queue.enqueueCurriculumImportMetadata({'curriculum_id': 'mishnayos'});
-    final items = await db.syncQueueDao.getAllPending();
-    expect(items.first.operationType, 'curriculum_import_metadata');
-  });
+  test(
+    'enqueueCurriculumImportMetadata stores correct operationType',
+    () async {
+      await queue.enqueueCurriculumImportMetadata({
+        'curriculum_id': 'mishnayos',
+      });
+      final items = await db.syncQueueDao.getAllPending();
+      expect(items.first.operationType, 'curriculum_import_metadata');
+    },
+  );
 
   // ── enqueueCurriculumTrack ────────────────────────────────────────────────
 

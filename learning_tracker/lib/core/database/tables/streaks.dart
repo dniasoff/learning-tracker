@@ -7,7 +7,8 @@ import 'package:drift/drift.dart';
 class Streaks extends Table {
   IntColumn get id => integer().autoIncrement()();
   IntColumn get profileId => integer()();
-  IntColumn get currentStreak => integer().withDefault(const Constant<int>(0))();
+  IntColumn get currentStreak =>
+      integer().withDefault(const Constant<int>(0))();
   IntColumn get maxStreak => integer().withDefault(const Constant<int>(0))();
   DateTimeColumn get lastCompletionDate => dateTime().nullable()();
   DateTimeColumn get graceUsedDate => dateTime().nullable()();

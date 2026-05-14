@@ -18,20 +18,20 @@ import '../../../../helpers/drift_memory.dart';
 /// Minimal valid import payload (all required sections as empty lists,
 /// optional sections absent).
 Map<String, dynamic> minimalPayload() => {
-      'formatVersion': 'schemaV1',
-      'exportedAt': '2026-01-01T00:00:00.000Z',
-      'appVersion': '1.0.0',
-      'userProfiles': <dynamic>[],
-      'learnerProfiles': <dynamic>[],
-      'curriculumTracks': <dynamic>[],
-      'stageDefinitions': <dynamic>[],
-      'pointConfigs': <dynamic>[],
-      'completions': <dynamic>[],
-      'bookmarks': <dynamic>[],
-      'learningOrder': <dynamic>[],
-      'goals': <dynamic>[],
-      'streaks': <dynamic>[],
-    };
+  'formatVersion': 'schemaV1',
+  'exportedAt': '2026-01-01T00:00:00.000Z',
+  'appVersion': '1.0.0',
+  'userProfiles': <dynamic>[],
+  'learnerProfiles': <dynamic>[],
+  'curriculumTracks': <dynamic>[],
+  'stageDefinitions': <dynamic>[],
+  'pointConfigs': <dynamic>[],
+  'completions': <dynamic>[],
+  'bookmarks': <dynamic>[],
+  'learningOrder': <dynamic>[],
+  'goals': <dynamic>[],
+  'streaks': <dynamic>[],
+};
 
 /// Returns a userProfile map (imported as an account row).
 Map<String, dynamic> userProfileMap({
@@ -40,13 +40,13 @@ Map<String, dynamic> userProfileMap({
   String tier = 'localBorn',
   String userMode = 'parent',
 }) => {
-      'id': id,
-      'displayName': displayName,
-      'tier': tier,
-      'userMode': userMode,
-      'createdAt': '2026-01-01T00:00:00.000Z',
-      'updatedAt': '2026-01-01T00:00:00.000Z',
-    };
+  'id': id,
+  'displayName': displayName,
+  'tier': tier,
+  'userMode': userMode,
+  'createdAt': '2026-01-01T00:00:00.000Z',
+  'updatedAt': '2026-01-01T00:00:00.000Z',
+};
 
 /// Returns a curriculumTrack map.
 Map<String, dynamic> trackMap({
@@ -56,16 +56,16 @@ Map<String, dynamic> trackMap({
   String trackType = 'personal',
   bool isActive = true,
 }) => {
-      'id': id,
-      'profileId': profileId,
-      'curriculumId': curriculumId,
-      'trackType': trackType,
-      'isActive': isActive,
-      'activatedAt': '2026-01-01T00:00:00.000Z',
-      'deactivatedAt': null,
-      'paceResetDate': null,
-      'deletedAt': null,
-    };
+  'id': id,
+  'profileId': profileId,
+  'curriculumId': curriculumId,
+  'trackType': trackType,
+  'isActive': isActive,
+  'activatedAt': '2026-01-01T00:00:00.000Z',
+  'deactivatedAt': null,
+  'paceResetDate': null,
+  'deletedAt': null,
+};
 
 /// Returns a stageDefinition map.
 Map<String, dynamic> stageMap({
@@ -74,83 +74,83 @@ Map<String, dynamic> stageMap({
   String stageName = 'Learn',
   int delayDays = 0,
 }) => {
-      'profileId': 1,
-      'curriculumId': 'bavli',
-      'trackId': trackId,
-      'stageOrder': stageOrder,
-      'stageName': stageName,
-      'delayDays': delayDays,
-      'isDefault': true,
-    };
+  'profileId': 1,
+  'curriculumId': 'bavli',
+  'trackId': trackId,
+  'stageOrder': stageOrder,
+  'stageName': stageName,
+  'delayDays': delayDays,
+  'isDefault': true,
+};
 
 /// Returns a pointConfig map.
 Map<String, dynamic> pointConfigMap({int trackId = 1, int stageOrder = 1}) => {
-      'profileId': 1,
-      'curriculumId': 'bavli',
-      'trackId': trackId,
-      'stageOrder': stageOrder,
-      'points': 10,
-    };
+  'profileId': 1,
+  'curriculumId': 'bavli',
+  'trackId': trackId,
+  'stageOrder': stageOrder,
+  'points': 10,
+};
 
 /// Returns a completion map.
 Map<String, dynamic> completionMap({int trackId = 1, int stageId = 1}) => {
-      'profileId': 1,
-      'curriculumId': 'bavli',
-      'sefariaRef': 'Berakhot.2a',
-      'stageId': stageId,
-      'trackType': 'personal',
-      'trackId': trackId,
-      'completedAt': '2026-03-01T00:00:00.000Z',
-      'points': 5,
-    };
+  'profileId': 1,
+  'curriculumId': 'bavli',
+  'sefariaRef': 'Berakhot.2a',
+  'stageId': stageId,
+  'trackType': 'personal',
+  'trackId': trackId,
+  'completedAt': '2026-03-01T00:00:00.000Z',
+  'points': 5,
+};
 
 /// Returns a streak map.
 Map<String, dynamic> streakMap({int profileId = 1}) => {
-      'profileId': profileId,
-      'currentStreak': 7,
-      'maxStreak': 14,
-      'lastCompletionDate': '2026-05-13T00:00:00.000Z',
-      'graceUsedDate': null,
-      'gracePeriodDays': 1,
-    };
+  'profileId': profileId,
+  'currentStreak': 7,
+  'maxStreak': 14,
+  'lastCompletionDate': '2026-05-13T00:00:00.000Z',
+  'graceUsedDate': null,
+  'gracePeriodDays': 1,
+};
 
 /// Returns a goal map.
 Map<String, dynamic> goalMap({int trackId = 1}) => {
-      'profileId': 1,
-      'curriculumId': 'bavli',
-      'trackId': trackId,
-      'targetPercent': 90.0,
-      'targetDate': null,
-      'description': '',
-      'dateType': 'gregorian',
-      'goalType': 'deadline',
-      'paceValue': null,
-      'pacePeriod': null,
-      'paceGranularity': null,
-      'createdAt': '2026-01-01T00:00:00.000Z',
-      'updatedAt': '2026-01-01T00:00:00.000Z',
-    };
+  'profileId': 1,
+  'curriculumId': 'bavli',
+  'trackId': trackId,
+  'targetPercent': 90.0,
+  'targetDate': null,
+  'description': '',
+  'dateType': 'gregorian',
+  'goalType': 'deadline',
+  'paceValue': null,
+  'pacePeriod': null,
+  'paceGranularity': null,
+  'createdAt': '2026-01-01T00:00:00.000Z',
+  'updatedAt': '2026-01-01T00:00:00.000Z',
+};
 
 /// Returns a bookmark map.
 Map<String, dynamic> bookmarkMap({int trackId = 1}) => {
-      'profileId': 1,
-      'curriculumId': 'bavli',
-      'trackId': trackId,
-      'sefariaRef': 'Berakhot.2a',
-      'updatedAt': '2026-05-01T00:00:00.000Z',
-    };
+  'profileId': 1,
+  'curriculumId': 'bavli',
+  'trackId': trackId,
+  'sefariaRef': 'Berakhot.2a',
+  'updatedAt': '2026-05-01T00:00:00.000Z',
+};
 
 /// Returns a learningOrder map.
 Map<String, dynamic> learningOrderMap({
   String sefariaRef = 'Berakhot.2a',
   int userSortOrder = 1,
 }) => {
-      'profileId': 1,
-      'curriculumId': 'bavli',
-      'sefariaRef': sefariaRef,
-      'userSortOrder': userSortOrder,
-      'updatedAt': '2026-05-01T00:00:00.000Z',
-    };
+  'profileId': 1,
+  'curriculumId': 'bavli',
+  'sefariaRef': sefariaRef,
+  'userSortOrder': userSortOrder,
+  'updatedAt': '2026-05-01T00:00:00.000Z',
+};
 
 void main() {
   late UserDatabase db;
@@ -180,7 +180,9 @@ void main() {
 
     test('clears existing data before importing', () async {
       // Pre-populate a track.
-      await db.into(db.curriculumTracks).insert(
+      await db
+          .into(db.curriculumTracks)
+          .insert(
             CurriculumTracksCompanion.insert(
               profileId: 1,
               curriculumId: 'bavli',
@@ -590,11 +592,7 @@ void main() {
         ..['userProfiles'] = [userProfileMap(id: 1)]
         ..['curriculumTracks'] = [trackMap(id: 1)]
         ..['trackLearningOrder'] = [
-          {
-            'trackId': 1,
-            'sefariaRef': 'Berakhot.2a',
-            'sortOrder': 1,
-          },
+          {'trackId': 1, 'sefariaRef': 'Berakhot.2a', 'sortOrder': 1},
         ];
 
       await service.importData(jsonEncode(payload));
@@ -627,10 +625,7 @@ void main() {
         ..['userProfiles'] = [userProfileMap(id: 1)]
         ..['curriculumTracks'] = [trackMap(id: 1)]
         ..['goals'] = [
-          {
-            ...goalMap(trackId: 1),
-            'targetDate': '2026-12-31T00:00:00.000Z',
-          },
+          {...goalMap(trackId: 1), 'targetDate': '2026-12-31T00:00:00.000Z'},
         ];
 
       await service.importData(jsonEncode(payload));
@@ -646,8 +641,7 @@ void main() {
 
   group('DataExportImportService.importData — streaks', () {
     test('inserts streak rows', () async {
-      final payload = minimalPayload()
-        ..['streaks'] = [streakMap(profileId: 1)];
+      final payload = minimalPayload()..['streaks'] = [streakMap(profileId: 1)];
 
       await service.importData(jsonEncode(payload));
 
@@ -660,10 +654,7 @@ void main() {
     test('handles optional lastCompletionDate and graceUsedDate', () async {
       final payload = minimalPayload()
         ..['streaks'] = [
-          {
-            ...streakMap(),
-            'graceUsedDate': '2026-05-12T00:00:00.000Z',
-          },
+          {...streakMap(), 'graceUsedDate': '2026-05-12T00:00:00.000Z'},
         ];
 
       await service.importData(jsonEncode(payload));
@@ -710,7 +701,9 @@ void main() {
       final now = DateTime.utc(2026, 1, 1);
 
       // Insert account.
-      final accountId = await db.into(db.accounts).insert(
+      final accountId = await db
+          .into(db.accounts)
+          .insert(
             AccountsCompanion.insert(
               email: 'user@test.example',
               tier: 'localBorn',
@@ -722,7 +715,9 @@ void main() {
           );
 
       // Insert track.
-      final trackId = await db.into(db.curriculumTracks).insert(
+      final trackId = await db
+          .into(db.curriculumTracks)
+          .insert(
             CurriculumTracksCompanion.insert(
               profileId: accountId,
               curriculumId: 'bavli',
@@ -732,7 +727,9 @@ void main() {
           );
 
       // Insert stage.
-      await db.into(db.stageDefinitions).insert(
+      await db
+          .into(db.stageDefinitions)
+          .insert(
             StageDefinitionsCompanion.insert(
               profileId: accountId,
               curriculumId: 'bavli',
@@ -744,7 +741,9 @@ void main() {
           );
 
       // Insert point config.
-      await db.into(db.pointConfigs).insert(
+      await db
+          .into(db.pointConfigs)
+          .insert(
             PointConfigsCompanion.insert(
               profileId: accountId,
               curriculumId: 'bavli',
@@ -755,7 +754,9 @@ void main() {
           );
 
       // Insert completion.
-      await db.into(db.completions).insert(
+      await db
+          .into(db.completions)
+          .insert(
             CompletionsCompanion.insert(
               profileId: accountId,
               curriculumId: 'bavli',
@@ -780,12 +781,14 @@ void main() {
       );
 
       // Insert streak.
-      await db.into(db.streaks).insert(
-            StreaksCompanion.insert(profileId: accountId),
-          );
+      await db
+          .into(db.streaks)
+          .insert(StreaksCompanion.insert(profileId: accountId));
 
       // Insert streak event.
-      await db.into(db.streakEvents).insert(
+      await db
+          .into(db.streakEvents)
+          .insert(
             StreakEventsCompanion.insert(
               profileId: accountId,
               eventType: 'study',
@@ -795,7 +798,9 @@ void main() {
           );
 
       // Insert bookmark.
-      await db.into(db.bookmarks).insert(
+      await db
+          .into(db.bookmarks)
+          .insert(
             BookmarksCompanion.insert(
               profileId: accountId,
               curriculumId: 'bavli',
@@ -806,7 +811,9 @@ void main() {
           );
 
       // Insert learningOrder.
-      await db.into(db.learningOrder).insert(
+      await db
+          .into(db.learningOrder)
+          .insert(
             LearningOrderCompanion.insert(
               profileId: accountId,
               curriculumId: 'bavli',
@@ -816,7 +823,9 @@ void main() {
           );
 
       // Insert trackLearningOrder.
-      await db.into(db.trackLearningOrder).insert(
+      await db
+          .into(db.trackLearningOrder)
+          .insert(
             TrackLearningOrderCompanion.insert(
               trackId: trackId,
               sefariaRef: 'Berakhot.2a',
@@ -866,7 +875,9 @@ void main() {
   group('DataExportImportService.exportData — learningLedger', () {
     test('serializes learning ledger rows', () async {
       final ts = DateTime.utc(2026, 3, 15);
-      await db.into(db.learningLedger).insert(
+      await db
+          .into(db.learningLedger)
+          .insert(
             LearningLedgerCompanion.insert(
               profileId: 1,
               ulid: const Value('01HX0000000000000000000001'),
@@ -884,8 +895,8 @@ void main() {
 
       final raw = await service.exportData();
       final decoded = jsonDecode(raw) as Map<String, dynamic>;
-      final ledger =
-          (decoded['learningLedger'] as List<dynamic>).cast<Map<String, dynamic>>();
+      final ledger = (decoded['learningLedger'] as List<dynamic>)
+          .cast<Map<String, dynamic>>();
       expect(ledger, hasLength(1));
       expect(ledger.first['unitIdentifier'], 'Berakhot.3a');
       expect(ledger.first['completionNumber'], 2);
@@ -899,7 +910,9 @@ void main() {
 
   group('DataExportImportService.exportData — trackLearningOrder', () {
     test('serializes track learning order rows', () async {
-      final trackId = await db.into(db.curriculumTracks).insert(
+      final trackId = await db
+          .into(db.curriculumTracks)
+          .insert(
             CurriculumTracksCompanion.insert(
               profileId: 1,
               curriculumId: 'bavli',
@@ -908,7 +921,9 @@ void main() {
             ),
           );
 
-      await db.into(db.trackLearningOrder).insert(
+      await db
+          .into(db.trackLearningOrder)
+          .insert(
             TrackLearningOrderCompanion.insert(
               trackId: trackId,
               sefariaRef: 'Berakhot.4a',
@@ -934,7 +949,9 @@ void main() {
   group('DataExportImportService.exportData — streakEvents', () {
     test('serializes streak event rows', () async {
       final ts = DateTime.utc(2026, 5, 10);
-      await db.into(db.streakEvents).insert(
+      await db
+          .into(db.streakEvents)
+          .insert(
             StreakEventsCompanion.insert(
               profileId: 1,
               eventType: 'grace',

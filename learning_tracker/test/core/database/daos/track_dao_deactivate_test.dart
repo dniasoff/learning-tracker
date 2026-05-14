@@ -24,15 +24,18 @@ void main() {
   // =========================================================================
 
   group('TrackDao.deactivateTrack', () {
-    test('deactivating personal track throws InvalidOperationException', () async {
-      await expectLater(
-        db.trackDao.deactivateTrack(
-          CurriculumId.mishnayos,
-          TrackType.personal,
-        ),
-        throwsA(isA<InvalidOperationException>()),
-      );
-    });
+    test(
+      'deactivating personal track throws InvalidOperationException',
+      () async {
+        await expectLater(
+          db.trackDao.deactivateTrack(
+            CurriculumId.mishnayos,
+            TrackType.personal,
+          ),
+          throwsA(isA<InvalidOperationException>()),
+        );
+      },
+    );
   });
 
   // =========================================================================

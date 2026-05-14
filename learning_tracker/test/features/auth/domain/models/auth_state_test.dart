@@ -62,7 +62,9 @@ void main() {
 
     test('maps Account fields to AuthUser', () async {
       final now = DateTime.utc(2026, 1, 1);
-      final profileId = await db.into(db.accounts).insert(
+      final profileId = await db
+          .into(db.accounts)
+          .insert(
             AccountsCompanion.insert(
               email: 'test@example.com',
               displayName: 'Test User',
@@ -72,10 +74,9 @@ void main() {
               updatedAt: now,
             ),
           );
-      final profile =
-          await (db.select(db.accounts)
-                ..where((a) => a.id.equals(profileId)))
-              .getSingle();
+      final profile = await (db.select(
+        db.accounts,
+      )..where((a) => a.id.equals(profileId))).getSingle();
 
       final user = AuthUser.fromProfile(profile);
 
@@ -178,9 +179,7 @@ void main() {
         user: testUser,
         tier: UserTier.localBorn,
       );
-      final updated = initial.copyWith(
-        sessionStatus: SessionStatus.signedOut,
-      );
+      final updated = initial.copyWith(sessionStatus: SessionStatus.signedOut);
       expect(updated.sessionStatus, SessionStatus.signedOut);
       // Other fields preserved
       expect(updated.tier, UserTier.localBorn);
@@ -235,7 +234,10 @@ void main() {
     );
 
     test('returns displayName when non-empty', () {
-      const state = AuthState.signedIn(user: authUser, tier: UserTier.cloudBorn);
+      const state = AuthState.signedIn(
+        user: authUser,
+        tier: UserTier.cloudBorn,
+      );
       expect(state.displayIdentifier, 'Alice');
     });
 
@@ -268,30 +270,45 @@ void main() {
     );
 
     test('returns copy with updated sessionStatus', () {
-      const state = AuthState.signedIn(user: authUser, tier: UserTier.cloudBorn);
+      const state = AuthState.signedIn(
+        user: authUser,
+        tier: UserTier.cloudBorn,
+      );
       final copy = state.copyWith(sessionStatus: SessionStatus.signedOut);
       expect(copy.sessionStatus, SessionStatus.signedOut);
       expect(copy.currentUser, authUser);
     });
 
     test('clears user when clearUser=true', () {
-      const state = AuthState.signedIn(user: authUser, tier: UserTier.cloudBorn);
+      const state = AuthState.signedIn(
+        user: authUser,
+        tier: UserTier.cloudBorn,
+      );
       final copy = state.copyWith(clearUser: true);
       expect(copy.currentUser, isNull);
     });
 
     test('clears tier when clearTier=true', () {
-      const state = AuthState.signedIn(user: authUser, tier: UserTier.cloudBorn);
+      const state = AuthState.signedIn(
+        user: authUser,
+        tier: UserTier.cloudBorn,
+      );
       final copy = state.copyWith(clearTier: true);
       expect(copy.tier, isNull);
     });
 
     test('is cloudBorn / localBorn correctly', () {
-      const cloud = AuthState.signedIn(user: authUser, tier: UserTier.cloudBorn);
+      const cloud = AuthState.signedIn(
+        user: authUser,
+        tier: UserTier.cloudBorn,
+      );
       expect(cloud.isCloudBorn, isTrue);
       expect(cloud.isLocalBorn, isFalse);
 
-      const local = AuthState.signedIn(user: authUser, tier: UserTier.localBorn);
+      const local = AuthState.signedIn(
+        user: authUser,
+        tier: UserTier.localBorn,
+      );
       expect(local.isLocalBorn, isTrue);
       expect(local.isCloudBorn, isFalse);
     });

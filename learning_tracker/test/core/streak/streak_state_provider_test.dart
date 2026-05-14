@@ -21,11 +21,7 @@ void main() {
       StreakEventsCompanion.insert(
         profileId: profileId,
         eventType: 'completion',
-        dayUtc: DateTime.utc(
-          timestamp.year,
-          timestamp.month,
-          timestamp.day,
-        ),
+        dayUtc: DateTime.utc(timestamp.year, timestamp.month, timestamp.day),
         eventTimestamp: timestamp,
         clientDeviceId: const Value(null),
       ),
@@ -65,14 +61,17 @@ void main() {
       expect(state.maxStreak, 1);
     });
 
-    test('returns streak of 2 for completions on two consecutive days', () async {
-      await insertEvent(db, DateTime.utc(2026, 5, 13));
-      await insertEvent(db, DateTime.utc(2026, 5, 14));
+    test(
+      'returns streak of 2 for completions on two consecutive days',
+      () async {
+        await insertEvent(db, DateTime.utc(2026, 5, 13));
+        await insertEvent(db, DateTime.utc(2026, 5, 14));
 
-      final state = await provider.read(profileId: profileId);
-      expect(state.currentStreak, 2);
-      expect(state.maxStreak, 2);
-    });
+        final state = await provider.read(profileId: profileId);
+        expect(state.currentStreak, 2);
+        expect(state.maxStreak, 2);
+      },
+    );
 
     test('streak lapses when last completion was 2+ days ago', () async {
       // Last completion 3 days ago, today is May 14.
@@ -131,9 +130,9 @@ void main() {
 
     test('stream emits new value when event is added while watching', () async {
       final states = <int>[];
-      final sub = provider.watch(profileId: profileId).listen(
-        (s) => states.add(s.currentStreak),
-      );
+      final sub = provider
+          .watch(profileId: profileId)
+          .listen((s) => states.add(s.currentStreak));
       addTearDown(sub.cancel);
 
       // Give the first emission time to arrive.

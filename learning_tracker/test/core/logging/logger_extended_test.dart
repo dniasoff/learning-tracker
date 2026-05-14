@@ -44,10 +44,7 @@ void main() {
     });
 
     test('warning with exception includes exception in log', () {
-      logger.warning(
-        event: 'retry_triggered',
-        exception: Exception('timeout'),
-      );
+      logger.warning(event: 'retry_triggered', exception: Exception('timeout'));
       // history should contain at least one entry
       expect(talker.history, isNotEmpty);
     });
@@ -94,10 +91,7 @@ void main() {
 
     test('info with empty fields map logs event verbatim', () {
       logger.info(event: 'noop_event', fields: {});
-      expect(
-        talker.history.last.generateTextMessage(),
-        contains('noop_event'),
-      );
+      expect(talker.history.last.generateTextMessage(), contains('noop_event'));
     });
   });
 
@@ -147,11 +141,7 @@ void main() {
     });
 
     test('errorMsg with exception and stack does not throw', () {
-      logger.errorMsg(
-        'fatal',
-        Exception('crash'),
-        StackTrace.current,
-      );
+      logger.errorMsg('fatal', Exception('crash'), StackTrace.current);
       expect(talker.history, isNotEmpty);
     });
 
@@ -164,7 +154,11 @@ void main() {
     });
 
     test('criticalMsg with exception and stack does not throw', () {
-      logger.criticalMsg('critical error', Exception('boom'), StackTrace.current);
+      logger.criticalMsg(
+        'critical error',
+        Exception('boom'),
+        StackTrace.current,
+      );
       expect(talker.history, isNotEmpty);
     });
   });

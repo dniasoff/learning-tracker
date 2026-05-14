@@ -13,14 +13,16 @@ void main() {
 
   setUp(() async {
     db = inMemoryDb();
-    trackId = await db.into(db.curriculumTracks).insert(
-      CurriculumTracksCompanion.insert(
-        profileId: 1,
-        curriculumId: 'bavli',
-        trackType: 'personal',
-        activatedAt: DateTime.utc(2026, 1, 1),
-      ),
-    );
+    trackId = await db
+        .into(db.curriculumTracks)
+        .insert(
+          CurriculumTracksCompanion.insert(
+            profileId: 1,
+            curriculumId: 'bavli',
+            trackType: 'personal',
+            activatedAt: DateTime.utc(2026, 1, 1),
+          ),
+        );
   });
 
   tearDown(() async {
@@ -77,10 +79,7 @@ void main() {
     });
 
     test('is a no-op when the list is empty', () async {
-      await expectLater(
-        db.completionDao.insertCompletionsBatch([]),
-        completes,
-      );
+      await expectLater(db.completionDao.insertCompletionsBatch([]), completes);
 
       final rows = await db.completionDao.getCompletionsByTrack(trackId);
       expect(rows, isEmpty);
@@ -101,8 +100,10 @@ void main() {
         ),
       );
 
-      final rows = await db.completionDao
-          .getCompletionsByTrackAndProfile(trackId, 1);
+      final rows = await db.completionDao.getCompletionsByTrackAndProfile(
+        trackId,
+        1,
+      );
       expect(rows, hasLength(2));
     });
 
@@ -111,27 +112,33 @@ void main() {
       await db.completionDao.insertCompletion(makeCompletion(profileId: 1));
 
       // Insert a second track for profile 2.
-      final track2 = await db.into(db.curriculumTracks).insert(
-        CurriculumTracksCompanion.insert(
-          profileId: 2,
-          curriculumId: 'bavli',
-          trackType: 'personal',
-          activatedAt: DateTime.utc(2026, 1, 1),
-        ),
-      );
+      final track2 = await db
+          .into(db.curriculumTracks)
+          .insert(
+            CurriculumTracksCompanion.insert(
+              profileId: 2,
+              curriculumId: 'bavli',
+              trackType: 'personal',
+              activatedAt: DateTime.utc(2026, 1, 1),
+            ),
+          );
       await db.completionDao.insertCompletion(
         makeCompletion(profileId: 2, overrideTrackId: track2),
       );
 
-      final rows = await db.completionDao
-          .getCompletionsByTrackAndProfile(trackId, 1);
+      final rows = await db.completionDao.getCompletionsByTrackAndProfile(
+        trackId,
+        1,
+      );
       expect(rows, hasLength(1));
       expect(rows.first.profileId, 1);
     });
 
     test('returns empty list when no completions exist', () async {
-      final rows = await db.completionDao
-          .getCompletionsByTrackAndProfile(trackId, 1);
+      final rows = await db.completionDao.getCompletionsByTrackAndProfile(
+        trackId,
+        1,
+      );
       expect(rows, isEmpty);
     });
   });
@@ -142,42 +149,45 @@ void main() {
 
   group('CompletionDao.getAggregateCountByTrack', () {
     test('returns 0 when no completions exist', () async {
-      final count =
-          await db.completionDao.getAggregateCountByTrack(trackId, 1);
+      final count = await db.completionDao.getAggregateCountByTrack(trackId, 1);
       expect(count, 0);
     });
 
     test('counts all completions for the given track and profile', () async {
       await db.completionDao.insertCompletion(
-        makeCompletion(sefariaRef: 'Berakhot.2a', completedAt: DateTime.utc(2026, 1, 1)),
+        makeCompletion(
+          sefariaRef: 'Berakhot.2a',
+          completedAt: DateTime.utc(2026, 1, 1),
+        ),
       );
       await db.completionDao.insertCompletion(
-        makeCompletion(sefariaRef: 'Berakhot.2b', completedAt: DateTime.utc(2026, 1, 2)),
+        makeCompletion(
+          sefariaRef: 'Berakhot.2b',
+          completedAt: DateTime.utc(2026, 1, 2),
+        ),
       );
 
-      final count =
-          await db.completionDao.getAggregateCountByTrack(trackId, 1);
+      final count = await db.completionDao.getAggregateCountByTrack(trackId, 1);
       expect(count, 2);
     });
 
     test('is scoped to the given profile', () async {
-      final track2 = await db.into(db.curriculumTracks).insert(
-        CurriculumTracksCompanion.insert(
-          profileId: 2,
-          curriculumId: 'bavli',
-          trackType: 'personal',
-          activatedAt: DateTime.utc(2026, 1, 1),
-        ),
-      );
+      final track2 = await db
+          .into(db.curriculumTracks)
+          .insert(
+            CurriculumTracksCompanion.insert(
+              profileId: 2,
+              curriculumId: 'bavli',
+              trackType: 'personal',
+              activatedAt: DateTime.utc(2026, 1, 1),
+            ),
+          );
       await db.completionDao.insertCompletion(makeCompletion(profileId: 1));
       await db.completionDao.insertCompletion(
         makeCompletion(profileId: 2, overrideTrackId: track2),
       );
 
-      expect(
-        await db.completionDao.getAggregateCountByTrack(trackId, 1),
-        1,
-      );
+      expect(await db.completionDao.getAggregateCountByTrack(trackId, 1), 1);
     });
   });
 
@@ -283,14 +293,16 @@ void main() {
     });
 
     test('is scoped to the given track', () async {
-      final other = await db.into(db.curriculumTracks).insert(
-        CurriculumTracksCompanion.insert(
-          profileId: 1,
-          curriculumId: 'bavli',
-          trackType: 'amud',
-          activatedAt: DateTime.utc(2026, 1, 1),
-        ),
-      );
+      final other = await db
+          .into(db.curriculumTracks)
+          .insert(
+            CurriculumTracksCompanion.insert(
+              profileId: 1,
+              curriculumId: 'bavli',
+              trackType: 'amud',
+              activatedAt: DateTime.utc(2026, 1, 1),
+            ),
+          );
 
       await db.completionDao.insertCompletion(
         makeCompletion(

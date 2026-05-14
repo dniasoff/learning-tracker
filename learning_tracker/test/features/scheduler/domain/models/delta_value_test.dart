@@ -179,10 +179,7 @@ void main() {
     });
 
     test('toString includes nested value', () {
-      expect(
-        const DateScheduleDelta(DateDelta(3)).toString(),
-        contains('3'),
-      );
+      expect(const DateScheduleDelta(DateDelta(3)).toString(), contains('3'));
     });
 
     test('toString exact format', () {
@@ -193,10 +190,7 @@ void main() {
     });
 
     test('is a ScheduleDelta', () {
-      expect(
-        const DateScheduleDelta(DateDelta(1)),
-        isA<ScheduleDelta>(),
-      );
+      expect(const DateScheduleDelta(DateDelta(1)), isA<ScheduleDelta>());
     });
   });
 
@@ -256,10 +250,7 @@ void main() {
     });
 
     test('toString includes nested value', () {
-      expect(
-        const PaceScheduleDelta(PaceDelta(-7)).toString(),
-        contains('-7'),
-      );
+      expect(const PaceScheduleDelta(PaceDelta(-7)).toString(), contains('-7'));
     });
 
     test('toString exact format', () {
@@ -270,22 +261,22 @@ void main() {
     });
 
     test('is a ScheduleDelta', () {
-      expect(
-        const PaceScheduleDelta(PaceDelta(1)),
-        isA<ScheduleDelta>(),
-      );
+      expect(const PaceScheduleDelta(PaceDelta(1)), isA<ScheduleDelta>());
     });
   });
 
   // ─── Cross-type checks ─────────────────────────────────────────────────────
 
   group('ScheduleDelta — sealed type checks', () {
-    test('DateScheduleDelta and PaceScheduleDelta share ScheduleDelta base', () {
-      const a = DateScheduleDelta(DateDelta(1));
-      const b = PaceScheduleDelta(PaceDelta(1));
-      expect(a, isA<ScheduleDelta>());
-      expect(b, isA<ScheduleDelta>());
-    });
+    test(
+      'DateScheduleDelta and PaceScheduleDelta share ScheduleDelta base',
+      () {
+        const a = DateScheduleDelta(DateDelta(1));
+        const b = PaceScheduleDelta(PaceDelta(1));
+        expect(a, isA<ScheduleDelta>());
+        expect(b, isA<ScheduleDelta>());
+      },
+    );
 
     test('pattern matching on ScheduleDelta works', () {
       const ScheduleDelta delta = DateScheduleDelta(DateDelta(7));

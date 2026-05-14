@@ -91,22 +91,28 @@ void main() {
       expect(result, isEmpty);
     });
 
-    test('getActiveProgramsByCurriculumType returns only active programs of that type', () {
-      final all = repo.getAllPrograms();
-      final types = all.map((p) => p.curriculumType).toSet();
-      for (final type in types) {
-        final filtered = repo.getActiveProgramsByCurriculumType(type);
-        for (final p in filtered) {
-          expect(p.curriculumType, type);
-          expect(p.isActive, isTrue);
+    test(
+      'getActiveProgramsByCurriculumType returns only active programs of that type',
+      () {
+        final all = repo.getAllPrograms();
+        final types = all.map((p) => p.curriculumType).toSet();
+        for (final type in types) {
+          final filtered = repo.getActiveProgramsByCurriculumType(type);
+          for (final p in filtered) {
+            expect(p.curriculumType, type);
+            expect(p.isActive, isTrue);
+          }
         }
-      }
-    });
+      },
+    );
 
-    test('getActiveProgramsByCurriculumType returns empty for unknown type', () {
-      final result = repo.getActiveProgramsByCurriculumType('__no_such__');
-      expect(result, isEmpty);
-    });
+    test(
+      'getActiveProgramsByCurriculumType returns empty for unknown type',
+      () {
+        final result = repo.getActiveProgramsByCurriculumType('__no_such__');
+        expect(result, isEmpty);
+      },
+    );
 
     test('programs have non-empty name and stagesConfig', () {
       for (final p in repo.getAllPrograms()) {

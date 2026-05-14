@@ -49,10 +49,7 @@ void main() {
 
     test('returns 0 when start is after end', () {
       final studyDays = {1: 'study'};
-      expect(
-        countStudyDaysInInclusiveMapRange(studyDays, sun, mon),
-        0,
-      );
+      expect(countStudyDaysInInclusiveMapRange(studyDays, sun, mon), 0);
     });
 
     test('returns 1 for same-day range on a study day', () {
@@ -64,16 +61,19 @@ void main() {
       );
     });
 
-    test('returns 1 for same-day range on non-study day when only off entry present', () {
-      // studyDays = {3: 'off'} means no 'study' entries; studyWeekdays is empty
-      // so the code falls back to all 7 days and the Wednesday IS counted.
-      final wednesday = DateTime(2026, 3, 11); // weekday = 3
-      final studyDays = {3: 'off'};
-      expect(
-        countStudyDaysInInclusiveMapRange(studyDays, wednesday, wednesday),
-        1,
-      );
-    });
+    test(
+      'returns 1 for same-day range on non-study day when only off entry present',
+      () {
+        // studyDays = {3: 'off'} means no 'study' entries; studyWeekdays is empty
+        // so the code falls back to all 7 days and the Wednesday IS counted.
+        final wednesday = DateTime(2026, 3, 11); // weekday = 3
+        final studyDays = {3: 'off'};
+        expect(
+          countStudyDaysInInclusiveMapRange(studyDays, wednesday, wednesday),
+          1,
+        );
+      },
+    );
 
     test('falls back to all 7 days when no study entries exist', () {
       // Both empty map and all-off map result in "all days" fallback.
@@ -84,15 +84,34 @@ void main() {
       // Jan 30 (Fri) to Feb 2 (Mon): 4 days, all study.
       final start = DateTime(2026, 1, 30); // Friday
       final end = DateTime(2026, 2, 2); // Monday
-      final allStudy = {1: 'study', 2: 'study', 3: 'study', 4: 'study', 5: 'study', 6: 'study', 7: 'study'};
+      final allStudy = {
+        1: 'study',
+        2: 'study',
+        3: 'study',
+        4: 'study',
+        5: 'study',
+        6: 'study',
+        7: 'study',
+      };
       expect(countStudyDaysInInclusiveMapRange(allStudy, start, end), 4);
     });
 
-    test('all-off map falls back to all 7 study days (no study entries means fallback)', () {
-      // When all entries are 'off', studyWeekdays set is empty, so fallback to all 7.
-      final allOff = {1: 'off', 2: 'off', 3: 'off', 4: 'off', 5: 'off', 6: 'off', 7: 'off'};
-      expect(countStudyDaysInInclusiveMapRange(allOff, mon, sun), 7);
-    });
+    test(
+      'all-off map falls back to all 7 study days (no study entries means fallback)',
+      () {
+        // When all entries are 'off', studyWeekdays set is empty, so fallback to all 7.
+        final allOff = {
+          1: 'off',
+          2: 'off',
+          3: 'off',
+          4: 'off',
+          5: 'off',
+          6: 'off',
+          7: 'off',
+        };
+        expect(countStudyDaysInInclusiveMapRange(allOff, mon, sun), 7);
+      },
+    );
   });
 
   // ─── localDateOnlyFromDt ──────────────────────────────────────────────────

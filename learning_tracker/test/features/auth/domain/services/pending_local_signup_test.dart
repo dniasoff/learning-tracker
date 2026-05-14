@@ -143,23 +143,26 @@ void main() {
       expect(result, isNull);
     });
 
-    test('writePayload then readPayload returns the same registration', () async {
-      final prefs = await SharedPreferences.getInstance();
-      const reg = PendingLocalRegistration(
-        accountId: 'acc-3',
-        dbFileName: 'learn.sqlite',
-        email: 'carol@example.com',
-        displayName: 'Carol',
-      );
+    test(
+      'writePayload then readPayload returns the same registration',
+      () async {
+        final prefs = await SharedPreferences.getInstance();
+        const reg = PendingLocalRegistration(
+          accountId: 'acc-3',
+          dbFileName: 'learn.sqlite',
+          email: 'carol@example.com',
+          displayName: 'Carol',
+        );
 
-      await PendingLocalSignupStore.writePayload(prefs, reg);
-      final result = await PendingLocalSignupStore.readPayload(prefs);
+        await PendingLocalSignupStore.writePayload(prefs, reg);
+        final result = await PendingLocalSignupStore.readPayload(prefs);
 
-      expect(result, isNotNull);
-      expect(result!.accountId, 'acc-3');
-      expect(result.email, 'carol@example.com');
-      expect(result.displayName, 'Carol');
-    });
+        expect(result, isNotNull);
+        expect(result!.accountId, 'acc-3');
+        expect(result.email, 'carol@example.com');
+        expect(result.displayName, 'Carol');
+      },
+    );
 
     test('clearPayload removes the stored payload', () async {
       final prefs = await SharedPreferences.getInstance();
@@ -261,10 +264,7 @@ void main() {
     test('releasing a non-reserved email is a no-op', () async {
       final prefs = await SharedPreferences.getInstance();
       // Should not throw
-      await PendingLocalSignupStore.releaseEmail(
-        prefs,
-        'nobody@example.com',
-      );
+      await PendingLocalSignupStore.releaseEmail(prefs, 'nobody@example.com');
     });
 
     test('releaseEmail is case-insensitive', () async {
@@ -281,8 +281,14 @@ void main() {
 
     test('multiple distinct emails can be reserved', () async {
       final prefs = await SharedPreferences.getInstance();
-      final ok1 = await PendingLocalSignupStore.tryReserveEmail(prefs, 'ira@example.com');
-      final ok2 = await PendingLocalSignupStore.tryReserveEmail(prefs, 'judy@example.com');
+      final ok1 = await PendingLocalSignupStore.tryReserveEmail(
+        prefs,
+        'ira@example.com',
+      );
+      final ok2 = await PendingLocalSignupStore.tryReserveEmail(
+        prefs,
+        'judy@example.com',
+      );
       expect(ok1, isTrue);
       expect(ok2, isTrue);
     });

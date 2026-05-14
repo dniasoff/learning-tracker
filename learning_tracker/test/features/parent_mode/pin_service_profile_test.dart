@@ -12,7 +12,10 @@ MockFlutterSecureStorage createMockStorage() {
   final store = <String, String>{};
 
   when(
-    () => mock.write(key: any(named: 'key'), value: any(named: 'value')),
+    () => mock.write(
+      key: any(named: 'key'),
+      value: any(named: 'value'),
+    ),
   ).thenAnswer((invocation) async {
     final key = invocation.namedArguments[#key] as String;
     final value = invocation.namedArguments[#value] as String?;
@@ -150,10 +153,7 @@ void main() {
       }
       // Locked out now; changing PIN should clear lockout.
       await pinService.setProfilePin(profileId, '5678');
-      expect(
-        await pinService.verifyProfilePin(profileId, '5678'),
-        isTrue,
-      );
+      expect(await pinService.verifyProfilePin(profileId, '5678'), isTrue);
     });
 
     test('profile PIN lockout triggers after max failed attempts', () async {
@@ -167,11 +167,15 @@ void main() {
       );
     });
 
-    test('getProfileLockoutRemainingMinutes returns 0 when not locked', () async {
-      final mins =
-          await pinService.getProfileLockoutRemainingMinutes(profileId);
-      expect(mins, 0);
-    });
+    test(
+      'getProfileLockoutRemainingMinutes returns 0 when not locked',
+      () async {
+        final mins = await pinService.getProfileLockoutRemainingMinutes(
+          profileId,
+        );
+        expect(mins, 0);
+      },
+    );
 
     test(
       'getProfileLockoutRemainingMinutes returns positive value after lockout',
@@ -180,8 +184,9 @@ void main() {
         for (var i = 0; i < 5; i++) {
           await pinService.verifyProfilePin(profileId, '0000');
         }
-        final mins =
-            await pinService.getProfileLockoutRemainingMinutes(profileId);
+        final mins = await pinService.getProfileLockoutRemainingMinutes(
+          profileId,
+        );
         expect(mins, greaterThan(0));
       },
     );
@@ -198,10 +203,7 @@ void main() {
         await pinService.verifyProfilePin(profileId, '0000');
       }
       // Should NOT throw — lockout requires 5 consecutive failures.
-      expect(
-        await pinService.verifyProfilePin(profileId, '1234'),
-        isTrue,
-      );
+      expect(await pinService.verifyProfilePin(profileId, '1234'), isTrue);
     });
   });
 
@@ -248,15 +250,17 @@ void main() {
       );
     });
 
-    test('tutor PIN is independent from profile PIN (different namespace)',
-        () async {
-      await pinService.setProfilePin(profileId, '1111');
-      await pinService.setTutorPin(profileId, '2222');
+    test(
+      'tutor PIN is independent from profile PIN (different namespace)',
+      () async {
+        await pinService.setProfilePin(profileId, '1111');
+        await pinService.setTutorPin(profileId, '2222');
 
-      // Knowing the tutor PIN should not grant profile PIN access.
-      expect(await pinService.verifyProfilePin(profileId, '2222'), isFalse);
-      expect(await pinService.verifyTutorPin(profileId, '1111'), isFalse);
-    });
+        // Knowing the tutor PIN should not grant profile PIN access.
+        expect(await pinService.verifyProfilePin(profileId, '2222'), isFalse);
+        expect(await pinService.verifyTutorPin(profileId, '1111'), isFalse);
+      },
+    );
 
     test('tutor PIN lockout triggers after max failed attempts', () async {
       await pinService.setTutorPin(profileId, '9999');
@@ -270,10 +274,7 @@ void main() {
     });
 
     test('getTutorLockoutRemainingMinutes returns 0 when not locked', () async {
-      expect(
-        await pinService.getTutorLockoutRemainingMinutes(profileId),
-        0,
-      );
+      expect(await pinService.getTutorLockoutRemainingMinutes(profileId), 0);
     });
 
     test(
@@ -283,8 +284,9 @@ void main() {
         for (var i = 0; i < 5; i++) {
           await pinService.verifyTutorPin(profileId, '0000');
         }
-        final mins =
-            await pinService.getTutorLockoutRemainingMinutes(profileId);
+        final mins = await pinService.getTutorLockoutRemainingMinutes(
+          profileId,
+        );
         expect(mins, greaterThan(0));
       },
     );

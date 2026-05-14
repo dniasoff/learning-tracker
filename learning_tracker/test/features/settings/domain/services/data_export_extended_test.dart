@@ -33,8 +33,9 @@ void main() {
   Future<int> insertTrack({
     int profileId = 1,
     String curriculumId = 'mishnayos',
-  }) =>
-      db.into(db.curriculumTracks).insert(
+  }) => db
+      .into(db.curriculumTracks)
+      .insert(
         CurriculumTracksCompanion.insert(
           profileId: profileId,
           curriculumId: curriculumId,
@@ -49,16 +50,18 @@ void main() {
   group('exportData — curriculumScopes', () {
     test('exports curriculum scopes', () async {
       final trackId = await insertTrack();
-      await db.into(db.curriculumScopes).insert(
-        CurriculumScopesCompanion.insert(
-          profileId: 1,
-          curriculumId: 'mishnayos',
-          trackId: trackId,
-          scopeLevel: 1,
-          scopeValue: 'Zeraim',
-          createdAt: DateTime.utc(2026, 1, 1),
-        ),
-      );
+      await db
+          .into(db.curriculumScopes)
+          .insert(
+            CurriculumScopesCompanion.insert(
+              profileId: 1,
+              curriculumId: 'mishnayos',
+              trackId: trackId,
+              scopeLevel: 1,
+              scopeValue: 'Zeraim',
+              createdAt: DateTime.utc(2026, 1, 1),
+            ),
+          );
 
       final data =
           jsonDecode(await service.exportData()) as Map<String, dynamic>;
@@ -74,13 +77,15 @@ void main() {
 
   group('exportData — profilePrograms', () {
     test('exports profile program assignments', () async {
-      await db.into(db.profilePrograms).insert(
-        ProfileProgramsCompanion.insert(
-          profileId: 1,
-          curriculumType: 'mishnayos',
-          programId: 42,
-        ),
-      );
+      await db
+          .into(db.profilePrograms)
+          .insert(
+            ProfileProgramsCompanion.insert(
+              profileId: 1,
+              curriculumType: 'mishnayos',
+              programId: 42,
+            ),
+          );
 
       final data =
           jsonDecode(await service.exportData()) as Map<String, dynamic>;
@@ -97,16 +102,18 @@ void main() {
   group('exportData — studyDayConfigs', () {
     test('exports study day config rows', () async {
       final trackId = await insertTrack();
-      await db.into(db.studyDayConfigs).insert(
-        StudyDayConfigsCompanion.insert(
-          profileId: 1,
-          curriculumId: 'mishnayos',
-          trackId: trackId,
-          dayOfWeek: 1,
-          dayType: const Value('study'),
-          updatedAt: DateTime.utc(2026, 1, 1),
-        ),
-      );
+      await db
+          .into(db.studyDayConfigs)
+          .insert(
+            StudyDayConfigsCompanion.insert(
+              profileId: 1,
+              curriculumId: 'mishnayos',
+              trackId: trackId,
+              dayOfWeek: 1,
+              dayType: const Value('study'),
+              updatedAt: DateTime.utc(2026, 1, 1),
+            ),
+          );
 
       final data =
           jsonDecode(await service.exportData()) as Map<String, dynamic>;
@@ -209,42 +216,41 @@ void main() {
   // ── importData — curriculumScopes ─────────────────────────────────────────
 
   group('importData — curriculumScopes', () {
-    String payload({required List<Map<String, dynamic>> scopes}) =>
-        jsonEncode({
-          'formatVersion': 'schemaV1',
-          'exportedAt': '2026-01-01T00:00:00.000Z',
-          'appVersion': '1.0.0',
-          'userProfiles': <dynamic>[],
-          'learnerProfiles': <dynamic>[],
-          'curriculumTracks': [
-            {
-              'id': 1,
-              'profileId': 1,
-              'curriculumId': 'mishnayos',
-              'trackType': 'personal',
-              'isActive': true,
-              'activatedAt': '2026-01-01T00:00:00.000Z',
-              'deactivatedAt': null,
-              'paceResetDate': null,
-              'deletedAt': null,
-            },
-          ],
-          'curriculumScopes': scopes,
-          'profilePrograms': <dynamic>[],
-          'stageDefinitions': <dynamic>[],
-          'pointConfigs': <dynamic>[],
-          'studyDayConfigs': <dynamic>[],
-          'completions': <dynamic>[],
-          'completionEvents': <dynamic>[],
-          'dailyPlans': <dynamic>[],
-          'learningLedger': <dynamic>[],
-          'bookmarks': <dynamic>[],
-          'learningOrder': <dynamic>[],
-          'trackLearningOrder': <dynamic>[],
-          'goals': <dynamic>[],
-          'streaks': <dynamic>[],
-          'streakEvents': <dynamic>[],
-        });
+    String payload({required List<Map<String, dynamic>> scopes}) => jsonEncode({
+      'formatVersion': 'schemaV1',
+      'exportedAt': '2026-01-01T00:00:00.000Z',
+      'appVersion': '1.0.0',
+      'userProfiles': <dynamic>[],
+      'learnerProfiles': <dynamic>[],
+      'curriculumTracks': [
+        {
+          'id': 1,
+          'profileId': 1,
+          'curriculumId': 'mishnayos',
+          'trackType': 'personal',
+          'isActive': true,
+          'activatedAt': '2026-01-01T00:00:00.000Z',
+          'deactivatedAt': null,
+          'paceResetDate': null,
+          'deletedAt': null,
+        },
+      ],
+      'curriculumScopes': scopes,
+      'profilePrograms': <dynamic>[],
+      'stageDefinitions': <dynamic>[],
+      'pointConfigs': <dynamic>[],
+      'studyDayConfigs': <dynamic>[],
+      'completions': <dynamic>[],
+      'completionEvents': <dynamic>[],
+      'dailyPlans': <dynamic>[],
+      'learningLedger': <dynamic>[],
+      'bookmarks': <dynamic>[],
+      'learningOrder': <dynamic>[],
+      'trackLearningOrder': <dynamic>[],
+      'goals': <dynamic>[],
+      'streaks': <dynamic>[],
+      'streakEvents': <dynamic>[],
+    });
 
     test('imports curriculum scopes', () async {
       await service.importData(
@@ -320,11 +326,8 @@ void main() {
     test('imports study day configs', () async {
       await service.importData(payload());
 
-      final configs =
-          await db.studyDayConfigDao.getConfigsByCurriculumAndProfile(
-        'mishnayos',
-        1,
-      );
+      final configs = await db.studyDayConfigDao
+          .getConfigsByCurriculumAndProfile('mishnayos', 1);
       expect(configs, hasLength(1));
       expect(configs.first.dayOfWeek, 7);
     });

@@ -97,13 +97,15 @@ void main() {
   // ── getRecoveryInfo ───────────────────────────────────────────────────────
 
   group('StreakService.getRecoveryInfo', () {
-    test('returns wasRecovered=false and currentStreak=0 when no streak',
-        () async {
-      final info = await service.getRecoveryInfo();
-      expect(info.wasRecovered, isFalse);
-      expect(info.currentStreak, 0);
-      expect(info.missedDate, isNull);
-    });
+    test(
+      'returns wasRecovered=false and currentStreak=0 when no streak',
+      () async {
+        final info = await service.getRecoveryInfo();
+        expect(info.wasRecovered, isFalse);
+        expect(info.currentStreak, 0);
+        expect(info.missedDate, isNull);
+      },
+    );
 
     test('returns wasRecovered=false when graceUsedDate is null', () async {
       await upsertStreak(current: 5, max: 5);
@@ -113,18 +115,20 @@ void main() {
       expect(info.currentStreak, 5);
     });
 
-    test('returns wasRecovered=false when graceUsedDate was on a different day',
-        () async {
-      // graceUsedDate set to a past day, not today
-      await upsertStreak(
-        current: 5,
-        max: 5,
-        graceUsedDate: DateTime.utc(2020, 1, 1),
-      );
+    test(
+      'returns wasRecovered=false when graceUsedDate was on a different day',
+      () async {
+        // graceUsedDate set to a past day, not today
+        await upsertStreak(
+          current: 5,
+          max: 5,
+          graceUsedDate: DateTime.utc(2020, 1, 1),
+        );
 
-      final info = await service.getRecoveryInfo();
-      expect(info.wasRecovered, isFalse);
-    });
+        final info = await service.getRecoveryInfo();
+        expect(info.wasRecovered, isFalse);
+      },
+    );
 
     test('returns correct currentStreak even without recovery', () async {
       await upsertStreak(current: 15, max: 20);

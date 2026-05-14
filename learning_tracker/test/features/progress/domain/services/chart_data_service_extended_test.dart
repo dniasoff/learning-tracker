@@ -24,7 +24,9 @@ void main() {
 
   // Insert a basic curriculum track (needed for FK if any, but not always required).
   Future<int> insertTrack({String curriculumId = 'mishnayos'}) {
-    return db.into(db.curriculumTracks).insert(
+    return db
+        .into(db.curriculumTracks)
+        .insert(
           CurriculumTracksCompanion.insert(
             profileId: profileId,
             curriculumId: curriculumId,
@@ -42,7 +44,9 @@ void main() {
     int stageId = 1,
     int trackId = 1,
   }) {
-    return db.into(db.completions).insert(
+    return db
+        .into(db.completions)
+        .insert(
           CompletionsCompanion.insert(
             profileId: profileId,
             curriculumId: curriculumId,
@@ -62,7 +66,9 @@ void main() {
     DateTime? updatedAt,
   }) {
     final now = DateTime.utc(2026, 1, 1);
-    return db.into(db.goals).insert(
+    return db
+        .into(db.goals)
+        .insert(
           GoalsCompanion.insert(
             profileId: profileId,
             curriculumId: curriculumId,
@@ -95,51 +101,55 @@ void main() {
       expect(result, isNull);
     });
 
-    test('returns null when goal targetDate is same as createdAt (0 days)',
-        () async {
-      final d = DateTime.utc(2026, 5, 14);
-      await insertGoal(
-        curriculumId: 'mishnayos',
-        createdAt: d,
-        targetDate: d, // totalDays == 0 → null
-      );
+    test(
+      'returns null when goal targetDate is same as createdAt (0 days)',
+      () async {
+        final d = DateTime.utc(2026, 5, 14);
+        await insertGoal(
+          curriculumId: 'mishnayos',
+          createdAt: d,
+          targetDate: d, // totalDays == 0 → null
+        );
 
-      final result = await service.getTargetLine(
-        curriculumId: 'mishnayos',
-        startDate: DateTime(2026, 5, 1),
-        endDate: DateTime(2026, 5, 14),
-      );
-      expect(result, isNull);
-    });
+        final result = await service.getTargetLine(
+          curriculumId: 'mishnayos',
+          startDate: DateTime(2026, 5, 1),
+          endDate: DateTime(2026, 5, 14),
+        );
+        expect(result, isNull);
+      },
+    );
 
-    test('returns target line points when goal and targetDate are set',
-        () async {
-      final trackId = await insertTrack();
-      final goalCreatedAt = DateTime.utc(2026, 5, 1);
-      final goalTargetDate = DateTime.utc(2026, 5, 31);
+    test(
+      'returns target line points when goal and targetDate are set',
+      () async {
+        final trackId = await insertTrack();
+        final goalCreatedAt = DateTime.utc(2026, 5, 1);
+        final goalTargetDate = DateTime.utc(2026, 5, 31);
 
-      await insertGoal(
-        curriculumId: 'mishnayos',
-        createdAt: goalCreatedAt,
-        targetDate: goalTargetDate,
-      );
-      await insertCompletion(
-        curriculumId: 'mishnayos',
-        trackId: trackId,
-        completedAt: DateTime.utc(2026, 5, 10),
-      );
+        await insertGoal(
+          curriculumId: 'mishnayos',
+          createdAt: goalCreatedAt,
+          targetDate: goalTargetDate,
+        );
+        await insertCompletion(
+          curriculumId: 'mishnayos',
+          trackId: trackId,
+          completedAt: DateTime.utc(2026, 5, 10),
+        );
 
-      final result = await service.getTargetLine(
-        curriculumId: 'mishnayos',
-        startDate: DateTime(2026, 5, 5),
-        endDate: DateTime(2026, 5, 10),
-      );
+        final result = await service.getTargetLine(
+          curriculumId: 'mishnayos',
+          startDate: DateTime(2026, 5, 5),
+          endDate: DateTime(2026, 5, 10),
+        );
 
-      expect(result, isNotNull);
-      expect(result!.isNotEmpty, isTrue);
-      // Should have one entry per day: May 5–10 = 6 days.
-      expect(result.length, 6);
-    });
+        expect(result, isNotNull);
+        expect(result!.isNotEmpty, isTrue);
+        // Should have one entry per day: May 5–10 = 6 days.
+        expect(result.length, 6);
+      },
+    );
 
     test('target line is monotonically non-decreasing within range', () async {
       final trackId = await insertTrack();

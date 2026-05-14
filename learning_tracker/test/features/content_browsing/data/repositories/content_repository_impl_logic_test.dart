@@ -286,8 +286,10 @@ void main() {
         query: 'berakhot',
       );
 
-      expect(upper.map((i) => i.sefariaRef).toList(),
-          equals(lower.map((i) => i.sefariaRef).toList()));
+      expect(
+        upper.map((i) => i.sefariaRef).toList(),
+        equals(lower.map((i) => i.sefariaRef).toList()),
+      );
     });
 
     test('returns empty for query with no matches', () async {

@@ -86,9 +86,9 @@ void main() {
       final inserted = await db.learningOrderDao.getLearningOrderById(id);
       expect(inserted, isNotNull);
 
-      final updated = inserted!.toCompanion(true).copyWith(
-        userSortOrder: const Value(99),
-      );
+      final updated = inserted!
+          .toCompanion(true)
+          .copyWith(userSortOrder: const Value(99));
       final success = await db.learningOrderDao.updateLearningOrder(updated);
       expect(success, isTrue);
 
@@ -135,8 +135,9 @@ void main() {
       );
       expect(written, isTrue);
 
-      final rows =
-          await db.learningOrderDao.getLearningOrderByCurriculum('bavli');
+      final rows = await db.learningOrderDao.getLearningOrderByCurriculum(
+        'bavli',
+      );
       expect(rows, hasLength(1));
       expect(rows.first.userSortOrder, 5);
     });
@@ -166,8 +167,9 @@ void main() {
       );
       expect(written, isTrue);
 
-      final rows =
-          await db.learningOrderDao.getLearningOrderByCurriculum('bavli');
+      final rows = await db.learningOrderDao.getLearningOrderByCurriculum(
+        'bavli',
+      );
       expect(rows.first.userSortOrder, 10);
     });
 
@@ -195,42 +197,47 @@ void main() {
       );
       expect(written, isFalse);
 
-      final rows =
-          await db.learningOrderDao.getLearningOrderByCurriculum('bavli');
+      final rows = await db.learningOrderDao.getLearningOrderByCurriculum(
+        'bavli',
+      );
       expect(rows.first.userSortOrder, 7); // unchanged
     });
 
-    test('skips update when incoming timestamp is older than existing', () async {
-      final older = DateTime.utc(2025, 12, 1);
-      final newer = DateTime.utc(2026, 4, 1);
+    test(
+      'skips update when incoming timestamp is older than existing',
+      () async {
+        final older = DateTime.utc(2025, 12, 1);
+        final newer = DateTime.utc(2026, 4, 1);
 
-      // Insert with the newer timestamp first.
-      await db.learningOrderDao.upsertLearningOrderIfNewer(
-        LearningOrderCompanion.insert(
-          profileId: 1,
-          curriculumId: 'bavli',
-          sefariaRef: 'Berakhot',
-          userSortOrder: 3,
-        ),
-        updatedAt: newer,
-      );
+        // Insert with the newer timestamp first.
+        await db.learningOrderDao.upsertLearningOrderIfNewer(
+          LearningOrderCompanion.insert(
+            profileId: 1,
+            curriculumId: 'bavli',
+            sefariaRef: 'Berakhot',
+            userSortOrder: 3,
+          ),
+          updatedAt: newer,
+        );
 
-      // Attempt to apply an older remote record — should be rejected.
-      final written = await db.learningOrderDao.upsertLearningOrderIfNewer(
-        LearningOrderCompanion.insert(
-          profileId: 1,
-          curriculumId: 'bavli',
-          sefariaRef: 'Berakhot',
-          userSortOrder: 1,
-        ),
-        updatedAt: older,
-      );
-      expect(written, isFalse);
+        // Attempt to apply an older remote record — should be rejected.
+        final written = await db.learningOrderDao.upsertLearningOrderIfNewer(
+          LearningOrderCompanion.insert(
+            profileId: 1,
+            curriculumId: 'bavli',
+            sefariaRef: 'Berakhot',
+            userSortOrder: 1,
+          ),
+          updatedAt: older,
+        );
+        expect(written, isFalse);
 
-      final rows =
-          await db.learningOrderDao.getLearningOrderByCurriculum('bavli');
-      expect(rows.first.userSortOrder, 3); // still the newer value
-    });
+        final rows = await db.learningOrderDao.getLearningOrderByCurriculum(
+          'bavli',
+        );
+        expect(rows.first.userSortOrder, 3); // still the newer value
+      },
+    );
   });
 
   // ---------------------------------------------------------------------------
@@ -244,7 +251,11 @@ void main() {
 
     test('returns correct count', () async {
       await insertRow(curriculumId: 'bavli', sefariaRef: 'Berakhot');
-      await insertRow(curriculumId: 'bavli', sefariaRef: 'Shabbat', userSortOrder: 1);
+      await insertRow(
+        curriculumId: 'bavli',
+        sefariaRef: 'Shabbat',
+        userSortOrder: 1,
+      );
       await insertRow(curriculumId: 'mishnayos', sefariaRef: 'Peah');
 
       expect(await db.learningOrderDao.countByCurriculum('bavli'), 2);

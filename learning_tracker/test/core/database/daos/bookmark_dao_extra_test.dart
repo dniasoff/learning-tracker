@@ -15,7 +15,9 @@ void main() {
   setUp(() async {
     db = inMemoryDb();
 
-    trackId = await db.into(db.curriculumTracks).insert(
+    trackId = await db
+        .into(db.curriculumTracks)
+        .insert(
           CurriculumTracksCompanion.insert(
             profileId: profileId,
             curriculumId: curriculumId,

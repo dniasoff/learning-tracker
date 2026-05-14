@@ -151,19 +151,18 @@ class SacredWindowRepository {
 
     // Build companions outside the async closure so we don't capture mutable
     // state that could change before the future resolves.
-    final companions =
-        windows
-            .map(
-              (w) => SacredWindowEntriesCompanion.insert(
-                startUtc: w.startUtc,
-                endUtc: w.endUtc,
-                kind: w.kind.name,
-                lat: Value(lat),
-                lng: Value(lng),
-                inIsrael: inIsrael,
-              ),
-            )
-            .toList();
+    final companions = windows
+        .map(
+          (w) => SacredWindowEntriesCompanion.insert(
+            startUtc: w.startUtc,
+            endUtc: w.endUtc,
+            kind: w.kind.name,
+            lat: Value(lat),
+            lng: Value(lng),
+            inIsrael: inIsrael,
+          ),
+        )
+        .toList();
 
     dao.clearAll().then((_) => dao.insertAll(companions)).ignore();
   }

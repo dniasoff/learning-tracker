@@ -28,7 +28,9 @@ void main() {
     db = inMemoryDb();
 
     // Insert a track to satisfy the FK on stage_definitions.
-    trackId = await db.into(db.curriculumTracks).insert(
+    trackId = await db
+        .into(db.curriculumTracks)
+        .insert(
           CurriculumTracksCompanion.insert(
             profileId: 1,
             curriculumId: CurriculumId.mishnayos.storageKey,
@@ -71,8 +73,7 @@ void main() {
 
   group('LearningProcessWizardService.getPresetsForCurriculum', () {
     test('returns programs for the given curriculum', () {
-      final presets =
-          service.getPresetsForCurriculum(CurriculumId.mishnayos);
+      final presets = service.getPresetsForCurriculum(CurriculumId.mishnayos);
       for (final p in presets) {
         expect(p.curriculumType, CurriculumId.mishnayos.storageKey);
       }
@@ -81,8 +82,7 @@ void main() {
     test('returns empty list for a curriculum with no programs', () {
       // All 9 curricula should have at least some programs; but if not,
       // the function should return an empty list without error.
-      final presets =
-          service.getPresetsForCurriculum(CurriculumId.mussar);
+      final presets = service.getPresetsForCurriculum(CurriculumId.mussar);
       expect(presets, isA<List<LearningProgramData>>());
     });
 
@@ -92,11 +92,14 @@ void main() {
       expect(presets.every((p) => p.curriculumType == 'mishnayos'), isTrue);
     });
 
-    test('returns empty list for unknown curriculum with no seeds (F2 variant)', () {
-      // CurriculumId.chumash seeds may or may not exist — we just assert type safety.
-      final presets = service.getPresetsForCurriculum(CurriculumId.bavli);
-      expect(presets, isA<List<LearningProgramData>>());
-    });
+    test(
+      'returns empty list for unknown curriculum with no seeds (F2 variant)',
+      () {
+        // CurriculumId.chumash seeds may or may not exist — we just assert type safety.
+        final presets = service.getPresetsForCurriculum(CurriculumId.bavli);
+        expect(presets, isA<List<LearningProgramData>>());
+      },
+    );
   });
 
   // ─── WizardChoice.noReview ────────────────────────────────────────────────
@@ -107,11 +110,7 @@ void main() {
         curriculumId: CurriculumId.mishnayos,
         choice: WizardChoice.noReview,
       );
-      await service.applyWizardResult(
-        result,
-        profileId: 1,
-        trackId: trackId,
-      );
+      await service.applyWizardResult(result, profileId: 1, trackId: trackId);
 
       final stages = await db.stageDao.getStagesByTrack(trackId);
       expect(stages.length, 1);
@@ -140,11 +139,7 @@ void main() {
         choice: WizardChoice.noReview,
       );
 
-      await service.applyWizardResult(
-        result,
-        profileId: 1,
-        trackId: trackId,
-      );
+      await service.applyWizardResult(result, profileId: 1, trackId: trackId);
 
       final stages = await db.stageDao.getStagesByTrack(trackId);
       expect(stages, hasLength(1));
@@ -171,11 +166,7 @@ void main() {
         choice: WizardChoice.noReview,
       );
 
-      await service.applyWizardResult(
-        result,
-        profileId: 1,
-        trackId: trackId,
-      );
+      await service.applyWizardResult(result, profileId: 1, trackId: trackId);
 
       final stages = await db.stageDao.getStagesByTrack(trackId);
       // Old stage replaced; only the one Learn stage remains.
@@ -183,41 +174,44 @@ void main() {
       expect(stages.first.stageName, 'לימוד');
     });
 
-    test('replaces existing stages before creating new ones (F2 variant)', () async {
-      // Pre-populate two stages using mishnayos (tracks use mishnayos curriculumId).
-      await db.stageDao.insertStageDefinition(
-        StageDefinitionsCompanion.insert(
-          profileId: 1,
-          curriculumId: CurriculumId.mishnayos.storageKey,
-          trackId: trackId,
-          stageOrder: 1,
-          stageName: 'old stage A',
-          delayDays: 0,
-        ),
-      );
-      await db.stageDao.insertStageDefinition(
-        StageDefinitionsCompanion.insert(
-          profileId: 1,
-          curriculumId: CurriculumId.mishnayos.storageKey,
-          trackId: trackId,
-          stageOrder: 2,
-          stageName: 'old stage B',
-          delayDays: 7,
-        ),
-      );
-      expect(await db.stageDao.getStagesByTrack(trackId), hasLength(2));
+    test(
+      'replaces existing stages before creating new ones (F2 variant)',
+      () async {
+        // Pre-populate two stages using mishnayos (tracks use mishnayos curriculumId).
+        await db.stageDao.insertStageDefinition(
+          StageDefinitionsCompanion.insert(
+            profileId: 1,
+            curriculumId: CurriculumId.mishnayos.storageKey,
+            trackId: trackId,
+            stageOrder: 1,
+            stageName: 'old stage A',
+            delayDays: 0,
+          ),
+        );
+        await db.stageDao.insertStageDefinition(
+          StageDefinitionsCompanion.insert(
+            profileId: 1,
+            curriculumId: CurriculumId.mishnayos.storageKey,
+            trackId: trackId,
+            stageOrder: 2,
+            stageName: 'old stage B',
+            delayDays: 7,
+          ),
+        );
+        expect(await db.stageDao.getStagesByTrack(trackId), hasLength(2));
 
-      const result = WizardResult(
-        curriculumId: CurriculumId.mishnayos,
-        choice: WizardChoice.noReview,
-      );
+        const result = WizardResult(
+          curriculumId: CurriculumId.mishnayos,
+          choice: WizardChoice.noReview,
+        );
 
-      await service.applyWizardResult(result, profileId: 1, trackId: trackId);
+        await service.applyWizardResult(result, profileId: 1, trackId: trackId);
 
-      final stages = await db.stageDao.getStagesByTrack(trackId);
-      expect(stages, hasLength(1));
-      expect(stages.first.stageName, 'לימוד');
-    });
+        final stages = await db.stageDao.getStagesByTrack(trackId);
+        expect(stages, hasLength(1));
+        expect(stages.first.stageName, 'לימוד');
+      },
+    );
   });
 
   // ─── WizardChoice.custom ─────────────────────────────────────────────────
@@ -293,10 +287,7 @@ void main() {
         curriculumId: CurriculumId.mishnayos,
         choice: WizardChoice.custom,
         customRounds: [
-          CustomRound(
-            label: 'Rolling',
-            scheduleType: ScheduleType.rolling,
-          ),
+          CustomRound(label: 'Rolling', scheduleType: ScheduleType.rolling),
         ],
       );
 
@@ -327,11 +318,7 @@ void main() {
         ],
       );
 
-      await service.applyWizardResult(
-        result,
-        profileId: 1,
-        trackId: trackId,
-      );
+      await service.applyWizardResult(result, profileId: 1, trackId: trackId);
 
       final stages = await db.stageDao.getStagesByTrack(trackId);
       expect(stages, hasLength(3)); // Learn + 2 rounds
@@ -355,42 +342,36 @@ void main() {
         ],
       );
 
-      await service.applyWizardResult(
-        result,
-        profileId: 1,
-        trackId: trackId,
-      );
+      await service.applyWizardResult(result, profileId: 1, trackId: trackId);
 
       final stages = await db.stageDao.getStagesByTrack(trackId);
       expect(stages.map((s) => s.stageOrder).toList(), [1, 2]);
     });
 
-    test('custom round with weekly schedule type stores scheduleType correctly',
-        () async {
-      const result = WizardResult(
-        curriculumId: CurriculumId.mishnayos,
-        choice: WizardChoice.custom,
-        customRounds: [
-          CustomRound(
-            label: 'Weekly Review',
-            scheduleType: ScheduleType.weekly,
-            daysOfWeek: [1, 5], // Mon, Fri
-          ),
-        ],
-      );
+    test(
+      'custom round with weekly schedule type stores scheduleType correctly',
+      () async {
+        const result = WizardResult(
+          curriculumId: CurriculumId.mishnayos,
+          choice: WizardChoice.custom,
+          customRounds: [
+            CustomRound(
+              label: 'Weekly Review',
+              scheduleType: ScheduleType.weekly,
+              daysOfWeek: [1, 5], // Mon, Fri
+            ),
+          ],
+        );
 
-      await service.applyWizardResult(
-        result,
-        profileId: 1,
-        trackId: trackId,
-      );
+        await service.applyWizardResult(result, profileId: 1, trackId: trackId);
 
-      final stages = await db.stageDao.getStagesByTrack(trackId);
-      expect(stages, hasLength(2));
-      expect(stages[1].stageName, 'Weekly Review');
-      // scheduleType stored as storageKey string
-      expect(stages[1].scheduleType, ScheduleType.weekly.storageKey);
-    });
+        final stages = await db.stageDao.getStagesByTrack(trackId);
+        expect(stages, hasLength(2));
+        expect(stages[1].stageName, 'Weekly Review');
+        // scheduleType stored as storageKey string
+        expect(stages[1].scheduleType, ScheduleType.weekly.storageKey);
+      },
+    );
 
     test('custom with empty customRounds only creates Learn stage', () async {
       const result = WizardResult(
@@ -399,11 +380,7 @@ void main() {
         customRounds: [],
       );
 
-      await service.applyWizardResult(
-        result,
-        profileId: 1,
-        trackId: trackId,
-      );
+      await service.applyWizardResult(result, profileId: 1, trackId: trackId);
 
       final stages = await db.stageDao.getStagesByTrack(trackId);
       expect(stages, hasLength(1));
@@ -498,10 +475,8 @@ void main() {
   group('LearningProcessWizardService — preset', () {
     test('creates stages from the program stages_config', () async {
       // Use program ID 1 which must exist in learningProgramSeeds.
-      final programs =
-          LearningProgramRepository.instance.getActiveProgramsByCurriculumType(
-        CurriculumId.mishnayos.storageKey,
-      );
+      final programs = LearningProgramRepository.instance
+          .getActiveProgramsByCurriculumType(CurriculumId.mishnayos.storageKey);
       // Skip the test if no mishnayos programs are seeded.
       if (programs.isEmpty) return;
 
@@ -512,11 +487,7 @@ void main() {
         programId: program.id,
       );
 
-      await service.applyWizardResult(
-        result,
-        profileId: 1,
-        trackId: trackId,
-      );
+      await service.applyWizardResult(result, profileId: 1, trackId: trackId);
 
       final stages = await db.stageDao.getStagesByTrack(trackId);
       expect(stages, isNotEmpty);
@@ -525,10 +496,8 @@ void main() {
     });
 
     test('stores the preset program association in profilePrograms', () async {
-      final programs =
-          LearningProgramRepository.instance.getActiveProgramsByCurriculumType(
-        CurriculumId.mishnayos.storageKey,
-      );
+      final programs = LearningProgramRepository.instance
+          .getActiveProgramsByCurriculumType(CurriculumId.mishnayos.storageKey);
       if (programs.isEmpty) return;
 
       final program = programs.first;
@@ -538,11 +507,7 @@ void main() {
         programId: program.id,
       );
 
-      await service.applyWizardResult(
-        result,
-        profileId: 1,
-        trackId: trackId,
-      );
+      await service.applyWizardResult(result, profileId: 1, trackId: trackId);
 
       final profilePrograms = await db.select(db.profilePrograms).get();
       expect(profilePrograms.any((p) => p.programId == program.id), isTrue);
@@ -555,11 +520,7 @@ void main() {
         programId: 9999, // non-existent
       );
 
-      await service.applyWizardResult(
-        result,
-        profileId: 1,
-        trackId: trackId,
-      );
+      await service.applyWizardResult(result, profileId: 1, trackId: trackId);
 
       final stages = await db.stageDao.getStagesByTrack(trackId);
       expect(stages, isEmpty);
@@ -583,25 +544,26 @@ void main() {
       // If no stages, the program ID may not exist for mishnayos — just don't throw.
     });
 
-    test('no-op when programId does not exist in repository (F2 variant)', () async {
-      const result = WizardResult(
-        curriculumId: CurriculumId.mishnayos,
-        choice: WizardChoice.preset,
-        programId: 99999, // non-existent
-      );
+    test(
+      'no-op when programId does not exist in repository (F2 variant)',
+      () async {
+        const result = WizardResult(
+          curriculumId: CurriculumId.mishnayos,
+          choice: WizardChoice.preset,
+          programId: 99999, // non-existent
+        );
 
-      await service.applyWizardResult(result, profileId: 1, trackId: trackId);
+        await service.applyWizardResult(result, profileId: 1, trackId: trackId);
 
-      // Should not throw, stages list should be empty.
-      final stages = await db.stageDao.getStagesByTrack(trackId);
-      expect(stages, isEmpty);
-    });
+        // Should not throw, stages list should be empty.
+        final stages = await db.stageDao.getStagesByTrack(trackId);
+        expect(stages, isEmpty);
+      },
+    );
 
     test('preset sets profile program association (F2 variant)', () async {
-      final programs =
-          LearningProgramRepository.instance.getActiveProgramsByCurriculumType(
-        CurriculumId.mishnayos.storageKey,
-      );
+      final programs = LearningProgramRepository.instance
+          .getActiveProgramsByCurriculumType(CurriculumId.mishnayos.storageKey);
       if (programs.isEmpty) return;
 
       final program = programs.first;
@@ -613,8 +575,10 @@ void main() {
 
       await service.applyWizardResult(result, profileId: 1, trackId: trackId);
 
-      final prog = await db.profileProgramDao
-          .getProgramForProfileAndCurriculum(1, CurriculumId.mishnayos.storageKey);
+      final prog = await db.profileProgramDao.getProgramForProfileAndCurriculum(
+        1,
+        CurriculumId.mishnayos.storageKey,
+      );
       expect(prog, isNotNull);
       expect(prog!.programId, program.id);
     });
@@ -635,7 +599,11 @@ void main() {
 
     test('custom result stores customRounds', () {
       const rounds = [
-        CustomRound(label: 'R1', scheduleType: ScheduleType.delay, delayDays: 3),
+        CustomRound(
+          label: 'R1',
+          scheduleType: ScheduleType.delay,
+          delayDays: 3,
+        ),
       ];
       const result = WizardResult(
         curriculumId: CurriculumId.mishnayos,
