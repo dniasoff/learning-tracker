@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
-import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/widgets/item_review_breakdown.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/widgets/review_count_badge.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/completion_providers.dart';
+import 'package:learning_tracker/features/stages/domain/repositories/stage_definition_repository.dart';
+import 'package:learning_tracker/features/stages/presentation/providers/stage_providers.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// Displays a single content item in the hierarchy browser.
@@ -190,7 +190,13 @@ class _StageBreakdownSheet extends ConsumerWidget {
         sefariaRef: item.sefariaRef,
       )),
     );
-    final db = ref.watch(userDatabaseProvider);
+    final curriculumEnum = CurriculumId.values.firstWhere(
+      (c) => c.storageKey == curriculumId,
+      orElse: () => CurriculumId.mishnayos,
+    );
+    final stageRepository = ref.watch(
+      stageDefinitionRepositoryProvider(curriculumEnum),
+    );
 
     return Padding(
       padding: const EdgeInsets.all(24),
@@ -232,7 +238,7 @@ class _StageBreakdownSheet extends ConsumerWidget {
                 );
               }
               return FutureBuilder<Map<int, String>>(
-                future: _resolveStageNames(db, curriculumId),
+                future: _resolveStageNames(stageRepository, curriculumEnum),
                 builder: (context, snapshot) {
                   final names = snapshot.data ?? {};
                   return ItemReviewBreakdown(
@@ -254,12 +260,10 @@ class _StageBreakdownSheet extends ConsumerWidget {
   }
 
   Future<Map<int, String>> _resolveStageNames(
-    UserDatabase db,
-    String curriculumId,
+    StageDefinitionRepository stageRepository,
+    CurriculumId curriculumId,
   ) async {
-    final stages = await db.stageDao.getStageDefinitionsByCurriculum(
-      curriculumId,
-    );
+    final stages = await stageRepository.getStagesForCurriculum(curriculumId);
     return {for (final s in stages) s.id: s.stageName};
   }
 }

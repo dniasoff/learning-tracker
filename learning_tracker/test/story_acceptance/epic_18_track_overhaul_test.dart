@@ -170,6 +170,11 @@ void main() {
             activationService: activationService,
             wizardService: wizardService,
             goalRepository: goalRepo,
+            stageRepository: StageDefinitionRepositoryImpl(
+              stageDao: db.stageDao,
+              completionDao: db.completionDao,
+              pushSettings: null,
+            ),
           );
         });
 

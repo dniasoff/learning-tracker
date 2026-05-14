@@ -290,6 +290,25 @@ class StageDefinitionRepositoryImpl implements StageDefinitionRepository {
   Future<bool> hasCompletionsForStage(int stageId) =>
       _completionDao.hasCompletionsForStage(stageId);
 
+  @override
+  Future<List<StageDefinition>> getStagesByTrack(int trackId) async {
+    final rows = await _stageDao.getStagesByTrack(trackId);
+    return rows.map(_rowToModel).toList();
+  }
+
+  @override
+  Future<void> deleteStagesForTrack(int trackId) async {
+    // No pushSettings call here — callers (track creation/deletion) are
+    // responsible for syncing after the full replacement is complete.
+    await _stageDao.deleteStagesForTrack(trackId);
+  }
+
+  @override
+  Future<List<StageDefinition>> getAllStageDefinitions() async {
+    final rows = await _stageDao.getAllStageDefinitions();
+    return rows.map(_rowToModel).toList();
+  }
+
   // ── Private helpers ──────────────────────────────────────────────────────
 
   StageDefinition _rowToModel(db.StageDefinition row) {

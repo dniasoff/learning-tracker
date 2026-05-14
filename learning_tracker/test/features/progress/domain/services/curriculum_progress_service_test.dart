@@ -1,7 +1,11 @@
 import 'package:learning_tracker/core/database/user/user_database.dart';
+import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/features/progress/domain/services/curriculum_progress_service.dart';
+import 'package:learning_tracker/features/stages/domain/models/schedule_type.dart';
+import 'package:learning_tracker/features/stages/domain/models/stage_definition.dart'
+    as domain_stage;
 import 'package:test/test.dart';
 
 import '../../../../helpers/test_database.dart';
@@ -70,8 +74,8 @@ void main() {
     return (await db.completionDao.getCompletionById(id))!;
   }
 
-  /// Helper to insert a stage definition and return the row.
-  Future<StageDefinition> insertStage(
+  /// Helper to insert a stage definition and return the domain model.
+  Future<domain_stage.StageDefinition> insertStage(
     UserDatabase db, {
     required int stageOrder,
     required String stageName,
@@ -87,7 +91,19 @@ void main() {
         delayDays: 0,
       ),
     );
-    return (await db.stageDao.getStageDefinitionById(id))!;
+    final curricEnum = CurriculumId.values.firstWhere(
+      (c) => c.storageKey == curriculumId,
+      orElse: () => CurriculumId.mishnayos,
+    );
+    return domain_stage.StageDefinition(
+      id: id,
+      curriculumId: curricEnum,
+      stageOrder: stageOrder,
+      stageName: stageName,
+      delayDays: 0,
+      isDefault: false,
+      scheduleType: ScheduleType.delay,
+    );
   }
 
   group('CurriculumProgressService', () {

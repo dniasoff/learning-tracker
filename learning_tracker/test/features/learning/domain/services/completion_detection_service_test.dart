@@ -4,6 +4,7 @@ import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 import 'package:learning_tracker/features/learning/data/repositories/learning_ledger_repository_impl.dart';
 import 'package:learning_tracker/features/learning/domain/services/completion_detection_service.dart';
+import 'package:learning_tracker/features/stages/data/repositories/stage_definition_repository_impl.dart';
 import 'package:learning_tracker/features/sync/data/sync_engine.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:test/test.dart';
@@ -101,10 +102,16 @@ void main() {
       activeProfileId: 1,
       activeProfileMode: 'adult',
     );
+    final stageRepo = StageDefinitionRepositoryImpl(
+      stageDao: db.stageDao,
+      completionDao: db.completionDao,
+      pushSettings: null,
+    );
     return CompletionDetectionService(
       database: db,
       contentRepository: mockContentRepo,
       ledgerRepository: ledgerRepo,
+      stageRepository: stageRepo,
     );
   }
 

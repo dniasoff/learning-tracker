@@ -190,7 +190,9 @@ class TrackDao extends DatabaseAccessor<UserDatabase>
 
     await db.transaction(() async {
       await db.goalDao.deleteGoalsForTrack(trackId);
-      await db.stageDao.deleteStagesForTrack(trackId);
+      await (db.delete(db.stageDefinitions)
+            ..where((t) => t.trackId.equals(trackId)))
+          .go();
       // Completions are NOT deleted — they are append-only (FR5 / E24).
       await db.dailyPlanDao.deletePlansByTrack(trackId);
       await db.pointConfigDao.deleteAllForTrack(trackId);

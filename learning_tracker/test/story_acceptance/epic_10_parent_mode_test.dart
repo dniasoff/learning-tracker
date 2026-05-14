@@ -20,6 +20,7 @@ import 'package:learning_tracker/features/gamification/domain/services/points_se
 import 'package:learning_tracker/features/parent_mode/domain/services/parent_dashboard_aggregator.dart';
 import 'package:learning_tracker/features/parent_mode/presentation/screens/pin_flow_screen.dart';
 import 'package:learning_tracker/features/parent_mode/presentation/screens/point_config_screen.dart';
+import 'package:learning_tracker/features/stages/data/repositories/stage_definition_repository_impl.dart';
 import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:mocktail/mocktail.dart';
@@ -368,7 +369,14 @@ void main() {
         pointsPerCompletion: 10,
       );
 
-      final aggregator = ParentDashboardAggregator(db);
+      final aggregator = ParentDashboardAggregator(
+          db,
+          stageRepository: StageDefinitionRepositoryImpl(
+            stageDao: db.stageDao,
+            completionDao: db.completionDao,
+            pushSettings: null,
+          ),
+        );
       final pct = await aggregator.computeCompletionPercentage(
         CurriculumId.mishnayos,
       );
@@ -424,7 +432,14 @@ void main() {
         }
 
         await db.activeCurriculumDao.activate(CurriculumId.mishnayos);
-        final aggregator = ParentDashboardAggregator(db);
+        final aggregator = ParentDashboardAggregator(
+          db,
+          stageRepository: StageDefinitionRepositoryImpl(
+            stageDao: db.stageDao,
+            completionDao: db.completionDao,
+            pushSettings: null,
+          ),
+        );
         final pct = await aggregator.computeCompletionPercentage(
           CurriculumId.mishnayos,
         );
@@ -436,7 +451,14 @@ void main() {
 
     test('aggregator returns 0% when no completions', () async {
       await db.activeCurriculumDao.activate(CurriculumId.mishnayos);
-      final aggregator = ParentDashboardAggregator(db);
+      final aggregator = ParentDashboardAggregator(
+          db,
+          stageRepository: StageDefinitionRepositoryImpl(
+            stageDao: db.stageDao,
+            completionDao: db.completionDao,
+            pushSettings: null,
+          ),
+        );
       final pct = await aggregator.computeCompletionPercentage(
         CurriculumId.mishnayos,
       );
@@ -458,7 +480,14 @@ void main() {
           completionBaseDate: now,
         );
 
-        final aggregator = ParentDashboardAggregator(db);
+        final aggregator = ParentDashboardAggregator(
+          db,
+          stageRepository: StageDefinitionRepositoryImpl(
+            stageDao: db.stageDao,
+            completionDao: db.completionDao,
+            pushSettings: null,
+          ),
+        );
         final data = await aggregator.compute();
 
         expect(data.engagement.daysActiveThisWeek, greaterThan(0));
@@ -495,7 +524,14 @@ void main() {
         );
       }
 
-      final aggregator = ParentDashboardAggregator(db);
+      final aggregator = ParentDashboardAggregator(
+          db,
+          stageRepository: StageDefinitionRepositoryImpl(
+            stageDao: db.stageDao,
+            completionDao: db.completionDao,
+            pushSettings: null,
+          ),
+        );
       final data = await aggregator.compute();
 
       // Only 3 recent completions should appear (not the 2 old ones)
@@ -531,7 +567,14 @@ void main() {
         ),
       );
 
-      final aggregator = ParentDashboardAggregator(db);
+      final aggregator = ParentDashboardAggregator(
+          db,
+          stageRepository: StageDefinitionRepositoryImpl(
+            stageDao: db.stageDao,
+            completionDao: db.completionDao,
+            pushSettings: null,
+          ),
+        );
       final data = await aggregator.compute();
 
       expect(data.currentStreak, equals(5));

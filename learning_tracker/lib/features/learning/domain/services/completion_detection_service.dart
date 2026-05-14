@@ -2,6 +2,9 @@ import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/learning_ledger_repository.dart';
+import 'package:learning_tracker/features/stages/domain/models/stage_definition.dart'
+    as domain_stage;
+import 'package:learning_tracker/features/stages/domain/repositories/stage_definition_repository.dart';
 
 /// Detects when all leaf items within a unit (masechta/seder/sefer)
 /// are complete across all stages, and auto-creates a ledger entry.
@@ -11,14 +14,17 @@ class CompletionDetectionService {
   final UserDatabase _database;
   final ContentRepository _contentRepository;
   final LearningLedgerRepository _ledgerRepository;
+  final StageDefinitionRepository? _stageRepository;
 
   CompletionDetectionService({
     required UserDatabase database,
     required ContentRepository contentRepository,
     required LearningLedgerRepository ledgerRepository,
+    StageDefinitionRepository? stageRepository,
   }) : _database = database,
        _contentRepository = contentRepository,
-       _ledgerRepository = ledgerRepository;
+       _ledgerRepository = ledgerRepository,
+       _stageRepository = stageRepository;
 
   /// Check if completing this leaf item completes a parent unit.
   ///
@@ -96,9 +102,9 @@ class CompletionDetectionService {
     if (leafItems.isEmpty) return;
 
     // Get all stages that need to be complete
-    final stages = await _database.stageDao.getStageDefinitionsByCurriculum(
-      curriculumId,
-    );
+    final stages = _stageRepository != null
+        ? await _stageRepository.getStagesForCurriculum(curriculum)
+        : const <domain_stage.StageDefinition>[];
     if (stages.isEmpty) return;
 
     final stageIds = stages.map((s) => s.stageOrder).toList();

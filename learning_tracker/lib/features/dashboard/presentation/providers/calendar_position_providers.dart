@@ -6,6 +6,7 @@ import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/dashboard/domain/models/calendar_position.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
+import 'package:learning_tracker/features/stages/presentation/providers/stage_providers.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'calendar_position_providers.g.dart';
@@ -84,7 +85,8 @@ Future<CalendarPosition> programCalendarPosition(Ref ref, int trackId) async {
   final totalDays = cycleEntries.isNotEmpty ? cycleEntries.length : 1;
 
   // 5. Count unique first-stage completions (learn-stage progress).
-  final stages = await db.stageDao.getStagesByTrack(trackId);
+  final stageRepository = ref.watch(globalStageRepositoryProvider);
+  final stages = await stageRepository.getStagesByTrack(trackId);
   final firstStage = stages.isEmpty
       ? null
       : (stages.toList()..sort((a, b) => a.stageOrder.compareTo(b.stageOrder)))

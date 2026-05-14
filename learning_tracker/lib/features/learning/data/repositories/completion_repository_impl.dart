@@ -16,6 +16,9 @@ import 'package:learning_tracker/features/learning/domain/entities/mark_completi
 import 'package:learning_tracker/features/learning/domain/repositories/bookmark_repository.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/completion_repository.dart';
 import 'package:learning_tracker/features/learning/domain/services/completion_detection_service.dart';
+import 'package:learning_tracker/features/stages/domain/models/stage_definition.dart'
+    as stage_model;
+import 'package:learning_tracker/features/stages/domain/repositories/stage_definition_repository.dart';
 import 'package:learning_tracker/features/sync/data/sync_engine.dart';
 
 /// Implementation of [CompletionRepository] using Drift database and sync engine.
@@ -28,6 +31,7 @@ class CompletionRepositoryImpl implements CompletionRepository {
   final RewardMilestoneService? _rewardMilestoneService;
   final int _activeProfileId;
   final CompletionWriter _completionWriter;
+  final StageDefinitionRepository? _stageRepository;
 
   CompletionRepositoryImpl({
     required UserDatabase database,
@@ -38,6 +42,7 @@ class CompletionRepositoryImpl implements CompletionRepository {
     RewardMilestoneService? rewardMilestoneService,
     int activeProfileId = 0,
     CompletionWriter? completionWriter,
+    StageDefinitionRepository? stageRepository,
   }) : _database = database,
        _syncEngine = syncEngine,
        _contentRepository = contentRepository,
@@ -45,7 +50,8 @@ class CompletionRepositoryImpl implements CompletionRepository {
        _completionDetectionService = completionDetectionService,
        _rewardMilestoneService = rewardMilestoneService,
        _activeProfileId = activeProfileId,
-       _completionWriter = completionWriter ?? CompletionWriter(database);
+       _completionWriter = completionWriter ?? CompletionWriter(database),
+       _stageRepository = stageRepository;
 
   @override
   Future<MarkCompletionResult> markComplete(CompletionRequest request) async {
@@ -715,9 +721,13 @@ class CompletionRepositoryImpl implements CompletionRepository {
     for (final completion in trackCompletions) {
       final curriculumId = completion.curriculumId;
       if (!stageOrderByCurriculum.containsKey(curriculumId)) {
-        final stages = await _database.stageDao.getStageDefinitionsByCurriculum(
-          curriculumId,
+        final curriculumEnum = CurriculumId.values.firstWhere(
+          (c) => c.storageKey == curriculumId,
+          orElse: () => CurriculumId.mishnayos,
         );
+        final stages = _stageRepository == null
+            ? <stage_model.StageDefinition>[]
+            : await _stageRepository.getStagesForCurriculum(curriculumEnum);
         stageOrderByCurriculum[curriculumId] = {
           for (final s in stages) s.id: s.stageOrder,
         };

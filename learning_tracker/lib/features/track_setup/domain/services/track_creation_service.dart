@@ -12,6 +12,7 @@ import 'package:learning_tracker/features/onboarding/domain/services/learning_pr
 import 'package:learning_tracker/features/scheduler/domain/models/goal_entity.dart';
 import 'package:learning_tracker/features/scheduler/domain/repositories/goal_repository.dart';
 import 'package:learning_tracker/features/settings/domain/services/curriculum_activation_service.dart';
+import 'package:learning_tracker/features/stages/domain/repositories/stage_definition_repository.dart';
 import 'package:learning_tracker/features/sync/data/sync_engine.dart';
 import 'package:learning_tracker/features/track_setup/domain/entities/add_track_result.dart';
 
@@ -39,12 +40,14 @@ class TrackCreationService {
     required CurriculumActivationService activationService,
     required LearningProcessWizardService wizardService,
     required GoalRepository goalRepository,
+    required StageDefinitionRepository stageRepository,
     SyncEngine? syncEngine,
     AnalyticsService? analytics,
   }) : _database = database,
        _activationService = activationService,
        _wizardService = wizardService,
        _goalRepository = goalRepository,
+       _stageRepository = stageRepository,
        _syncEngine = syncEngine,
        _analytics = analytics ?? const NullAnalyticsService();
 
@@ -52,6 +55,7 @@ class TrackCreationService {
   final CurriculumActivationService _activationService;
   final LearningProcessWizardService _wizardService;
   final GoalRepository _goalRepository;
+  final StageDefinitionRepository _stageRepository;
   final SyncEngine? _syncEngine;
   final AnalyticsService _analytics;
 
@@ -101,7 +105,7 @@ class TrackCreationService {
     }
 
     await _database.transaction(() async {
-      await _database.stageDao.deleteStagesForTrack(trackId);
+      await _stageRepository.deleteStagesForTrack(trackId);
 
       if (result.wizardResult is LearningProcessWizardResult) {
         final wizard = result.wizardResult! as LearningProcessWizardResult;

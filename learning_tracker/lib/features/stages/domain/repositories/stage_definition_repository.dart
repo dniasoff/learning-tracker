@@ -55,4 +55,22 @@ abstract class StageDefinitionRepository {
 
   /// Returns true if any completions reference the given stage ID.
   Future<bool> hasCompletionsForStage(int stageId);
+
+  /// Returns all stage definitions for a track, ordered by stageOrder.
+  ///
+  /// Track-scoped variant used by callers that have a [trackId] but not a
+  /// [CurriculumId] (e.g. scheduler, point-config screen).
+  Future<List<StageDefinition>> getStagesByTrack(int trackId);
+
+  /// Deletes all stage definitions for a track.
+  ///
+  /// Used during track replacement / deletion workflows.
+  /// Does NOT push settings — the caller is responsible for pushing after
+  /// the replacement is complete.
+  Future<void> deleteStagesForTrack(int trackId);
+
+  /// Returns every stage definition in the database (cross-curriculum).
+  ///
+  /// Intended for full-data export only.
+  Future<List<StageDefinition>> getAllStageDefinitions();
 }

@@ -11,6 +11,8 @@ import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
+import 'package:learning_tracker/features/stages/domain/models/stage_definition.dart'
+    as domain_stage;
 import 'package:learning_tracker/features/stages/presentation/providers/stage_providers.dart';
 import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
 import 'package:learning_tracker/features/track_setup/presentation/providers/track_management_providers.dart';
@@ -36,7 +38,7 @@ int _defaultPointsForStageOrder(int stageOrder) {
 class _StagePointConfig {
   const _StagePointConfig({required this.stage, required this.config});
 
-  final StageDefinition stage;
+  final domain_stage.StageDefinition stage;
   final PointConfig config;
 }
 
@@ -86,12 +88,11 @@ final _pointConfigDataProvider = FutureProvider.autoDispose<List<_TrackPointData
           .firstOrNull;
       if (curriculum == null) continue;
 
-      var stages = await db.stageDao.getStagesByTrack(track.id);
+      final stageRepo = ref.read(stageDefinitionRepositoryProvider(curriculum));
+      var stages = await stageRepo.getStagesByTrack(track.id);
       if (stages.isEmpty) {
-        await ref
-            .read(stageDefinitionRepositoryProvider(curriculum))
-            .initializeDefaults(curriculum, trackId: track.id);
-        stages = await db.stageDao.getStagesByTrack(track.id);
+        await stageRepo.initializeDefaults(curriculum, trackId: track.id);
+        stages = await stageRepo.getStagesByTrack(track.id);
       }
       if (stages.isEmpty) {
         continue;

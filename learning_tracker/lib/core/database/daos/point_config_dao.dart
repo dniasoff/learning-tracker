@@ -120,7 +120,10 @@ class PointConfigDao extends DatabaseAccessor<UserDatabase>
     int trackId, {
     required int profileId,
   }) async {
-    final stages = await db.stageDao.getStagesByTrack(trackId);
+    final stages = await (db.select(db.stageDefinitions)
+          ..where((t) => t.trackId.equals(trackId))
+          ..orderBy([(t) => OrderingTerm.asc(t.stageOrder)]))
+        .get();
 
     // Fallback to 3 hardcoded stages if no stage definitions exist yet
     if (stages.isEmpty) {

@@ -23,6 +23,9 @@ import 'package:learning_tracker/features/progress/domain/services/curriculum_pr
 import 'package:learning_tracker/features/scheduler/domain/models/delta_value.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/pace_status.dart';
 import 'package:learning_tracker/features/scheduler/domain/services/pace_calculator.dart';
+import 'package:learning_tracker/features/stages/domain/models/schedule_type.dart';
+import 'package:learning_tracker/features/stages/domain/models/stage_definition.dart'
+    as domain_stage;
 import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:test/test.dart' hide isNotNull, isNull;
@@ -581,7 +584,7 @@ void main() {
       await db.close();
     });
 
-    Future<StageDefinition> insertStage(
+    Future<domain_stage.StageDefinition> insertStage(
       int stageOrder,
       String stageName,
     ) async {
@@ -595,7 +598,15 @@ void main() {
           delayDays: 0,
         ),
       );
-      return (await db.stageDao.getStageDefinitionById(id))!;
+      return domain_stage.StageDefinition(
+        id: id,
+        curriculumId: CurriculumId.mishnayos,
+        stageOrder: stageOrder,
+        stageName: stageName,
+        delayDays: 0,
+        isDefault: false,
+        scheduleType: ScheduleType.delay,
+      );
     }
 
     Future<Completion> insertCompletion({

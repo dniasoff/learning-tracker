@@ -18,6 +18,7 @@ import 'package:learning_tracker/features/scheduler/domain/models/pace_status.da
 import 'package:learning_tracker/features/scheduler/domain/services/pace_calculator.dart';
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/curriculum_scope_providers.dart';
+import 'package:learning_tracker/features/stages/presentation/providers/stage_providers.dart';
 import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
@@ -113,9 +114,10 @@ Future<double> dashboardTrackCompletionPercentage(Ref ref, int trackId) async {
     trackId,
     profileId,
   );
-  final stages = await db.stageDao.getStageDefinitionsByCurriculum(
-    curriculum.storageKey,
+  final stageRepository = ref.watch(
+    stageDefinitionRepositoryProvider(curriculum),
   );
+  final stages = await stageRepository.getStagesForCurriculum(curriculum);
   if (stages.isEmpty) return 0.0;
   final totalItems = await ref.watch(
     scopedItemCountProvider(curriculum).future,
@@ -141,9 +143,10 @@ Future<double> dashboardCompletionPercentage(
   final profileId = ref.watch(activeProfileIdProvider);
   final completions = await db.completionDao
       .getCompletionsByCurriculumAndProfile(curriculum.storageKey, profileId);
-  final stages = await db.stageDao.getStageDefinitionsByCurriculum(
-    curriculum.storageKey,
+  final stageRepository = ref.watch(
+    stageDefinitionRepositoryProvider(curriculum),
   );
+  final stages = await stageRepository.getStagesForCurriculum(curriculum);
   if (stages.isEmpty) return 0.0;
 
   final totalItems = await ref.watch(

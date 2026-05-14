@@ -2,6 +2,8 @@ import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/features/progress/domain/models/curriculum_progress_data.dart';
+import 'package:learning_tracker/features/stages/domain/models/stage_definition.dart'
+    as domain_stage;
 
 /// Pure computation service for curriculum progress aggregation.
 ///
@@ -19,7 +21,7 @@ class CurriculumProgressService {
     required String curriculumId,
     required List<ContentItem> contentItems,
     required List<Completion> completions,
-    required List<StageDefinition> stageDefinitions,
+    required List<domain_stage.StageDefinition> stageDefinitions,
     required List<String> levelLabels,
   }) {
     final leafItems = contentItems.where((c) => c.isLeaf).toList();
@@ -89,7 +91,7 @@ class CurriculumProgressService {
   static List<HierarchyLevelProgress> _buildLevel1Progress({
     required List<ContentItem> leafItems,
     required List<Completion> completions,
-    required List<StageDefinition> stageDefinitions,
+    required List<domain_stage.StageDefinition> stageDefinitions,
     required List<String> levelLabels,
   }) {
     // Group leaf items by level1
@@ -151,7 +153,7 @@ class CurriculumProgressService {
   static List<HierarchyLevelProgress> _buildLevel2Progress({
     required List<ContentItem> leafItems,
     required List<Completion> completions,
-    required List<StageDefinition> stageDefinitions,
+    required List<domain_stage.StageDefinition> stageDefinitions,
     required String levelLabel,
   }) {
     final grouped = <String, List<ContentItem>>{};
@@ -199,7 +201,7 @@ class CurriculumProgressService {
     required String levelLabel,
     required List<ContentItem> leafItems,
     required List<Completion> completions,
-    required List<StageDefinition> stageDefinitions,
+    required List<domain_stage.StageDefinition> stageDefinitions,
     List<HierarchyLevelProgress>? subLevels,
   }) {
     final completedRefs = completions.map((c) => c.sefariaRef).toSet();

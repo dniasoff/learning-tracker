@@ -3,6 +3,9 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/pace_status.dart';
 import 'package:learning_tracker/features/scheduler/domain/services/pace_calculator.dart';
+import 'package:learning_tracker/features/stages/domain/models/stage_definition.dart'
+    as domain_stage;
+import 'package:learning_tracker/features/stages/domain/repositories/stage_definition_repository.dart';
 
 /// Aggregated analytics data for the parent dashboard.
 class ParentDashboardData {
@@ -71,9 +74,14 @@ class EngagementMetrics {
 class ParentDashboardAggregator {
   final UserDatabase _db;
   final int _profileId;
+  final StageDefinitionRepository? _stageRepository;
 
-  ParentDashboardAggregator(this._db, {int profileId = 0})
-    : _profileId = profileId;
+  ParentDashboardAggregator(
+    this._db, {
+    int profileId = 0,
+    StageDefinitionRepository? stageRepository,
+  }) : _profileId = profileId,
+       _stageRepository = stageRepository;
 
   /// Compute the full dashboard data snapshot.
   ///
@@ -152,9 +160,9 @@ class ParentDashboardAggregator {
           curriculum.storageKey,
           _profileId,
         );
-    final stages = await _db.stageDao.getStageDefinitionsByCurriculum(
-      curriculum.storageKey,
-    );
+    final stages = _stageRepository != null
+        ? await _stageRepository.getStagesForCurriculum(curriculum)
+        : const <domain_stage.StageDefinition>[];
     if (stages.isEmpty || completions.isEmpty) return 0.0;
 
     final totalStages = stages.length;

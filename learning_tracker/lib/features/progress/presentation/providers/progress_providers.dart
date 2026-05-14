@@ -14,6 +14,7 @@ import 'package:learning_tracker/features/scheduler/domain/models/pace_status.da
 import 'package:learning_tracker/features/scheduler/domain/services/pace_calculator.dart';
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/curriculum_scope_providers.dart';
+import 'package:learning_tracker/features/stages/presentation/providers/stage_providers.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'progress_providers.g.dart';
@@ -144,8 +145,11 @@ Future<CurriculumProgressData> curriculumProgress(
   final profileId = ref.watch(activeProfileIdProvider);
   final completions = await db.completionDao
       .getCompletionsByCurriculumAndProfile(curriculumId, profileId);
-  final stageDefinitions = await db.stageDao.getStageDefinitionsByCurriculum(
-    curriculumId,
+  final stageRepository = ref.watch(
+    stageDefinitionRepositoryProvider(curriculumEnum),
+  );
+  final stageDefinitions = await stageRepository.getStagesForCurriculum(
+    curriculumEnum,
   );
 
   return CurriculumProgressService.compute(

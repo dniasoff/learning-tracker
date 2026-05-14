@@ -120,7 +120,7 @@ class DataExportImportService {
         .get();
 
     // --- Stage definitions ---
-    final stages = await _database.stageDao.getAllStageDefinitions();
+    final stages = await _database.select(_database.stageDefinitions).get();
 
     // --- Point configs ---
     final pointConfigs = await _database.select(_database.pointConfigs).get();

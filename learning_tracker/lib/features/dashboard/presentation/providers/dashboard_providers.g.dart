@@ -268,7 +268,7 @@ final class DashboardTrackCompletionPercentageProvider
 }
 
 String _$dashboardTrackCompletionPercentageHash() =>
-    r'5a4725fcc043ebe6690ee63615c78dc6fbd99fbc';
+    r'cd288ac482c6dfcc4dfbb437d6185217ace3d714';
 
 /// Stage-based completion for one track (same denominator as
 /// [dashboardCompletionPercentage] for the curriculum, completions from this track only).
@@ -369,7 +369,7 @@ final class DashboardCompletionPercentageProvider
 }
 
 String _$dashboardCompletionPercentageHash() =>
-    r'88fd9fc1e24e52eec08e6003a1c5540efdeccf94';
+    r'755a8eaee3b1a30c6d1a0bd6cc3b9d4f0119838f';
 
 /// Per-curriculum completion percentage, scoped to active profile.
 ///

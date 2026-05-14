@@ -19,6 +19,22 @@ final stageDefinitionRepositoryProvider =
       );
     });
 
+/// Global (non-curriculum-scoped) provider for [StageDefinitionRepository].
+///
+/// Use when the caller has a [trackId] but not a [CurriculumId], or when
+/// performing cross-curriculum operations such as data export.
+final globalStageRepositoryProvider = Provider<StageDefinitionRepository>((
+  ref,
+) {
+  final database = ref.watch(userDatabaseProvider);
+  final syncEngine = ref.watch(syncEngineProvider);
+  return StageDefinitionRepositoryImpl(
+    stageDao: database.stageDao,
+    completionDao: database.completionDao,
+    pushSettings: syncEngine?.pushSettings,
+  );
+});
+
 /// Provider for the list of stages for a curriculum, ordered by stageOrder.
 final stageListProvider =
     FutureProvider.family<List<StageDefinition>, CurriculumId>((

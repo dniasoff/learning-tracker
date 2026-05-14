@@ -27,6 +27,10 @@ import 'package:learning_tracker/features/scheduler/domain/services/daily_task_g
 import 'package:learning_tracker/features/scheduler/domain/services/pace_calculator.dart';
 import 'package:learning_tracker/features/scheduler/domain/services/scheduler_engine.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/curriculum_scope_providers.dart';
+import 'package:learning_tracker/features/stages/domain/models/stage_definition.dart'
+    as domain_stage;
+import 'package:learning_tracker/features/stages/domain/repositories/stage_definition_repository.dart';
+import 'package:learning_tracker/features/stages/presentation/providers/stage_providers.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -267,11 +271,13 @@ Future<List<DailyTask>> allDailyTasks(Ref ref) async {
   final now = ref.watch(clockProvider);
 
   final engine = ref.watch(schedulerEngineProvider);
+  final stageRepository = ref.watch(globalStageRepositoryProvider);
   final tasks = await planRepo.getOrSnapshotPlan(
     profileId: profileId,
     now: now,
     buildPlan: () => _buildFreshPlan(
       db: db,
+      stageRepository: stageRepository,
       generator: generator,
       engine: engine,
       planRepo: planRepo,
@@ -297,6 +303,7 @@ Future<List<DailyTask>> allDailyTasks(Ref ref) async {
   final snapshotMissingProgramAssignments =
       await _snapshotMissingProgramAssignments(
         db: db,
+        stageRepository: stageRepository,
         tasks: tasks,
         profileId: profileId,
         now: now,
@@ -313,6 +320,7 @@ Future<List<DailyTask>> allDailyTasks(Ref ref) async {
           now: now,
           buildPlan: () => _buildFreshPlan(
             db: db,
+            stageRepository: stageRepository,
             generator: generator,
             engine: engine,
             planRepo: planRepo,
@@ -371,6 +379,7 @@ Future<List<DailyTask>> allDailyTasks(Ref ref) async {
 
 Future<bool> _snapshotMissingProgramAssignments({
   required UserDatabase db,
+  required StageDefinitionRepository stageRepository,
   required List<DailyTask> tasks,
   required int profileId,
   required DateTime now,
@@ -463,6 +472,7 @@ bool _programAssignmentPresentInTasks({
 /// Called only when no snapshot exists for the current local day.
 Future<List<DailyTask>> _buildFreshPlan({
   required UserDatabase db,
+  required StageDefinitionRepository stageRepository,
   required DailyTaskGenerator generator,
   required SchedulerEngine engine,
   required DailyPlanRepository planRepo,
@@ -625,10 +635,10 @@ Future<List<DailyTask>> _buildFreshPlan({
 
     final orderedItems = await engine.getOrderedLeafItems(curriculum);
     final paceCeil = pace.ceil();
-    final stages = await db.stageDao.getStagesByTrack(trackId);
+    final stages = await stageRepository.getStagesByTrack(trackId);
     if (stages.isEmpty || orderedItems.isEmpty || paceCeil <= 0) continue;
     final firstStage = stages.reduce(
-      (StageDefinition a, StageDefinition b) =>
+      (domain_stage.StageDefinition a, domain_stage.StageDefinition b) =>
           a.stageOrder < b.stageOrder ? a : b,
     );
 
@@ -710,6 +720,7 @@ Future<List<DailyTask>> _buildFreshPlan({
 
   final overridden = await _applyProgramCalendarOverrides(
     db: db,
+    stageRepository: stageRepository,
     generated: generated,
     profileId: profileId,
     now: now,
@@ -725,6 +736,7 @@ Future<List<DailyTask>> _buildFreshPlan({
 
 Future<List<DailyTask>> _applyProgramCalendarOverrides({
   required UserDatabase db,
+  required StageDefinitionRepository stageRepository,
   required List<DailyTask> generated,
   required int profileId,
   required DateTime now,
@@ -757,11 +769,14 @@ Future<List<DailyTask>> _applyProgramCalendarOverrides({
     if (programKey == null) continue;
 
     final contentItems = await getScopedContent(curriculum);
-    final stages = await db.stageDao.getStagesByTrack(trackId);
+    final stages = await stageRepository.getStagesByTrack(trackId);
     if (stages.isEmpty) continue;
-    final firstStage =
-        (stages.toList()..sort((a, b) => a.stageOrder.compareTo(b.stageOrder)))
-            .first;
+    final firstStage = (stages.toList()
+          ..sort(
+            (domain_stage.StageDefinition a, domain_stage.StageDefinition b) =>
+                a.stageOrder.compareTo(b.stageOrder),
+          ))
+        .first;
 
     final todayDate = DateUtils.extractLocalDate(now);
     final DateTime configuredStartDate;

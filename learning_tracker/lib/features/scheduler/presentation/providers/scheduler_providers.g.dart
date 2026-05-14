@@ -650,7 +650,7 @@ final class AllDailyTasksProvider
   }
 }
 
-String _$allDailyTasksHash() => r'10d567a7750c468340170af16d2d38be549ebdb7';
+String _$allDailyTasksHash() => r'1e6f0595b6bc0b2f6c403ab922f5773217ec3860';
 
 /// Returns the first [DailyTask] for [trackId] that falls in [category],
 /// or null when the bucket is empty.
