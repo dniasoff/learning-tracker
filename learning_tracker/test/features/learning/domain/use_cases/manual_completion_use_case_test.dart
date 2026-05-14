@@ -1,23 +1,28 @@
 import 'package:learning_tracker/core/database/user/user_database.dart';
+import 'package:learning_tracker/core/sync/firestore_gateway.dart';
 import 'package:learning_tracker/features/learning/data/repositories/learning_ledger_repository_impl.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/learning_ledger_repository.dart';
 import 'package:learning_tracker/features/learning/domain/use_cases/manual_completion_use_case.dart';
-import 'package:learning_tracker/features/sync/data/sync_engine.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:test/test.dart';
 
 import '../../../../helpers/test_database.dart';
 
-class _MockSyncEngine extends Mock implements SyncEngine {}
+class _MockFirestoreGateway extends Mock implements FirestoreGateway {}
 
 void main() {
   late UserDatabase db;
-  late _MockSyncEngine mockSyncEngine;
+  late _MockFirestoreGateway mockGateway;
 
   setUp(() {
     db = createTestDatabase();
-    mockSyncEngine = _MockSyncEngine();
-    when(() => mockSyncEngine.pushLedgerEntry(any())).thenAnswer((_) async {});
+    mockGateway = _MockFirestoreGateway();
+    when(
+      () => mockGateway.pushLedgerEntry(
+        profileId: any(named: 'profileId'),
+        data: any(named: 'data'),
+      ),
+    ).thenAnswer((_) async {});
   });
 
   tearDown(() async {
@@ -31,7 +36,7 @@ void main() {
   }) {
     final repo = LearningLedgerRepositoryImpl(
       database: db,
-      syncEngine: mockSyncEngine,
+      firestoreGateway: mockGateway,
       activeProfileId: profileId,
       activeProfileMode: profileMode,
       parentPinSessionMatchesActiveProfile:

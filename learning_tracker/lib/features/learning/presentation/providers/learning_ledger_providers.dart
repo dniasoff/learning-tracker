@@ -1,12 +1,12 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
+import 'package:learning_tracker/core/sync/providers/outbox_providers.dart';
 import 'package:learning_tracker/features/learning/data/repositories/learning_ledger_repository_impl.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/learning_ledger_repository.dart';
 import 'package:learning_tracker/features/learning/domain/use_cases/manual_completion_use_case.dart';
 import 'package:learning_tracker/features/parent_mode/presentation/providers/parent_pin_session_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
-import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'learning_ledger_providers.g.dart';
@@ -25,7 +25,7 @@ final _activeProfileModeProvider = FutureProvider.autoDispose<String>((
 @riverpod
 LearningLedgerRepository learningLedgerRepository(Ref ref) {
   final database = ref.watch(userDatabaseProvider);
-  final syncEngine = ref.watch(syncEngineProvider);
+  final firestoreGateway = ref.watch(firestoreGatewayProvider);
   final profileId = ref.watch(activeProfileIdProvider);
   final profileMode = ref.watch(_activeProfileModeProvider).value ?? 'adult';
   final pinSessionProfileId = ref.watch(
@@ -36,7 +36,7 @@ LearningLedgerRepository learningLedgerRepository(Ref ref) {
 
   return LearningLedgerRepositoryImpl(
     database: database,
-    syncEngine: syncEngine,
+    firestoreGateway: firestoreGateway,
     activeProfileId: profileId,
     activeProfileMode: profileMode,
     parentPinSessionMatchesActiveProfile: parentPinSessionMatches,

@@ -1,17 +1,17 @@
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
+import 'package:learning_tracker/core/sync/firestore_gateway.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 import 'package:learning_tracker/features/learning/data/repositories/learning_ledger_repository_impl.dart';
 import 'package:learning_tracker/features/learning/domain/services/completion_detection_service.dart';
 import 'package:learning_tracker/features/stages/data/repositories/stage_definition_repository_impl.dart';
-import 'package:learning_tracker/features/sync/data/sync_engine.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:test/test.dart';
 
 import '../../../../helpers/test_database.dart';
 
-class _MockSyncEngine extends Mock implements SyncEngine {}
+class _MockFirestoreGateway extends Mock implements FirestoreGateway {}
 
 class _MockContentRepository extends Mock implements ContentRepository {}
 
@@ -19,15 +19,20 @@ const _currId = 'mishnayos';
 
 void main() {
   late UserDatabase db;
-  late _MockSyncEngine mockSyncEngine;
+  late _MockFirestoreGateway mockGateway;
   late _MockContentRepository mockContentRepo;
   late int trackId;
 
   setUp(() async {
     db = createTestDatabase();
-    mockSyncEngine = _MockSyncEngine();
+    mockGateway = _MockFirestoreGateway();
     mockContentRepo = _MockContentRepository();
-    when(() => mockSyncEngine.pushLedgerEntry(any())).thenAnswer((_) async {});
+    when(
+      () => mockGateway.pushLedgerEntry(
+        profileId: any(named: 'profileId'),
+        data: any(named: 'data'),
+      ),
+    ).thenAnswer((_) async {});
 
     final trackRow = await db
         .into(db.curriculumTracks)
@@ -98,7 +103,7 @@ void main() {
   CompletionDetectionService createService() {
     final ledgerRepo = LearningLedgerRepositoryImpl(
       database: db,
-      syncEngine: mockSyncEngine,
+      firestoreGateway: mockGateway,
       activeProfileId: 1,
       activeProfileMode: 'adult',
     );

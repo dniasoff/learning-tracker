@@ -1,14 +1,15 @@
 import 'package:drift/drift.dart' as drift;
 import 'package:learning_tracker/core/database/user/user_database.dart';
+import 'package:learning_tracker/core/sync/firestore_gateway.dart';
 import 'package:learning_tracker/core/time/ulid.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/learning_ledger_repository.dart';
-import 'package:learning_tracker/features/sync/data/sync_engine.dart';
 
-/// Implementation of [LearningLedgerRepository] using Drift database and sync engine.
+/// Implementation of [LearningLedgerRepository] using Drift database and
+/// [FirestoreGateway] for direct ledger pushes (P2c).
 class LearningLedgerRepositoryImpl implements LearningLedgerRepository {
   final UserDatabase _database;
-  final SyncEngine? _syncEngine;
+  final FirestoreGateway? _firestoreGateway;
   final int _activeProfileId;
   final String _activeProfileMode;
 
@@ -17,12 +18,12 @@ class LearningLedgerRepositoryImpl implements LearningLedgerRepository {
 
   LearningLedgerRepositoryImpl({
     required UserDatabase database,
-    required SyncEngine? syncEngine,
+    required FirestoreGateway? firestoreGateway,
     required int activeProfileId,
     required String activeProfileMode,
     this.parentPinSessionMatchesActiveProfile = false,
   }) : _database = database,
-       _syncEngine = syncEngine,
+       _firestoreGateway = firestoreGateway,
        _activeProfileId = activeProfileId,
        _activeProfileMode = activeProfileMode;
 
@@ -53,7 +54,10 @@ class LearningLedgerRepositoryImpl implements LearningLedgerRepository {
   };
 
   Future<void> _syncLedgerEntry(LearningLedgerData entry) async {
-    await _syncEngine?.pushLedgerEntry(_ledgerDataToSyncMap(entry));
+    await _firestoreGateway?.pushLedgerEntry(
+      profileId: _activeProfileId,
+      data: _ledgerDataToSyncMap(entry),
+    );
   }
 
   @override
@@ -161,8 +165,9 @@ class LearningLedgerRepositoryImpl implements LearningLedgerRepository {
     });
 
     if (results.isNotEmpty) {
-      await _syncEngine?.pushLedgerEntriesBatch(
-        results.map(_ledgerDataToSyncMap).toList(),
+      await _firestoreGateway?.pushLedgerEntriesBatch(
+        profileId: _activeProfileId,
+        entries: results.map(_ledgerDataToSyncMap).toList(),
       );
     }
 

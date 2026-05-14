@@ -1,24 +1,32 @@
 import 'package:learning_tracker/core/database/user/user_database.dart';
+import 'package:learning_tracker/core/sync/firestore_gateway.dart';
 import 'package:learning_tracker/features/learning/data/repositories/learning_ledger_repository_impl.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/learning_ledger_repository.dart';
-import 'package:learning_tracker/features/sync/data/sync_engine.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:test/test.dart';
 
 import '../../../../helpers/test_database.dart';
 
-class _MockSyncEngine extends Mock implements SyncEngine {}
+class _MockFirestoreGateway extends Mock implements FirestoreGateway {}
 
 void main() {
   late UserDatabase db;
-  late _MockSyncEngine mockSyncEngine;
+  late _MockFirestoreGateway mockGateway;
 
   setUp(() {
     db = createTestDatabase();
-    mockSyncEngine = _MockSyncEngine();
-    when(() => mockSyncEngine.pushLedgerEntry(any())).thenAnswer((_) async {});
+    mockGateway = _MockFirestoreGateway();
     when(
-      () => mockSyncEngine.pushLedgerEntriesBatch(any()),
+      () => mockGateway.pushLedgerEntry(
+        profileId: any(named: 'profileId'),
+        data: any(named: 'data'),
+      ),
+    ).thenAnswer((_) async {});
+    when(
+      () => mockGateway.pushLedgerEntriesBatch(
+        profileId: any(named: 'profileId'),
+        entries: any(named: 'entries'),
+      ),
     ).thenAnswer((_) async {});
   });
 
@@ -33,7 +41,7 @@ void main() {
   }) {
     return LearningLedgerRepositoryImpl(
       database: db,
-      syncEngine: mockSyncEngine,
+      firestoreGateway: mockGateway,
       activeProfileId: profileId,
       activeProfileMode: profileMode,
       parentPinSessionMatchesActiveProfile: parentPinSessionMatches,
@@ -98,7 +106,12 @@ void main() {
           isManual: false,
         );
 
-        verify(() => mockSyncEngine.pushLedgerEntry(any())).called(1);
+        verify(
+          () => mockGateway.pushLedgerEntry(
+            profileId: any(named: 'profileId'),
+            data: any(named: 'data'),
+          ),
+        ).called(1);
       });
 
       test(
@@ -241,8 +254,18 @@ void main() {
         expect(entries, hasLength(2));
         expect(entries.first.completionNumber, 1);
         expect(entries.last.completionNumber, 1);
-        verifyNever(() => mockSyncEngine.pushLedgerEntry(any()));
-        verify(() => mockSyncEngine.pushLedgerEntriesBatch(any())).called(1);
+        verifyNever(
+          () => mockGateway.pushLedgerEntry(
+            profileId: any(named: 'profileId'),
+            data: any(named: 'data'),
+          ),
+        );
+        verify(
+          () => mockGateway.pushLedgerEntriesBatch(
+            profileId: any(named: 'profileId'),
+            entries: any(named: 'entries'),
+          ),
+        ).called(1);
       });
     });
 
