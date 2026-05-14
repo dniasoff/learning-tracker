@@ -97,6 +97,8 @@ class ProgressScreen extends ConsumerWidget {
                     ),
                     const SizedBox(height: 16),
                     const _ProgressChartsTile(),
+                    const SizedBox(height: 8),
+                    const _LearningJourneyTile(),
                     const SizedBox(height: 20),
                     _LearningLifetimeTreeCard(summaries: lifetimeSummaries),
                   ],
@@ -146,7 +148,6 @@ class _StatGrid extends StatelessWidget {
           iconColor: AppTheme.brandBlue,
           value: '$totalUniqueUnits',
           label: l10n.statUnitsDone,
-          onTap: () => context.router.push(LearningJourneyRoute()),
         ),
         _OverviewStatCard(
           icon: Icons.local_fire_department_rounded,
@@ -253,6 +254,74 @@ class _ProgressChartsTile extends StatelessWidget {
                   ),
                   Text(
                     l10n.progressChartsTileSubtitle,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: AppTheme.brandInkMuted,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(
+              Icons.chevron_right_rounded,
+              color: AppTheme.brandInkMuted,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _LearningJourneyTile extends StatelessWidget {
+  const _LearningJourneyTile();
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return InkWell(
+      borderRadius: BorderRadius.circular(20),
+      onTap: () => context.router.push(LearningJourneyRoute()),
+      child: Ink(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF03174C).withValues(alpha: 0.06),
+              blurRadius: 12,
+              offset: const Offset(0, 5),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 34,
+              height: 34,
+              decoration: BoxDecoration(
+                color: const Color(0xFFEEF3FF),
+                borderRadius: BorderRadius.circular(11),
+              ),
+              child: const Icon(
+                Icons.menu_book_outlined,
+                color: AppTheme.brandBlue,
+                size: 20,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    l10n.myLearningJourney,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  Text(
+                    l10n.myLearningJourneySubtitle,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: AppTheme.brandInkMuted,
                     ),

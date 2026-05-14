@@ -110,6 +110,9 @@ class AppLocalizationsHe extends AppLocalizations {
   String get myLearningJourney => 'מסע הלימוד שלי';
 
   @override
+  String get myLearningJourneySubtitle => 'כל מה שלמדת, לפי הסדר';
+
+  @override
   String get seeLifetimeAchievements => 'הישגים לאורך כל הדרך';
 
   @override

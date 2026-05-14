@@ -284,6 +284,12 @@ abstract class AppLocalizations {
   /// **'My Learning Journey'**
   String get myLearningJourney;
 
+  /// No description provided for @myLearningJourneySubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Everything you\'ve learned, in order'**
+  String get myLearningJourneySubtitle;
+
   /// No description provided for @seeLifetimeAchievements.
   ///
   /// In en, this message translates to:

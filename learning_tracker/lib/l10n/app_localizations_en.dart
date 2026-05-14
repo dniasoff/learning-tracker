@@ -111,6 +111,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get myLearningJourney => 'My Learning Journey';
 
   @override
+  String get myLearningJourneySubtitle => 'Everything you\'ve learned, in order';
+
+  @override
   String get seeLifetimeAchievements => 'See your lifetime achievements';
 
   @override
