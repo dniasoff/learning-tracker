@@ -10,6 +10,7 @@ import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/core/utils/hebrew_calendar_utils.dart';
 import 'package:learning_tracker/core/widgets/learning_date_picker_theme.dart';
+import 'package:learning_tracker/core/widgets/scrollable_step_body.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/goal_entity.dart';
 import 'package:learning_tracker/features/scheduler/presentation/widgets/hebrew_date_picker.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/curriculum_scope_providers.dart';
@@ -263,8 +264,7 @@ class _SelfPacedGoalStepState extends ConsumerState<SelfPacedGoalStep> {
       l10n: l10n,
     );
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+    return ScrollableStepBody(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
