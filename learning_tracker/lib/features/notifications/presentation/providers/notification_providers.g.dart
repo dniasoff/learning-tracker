@@ -411,6 +411,10 @@ String _$isSacredTimeActiveHash() =>
 /// Kept alive so the in-memory cache survives across provider rebuilds.
 /// [TimezoneLifecycleObserver] calls [SacredWindowRepository.invalidate]
 /// on resume (DNI-367).
+///
+/// The [SacredWindowDao] is injected so computed windows are persisted to
+/// the user DB, enabling background notification fire-time checks on
+/// cold-start without the Flutter engine (DNI-367 AC 26.24 requirement 4).
 
 @ProviderFor(sacredWindowRepository)
 final sacredWindowRepositoryProvider = SacredWindowRepositoryProvider._();
@@ -420,6 +424,10 @@ final sacredWindowRepositoryProvider = SacredWindowRepositoryProvider._();
 /// Kept alive so the in-memory cache survives across provider rebuilds.
 /// [TimezoneLifecycleObserver] calls [SacredWindowRepository.invalidate]
 /// on resume (DNI-367).
+///
+/// The [SacredWindowDao] is injected so computed windows are persisted to
+/// the user DB, enabling background notification fire-time checks on
+/// cold-start without the Flutter engine (DNI-367 AC 26.24 requirement 4).
 
 final class SacredWindowRepositoryProvider
     extends
@@ -434,6 +442,10 @@ final class SacredWindowRepositoryProvider
   /// Kept alive so the in-memory cache survives across provider rebuilds.
   /// [TimezoneLifecycleObserver] calls [SacredWindowRepository.invalidate]
   /// on resume (DNI-367).
+  ///
+  /// The [SacredWindowDao] is injected so computed windows are persisted to
+  /// the user DB, enabling background notification fire-time checks on
+  /// cold-start without the Flutter engine (DNI-367 AC 26.24 requirement 4).
   SacredWindowRepositoryProvider._()
     : super(
         from: null,
@@ -469,7 +481,7 @@ final class SacredWindowRepositoryProvider
 }
 
 String _$sacredWindowRepositoryHash() =>
-    r'352f72aa0a86150457c461db1bea1a2ad7b69a86';
+    r'13530eafd0fbfd2938f84a78941349af7d86d81f';
 
 /// Provides the [NotificationScheduler] instance.
 

@@ -12,6 +12,7 @@ import 'package:learning_tracker/core/database/daos/outbox_dao.dart';
 import 'package:learning_tracker/core/database/daos/point_config_dao.dart';
 import 'package:learning_tracker/core/database/daos/profile_dao.dart';
 import 'package:learning_tracker/core/database/daos/profile_program_dao.dart';
+import 'package:learning_tracker/core/database/daos/sacred_window_dao.dart';
 import 'package:learning_tracker/core/database/daos/stage_dao.dart';
 import 'package:learning_tracker/core/database/daos/streak_dao.dart';
 import 'package:learning_tracker/core/database/daos/streak_event_dao.dart';
@@ -35,6 +36,7 @@ import 'package:learning_tracker/core/database/tables/learning_order.dart';
 import 'package:learning_tracker/core/database/tables/outbox_table.dart';
 import 'package:learning_tracker/core/database/tables/point_configs.dart';
 import 'package:learning_tracker/core/database/tables/profile_programs.dart';
+import 'package:learning_tracker/core/database/tables/sacred_window_entries.dart';
 import 'package:learning_tracker/core/database/tables/stage_definitions.dart';
 import 'package:learning_tracker/core/database/tables/streak_events.dart';
 import 'package:learning_tracker/core/database/tables/streaks.dart';
@@ -80,6 +82,7 @@ part 'user_database.g.dart';
     SyncQueue,
     TextDownloadStatuses,
     Outbox,
+    SacredWindowEntries,
   ],
   daos: [
     ActiveCurriculumDao,
@@ -104,16 +107,24 @@ part 'user_database.g.dart';
     StudyDayConfigDao,
     ProfileProgramDao,
     OutboxDao,
+    SacredWindowDao,
   ],
 )
 class UserDatabase extends _$UserDatabase {
   UserDatabase(super.e);
 
   @override
-  int get schemaVersion => 14;
+  int get schemaVersion => 15;
 
   @override
   MigrationStrategy get migration {
-    return MigrationStrategy(onCreate: (Migrator m) => m.createAll());
+    return MigrationStrategy(
+      onCreate: (Migrator m) => m.createAll(),
+      onUpgrade: (Migrator m, int from, int to) async {
+        if (from < 15) {
+          await m.createTable(sacredWindowEntries);
+        }
+      },
+    );
   }
 }

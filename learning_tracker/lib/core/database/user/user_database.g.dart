@@ -11254,6 +11254,498 @@ class OutboxCompanion extends UpdateCompanion<OutboxData> {
   }
 }
 
+class $SacredWindowEntriesTable extends SacredWindowEntries
+    with TableInfo<$SacredWindowEntriesTable, SacredWindowEntry> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $SacredWindowEntriesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _startUtcMeta = const VerificationMeta(
+    'startUtc',
+  );
+  @override
+  late final GeneratedColumn<DateTime> startUtc = GeneratedColumn<DateTime>(
+    'start_utc',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _endUtcMeta = const VerificationMeta('endUtc');
+  @override
+  late final GeneratedColumn<DateTime> endUtc = GeneratedColumn<DateTime>(
+    'end_utc',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _kindMeta = const VerificationMeta('kind');
+  @override
+  late final GeneratedColumn<String> kind = GeneratedColumn<String>(
+    'kind',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _latMeta = const VerificationMeta('lat');
+  @override
+  late final GeneratedColumn<double> lat = GeneratedColumn<double>(
+    'lat',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _lngMeta = const VerificationMeta('lng');
+  @override
+  late final GeneratedColumn<double> lng = GeneratedColumn<double>(
+    'lng',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _inIsraelMeta = const VerificationMeta(
+    'inIsrael',
+  );
+  @override
+  late final GeneratedColumn<bool> inIsrael = GeneratedColumn<bool>(
+    'in_israel',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("in_israel" IN (0, 1))',
+    ),
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    defaultValue: currentDateAndTime,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    startUtc,
+    endUtc,
+    kind,
+    lat,
+    lng,
+    inIsrael,
+    createdAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'sacred_window_entries';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<SacredWindowEntry> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('start_utc')) {
+      context.handle(
+        _startUtcMeta,
+        startUtc.isAcceptableOrUnknown(data['start_utc']!, _startUtcMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_startUtcMeta);
+    }
+    if (data.containsKey('end_utc')) {
+      context.handle(
+        _endUtcMeta,
+        endUtc.isAcceptableOrUnknown(data['end_utc']!, _endUtcMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_endUtcMeta);
+    }
+    if (data.containsKey('kind')) {
+      context.handle(
+        _kindMeta,
+        kind.isAcceptableOrUnknown(data['kind']!, _kindMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_kindMeta);
+    }
+    if (data.containsKey('lat')) {
+      context.handle(
+        _latMeta,
+        lat.isAcceptableOrUnknown(data['lat']!, _latMeta),
+      );
+    }
+    if (data.containsKey('lng')) {
+      context.handle(
+        _lngMeta,
+        lng.isAcceptableOrUnknown(data['lng']!, _lngMeta),
+      );
+    }
+    if (data.containsKey('in_israel')) {
+      context.handle(
+        _inIsraelMeta,
+        inIsrael.isAcceptableOrUnknown(data['in_israel']!, _inIsraelMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_inIsraelMeta);
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  SacredWindowEntry map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return SacredWindowEntry(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      startUtc: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}start_utc'],
+      )!,
+      endUtc: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}end_utc'],
+      )!,
+      kind: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}kind'],
+      )!,
+      lat: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}lat'],
+      ),
+      lng: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}lng'],
+      ),
+      inIsrael: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}in_israel'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+    );
+  }
+
+  @override
+  $SacredWindowEntriesTable createAlias(String alias) {
+    return $SacredWindowEntriesTable(attachedDatabase, alias);
+  }
+}
+
+class SacredWindowEntry extends DataClass
+    implements Insertable<SacredWindowEntry> {
+  final int id;
+  final DateTime startUtc;
+  final DateTime endUtc;
+
+  /// 'shabbos' | 'yomTov' | 'shabbosYomTov' | 'yomKippur'
+  final String kind;
+
+  /// Device latitude — null when coordinates are not available.
+  final double? lat;
+
+  /// Device longitude — null when coordinates are not available.
+  final double? lng;
+  final bool inIsrael;
+  final DateTime createdAt;
+  const SacredWindowEntry({
+    required this.id,
+    required this.startUtc,
+    required this.endUtc,
+    required this.kind,
+    this.lat,
+    this.lng,
+    required this.inIsrael,
+    required this.createdAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['start_utc'] = Variable<DateTime>(startUtc);
+    map['end_utc'] = Variable<DateTime>(endUtc);
+    map['kind'] = Variable<String>(kind);
+    if (!nullToAbsent || lat != null) {
+      map['lat'] = Variable<double>(lat);
+    }
+    if (!nullToAbsent || lng != null) {
+      map['lng'] = Variable<double>(lng);
+    }
+    map['in_israel'] = Variable<bool>(inIsrael);
+    map['created_at'] = Variable<DateTime>(createdAt);
+    return map;
+  }
+
+  SacredWindowEntriesCompanion toCompanion(bool nullToAbsent) {
+    return SacredWindowEntriesCompanion(
+      id: Value(id),
+      startUtc: Value(startUtc),
+      endUtc: Value(endUtc),
+      kind: Value(kind),
+      lat: lat == null && nullToAbsent ? const Value.absent() : Value(lat),
+      lng: lng == null && nullToAbsent ? const Value.absent() : Value(lng),
+      inIsrael: Value(inIsrael),
+      createdAt: Value(createdAt),
+    );
+  }
+
+  factory SacredWindowEntry.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return SacredWindowEntry(
+      id: serializer.fromJson<int>(json['id']),
+      startUtc: serializer.fromJson<DateTime>(json['startUtc']),
+      endUtc: serializer.fromJson<DateTime>(json['endUtc']),
+      kind: serializer.fromJson<String>(json['kind']),
+      lat: serializer.fromJson<double?>(json['lat']),
+      lng: serializer.fromJson<double?>(json['lng']),
+      inIsrael: serializer.fromJson<bool>(json['inIsrael']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'startUtc': serializer.toJson<DateTime>(startUtc),
+      'endUtc': serializer.toJson<DateTime>(endUtc),
+      'kind': serializer.toJson<String>(kind),
+      'lat': serializer.toJson<double?>(lat),
+      'lng': serializer.toJson<double?>(lng),
+      'inIsrael': serializer.toJson<bool>(inIsrael),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+    };
+  }
+
+  SacredWindowEntry copyWith({
+    int? id,
+    DateTime? startUtc,
+    DateTime? endUtc,
+    String? kind,
+    Value<double?> lat = const Value.absent(),
+    Value<double?> lng = const Value.absent(),
+    bool? inIsrael,
+    DateTime? createdAt,
+  }) => SacredWindowEntry(
+    id: id ?? this.id,
+    startUtc: startUtc ?? this.startUtc,
+    endUtc: endUtc ?? this.endUtc,
+    kind: kind ?? this.kind,
+    lat: lat.present ? lat.value : this.lat,
+    lng: lng.present ? lng.value : this.lng,
+    inIsrael: inIsrael ?? this.inIsrael,
+    createdAt: createdAt ?? this.createdAt,
+  );
+  SacredWindowEntry copyWithCompanion(SacredWindowEntriesCompanion data) {
+    return SacredWindowEntry(
+      id: data.id.present ? data.id.value : this.id,
+      startUtc: data.startUtc.present ? data.startUtc.value : this.startUtc,
+      endUtc: data.endUtc.present ? data.endUtc.value : this.endUtc,
+      kind: data.kind.present ? data.kind.value : this.kind,
+      lat: data.lat.present ? data.lat.value : this.lat,
+      lng: data.lng.present ? data.lng.value : this.lng,
+      inIsrael: data.inIsrael.present ? data.inIsrael.value : this.inIsrael,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SacredWindowEntry(')
+          ..write('id: $id, ')
+          ..write('startUtc: $startUtc, ')
+          ..write('endUtc: $endUtc, ')
+          ..write('kind: $kind, ')
+          ..write('lat: $lat, ')
+          ..write('lng: $lng, ')
+          ..write('inIsrael: $inIsrael, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(id, startUtc, endUtc, kind, lat, lng, inIsrael, createdAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is SacredWindowEntry &&
+          other.id == this.id &&
+          other.startUtc == this.startUtc &&
+          other.endUtc == this.endUtc &&
+          other.kind == this.kind &&
+          other.lat == this.lat &&
+          other.lng == this.lng &&
+          other.inIsrael == this.inIsrael &&
+          other.createdAt == this.createdAt);
+}
+
+class SacredWindowEntriesCompanion extends UpdateCompanion<SacredWindowEntry> {
+  final Value<int> id;
+  final Value<DateTime> startUtc;
+  final Value<DateTime> endUtc;
+  final Value<String> kind;
+  final Value<double?> lat;
+  final Value<double?> lng;
+  final Value<bool> inIsrael;
+  final Value<DateTime> createdAt;
+  const SacredWindowEntriesCompanion({
+    this.id = const Value.absent(),
+    this.startUtc = const Value.absent(),
+    this.endUtc = const Value.absent(),
+    this.kind = const Value.absent(),
+    this.lat = const Value.absent(),
+    this.lng = const Value.absent(),
+    this.inIsrael = const Value.absent(),
+    this.createdAt = const Value.absent(),
+  });
+  SacredWindowEntriesCompanion.insert({
+    this.id = const Value.absent(),
+    required DateTime startUtc,
+    required DateTime endUtc,
+    required String kind,
+    this.lat = const Value.absent(),
+    this.lng = const Value.absent(),
+    required bool inIsrael,
+    this.createdAt = const Value.absent(),
+  }) : startUtc = Value(startUtc),
+       endUtc = Value(endUtc),
+       kind = Value(kind),
+       inIsrael = Value(inIsrael);
+  static Insertable<SacredWindowEntry> custom({
+    Expression<int>? id,
+    Expression<DateTime>? startUtc,
+    Expression<DateTime>? endUtc,
+    Expression<String>? kind,
+    Expression<double>? lat,
+    Expression<double>? lng,
+    Expression<bool>? inIsrael,
+    Expression<DateTime>? createdAt,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (startUtc != null) 'start_utc': startUtc,
+      if (endUtc != null) 'end_utc': endUtc,
+      if (kind != null) 'kind': kind,
+      if (lat != null) 'lat': lat,
+      if (lng != null) 'lng': lng,
+      if (inIsrael != null) 'in_israel': inIsrael,
+      if (createdAt != null) 'created_at': createdAt,
+    });
+  }
+
+  SacredWindowEntriesCompanion copyWith({
+    Value<int>? id,
+    Value<DateTime>? startUtc,
+    Value<DateTime>? endUtc,
+    Value<String>? kind,
+    Value<double?>? lat,
+    Value<double?>? lng,
+    Value<bool>? inIsrael,
+    Value<DateTime>? createdAt,
+  }) {
+    return SacredWindowEntriesCompanion(
+      id: id ?? this.id,
+      startUtc: startUtc ?? this.startUtc,
+      endUtc: endUtc ?? this.endUtc,
+      kind: kind ?? this.kind,
+      lat: lat ?? this.lat,
+      lng: lng ?? this.lng,
+      inIsrael: inIsrael ?? this.inIsrael,
+      createdAt: createdAt ?? this.createdAt,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (startUtc.present) {
+      map['start_utc'] = Variable<DateTime>(startUtc.value);
+    }
+    if (endUtc.present) {
+      map['end_utc'] = Variable<DateTime>(endUtc.value);
+    }
+    if (kind.present) {
+      map['kind'] = Variable<String>(kind.value);
+    }
+    if (lat.present) {
+      map['lat'] = Variable<double>(lat.value);
+    }
+    if (lng.present) {
+      map['lng'] = Variable<double>(lng.value);
+    }
+    if (inIsrael.present) {
+      map['in_israel'] = Variable<bool>(inIsrael.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SacredWindowEntriesCompanion(')
+          ..write('id: $id, ')
+          ..write('startUtc: $startUtc, ')
+          ..write('endUtc: $endUtc, ')
+          ..write('kind: $kind, ')
+          ..write('lat: $lat, ')
+          ..write('lng: $lng, ')
+          ..write('inIsrael: $inIsrael, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$UserDatabase extends GeneratedDatabase {
   _$UserDatabase(QueryExecutor e) : super(e);
   $UserDatabaseManager get managers => $UserDatabaseManager(this);
@@ -11294,6 +11786,8 @@ abstract class _$UserDatabase extends GeneratedDatabase {
   late final $TextDownloadStatusesTable textDownloadStatuses =
       $TextDownloadStatusesTable(this);
   late final $OutboxTable outbox = $OutboxTable(this);
+  late final $SacredWindowEntriesTable sacredWindowEntries =
+      $SacredWindowEntriesTable(this);
   late final Index completionsPidxPidCurCompleted = Index(
     'completions_pidx_pid_cur_completed',
     'CREATE INDEX completions_pidx_pid_cur_completed ON completions (profile_id, curriculum_id, completed_at DESC)',
@@ -11366,6 +11860,9 @@ abstract class _$UserDatabase extends GeneratedDatabase {
     this as UserDatabase,
   );
   late final OutboxDao outboxDao = OutboxDao(this as UserDatabase);
+  late final SacredWindowDao sacredWindowDao = SacredWindowDao(
+    this as UserDatabase,
+  );
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -11392,6 +11889,7 @@ abstract class _$UserDatabase extends GeneratedDatabase {
     syncQueue,
     textDownloadStatuses,
     outbox,
+    sacredWindowEntries,
     completionsPidxPidCurCompleted,
     completionsNaturalKey,
     completionEventsNaturalKey,
@@ -18758,6 +19256,273 @@ typedef $$OutboxTableProcessedTableManager =
       OutboxData,
       PrefetchHooks Function()
     >;
+typedef $$SacredWindowEntriesTableCreateCompanionBuilder =
+    SacredWindowEntriesCompanion Function({
+      Value<int> id,
+      required DateTime startUtc,
+      required DateTime endUtc,
+      required String kind,
+      Value<double?> lat,
+      Value<double?> lng,
+      required bool inIsrael,
+      Value<DateTime> createdAt,
+    });
+typedef $$SacredWindowEntriesTableUpdateCompanionBuilder =
+    SacredWindowEntriesCompanion Function({
+      Value<int> id,
+      Value<DateTime> startUtc,
+      Value<DateTime> endUtc,
+      Value<String> kind,
+      Value<double?> lat,
+      Value<double?> lng,
+      Value<bool> inIsrael,
+      Value<DateTime> createdAt,
+    });
+
+class $$SacredWindowEntriesTableFilterComposer
+    extends Composer<_$UserDatabase, $SacredWindowEntriesTable> {
+  $$SacredWindowEntriesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get startUtc => $composableBuilder(
+    column: $table.startUtc,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get endUtc => $composableBuilder(
+    column: $table.endUtc,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get kind => $composableBuilder(
+    column: $table.kind,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get lat => $composableBuilder(
+    column: $table.lat,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get lng => $composableBuilder(
+    column: $table.lng,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get inIsrael => $composableBuilder(
+    column: $table.inIsrael,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$SacredWindowEntriesTableOrderingComposer
+    extends Composer<_$UserDatabase, $SacredWindowEntriesTable> {
+  $$SacredWindowEntriesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get startUtc => $composableBuilder(
+    column: $table.startUtc,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get endUtc => $composableBuilder(
+    column: $table.endUtc,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get kind => $composableBuilder(
+    column: $table.kind,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get lat => $composableBuilder(
+    column: $table.lat,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get lng => $composableBuilder(
+    column: $table.lng,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get inIsrael => $composableBuilder(
+    column: $table.inIsrael,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$SacredWindowEntriesTableAnnotationComposer
+    extends Composer<_$UserDatabase, $SacredWindowEntriesTable> {
+  $$SacredWindowEntriesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get startUtc =>
+      $composableBuilder(column: $table.startUtc, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get endUtc =>
+      $composableBuilder(column: $table.endUtc, builder: (column) => column);
+
+  GeneratedColumn<String> get kind =>
+      $composableBuilder(column: $table.kind, builder: (column) => column);
+
+  GeneratedColumn<double> get lat =>
+      $composableBuilder(column: $table.lat, builder: (column) => column);
+
+  GeneratedColumn<double> get lng =>
+      $composableBuilder(column: $table.lng, builder: (column) => column);
+
+  GeneratedColumn<bool> get inIsrael =>
+      $composableBuilder(column: $table.inIsrael, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+}
+
+class $$SacredWindowEntriesTableTableManager
+    extends
+        RootTableManager<
+          _$UserDatabase,
+          $SacredWindowEntriesTable,
+          SacredWindowEntry,
+          $$SacredWindowEntriesTableFilterComposer,
+          $$SacredWindowEntriesTableOrderingComposer,
+          $$SacredWindowEntriesTableAnnotationComposer,
+          $$SacredWindowEntriesTableCreateCompanionBuilder,
+          $$SacredWindowEntriesTableUpdateCompanionBuilder,
+          (
+            SacredWindowEntry,
+            BaseReferences<
+              _$UserDatabase,
+              $SacredWindowEntriesTable,
+              SacredWindowEntry
+            >,
+          ),
+          SacredWindowEntry,
+          PrefetchHooks Function()
+        > {
+  $$SacredWindowEntriesTableTableManager(
+    _$UserDatabase db,
+    $SacredWindowEntriesTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$SacredWindowEntriesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$SacredWindowEntriesTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$SacredWindowEntriesTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<DateTime> startUtc = const Value.absent(),
+                Value<DateTime> endUtc = const Value.absent(),
+                Value<String> kind = const Value.absent(),
+                Value<double?> lat = const Value.absent(),
+                Value<double?> lng = const Value.absent(),
+                Value<bool> inIsrael = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+              }) => SacredWindowEntriesCompanion(
+                id: id,
+                startUtc: startUtc,
+                endUtc: endUtc,
+                kind: kind,
+                lat: lat,
+                lng: lng,
+                inIsrael: inIsrael,
+                createdAt: createdAt,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required DateTime startUtc,
+                required DateTime endUtc,
+                required String kind,
+                Value<double?> lat = const Value.absent(),
+                Value<double?> lng = const Value.absent(),
+                required bool inIsrael,
+                Value<DateTime> createdAt = const Value.absent(),
+              }) => SacredWindowEntriesCompanion.insert(
+                id: id,
+                startUtc: startUtc,
+                endUtc: endUtc,
+                kind: kind,
+                lat: lat,
+                lng: lng,
+                inIsrael: inIsrael,
+                createdAt: createdAt,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$SacredWindowEntriesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$UserDatabase,
+      $SacredWindowEntriesTable,
+      SacredWindowEntry,
+      $$SacredWindowEntriesTableFilterComposer,
+      $$SacredWindowEntriesTableOrderingComposer,
+      $$SacredWindowEntriesTableAnnotationComposer,
+      $$SacredWindowEntriesTableCreateCompanionBuilder,
+      $$SacredWindowEntriesTableUpdateCompanionBuilder,
+      (
+        SacredWindowEntry,
+        BaseReferences<
+          _$UserDatabase,
+          $SacredWindowEntriesTable,
+          SacredWindowEntry
+        >,
+      ),
+      SacredWindowEntry,
+      PrefetchHooks Function()
+    >;
 
 class $UserDatabaseManager {
   final _$UserDatabase _db;
@@ -18804,4 +19569,6 @@ class $UserDatabaseManager {
       $$TextDownloadStatusesTableTableManager(_db, _db.textDownloadStatuses);
   $$OutboxTableTableManager get outbox =>
       $$OutboxTableTableManager(_db, _db.outbox);
+  $$SacredWindowEntriesTableTableManager get sacredWindowEntries =>
+      $$SacredWindowEntriesTableTableManager(_db, _db.sacredWindowEntries);
 }

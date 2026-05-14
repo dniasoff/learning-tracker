@@ -5,8 +5,8 @@
 /// end-to-end without errors and that a second device can restore the
 /// same data via the sync/restore path.
 ///
-/// AC1: Schema migration — fresh DB initialises at schemaVersion 14;
-///      all 21 Drift-registered tables exist; all UNIQUE indexes exist.
+/// AC1: Schema migration — fresh DB initialises at schemaVersion 15;
+///      all 22 Drift-registered tables exist; all UNIQUE indexes exist.
 /// AC2: Onboarding flow — create account → create profile →
 ///      activate curriculum → writes land in local DB.
 /// AC3: Second-device restore — given Firestore docs, the sync engine
@@ -104,7 +104,7 @@ void main() {
   });
 
   // --------------------------------------------------------------------------
-  // AC1 — Schema migration: fresh DB at schemaVersion 14, all tables exist,
+  // AC1 — Schema migration: fresh DB at schemaVersion 15, all tables exist,
   //        all UNIQUE indexes exist, no migration error thrown.
   // --------------------------------------------------------------------------
 
@@ -114,23 +114,23 @@ void main() {
     setUp(() => db = inMemoryDb());
     tearDown(() => db.close());
 
-    test('UserDatabase.schemaVersion is 14 (E25 wipe-install boundary)', () {
+    test('UserDatabase.schemaVersion is 15 (DNI-367 SacredWindowEntries)', () {
       // schemaVersion is a Dart constant — no I/O needed.
-      expect(db.schemaVersion, equals(14));
+      expect(db.schemaVersion, equals(15));
     });
 
     test(
-      'PRAGMA user_version matches schemaVersion 14 after first query',
+      'PRAGMA user_version matches schemaVersion 15 after first query',
       () async {
         // Trigger schema materialisation by issuing any query.
         await db.customSelect('SELECT 1').get();
 
         final row = await db.customSelect('PRAGMA user_version').getSingle();
-        expect(row.read<int>('user_version'), equals(14));
+        expect(row.read<int>('user_version'), equals(15));
       },
     );
 
-    test('all 21 Drift-registered tables exist in sqlite_master', () async {
+    test('all 22 Drift-registered tables exist in sqlite_master', () async {
       final rows = await db
           .customSelect(
             "SELECT name FROM sqlite_master WHERE type='table' ORDER BY name",
@@ -138,7 +138,7 @@ void main() {
           .get();
       final tableNames = rows.map((r) => r.read<String>('name')).toSet();
 
-      // The 21 tables registered in @DriftDatabase(tables: [...]).
+      // The 22 tables registered in @DriftDatabase(tables: [...]).
       const expected = {
         'accounts',
         'learner_profiles',
@@ -161,6 +161,7 @@ void main() {
         'sync_queue',
         'text_download_statuses',
         'outbox',
+        'sacred_window_entries',
       };
 
       for (final name in expected) {

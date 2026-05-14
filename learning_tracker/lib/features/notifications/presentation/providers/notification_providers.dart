@@ -226,9 +226,14 @@ bool isSacredTimeActive(Ref ref) {
 /// Kept alive so the in-memory cache survives across provider rebuilds.
 /// [TimezoneLifecycleObserver] calls [SacredWindowRepository.invalidate]
 /// on resume (DNI-367).
+///
+/// The [SacredWindowDao] is injected so computed windows are persisted to
+/// the user DB, enabling background notification fire-time checks on
+/// cold-start without the Flutter engine (DNI-367 AC 26.24 requirement 4).
 @Riverpod(keepAlive: true)
 SacredWindowRepository sacredWindowRepository(Ref ref) {
-  return SacredWindowRepository();
+  final dao = ref.watch(userDatabaseProvider).sacredWindowDao;
+  return SacredWindowRepository(dao: dao);
 }
 
 /// Provides the [NotificationScheduler] instance.

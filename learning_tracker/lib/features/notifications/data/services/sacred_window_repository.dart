@@ -1,3 +1,6 @@
+import 'package:drift/drift.dart';
+import 'package:learning_tracker/core/database/daos/sacred_window_dao.dart';
+import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/features/sacred_time/domain/models/sacred_location.dart';
 import 'package:learning_tracker/features/sacred_time/domain/models/sacred_window.dart';
 import 'package:learning_tracker/features/sacred_time/domain/services/zmanim_window_service.dart';
@@ -5,17 +8,26 @@ import 'package:learning_tracker/features/sacred_time/domain/services/zmanim_win
 /// Repository that provides Sacred Time block windows for notification
 /// scheduling (DNI-367, Story 26.24).
 ///
-/// Wraps [ZmanimWindowService] with an in-memory cache keyed on
-/// (latitude, longitude, inIsrael). Call [invalidate] whenever the user's
-/// location or timezone changes — the next query will recompute.
+/// Wraps [ZmanimWindowService] with a two-level cache:
 ///
-/// Windows are computed over a span wide enough to cover the next 14 days
-/// plus a 2-day look-back so an in-progress window is always detected.
+/// 1. **In-memory** — a `List<SacredWindow>?` keyed on (lat, lng, inIsrael),
+///    identical to the original implementation, so synchronous callers
+///    ([NotificationScheduler]) are unaffected.
+///
+/// 2. **DB** (optional) — if a [SacredWindowDao] is supplied, computed
+///    windows are written to the database asynchronously (fire-and-forget)
+///    so that background notification-fire-time checks can read them on
+///    cold-start without the Flutter engine (AC 26.24 requirement 4).
+///
+/// Call [invalidate] whenever the user's location or timezone changes — the
+/// next query recomputes and re-persists.
 class SacredWindowRepository {
-  SacredWindowRepository({ZmanimWindowService? service})
-    : _service = service ?? const ZmanimWindowService();
+  SacredWindowRepository({ZmanimWindowService? service, SacredWindowDao? dao})
+    : _service = service ?? const ZmanimWindowService(),
+      _dao = dao;
 
   final ZmanimWindowService _service;
+  final SacredWindowDao? _dao;
 
   /// Span used for window computation: 14 days forward + 2 days look-back
   /// inside the service itself (service always looks back 2 days from `from`).
@@ -26,7 +38,7 @@ class SacredWindowRepository {
   double? _cachedLong;
   bool? _cachedInIsrael;
 
-  /// Invalidates the in-memory cache.
+  /// Invalidates the in-memory cache and asynchronously clears the DB cache.
   ///
   /// Called by [TimezoneLifecycleObserver] on resume, and whenever the user's
   /// location changes.
@@ -35,6 +47,7 @@ class SacredWindowRepository {
     _cachedLat = null;
     _cachedLong = null;
     _cachedInIsrael = null;
+    _dao?.clearAll();
   }
 
   /// Returns true if [fireTimeUtc] (UTC) falls inside any Sacred Time block
@@ -110,6 +123,48 @@ class SacredWindowRepository {
     _cachedLat = location.latitude;
     _cachedLong = location.longitude;
     _cachedInIsrael = inIsrael;
+
+    // Persist to DB asynchronously so background cold-start checks can read
+    // the windows without the Flutter engine (DNI-367 AC 26.24 requirement 4).
+    _persistToDb(
+      windows: _cachedWindows!,
+      lat: location.latitude,
+      lng: location.longitude,
+      inIsrael: inIsrael,
+    );
+
     return _cachedWindows!;
+  }
+
+  /// Writes the computed windows to the DB (fire-and-forget).
+  ///
+  /// Silently no-ops when [_dao] is null (e.g. in unit tests that construct
+  /// [SacredWindowRepository] without a DAO).
+  void _persistToDb({
+    required List<SacredWindow> windows,
+    required double lat,
+    required double lng,
+    required bool inIsrael,
+  }) {
+    final dao = _dao;
+    if (dao == null) return;
+
+    // Build companions outside the async closure so we don't capture mutable
+    // state that could change before the future resolves.
+    final companions =
+        windows
+            .map(
+              (w) => SacredWindowEntriesCompanion.insert(
+                startUtc: w.startUtc,
+                endUtc: w.endUtc,
+                kind: w.kind.name,
+                lat: Value(lat),
+                lng: Value(lng),
+                inIsrael: inIsrael,
+              ),
+            )
+            .toList();
+
+    dao.clearAll().then((_) => dao.insertAll(companions)).ignore();
   }
 }
