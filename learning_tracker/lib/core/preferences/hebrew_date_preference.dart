@@ -3,13 +3,13 @@ import 'package:learning_tracker/features/sync/domain/profile_scoped_preference_
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Per-profile toggle controlling whether dates show on the Hebrew calendar
-/// (vs the English / Gregorian calendar). New profiles default to **false**
-/// (English calendar) per AC of DNI-328.
+/// (vs the English / Gregorian calendar). New profiles default to **true**
+/// (Hebrew calendar) so the app ships with Jewish calendar on first launch.
 class HebrewDatePreference extends ProfileScopedPreference<bool> {
   HebrewDatePreference();
 
   @override
-  bool get defaultValue => false;
+  bool get defaultValue => true;
 
   @override
   bool readFromPrefs(SharedPreferences prefs, int profileId) {

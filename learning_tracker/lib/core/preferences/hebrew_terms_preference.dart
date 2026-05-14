@@ -6,12 +6,13 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// review section, …) render in Hebrew script vs English transliteration.
 ///
 /// Independent of the app's UI locale and of [AppLocalePreference]. New
-/// profiles default to **false** (English transliteration) per AC of DNI-328.
+/// profiles default to **true** (Hebrew script) so the app ships with
+/// Hebrew terms on first launch.
 class HebrewTermsPreference extends ProfileScopedPreference<bool> {
   HebrewTermsPreference();
 
   @override
-  bool get defaultValue => false;
+  bool get defaultValue => true;
 
   @override
   bool readFromPrefs(SharedPreferences prefs, int profileId) {
