@@ -15,7 +15,6 @@ import 'package:learning_tracker/features/sync/data/firestore_data_source.dart';
 import 'package:learning_tracker/features/sync/data/offline_queue.dart';
 import 'package:learning_tracker/features/sync/data/sync_engine.dart';
 import 'package:learning_tracker/features/sync/domain/models/sync_status.dart';
-
 /// Provider for FirestoreDataSource, scoped to the active profile.
 ///
 /// Returns null when the user is not cloud-born (v2 §4.5 tier gate).
@@ -101,6 +100,11 @@ final syncEngineProvider = Provider<SyncEngine?>((ref) {
 });
 
 /// Provider for sync status stream.
+///
+/// Phase 5: the canonical source has moved to
+/// `core/sync/providers/sync_status_providers.dart`. This provider is kept
+/// in place for backward compatibility; new code should prefer the core
+/// provider directly.
 final syncStatusStreamProvider = StreamProvider<SyncStatus>((ref) {
   final engine = ref.watch(syncEngineProvider);
   if (engine == null) {
@@ -110,6 +114,11 @@ final syncStatusStreamProvider = StreamProvider<SyncStatus>((ref) {
 });
 
 /// Provider for current sync status (from stream).
+///
+/// Phase 5: the canonical source has moved to
+/// `core/sync/providers/sync_status_providers.dart`. This provider is kept
+/// in place for backward compatibility; new code should prefer the core
+/// provider directly.
 final syncStatusProvider = Provider<SyncStatus>((ref) {
   final engine = ref.watch(syncEngineProvider);
   if (engine == null) return const SyncStatus.localOnly();

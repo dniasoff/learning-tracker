@@ -9,6 +9,7 @@ import 'package:learning_tracker/features/sync/domain/models/sync_status.dart';
 ///
 /// Phase 3: pullOnLaunch.
 /// Phase 4: pushAllLocalData.
+/// Phase 5: statusStream / currentStatus — SyncStatus consumers switch here.
 ///
 /// Future phases will remove the internal delegation to [SyncEngine] as
 /// individual merge paths are decomposed into [PullPipeline] + [MergeRouter].
@@ -32,6 +33,11 @@ abstract class SyncOrchestrator {
   /// pull (e.g. [DeviceRestoreService]) can switch to this interface without
   /// needing a direct [SyncEngine] reference.
   SyncStatus get currentStatus;
+
+  /// Broadcast stream of sync-status changes — delegates to the underlying
+  /// engine. Consumers subscribe here instead of holding a direct
+  /// [SyncEngine] reference.
+  Stream<SyncStatus> get statusStream;
 }
 
 /// Concrete implementation that delegates to [SyncEngine].
@@ -55,4 +61,7 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
 
   @override
   SyncStatus get currentStatus => _engine.currentStatus;
+
+  @override
+  Stream<SyncStatus> get statusStream => _engine.statusStream;
 }

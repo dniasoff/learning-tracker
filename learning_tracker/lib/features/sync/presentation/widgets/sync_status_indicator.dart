@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:learning_tracker/core/sync/providers/sync_status_providers.dart';
 import 'package:learning_tracker/features/sync/domain/models/sync_status.dart';
-import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
 
 /// Displays the current sync status as a compact icon with optional label.
 ///
