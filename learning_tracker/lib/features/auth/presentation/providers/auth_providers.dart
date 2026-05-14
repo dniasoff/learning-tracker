@@ -1,4 +1,3 @@
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:learning_tracker/features/auth/data/repositories/auth_repository_impl.dart';
 import 'package:learning_tracker/features/auth/domain/models/app_user.dart';
@@ -15,7 +14,6 @@ GoogleSignIn googleSignIn(Ref ref) {
 @Riverpod(keepAlive: true)
 AuthRepository authRepository(Ref ref) {
   return AuthRepositoryImpl(
-    firebaseAuth: FirebaseAuth.instance,
     googleSignIn: ref.watch(googleSignInProvider),
   );
 }

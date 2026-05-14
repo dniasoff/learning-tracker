@@ -1,6 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:learning_tracker/core/sync/firestore_gateway.dart';
+import 'package:learning_tracker/features/auth/domain/repositories/auth_repository.dart';
 
 /// The canonical [FirestoreGateway] implementation.
 ///
@@ -15,12 +15,12 @@ import 'package:learning_tracker/core/sync/firestore_gateway.dart';
 class FirestoreGatewayImpl implements FirestoreGateway {
   FirestoreGatewayImpl({
     required FirebaseFirestore firestore,
-    required FirebaseAuth auth,
+    required AuthRepository authRepository,
   }) : _firestore = firestore,
-       _auth = auth;
+       _authRepository = authRepository;
 
   final FirebaseFirestore _firestore;
-  final FirebaseAuth _auth;
+  final AuthRepository _authRepository;
 
   // ── push ──────────────────────────────────────────────────────────────────
 
@@ -140,7 +140,7 @@ class FirestoreGatewayImpl implements FirestoreGateway {
     int profileId,
     String name,
   ) {
-    final uid = _auth.currentUser?.uid;
+    final uid = _authRepository.currentUser?.uid;
     if (uid == null) return null;
     return _firestore
         .collection('users')

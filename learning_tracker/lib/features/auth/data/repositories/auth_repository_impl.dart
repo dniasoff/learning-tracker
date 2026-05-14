@@ -6,9 +6,9 @@ import 'package:learning_tracker/features/auth/domain/repositories/auth_reposito
 
 class AuthRepositoryImpl implements AuthRepository {
   AuthRepositoryImpl({
-    required FirebaseAuth firebaseAuth,
+    FirebaseAuth? firebaseAuth,
     required GoogleSignIn googleSignIn,
-  }) : _firebaseAuth = firebaseAuth,
+  }) : _firebaseAuth = firebaseAuth ?? FirebaseAuth.instance,
        _googleSignIn = googleSignIn;
 
   final FirebaseAuth _firebaseAuth;
