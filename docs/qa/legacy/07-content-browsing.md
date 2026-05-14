@@ -538,6 +538,16 @@ Each scenario follows this structure:
 
 ---
 
+## Bavli Seder Zeraim — Intentionally Brochos-only
+
+The Babylonian Talmud has Gemara for only 37 of the 63 tractates in Mishnayos.
+Seder Zeraim's sole Bavli tractate is Brochos (Berakhot). The `bavli.json`
+hierarchy intentionally includes only Brochos under Seder Zeraim; Bikkurim,
+Peah, and the rest of Zeraim exist under Mishnayos, Yerushalmi, and perek_yomi
+— not under Bavli. This is correct and expected; it is not a bug.
+
+---
+
 ## Cross-Feature References
 
 | Feature Area | Document | Relationship to Content Browsing |
