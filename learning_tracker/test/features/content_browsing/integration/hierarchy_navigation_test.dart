@@ -9,6 +9,7 @@ import 'package:learning_tracker/features/content_browsing/presentation/provider
 import 'package:learning_tracker/features/content_browsing/presentation/screens/content_hierarchy_screen.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/screens/curriculum_list_screen.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -35,7 +36,11 @@ void main() {
           (ref, curriculum) async => 0.0,
         ),
       ],
-      child: MaterialApp(home: home),
+      child: MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: home,
+      ),
     );
   }
 

@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/goal_entity.dart';
 import 'package:learning_tracker/features/scheduler/presentation/screens/goal_setup_screen.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 GoalEntity _makeGoal() => GoalEntity(
@@ -13,6 +14,14 @@ GoalEntity _makeGoal() => GoalEntity(
   description: 'Test goal',
   createdAt: DateTime.utc(2026, 1, 1),
   updatedAt: DateTime.utc(2026, 1, 1),
+);
+
+Widget _makeApp({required Widget home}) => ProviderScope(
+  child: MaterialApp(
+    localizationsDelegates: AppLocalizations.localizationsDelegates,
+    supportedLocales: AppLocalizations.supportedLocales,
+    home: home,
+  ),
 );
 
 void main() {
@@ -25,11 +34,7 @@ void main() {
       tester,
     ) async {
       await tester.pumpWidget(
-        const ProviderScope(
-          child: MaterialApp(
-            home: GoalSetupScreen(curriculumId: CurriculumId.mishnayos),
-          ),
-        ),
+        _makeApp(home: const GoalSetupScreen(curriculumId: CurriculumId.mishnayos)),
       );
 
       expect(find.text('New Goal'), findsOneWidget);
@@ -42,11 +47,7 @@ void main() {
       tester,
     ) async {
       await tester.pumpWidget(
-        const ProviderScope(
-          child: MaterialApp(
-            home: GoalSetupScreen(curriculumId: CurriculumId.mishnayos),
-          ),
-        ),
+        _makeApp(home: const GoalSetupScreen(curriculumId: CurriculumId.mishnayos)),
       );
 
       expect(find.text('Deadline'), findsOneWidget);
@@ -56,11 +57,7 @@ void main() {
 
     testWidgets('slider changes target percentage', (tester) async {
       await tester.pumpWidget(
-        const ProviderScope(
-          child: MaterialApp(
-            home: GoalSetupScreen(curriculumId: CurriculumId.mishnayos),
-          ),
-        ),
+        _makeApp(home: const GoalSetupScreen(curriculumId: CurriculumId.mishnayos)),
       );
 
       expect(find.textContaining('100%'), findsOneWidget);
@@ -77,12 +74,10 @@ void main() {
       tester,
     ) async {
       await tester.pumpWidget(
-        const ProviderScope(
-          child: MaterialApp(
-            home: GoalSetupScreen(
-              curriculumId: CurriculumId.bavli,
-              totalItems: 2711,
-            ),
+        _makeApp(
+          home: const GoalSetupScreen(
+            curriculumId: CurriculumId.bavli,
+            totalItems: 2711,
           ),
         ),
       );
@@ -93,12 +88,10 @@ void main() {
 
     testWidgets('switching to pace mode shows pace inputs', (tester) async {
       await tester.pumpWidget(
-        const ProviderScope(
-          child: MaterialApp(
-            home: GoalSetupScreen(
-              curriculumId: CurriculumId.bavli,
-              totalItems: 2711,
-            ),
+        _makeApp(
+          home: const GoalSetupScreen(
+            curriculumId: CurriculumId.bavli,
+            totalItems: 2711,
           ),
         ),
       );
@@ -118,12 +111,10 @@ void main() {
       tester,
     ) async {
       await tester.pumpWidget(
-        const ProviderScope(
-          child: MaterialApp(
-            home: GoalSetupScreen(
-              curriculumId: CurriculumId.bavli,
-              totalItems: 2711,
-            ),
+        _makeApp(
+          home: const GoalSetupScreen(
+            curriculumId: CurriculumId.bavli,
+            totalItems: 2711,
           ),
         ),
       );
@@ -142,12 +133,10 @@ void main() {
       tester,
     ) async {
       await tester.pumpWidget(
-        const ProviderScope(
-          child: MaterialApp(
-            home: GoalSetupScreen(
-              curriculumId: CurriculumId.bavli,
-              totalItems: 2711,
-            ),
+        _makeApp(
+          home: const GoalSetupScreen(
+            curriculumId: CurriculumId.bavli,
+            totalItems: 2711,
           ),
         ),
       );
@@ -161,12 +150,10 @@ void main() {
 
     testWidgets('edit mode shows Update Goal button', (tester) async {
       await tester.pumpWidget(
-        ProviderScope(
-          child: MaterialApp(
-            home: GoalSetupScreen(
-              curriculumId: CurriculumId.mishnayos,
-              existingGoal: _makeGoal(),
-            ),
+        _makeApp(
+          home: GoalSetupScreen(
+            curriculumId: CurriculumId.mishnayos,
+            existingGoal: _makeGoal(),
           ),
         ),
       );

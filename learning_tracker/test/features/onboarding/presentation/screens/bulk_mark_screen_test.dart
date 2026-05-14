@@ -6,6 +6,7 @@ import 'package:learning_tracker/core/network/sefaria/models/curriculum_hierarch
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/onboarding/presentation/screens/bulk_mark_screen.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/curriculum_scope_providers.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
 
 void main() {
   group('BulkMarkScreen', () {
@@ -27,8 +28,10 @@ void main() {
             ),
             contentSearchProvider.overrideWith((ref, args) => Future.value([])),
           ],
-          child: const MaterialApp(
-            home: BulkMarkScreen(curriculumId: CurriculumId.mishnayos),
+          child: MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: const BulkMarkScreen(curriculumId: CurriculumId.mishnayos),
           ),
         ),
       );

@@ -23,6 +23,7 @@ import 'package:learning_tracker/features/progress/domain/services/curriculum_pr
 import 'package:learning_tracker/features/scheduler/domain/models/delta_value.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/pace_status.dart';
 import 'package:learning_tracker/features/scheduler/domain/services/pace_calculator.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:test/test.dart' hide isNotNull, isNull;
 
@@ -546,6 +547,8 @@ void main() {
       var started = false;
       await tester.pumpWidget(
         MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
             body: TodaysTasksWidget(
               taskCount: 12,

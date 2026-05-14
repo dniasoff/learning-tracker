@@ -15,6 +15,7 @@ import 'package:learning_tracker/features/gamification/presentation/widgets/stre
 import 'package:learning_tracker/features/profiles/presentation/widgets/profile_avatar.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/delta_value.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/pace_status.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Load real fonts so text renders in golden screenshots instead of Ahem boxes.
@@ -69,6 +70,8 @@ Widget phoneApp({required Widget child}) {
       ),
       child: MaterialApp(
         debugShowCheckedModeBanner: false,
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         theme: AppTheme.lightTheme(),
         home: child,
       ),

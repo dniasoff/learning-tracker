@@ -9,6 +9,7 @@ import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dar
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
 import 'package:learning_tracker/features/scheduler/presentation/screens/scheduler_screen.dart';
 import 'package:learning_tracker/features/scheduler/presentation/widgets/daily_task_card.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
 
 DailyTask _task({
   CurriculumId curriculum = CurriculumId.mishnayos,
@@ -40,6 +41,8 @@ Widget _buildScreen({required List<DailyTask> tasks}) {
       allDailyTasksProvider.overrideWith((ref) => Future.value(tasks)),
     ],
     child: MaterialApp(
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       theme: AppTheme.lightTheme(),
       home: const SchedulerScreen(),
     ),
@@ -111,6 +114,8 @@ void main() {
             allDailyTasksProvider.overrideWith((ref) => completer.future),
           ],
           child: MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
             theme: AppTheme.lightTheme(),
             home: const SchedulerScreen(),
           ),
@@ -134,6 +139,8 @@ void main() {
             ),
           ],
           child: MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
             theme: AppTheme.lightTheme(),
             home: const SchedulerScreen(),
           ),
@@ -154,6 +161,8 @@ void main() {
             allDailyTasksProvider.overrideWith((ref) => Future.value(tasks)),
           ],
           child: MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
             theme: AppTheme.lightTheme(),
             home: const SchedulerScreen(),
           ),

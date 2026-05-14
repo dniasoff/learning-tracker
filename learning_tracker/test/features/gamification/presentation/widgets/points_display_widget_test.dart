@@ -5,6 +5,7 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/user_mode.dart';
 import 'package:learning_tracker/features/gamification/presentation/providers/points_providers.dart';
 import 'package:learning_tracker/features/gamification/presentation/widgets/points_display_widget.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
@@ -28,8 +29,10 @@ void main() {
               (_) async => {CurriculumId.mishnayos: 15, CurriculumId.bavli: 10},
             ),
           ],
-          child: const MaterialApp(
-            home: Scaffold(body: PointsDisplayWidget(userMode: UserMode.child)),
+          child: MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: const Scaffold(body: PointsDisplayWidget(userMode: UserMode.child)),
           ),
         ),
       );
@@ -51,8 +54,10 @@ void main() {
               (_) async => {CurriculumId.mishnayos: 25},
             ),
           ],
-          child: const MaterialApp(
-            home: Scaffold(body: PointsDisplayWidget(userMode: UserMode.adult)),
+          child: MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: const Scaffold(body: PointsDisplayWidget(userMode: UserMode.adult)),
           ),
         ),
       );

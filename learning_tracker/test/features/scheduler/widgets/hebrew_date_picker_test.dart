@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/features/scheduler/presentation/widgets/hebrew_date_picker.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
 
 Widget _buildTestApp({required ValueChanged<DateTime?> onResult}) {
   return MaterialApp(
+    localizationsDelegates: AppLocalizations.localizationsDelegates,
+    supportedLocales: AppLocalizations.supportedLocales,
     home: Builder(
       builder: (context) => Scaffold(
         body: ElevatedButton(

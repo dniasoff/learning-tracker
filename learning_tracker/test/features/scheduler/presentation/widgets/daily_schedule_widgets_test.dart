@@ -8,6 +8,7 @@ import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dar
 import 'package:learning_tracker/features/scheduler/presentation/widgets/daily_schedule_header.dart';
 import 'package:learning_tracker/features/scheduler/presentation/widgets/grouped_daily_view.dart';
 import 'package:learning_tracker/features/scheduler/presentation/widgets/unified_daily_view.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 DailyTask _task(
@@ -38,6 +39,8 @@ ComposedDailySchedule _schedule(List<DailyTask> tasks, String summary) {
 Widget _wrap(Widget child) {
   return ProviderScope(
     child: MaterialApp(
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       theme: AppTheme.lightTheme(),
       home: Scaffold(body: child),
     ),
