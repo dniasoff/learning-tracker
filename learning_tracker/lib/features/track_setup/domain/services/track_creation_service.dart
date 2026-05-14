@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:drift/drift.dart';
 import 'package:learning_tracker/core/analytics/analytics_service.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
@@ -69,7 +68,18 @@ class TrackCreationService {
   }) async {
     final curriculum = result.curriculumId;
 
-    // 1. Ensure curriculum is activated for this profile (idempotent, outside transaction)
+    // 1. Ensure curriculum is activated for this profile AND restore any
+    //    soft-deleted track row (avoids UNIQUE violation on re-add).
+    final trackId = await _database.trackDao.restoreOrCreate(
+      profileId: profileId,
+      curriculumId: curriculum,
+      trackType: TrackType.personal,
+    );
+
+    // Also activate the curriculum in active_curricula (idempotent, outside
+    // transaction). A soft-deleted track can exist without an active_curricula
+    // row, so we always attempt this even when restoreOrCreate found an
+    // existing row.
     try {
       await _activationService.activateForProfile(curriculum, profileId);
     } catch (_) {
@@ -78,25 +88,6 @@ class TrackCreationService {
         'activation skipped (likely already active)',
       );
     }
-
-    // 2. Resolve the trackId — activation created the personal track above.
-    final track =
-        await (_database.select(_database.curriculumTracks)
-              ..where(
-                (t) =>
-                    t.profileId.equals(profileId) &
-                    t.curriculumId.equals(curriculum.storageKey) &
-                    t.trackType.equals(TrackType.personal.storageKey),
-              )
-              ..limit(1))
-            .getSingleOrNull();
-    if (track == null) {
-      throw StateError(
-        'No curriculum track found after activation for '
-        '${curriculum.storageKey} (profile=$profileId)',
-      );
-    }
-    final trackId = track.id;
 
     // Replace prior goals (syncs tombstones) so re-add does not stack duplicates.
     final existingGoals = await _database.goalDao.getGoalsByTrack(trackId);

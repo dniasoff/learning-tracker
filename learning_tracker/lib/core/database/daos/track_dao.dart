@@ -290,6 +290,104 @@ class TrackDao extends DatabaseAccessor<UserDatabase>
     return tracks.length;
   }
 
+  /// Restore a soft-deleted track or create a new one.
+  ///
+  /// Looks up the (profileId, curriculumId, trackType) triple, ignoring deletedAt.
+  ///
+  /// * Found + soft-deleted  → clears deletedAt, reactivates row. Returns its id.
+  /// * Found + active        → returns id (idempotent).
+  /// * Not found             → inserts new row. Returns new id.
+  ///
+  /// Use this instead of [initializeDefaultTracks] when re-adding a previously
+  /// deleted track to avoid UNIQUE(profileId, curriculumId, trackType) violations.
+  Future<int> restoreOrCreate({
+    required int profileId,
+    required CurriculumId curriculumId,
+    required TrackType trackType,
+  }) async {
+    final existing =
+        await (select(curriculumTracks)
+              ..where(
+                (t) =>
+                    t.profileId.equals(profileId) &
+                    t.curriculumId.equals(curriculumId.storageKey) &
+                    t.trackType.equals(trackType.storageKey),
+              )
+              ..limit(1))
+            .getSingleOrNull();
+
+    if (existing != null) {
+      if (existing.deletedAt != null) {
+        await (update(curriculumTracks)
+              ..where((t) => t.id.equals(existing.id)))
+            .write(
+          CurriculumTracksCompanion(
+            isActive: const Value(true),
+            activatedAt: Value(DateTimeFactory.nowUtc()),
+            deactivatedAt: const Value(null),
+            deletedAt: const Value(null),
+          ),
+        );
+      }
+      return existing.id;
+    }
+
+    return into(curriculumTracks).insert(
+      CurriculumTracksCompanion.insert(
+        profileId: profileId,
+        curriculumId: curriculumId.storageKey,
+        trackType: trackType.storageKey,
+        isActive: const Value(true),
+        activatedAt: DateTimeFactory.nowUtc(),
+      ),
+    );
+  }
+
+  /// Hard-delete all completion rows owned by [trackId], then soft-delete
+  /// the track itself.
+  ///
+  /// Use this when the user explicitly requests "Delete and wipe history".
+  /// Completions are the only append-only table with a direct trackId FK that
+  /// carries per-track history; streak_events are profile-scoped and are not
+  /// touched. All other per-track config tables (goals, stages, daily plans,
+  /// point configs, scopes, study days, learning order) are already cleared by
+  /// [deleteTrackAndData].
+  Future<void> purgeHistory(int trackId) async {
+    await db.transaction(() async {
+      await (db.delete(db.completions)
+            ..where((t) => t.trackId.equals(trackId)))
+          .go();
+      await db.goalDao.deleteGoalsForTrack(trackId);
+      await (db.delete(db.stageDefinitions)
+            ..where((t) => t.trackId.equals(trackId)))
+          .go();
+      await db.dailyPlanDao.deletePlansByTrack(trackId);
+      await db.pointConfigDao.deleteAllForTrack(trackId);
+      await db.curriculumScopeDao.clearScopesForTrack(trackId);
+      await db.studyDayConfigDao.deleteConfigsForTrack(trackId);
+      await db.trackLearningOrderDao.deleteByTrack(trackId);
+      await (update(curriculumTracks)..where((t) => t.id.equals(trackId)))
+          .write(
+        CurriculumTracksCompanion(
+          isActive: const Value(false),
+          deletedAt: Value(DateTimeFactory.nowUtc()),
+        ),
+      );
+    });
+    final track = await getTrackById(trackId);
+    if (track != null) {
+      final curriculum = CurriculumId.values
+          .where((c) => c.storageKey == track.curriculumId)
+          .firstOrNull;
+      if (curriculum != null) {
+        await db.activeCurriculumDao.forceRemoveForProfile(
+          curriculum,
+          track.profileId,
+        );
+      }
+    }
+  }
+
   /// Reset the pace baseline for a track (Recovery Action).
   ///
   /// Sets `paceResetDate` to now. Does NOT touch completions or chazara data.
