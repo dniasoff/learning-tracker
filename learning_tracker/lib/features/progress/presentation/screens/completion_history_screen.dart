@@ -137,7 +137,10 @@ class _CompletionHistoryScreenState
       color: AppTheme.getTrackColor(_trackFilter!).withValues(alpha: 0.1),
       child: Row(
         children: [
-          Text(AppLocalizations.of(context)!.completionHistoryFilteredBy, style: const TextStyle(fontSize: 14)),
+          Text(
+            AppLocalizations.of(context)!.completionHistoryFilteredBy,
+            style: const TextStyle(fontSize: 14),
+          ),
           Chip(
             avatar: CircleAvatar(
               backgroundColor: AppTheme.getTrackColor(_trackFilter!),
@@ -214,7 +217,11 @@ class _CompletionHistoryScreenState
             const SizedBox(height: 4),
             Row(
               children: [
-                Text(AppLocalizations.of(context)!.completionHistoryStagePrefix(completion.stageId)),
+                Text(
+                  AppLocalizations.of(
+                    context,
+                  )!.completionHistoryStagePrefix(completion.stageId),
+                ),
                 CurriculumLabel.trackType(trackType),
               ],
             ),

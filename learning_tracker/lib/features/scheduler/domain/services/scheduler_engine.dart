@@ -198,7 +198,9 @@ class SchedulerEngine {
             stageDefinitionId: firstStage.id,
             priority: priority,
             isOverdue: true,
-            reason: hasAnyCompletion ? 'Missed earlier' : 'New learning carry-over',
+            reason: hasAnyCompletion
+                ? 'Missed earlier'
+                : 'New learning carry-over',
             stageName: firstStage.stageName,
             trackId: config.trackId,
             trackLabel: config.trackLabel,

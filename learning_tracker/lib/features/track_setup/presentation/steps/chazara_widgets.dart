@@ -150,7 +150,10 @@ class CustomDayEditorChip extends StatelessWidget {
                 minimumSize: const Size(0, 24),
                 padding: const EdgeInsets.symmetric(horizontal: 6),
               ),
-              child: Text(l10n.actionRemove, style: const TextStyle(fontSize: 11)),
+              child: Text(
+                l10n.actionRemove,
+                style: const TextStyle(fontSize: 11),
+              ),
             ),
           ],
         ],
@@ -206,11 +209,7 @@ class AddRoundChip extends StatelessWidget {
 }
 
 class TinyCircleButton extends StatelessWidget {
-  const TinyCircleButton({
-    required this.icon,
-    required this.onTap,
-    super.key,
-  });
+  const TinyCircleButton({required this.icon, required this.onTap, super.key});
 
   final IconData icon;
   final VoidCallback onTap;

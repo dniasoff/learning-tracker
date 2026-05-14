@@ -12,9 +12,8 @@ import 'package:learning_tracker/features/sacred_time/domain/services/zmanim_win
 /// Windows are computed over a span wide enough to cover the next 14 days
 /// plus a 2-day look-back so an in-progress window is always detected.
 class SacredWindowRepository {
-  SacredWindowRepository({
-    ZmanimWindowService? service,
-  }) : _service = service ?? const ZmanimWindowService();
+  SacredWindowRepository({ZmanimWindowService? service})
+    : _service = service ?? const ZmanimWindowService();
 
   final ZmanimWindowService _service;
 

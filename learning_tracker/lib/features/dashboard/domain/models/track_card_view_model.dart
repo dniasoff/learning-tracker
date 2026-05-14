@@ -14,12 +14,7 @@ part 'track_card_view_model.freezed.dart';
 ///   [deadlineGoal]    — self-paced track with a finish-by-date goal
 ///   [velocityGoal]    — self-paced track with a completions-per-day goal
 ///   [momentum]        — self-paced track with no explicit goal
-enum TrackCardShape {
-  programCalendar,
-  deadlineGoal,
-  velocityGoal,
-  momentum,
-}
+enum TrackCardShape { programCalendar, deadlineGoal, velocityGoal, momentum }
 
 /// Data for the breadcrumb shown in [NextTaskBreadcrumb].
 ///

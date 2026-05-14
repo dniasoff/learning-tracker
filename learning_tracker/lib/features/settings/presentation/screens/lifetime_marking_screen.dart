@@ -450,9 +450,7 @@ class _LifetimeCurriculumMarkingScreenState
     // ignore: deprecated_member_use
     ref.invalidate(globalLifetimeCurriculaProvider(profileId));
     ref.invalidate(
-      lifetimeDataProvider(
-        (profileId: profileId, curriculumId: _curriculum),
-      ),
+      lifetimeDataProvider((profileId: profileId, curriculumId: _curriculum)),
     );
     ref.invalidate(trackDualProgressMetricsProvider(profileId));
     ref.invalidate(progressOverviewStatsProvider);

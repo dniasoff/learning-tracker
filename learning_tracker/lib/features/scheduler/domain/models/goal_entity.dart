@@ -147,7 +147,8 @@ abstract class GoalEntity with _$GoalEntity {
   ///
   /// Prefers [paceGranularity.storageKey] when set, falls back to
   /// [rawLearningUnit] for granularities not yet covered by the enum.
-  String? get paceGranularityKey => paceGranularity?.storageKey ?? rawLearningUnit;
+  String? get paceGranularityKey =>
+      paceGranularity?.storageKey ?? rawLearningUnit;
 
   /// Firestore document ID (deterministic per P4).
   /// Uses curriculum + targetPercent + createdAt for uniqueness

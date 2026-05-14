@@ -5,18 +5,26 @@ import 'package:learning_tracker/l10n/app_localizations.dart';
 
 void main() {
   group('TrackLabelStep', () {
-    Widget buildWidget({required String defaultLabel, required ValueChanged<String> onComplete}) {
+    Widget buildWidget({
+      required String defaultLabel,
+      required ValueChanged<String> onComplete,
+    }) {
       return MaterialApp(
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         home: Scaffold(
-          body: TrackLabelStep(defaultLabel: defaultLabel, onComplete: onComplete),
+          body: TrackLabelStep(
+            defaultLabel: defaultLabel,
+            onComplete: onComplete,
+          ),
         ),
       );
     }
 
     testWidgets('pre-fills with default label', (tester) async {
-      await tester.pumpWidget(buildWidget(defaultLabel: 'דף היומי', onComplete: (_) {}));
+      await tester.pumpWidget(
+        buildWidget(defaultLabel: 'דף היומי', onComplete: (_) {}),
+      );
       await tester.pumpAndSettle();
 
       final textField = tester.widget<TextFormField>(
@@ -27,10 +35,9 @@ void main() {
 
     testWidgets('calls onComplete with entered text', (tester) async {
       String? result;
-      await tester.pumpWidget(buildWidget(
-        defaultLabel: '',
-        onComplete: (label) => result = label,
-      ));
+      await tester.pumpWidget(
+        buildWidget(defaultLabel: '', onComplete: (label) => result = label),
+      );
       await tester.pumpAndSettle();
 
       await tester.enterText(find.byType(TextFormField), 'My Track');
@@ -42,10 +49,9 @@ void main() {
 
     testWidgets('shows validation error for empty input', (tester) async {
       String? result;
-      await tester.pumpWidget(buildWidget(
-        defaultLabel: '',
-        onComplete: (label) => result = label,
-      ));
+      await tester.pumpWidget(
+        buildWidget(defaultLabel: '', onComplete: (label) => result = label),
+      );
       await tester.pumpAndSettle();
 
       // Clear any default and try to submit empty
@@ -59,10 +65,12 @@ void main() {
 
     testWidgets('accepts default without editing', (tester) async {
       String? result;
-      await tester.pumpWidget(buildWidget(
-        defaultLabel: 'משניות',
-        onComplete: (label) => result = label,
-      ));
+      await tester.pumpWidget(
+        buildWidget(
+          defaultLabel: 'משניות',
+          onComplete: (label) => result = label,
+        ),
+      );
       await tester.pumpAndSettle();
 
       await tester.tap(find.byType(FilledButton));

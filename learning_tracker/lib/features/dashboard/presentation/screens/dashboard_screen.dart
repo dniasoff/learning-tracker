@@ -126,9 +126,10 @@ class DashboardScreen extends ConsumerWidget {
                   ref.invalidate(globalLifetimeCurriculaProvider(profileId));
                   for (final c in CurriculumId.values) {
                     ref.invalidate(
-                      lifetimeDataProvider(
-                        (profileId: profileId, curriculumId: c),
-                      ),
+                      lifetimeDataProvider((
+                        profileId: profileId,
+                        curriculumId: c,
+                      )),
                     );
                   }
                   ref.invalidate(trackDualProgressMetricsProvider(profileId));
@@ -1680,9 +1681,7 @@ class _ActiveTrackCard extends ConsumerWidget {
     );
     final profileId = ref.watch(activeProfileIdProvider);
     final lifetimeSummaryAsync = ref.watch(
-      lifetimeDataProvider(
-        (profileId: profileId, curriculumId: curriculum),
-      ),
+      lifetimeDataProvider((profileId: profileId, curriculumId: curriculum)),
     );
     final lifetimeFraction = lifetimeSummaryAsync.when(
       data: (summary) => summary?.percentage ?? 0.0,

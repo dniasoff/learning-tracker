@@ -27,7 +27,6 @@ class ContentRepositoryImpl implements ContentRepository {
   /// [search] call so nikud stripping is not recomputed per keystroke (T2.10).
   final _strippedHeCache = <String, List<String>>{};
 
-
   @override
   Future<List<ContentItem>> getContentForCurriculum(
     CurriculumId curriculumId,

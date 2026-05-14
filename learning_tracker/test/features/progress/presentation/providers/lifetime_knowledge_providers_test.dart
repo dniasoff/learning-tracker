@@ -60,9 +60,9 @@ void main() {
 
         final container = ProviderContainer(
           overrides: [
-            lifetimeSummariesProvider(42).overrideWith(
-              (ref) => Future.value([fakeSummary]),
-            ),
+            lifetimeSummariesProvider(
+              42,
+            ).overrideWith((ref) => Future.value([fakeSummary])),
           ],
         );
         addTearDown(container.dispose);
@@ -83,9 +83,10 @@ void main() {
     test('single-curriculum override returns only that curriculum', () async {
       final container = ProviderContainer(
         overrides: [
-          lifetimeDataProvider(
-            (profileId: 1, curriculumId: CurriculumId.chumash),
-          ).overrideWith(
+          lifetimeDataProvider((
+            profileId: 1,
+            curriculumId: CurriculumId.chumash,
+          )).overrideWith(
             (ref) => Future.value(
               const CurriculumLifetimeSummary(
                 curriculumId: CurriculumId.chumash,
@@ -101,9 +102,10 @@ void main() {
       addTearDown(container.dispose);
 
       final result = await container.read(
-        lifetimeDataProvider(
-          (profileId: 1, curriculumId: CurriculumId.chumash),
-        ).future,
+        lifetimeDataProvider((
+          profileId: 1,
+          curriculumId: CurriculumId.chumash,
+        )).future,
       );
 
       expect(result, isNotNull);
@@ -114,17 +116,19 @@ void main() {
     test('null result represents missing curriculum asset', () async {
       final container = ProviderContainer(
         overrides: [
-          lifetimeDataProvider(
-            (profileId: 1, curriculumId: CurriculumId.yerushalmi),
-          ).overrideWith((ref) => Future.value(null)),
+          lifetimeDataProvider((
+            profileId: 1,
+            curriculumId: CurriculumId.yerushalmi,
+          )).overrideWith((ref) => Future.value(null)),
         ],
       );
       addTearDown(container.dispose);
 
       final result = await container.read(
-        lifetimeDataProvider(
-          (profileId: 1, curriculumId: CurriculumId.yerushalmi),
-        ).future,
+        lifetimeDataProvider((
+          profileId: 1,
+          curriculumId: CurriculumId.yerushalmi,
+        )).future,
       );
 
       expect(result, isNull);

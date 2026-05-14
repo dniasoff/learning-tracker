@@ -210,10 +210,18 @@ class _CompletionButtonState extends ConsumerState<CompletionButton> {
                       children: [
                         const Icon(Icons.check_circle, size: 18),
                         const SizedBox(width: 4),
-                        Text(AppLocalizations.of(context)!.completionButtonCompleted),
+                        Text(
+                          AppLocalizations.of(
+                            context,
+                          )!.completionButtonCompleted,
+                        ),
                       ],
                     )
-                  : Text(AppLocalizations.of(context)!.completionButtonMarkComplete),
+                  : Text(
+                      AppLocalizations.of(
+                        context,
+                      )!.completionButtonMarkComplete,
+                    ),
             ),
             // H1: IgnorePointer so animation overlay doesn't block taps
             if (_feedbackController.phase == CompletionFeedbackPhase.checkmark)

@@ -34,7 +34,10 @@ class PointsDisplayWidget extends ConsumerWidget {
               color: Theme.of(context).colorScheme.primary,
             ),
           ),
-          Text(AppLocalizations.of(context)!.totalPointsLabel, style: Theme.of(context).textTheme.labelMedium),
+          Text(
+            AppLocalizations.of(context)!.totalPointsLabel,
+            style: Theme.of(context).textTheme.labelMedium,
+          ),
           const SizedBox(height: 8),
           breakdown.when(
             data: (map) => Wrap(

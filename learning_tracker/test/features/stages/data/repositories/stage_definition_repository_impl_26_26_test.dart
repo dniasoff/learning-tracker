@@ -112,14 +112,18 @@ void main() {
         pushSettings: (s) async => pushedSettings.add(s),
       );
 
-      when(() => mockStageDao.countStagesForCurriculum(any()))
-          .thenAnswer((_) async => 3);
-      when(() => mockStageDao.getMaxStageOrder(any()))
-          .thenAnswer((_) async => 3);
-      when(() => mockStageDao.insertStageDefinition(any()))
-          .thenAnswer((_) async => 4);
-      when(() => mockStageDao.getStageDefinitionsByCurriculum(any()))
-          .thenAnswer((_) async => [_makeRow()]);
+      when(
+        () => mockStageDao.countStagesForCurriculum(any()),
+      ).thenAnswer((_) async => 3);
+      when(
+        () => mockStageDao.getMaxStageOrder(any()),
+      ).thenAnswer((_) async => 3);
+      when(
+        () => mockStageDao.insertStageDefinition(any()),
+      ).thenAnswer((_) async => 4);
+      when(
+        () => mockStageDao.getStageDefinitionsByCurriculum(any()),
+      ).thenAnswer((_) async => [_makeRow()]);
     });
 
     test('addStage(delay) writes scheduleType=delay to DAO', () async {
@@ -154,127 +158,136 @@ void main() {
       expect(captured.scheduleType.value, 'delay');
     });
 
-    test('addStage(weekly) writes scheduleType=weekly and daysOfWeek to DAO',
-        () async {
-      when(() => mockStageDao.getStageDefinitionById(4)).thenAnswer(
-        (_) async => _makeRow(
-          id: 4,
-          stageOrder: 4,
-          stageName: 'Weekly Review',
-          delayDays: 0,
-          isDefault: false,
-          scheduleType: 'weekly',
-          daysOfWeek: '[1,3,5]',
-        ),
-      );
+    test(
+      'addStage(weekly) writes scheduleType=weekly and daysOfWeek to DAO',
+      () async {
+        when(() => mockStageDao.getStageDefinitionById(4)).thenAnswer(
+          (_) async => _makeRow(
+            id: 4,
+            stageOrder: 4,
+            stageName: 'Weekly Review',
+            delayDays: 0,
+            isDefault: false,
+            scheduleType: 'weekly',
+            daysOfWeek: '[1,3,5]',
+          ),
+        );
 
-      final result = await repository.addStage(
-        curriculum,
-        'Weekly Review',
-        0,
-        trackId: 1,
-        scheduleType: ScheduleType.weekly,
-        daysOfWeek: [1, 3, 5],
-      );
-
-      expect(result.scheduleType, ScheduleType.weekly);
-      expect(result.daysOfWeek, [1, 3, 5]);
-
-      final captured =
-          verify(
-                () => mockStageDao.insertStageDefinition(captureAny()),
-              ).captured.single
-              as db.StageDefinitionsCompanion;
-      expect(captured.scheduleType.value, 'weekly');
-      expect(captured.daysOfWeek.value, '[1,3,5]');
-    });
-
-    test('addStage(rolling) writes scheduleType=rolling and windowSize to DAO',
-        () async {
-      when(() => mockStageDao.getStageDefinitionById(4)).thenAnswer(
-        (_) async => _makeRow(
-          id: 4,
-          stageOrder: 4,
-          stageName: 'Rolling',
-          delayDays: 0,
-          isDefault: false,
-          scheduleType: 'rolling',
-          rollingWindowSize: 10,
-        ),
-      );
-
-      final result = await repository.addStage(
-        curriculum,
-        'Rolling',
-        0,
-        trackId: 1,
-        scheduleType: ScheduleType.rolling,
-        rollingWindowSize: 10,
-      );
-
-      expect(result.scheduleType, ScheduleType.rolling);
-      expect(result.rollingWindowSize, 10);
-
-      final captured =
-          verify(
-                () => mockStageDao.insertStageDefinition(captureAny()),
-              ).captured.single
-              as db.StageDefinitionsCompanion;
-      expect(captured.scheduleType.value, 'rolling');
-      expect(captured.rollingWindowSize.value, 10);
-    });
-
-    test('addStage(weekly) without daysOfWeek throws ArgumentError (validator)',
-        () async {
-      expect(
-        () => repository.addStage(
+        final result = await repository.addStage(
           curriculum,
-          'Bad Weekly',
+          'Weekly Review',
           0,
           trackId: 1,
           scheduleType: ScheduleType.weekly,
-          // daysOfWeek deliberately omitted
-        ),
-        throwsA(isA<ArgumentError>()),
-      );
+          daysOfWeek: [1, 3, 5],
+        );
 
-      verifyNever(() => mockStageDao.insertStageDefinition(any()));
-    });
+        expect(result.scheduleType, ScheduleType.weekly);
+        expect(result.daysOfWeek, [1, 3, 5]);
+
+        final captured =
+            verify(
+                  () => mockStageDao.insertStageDefinition(captureAny()),
+                ).captured.single
+                as db.StageDefinitionsCompanion;
+        expect(captured.scheduleType.value, 'weekly');
+        expect(captured.daysOfWeek.value, '[1,3,5]');
+      },
+    );
 
     test(
-        'addStage(rolling) without rollingWindowSize throws ArgumentError (validator)',
-        () async {
-      expect(
-        () => repository.addStage(
+      'addStage(rolling) writes scheduleType=rolling and windowSize to DAO',
+      () async {
+        when(() => mockStageDao.getStageDefinitionById(4)).thenAnswer(
+          (_) async => _makeRow(
+            id: 4,
+            stageOrder: 4,
+            stageName: 'Rolling',
+            delayDays: 0,
+            isDefault: false,
+            scheduleType: 'rolling',
+            rollingWindowSize: 10,
+          ),
+        );
+
+        final result = await repository.addStage(
           curriculum,
-          'Bad Rolling',
+          'Rolling',
           0,
           trackId: 1,
           scheduleType: ScheduleType.rolling,
-          // rollingWindowSize deliberately omitted
-        ),
-        throwsA(isA<ArgumentError>()),
-      );
+          rollingWindowSize: 10,
+        );
 
-      verifyNever(() => mockStageDao.insertStageDefinition(any()));
-    });
+        expect(result.scheduleType, ScheduleType.rolling);
+        expect(result.rollingWindowSize, 10);
 
-    test('addStage(weekly) with empty daysOfWeek throws ArgumentError',
-        () async {
-      expect(
-        () => repository.addStage(
-          curriculum,
-          'Bad Weekly',
-          0,
-          trackId: 1,
-          scheduleType: ScheduleType.weekly,
-          daysOfWeek: [], // empty list
-        ),
-        throwsA(isA<ArgumentError>()),
-      );
+        final captured =
+            verify(
+                  () => mockStageDao.insertStageDefinition(captureAny()),
+                ).captured.single
+                as db.StageDefinitionsCompanion;
+        expect(captured.scheduleType.value, 'rolling');
+        expect(captured.rollingWindowSize.value, 10);
+      },
+    );
 
-      verifyNever(() => mockStageDao.insertStageDefinition(any()));
-    });
+    test(
+      'addStage(weekly) without daysOfWeek throws ArgumentError (validator)',
+      () async {
+        expect(
+          () => repository.addStage(
+            curriculum,
+            'Bad Weekly',
+            0,
+            trackId: 1,
+            scheduleType: ScheduleType.weekly,
+            // daysOfWeek deliberately omitted
+          ),
+          throwsA(isA<ArgumentError>()),
+        );
+
+        verifyNever(() => mockStageDao.insertStageDefinition(any()));
+      },
+    );
+
+    test(
+      'addStage(rolling) without rollingWindowSize throws ArgumentError (validator)',
+      () async {
+        expect(
+          () => repository.addStage(
+            curriculum,
+            'Bad Rolling',
+            0,
+            trackId: 1,
+            scheduleType: ScheduleType.rolling,
+            // rollingWindowSize deliberately omitted
+          ),
+          throwsA(isA<ArgumentError>()),
+        );
+
+        verifyNever(() => mockStageDao.insertStageDefinition(any()));
+      },
+    );
+
+    test(
+      'addStage(weekly) with empty daysOfWeek throws ArgumentError',
+      () async {
+        expect(
+          () => repository.addStage(
+            curriculum,
+            'Bad Weekly',
+            0,
+            trackId: 1,
+            scheduleType: ScheduleType.weekly,
+            daysOfWeek: [], // empty list
+          ),
+          throwsA(isA<ArgumentError>()),
+        );
+
+        verifyNever(() => mockStageDao.insertStageDefinition(any()));
+      },
+    );
 
     test('addStage(rolling) with windowSize=0 throws ArgumentError', () async {
       expect(
@@ -324,31 +337,36 @@ void main() {
       expect(persisted.daysOfWeek, [2, 4]);
     });
 
-    test('scheduleType/rollingWindowSize round-trips for rolling stage',
-        () async {
-      final ctx = await _makeRealRepo();
-      addTearDown(() => ctx.database.close());
+    test(
+      'scheduleType/rollingWindowSize round-trips for rolling stage',
+      () async {
+        final ctx = await _makeRealRepo();
+        addTearDown(() => ctx.database.close());
 
-      await ctx.repository.initializeDefaults(curriculum, trackId: ctx.trackId);
+        await ctx.repository.initializeDefaults(
+          curriculum,
+          trackId: ctx.trackId,
+        );
 
-      final stage = await ctx.repository.addStage(
-        curriculum,
-        'Rolling',
-        0,
-        trackId: ctx.trackId,
-        scheduleType: ScheduleType.rolling,
-        rollingWindowSize: 7,
-      );
+        final stage = await ctx.repository.addStage(
+          curriculum,
+          'Rolling',
+          0,
+          trackId: ctx.trackId,
+          scheduleType: ScheduleType.rolling,
+          rollingWindowSize: 7,
+        );
 
-      expect(stage.scheduleType, ScheduleType.rolling);
-      expect(stage.rollingWindowSize, 7);
-      expect(stage.daysOfWeek, isNull);
+        expect(stage.scheduleType, ScheduleType.rolling);
+        expect(stage.rollingWindowSize, 7);
+        expect(stage.daysOfWeek, isNull);
 
-      final stages = await ctx.repository.getStagesForCurriculum(curriculum);
-      final persisted = stages.firstWhere((s) => s.id == stage.id);
-      expect(persisted.scheduleType, ScheduleType.rolling);
-      expect(persisted.rollingWindowSize, 7);
-    });
+        final stages = await ctx.repository.getStagesForCurriculum(curriculum);
+        final persisted = stages.firstWhere((s) => s.id == stage.id);
+        expect(persisted.scheduleType, ScheduleType.rolling);
+        expect(persisted.rollingWindowSize, 7);
+      },
+    );
   });
 
   // =========================================================================
@@ -371,10 +389,11 @@ void main() {
       final chazara1Id = before[1].id;
       final chazara2Id = before[2].id;
 
-      await ctx.repository.reorderStages(
-        curriculum,
-        [learnId, chazara2Id, chazara1Id],
-      );
+      await ctx.repository.reorderStages(curriculum, [
+        learnId,
+        chazara2Id,
+        chazara1Id,
+      ]);
 
       final after = await ctx.repository.getStagesForCurriculum(curriculum);
       expect(after[0].id, learnId);
@@ -386,54 +405,65 @@ void main() {
     });
 
     test(
-        'reorderStages throws ProtectedStageException when Learn not at position 1',
-        () async {
-      final ctx = await _makeRealRepo();
-      addTearDown(() => ctx.database.close());
+      'reorderStages throws ProtectedStageException when Learn not at position 1',
+      () async {
+        final ctx = await _makeRealRepo();
+        addTearDown(() => ctx.database.close());
 
-      await ctx.repository.initializeDefaults(curriculum, trackId: ctx.trackId);
-
-      final stages = await ctx.repository.getStagesForCurriculum(curriculum);
-      final learnId = stages[0].id;
-      final chazara1Id = stages[1].id;
-      final chazara2Id = stages[2].id;
-
-      // Put Chazara1 first — should throw because Learn would move from pos 1
-      expect(
-        () => ctx.repository.reorderStages(
+        await ctx.repository.initializeDefaults(
           curriculum,
-          [chazara1Id, learnId, chazara2Id],
-        ),
-        throwsA(isA<ProtectedStageException>()),
-      );
-    });
-
-    test('reorderStages leaves stages unchanged when Learn guard fires',
-        () async {
-      final ctx = await _makeRealRepo();
-      addTearDown(() => ctx.database.close());
-
-      await ctx.repository.initializeDefaults(curriculum, trackId: ctx.trackId);
-
-      final before = await ctx.repository.getStagesForCurriculum(curriculum);
-      final learnId = before[0].id;
-      final chazara1Id = before[1].id;
-      final chazara2Id = before[2].id;
-
-      try {
-        await ctx.repository.reorderStages(
-          curriculum,
-          [chazara1Id, learnId, chazara2Id],
+          trackId: ctx.trackId,
         );
-      } on ProtectedStageException {
-        // expected
-      }
 
-      // Stages must be unchanged
-      final after = await ctx.repository.getStagesForCurriculum(curriculum);
-      expect(after[0].id, learnId);
-      expect(after[0].stageOrder, 1);
-    });
+        final stages = await ctx.repository.getStagesForCurriculum(curriculum);
+        final learnId = stages[0].id;
+        final chazara1Id = stages[1].id;
+        final chazara2Id = stages[2].id;
+
+        // Put Chazara1 first — should throw because Learn would move from pos 1
+        expect(
+          () => ctx.repository.reorderStages(curriculum, [
+            chazara1Id,
+            learnId,
+            chazara2Id,
+          ]),
+          throwsA(isA<ProtectedStageException>()),
+        );
+      },
+    );
+
+    test(
+      'reorderStages leaves stages unchanged when Learn guard fires',
+      () async {
+        final ctx = await _makeRealRepo();
+        addTearDown(() => ctx.database.close());
+
+        await ctx.repository.initializeDefaults(
+          curriculum,
+          trackId: ctx.trackId,
+        );
+
+        final before = await ctx.repository.getStagesForCurriculum(curriculum);
+        final learnId = before[0].id;
+        final chazara1Id = before[1].id;
+        final chazara2Id = before[2].id;
+
+        try {
+          await ctx.repository.reorderStages(curriculum, [
+            chazara1Id,
+            learnId,
+            chazara2Id,
+          ]);
+        } on ProtectedStageException {
+          // expected
+        }
+
+        // Stages must be unchanged
+        final after = await ctx.repository.getStagesForCurriculum(curriculum);
+        expect(after[0].id, learnId);
+        expect(after[0].stageOrder, 1);
+      },
+    );
   });
 
   // =========================================================================
@@ -455,28 +485,36 @@ void main() {
       );
     });
 
-    test('deleteStage throws ProtectedStageException for stageOrder==1',
-        () async {
-      when(
-        () => mockStageDao.getStageDefinitionById(1),
-      ).thenAnswer((_) async => _makeRow(id: 1, stageOrder: 1));
+    test(
+      'deleteStage throws ProtectedStageException for stageOrder==1',
+      () async {
+        when(
+          () => mockStageDao.getStageDefinitionById(1),
+        ).thenAnswer((_) async => _makeRow(id: 1, stageOrder: 1));
 
-      expect(
-        () => repository.deleteStage(1),
-        throwsA(isA<ProtectedStageException>()),
-      );
-    });
+        expect(
+          () => repository.deleteStage(1),
+          throwsA(isA<ProtectedStageException>()),
+        );
+      },
+    );
 
     test('deleteStage succeeds for non-Learn stage', () async {
       when(() => mockStageDao.getStageDefinitionById(3)).thenAnswer(
-        (_) async =>
-            _makeRow(id: 3, stageOrder: 3, stageName: 'Chazara 2', delayDays: 7,
-                isDefault: false),
+        (_) async => _makeRow(
+          id: 3,
+          stageOrder: 3,
+          stageName: 'Chazara 2',
+          delayDays: 7,
+          isDefault: false,
+        ),
       );
-      when(() => mockStageDao.deleteStageDefinition(3))
-          .thenAnswer((_) async => 1);
-      when(() => mockStageDao.getStageDefinitionsByCurriculum(any()))
-          .thenAnswer((_) async => [_makeRow()]);
+      when(
+        () => mockStageDao.deleteStageDefinition(3),
+      ).thenAnswer((_) async => 1);
+      when(
+        () => mockStageDao.getStageDefinitionsByCurriculum(any()),
+      ).thenAnswer((_) async => [_makeRow()]);
 
       await repository.deleteStage(3);
 
@@ -505,14 +543,20 @@ void main() {
 
     test('updateStage on delay stage passes validator and calls DAO', () async {
       when(() => mockStageDao.getStageDefinitionById(2)).thenAnswer(
-        (_) async =>
-            _makeRow(id: 2, stageOrder: 2, stageName: 'Chazara 1', delayDays: 1,
-                isDefault: false),
+        (_) async => _makeRow(
+          id: 2,
+          stageOrder: 2,
+          stageName: 'Chazara 1',
+          delayDays: 1,
+          isDefault: false,
+        ),
       );
-      when(() => mockStageDao.updateStageDefinition(any()))
-          .thenAnswer((_) async => true);
-      when(() => mockStageDao.getStageDefinitionsByCurriculum(any()))
-          .thenAnswer((_) async => [_makeRow()]);
+      when(
+        () => mockStageDao.updateStageDefinition(any()),
+      ).thenAnswer((_) async => true);
+      when(
+        () => mockStageDao.getStageDefinitionsByCurriculum(any()),
+      ).thenAnswer((_) async => [_makeRow()]);
 
       await repository.updateStage(2, name: 'Review', delayDays: 3);
 

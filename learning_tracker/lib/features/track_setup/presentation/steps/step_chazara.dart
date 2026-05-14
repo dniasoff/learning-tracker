@@ -229,7 +229,9 @@ class _ChazaraInlineSetupState extends State<ChazaraInlineSetup> {
                                     borderRadius: BorderRadius.circular(10),
                                   ),
                                   child: Text(
-                                    l10n.chazaraSessionsCount(_customDelays.length),
+                                    l10n.chazaraSessionsCount(
+                                      _customDelays.length,
+                                    ),
                                     style: theme.textTheme.labelMedium
                                         ?.copyWith(
                                           color: AppTheme.brandBlueDeep,

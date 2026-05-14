@@ -120,16 +120,18 @@ void main() {
       ).called(1);
     });
 
-    test('buildFireTimesForTest returns up to 14 entries without repository',
-        () {
-      final fireTimes = scheduler.buildFireTimesForTest(
-        time: const TimeOfDay(hour: 19, minute: 0),
-        location: null,
-        inIsrael: false,
-        fromDay: DateTime(2026, 5, 13), // a Wednesday
-      );
-      // Without a sacred window repository, all 14 entries should be returned.
-      expect(fireTimes.length, equals(kBatchDays));
-    });
+    test(
+      'buildFireTimesForTest returns up to 14 entries without repository',
+      () {
+        final fireTimes = scheduler.buildFireTimesForTest(
+          time: const TimeOfDay(hour: 19, minute: 0),
+          location: null,
+          inIsrael: false,
+          fromDay: DateTime(2026, 5, 13), // a Wednesday
+        );
+        // Without a sacred window repository, all 14 entries should be returned.
+        expect(fireTimes.length, equals(kBatchDays));
+      },
+    );
   });
 }

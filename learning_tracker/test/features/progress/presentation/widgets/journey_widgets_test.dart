@@ -119,9 +119,7 @@ void main() {
         curricula: [
           CurriculumJourney(
             curriculumId: CurriculumId.mishnayos,
-            completions: [
-              _completion(identifier: 'Berakhot'),
-            ],
+            completions: [_completion(identifier: 'Berakhot')],
             uniqueUnitsCompleted: 1,
             totalUnitsAvailable: 63,
             milestones: [],

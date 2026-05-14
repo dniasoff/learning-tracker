@@ -153,8 +153,7 @@ class DashboardTaskList extends ConsumerWidget {
                     _subHeader(
                       theme,
                       icon: Icons.menu_book,
-                      title:
-                          l10n.todaysLearning(grouped.todayLearning.length),
+                      title: l10n.todaysLearning(grouped.todayLearning.length),
                       color: theme.colorScheme.primary,
                     ),
                     const SizedBox(height: 6),
@@ -200,7 +199,11 @@ class DashboardTaskList extends ConsumerWidget {
     );
   }
 
-  Widget _sectionHeader(ThemeData theme, AppLocalizations l10n, int? remaining) {
+  Widget _sectionHeader(
+    ThemeData theme,
+    AppLocalizations l10n,
+    int? remaining,
+  ) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [

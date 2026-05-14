@@ -31,8 +31,7 @@ class StartingPositionStep extends ConsumerStatefulWidget {
       _StartingPositionStepState();
 }
 
-class _StartingPositionStepState
-    extends ConsumerState<StartingPositionStep> {
+class _StartingPositionStepState extends ConsumerState<StartingPositionStep> {
   List<ContentItem>? _allItems;
   bool _loading = true;
 
@@ -84,8 +83,9 @@ class _StartingPositionStepState
 
       if (!mounted) return;
       final containerList = containers.values.toList();
-      final defaultContainer =
-          containerList.isNotEmpty ? containerList.first : null;
+      final defaultContainer = containerList.isNotEmpty
+          ? containerList.first
+          : null;
       final defaultLeaves = defaultContainer == null
           ? <ContentItem>[]
           : items.where((item) {
@@ -153,7 +153,10 @@ class _StartingPositionStepState
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(l10n.startingPositionTitle, style: theme.textTheme.headlineSmall),
+          Text(
+            l10n.startingPositionTitle,
+            style: theme.textTheme.headlineSmall,
+          ),
           const SizedBox(height: 8),
           Text(
             l10n.startingPositionWhereAreYou(widget.programName),

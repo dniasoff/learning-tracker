@@ -78,7 +78,5 @@ Future<void> onTrackChanged(WidgetRef ref, int profileId) async {
 /// so existing call sites (add_track_flow, track_management_body,
 /// track_detail_screen) continue to compile without changes.
 @Deprecated('Use onTrackChanged instead')
-Future<void> invalidateAfterTrackDataChange(
-  WidgetRef ref,
-  int profileId,
-) => onTrackChanged(ref, profileId);
+Future<void> invalidateAfterTrackDataChange(WidgetRef ref, int profileId) =>
+    onTrackChanged(ref, profileId);

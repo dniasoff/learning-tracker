@@ -292,7 +292,11 @@ class _ContentHierarchyScreenState
                       color: AppTheme.brandCoralDeep,
                     ),
                     const SizedBox(height: 16),
-                    Text(AppLocalizations.of(context)!.errorLoadingContent(error.toString())),
+                    Text(
+                      AppLocalizations.of(
+                        context,
+                      )!.errorLoadingContent(error.toString()),
+                    ),
                   ],
                 ),
               ),

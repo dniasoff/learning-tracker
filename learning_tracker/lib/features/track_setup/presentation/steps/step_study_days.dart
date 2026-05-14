@@ -4,7 +4,15 @@ import 'package:learning_tracker/features/track_setup/domain/services/track_crea
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// Day labels in Jewish week order (Sunday first, Shabbos last).
-const kStepStudyDayLabels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Shabbos'];
+const kStepStudyDayLabels = [
+  'Sun',
+  'Mon',
+  'Tue',
+  'Wed',
+  'Thu',
+  'Fri',
+  'Shabbos',
+];
 
 /// ISO day numbers in Jewish week order.
 const kStepStudyDayNumbers = [7, 1, 2, 3, 4, 5, 6];

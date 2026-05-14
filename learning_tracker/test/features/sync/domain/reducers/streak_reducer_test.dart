@@ -8,10 +8,10 @@ void main() {
 
   /// Build a UTC [StreakEvent] of type `completion` on [day] (2026-based).
   StreakEvent completion(DateTime day) => StreakEvent(
-        profileId: profileId,
-        eventType: 'completion',
-        eventTimestamp: DateTime.utc(day.year, day.month, day.day, 12),
-      );
+    profileId: profileId,
+    eventType: 'completion',
+    eventTimestamp: DateTime.utc(day.year, day.month, day.day, 12),
+  );
 
   /// Today anchor used across tests.
   final today = DateTime.utc(2026, 5, 14);
@@ -33,11 +33,14 @@ void main() {
       expect(state.maxStreak, 1);
     });
 
-    test('3 — single event yesterday yields current streak = 1 (streak alive)', () {
-      final state = reducer.reduce([completion(yesterday)], today: today);
-      expect(state.currentStreak, 1);
-      expect(state.maxStreak, 1);
-    });
+    test(
+      '3 — single event yesterday yields current streak = 1 (streak alive)',
+      () {
+        final state = reducer.reduce([completion(yesterday)], today: today);
+        expect(state.currentStreak, 1);
+        expect(state.maxStreak, 1);
+      },
+    );
 
     test('4 — three consecutive days yields streak = 3', () {
       final events = [
@@ -50,31 +53,42 @@ void main() {
       expect(state.maxStreak, 3);
     });
 
-    test('5 — gap of 2+ days with no recent event yields current streak = 0', () {
-      // Last completion was 3 days ago — gap to today is 3 which is > 1.
-      final state = reducer.reduce([completion(threeDaysAgo)], today: today);
-      expect(state.currentStreak, 0);
-      // maxStreak captures the historical run (1 day).
-      expect(state.maxStreak, 1);
-    });
+    test(
+      '5 — gap of 2+ days with no recent event yields current streak = 0',
+      () {
+        // Last completion was 3 days ago — gap to today is 3 which is > 1.
+        final state = reducer.reduce([completion(threeDaysAgo)], today: today);
+        expect(state.currentStreak, 0);
+        // maxStreak captures the historical run (1 day).
+        expect(state.maxStreak, 1);
+      },
+    );
 
-    test('6 — multiple completions on the same day count as one streak day', () {
-      final events = [
-        StreakEvent(
-          profileId: profileId,
-          eventType: 'completion',
-          eventTimestamp: DateTime.utc(today.year, today.month, today.day, 8),
-        ),
-        StreakEvent(
-          profileId: profileId,
-          eventType: 'completion',
-          eventTimestamp: DateTime.utc(today.year, today.month, today.day, 20),
-        ),
-      ];
-      final state = reducer.reduce(events, today: today);
-      expect(state.currentStreak, 1);
-      expect(state.maxStreak, 1);
-    });
+    test(
+      '6 — multiple completions on the same day count as one streak day',
+      () {
+        final events = [
+          StreakEvent(
+            profileId: profileId,
+            eventType: 'completion',
+            eventTimestamp: DateTime.utc(today.year, today.month, today.day, 8),
+          ),
+          StreakEvent(
+            profileId: profileId,
+            eventType: 'completion',
+            eventTimestamp: DateTime.utc(
+              today.year,
+              today.month,
+              today.day,
+              20,
+            ),
+          ),
+        ];
+        final state = reducer.reduce(events, today: today);
+        expect(state.currentStreak, 1);
+        expect(state.maxStreak, 1);
+      },
+    );
 
     test('7 — non-completion events are ignored', () {
       final events = [

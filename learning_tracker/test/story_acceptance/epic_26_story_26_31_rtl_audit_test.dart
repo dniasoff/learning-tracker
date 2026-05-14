@@ -194,21 +194,18 @@ void main() {
         throw StateError('File not found: $relPath');
       }
 
-      test(
-        'daily_task_card.dart uses AlignmentDirectional.centerEnd',
-        () {
-          final src = readFeatureFile(
-            'scheduler/presentation/widgets/daily_task_card.dart',
-          );
-          expect(
-            src,
-            contains('AlignmentDirectional.centerEnd'),
-            reason:
-                'AC4: the dismiss background Container must use '
-                'AlignmentDirectional.centerEnd instead of Alignment.centerRight.',
-          );
-        },
-      );
+      test('daily_task_card.dart uses AlignmentDirectional.centerEnd', () {
+        final src = readFeatureFile(
+          'scheduler/presentation/widgets/daily_task_card.dart',
+        );
+        expect(
+          src,
+          contains('AlignmentDirectional.centerEnd'),
+          reason:
+              'AC4: the dismiss background Container must use '
+              'AlignmentDirectional.centerEnd instead of Alignment.centerRight.',
+        );
+      });
 
       test(
         'account_picker_screen.dart uses EdgeInsetsDirectional.only(end: 20)',
@@ -232,8 +229,12 @@ void main() {
         // AlignmentDirectional. The constraint is satisfied.
         final root = _projectRoot();
         final candidates = [
-          File('${root.path}/lib/features/track_setup/presentation/screens/add_track_flow.dart'),
-          File('lib/features/track_setup/presentation/screens/add_track_flow.dart'),
+          File(
+            '${root.path}/lib/features/track_setup/presentation/screens/add_track_flow.dart',
+          ),
+          File(
+            'lib/features/track_setup/presentation/screens/add_track_flow.dart',
+          ),
         ];
         final exists = candidates.any((f) => f.existsSync());
         if (!exists) return; // file deleted — constraint satisfied by deletion

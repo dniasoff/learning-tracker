@@ -122,9 +122,7 @@ class AppTheme {
     final curriculum = CurriculumId.values
         .where((c) => c.storageKey == storageKey)
         .firstOrNull;
-    return curriculum != null
-        ? getCurriculumColor(curriculum)
-        : brandBlue;
+    return curriculum != null ? getCurriculumColor(curriculum) : brandBlue;
   }
 
   static const Color trackPersonal = brandBlue;

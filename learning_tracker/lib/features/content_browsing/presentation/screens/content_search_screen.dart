@@ -66,9 +66,15 @@ class _ContentSearchScreenState extends ConsumerState<ContentSearchScreen> {
 
     if (curriculum == null) {
       return Scaffold(
-        appBar: AppBar(title: AppBarTitle(text: AppLocalizations.of(context)!.searchTitle)),
+        appBar: AppBar(
+          title: AppBarTitle(text: AppLocalizations.of(context)!.searchTitle),
+        ),
         body: Center(
-          child: Text(AppLocalizations.of(context)!.errorUnknownCurriculum(widget.curriculumId)),
+          child: Text(
+            AppLocalizations.of(
+              context,
+            )!.errorUnknownCurriculum(widget.curriculumId),
+          ),
         ),
       );
     }
@@ -109,7 +115,9 @@ class _ContentSearchScreenState extends ConsumerState<ContentSearchScreen> {
     AsyncValue<List<ContentItem>>? resultsAsync,
   ) {
     if (resultsAsync == null) {
-      return Center(child: Text(AppLocalizations.of(context)!.searchHintEnterTerm));
+      return Center(
+        child: Text(AppLocalizations.of(context)!.searchHintEnterTerm),
+      );
     }
 
     return resultsAsync.when(
@@ -151,7 +159,9 @@ class _ContentSearchScreenState extends ConsumerState<ContentSearchScreen> {
               color: AppTheme.brandCoralDeep,
             ),
             const SizedBox(height: 16),
-            Text(AppLocalizations.of(context)!.errorSearchError(error.toString())),
+            Text(
+              AppLocalizations.of(context)!.errorSearchError(error.toString()),
+            ),
           ],
         ),
       ),

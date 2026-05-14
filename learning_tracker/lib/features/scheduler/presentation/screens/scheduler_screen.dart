@@ -35,8 +35,12 @@ class _SchedulerScreenState extends ConsumerState<SchedulerScreen> {
             final visibleTasks = _filterTasks(tasks, section);
             if (visibleTasks.isEmpty) {
               return EmptyState(
-                message: AppLocalizations.of(context)!.dashboardAllCaughtUpTitle,
-                subtitle: AppLocalizations.of(context)!.tasksNoTasksRemainingTitle,
+                message: AppLocalizations.of(
+                  context,
+                )!.dashboardAllCaughtUpTitle,
+                subtitle: AppLocalizations.of(
+                  context,
+                )!.tasksNoTasksRemainingTitle,
                 icon: Icons.celebration_outlined,
               );
             }
@@ -93,7 +97,11 @@ class _SchedulerScreenState extends ConsumerState<SchedulerScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(AppLocalizations.of(context)!.errorLoadingTasks(error.toString())),
+                Text(
+                  AppLocalizations.of(
+                    context,
+                  )!.errorLoadingTasks(error.toString()),
+                ),
                 const SizedBox(height: 16),
                 ElevatedButton(
                   onPressed: () => ref.invalidate(allDailyTasksProvider),
@@ -189,7 +197,9 @@ class _TaskList extends ConsumerWidget {
                   .skip(task.contentItemSefariaRef);
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content: Text(AppLocalizations.of(context)!.taskSkippedUntilTomorrow),
+                  content: Text(
+                    AppLocalizations.of(context)!.taskSkippedUntilTomorrow,
+                  ),
                   action: SnackBarAction(
                     label: AppLocalizations.of(context)!.undoLabel,
                     onPressed: () {
@@ -218,7 +228,10 @@ class _HeaderRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Text(AppLocalizations.of(context)!.dailyTasksTitle, style: titleStyle);
+    return Text(
+      AppLocalizations.of(context)!.dailyTasksTitle,
+      style: titleStyle,
+    );
   }
 }
 

@@ -51,7 +51,10 @@ class _TrackLabelStepState extends State<TrackLabelStep> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text(AppLocalizations.of(context)!.trackNameThisTrack, style: theme.textTheme.headlineSmall),
+            Text(
+              AppLocalizations.of(context)!.trackNameThisTrack,
+              style: theme.textTheme.headlineSmall,
+            ),
             const SizedBox(height: 8),
             Text(
               AppLocalizations.of(context)!.trackNameSubtitle,
@@ -75,7 +78,10 @@ class _TrackLabelStepState extends State<TrackLabelStep> {
               onFieldSubmitted: (_) => _submit(),
             ),
             const Spacer(),
-            FilledButton(onPressed: _submit, child: Text(AppLocalizations.of(context)!.actionContinue)),
+            FilledButton(
+              onPressed: _submit,
+              child: Text(AppLocalizations.of(context)!.actionContinue),
+            ),
           ],
         ),
       ),

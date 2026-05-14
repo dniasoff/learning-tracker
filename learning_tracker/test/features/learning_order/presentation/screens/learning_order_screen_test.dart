@@ -22,7 +22,9 @@ void main() {
           child: MaterialApp(
             localizationsDelegates: AppLocalizations.localizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
-            home: const LearningOrderScreen(curriculumId: CurriculumId.mishnayos),
+            home: const LearningOrderScreen(
+              curriculumId: CurriculumId.mishnayos,
+            ),
           ),
         ),
       );

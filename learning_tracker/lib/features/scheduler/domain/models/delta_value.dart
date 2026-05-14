@@ -18,8 +18,7 @@ final class DateDelta {
   final int days;
 
   @override
-  bool operator ==(Object other) =>
-      other is DateDelta && other.days == days;
+  bool operator ==(Object other) => other is DateDelta && other.days == days;
 
   @override
   int get hashCode => Object.hash(runtimeType, days);

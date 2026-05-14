@@ -502,7 +502,11 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
                 );
               },
               loading: () => const Center(child: CircularProgressIndicator()),
-              error: (e, _) => Center(child: Text(AppLocalizations.of(context)!.errorGeneric(e.toString()))),
+              error: (e, _) => Center(
+                child: Text(
+                  AppLocalizations.of(context)!.errorGeneric(e.toString()),
+                ),
+              ),
             ),
           ),
           if (_selections.isNotEmpty)
@@ -618,7 +622,11 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
                         },
                         title: Text(stage.stageName),
                         subtitle: stage.delayDays > 0
-                            ? Text(AppLocalizations.of(context)!.reviewStageDayDelay(stage.delayDays))
+                            ? Text(
+                                AppLocalizations.of(
+                                  context,
+                                )!.reviewStageDayDelay(stage.delayDays),
+                              )
                             : null,
                       ),
                     const Divider(),
@@ -667,7 +675,11 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
                 ],
               ),
               loading: () => const Center(child: CircularProgressIndicator()),
-              error: (e, _) => Center(child: Text(AppLocalizations.of(context)!.errorGeneric(e.toString()))),
+              error: (e, _) => Center(
+                child: Text(
+                  AppLocalizations.of(context)!.errorGeneric(e.toString()),
+                ),
+              ),
             ),
           ),
           Padding(
@@ -713,7 +725,10 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
             children: [
               Icon(Icons.checklist, size: 64, color: theme.colorScheme.primary),
               const SizedBox(height: 24),
-              Text(AppLocalizations.of(context)!.bulkMarkConfirmBulkTitle, style: theme.textTheme.headlineSmall),
+              Text(
+                AppLocalizations.of(context)!.bulkMarkConfirmBulkTitle,
+                style: theme.textTheme.headlineSmall,
+              ),
               const SizedBox(height: 16),
               Text(
                 '$itemCount items across $stageCount stage(s)',
@@ -767,7 +782,10 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
           children: [
             const CircularProgressIndicator(),
             const SizedBox(height: 24),
-            Text(AppLocalizations.of(context)!.bulkMarkingCompletions, style: theme.textTheme.titleMedium),
+            Text(
+              AppLocalizations.of(context)!.bulkMarkingCompletions,
+              style: theme.textTheme.titleMedium,
+            ),
           ],
         ),
       ),
@@ -790,7 +808,10 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
                 color: theme.colorScheme.primary,
               ),
               const SizedBox(height: 16),
-              Text(AppLocalizations.of(context)!.bulkMarkDone, style: theme.textTheme.headlineSmall),
+              Text(
+                AppLocalizations.of(context)!.bulkMarkDone,
+                style: theme.textTheme.headlineSmall,
+              ),
               if (result != null) ...[
                 const SizedBox(height: 8),
                 Text(

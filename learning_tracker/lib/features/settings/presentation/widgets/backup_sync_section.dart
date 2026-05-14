@@ -151,7 +151,9 @@ class BackupSyncSection extends ConsumerWidget {
                     ),
                     onPressed: () =>
                         context.pushRoute(const UpgradeToCloudRoute()),
-                    child: Text(AppLocalizations.of(context)!.backupUpgradeToCloud),
+                    child: Text(
+                      AppLocalizations.of(context)!.backupUpgradeToCloud,
+                    ),
                   ),
                 ),
               ],

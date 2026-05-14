@@ -270,9 +270,12 @@ class _DailyTasksSection extends ConsumerWidget {
                 ),
               ),
               child: dailyTasksAsync.when(
-                data: (tasks) => Text(AppLocalizations.of(context)!.itemsCount(tasks.length)),
+                data: (tasks) => Text(
+                  AppLocalizations.of(context)!.itemsCount(tasks.length),
+                ),
                 loading: () => const Text('...'),
-                error: (_, __) => Text(AppLocalizations.of(context)!.itemsCount(0)),
+                error: (_, __) =>
+                    Text(AppLocalizations.of(context)!.itemsCount(0)),
               ),
             ),
           ],
@@ -293,7 +296,9 @@ class _DailyTasksSection extends ConsumerWidget {
               return _InfoCard(
                 icon: Icons.celebration_outlined,
                 title: AppLocalizations.of(context)!.tasksAllCaughtUp,
-                subtitle: AppLocalizations.of(context)!.tasksNoTasksRemainingToday,
+                subtitle: AppLocalizations.of(
+                  context,
+                )!.tasksNoTasksRemainingToday,
               );
             }
 

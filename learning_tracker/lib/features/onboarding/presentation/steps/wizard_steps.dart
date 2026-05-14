@@ -720,8 +720,16 @@ class _RoundTimingCard extends StatelessWidget {
             const SizedBox(height: 8),
             SegmentedButton<bool>(
               segments: [
-                ButtonSegment(value: false, label: Text(AppLocalizations.of(context)!.schedulerDaysLabel)),
-                ButtonSegment(value: true, label: Text(AppLocalizations.of(context)!.schedulerWeeksLabel)),
+                ButtonSegment(
+                  value: false,
+                  label: Text(AppLocalizations.of(context)!.schedulerDaysLabel),
+                ),
+                ButtonSegment(
+                  value: true,
+                  label: Text(
+                    AppLocalizations.of(context)!.schedulerWeeksLabel,
+                  ),
+                ),
               ],
               selected: {state.useWeekly},
               onSelectionChanged: (s) {

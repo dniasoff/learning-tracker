@@ -58,7 +58,11 @@ class _BulkCompletionDialogState extends ConsumerState<BulkCompletionDialog> {
         // Show success message
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(AppLocalizations.of(context)!.bulkMarkedComplete(completions.length)),
+            content: Text(
+              AppLocalizations.of(
+                context,
+              )!.bulkMarkedComplete(completions.length),
+            ),
             backgroundColor: Colors.green,
           ),
         );
@@ -71,7 +75,11 @@ class _BulkCompletionDialogState extends ConsumerState<BulkCompletionDialog> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(AppLocalizations.of(context)!.errorMarkCompleteFailed(e.toString())),
+            content: Text(
+              AppLocalizations.of(
+                context,
+              )!.errorMarkCompleteFailed(e.toString()),
+            ),
             backgroundColor: Colors.red,
           ),
         );

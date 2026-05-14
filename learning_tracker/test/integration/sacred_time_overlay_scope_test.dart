@@ -69,7 +69,9 @@ void main() {
             child: SizedBox(key: childKey, child: Text('DASHBOARD')),
           ),
           overrides: [
-            currentSacredWindowProvider.overrideWithValue(_activeShabboWindow()),
+            currentSacredWindowProvider.overrideWithValue(
+              _activeShabboWindow(),
+            ),
           ],
         );
 
@@ -89,12 +91,8 @@ void main() {
       (tester) async {
         await _pump(
           tester,
-          const SacredTimeLockOverlay(
-            child: Text('DASHBOARD'),
-          ),
-          overrides: [
-            currentSacredWindowProvider.overrideWithValue(null),
-          ],
+          const SacredTimeLockOverlay(child: Text('DASHBOARD')),
+          overrides: [currentSacredWindowProvider.overrideWithValue(null)],
         );
 
         expect(find.text('DASHBOARD'), findsOneWidget);
@@ -116,7 +114,9 @@ void main() {
           tester,
           shellContent,
           overrides: [
-            currentSacredWindowProvider.overrideWithValue(_activeShabboWindow()),
+            currentSacredWindowProvider.overrideWithValue(
+              _activeShabboWindow(),
+            ),
           ],
         );
 
@@ -138,7 +138,9 @@ void main() {
           tester,
           onboardingContent,
           overrides: [
-            currentSacredWindowProvider.overrideWithValue(_activeShabboWindow()),
+            currentSacredWindowProvider.overrideWithValue(
+              _activeShabboWindow(),
+            ),
           ],
         );
 
@@ -156,7 +158,9 @@ void main() {
       (tester) async {
         final container = ProviderContainer(
           overrides: [
-            currentSacredWindowProvider.overrideWithValue(_activeShabboWindow()),
+            currentSacredWindowProvider.overrideWithValue(
+              _activeShabboWindow(),
+            ),
           ],
         );
         addTearDown(container.dispose);

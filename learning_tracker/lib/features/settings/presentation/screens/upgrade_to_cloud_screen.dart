@@ -190,7 +190,9 @@ class _UpgradeToCloudScreenState extends ConsumerState<UpgradeToCloudScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(AppLocalizations.of(context)!.errorVerificationEmailSent),
+            content: Text(
+              AppLocalizations.of(context)!.errorVerificationEmailSent,
+            ),
           ),
         );
       }
@@ -305,7 +307,9 @@ class _UpgradeToCloudScreenState extends ConsumerState<UpgradeToCloudScreen> {
     final authState = ref.watch(authStateProvider);
 
     return Scaffold(
-      appBar: AppBar(title: Text(AppLocalizations.of(context)!.upgradeToCloudTitle)),
+      appBar: AppBar(
+        title: Text(AppLocalizations.of(context)!.upgradeToCloudTitle),
+      ),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24),
@@ -398,7 +402,9 @@ class _UpgradeToCloudScreenState extends ConsumerState<UpgradeToCloudScreen> {
                             width: 20,
                             child: CircularProgressIndicator(strokeWidth: 2),
                           )
-                        : Text(AppLocalizations.of(context)!.upgradeToCloudButton),
+                        : Text(
+                            AppLocalizations.of(context)!.upgradeToCloudButton,
+                          ),
                   ),
                 ],
               ],
@@ -577,7 +583,9 @@ class _CollisionBlock extends StatelessWidget {
           const SizedBox(height: 8),
           TextButton(
             onPressed: isLoading ? null : onCancel,
-            child: Text(AppLocalizations.of(context)!.upgradeToCloudCancelKeepOffline),
+            child: Text(
+              AppLocalizations.of(context)!.upgradeToCloudCancelKeepOffline,
+            ),
           ),
         ],
       ),

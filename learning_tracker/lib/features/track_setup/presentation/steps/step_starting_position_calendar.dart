@@ -11,11 +11,27 @@ import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 const _kWeekdayNames = [
-  'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday',
+  'Monday',
+  'Tuesday',
+  'Wednesday',
+  'Thursday',
+  'Friday',
+  'Saturday',
+  'Sunday',
 ];
 const _kMonthNames = [
-  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+  'Jan',
+  'Feb',
+  'Mar',
+  'Apr',
+  'May',
+  'Jun',
+  'Jul',
+  'Aug',
+  'Sep',
+  'Oct',
+  'Nov',
+  'Dec',
 ];
 
 /// Calendar-program variant of the starting-position step.
@@ -192,7 +208,11 @@ class _StartingPositionCalendarModeState
             color: Colors.white,
             borderRadius: BorderRadius.circular(28),
             boxShadow: const [
-              BoxShadow(color: Color(0x12000000), blurRadius: 18, offset: Offset(0, 8)),
+              BoxShadow(
+                color: Color(0x12000000),
+                blurRadius: 18,
+                offset: Offset(0, 8),
+              ),
             ],
           ),
           child: Padding(
@@ -202,17 +222,30 @@ class _StartingPositionCalendarModeState
                 const CircleAvatar(
                   radius: 34,
                   backgroundColor: Color(0xFFE6E8FF),
-                  child: Icon(Icons.calendar_today_rounded, size: 28, color: AppTheme.brandBlueDeep),
+                  child: Icon(
+                    Icons.calendar_today_rounded,
+                    size: 28,
+                    color: AppTheme.brandBlueDeep,
+                  ),
                 ),
                 const SizedBox(height: 14),
-                Text(l10n.startingPositionTargetDate, style: theme.textTheme.titleSmall?.copyWith(
-                  letterSpacing: 1.1, color: AppTheme.brandInkMuted, fontWeight: FontWeight.w700,
-                )),
+                Text(
+                  l10n.startingPositionTargetDate,
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    letterSpacing: 1.1,
+                    color: AppTheme.brandInkMuted,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
                 const SizedBox(height: 8),
-                Text(_dateLabel(), textAlign: TextAlign.center,
+                Text(
+                  _dateLabel(),
+                  textAlign: TextAlign.center,
                   style: theme.textTheme.headlineMedium?.copyWith(
-                    color: AppTheme.brandBlueDeep, fontWeight: FontWeight.w800,
-                  )),
+                    color: AppTheme.brandBlueDeep,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
                 const SizedBox(height: 8),
                 _buildCalendarEntrySection(theme),
               ],
@@ -220,18 +253,29 @@ class _StartingPositionCalendarModeState
           ),
         ),
         Positioned(
-          top: -14, right: 12,
+          top: -14,
+          right: 12,
           child: DecoratedBox(
             decoration: BoxDecoration(
               color: const Color(0xFFFF707D),
               borderRadius: BorderRadius.circular(999),
-              boxShadow: const [BoxShadow(color: Color(0x33000000), blurRadius: 10, offset: Offset(0, 4))],
+              boxShadow: const [
+                BoxShadow(
+                  color: Color(0x33000000),
+                  blurRadius: 10,
+                  offset: Offset(0, 4),
+                ),
+              ],
             ),
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-              child: Text(_offsetLabel(), style: theme.textTheme.titleSmall?.copyWith(
-                color: Colors.white, fontWeight: FontWeight.w800,
-              )),
+              child: Text(
+                _offsetLabel(),
+                style: theme.textTheme.titleSmall?.copyWith(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
             ),
           ),
         ),
@@ -253,7 +297,10 @@ class _StartingPositionCalendarModeState
             _OffsetButton(
               icon: Icons.chevron_left_rounded,
               enabled: _offsetDays > -30,
-              onTap: () { setState(() => _offsetDays -= 1); unawaited(_refreshCalendarEntry()); },
+              onTap: () {
+                setState(() => _offsetDays -= 1);
+                unawaited(_refreshCalendarEntry());
+              },
             ),
             Expanded(
               child: Center(
@@ -262,12 +309,19 @@ class _StartingPositionCalendarModeState
                   children: [
                     Text(
                       _offsetDays == 0 ? 'Today' : daysLabel,
-                      style: theme.textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w800),
+                      style: theme.textTheme.headlineMedium?.copyWith(
+                        fontWeight: FontWeight.w800,
+                      ),
                     ),
                     const SizedBox(height: 2),
-                    Text(_directionLabel(), style: theme.textTheme.titleSmall?.copyWith(
-                      letterSpacing: 1.1, color: AppTheme.brandInkMuted, fontWeight: FontWeight.w700,
-                    )),
+                    Text(
+                      _directionLabel(),
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        letterSpacing: 1.1,
+                        color: AppTheme.brandInkMuted,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -275,7 +329,10 @@ class _StartingPositionCalendarModeState
             _OffsetButton(
               icon: Icons.chevron_right_rounded,
               enabled: _offsetDays < 30,
-              onTap: () { setState(() => _offsetDays += 1); unawaited(_refreshCalendarEntry()); },
+              onTap: () {
+                setState(() => _offsetDays += 1);
+                unawaited(_refreshCalendarEntry());
+              },
             ),
           ],
         ),
@@ -316,10 +373,7 @@ class _StartingPositionCalendarModeState
           const SizedBox(height: 8),
           Builder(
             builder: (context) {
-              final label = calendarEntryLabelText(
-                ref,
-                entry: _calendarEntry!,
-              );
+              final label = calendarEntryLabelText(ref, entry: _calendarEntry!);
               return Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 12,

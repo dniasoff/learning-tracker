@@ -188,7 +188,6 @@ void main() {
       expect(entity.paceValue, isNull);
       expect(entity.pacePeriod, isNull);
     });
-
   });
 
   // Placeholder groups for future stories in Epic 16

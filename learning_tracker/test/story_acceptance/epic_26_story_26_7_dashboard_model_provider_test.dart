@@ -27,10 +27,7 @@ import 'package:test/test.dart';
 /// Reads [path] relative to the learning_tracker/ app root when run from the
 /// Flutter project directory, with a fallback for the worktree path.
 String _src(String path) {
-  final candidates = [
-    'lib/$path',
-    'learning_tracker/lib/$path',
-  ];
+  final candidates = ['lib/$path', 'learning_tracker/lib/$path'];
   for (final c in candidates) {
     if (File(c).existsSync()) return File(c).readAsStringSync();
   }
@@ -97,27 +94,26 @@ void main() {
     'Story 26.7 AC2 — onTrackChanged is the canonical invalidation helper',
     tags: ['story_26_7'],
     () {
-      test('onTrackChanged is importable from after_track_change_invalidation',
-          () {
-        // Importing onTrackChanged directly verifies it is exported.
-        expect(onTrackChanged, isNotNull);
-      });
-
       test(
-        'after_track_change_invalidation.dart declares onTrackChanged',
+        'onTrackChanged is importable from after_track_change_invalidation',
         () {
-          final src = _src(
-            'features/track_setup/presentation/providers/after_track_change_invalidation.dart',
-          );
-          expect(
-            src,
-            contains('Future<void> onTrackChanged('),
-            reason:
-                'onTrackChanged must be the primary public function in '
-                'after_track_change_invalidation.dart',
-          );
+          // Importing onTrackChanged directly verifies it is exported.
+          expect(onTrackChanged, isNotNull);
         },
       );
+
+      test('after_track_change_invalidation.dart declares onTrackChanged', () {
+        final src = _src(
+          'features/track_setup/presentation/providers/after_track_change_invalidation.dart',
+        );
+        expect(
+          src,
+          contains('Future<void> onTrackChanged('),
+          reason:
+              'onTrackChanged must be the primary public function in '
+              'after_track_change_invalidation.dart',
+        );
+      });
 
       test(
         'invalidateAfterTrackDataChange is deprecated in favour of onTrackChanged',
@@ -152,7 +148,9 @@ void main() {
           // as consecutive separate ref.invalidate() calls. After this story
           // they are replaced by a single onTrackChanged() call.
           final hasParallelList =
-              src.contains('ref.invalidate(dashboardCompletionPercentageProvider') &&
+              src.contains(
+                'ref.invalidate(dashboardCompletionPercentageProvider',
+              ) &&
               src.contains('ref.invalidate(progressOverviewStatsProvider)');
           expect(
             hasParallelList,
@@ -164,70 +162,62 @@ void main() {
         },
       );
 
-      test(
-        'add_track_flow.dart does not contain parallel invalidation list',
-        () {
-          // add_track_flow.dart was deleted by DNI-353 (26.10). If the file no
-          // longer exists, the constraint is trivially satisfied.
-          final candidates = [
-            'lib/features/track_setup/presentation/screens/add_track_flow.dart',
-            'learning_tracker/lib/features/track_setup/presentation/screens/add_track_flow.dart',
-          ];
-          final exists = candidates.any((c) => File(c).existsSync());
-          if (!exists) return; // file deleted — constraint satisfied
-          final src = _src(
-            'features/track_setup/presentation/screens/add_track_flow.dart',
-          );
-          final hasParallelList =
-              src.contains('ref.invalidate(dashboardCompletionPercentageProvider') &&
-              src.contains('ref.invalidate(progressOverviewStatsProvider)');
-          expect(
-            hasParallelList,
-            isFalse,
-            reason:
-                'add_track_flow.dart must not have a parallel ad-hoc '
-                'invalidation list — use onTrackChanged() instead',
-          );
-        },
-      );
+      test('add_track_flow.dart does not contain parallel invalidation list', () {
+        // add_track_flow.dart was deleted by DNI-353 (26.10). If the file no
+        // longer exists, the constraint is trivially satisfied.
+        final candidates = [
+          'lib/features/track_setup/presentation/screens/add_track_flow.dart',
+          'learning_tracker/lib/features/track_setup/presentation/screens/add_track_flow.dart',
+        ];
+        final exists = candidates.any((c) => File(c).existsSync());
+        if (!exists) return; // file deleted — constraint satisfied
+        final src = _src(
+          'features/track_setup/presentation/screens/add_track_flow.dart',
+        );
+        final hasParallelList =
+            src.contains(
+              'ref.invalidate(dashboardCompletionPercentageProvider',
+            ) &&
+            src.contains('ref.invalidate(progressOverviewStatsProvider)');
+        expect(
+          hasParallelList,
+          isFalse,
+          reason:
+              'add_track_flow.dart must not have a parallel ad-hoc '
+              'invalidation list — use onTrackChanged() instead',
+        );
+      });
 
-      test(
-        'add_track_flow_screen.dart calls onTrackChanged',
-        () {
-          final src = _src(
-            'features/track_setup/presentation/screens/add_track_flow_screen.dart',
-          );
-          expect(
-            src,
-            contains('onTrackChanged('),
-            reason:
-                'add_track_flow_screen.dart must delegate to onTrackChanged()',
-          );
-        },
-      );
+      test('add_track_flow_screen.dart calls onTrackChanged', () {
+        final src = _src(
+          'features/track_setup/presentation/screens/add_track_flow_screen.dart',
+        );
+        expect(
+          src,
+          contains('onTrackChanged('),
+          reason:
+              'add_track_flow_screen.dart must delegate to onTrackChanged()',
+        );
+      });
 
-      test(
-        'add_track_flow.dart calls onTrackChanged',
-        () {
-          // add_track_flow.dart was deleted by DNI-353 (26.10). If the file no
-          // longer exists, the constraint is trivially satisfied.
-          final candidates = [
-            'lib/features/track_setup/presentation/screens/add_track_flow.dart',
-            'learning_tracker/lib/features/track_setup/presentation/screens/add_track_flow.dart',
-          ];
-          final exists = candidates.any((c) => File(c).existsSync());
-          if (!exists) return; // file deleted — constraint satisfied
-          final src = _src(
-            'features/track_setup/presentation/screens/add_track_flow.dart',
-          );
-          expect(
-            src,
-            contains('onTrackChanged('),
-            reason:
-                'add_track_flow.dart must delegate to onTrackChanged()',
-          );
-        },
-      );
+      test('add_track_flow.dart calls onTrackChanged', () {
+        // add_track_flow.dart was deleted by DNI-353 (26.10). If the file no
+        // longer exists, the constraint is trivially satisfied.
+        final candidates = [
+          'lib/features/track_setup/presentation/screens/add_track_flow.dart',
+          'learning_tracker/lib/features/track_setup/presentation/screens/add_track_flow.dart',
+        ];
+        final exists = candidates.any((c) => File(c).existsSync());
+        if (!exists) return; // file deleted — constraint satisfied
+        final src = _src(
+          'features/track_setup/presentation/screens/add_track_flow.dart',
+        );
+        expect(
+          src,
+          contains('onTrackChanged('),
+          reason: 'add_track_flow.dart must delegate to onTrackChanged()',
+        );
+      });
     },
   );
 

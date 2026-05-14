@@ -347,7 +347,9 @@ class _HebrewDatePickerState extends State<HebrewDatePicker> {
                         ),
                         elevation: 0,
                       ),
-                      child: Text(AppLocalizations.of(context)!.schedulerSelectDate),
+                      child: Text(
+                        AppLocalizations.of(context)!.schedulerSelectDate,
+                      ),
                     ),
                   ),
                 ],

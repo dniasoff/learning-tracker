@@ -30,7 +30,9 @@ class ManageLearnersScreen extends ConsumerWidget {
       ),
       body: profilesAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, s) => Center(child: Text(AppLocalizations.of(context)!.errorGeneric(e.toString()))),
+        error: (e, s) => Center(
+          child: Text(AppLocalizations.of(context)!.errorGeneric(e.toString())),
+        ),
         data: (profiles) {
           if (profiles.isEmpty) {
             return Center(
@@ -56,7 +58,9 @@ class ManageLearnersScreen extends ConsumerWidget {
   ) async {
     final result = await showDialog<({String name, String mode, int avatar})>(
       context: context,
-      builder: (ctx) => _ProfileFormDialog(title: AppLocalizations.of(context)!.profilesAddLearner),
+      builder: (ctx) => _ProfileFormDialog(
+        title: AppLocalizations.of(context)!.profilesAddLearner,
+      ),
     );
     if (result == null) return;
 
@@ -106,8 +110,14 @@ class _ProfileListTile extends ConsumerWidget {
             }
           },
           itemBuilder: (context) => [
-            PopupMenuItem(value: 'edit', child: Text(AppLocalizations.of(context)!.profilesEditLabel)),
-            PopupMenuItem(value: 'delete', child: Text(AppLocalizations.of(context)!.profilesDeleteLabel)),
+            PopupMenuItem(
+              value: 'edit',
+              child: Text(AppLocalizations.of(context)!.profilesEditLabel),
+            ),
+            PopupMenuItem(
+              value: 'delete',
+              child: Text(AppLocalizations.of(context)!.profilesDeleteLabel),
+            ),
           ],
         ),
       ),
@@ -168,7 +178,11 @@ class _ProfileListTile extends ConsumerWidget {
             style: TextButton.styleFrom(
               foregroundColor: AppTheme.brandCoralDeep,
             ),
-            child: Text(isLast ? 'Delete anyway' : AppLocalizations.of(context)!.actionDelete),
+            child: Text(
+              isLast
+                  ? 'Delete anyway'
+                  : AppLocalizations.of(context)!.actionDelete,
+            ),
           ),
         ],
       ),
@@ -235,15 +249,23 @@ class _ProfileFormDialogState extends State<_ProfileFormDialog> {
               controller: _nameController,
               decoration: InputDecoration(
                 labelText: 'Name',
-                hintText: AppLocalizations.of(context)!.profilesEnterLearnerName,
+                hintText: AppLocalizations.of(
+                  context,
+                )!.profilesEnterLearnerName,
               ),
               autofocus: true,
             ),
             const SizedBox(height: 16),
             SegmentedButton<String>(
               segments: [
-                ButtonSegment(value: 'child', label: Text(AppLocalizations.of(context)!.profilesChildLabel)),
-                ButtonSegment(value: 'adult', label: Text(AppLocalizations.of(context)!.profilesAdultLabel)),
+                ButtonSegment(
+                  value: 'child',
+                  label: Text(AppLocalizations.of(context)!.profilesChildLabel),
+                ),
+                ButtonSegment(
+                  value: 'adult',
+                  label: Text(AppLocalizations.of(context)!.profilesAdultLabel),
+                ),
               ],
               selected: {_mode},
               onSelectionChanged: (selected) {

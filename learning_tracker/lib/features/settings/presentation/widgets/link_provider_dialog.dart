@@ -74,7 +74,11 @@ class _LinkProviderDialogState extends State<_LinkProviderDialog> {
       if (mounted) {
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(AppLocalizations.of(context)!.linkAccountGoogleSuccess)),
+          SnackBar(
+            content: Text(
+              AppLocalizations.of(context)!.linkAccountGoogleSuccess,
+            ),
+          ),
         );
       }
     } on GoogleSignInException catch (e) {
@@ -115,7 +119,9 @@ class _LinkProviderDialogState extends State<_LinkProviderDialog> {
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(AppLocalizations.of(context)!.linkAccountEmailSuccess),
+            content: Text(
+              AppLocalizations.of(context)!.linkAccountEmailSuccess,
+            ),
           ),
         );
       }
@@ -157,7 +163,9 @@ class _LinkProviderDialogState extends State<_LinkProviderDialog> {
           if (!widget.hasPassword) ...[
             ListTile(
               leading: const Icon(Icons.email),
-              title: Text(AppLocalizations.of(context)!.linkAccountEmailPasswordLabel),
+              title: Text(
+                AppLocalizations.of(context)!.linkAccountEmailPasswordLabel,
+              ),
               trailing: const Icon(Icons.add),
               onTap: _loading
                   ? null

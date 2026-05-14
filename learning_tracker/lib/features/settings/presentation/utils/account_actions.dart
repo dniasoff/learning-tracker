@@ -372,7 +372,11 @@ Future<void> showDeleteLocalAccountFlow(
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(AppLocalizations.of(context)!.errorDeleteAccountFailed(e.toString())),
+          content: Text(
+            AppLocalizations.of(
+              context,
+            )!.errorDeleteAccountFailed(e.toString()),
+          ),
           backgroundColor: Colors.red,
         ),
       );

@@ -596,7 +596,6 @@ void main() {
         expect(chumashGoals[0].targetPercent, 50.0);
       },
     );
-
   });
 
   // ── Story 6.4: Pace Tracking ──────────────────────────────────
@@ -857,5 +856,4 @@ void main() {
       },
     );
   });
-
 }

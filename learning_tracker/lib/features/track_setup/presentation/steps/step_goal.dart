@@ -144,9 +144,11 @@ class _SelfPacedGoalStepState extends ConsumerState<SelfPacedGoalStep> {
     final now = DateTimeFactory.nowUtc();
     if (_mode == 'deadline') {
       if (_deadline == null) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context)!.goalPickDeadlineFirst)));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(AppLocalizations.of(context)!.goalPickDeadlineFirst),
+          ),
+        );
         return;
       }
       final useHebrew = ref.read(useHebrewDateProvider);

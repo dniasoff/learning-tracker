@@ -211,9 +211,13 @@ class _PointConfigScreenState extends ConsumerState<PointConfigScreen> {
     } catch (e) {
       if (mounted) setState(() => _saving = false);
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context)!.errorGeneric(e.toString()))));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              AppLocalizations.of(context)!.errorGeneric(e.toString()),
+            ),
+          ),
+        );
       }
     }
   }
@@ -252,7 +256,11 @@ class _PointConfigScreenState extends ConsumerState<PointConfigScreen> {
       ),
       body: pointsAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, stack) => Center(child: Text(AppLocalizations.of(context)!.errorGeneric(error.toString()))),
+        error: (error, stack) => Center(
+          child: Text(
+            AppLocalizations.of(context)!.errorGeneric(error.toString()),
+          ),
+        ),
         data: (pointData) {
           if (pointData.isEmpty) {
             return Center(

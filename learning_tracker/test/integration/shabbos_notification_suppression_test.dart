@@ -69,37 +69,34 @@ void main() {
       when(() => mockService.cancelDailyReminder()).thenAnswer((_) async {});
     });
 
-    test(
-      'AC5 — Erev Shabbos, 19:30 EDT reminder → fire on Friday suppressed '
-      '(window opens ~19:18 EDT = 23:18 UTC)',
-      () {
-        // 1 May 2026 is a Friday.
-        // Shabbos window opens ~23:18 UTC (19:18 EDT) with 15-min cushion.
-        // 19:30 EDT = 23:30 UTC — inside the window.
-        final fridayNineteenThirtyUtc = DateTime.utc(2026, 5, 1, 23, 30);
+    test('AC5 — Erev Shabbos, 19:30 EDT reminder → fire on Friday suppressed '
+        '(window opens ~19:18 EDT = 23:18 UTC)', () {
+      // 1 May 2026 is a Friday.
+      // Shabbos window opens ~23:18 UTC (19:18 EDT) with 15-min cushion.
+      // 19:30 EDT = 23:30 UTC — inside the window.
+      final fridayNineteenThirtyUtc = DateTime.utc(2026, 5, 1, 23, 30);
 
-        final location = SacredLocation(
-          latitude: lakewoodLat,
-          longitude: lakewoodLong,
-          source: SacredLocationSource.detected,
-          fixedAt: DateTime.utc(2026, 5, 1),
-        );
+      final location = SacredLocation(
+        latitude: lakewoodLat,
+        longitude: lakewoodLong,
+        source: SacredLocationSource.detected,
+        fixedAt: DateTime.utc(2026, 5, 1),
+      );
 
-        final suppressed = repository.isWindowActive(
-          fridayNineteenThirtyUtc,
-          location: location,
-          inIsrael: false,
-        );
+      final suppressed = repository.isWindowActive(
+        fridayNineteenThirtyUtc,
+        location: location,
+        inIsrael: false,
+      );
 
-        expect(
-          suppressed,
-          isTrue,
-          reason:
-              'A 19:30 EDT reminder on Erev Shabbos (1 May 2026, Lakewood NJ) '
-              'should be suppressed — Shabbos window opens ~23:18 UTC / 19:18 EDT',
-        );
-      },
-    );
+      expect(
+        suppressed,
+        isTrue,
+        reason:
+            'A 19:30 EDT reminder on Erev Shabbos (1 May 2026, Lakewood NJ) '
+            'should be suppressed — Shabbos window opens ~23:18 UTC / 19:18 EDT',
+      );
+    });
 
     test(
       'AC5b — 19:00 EDT (23:00 UTC) on Friday is NOT suppressed (before window)',
@@ -166,7 +163,8 @@ void main() {
           expect(
             utc,
             isNot(equals(friUtc)),
-            reason: 'Friday 19:30 EDT should be suppressed (inside Shabbos window)',
+            reason:
+                'Friday 19:30 EDT should be suppressed (inside Shabbos window)',
           );
           expect(
             utc,
@@ -195,7 +193,11 @@ void main() {
         inIsrael: false,
       );
 
-      expect(suppressed, isFalse, reason: 'Sunday morning should not be suppressed');
+      expect(
+        suppressed,
+        isFalse,
+        reason: 'Sunday morning should not be suppressed',
+      );
     });
 
     test(
@@ -258,7 +260,8 @@ void main() {
       expect(
         result,
         isTrue,
-        reason: 'After cache invalidation, 23:30 UTC Fri May 1 is still in window',
+        reason:
+            'After cache invalidation, 23:30 UTC Fri May 1 is still in window',
       );
     });
 

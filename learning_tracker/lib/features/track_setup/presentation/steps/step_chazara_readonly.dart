@@ -104,9 +104,14 @@ class ChazaraReadOnlyStep extends StatelessWidget {
                       );
                       final delay = stage['delay_days'];
                       final delayLabel = switch (delay) {
-                        final int value when value == 1 => l10n.reviewScheduleAfterOneDay,
-                        final int value => l10n.reviewScheduleAfterNDays('$value'),
-                        final String value => l10n.reviewScheduleAfterNDays(value),
+                        final int value when value == 1 =>
+                          l10n.reviewScheduleAfterOneDay,
+                        final int value => l10n.reviewScheduleAfterNDays(
+                          '$value',
+                        ),
+                        final String value => l10n.reviewScheduleAfterNDays(
+                          value,
+                        ),
                         _ => l10n.reviewScheduleScheduledByProgram,
                       };
 
@@ -114,9 +119,7 @@ class ChazaraReadOnlyStep extends StatelessWidget {
                         decoration: BoxDecoration(
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(22),
-                          border: Border.all(
-                            color: const Color(0xFFE7EAF1),
-                          ),
+                          border: Border.all(color: const Color(0xFFE7EAF1)),
                         ),
                         child: Padding(
                           padding: const EdgeInsets.symmetric(

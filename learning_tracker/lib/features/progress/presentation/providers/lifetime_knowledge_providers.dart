@@ -117,53 +117,54 @@ class LifetimeTotals {
 /// Keyed by `({int profileId, CurriculumId curriculumId})` so each curriculum
 /// is fetched independently and cached/disposed independently.
 final lifetimeDataProvider = FutureProvider.autoDispose
-    .family<CurriculumLifetimeSummary?, ({int profileId, CurriculumId curriculumId})>(
-      (ref, args) async {
-        final db = ref.watch(userDatabaseProvider);
-        final repo = ref.watch(contentRepositoryProvider);
-        final curriculum = args.curriculumId;
-        final profileId = args.profileId;
+    .family<
+      CurriculumLifetimeSummary?,
+      ({int profileId, CurriculumId curriculumId})
+    >((ref, args) async {
+      final db = ref.watch(userDatabaseProvider);
+      final repo = ref.watch(contentRepositoryProvider);
+      final curriculum = args.curriculumId;
+      final profileId = args.profileId;
 
-        final leaves = await _safeLoadLeaves(repo, curriculum);
-        if (leaves == null) return null;
-        if (leaves.isEmpty) return null;
+      final leaves = await _safeLoadLeaves(repo, curriculum);
+      if (leaves == null) return null;
+      if (leaves.isEmpty) return null;
 
-        final completions = await db.completionDao
-            .getCompletionsByCurriculumAndProfile(
-              curriculum.storageKey,
-              profileId,
-            );
-        final ledger = await db.learningLedgerDao.getEntriesByCurriculum(
-          profileId,
-          curriculum.storageKey,
-        );
+      final completions = await db.completionDao
+          .getCompletionsByCurriculumAndProfile(
+            curriculum.storageKey,
+            profileId,
+          );
+      final ledger = await db.learningLedgerDao.getEntriesByCurriculum(
+        profileId,
+        curriculum.storageKey,
+      );
 
-        final learnedLeafRefs = _learnedLeafRefs(
-          leaves: leaves,
-          completedRefs: completions.map((c) => c.sefariaRef).toSet(),
-          ledgerEntries: ledger,
-        );
+      final learnedLeafRefs = _learnedLeafRefs(
+        leaves: leaves,
+        completedRefs: completions.map((c) => c.sefariaRef).toSet(),
+        ledgerEntries: ledger,
+      );
 
-        final heLookup = await _heLabelLookup(repo, curriculum);
-        final tree = _buildTree(
-          curriculum,
-          leaves,
-          learnedLeafRefs,
-          heLabelLookup: heLookup,
-        );
-        final percentage = leaves.isEmpty
-            ? 0.0
-            : learnedLeafRefs.length / leaves.length;
+      final heLookup = await _heLabelLookup(repo, curriculum);
+      final tree = _buildTree(
+        curriculum,
+        leaves,
+        learnedLeafRefs,
+        heLabelLookup: heLookup,
+      );
+      final percentage = leaves.isEmpty
+          ? 0.0
+          : learnedLeafRefs.length / leaves.length;
 
-        return CurriculumLifetimeSummary(
-          curriculumId: curriculum,
-          learnedLeafCount: learnedLeafRefs.length,
-          totalLeafCount: leaves.length,
-          percentage: percentage.clamp(0.0, 1.0),
-          tree: tree,
-        );
-      },
-    );
+      return CurriculumLifetimeSummary(
+        curriculumId: curriculum,
+        learnedLeafCount: learnedLeafRefs.length,
+        totalLeafCount: leaves.length,
+        percentage: percentage.clamp(0.0, 1.0),
+        tree: tree,
+      );
+    });
 
 /// Aggregated lifetime summaries across all active curricula.
 ///
@@ -178,9 +179,10 @@ final lifetimeSummariesProvider = FutureProvider.autoDispose
       final results = await Future.wait(
         CurriculumId.values.map(
           (curriculum) => ref.watch(
-            lifetimeDataProvider(
-              (profileId: profileId, curriculumId: curriculum),
-            ).future,
+            lifetimeDataProvider((
+              profileId: profileId,
+              curriculumId: curriculum,
+            )).future,
           ),
         ),
       );

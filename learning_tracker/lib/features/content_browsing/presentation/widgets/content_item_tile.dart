@@ -243,7 +243,9 @@ class _StageBreakdownSheet extends ConsumerWidget {
               );
             },
             loading: () => const Center(child: CircularProgressIndicator()),
-            error: (e, _) => Text(AppLocalizations.of(context)!.errorWithMessage(e.toString())),
+            error: (e, _) => Text(
+              AppLocalizations.of(context)!.errorWithMessage(e.toString()),
+            ),
           ),
           const SizedBox(height: 16),
         ],

@@ -76,6 +76,5 @@ void main() {
         verify(() => mockPlugin.cancel(id: streakAlertId)).called(1);
       });
     });
-
   });
 }

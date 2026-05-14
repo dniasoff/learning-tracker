@@ -157,8 +157,9 @@ class PaceGoalCard extends StatelessWidget {
                 unitPlural,
                 pacePeriod == 'per_day' ? l10n.pacePerDay : l10n.pacePerWeek,
               ),
-              style: theme.textTheme.bodyMedium
-                  ?.copyWith(color: AppTheme.brandInkMuted),
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: AppTheme.brandInkMuted,
+              ),
             ),
             if (hasUnitChoice && fineKey != null && fineLabel != null) ...[
               const SizedBox(height: 10),
@@ -191,8 +192,9 @@ class PaceGoalCard extends StatelessWidget {
                   child: Center(
                     child: Text(
                       '$paceValue',
-                      style: theme.textTheme.headlineMedium
-                          ?.copyWith(fontWeight: FontWeight.w800),
+                      style: theme.textTheme.headlineMedium?.copyWith(
+                        fontWeight: FontWeight.w800,
+                      ),
                     ),
                   ),
                 ),
@@ -276,8 +278,9 @@ class DeadlineGoalCard extends StatelessWidget {
                 const SizedBox(width: 10),
                 Text(
                   l10n.goalSetDeadline,
-                  style: theme.textTheme.titleLarge
-                      ?.copyWith(fontWeight: FontWeight.w800),
+                  style: theme.textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
               ],
             ),

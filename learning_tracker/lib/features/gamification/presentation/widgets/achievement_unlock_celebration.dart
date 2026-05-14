@@ -43,8 +43,8 @@ Future<String> _resolveTrackLabel(WidgetRef ref, int trackId) async {
 /// private class internals.
 final _celebrationInFlightProvider =
     NotifierProvider<_CelebrationInFlightNotifier, bool>(
-  _CelebrationInFlightNotifier.new,
-);
+      _CelebrationInFlightNotifier.new,
+    );
 
 class _CelebrationInFlightNotifier extends Notifier<bool> {
   @override

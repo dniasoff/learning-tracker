@@ -424,10 +424,7 @@ void main() {
           // Same runtime type — proves the 4 shapes are not structurally
           // divergent at the model layer.
           expect(viewModels, hasLength(4));
-          expect(
-            viewModels.map((vm) => vm.runtimeType).toSet(),
-            hasLength(1),
-          );
+          expect(viewModels.map((vm) => vm.runtimeType).toSet(), hasLength(1));
 
           // Shape ↔ shape-specific field correspondence (the contract the
           // TrackCard widget tree relies on).

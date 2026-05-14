@@ -677,7 +677,9 @@ class _CompletionSectionState extends ConsumerState<_CompletionSection> {
         setState(() => _saving = false);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(AppLocalizations.of(context)!.couldNotSave(e.toString())),
+            content: Text(
+              AppLocalizations.of(context)!.couldNotSave(e.toString()),
+            ),
             backgroundColor: AppTheme.brandCoralDeep,
           ),
         );

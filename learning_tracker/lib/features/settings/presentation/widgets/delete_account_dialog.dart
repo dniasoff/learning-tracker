@@ -75,7 +75,9 @@ class _DeleteAccountDialogState extends State<_DeleteAccountDialog> {
           const SizedBox(height: 8),
           TextField(
             controller: _controller,
-            decoration: InputDecoration(hintText: AppLocalizations.of(context)!.deleteAccountHint),
+            decoration: InputDecoration(
+              hintText: AppLocalizations.of(context)!.deleteAccountHint,
+            ),
           ),
         ],
       ),

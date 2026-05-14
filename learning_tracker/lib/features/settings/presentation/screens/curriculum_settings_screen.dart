@@ -62,12 +62,22 @@ class _CurriculumSettingsScreenState
             programInfo.when(
               loading: () => ListTile(
                 leading: const Icon(Icons.school),
-                title: Text(AppLocalizations.of(context)!.curriculumSettingsLoadingProgram),
+                title: Text(
+                  AppLocalizations.of(
+                    context,
+                  )!.curriculumSettingsLoadingProgram,
+                ),
               ),
               error: (e, _) => ListTile(
                 leading: const Icon(Icons.school),
-                title: Text(AppLocalizations.of(context)!.curriculumSettingsProgramTitle),
-                subtitle: Text(AppLocalizations.of(context)!.curriculumSettingsProgramError(e.toString())),
+                title: Text(
+                  AppLocalizations.of(context)!.curriculumSettingsProgramTitle,
+                ),
+                subtitle: Text(
+                  AppLocalizations.of(
+                    context,
+                  )!.curriculumSettingsProgramError(e.toString()),
+                ),
               ),
               data: (info) => ListTile(
                 leading: const Icon(Icons.school),
@@ -83,8 +93,14 @@ class _CurriculumSettingsScreenState
             // Task 2: Change Program button
             ListTile(
               leading: const Icon(Icons.swap_horiz),
-              title: Text(AppLocalizations.of(context)!.curriculumSettingsChangeProgram),
-              subtitle: Text(AppLocalizations.of(context)!.curriculumSettingsChangeProgramSubtitle),
+              title: Text(
+                AppLocalizations.of(context)!.curriculumSettingsChangeProgram,
+              ),
+              subtitle: Text(
+                AppLocalizations.of(
+                  context,
+                )!.curriculumSettingsChangeProgramSubtitle,
+              ),
               trailing: const Icon(Icons.chevron_right),
               onTap: () => _onChangeProgram(context),
             ),
@@ -94,8 +110,12 @@ class _CurriculumSettingsScreenState
             // Task 4: Request New Program
             ListTile(
               leading: const Icon(Icons.mail_outline),
-              title: Text(AppLocalizations.of(context)!.curriculumSettingsDontSeeProgram),
-              subtitle: Text(AppLocalizations.of(context)!.curriculumSettingsRequestProgram),
+              title: Text(
+                AppLocalizations.of(context)!.curriculumSettingsDontSeeProgram,
+              ),
+              subtitle: Text(
+                AppLocalizations.of(context)!.curriculumSettingsRequestProgram,
+              ),
               trailing: const Icon(Icons.open_in_new),
               onTap: () => _onRequestProgram(context),
             ),

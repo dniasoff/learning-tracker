@@ -120,12 +120,16 @@ class _AddAnotherPromptWidget extends StatelessWidget {
               const SizedBox(height: 48),
               FilledButton(
                 onPressed: onStartLearning,
-                child: Text(AppLocalizations.of(context)!.onboardingStartLearning),
+                child: Text(
+                  AppLocalizations.of(context)!.onboardingStartLearning,
+                ),
               ),
               const SizedBox(height: 12),
               OutlinedButton(
                 onPressed: onAddAnother,
-                child: Text(AppLocalizations.of(context)!.onboardingAddAnotherTrack),
+                child: Text(
+                  AppLocalizations.of(context)!.onboardingAddAnotherTrack,
+                ),
               ),
             ],
           ),
@@ -218,17 +222,23 @@ class _HandoffWidget extends StatelessWidget {
               const SizedBox(height: 48),
               FilledButton(
                 onPressed: onStartLearning,
-                child: Text(AppLocalizations.of(context)!.onboardingStartLearning),
+                child: Text(
+                  AppLocalizations.of(context)!.onboardingStartLearning,
+                ),
               ),
               const SizedBox(height: 12),
               OutlinedButton(
                 onPressed: onAddAnotherTrack,
-                child: Text(AppLocalizations.of(context)!.onboardingAddAnotherTrack),
+                child: Text(
+                  AppLocalizations.of(context)!.onboardingAddAnotherTrack,
+                ),
               ),
               const SizedBox(height: 12),
               TextButton(
                 onPressed: onAddAnotherLearner,
-                child: Text(AppLocalizations.of(context)!.onboardingAddAnotherLearner),
+                child: Text(
+                  AppLocalizations.of(context)!.onboardingAddAnotherLearner,
+                ),
               ),
             ],
           ),

@@ -35,7 +35,10 @@ class _CityPickerScreenState extends ConsumerState<CityPickerScreen> {
         : ref.watch(citySearchProvider(_query));
 
     return Scaffold(
-      appBar: AppBar(title: Text(AppLocalizations.of(context)!.cityPickerTitle), elevation: 0),
+      appBar: AppBar(
+        title: Text(AppLocalizations.of(context)!.cityPickerTitle),
+        elevation: 0,
+      ),
       body: Column(
         children: [
           Padding(
@@ -59,7 +62,11 @@ class _CityPickerScreenState extends ConsumerState<CityPickerScreen> {
           Expanded(
             child: results.when(
               loading: () => const Center(child: CircularProgressIndicator()),
-              error: (e, _) => Center(child: Text(AppLocalizations.of(context)!.errorSearchFailed(e.toString()))),
+              error: (e, _) => Center(
+                child: Text(
+                  AppLocalizations.of(context)!.errorSearchFailed(e.toString()),
+                ),
+              ),
               data: (cities) {
                 if (_query.length < 2) {
                   return _IdleHint(theme: theme);

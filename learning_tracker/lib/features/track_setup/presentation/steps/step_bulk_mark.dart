@@ -119,8 +119,7 @@ class SelfPacedSelectionList extends StatefulWidget {
   final ValueChanged<SelfPacedPriorCompletionSelection> onMarkCompleted;
 
   @override
-  State<SelfPacedSelectionList> createState() =>
-      _SelfPacedSelectionListState();
+  State<SelfPacedSelectionList> createState() => _SelfPacedSelectionListState();
 }
 
 class _SelfPacedSelectionListState extends State<SelfPacedSelectionList> {

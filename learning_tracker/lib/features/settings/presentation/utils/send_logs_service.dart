@@ -24,7 +24,11 @@ Future<void> sendLogsToFirebase({
   if (uid == null) {
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(AppLocalizations.of(context)!.errorSendLogsMustBeSignedIn)),
+        SnackBar(
+          content: Text(
+            AppLocalizations.of(context)!.errorSendLogsMustBeSignedIn,
+          ),
+        ),
       );
     }
     return;
@@ -84,9 +88,13 @@ Future<void> sendLogsToFirebase({
     }
   } catch (e) {
     if (context.mounted) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context)!.errorSendLogsFailed(e.toString()))));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            AppLocalizations.of(context)!.errorSendLogsFailed(e.toString()),
+          ),
+        ),
+      );
     }
   }
 }

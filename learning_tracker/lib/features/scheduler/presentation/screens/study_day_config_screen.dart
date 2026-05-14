@@ -72,14 +72,18 @@ class StudyDayConfigScreen extends ConsumerWidget {
                     children: [
                       _LegendDot(
                         color: theme.colorScheme.primary,
-                        label: AppLocalizations.of(context)!.schedulerStudyLabel,
+                        label: AppLocalizations.of(
+                          context,
+                        )!.schedulerStudyLabel,
                       ),
                       const SizedBox(width: 16),
                       _LegendDot(
                         color: theme.colorScheme.onSurfaceVariant.withValues(
                           alpha: 0.4,
                         ),
-                        label: AppLocalizations.of(context)!.schedulerReviewOnlyLabel,
+                        label: AppLocalizations.of(
+                          context,
+                        )!.schedulerReviewOnlyLabel,
                       ),
                     ],
                   ),
@@ -127,7 +131,11 @@ class StudyDayConfigScreen extends ConsumerWidget {
             );
           },
           loading: () => const Center(child: CircularProgressIndicator()),
-          error: (e, _) => Center(child: Text(AppLocalizations.of(context)!.errorGeneric(e.toString()))),
+          error: (e, _) => Center(
+            child: Text(
+              AppLocalizations.of(context)!.errorGeneric(e.toString()),
+            ),
+          ),
         ),
       ),
     );

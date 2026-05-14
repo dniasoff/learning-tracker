@@ -59,9 +59,10 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
 
     final lifetimeSummaryAsync = curriculum != null
         ? ref.watch(
-            lifetimeDataProvider(
-              (profileId: profileId, curriculumId: curriculum),
-            ),
+            lifetimeDataProvider((
+              profileId: profileId,
+              curriculumId: curriculum,
+            )),
           )
         : null;
     final lifetimeFraction = lifetimeSummaryAsync?.when(

@@ -34,7 +34,9 @@ void main() {
       tester,
     ) async {
       await tester.pumpWidget(
-        _makeApp(home: const GoalSetupScreen(curriculumId: CurriculumId.mishnayos)),
+        _makeApp(
+          home: const GoalSetupScreen(curriculumId: CurriculumId.mishnayos),
+        ),
       );
 
       expect(find.text('New Goal'), findsOneWidget);
@@ -47,7 +49,9 @@ void main() {
       tester,
     ) async {
       await tester.pumpWidget(
-        _makeApp(home: const GoalSetupScreen(curriculumId: CurriculumId.mishnayos)),
+        _makeApp(
+          home: const GoalSetupScreen(curriculumId: CurriculumId.mishnayos),
+        ),
       );
 
       expect(find.text('Deadline'), findsOneWidget);
@@ -57,7 +61,9 @@ void main() {
 
     testWidgets('slider changes target percentage', (tester) async {
       await tester.pumpWidget(
-        _makeApp(home: const GoalSetupScreen(curriculumId: CurriculumId.mishnayos)),
+        _makeApp(
+          home: const GoalSetupScreen(curriculumId: CurriculumId.mishnayos),
+        ),
       );
 
       expect(find.textContaining('100%'), findsOneWidget);

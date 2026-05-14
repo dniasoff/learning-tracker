@@ -98,10 +98,11 @@ void main() {
       final chazara1Id = stages[1].id; // stageOrder == 2
       final chazara2Id = stages[2].id; // stageOrder == 3
 
-      await repository.reorderStages(
-        curriculum,
-        [learnId, chazara2Id, chazara1Id],
-      );
+      await repository.reorderStages(curriculum, [
+        learnId,
+        chazara2Id,
+        chazara1Id,
+      ]);
 
       final reordered = await repository.getStagesForCurriculum(curriculum);
       expect(reordered[0].stageOrder, 1);

@@ -57,11 +57,17 @@ class _LearningOrderScreenState extends ConsumerState<LearningOrderScreen> {
       ),
       body: orderAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text(AppLocalizations.of(context)!.errorLoadingOrder(e.toString()))),
+        error: (e, _) => Center(
+          child: Text(
+            AppLocalizations.of(context)!.errorLoadingOrder(e.toString()),
+          ),
+        ),
         data: (_) {
           final items = _localOrder;
           if (items == null || items.isEmpty) {
-            return Center(child: Text(AppLocalizations.of(context)!.noItemsToOrder));
+            return Center(
+              child: Text(AppLocalizations.of(context)!.noItemsToOrder),
+            );
           }
 
           if (isRestricted) {

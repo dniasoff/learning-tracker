@@ -98,12 +98,15 @@ void main() {
       ).called(1);
     });
 
-    test('cancel() delegates to service.cancelDailyReminder() and batch', () async {
-      await scheduler.cancel();
+    test(
+      'cancel() delegates to service.cancelDailyReminder() and batch',
+      () async {
+        await scheduler.cancel();
 
-      verify(() => mockService.cancelDailyReminder()).called(1);
-      verify(() => mockService.cancelBatchReminders()).called(1);
-    });
+        verify(() => mockService.cancelDailyReminder()).called(1);
+        verify(() => mockService.cancelBatchReminders()).called(1);
+      },
+    );
 
     test('notification payload enables deep link to daily tasks', () {
       expect(dailyReminderPayload, 'daily_reminder');
