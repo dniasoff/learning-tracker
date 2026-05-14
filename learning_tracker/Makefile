@@ -1,4 +1,4 @@
-.PHONY: help test test-story-4.1 test-story-5.2 test-story-6.1 test-story-6.3 test-story-6.4 test-story-6.5 test-story-7.1 test-story-7.2 test-story-7.3 test-story-8.4 test-epic-8 test-story-9.4 test-epic-9 test-story-10.4 test-story-10.5 test-epic-10 test-story-12.4 test-epic-12 test-story-13.1 test-story-13.2 test-epic-13 test-story-14.1 test-story-14.2 test-story-14.3 test-epic-14 test-story-15.5 test-story-15.6 test-story-15.8 test-epic-15 test-epic-21 test-story-24.7 test-epic-24 test-story-25.3 test-story-25.5 test-story-25.8 test-story-25.9 test-story-25.10 test-story-25.11 test-story-25.15 test-story-25.19 test-story-25.20 test-story-25.21 test-story-25.22 test-epic-25 test-story-26.7 test-story-26.11 test-story-26.13 test-story-26.15 test-story-26.16 test-epic-26 test-story-27.1 test-story-27.3 test-story-27.4 test-story-27.6 test-story-27.7 test-story-27.8 test-story-27.9 test-epic-27 ci analyze format validate-calendar
+.PHONY: help test test-story-4.1 test-story-5.2 test-story-6.1 test-story-6.3 test-story-6.4 test-story-6.5 test-story-7.1 test-story-7.2 test-story-7.3 test-story-8.4 test-epic-8 test-story-9.4 test-epic-9 test-story-10.4 test-story-10.5 test-epic-10 test-story-12.4 test-epic-12 test-story-13.1 test-story-13.2 test-epic-13 test-story-14.1 test-story-14.2 test-story-14.3 test-epic-14 test-story-15.5 test-story-15.6 test-story-15.8 test-epic-15 test-epic-21 test-story-24.7 test-epic-24 test-story-25.3 test-story-25.5 test-story-25.8 test-story-25.9 test-story-25.10 test-story-25.11 test-story-25.15 test-story-25.19 test-story-25.20 test-story-25.21 test-story-25.22 test-epic-25 test-story-26.7 test-story-26.11 test-story-26.13 test-story-26.15 test-story-26.16 test-epic-26 test-story-27.1 test-story-27.3 test-story-27.4 test-story-27.6 test-story-27.7 test-story-27.8 test-story-27.9 test-epic-27 ci analyze format format-check validate-calendar audit lint
 
 help: ## Show this help message
 	@echo 'Usage: make [target]'
@@ -186,11 +186,105 @@ test-epic-27: ## Run all Epic 27 (Test Infrastructure) acceptance tests
 
 ci: analyze validate-calendar test ## Run full CI pipeline (analyze + seed validation + all tests)
 
-analyze: ## Run dart analyze
-	dart analyze
+analyze: ## Run dart analyze (matches CI --fatal-infos flag)
+	dart analyze --fatal-infos
 
 validate-calendar: ## Validate every (program, date) in seed has a ref + that ref resolves
 	dart run tool/validate_seed_coverage.dart
 
 format: ## Format all Dart code
 	dart format .
+
+format-check: ## Dry-run format check (matches CI: exits non-zero if any file would change)
+	dart format --set-exit-if-changed .
+
+lint: ## Run custom_lint (skips gracefully if not in pubspec)
+	@if dart pub deps --json 2>/dev/null | grep -q '"custom_lint"'; then \
+	  dart run custom_lint; \
+	else \
+	  echo "custom_lint not in pubspec — skipping (add custom_lint to dev_dependencies when ready)"; \
+	fi
+
+audit: ## Run all 12 enforcement greps (NFR19) — exits non-zero on any violation
+	@echo "=== audit: enforcement greps ==="
+	@FAIL=0; \
+	echo "1/12 — No Firebase imports outside core/auth or core/sync"; \
+	if grep -rn "package:firebase_auth" lib/ --include="*.dart" \
+	    | grep -v "lib/core/auth/" | grep -v "\.g\.dart" | grep -v "\.freezed\.dart" | grep -q .; then \
+	  grep -rn "package:firebase_auth" lib/ --include="*.dart" \
+	    | grep -v "lib/core/auth/" | grep -v "\.g\.dart" | grep -v "\.freezed\.dart"; \
+	  FAIL=1; \
+	fi; \
+	echo "2/12 — No FirebaseFirestore/FirebaseStorage outside core/sync or core/auth"; \
+	if grep -rn "FirebaseFirestore\|FirebaseStorage\|firebase_firestore\|firebase_storage" lib/ --include="*.dart" \
+	    | grep -v "lib/core/sync/" | grep -v "lib/core/auth/" | grep -v "\.g\.dart" | grep -q .; then \
+	  grep -rn "FirebaseFirestore\|FirebaseStorage\|firebase_firestore\|firebase_storage" lib/ --include="*.dart" \
+	    | grep -v "lib/core/sync/" | grep -v "lib/core/auth/" | grep -v "\.g\.dart"; \
+	  FAIL=1; \
+	fi; \
+	echo "3/12 — No FirebaseAuth.instance.signOut outside core/auth"; \
+	if grep -rn "FirebaseAuth\.instance\.signOut" lib/ --include="*.dart" \
+	    | grep -v "lib/core/auth/" | grep -q .; then \
+	  grep -rn "FirebaseAuth\.instance\.signOut" lib/ --include="*.dart" | grep -v "lib/core/auth/"; \
+	  FAIL=1; \
+	fi; \
+	echo "4/12 — No raw talker import outside core/logging"; \
+	if grep -rn "import 'package:talker/talker\.dart'" lib/ --include="*.dart" \
+	    | grep -v "lib/core/logging/" | grep -q .; then \
+	  grep -rn "import 'package:talker/talker\.dart'" lib/ --include="*.dart" | grep -v "lib/core/logging/"; \
+	  FAIL=1; \
+	fi; \
+	echo "5/12 — No debugPrint or bare print() in production code"; \
+	if grep -rn "debugPrint\|^\s*print(" lib/ --include="*.dart" \
+	    | grep -v "\.g\.dart" | grep -v "\.freezed\.dart" | grep -q .; then \
+	  grep -rn "debugPrint\|^\s*print(" lib/ --include="*.dart" \
+	    | grep -v "\.g\.dart" | grep -v "\.freezed\.dart"; \
+	  FAIL=1; \
+	fi; \
+	echo "6/12 — No DateTime.now() outside core/time"; \
+	if grep -rn "DateTime\.now()" lib/ --include="*.dart" \
+	    | grep -v "lib/core/time/" | grep -v "\.g\.dart" | grep -v "\.freezed\.dart" | grep -v "test/" | grep -q .; then \
+	  grep -rn "DateTime\.now()" lib/ --include="*.dart" \
+	    | grep -v "lib/core/time/" | grep -v "\.g\.dart" | grep -v "\.freezed\.dart" | grep -v "test/"; \
+	  FAIL=1; \
+	fi; \
+	echo "7/12 — No hebrewTermsScriptProvider read outside core/labels, core/preferences, or settings screens"; \
+	if grep -rn "hebrewTermsScriptProvider" lib/ --include="*.dart" \
+	    | grep -v "lib/core/labels/" | grep -v "lib/core/preferences/" | grep -v "settings/.*_screen\.dart" | grep -q .; then \
+	  grep -rn "hebrewTermsScriptProvider" lib/ --include="*.dart" \
+	    | grep -v "lib/core/labels/" | grep -v "lib/core/preferences/" | grep -v "settings/.*_screen\.dart"; \
+	  FAIL=1; \
+	fi; \
+	echo "8/12 — No displayNameEn/He() outside core/labels (excluding generated files)"; \
+	if grep -rn "displayName(En\|He)" lib/ --include="*.dart" \
+	    | grep -v "lib/core/labels/" | grep -v "\.g\.dart" | grep -v "\.freezed\.dart" | grep -q .; then \
+	  grep -rn "displayName(En\|He)" lib/ --include="*.dart" \
+	    | grep -v "lib/core/labels/" | grep -v "\.g\.dart" | grep -v "\.freezed\.dart"; \
+	  FAIL=1; \
+	fi; \
+	echo "9/12 — No empty catch blocks"; \
+	if grep -rn "catch\s*(_\?\w*)\s*{}" lib/ --include="*.dart" | grep -v "\.g\.dart" | grep -q .; then \
+	  grep -rn "catch\s*(_\?\w*)\s*{}" lib/ --include="*.dart" | grep -v "\.g\.dart"; \
+	  FAIL=1; \
+	fi; \
+	echo "10/12 — No banned TODO/FIXME/XXX markers"; \
+	if grep -rn "TODO: refactor later\|FIXME: hardcoded for now\|XXX: temporary" lib/ --include="*.dart" | grep -q .; then \
+	  grep -rn "TODO: refactor later\|FIXME: hardcoded for now\|XXX: temporary" lib/ --include="*.dart"; \
+	  FAIL=1; \
+	fi; \
+	echo "11/12 — No .withDefault(const Constant(0)) in database tables"; \
+	if grep -rn "\.withDefault(const Constant(0))" lib/core/database/tables/ --include="*.dart" | grep -q .; then \
+	  grep -rn "\.withDefault(const Constant(0))" lib/core/database/tables/ --include="*.dart"; \
+	  FAIL=1; \
+	fi; \
+	echo "12/12 — No currentAccountId hard-coded to 1"; \
+	if grep -rn "currentAccountId.*=.*1\b" lib/ --include="*.dart" | grep -v "\.g\.dart" | grep -q .; then \
+	  grep -rn "currentAccountId.*=.*1\b" lib/ --include="*.dart" | grep -v "\.g\.dart"; \
+	  FAIL=1; \
+	fi; \
+	if [ "$$FAIL" -eq 1 ]; then \
+	  echo "=== audit FAILED — fix violations above ==="; \
+	  exit 1; \
+	else \
+	  echo "=== audit PASSED — all 12 greps clean ==="; \
+	fi
