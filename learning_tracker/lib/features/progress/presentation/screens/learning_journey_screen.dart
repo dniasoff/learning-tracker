@@ -54,10 +54,7 @@ class LearningJourneyScreen extends ConsumerWidget {
           ),
           data: (viewModel) {
             if (_isEmpty(viewModel)) {
-              return _EmptyState(
-                onStartLearning: () =>
-                    context.router.push(const DashboardRoute()),
-              );
+              return const _EmptyState();
             }
 
             return RefreshIndicator(
@@ -112,9 +109,7 @@ class LearningJourneyScreen extends ConsumerWidget {
 }
 
 class _EmptyState extends StatelessWidget {
-  const _EmptyState({required this.onStartLearning});
-
-  final VoidCallback onStartLearning;
+  const _EmptyState();
 
   @override
   Widget build(BuildContext context) {
@@ -146,13 +141,6 @@ class _EmptyState extends StatelessWidget {
                 color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
               textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 32),
-            FilledButton.icon(
-              onPressed: onStartLearning,
-              icon: const Icon(Icons.play_arrow),
-              label: Text(l10n.startLearning),
-              style: FilledButton.styleFrom(minimumSize: const Size(200, 48)),
             ),
           ],
         ),

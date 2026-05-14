@@ -111,7 +111,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get myLearningJourney => 'My Learning Journey';
 
   @override
-  String get myLearningJourneySubtitle => 'Everything you\'ve learned, in order';
+  String get myLearningJourneySubtitle =>
+      'Everything you\'ve learned, in order';
 
   @override
   String get seeLifetimeAchievements => 'See your lifetime achievements';
@@ -1366,11 +1367,11 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get journeyEmptyTitle => 'Your learning journey starts here!';
+  String get journeyEmptyTitle => 'No siyumim yet';
 
   @override
   String get journeyEmptyBody =>
-      'Complete your first masechta to see it recorded forever.';
+      'When you complete a masechta or sefer, it will be recorded here as a permanent milestone.';
 
   @override
   String get progressChartsTitle => 'Progress Charts';

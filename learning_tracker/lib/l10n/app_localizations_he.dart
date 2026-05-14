@@ -1353,11 +1353,11 @@ class AppLocalizationsHe extends AppLocalizations {
   }
 
   @override
-  String get journeyEmptyTitle => 'מסע הלמידה שלכם מתחיל כאן!';
+  String get journeyEmptyTitle => 'עדיין אין סיומים';
 
   @override
   String get journeyEmptyBody =>
-      'השלימו את המסכתא הראשונה כדי לראות אותה נרשמת לנצח.';
+      'כשתסיימו מסכתא או ספר, הוא יירשם כאן כאבן דרך קבועה.';
 
   @override
   String get progressChartsTitle => 'תרשימי התקדמות';

@@ -645,8 +645,8 @@
       "error": { "type": "String" }
     }
   },
-  "journeyEmptyTitle": "Your learning journey starts here!",
-  "journeyEmptyBody": "Complete your first masechta to see it recorded forever.",
+  "journeyEmptyTitle": "No siyumim yet",
+  "journeyEmptyBody": "When you complete a masechta or sefer, it will be recorded here as a permanent milestone.",
   "progressChartsTitle": "Progress Charts",
   "chartCompletionsOverTime": "Completions Over Time",
   "chartDailyActivity": "DAILY ACTIVITY",

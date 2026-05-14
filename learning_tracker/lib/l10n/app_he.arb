@@ -645,8 +645,8 @@
       "error": { "type": "String" }
     }
   },
-  "journeyEmptyTitle": "מסע הלמידה שלכם מתחיל כאן!",
-  "journeyEmptyBody": "השלימו את המסכתא הראשונה כדי לראות אותה נרשמת לנצח.",
+  "journeyEmptyTitle": "עדיין אין סיומים",
+  "journeyEmptyBody": "כשתסיימו מסכתא או ספר, הוא יירשם כאן כאבן דרך קבועה.",
   "progressChartsTitle": "תרשימי התקדמות",
   "chartCompletionsOverTime": "השלמות לאורך זמן",
   "chartDailyActivity": "פעילות יומית",
