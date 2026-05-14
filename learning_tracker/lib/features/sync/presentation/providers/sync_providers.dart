@@ -5,6 +5,7 @@ import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/providers/firebase_providers.dart';
 import 'package:learning_tracker/core/providers/network_providers.dart';
 import 'package:learning_tracker/core/providers/talker_provider.dart';
+import 'package:learning_tracker/core/sync/providers/outbox_providers.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/auth/presentation/providers/auth_providers.dart'
     show authRepositoryProvider;
@@ -75,6 +76,7 @@ final syncEngineProvider = Provider<SyncEngine?>((ref) {
   final connectivityService = ref.watch(connectivityServiceProvider);
 
   final analytics = ref.watch(analyticsServiceProvider);
+  final outboxProcessor = ref.watch(outboxProcessorProvider);
 
   final engine = SyncEngine(
     database: database,
@@ -83,6 +85,7 @@ final syncEngineProvider = Provider<SyncEngine?>((ref) {
     logger: AppLogger(talker),
     connectivityService: connectivityService,
     analytics: analytics,
+    outboxProcessor: outboxProcessor,
   );
 
   // Initialize; surface errors onto the status stream.

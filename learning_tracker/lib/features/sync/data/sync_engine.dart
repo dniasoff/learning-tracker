@@ -10,6 +10,7 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/network/connectivity_service.dart';
+import 'package:learning_tracker/core/sync/outbox/outbox_processor.dart';
 import 'package:learning_tracker/core/time/ulid.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/gamification/domain/services/reward_milestone_service.dart';
@@ -37,12 +38,14 @@ class SyncEngine {
     required AppLogger logger,
     required ConnectivityService connectivityService,
     AnalyticsService? analytics,
+    OutboxProcessor? outboxProcessor,
   }) : _database = database,
        _firestoreDataSource = firestoreDataSource,
        _offlineQueue = offlineQueue,
        _logger = logger,
        _connectivityService = connectivityService,
-       _analytics = analytics ?? const NullAnalyticsService();
+       _analytics = analytics ?? const NullAnalyticsService(),
+       _outboxProcessor = outboxProcessor;
 
   final UserDatabase _database;
   final FirestoreDataSource _firestoreDataSource;
@@ -50,6 +53,12 @@ class SyncEngine {
   final AppLogger _logger;
   final ConnectivityService _connectivityService;
   final AnalyticsService _analytics;
+
+  /// Optional new-pipeline outbox processor. When non-null, each background
+  /// flush also drains the [Outbox] table via [OutboxProcessor.drain].
+  /// This is Phase 1 of the SyncEngine decomposition (DNI-333): both paths
+  /// run in parallel so no existing behaviour is removed.
+  final OutboxProcessor? _outboxProcessor;
 
   final _statusController = StreamController<SyncStatus>.broadcast();
   Stream<SyncStatus> get statusStream => _statusController.stream;
@@ -565,6 +574,15 @@ class SyncEngine {
     try {
       final batchSize = _isBatterySaverMode ? 5 : null;
       final synced = await _offlineQueue.flush(batchSize: batchSize);
+
+      // Phase 1 (DNI-333): also drain the new Outbox table when wired.
+      // Both the legacy OfflineQueue drain and this new drain run in the same
+      // background flush so the caller never needs to know which path is active.
+      final processor = _outboxProcessor;
+      if (processor != null) {
+        await processor.drain(_firestoreDataSource.profileId);
+      }
+
       if (synced > 0) {
         _consecutivePushPermissionErrors = 0;
         _updateStatus(
