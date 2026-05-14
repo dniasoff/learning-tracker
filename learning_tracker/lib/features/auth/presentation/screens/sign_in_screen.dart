@@ -609,9 +609,10 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
     ref.invalidate(syncEngineProvider);
     final orchestrator = ref.read(syncOrchestratorProvider);
     if (orchestrator != null) {
-      await orchestrator
-          .pullOnLaunch()
-          .timeout(const Duration(seconds: 8), onTimeout: () {});
+      await orchestrator.pullOnLaunch().timeout(
+        const Duration(seconds: 8),
+        onTimeout: () {},
+      );
     }
     if (!mounted) return;
 

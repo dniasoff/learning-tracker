@@ -2548,8 +2548,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'Sign-in is taking too long. Check your connection and try again.';
 
   @override
-  String get reauthGoogleTitle =>
-      'Confirm with Google to delete your account';
+  String get reauthGoogleTitle => 'Confirm with Google to delete your account';
 
   @override
   String get reauthGoogleBody =>

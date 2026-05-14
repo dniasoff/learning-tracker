@@ -2520,8 +2520,7 @@ class AppLocalizationsHe extends AppLocalizations {
       'הכניסה לוקחת יותר מדי זמן. בדוק את החיבור ונסה שוב.';
 
   @override
-  String get reauthGoogleTitle =>
-      'אמת עם גוגל כדי למחוק את חשבונך';
+  String get reauthGoogleTitle => 'אמת עם גוגל כדי למחוק את חשבונך';
 
   @override
   String get reauthGoogleBody =>
@@ -2538,6 +2537,5 @@ class AppLocalizationsHe extends AppLocalizations {
       'זה עשוי לקחת מספר שניות. אנא אל תסגור את האפליקציה.';
 
   @override
-  String get deletingAccountError =>
-      'המחיקה נתקלה בבעיה. התנתקת מהחשבון.';
+  String get deletingAccountError => 'המחיקה נתקלה בבעיה. התנתקת מהחשבון.';
 }
