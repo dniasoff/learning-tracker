@@ -1,4 +1,5 @@
 import 'package:drift/drift.dart';
+import 'package:learning_tracker/core/database/base_dao.dart';
 import 'package:learning_tracker/core/database/tables/point_configs.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 
@@ -6,8 +7,17 @@ part 'point_config_dao.g.dart';
 
 @DriftAccessor(tables: [PointConfigs])
 class PointConfigDao extends DatabaseAccessor<UserDatabase>
-    with _$PointConfigDaoMixin {
+    with _$PointConfigDaoMixin, BaseDao<$PointConfigsTable, PointConfig, UserDatabase> {
   PointConfigDao(super.db);
+
+  @override
+  TableInfo<$PointConfigsTable, PointConfig> get table => pointConfigs;
+
+  @override
+  Expression<int> idColumn($PointConfigsTable t) => t.id;
+
+  @override
+  Expression<int> profileIdColumn($PointConfigsTable t) => t.profileId;
 
   /// Get all point configs for a curriculum, ordered by stage.
   ///

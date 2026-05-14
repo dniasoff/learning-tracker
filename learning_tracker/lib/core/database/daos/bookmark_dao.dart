@@ -1,4 +1,5 @@
 import 'package:drift/drift.dart';
+import 'package:learning_tracker/core/database/base_dao.dart';
 import 'package:learning_tracker/core/database/tables/bookmarks.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 
@@ -6,8 +7,17 @@ part 'bookmark_dao.g.dart';
 
 @DriftAccessor(tables: [Bookmarks])
 class BookmarkDao extends DatabaseAccessor<UserDatabase>
-    with _$BookmarkDaoMixin {
+    with _$BookmarkDaoMixin, BaseDao<$BookmarksTable, Bookmark, UserDatabase> {
   BookmarkDao(super.db);
+
+  @override
+  TableInfo<$BookmarksTable, Bookmark> get table => bookmarks;
+
+  @override
+  Expression<int> idColumn($BookmarksTable t) => t.id;
+
+  @override
+  Expression<int> profileIdColumn($BookmarksTable t) => t.profileId;
 
   Future<List<Bookmark>> getAllBookmarks() => select(bookmarks).get();
 

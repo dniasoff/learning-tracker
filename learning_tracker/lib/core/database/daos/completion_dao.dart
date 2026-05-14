@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:drift/drift.dart';
 import 'package:flutter/foundation.dart';
+import 'package:learning_tracker/core/database/base_dao.dart';
 import 'package:learning_tracker/core/database/tables/completions.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/cross_profile_scope.dart';
@@ -15,8 +16,17 @@ part 'completion_dao.g.dart';
 /// No update or delete methods are provided to enforce immutability.
 @DriftAccessor(tables: [Completions])
 class CompletionDao extends DatabaseAccessor<UserDatabase>
-    with _$CompletionDaoMixin {
+    with _$CompletionDaoMixin, BaseDao<$CompletionsTable, Completion, UserDatabase> {
   CompletionDao(super.db);
+
+  @override
+  TableInfo<$CompletionsTable, Completion> get table => completions;
+
+  @override
+  Expression<int> idColumn($CompletionsTable t) => t.id;
+
+  @override
+  Expression<int> profileIdColumn($CompletionsTable t) => t.profileId;
 
   // ── Cross-profile internals (DNI-338) ───────────────────────────────────
   //

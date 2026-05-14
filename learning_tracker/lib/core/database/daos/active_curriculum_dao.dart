@@ -1,4 +1,5 @@
 import 'package:drift/drift.dart';
+import 'package:learning_tracker/core/database/base_dao.dart';
 import 'package:learning_tracker/core/database/tables/curriculum_tracks.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
@@ -14,8 +15,19 @@ part 'active_curriculum_dao.g.dart';
 /// This eliminates the former `active_curricula` table and its split-brain risk.
 @DriftAccessor(tables: [CurriculumTracks])
 class ActiveCurriculumDao extends DatabaseAccessor<UserDatabase>
-    with _$ActiveCurriculumDaoMixin {
+    with _$ActiveCurriculumDaoMixin,
+        BaseDao<$CurriculumTracksTable, CurriculumTrack, UserDatabase> {
   ActiveCurriculumDao(super.db);
+
+  @override
+  TableInfo<$CurriculumTracksTable, CurriculumTrack> get table =>
+      curriculumTracks;
+
+  @override
+  Expression<int> idColumn($CurriculumTracksTable t) => t.id;
+
+  @override
+  Expression<int> profileIdColumn($CurriculumTracksTable t) => t.profileId;
 
   // ========== Profile-Scoped Queries ==========
 

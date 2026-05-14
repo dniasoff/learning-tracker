@@ -1,4 +1,5 @@
 import 'package:drift/drift.dart';
+import 'package:learning_tracker/core/database/base_dao.dart';
 import 'package:learning_tracker/core/database/tables/learning_order.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 
@@ -6,8 +7,18 @@ part 'learning_order_dao.g.dart';
 
 @DriftAccessor(tables: [LearningOrder])
 class LearningOrderDao extends DatabaseAccessor<UserDatabase>
-    with _$LearningOrderDaoMixin {
+    with _$LearningOrderDaoMixin,
+        BaseDao<$LearningOrderTable, LearningOrderData, UserDatabase> {
   LearningOrderDao(super.db);
+
+  @override
+  TableInfo<$LearningOrderTable, LearningOrderData> get table => learningOrder;
+
+  @override
+  Expression<int> idColumn($LearningOrderTable t) => t.id;
+
+  @override
+  Expression<int> profileIdColumn($LearningOrderTable t) => t.profileId;
 
   Future<List<LearningOrderData>> getAllLearningOrders() =>
       select(learningOrder).get();

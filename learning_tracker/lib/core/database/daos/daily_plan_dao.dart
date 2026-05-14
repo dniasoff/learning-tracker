@@ -1,4 +1,5 @@
 import 'package:drift/drift.dart';
+import 'package:learning_tracker/core/database/base_dao.dart';
 import 'package:learning_tracker/core/database/tables/daily_plans.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 
@@ -10,8 +11,17 @@ part 'daily_plan_dao.g.dart';
 /// hot path: returns the full plan for a profile on a given local date.
 @DriftAccessor(tables: [DailyPlans])
 class DailyPlanDao extends DatabaseAccessor<UserDatabase>
-    with _$DailyPlanDaoMixin {
+    with _$DailyPlanDaoMixin, BaseDao<$DailyPlansTable, DailyPlan, UserDatabase> {
   DailyPlanDao(super.db);
+
+  @override
+  TableInfo<$DailyPlansTable, DailyPlan> get table => dailyPlans;
+
+  @override
+  Expression<int> idColumn($DailyPlansTable t) => t.id;
+
+  @override
+  Expression<int> profileIdColumn($DailyPlansTable t) => t.profileId;
 
   Future<List<DailyPlan>> getPlanForDay({
     required int profileId,
