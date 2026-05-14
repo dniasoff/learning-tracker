@@ -31,6 +31,12 @@ class BulkCompletionRequest {
   /// track study only.
   final bool awardGamificationPoints;
 
+  /// When set, overrides the timestamp written to each completion row.
+  /// Pass [DateTime.utc(2000, 1, 1)] for bulk-mark-prior so the completions
+  /// are recorded in the distant past and do not inflate the current streak.
+  /// When null, each completion receives [DateTimeFactory.nowUtc()] at write time.
+  final DateTime? completedAt;
+
   const BulkCompletionRequest({
     required this.curriculumId,
     required this.sefariaRefs,
@@ -38,5 +44,6 @@ class BulkCompletionRequest {
     required this.trackType,
     this.profileId,
     this.awardGamificationPoints = true,
+    this.completedAt,
   });
 }

@@ -434,6 +434,33 @@ void main() {
         });
       });
 
+      // ── AC7: bulk-mark-prior sentinel date must not inflate streak ───
+
+      group('AC7 — bulk-mark-prior does not inflate streak', () {
+        test(
+          'fresh install: bulk-mark-prior with sentinel date yields currentStreak==0',
+          () async {
+            final trackId = await _seedTrack(db);
+            // Simulate what BulkPriorCompletionService writes via the optimised path.
+            await _seedCompletion(
+              db,
+              profileId: 1,
+              trackId: trackId,
+              completedAt: DateTime.utc(2000, 1, 1), // sentinel historical date
+            );
+
+            // StreakRestorer sees empty streak_events → restores from completions.
+            final state = await StreakStateProvider(
+              db: db,
+              clock: FakeLocalDayClock(DateTime.utc(2026, 5, 14, 9)),
+            ).read(profileId: 1);
+
+            // A 26-year-old completion must NOT produce a current streak.
+            expect(state.currentStreak, 0);
+          },
+        );
+      });
+
       // ── AC3: StreakStateProvider is the only read path ────────────────
 
       group('AC3 — StreakStateProvider is the only read path', () {

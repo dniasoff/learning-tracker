@@ -302,7 +302,7 @@ class CompletionRepositoryImpl implements CompletionRepository {
       toInsertUnique.add(r);
     }
 
-    final now = DateTimeFactory.nowUtc();
+    final now = request.completedAt ?? DateTimeFactory.nowUtc();
 
     // FR15: route all writes through CompletionWriter so each completion
     // gets its own atomic (completion + outbox) transaction.
