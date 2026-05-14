@@ -25,12 +25,12 @@ date: 2026-05-13
 
 ## Architecture at a Glance
 
-The Learning Tracker application follows a **feature-first Clean Architecture** pattern built with Flutter. The codebase is organized into a shared core layer and 16 feature modules, each internally structured with data, domain, and presentation layers. State management uses Riverpod, persistence uses Drift (SQLite), and cloud sync uses Firebase.
+The Learning Tracker application follows a **feature-first Clean Architecture** pattern built with Flutter. The codebase is organized into a shared core layer and 18 feature modules, each internally structured with data, domain, and presentation layers. State management uses Riverpod, persistence uses Drift (SQLite), and cloud sync uses Firebase.
 
 Post-rebuild highlights (Epic 25/26/27):
 
 - **Schema v14** (User DB) — clean rebuild; all migration steps deleted; `schemaVersion` is the authoritative version number.
-- **7-class SyncEngine** — `FirestoreGateway`, `PushPipeline`, `PullPipeline`, `MergeRouter`, `EntityMerger`, `ListenerSupervisor`, `LifecycleObserver`.
+- **7-class sync layer (core/sync/)** — `FirestoreGateway`, `PushPipeline`, `PullPipeline`, `MergeRouter`, `EntityMerger`, `ListenerSupervisor`, `LifecycleObserver`. Built in E25; not yet wired into production (monolithic `SyncEngine` in `features/sync/` remains live pending Wave D migration).
 - **Single `CompletionWriter`** — one transactional path for recording completions (idempotent, outbox-paired).
 - **Single `StreakReducer`** — pure function over UTC days from the `StreakEvent` log.
 - **Single `ContentIndex` + `ProgramRefResolver`** — O(1) ref lookup across all curricula.
@@ -115,7 +115,9 @@ The core layer (`lib/core/`) provides shared infrastructure that all feature mod
 - **Guards (5):** `AuthGuard`, `RestoreGuard`, `ProfileGuard`, `ChildModeGuard`, and `PinGuard` — parameterized by `PinScope` (parent) so adding a PIN-gated route is one line.
 - **Shell:** `AppShell` with 4-tab bottom navigation.
 
-### SyncEngine (7 classes)
+### SyncEngine (7 classes — core/sync/, built but not yet production)
+
+> **Status note:** The 7 classes below live in `lib/core/sync/` and are fully implemented (E25, Stories 25.12–25.14). However, they are **not yet wired into production**. The active production sync path remains the monolithic `features/sync/data/sync_engine.dart` (≈3 250 lines), consumed via `syncEngineProvider`. Migration of the production path to `core/sync/` is tracked as Wave D.
 
 The SyncEngine was decomposed from a monolith into 7 focused classes (Epic 25, Stories 25.12–25.14):
 
@@ -187,7 +189,7 @@ Shared widgets in `lib/core/widgets/` including `AnimatedProgressBar`, `HebrewTe
 
 ## Feature Modules
 
-The application contains 16 active feature modules (zombie features `tutor_mode` and `test_tracking` removed in Epic 25/26). Each follows the same internal layering:
+The application contains 18 active feature modules (zombie features `tutor_mode` and `test_tracking` removed in Epic 25/26). Each follows the same internal layering:
 
 ```text
 lib/features/<feature>/
@@ -224,7 +226,7 @@ lib/features/<feature>/
 | 13 | **scheduler** | Three-phase engine, adaptive pacing, 3 schedule types (delay/weekly/rolling), 7-day rolling average |
 | 14 | **settings** | Account management, curriculum activation (min 1), data export/import |
 | 15 | **stages** | Stage definitions with 3 schedule types, max 10 stages, protected Learn stage, 2-pass reordering |
-| 16 | **sync** | SyncEngine (7 classes), Firestore profile-scoped collections, Outbox-driven push, merge strategies, offline queue |
+| 16 | **sync** | Monolithic `SyncEngine` (production); `core/sync/` 7-class layer built but pending Wave D wiring; Firestore profile-scoped collections, Outbox-driven push, merge strategies, offline queue |
 | 17 | **track_learning_order** | Track-scoped content ordering |
 | 18 | **track_setup** | Track management hub; track detail and editing screens |
 
