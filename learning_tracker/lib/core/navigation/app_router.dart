@@ -87,7 +87,11 @@ class AppRouter extends RootStackRouter {
       guards: [authGuard],
     ),
     AutoRoute(path: '/onboarding', page: OnboardingRoute.page),
-    AutoRoute(path: '/permission-prompt', page: PermissionPromptRoute.page),
+    AutoRoute(
+      path: '/permission-prompt',
+      page: PermissionPromptRoute.page,
+      guards: [authGuard],
+    ),
     AutoRoute(path: '/restore', page: DeviceRestoreRoute.page),
     AutoRoute(
       path: '/profile-picker',
