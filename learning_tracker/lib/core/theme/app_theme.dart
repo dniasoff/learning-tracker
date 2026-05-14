@@ -51,9 +51,6 @@ class AppTheme {
 
   static const Color _errorColor = Color(0xFFB00020);
 
-  /// Default accent kept for backward compatibility with existing call sites.
-  static const Color defaultAccentColor = brandBlue;
-
   // ---------------------------------------------------------------------------
   // Dark palette — Material 3 dark surfaces with brand hues raised for AA
   // contrast on dark backgrounds.
@@ -127,7 +124,7 @@ class AppTheme {
         .firstOrNull;
     return curriculum != null
         ? getCurriculumColor(curriculum)
-        : defaultAccentColor;
+        : brandBlue;
   }
 
   static const Color trackPersonal = brandBlue;

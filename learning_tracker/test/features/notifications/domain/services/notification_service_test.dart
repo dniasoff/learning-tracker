@@ -77,46 +77,5 @@ void main() {
       });
     });
 
-    group('showRewardMilestone', () {
-      test('shows notification with incrementing IDs', () async {
-        when(
-          () => mockPlugin.show(
-            id: any<int>(named: 'id'),
-            title: any<String>(named: 'title'),
-            body: any<String>(named: 'body'),
-            notificationDetails: any<NotificationDetails>(
-              named: 'notificationDetails',
-            ),
-            payload: any<String>(named: 'payload'),
-          ),
-        ).thenAnswer((_) async {});
-
-        await service.showRewardMilestone(body: 'First milestone');
-        await service.showRewardMilestone(body: 'Second milestone');
-
-        verify(
-          () => mockPlugin.show(
-            id: 100,
-            title: 'Reward Milestone',
-            body: 'First milestone',
-            notificationDetails: any<NotificationDetails>(
-              named: 'notificationDetails',
-            ),
-            payload: rewardMilestonePayload,
-          ),
-        ).called(1);
-        verify(
-          () => mockPlugin.show(
-            id: 101,
-            title: 'Reward Milestone',
-            body: 'Second milestone',
-            notificationDetails: any<NotificationDetails>(
-              named: 'notificationDetails',
-            ),
-            payload: rewardMilestonePayload,
-          ),
-        ).called(1);
-      });
-    });
   });
 }

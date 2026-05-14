@@ -1439,8 +1439,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get notifRewardMilestones => 'Reward Notifications';
 
   @override
-  String get notifRewardMilestonesSubtitle =>
-      'When you earn Learning Points!';
+  String get notifRewardMilestonesSubtitle => 'When you earn Learning Points!';
 
   @override
   String get notifSacredTime => 'SHABBOS MODE';

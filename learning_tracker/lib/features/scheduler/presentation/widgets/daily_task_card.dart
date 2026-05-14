@@ -28,7 +28,6 @@ class DailyTaskCard extends ConsumerWidget {
     final theme = Theme.of(context);
     final curriculumColor = AppTheme.getCurriculumColor(task.curriculumId);
     final stageLabel = task.stageName;
-    final xp = task.estimatedEffortMinutes * 3;
 
     return Dismissible(
       key: ValueKey(
@@ -160,28 +159,6 @@ class DailyTaskCard extends ConsumerWidget {
                             style: theme.textTheme.bodySmall?.copyWith(
                               color: AppTheme.brandInkMuted,
                               fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 10),
-                      Row(
-                        children: [
-                          // Per-task time estimate removed — every learner
-                          // works at a different pace, so a single 'Xm'
-                          // chip was misleading and demoralising for those
-                          // who take longer than the seed average.
-                          const Icon(
-                            Icons.stars_rounded,
-                            size: 16,
-                            color: AppTheme.brandInkMuted,
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            '+$xp XP',
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: AppTheme.brandInkMuted,
-                              fontWeight: FontWeight.w700,
                             ),
                           ),
                         ],

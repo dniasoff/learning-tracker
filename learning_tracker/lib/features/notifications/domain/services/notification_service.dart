@@ -32,23 +32,12 @@ const int streakAlertId = 1;
 /// Payload used when a reward milestone notification is tapped.
 const String rewardMilestonePayload = 'reward_earned';
 
-/// Notification channel for reward milestones.
-const String _rewardChannelId = 'reward_milestones';
-const String _rewardChannelName = 'Reward Milestones';
-const String _rewardChannelDescription =
-    'Notifications when reward point thresholds are reached';
-
-/// Base notification ID for reward milestones.
-/// Uses incrementing IDs starting from 100 to avoid conflicts.
-const int _rewardMilestoneBaseId = 100;
-
 /// Service for scheduling and managing local notifications.
 class NotificationService {
   NotificationService({FlutterLocalNotificationsPlugin? plugin})
     : _plugin = plugin ?? FlutterLocalNotificationsPlugin();
 
   final FlutterLocalNotificationsPlugin _plugin;
-  int _rewardNotificationCounter = 0;
 
   /// Initialize the notification plugin.
   ///
@@ -228,31 +217,6 @@ class NotificationService {
   /// Cancel the streak protection alert.
   Future<void> cancelStreakAlert() async {
     await _plugin.cancel(id: streakAlertId);
-  }
-
-  /// Show an immediate notification for a reward milestone.
-  ///
-  /// [body] is the notification text, varying by user mode.
-  Future<void> showRewardMilestone({required String body}) async {
-    const androidDetails = AndroidNotificationDetails(
-      _rewardChannelId,
-      _rewardChannelName,
-      channelDescription: _rewardChannelDescription,
-      importance: Importance.high,
-      priority: Priority.high,
-    );
-    const notificationDetails = NotificationDetails(android: androidDetails);
-
-    final id = _rewardMilestoneBaseId + _rewardNotificationCounter;
-    _rewardNotificationCounter++;
-
-    await _plugin.show(
-      id: id,
-      title: 'Reward Milestone',
-      body: body,
-      notificationDetails: notificationDetails,
-      payload: rewardMilestonePayload,
-    );
   }
 
   /// Get the next instance of the given time (today or tomorrow).
