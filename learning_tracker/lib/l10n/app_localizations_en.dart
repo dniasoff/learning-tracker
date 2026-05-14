@@ -684,7 +684,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get lifetimeHowItWorksStep2 =>
-      'Toggle units you\'ve finished to update your lifetime progress map.';
+      'Toggle tasks you\'ve finished to update your lifetime progress map.';
 
   @override
   String get lifetimeHowItWorksStep3 =>

@@ -1298,7 +1298,7 @@ abstract class AppLocalizations {
   /// No description provided for @lifetimeHowItWorksStep2.
   ///
   /// In en, this message translates to:
-  /// **'Toggle units you\'ve finished to update your lifetime progress map.'**
+  /// **'Toggle tasks you\'ve finished to update your lifetime progress map.'**
   String get lifetimeHowItWorksStep2;
 
   /// No description provided for @lifetimeHowItWorksStep3.

@@ -679,7 +679,7 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String get lifetimeHowItWorksStep2 =>
-      'סמנו יחידות שסיימתם כדי לעדכן את מפת ההתקדמות לכל החיים.';
+      'סמנו משימות שסיימתם כדי לעדכן את מפת ההתקדמות לכל החיים.';
 
   @override
   String get lifetimeHowItWorksStep3 =>
