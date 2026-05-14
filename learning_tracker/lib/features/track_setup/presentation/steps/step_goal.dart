@@ -263,7 +263,7 @@ class _SelfPacedGoalStepState extends ConsumerState<SelfPacedGoalStep> {
       l10n: l10n,
     );
 
-    return Padding(
+    return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -297,7 +297,7 @@ class _SelfPacedGoalStepState extends ConsumerState<SelfPacedGoalStep> {
                   onTap: () => unawaited(_activateDeadlineMode()),
                   child: deadlineCard,
                 ),
-          const Spacer(),
+          const SizedBox(height: 24),
           FilledButton(
             onPressed: _continue,
             style: FilledButton.styleFrom(
