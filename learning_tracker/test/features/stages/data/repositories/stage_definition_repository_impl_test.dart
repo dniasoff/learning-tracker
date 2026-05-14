@@ -353,5 +353,65 @@ void main() {
 
       expect(pushedSettings, hasLength(1));
     });
+
+    // =========================================================================
+    // getStagesByTrack (line 289-303)
+    // =========================================================================
+
+    test('getStagesByTrack returns stages for the given trackId', () async {
+      final rows = [makeRow(id: 1, stageOrder: 1), makeRow(id: 2, stageOrder: 2)];
+      when(() => mockStageDao.getStagesByTrack(42)).thenAnswer(
+        (_) async => rows,
+      );
+
+      final stages = await repository.getStagesByTrack(42);
+      expect(stages, hasLength(2));
+      expect(stages.first.id, 1);
+    });
+
+    test('getStagesByTrack returns empty list when no stages found', () async {
+      when(() => mockStageDao.getStagesByTrack(99)).thenAnswer(
+        (_) async => [],
+      );
+
+      final stages = await repository.getStagesByTrack(99);
+      expect(stages, isEmpty);
+    });
+
+    // =========================================================================
+    // deleteStagesForTrack (line 305-309)
+    // =========================================================================
+
+    test('deleteStagesForTrack delegates to stageDao', () async {
+      when(() => mockStageDao.deleteStagesForTrack(7)).thenAnswer(
+        (_) async => 0,
+      );
+
+      await repository.deleteStagesForTrack(7);
+      verify(() => mockStageDao.deleteStagesForTrack(7)).called(1);
+    });
+
+    // =========================================================================
+    // getAllStageDefinitions (line 291)
+    // =========================================================================
+
+    test('getAllStageDefinitions returns all stages', () async {
+      final rows = [makeRow(id: 10), makeRow(id: 11, stageOrder: 2)];
+      when(() => mockStageDao.getAllStageDefinitions()).thenAnswer(
+        (_) async => rows,
+      );
+
+      final stages = await repository.getAllStageDefinitions();
+      expect(stages, hasLength(2));
+    });
+
+    test('getAllStageDefinitions returns empty list when none exist', () async {
+      when(() => mockStageDao.getAllStageDefinitions()).thenAnswer(
+        (_) async => [],
+      );
+
+      final stages = await repository.getAllStageDefinitions();
+      expect(stages, isEmpty);
+    });
   });
 }

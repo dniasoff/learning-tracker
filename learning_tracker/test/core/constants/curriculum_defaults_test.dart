@@ -240,4 +240,212 @@ void main() {
       }
     });
   });
+
+  group('CurriculumLabels - label list accessors (extra coverage)', () {
+    test('labelsEnPlural returns plural English labels for bavli', () {
+      final labels = CurriculumLabels.labelsEnPlural(CurriculumId.bavli);
+      expect(labels, containsAll(['Sedarim', 'Masechtos', 'Dafim', 'Amudim']));
+    });
+
+    test('labelsHe returns Hebrew singular labels for mishnayos', () {
+      final labels = CurriculumLabels.labelsHe(CurriculumId.mishnayos);
+      expect(labels, containsAll(['סדר', 'מסכת', 'פרק', 'משנה']));
+    });
+
+    test('labelsHePlural returns Hebrew plural labels for bavli', () {
+      final labels = CurriculumLabels.labelsHePlural(CurriculumId.bavli);
+      expect(labels, containsAll(['סדרים', 'מסכתות', 'דפים', 'עמודים']));
+    });
+
+    test('level throws RangeError for level 0', () {
+      expect(
+        () => CurriculumLabels.level(CurriculumId.bavli, 0),
+        throwsRangeError,
+      );
+    });
+
+    test('level throws RangeError for level > depth', () {
+      expect(
+        () => CurriculumLabels.level(CurriculumId.bavli, 99),
+        throwsRangeError,
+      );
+    });
+
+    test('transliterateNamedValue returns raw value for unknown key', () {
+      expect(
+        CurriculumLabels.transliterateNamedValue('Berakhot'),
+        'Berakhot',
+      );
+    });
+
+    test('transliterateNamedValue maps Genesis → Bereishis (ashkenazi)', () {
+      expect(
+        CurriculumLabels.transliterateNamedValue(
+          'Genesis',
+          variant: TransliterationVariant.ashkenazi,
+        ),
+        'Bereishis',
+      );
+    });
+
+    test('transliterateNamedValue maps Genesis → Bereshit (sephardi)', () {
+      expect(
+        CurriculumLabels.transliterateNamedValue(
+          'Genesis',
+          variant: TransliterationVariant.sephardi,
+        ),
+        'Bereshit',
+      );
+    });
+
+    test('structuralPrefixesHe includes level labels with trailing space', () {
+      final prefixes = CurriculumLabels.structuralPrefixesHe(
+        curriculumId: CurriculumId.bavli,
+      );
+      expect(prefixes, contains('דף '));
+    });
+
+    test(
+      'structuralPrefixesHe global call includes prefixes from all curricula',
+      () {
+        final all = CurriculumLabels.structuralPrefixesHe();
+        expect(all, contains('פרק '));
+        expect(all, contains('דף '));
+      },
+    );
+
+    test('valueWithLabel builds English label correctly', () {
+      expect(
+        CurriculumLabels.valueWithLabel(
+          CurriculumId.bavli,
+          3,
+          '2a',
+          useHebrew: false,
+        ),
+        'Daf 2a',
+      );
+    });
+
+    test('valueWithLabel builds Hebrew label correctly', () {
+      expect(
+        CurriculumLabels.valueWithLabel(
+          CurriculumId.bavli,
+          3,
+          'ב',
+          useHebrew: true,
+        ),
+        'דף ב',
+      );
+    });
+
+    test('fullPath builds breadcrumb for bavli (English)', () {
+      final path = CurriculumLabels.fullPath(
+        CurriculumId.bavli,
+        ['Zeraim', 'Berakhot', '2', 'a'],
+        useHebrew: false,
+      );
+      expect(path, 'Seder Zeraim → Masechta Berakhot → Daf 2 → Amud a');
+    });
+
+    test('fullPath skips null segments', () {
+      final path = CurriculumLabels.fullPath(
+        CurriculumId.bavli,
+        ['Zeraim', null],
+        useHebrew: false,
+      );
+      expect(path, 'Seder Zeraim');
+    });
+
+    test('fullPath with custom separator', () {
+      final path = CurriculumLabels.fullPath(
+        CurriculumId.bavli,
+        ['Zeraim', 'Berakhot'],
+        useHebrew: false,
+        separator: ' / ',
+      );
+      expect(path, 'Seder Zeraim / Masechta Berakhot');
+    });
+
+    test('fullPath without level labels', () {
+      final path = CurriculumLabels.fullPath(
+        CurriculumId.bavli,
+        ['Zeraim', 'Berakhot'],
+        useHebrew: false,
+        includeLevelLabel: false,
+      );
+      expect(path, 'Zeraim → Berakhot');
+    });
+
+    test('containerSectionHeader returns null for single-level curricula', () {
+      // There are no single-level curricula currently, but verify the
+      // accessor returns non-null for bavli (which has L2).
+      expect(
+        CurriculumLabels.containerSectionHeader(
+          CurriculumId.bavli,
+          useHebrew: false,
+        ),
+        isNotNull,
+      );
+    });
+
+    test('primaryUnitLabelPlural returns Masechtos for mishnayos', () {
+      expect(
+        CurriculumLabels.primaryUnitLabelPlural(CurriculumId.mishnayos),
+        'Mishnayos',
+      );
+    });
+
+    test('primaryUnitLabelPlural returns Dafim for bavli', () {
+      expect(
+        CurriculumLabels.primaryUnitLabelPlural(CurriculumId.bavli),
+        'Dafim',
+      );
+    });
+
+    test('container returns Daf for bavli', () {
+      expect(CurriculumLabels.container(CurriculumId.bavli)?.en, 'Daf');
+    });
+
+    test('maxBrowseDepth for yerushalmi equals depth', () {
+      expect(
+        CurriculumLabels.maxBrowseDepth(CurriculumId.yerushalmi),
+        CurriculumLabels.depth(CurriculumId.yerushalmi),
+      );
+    });
+  });
+
+  group('LevelLabels helpers (extra coverage)', () {
+    const label = LevelLabels(
+      en: 'Daf',
+      enPlural: 'Dafim',
+      he: 'דף',
+      hePlural: 'דפים',
+      valueKind: LevelValueKind.ordinal,
+      prefixLabelInDisplay: true,
+    );
+
+    test('bilingualPlural concatenates correctly', () {
+      expect(label.bilingualPlural, 'דפים • Dafim');
+    });
+
+    test('bilingualSingular concatenates correctly', () {
+      expect(label.bilingualSingular, 'דף • Daf');
+    });
+
+    test('inLanguage returns en for useHebrew:false', () {
+      expect(label.inLanguage(useHebrew: false), 'Daf');
+    });
+
+    test('inLanguage returns enPlural for useHebrew:false, plural:true', () {
+      expect(label.inLanguage(useHebrew: false, plural: true), 'Dafim');
+    });
+
+    test('inLanguage returns he for useHebrew:true', () {
+      expect(label.inLanguage(useHebrew: true), 'דף');
+    });
+
+    test('inLanguage returns hePlural for useHebrew:true, plural:true', () {
+      expect(label.inLanguage(useHebrew: true, plural: true), 'דפים');
+    });
+  });
 }

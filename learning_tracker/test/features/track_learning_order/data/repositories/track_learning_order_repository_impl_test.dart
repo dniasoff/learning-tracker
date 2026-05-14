@@ -100,7 +100,7 @@ ContentItem _masechta(String seder, String ref, {int sortOrder = 0}) =>
       level4: null,
     );
 
-LearningOrderItem _item(String ref, int order) => LearningOrderItem(
+LearningOrderItem _item(String ref, [int order = 0]) => LearningOrderItem(
   sefariaRef: ref,
   displayNameHe: ref,
   displayNameEn: ref,
@@ -114,6 +114,44 @@ TrackLearningOrderRepositoryImpl _makeRepo(
   database: db,
   contentRepository: _StubContentRepository(items),
 );
+
+/// Creates a hierarchy:
+///   Seder Zeraim (L1 container, no L2)
+///     └── Berakhot (L2 container, no L3)
+///           └── Berakhot 1:1 (leaf)
+List<ContentItem> _mishnaItems() => [
+      const ContentItem(
+        curriculumId: 'mishnayos',
+        level1: 'Seder Zeraim',
+        displayNameHe: 'סדר זרעים',
+        displayNameEn: 'Seder Zeraim',
+        sefariaRef: 'Seder Zeraim',
+        sortOrder: 0,
+        isLeaf: false,
+      ),
+      const ContentItem(
+        curriculumId: 'mishnayos',
+        level1: 'Seder Zeraim',
+        level2: 'Berakhot',
+        displayNameHe: 'ברכות',
+        displayNameEn: 'Berakhot',
+        sefariaRef: 'Berakhot',
+        sortOrder: 1,
+        isLeaf: false,
+      ),
+      const ContentItem(
+        curriculumId: 'mishnayos',
+        level1: 'Seder Zeraim',
+        level2: 'Berakhot',
+        level3: '1',
+        level4: '1',
+        displayNameHe: 'ברכות א׃א',
+        displayNameEn: 'Berakhot 1:1',
+        sefariaRef: 'Mishnah Berakhot 1:1',
+        sortOrder: 2,
+        isLeaf: true,
+      ),
+    ];
 
 // ---------------------------------------------------------------------------
 // Tests
@@ -242,6 +280,24 @@ void main() {
       final refs = stored.map((r) => r.sefariaRef).toSet();
       expect(refs, containsAll(['Moed', 'Zeraim']));
     });
+
+    test('upserts on second call (does not duplicate)', () async {
+      final items = [_seder('Zeraim')];
+      final repo = _makeRepo(db, items);
+      await repo.saveSedarimOrder(trackId, [_item('Zeraim')]);
+      // Call again with same item.
+      await repo.saveSedarimOrder(trackId, [_item('Zeraim', 0)]);
+
+      final rows = await db.trackLearningOrderDao.getByTrack(trackId);
+      expect(rows, hasLength(1));
+    });
+
+    test('saves empty list without error', () async {
+      final repo = _makeRepo(db, []);
+      await repo.saveSedarimOrder(trackId, []);
+      final rows = await db.trackLearningOrderDao.getByTrack(trackId);
+      expect(rows, isEmpty);
+    });
   });
 
   group('saveMasechtosOrder', () {
@@ -291,6 +347,15 @@ void main() {
       );
     });
 
+    test('is a no-op when no custom order exists', () async {
+      final repo = _makeRepo(db, []);
+      await repo.resetToDefault(trackId);
+      expect(
+        await db.trackLearningOrderDao.getByTrack(trackId),
+        isEmpty,
+      );
+    });
+
     test('after reset getSedarimOrder returns default content order', () async {
       final items = [
         _seder('Moed', sortOrder: 1),
@@ -313,6 +378,113 @@ void main() {
         ['Zeraim', 'Moed'],
       );
       expect(result.every((i) => !i.isCustomOrdered), isTrue);
+    });
+  });
+
+  // ─── F1 additional tests using _mishnaItems() ─────────────────────────────
+
+  group('TrackLearningOrderRepositoryImpl.getSedarimOrder (mishna hierarchy)', () {
+    test('returns sedarim in default sort order when no custom order saved',
+        () async {
+      final repo = _makeRepo(db, _mishnaItems());
+      final result = await repo.getSedarimOrder(trackId, CurriculumId.mishnayos);
+
+      // The fake content has "Seder Zeraim" as the only L1-only container.
+      expect(result, hasLength(1));
+      expect(result.first.sefariaRef, 'Seder Zeraim');
+      expect(result.first.isCustomOrdered, isFalse);
+    });
+
+    test('returns sedarim in custom order after saveSedarimOrder', () async {
+      final repo = _makeRepo(db, _mishnaItems());
+      // Our fake only has one seder so we just verify the ref is present.
+      await repo.saveSedarimOrder(trackId, [_item('Seder Zeraim')]);
+
+      final result = await repo.getSedarimOrder(trackId, CurriculumId.mishnayos);
+
+      expect(result, hasLength(1));
+      expect(result.first.isCustomOrdered, isTrue);
+    });
+  });
+
+  group('TrackLearningOrderRepositoryImpl.getMasechtosOrder (mishna hierarchy)', () {
+    test('returns masechtos in default sort order when no custom order saved',
+        () async {
+      final repo = _makeRepo(db, _mishnaItems());
+      final result =
+          await repo.getMasechtosOrder(trackId, CurriculumId.mishnayos);
+
+      // The fake content has "Berakhot" as the only L2 container.
+      expect(result, hasLength(1));
+      expect(result.first.sefariaRef, 'Berakhot');
+      expect(result.first.isCustomOrdered, isFalse);
+    });
+
+    test(
+      'returns masechtos in custom order after saveMasechtosOrder',
+      () async {
+        final repo = _makeRepo(db, _mishnaItems());
+        await repo.saveMasechtosOrder(trackId, [_item('Berakhot')]);
+
+        final result =
+            await repo.getMasechtosOrder(trackId, CurriculumId.mishnayos);
+
+        expect(result, hasLength(1));
+        expect(result.first.isCustomOrdered, isTrue);
+      },
+    );
+  });
+
+  group('TrackLearningOrderRepositoryImpl.saveSedarimOrder (F1 extra)', () {
+    test('persists sedarim order to the database', () async {
+      final repo = _makeRepo(db, _mishnaItems());
+      final items = [
+        _item('Seder Zeraim', 0),
+        _item('Seder Moed', 1),
+      ];
+
+      await repo.saveSedarimOrder(trackId, items);
+
+      final rows = await db.trackLearningOrderDao.getByTrack(trackId);
+      expect(rows, hasLength(2));
+      expect(rows[0].sefariaRef, 'Seder Zeraim');
+      expect(rows[0].sortOrder, 0);
+      expect(rows[1].sefariaRef, 'Seder Moed');
+      expect(rows[1].sortOrder, 1);
+    });
+  });
+
+  group('TrackLearningOrderRepositoryImpl.saveMasechtosOrder (F1 extra)', () {
+    test('persists masechtos order to the database', () async {
+      final repo = _makeRepo(db, _mishnaItems());
+      final items = [
+        _item('Berakhot', 0),
+        _item('Peah', 1),
+      ];
+
+      await repo.saveMasechtosOrder(trackId, items);
+
+      final rows = await db.trackLearningOrderDao.getByTrack(trackId);
+      expect(rows, hasLength(2));
+      expect(rows.map((r) => r.sefariaRef).toList(), ['Berakhot', 'Peah']);
+    });
+  });
+
+  group('TrackLearningOrderRepositoryImpl.resetToDefault (F1 extra)', () {
+    test('deletes all custom order rows for the track', () async {
+      final repo = _makeRepo(db, _mishnaItems());
+      await repo.saveSedarimOrder(trackId, [_item('Seder Zeraim')]);
+      expect(
+        await db.trackLearningOrderDao.getByTrack(trackId),
+        hasLength(1),
+      );
+
+      await repo.resetToDefault(trackId);
+
+      expect(
+        await db.trackLearningOrderDao.getByTrack(trackId),
+        isEmpty,
+      );
     });
   });
 }

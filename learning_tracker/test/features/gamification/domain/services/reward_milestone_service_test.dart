@@ -12,6 +12,7 @@
 ///  - [RewardMilestoneService.exportCloudPayload]
 library;
 
+import 'package:drift/drift.dart' show Value;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
@@ -19,7 +20,7 @@ import 'package:learning_tracker/features/gamification/domain/models/reward_mile
 import 'package:learning_tracker/features/gamification/domain/services/reward_milestone_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../../../../helpers/test_database.dart';
+import '../../../../helpers/drift_memory.dart';
 
 void main() {
   late UserDatabase db;
@@ -28,13 +29,63 @@ void main() {
 
   setUp(() async {
     SharedPreferences.setMockInitialValues({});
-    db = createTestDatabase();
+    db = inMemoryDb();
     service = RewardMilestoneService(db, profileId: profileId);
   });
 
   tearDown(() async {
     await db.close();
   });
+
+  // ---------------------------------------------------------------------------
+  // Helper — insert a track + goal so trackCountsTowardRewardPoints returns true
+  // ---------------------------------------------------------------------------
+
+  Future<int> insertTrackWithGoal({
+    String curriculumId = 'bavli',
+    String trackType = 'personal',
+  }) async {
+    final trackId = await db.into(db.curriculumTracks).insert(
+      CurriculumTracksCompanion.insert(
+        profileId: profileId,
+        curriculumId: curriculumId,
+        trackType: trackType,
+        activatedAt: DateTime.utc(2026, 1, 1),
+      ),
+    );
+    final now = DateTime.utc(2026, 1, 1);
+    await db.goalDao.insertGoal(
+      GoalsCompanion.insert(
+        profileId: profileId,
+        curriculumId: curriculumId,
+        trackId: trackId,
+        createdAt: now,
+        updatedAt: now,
+      ),
+    );
+    return trackId;
+  }
+
+  Future<void> insertCompletion({
+    required int trackId,
+    required int points,
+    String sefariaRef = 'Berakhot.2a',
+    String trackType = 'personal',
+    DateTime? completedAt,
+  }) async {
+    await db.completionDao.insertCompletion(
+      CompletionsCompanion.insert(
+        profileId: profileId,
+        curriculumId: 'bavli',
+        sefariaRef: sefariaRef,
+        stageId: 1,
+        trackType: trackType,
+        trackId: trackId,
+        completedAt: completedAt ?? DateTime.utc(2026, 1, 1),
+        points: Value(points),
+      ),
+    );
+  }
 
   // ─── RewardMilestone model ────────────────────────────────────────────────
 
@@ -179,11 +230,33 @@ void main() {
     });
   });
 
-  // ─── upsertMilestone / getAllMilestones ───────────────────────────────────
+  // ─── getAllMilestones — empty / persistence ───────────────────────────────
+
+  group('RewardMilestoneService.getAllMilestones', () {
+    test('returns empty list when no milestones have been saved', () async {
+      final milestones = await service.getAllMilestones();
+      expect(milestones, isEmpty);
+    });
+
+    test('persists milestones across calls', () async {
+      final trackId = await insertTrackWithGoal();
+      await service.upsertMilestone(
+        trackId: trackId,
+        title: 'Gold Star',
+        thresholdPoints: 1000,
+      );
+
+      final milestones = await service.getAllMilestones();
+      expect(milestones, hasLength(1));
+      expect(milestones.first.title, 'Gold Star');
+      expect(milestones.first.thresholdPoints, 1000);
+    });
+  });
+
+  // ─── upsertMilestone + getAllMilestones ───────────────────────────────────
 
   group('upsertMilestone + getAllMilestones', () {
     test('inserts a new milestone when no id supplied', () async {
-      // Insert a track so profile program checks work
       await service.upsertMilestone(
         trackId: 1,
         title: 'Test Milestone',
@@ -277,6 +350,102 @@ void main() {
     });
   });
 
+  // ─── upsertMilestone — insert path ───────────────────────────────────────
+
+  group('RewardMilestoneService.upsertMilestone — insert', () {
+    test('creates a new milestone with trimmed title', () async {
+      final trackId = await insertTrackWithGoal();
+      await service.upsertMilestone(
+        trackId: trackId,
+        title: '  Bronze Star  ',
+        thresholdPoints: 500,
+        iconIndex: 2,
+      );
+
+      final milestones = await service.getMilestonesForTrack(trackId);
+      expect(milestones, hasLength(1));
+      expect(milestones.first.title, 'Bronze Star');
+      expect(milestones.first.iconIndex, 2);
+      expect(milestones.first.isEnabled, isTrue);
+    });
+
+    test('auto-generates an id when milestoneId is null', () async {
+      final trackId = await insertTrackWithGoal();
+      await service.upsertMilestone(
+        trackId: trackId,
+        title: 'Star',
+        thresholdPoints: 100,
+      );
+
+      final milestones = await service.getAllMilestones();
+      expect(milestones.first.id, isNotEmpty);
+    });
+
+    test('uses provided milestoneId when given', () async {
+      final trackId = await insertTrackWithGoal();
+      await service.upsertMilestone(
+        trackId: trackId,
+        title: 'Named',
+        thresholdPoints: 50,
+        milestoneId: 'my-custom-id',
+      );
+
+      final milestones = await service.getAllMilestones();
+      expect(milestones.first.id, 'my-custom-id');
+    });
+
+    test('multiple milestones for the same track are stored correctly',
+        () async {
+      final trackId = await insertTrackWithGoal();
+      await service.upsertMilestone(
+        trackId: trackId,
+        title: 'Bronze',
+        thresholdPoints: 500,
+      );
+      await service.upsertMilestone(
+        trackId: trackId,
+        title: 'Silver',
+        thresholdPoints: 1000,
+      );
+
+      final milestones = await service.getMilestonesForTrack(trackId);
+      expect(milestones, hasLength(2));
+      // Ordered by thresholdPoints ascending.
+      expect(milestones.first.thresholdPoints, 500);
+      expect(milestones.last.thresholdPoints, 1000);
+    });
+  });
+
+  // ─── upsertMilestone — update path ───────────────────────────────────────
+
+  group('RewardMilestoneService.upsertMilestone — update', () {
+    test('updates an existing milestone when milestoneId matches', () async {
+      final trackId = await insertTrackWithGoal();
+      await service.upsertMilestone(
+        trackId: trackId,
+        title: 'Old Title',
+        thresholdPoints: 200,
+        milestoneId: 'id-1',
+      );
+
+      await service.upsertMilestone(
+        trackId: trackId,
+        title: 'New Title',
+        thresholdPoints: 400,
+        milestoneId: 'id-1',
+        iconIndex: 5,
+        isEnabled: false,
+      );
+
+      final milestones = await service.getMilestonesForTrack(trackId);
+      expect(milestones, hasLength(1)); // no duplicate
+      expect(milestones.first.title, 'New Title');
+      expect(milestones.first.thresholdPoints, 400);
+      expect(milestones.first.iconIndex, 5);
+      expect(milestones.first.isEnabled, isFalse);
+    });
+  });
+
   // ─── removeMilestone ──────────────────────────────────────────────────────
 
   group('removeMilestone', () {
@@ -303,6 +472,44 @@ void main() {
 
       await service.removeMilestone('nonexistent');
       expect((await service.getAllMilestones()).length, 1);
+    });
+  });
+
+  group('RewardMilestoneService.removeMilestone', () {
+    test('removes the milestone with the matching id', () async {
+      final trackId = await insertTrackWithGoal();
+      await service.upsertMilestone(
+        trackId: trackId,
+        title: 'Remove Me',
+        thresholdPoints: 100,
+        milestoneId: 'rm-1',
+      );
+      await service.upsertMilestone(
+        trackId: trackId,
+        title: 'Keep Me',
+        thresholdPoints: 200,
+        milestoneId: 'rm-2',
+      );
+
+      await service.removeMilestone('rm-1');
+
+      final milestones = await service.getMilestonesForTrack(trackId);
+      expect(milestones, hasLength(1));
+      expect(milestones.first.id, 'rm-2');
+    });
+
+    test('is a no-op when milestoneId does not exist', () async {
+      final trackId = await insertTrackWithGoal();
+      await service.upsertMilestone(
+        trackId: trackId,
+        title: 'Keep',
+        thresholdPoints: 100,
+      );
+
+      await service.removeMilestone('nonexistent-id');
+
+      final milestones = await service.getMilestonesForTrack(trackId);
+      expect(milestones, hasLength(1));
     });
   });
 
@@ -368,6 +575,286 @@ void main() {
     });
   });
 
+  // ─── getGlobalMilestones / getMilestonesForTrack ──────────────────────────
+
+  group('RewardMilestoneService.getGlobalMilestones', () {
+    test('returns milestones tied to kGlobalTrackSentinel', () async {
+      await service.upsertMilestone(
+        trackId: RewardMilestone.kGlobalTrackSentinel,
+        title: 'Global Star',
+        thresholdPoints: 5000,
+      );
+
+      final global = await service.getGlobalMilestones();
+      expect(global, hasLength(1));
+      expect(global.first.title, 'Global Star');
+      expect(global.first.trackId, RewardMilestone.kGlobalTrackSentinel);
+    });
+
+    test('getMilestonesForTrack only returns milestones for that track',
+        () async {
+      final trackId = await insertTrackWithGoal();
+      await service.upsertMilestone(
+        trackId: trackId,
+        title: 'Track Milestone',
+        thresholdPoints: 500,
+      );
+      await service.upsertMilestone(
+        trackId: RewardMilestone.kGlobalTrackSentinel,
+        title: 'Global',
+        thresholdPoints: 9999,
+      );
+
+      final trackMilestones = await service.getMilestonesForTrack(trackId);
+      expect(trackMilestones, hasLength(1));
+      expect(trackMilestones.first.title, 'Track Milestone');
+    });
+  });
+
+  // ─── trackCountsTowardRewardPoints ───────────────────────────────────────
+
+  group('RewardMilestoneService.trackCountsTowardRewardPoints', () {
+    test('returns false for a non-existent track', () async {
+      final result = await service.trackCountsTowardRewardPoints(9999);
+      expect(result, isFalse);
+    });
+
+    test('returns false when track has no goal and no program', () async {
+      final trackId = await db.into(db.curriculumTracks).insert(
+        CurriculumTracksCompanion.insert(
+          profileId: profileId,
+          curriculumId: 'bavli',
+          trackType: 'personal',
+          activatedAt: DateTime.utc(2026, 1, 1),
+        ),
+      );
+
+      final result = await service.trackCountsTowardRewardPoints(trackId);
+      expect(result, isFalse);
+    });
+
+    test('returns true when track has a goal', () async {
+      final trackId = await insertTrackWithGoal();
+      final result = await service.trackCountsTowardRewardPoints(trackId);
+      expect(result, isTrue);
+    });
+  });
+
+  // ─── getTrackPointsTotal ──────────────────────────────────────────────────
+
+  group('RewardMilestoneService.getTrackPointsTotal', () {
+    test('returns 0 when no completions exist for the track', () async {
+      final trackId = await insertTrackWithGoal();
+      expect(await service.getTrackPointsTotal(trackId), 0);
+    });
+
+    test('sums points across all completions for the track', () async {
+      final trackId = await insertTrackWithGoal();
+      await insertCompletion(
+        trackId: trackId,
+        points: 100,
+        sefariaRef: 'Berakhot.2a',
+      );
+      await insertCompletion(
+        trackId: trackId,
+        points: 250,
+        sefariaRef: 'Berakhot.2b',
+        completedAt: DateTime.utc(2026, 2, 1),
+      );
+
+      expect(await service.getTrackPointsTotal(trackId), 350);
+    });
+  });
+
+  // ─── getTrackPointsTotalForRewards ───────────────────────────────────────
+
+  group('RewardMilestoneService.getTrackPointsTotalForRewards', () {
+    test('returns 0 when track does not count toward rewards', () async {
+      final trackId = await db.into(db.curriculumTracks).insert(
+        CurriculumTracksCompanion.insert(
+          profileId: profileId,
+          curriculumId: 'bavli',
+          trackType: 'personal',
+          activatedAt: DateTime.utc(2026, 1, 1),
+        ),
+      );
+      await insertCompletion(trackId: trackId, points: 500);
+
+      expect(await service.getTrackPointsTotalForRewards(trackId), 0);
+    });
+
+    test('returns points when track counts toward rewards', () async {
+      final trackId = await insertTrackWithGoal();
+      await insertCompletion(trackId: trackId, points: 300);
+
+      expect(await service.getTrackPointsTotalForRewards(trackId), 300);
+    });
+  });
+
+  // ─── evaluateUnlocksForTrack ──────────────────────────────────────────────
+
+  group('RewardMilestoneService.evaluateUnlocksForTrack', () {
+    test('returns empty list when track does not count toward rewards',
+        () async {
+      final trackId = await db.into(db.curriculumTracks).insert(
+        CurriculumTracksCompanion.insert(
+          profileId: profileId,
+          curriculumId: 'bavli',
+          trackType: 'personal',
+          activatedAt: DateTime.utc(2026, 1, 1),
+        ),
+      );
+
+      final unlocks = await service.evaluateUnlocksForTrack(trackId);
+      expect(unlocks, isEmpty);
+    });
+
+    test('returns empty list when no milestones exist for the track', () async {
+      final trackId = await insertTrackWithGoal();
+      final unlocks = await service.evaluateUnlocksForTrack(trackId);
+      expect(unlocks, isEmpty);
+    });
+
+    test('unlocks a milestone when points cross the threshold', () async {
+      final trackId = await insertTrackWithGoal();
+      await service.upsertMilestone(
+        trackId: trackId,
+        title: 'Bronze',
+        thresholdPoints: 100,
+        milestoneId: 'b1',
+      );
+      await insertCompletion(trackId: trackId, points: 150);
+
+      final unlocks = await service.evaluateUnlocksForTrack(trackId);
+      expect(unlocks, hasLength(1));
+      expect(unlocks.first.title, 'Bronze');
+    });
+
+    test('does not re-unlock already unlocked milestones', () async {
+      final trackId = await insertTrackWithGoal();
+      await service.upsertMilestone(
+        trackId: trackId,
+        title: 'Bronze',
+        thresholdPoints: 100,
+        milestoneId: 'b1',
+      );
+      await insertCompletion(trackId: trackId, points: 200);
+
+      // First evaluation unlocks it.
+      final first = await service.evaluateUnlocksForTrack(trackId);
+      expect(first, hasLength(1));
+
+      // Second evaluation should yield nothing new.
+      final second = await service.evaluateUnlocksForTrack(trackId);
+      expect(second, isEmpty);
+    });
+
+    test('does not unlock disabled milestones', () async {
+      final trackId = await insertTrackWithGoal();
+      await service.upsertMilestone(
+        trackId: trackId,
+        title: 'Disabled',
+        thresholdPoints: 10,
+        isEnabled: false,
+      );
+      await insertCompletion(trackId: trackId, points: 100);
+
+      final unlocks = await service.evaluateUnlocksForTrack(trackId);
+      expect(unlocks, isEmpty);
+    });
+
+    test('does not unlock when points are below the threshold', () async {
+      final trackId = await insertTrackWithGoal();
+      await service.upsertMilestone(
+        trackId: trackId,
+        title: 'High Bar',
+        thresholdPoints: 10000,
+      );
+      await insertCompletion(trackId: trackId, points: 50);
+
+      final unlocks = await service.evaluateUnlocksForTrack(trackId);
+      expect(unlocks, isEmpty);
+    });
+  });
+
+  // ─── evaluateUnlocksForGlobal ─────────────────────────────────────────────
+
+  group('RewardMilestoneService.evaluateUnlocksForGlobal', () {
+    test('returns empty list when no global milestones configured', () async {
+      final unlocks = await service.evaluateUnlocksForGlobal();
+      expect(unlocks, isEmpty);
+    });
+
+    test('unlocks global milestone when total points cross threshold', () async {
+      await service.upsertMilestone(
+        trackId: RewardMilestone.kGlobalTrackSentinel,
+        title: 'Global 500',
+        thresholdPoints: 500,
+        milestoneId: 'g1',
+      );
+
+      // Add a track + goal (so completions count) and insert completions.
+      final trackId = await insertTrackWithGoal();
+      await insertCompletion(trackId: trackId, points: 600);
+
+      final unlocks = await service.evaluateUnlocksForGlobal();
+      expect(unlocks, hasLength(1));
+      expect(unlocks.first.title, 'Global 500');
+    });
+
+    test('global milestone is only unlocked once', () async {
+      await service.upsertMilestone(
+        trackId: RewardMilestone.kGlobalTrackSentinel,
+        title: 'Global',
+        thresholdPoints: 100,
+        milestoneId: 'g1',
+      );
+      final trackId = await insertTrackWithGoal();
+      await insertCompletion(trackId: trackId, points: 200);
+
+      await service.evaluateUnlocksForGlobal();
+      final second = await service.evaluateUnlocksForGlobal();
+      expect(second, isEmpty);
+    });
+  });
+
+  // ─── getAllUnlocks (extended) ─────────────────────────────────────────────
+
+  group('RewardMilestoneService.getAllUnlocks', () {
+    test('returns empty list when no unlocks have occurred', () async {
+      expect(await service.getAllUnlocks(), isEmpty);
+    });
+
+    test('returns unlocks sorted by unlockedAt descending', () async {
+      final trackId = await insertTrackWithGoal();
+      await service.upsertMilestone(
+        trackId: trackId,
+        title: 'A',
+        thresholdPoints: 50,
+        milestoneId: 'a1',
+      );
+      await service.upsertMilestone(
+        trackId: trackId,
+        title: 'B',
+        thresholdPoints: 100,
+        milestoneId: 'b1',
+      );
+      await insertCompletion(trackId: trackId, points: 200);
+
+      await service.evaluateUnlocksForTrack(trackId);
+
+      final unlocks = await service.getAllUnlocks();
+      expect(unlocks, hasLength(2));
+      // Descending by unlockedAt — the last added should be first.
+      expect(
+        unlocks.first.unlockedAt
+                .isAfter(unlocks.last.unlockedAt) ||
+            unlocks.first.unlockedAt == unlocks.last.unlockedAt,
+        isTrue,
+      );
+    });
+  });
+
   // ─── stripStockTemplateMilestones ────────────────────────────────────────
 
   group('stripStockTemplateMilestones', () {
@@ -425,6 +912,53 @@ void main() {
       final result = await service.stripStockTemplateMilestones();
       expect(result, isFalse);
       expect((await service.getAllMilestones()).length, 1);
+    });
+  });
+
+  group('RewardMilestoneService.stripStockTemplateMilestones', () {
+    test('returns false when no milestones exist', () async {
+      final stripped = await service.stripStockTemplateMilestones();
+      expect(stripped, isFalse);
+    });
+
+    test('removes milestones matching the default ladder', () async {
+      final trackId = await insertTrackWithGoal();
+      // Add a milestone matching the default ladder exactly.
+      await service.upsertMilestone(
+        trackId: trackId,
+        title: 'Bronze Star',
+        thresholdPoints: 500,
+      );
+      // Add a custom milestone that should be kept.
+      await service.upsertMilestone(
+        trackId: trackId,
+        title: 'Custom Prize',
+        thresholdPoints: 750,
+      );
+
+      final stripped = await service.stripStockTemplateMilestones();
+      expect(stripped, isTrue);
+
+      final remaining = await service.getMilestonesForTrack(trackId);
+      expect(remaining, hasLength(1));
+      expect(remaining.first.title, 'Custom Prize');
+    });
+
+    test('removes legacy 50/150/300 tier set for a single track', () async {
+      final trackId = await insertTrackWithGoal();
+      for (final threshold in [50, 150, 300]) {
+        await service.upsertMilestone(
+          trackId: trackId,
+          title: 'Legacy $threshold',
+          thresholdPoints: threshold,
+        );
+      }
+
+      final stripped = await service.stripStockTemplateMilestones();
+      expect(stripped, isTrue);
+
+      final remaining = await service.getMilestonesForTrack(trackId);
+      expect(remaining, isEmpty);
     });
   });
 
@@ -491,6 +1025,104 @@ void main() {
     });
   });
 
+  // ─── exportCloudPayload / mergeCloudPayload (extended) ───────────────────
+
+  group('RewardMilestoneService — cloud sync', () {
+    test('exportCloudPayload includes milestones and unlocks', () async {
+      final trackId = await insertTrackWithGoal();
+      await service.upsertMilestone(
+        trackId: trackId,
+        title: 'Export Test',
+        thresholdPoints: 50,
+        milestoneId: 'ex1',
+      );
+
+      final payload = await service.exportCloudPayload();
+      expect(payload.containsKey('milestones'), isTrue);
+      expect(payload.containsKey('unlocks'), isTrue);
+      expect(payload.containsKey('updated_at'), isTrue);
+      expect(payload['milestones'] as List, hasLength(1));
+    });
+
+    test('mergeCloudPayload is a no-op when remote is null', () async {
+      // Should complete without error.
+      await expectLater(service.mergeCloudPayload(null), completes);
+    });
+
+    test('mergeCloudPayload is a no-op when remote is empty', () async {
+      await expectLater(service.mergeCloudPayload({}), completes);
+    });
+
+    test(
+      'mergeCloudPayload replaces local data when remote timestamp is newer',
+      () async {
+        // Set up a local milestone.
+        final trackId = await insertTrackWithGoal();
+        await service.upsertMilestone(
+          trackId: trackId,
+          title: 'Local Only',
+          thresholdPoints: 999,
+          milestoneId: 'local-1',
+        );
+
+        final remote = {
+          'updated_at': DateTime.utc(2099, 1, 1).toIso8601String(),
+          'milestones': [
+            {
+              'id': 'remote-1',
+              'profile_id': profileId,
+              'track_id': trackId,
+              'title': 'Remote Star',
+              'threshold_points': 777,
+              'is_enabled': true,
+              'icon_index': 0,
+              'created_at': '2026-01-01T00:00:00.000Z',
+              'updated_at': '2026-01-01T00:00:00.000Z',
+            },
+          ],
+          'unlocks': <Map<String, dynamic>>[],
+        };
+
+        await service.mergeCloudPayload(remote);
+
+        final milestones = await service.getAllMilestones();
+        // Remote data should have replaced local.
+        expect(milestones.any((m) => m.id == 'remote-1'), isTrue);
+      },
+    );
+
+    test(
+      'mergeCloudPayload is a no-op when remote timestamp is not newer',
+      () async {
+        final trackId = await insertTrackWithGoal();
+        await service.upsertMilestone(
+          trackId: trackId,
+          title: 'Local',
+          thresholdPoints: 100,
+          milestoneId: 'keep-me',
+        );
+
+        // Export to bump the local timestamp.
+        final exported = await service.exportCloudPayload();
+
+        final remote = {
+          'updated_at':
+              DateTime.utc(2000, 1, 1).toIso8601String(), // very old
+          'milestones': <Map<String, dynamic>>[],
+          'unlocks': <Map<String, dynamic>>[],
+        };
+        await service.mergeCloudPayload(remote);
+
+        // Local milestone should still be there.
+        final milestones = await service.getAllMilestones();
+        expect(milestones.any((m) => m.id == 'keep-me'), isTrue);
+
+        // Suppress unused variable warning.
+        expect(exported.containsKey('updated_at'), isTrue);
+      },
+    );
+  });
+
   // ─── exportCloudPayload ───────────────────────────────────────────────────
 
   group('exportCloudPayload', () {
@@ -521,6 +1153,24 @@ void main() {
   group('kGlobalTrackSentinel', () {
     test('sentinel value is 0', () {
       expect(RewardMilestone.kGlobalTrackSentinel, 0);
+    });
+  });
+
+  // ─── ensureDefaultsForTrack ───────────────────────────────────────────────
+
+  group('RewardMilestoneService.ensureDefaultsForTrack', () {
+    test('is a no-op for a real track (does not seed any milestones)', () async {
+      final trackId = await insertTrackWithGoal();
+      await service.ensureDefaultsForTrack(trackId);
+
+      final milestones = await service.getMilestonesForTrack(trackId);
+      expect(milestones, isEmpty);
+    });
+
+    test('is a no-op for kGlobalTrackSentinel', () async {
+      await service.ensureDefaultsForTrack(RewardMilestone.kGlobalTrackSentinel);
+      final milestones = await service.getGlobalMilestones();
+      expect(milestones, isEmpty);
     });
   });
 }
