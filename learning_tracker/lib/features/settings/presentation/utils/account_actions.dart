@@ -245,56 +245,157 @@ Future<void> showDeleteAccountFlow(
 
   if (!reauthenticated || !context.mounted) return;
 
-  String? deleteError;
-  try {
-    await service.deleteAccount(user.uid);
-  } catch (e) {
-    deleteError = e.toString();
-  } finally {
-    // AuthStateNotifier is keepAlive and doesn't auto-react to Firebase
-    // auth changes — always clear it here so the router guards see a
-    // signed-out user regardless of whether deleteAccount fully succeeded.
-    ref.read(authStateProvider.notifier).signOut();
-    ref.invalidate(authStateProvider);
-  }
-
-  if (!context.mounted) return;
-
-  if (deleteError != null) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          'Account sign-out complete, but deletion was partial: $deleteError',
-        ),
-        backgroundColor: Colors.orange,
-        duration: const Duration(seconds: 6),
-      ),
-    );
-  } else {
-    await showDialog<void>(
-      context: context,
-      barrierDismissible: false,
-      builder: (ctx) => AlertDialog(
-        title: Text(AppLocalizations.of(context)!.accountDeletedTitle),
-        content: const Text(
-          'Your account and all associated data have been permanently deleted.',
-        ),
-        actions: [
-          FilledButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text(AppLocalizations.of(context)!.actionOk),
-          ),
-        ],
-      ),
-    );
-  }
-
-  if (!context.mounted) return;
-  // Use root AppRouter — context.router inside a tab cannot navigate to
-  // root-level routes and throws, preventing sign-in navigation.
-  unawaited(ref.read(routerProvider).replaceAll([const SignInRoute()]));
+  // Navigate to a blocking overlay immediately after re-auth so the user
+  // cannot interact with the app while deletion runs (may take 10+ seconds).
+  await showDialog<void>(
+    context: context,
+    barrierDismissible: false,
+    barrierColor: Colors.black87,
+    builder: (ctx) => UncontrolledProviderScope(
+      container: ProviderScope.containerOf(context),
+      child: _DeletingAccountOverlay(accountId: user.uid),
+    ),
+  );
 }
 
+// ---------------------------------------------------------------------------
+// Blocking account-deletion overlay
+// ---------------------------------------------------------------------------
+
+/// Full-screen modal that runs [AccountManagementService.deleteAccount] and
+/// prevents all app interaction while the wipe is in progress.
+///
+/// Uses [ProviderScope] re-parenting so it can read Riverpod providers even
+/// though it is pushed via [showDialog] outside the normal route tree.
+class _DeletingAccountOverlay extends ConsumerStatefulWidget {
+  const _DeletingAccountOverlay({required this.accountId});
+
+  final String accountId;
+
+  @override
+  ConsumerState<_DeletingAccountOverlay> createState() =>
+      _DeletingAccountOverlayState();
+}
+
+class _DeletingAccountOverlayState
+    extends ConsumerState<_DeletingAccountOverlay> {
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    unawaited(_runDeletion());
+  }
+
+  Future<void> _runDeletion() async {
+    try {
+      final service = ref.read(accountManagementServiceProvider);
+      await service.deleteAccount(widget.accountId);
+      if (!mounted) return;
+      // AuthStateNotifier is keepAlive — always clear so router guards see
+      // signed-out state regardless of whether deleteAccount fully succeeded.
+      ref.read(authStateProvider.notifier).signOut();
+      ref.invalidate(authStateProvider);
+      if (mounted) Navigator.of(context).pop(); // close overlay
+      unawaited(ref.read(routerProvider).replaceAll([const SignInRoute()]));
+    } catch (e) {
+      if (mounted) {
+        setState(() => _error = e.toString());
+        // Still clear auth even on failure — account may be partially deleted.
+        ref.read(authStateProvider.notifier).signOut();
+        ref.invalidate(authStateProvider);
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return PopScope(
+      canPop: false,
+      child: Scaffold(
+        backgroundColor: Colors.black87,
+        body: SafeArea(
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.all(32),
+              child: _error != null
+                  ? _buildError(context, l10n)
+                  : _buildProgress(l10n),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildProgress(AppLocalizations l10n) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const CircularProgressIndicator(color: Colors.white),
+        const SizedBox(height: 24),
+        Text(
+          l10n.deletingAccountTitle,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 20,
+            fontWeight: FontWeight.w600,
+          ),
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 8),
+        Text(
+          l10n.deletingAccountBody,
+          style: const TextStyle(color: Colors.white70, fontSize: 14),
+          textAlign: TextAlign.center,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildError(BuildContext context, AppLocalizations l10n) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const Icon(Icons.error_outline, color: Colors.red, size: 48),
+        const SizedBox(height: 16),
+        Text(
+          l10n.deletingAccountError,
+          style: const TextStyle(color: Colors.white, fontSize: 16),
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 8),
+        Text(
+          _error!,
+          style: const TextStyle(color: Colors.white54, fontSize: 12),
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 24),
+        FilledButton(
+          onPressed: () {
+            setState(() => _error = null);
+            unawaited(_runDeletion());
+          },
+          child: Text(l10n.actionRetry),
+        ),
+        const SizedBox(height: 8),
+        TextButton(
+          style: TextButton.styleFrom(foregroundColor: Colors.white70),
+          onPressed: () {
+            Navigator.of(context).pop();
+            unawaited(
+              ref.read(routerProvider).replaceAll([const SignInRoute()]),
+            );
+          },
+          child: Text(l10n.actionCancel),
+        ),
+      ],
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
 /// Permanent deletion for [Tier.localBorn] accounts (device-only data).
 ///
 /// Closes the active Drift DB if needed, deletes the account DB file,
