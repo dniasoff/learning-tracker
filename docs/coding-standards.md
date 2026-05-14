@@ -249,7 +249,7 @@ Content tables (read-only, shared across profiles) are exempt. The invariant app
 
 ## Enforcement — `make audit`
 
-`make audit` (DNI-389, not yet on `origin/dev`) runs every layering grep and custom lint locally. Until it lands, run the individual greps listed in each [Layering Rules](#layering-rules) section above.
+`make audit` (DNI-389) runs all 12 enforcement greps and `custom_lint` locally. Run it before pushing to catch violations early. The greps are also run in CI on every PR.
 
 The full CI matrix (DNI-388) requires all of the following to pass on every PR:
 
@@ -257,10 +257,29 @@ The full CI matrix (DNI-388) requires all of the following to pass on every PR:
 |------|---------|----------------|
 | `analyze` | `dart analyze --fatal-infos` | Static analysis, no warnings |
 | `format-check` | `dart format --set-exit-if-changed lib/ test/` | Consistent formatting |
-| `audit` | `make audit` | All 5 layering greps (see above) |
+| `audit` | `make audit` | All 12 enforcement greps + custom_lint (see below) |
 | `lint` | `custom_lint` | 4 custom lint rules (DNI-386/387) |
 | `test` | `flutter test` | Full test suite |
 | `coverage-floor` | (coverage tool) | Line coverage ≥ 60%; cannot drop on a PR |
+
+### The 12 enforcement greps
+
+Each grep must return zero matching lines. Violations block the commit.
+
+| # | What it checks | Why |
+|---|----------------|-----|
+| 1 | `FirebaseAuth.instance.signOut` outside `core/auth/` | Direct sign-out calls bypass the auth gateway and skip session-cleanup hooks (NFR3 / Story 24.3). |
+| 2 | `import 'package:talker/talker.dart'` outside `core/logging/` | Raw Talker bypasses PII redaction, log-level filtering, and Crashlytics breadcrumb integration provided by `AppLogger` (NFR24 / Story 24.5). |
+| 3 | `.withDefault(const Constant(0))` in `core/database/tables/` | Drift integer columns must not use a silent zero default; use explicit non-null types or nullable columns to surface missing data (Story 25.1). |
+| 4 | `hebrewTermsScriptProvider` outside `core/labels/`, `core/preferences/`, or `settings/*_screen.dart` | Script-selection state must flow through the labels layer, not be read ad-hoc in feature code (Story 25.9). |
+| 5 | `.displayNameEn` / `.displayNameHe` outside `core/labels/` (non-generated) | Direct field access bypasses the label service, breaking locale switching and the Hebrew/English chokepoint (Story 25.9 / Lint L1). |
+| 6 | `DateTime.now()` outside `core/time/` | Raw `DateTime.now()` makes tests non-deterministic; all clock reads must go through `DateTimeFactory` or the `clockProvider` (NFR21 / Story 25.10). |
+| 7 | `package:firebase_auth` outside `core/auth/` | Firebase Auth symbols must be isolated to the auth module so the rest of the app stays Firebase-agnostic (NFR3 / Story 25.11). |
+| 8 | `debugPrint` or bare `print()` in production code (non-generated) | Debug prints leak to device consoles in production builds; use `AppLogger` instead (NFR24 / Story 25.19). |
+| 9 | `currentAccountId = 1` hardcoded in `lib/` | Hardcoded account ID 1 breaks multi-account support; account ID must be resolved from session state (Story 25.21). |
+| 10 | Empty catch blocks `catch (_) {}` in non-generated code | Silent swallowing of exceptions hides bugs and makes errors undiagnosable in production (NFR23). |
+| 11 | `EdgeInsets.only(left: ...)` or `EdgeInsets.only(right: ...)` in non-generated code | Hardcoded directional insets break RTL (Hebrew) layout; use `EdgeInsetsDirectional` or symmetric padding (NFR16 / UX-DR5). |
+| 12 | `package:cloud_firestore` or `package:firebase_storage` outside `core/sync/` or `core/auth/` | Firestore and Storage SDK symbols must stay inside the sync gateway; all other code accesses them through injected providers (NFR3). |
 
 ---
 

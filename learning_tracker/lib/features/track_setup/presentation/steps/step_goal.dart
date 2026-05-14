@@ -10,7 +10,7 @@ import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/core/utils/hebrew_calendar_utils.dart';
 import 'package:learning_tracker/core/widgets/learning_date_picker_theme.dart';
-import 'package:learning_tracker/features/scheduler/presentation/screens/goal_setup_screen.dart';
+import 'package:learning_tracker/features/scheduler/domain/models/goal_entity.dart';
 import 'package:learning_tracker/features/scheduler/presentation/widgets/hebrew_date_picker.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/curriculum_scope_providers.dart';
 import 'package:learning_tracker/features/track_setup/presentation/steps/goal_cards.dart';
@@ -27,7 +27,7 @@ class SelfPacedGoalStep extends ConsumerStatefulWidget {
 
   final CurriculumId curriculumId;
   final Map<int, String> studyDays;
-  final ValueChanged<GoalFormResult?> onComplete;
+  final ValueChanged<GoalEntity?> onComplete;
 
   @override
   ConsumerState<SelfPacedGoalStep> createState() => _SelfPacedGoalStepState();
@@ -141,6 +141,7 @@ class _SelfPacedGoalStepState extends ConsumerState<SelfPacedGoalStep> {
   }
 
   void _continue() {
+    final now = DateTimeFactory.nowUtc();
     if (_mode == 'deadline') {
       if (_deadline == null) {
         ScaffoldMessenger.of(
@@ -150,24 +151,32 @@ class _SelfPacedGoalStepState extends ConsumerState<SelfPacedGoalStep> {
       }
       final useHebrew = ref.read(useHebrewDateProvider);
       widget.onComplete(
-        GoalFormResult(
+        GoalEntity(
+          curriculumId: widget.curriculumId,
           targetPercent: 100,
           goalType: 'deadline',
           targetDate: _deadline!.toUtc(),
           dateType: useHebrew ? 'hebrew' : 'gregorian',
-          paceGranularity: _paceGranularity,
+          paceGranularity: PaceGranularity.fromStorageKey(_paceGranularity),
+          rawLearningUnit: _paceGranularity,
+          createdAt: now,
+          updatedAt: now,
         ),
       );
       return;
     }
 
     widget.onComplete(
-      GoalFormResult(
+      GoalEntity(
+        curriculumId: widget.curriculumId,
         targetPercent: 100,
         goalType: 'pace',
         paceValue: _paceValue,
         pacePeriod: _paceUnit,
-        paceGranularity: _paceGranularity,
+        paceGranularity: PaceGranularity.fromStorageKey(_paceGranularity),
+        rawLearningUnit: _paceGranularity,
+        createdAt: now,
+        updatedAt: now,
       ),
     );
   }
@@ -259,14 +268,16 @@ class _SelfPacedGoalStepState extends ConsumerState<SelfPacedGoalStep> {
         children: [
           Text(
             "What's your pace or deadline?",
-            style: theme.textTheme.headlineLarge
-                ?.copyWith(fontWeight: FontWeight.w800),
+            style: theme.textTheme.headlineLarge?.copyWith(
+              fontWeight: FontWeight.w800,
+            ),
           ),
           const SizedBox(height: 6),
           Text(
             'Set a goal, or skip for now.',
-            style: theme.textTheme.titleMedium
-                ?.copyWith(color: AppTheme.brandInkMuted),
+            style: theme.textTheme.titleMedium?.copyWith(
+              color: AppTheme.brandInkMuted,
+            ),
           ),
           const SizedBox(height: 18),
           _mode == 'pace'

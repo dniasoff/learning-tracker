@@ -108,9 +108,6 @@ void main() {
       'lib/features/scheduler/presentation/providers/scheduler_providers.dart',
       // Doc-comment reference only.
       'lib/features/track_setup/presentation/widgets/curriculum_picker_step.dart',
-      // V1 exception toString — single-track v1 makes this branch dead code.
-      // TODO(post-v1): route through trackTypeLabelText when multi-track ships.
-      'lib/core/exceptions/duplicate_completion_exception.dart',
       // Composite curriculum strategy — constructs synthetic ContentItem
       // preamble rows (data layer, not a UI surface). DNI-358 / 26.15.
       'lib/features/content_browsing/domain/strategies/composite_curriculum_strategy.dart',

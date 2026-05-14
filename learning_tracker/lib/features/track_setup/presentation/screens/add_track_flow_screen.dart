@@ -11,7 +11,7 @@ import 'package:learning_tracker/features/dashboard/presentation/providers/dashb
 import 'package:learning_tracker/features/onboarding/domain/models/wizard_result_wrapper.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/bulk_prior_completion_service.dart';
 import 'package:learning_tracker/features/onboarding/presentation/providers/onboarding_providers.dart';
-import 'package:learning_tracker/features/scheduler/presentation/screens/goal_setup_screen.dart';
+import 'package:learning_tracker/features/scheduler/domain/models/goal_entity.dart';
 import 'package:learning_tracker/features/track_setup/domain/entities/add_track_result.dart';
 import 'package:learning_tracker/features/track_setup/domain/services/track_creation_service.dart';
 import 'package:learning_tracker/features/track_setup/presentation/providers/add_track_providers.dart';
@@ -506,7 +506,7 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
     _goToNextStep();
   }
 
-  void _onGoalComplete(GoalFormResult? result) {
+  void _onGoalComplete(GoalEntity? result) {
     setState(() => _state = _state.copyWith(goalResult: result));
     _goToNextStep();
   }
@@ -628,7 +628,10 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(AppLocalizations.of(context)!.errorSaveTrackFailed),
-          action: SnackBarAction(label: AppLocalizations.of(context)!.actionRetry, onPressed: _finishFlow),
+          action: SnackBarAction(
+            label: AppLocalizations.of(context)!.actionRetry,
+            onPressed: _finishFlow,
+          ),
         ),
       );
     } finally {
