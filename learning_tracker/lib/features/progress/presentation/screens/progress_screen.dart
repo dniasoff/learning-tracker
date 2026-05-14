@@ -148,6 +148,7 @@ class _StatGrid extends StatelessWidget {
           iconColor: AppTheme.brandBlue,
           value: '$totalUniqueUnits',
           label: l10n.statUnitsDone,
+          onTap: () => context.router.push(const TasksDoneRoute()),
         ),
         _OverviewStatCard(
           icon: Icons.local_fire_department_rounded,

@@ -35,6 +35,7 @@ import 'package:learning_tracker/features/progress/presentation/screens/learning
 import 'package:learning_tracker/features/progress/presentation/screens/progress_charts_screen.dart';
 import 'package:learning_tracker/features/progress/presentation/screens/progress_screen.dart';
 import 'package:learning_tracker/features/progress/presentation/screens/streak_history_screen.dart';
+import 'package:learning_tracker/features/progress/presentation/screens/tasks_done_screen.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/screens/city_picker_screen.dart';
 import 'package:learning_tracker/features/scheduler/presentation/screens/scheduler_screen.dart';
 import 'package:learning_tracker/features/scheduler/presentation/screens/study_day_config_screen.dart';
@@ -140,6 +141,11 @@ class AppRouter extends RootStackRouter {
     AutoRoute(
       path: '/progress/streak',
       page: StreakHistoryRoute.page,
+      guards: [authGuard],
+    ),
+    AutoRoute(
+      path: '/progress/tasks-done',
+      page: TasksDoneRoute.page,
       guards: [authGuard],
     ),
 

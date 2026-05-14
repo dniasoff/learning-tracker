@@ -1160,6 +1160,22 @@ class SyncRoute extends PageRouteInfo<void> {
 }
 
 /// generated route for
+/// [TasksDoneScreen]
+class TasksDoneRoute extends PageRouteInfo<void> {
+  const TasksDoneRoute({List<PageRouteInfo>? children})
+    : super(TasksDoneRoute.name, initialChildren: children);
+
+  static const String name = 'TasksDoneRoute';
+
+  static PageInfo page = PageInfo(
+    name,
+    builder: (data) {
+      return const TasksDoneScreen();
+    },
+  );
+}
+
+/// generated route for
 /// [TextDisplayScreen]
 class TextDisplayRoute extends PageRouteInfo<TextDisplayRouteArgs> {
   TextDisplayRoute({
