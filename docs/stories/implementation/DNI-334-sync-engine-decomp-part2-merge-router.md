@@ -1,6 +1,6 @@
 # DNI-334 — 25.13 SyncEngine decomp Part 2 — MergeRouter + sealed EntityMerger
 
-Status: review
+Status: done
 
 Linear: https://linear.app/orvexai/issue/DNI-334
 
@@ -51,21 +51,19 @@ entity is a one-file addition rather than a 12-touch sprawl (NFR20, T2.9).
 - `learning_tracker/lib/core/sync/merge/bookmark_merger.dart` (new)
 - `learning_tracker/lib/core/sync/merge/settings_merger.dart` (new)
 - `learning_tracker/lib/core/sync/merge/stage_definition_merger.dart` (new)
+- `learning_tracker/lib/core/sync/merge/drift_merge_store.dart` (new — concrete MergeStore, wired ahead of schedule in DNI-333/334/335 cutover)
+- `learning_tracker/lib/core/sync/providers/merge_router_provider.dart` (new — Riverpod provider wiring all 7 mergers)
+- `learning_tracker/lib/core/sync/firestore_gateway_impl.dart` (modified — added _normalizeRow to convert Timestamp SDK objects to ISO strings at the gateway boundary)
 - `learning_tracker/test/story_acceptance/epic_25_story_13_merge_router_test.dart` (new)
 - `Makefile` (modified: added `test-story-25.13` target)
 - `docs/stories/implementation/DNI-334-sync-engine-decomp-part2-merge-router.md` (new)
 
 ## Dev Agent Record
 
-- Branched from `dev-dni-333` (`b2486d55`) so the `MergeDispatcher` /
-  `MergeOutcome` interfaces from DNI-333 are available. When dev-dni-333
-  merges to dev, this branch should rebase cleanly.
-- Schema unchanged.
-- No new pub dependencies — mergers talk to a small `MergeStore` adapter
-  interface; concrete `DriftMergeStore` will be wired up in DNI-335 once
-  the listener supervisor exists to drive sustained pulls and feed real
-  pages from Firestore. This keeps the merger unit tests free of
-  Drift / Firestore wiring.
+- All work landed on `dev` directly in the DNI-333/334/335 combined cutover
+  commit (`9c862d1a`). Schema unchanged.
+- `DriftMergeStore` (concrete MergeStore) was wired ahead of schedule in the
+  cutover — the DNI-335 prerequisite was not necessary in practice.
 - Append-only mergers (`CompletionEventMerger`, `StreakEventMerger`) use
   `MergeStore.insertIfAbsent` keyed by `firestore_id` (or a deterministic
   composite key) — the composite-UNIQUE indexes from DNI-323 already
@@ -77,6 +75,10 @@ entity is a one-file addition rather than a 12-touch sprawl (NFR20, T2.9).
 - `StageDefinitionMerger.mergedFields` lists every preserved field so a
   future developer cannot regress T1.9 without explicitly editing the
   list (which would also fail review by inspection).
+- Code review fix: `FirestoreGatewayImpl._normalizeRow` was added to convert
+  Firestore `Timestamp` SDK objects to ISO strings at the gateway read boundary
+  — preventing silent merge failures if `updated_at` fields are stored as
+  Timestamps rather than ISO strings.
 
 ## Change Log
 
@@ -84,3 +86,7 @@ entity is a one-file addition rather than a 12-touch sprawl (NFR20, T2.9).
   passing. `make test-story-25.12` (DNI-333 regression) — 6/6 passing.
   `make epic_25_schema_core_test.dart` (DNI-326 outbox regression) — 13/13
   passing. Analyzer clean on changed paths.
+- 2026-05-15 — Code review (AI): all 5 ACs confirmed implemented. Added
+  `_normalizeRow` to gateway to fix Timestamp boundary leak; corrected
+  misleading MergeRouter comments; updated File List and Dev Agent Record.
+  Status → done.

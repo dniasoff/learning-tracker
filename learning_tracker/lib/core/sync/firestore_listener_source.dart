@@ -8,13 +8,16 @@ import 'package:learning_tracker/core/sync/listener_supervisor.dart';
 /// brand-new streams so that a `restart()` cancels old subscriptions before
 /// attaching new ones — matching the correctness contract in DNI-335.
 ///
-/// Channels exposed:
+/// Channels exposed (each must have a matching entry in
+/// `SyncOrchestratorImpl._channelToKind` and an [EntityMerger]):
 ///   completions       — profile subcollection
 ///   bookmarks         — profile subcollection
 ///   settings          — profile subcollection
 ///   streak            — single-document stream
 ///   curriculum_tracks — profile subcollection
-///   learning_order    — profile subcollection
+///
+/// `learning_order` is intentionally absent — it has no [EntityMerger] yet
+/// and is covered by `PullPipeline.pullLearningOrder()` on launch.
 class FirestoreListenerSource implements ListenerSource {
   FirestoreListenerSource({
     required FirestoreGateway gateway,
@@ -48,10 +51,6 @@ class FirestoreListenerSource implements ListenerSource {
       'curriculum_tracks': _gateway.listenToCollection(
         profileId: _profileId,
         collection: 'curriculum_tracks',
-      ),
-      'learning_order': _gateway.listenToCollection(
-        profileId: _profileId,
-        collection: 'learning_order',
       ),
     };
   }

@@ -7,9 +7,9 @@ import 'package:learning_tracker/features/auth/domain/repositories/auth_reposito
 ///
 /// **This is the only file in `lib/` permitted to import
 /// `package:cloud_firestore/cloud_firestore.dart`** — the acceptance test
-/// for Story 25.12 enforces that invariant (with a transitional allowlist
-/// for the legacy `features/sync/data/*` files that DNI-334..335 are
-/// retiring).
+/// for Story 25.12 enforces that invariant. Legacy `features/sync/data/*`
+/// files were migrated to route through this gateway in the DNI-333/334/335
+/// cutover.
 ///
 /// Collection layout (v1, set by DNI-325):
 ///   `users/{uid}/learner_profiles/{profileId}/<collection>/...`
@@ -241,7 +241,7 @@ class FirestoreGatewayImpl implements FirestoreGateway {
 
     final snapshot = await query.get();
     final rows = snapshot.docs
-        .map((doc) => {...doc.data(), 'firestore_id': doc.id})
+        .map((doc) => _normalizeRow({...doc.data(), 'firestore_id': doc.id}))
         .toList(growable: false);
     return FirestorePage(rows: rows);
   }
@@ -257,7 +257,7 @@ class FirestoreGatewayImpl implements FirestoreGateway {
     if (ref == null) return [];
     final snapshot = await ref.get();
     return snapshot.docs
-        .map((doc) => {...doc.data(), 'firestore_id': doc.id})
+        .map((doc) => _normalizeRow({...doc.data(), 'firestore_id': doc.id}))
         .toList(growable: false);
   }
 
@@ -393,7 +393,7 @@ class FirestoreGatewayImpl implements FirestoreGateway {
     return ref
         .snapshots()
         .map((s) => s.docs
-            .map((d) => {...d.data(), 'firestore_id': d.id})
+            .map((d) => _normalizeRow({...d.data(), 'firestore_id': d.id}))
             .toList(growable: false));
   }
 
@@ -409,7 +409,7 @@ class FirestoreGatewayImpl implements FirestoreGateway {
       if (!s.exists) return null;
       final data = s.data();
       if (data == null) return null;
-      return {...data, 'firestore_id': s.id};
+      return _normalizeRow({...data, 'firestore_id': s.id});
     });
   }
 
@@ -423,7 +423,7 @@ class FirestoreGatewayImpl implements FirestoreGateway {
         .collection('learner_profiles')
         .get();
     return snap.docs
-        .map((d) => {...d.data(), 'firestore_id': d.id})
+        .map((d) => _normalizeRow({...d.data(), 'firestore_id': d.id}))
         .toList(growable: false);
   }
 
@@ -439,10 +439,24 @@ class FirestoreGatewayImpl implements FirestoreGateway {
     if (!snap.exists) return null;
     final data = snap.data();
     if (data == null) return null;
-    return {...data, 'firestore_id': snap.id};
+    return _normalizeRow({...data, 'firestore_id': snap.id});
   }
 
   // ── helpers ───────────────────────────────────────────────────────────────
+
+  /// Converts Firestore-specific types to plain Dart values so the merge
+  /// pipeline never sees SDK types (e.g. [Timestamp] → ISO-8601 String).
+  ///
+  /// This keeps the gateway boundary clean — callers only see
+  /// `Map<String, dynamic>` with standard Dart types.
+  static Map<String, dynamic> _normalizeRow(Map<String, dynamic> raw) {
+    return raw.map((key, value) {
+      if (value is Timestamp) {
+        return MapEntry(key, value.toDate().toUtc().toIso8601String());
+      }
+      return MapEntry(key, value);
+    });
+  }
 
   /// Returns the account-level learner-profile document reference.
   ///

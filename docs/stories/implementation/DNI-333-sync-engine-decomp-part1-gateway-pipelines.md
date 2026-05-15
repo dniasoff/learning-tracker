@@ -1,6 +1,6 @@
 # DNI-333 — 25.12 SyncEngine decomp Part 1 — FirestoreGateway, PushPipeline, PullPipeline
 
-Status: review
+Status: done
 
 Linear: https://linear.app/orvexai/issue/DNI-333
 
@@ -50,6 +50,8 @@ the remaining building blocks.
 - `learning_tracker/lib/core/sync/firestore_gateway_impl.dart` (new)
 - `learning_tracker/lib/core/sync/pull_pipeline.dart` (new)
 - `learning_tracker/lib/core/sync/push_pipeline_impl.dart` (new)
+- `learning_tracker/lib/core/sync/outbox/push_pipeline.dart` (modified: removed stale TODOs)
+- `learning_tracker/lib/features/sync/data/firestore_data_source.dart` (modified: migrated off cloud_firestore → FirestoreGateway; prerequisite for AC1 being fully clean)
 - `learning_tracker/test/story_acceptance/epic_25_story_12_sync_decomp_part1_test.dart` (new)
 - `Makefile` (modified: added `test-story-25.12` target)
 - `docs/stories/implementation/DNI-333-sync-engine-decomp-part1-gateway-pipelines.md` (new)
@@ -58,16 +60,20 @@ the remaining building blocks.
 
 - Schema unchanged (v13 from DNI-326).
 - No new pub dependencies added; `fake_cloud_firestore` deferred to DNI-377 —
-  unit tests here use plain Dart test doubles implementing the gateway
-  interface, which is sufficient because the gateway is the only Firestore
-  seam.
-- Legacy `features/sync/data/sync_engine.dart` and `firestore_data_source.dart`
-  remain untouched. The next two stories (DNI-334 MergeRouter and DNI-335
-  ListenerSupervisor) replace their merge + listener responsibilities; after
-  those land, the legacy SyncEngine collapses to a thin coordinator delegating
-  to the three new classes.
+  unit tests use plain Dart test doubles implementing the gateway interface.
+- `firestore_data_source.dart` was migrated from direct `cloud_firestore` import
+  to routing through `FirestoreGateway`; this was done ahead of schedule as part
+  of the DNI-333/334/335 combined cutover commit, ensuring AC1 is fully clean
+  (no allowlist needed).
+- `sync_engine.dart` retains its coordinator role but no longer imports
+  `cloud_firestore` directly — all Firestore I/O now goes through
+  `FirestoreGateway`.
 
 ## Change Log
 
 - 2026-05-13 — Initial implementation. Acceptance test green (`make
   test-story-25.12` — 6 passing). Analyzer clean on changed paths.
+- 2026-05-15 — Code review (AI): all 4 ACs confirmed implemented. Fixed stale
+  TODO comments in push_pipeline.dart, updated misleading allowlist reference in
+  firestore_gateway_impl.dart, completed File List and Dev Agent Record.
+  Status → done.

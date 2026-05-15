@@ -5,9 +5,10 @@ import 'package:learning_tracker/core/sync/pull_pipeline.dart';
 /// [EntityMerger] by entity kind.
 ///
 /// `MergeRouter implements MergeDispatcher`, so it slots directly into the
-/// constructor of `PullPipeline`. The static map of mergers is the *only*
-/// place outside [EntityKind] that enumerates the kind taxonomy — adding a
-/// new entity is therefore a one-file addition plus one map entry.
+/// constructor of `PullPipeline`. Adding a new entity kind requires exactly
+/// three touches in this file: one `EntityKind` constant, one `case` label in
+/// the exhaustiveness switch below, and one entry in the `mergers` map. No
+/// other production file enumerates the full kind set.
 class MergeRouter implements MergeDispatcher {
   MergeRouter({required Map<String, EntityMerger> mergers})
     : _mergers = mergers;
@@ -22,8 +23,9 @@ class MergeRouter implements MergeDispatcher {
   }) async {
     if (rows.isEmpty) return MergeOutcome.continueNext;
 
-    // The router's switch is expressed as a map lookup so adding a kind
-    // costs exactly one map entry — no chain of `case` statements to grow.
+    // All valid kinds fall through to the map lookup. The exhaustiveness
+    // switch ensures the default halt fires for unknown kinds, and that
+    // adding a kind requires a new case label here (plus a map entry).
     switch (kind) {
       case EntityKind.completion:
       case EntityKind.streak:
