@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:learning_tracker/core/content/hierarchy_selection.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/services/learning_program_service.dart';
@@ -563,9 +564,7 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
     );
   }
 
-  Future<void> _finishFlow({
-    SelfPacedPriorCompletionSelection? priorCompletionSelection,
-  }) async {
+  Future<void> _finishFlow({Set<HierarchySelection>? priorSelections}) async {
     if (_isFinishing) return;
     _isFinishing = true;
 
@@ -607,9 +606,9 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
 
       await invalidateAfterTrackDataChange(ref, widget.profileId);
 
-      if (!_isProgramTrack && priorCompletionSelection != null) {
+      if (!_isProgramTrack && priorSelections != null) {
         unawaited(
-          _applySelfPacedPriorCompletions(priorCompletionSelection).then(
+          _applySelfPacedPriorCompletions(priorSelections).then(
             (_) {
               // Bulk marking completed in background.
             },
@@ -640,31 +639,15 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
   }
 
   Future<({int itemCount, int completionCount})>
-  _applySelfPacedPriorCompletions(
-    SelfPacedPriorCompletionSelection selection,
-  ) async {
+  _applySelfPacedPriorCompletions(Set<HierarchySelection> selections) async {
+    if (selections.isEmpty) return (itemCount: 0, completionCount: 0);
+
     final service = ref.read(bulkPriorCompletionServiceProvider);
     final curriculum = _state.curriculumId!;
 
-    final hierarchySelections = selection.markAll
-        ? const [HierarchySelection()]
-        : selection.selectedScopes.map((s) {
-            return switch (s.level) {
-              1 => HierarchySelection(level1: s.value),
-              2 => HierarchySelection(level2: s.value),
-              3 => HierarchySelection(level3: s.value),
-              4 => HierarchySelection(level4: s.value),
-              _ => const HierarchySelection(),
-            };
-          }).toList();
-
-    if (hierarchySelections.isEmpty) {
-      return (itemCount: 0, completionCount: 0);
-    }
-
     final resolved = await service.resolveSelections(
       curriculumId: curriculum,
-      selections: hierarchySelections,
+      selections: selections.toList(),
     );
     if (resolved.isEmpty) {
       return (itemCount: 0, completionCount: 0);
@@ -895,8 +878,8 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
         curriculumId: _state.curriculumId!,
         scopeSelections: _state.scopeSelections,
         onSkip: () => unawaited(_finishFlow()),
-        onMarkCompleted: (selection) =>
-            unawaited(_finishFlow(priorCompletionSelection: selection)),
+        onMarkCompleted: (selections) =>
+            unawaited(_finishFlow(priorSelections: selections)),
       );
     }
 
