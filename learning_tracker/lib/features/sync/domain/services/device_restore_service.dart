@@ -6,9 +6,9 @@ import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/cross_profile_scope.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
+import 'package:learning_tracker/core/sync/firestore_gateway.dart';
 import 'package:learning_tracker/core/sync/sync_orchestrator.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/curriculum_import_service.dart';
-import 'package:learning_tracker/features/sync/data/firestore_data_source.dart';
 import 'package:learning_tracker/features/sync/domain/models/restore_status.dart';
 import 'package:learning_tracker/features/sync/domain/models/sync_status.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -32,20 +32,26 @@ class DeviceRestoreService {
   DeviceRestoreService({
     required UserDatabase database,
     required SyncOrchestrator syncOrchestrator,
-    required FirestoreDataSource firestoreDataSource,
+    required FirestoreGateway firestoreGateway,
+    required int profileId,
+    required bool isAuthenticated,
     required CurriculumImportService curriculumImportService,
     required AppLogger logger,
     AnalyticsService? analytics,
   }) : _database = database,
        _syncOrchestrator = syncOrchestrator,
-       _firestoreDataSource = firestoreDataSource,
+       _firestoreGateway = firestoreGateway,
+       _profileId = profileId,
+       _isAuthenticated = isAuthenticated,
        _curriculumImportService = curriculumImportService,
        _logger = logger,
        _analytics = analytics ?? const NullAnalyticsService();
 
   final UserDatabase _database;
   final SyncOrchestrator _syncOrchestrator;
-  final FirestoreDataSource _firestoreDataSource;
+  final FirestoreGateway _firestoreGateway;
+  final int _profileId;
+  final bool _isAuthenticated;
   final CurriculumImportService _curriculumImportService;
   final AppLogger _logger;
   final AnalyticsService _analytics;
@@ -84,14 +90,8 @@ class DeviceRestoreService {
     // install. This catches the reinstall case even if stale profile
     // rows exist locally (otherwise the empty-completions check would
     // be hidden by leftover SQLite state).
-    String? firebaseUid;
-    try {
-      firebaseUid = _firestoreDataSource.isAuthenticated
-          ? 'authenticated' // non-null sentinel: session is active
-          : null;
-    } catch (_) {
-      // Firebase not initialized (e.g. test environment) — treat as no session.
-    }
+    // Use the injected authenticated flag (set at construction time).
+    final firebaseUid = _isAuthenticated ? 'authenticated' : null;
     final analytics = ParentAnalyticsRepositoryImpl(_database);
     final completions = await analytics.getAllCompletions(
       scope: CrossProfileScope.syncRestore,
@@ -183,7 +183,10 @@ class DeviceRestoreService {
           totalSteps: totalSteps,
         ),
       );
-      final allTracks = await _firestoreDataSource.fetchCurriculumTracks();
+      final allTracks = await _firestoreGateway.fetchAll(
+        profileId: _profileId,
+        collection: 'curriculum_tracks',
+      );
       final activeCurriculaKeys = allTracks
           .where((t) => t['is_active'] == true)
           .map((t) => t['curriculum_id'] as String?)

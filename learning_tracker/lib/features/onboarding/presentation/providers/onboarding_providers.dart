@@ -1,8 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/analytics/analytics_provider.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
-import 'package:learning_tracker/core/providers/firebase_providers.dart';
 import 'package:learning_tracker/core/services/learning_program_service.dart';
+import 'package:learning_tracker/core/sync/providers/outbox_providers.dart'
+    show firestoreGatewayProvider;
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/bookmark_providers.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/completion_providers.dart';
@@ -22,10 +23,10 @@ part 'onboarding_providers.g.dart';
 @Riverpod(keepAlive: true)
 UserProfileService userProfileService(Ref ref) {
   final db = ref.watch(userDatabaseProvider);
-  final firestore = ref.watch(firebaseFirestoreProvider);
+  final gateway = ref.watch(firestoreGatewayProvider);
   return UserProfileService(
     userProfileDao: db.userProfileDao,
-    pushUserProfile: createFirestorePush(firestore),
+    pushUserProfile: createFirestorePushFromGateway(gateway),
   );
 }
 

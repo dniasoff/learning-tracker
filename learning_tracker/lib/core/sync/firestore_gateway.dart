@@ -108,6 +108,63 @@ abstract class FirestoreGateway {
     required int profileId,
     required String collection,
   });
+
+  // ── Step 1 additions (DNI-333 cutover) ────────────────────────────────────
+
+  Future<void> pushGoal({
+    required int profileId,
+    required Map<String, dynamic> data,
+  });
+
+  Future<void> pushUiPreferences({
+    required int profileId,
+    required Map<String, dynamic> data,
+  });
+
+  /// Push account-level profile document at `users/{uid}`.
+  Future<void> pushAccountProfile({required Map<String, dynamic> data});
+
+  Future<void> pushCurriculumImportMetadata({
+    required int profileId,
+    required Map<String, dynamic> data,
+  });
+
+  /// Batch-delete all user subcollections under `users/{uid}`.
+  Future<void> deleteUserData(String uid);
+
+  Future<void> pushDiagnosticLog({
+    required String uid,
+    required Map<String, dynamic> data,
+  });
+
+  /// Write the `users/{uid}` document (account-level user profile).
+  Future<void> pushAccountUserProfile({
+    required String uid,
+    required Map<String, dynamic> data,
+  });
+
+  /// Open a real-time stream of a profile subcollection.
+  Stream<List<Map<String, dynamic>>> listenToCollection({
+    required int profileId,
+    required String collection,
+  });
+
+  /// Open a real-time stream of a single document in a profile subcollection.
+  Stream<Map<String, dynamic>?> listenToDocument({
+    required int profileId,
+    required String collection,
+    required String docId,
+  });
+
+  /// Fetch all learner profile documents at `users/{uid}/learner_profiles/`.
+  Future<List<Map<String, dynamic>>> fetchLearnerProfiles();
+
+  /// Fetch a single document from a profile subcollection.
+  Future<Map<String, dynamic>?> fetchDocument({
+    required int profileId,
+    required String collection,
+    required String docId,
+  });
 }
 
 /// Result of [FirestoreGateway.fetchPage].

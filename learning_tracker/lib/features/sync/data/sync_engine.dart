@@ -1,6 +1,4 @@
 import 'dart:async';
-import 'package:cloud_firestore/cloud_firestore.dart'
-    show FirebaseException, Timestamp;
 import 'package:drift/drift.dart';
 import 'package:learning_tracker/core/analytics/analytics_service.dart';
 import 'package:learning_tracker/core/analytics/parent_analytics_repository.dart';
@@ -512,7 +510,11 @@ class SyncEngine implements SyncWriteFacade {
   /// Check if an error is a Firestore PERMISSION_DENIED and track it.
   /// Returns true if the error is permission-denied.
   bool _trackPushError(Object e) {
-    if (e is FirebaseException && e.code == 'permission-denied') {
+    // FirebaseException is no longer imported directly — detect by message
+    // content. The gateway wraps cloud_firestore exceptions; PERMISSION_DENIED
+    // surfaces as an Exception whose toString contains 'permission-denied'.
+    final isPermissionDenied = e.toString().contains('permission-denied');
+    if (isPermissionDenied) {
       _consecutivePushPermissionErrors++;
       if (_pushSuppressed) {
         _logger.warning(
@@ -1025,12 +1027,22 @@ class SyncEngine implements SyncWriteFacade {
 
   // ========== Conflict Resolution & Merge ==========
 
-  /// Convert a Firestore Timestamp or ISO string to DateTime.
+  /// Convert a Firestore Timestamp (as Map), ISO string, or DateTime to
+  /// [DateTime]. Firestore Timestamps arrive as `{seconds: int, nanoseconds:
+  /// int}` maps after passing through [FirestoreGateway].
   DateTime? _parseTimestamp(dynamic value) {
     if (value == null) return null;
     if (value is DateTime) return value;
-    if (value is Timestamp) return value.toDate();
     if (value is String) return DateTime.tryParse(value);
+    if (value is int) {
+      return DateTime.fromMillisecondsSinceEpoch(value * 1000, isUtc: true);
+    }
+    if (value is Map) {
+      final s = value['seconds'];
+      if (s is int) {
+        return DateTime.fromMillisecondsSinceEpoch(s * 1000, isUtc: true);
+      }
+    }
     return null;
   }
 
@@ -2750,7 +2762,7 @@ class SyncEngine implements SyncWriteFacade {
     // Distinguish PERMISSION_DENIED (auth issue) from other errors (quota).
     // Permission errors should detach immediately — retrying just wastes
     // requests and the 3-strike counter would misattribute them as quota.
-    if (error is FirebaseException && error.code == 'permission-denied') {
+    if (error.toString().contains('permission-denied')) {
       _logger.warning(event: 'sync_listener_permission_denied_detaching');
       detachListeners();
       _updateStatus(

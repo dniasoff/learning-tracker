@@ -2,12 +2,12 @@ import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
-import 'package:learning_tracker/features/sync/data/firestore_data_source.dart';
+import 'package:learning_tracker/core/sync/firestore_gateway.dart';
 import 'package:learning_tracker/features/sync/data/offline_queue.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:talker/talker.dart';
 
-class MockFirestoreDataSource extends Mock implements FirestoreDataSource {}
+class _MockFirestoreGateway extends Mock implements FirestoreGateway {}
 
 UserDatabase _createInMemoryDatabase() {
   return UserDatabase(NativeDatabase.memory());
@@ -15,18 +15,18 @@ UserDatabase _createInMemoryDatabase() {
 
 void main() {
   late UserDatabase database;
-  late MockFirestoreDataSource mockFirestore;
+  late _MockFirestoreGateway mockFirestore;
   late AppLogger logger;
   late OfflineQueue offlineQueue;
 
   setUp(() {
     database = _createInMemoryDatabase();
-    mockFirestore = MockFirestoreDataSource();
+    mockFirestore = _MockFirestoreGateway();
     logger = AppLogger(Talker());
 
     offlineQueue = OfflineQueue(
       database: database,
-      firestoreDataSource: mockFirestore,
+      firestoreGateway: mockFirestore,
       logger: logger,
     );
   });
@@ -113,7 +113,12 @@ void main() {
     });
 
     test('flush pushes completions to Firestore', () async {
-      when(() => mockFirestore.pushCompletion(any())).thenAnswer((_) async {});
+      when(
+        () => mockFirestore.pushCompletion(
+          profileId: any(named: 'profileId'),
+          data: any(named: 'data'),
+        ),
+      ).thenAnswer((_) async {});
 
       final data = {'curriculum_id': 'mishnayos', 'content_item_id': 1};
       await offlineQueue.enqueueCompletion(data);
@@ -123,7 +128,9 @@ void main() {
 
       verify(
         () => mockFirestore.pushCompletion(
-          any(
+          profileId: any(named: 'profileId'),
+          data: any(
+            named: 'data',
             that: predicate<Map<String, dynamic>>(
               (m) => m['curriculum_id'] == 'mishnayos',
             ),
@@ -137,7 +144,12 @@ void main() {
     });
 
     test('flush pushes bookmarks to Firestore', () async {
-      when(() => mockFirestore.pushBookmark(any())).thenAnswer((_) async {});
+      when(
+        () => mockFirestore.pushBookmark(
+          profileId: any(named: 'profileId'),
+          data: any(named: 'data'),
+        ),
+      ).thenAnswer((_) async {});
 
       await offlineQueue.enqueueBookmark({
         'curriculum_id': 'bavli',
@@ -146,42 +158,74 @@ void main() {
 
       final syncedCount = await offlineQueue.flush();
       expect(syncedCount, 1);
-      verify(() => mockFirestore.pushBookmark(any())).called(1);
+      verify(
+        () => mockFirestore.pushBookmark(
+          profileId: any(named: 'profileId'),
+          data: any(named: 'data'),
+        ),
+      ).called(1);
     });
 
     test('flush pushes settings to Firestore', () async {
-      when(() => mockFirestore.pushSettings(any())).thenAnswer((_) async {});
+      when(
+        () => mockFirestore.pushSettings(
+          profileId: any(named: 'profileId'),
+          data: any(named: 'data'),
+        ),
+      ).thenAnswer((_) async {});
 
       await offlineQueue.enqueueSettings({'curriculum_id': 'mishnayos'});
 
       final syncedCount = await offlineQueue.flush();
       expect(syncedCount, 1);
-      verify(() => mockFirestore.pushSettings(any())).called(1);
+      verify(
+        () => mockFirestore.pushSettings(
+          profileId: any(named: 'profileId'),
+          data: any(named: 'data'),
+        ),
+      ).called(1);
     });
 
     test('flush pushes streak to Firestore', () async {
-      when(() => mockFirestore.pushStreak(any())).thenAnswer((_) async {});
+      when(
+        () => mockFirestore.pushStreak(
+          profileId: any(named: 'profileId'),
+          data: any(named: 'data'),
+        ),
+      ).thenAnswer((_) async {});
 
       await offlineQueue.enqueueStreak({'current_count': 3});
 
       final syncedCount = await offlineQueue.flush();
       expect(syncedCount, 1);
-      verify(() => mockFirestore.pushStreak(any())).called(1);
+      verify(
+        () => mockFirestore.pushStreak(
+          profileId: any(named: 'profileId'),
+          data: any(named: 'data'),
+        ),
+      ).called(1);
     });
 
     test('flush pushes profile to Firestore', () async {
-      when(() => mockFirestore.pushProfile(any())).thenAnswer((_) async {});
+      when(
+        () => mockFirestore.pushAccountProfile(data: any(named: 'data')),
+      ).thenAnswer((_) async {});
 
       await offlineQueue.enqueueProfile({'firebase_uid': 'uid-123'});
 
       final syncedCount = await offlineQueue.flush();
       expect(syncedCount, 1);
-      verify(() => mockFirestore.pushProfile(any())).called(1);
+      verify(
+        () => mockFirestore.pushAccountProfile(data: any(named: 'data')),
+      ).called(1);
     });
 
     test('flush pushes curriculum import metadata to Firestore', () async {
       when(
-        () => mockFirestore.pushCurriculumImportMetadata(any()),
+        () => mockFirestore.pushCurriculumImportMetadata(
+          profileId: any(named: 'profileId'),
+          data: any(named: 'data'),
+        ),
       ).thenAnswer((_) async {});
 
       await offlineQueue.enqueueCurriculumImportMetadata({
@@ -191,13 +235,33 @@ void main() {
 
       final syncedCount = await offlineQueue.flush();
       expect(syncedCount, 1);
-      verify(() => mockFirestore.pushCurriculumImportMetadata(any())).called(1);
+      verify(
+        () => mockFirestore.pushCurriculumImportMetadata(
+          profileId: any(named: 'profileId'),
+          data: any(named: 'data'),
+        ),
+      ).called(1);
     });
 
     test('flush handles mixed operation types', () async {
-      when(() => mockFirestore.pushCompletion(any())).thenAnswer((_) async {});
-      when(() => mockFirestore.pushBookmark(any())).thenAnswer((_) async {});
-      when(() => mockFirestore.pushSettings(any())).thenAnswer((_) async {});
+      when(
+        () => mockFirestore.pushCompletion(
+          profileId: any(named: 'profileId'),
+          data: any(named: 'data'),
+        ),
+      ).thenAnswer((_) async {});
+      when(
+        () => mockFirestore.pushBookmark(
+          profileId: any(named: 'profileId'),
+          data: any(named: 'data'),
+        ),
+      ).thenAnswer((_) async {});
+      when(
+        () => mockFirestore.pushSettings(
+          profileId: any(named: 'profileId'),
+          data: any(named: 'data'),
+        ),
+      ).thenAnswer((_) async {});
 
       await offlineQueue.enqueueCompletion({'id': '1'});
       await offlineQueue.enqueueBookmark({'id': '2'});
@@ -212,9 +276,17 @@ void main() {
 
     test('flush marks failed operations and continues', () async {
       when(
-        () => mockFirestore.pushCompletion(any()),
+        () => mockFirestore.pushCompletion(
+          profileId: any(named: 'profileId'),
+          data: any(named: 'data'),
+        ),
       ).thenThrow(Exception('Network error'));
-      when(() => mockFirestore.pushBookmark(any())).thenAnswer((_) async {});
+      when(
+        () => mockFirestore.pushBookmark(
+          profileId: any(named: 'profileId'),
+          data: any(named: 'data'),
+        ),
+      ).thenAnswer((_) async {});
 
       await offlineQueue.enqueueCompletion({'id': '1'});
       await offlineQueue.enqueueBookmark({'id': '2'});
@@ -245,16 +317,31 @@ void main() {
     test('flush processes entries in FIFO order', () async {
       final pushOrder = <String>[];
 
-      when(() => mockFirestore.pushCompletion(any())).thenAnswer((inv) async {
-        final payload = inv.positionalArguments[0] as Map<String, dynamic>;
+      when(
+        () => mockFirestore.pushCompletion(
+          profileId: any(named: 'profileId'),
+          data: any(named: 'data'),
+        ),
+      ).thenAnswer((inv) async {
+        final payload = inv.namedArguments[#data] as Map<String, dynamic>;
         pushOrder.add('completion:${payload['id']}');
       });
-      when(() => mockFirestore.pushBookmark(any())).thenAnswer((inv) async {
-        final payload = inv.positionalArguments[0] as Map<String, dynamic>;
+      when(
+        () => mockFirestore.pushBookmark(
+          profileId: any(named: 'profileId'),
+          data: any(named: 'data'),
+        ),
+      ).thenAnswer((inv) async {
+        final payload = inv.namedArguments[#data] as Map<String, dynamic>;
         pushOrder.add('bookmark:${payload['id']}');
       });
-      when(() => mockFirestore.pushSettings(any())).thenAnswer((inv) async {
-        final payload = inv.positionalArguments[0] as Map<String, dynamic>;
+      when(
+        () => mockFirestore.pushSettings(
+          profileId: any(named: 'profileId'),
+          data: any(named: 'data'),
+        ),
+      ).thenAnswer((inv) async {
+        final payload = inv.namedArguments[#data] as Map<String, dynamic>;
         pushOrder.add('settings:${payload['id']}');
       });
 
@@ -282,7 +369,7 @@ void main() {
       // on-disk SQLite file.
       final newQueue = OfflineQueue(
         database: database,
-        firestoreDataSource: mockFirestore,
+        firestoreGateway: mockFirestore,
         logger: AppLogger(Talker()),
       );
 
@@ -294,7 +381,10 @@ void main() {
   group('OfflineQueue retry with exponential backoff', () {
     test('failed push increments retry count', () async {
       when(
-        () => mockFirestore.pushCompletion(any()),
+        () => mockFirestore.pushCompletion(
+          profileId: any(named: 'profileId'),
+          data: any(named: 'data'),
+        ),
       ).thenThrow(Exception('Network error'));
 
       await offlineQueue.enqueueCompletion({'id': '1'});
@@ -310,7 +400,10 @@ void main() {
 
     test('after 5 retries, entry marked as failed (not retried)', () async {
       when(
-        () => mockFirestore.pushCompletion(any()),
+        () => mockFirestore.pushCompletion(
+          profileId: any(named: 'profileId'),
+          data: any(named: 'data'),
+        ),
       ).thenThrow(Exception('persistent error'));
 
       // Enqueue and manually set retryCount to 5 (= maxRetries)
@@ -337,9 +430,24 @@ void main() {
 
   group('OfflineQueue batch processing', () {
     test('flush with batchSize processes all items in batches', () async {
-      when(() => mockFirestore.pushCompletion(any())).thenAnswer((_) async {});
-      when(() => mockFirestore.pushBookmark(any())).thenAnswer((_) async {});
-      when(() => mockFirestore.pushSettings(any())).thenAnswer((_) async {});
+      when(
+        () => mockFirestore.pushCompletion(
+          profileId: any(named: 'profileId'),
+          data: any(named: 'data'),
+        ),
+      ).thenAnswer((_) async {});
+      when(
+        () => mockFirestore.pushBookmark(
+          profileId: any(named: 'profileId'),
+          data: any(named: 'data'),
+        ),
+      ).thenAnswer((_) async {});
+      when(
+        () => mockFirestore.pushSettings(
+          profileId: any(named: 'profileId'),
+          data: any(named: 'data'),
+        ),
+      ).thenAnswer((_) async {});
 
       await offlineQueue.enqueueCompletion({'id': '1'});
       await offlineQueue.enqueueBookmark({'id': '2'});

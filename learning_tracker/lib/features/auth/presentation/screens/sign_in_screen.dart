@@ -10,6 +10,8 @@ import 'package:learning_tracker/core/database/registry/device_registry_database
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/providers/registry_provider.dart';
+import 'package:learning_tracker/core/sync/providers/outbox_providers.dart'
+    show firestoreGatewayProvider;
 import 'package:learning_tracker/core/sync/providers/sync_orchestrator_providers.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/auth/data/services/magic_link_service.dart';
@@ -633,7 +635,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
       // network call so a hung Firestore read cannot freeze the spinner.
       final remoteProfiles =
           await ref
-              .read(firestoreDataSourceProvider)
+              .read(firestoreGatewayProvider)
               ?.fetchLearnerProfiles()
               .timeout(
                 const Duration(seconds: 8),

@@ -1,8 +1,8 @@
 import 'dart:developer' as developer;
 
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:learning_tracker/core/database/daos/user_profile_dao.dart';
 import 'package:learning_tracker/core/enums/user_mode.dart';
+import 'package:learning_tracker/core/sync/firestore_gateway.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 
 /// Callback type for pushing user profile data to Firestore.
@@ -13,18 +13,24 @@ typedef PushUserProfile =
       required String userMode,
     });
 
-/// Default Firestore push implementation.
-PushUserProfile createFirestorePush(FirebaseFirestore firestore) {
+/// Gateway-based Firestore push implementation.
+///
+/// Replaces [createFirestorePush] — uses the [FirestoreGateway] seam so
+/// `cloud_firestore` types do not leak into feature code.
+PushUserProfile createFirestorePushFromGateway(FirestoreGateway? gateway) {
   return ({
     required String firebaseUid,
     required String displayName,
     required String userMode,
   }) async {
-    await firestore.collection('users').doc(firebaseUid).set({
-      'displayName': displayName,
-      'userMode': userMode,
-      'updatedAt': FieldValue.serverTimestamp(),
-    }, SetOptions(merge: true));
+    if (gateway == null) return;
+    await gateway.pushAccountUserProfile(
+      uid: firebaseUid,
+      data: {
+        'displayName': displayName,
+        'userMode': userMode,
+      },
+    );
   };
 }
 

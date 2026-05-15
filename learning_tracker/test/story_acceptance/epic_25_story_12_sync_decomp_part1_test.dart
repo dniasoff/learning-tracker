@@ -34,14 +34,14 @@ void main() {
           reason: 'must run from learning_tracker/ working dir',
         );
 
+        // The canonical importer — all other files must be in canonicalZone
+        // or be an offender. `firestore_instance_provider.dart` lives in
+        // `core/sync/` (the allowed zone) and provides the Riverpod-level
+        // FirebaseFirestore instance; it is a sanctioned second importer.
         const canonical = 'core/sync/firestore_gateway_impl.dart';
-        const transitionalAllowlist = <String>{
-          'features/sync/data/firestore_data_source.dart',
-          'features/sync/data/sync_engine.dart',
-          'features/auth/domain/services/account_lifecycle_service.dart',
-          'features/onboarding/domain/services/user_profile_service.dart',
-          'features/settings/presentation/utils/send_logs_service.dart',
-          'core/providers/firebase_providers.dart',
+        const canonicalZone = <String>{
+          canonical,
+          'core/sync/providers/firestore_instance_provider.dart',
         };
 
         final offenders = <String>[];
@@ -62,7 +62,7 @@ void main() {
             canonicalFile = entity;
             continue;
           }
-          if (transitionalAllowlist.contains(rel)) continue;
+          if (canonicalZone.contains(rel)) continue;
           offenders.add(rel);
         }
 
@@ -77,8 +77,7 @@ void main() {
           offenders,
           isEmpty,
           reason:
-              'DNI-333 AC: only firestore_gateway_impl.dart and the '
-              'documented transitional allowlist may import '
+              'DNI-333 AC: only files in core/sync/ may import '
               'cloud_firestore. New offenders: $offenders',
         );
       });
@@ -329,6 +328,55 @@ class _RecordingGateway implements FirestoreGateway {
     required int profileId,
     required String collection,
   }) async => const <Map<String, dynamic>>[];
+  @override
+  Future<void> pushGoal({
+    required int profileId,
+    required Map<String, dynamic> data,
+  }) async {}
+  @override
+  Future<void> pushUiPreferences({
+    required int profileId,
+    required Map<String, dynamic> data,
+  }) async {}
+  @override
+  Future<void> pushAccountProfile({required Map<String, dynamic> data}) async {}
+  @override
+  Future<void> pushCurriculumImportMetadata({
+    required int profileId,
+    required Map<String, dynamic> data,
+  }) async {}
+  @override
+  Future<void> deleteUserData(String uid) async {}
+  @override
+  Future<void> pushDiagnosticLog({
+    required String uid,
+    required Map<String, dynamic> data,
+  }) async {}
+  @override
+  Future<void> pushAccountUserProfile({
+    required String uid,
+    required Map<String, dynamic> data,
+  }) async {}
+  @override
+  Stream<List<Map<String, dynamic>>> listenToCollection({
+    required int profileId,
+    required String collection,
+  }) => const Stream.empty();
+  @override
+  Stream<Map<String, dynamic>?> listenToDocument({
+    required int profileId,
+    required String collection,
+    required String docId,
+  }) => const Stream.empty();
+  @override
+  Future<List<Map<String, dynamic>>> fetchLearnerProfiles() async =>
+      const <Map<String, dynamic>>[];
+  @override
+  Future<Map<String, dynamic>?> fetchDocument({
+    required int profileId,
+    required String collection,
+    required String docId,
+  }) async => null;
 }
 
 class _FetchCall {
@@ -429,6 +477,55 @@ class _PagingGateway implements FirestoreGateway {
     required int profileId,
     required String collection,
   }) async => const <Map<String, dynamic>>[];
+  @override
+  Future<void> pushGoal({
+    required int profileId,
+    required Map<String, dynamic> data,
+  }) async {}
+  @override
+  Future<void> pushUiPreferences({
+    required int profileId,
+    required Map<String, dynamic> data,
+  }) async {}
+  @override
+  Future<void> pushAccountProfile({required Map<String, dynamic> data}) async {}
+  @override
+  Future<void> pushCurriculumImportMetadata({
+    required int profileId,
+    required Map<String, dynamic> data,
+  }) async {}
+  @override
+  Future<void> deleteUserData(String uid) async {}
+  @override
+  Future<void> pushDiagnosticLog({
+    required String uid,
+    required Map<String, dynamic> data,
+  }) async {}
+  @override
+  Future<void> pushAccountUserProfile({
+    required String uid,
+    required Map<String, dynamic> data,
+  }) async {}
+  @override
+  Stream<List<Map<String, dynamic>>> listenToCollection({
+    required int profileId,
+    required String collection,
+  }) => const Stream.empty();
+  @override
+  Stream<Map<String, dynamic>?> listenToDocument({
+    required int profileId,
+    required String collection,
+    required String docId,
+  }) => const Stream.empty();
+  @override
+  Future<List<Map<String, dynamic>>> fetchLearnerProfiles() async =>
+      const <Map<String, dynamic>>[];
+  @override
+  Future<Map<String, dynamic>?> fetchDocument({
+    required int profileId,
+    required String collection,
+    required String docId,
+  }) async => null;
 }
 
 class _DispatchedPage {

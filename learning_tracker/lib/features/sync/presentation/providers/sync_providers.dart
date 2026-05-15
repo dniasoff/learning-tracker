@@ -2,7 +2,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/analytics/analytics_provider.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
-import 'package:learning_tracker/core/providers/firebase_providers.dart';
 import 'package:learning_tracker/core/providers/network_providers.dart';
 import 'package:learning_tracker/core/providers/talker_provider.dart';
 import 'package:learning_tracker/core/sync/providers/outbox_providers.dart';
@@ -19,16 +18,20 @@ import 'package:learning_tracker/features/sync/domain/models/sync_status.dart';
 /// Provider for FirestoreDataSource, scoped to the active profile.
 ///
 /// Returns null when the user is not cloud-born (v2 §4.5 tier gate).
+/// NOTE: [FirestoreDataSource] is a legacy adapter kept alive while
+/// [SyncEngine] still depends on it. New code should use
+/// [firestoreGatewayProvider] instead.
 final firestoreDataSourceProvider = Provider<FirestoreDataSource?>((ref) {
   final authState = ref.watch(authStateProvider);
   if (!authState.isCloudBorn) return null;
 
-  final firestore = ref.watch(firebaseFirestoreProvider);
+  final gateway = ref.watch(firestoreGatewayProvider);
+  if (gateway == null) return null;
   final auth = ref.watch(authRepositoryProvider);
   final profileId = ref.watch(activeProfileIdProvider);
 
   return FirestoreDataSource(
-    firestore: firestore,
+    gateway: gateway,
     auth: auth,
     profileId: profileId,
   );
@@ -43,13 +46,13 @@ final offlineQueueProvider = Provider<OfflineQueue?>((ref) {
   if (!authState.isCloudBorn) return null;
 
   final database = ref.watch(userDatabaseProvider);
-  final firestoreDataSource = ref.watch(firestoreDataSourceProvider);
-  if (firestoreDataSource == null) return null;
+  final gateway = ref.watch(firestoreGatewayProvider);
+  if (gateway == null) return null;
   final talker = ref.watch(talkerProvider);
 
   return OfflineQueue(
     database: database,
-    firestoreDataSource: firestoreDataSource,
+    firestoreGateway: gateway,
     logger: AppLogger(talker),
   );
 });

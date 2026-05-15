@@ -55,4 +55,4 @@ final class UserProfileServiceProvider
 }
 
 String _$userProfileServiceHash() =>
-    r'5ef005e748a51fa6255dab3897c7030a97434af0';
+    r'7586fec5123b6fba1755da8fcec1748375daf609';

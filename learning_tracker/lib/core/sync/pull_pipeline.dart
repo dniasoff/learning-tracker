@@ -1,4 +1,5 @@
 import 'package:learning_tracker/core/sync/firestore_gateway.dart';
+import 'package:learning_tracker/core/sync/merge/entity_merger.dart';
 
 /// Signal returned by a [MergeDispatcher] after a page is merged.
 ///
@@ -77,7 +78,17 @@ class PullPipeline {
   }) => _pullCollection(
     profileId: profileId,
     collection: 'curriculum_tracks',
-    kind: 'track',
+    kind: EntityKind.trackConfig,
+    pageSize: pageSize,
+  );
+
+  Future<void> pullLearnerProfiles({
+    required int profileId,
+    int pageSize = defaultPageSize,
+  }) => _pullCollection(
+    profileId: profileId,
+    collection: 'learner_profiles',
+    kind: EntityKind.learnerProfile,
     pageSize: pageSize,
   );
 

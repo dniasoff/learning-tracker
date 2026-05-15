@@ -10,6 +10,7 @@ import 'package:learning_tracker/core/enums/cross_profile_scope.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/network/connectivity_service.dart';
+import 'package:learning_tracker/core/sync/firestore_gateway.dart';
 import 'package:learning_tracker/core/sync/sync_orchestrator.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/curriculum_import_service.dart';
 import 'package:learning_tracker/features/sync/data/firestore_data_source.dart';
@@ -24,10 +25,34 @@ import 'package:test/test.dart';
 
 class MockFirestoreDataSource extends Mock implements FirestoreDataSource {}
 
+class _MockFirestoreGateway extends Mock implements FirestoreGateway {}
+
 class MockConnectivityService extends Mock implements ConnectivityService {}
 
 class MockCurriculumImportService extends Mock
     implements CurriculumImportService {}
+
+/// Thin [SyncOrchestrator] adapter that delegates [pullOnLaunch] to
+/// [SyncEngine.pullOnLaunch] so that Story 13.4 restore tests can keep
+/// verifying `FirestoreDataSource.fetch*` calls without rewiring to the
+/// new [PullPipeline] path.
+class _SyncEngineOrchestrator implements SyncOrchestrator {
+  _SyncEngineOrchestrator(this._engine);
+  final SyncEngine _engine;
+
+  @override
+  Future<void> pullOnLaunch({bool triggeredFromResume = false}) =>
+      _engine.pullOnLaunch(triggeredFromResume: triggeredFromResume);
+
+  @override
+  Future<void> pushAllLocalData() => _engine.pushAllLocalData();
+
+  @override
+  SyncStatus get currentStatus => _engine.currentStatus;
+
+  @override
+  Stream<SyncStatus> get statusStream => _engine.statusStream;
+}
 
 /// Stubs every [FirestoreDataSource] method used by [SyncEngine.pullOnLaunch].
 void stubFirestorePullOnLaunchEmpty(MockFirestoreDataSource mock) {
@@ -81,6 +106,7 @@ void main() {
     () {
       late UserDatabase database;
       late MockFirestoreDataSource mockFirestore;
+      late _MockFirestoreGateway mockGateway;
       late MockConnectivityService mockConnectivity;
       late AppLogger logger;
       late OfflineQueue offlineQueue;
@@ -90,11 +116,12 @@ void main() {
         database = _createInMemoryDatabase();
         await _insertTrack(database);
         mockFirestore = MockFirestoreDataSource();
+        mockGateway = _MockFirestoreGateway();
         mockConnectivity = MockConnectivityService();
         logger = AppLogger(Talker());
         offlineQueue = OfflineQueue(
           database: database,
-          firestoreDataSource: mockFirestore,
+          firestoreGateway: mockGateway,
           logger: logger,
         );
         when(() => mockConnectivity.isOnline).thenAnswer((_) async => true);
@@ -115,11 +142,8 @@ void main() {
       });
 
       test('local write creates corresponding sync_queue entry', () async {
-        // Offline: enqueue only; Firestore is not called until reconnect/flush
-        when(
-          () => mockFirestore.pushCompletion(any()),
-        ).thenThrow(Exception('offline'));
-
+        // Offline: enqueue only; gateway is not called until reconnect/flush.
+        // (No stub needed — OfflineQueue is in queue-only mode when offline.)
         syncEngine.setOnlineState(false);
 
         final data = {
@@ -138,7 +162,10 @@ void main() {
         'online local write enqueues then background flush reaches Firestore',
         () async {
           when(
-            () => mockFirestore.pushCompletion(any()),
+            () => mockGateway.pushCompletion(
+              profileId: any(named: 'profileId'),
+              data: any(named: 'data'),
+            ),
           ).thenAnswer((_) async {});
 
           final data = <String, dynamic>{
@@ -152,7 +179,12 @@ void main() {
           await Future<void>.delayed(Duration.zero);
           await Future<void>.delayed(Duration.zero);
 
-          verify(() => mockFirestore.pushCompletion(any())).called(1);
+          verify(
+            () => mockGateway.pushCompletion(
+              profileId: any(named: 'profileId'),
+              data: any(named: 'data'),
+            ),
+          ).called(1);
           expect(await database.syncQueueDao.getPendingCount(), 0);
         },
       );
@@ -160,12 +192,22 @@ void main() {
       test('queue processes entries in FIFO order', () async {
         final pushOrder = <String>[];
 
-        when(() => mockFirestore.pushCompletion(any())).thenAnswer((inv) async {
-          final p = inv.positionalArguments[0] as Map<String, dynamic>;
+        when(
+          () => mockGateway.pushCompletion(
+            profileId: any(named: 'profileId'),
+            data: any(named: 'data'),
+          ),
+        ).thenAnswer((inv) async {
+          final p = inv.namedArguments[#data] as Map<String, dynamic>;
           pushOrder.add('c:${p['id']}');
         });
-        when(() => mockFirestore.pushBookmark(any())).thenAnswer((inv) async {
-          final p = inv.positionalArguments[0] as Map<String, dynamic>;
+        when(
+          () => mockGateway.pushBookmark(
+            profileId: any(named: 'profileId'),
+            data: any(named: 'data'),
+          ),
+        ).thenAnswer((inv) async {
+          final p = inv.namedArguments[#data] as Map<String, dynamic>;
           pushOrder.add('b:${p['id']}');
         });
 
@@ -185,7 +227,7 @@ void main() {
         // Create new queue instance (simulates restart with same DB)
         final newQueue = OfflineQueue(
           database: database,
-          firestoreDataSource: mockFirestore,
+          firestoreGateway: mockGateway,
           logger: logger,
         );
 
@@ -195,7 +237,10 @@ void main() {
 
       test('failed push retries with exponential backoff', () async {
         when(
-          () => mockFirestore.pushCompletion(any()),
+          () => mockGateway.pushCompletion(
+            profileId: any(named: 'profileId'),
+            data: any(named: 'data'),
+          ),
         ).thenThrow(Exception('err'));
 
         await offlineQueue.enqueueCompletion({'id': '1'});
@@ -215,7 +260,10 @@ void main() {
 
       test('after 5 retries, entry marked as failed (not retried)', () async {
         when(
-          () => mockFirestore.pushCompletion(any()),
+          () => mockGateway.pushCompletion(
+            profileId: any(named: 'profileId'),
+            data: any(named: 'data'),
+          ),
         ).thenThrow(Exception('persistent'));
 
         await offlineQueue.enqueueCompletion({'id': '1'});
@@ -278,6 +326,7 @@ void main() {
     late UserDatabase database;
     late int trackId;
     late MockFirestoreDataSource mockFirestore;
+    late _MockFirestoreGateway mockGateway;
     late MockConnectivityService mockConnectivity;
     late AppLogger logger;
     late OfflineQueue offlineQueue;
@@ -287,11 +336,12 @@ void main() {
       database = _createInMemoryDatabase();
       trackId = await _insertTrack(database);
       mockFirestore = MockFirestoreDataSource();
+      mockGateway = _MockFirestoreGateway();
       mockConnectivity = MockConnectivityService();
       logger = AppLogger(Talker());
       offlineQueue = OfflineQueue(
         database: database,
-        firestoreDataSource: mockFirestore,
+        firestoreGateway: mockGateway,
         logger: logger,
       );
       when(() => mockConnectivity.isOnline).thenAnswer((_) async => true);
@@ -519,6 +569,7 @@ void main() {
       late UserDatabase database;
       late int trackId;
       late MockFirestoreDataSource mockFirestore;
+      late _MockFirestoreGateway mockGateway;
       late MockConnectivityService mockConnectivity;
       late AppLogger logger;
       late OfflineQueue offlineQueue;
@@ -528,11 +579,12 @@ void main() {
         database = _createInMemoryDatabase();
         trackId = await _insertTrack(database);
         mockFirestore = MockFirestoreDataSource();
+        mockGateway = _MockFirestoreGateway();
         mockConnectivity = MockConnectivityService();
         logger = AppLogger(Talker());
         offlineQueue = OfflineQueue(
           database: database,
-          firestoreDataSource: mockFirestore,
+          firestoreGateway: mockGateway,
           logger: logger,
         );
         when(() => mockConnectivity.isOnline).thenAnswer((_) async => true);
@@ -797,6 +849,7 @@ void main() {
     late UserDatabase database;
     late int trackId;
     late MockFirestoreDataSource mockFirestore;
+    late _MockFirestoreGateway mockGateway;
     late MockConnectivityService mockConnectivity;
     late MockCurriculumImportService mockImportService;
     late AppLogger logger;
@@ -806,18 +859,26 @@ void main() {
 
     void stubEmptyFetches() {
       stubFirestorePullOnLaunchEmpty(mockFirestore);
+      // DeviceRestoreService.restore() calls gateway.fetchAll for curriculum_tracks.
+      when(
+        () => mockGateway.fetchAll(
+          profileId: any(named: 'profileId'),
+          collection: any(named: 'collection'),
+        ),
+      ).thenAnswer((_) async => []);
     }
 
     setUp(() async {
       database = _createInMemoryDatabase();
       trackId = await _insertTrack(database);
       mockFirestore = MockFirestoreDataSource();
+      mockGateway = _MockFirestoreGateway();
       mockConnectivity = MockConnectivityService();
       mockImportService = MockCurriculumImportService();
       logger = AppLogger(Talker());
       offlineQueue = OfflineQueue(
         database: database,
-        firestoreDataSource: mockFirestore,
+        firestoreGateway: mockGateway,
         logger: logger,
       );
       when(() => mockConnectivity.isOnline).thenAnswer((_) async => true);
@@ -833,8 +894,10 @@ void main() {
       );
       restoreService = DeviceRestoreService(
         database: database,
-        syncOrchestrator: SyncOrchestratorImpl(engine: syncEngine),
-        firestoreDataSource: mockFirestore,
+        syncOrchestrator: _SyncEngineOrchestrator(syncEngine),
+        firestoreGateway: mockGateway,
+        profileId: 1,
+        isAuthenticated: true,
         curriculumImportService: mockImportService,
         logger: logger,
       );
@@ -968,23 +1031,32 @@ void main() {
       verify(() => mockFirestore.fetchLedgerEntries(pageSize: ps)).called(1);
       verify(() => mockFirestore.fetchLearnerProfiles()).called(1);
       verify(() => mockFirestore.forProfile(1)).called(1);
-      // Called twice: once in pullOnLaunch, once to derive active curricula.
-      verify(() => mockFirestore.fetchCurriculumTracks(pageSize: ps)).called(2);
+      // Called once in pullOnLaunch (SyncEngine); the second call to derive
+      // active curricula now goes through gateway.fetchAll(), not this method.
+      verify(() => mockFirestore.fetchCurriculumTracks(pageSize: ps)).called(1);
       verify(() => mockFirestore.fetchNotificationSettings()).called(1);
       verify(() => mockFirestore.fetchGamificationSettings()).called(1);
-      // Called twice: once via _isNewDevice for new-install detection (DNI-332
-      // routed through FirestoreDataSource.isAuthenticated), once via the
-      // existing pullOnLaunch session check.
-      verify(() => mockFirestore.isAuthenticated).called(2);
+      // DeviceRestoreService.restore() calls gateway.fetchAll for tracks.
+      verify(
+        () => mockGateway.fetchAll(
+          profileId: any(named: 'profileId'),
+          collection: 'curriculum_tracks',
+        ),
+      ).called(1);
+      // isAuthenticated: called in isNewDevice() check.
+      verify(() => mockFirestore.isAuthenticated).called(1);
     });
 
     test(
       'content items re-imported from bundled data, not Firestore',
       () async {
         stubEmptyFetches();
+        // DeviceRestoreService derives active curricula via gateway.fetchAll,
+        // not FirestoreDataSource.fetchCurriculumTracks.
         when(
-          () => mockFirestore.fetchCurriculumTracks(
-            pageSize: any(named: 'pageSize'),
+          () => mockGateway.fetchAll(
+            profileId: any(named: 'profileId'),
+            collection: 'curriculum_tracks',
           ),
         ).thenAnswer(
           (_) async => [

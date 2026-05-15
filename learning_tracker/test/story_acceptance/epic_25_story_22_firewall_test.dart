@@ -20,11 +20,14 @@ import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/network/connectivity_service.dart';
+import 'package:learning_tracker/core/sync/firestore_gateway.dart';
 import 'package:learning_tracker/core/sync/sync_orchestrator.dart';
+import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/curriculum_import_service.dart';
 import 'package:learning_tracker/features/sync/data/firestore_data_source.dart';
 import 'package:learning_tracker/features/sync/data/offline_queue.dart';
 import 'package:learning_tracker/features/sync/data/sync_engine.dart';
+import 'package:learning_tracker/features/sync/domain/models/sync_status.dart';
 import 'package:learning_tracker/features/sync/domain/services/device_restore_service.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -37,10 +40,31 @@ import '../helpers/drift_memory.dart';
 
 class _MockFirestoreDataSource extends Mock implements FirestoreDataSource {}
 
+class _MockFirestoreGateway extends Mock implements FirestoreGateway {}
+
 class _MockConnectivityService extends Mock implements ConnectivityService {}
 
 class _MockCurriculumImportService extends Mock
     implements CurriculumImportService {}
+
+// ── stub orchestrator ─────────────────────────────────────────────────────────
+
+/// Minimal [SyncOrchestrator] stub for tests that construct
+/// [DeviceRestoreService] but do not exercise the pull path.
+class _StubSyncOrchestrator implements SyncOrchestrator {
+  @override
+  Future<void> pullOnLaunch({bool triggeredFromResume = false}) async {}
+
+  @override
+  Future<void> pushAllLocalData() async {}
+
+  @override
+  SyncStatus get currentStatus =>
+      SyncStatus.synced(lastSyncedAt: DateTimeFactory.nowUtc());
+
+  @override
+  Stream<SyncStatus> get statusStream => const Stream.empty();
+}
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
@@ -81,9 +105,13 @@ SyncEngine _makeSyncEngine(
   final connectivity = _MockConnectivityService();
   when(() => connectivity.isOnline).thenAnswer((_) async => true);
 
+  // OfflineQueue now requires a FirestoreGateway; use a minimal stub since
+  // the queue path is not exercised by the tests in this file.
+  final gatewayStub = _MockFirestoreGateway();
+
   final queue = OfflineQueue(
     database: db,
-    firestoreDataSource: fsMock,
+    firestoreGateway: gatewayStub,
     logger: logger,
   );
   return SyncEngine(
@@ -340,19 +368,27 @@ void main() {
 
       test('DeviceRestoreService with unauthenticated Firestore skips restore '
           'without throwing', () async {
-        final fsMock = _MockFirestoreDataSource();
-        when(() => fsMock.isAuthenticated).thenReturn(false);
-        when(() => fsMock.fetchCurriculumTracks()).thenAnswer((_) async => []);
-
         final importService = _MockCurriculumImportService();
 
-        final engine = _makeSyncEngine(db, fsMock, logger);
-        addTearDown(() => engine.dispose());
+        // Use a minimal gateway stub — DeviceRestoreService.restore() calls
+        // fetchAll() for curriculum_tracks after pullOnLaunch, but with an
+        // unauthenticated, empty-DB scenario the service skips to
+        // isNewDevice() → true (empty profiles) and then calls pullOnLaunch
+        // on the stub orchestrator (no-op) before fetching tracks.
+        final gatewayStub = _MockFirestoreGateway();
+        when(
+          () => gatewayStub.fetchAll(
+            profileId: any(named: 'profileId'),
+            collection: any(named: 'collection'),
+          ),
+        ).thenAnswer((_) async => []);
 
         final svc = DeviceRestoreService(
           database: db,
-          syncOrchestrator: SyncOrchestratorImpl(engine: engine),
-          firestoreDataSource: fsMock,
+          syncOrchestrator: _StubSyncOrchestrator(),
+          firestoreGateway: gatewayStub,
+          profileId: 1,
+          isAuthenticated: false,
           curriculumImportService: importService,
           logger: logger,
         );

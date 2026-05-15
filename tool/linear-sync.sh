@@ -252,7 +252,11 @@ cmd_sync() {
   local tmpfile
   tmpfile=$(mktemp)
 
-  # Paginate until all issues are fetched
+  # Paginate until all issues are fetched.
+  # --status must be passed explicitly: linearis applies NON_COMPLETED_ISSUES_FILTER
+  # (excludes state.type=="completed") unless an explicit state filter is present,
+  # which would silently drop all Done stories.
+  local ALL_STATUSES="Backlog,Todo,In Progress,In Review,Done,Canceled,Duplicate"
   local cursor="" has_next=true page=0
   # Start with an empty JSON array
   echo '[]' > "$tmpfile"
@@ -261,9 +265,9 @@ cmd_sync() {
     local page_file
     page_file=$(mktemp)
     if [[ -n "$cursor" ]]; then
-      linearis issues list --team "$TEAM_KEY" --project "$LINEAR_PROJECT" --limit 200 --after "$cursor" > "$page_file"
+      linearis issues list --team "$TEAM_KEY" --project "$LINEAR_PROJECT" --limit 200 --status "$ALL_STATUSES" --after "$cursor" > "$page_file"
     else
-      linearis issues list --team "$TEAM_KEY" --project "$LINEAR_PROJECT" --limit 200 > "$page_file"
+      linearis issues list --team "$TEAM_KEY" --project "$LINEAR_PROJECT" --limit 200 --status "$ALL_STATUSES" > "$page_file"
     fi
     local count
     count=$(jq '.nodes | length' "$page_file")

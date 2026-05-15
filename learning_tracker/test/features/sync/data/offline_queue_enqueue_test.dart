@@ -8,27 +8,27 @@ library;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
-import 'package:learning_tracker/features/sync/data/firestore_data_source.dart';
+import 'package:learning_tracker/core/sync/firestore_gateway.dart';
 import 'package:learning_tracker/features/sync/data/offline_queue.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:talker/talker.dart';
 
 import '../../../helpers/drift_memory.dart';
 
-class MockFirestoreDataSource extends Mock implements FirestoreDataSource {}
+class _MockFirestoreGateway extends Mock implements FirestoreGateway {}
 
 void main() {
   late UserDatabase db;
-  late MockFirestoreDataSource mockDataSource;
+  late _MockFirestoreGateway mockGateway;
   late OfflineQueue queue;
 
   setUp(() {
     db = inMemoryDb();
-    mockDataSource = MockFirestoreDataSource();
+    mockGateway = _MockFirestoreGateway();
 
     queue = OfflineQueue(
       database: db,
-      firestoreDataSource: mockDataSource,
+      firestoreGateway: mockGateway,
       logger: AppLogger(Talker()),
     );
   });
@@ -244,9 +244,14 @@ void main() {
 
   // ── flush with empty queue ────────────────────────────────────────────────
 
-  test('flush on empty queue returns 0 without touching dataSource', () async {
+  test('flush on empty queue returns 0 without touching gateway', () async {
     final count = await queue.flush();
     expect(count, 0);
-    verifyNever(() => mockDataSource.pushCompletion(any()));
+    verifyNever(
+      () => mockGateway.pushCompletion(
+        profileId: any(named: 'profileId'),
+        data: any(named: 'data'),
+      ),
+    );
   });
 }

@@ -5,9 +5,10 @@ import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/navigation/router_provider.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
-import 'package:learning_tracker/core/providers/firebase_providers.dart';
 import 'package:learning_tracker/core/providers/talker_provider.dart';
 import 'package:learning_tracker/core/services/pin_service.dart';
+import 'package:learning_tracker/core/sync/providers/outbox_providers.dart'
+    show firestoreGatewayProvider;
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/widgets/preference_list_tile.dart';
 import 'package:learning_tracker/core/widgets/preference_segmented_tile.dart';
@@ -235,7 +236,7 @@ class SettingsScreen extends ConsumerWidget {
                 onTap: () => sendLogsToFirebase(
                   context: context,
                   logger: ref.read(appLoggerProvider),
-                  firestore: ref.read(firebaseFirestoreProvider),
+                  gateway: ref.read(firestoreGatewayProvider),
                   auth: ref.read(authRepositoryProvider),
                 ),
               ),

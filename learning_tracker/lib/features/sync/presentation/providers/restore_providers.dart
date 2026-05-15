@@ -2,30 +2,36 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/analytics/analytics_provider.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/providers/talker_provider.dart';
+import 'package:learning_tracker/core/sync/providers/outbox_providers.dart'
+    show firestoreGatewayProvider;
 import 'package:learning_tracker/core/sync/providers/sync_orchestrator_providers.dart';
+import 'package:learning_tracker/features/auth/presentation/providers/auth_state_provider.dart';
 import 'package:learning_tracker/features/onboarding/presentation/providers/onboarding_providers.dart';
+import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/sync/domain/models/restore_status.dart';
 import 'package:learning_tracker/features/sync/domain/services/device_restore_service.dart';
-import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
 
 /// Provider for DeviceRestoreService.
 ///
 /// Returns null when user has no cloud account (restore requires Firestore).
 final deviceRestoreServiceProvider = Provider<DeviceRestoreService?>((ref) {
   final syncOrchestrator = ref.watch(syncOrchestratorProvider);
-  final firestoreDataSource = ref.watch(firestoreDataSourceProvider);
-  if (syncOrchestrator == null || firestoreDataSource == null) return null;
+  final gateway = ref.watch(firestoreGatewayProvider);
+  if (syncOrchestrator == null || gateway == null) return null;
 
   final database = ref.watch(userDatabaseProvider);
+  final profileId = ref.watch(activeProfileIdProvider);
+  final authState = ref.watch(authStateProvider);
   final curriculumImportService = ref.watch(curriculumImportServiceProvider);
   final logger = ref.watch(appLoggerProvider);
-
   final analytics = ref.watch(analyticsServiceProvider);
 
   final service = DeviceRestoreService(
     database: database,
     syncOrchestrator: syncOrchestrator,
-    firestoreDataSource: firestoreDataSource,
+    firestoreGateway: gateway,
+    profileId: profileId,
+    isAuthenticated: authState.isCloudBorn,
     curriculumImportService: curriculumImportService,
     logger: logger,
     analytics: analytics,

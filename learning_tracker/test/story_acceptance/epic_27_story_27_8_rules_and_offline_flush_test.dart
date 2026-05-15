@@ -563,4 +563,66 @@ class _ToggleableFakeGateway implements FirestoreGateway {
     required int profileId,
     required String collection,
   }) async => const <Map<String, dynamic>>[];
+
+  // ── Step 1 additions (DNI-333 cutover) ─────────────────────────────────────
+
+  @override
+  Future<void> pushGoal({
+    required int profileId,
+    required Map<String, dynamic> data,
+  }) async {}
+
+  @override
+  Future<void> pushUiPreferences({
+    required int profileId,
+    required Map<String, dynamic> data,
+  }) async {}
+
+  @override
+  Future<void> pushAccountProfile({required Map<String, dynamic> data}) async {}
+
+  @override
+  Future<void> pushCurriculumImportMetadata({
+    required int profileId,
+    required Map<String, dynamic> data,
+  }) async {}
+
+  @override
+  Future<void> deleteUserData(String uid) async {}
+
+  @override
+  Future<void> pushDiagnosticLog({
+    required String uid,
+    required Map<String, dynamic> data,
+  }) async {}
+
+  @override
+  Future<void> pushAccountUserProfile({
+    required String uid,
+    required Map<String, dynamic> data,
+  }) async {}
+
+  @override
+  Stream<List<Map<String, dynamic>>> listenToCollection({
+    required int profileId,
+    required String collection,
+  }) => const Stream.empty();
+
+  @override
+  Stream<Map<String, dynamic>?> listenToDocument({
+    required int profileId,
+    required String collection,
+    required String docId,
+  }) => const Stream.empty();
+
+  @override
+  Future<List<Map<String, dynamic>>> fetchLearnerProfiles() async =>
+      const <Map<String, dynamic>>[];
+
+  @override
+  Future<Map<String, dynamic>?> fetchDocument({
+    required int profileId,
+    required String collection,
+    required String docId,
+  }) async => null;
 }

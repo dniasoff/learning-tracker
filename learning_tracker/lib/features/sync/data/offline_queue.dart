@@ -4,8 +4,8 @@ import 'dart:math';
 import 'package:learning_tracker/core/database/daos/sync_queue_dao.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
+import 'package:learning_tracker/core/sync/firestore_gateway.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
-import 'package:learning_tracker/features/sync/data/firestore_data_source.dart';
 
 /// Manages offline queue for pending Firestore operations.
 ///
@@ -15,14 +15,14 @@ import 'package:learning_tracker/features/sync/data/firestore_data_source.dart';
 class OfflineQueue {
   OfflineQueue({
     required UserDatabase database,
-    required FirestoreDataSource firestoreDataSource,
+    required FirestoreGateway firestoreGateway,
     required AppLogger logger,
   }) : _database = database,
-       _firestoreDataSource = firestoreDataSource,
+       _gateway = firestoreGateway,
        _logger = logger;
 
   final UserDatabase _database;
-  final FirestoreDataSource _firestoreDataSource;
+  final FirestoreGateway _gateway;
   final AppLogger _logger;
 
   /// Maximum number of retry attempts before an item is considered dead (FR93).
@@ -35,25 +35,6 @@ class OfflineQueue {
     if (raw is int) return raw;
     if (raw is num) return raw.toInt();
     return int.tryParse(raw?.toString() ?? '');
-  }
-
-  ({FirestoreDataSource dataSource, Map<String, dynamic> payload})
-  _resolveTarget(Map<String, dynamic> payload) {
-    final scopedPayload = Map<String, dynamic>.from(payload);
-    final targetProfileId = _parseProfileId(
-      scopedPayload['profile_id'] ?? scopedPayload['_target_profile_id'],
-    );
-    scopedPayload.remove('_target_profile_id');
-
-    if (targetProfileId == null ||
-        targetProfileId == _firestoreDataSource.profileId) {
-      return (dataSource: _firestoreDataSource, payload: scopedPayload);
-    }
-
-    return (
-      dataSource: _firestoreDataSource.forProfile(targetProfileId),
-      payload: scopedPayload,
-    );
   }
 
   /// Get count of pending operations in the queue.
@@ -288,46 +269,63 @@ class OfflineQueue {
         try {
           final rawPayload =
               jsonDecode(operation.payload) as Map<String, dynamic>;
-          final resolved = _resolveTarget(rawPayload);
-          final payload = resolved.payload;
-          final dataSource = resolved.dataSource;
+          final payload = Map<String, dynamic>.from(rawPayload);
+          payload.remove('_target_profile_id');
+
+          final profileId =
+              _parseProfileId(rawPayload['profile_id'] ?? rawPayload['_target_profile_id']);
 
           switch (operation.operationType) {
             case 'completion':
-              await dataSource.pushCompletion(payload);
-              break;
+              await _gateway.pushCompletion(
+                profileId: profileId ?? 0,
+                data: payload,
+              );
             case 'bookmark':
-              await dataSource.pushBookmark(payload);
-              break;
+              await _gateway.pushBookmark(
+                profileId: profileId ?? 0,
+                data: payload,
+              );
             case 'settings':
-              await dataSource.pushSettings(payload);
-              break;
+              await _gateway.pushSettings(
+                profileId: profileId ?? 0,
+                data: payload,
+              );
             case 'notification_settings':
-              await dataSource.pushNotificationSettings(payload);
-              break;
+              await _gateway.pushNotificationSettings(
+                profileId: profileId ?? 0,
+                data: payload,
+              );
             case 'gamification_settings':
-              await dataSource.pushGamificationSettings(payload);
-              break;
+              await _gateway.pushGamificationSettings(
+                profileId: profileId ?? 0,
+                data: payload,
+              );
             case 'ui_preferences':
-              await dataSource.pushUiPreferences(payload);
-              break;
+              await _gateway.pushUiPreferences(
+                profileId: profileId ?? 0,
+                data: payload,
+              );
             case 'streak':
-              await dataSource.pushStreak(payload);
-              break;
+              await _gateway.pushStreak(
+                profileId: profileId ?? 0,
+                data: payload,
+              );
             case 'profile':
-              await dataSource.pushProfile(payload);
-              break;
+              await _gateway.pushAccountProfile(data: payload);
             case 'learner_profile':
-              await dataSource.pushLearnerProfile(payload);
-              break;
+              await _gateway.pushLearnerProfile(
+                profileId: profileId ?? 0,
+                data: payload,
+              );
             case 'learner_profile_delete':
-              final rawProfileId = payload['profile_id'];
-              final profileId = rawProfileId is int
+              final rawProfileId = rawPayload['profile_id'];
+              final pid = rawProfileId is int
                   ? rawProfileId
                   : rawProfileId is num
                   ? rawProfileId.toInt()
                   : int.tryParse(rawProfileId?.toString() ?? '');
-              if (profileId == null) {
+              if (pid == null) {
                 _logger.warning(
                   event: 'offline_queue_invalid_payload',
                   fields: {
@@ -337,16 +335,19 @@ class OfflineQueue {
                 );
                 continue;
               }
-              await dataSource.deleteLearnerProfile(profileId);
-              break;
+              await _gateway.deleteLearnerProfile(pid);
             case 'goal':
-              await dataSource.pushGoal(payload);
-              break;
+              await _gateway.pushGoal(
+                profileId: profileId ?? 0,
+                data: payload,
+              );
             case 'profile_program':
-              await dataSource.pushProfileProgram(payload);
-              break;
+              await _gateway.pushProfileProgram(
+                profileId: profileId ?? 0,
+                data: payload,
+              );
             case 'profile_program_delete':
-              final cid = payload['curriculum_id'] as String?;
+              final cid = rawPayload['curriculum_id'] as String?;
               if (cid == null || cid.isEmpty) {
                 _logger.warning(
                   event: 'offline_queue_invalid_payload',
@@ -357,20 +358,30 @@ class OfflineQueue {
                 );
                 continue;
               }
-              await dataSource.deleteProfileProgramForCurriculum(cid);
-              break;
+              await _gateway.removeProfileProgramAssignment(
+                profileId: profileId ?? 0,
+                curriculumStorageKey: cid,
+              );
             case 'ledger_entry':
-              await dataSource.pushLedgerEntry(payload);
-              break;
+              await _gateway.pushLedgerEntry(
+                profileId: profileId ?? 0,
+                data: payload,
+              );
             case 'curriculum_import_metadata':
-              await dataSource.pushCurriculumImportMetadata(payload);
-              break;
+              await _gateway.pushCurriculumImportMetadata(
+                profileId: profileId ?? 0,
+                data: payload,
+              );
             case 'curriculum_track':
-              await dataSource.pushCurriculumTrack(payload);
-              break;
+              await _gateway.pushTrack(
+                profileId: profileId ?? 0,
+                data: payload,
+              );
             case 'learning_order_item':
-              await dataSource.pushLearningOrderItem(payload);
-              break;
+              await _gateway.pushLearningOrder(
+                profileId: profileId ?? 0,
+                data: payload,
+              );
             default:
               _logger.warning(
                 event: 'offline_queue_unknown_operation_type',

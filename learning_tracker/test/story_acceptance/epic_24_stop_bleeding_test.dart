@@ -12,6 +12,7 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/network/connectivity_service.dart';
+import 'package:learning_tracker/core/sync/firestore_gateway.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 import 'package:learning_tracker/features/learning/data/repositories/track_repository_impl.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/track_repository.dart';
@@ -25,6 +26,8 @@ import 'package:talker/talker.dart';
 import 'package:test/test.dart';
 
 class MockFirestoreDataSource extends Mock implements FirestoreDataSource {}
+
+class _MockFirestoreGateway extends Mock implements FirestoreGateway {}
 
 class MockConnectivityService extends Mock implements ConnectivityService {}
 
@@ -167,6 +170,7 @@ void main() {
       group('pull-on-launch', () {
         late UserDatabase db;
         late MockFirestoreDataSource mockFirestore;
+        late _MockFirestoreGateway mockGateway;
         late MockConnectivityService mockConnectivity;
         late OfflineQueue offlineQueue;
         late SyncEngine syncEngine;
@@ -174,13 +178,14 @@ void main() {
         setUp(() async {
           db = _createDb();
           mockFirestore = MockFirestoreDataSource();
+          mockGateway = _MockFirestoreGateway();
           mockConnectivity = MockConnectivityService();
           when(() => mockConnectivity.isOnline).thenAnswer((_) async => true);
           when(() => mockFirestore.isAuthenticated).thenReturn(true);
           when(() => mockFirestore.profileId).thenReturn(1);
           offlineQueue = OfflineQueue(
             database: db,
-            firestoreDataSource: mockFirestore,
+            firestoreGateway: mockGateway,
             logger: AppLogger(Talker()),
           );
           syncEngine = SyncEngine(
@@ -253,6 +258,7 @@ void main() {
       group('LWW conflict resolution', () {
         late UserDatabase db;
         late MockFirestoreDataSource mockFirestore;
+        late _MockFirestoreGateway mockGateway;
         late MockConnectivityService mockConnectivity;
         late OfflineQueue offlineQueue;
         late SyncEngine syncEngine;
@@ -260,13 +266,14 @@ void main() {
         setUp(() {
           db = _createDb();
           mockFirestore = MockFirestoreDataSource();
+          mockGateway = _MockFirestoreGateway();
           mockConnectivity = MockConnectivityService();
           when(() => mockConnectivity.isOnline).thenAnswer((_) async => true);
           when(() => mockFirestore.isAuthenticated).thenReturn(true);
           when(() => mockFirestore.profileId).thenReturn(1);
           offlineQueue = OfflineQueue(
             database: db,
-            firestoreDataSource: mockFirestore,
+            firestoreGateway: mockGateway,
             logger: AppLogger(Talker()),
           );
           syncEngine = SyncEngine(
@@ -559,6 +566,7 @@ void main() {
       group('pull-on-launch', () {
         late UserDatabase db;
         late MockFirestoreDataSource mockFirestore;
+        late _MockFirestoreGateway mockGateway;
         late MockConnectivityService mockConnectivity;
         late OfflineQueue offlineQueue;
         late SyncEngine syncEngine;
@@ -566,13 +574,14 @@ void main() {
         setUp(() {
           db = _createDb();
           mockFirestore = MockFirestoreDataSource();
+          mockGateway = _MockFirestoreGateway();
           mockConnectivity = MockConnectivityService();
           when(() => mockConnectivity.isOnline).thenAnswer((_) async => true);
           when(() => mockFirestore.isAuthenticated).thenReturn(true);
           when(() => mockFirestore.profileId).thenReturn(0);
           offlineQueue = OfflineQueue(
             database: db,
-            firestoreDataSource: mockFirestore,
+            firestoreGateway: mockGateway,
             logger: AppLogger(Talker()),
           );
           syncEngine = SyncEngine(
@@ -624,6 +633,7 @@ void main() {
       group('LWW conflict resolution', () {
         late UserDatabase db;
         late MockFirestoreDataSource mockFirestore;
+        late _MockFirestoreGateway mockGateway;
         late MockConnectivityService mockConnectivity;
         late OfflineQueue offlineQueue;
         late SyncEngine syncEngine;
@@ -631,13 +641,14 @@ void main() {
         setUp(() {
           db = _createDb();
           mockFirestore = MockFirestoreDataSource();
+          mockGateway = _MockFirestoreGateway();
           mockConnectivity = MockConnectivityService();
           when(() => mockConnectivity.isOnline).thenAnswer((_) async => true);
           when(() => mockFirestore.isAuthenticated).thenReturn(true);
           when(() => mockFirestore.profileId).thenReturn(0);
           offlineQueue = OfflineQueue(
             database: db,
-            firestoreDataSource: mockFirestore,
+            firestoreGateway: mockGateway,
             logger: AppLogger(Talker()),
           );
           syncEngine = SyncEngine(

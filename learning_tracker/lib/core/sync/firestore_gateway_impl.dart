@@ -261,6 +261,187 @@ class FirestoreGatewayImpl implements FirestoreGateway {
         .toList(growable: false);
   }
 
+  // ── DNI-333 cutover additions ─────────────────────────────────────────────
+
+  @override
+  Future<void> pushGoal({
+    required int profileId,
+    required Map<String, dynamic> data,
+  }) async {
+    final collection = _collection(profileId, 'goals');
+    if (collection == null) throw _notAuthenticated;
+    final docId = data['id']?.toString() ?? data['goal_id']?.toString();
+    if (docId != null) {
+      await collection.doc(docId).set(
+        {...data, 'synced_at': FieldValue.serverTimestamp()},
+        SetOptions(merge: true),
+      );
+    } else {
+      await collection.add({...data, 'synced_at': FieldValue.serverTimestamp()});
+    }
+  }
+
+  @override
+  Future<void> pushUiPreferences({
+    required int profileId,
+    required Map<String, dynamic> data,
+  }) async {
+    final doc = _doc(profileId, 'ui_preferences', 'data');
+    if (doc == null) throw _notAuthenticated;
+    await doc.set({
+      ...data,
+      'synced_at': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+  }
+
+  @override
+  Future<void> pushAccountProfile({required Map<String, dynamic> data}) async {
+    final uid = _authRepository.currentUser?.uid;
+    if (uid == null) throw _notAuthenticated;
+    await _firestore
+        .collection('users')
+        .doc(uid)
+        .collection('profile')
+        .doc('data')
+        .set({...data, 'synced_at': FieldValue.serverTimestamp()},
+            SetOptions(merge: true));
+  }
+
+  @override
+  Future<void> pushCurriculumImportMetadata({
+    required int profileId,
+    required Map<String, dynamic> data,
+  }) async {
+    final collection = _collection(profileId, 'curriculum_import_metadata');
+    if (collection == null) throw _notAuthenticated;
+    final docId = data['curriculum_id']?.toString() ?? 'default';
+    await collection.doc(docId).set({
+      ...data,
+      'synced_at': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+  }
+
+  @override
+  Future<void> deleteUserData(String uid) async {
+    final userDoc = _firestore.collection('users').doc(uid);
+    const subcollections = [
+      'completions',
+      'bookmarks',
+      'settings',
+      'streaks',
+      'profiles',
+      'learner_profiles',
+      'goals',
+      'rewards',
+      'sync_queue',
+      'learning_order',
+      'stage_definitions',
+      'diagnostic_logs',
+    ];
+    for (final sub in subcollections) {
+      await _deleteCollection(userDoc.collection(sub));
+    }
+    await userDoc.delete();
+  }
+
+  Future<void> _deleteCollection(
+    CollectionReference<Map<String, dynamic>> ref,
+  ) async {
+    const batchSize = 500;
+    QuerySnapshot<Map<String, dynamic>> snapshot;
+    do {
+      snapshot = await ref.limit(batchSize).get();
+      if (snapshot.docs.isEmpty) break;
+      final batch = _firestore.batch();
+      for (final doc in snapshot.docs) {
+        batch.delete(doc.reference);
+      }
+      await batch.commit();
+    } while (snapshot.docs.length >= batchSize);
+  }
+
+  @override
+  Future<void> pushDiagnosticLog({
+    required String uid,
+    required Map<String, dynamic> data,
+  }) async {
+    await _firestore
+        .collection('users')
+        .doc(uid)
+        .collection('diagnostic_logs')
+        .add({...data, 'captured_at': FieldValue.serverTimestamp()});
+  }
+
+  @override
+  Future<void> pushAccountUserProfile({
+    required String uid,
+    required Map<String, dynamic> data,
+  }) async {
+    await _firestore.collection('users').doc(uid).set(
+      {...data, 'updatedAt': FieldValue.serverTimestamp()},
+      SetOptions(merge: true),
+    );
+  }
+
+  @override
+  Stream<List<Map<String, dynamic>>> listenToCollection({
+    required int profileId,
+    required String collection,
+  }) {
+    final ref = _collection(profileId, collection);
+    if (ref == null) return const Stream.empty();
+    return ref
+        .snapshots()
+        .map((s) => s.docs
+            .map((d) => {...d.data(), 'firestore_id': d.id})
+            .toList(growable: false));
+  }
+
+  @override
+  Stream<Map<String, dynamic>?> listenToDocument({
+    required int profileId,
+    required String collection,
+    required String docId,
+  }) {
+    final ref = _doc(profileId, collection, docId);
+    if (ref == null) return const Stream.empty();
+    return ref.snapshots().map((s) {
+      if (!s.exists) return null;
+      final data = s.data();
+      if (data == null) return null;
+      return {...data, 'firestore_id': s.id};
+    });
+  }
+
+  @override
+  Future<List<Map<String, dynamic>>> fetchLearnerProfiles() async {
+    final uid = _authRepository.currentUser?.uid;
+    if (uid == null) return [];
+    final snap = await _firestore
+        .collection('users')
+        .doc(uid)
+        .collection('learner_profiles')
+        .get();
+    return snap.docs
+        .map((d) => {...d.data(), 'firestore_id': d.id})
+        .toList(growable: false);
+  }
+
+  @override
+  Future<Map<String, dynamic>?> fetchDocument({
+    required int profileId,
+    required String collection,
+    required String docId,
+  }) async {
+    final ref = _doc(profileId, collection, docId);
+    if (ref == null) return null;
+    final snap = await ref.get();
+    if (!snap.exists) return null;
+    final data = snap.data();
+    if (data == null) return null;
+    return {...data, 'firestore_id': snap.id};
+  }
+
   // ── helpers ───────────────────────────────────────────────────────────────
 
   /// Returns the account-level learner-profile document reference.

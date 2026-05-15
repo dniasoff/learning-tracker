@@ -1,7 +1,7 @@
 import 'dart:io';
 
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:learning_tracker/core/database/registry/device_registry_database.dart';
+import 'package:learning_tracker/core/sync/firestore_gateway.dart';
 import 'package:learning_tracker/features/auth/domain/repositories/auth_repository.dart';
 
 /// Service handling account removal and deletion for all tiers.
@@ -15,19 +15,16 @@ class AccountLifecycleService {
     required DeviceRegistryDatabase registry,
     required String databasesPath,
     AuthRepository? authRepository,
-    FirebaseFirestore? firestore,
+    FirestoreGateway? gateway,
   }) : _registry = registry,
        _dbPath = databasesPath,
        _authRepository = authRepository,
-       _firestore = firestore;
+       _gateway = gateway;
 
   final DeviceRegistryDatabase _registry;
   final String _dbPath;
   final AuthRepository? _authRepository;
-  final FirebaseFirestore? _firestore;
-
-  FirebaseFirestore get _firestoreDb =>
-      _firestore ?? FirebaseFirestore.instance;
+  final FirestoreGateway? _gateway;
 
   // ─── 21.13: Remove cloud-born account from device ──────────
 
@@ -105,8 +102,10 @@ class AccountLifecycleService {
 
     final uid = account.firebaseUid!;
 
-    // Step 1: delete Firestore data (client-side best-effort)
-    await _deleteFirestoreData(uid);
+    // Step 1: delete Firestore data via gateway (client-side best-effort)
+    if (_gateway != null) {
+      await _gateway.deleteUserData(uid);
+    }
 
     // Step 2: delete Firebase Auth user — triggers Cloud Function
     final currentUser = _authRepository?.currentUser;
@@ -117,45 +116,6 @@ class AccountLifecycleService {
     // Step 3: local cleanup (only after cloud succeeds)
     _deleteDbFile(account.dbFileName);
     await _registry.removeAccount(accountId);
-  }
-
-  /// Best-effort Firestore subcollection deletion. The Cloud
-  /// Function (21.16) catches anything we miss.
-  Future<void> _deleteFirestoreData(String uid) async {
-    final userDoc = _firestoreDb.collection('users').doc(uid);
-    const subcollections = [
-      'completions',
-      'bookmarks',
-      'settings',
-      'streaks',
-      'profiles',
-      'goals',
-      'rewards',
-      'sync_queue',
-      'learning_order',
-      'stage_definitions',
-    ];
-
-    for (final sub in subcollections) {
-      await _deleteCollection(userDoc.collection(sub));
-    }
-    await userDoc.delete();
-  }
-
-  Future<void> _deleteCollection(
-    CollectionReference<Map<String, dynamic>> ref,
-  ) async {
-    const batchSize = 500;
-    QuerySnapshot<Map<String, dynamic>> snapshot;
-    do {
-      snapshot = await ref.limit(batchSize).get();
-      if (snapshot.docs.isEmpty) break;
-      final batch = _firestoreDb.batch();
-      for (final doc in snapshot.docs) {
-        batch.delete(doc.reference);
-      }
-      await batch.commit();
-    } while (snapshot.docs.length >= batchSize);
   }
 
   void _deleteDbFile(String dbFileName) {

@@ -1,8 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
-import 'package:learning_tracker/core/providers/firebase_providers.dart';
 import 'package:learning_tracker/core/sync/firestore_gateway_impl.dart';
 import 'package:learning_tracker/core/sync/outbox/outbox_processor.dart';
+import 'package:learning_tracker/core/sync/providers/firestore_instance_provider.dart';
 import 'package:learning_tracker/core/sync/push_pipeline_impl.dart';
 import 'package:learning_tracker/features/auth/presentation/providers/auth_providers.dart'
     show authRepositoryProvider;

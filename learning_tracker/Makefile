@@ -1,4 +1,4 @@
-.PHONY: help test test-story-4.1 test-story-5.2 test-story-6.1 test-story-6.3 test-story-6.4 test-story-6.5 test-story-7.1 test-story-7.2 test-story-7.3 test-story-8.4 test-epic-8 test-story-9.4 test-epic-9 test-story-10.4 test-story-10.5 test-epic-10 test-story-12.4 test-epic-12 test-story-13.1 test-story-13.2 test-epic-13 test-story-14.1 test-story-14.2 test-story-14.3 test-epic-14 test-story-15.5 test-story-15.6 test-story-15.8 test-epic-15 test-epic-21 test-story-24.7 test-epic-24 test-story-25.3 test-story-25.5 test-story-25.8 test-story-25.9 test-story-25.10 test-story-25.11 test-story-25.15 test-story-25.19 test-story-25.20 test-story-25.21 test-story-25.22 test-epic-25 test-story-26.7 test-story-26.11 test-story-26.13 test-story-26.15 test-story-26.16 test-epic-26 test-story-27.1 test-story-27.3 test-story-27.4 test-story-27.6 test-story-27.7 test-story-27.8 test-story-27.9 test-epic-27 ci analyze format format-check validate-calendar audit lint
+.PHONY: help test test-story-4.1 test-story-5.2 test-story-6.1 test-story-6.3 test-story-6.4 test-story-6.5 test-story-7.1 test-story-7.2 test-story-7.3 test-story-8.4 test-epic-8 test-story-9.4 test-epic-9 test-story-10.4 test-story-10.5 test-epic-10 test-story-12.4 test-epic-12 test-story-13.1 test-story-13.2 test-epic-13 test-story-14.1 test-story-14.2 test-story-14.3 test-epic-14 test-story-15.5 test-story-15.6 test-story-15.8 test-epic-15 test-epic-21 test-story-24.7 test-epic-24 test-story-25.3 test-story-25.5 test-story-25.8 test-story-25.9 test-story-25.10 test-story-25.11 test-story-25.12 test-story-25.13 test-story-25.14 test-story-25.15 test-story-25.19 test-story-25.20 test-story-25.21 test-story-25.22 test-epic-25 test-story-26.7 test-story-26.11 test-story-26.13 test-story-26.15 test-story-26.16 test-epic-26 test-story-27.1 test-story-27.3 test-story-27.4 test-story-27.6 test-story-27.7 test-story-27.8 test-story-27.9 test-epic-27 ci analyze format format-check validate-calendar audit lint
 
 help: ## Show this help message
 	@echo 'Usage: make [target]'
@@ -124,6 +124,15 @@ test-story-25.9: ## Run Story 25.9 (core/labels rebuild — three new modes + Co
 test-story-25.11: ## Run Story 25.11 (AuthRepository sole firebase_auth consumer) acceptance tests
 	flutter test test/story_acceptance/epic_25_schema_core_test.dart --name "Story 25.11"
 
+test-story-25.12: ## Run Story 25.12 (SyncEngine decomp Part 1 — FirestoreGateway, PushPipeline, PullPipeline) acceptance tests
+	flutter test test/story_acceptance/epic_25_story_12_sync_decomp_part1_test.dart
+
+test-story-25.13: ## Run Story 25.13 (SyncEngine decomp Part 2 — MergeRouter + sealed EntityMerger) acceptance tests
+	flutter test test/story_acceptance/epic_25_story_13_merge_router_test.dart
+
+test-story-25.14: ## Run Story 25.14 (SyncEngine decomp Part 3 — ListenerSupervisor + LifecycleObserver) acceptance tests
+	flutter test test/story_acceptance/epic_25_story_14_listener_lifecycle_test.dart
+
 test-story-25.15: ## Run Story 25.15 (CompletionWriter transactional commit path) acceptance tests
 	flutter test test/story_acceptance/epic_25_story_15_completion_writer_test.dart
 
@@ -140,7 +149,7 @@ test-story-25.22: ## Run Story 25.22 (FIREWALL — wipe-install cutover E2E veri
 	flutter test test/story_acceptance/epic_25_story_22_firewall_test.dart
 
 test-epic-25: ## Run all Epic 25 (Schema + Core Foundation) acceptance tests
-	flutter test test/story_acceptance/epic_25_schema_core_test.dart test/story_acceptance/epic_25_story_25_9_test.dart test/story_acceptance/epic_25_story_25_9_lints_test.dart test/story_acceptance/epic_25_story_15_completion_writer_test.dart test/story_acceptance/epic_25_story_21_multi_account_threading_test.dart test/story_acceptance/epic_25_story_25_20_locale_theme_test.dart test/story_acceptance/epic_25_story_22_firewall_test.dart
+	flutter test test/story_acceptance/epic_25_schema_core_test.dart test/story_acceptance/epic_25_story_25_9_test.dart test/story_acceptance/epic_25_story_25_9_lints_test.dart test/story_acceptance/epic_25_story_12_sync_decomp_part1_test.dart test/story_acceptance/epic_25_story_13_merge_router_test.dart test/story_acceptance/epic_25_story_14_listener_lifecycle_test.dart test/story_acceptance/epic_25_story_15_completion_writer_test.dart test/story_acceptance/epic_25_story_21_multi_account_threading_test.dart test/story_acceptance/epic_25_story_25_20_locale_theme_test.dart test/story_acceptance/epic_25_story_22_firewall_test.dart
 
 test-story-26.7: ## Run Story 26.7 (dashboardModelProvider + centralized onTrackChanged) acceptance tests
 	flutter test test/story_acceptance/epic_26_story_26_7_dashboard_model_provider_test.dart
