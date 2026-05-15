@@ -263,7 +263,7 @@ class HierarchySelectionPanelState
           ),
         if (widget.bottomActions != null)
           widget.bottomActions!(context)
-        else
+        else if (widget.onSkip != null || widget.onConfirmed != null)
           Padding(
             padding: const EdgeInsets.all(16),
             child: Row(

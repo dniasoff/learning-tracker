@@ -1,14 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/content/content_grouping.dart';
-import 'package:learning_tracker/core/content/hierarchy_browser.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
-import 'package:learning_tracker/core/labels/curriculum_label_renderer.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/widgets/app_bar_title.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
+import 'package:learning_tracker/features/content_browsing/presentation/widgets/hierarchy_selection_panel.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/bulk_prior_completion_service.dart';
 import 'package:learning_tracker/features/onboarding/presentation/providers/onboarding_providers.dart';
@@ -74,10 +73,9 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
   // Per-stage marking: maps each selection to its own stage set
   final _perSelectionStages = <HierarchySelection, Set<int>>{};
 
-  // HierarchyBrowser state (synced via onNavigationChanged).
-  List<String> _navigationStack = [];
-  List<String?> _navigationStackHebrewNames = [];
-  final _browserKey = GlobalKey<HierarchyBrowserState>();
+  // Panel navigation state (synced via onNavigationChanged).
+  bool _hasNavStack = false;
+  final _panelKey = GlobalKey<HierarchySelectionPanelState>();
 
   /// Filter items by scope constraints if provided.
   List<ContentItem> _applyScope(List<ContentItem> items) {
@@ -265,10 +263,10 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
                 text:
                     'Mark Prior Completions — ${curriculumLabelText(ref, curriculum: widget.curriculumId)}',
               ),
-        leading: _phase == _Phase.selection && _navigationStack.isNotEmpty
+        leading: _phase == _Phase.selection && _hasNavStack
             ? IconButton(
                 icon: const Icon(Icons.arrow_back),
-                onPressed: () => _browserKey.currentState?.navigateBack(),
+                onPressed: () => _panelKey.currentState?.navigateBack(),
               )
             : null,
         actions: [
@@ -281,6 +279,7 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
                   if (!_isSearching) {
                     _searchController.clear();
                     _searchQuery = '';
+                    _hasNavStack = false;
                   }
                 });
               },
@@ -300,7 +299,6 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
   Widget _buildSelection(ThemeData theme) {
     final isSearchActive = _searchQuery.length >= 2;
     final useHebrew = ref.watch(useHebrewTermsProvider);
-    final variant = ref.watch(currentTransliterationVariantProvider);
     final l10n = AppLocalizations.of(context)!;
 
     return SafeArea(
@@ -316,38 +314,43 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
               textAlign: TextAlign.center,
             ),
           ),
-          // Breadcrumb bar — only shown during hierarchy browsing.
-          if (_navigationStack.isNotEmpty && !isSearchActive)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Wrap(
-                children: [
-                  for (var i = 0; i < _navigationStack.length; i++)
-                    TextButton(
-                      onPressed: () {
-                        // Trim browser's internal stack to i+1 entries.
-                        for (var j = _navigationStack.length; j > i + 1; j--) {
-                          _browserKey.currentState?.navigateBack();
-                        }
-                      },
-                      child: Text(
-                        CurriculumLabelRenderer.renderBreadcrumb(
-                          curriculumId: widget.curriculumId,
-                          rawSegmentValues: _navigationStack.sublist(0, i + 1),
-                          useHebrew: useHebrew,
-                          hebrewNamesPerSegment: _navigationStackHebrewNames
-                              .sublist(0, i + 1),
-                          transliterationVariant: variant,
-                        ).last,
-                      ),
-                    ),
-                ],
-              ),
-            ),
           Expanded(
             child: isSearchActive
                 ? _buildSearchResults(theme, useHebrew, l10n)
-                : _buildHierarchyBrowser(theme, useHebrew),
+                : HierarchySelectionPanel(
+                    key: _panelKey,
+                    curriculumId: widget.curriculumId,
+                    scopeConstraints: widget.scopeConstraints,
+                    autoAdvanceSingleOption: true,
+                    onNavigationChanged: (path, _) {
+                      setState(() => _hasNavStack = path.isNotEmpty);
+                    },
+                    tileBuilder: (item, currentPath, onDrill) {
+                      final isSelected = _isItemSelected(item);
+                      return ListTile(
+                        leading: Checkbox(
+                          value: isSelected,
+                          onChanged: (_) =>
+                              _toggleItem(item, currentPath.length),
+                        ),
+                        title: CurriculumLabel.item(
+                          item,
+                          mode: CurriculumLabelMode.leaf,
+                          textDirection: useHebrew
+                              ? TextDirection.rtl
+                              : TextDirection.ltr,
+                          textAlign: TextAlign.start,
+                          style: theme.textTheme.titleLarge?.copyWith(
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        trailing: onDrill != null
+                            ? const Icon(Icons.chevron_right)
+                            : null,
+                        onTap: onDrill ?? () => _toggleItem(item, currentPath.length),
+                      );
+                    },
+                  ),
           ),
           if (_selections.isNotEmpty)
             Padding(
@@ -381,51 +384,6 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildHierarchyBrowser(ThemeData theme, bool useHebrew) {
-    final contentAsync = ref.watch(
-      curriculumContentProvider(widget.curriculumId),
-    );
-    return contentAsync.when(
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (e, _) => Center(
-        child: Text(AppLocalizations.of(context)!.errorGeneric(e.toString())),
-      ),
-      data: (allItems) => HierarchyBrowser(
-        key: _browserKey,
-        items: allItems,
-        curriculumId: widget.curriculumId,
-        filterItems: _applyScope,
-        autoAdvanceSingleOption: true,
-        onNavigationChanged: (path, hebrewNames) {
-          setState(() {
-            _navigationStack = path;
-            _navigationStackHebrewNames = hebrewNames;
-          });
-        },
-        tileBuilder: (item, currentPath, onDrill) {
-          final isSelected = _isItemSelected(item);
-          return ListTile(
-            leading: Checkbox(
-              value: isSelected,
-              onChanged: (_) => _toggleItem(item, currentPath.length),
-            ),
-            title: CurriculumLabel.item(
-              item,
-              mode: CurriculumLabelMode.leaf,
-              textDirection: useHebrew ? TextDirection.rtl : TextDirection.ltr,
-              textAlign: TextAlign.start,
-              style: theme.textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            trailing: onDrill != null ? const Icon(Icons.chevron_right) : null,
-            onTap: onDrill ?? () => _toggleItem(item, currentPath.length),
-          );
-        },
       ),
     );
   }
