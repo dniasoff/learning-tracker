@@ -12,19 +12,32 @@ import 'package:learning_tracker/features/content_browsing/presentation/provider
 import 'package:learning_tracker/features/track_setup/domain/entities/add_track_result.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
-/// A self-contained widget that presents a hierarchical content browser with
-/// checkboxes, breadcrumb navigation, a selection counter, and Skip/Next buttons.
+/// A self-contained widget that loads curriculum content, shows a breadcrumb
+/// navigation bar, renders a [HierarchyBrowser], and provides action buttons.
 ///
-/// Used wherever the user needs to pick content nodes at any depth before
-/// confirming a bulk action (e.g. track-setup "prior learning" step).
+/// **Default mode** (no [tileBuilder] / [bottomActions]):
+/// - Checkbox tiles with internal [Set<HierarchySelection>] selection management.
+/// - Skip / Confirm buttons driven by [onSkip] and [onConfirmed].
+///
+/// **Custom mode** ([tileBuilder] and/or [bottomActions] provided):
+/// - Caller supplies tile rendering and action buttons.
+/// - Use a [GlobalKey<HierarchySelectionPanelState>] to call
+///   [HierarchySelectionPanelState.navigateBack] from an AppBar back button.
+/// - [onNavigationChanged] and [onDisplayItemsChanged] keep the caller in sync
+///   with navigation state and visible items.
 class HierarchySelectionPanel extends ConsumerStatefulWidget {
   const HierarchySelectionPanel({
     required this.curriculumId,
-    required this.onSkip,
-    required this.onConfirmed,
     this.scopeConstraints,
+    this.onSkip,
+    this.onConfirmed,
     this.skipLabel,
     this.confirmLabel,
+    this.tileBuilder,
+    this.bottomActions,
+    this.onNavigationChanged,
+    this.onDisplayItemsChanged,
+    this.autoAdvanceSingleOption = true,
     super.key,
   });
 
@@ -34,28 +47,54 @@ class HierarchySelectionPanel extends ConsumerStatefulWidget {
   /// are shown. Pass null to show the full curriculum.
   final List<ScopeEntry>? scopeConstraints;
 
-  final VoidCallback onSkip;
+  // ── Default-mode callbacks (used when [bottomActions] is null) ────────────
 
-  /// Called with the current selection set when the user taps the confirm button.
-  final ValueChanged<Set<HierarchySelection>> onConfirmed;
-
-  /// Label for the skip button. Defaults to [AppLocalizations.actionSkipForNow].
+  final VoidCallback? onSkip;
+  final ValueChanged<Set<HierarchySelection>>? onConfirmed;
   final String? skipLabel;
-
-  /// Label for the confirm button. Defaults to [AppLocalizations.actionNext].
   final String? confirmLabel;
 
+  // ── Custom-mode overrides ─────────────────────────────────────────────────
+
+  /// Custom tile builder. When non-null, internal checkbox selection is
+  /// disabled and no selection counter is shown.
+  final HierarchyTileBuilder? tileBuilder;
+
+  /// Widget shown below the browser. When non-null, replaces the default
+  /// Skip / Confirm row.
+  final WidgetBuilder? bottomActions;
+
+  /// Notified whenever the navigation stack changes. Use to update an AppBar
+  /// back button or external breadcrumb UI.
+  final void Function(List<String> path, List<String?> hebrewNames)?
+  onNavigationChanged;
+
+  /// Notified after every render with the items currently visible at this
+  /// level. Use to implement "select all visible" functionality.
+  final void Function(List<ContentItem> items)? onDisplayItemsChanged;
+
+  /// Whether to skip past levels with a single option automatically.
+  /// Defaults to true (keeps the original track-setup behaviour).
+  final bool autoAdvanceSingleOption;
+
   @override
-  ConsumerState<HierarchySelectionPanel> createState() =>
-      _HierarchySelectionPanelState();
+  HierarchySelectionPanelState createState() => HierarchySelectionPanelState();
 }
 
-class _HierarchySelectionPanelState
+class HierarchySelectionPanelState
     extends ConsumerState<HierarchySelectionPanel> {
   final _selections = <HierarchySelection>{};
   List<String> _navigationStack = [];
   List<String?> _navigationStackHebrewNames = [];
   final _browserKey = GlobalKey<HierarchyBrowserState>();
+
+  // ── Public API ─────────────────────────────────────────────────────────────
+
+  void navigateBack() => _browserKey.currentState?.navigateBack();
+  void clearNavigation() => _browserKey.currentState?.clearNavigation();
+  bool get canGoBack => _navigationStack.isNotEmpty;
+
+  // ── Internal helpers ───────────────────────────────────────────────────────
 
   List<ContentItem> _applyScope(List<ContentItem> items) {
     final scopes = widget.scopeConstraints;
@@ -111,6 +150,14 @@ class _HierarchySelectionPanelState
     });
   }
 
+  void _handleNavChanged(List<String> path, List<String?> hebrewNames) {
+    setState(() {
+      _navigationStack = path;
+      _navigationStackHebrewNames = hebrewNames;
+    });
+    widget.onNavigationChanged?.call(path, hebrewNames);
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -121,21 +168,58 @@ class _HierarchySelectionPanelState
       curriculumContentProvider(widget.curriculumId),
     );
 
+    final useDefaultTiles = widget.tileBuilder == null;
+
+    final effectiveTileBuilder =
+        widget.tileBuilder ??
+        (ContentItem item, List<String> currentPath, VoidCallback? onDrill) {
+          final isSelected = _isItemSelected(item);
+          return ListTile(
+            leading: Checkbox(
+              value: isSelected,
+              onChanged: (_) => _toggleItem(item, currentPath.length),
+            ),
+            title: CurriculumLabel.item(
+              item,
+              mode: CurriculumLabelMode.leaf,
+              textDirection: useHebrew ? TextDirection.rtl : TextDirection.ltr,
+              textAlign: TextAlign.start,
+              style: theme.textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            trailing: onDrill != null ? const Icon(Icons.chevron_right) : null,
+            onTap: onDrill ?? () => _toggleItem(item, currentPath.length),
+          );
+        };
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         if (_navigationStack.isNotEmpty)
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Wrap(
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            child: Row(
               children: [
-                for (var i = 0; i < _navigationStack.length; i++)
+                TextButton(
+                  onPressed: clearNavigation,
+                  child: Text(l10n.breadcrumbsRoot),
+                ),
+                for (var i = 0; i < _navigationStack.length; i++) ...[
+                  const Icon(Icons.chevron_right, size: 16, color: Colors.grey),
                   TextButton(
-                    onPressed: () {
-                      for (var j = _navigationStack.length; j > i + 1; j--) {
-                        _browserKey.currentState?.navigateBack();
-                      }
-                    },
+                    onPressed: i < _navigationStack.length - 1
+                        ? () {
+                            for (
+                              var j = _navigationStack.length;
+                              j > i + 1;
+                              j--
+                            ) {
+                              _browserKey.currentState?.navigateBack();
+                            }
+                          }
+                        : null,
                     child: Text(
                       CurriculumLabelRenderer.renderBreadcrumb(
                         curriculumId: widget.curriculumId,
@@ -147,6 +231,7 @@ class _HierarchySelectionPanelState
                       ).last,
                     ),
                   ),
+                ],
               ],
             ),
           ),
@@ -160,41 +245,14 @@ class _HierarchySelectionPanelState
               items: allItems,
               curriculumId: widget.curriculumId,
               filterItems: _applyScope,
-              autoAdvanceSingleOption: true,
-              onNavigationChanged: (path, hebrewNames) {
-                setState(() {
-                  _navigationStack = path;
-                  _navigationStackHebrewNames = hebrewNames;
-                });
-              },
-              tileBuilder: (item, currentPath, onDrill) {
-                final isSelected = _isItemSelected(item);
-                return ListTile(
-                  leading: Checkbox(
-                    value: isSelected,
-                    onChanged: (_) => _toggleItem(item, currentPath.length),
-                  ),
-                  title: CurriculumLabel.item(
-                    item,
-                    mode: CurriculumLabelMode.leaf,
-                    textDirection: useHebrew
-                        ? TextDirection.rtl
-                        : TextDirection.ltr,
-                    textAlign: TextAlign.start,
-                    style: theme.textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  trailing: onDrill != null
-                      ? const Icon(Icons.chevron_right)
-                      : null,
-                  onTap: onDrill ?? () => _toggleItem(item, currentPath.length),
-                );
-              },
+              autoAdvanceSingleOption: widget.autoAdvanceSingleOption,
+              onNavigationChanged: _handleNavChanged,
+              onDisplayItemsChanged: widget.onDisplayItemsChanged,
+              tileBuilder: effectiveTileBuilder,
             ),
           ),
         ),
-        if (_selections.isNotEmpty)
+        if (useDefaultTiles && _selections.isNotEmpty)
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
             child: Text(
@@ -203,28 +261,34 @@ class _HierarchySelectionPanelState
               textAlign: TextAlign.center,
             ),
           ),
-        Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: widget.onSkip,
-                  child: Text(widget.skipLabel ?? l10n.actionSkipForNow),
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: FilledButton(
-                  onPressed: _selections.isNotEmpty
-                      ? () => widget.onConfirmed(Set.of(_selections))
-                      : null,
-                  child: Text(widget.confirmLabel ?? l10n.actionNext),
-                ),
-              ),
-            ],
+        if (widget.bottomActions != null)
+          widget.bottomActions!(context)
+        else
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                if (widget.onSkip != null) ...[
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: widget.onSkip,
+                      child: Text(widget.skipLabel ?? l10n.actionSkipForNow),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                ],
+                if (widget.onConfirmed != null)
+                  Expanded(
+                    child: FilledButton(
+                      onPressed: _selections.isNotEmpty
+                          ? () => widget.onConfirmed!(Set.of(_selections))
+                          : null,
+                      child: Text(widget.confirmLabel ?? l10n.actionNext),
+                    ),
+                  ),
+              ],
+            ),
           ),
-        ),
       ],
     );
   }
