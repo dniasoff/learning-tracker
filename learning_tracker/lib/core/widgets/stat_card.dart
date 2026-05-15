@@ -193,6 +193,8 @@ class _FullLayout extends StatelessWidget {
             const SizedBox(height: 4),
             Text(
               label,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
               style: Theme.of(context).textTheme.labelMedium?.copyWith(
                 color: effectiveLabelColor,
                 fontWeight: FontWeight.w700,

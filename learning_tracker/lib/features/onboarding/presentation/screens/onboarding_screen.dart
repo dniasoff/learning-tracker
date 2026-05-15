@@ -65,6 +65,7 @@ const _kOnboardingProfileId = 'onboarding_profile_id';
 const _kOnboardingProfileName = 'onboarding_profile_name';
 const _kOnboardingProfileMode = 'onboarding_profile_mode';
 const _kOnboardingHebrewCalendar = 'onboarding_use_hebrew_calendar';
+const _kOnboardingHebrewTerms = 'onboarding_use_hebrew_terms';
 const _kOnboardingShowNikud = 'onboarding_show_nikud';
 const _kOnboardingTransliterationVariant = 'onboarding_transliteration_variant';
 
@@ -161,6 +162,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     if (profileName != null) _profileName = profileName;
     if (profileMode != null) _profileMode = profileMode;
     _useHebrewCalendar = prefs.getBool(_kOnboardingHebrewCalendar) ?? true;
+    _useHebrewTerms = prefs.getBool(_kOnboardingHebrewTerms) ?? true;
     _showNikud = prefs.getBool(_kOnboardingShowNikud) ?? true;
     final savedVariant = prefs.getString(_kOnboardingTransliterationVariant);
     if (savedVariant == 'sephardi') {
@@ -196,6 +198,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     }
     await prefs.setString(_kOnboardingProfileMode, _profileMode);
     await prefs.setBool(_kOnboardingHebrewCalendar, _useHebrewCalendar);
+    await prefs.setBool(_kOnboardingHebrewTerms, _useHebrewTerms);
     await prefs.setBool(_kOnboardingShowNikud, _showNikud);
     await prefs.setString(
       _kOnboardingTransliterationVariant,
@@ -211,6 +214,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       _kOnboardingProfileName,
       _kOnboardingProfileMode,
       _kOnboardingHebrewCalendar,
+      _kOnboardingHebrewTerms,
       _kOnboardingShowNikud,
       _kOnboardingTransliterationVariant,
     ]) {

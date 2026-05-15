@@ -41,6 +41,10 @@ class DashboardScreen extends ConsumerWidget {
         child: SafeArea(
           top: false,
           child: activeTracksAsync.when(
+            // Keep the previous tracks visible while the stream re-subscribes
+            // on launch (auth settling). Without this the screen flashes a
+            // spinner — then DashboardBody — on every reload.
+            skipLoadingOnReload: true,
             loading: () => const Center(child: CircularProgressIndicator()),
             error: (e, s) =>
                 Center(child: Text(l10n.errorWithMessage(e.toString()))),

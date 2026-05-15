@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:learning_tracker/core/content/content_grouping.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
+import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/track_setup/domain/entities/add_track_result.dart';
 import 'package:learning_tracker/features/track_setup/presentation/steps/scope_tiles.dart';
@@ -11,8 +13,8 @@ import 'package:learning_tracker/l10n/app_localizations.dart';
 // Shared callback types used by both views
 // ---------------------------------------------------------------------------
 
-typedef ScopeToggleCallback = void Function(String value);
-typedef ScopeDrillCallback = void Function(String value);
+typedef ScopeToggleCallback = void Function(ContentItem item);
+typedef ScopeDrillCallback = void Function(ContentItem item);
 typedef ScopeSelectAllCallback = void Function();
 
 // ---------------------------------------------------------------------------
@@ -20,10 +22,14 @@ typedef ScopeSelectAllCallback = void Function();
 // ---------------------------------------------------------------------------
 
 /// Shows the "Learn All" hero + list of level-1 items for the first drill step.
+///
+/// [items] must be pre-rendered via [groupItemsByNextLevel] — callers must not
+/// pass raw [ContentItem]s with Sefaria data strings as display names.
 class ScopeTopLevelView extends ConsumerWidget {
   const ScopeTopLevelView({
     required this.curriculumId,
-    required this.values,
+    required this.items,
+    required this.useHebrew,
     required this.selections,
     required this.allDirectlySelected,
     required this.currentLevel,
@@ -31,7 +37,7 @@ class ScopeTopLevelView extends ConsumerWidget {
     required this.labelForLevel,
     required this.scopeDescription,
     required this.scopeIcon,
-    required this.childCountForValue,
+    required this.childCountForItem,
     required this.isDirectlySelected,
     required this.onLearnAll,
     required this.onToggle,
@@ -42,16 +48,22 @@ class ScopeTopLevelView extends ConsumerWidget {
   });
 
   final CurriculumId curriculumId;
-  final List<String> values;
+
+  /// Pre-rendered content items at the current level.
+  final List<ContentItem> items;
+
+  /// Whether to show Hebrew display names.
+  final bool useHebrew;
+
   final List<ScopeEntry> selections;
   final bool allDirectlySelected;
   final int currentLevel;
   final int maxSelectableLevel;
   final String Function(int level) labelForLevel;
-  final String Function(String value) scopeDescription;
-  final IconData Function(String value) scopeIcon;
-  final int Function(String value) childCountForValue;
-  final bool Function(String value) isDirectlySelected;
+  final String Function(String rawValue) scopeDescription;
+  final IconData Function(String rawValue) scopeIcon;
+  final int Function(ContentItem item) childCountForItem;
+  final bool Function(ContentItem item) isDirectlySelected;
   final VoidCallback onLearnAll;
   final ScopeToggleCallback onToggle;
   final ScopeDrillCallback onDrill;
@@ -167,7 +179,7 @@ class ScopeTopLevelView extends ConsumerWidget {
             ),
           ),
         ),
-        if (values.isNotEmpty) ...[
+        if (items.isNotEmpty) ...[
           const SizedBox(height: 4),
           Align(
             alignment: AlignmentDirectional.centerStart,
@@ -188,22 +200,24 @@ class ScopeTopLevelView extends ConsumerWidget {
         const SizedBox(height: 8),
         Expanded(
           child: ListView.separated(
-            itemCount: values.length,
+            itemCount: items.length,
             separatorBuilder: (_, __) => const SizedBox(height: 8),
             itemBuilder: (context, index) {
-              final value = values[index];
-              final selected = isDirectlySelected(value);
-              final count = childCountForValue(value);
+              final item = items[index];
+              final rawValue = levelValueAt(item, currentLevel) ?? '';
+              final title = itemDisplayName(item, useHebrew: useHebrew);
+              final selected = isDirectlySelected(item);
+              final count = childCountForItem(item);
               return ScopeLevelTile(
-                title: value,
+                title: title,
                 subtitle:
-                    '$count ${labelForLevel(2)} • ${scopeDescription(value)}',
-                icon: scopeIcon(value),
+                    '$count ${labelForLevel(currentLevel + 1)} • ${scopeDescription(rawValue)}',
+                icon: scopeIcon(rawValue),
                 selected: selected,
                 badgeText: selected ? l10n.scopeSelectedBadge : null,
-                onCheck: () => onToggle(value),
+                onCheck: () => onToggle(item),
                 canDrill: canDrillDeeper,
-                onDrill: canDrillDeeper ? () => onDrill(value) : null,
+                onDrill: canDrillDeeper ? () => onDrill(item) : null,
               );
             },
           ),
@@ -234,12 +248,17 @@ class ScopeTopLevelView extends ConsumerWidget {
 
 /// Shows breadcrumb trail, selection chips, select-all button and item list
 /// during a drill-down session.
+///
+/// [items] must be pre-rendered via [groupItemsByNextLevel].
 class ScopeHierarchyView extends StatelessWidget {
   const ScopeHierarchyView({
     required this.curriculumId,
     required this.breadcrumbs,
-    required this.values,
+    required this.breadcrumbLabels,
+    required this.items,
+    required this.useHebrew,
     required this.selections,
+    required this.selectionLabels,
     required this.allDirectlySelected,
     required this.currentLevel,
     required this.maxSelectableLevel,
@@ -259,14 +278,27 @@ class ScopeHierarchyView extends StatelessWidget {
 
   final CurriculumId curriculumId;
   final List<ScopeEntry> breadcrumbs;
-  final List<String> values;
+
+  /// Rendered display label for each breadcrumb (parallel to [breadcrumbs]).
+  final List<String> breadcrumbLabels;
+
+  /// Pre-rendered content items at the current level.
+  final List<ContentItem> items;
+
+  /// Whether to show Hebrew display names.
+  final bool useHebrew;
+
   final List<ScopeEntry> selections;
+
+  /// Rendered display label for each selection, keyed by raw value.
+  final Map<String, String> selectionLabels;
+
   final bool allDirectlySelected;
   final int currentLevel;
   final int maxSelectableLevel;
   final String Function(int level) labelForLevel;
-  final bool Function(String value) isSelected;
-  final bool Function(String value) isDirectlySelected;
+  final bool Function(ContentItem item) isSelected;
+  final bool Function(ContentItem item) isDirectlySelected;
   final ScopeToggleCallback onToggle;
   final ScopeDrillCallback onDrill;
   final ScopeSelectAllCallback onToggleAll;
@@ -299,7 +331,7 @@ class ScopeHierarchyView extends StatelessWidget {
                   .map(
                     (s) => Chip(
                       label: Text(
-                        '${labelForLevel(s.level)}: ${s.value}',
+                        '${labelForLevel(s.level)}: ${selectionLabels[s.value] ?? s.value}',
                         style: theme.textTheme.labelSmall,
                       ),
                       deleteIcon: const Icon(Icons.close, size: 16),
@@ -311,7 +343,7 @@ class ScopeHierarchyView extends StatelessWidget {
                   .toList(),
             ),
           ),
-        if (values.isNotEmpty) ...[
+        if (items.isNotEmpty) ...[
           const SizedBox(height: 4),
           Align(
             alignment: AlignmentDirectional.centerStart,
@@ -331,16 +363,17 @@ class ScopeHierarchyView extends StatelessWidget {
         ],
         Expanded(
           child: ListView.builder(
-            itemCount: values.length,
+            itemCount: items.length,
             itemBuilder: (context, index) {
-              final value = values[index];
+              final item = items[index];
+              final title = itemDisplayName(item, useHebrew: useHebrew);
               return HierarchyTile(
-                title: value,
-                isSelected: isSelected(value),
-                isImplicit: isSelected(value) && !isDirectlySelected(value),
+                title: title,
+                isSelected: isSelected(item),
+                isImplicit: isSelected(item) && !isDirectlySelected(item),
                 canDrill: canDrillDeeper,
-                onCheck: () => onToggle(value),
-                onDrill: canDrillDeeper ? () => onDrill(value) : null,
+                onCheck: () => onToggle(item),
+                onDrill: canDrillDeeper ? () => onDrill(item) : null,
               );
             },
           ),
@@ -394,7 +427,7 @@ class ScopeHierarchyView extends StatelessWidget {
                         ? () => onTrimBreadcrumbs(i + 1)
                         : null,
                     child: Text(
-                      breadcrumbs[i].value,
+                      breadcrumbLabels[i],
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: i < breadcrumbs.length - 1
                             ? theme.colorScheme.primary

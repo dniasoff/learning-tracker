@@ -46,7 +46,7 @@ class _ParentTrackManagementScreenState
 
     final activeAsync = ref.watch(tm.activeTracksProvider);
 
-    final showAddTrackFab = !activeAsync.isLoading;
+    final showAddTrackFab = activeAsync.asData?.value.isNotEmpty ?? false;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FC),

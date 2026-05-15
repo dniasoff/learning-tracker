@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:learning_tracker/core/content/content_grouping.dart';
+import 'package:learning_tracker/core/content/hierarchy_browser.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/labels/curriculum_label_renderer.dart';
@@ -12,7 +14,6 @@ import 'package:learning_tracker/features/onboarding/domain/services/bulk_prior_
 import 'package:learning_tracker/features/onboarding/presentation/providers/onboarding_providers.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/progress_providers.dart';
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
-import 'package:learning_tracker/features/settings/presentation/providers/curriculum_scope_providers.dart';
 import 'package:learning_tracker/features/stages/presentation/providers/stage_providers.dart';
 import 'package:learning_tracker/features/track_setup/domain/entities/add_track_result.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
@@ -64,7 +65,6 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
   List<ContentItem>? _resolvedItems;
   BulkPriorCompletionResult? _result;
   String? _error;
-  bool _didInitialAutoAdvance = false;
 
   // Search state
   final _searchController = TextEditingController();
@@ -74,8 +74,10 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
   // Per-stage marking: maps each selection to its own stage set
   final _perSelectionStages = <HierarchySelection, Set<int>>{};
 
-  // Navigation stack for hierarchy browsing within selection
+  // HierarchyBrowser state (synced via onNavigationChanged).
   List<String> _navigationStack = [];
+  List<String?> _navigationStackHebrewNames = [];
+  final _browserKey = GlobalKey<HierarchyBrowserState>();
 
   /// Filter items by scope constraints if provided.
   List<ContentItem> _applyScope(List<ContentItem> items) {
@@ -84,26 +86,12 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
     final level = scopes.first.level;
     final values = scopes.map((s) => s.value).toSet();
     return items.where((item) {
-      final itemValue = switch (level) {
-        1 => item.level1,
-        2 => item.level2,
-        3 => item.level3,
-        4 => item.level4,
-        _ => null,
-      };
+      final itemValue = levelValueAt(item, level);
       return itemValue != null && values.contains(itemValue);
     }).toList();
   }
 
-  String? get _currentLevel1 =>
-      _navigationStack.isNotEmpty ? _navigationStack[0] : null;
-  String? get _currentLevel2 =>
-      _navigationStack.length > 1 ? _navigationStack[1] : null;
-  String? get _currentLevel3 =>
-      _navigationStack.length > 2 ? _navigationStack[2] : null;
-
-  HierarchySelection _selectionForItem(ContentItem item) {
-    final depth = _navigationStack.length;
+  HierarchySelection _selectionForItem(ContentItem item, int depth) {
     return HierarchySelection(
       level1: item.level1,
       level2: depth >= 1 ? item.level2 : null,
@@ -113,9 +101,6 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
   }
 
   bool _isItemSelected(ContentItem item) {
-    // Check if this specific item or any ancestor is selected.
-    // Works for both leaf items and containers — a container is "selected"
-    // if it was directly selected OR if an ancestor selection covers it.
     return _selections.any((s) {
       if (s.level1 != null && s.level1 != item.level1) return false;
       if (s.level2 != null && s.level2 != item.level2) return false;
@@ -125,11 +110,10 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
     });
   }
 
-  void _toggleItem(ContentItem item) {
+  void _toggleItem(ContentItem item, int depth) {
     setState(() {
-      final sel = _selectionForItem(item);
+      final sel = _selectionForItem(item, depth);
       if (_isItemSelected(item)) {
-        // Remove this selection and any ancestor that covers it
         _selections.removeWhere((s) {
           if (s.level1 != null && s.level1 != item.level1) return false;
           if (s.level2 != null && s.level2 != item.level2) return false;
@@ -138,7 +122,6 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
           return true;
         });
       } else {
-        // Add this selection; remove redundant child selections
         _selections.removeWhere((s) {
           if (sel.level1 != null && sel.level1 != s.level1) return false;
           if (sel.level2 != null && sel.level2 != s.level2) return false;
@@ -149,60 +132,6 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
         _selections.add(sel);
       }
     });
-  }
-
-  void _drillDown(ContentItem item) {
-    final depth = _navigationStack.length;
-    final nextValue = switch (depth) {
-      0 => item.level1,
-      1 => item.level2,
-      2 => item.level3,
-      3 => item.level4,
-      _ => null,
-    };
-    if (nextValue != null) {
-      setState(() {
-        _navigationStack = [..._navigationStack, nextValue];
-      });
-      // Smart drill-down: auto-skip levels with only one option.
-      // Deferred to after setState so we can check next level's items.
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _autoAdvanceIfSingleOption();
-      });
-    }
-  }
-
-  /// Auto-advance past hierarchy levels that have only one option.
-  void _autoAdvanceIfSingleOption() {
-    // We need the current items to check — read from provider synchronously
-    final itemsAsync = ref.read(
-      scopedFilteredContentProvider((
-        curriculumId: widget.curriculumId,
-        level1: _currentLevel1,
-        level2: _currentLevel2,
-        level3: _currentLevel3,
-        level4: null,
-      )),
-    );
-    final items = itemsAsync.asData?.value;
-    if (items == null) return;
-
-    final scopedItems = _applyScope(items);
-    final grouped = _groupItemsByNextLevel(scopedItems);
-    if (grouped.length == 1 && !grouped.first.isLeaf) {
-      _drillDown(grouped.first);
-    }
-  }
-
-  void _navigateUp() {
-    if (_navigationStack.isNotEmpty) {
-      setState(() {
-        _navigationStack = _navigationStack.sublist(
-          0,
-          _navigationStack.length - 1,
-        );
-      });
-    }
   }
 
   @override
@@ -339,7 +268,7 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
         leading: _phase == _Phase.selection && _navigationStack.isNotEmpty
             ? IconButton(
                 icon: const Icon(Icons.arrow_back),
-                onPressed: _navigateUp,
+                onPressed: () => _browserKey.currentState?.navigateBack(),
               )
             : null,
         actions: [
@@ -369,27 +298,10 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
   }
 
   Widget _buildSelection(ThemeData theme) {
-    // Use search results when searching, hierarchy browsing otherwise
     final isSearchActive = _searchQuery.length >= 2;
-    final AsyncValue<List<ContentItem>> itemsAsync;
-    if (isSearchActive) {
-      itemsAsync = ref.watch(
-        contentSearchProvider(
-          curriculumId: widget.curriculumId,
-          query: _searchQuery,
-        ),
-      );
-    } else {
-      itemsAsync = ref.watch(
-        scopedFilteredContentProvider((
-          curriculumId: widget.curriculumId,
-          level1: _currentLevel1,
-          level2: _currentLevel2,
-          level3: _currentLevel3,
-          level4: null,
-        )),
-      );
-    }
+    final useHebrew = ref.watch(useHebrewTermsProvider);
+    final variant = ref.watch(currentTransliterationVariantProvider);
+    final l10n = AppLocalizations.of(context)!;
 
     return SafeArea(
       top: false,
@@ -404,110 +316,38 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
               textAlign: TextAlign.center,
             ),
           ),
+          // Breadcrumb bar — only shown during hierarchy browsing.
           if (_navigationStack.isNotEmpty && !isSearchActive)
-            Builder(
-              builder: (context) {
-                // Same renderer used by Browse Content and the reader —
-                // each crumb is the bare named segment ("זרעים", "ברכות")
-                // or the ordinal value with prefix ("פרק א").
-                final useHebrew = ref.watch(useHebrewTermsProvider);
-                final variant = ref.watch(
-                  currentTransliterationVariantProvider,
-                );
-                final segments = CurriculumLabelRenderer.renderBreadcrumb(
-                  curriculumId: widget.curriculumId,
-                  rawSegmentValues: _navigationStack,
-                  useHebrew: useHebrew,
-                  transliterationVariant: variant,
-                );
-                return Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Wrap(
-                    children: [
-                      for (var i = 0; i < segments.length; i++)
-                        TextButton(
-                          onPressed: () {
-                            setState(() {
-                              _navigationStack = _navigationStack.sublist(
-                                0,
-                                i + 1,
-                              );
-                            });
-                          },
-                          child: Text(segments[i]),
-                        ),
-                    ],
-                  ),
-                );
-              },
-            ),
-          Expanded(
-            child: itemsAsync.when(
-              data: (rawItems) {
-                final items = _applyScope(rawItems);
-                final displayItems = isSearchActive
-                    ? items
-                    : _groupItemsByNextLevel(items);
-
-                // Auto-advance past single-option levels on initial load
-                if (!_didInitialAutoAdvance && !isSearchActive) {
-                  _didInitialAutoAdvance = true;
-                  if (displayItems.length == 1 && !displayItems.first.isLeaf) {
-                    WidgetsBinding.instance.addPostFrameCallback((_) {
-                      if (mounted) _drillDown(displayItems.first);
-                    });
-                  }
-                }
-
-                if (displayItems.isEmpty) {
-                  return Center(
-                    child: Text(
-                      isSearchActive
-                          ? 'No results for "$_searchQuery"'
-                          : 'No content available',
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Wrap(
+                children: [
+                  for (var i = 0; i < _navigationStack.length; i++)
+                    TextButton(
+                      onPressed: () {
+                        // Trim browser's internal stack to i+1 entries.
+                        for (var j = _navigationStack.length; j > i + 1; j--) {
+                          _browserKey.currentState?.navigateBack();
+                        }
+                      },
+                      child: Text(
+                        CurriculumLabelRenderer.renderBreadcrumb(
+                          curriculumId: widget.curriculumId,
+                          rawSegmentValues: _navigationStack.sublist(0, i + 1),
+                          useHebrew: useHebrew,
+                          hebrewNamesPerSegment: _navigationStackHebrewNames
+                              .sublist(0, i + 1),
+                          transliterationVariant: variant,
+                        ).last,
+                      ),
                     ),
-                  );
-                }
-
-                final useHebrew = ref.watch(useHebrewTermsProvider);
-                return ListView.builder(
-                  itemCount: displayItems.length,
-                  itemBuilder: (context, index) {
-                    final item = displayItems[index];
-                    final isSelected = _isItemSelected(item);
-                    return ListTile(
-                      leading: Checkbox(
-                        value: isSelected,
-                        onChanged: (_) => _toggleItem(item),
-                      ),
-                      title: CurriculumLabel.item(
-                        item,
-                        mode: CurriculumLabelMode.breadcrumb,
-                        textDirection: useHebrew
-                            ? TextDirection.rtl
-                            : TextDirection.ltr,
-                        textAlign: TextAlign.start,
-                        style: theme.textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      trailing: item.isLeaf || isSearchActive
-                          ? null
-                          : const Icon(Icons.chevron_right),
-                      onTap: item.isLeaf || isSearchActive
-                          ? () => _toggleItem(item)
-                          : () => _drillDown(item),
-                    );
-                  },
-                );
-              },
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (e, _) => Center(
-                child: Text(
-                  AppLocalizations.of(context)!.errorGeneric(e.toString()),
-                ),
+                ],
               ),
             ),
+          Expanded(
+            child: isSearchActive
+                ? _buildSearchResults(theme, useHebrew, l10n)
+                : _buildHierarchyBrowser(theme, useHebrew),
           ),
           if (_selections.isNotEmpty)
             Padding(
@@ -525,7 +365,7 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
                 Expanded(
                   child: OutlinedButton(
                     onPressed: () => Navigator.of(context).pop(null),
-                    child: Text(AppLocalizations.of(context)!.bulkMarkSkip),
+                    child: Text(l10n.bulkMarkSkip),
                   ),
                 ),
                 const SizedBox(width: 16),
@@ -534,7 +374,7 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
                     onPressed: _selections.isNotEmpty
                         ? _proceedToStageSelection
                         : null,
-                    child: Text(AppLocalizations.of(context)!.actionNext),
+                    child: Text(l10n.actionNext),
                   ),
                 ),
               ],
@@ -542,6 +382,99 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildHierarchyBrowser(ThemeData theme, bool useHebrew) {
+    final contentAsync = ref.watch(
+      curriculumContentProvider(widget.curriculumId),
+    );
+    return contentAsync.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (e, _) => Center(
+        child: Text(AppLocalizations.of(context)!.errorGeneric(e.toString())),
+      ),
+      data: (allItems) => HierarchyBrowser(
+        key: _browserKey,
+        items: allItems,
+        curriculumId: widget.curriculumId,
+        filterItems: _applyScope,
+        autoAdvanceSingleOption: true,
+        onNavigationChanged: (path, hebrewNames) {
+          setState(() {
+            _navigationStack = path;
+            _navigationStackHebrewNames = hebrewNames;
+          });
+        },
+        tileBuilder: (item, currentPath, onDrill) {
+          final isSelected = _isItemSelected(item);
+          return ListTile(
+            leading: Checkbox(
+              value: isSelected,
+              onChanged: (_) => _toggleItem(item, currentPath.length),
+            ),
+            title: CurriculumLabel.item(
+              item,
+              mode: CurriculumLabelMode.leaf,
+              textDirection: useHebrew ? TextDirection.rtl : TextDirection.ltr,
+              textAlign: TextAlign.start,
+              style: theme.textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            trailing: onDrill != null ? const Icon(Icons.chevron_right) : null,
+            onTap: onDrill ?? () => _toggleItem(item, currentPath.length),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildSearchResults(
+    ThemeData theme,
+    bool useHebrew,
+    AppLocalizations l10n,
+  ) {
+    final itemsAsync = ref.watch(
+      contentSearchProvider(
+        curriculumId: widget.curriculumId,
+        query: _searchQuery,
+      ),
+    );
+    return itemsAsync.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (e, _) => Center(child: Text(l10n.errorGeneric(e.toString()))),
+      data: (rawItems) {
+        final items = _applyScope(rawItems);
+        if (items.isEmpty) {
+          return Center(child: Text('No results for "$_searchQuery"'));
+        }
+        return ListView.builder(
+          itemCount: items.length,
+          itemBuilder: (context, index) {
+            final item = items[index];
+            final isSelected = _isItemSelected(item);
+            return ListTile(
+              leading: Checkbox(
+                value: isSelected,
+                onChanged: (_) => _toggleItem(item, 3),
+              ),
+              title: CurriculumLabel.item(
+                item,
+                mode: CurriculumLabelMode.leaf,
+                textDirection: useHebrew
+                    ? TextDirection.rtl
+                    : TextDirection.ltr,
+                textAlign: TextAlign.start,
+                style: theme.textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              onTap: () => _toggleItem(item, 3),
+            );
+          },
+        );
+      },
     );
   }
 
@@ -838,64 +771,5 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
         ),
       ),
     );
-  }
-
-  /// Group items by the next hierarchy level. Display names flow through
-  /// `CurriculumLabelRenderer` so this screen renders the same Hebrew /
-  /// transliterated strings as Browse Content and the dashboard pill.
-  List<ContentItem> _groupItemsByNextLevel(List<ContentItem> items) {
-    final currentDepth = _navigationStack.length;
-    if (currentDepth >= 4) return items;
-
-    final variant = ref.read(currentTransliterationVariantProvider);
-    final uniqueItems = <String, ContentItem>{};
-
-    for (final item in items) {
-      final nextLevelValue = switch (currentDepth) {
-        0 => item.level1,
-        1 => item.level2,
-        2 => item.level3,
-        3 => item.level4,
-        _ => null,
-      };
-      if (nextLevelValue == null || uniqueItems.containsKey(nextLevelValue)) {
-        continue;
-      }
-
-      final renderedHe = CurriculumLabelRenderer.renderValue(
-        curriculumId: widget.curriculumId,
-        level: currentDepth + 1,
-        rawValue: nextLevelValue,
-        useHebrew: true,
-        hebrewName: !item.isLeaf ? item.displayNameHe : null,
-        parentL1Value: item.level1,
-        transliterationVariant: variant,
-      );
-      final renderedEn = CurriculumLabelRenderer.renderValue(
-        curriculumId: widget.curriculumId,
-        level: currentDepth + 1,
-        rawValue: nextLevelValue,
-        useHebrew: false,
-        hebrewName: !item.isLeaf ? item.displayNameHe : null,
-        parentL1Value: item.level1,
-        transliterationVariant: variant,
-      );
-
-      uniqueItems[nextLevelValue] = ContentItem(
-        curriculumId: item.curriculumId,
-        level1: item.level1,
-        level2: currentDepth >= 1 ? item.level2 : null,
-        level3: currentDepth >= 2 ? item.level3 : null,
-        level4: currentDepth >= 3 ? item.level4 : null,
-        displayNameHe: renderedHe,
-        displayNameEn: renderedEn,
-        sefariaRef: item.sefariaRef,
-        sortOrder: item.sortOrder,
-        isLeaf: item.isLeaf,
-      );
-    }
-
-    return uniqueItems.values.toList()
-      ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
   }
 }

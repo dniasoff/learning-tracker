@@ -321,8 +321,11 @@ class _DeletingAccountOverlayState
       // signed-out state regardless of whether deleteAccount fully succeeded.
       ref.read(authStateProvider.notifier).signOut();
       ref.invalidate(authStateProvider);
+      // Replace the underlying route stack with SignIn BEFORE dismissing the
+      // overlay. Popping first briefly exposes the now-wiped Settings screen
+      // with full interactivity until the async replace lands.
+      await ref.read(routerProvider).replaceAll([const SignInRoute()]);
       if (mounted) Navigator.of(context).pop(); // close overlay
-      unawaited(ref.read(routerProvider).replaceAll([const SignInRoute()]));
     } catch (e) {
       if (mounted) {
         setState(() => _error = e.toString());

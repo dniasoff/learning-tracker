@@ -85,6 +85,14 @@ void main() {
       'lib/features/content_browsing/data/services/cloud_content_service.dart',
       'lib/features/content_browsing/domain/repositories/content_repository.dart',
       'lib/features/content_browsing/presentation/providers/content_providers.dart',
+      // Shared renderer-bridge extracted from content_browser_tree /
+      // bulk_mark_screen: groups items by next level, passes displayNameHe as
+      // hebrewName: to CurriculumLabelRenderer, returns pre-rendered ContentItems.
+      'lib/core/content/content_grouping.dart',
+      // Drill-down navigation widget: captures item.displayNameHe (already
+      // rendered by groupItemsByNextLevel) for breadcrumb Hebrew labels and
+      // passes them to callers via onNavigationChanged.
+      'lib/core/content/hierarchy_browser.dart',
       // Renderer-bridge: passes item.displayNameHe as hebrewName: to
       // CurriculumLabel.level (named segment Hebrew lookup), and builds
       // synthetic ContentItem instances to feed back through the renderer.

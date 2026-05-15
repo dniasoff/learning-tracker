@@ -101,7 +101,7 @@ class _ProfilePickerScreenState extends ConsumerState<ProfilePickerScreen> {
             GridView.builder(
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: 2,
-                childAspectRatio: 0.71,
+                childAspectRatio: 0.67,
                 crossAxisSpacing: 14,
                 mainAxisSpacing: 14,
               ),
@@ -707,7 +707,7 @@ class _ProfileCard extends StatelessWidget {
                   ],
                 ),
               ),
-              const SizedBox(height: 14),
+              const SizedBox(height: 10),
               Center(
                 child: Column(
                   children: [
@@ -819,6 +819,8 @@ class AddProfileModePickCard extends StatelessWidget {
                   const SizedBox(height: 2),
                   Text(
                     subtitle,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                     style: theme.textTheme.bodySmall?.copyWith(
                       fontWeight: FontWeight.w500,
                       color: selected

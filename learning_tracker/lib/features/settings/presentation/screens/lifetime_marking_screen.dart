@@ -1,10 +1,11 @@
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:learning_tracker/core/content/content_grouping.dart';
+import 'package:learning_tracker/core/content/hierarchy_browser.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
-import 'package:learning_tracker/core/labels/curriculum_label_renderer.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
@@ -289,53 +290,33 @@ class LifetimeCurriculumMarkingScreen extends ConsumerStatefulWidget {
 
 class _LifetimeCurriculumMarkingScreenState
     extends ConsumerState<LifetimeCurriculumMarkingScreen> {
-  final List<ScopeEntry> _breadcrumbs = [];
   final List<ScopeEntry> _selections = [];
   bool _saving = false;
+
+  // Navigation state synced from HierarchyBrowser.
+  List<String> _breadcrumbPath = [];
+  List<String?> _breadcrumbHebrewNames = [];
+  List<ContentItem> _currentDisplayItems = [];
+  final _browserKey = GlobalKey<HierarchyBrowserState>();
 
   CurriculumId get _curriculum => CurriculumId.values.firstWhere(
     (c) => c.storageKey == widget.curriculumId,
     orElse: () => CurriculumId.mishnayos,
   );
 
-  int get _currentLevel =>
-      _breadcrumbs.isEmpty ? 1 : _breadcrumbs.last.level + 1;
+  int get _currentLevel => _breadcrumbPath.length + 1;
 
-  String? _getItemLevel(ContentItem item, int level) {
-    return switch (level) {
-      1 => item.level1,
-      2 => item.level2,
-      3 => item.level3,
-      4 => item.level4,
-      _ => null,
-    };
-  }
-
-  List<String> _valuesAtCurrentLevel(List<ContentItem> items) {
-    var filtered = items;
-    for (final crumb in _breadcrumbs) {
-      filtered = filtered
-          .where((item) => _getItemLevel(item, crumb.level) == crumb.value)
-          .toList();
-    }
-    final seen = <String>{};
-    final result = <String>[];
-    for (final item in filtered) {
-      final value = _getItemLevel(item, _currentLevel);
-      if (value != null && value.isNotEmpty && seen.add(value)) {
-        result.add(value);
-      }
-    }
-    return result;
-  }
-
-  bool _isSelected(String value) {
-    if (_selections.any((s) => s.level == _currentLevel && s.value == value)) {
+  bool _isSelected(String value, List<String> currentPath) {
+    final currentLevel = currentPath.length + 1;
+    if (_selections.any((s) => s.level == currentLevel && s.value == value)) {
       return true;
     }
-    for (final crumb in _breadcrumbs) {
+    // Check if any ancestor in the current path is selected.
+    for (var i = 0; i < currentPath.length; i++) {
+      final ancestorLevel = i + 1;
+      final ancestorValue = currentPath[i];
       if (_selections.any(
-        (s) => s.level == crumb.level && s.value == crumb.value,
+        (s) => s.level == ancestorLevel && s.value == ancestorValue,
       )) {
         return true;
       }
@@ -343,36 +324,33 @@ class _LifetimeCurriculumMarkingScreenState
     return false;
   }
 
-  bool _isDirectlySelected(String value) {
-    return _selections.any((s) => s.level == _currentLevel && s.value == value);
+  bool _isDirectlySelected(String value, int currentLevel) {
+    return _selections.any((s) => s.level == currentLevel && s.value == value);
   }
 
-  void _toggleSelection(String value) {
+  void _toggleSelection(String value, int level) {
     setState(() {
       final idx = _selections.indexWhere(
-        (s) => s.level == _currentLevel && s.value == value,
+        (s) => s.level == level && s.value == value,
       );
       if (idx >= 0) {
         _selections.removeAt(idx);
       } else {
-        _selections.removeWhere((s) => s.level > _currentLevel);
-        _selections.add(ScopeEntry(level: _currentLevel, value: value));
+        _selections.removeWhere((s) => s.level > level);
+        _selections.add(ScopeEntry(level: level, value: value));
       }
     });
   }
 
-  void _drillInto(String value) {
-    if (_currentLevel >= 4) return;
+  void _markAllCurrentLevel() {
+    final level = _currentLevel;
     setState(() {
-      _breadcrumbs.add(ScopeEntry(level: _currentLevel, value: value));
-    });
-  }
-
-  void _markAllCurrentLevel(List<String> values) {
-    setState(() {
-      _selections.removeWhere((s) => s.level == _currentLevel);
-      for (final value in values) {
-        _selections.add(ScopeEntry(level: _currentLevel, value: value));
+      _selections.removeWhere((s) => s.level == level);
+      for (final item in _currentDisplayItems) {
+        final rawValue = levelValueAt(item, level) ?? '';
+        if (rawValue.isNotEmpty) {
+          _selections.add(ScopeEntry(level: level, value: rawValue));
+        }
       }
     });
   }
@@ -385,17 +363,6 @@ class _LifetimeCurriculumMarkingScreenState
     return ledger.any(
       (e) => e.entryScope == 'level$level' && e.unitIdentifier == value,
     );
-  }
-
-  MarkingRowVisual _visualFor(String value, List<LearningLedgerData> ledger) {
-    if (_ledgerHasUnit(ledger, _currentLevel, value)) {
-      return MarkingRowVisual.direct;
-    }
-    final selected = _isSelected(value);
-    final implicit = selected && !_isDirectlySelected(value);
-    if (implicit) return MarkingRowVisual.implicit;
-    if (selected) return MarkingRowVisual.direct;
-    return MarkingRowVisual.none;
   }
 
   Future<void> _markSelections(List<ScopeEntry> selections) async {
@@ -469,7 +436,7 @@ class _LifetimeCurriculumMarkingScreenState
       curriculumLedgerProvider(widget.curriculumId),
     );
     final ledger = ledgerAsync.asData?.value ?? const <LearningLedgerData>[];
-
+    final useHebrew = ref.watch(useHebrewTermsProvider);
     final theme = Theme.of(context);
 
     return Scaffold(
@@ -479,6 +446,13 @@ class _LifetimeCurriculumMarkingScreenState
         foregroundColor: AppTheme.brandInk,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
+        leading: _breadcrumbPath.isNotEmpty
+            ? IconButton(
+                icon: const Icon(Icons.arrow_back_ios_new_rounded),
+                color: AppTheme.brandBlueDeep,
+                onPressed: () => _browserKey.currentState?.navigateBack(),
+              )
+            : null,
         title: AppBarTitle(
           text: curriculumLabelText(ref, curriculum: _curriculum),
         ),
@@ -503,60 +477,86 @@ class _LifetimeCurriculumMarkingScreenState
               child: Text(l10n.contentLoadError(e.toString())),
             ),
           ),
-          data: (allItems) {
-            final values = _valuesAtCurrentLevel(allItems);
-            final canDrill = _currentLevel < 4;
-            final variant = ref.watch(currentTransliterationVariantProvider);
-            // English forms for the row's secondary line. Built via the
-            // centralized renderer so the result matches the rest of the
-            // app's English-mode display.
-            final valueToEnglish = <String, String>{};
-            for (final item in allItems) {
-              final key = _getItemLevel(item, _currentLevel);
-              if (key == null || key.isEmpty) continue;
-              valueToEnglish.putIfAbsent(
-                key,
-                () => CurriculumLabelRenderer.renderValue(
-                  curriculumId: _curriculum,
-                  level: _currentLevel,
-                  rawValue: key,
-                  useHebrew: false,
-                  hebrewName: item.displayNameHe,
-                  parentL1Value: item.level1,
-                  transliterationVariant: variant,
-                ),
-              );
-            }
-            return SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
-                child: Column(
-                  children: [
-                    Expanded(
-                      child: Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: const Color(0xFFE9ECF2)),
-                          boxShadow: const [
-                            BoxShadow(
-                              color: Color(0x121D2939),
-                              blurRadius: 16,
-                              offset: Offset(0, 5),
+          data: (allItems) => SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+              child: Column(
+                children: [
+                  Expanded(
+                    child: Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: const Color(0xFFE9ECF2)),
+                        boxShadow: const [
+                          BoxShadow(
+                            color: Color(0x121D2939),
+                            blurRadius: 16,
+                            offset: Offset(0, 5),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Icon(
+                                Icons.playlist_add_check_outlined,
+                                color: AppTheme.brandBlue,
+                                size: 26,
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      l10n.lifetimeSelectScreenTitle,
+                                      style: theme.textTheme.titleLarge
+                                          ?.copyWith(
+                                            fontWeight: FontWeight.w800,
+                                            color: AppTheme.brandInk,
+                                          ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      l10n.lifetimeSelectScreenSubtitle,
+                                      style: theme.textTheme.bodySmall
+                                          ?.copyWith(
+                                            color: AppTheme.brandInkMuted,
+                                            height: 1.35,
+                                          ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 10,
                             ),
-                          ],
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            Row(
+                            decoration: BoxDecoration(
+                              color: AppTheme.brandBlueSoft.withValues(
+                                alpha: 0.45,
+                              ),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: const Color(0xFFE9ECF2),
+                              ),
+                            ),
+                            child: Row(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 const Icon(
-                                  Icons.playlist_add_check_outlined,
+                                  Icons.draw_outlined,
                                   color: AppTheme.brandBlue,
-                                  size: 26,
+                                  size: 20,
                                 ),
                                 const SizedBox(width: 10),
                                 Expanded(
@@ -565,16 +565,19 @@ class _LifetimeCurriculumMarkingScreenState
                                         CrossAxisAlignment.start,
                                     children: [
                                       Text(
-                                        l10n.lifetimeSelectScreenTitle,
-                                        style: theme.textTheme.titleLarge
+                                        l10n.lifetimeMarkAsLearnedTitle,
+                                        style: theme.textTheme.titleSmall
                                             ?.copyWith(
-                                              fontWeight: FontWeight.w800,
+                                              fontWeight: FontWeight.w700,
                                               color: AppTheme.brandInk,
                                             ),
                                       ),
                                       const SizedBox(height: 4),
                                       Text(
-                                        l10n.lifetimeSelectScreenSubtitle,
+                                        l10n.lifetimeMarkAsLearnedLine(
+                                          _selections.length,
+                                          _currentLevel,
+                                        ),
                                         style: theme.textTheme.bodySmall
                                             ?.copyWith(
                                               color: AppTheme.brandInkMuted,
@@ -586,230 +589,209 @@ class _LifetimeCurriculumMarkingScreenState
                                 ),
                               ],
                             ),
-                            const SizedBox(height: 12),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 10,
-                              ),
-                              decoration: BoxDecoration(
-                                color: AppTheme.brandBlueSoft.withValues(
+                          ),
+                          const SizedBox(height: 10),
+                          OutlinedButton.icon(
+                            onPressed: _currentDisplayItems.isEmpty
+                                ? null
+                                : _markAllCurrentLevel,
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: AppTheme.brandBlue,
+                              side: BorderSide(
+                                color: AppTheme.brandBlue.withValues(
                                   alpha: 0.45,
                                 ),
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(
-                                  color: const Color(0xFFE9ECF2),
-                                ),
                               ),
-                              child: Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
+                            ),
+                            icon: const Icon(Icons.select_all, size: 20),
+                            label: Text(l10n.selectAllInThisList),
+                          ),
+                          // Breadcrumb trail.
+                          if (_breadcrumbPath.isNotEmpty) ...[
+                            const SizedBox(height: 6),
+                            SizedBox(
+                              height: 40,
+                              child: ListView(
+                                scrollDirection: Axis.horizontal,
                                 children: [
-                                  const Icon(
-                                    Icons.draw_outlined,
-                                    color: AppTheme.brandBlue,
-                                    size: 20,
-                                  ),
-                                  const SizedBox(width: 10),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          l10n.lifetimeMarkAsLearnedTitle,
-                                          style: theme.textTheme.titleSmall
-                                              ?.copyWith(
-                                                fontWeight: FontWeight.w700,
-                                                color: AppTheme.brandInk,
-                                              ),
-                                        ),
-                                        const SizedBox(height: 4),
-                                        Text(
-                                          l10n.lifetimeMarkAsLearnedLine(
-                                            _selections.length,
-                                            _currentLevel,
-                                          ),
-                                          style: theme.textTheme.bodySmall
-                                              ?.copyWith(
-                                                color: AppTheme.brandInkMuted,
-                                                height: 1.35,
-                                              ),
-                                        ),
-                                      ],
+                                  TextButton(
+                                    onPressed: () => _browserKey.currentState
+                                        ?.clearNavigation(),
+                                    child: Text(
+                                      l10n.breadcrumbsRoot,
+                                      style: const TextStyle(
+                                        color: AppTheme.brandBlue,
+                                        fontWeight: FontWeight.w700,
+                                      ),
                                     ),
                                   ),
+                                  for (
+                                    var i = 0;
+                                    i < _breadcrumbPath.length;
+                                    i++
+                                  )
+                                    TextButton(
+                                      onPressed: i < _breadcrumbPath.length - 1
+                                          ? () {
+                                              for (
+                                                var j = _breadcrumbPath.length;
+                                                j > i + 1;
+                                                j--
+                                              ) {
+                                                _browserKey.currentState
+                                                    ?.navigateBack();
+                                              }
+                                            }
+                                          : null,
+                                      child: Text(
+                                        _breadcrumbHebrewNames[i] ??
+                                            _breadcrumbPath[i],
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: TextStyle(
+                                          color: i < _breadcrumbPath.length - 1
+                                              ? AppTheme.brandBlue
+                                              : AppTheme.brandInkMuted,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ),
                                 ],
                               ),
                             ),
-                            const SizedBox(height: 10),
-                            OutlinedButton.icon(
-                              onPressed: values.isEmpty
-                                  ? null
-                                  : () => _markAllCurrentLevel(values),
-                              style: OutlinedButton.styleFrom(
-                                foregroundColor: AppTheme.brandBlue,
-                                side: BorderSide(
-                                  color: AppTheme.brandBlue.withValues(
-                                    alpha: 0.45,
+                          ],
+                          const SizedBox(height: 8),
+                          Expanded(
+                            child: LifetimeFolderListPanel(
+                              insetBackground: false,
+                              child: HierarchyBrowser(
+                                key: _browserKey,
+                                items: allItems,
+                                curriculumId: _curriculum,
+                                onNavigationChanged: (path, hebrewNames) {
+                                  setState(() {
+                                    _breadcrumbPath = path;
+                                    _breadcrumbHebrewNames = hebrewNames;
+                                  });
+                                },
+                                onDisplayItemsChanged: (items) {
+                                  if (_currentDisplayItems != items) {
+                                    _currentDisplayItems = items;
+                                  }
+                                },
+                                emptyBuilder: (context) => Center(
+                                  child: Text(
+                                    l10n.noItemsAtThisLevel,
+                                    style: const TextStyle(
+                                      color: AppTheme.brandInkMuted,
+                                    ),
                                   ),
                                 ),
-                              ),
-                              icon: const Icon(Icons.select_all, size: 20),
-                              label: Text(l10n.selectAllInThisList),
-                            ),
-                            if (_breadcrumbs.isNotEmpty) ...[
-                              const SizedBox(height: 6),
-                              SizedBox(
-                                height: 40,
-                                child: ListView(
-                                  scrollDirection: Axis.horizontal,
-                                  children: [
-                                    TextButton(
-                                      onPressed: () {
-                                        setState(_breadcrumbs.clear);
-                                      },
-                                      child: Text(
-                                        l10n.breadcrumbsRoot,
-                                        style: const TextStyle(
-                                          color: AppTheme.brandBlue,
-                                          fontWeight: FontWeight.w700,
-                                        ),
-                                      ),
+                                tileBuilder: (item, currentPath, onDrill) {
+                                  final currentLevel = currentPath.length + 1;
+                                  final rawValue =
+                                      levelValueAt(item, currentLevel) ?? '';
+                                  final persisted = _ledgerHasUnit(
+                                    ledger,
+                                    currentLevel,
+                                    rawValue,
+                                  );
+                                  final selected = _isSelected(
+                                    rawValue,
+                                    currentPath,
+                                  );
+                                  final directlySelected = _isDirectlySelected(
+                                    rawValue,
+                                    currentLevel,
+                                  );
+                                  return LifetimeMarkingScopeRow(
+                                    primary: itemDisplayName(
+                                      item,
+                                      useHebrew: useHebrew,
                                     ),
-                                    for (
-                                      var i = 0;
-                                      i < _breadcrumbs.length;
-                                      i++
-                                    )
-                                      TextButton(
-                                        onPressed: i < _breadcrumbs.length - 1
-                                            ? () {
-                                                setState(() {
-                                                  _breadcrumbs.removeRange(
-                                                    i + 1,
-                                                    _breadcrumbs.length,
-                                                  );
-                                                });
-                                              }
-                                            : null,
-                                        child: Text(
-                                          _breadcrumbs[i].value,
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: TextStyle(
-                                            color: i < _breadcrumbs.length - 1
-                                                ? AppTheme.brandBlue
-                                                : AppTheme.brandInkMuted,
-                                            fontWeight: FontWeight.w600,
+                                    secondary: useHebrew
+                                        ? itemDisplayName(
+                                            item,
+                                            useHebrew: false,
+                                          )
+                                        : null,
+                                    hasDrill: onDrill != null,
+                                    visual: persisted
+                                        ? MarkingRowVisual.direct
+                                        : selected && !directlySelected
+                                        ? MarkingRowVisual.implicit
+                                        : selected
+                                        ? MarkingRowVisual.direct
+                                        : MarkingRowVisual.none,
+                                    isPersisted: persisted,
+                                    isImplicit:
+                                        !persisted &&
+                                        selected &&
+                                        !directlySelected,
+                                    lightSurface: true,
+                                    onDrill: onDrill,
+                                    onToggle: () => _toggleSelection(
+                                      rawValue,
+                                      currentLevel,
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: OutlinedButton(
+                                  onPressed: _saving || _selections.isEmpty
+                                      ? null
+                                      : () {
+                                          setState(_selections.clear);
+                                        },
+                                  style: OutlinedButton.styleFrom(
+                                    foregroundColor: AppTheme.brandInkMuted,
+                                    side: const BorderSide(
+                                      color: Color(0xFFD7DEEA),
+                                    ),
+                                  ),
+                                  child: Text(l10n.clearSelection),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: FilledButton(
+                                  style: FilledButton.styleFrom(
+                                    backgroundColor: AppTheme.brandBlue,
+                                    foregroundColor: Colors.white,
+                                  ),
+                                  onPressed: _saving || _selections.isEmpty
+                                      ? null
+                                      : () {
+                                          _markSelections(List.of(_selections));
+                                        },
+                                  child: _saving
+                                      ? const SizedBox(
+                                          width: 20,
+                                          height: 20,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                            color: Colors.white,
                                           ),
-                                        ),
-                                      ),
-                                  ],
+                                        )
+                                      : Text(l10n.save),
                                 ),
                               ),
                             ],
-                            const SizedBox(height: 8),
-                            Expanded(
-                              child: LifetimeFolderListPanel(
-                                insetBackground: false,
-                                child: values.isEmpty
-                                    ? Center(
-                                        child: Text(
-                                          l10n.noItemsAtThisLevel,
-                                          style: const TextStyle(
-                                            color: AppTheme.brandInkMuted,
-                                          ),
-                                        ),
-                                      )
-                                    : ListView.separated(
-                                        padding: EdgeInsets.zero,
-                                        itemCount: values.length,
-                                        separatorBuilder: (_, __) =>
-                                            const SizedBox.shrink(),
-                                        itemBuilder: (context, index) {
-                                          final value = values[index];
-                                          final persisted = _ledgerHasUnit(
-                                            ledger,
-                                            _currentLevel,
-                                            value,
-                                          );
-                                          return LifetimeMarkingScopeRow(
-                                            primary: value,
-                                            secondary: valueToEnglish[value],
-                                            hasDrill: canDrill,
-                                            visual: _visualFor(value, ledger),
-                                            isPersisted: persisted,
-                                            isImplicit:
-                                                !persisted &&
-                                                _isSelected(value) &&
-                                                !_isDirectlySelected(value),
-                                            lightSurface: true,
-                                            onDrill: canDrill
-                                                ? () => _drillInto(value)
-                                                : null,
-                                            onToggle: () =>
-                                                _toggleSelection(value),
-                                          );
-                                        },
-                                      ),
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: OutlinedButton(
-                                    onPressed: _saving || _selections.isEmpty
-                                        ? null
-                                        : () {
-                                            setState(_selections.clear);
-                                          },
-                                    style: OutlinedButton.styleFrom(
-                                      foregroundColor: AppTheme.brandInkMuted,
-                                      side: const BorderSide(
-                                        color: Color(0xFFD7DEEA),
-                                      ),
-                                    ),
-                                    child: Text(l10n.clearSelection),
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: FilledButton(
-                                    style: FilledButton.styleFrom(
-                                      backgroundColor: AppTheme.brandBlue,
-                                      foregroundColor: Colors.white,
-                                    ),
-                                    onPressed: _saving || _selections.isEmpty
-                                        ? null
-                                        : () {
-                                            _markSelections(
-                                              List.of(_selections),
-                                            );
-                                          },
-                                    child: _saving
-                                        ? const SizedBox(
-                                            width: 20,
-                                            height: 20,
-                                            child: CircularProgressIndicator(
-                                              strokeWidth: 2,
-                                              color: Colors.white,
-                                            ),
-                                          )
-                                        : Text(l10n.save),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-            );
-          },
+            ),
+          ),
         ),
       ),
     );

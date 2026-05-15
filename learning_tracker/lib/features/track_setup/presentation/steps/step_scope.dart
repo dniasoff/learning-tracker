@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
+import 'package:learning_tracker/core/content/content_grouping.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
+import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/track_setup/domain/entities/add_track_result.dart';
@@ -31,7 +33,9 @@ class ScopeStepContent extends ConsumerStatefulWidget {
 
 class _ScopeStepContentState extends ConsumerState<ScopeStepContent> {
   final List<ScopeEntry> _breadcrumbs = [];
+  final List<String> _breadcrumbLabels = []; // parallel rendered labels
   final List<ScopeEntry> _selections = [];
+  final Map<String, String> _selectionLabels = {}; // rawValue → rendered label
   bool _didAutoSkip = false;
 
   List<String> get _levelLabels =>
@@ -50,34 +54,21 @@ class _ScopeStepContentState extends ConsumerState<ScopeStepContent> {
         : 'Level $level';
   }
 
-  String? _getItemLevel(ContentItem item, int level) {
-    return switch (level) {
-      1 => item.level1,
-      2 => item.level2,
-      3 => item.level3,
-      4 => item.level4,
-      _ => null,
-    };
-  }
-
-  List<String> _valuesAtCurrentLevel(List<ContentItem> items) {
-    var filtered = items;
+  /// Filters [allItems] to those matching the current breadcrumb path.
+  List<ContentItem> _filteredToCurrentPath(List<ContentItem> allItems) {
+    var filtered = allItems;
     for (final crumb in _breadcrumbs) {
       filtered = filtered
-          .where((item) => _getItemLevel(item, crumb.level) == crumb.value)
+          .where((item) => levelValueAt(item, crumb.level) == crumb.value)
           .toList();
     }
-    final seen = <String>{};
-    final result = <String>[];
-    for (final item in filtered) {
-      final value = _getItemLevel(item, _currentLevel);
-      if (value != null && seen.add(value)) result.add(value);
-    }
-    return result;
+    return filtered;
   }
 
-  bool _isSelected(String value) {
-    if (_selections.any((s) => s.level == _currentLevel && s.value == value)) {
+  bool _isRawSelected(String rawValue) {
+    if (_selections.any(
+      (s) => s.level == _currentLevel && s.value == rawValue,
+    )) {
       return true;
     }
     for (final crumb in _breadcrumbs) {
@@ -90,41 +81,67 @@ class _ScopeStepContentState extends ConsumerState<ScopeStepContent> {
     return false;
   }
 
-  bool _isDirectlySelected(String value) {
-    return _selections.any((s) => s.level == _currentLevel && s.value == value);
-  }
+  bool _isRawDirectlySelected(String rawValue) =>
+      _selections.any((s) => s.level == _currentLevel && s.value == rawValue);
 
-  void _toggleSelection(String value) {
+  bool _isItemSelected(ContentItem item) =>
+      _isRawSelected(levelValueAt(item, _currentLevel) ?? '');
+
+  bool _isItemDirectlySelected(ContentItem item) =>
+      _isRawDirectlySelected(levelValueAt(item, _currentLevel) ?? '');
+
+  void _toggleItem(ContentItem item, bool useHebrew) {
+    final rawValue = levelValueAt(item, _currentLevel) ?? '';
+    final label = itemDisplayName(item, useHebrew: useHebrew);
     setState(() {
-      final existing = _selections.indexWhere(
-        (s) => s.level == _currentLevel && s.value == value,
+      final idx = _selections.indexWhere(
+        (s) => s.level == _currentLevel && s.value == rawValue,
       );
-      if (existing >= 0) {
-        _selections.removeAt(existing);
+      if (idx >= 0) {
+        _selections.removeAt(idx);
       } else {
         _selections.removeWhere((s) => s.level > _currentLevel);
-        _selections.add(ScopeEntry(level: _currentLevel, value: value));
+        _selections.add(ScopeEntry(level: _currentLevel, value: rawValue));
+        _selectionLabels[rawValue] = label;
       }
     });
   }
 
-  void _drillInto(String value, List<ContentItem> items) {
+  void _drillInto(
+    ContentItem item,
+    List<ContentItem> allItems,
+    bool useHebrew,
+  ) {
+    final rawValue = levelValueAt(item, _currentLevel) ?? '';
+    final label = itemDisplayName(item, useHebrew: useHebrew);
     final nextLevel = _currentLevel + 1;
     if (nextLevel > _maxSelectableLevel) return;
     setState(() {
-      _breadcrumbs.add(ScopeEntry(level: _currentLevel, value: value));
+      _breadcrumbs.add(ScopeEntry(level: _currentLevel, value: rawValue));
+      _breadcrumbLabels.add(label);
     });
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final nextValues = _valuesAtCurrentLevel(items);
-      if (nextValues.length == 1 && _currentLevel < _maxSelectableLevel) {
-        _drillInto(nextValues.first, items);
+      if (!mounted) return;
+      final variant = ref.read(currentTransliterationVariantProvider);
+      final filtered = _filteredToCurrentPath(allItems);
+      final nextItems = groupItemsByNextLevel(
+        items: filtered,
+        currentDepth: _breadcrumbs.length,
+        curriculumId: widget.curriculumId,
+        variant: variant,
+      );
+      if (nextItems.length == 1 && _currentLevel < _maxSelectableLevel) {
+        _drillInto(nextItems.first, allItems, useHebrew);
       }
     });
   }
 
   void _goBack() {
     setState(() {
-      if (_breadcrumbs.isNotEmpty) _breadcrumbs.removeLast();
+      if (_breadcrumbs.isNotEmpty) {
+        _breadcrumbs.removeLast();
+        _breadcrumbLabels.removeLast();
+      }
     });
   }
 
@@ -136,57 +153,63 @@ class _ScopeStepContentState extends ConsumerState<ScopeStepContent> {
     }
   }
 
-  bool _allValuesDirectlySelected(List<String> values) {
-    if (values.isEmpty) return false;
-    return values.every(_isDirectlySelected);
+  bool _allItemsDirectlySelected(List<ContentItem> items) {
+    if (items.isEmpty) return false;
+    return items.every(_isItemDirectlySelected);
   }
 
-  void _toggleSelectAllCurrentLevel(List<ContentItem> items) {
-    final values = _valuesAtCurrentLevel(items);
-    if (values.isEmpty) return;
+  void _toggleSelectAll(List<ContentItem> displayItems, bool useHebrew) {
+    if (displayItems.isEmpty) return;
     setState(() {
-      if (_allValuesDirectlySelected(values)) {
-        for (final v in values) {
+      if (_allItemsDirectlySelected(displayItems)) {
+        for (final item in displayItems) {
+          final rawValue = levelValueAt(item, _currentLevel) ?? '';
           _selections.removeWhere(
-            (s) => s.level == _currentLevel && s.value == v,
+            (s) => s.level == _currentLevel && s.value == rawValue,
           );
         }
       } else {
         _selections.removeWhere((s) => s.level > _currentLevel);
-        for (final v in values) {
+        for (final item in displayItems) {
+          final rawValue = levelValueAt(item, _currentLevel) ?? '';
           if (!_selections.any(
-            (s) => s.level == _currentLevel && s.value == v,
+            (s) => s.level == _currentLevel && s.value == rawValue,
           )) {
-            _selections.add(ScopeEntry(level: _currentLevel, value: v));
+            _selections.add(ScopeEntry(level: _currentLevel, value: rawValue));
+            _selectionLabels[rawValue] = itemDisplayName(
+              item,
+              useHebrew: useHebrew,
+            );
           }
         }
       }
     });
   }
 
-  int _childCountForValue(List<ContentItem> items, String value) {
+  int _childCountForItem(List<ContentItem> allItems, ContentItem item) {
+    final rawValue = levelValueAt(item, _currentLevel) ?? '';
     final nextLevel = _currentLevel + 1;
     if (nextLevel > _maxLevels) return 0;
     final seen = <String>{};
-    for (final item in items) {
+    for (final allItem in allItems) {
       var matches = true;
       for (final crumb in _breadcrumbs) {
-        if (_getItemLevel(item, crumb.level) != crumb.value) {
+        if (levelValueAt(allItem, crumb.level) != crumb.value) {
           matches = false;
           break;
         }
       }
       if (!matches) continue;
-      if (_getItemLevel(item, _currentLevel) != value) continue;
-      final child = _getItemLevel(item, nextLevel);
+      if (levelValueAt(allItem, _currentLevel) != rawValue) continue;
+      final child = levelValueAt(allItem, nextLevel);
       if (child != null) seen.add(child);
     }
     return seen.length;
   }
 
-  String _scopeDescription(String value) {
+  String _scopeDescription(String rawValue) {
     if (widget.curriculumId == CurriculumId.mishnayos) {
-      return switch (value.toLowerCase()) {
+      return switch (rawValue.toLowerCase()) {
         'seder zeraim' => 'Seeds & Agriculture',
         'seder moed' => 'Festivals & Sabbaths',
         'seder nashim' => 'Women & Marriage',
@@ -199,8 +222,8 @@ class _ScopeStepContentState extends ConsumerState<ScopeStepContent> {
     return 'Core section focus';
   }
 
-  IconData _scopeIcon(String value) {
-    final normalized = value.toLowerCase();
+  IconData _scopeIcon(String rawValue) {
+    final normalized = rawValue.toLowerCase();
     if (normalized.contains('zeraim')) return Icons.eco_rounded;
     if (normalized.contains('moed')) return Icons.calendar_month_rounded;
     if (normalized.contains('nashim')) return Icons.family_restroom_rounded;
@@ -216,6 +239,8 @@ class _ScopeStepContentState extends ConsumerState<ScopeStepContent> {
     final contentAsync = ref.watch(
       curriculumContentProvider(widget.curriculumId),
     );
+    final useHebrew = ref.watch(useHebrewTermsProvider);
+    final variant = ref.watch(currentTransliterationVariantProvider);
     final theme = Theme.of(context);
 
     return Padding(
@@ -276,8 +301,8 @@ class _ScopeStepContentState extends ConsumerState<ScopeStepContent> {
                 }
                 return const Center(child: CircularProgressIndicator());
               },
-              data: (items) {
-                if (items.isEmpty) {
+              data: (allItems) {
+                if (allItems.isEmpty) {
                   if (!_didAutoSkip) {
                     _didAutoSkip = true;
                     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -286,50 +311,69 @@ class _ScopeStepContentState extends ConsumerState<ScopeStepContent> {
                   }
                   return const Center(child: CircularProgressIndicator());
                 }
-                final values = _valuesAtCurrentLevel(items);
+
+                final filtered = _filteredToCurrentPath(allItems);
+                final displayItems = groupItemsByNextLevel(
+                  items: filtered,
+                  currentDepth: _breadcrumbs.length,
+                  curriculumId: widget.curriculumId,
+                  variant: variant,
+                );
+
                 if (_breadcrumbs.isEmpty) {
                   return ScopeTopLevelView(
                     curriculumId: widget.curriculumId,
-                    values: values,
+                    items: displayItems,
+                    useHebrew: useHebrew,
                     selections: _selections,
-                    allDirectlySelected: _allValuesDirectlySelected(values),
+                    allDirectlySelected: _allItemsDirectlySelected(
+                      displayItems,
+                    ),
                     currentLevel: _currentLevel,
                     maxSelectableLevel: _maxSelectableLevel,
                     labelForLevel: _labelForLevel,
                     scopeDescription: _scopeDescription,
                     scopeIcon: _scopeIcon,
-                    childCountForValue: (v) => _childCountForValue(items, v),
-                    isDirectlySelected: _isDirectlySelected,
+                    childCountForItem: (item) =>
+                        _childCountForItem(allItems, item),
+                    isDirectlySelected: _isItemDirectlySelected,
                     onLearnAll: () => widget.onComplete(null),
-                    onToggle: _toggleSelection,
-                    onDrill: (v) => _drillInto(v, items),
-                    onToggleAll: () => _toggleSelectAllCurrentLevel(items),
+                    onToggle: (item) => _toggleItem(item, useHebrew),
+                    onDrill: (item) => _drillInto(item, allItems, useHebrew),
+                    onToggleAll: () =>
+                        _toggleSelectAll(displayItems, useHebrew),
                     onDone: _done,
                   );
                 }
                 return ScopeHierarchyView(
                   curriculumId: widget.curriculumId,
                   breadcrumbs: _breadcrumbs,
-                  values: values,
+                  breadcrumbLabels: _breadcrumbLabels,
+                  items: displayItems,
+                  useHebrew: useHebrew,
                   selections: _selections,
-                  allDirectlySelected: _allValuesDirectlySelected(values),
+                  selectionLabels: _selectionLabels,
+                  allDirectlySelected: _allItemsDirectlySelected(displayItems),
                   currentLevel: _currentLevel,
                   maxSelectableLevel: _maxSelectableLevel,
                   labelForLevel: _labelForLevel,
-                  isSelected: _isSelected,
-                  isDirectlySelected: _isDirectlySelected,
-                  onToggle: _toggleSelection,
-                  onDrill: (v) => _drillInto(v, items),
-                  onToggleAll: () => _toggleSelectAllCurrentLevel(items),
+                  isSelected: _isItemSelected,
+                  isDirectlySelected: _isItemDirectlySelected,
+                  onToggle: (item) => _toggleItem(item, useHebrew),
+                  onDrill: (item) => _drillInto(item, allItems, useHebrew),
+                  onToggleAll: () => _toggleSelectAll(displayItems, useHebrew),
                   onBack: _goBack,
-                  onClearBreadcrumbs: () =>
-                      setState(() => _breadcrumbs.clear()),
-                  onTrimBreadcrumbs: (upToIndex) => setState(
-                    () => _breadcrumbs.removeRange(
+                  onClearBreadcrumbs: () => setState(() {
+                    _breadcrumbs.clear();
+                    _breadcrumbLabels.clear();
+                  }),
+                  onTrimBreadcrumbs: (upToIndex) => setState(() {
+                    _breadcrumbs.removeRange(upToIndex, _breadcrumbs.length);
+                    _breadcrumbLabels.removeRange(
                       upToIndex,
-                      _breadcrumbs.length,
-                    ),
-                  ),
+                      _breadcrumbLabels.length,
+                    );
+                  }),
                   onRemoveSelection: (s) =>
                       setState(() => _selections.remove(s)),
                   onDone: _done,

@@ -2,11 +2,11 @@ import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
+import 'package:learning_tracker/core/content/content_grouping.dart';
 import 'package:learning_tracker/core/content/content_tree.dart';
 import 'package:learning_tracker/core/content/hierarchy_selection.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
-import 'package:learning_tracker/core/labels/curriculum_label_renderer.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
@@ -157,124 +157,21 @@ class _ContentBrowserTreeState extends ConsumerState<ContentBrowserTree> {
     widget.onSelectionChanged?.call(Set.of(_selections));
   }
 
-  // ── Item grouping (mirrors ContentHierarchyScreen._groupItemsByNextLevel) ─
+  // ── Item grouping ──────────────────────────────────────────────────────────
 
-  List<ContentItem> _groupItemsByNextLevel(
+  List<ContentItem> _groupItems(
     List<ContentItem> items,
-    bool useHebrew,
-    TransliterationVariant variant,
-  ) {
-    final currentDepth = _navigationStack.length;
-    final maxBrowseDepth = CurriculumLabels.maxBrowseDepth(widget.curriculum);
-    if (currentDepth >= maxBrowseDepth) return const [];
-
-    final nextLevel = currentDepth + 1;
-    final uniqueItems = <String, ContentItem>{};
-
-    for (final item in items) {
-      final nextLevelValue = _getNextLevelValue(item, currentDepth);
-      if (nextLevelValue == null || uniqueItems.containsKey(nextLevelValue)) {
-        continue;
-      }
-
-      final renderedHe = CurriculumLabelRenderer.renderValue(
-        curriculumId: widget.curriculum,
-        level: nextLevel,
-        rawValue: nextLevelValue,
-        useHebrew: true,
-        hebrewName: !item.isLeaf ? item.displayNameHe : null,
-        parentL1Value: item.level1,
-        transliterationVariant: variant,
-      );
-      final renderedEn = CurriculumLabelRenderer.renderValue(
-        curriculumId: widget.curriculum,
-        level: nextLevel,
-        rawValue: nextLevelValue,
-        useHebrew: false,
-        hebrewName: !item.isLeaf ? item.displayNameHe : null,
-        parentL1Value: item.level1,
-        transliterationVariant: variant,
-      );
-
-      uniqueItems[nextLevelValue] = ContentItem(
-        curriculumId: item.curriculumId,
-        level1: item.level1,
-        level2: currentDepth >= 1 ? item.level2 : null,
-        level3: currentDepth >= 2 ? item.level3 : null,
-        level4: currentDepth >= 3 ? item.level4 : null,
-        displayNameHe: renderedHe,
-        displayNameEn: renderedEn,
-        sefariaRef: item.sefariaRef,
-        sortOrder: item.sortOrder,
-        isLeaf: item.isLeaf,
-      );
-    }
-
-    return uniqueItems.values.toList()
-      ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
-  }
-
-  /// Multicheck grouping — no maxBrowseDepth cap so all levels are browsable.
-  List<ContentItem> _groupItemsByNextLevelMulti(
-    List<ContentItem> items,
-    TransliterationVariant variant,
-  ) {
-    final currentDepth = _navigationStack.length;
-    if (currentDepth >= 4) return items;
-
-    final uniqueItems = <String, ContentItem>{};
-    for (final item in items) {
-      final nextLevelValue = _getNextLevelValue(item, currentDepth);
-      if (nextLevelValue == null || uniqueItems.containsKey(nextLevelValue)) {
-        continue;
-      }
-
-      final renderedHe = CurriculumLabelRenderer.renderValue(
-        curriculumId: widget.curriculum,
-        level: currentDepth + 1,
-        rawValue: nextLevelValue,
-        useHebrew: true,
-        hebrewName: !item.isLeaf ? item.displayNameHe : null,
-        parentL1Value: item.level1,
-        transliterationVariant: variant,
-      );
-      final renderedEn = CurriculumLabelRenderer.renderValue(
-        curriculumId: widget.curriculum,
-        level: currentDepth + 1,
-        rawValue: nextLevelValue,
-        useHebrew: false,
-        hebrewName: !item.isLeaf ? item.displayNameHe : null,
-        parentL1Value: item.level1,
-        transliterationVariant: variant,
-      );
-
-      uniqueItems[nextLevelValue] = ContentItem(
-        curriculumId: item.curriculumId,
-        level1: item.level1,
-        level2: currentDepth >= 1 ? item.level2 : null,
-        level3: currentDepth >= 2 ? item.level3 : null,
-        level4: currentDepth >= 3 ? item.level4 : null,
-        displayNameHe: renderedHe,
-        displayNameEn: renderedEn,
-        sefariaRef: item.sefariaRef,
-        sortOrder: item.sortOrder,
-        isLeaf: item.isLeaf,
-      );
-    }
-
-    return uniqueItems.values.toList()
-      ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
-  }
-
-  String? _getNextLevelValue(ContentItem item, int currentDepth) {
-    return switch (currentDepth) {
-      0 => item.level1,
-      1 => item.level2,
-      2 => item.level3,
-      3 => item.level4,
-      _ => null,
-    };
-  }
+    TransliterationVariant variant, {
+    bool capped = false,
+  }) => groupItemsByNextLevel(
+    items: items,
+    currentDepth: _navigationStack.length,
+    curriculumId: widget.curriculum,
+    variant: variant,
+    maxBrowseDepth: capped
+        ? CurriculumLabels.maxBrowseDepth(widget.curriculum)
+        : null,
+  );
 
   bool _isChapterLevelRef(ContentItem item) {
     final maxDepth = CurriculumLabels.maxBrowseDepth(widget.curriculum);
@@ -365,9 +262,8 @@ class _ContentBrowserTreeState extends ConsumerState<ContentBrowserTree> {
   }
 
   Widget _buildNoneList(BuildContext context, List<ContentItem> items) {
-    final useHebrew = ref.watch(useHebrewTermsProvider);
     final variant = ref.watch(currentTransliterationVariantProvider);
-    final displayItems = _groupItemsByNextLevel(items, useHebrew, variant);
+    final displayItems = _groupItems(items, variant, capped: true);
 
     if (displayItems.isEmpty) {
       return const Center(child: Text('No content available'));
@@ -388,9 +284,8 @@ class _ContentBrowserTreeState extends ConsumerState<ContentBrowserTree> {
   }
 
   Widget _buildSingleList(BuildContext context, List<ContentItem> items) {
-    final useHebrew = ref.watch(useHebrewTermsProvider);
     final variant = ref.watch(currentTransliterationVariantProvider);
-    final displayItems = _groupItemsByNextLevel(items, useHebrew, variant);
+    final displayItems = _groupItems(items, variant, capped: true);
 
     if (displayItems.isEmpty) {
       return const Center(child: Text('No content available'));
@@ -414,7 +309,7 @@ class _ContentBrowserTreeState extends ConsumerState<ContentBrowserTree> {
     final theme = Theme.of(context);
     final useHebrew = ref.watch(useHebrewTermsProvider);
     final variant = ref.watch(currentTransliterationVariantProvider);
-    final displayItems = _groupItemsByNextLevelMulti(items, variant);
+    final displayItems = _groupItems(items, variant);
 
     if (displayItems.isEmpty) {
       return const Center(child: Text('No content available'));
@@ -432,7 +327,7 @@ class _ContentBrowserTreeState extends ConsumerState<ContentBrowserTree> {
           ),
           title: CurriculumLabel.item(
             item,
-            mode: CurriculumLabelMode.breadcrumb,
+            mode: CurriculumLabelMode.leaf,
             textDirection: useHebrew ? TextDirection.rtl : TextDirection.ltr,
             textAlign: TextAlign.start,
             style: theme.textTheme.titleLarge?.copyWith(

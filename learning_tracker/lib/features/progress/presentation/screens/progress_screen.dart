@@ -132,7 +132,7 @@ class _StatGrid extends StatelessWidget {
       crossAxisCount: 2,
       crossAxisSpacing: 12,
       mainAxisSpacing: 12,
-      childAspectRatio: 1.16,
+      childAspectRatio: 1.0,
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       children: [

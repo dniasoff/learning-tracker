@@ -625,17 +625,33 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
         .profileDao
         .countProfilesForAccount(ref.read(currentAccountIdProvider));
 
+    var cloudAccountHasProfiles = false;
     if (profileCount == 0) {
       // If local is still empty, double-check cloud account-level profiles.
       // This avoids incorrectly routing returning cloud users into onboarding
-      // when profile restore lagged behind the first pull attempt.
+      // when profile restore lagged behind the first pull attempt. Bound the
+      // network call so a hung Firestore read cannot freeze the spinner.
       final remoteProfiles =
-          await ref.read(firestoreDataSourceProvider)?.fetchLearnerProfiles() ??
+          await ref
+              .read(firestoreDataSourceProvider)
+              ?.fetchLearnerProfiles()
+              .timeout(
+                const Duration(seconds: 8),
+                onTimeout: () => const <Map<String, dynamic>>[],
+              ) ??
           const <Map<String, dynamic>>[];
+      cloudAccountHasProfiles = remoteProfiles.isNotEmpty;
 
-      if (remoteProfiles.isNotEmpty && orchestrator != null) {
-        // Fire the second pull in the background — don't block navigation.
-        unawaited(orchestrator.pullOnLaunch());
+      if (cloudAccountHasProfiles && orchestrator != null) {
+        // Returning cloud account — wait (bounded) for the retry pull so the
+        // profile rows land BEFORE the route decision. Firing this in the
+        // background and re-counting immediately always read zero, which
+        // wrongly pushed returning users into onboarding.
+        await orchestrator.pullOnLaunch().timeout(
+          const Duration(seconds: 8),
+          onTimeout: () {},
+        );
+        if (!mounted) return;
         profileCount = await ref
             .read(userDatabaseProvider)
             .profileDao
@@ -643,7 +659,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
       }
     }
 
-    if (profileCount == 0) {
+    if (profileCount == 0 && !cloudAccountHasProfiles) {
       // Brand-new cloud account with no existing cloud profiles — run through
       // onboarding to create the first profile + pick tracks.
       if (!mounted) return;
