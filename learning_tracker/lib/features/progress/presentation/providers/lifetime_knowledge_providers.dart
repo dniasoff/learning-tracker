@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/core/enums/curriculum_overlap_registry.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
@@ -140,9 +141,23 @@ final lifetimeDataProvider = FutureProvider.autoDispose
         curriculum.storageKey,
       );
 
+      // I-4: Union in completions from subset curricula so that, e.g., a ref
+      // completed via a Chumash track is also credited to Tanach.  Deduplication
+      // is handled by Set semantics — a ref present in both the direct set and a
+      // subset set is counted only once.
+      final subsets = subsetsOf(curriculum);
+      var completedRefs = completions.map((c) => c.sefariaRef).toSet();
+      for (final subset in subsets) {
+        final subsetCompletions = await db.completionDao
+            .getCompletionsByCurriculumAndProfile(subset.storageKey, profileId);
+        completedRefs = completedRefs.union(
+          subsetCompletions.map((c) => c.sefariaRef).toSet(),
+        );
+      }
+
       final learnedLeafRefs = _learnedLeafRefs(
         leaves: leaves,
-        completedRefs: completions.map((c) => c.sefariaRef).toSet(),
+        completedRefs: completedRefs,
         ledgerEntries: ledger,
       );
 
