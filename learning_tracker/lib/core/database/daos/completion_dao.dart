@@ -121,20 +121,25 @@ class CompletionDao extends DatabaseAccessor<UserDatabase>
           ))
           .get();
 
-  /// Get completion count for a curriculum scoped to a specific profile.
+  /// Get the count of distinct sefariaRefs completed for a curriculum by a profile.
+  ///
+  /// Uses COUNT(DISTINCT sefariaRef) so that completing the same ref at
+  /// multiple stages counts once — matching the "distinct ref" numerator used
+  /// by [CurriculumProgressService.computeCompletionPercentage] (R5 / N6).
   Future<int> getAggregateCountByProfile(
     String curriculumId,
     int profileId,
   ) async {
+    final expr = completions.sefariaRef.count(distinct: true);
     final query = selectOnly(completions)
-      ..addColumns([completions.id.count()])
+      ..addColumns([expr])
       ..where(
         completions.curriculumId.equals(curriculumId) &
             completions.profileId.equals(profileId),
       );
 
     final result = await query.getSingle();
-    return result.read(completions.id.count()) ?? 0;
+    return result.read(expr) ?? 0;
   }
 
   /// Get track breakdown for a curriculum scoped to a specific profile.
