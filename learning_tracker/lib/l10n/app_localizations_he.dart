@@ -628,7 +628,7 @@ class AppLocalizationsHe extends AppLocalizations {
       'התחילו ללמוד כדי לראות את ההתקדמות כאן.';
 
   @override
-  String get statCompletions => 'השלמות';
+  String get statCompletions => 'פריטים שנלמדו';
 
   @override
   String get statUnitsDone => 'משימות';

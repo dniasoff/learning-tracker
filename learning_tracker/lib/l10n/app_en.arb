@@ -320,7 +320,7 @@
   "paceOnPace": "OK",
   "progressNoDataTitle": "No progress yet",
   "progressNoDataSubtitle": "Start learning to see your progress here.",
-  "statCompletions": "COMPLETIONS",
+  "statCompletions": "ITEMS LEARNED",
   "statUnitsDone": "TASKS DONE",
   "statDayStreak": "DAY STREAK",
   "statActiveTracks": "ACTIVE TRACKS",

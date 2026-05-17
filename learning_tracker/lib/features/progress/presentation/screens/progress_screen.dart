@@ -139,14 +139,14 @@ class _StatGrid extends StatelessWidget {
         _OverviewStatCard(
           icon: Icons.verified_outlined,
           iconColor: const Color(0xFFF8C146),
-          value: '$totalCompletions',
+          value: '$totalUniqueUnits',
           label: l10n.statCompletions,
           onTap: () => context.router.push(CompletionHistoryRoute()),
         ),
         _OverviewStatCard(
           icon: Icons.menu_book_outlined,
           iconColor: AppTheme.brandBlue,
-          value: '$totalUniqueUnits',
+          value: '$totalCompletions',
           label: l10n.statUnitsDone,
           onTap: () => context.router.push(const TasksDoneRoute()),
         ),

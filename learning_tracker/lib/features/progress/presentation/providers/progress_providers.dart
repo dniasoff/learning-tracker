@@ -85,12 +85,15 @@ Future<ProgressOverviewStats> progressOverviewStats(Ref ref) async {
   final db = ref.watch(userDatabaseProvider);
   final profileId = ref.watch(activeProfileIdProvider);
   final completions = await db.completionDao.getCompletionsByProfile(profileId);
+  // Track-only: exclude bulk-marked/lifetime items (trackId == 0 sentinel).
+  final trackCompletions =
+      completions.where((c) => c.trackId != 0).toList();
   final uniqueItems = <String>{};
-  for (final c in completions) {
+  for (final c in trackCompletions) {
     uniqueItems.add('${c.curriculumId}:${c.sefariaRef}');
   }
   return ProgressOverviewStats(
-    totalCompletions: completions.length,
+    totalCompletions: trackCompletions.length,
     totalUniqueItems: uniqueItems.length,
   );
 }

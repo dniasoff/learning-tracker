@@ -1208,7 +1208,7 @@ abstract class AppLocalizations {
   /// No description provided for @statCompletions.
   ///
   /// In en, this message translates to:
-  /// **'COMPLETIONS'**
+  /// **'ITEMS LEARNED'**
   String get statCompletions;
 
   /// No description provided for @statUnitsDone.
