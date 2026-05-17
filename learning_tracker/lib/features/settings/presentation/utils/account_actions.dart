@@ -7,6 +7,7 @@ import 'package:google_sign_in/google_sign_in.dart'
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/navigation/router_provider.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
+import 'package:learning_tracker/core/providers/network_providers.dart';
 import 'package:learning_tracker/core/providers/registry_provider.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/auth/domain/models/app_user.dart';
@@ -186,10 +187,22 @@ Future<void> showDeleteAccountFlow(
 ) async {
   if (user == null) return;
 
+  final messenger = ScaffoldMessenger.of(context);
+  final offlineMsg = AppLocalizations.of(
+    context,
+  )!.errorDeleteAccountRequiresInternet;
+  final isOnline = await ref.read(connectivityServiceProvider).isOnline;
+  if (!isOnline) {
+    messenger.showSnackBar(SnackBar(content: Text(offlineMsg)));
+    return;
+  }
+
   final service = ref.read(accountManagementServiceProvider);
 
   final hasPassword = user.providers.contains('password');
   final hasGoogle = user.providers.contains('google.com');
+
+  if (!context.mounted) return;
 
   // Show the type-DELETE confirmation first so the user knows what they're
   // doing before being prompted for credentials. The dialog copy explains

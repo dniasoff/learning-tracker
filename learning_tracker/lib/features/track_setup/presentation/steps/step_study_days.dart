@@ -76,12 +76,8 @@ class _StudyDaysEditableState extends State<StudyDaysEditable> {
                     initial: kStepStudyDayLabels[index].substring(0, 1),
                     title: _dayName(dayNum),
                     subtitle: _daySubtitle(dayNum),
-                    subtitleColor: dayNum == 5
-                        ? const Color(0xFFAA2F39)
-                        : AppTheme.brandInkMuted,
-                    activeColor: dayNum == 5
-                        ? const Color(0xFFFFE1E4)
-                        : const Color(0xFFE9ECF2),
+                    subtitleColor: AppTheme.brandInkMuted,
+                    activeColor: const Color(0xFFE9ECF2),
                     isShabbos: dayNum == 6,
                     isOn: isActive,
                     onChanged: (v) =>
@@ -129,8 +125,6 @@ class _StudyDaysEditableState extends State<StudyDaysEditable> {
   String _daySubtitle(int dayNum) {
     return switch (dayNum) {
       7 => 'Yom Rishon',
-      5 => 'EREV SHABBOS',
-      6 => 'DAY OF REST',
       _ => '',
     };
   }

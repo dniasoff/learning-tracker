@@ -26,10 +26,7 @@ PushUserProfile createFirestorePushFromGateway(FirestoreGateway? gateway) {
     if (gateway == null) return;
     await gateway.pushAccountUserProfile(
       uid: firebaseUid,
-      data: {
-        'displayName': displayName,
-        'userMode': userMode,
-      },
+      data: {'displayName': displayName, 'userMode': userMode},
     );
   };
 }

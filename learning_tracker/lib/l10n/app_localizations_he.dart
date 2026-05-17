@@ -1774,12 +1774,24 @@ class AppLocalizationsHe extends AppLocalizations {
   String get errorOnlyOfflineDelete => 'ניתן למחוק כאן רק חשבונות לא מקוונים.';
 
   @override
+  String get errorDeleteProfileRequiresInternet =>
+      'נדרש חיבור לאינטרנט כדי למחוק פרופיל.';
+
+  @override
+  String get errorDeleteAccountRequiresInternet =>
+      'נדרש חיבור לאינטרנט כדי למחוק את החשבון.';
+
+  @override
   String errorDeleteAccountFailed(String error) {
     return 'מחיקת החשבון נכשלה: $error';
   }
 
   @override
   String get errorSendLogsMustBeSignedIn => 'יש להיות מחובר כדי לשלוח יומנים';
+
+  @override
+  String get errorSendLogsNoGateway =>
+      'סנכרון לא זמין — החשבון אינו מקושר לענן';
 
   @override
   String errorSendLogsFailed(String error) {
@@ -2463,7 +2475,7 @@ class AppLocalizationsHe extends AppLocalizations {
   String get goalPaceOrDeadlineTitle => 'מה הקצב או המועד שלך?';
 
   @override
-  String get goalPaceOrDeadlineSubtitle => 'הגדר יעד, או דלג לעכשיו.';
+  String get goalPaceOrDeadlineSubtitle => 'הגדר יעד.';
 
   @override
   String get goalTargetPace => 'קצב יעד';

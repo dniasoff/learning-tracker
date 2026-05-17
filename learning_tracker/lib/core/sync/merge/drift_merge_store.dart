@@ -43,13 +43,12 @@ class DriftMergeStore implements MergeStore {
         final curriculumId = parts[0];
         final trackType = parts[1];
         final row =
-            await (_db.select(_db.curriculumTracks)
-                  ..where(
-                    (t) =>
-                        t.profileId.equals(profileId) &
-                        t.curriculumId.equals(curriculumId) &
-                        t.trackType.equals(trackType),
-                  ))
+            await (_db.select(_db.curriculumTracks)..where(
+                  (t) =>
+                      t.profileId.equals(profileId) &
+                      t.curriculumId.equals(curriculumId) &
+                      t.trackType.equals(trackType),
+                ))
                 .getSingleOrNull();
         // Track uses activatedAt as its LWW timestamp (most recent state change).
         if (row == null) return null;
@@ -81,14 +80,13 @@ class DriftMergeStore implements MergeStore {
         final stageOrder = int.tryParse(parts[2]);
         if (trackId == null || stageOrder == null) return null;
         final row =
-            await (_db.select(_db.stageDefinitions)
-                  ..where(
-                    (t) =>
-                        t.profileId.equals(profileId) &
-                        t.curriculumId.equals(curriculumId) &
-                        t.trackId.equals(trackId) &
-                        t.stageOrder.equals(stageOrder),
-                  ))
+            await (_db.select(_db.stageDefinitions)..where(
+                  (t) =>
+                      t.profileId.equals(profileId) &
+                      t.curriculumId.equals(curriculumId) &
+                      t.trackId.equals(trackId) &
+                      t.stageOrder.equals(stageOrder),
+                ))
                 .getSingleOrNull();
         // StageDefinitions don't have an updatedAt column — return null to let
         // the merger-level LWW (from updated_at in the enclosing settings doc)
@@ -156,10 +154,13 @@ class DriftMergeStore implements MergeStore {
   ) async {
     final curriculumId = fields['curriculum_id'] as String?;
     final sefariaRef = fields['sefaria_ref'] as String?;
-    final stageId = fields['stage_id'] as int? ??
+    final stageId =
+        fields['stage_id'] as int? ??
         int.tryParse(fields['stage_id']?.toString() ?? '');
     final trackType = fields['track_type'] as String?;
-    final eventTs = _parseDateTime(fields['completed_at'] ?? fields['event_timestamp']);
+    final eventTs = _parseDateTime(
+      fields['completed_at'] ?? fields['event_timestamp'],
+    );
 
     if (curriculumId == null ||
         sefariaRef == null ||
@@ -185,37 +186,43 @@ class DriftMergeStore implements MergeStore {
     int profileId,
     Map<String, dynamic> fields,
   ) async {
-    final remoteId = fields['profile_id'] as int? ??
+    final remoteId =
+        fields['profile_id'] as int? ??
         int.tryParse(fields['profile_id']?.toString() ?? '') ??
         profileId;
-    final accountId = fields['account_id'] as int? ??
+    final accountId =
+        fields['account_id'] as int? ??
         int.tryParse(fields['account_id']?.toString() ?? '') ??
         0;
     final displayName = fields['display_name'] as String? ?? '';
     final mode = fields['mode'] as String? ?? 'adult';
-    final avatarIndex = fields['avatar_index'] as int? ??
+    final avatarIndex =
+        fields['avatar_index'] as int? ??
         int.tryParse(fields['avatar_index']?.toString() ?? '') ??
         0;
-    final updatedAt = _parseDateTime(fields['updated_at']) ?? DateTimeFactory.nowUtc();
+    final updatedAt =
+        _parseDateTime(fields['updated_at']) ?? DateTimeFactory.nowUtc();
     final createdAt = _parseDateTime(fields['created_at']) ?? updatedAt;
 
     final existing = await _db.profileDao.getProfileById(remoteId);
     if (existing == null) {
-      await _db.into(_db.learnerProfiles).insertOnConflictUpdate(
-        LearnerProfilesCompanion.insert(
-          id: Value(remoteId),
-          accountId: accountId,
-          displayName: displayName,
-          mode: mode,
-          avatarIndex: Value(avatarIndex),
-          createdAt: createdAt,
-          updatedAt: updatedAt,
-        ),
-      );
+      await _db
+          .into(_db.learnerProfiles)
+          .insertOnConflictUpdate(
+            LearnerProfilesCompanion.insert(
+              id: Value(remoteId),
+              accountId: accountId,
+              displayName: displayName,
+              mode: mode,
+              avatarIndex: Value(avatarIndex),
+              createdAt: createdAt,
+              updatedAt: updatedAt,
+            ),
+          );
     } else {
-      await (_db.update(_db.learnerProfiles)
-            ..where((t) => t.id.equals(remoteId)))
-          .write(
+      await (_db.update(
+        _db.learnerProfiles,
+      )..where((t) => t.id.equals(remoteId))).write(
         LearnerProfilesCompanion(
           displayName: Value(displayName),
           mode: Value(mode),
@@ -238,31 +245,32 @@ class DriftMergeStore implements MergeStore {
     final paceResetDate = _parseDateTime(fields['pace_reset_date']);
 
     final existing =
-        await (_db.select(_db.curriculumTracks)
-              ..where(
-                (t) =>
-                    t.profileId.equals(profileId) &
-                    t.curriculumId.equals(curriculumId) &
-                    t.trackType.equals(trackType),
-              ))
+        await (_db.select(_db.curriculumTracks)..where(
+              (t) =>
+                  t.profileId.equals(profileId) &
+                  t.curriculumId.equals(curriculumId) &
+                  t.trackType.equals(trackType),
+            ))
             .getSingleOrNull();
 
     if (existing == null) {
-      await _db.into(_db.curriculumTracks).insert(
-        CurriculumTracksCompanion.insert(
-          profileId: profileId,
-          curriculumId: curriculumId,
-          trackType: trackType,
-          isActive: Value(isActive),
-          activatedAt: activatedAt,
-          deactivatedAt: Value(deactivatedAt),
-          paceResetDate: Value(paceResetDate),
-        ),
-      );
+      await _db
+          .into(_db.curriculumTracks)
+          .insert(
+            CurriculumTracksCompanion.insert(
+              profileId: profileId,
+              curriculumId: curriculumId,
+              trackType: trackType,
+              isActive: Value(isActive),
+              activatedAt: activatedAt,
+              deactivatedAt: Value(deactivatedAt),
+              paceResetDate: Value(paceResetDate),
+            ),
+          );
     } else {
-      await (_db.update(_db.curriculumTracks)
-            ..where((t) => t.id.equals(existing.id)))
-          .write(
+      await (_db.update(
+        _db.curriculumTracks,
+      )..where((t) => t.id.equals(existing.id))).write(
         CurriculumTracksCompanion(
           isActive: Value(isActive),
           activatedAt: Value(activatedAt),
@@ -292,13 +300,12 @@ class DriftMergeStore implements MergeStore {
     // Bookmarks in the DB are keyed by trackId (FK), not track_type string.
     // Find the track row to get the trackId.
     final track =
-        await (_db.select(_db.curriculumTracks)
-              ..where(
-                (t) =>
-                    t.profileId.equals(profileId) &
-                    t.curriculumId.equals(curriculumId) &
-                    t.trackType.equals(trackType),
-              ))
+        await (_db.select(_db.curriculumTracks)..where(
+              (t) =>
+                  t.profileId.equals(profileId) &
+                  t.curriculumId.equals(curriculumId) &
+                  t.trackType.equals(trackType),
+            ))
             .getSingleOrNull();
 
     if (track == null) {
@@ -329,32 +336,29 @@ class DriftMergeStore implements MergeStore {
 
     final defaultTrackId = fields['track_id'] as int? ?? 0;
 
-    final companions = stagesList
-        .cast<Map<String, dynamic>>()
-        .map((s) {
-          final trackId = s['track_id'] as int? ?? defaultTrackId;
-          final stageOrder = s['stage_order'] as int? ?? 0;
-          final stageName = s['stage_name'] as String? ?? '';
-          final delayDays = s['delay_days'] as int? ?? 0;
-          final isDefault = s['is_default'] as bool? ?? false;
-          final scheduleType = s['schedule_type'] as String? ?? 'delay';
-          final daysOfWeek = s['days_of_week'] as String?;
-          final rollingWindowSize = s['rolling_window_size'] as int?;
+    final companions = stagesList.cast<Map<String, dynamic>>().map((s) {
+      final trackId = s['track_id'] as int? ?? defaultTrackId;
+      final stageOrder = s['stage_order'] as int? ?? 0;
+      final stageName = s['stage_name'] as String? ?? '';
+      final delayDays = s['delay_days'] as int? ?? 0;
+      final isDefault = s['is_default'] as bool? ?? false;
+      final scheduleType = s['schedule_type'] as String? ?? 'delay';
+      final daysOfWeek = s['days_of_week'] as String?;
+      final rollingWindowSize = s['rolling_window_size'] as int?;
 
-          return StageDefinitionsCompanion.insert(
-            profileId: profileId,
-            curriculumId: curriculumId,
-            trackId: trackId,
-            stageOrder: stageOrder,
-            stageName: stageName,
-            delayDays: delayDays,
-            isDefault: Value(isDefault),
-            scheduleType: Value(scheduleType),
-            daysOfWeek: Value(daysOfWeek),
-            rollingWindowSize: Value(rollingWindowSize),
-          );
-        })
-        .toList();
+      return StageDefinitionsCompanion.insert(
+        profileId: profileId,
+        curriculumId: curriculumId,
+        trackId: trackId,
+        stageOrder: stageOrder,
+        stageName: stageName,
+        delayDays: delayDays,
+        isDefault: Value(isDefault),
+        scheduleType: Value(scheduleType),
+        daysOfWeek: Value(daysOfWeek),
+        rollingWindowSize: Value(rollingWindowSize),
+      );
+    }).toList();
 
     await _db.stageDao.replaceStagesForCurriculum(curriculumId, companions);
   }
@@ -364,12 +368,15 @@ class DriftMergeStore implements MergeStore {
     Map<String, dynamic> fields,
   ) async {
     final curriculumId = fields['curriculum_id'] as String?;
-    final trackId = fields['track_id'] as int? ??
+    final trackId =
+        fields['track_id'] as int? ??
         int.tryParse(fields['track_id']?.toString() ?? '');
-    final stageOrder = fields['stage_order'] as int? ??
+    final stageOrder =
+        fields['stage_order'] as int? ??
         int.tryParse(fields['stage_order']?.toString() ?? '');
     final stageName = fields['stage_name'] as String? ?? '';
-    final delayDays = fields['delay_days'] as int? ??
+    final delayDays =
+        fields['delay_days'] as int? ??
         int.tryParse(fields['delay_days']?.toString() ?? '') ??
         0;
 
@@ -378,18 +385,18 @@ class DriftMergeStore implements MergeStore {
     final isDefault = fields['is_default'] as bool? ?? false;
     final scheduleType = fields['schedule_type'] as String? ?? 'delay';
     final daysOfWeek = fields['days_of_week'] as String?;
-    final rollingWindowSize = fields['rolling_window_size'] as int? ??
+    final rollingWindowSize =
+        fields['rolling_window_size'] as int? ??
         int.tryParse(fields['rolling_window_size']?.toString() ?? '');
 
     final existing =
-        await (_db.select(_db.stageDefinitions)
-              ..where(
-                (t) =>
-                    t.profileId.equals(profileId) &
-                    t.curriculumId.equals(curriculumId) &
-                    t.trackId.equals(trackId) &
-                    t.stageOrder.equals(stageOrder),
-              ))
+        await (_db.select(_db.stageDefinitions)..where(
+              (t) =>
+                  t.profileId.equals(profileId) &
+                  t.curriculumId.equals(curriculumId) &
+                  t.trackId.equals(trackId) &
+                  t.stageOrder.equals(stageOrder),
+            ))
             .getSingleOrNull();
 
     if (existing == null) {
@@ -408,9 +415,9 @@ class DriftMergeStore implements MergeStore {
         ),
       );
     } else {
-      await (_db.update(_db.stageDefinitions)
-            ..where((t) => t.id.equals(existing.id)))
-          .write(
+      await (_db.update(
+        _db.stageDefinitions,
+      )..where((t) => t.id.equals(existing.id))).write(
         StageDefinitionsCompanion(
           stageName: Value(stageName),
           delayDays: Value(delayDays),

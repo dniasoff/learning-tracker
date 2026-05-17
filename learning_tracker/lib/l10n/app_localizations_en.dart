@@ -1796,12 +1796,24 @@ class AppLocalizationsEn extends AppLocalizations {
       'Only offline accounts can be deleted here.';
 
   @override
+  String get errorDeleteProfileRequiresInternet =>
+      'An internet connection is required to delete a profile.';
+
+  @override
+  String get errorDeleteAccountRequiresInternet =>
+      'An internet connection is required to delete your account.';
+
+  @override
   String errorDeleteAccountFailed(String error) {
     return 'Failed to delete account: $error';
   }
 
   @override
   String get errorSendLogsMustBeSignedIn => 'Must be signed in to send logs';
+
+  @override
+  String get errorSendLogsNoGateway =>
+      'Sync not available — account not linked to cloud';
 
   @override
   String errorSendLogsFailed(String error) {
@@ -2491,7 +2503,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get goalPaceOrDeadlineTitle => 'What\'s your pace or deadline?';
 
   @override
-  String get goalPaceOrDeadlineSubtitle => 'Set a goal, or skip for now.';
+  String get goalPaceOrDeadlineSubtitle => 'Set a goal.';
 
   @override
   String get goalTargetPace => 'Target Pace';

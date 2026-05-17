@@ -1,8 +1,10 @@
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:learning_tracker/core/providers/network_providers.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/widgets/app_bar_title.dart';
+import 'package:learning_tracker/features/auth/presentation/providers/auth_state_provider.dart';
 import 'package:learning_tracker/features/parent_mode/presentation/widgets/parent_pin_setup_dialog.dart';
 import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
@@ -189,6 +191,25 @@ class _ProfileListTile extends ConsumerWidget {
     );
 
     if (confirmed != true) return;
+
+    final isLocalBorn = ref.read(authStateProvider).isLocalBorn;
+    if (!isLocalBorn) {
+      final isOnline = await ref.read(connectivityServiceProvider).isOnline;
+      if (!isOnline) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                AppLocalizations.of(
+                  context,
+                )!.errorDeleteProfileRequiresInternet,
+              ),
+            ),
+          );
+        }
+        return;
+      }
+    }
 
     final selectedId = ref.read(selectedProfileIdProvider);
     await repo.deleteProfile(profile.id, allowLast: isLast);

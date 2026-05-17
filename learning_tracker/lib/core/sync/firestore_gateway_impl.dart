@@ -272,12 +272,15 @@ class FirestoreGatewayImpl implements FirestoreGateway {
     if (collection == null) throw _notAuthenticated;
     final docId = data['id']?.toString() ?? data['goal_id']?.toString();
     if (docId != null) {
-      await collection.doc(docId).set(
-        {...data, 'synced_at': FieldValue.serverTimestamp()},
-        SetOptions(merge: true),
-      );
+      await collection.doc(docId).set({
+        ...data,
+        'synced_at': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
     } else {
-      await collection.add({...data, 'synced_at': FieldValue.serverTimestamp()});
+      await collection.add({
+        ...data,
+        'synced_at': FieldValue.serverTimestamp(),
+      });
     }
   }
 
@@ -303,8 +306,10 @@ class FirestoreGatewayImpl implements FirestoreGateway {
         .doc(uid)
         .collection('profile')
         .doc('data')
-        .set({...data, 'synced_at': FieldValue.serverTimestamp()},
-            SetOptions(merge: true));
+        .set({
+          ...data,
+          'synced_at': FieldValue.serverTimestamp(),
+        }, SetOptions(merge: true));
   }
 
   @override
@@ -377,10 +382,10 @@ class FirestoreGatewayImpl implements FirestoreGateway {
     required String uid,
     required Map<String, dynamic> data,
   }) async {
-    await _firestore.collection('users').doc(uid).set(
-      {...data, 'updatedAt': FieldValue.serverTimestamp()},
-      SetOptions(merge: true),
-    );
+    await _firestore.collection('users').doc(uid).set({
+      ...data,
+      'updatedAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
   }
 
   @override
@@ -390,11 +395,11 @@ class FirestoreGatewayImpl implements FirestoreGateway {
   }) {
     final ref = _collection(profileId, collection);
     if (ref == null) return const Stream.empty();
-    return ref
-        .snapshots()
-        .map((s) => s.docs
-            .map((d) => _normalizeRow({...d.data(), 'firestore_id': d.id}))
-            .toList(growable: false));
+    return ref.snapshots().map(
+      (s) => s.docs
+          .map((d) => _normalizeRow({...d.data(), 'firestore_id': d.id}))
+          .toList(growable: false),
+    );
   }
 
   @override

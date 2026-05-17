@@ -36,7 +36,21 @@ class AuthStateNotifier extends _$AuthStateNotifier {
       if (refreshed != null &&
           !(isPasswordAccount && !refreshed.emailVerified)) {
         final dao = ref.read(userDatabaseProvider).userProfileDao;
-        final profile = await dao.findCloudBornByFirebaseUid(refreshed.uid);
+        var profile = await dao.findCloudBornByFirebaseUid(refreshed.uid);
+        if (profile == null) {
+          // Profile tier may be stale (was created locally before cloud sign-in
+          // or the upgrade flow didn't flip the tier). Upgrade it now so sync
+          // activates on this and every subsequent launch.
+          final any = await dao.getUserProfileByFirebaseUid(refreshed.uid);
+          if (any != null) {
+            await dao.upgradeLocalToCloud(
+              profileId: any.id,
+              firebaseUid: refreshed.uid,
+              updatedAt: DateTimeFactory.nowUtc(),
+            );
+            profile = await dao.findCloudBornByFirebaseUid(refreshed.uid);
+          }
+        }
         if (profile != null) {
           state = AuthState.signedIn(
             user: AuthUser.fromProfile(profile),

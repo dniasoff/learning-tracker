@@ -5,7 +5,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
+import 'package:learning_tracker/core/providers/network_providers.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/features/auth/presentation/providers/auth_state_provider.dart';
 import 'package:learning_tracker/features/auth/presentation/widgets/no_backup_badge.dart';
 import 'package:learning_tracker/features/parent_mode/presentation/widgets/parent_mode_dialog_frame.dart';
 import 'package:learning_tracker/features/parent_mode/presentation/widgets/parent_pin_setup_dialog.dart';
@@ -563,6 +565,26 @@ class _ProfilePickerScreenState extends ConsumerState<ProfilePickerScreen> {
       },
     );
     if (!(ok ?? false) || !mounted) return;
+
+    final isLocalBorn = ref.read(authStateProvider).isLocalBorn;
+    if (!isLocalBorn) {
+      final isOnline = await ref.read(connectivityServiceProvider).isOnline;
+      if (!isOnline) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                AppLocalizations.of(
+                  context,
+                )!.errorDeleteProfileRequiresInternet,
+              ),
+            ),
+          );
+        }
+        return;
+      }
+    }
+
     await repo.deleteProfile(profile.id, allowLast: isLast);
     final sel = ref.read(selectedProfileIdProvider) ?? -1;
     if (sel == profile.id) {

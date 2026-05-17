@@ -37,7 +37,9 @@ Future<void> sendLogsToFirebase({
   if (gateway == null) {
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Sync not available — not signed in.')),
+        SnackBar(
+          content: Text(AppLocalizations.of(context)!.errorSendLogsNoGateway),
+        ),
       );
     }
     return;

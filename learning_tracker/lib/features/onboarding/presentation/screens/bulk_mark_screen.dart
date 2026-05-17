@@ -347,7 +347,9 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
                         trailing: onDrill != null
                             ? const Icon(Icons.chevron_right)
                             : null,
-                        onTap: onDrill ?? () => _toggleItem(item, currentPath.length),
+                        onTap:
+                            onDrill ??
+                            () => _toggleItem(item, currentPath.length),
                       );
                     },
                   ),

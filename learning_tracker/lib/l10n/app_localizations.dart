@@ -3293,6 +3293,18 @@ abstract class AppLocalizations {
   /// **'Only offline accounts can be deleted here.'**
   String get errorOnlyOfflineDelete;
 
+  /// No description provided for @errorDeleteProfileRequiresInternet.
+  ///
+  /// In en, this message translates to:
+  /// **'An internet connection is required to delete a profile.'**
+  String get errorDeleteProfileRequiresInternet;
+
+  /// No description provided for @errorDeleteAccountRequiresInternet.
+  ///
+  /// In en, this message translates to:
+  /// **'An internet connection is required to delete your account.'**
+  String get errorDeleteAccountRequiresInternet;
+
   /// No description provided for @errorDeleteAccountFailed.
   ///
   /// In en, this message translates to:
@@ -3304,6 +3316,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Must be signed in to send logs'**
   String get errorSendLogsMustBeSignedIn;
+
+  /// No description provided for @errorSendLogsNoGateway.
+  ///
+  /// In en, this message translates to:
+  /// **'Sync not available — account not linked to cloud'**
+  String get errorSendLogsNoGateway;
 
   /// No description provided for @errorSendLogsFailed.
   ///
@@ -4442,7 +4460,7 @@ abstract class AppLocalizations {
   /// No description provided for @goalPaceOrDeadlineSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Set a goal, or skip for now.'**
+  /// **'Set a goal.'**
   String get goalPaceOrDeadlineSubtitle;
 
   /// No description provided for @goalTargetPace.

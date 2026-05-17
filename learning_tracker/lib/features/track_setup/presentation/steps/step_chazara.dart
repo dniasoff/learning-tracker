@@ -127,8 +127,6 @@ class _ChazaraInlineSetupState extends State<ChazaraInlineSetup> {
     );
   }
 
-  void _skip() => widget.onComplete(null);
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -292,19 +290,6 @@ class _ChazaraInlineSetupState extends State<ChazaraInlineSetup> {
             ),
           ),
           const SizedBox(height: 12),
-          FilledButton(
-            onPressed: _skip,
-            style: FilledButton.styleFrom(
-              backgroundColor: const Color(0xFFE4E5E9),
-              foregroundColor: AppTheme.brandInk,
-              minimumSize: const Size.fromHeight(48),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(24),
-              ),
-            ),
-            child: Text(l10n.actionSkipNoReview),
-          ),
-          const SizedBox(height: 8),
           FilledButton(
             onPressed: _confirm,
             style: FilledButton.styleFrom(

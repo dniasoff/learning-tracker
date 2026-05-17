@@ -836,6 +836,8 @@
   "errorReauthFailed": "Re-authentication failed. Please try again.",
   "errorResolveAccount": "Could not resolve this account. Try again.",
   "errorOnlyOfflineDelete": "Only offline accounts can be deleted here.",
+  "errorDeleteProfileRequiresInternet": "An internet connection is required to delete a profile.",
+  "errorDeleteAccountRequiresInternet": "An internet connection is required to delete your account.",
   "errorDeleteAccountFailed": "Failed to delete account: {error}",
   "@errorDeleteAccountFailed": {
     "placeholders": {
@@ -843,6 +845,7 @@
     }
   },
   "errorSendLogsMustBeSignedIn": "Must be signed in to send logs",
+  "errorSendLogsNoGateway": "Sync not available — account not linked to cloud",
   "errorSendLogsFailed": "Failed to send logs: {error}",
   "@errorSendLogsFailed": {
     "placeholders": {
@@ -1223,7 +1226,7 @@
   "startingPositionTargetDate": "TARGET DATE",
 
   "goalPaceOrDeadlineTitle": "What's your pace or deadline?",
-  "goalPaceOrDeadlineSubtitle": "Set a goal, or skip for now.",
+  "goalPaceOrDeadlineSubtitle": "Set a goal.",
   "goalTargetPace": "Target Pace",
   "goalPaceDescriptionLine": "{unit} {period}",
   "@goalPaceDescriptionLine": {

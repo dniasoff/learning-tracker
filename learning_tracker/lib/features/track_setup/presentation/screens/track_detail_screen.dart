@@ -7,16 +7,23 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/core/utils/percentage_formatter.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/onboarding/presentation/screens/bulk_mark_screen.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/lifetime_knowledge_providers.dart';
+import 'package:learning_tracker/features/settings/presentation/providers/curriculum_scope_providers.dart';
 import 'package:learning_tracker/features/track_learning_order/presentation/screens/track_learning_order_screen.dart';
 import 'package:learning_tracker/features/track_setup/domain/entities/add_track_result.dart';
 import 'package:learning_tracker/features/track_setup/presentation/providers/after_track_change_invalidation.dart';
 import 'package:learning_tracker/features/track_setup/presentation/widgets/learning_track_card.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
+
+final _trackGoalProvider = FutureProvider.family<Goal?, int>(
+  (ref, trackId) =>
+      ref.watch(userDatabaseProvider).goalDao.getGoalByTrack(trackId),
+);
 
 @RoutePage()
 class TrackDetailScreen extends ConsumerStatefulWidget {
@@ -81,9 +88,18 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
     final accent = trackAccentForType(track.trackType);
     final icon = trackTypeIconData(track.trackType);
     final trackLabel = trackTypeDisplayLabel(track.trackType);
-    final activatedDate = DateFormat.yMMMd(
-      Localizations.localeOf(context).toString(),
-    ).format(track.activatedAt);
+    final locale = Localizations.localeOf(context).toString();
+    final activatedDate = DateFormat.yMMMd(locale).format(track.activatedAt);
+
+    final goal = ref.watch(_trackGoalProvider(track.id)).asData?.value;
+    final totalScopeAsync = curriculum != null
+        ? ref.watch(scopedItemCountProvider(curriculum))
+        : null;
+    final totalScope = totalScopeAsync?.asData?.value;
+    final itemsRemaining = totalScope != null
+        ? (totalScope * (1 - cycleFraction)).ceil().clamp(0, totalScope)
+        : null;
+    final estimatedFinish = _estimatedFinish(goal, itemsRemaining, locale);
 
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FC),
@@ -116,6 +132,9 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
             curriculumBarColor,
             lifetimeProgress,
             lifetimePercentDisplay,
+            goal: goal,
+            itemsRemaining: itemsRemaining,
+            estimatedFinish: estimatedFinish,
           ),
           const SizedBox(height: 20),
           _buildActionsCard(
@@ -144,8 +163,11 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
     String cyclePercentDisplay,
     Color curriculumBarColor,
     double lifetimeProgress,
-    String lifetimePercentDisplay,
-  ) {
+    String lifetimePercentDisplay, {
+    Goal? goal,
+    int? itemsRemaining,
+    String? estimatedFinish,
+  }) {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
@@ -261,9 +283,82 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
               ),
             ),
           ),
+          const SizedBox(height: 16),
+          const Divider(height: 1, color: Color(0xFFEEF0F6)),
+          const SizedBox(height: 14),
+          _configRow(theme, 'Track type', trackLabel),
+          if (goal != null)
+            _configRow(theme, 'Goal', _goalLabel(goal, l10n)),
+          if (itemsRemaining != null)
+            _configRow(theme, 'Items remaining', '$itemsRemaining'),
+          if (estimatedFinish != null)
+            _configRow(theme, 'Est. finish', estimatedFinish),
         ],
       ),
     );
+  }
+
+  Widget _configRow(ThemeData theme, String label, String? value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Row(
+        children: [
+          Text(
+            label,
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: AppTheme.brandInkMuted,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const Spacer(),
+          Text(
+            value ?? '—',
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: AppTheme.brandInk,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String? _goalLabel(Goal? goal, AppLocalizations l10n) {
+    if (goal == null) return null;
+    if (goal.goalType == 'pace' &&
+        goal.paceValue != null &&
+        goal.pacePeriod != null) {
+      final period =
+          goal.pacePeriod == 'per_day' ? l10n.pacePerDay : l10n.pacePerWeek;
+      return '${goal.paceValue} · $period';
+    }
+    if (goal.goalType == 'deadline' && goal.targetDate != null) {
+      // Show the raw deadline date; the "Est. finish" row is not shown for
+      // deadline goals to avoid repeating the same value twice.
+      return DateFormat.yMMMd().format(goal.targetDate!.toLocal());
+    }
+    return null;
+  }
+
+  String? _estimatedFinish(Goal? goal, int? itemsRemaining, String locale) {
+    if (goal == null) return null;
+    // Deadline goals surface their date in the "Goal" row; skip here.
+    if (goal.goalType == 'deadline') return null;
+    if (goal.goalType == 'pace' &&
+        goal.paceValue != null &&
+        goal.pacePeriod != null &&
+        itemsRemaining != null &&
+        itemsRemaining > 0) {
+      final weeklyRate = goal.pacePeriod == 'per_day'
+          ? goal.paceValue! * 7
+          : goal.paceValue!;
+      if (weeklyRate > 0) {
+        final days = (itemsRemaining / weeklyRate * 7).ceil();
+        return DateFormat.yMMMd(locale)
+            .format(DateTimeFactory.nowLocal().add(Duration(days: days)));
+      }
+    }
+    return null;
   }
 
   Widget _buildActionsCard(

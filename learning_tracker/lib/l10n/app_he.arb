@@ -836,6 +836,8 @@
   "errorReauthFailed": "אימות מחדש נכשל. נסו שוב.",
   "errorResolveAccount": "לא ניתן לאמת את החשבון. נסו שוב.",
   "errorOnlyOfflineDelete": "ניתן למחוק כאן רק חשבונות לא מקוונים.",
+  "errorDeleteProfileRequiresInternet": "נדרש חיבור לאינטרנט כדי למחוק פרופיל.",
+  "errorDeleteAccountRequiresInternet": "נדרש חיבור לאינטרנט כדי למחוק את החשבון.",
   "errorDeleteAccountFailed": "מחיקת החשבון נכשלה: {error}",
   "@errorDeleteAccountFailed": {
     "placeholders": {
@@ -843,6 +845,7 @@
     }
   },
   "errorSendLogsMustBeSignedIn": "יש להיות מחובר כדי לשלוח יומנים",
+  "errorSendLogsNoGateway": "סנכרון לא זמין — החשבון אינו מקושר לענן",
   "errorSendLogsFailed": "שליחת היומנים נכשלה: {error}",
   "@errorSendLogsFailed": {
     "placeholders": {
@@ -1223,7 +1226,7 @@
   "startingPositionTargetDate": "תאריך יעד",
 
   "goalPaceOrDeadlineTitle": "מה הקצב או המועד שלך?",
-  "goalPaceOrDeadlineSubtitle": "הגדר יעד, או דלג לעכשיו.",
+  "goalPaceOrDeadlineSubtitle": "הגדר יעד.",
   "goalTargetPace": "קצב יעד",
   "goalPaceDescriptionLine": "{unit} {period}",
   "@goalPaceDescriptionLine": {

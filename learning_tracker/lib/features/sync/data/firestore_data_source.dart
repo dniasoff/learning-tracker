@@ -61,7 +61,9 @@ class FirestoreDataSource {
 
   Future<void> pushLearnerProfile(Map<String, dynamic> profileData) async {
     final id = profileData['id'];
-    final pid = id is int ? id : int.tryParse(id?.toString() ?? '') ?? profileId;
+    final pid = id is int
+        ? id
+        : int.tryParse(id?.toString() ?? '') ?? profileId;
     await _gateway.pushLearnerProfile(profileId: pid, data: profileData);
   }
 
@@ -234,10 +236,7 @@ class FirestoreDataSource {
   // ========== UI Preferences Operations ==========
 
   Future<void> pushUiPreferences(Map<String, dynamic> uiPreferences) async {
-    await _gateway.pushUiPreferences(
-      profileId: profileId,
-      data: uiPreferences,
-    );
+    await _gateway.pushUiPreferences(profileId: profileId, data: uiPreferences);
   }
 
   Future<Map<String, dynamic>?> fetchUiPreferences() async {

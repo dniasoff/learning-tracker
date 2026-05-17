@@ -272,8 +272,9 @@ class OfflineQueue {
           final payload = Map<String, dynamic>.from(rawPayload);
           payload.remove('_target_profile_id');
 
-          final profileId =
-              _parseProfileId(rawPayload['profile_id'] ?? rawPayload['_target_profile_id']);
+          final profileId = _parseProfileId(
+            rawPayload['profile_id'] ?? rawPayload['_target_profile_id'],
+          );
 
           switch (operation.operationType) {
             case 'completion':
@@ -337,10 +338,7 @@ class OfflineQueue {
               }
               await _gateway.deleteLearnerProfile(pid);
             case 'goal':
-              await _gateway.pushGoal(
-                profileId: profileId ?? 0,
-                data: payload,
-              );
+              await _gateway.pushGoal(profileId: profileId ?? 0, data: payload);
             case 'profile_program':
               await _gateway.pushProfileProgram(
                 profileId: profileId ?? 0,
