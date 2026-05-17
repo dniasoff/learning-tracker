@@ -102,6 +102,109 @@ class DailyPlanRepository {
     }
   }
 
+  /// Back-fills synthetic snapshots for elapsed **study days** only.
+  ///
+  /// Iterates every calendar day from [activatedAt] through the day before
+  /// [currentDate].  Days whose [DateTime.weekday] is not in [studyWeekdays]
+  /// are skipped entirely — no row is written for them.
+  ///
+  /// For each elapsed study day the refs are taken from [orderedRefs] using a
+  /// study-day ordinal counter (not the calendar-day index), so "study day #1"
+  /// always gets `orderedRefs[0 .. pace-1]`, "study day #2" gets
+  /// `orderedRefs[pace .. 2*pace-1]`, etc.  This mirrors the position
+  /// assignment the engine would have used had the app been opened on those
+  /// days.
+  ///
+  /// Idempotent: days that already have a snapshot row are skipped.
+  ///
+  /// Returns the set of [sefariaRef]s that are now in any prior-day snapshot
+  /// for [trackId] (i.e. the `priorlyShownRefs` to feed the engine).
+  Future<Set<String>> backfillStudyDaySnapshots({
+    required int profileId,
+    required int trackId,
+    required CurriculumId curriculumId,
+    required DateTime activatedAt,
+    required DateTime currentDate,
+    required int pace,
+    required Set<int> studyWeekdays,
+    required List<String> orderedRefs,
+    required int firstStageOrder,
+    required int firstStageDefinitionId,
+    required String firstStageName,
+    required String trackLabel,
+  }) async {
+    final startDay = DateUtils.extractLocalDate(activatedAt);
+    final todayLocal = DateUtils.extractLocalDate(currentDate);
+    if (!startDay.isBefore(todayLocal)) {
+      // Activated today (or in the future) — nothing to back-fill.
+      return _db.dailyPlanDao.getPriorlyShownRefsForTrack(
+        trackId: trackId,
+        excludeDate: todayLocal,
+      );
+    }
+
+    // Use 7-day default (all days are study days) when studyWeekdays is empty.
+    final effectiveStudyDays = studyWeekdays.isEmpty
+        ? const {1, 2, 3, 4, 5, 6, 7}
+        : studyWeekdays;
+
+    var studyDayOrdinal = 0;
+    final totalDays = todayLocal.difference(startDay).inDays;
+    for (var d = 0; d < totalDays; d++) {
+      final planDate = startDay.add(Duration(days: d));
+
+      // Skip non-study days.
+      if (!effectiveStudyDays.contains(planDate.weekday)) continue;
+
+      // Idempotent: skip if already snapshotted.
+      final exists = await _db.dailyPlanDao.hasPlanForTrackOnDay(
+        trackId: trackId,
+        planDate: planDate,
+      );
+      if (exists) {
+        studyDayOrdinal++;
+        continue;
+      }
+
+      final start = studyDayOrdinal * pace;
+      studyDayOrdinal++;
+
+      if (start >= orderedRefs.length) continue;
+      final end = (start + pace).clamp(0, orderedRefs.length);
+      final refs = orderedRefs.sublist(start, end);
+
+      final tasks = refs
+          .map(
+            (ref) => DailyTask(
+              curriculumId: curriculumId,
+              contentItemSefariaRef: ref,
+              stageOrder: firstStageOrder,
+              stageDefinitionId: firstStageDefinitionId,
+              priority: DailyTaskPriority.newLearning,
+              isOverdue: true,
+              reason: 'Backfilled study day',
+              stageName: firstStageName,
+              trackId: trackId,
+              trackLabel: trackLabel,
+              estimatedEffortMinutes: 5,
+            ),
+          )
+          .toList();
+
+      await _persistPlan(
+        profileId: profileId,
+        planDate: planDate,
+        tasks: tasks,
+        now: planDate,
+      );
+    }
+
+    return _db.dailyPlanDao.getPriorlyShownRefsForTrack(
+      trackId: trackId,
+      excludeDate: todayLocal,
+    );
+  }
+
   /// Forces regeneration for today's plan by clearing the existing snapshot.
   Future<List<DailyTask>> rebuildPlan({
     required int profileId,

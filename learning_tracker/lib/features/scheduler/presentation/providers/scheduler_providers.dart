@@ -620,94 +620,173 @@ Future<List<DailyTask>> _buildFreshPlan({
     }
   }
 
-  // For each self-paced track (pace + activatedAt both known), back-fill
-  // synthetic snapshots for any past local-days that have no snapshot.
-  // Then capture the set of refs that have appeared in any prior-day
-  // snapshot — the engine uses this to mark uncompleted prior items as
-  // overdue today.
+  // For every track with a known activatedAt, back-fill synthetic snapshots
+  // for elapsed *study days* that have no existing snapshot row.  The engine
+  // uses priorlyShownRefs to surface uncompleted prior items as overdue today.
+  //
+  // F6 fix: back-fill now runs for tracks regardless of whether they have a
+  // pace-based goal.  Non-pace tracks use `defaultNewItemsPerDay` (5) as the
+  // effective pace so the snapshot path fires and overdue items appear after
+  // elapsed study days.  Back-fill is restricted to study days only —
+  // non-study elapsed days are skipped.
   final priorlyShownRefsMap = <CurriculumId, Set<String>>{};
+  // Tracks that don't have a pace goal but have activatedAt: we synthesise
+  // a pacePerDay for the engine snapshot path (overdue computation only).
+  final effectivePaceOverrideMap = <CurriculumId, double>{};
   final todayLocal = _localDateOnly(now);
   for (final curriculum in activeCurricula) {
     final trackId = trackIds[curriculum];
-    final pace = pacePerDayMap[curriculum];
     final startedAt = trackStartedAtMap[curriculum];
-    if (trackId == null || pace == null || startedAt == null) continue;
+    if (trackId == null || startedAt == null) continue;
 
     final orderedItems = await engine.getOrderedLeafItems(curriculum);
-    final paceCeil = pace.ceil();
     final stages = await stageRepository.getStagesByTrack(trackId);
-    if (stages.isEmpty || orderedItems.isEmpty || paceCeil <= 0) continue;
+    if (stages.isEmpty || orderedItems.isEmpty) continue;
     final firstStage = stages.reduce(
       (domain_stage.StageDefinition a, domain_stage.StageDefinition b) =>
           a.stageOrder < b.stageOrder ? a : b,
     );
 
-    // Slot a day's worth of refs by either coarse unit (when the goal's
-    // paceGranularity names a level above the leaf, e.g. 'perek' for
-    // Mishnayos or 'daf' for Bavli) or single leaves. Each day consumes
-    // [paceCeil] slots.
-    final paceGranularity = paceGranularityMap[curriculum];
-    final isCoarse = _isCoarseLearningUnit(curriculum, paceGranularity);
-    final daySlots = <List<String>>[];
-    if (isCoarse) {
-      final byKey = <String, List<String>>{};
-      final keyOrder = <String>[];
-      for (final item in orderedItems) {
-        final key = item.coarseUnitKey ?? item.sefariaRef;
-        final list = byKey.putIfAbsent(key, () {
-          keyOrder.add(key);
-          return <String>[];
-        });
-        list.add(item.sefariaRef);
-      }
-      for (final key in keyOrder) {
-        daySlots.add(byKey[key]!);
-      }
-    } else {
-      for (final item in orderedItems) {
-        daySlots.add([item.sefariaRef]);
-      }
-    }
+    final pace = pacePerDayMap[curriculum];
+    final hasPaceGoal = pace != null;
 
-    await planRepo.backfillMissingSnapshots(
-      profileId: profileId,
-      trackId: trackId,
-      activatedAt: startedAt,
-      currentDate: now,
-      buildSnapshotForDay: ({required dayIndex, required planDate}) async {
-        final start = dayIndex * paceCeil;
-        if (start >= daySlots.length) return const <DailyTask>[];
-        final end = (start + paceCeil).clamp(0, daySlots.length);
-        final refs = daySlots.sublist(start, end).expand((g) => g).toList();
-        return refs
-            .map(
-              (ref) => DailyTask(
-                curriculumId: curriculum,
-                contentItemSefariaRef: ref,
-                stageOrder: firstStage.stageOrder,
-                stageDefinitionId: firstStage.id,
-                priority: DailyTaskPriority.newLearning,
-                isOverdue: true,
-                reason: 'Backfilled (app not run)',
-                stageName: firstStage.stageName,
-                trackId: trackId,
-                trackLabel: trackLabels[curriculum] ?? '',
-                estimatedEffortMinutes: 5,
-              ),
-            )
-            .toList();
-      },
-    );
+    if (hasPaceGoal) {
+      // Existing pace-goal path: respect coarse-unit grouping and use the
+      // configured pace.  Back-fill is study-day-aware.
+      final paceCeil = pace.ceil();
+      if (paceCeil <= 0) continue;
+
+      // Fetch study day weekdays for this track.
+      final studyConfigs = await db.studyDayConfigDao.getConfigsByTrack(
+        trackId,
+      );
+      final studyWeekdays = studyConfigs.isEmpty
+          ? {1, 2, 3, 4, 5, 6, 7}
+          : {
+              for (final c in studyConfigs)
+                if (c.dayType == 'study') c.dayOfWeek,
+            };
+
+      // Slot a day's worth of refs by either coarse unit (when the goal's
+      // paceGranularity names a level above the leaf, e.g. 'perek' for
+      // Mishnayos or 'daf' for Bavli) or single leaves.
+      final paceGranularity = paceGranularityMap[curriculum];
+      final isCoarse = _isCoarseLearningUnit(curriculum, paceGranularity);
+      final daySlots = <List<String>>[];
+      if (isCoarse) {
+        final byKey = <String, List<String>>{};
+        final keyOrder = <String>[];
+        for (final item in orderedItems) {
+          final key = item.coarseUnitKey ?? item.sefariaRef;
+          final list = byKey.putIfAbsent(key, () {
+            keyOrder.add(key);
+            return <String>[];
+          });
+          list.add(item.sefariaRef);
+        }
+        for (final key in keyOrder) {
+          daySlots.add(byKey[key]!);
+        }
+      } else {
+        for (final item in orderedItems) {
+          daySlots.add([item.sefariaRef]);
+        }
+      }
+
+      // Study-day ordinal counter — incremented only for study days so the
+      // position assignment skips non-study days.
+      var studyDayOrdinal = 0;
+      await planRepo.backfillMissingSnapshots(
+        profileId: profileId,
+        trackId: trackId,
+        activatedAt: startedAt,
+        currentDate: now,
+        buildSnapshotForDay: ({required dayIndex, required planDate}) async {
+          // Skip non-study days.
+          if (!studyWeekdays.contains(planDate.weekday)) {
+            return const <DailyTask>[];
+          }
+
+          final start = studyDayOrdinal * paceCeil;
+          studyDayOrdinal++;
+
+          if (start >= daySlots.length) return const <DailyTask>[];
+          final end = (start + paceCeil).clamp(0, daySlots.length);
+          final refs = daySlots.sublist(start, end).expand((g) => g).toList();
+          return refs
+              .map(
+                (ref) => DailyTask(
+                  curriculumId: curriculum,
+                  contentItemSefariaRef: ref,
+                  stageOrder: firstStage.stageOrder,
+                  stageDefinitionId: firstStage.id,
+                  priority: DailyTaskPriority.newLearning,
+                  isOverdue: true,
+                  reason: 'Backfilled (app not run)',
+                  stageName: firstStage.stageName,
+                  trackId: trackId,
+                  trackLabel: trackLabels[curriculum] ?? '',
+                  estimatedEffortMinutes: 5,
+                ),
+              )
+              .toList();
+        },
+      );
+    } else {
+      // Non-pace-goal path (F6 fix): back-fill elapsed study days using a
+      // default pace so overdue items appear when study days were missed.
+      const kDefaultBackfillPace = 5;
+
+      final studyConfigs = await db.studyDayConfigDao.getConfigsByTrack(
+        trackId,
+      );
+      final studyWeekdays = studyConfigs.isEmpty
+          ? const <int>{1, 2, 3, 4, 5, 6, 7}
+          : {
+              for (final c in studyConfigs)
+                if (c.dayType == 'study') c.dayOfWeek,
+            };
+
+      final orderedRefs = orderedItems.map((i) => i.sefariaRef).toList();
+
+      await planRepo.backfillStudyDaySnapshots(
+        profileId: profileId,
+        trackId: trackId,
+        curriculumId: curriculum,
+        activatedAt: startedAt,
+        currentDate: now,
+        pace: kDefaultBackfillPace,
+        studyWeekdays: studyWeekdays,
+        orderedRefs: orderedRefs,
+        firstStageOrder: firstStage.stageOrder,
+        firstStageDefinitionId: firstStage.id,
+        firstStageName: firstStage.stageName,
+        trackLabel: trackLabels[curriculum] ?? '',
+      );
+
+      // Record the effective pace override so the engine uses the snapshot
+      // path (which handles priorlyShownRefs) for overdue computation.
+      effectivePaceOverrideMap[curriculum] = kDefaultBackfillPace.toDouble();
+    }
 
     priorlyShownRefsMap[curriculum] = await db.dailyPlanDao
         .getPriorlyShownRefsForTrack(trackId: trackId, excludeDate: todayLocal);
   }
 
+  // Merge the explicit pace-goal map with effective-pace overrides for
+  // non-pace tracks that were back-filled (F6 fix).  The engine snapshot
+  // path requires pacePerDay != null to fire; effectivePaceOverrideMap
+  // supplies a default value so overdue items surface for those tracks.
+  final mergedPacePerDayMap = {
+    ...effectivePaceOverrideMap,
+    ...pacePerDayMap, // explicit goals take precedence
+  };
+
   final generated = await generator.generateAll(
     activeCurricula,
     now,
     goalDeadlines: goalDeadlines,
-    pacePerDayMap: pacePerDayMap,
+    pacePerDayMap: mergedPacePerDayMap,
     isStudyDayMap: isStudyDayMap,
     studyDaysPerWeekMap: studyDaysPerWeekMap,
     studyDaysInDeadlineWindowMap: studyDaysInDeadlineWindowMap,
