@@ -86,9 +86,15 @@ class ActiveTrackCard extends ConsumerWidget {
       loading: () => null,
       error: (_, __) => 0.0,
     );
-    final lifetimePercentDisplay = lifetimeFraction == null
-        ? '…'
-        : formatFractionAsPercent(lifetimeFraction);
+    final dualMetricsAsync = ref.watch(trackDualProgressMetricsProvider(profileId));
+    final dualMetricMatches = dualMetricsAsync.asData?.value
+        .where((m) => m.trackId == track.id)
+        .toList();
+    final dualMetric = (dualMetricMatches == null || dualMetricMatches.isEmpty)
+        ? null
+        : dualMetricMatches.first;
+    final currentCyclePct = dualMetric?.currentCyclePercentage ?? 0.0;
+    final lifetimePct = dualMetric?.lifetimePercentage ?? lifetimeFraction ?? 0.0;
 
     final curriculumTasks = allTasks
         .where((t) => t.trackId == track.id)
@@ -221,11 +227,21 @@ class ActiveTrackCard extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   mainAxisSize: MainAxisSize.max,
                   children: [
+                    Text(
+                      '${l10n.trackCurrentCycle} • ${formatFractionAsPercent(currentCyclePct)}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: AppTheme.brandInkMuted,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
                     Row(
                       children: [
                         Expanded(
                           child: Text(
-                            '${l10n.trackLifetimeLearning} • $lifetimePercentDisplay',
+                            '${l10n.trackLifetimeLearning} • ${formatFractionAsPercent(lifetimePct)}',
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: theme.textTheme.labelSmall?.copyWith(
