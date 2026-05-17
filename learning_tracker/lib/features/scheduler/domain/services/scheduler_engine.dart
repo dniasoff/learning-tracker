@@ -208,11 +208,6 @@ class SchedulerEngine {
       final pace = config.pacePerDay!.ceil();
       final priorlyShown = config.priorlyShownRefs;
 
-      // isStudyDay guard: on non-study days the snapshot path emits nothing.
-      if (!config.isStudyDay) {
-        return const [];
-      }
-
       // Carry-over overdue from prior-day snapshots. Preserve original
       // orderedRefs order so the list is stable across runs.
       //
