@@ -2405,6 +2405,18 @@ class AppLocalizationsHe extends AppLocalizations {
   }
 
   @override
+  String get trackDetailConfigType => 'סוג מסלול';
+
+  @override
+  String get trackDetailConfigGoal => 'יעד';
+
+  @override
+  String get trackDetailConfigItemsRemaining => 'פריטים שנותרו';
+
+  @override
+  String get trackDetailConfigEstFinish => 'סיום משוער';
+
+  @override
   String trackSince(String date) {
     return 'מאז $date';
   }

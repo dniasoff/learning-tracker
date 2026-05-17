@@ -1194,6 +1194,10 @@
     }
   },
 
+  "trackDetailConfigType": "Track type",
+  "trackDetailConfigGoal": "Goal",
+  "trackDetailConfigItemsRemaining": "Items remaining",
+  "trackDetailConfigEstFinish": "Est. finish",
   "trackSince": "Since {date}",
   "@trackSince": {
     "placeholders": {
