@@ -68,15 +68,64 @@ class TrackCreationService {
   }) async {
     final curriculum = result.curriculumId;
 
-    // 1. Ensure curriculum is activated for this profile AND restore any
-    //    soft-deleted track row (avoids UNIQUE violation on re-add).
+    final trackId = await _restoreOrCreateTrack(
+      profileId: profileId,
+      curriculum: curriculum,
+    );
+
+    await _deleteExistingGoals(trackId);
+
+    await _runCoreTransaction(
+      result: result,
+      profileId: profileId,
+      curriculum: curriculum,
+      trackId: trackId,
+    );
+
+    await _recreateGoal(
+      result: result,
+      profileId: profileId,
+      curriculum: curriculum,
+      trackId: trackId,
+    );
+
+    if (result.programId == null) {
+      await _clearProgramEnrollment(
+        profileId: profileId,
+        curriculum: curriculum,
+      );
+    } else {
+      await _enrollInProgram(
+        result: result,
+        profileId: profileId,
+        curriculum: curriculum,
+        trackId: trackId,
+      );
+    }
+
+    AppLogger.instance.info(
+      'TrackCreationService: track "${result.label}" created for '
+      '${curriculum.storageKey} (profile=$profileId)',
+    );
+
+    // Story 27.14 (DNI-390): fire analytics event after successful track creation.
+    unawaited(_analytics.logTrackAdded(curriculumId: curriculum.storageKey));
+  }
+
+  /// Restore a soft-deleted track row or create a fresh one, and ensure the
+  /// curriculum is activated for this profile. Returns the track ID.
+  Future<int> _restoreOrCreateTrack({
+    required int profileId,
+    required CurriculumId curriculum,
+  }) async {
+    // Restore any soft-deleted track row (avoids UNIQUE violation on re-add).
     final trackId = await _database.trackDao.restoreOrCreate(
       profileId: profileId,
       curriculumId: curriculum,
       trackType: TrackType.personal,
     );
 
-    // Also activate the curriculum in active_curricula (idempotent, outside
+    // Activate the curriculum in active_curricula (idempotent, outside
     // transaction). A soft-deleted track can exist without an active_curricula
     // row, so we always attempt this even when restoreOrCreate found an
     // existing row.
@@ -89,12 +138,26 @@ class TrackCreationService {
       );
     }
 
-    // Replace prior goals (syncs tombstones) so re-add does not stack duplicates.
+    return trackId;
+  }
+
+  /// Delete all existing goals for [trackId], syncing tombstones so
+  /// re-add does not stack duplicates.
+  Future<void> _deleteExistingGoals(int trackId) async {
     final existingGoals = await _database.goalDao.getGoalsByTrack(trackId);
     for (final g in existingGoals) {
       await _goalRepository.deleteGoal(g.id);
     }
+  }
 
+  /// Run the core DB transaction: delete old stages, apply wizard result,
+  /// save study days, save scopes, and seed point configs.
+  Future<void> _runCoreTransaction({
+    required AddTrackResult result,
+    required int profileId,
+    required CurriculumId curriculum,
+    required int trackId,
+  }) async {
     await _database.transaction(() async {
       await _stageRepository.deleteStagesForTrack(trackId);
 
@@ -131,125 +194,145 @@ class TrackCreationService {
         trackId: trackId,
       );
     });
+  }
 
-    if (result.goalResult is GoalEntity) {
-      final goal = result.goalResult! as GoalEntity;
-      await _goalRepository.createGoal(
+  /// Create the goal from [result] if one is present.
+  Future<void> _recreateGoal({
+    required AddTrackResult result,
+    required int profileId,
+    required CurriculumId curriculum,
+    required int trackId,
+  }) async {
+    if (result.goalResult is! GoalEntity) return;
+    final goal = result.goalResult! as GoalEntity;
+    await _goalRepository.createGoal(
+      profileId: profileId,
+      curriculumId: curriculum,
+      trackId: trackId,
+      targetPercent: goal.targetPercent,
+      targetDate: goal.targetDate,
+      description: goal.description,
+      dateType: goal.dateType,
+      goalType: goal.goalType,
+      paceValue: goal.paceValue,
+      pacePeriod: goal.pacePeriod,
+      paceGranularity: goal.paceGranularityKey,
+    );
+  }
+
+  /// Clear program enrollment locally and on cloud when switching to self-paced.
+  Future<void> _clearProgramEnrollment({
+    required int profileId,
+    required CurriculumId curriculum,
+  }) async {
+    final removed = await _database.profileProgramDao
+        .clearProgramForProfileAndCurriculum(
+          profileId,
+          curriculum.storageKey,
+        );
+    if (removed > 0) {
+      await _gateway?.removeProfileProgramAssignment(
         profileId: profileId,
-        curriculumId: curriculum,
-        trackId: trackId,
-        targetPercent: goal.targetPercent,
-        targetDate: goal.targetDate,
-        description: goal.description,
-        dateType: goal.dateType,
-        goalType: goal.goalType,
-        paceValue: goal.paceValue,
-        pacePeriod: goal.pacePeriod,
-        paceGranularity: goal.paceGranularityKey,
+        curriculumStorageKey: curriculum.storageKey,
       );
     }
+  }
 
-    // Self-paced: clear program enrollment locally + on cloud when switching from programmed.
-    if (result.programId == null) {
-      final removed = await _database.profileProgramDao
-          .clearProgramForProfileAndCurriculum(
-            profileId,
-            curriculum.storageKey,
-          );
-      if (removed > 0) {
-        await _gateway?.removeProfileProgramAssignment(
-          profileId: profileId,
-          curriculumStorageKey: curriculum.storageKey,
-        );
-      }
-    }
+  /// Parse the raw startingRef string into a bookmark ref and tracking-start date.
+  ///
+  /// The format may be:
+  ///   - null → start from beginning
+  ///   - "offset:N|ref:<sefariaRef>" → calendar offset + resolved unit
+  ///   - "offset:N" → legacy day-offset format
+  ///   - a sefariaRef string (e.g. "Berakhot 42a") → content-based position
+  ({String? bookmarkRef, DateTime? trackingStartDate}) _parseProgramStartingRef(
+    String? rawStartingRef,
+  ) {
+    var bookmarkRef = rawStartingRef;
+    String? offsetToken;
 
-    // Link profile to program if one was selected (outside transaction — idempotent)
-    if (result.programId != null) {
-      final programId = result.programId!;
-      // startingRef is either:
-      //   - null → start from beginning
-      //   - "offset:N|ref:<sefariaRef>" → calendar offset + resolved unit
-      //   - "offset:N" → legacy day-offset format
-      //   - a sefariaRef string (e.g. "Berakhot 42a") → content-based position
-      final rawStartingRef = result.startingRef;
-      var bookmarkRef = rawStartingRef;
-      String? offsetToken;
-      if (rawStartingRef != null && rawStartingRef.contains('|')) {
-        for (final token in rawStartingRef.split('|')) {
-          if (token.startsWith('offset:')) offsetToken = token;
-          if (token.startsWith('ref:')) {
-            final parsedRef = token.substring('ref:'.length);
-            if (parsedRef.isNotEmpty) {
-              bookmarkRef = parsedRef;
-            }
+    if (rawStartingRef != null && rawStartingRef.contains('|')) {
+      for (final token in rawStartingRef.split('|')) {
+        if (token.startsWith('offset:')) offsetToken = token;
+        if (token.startsWith('ref:')) {
+          final parsedRef = token.substring('ref:'.length);
+          if (parsedRef.isNotEmpty) {
+            bookmarkRef = parsedRef;
           }
         }
       }
+    }
 
-      DateTime? trackingStartDate;
-      final offsetSource =
-          offsetToken ??
-          ((rawStartingRef != null && rawStartingRef.startsWith('offset:'))
-              ? rawStartingRef
-              : null);
-      if (offsetSource != null) {
-        final offset = int.tryParse(offsetSource.substring('offset:'.length));
-        if (offset != null) {
-          final clampedOffset = offset.clamp(-30, 30);
-          trackingStartDate = DateTimeFactory.nowUtc().add(
-            Duration(days: clampedOffset),
-          );
-        }
+    DateTime? trackingStartDate;
+    final offsetSource =
+        offsetToken ??
+        ((rawStartingRef != null && rawStartingRef.startsWith('offset:'))
+            ? rawStartingRef
+            : null);
+    if (offsetSource != null) {
+      final offset = int.tryParse(offsetSource.substring('offset:'.length));
+      if (offset != null) {
+        final clampedOffset = offset.clamp(-30, 30);
+        trackingStartDate = DateTimeFactory.nowUtc().add(
+          Duration(days: clampedOffset),
+        );
       }
+    }
 
-      await _database.profileProgramDao.setProfileProgram(
+    return (bookmarkRef: bookmarkRef, trackingStartDate: trackingStartDate);
+  }
+
+  /// Link the profile to the selected program and push to Firestore.
+  /// Also upserts the bookmark if a starting ref was specified.
+  Future<void> _enrollInProgram({
+    required AddTrackResult result,
+    required int profileId,
+    required CurriculumId curriculum,
+    required int trackId,
+  }) async {
+    final programId = result.programId!;
+    final (:bookmarkRef, :trackingStartDate) = _parseProgramStartingRef(
+      result.startingRef,
+    );
+
+    await _database.profileProgramDao.setProfileProgram(
+      profileId: profileId,
+      curriculumType: curriculum.storageKey,
+      programId: programId,
+      trackingStartDate: trackingStartDate,
+      trackingStartRef: bookmarkRef,
+    );
+
+    if (bookmarkRef != null && bookmarkRef.isNotEmpty) {
+      final updatedAt = DateTimeFactory.nowUtc();
+      await _database.bookmarkDao.upsertBookmarkByProfile(
         profileId: profileId,
-        curriculumType: curriculum.storageKey,
-        programId: programId,
-        trackingStartDate: trackingStartDate,
-        trackingStartRef: bookmarkRef,
+        curriculumId: curriculum.storageKey,
+        trackId: trackId,
+        sefariaRef: bookmarkRef,
+        updatedAt: updatedAt,
       );
-
-      if (bookmarkRef != null && bookmarkRef.isNotEmpty) {
-        final updatedAt = DateTimeFactory.nowUtc();
-        await _database.bookmarkDao.upsertBookmarkByProfile(
-          profileId: profileId,
-          curriculumId: curriculum.storageKey,
-          trackId: trackId,
-          sefariaRef: bookmarkRef,
-          updatedAt: updatedAt,
-        );
-        await _gateway?.pushBookmark(
-          profileId: profileId,
-          data: {
-            'curriculum_id': curriculum.storageKey,
-            'track_type': TrackType.personal.storageKey,
-            'content_item_id': bookmarkRef,
-            'updated_at': updatedAt.toIso8601String(),
-          },
-        );
-      }
-
-      await _gateway?.pushProfileProgram(
+      await _gateway?.pushBookmark(
         profileId: profileId,
         data: {
-          'profile_id': profileId,
           'curriculum_id': curriculum.storageKey,
-          'program_id': programId,
-          'tracking_start_date': trackingStartDate?.toIso8601String(),
-          'tracking_start_ref': bookmarkRef,
+          'track_type': TrackType.personal.storageKey,
+          'content_item_id': bookmarkRef,
+          'updated_at': updatedAt.toIso8601String(),
         },
       );
     }
 
-    AppLogger.instance.info(
-      'TrackCreationService: track "${result.label}" created for '
-      '${curriculum.storageKey} (profile=$profileId)',
+    await _gateway?.pushProfileProgram(
+      profileId: profileId,
+      data: {
+        'profile_id': profileId,
+        'curriculum_id': curriculum.storageKey,
+        'program_id': programId,
+        'tracking_start_date': trackingStartDate?.toIso8601String(),
+        'tracking_start_ref': bookmarkRef,
+      },
     );
-
-    // Story 27.14 (DNI-390): fire analytics event after successful track creation.
-    unawaited(_analytics.logTrackAdded(curriculumId: curriculum.storageKey));
   }
 
   Future<void> _saveStudyDays({
