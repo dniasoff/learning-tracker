@@ -26,8 +26,6 @@ import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/sync/firestore_gateway.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
-import 'package:learning_tracker/features/scheduler/data/repositories/daily_plan_repository.dart';
-import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dart';
 import 'package:learning_tracker/features/sync/data/offline_queue.dart';
 import 'package:test/test.dart';
 
@@ -95,7 +93,7 @@ void main() {
           // while removing the activeProfileIdProvider watch, or promote the
           // provider to keepAlive: true. Either way the source must not contain
           // a watch call on activeProfileIdProvider.
-          final srcPath =
+          const srcPath =
               'lib/core/sync/providers/sync_orchestrator_providers.dart';
           final file = File(srcPath);
           if (!file.existsSync()) {

@@ -27,19 +27,6 @@ import '../helpers/drift_memory.dart';
 
 // ── Shared helpers ────────────────────────────────────────────────────────────
 
-/// Seed a curriculum_tracks row and return its id.
-Future<int> _createTrack(
-  UserDatabase db, {
-  required int profileId,
-  CurriculumId curriculum = CurriculumId.mishnayos,
-  TrackType trackType = TrackType.personal,
-  required DateTime activatedAt,
-}) => db.trackDao.restoreOrCreate(
-  profileId: profileId,
-  curriculumId: curriculum,
-  trackType: trackType,
-);
-
 /// Insert a completion row directly (bypasses CompletionWriter for speed).
 Future<void> _addCompletion(
   UserDatabase db, {
