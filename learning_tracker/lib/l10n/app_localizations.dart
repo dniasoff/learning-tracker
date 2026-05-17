@@ -266,6 +266,12 @@ abstract class AppLocalizations {
   /// **'Lifetime learning'**
   String get trackLifetimeLearning;
 
+  /// No description provided for @trackCurrentCycle.
+  ///
+  /// In en, this message translates to:
+  /// **'This cycle'**
+  String get trackCurrentCycle;
+
   /// No description provided for @continueLearning.
   ///
   /// In en, this message translates to:

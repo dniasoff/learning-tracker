@@ -102,6 +102,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get trackLifetimeLearning => 'Lifetime learning';
 
   @override
+  String get trackCurrentCycle => 'This cycle';
+
+  @override
   String get continueLearning => 'Continue Learning';
 
   @override

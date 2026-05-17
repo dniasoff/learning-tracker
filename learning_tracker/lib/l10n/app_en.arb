@@ -43,6 +43,7 @@
   "activeTrackMetricDueToday": "DUE TODAY",
   "activeTrackMetricOverdue": "OVERDUE",
   "trackLifetimeLearning": "Lifetime learning",
+  "trackCurrentCycle": "This cycle",
   "continueLearning": "Continue Learning",
   "recentActivity": "Recent Activity",
   "myLearningJourney": "My Learning Journey",
