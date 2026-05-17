@@ -225,20 +225,31 @@ final trackDualProgressMetricsProvider = FutureProvider.autoDispose
         final denominator = leaves.length;
         if (denominator == 0) continue;
 
-        final trackCompletions = await db.completionDao
-            .getCompletionsByTrackAndProfile(track.id, profileId);
-        final currentCycleRefs = trackCompletions
+        // Current-session completions: only those on or after activatedAt.
+        // This ensures a restored track starts at 0% for the new cycle even
+        // though pre-restore completions remain in the DB for lifetime stats.
+        final sessionCompletions = await db.completionDao
+            .getCompletionsByTrackAndProfileSince(
+              track.id,
+              profileId,
+              track.activatedAt,
+            );
+        final currentCycleRefs = sessionCompletions
             .map((c) => c.sefariaRef)
             .toSet();
         final currentCyclePct = currentCycleRefs.length / denominator;
 
+        // Lifetime completions: all completions for this track, including
+        // those from previous learning sessions (before the last restore).
+        final allTrackCompletions = await db.completionDao
+            .getCompletionsByTrackAndProfile(track.id, profileId);
         final trackLedger = await db.learningLedgerDao.getEntriesByTrack(
           track.id,
           profileId,
         );
         final lifetimeRefs = _learnedLeafRefs(
           leaves: leaves,
-          completedRefs: trackCompletions.map((c) => c.sefariaRef).toSet(),
+          completedRefs: allTrackCompletions.map((c) => c.sefariaRef).toSet(),
           ledgerEntries: trackLedger,
         );
         final lifetimePct = lifetimeRefs.length / denominator;

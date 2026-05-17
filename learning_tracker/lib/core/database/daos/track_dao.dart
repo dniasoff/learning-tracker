@@ -294,9 +294,15 @@ class TrackDao extends DatabaseAccessor<UserDatabase>
   ///
   /// Looks up the (profileId, curriculumId, trackType) triple, ignoring deletedAt.
   ///
-  /// * Found + soft-deleted  → clears deletedAt, reactivates row. Returns its id.
+  /// * Found + soft-deleted  → clears deletedAt, reactivates row, resets
+  ///   [activatedAt] to now (new learning session). Returns its id.
   /// * Found + active        → returns id (idempotent).
   /// * Not found             → inserts new row. Returns new id.
+  ///
+  /// Completions from before the restore are intentionally preserved — they
+  /// count toward lifetime stats. The new [activatedAt] acts as a session
+  /// boundary: current-session progress is computed from completions where
+  /// completedAt >= activatedAt, so the track starts at 0% for the new cycle.
   ///
   /// Use this instead of [initializeDefaultTracks] when re-adding a previously
   /// deleted track to avoid UNIQUE(profileId, curriculumId, trackType) violations.
@@ -318,28 +324,19 @@ class TrackDao extends DatabaseAccessor<UserDatabase>
 
     if (existing != null) {
       if (existing.deletedAt != null) {
-        // Re-adding a previously-deleted track: purge its completion rows so
-        // the restored track starts with a clean history. Without this purge
-        // the old completions re-attach to the same row id and produce
-        // phantom progress (Bug #4 / R3).
-        //
-        // activatedAt is intentionally NOT overwritten — preserving the
-        // original creation date lets backfillMissingSnapshots generate
-        // prior-day snapshots and surface overdue tasks on app open (Bug #8 / R4).
-        await db.transaction(() async {
-          await (db.delete(
-            db.completions,
-          )..where((t) => t.trackId.equals(existing.id))).go();
-          await (update(
-            curriculumTracks,
-          )..where((t) => t.id.equals(existing.id))).write(
-            CurriculumTracksCompanion(
-              isActive: const Value(true),
-              deactivatedAt: const Value(null),
-              deletedAt: const Value(null),
-            ),
-          );
-        });
+        // Reset activatedAt to now so this is treated as a new learning session.
+        // Old completions stay in the DB for lifetime stats; current-session
+        // progress queries filter by completedAt >= activatedAt.
+        await (update(curriculumTracks)
+              ..where((t) => t.id.equals(existing.id)))
+            .write(
+          CurriculumTracksCompanion(
+            isActive: const Value(true),
+            activatedAt: Value(DateTimeFactory.nowUtc()),
+            deactivatedAt: const Value(null),
+            deletedAt: const Value(null),
+          ),
+        );
       }
       return existing.id;
     }
@@ -355,16 +352,18 @@ class TrackDao extends DatabaseAccessor<UserDatabase>
     );
   }
 
-  /// Hard-delete all completion rows owned by [trackId], then soft-delete
-  /// the track itself.
+  /// Physically remove all data for [trackId] — completions, config, and the
+  /// track row itself.
   ///
   /// Use this when the user explicitly requests "Delete and wipe history".
-  /// Completions are the only append-only table with a direct trackId FK that
-  /// carries per-track history; streak_events are profile-scoped and are not
-  /// touched. All other per-track config tables (goals, stages, daily plans,
-  /// point configs, scopes, study days, learning order) are already cleared by
-  /// [deleteTrackAndData].
+  /// Unlike [deleteTrackAndData], this leaves no tombstone: the track row is
+  /// hard-deleted so [restoreOrCreate] will create a brand-new row next time.
+  /// streak_events are profile-scoped and are not touched.
   Future<void> purgeHistory(int trackId) async {
+    // Fetch before the transaction — the row will be gone afterwards.
+    final track = await getTrackById(trackId);
+    if (track == null) return;
+
     await db.transaction(() async {
       await (db.delete(
         db.completions,
@@ -378,26 +377,20 @@ class TrackDao extends DatabaseAccessor<UserDatabase>
       await db.curriculumScopeDao.clearScopesForTrack(trackId);
       await db.studyDayConfigDao.deleteConfigsForTrack(trackId);
       await db.trackLearningOrderDao.deleteByTrack(trackId);
-      await (update(
+      // Hard-delete the track row — no tombstone left behind.
+      await (db.delete(
         curriculumTracks,
-      )..where((t) => t.id.equals(trackId))).write(
-        CurriculumTracksCompanion(
-          isActive: const Value(false),
-          deletedAt: Value(DateTimeFactory.nowUtc()),
-        ),
-      );
+      )..where((t) => t.id.equals(trackId))).go();
     });
-    final track = await getTrackById(trackId);
-    if (track != null) {
-      final curriculum = CurriculumId.values
-          .where((c) => c.storageKey == track.curriculumId)
-          .firstOrNull;
-      if (curriculum != null) {
-        await db.activeCurriculumDao.forceRemoveForProfile(
-          curriculum,
-          track.profileId,
-        );
-      }
+
+    final curriculum = CurriculumId.values
+        .where((c) => c.storageKey == track.curriculumId)
+        .firstOrNull;
+    if (curriculum != null) {
+      await db.activeCurriculumDao.forceRemoveForProfile(
+        curriculum,
+        track.profileId,
+      );
     }
   }
 

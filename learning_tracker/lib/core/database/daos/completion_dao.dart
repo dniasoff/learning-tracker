@@ -508,6 +508,22 @@ class CompletionDao extends DatabaseAccessor<UserDatabase>
           ))
           .get();
 
+  /// Get completions for a track on or after [since] — the current-session
+  /// boundary. Used to compute current-cycle progress independently of
+  /// completions accumulated in previous learning sessions (before a restore).
+  Future<List<Completion>> getCompletionsByTrackAndProfileSince(
+    int trackId,
+    int profileId,
+    DateTime since,
+  ) =>
+      (select(completions)..where(
+            (t) =>
+                t.trackId.equals(trackId) &
+                t.profileId.equals(profileId) &
+                t.completedAt.isBiggerOrEqualValue(since),
+          ))
+          .get();
+
   /// Get completion count for a track scoped to a specific profile.
   Future<int> getAggregateCountByTrack(int trackId, int profileId) async {
     final query = selectOnly(completions)

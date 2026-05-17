@@ -154,11 +154,12 @@ void main() {
       });
     });
 
-    // ── N4 — delete+re-add track = 0 phantom progress ──────────────────────
+    // ── N4 — delete+re-add: lifetime completions preserved, session starts at 0
 
     group('N4: delete+re-add track leaves 0 completions', () {
       test(
-        'restoreOrCreate after deleteTrackAndData: no old completions visible',
+        'restoreOrCreate after deleteTrackAndData: old completions preserved for '
+        'lifetime; current session starts at 0',
         () async {
           final db = inMemoryDb();
           addTearDown(db.close);
@@ -170,7 +171,7 @@ void main() {
             trackType: TrackType.personal,
           );
 
-          // Directly insert 3 completions attached to that track.
+          // Directly insert 3 completions attached to that track, all in the past.
           for (var i = 0; i < 3; i++) {
             await db.into(db.completions).insert(
               CompletionsCompanion.insert(
@@ -203,29 +204,41 @@ void main() {
           expect(
             restoredId,
             equals(originalId),
-            reason:
-                'N4 pre-condition: restoreOrCreate must reuse the same row '
-                'id — this is the mechanism behind the phantom progress',
+            reason: 'N4 pre-condition: restoreOrCreate must reuse the same row id',
           );
 
-          // After a fresh re-add, the user expects 0 prior completions.
-          // FAILS today: old completions still join to the restored track.
+          final restored = await db.trackDao.getTrackById(restoredId);
+
+          // Lifetime count still includes pre-restore completions.
           expect(
             await db.completionDao.getAggregateCountByProfile('mishnayos', 1),
-            0,
+            3,
+            reason: 'N4: lifetime completions must survive delete+restore',
+          );
+
+          // Current-session count (completedAt >= activatedAt) is 0 — fresh start.
+          final sessionCompletions = await db.completionDao
+              .getCompletionsByTrackAndProfileSince(
+                restoredId,
+                1,
+                restored!.activatedAt,
+              );
+          expect(
+            sessionCompletions,
+            isEmpty,
             reason:
-                'N4: after delete+re-add, no prior completions must be '
-                'visible — the re-added track is a fresh start',
+                'N4: current-session completions must be 0 — pre-restore rows '
+                'predate the new activatedAt and are excluded from the current cycle',
           );
         },
       );
     });
 
-    // ── N5 — restoreOrCreate preserves activatedAt ──────────────────────────
+    // ── N5 — restoreOrCreate resets activatedAt to mark a new session ────────
 
-    group('N5: restoreOrCreate preserves original activatedAt', () {
+    group('N5: restoreOrCreate resets activatedAt for a new learning session', () {
       test(
-        'restored track retains pre-delete activatedAt so backfill can compute overdue',
+        'restored track gets activatedAt = now so the current cycle starts fresh',
         () async {
           final db = inMemoryDb();
           addTearDown(db.close);
@@ -248,6 +261,8 @@ void main() {
           // Soft-delete the track.
           await db.trackDao.deleteTrackAndData(trackId);
 
+          final beforeRestore = DateTimeFactory.nowUtc();
+
           // Re-add via restoreOrCreate.
           await db.trackDao.restoreOrCreate(
             profileId: 1,
@@ -257,18 +272,23 @@ void main() {
 
           final restored = await db.trackDao.getTrackById(trackId);
 
-          // FAILS today: restoreOrCreate writes activatedAt = DateTimeFactory.nowUtc()
-          // which discards the original value and causes backfillMissingSnapshots
-          // to see 0 elapsed days → no prior-day rows → no overdue tasks.
+          // activatedAt must be reset to now (new session), not the old value.
           expect(
-            restored!.activatedAt.isBefore(
+            restored!.activatedAt.isAfter(
               DateTimeFactory.nowUtc().subtract(const Duration(days: 4)),
             ),
             isTrue,
             reason:
-                'N5: restoreOrCreate must preserve the original activatedAt '
-                'so that backfillMissingSnapshots can generate prior-day '
-                'snapshots and surface overdue tasks on app open',
+                'N5: restoreOrCreate must reset activatedAt to now so that '
+                'the current learning session starts fresh; old completions '
+                'predating activatedAt are excluded from current-cycle progress',
+          );
+          expect(
+            restored.activatedAt.isAfter(
+              beforeRestore.subtract(const Duration(seconds: 5)),
+            ),
+            isTrue,
+            reason: 'N5: new activatedAt must be approximately now',
           );
         },
       );

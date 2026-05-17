@@ -329,7 +329,7 @@ void main() {
         expect(track.deletedAt, isNull);
       });
 
-      test('restore preserves original activatedAt (R4 / N5)', () async {
+      test('restore resets activatedAt to now (new learning session) (N5)', () async {
         final originalActivatedAt = DateTime.utc(2026, 5, 10);
         final trackId = await db.into(db.curriculumTracks).insert(
           CurriculumTracksCompanion.insert(
@@ -349,16 +349,19 @@ void main() {
         );
 
         final restored = await db.trackDao.getTrackById(trackId);
-        // Drift reads DateTime back as local time; compare by moment, not representation.
+        // activatedAt must be reset to now — the new session boundary.
+        // Pre-restore completions (completedAt = 2026-05-10) will predate it.
         expect(
-          restored!.activatedAt.isAtSameMomentAs(originalActivatedAt),
+          restored!.activatedAt.isAfter(originalActivatedAt),
           isTrue,
-          reason: 'R4: original activatedAt must survive delete+restore so '
-              'backfill can compute elapsed overdue days',
+          reason: 'N5: restore must reset activatedAt to now so the current '
+              'learning cycle starts fresh and pre-restore completions are '
+              'excluded from current-session progress',
         );
       });
 
-      test('restore purges pre-delete completions (R3 / N4)', () async {
+      test('restore preserves pre-delete completions for lifetime; '
+          'current session starts at 0 (N4)', () async {
         final trackId = await db.trackDao.restoreOrCreate(
           profileId: profileId,
           curriculumId: CurriculumId.mishnayos,
@@ -369,6 +372,7 @@ void main() {
           profileId: profileId,
           trackId: trackId,
           sefariaRef: 'Berakhot 1:1',
+          completedAt: DateTime.utc(2026, 5, 1), // clearly in the past
         );
         expect(
           await db.completionDao.getAggregateCountByProfile(
@@ -385,14 +389,29 @@ void main() {
           trackType: TrackType.personal,
         );
 
+        final restored = await db.trackDao.getTrackById(trackId);
+
+        // Lifetime count preserved.
         expect(
           await db.completionDao.getAggregateCountByProfile(
             CurriculumId.mishnayos.storageKey,
             profileId,
           ),
-          0,
-          reason: 'R3: restored track must show 0 completions — pre-delete '
-              'rows are purged to prevent phantom progress',
+          1,
+          reason: 'pre-restore completions survive for lifetime stats',
+        );
+
+        // Current-session count = 0 (pre-restore completedAt < new activatedAt).
+        final session = await db.completionDao.getCompletionsByTrackAndProfileSince(
+          trackId,
+          profileId,
+          restored!.activatedAt,
+        );
+        expect(
+          session,
+          isEmpty,
+          reason: 'current session starts at 0 — pre-restore completions '
+              'predate the new activatedAt',
         );
       });
 
@@ -430,7 +449,9 @@ void main() {
           reason: 'deleteTrackAndData must wipe daily-plan snapshot rows',
         );
 
-        // Restore — activatedAt preserved; re-backfill creates 3 fresh rows.
+        // Restore — activatedAt resets to now (new session), but the backfill
+        // helper is called with the original threeDaysAgo explicitly, simulating
+        // a caller that knows the prior content scope. 3 fresh rows expected.
         await db.trackDao.restoreOrCreate(
           profileId: profileId,
           curriculumId: CurriculumId.mishnayos,
@@ -447,8 +468,8 @@ void main() {
         expect(
           calls,
           3,
-          reason: 'after restore, backfill must regenerate the 3 prior-day '
-              'snapshots using the preserved activatedAt',
+          reason: 'after restore, daily-plan rows were wiped so backfill '
+              'regenerates the 3 prior-day snapshots',
         );
       });
 
@@ -465,12 +486,14 @@ void main() {
           trackType: TrackType.personal,
         );
 
+        // Use a past timestamp so it clearly predates any restore activatedAt.
         await _addCompletion(
           db,
           profileId: profileId,
           trackId: trackA,
           sefariaRef: 'Berakhot 1:1',
           curriculum: CurriculumId.mishnayos,
+          completedAt: DateTime.utc(2026, 5, 1),
         );
         await _addCompletion(
           db,
@@ -488,6 +511,8 @@ void main() {
           trackType: TrackType.personal,
         );
 
+        final restoredA = await db.trackDao.getTrackById(trackA);
+
         // Track B's completion must be untouched.
         expect(
           await db.completionDao.getAggregateCountByProfile(
@@ -497,13 +522,25 @@ void main() {
           1,
           reason: 'track B completions must survive track A delete+restore',
         );
-        // Track A starts fresh.
+        // Track A: lifetime count preserved (completion survives restore).
         expect(
           await db.completionDao.getAggregateCountByProfile(
             CurriculumId.mishnayos.storageKey,
             profileId,
           ),
-          0,
+          1,
+          reason: 'track A lifetime completion is preserved after restore',
+        );
+        // Track A: current session = 0 (pre-restore completion predates activatedAt).
+        final sessionA = await db.completionDao.getCompletionsByTrackAndProfileSince(
+          trackA,
+          profileId,
+          restoredA!.activatedAt,
+        );
+        expect(
+          sessionA,
+          isEmpty,
+          reason: 'track A current session starts fresh after restore',
         );
       });
     },
@@ -800,7 +837,7 @@ void main() {
         );
       });
 
-      test('delete + restore resets count to 0 (R3 / N4)', () async {
+      test('delete + restore: lifetime count preserved; session count = 0 (N4)', () async {
         final trackId = await db.trackDao.restoreOrCreate(
           profileId: profileId,
           curriculumId: CurriculumId.mishnayos,
@@ -812,6 +849,7 @@ void main() {
             profileId: profileId,
             trackId: trackId,
             sefariaRef: ref,
+            completedAt: DateTime.utc(2026, 5, 1), // clearly in the past
           );
         }
         expect(
@@ -829,13 +867,28 @@ void main() {
           trackType: TrackType.personal,
         );
 
+        final restored = await db.trackDao.getTrackById(trackId);
+
+        // Lifetime: pre-restore completions still count.
         expect(
           await db.completionDao.getAggregateCountByProfile(
             CurriculumId.mishnayos.storageKey,
             profileId,
           ),
-          0,
-          reason: 'fresh start after restore — no phantom count from pre-delete rows',
+          2,
+          reason: 'lifetime count must be preserved after restore',
+        );
+
+        // Current session: 0 — all pre-restore completions predate activatedAt.
+        final session = await db.completionDao.getCompletionsByTrackAndProfileSince(
+          trackId,
+          profileId,
+          restored!.activatedAt,
+        );
+        expect(
+          session,
+          isEmpty,
+          reason: 'current session starts at 0 after restore',
         );
       });
 

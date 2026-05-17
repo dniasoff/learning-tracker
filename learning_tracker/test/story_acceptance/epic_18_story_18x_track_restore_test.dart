@@ -119,9 +119,9 @@ void main() {
           )..where((t) => t.trackId.equals(trackId))).get();
           expect(after, isEmpty);
 
-          // Track row still exists (soft-deleted tombstone)
+          // Track row is physically deleted — no tombstone left behind.
           final trackRow = await db.trackDao.getTrackById(trackId);
-          expect(trackRow?.deletedAt, isNotNull);
+          expect(trackRow, isNull);
         },
       );
     },
