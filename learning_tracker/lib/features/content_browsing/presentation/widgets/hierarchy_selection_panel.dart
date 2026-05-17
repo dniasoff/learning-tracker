@@ -204,7 +204,7 @@ class HierarchySelectionPanelState
               children: [
                 TextButton(
                   onPressed: clearNavigation,
-                  child: Text(l10n.breadcrumbsRoot),
+                  child: CurriculumLabel.curriculum(widget.curriculumId),
                 ),
                 for (var i = 0; i < _navigationStack.length; i++) ...[
                   const Icon(Icons.chevron_right, size: 16, color: Colors.grey),
