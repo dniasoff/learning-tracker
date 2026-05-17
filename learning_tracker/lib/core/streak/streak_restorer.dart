@@ -9,6 +9,7 @@
 /// Idempotent: re-running on a non-empty log is a no-op.
 library;
 
+import 'package:drift/drift.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart'
     hide StreakEvent;
 import 'package:learning_tracker/core/streak/streak_event.dart';
@@ -32,9 +33,13 @@ class StreakRestorer {
             .getSingleOrNull();
     if (existing != null) return;
 
+    // Only track-based completions credit the streak. Bulk-marked lifetime
+    // items use trackId = 0 as a sentinel and must not create streak events
+    // (matches the write-path gate in CompletionRepositoryImpl / DNI-381).
     final completions = await (_db.select(
       _db.completions,
-    )..where((t) => t.profileId.equals(profileId))).get();
+    )..where((t) => t.profileId.equals(profileId) & t.trackId.isNotValue(0)))
+        .get();
 
     final firstPerDay = <DateTime, DateTime>{};
     for (final c in completions) {
