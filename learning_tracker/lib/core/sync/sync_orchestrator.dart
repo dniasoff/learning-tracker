@@ -67,18 +67,18 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
     required PullPipeline pullPipeline,
     required MergeRouter mergeRouter,
     required FirestoreGateway gateway,
-    required int profileId,
+    required int Function() resolveProfileId,
     AppLogger? logger,
   }) : _engine = engine,
        _pullPipeline = pullPipeline,
        _mergeRouter = mergeRouter,
        _gateway = gateway,
-       _profileId = profileId,
+       _resolveProfileId = resolveProfileId,
        _logger = logger {
     _listenerSupervisor = ListenerSupervisor(
       source: FirestoreListenerSource(
         gateway: _gateway,
-        profileId: _profileId,
+        profileId: _resolveProfileId(),
       ),
       onEvent: _onListenerEvent,
       onError: _onListenerError,
@@ -102,8 +102,10 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
   final PullPipeline _pullPipeline;
   final MergeRouter _mergeRouter;
   final FirestoreGateway _gateway;
-  final int _profileId;
+  final int Function() _resolveProfileId;
   final AppLogger? _logger;
+
+  int get _profileId => _resolveProfileId();
 
   late final ListenerSupervisor _listenerSupervisor;
   late final LifecycleObserver _lifecycleObserver;
@@ -224,11 +226,7 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
         });
   }
 
-  void _onListenerError(
-    String channel,
-    Object error,
-    StackTrace stackTrace,
-  ) {
+  void _onListenerError(String channel, Object error, StackTrace stackTrace) {
     _logger?.error(
       event: 'sync_orchestrator_listener_error',
       fields: {'channel': channel},
