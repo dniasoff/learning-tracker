@@ -110,6 +110,9 @@ void main() {
       // CurriculumLabel.level at render time.
       // Constructs CalendarProgramEntry instances directly.
       'lib/features/scheduler/presentation/providers/scheduler_providers.dart',
+      // SefariaRefMatcher domain service — constructs sentinel ContentItem
+      // instances (required constructor fields, not UI label reads). C5 extraction.
+      'lib/features/scheduler/domain/services/sefaria_ref_matcher.dart',
       // Doc-comment reference only.
       'lib/features/track_setup/presentation/widgets/curriculum_picker_step.dart',
       // Composite curriculum strategy — constructs synthetic ContentItem
