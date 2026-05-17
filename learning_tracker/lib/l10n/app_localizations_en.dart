@@ -2571,4 +2571,27 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get deletingAccountError =>
       'Deletion encountered an issue. You have been signed out.';
+
+  @override
+  String get itemsLearnedTitle => 'Items Learned';
+
+  @override
+  String get itemsLearnedSubtitle => 'Track completions by curriculum';
+
+  @override
+  String get lifetimeViewTitle => 'Lifetime View';
+
+  @override
+  String get lifetimeViewSubtitle => 'Everything you\'ve ever covered';
+
+  @override
+  String get itemsLearnedNoCurricula => 'No track completions yet';
+
+  @override
+  String get itemsLearnedNoCurriculaSubtitle =>
+      'Complete daily tasks to see your progress here';
+
+  @override
+  String itemsLearnedOf(int completed, int total) =>
+      '$completed of $total';
 }

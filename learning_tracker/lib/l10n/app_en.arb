@@ -1275,5 +1275,19 @@
 
   "deletingAccountTitle": "Deleting your account…",
   "deletingAccountBody": "This may take a few seconds. Please don't close the app.",
-  "deletingAccountError": "Deletion encountered an issue. You have been signed out."
+  "deletingAccountError": "Deletion encountered an issue. You have been signed out.",
+
+  "itemsLearnedTitle": "Items Learned",
+  "itemsLearnedSubtitle": "Track completions by curriculum",
+  "lifetimeViewTitle": "Lifetime View",
+  "lifetimeViewSubtitle": "Everything you've ever covered",
+  "itemsLearnedNoCurricula": "No track completions yet",
+  "itemsLearnedNoCurriculaSubtitle": "Complete daily tasks to see your progress here",
+  "itemsLearnedOf": "{completed} of {total}",
+  "@itemsLearnedOf": {
+    "placeholders": {
+      "completed": { "type": "int" },
+      "total": { "type": "int" }
+    }
+  }
 }

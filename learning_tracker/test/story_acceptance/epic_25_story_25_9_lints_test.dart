@@ -96,6 +96,10 @@ void main() {
       'lib/features/onboarding/presentation/screens/bulk_mark_screen.dart',
       'lib/features/settings/presentation/screens/lifetime_marking_screen.dart',
       'lib/features/progress/presentation/providers/lifetime_knowledge_providers.dart',
+      // items_learned_providers: builds the same Hebrew label lookup as
+      // lifetime_knowledge_providers — item.displayNameHe is passed through
+      // as hebrewName to LifetimeTreeNode (not displayed directly).
+      'lib/features/progress/presentation/providers/items_learned_providers.dart',
       // Onboarding curriculum importer — Drift seed converter, not a UI surface.
       'lib/features/onboarding/domain/services/curriculum_import_service.dart',
       // Service builds bilingual storage entries (writes both forms into ledger).

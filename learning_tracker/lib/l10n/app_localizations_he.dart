@@ -2541,4 +2541,27 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String get deletingAccountError => 'המחיקה נתקלה בבעיה. התנתקת מהחשבון.';
+
+  @override
+  String get itemsLearnedTitle => 'פריטים שנלמדו';
+
+  @override
+  String get itemsLearnedSubtitle => 'השלמות מסלול לפי תוכנית';
+
+  @override
+  String get lifetimeViewTitle => 'תצוגת כל החיים';
+
+  @override
+  String get lifetimeViewSubtitle => 'כל מה שלמדת אי פעם';
+
+  @override
+  String get itemsLearnedNoCurricula => 'עדיין אין השלמות מסלול';
+
+  @override
+  String get itemsLearnedNoCurriculaSubtitle =>
+      'השלם משימות יומיות כדי לראות את ההתקדמות כאן';
+
+  @override
+  String itemsLearnedOf(int completed, int total) =>
+      '$completed מתוך $total';
 }

@@ -4570,6 +4570,48 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Deletion encountered an issue. You have been signed out.'**
   String get deletingAccountError;
+
+  /// No description provided for @itemsLearnedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Items Learned'**
+  String get itemsLearnedTitle;
+
+  /// No description provided for @itemsLearnedSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Track completions by curriculum'**
+  String get itemsLearnedSubtitle;
+
+  /// No description provided for @lifetimeViewTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Lifetime View'**
+  String get lifetimeViewTitle;
+
+  /// No description provided for @lifetimeViewSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Everything you\'ve ever covered'**
+  String get lifetimeViewSubtitle;
+
+  /// No description provided for @itemsLearnedNoCurricula.
+  ///
+  /// In en, this message translates to:
+  /// **'No track completions yet'**
+  String get itemsLearnedNoCurricula;
+
+  /// No description provided for @itemsLearnedNoCurriculaSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Complete daily tasks to see your progress here'**
+  String get itemsLearnedNoCurriculaSubtitle;
+
+  /// No description provided for @itemsLearnedOf.
+  ///
+  /// In en, this message translates to:
+  /// **'{completed} of {total}'**
+  String itemsLearnedOf(int completed, int total);
 }
 
 class _AppLocalizationsDelegate

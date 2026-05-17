@@ -99,6 +99,8 @@ class ProgressScreen extends ConsumerWidget {
                     const _ProgressChartsTile(),
                     const SizedBox(height: 8),
                     const _LearningJourneyTile(),
+                    const SizedBox(height: 8),
+                    const _ItemsLearnedTile(),
                     const SizedBox(height: 20),
                     _LearningLifetimeTreeCard(summaries: lifetimeSummaries),
                   ],
@@ -323,6 +325,74 @@ class _LearningJourneyTile extends StatelessWidget {
                   ),
                   Text(
                     l10n.myLearningJourneySubtitle,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: AppTheme.brandInkMuted,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(
+              Icons.chevron_right_rounded,
+              color: AppTheme.brandInkMuted,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ItemsLearnedTile extends StatelessWidget {
+  const _ItemsLearnedTile();
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return InkWell(
+      borderRadius: BorderRadius.circular(20),
+      onTap: () => context.router.push(const ItemsLearnedRoute()),
+      child: Ink(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF03174C).withValues(alpha: 0.06),
+              blurRadius: 12,
+              offset: const Offset(0, 5),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 34,
+              height: 34,
+              decoration: BoxDecoration(
+                color: const Color(0xFFEEF3FF),
+                borderRadius: BorderRadius.circular(11),
+              ),
+              child: const Icon(
+                Icons.menu_book_outlined,
+                color: AppTheme.brandBlue,
+                size: 20,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    l10n.itemsLearnedTitle,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  Text(
+                    l10n.itemsLearnedSubtitle,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: AppTheme.brandInkMuted,
                     ),
