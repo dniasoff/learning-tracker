@@ -684,7 +684,7 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
   @override
   Widget build(BuildContext context) {
     final steps = _activeSteps;
-    final progress = (_currentIndex + 1) / steps.length;
+    final progress = _currentIndex / steps.length;
     final theme = Theme.of(context);
 
     return PopScope(
