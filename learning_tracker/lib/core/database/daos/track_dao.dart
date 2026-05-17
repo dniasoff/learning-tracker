@@ -322,6 +322,10 @@ class TrackDao extends DatabaseAccessor<UserDatabase>
         // the restored track starts with a clean history. Without this purge
         // the old completions re-attach to the same row id and produce
         // phantom progress (Bug #4 / R3).
+        //
+        // activatedAt is intentionally NOT overwritten — preserving the
+        // original creation date lets backfillMissingSnapshots generate
+        // prior-day snapshots and surface overdue tasks on app open (Bug #8 / R4).
         await db.transaction(() async {
           await (db.delete(
             db.completions,
@@ -331,7 +335,6 @@ class TrackDao extends DatabaseAccessor<UserDatabase>
           )..where((t) => t.id.equals(existing.id))).write(
             CurriculumTracksCompanion(
               isActive: const Value(true),
-              activatedAt: Value(DateTimeFactory.nowUtc()),
               deactivatedAt: const Value(null),
               deletedAt: const Value(null),
             ),
