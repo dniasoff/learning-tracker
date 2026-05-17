@@ -318,16 +318,25 @@ class TrackDao extends DatabaseAccessor<UserDatabase>
 
     if (existing != null) {
       if (existing.deletedAt != null) {
-        await (update(
-          curriculumTracks,
-        )..where((t) => t.id.equals(existing.id))).write(
-          CurriculumTracksCompanion(
-            isActive: const Value(true),
-            activatedAt: Value(DateTimeFactory.nowUtc()),
-            deactivatedAt: const Value(null),
-            deletedAt: const Value(null),
-          ),
-        );
+        // Re-adding a previously-deleted track: purge its completion rows so
+        // the restored track starts with a clean history. Without this purge
+        // the old completions re-attach to the same row id and produce
+        // phantom progress (Bug #4 / R3).
+        await db.transaction(() async {
+          await (db.delete(
+            db.completions,
+          )..where((t) => t.trackId.equals(existing.id))).go();
+          await (update(
+            curriculumTracks,
+          )..where((t) => t.id.equals(existing.id))).write(
+            CurriculumTracksCompanion(
+              isActive: const Value(true),
+              activatedAt: Value(DateTimeFactory.nowUtc()),
+              deactivatedAt: const Value(null),
+              deletedAt: const Value(null),
+            ),
+          );
+        });
       }
       return existing.id;
     }
