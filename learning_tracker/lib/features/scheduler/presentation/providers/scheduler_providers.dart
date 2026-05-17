@@ -272,7 +272,7 @@ Future<List<DailyTask>> allDailyTasks(Ref ref) async {
 
   final engine = ref.watch(schedulerEngineProvider);
   final stageRepository = ref.watch(globalStageRepositoryProvider);
-  final tasks = await planRepo.getOrSnapshotPlan(
+  final planResult = await planRepo.getOrSnapshotPlan(
     profileId: profileId,
     now: now,
     buildPlan: () => _buildFreshPlan(
@@ -288,10 +288,16 @@ Future<List<DailyTask>> allDailyTasks(Ref ref) async {
           ref.read(scopedCurriculumContentProvider(curriculumId).future),
     ),
   );
+  final tasks = planResult.tasks;
 
   // Guard against stale/empty daily snapshots:
   // if active curricula changed after the first snapshot of the day,
   // today's plan may miss entire curricula until tomorrow.
+  //
+  // Performance: skip this guard when the plan was already snapshotted
+  // before this provider call (e.g. completion-triggered re-evaluations).
+  // The guard is only meaningful immediately after the plan is first built,
+  // not on every subsequent read.
   final activeCurriculumKeys = await db.activeCurriculumDao
       .getActiveCurriculaByProfile(profileId);
   final snapshotCurriculumKeys = tasks
@@ -300,18 +306,19 @@ Future<List<DailyTask>> allDailyTasks(Ref ref) async {
   final snapshotMissingActiveCurriculum =
       activeCurriculumKeys.isNotEmpty &&
       activeCurriculumKeys.any((key) => !snapshotCurriculumKeys.contains(key));
-  final snapshotMissingProgramAssignments =
-      await _snapshotMissingProgramAssignments(
-        db: db,
-        stageRepository: stageRepository,
-        tasks: tasks,
-        profileId: profileId,
-        now: now,
-        activeCurriculumKeys: activeCurriculumKeys,
-        calendarService: calendarService,
-        getScopedContent: (curriculumId) =>
-            ref.read(scopedCurriculumContentProvider(curriculumId).future),
-      );
+  final snapshotMissingProgramAssignments = planResult.isNew
+      ? await _snapshotMissingProgramAssignments(
+          db: db,
+          stageRepository: stageRepository,
+          tasks: tasks,
+          profileId: profileId,
+          now: now,
+          activeCurriculumKeys: activeCurriculumKeys,
+          calendarService: calendarService,
+          getScopedContent: (curriculumId) =>
+              ref.read(scopedCurriculumContentProvider(curriculumId).future),
+        )
+      : false;
 
   final effectiveTasks =
       (snapshotMissingActiveCurriculum || snapshotMissingProgramAssignments)

@@ -184,9 +184,16 @@ Future<DateTime?> dashboardLastCompletion(
 /// only read path post-DNI-337. The provider replays the append-only
 /// `streak_events` log through `StreakReducer` (UTC day boundaries),
 /// restoring from `completions` on a new-device empty-log first launch.
+///
+/// Performance note: `completionCommittedProvider` is intentionally NOT
+/// watched here. [CompletionRepositoryImpl._createCompletion] writes a
+/// `streak_events` row on each completion, which Drift surfaces via the
+/// reactive `watch()` query below — no manual trigger needed.
+/// Watching `completionCommittedProvider` would tear down and rebuild the
+/// entire stream subscription on every completion, causing unnecessary
+/// work on every task mark.
 @riverpod
 Stream<({int currentStreak, int maxStreak})> dashboardStreak(Ref ref) async* {
-  ref.watch<int>(completionCommittedProvider);
   final db = ref.watch(userDatabaseProvider);
   final profileId = ref.watch(activeProfileIdProvider);
   final stateProvider = StreakStateProvider(
