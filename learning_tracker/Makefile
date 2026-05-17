@@ -9,7 +9,7 @@ help: ## Show this help message
 test: ## Run all tests with coverage instrumentation
 	flutter test --coverage
 
-test-invariants: ## Run the N1–N6 quality-crisis invariant net (expected: N1+N3 green, N2+N4+N5+N6 red until fixed)
+test-invariants: ## Run the N1–N7 quality-crisis invariant net
 	flutter test test/story_acceptance/regression_invariants_test.dart --reporter=expanded
 
 test-story-4.1: ## Run Story 4.1 (Track Management) acceptance tests

@@ -7,7 +7,6 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
-import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/core/utils/percentage_formatter.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/onboarding/presentation/screens/bulk_mark_screen.dart';
@@ -355,7 +354,7 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
       if (weeklyRate > 0) {
         final days = (itemsRemaining / weeklyRate * 7).ceil();
         return DateFormat.yMMMd(locale)
-            .format(DateTimeFactory.nowLocal().add(Duration(days: days)));
+            .format(goal.createdAt.toLocal().add(Duration(days: days)));
       }
     }
     return null;

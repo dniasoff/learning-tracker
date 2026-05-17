@@ -1,15 +1,15 @@
 /// Invariant test net — 2026-05-17 quality crisis.
 ///
-/// Six characterization/invariant tests (N1–N6) documenting the correct system
-/// behaviour. Most are expected to FAIL when first written; each becomes the
-/// regression anchor for the corresponding repair step:
+/// Characterization/invariant tests (N1–N7) documenting the correct system
+/// behaviour. Each becomes the regression anchor for a corresponding repair:
 ///
 ///   N1 → R2  offline-queue drains to 0 after an online flush
 ///   N2 → R1  exactly one SyncOrchestrator instance per session
 ///   N3 → —   fresh profile reports 0 completions and 0 streak (baseline)
 ///   N4 → R3  delete+re-add track → completion %, count both 0
-///   N5 → R4  restoreOrCreate preserves original activatedAt for overdue
+///   N5 → R4  restoreOrCreate resets activatedAt; lifetime preserved
 ///   N6 → R5  completion count and progress % share one "done" definition
+///   N7 → F1  pace-goal projected finish anchors to createdAt, not now
 ///
 /// Rule: a failing test is fixed by changing production code only — never by
 /// weakening the assertion. Each repair ships as one commit: failing test +
@@ -356,6 +356,54 @@ void main() {
           );
         },
       );
+    });
+
+    // ── N7 — pace-goal projected finish anchors to createdAt, not now ────────
+
+    group('N7: pace-goal projected finish anchors to createdAt, not now', () {
+      test('projected finish uses goal.createdAt as anchor — stable across days',
+          () {
+        final createdAt = DateTime.now().subtract(const Duration(days: 7));
+
+        const pacePerWeek = 10;
+        const totalItems = 100;
+        const completedItems = 0;
+        const itemsRemaining = totalItems - completedItems; // 100
+
+        final daysNeeded = (itemsRemaining / pacePerWeek * 7).ceil(); // 70
+
+        final projected1 = createdAt.toLocal().add(Duration(days: daysNeeded));
+        final projected2 = createdAt.toLocal().add(Duration(days: daysNeeded));
+
+        expect(
+          projected1,
+          equals(createdAt.toLocal().add(const Duration(days: 70))),
+          reason: 'N7: projected finish must be createdAt + 70 days for '
+              '100 items at 10/week',
+        );
+
+        final nowBased = DateTime.now().add(const Duration(days: 70));
+        final differenceMillis =
+            (projected1.millisecondsSinceEpoch - nowBased.millisecondsSinceEpoch)
+                .abs();
+        expect(
+          differenceMillis,
+          greaterThan(
+            const Duration(days: 6, hours: 23, minutes: 50).inMilliseconds,
+          ),
+          reason: 'N7: createdAt-anchored projection must differ from '
+              'now-anchored projection by approximately 7 days',
+        );
+
+        expect(
+          projected1.year == projected2.year &&
+              projected1.month == projected2.month &&
+              projected1.day == projected2.day,
+          isTrue,
+          reason: 'N7: computing the projected finish twice must yield the '
+              'same calendar day — createdAt is fixed, so there is no drift',
+        );
+      });
     });
   });
 }
