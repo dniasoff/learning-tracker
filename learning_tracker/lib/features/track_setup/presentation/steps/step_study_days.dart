@@ -75,7 +75,7 @@ class _StudyDaysEditableState extends State<StudyDaysEditable> {
                   child: StudyDayCard(
                     initial: kStepStudyDayLabels[index].substring(0, 1),
                     title: _dayName(dayNum),
-                    subtitle: _daySubtitle(dayNum),
+                    subtitle: '',
                     subtitleColor: AppTheme.brandInkMuted,
                     activeColor: const Color(0xFFE9ECF2),
                     isShabbos: dayNum == 6,
@@ -122,12 +122,6 @@ class _StudyDaysEditableState extends State<StudyDaysEditable> {
     };
   }
 
-  String _daySubtitle(int dayNum) {
-    return switch (dayNum) {
-      7 => 'Yom Rishon',
-      _ => '',
-    };
-  }
 }
 
 class StudyDayCard extends StatelessWidget {
