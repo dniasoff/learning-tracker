@@ -115,7 +115,12 @@ class DashboardBody extends ConsumerWidget {
     final l10n = AppLocalizations.of(context)!;
     final profileId = ref.watch(activeProfileIdProvider);
     final dailyTasksAsync = ref.watch(allDailyTasksProvider);
-    final globalPointsAsync = ref.watch(dashboardGlobalPointsProvider);
+    // Use .select() so this widget only rebuilds when the integer value
+    // changes — not on every completion-triggered AsyncValue re-emission
+    // when points remain the same (e.g. adult users where this is always 0).
+    final totalPoints = ref.watch(
+      dashboardGlobalPointsProvider.select((v) => v.asData?.value ?? 0),
+    );
     final lifetimeTotalsAsync = ref.watch(
       lifetimeTotalsAcrossAllCurriculaProvider(profileId),
     );
@@ -129,7 +134,6 @@ class DashboardBody extends ConsumerWidget {
     final name = profileName ?? l10n.learner;
     final now = DateTimeFactory.nowLocal();
 
-    final totalPoints = globalPointsAsync.value ?? 0;
     final allTasks = dailyTasksAsync.value ?? const <DailyTask>[];
     final lifetimeTotals = lifetimeTotalsAsync.hasValue
         ? lifetimeTotalsAsync.value

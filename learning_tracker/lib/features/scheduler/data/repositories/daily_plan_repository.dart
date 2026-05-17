@@ -31,7 +31,12 @@ class DailyPlanRepository {
   /// Returns today's plan, running [buildPlan] exactly once per local day
   /// to materialize rows. Subsequent calls on the same local day read the
   /// snapshot regardless of any completions that happened since.
-  Future<List<DailyTask>> getOrSnapshotPlan({
+  ///
+  /// The returned record also carries [isNew] = true when the plan was
+  /// freshly generated in this call (i.e. no prior snapshot existed).
+  /// Callers can use this flag to skip expensive integrity guards that only
+  /// matter immediately after generation.
+  Future<({List<DailyTask> tasks, bool isNew})> getOrSnapshotPlan({
     required int profileId,
     required DateTime now,
     required Future<List<DailyTask>> Function() buildPlan,
@@ -57,7 +62,7 @@ class DailyPlanRepository {
       profileId: profileId,
       planDate: planDate,
     );
-    return rows.map(_rowToTask).toList();
+    return (tasks: rows.map(_rowToTask).toList(), isNew: !hasPlan);
   }
 
   /// Writes a synthetic snapshot for each local-date between

@@ -48,7 +48,8 @@ void main() {
           buildPlan: build,
         );
         expect(buildCount, 1);
-        expect(first.map((t) => t.contentItemSefariaRef).toList(), [
+        expect(first.isNew, isTrue);
+        expect(first.tasks.map((t) => t.contentItemSefariaRef).toList(), [
           'Mishnah Berachot 1:1',
           'Mishnah Berachot 1:2',
         ]);
@@ -60,7 +61,8 @@ void main() {
           buildPlan: build,
         );
         expect(buildCount, 1);
-        expect(second.map((t) => t.contentItemSefariaRef).toList(), [
+        expect(second.isNew, isFalse);
+        expect(second.tasks.map((t) => t.contentItemSefariaRef).toList(), [
           'Mishnah Berachot 1:1',
           'Mishnah Berachot 1:2',
         ]);
@@ -81,7 +83,7 @@ void main() {
         now: now,
         buildPlan: build,
       );
-      expect(first.length, 3);
+      expect(first.tasks.length, 3);
 
       // Simulate the scheduler changing its mind (e.g., a completion would
       // shrink the list). We still expect the snapshot to be served.
@@ -97,7 +99,7 @@ void main() {
         1,
         reason: 'buildPlan should not have been called again',
       );
-      expect(second.map((t) => t.contentItemSefariaRef).toList(), [
+      expect(second.tasks.map((t) => t.contentItemSefariaRef).toList(), [
         'Item 1',
         'Item 2',
         'Item 3',
@@ -125,7 +127,7 @@ void main() {
         buildPlan: build,
       );
       expect(buildCount, 2, reason: 'new day must trigger a fresh build');
-      expect(next.single.contentItemSefariaRef, 'Item B');
+      expect(next.tasks.single.contentItemSefariaRef, 'Item B');
     });
 
     test('different profiles maintain independent snapshots', () async {
@@ -147,8 +149,8 @@ void main() {
         buildPlan: () => buildFor('P2 item'),
       );
       expect(buildCount, 2);
-      expect(p1.single.contentItemSefariaRef, 'P1 item');
-      expect(p2.single.contentItemSefariaRef, 'P2 item');
+      expect(p1.tasks.single.contentItemSefariaRef, 'P1 item');
+      expect(p2.tasks.single.contentItemSefariaRef, 'P2 item');
     });
 
     test('preserves priority ordering from the built plan', () async {
@@ -175,9 +177,9 @@ void main() {
         now: now,
         buildPlan: () async => plan,
       );
-      expect(result.first.priority, DailyTaskPriority.overdueChazara);
-      expect(result.first.isOverdue, true);
-      expect(result.last.priority, DailyTaskPriority.newLearning);
+      expect(result.tasks.first.priority, DailyTaskPriority.overdueChazara);
+      expect(result.tasks.first.isOverdue, true);
+      expect(result.tasks.last.priority, DailyTaskPriority.newLearning);
     });
   });
 }
