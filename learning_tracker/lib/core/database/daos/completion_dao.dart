@@ -74,6 +74,15 @@ class CompletionDao extends DatabaseAccessor<UserDatabase>
   Future<List<Completion>> getCompletionsByProfile(int profileId) =>
       (select(completions)..where((t) => t.profileId.equals(profileId))).get();
 
+  /// Track-only completions for [profileId] — excludes the bulk-mark sentinel
+  /// (trackId = 0) at the SQL layer so that lifetime bulk-marked items do not
+  /// inflate the ITEMS LEARNED / TASKS DONE counters on the Progress screen.
+  Future<List<Completion>> getTrackOnlyCompletionsByProfile(int profileId) =>
+      (select(completions)..where(
+            (t) => t.profileId.equals(profileId) & t.trackId.isNotValue(0),
+          ))
+          .get();
+
   /// Completions for [profileId] whose [sefariaRef] is in [refs] (chunked `IN`).
   ///
   /// Used to filter today's daily tasks without loading the full completion

@@ -1198,6 +1198,10 @@
     }
   },
 
+  "trackDetailConfigType": "סוג מסלול",
+  "trackDetailConfigGoal": "יעד",
+  "trackDetailConfigItemsRemaining": "פריטים שנותרו",
+  "trackDetailConfigEstFinish": "סיום משוער",
   "trackSince": "מאז {date}",
   "@trackSince": {
     "placeholders": {

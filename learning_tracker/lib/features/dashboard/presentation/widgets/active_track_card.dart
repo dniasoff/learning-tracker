@@ -95,6 +95,9 @@ class ActiveTrackCard extends ConsumerWidget {
         : dualMetricMatches.first;
     final currentCyclePct = dualMetric?.currentCyclePercentage ?? 0.0;
     final lifetimePct = dualMetric?.lifetimePercentage ?? lifetimeFraction ?? 0.0;
+    final currentCycleDisplay = dualMetricsAsync.isLoading
+        ? '…'
+        : formatFractionAsPercent(currentCyclePct);
 
     final curriculumTasks = allTasks
         .where((t) => t.trackId == track.id)
@@ -120,8 +123,11 @@ class ActiveTrackCard extends ConsumerWidget {
             ref.watch(renderedDisplayForRefProvider(focusRef)).asData?.value ??
                 focusRef,
           );
-    final lifetimeFull =
-        lifetimeFraction != null && (lifetimeFraction - 1.0).abs() < 1e-6;
+    // Icon and text both use the same value: dual-metric track-scoped lifetime
+    // when available, falling back to the full-curriculum global provider.
+    // The icon is shown as soon as either source has resolved (not loading).
+    final showLifetimeIcon = lifetimeFraction != null || dualMetric != null;
+    final lifetimeFull = (lifetimePct - 1.0).abs() < 1e-6;
 
     return Card(
       elevation: 5,
@@ -228,7 +234,7 @@ class ActiveTrackCard extends ConsumerWidget {
                   mainAxisSize: MainAxisSize.max,
                   children: [
                     Text(
-                      '${l10n.trackCurrentCycle} • ${formatFractionAsPercent(currentCyclePct)}',
+                      '${l10n.trackCurrentCycle} • $currentCycleDisplay',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: theme.textTheme.labelSmall?.copyWith(
@@ -250,7 +256,7 @@ class ActiveTrackCard extends ConsumerWidget {
                             ),
                           ),
                         ),
-                        if (lifetimeFraction == null)
+                        if (!showLifetimeIcon)
                           const SizedBox.shrink()
                         else
                           Icon(

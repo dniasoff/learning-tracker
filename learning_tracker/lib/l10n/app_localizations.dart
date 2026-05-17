@@ -4397,6 +4397,30 @@ abstract class AppLocalizations {
   /// **'{count} RUNNING'**
   String activeTracksRunning(int count);
 
+  /// No description provided for @trackDetailConfigType.
+  ///
+  /// In en, this message translates to:
+  /// **'Track type'**
+  String get trackDetailConfigType;
+
+  /// No description provided for @trackDetailConfigGoal.
+  ///
+  /// In en, this message translates to:
+  /// **'Goal'**
+  String get trackDetailConfigGoal;
+
+  /// No description provided for @trackDetailConfigItemsRemaining.
+  ///
+  /// In en, this message translates to:
+  /// **'Items remaining'**
+  String get trackDetailConfigItemsRemaining;
+
+  /// No description provided for @trackDetailConfigEstFinish.
+  ///
+  /// In en, this message translates to:
+  /// **'Est. finish'**
+  String get trackDetailConfigEstFinish;
+
   /// No description provided for @trackSince.
   ///
   /// In en, this message translates to:

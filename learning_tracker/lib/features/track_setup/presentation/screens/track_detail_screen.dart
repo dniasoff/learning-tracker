@@ -20,7 +20,7 @@ import 'package:learning_tracker/features/track_setup/presentation/providers/aft
 import 'package:learning_tracker/features/track_setup/presentation/widgets/learning_track_card.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
-final _trackGoalProvider = FutureProvider.family<Goal?, int>(
+final _trackGoalProvider = FutureProvider.autoDispose.family<Goal?, int>(
   (ref, trackId) =>
       ref.watch(userDatabaseProvider).goalDao.getGoalByTrack(trackId),
 );
@@ -286,13 +286,13 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
           const SizedBox(height: 16),
           const Divider(height: 1, color: Color(0xFFEEF0F6)),
           const SizedBox(height: 14),
-          _configRow(theme, 'Track type', trackLabel),
+          _configRow(theme, l10n.trackDetailConfigType, trackLabel),
           if (goal != null)
-            _configRow(theme, 'Goal', _goalLabel(goal, l10n)),
+            _configRow(theme, l10n.trackDetailConfigGoal, _goalLabel(goal, l10n)),
           if (itemsRemaining != null)
-            _configRow(theme, 'Items remaining', '$itemsRemaining'),
+            _configRow(theme, l10n.trackDetailConfigItemsRemaining, '$itemsRemaining'),
           if (estimatedFinish != null)
-            _configRow(theme, 'Est. finish', estimatedFinish),
+            _configRow(theme, l10n.trackDetailConfigEstFinish, estimatedFinish),
         ],
       ),
     );

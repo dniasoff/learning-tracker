@@ -2447,6 +2447,18 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get trackDetailConfigType => 'Track type';
+
+  @override
+  String get trackDetailConfigGoal => 'Goal';
+
+  @override
+  String get trackDetailConfigItemsRemaining => 'Items remaining';
+
+  @override
+  String get trackDetailConfigEstFinish => 'Est. finish';
+
+  @override
   String trackSince(String date) {
     return 'Since $date';
   }
