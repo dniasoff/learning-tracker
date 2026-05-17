@@ -1283,5 +1283,19 @@
 
   "deletingAccountTitle": "מוחק את חשבונך…",
   "deletingAccountBody": "זה עשוי לקחת מספר שניות. אנא אל תסגור את האפליקציה.",
-  "deletingAccountError": "המחיקה נתקלה בבעיה. התנתקת מהחשבון."
+  "deletingAccountError": "המחיקה נתקלה בבעיה. התנתקת מהחשבון.",
+
+  "itemsLearnedTitle": "פריטים שנלמדו",
+  "itemsLearnedSubtitle": "השלמות מסלול לפי תוכנית",
+  "lifetimeViewTitle": "תצוגת כל החיים",
+  "lifetimeViewSubtitle": "כל מה שלמדת אי פעם",
+  "itemsLearnedNoCurricula": "עדיין אין השלמות מסלול",
+  "itemsLearnedNoCurriculaSubtitle": "השלם משימות יומיות כדי לראות את ההתקדמות כאן",
+  "itemsLearnedOf": "{completed} מתוך {total}",
+  "@itemsLearnedOf": {
+    "placeholders": {
+      "completed": { "type": "int" },
+      "total": { "type": "int" }
+    }
+  }
 }

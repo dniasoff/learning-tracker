@@ -1176,6 +1176,38 @@ class TasksDoneRoute extends PageRouteInfo<void> {
 }
 
 /// generated route for
+/// [ItemsLearnedScreen]
+class ItemsLearnedRoute extends PageRouteInfo<void> {
+  const ItemsLearnedRoute({List<PageRouteInfo>? children})
+    : super(ItemsLearnedRoute.name, initialChildren: children);
+
+  static const String name = 'ItemsLearnedRoute';
+
+  static PageInfo page = PageInfo(
+    name,
+    builder: (data) {
+      return const ItemsLearnedScreen();
+    },
+  );
+}
+
+/// generated route for
+/// [LifetimeViewScreen]
+class LifetimeViewRoute extends PageRouteInfo<void> {
+  const LifetimeViewRoute({List<PageRouteInfo>? children})
+    : super(LifetimeViewRoute.name, initialChildren: children);
+
+  static const String name = 'LifetimeViewRoute';
+
+  static PageInfo page = PageInfo(
+    name,
+    builder: (data) {
+      return const LifetimeViewScreen();
+    },
+  );
+}
+
+/// generated route for
 /// [TextDisplayScreen]
 class TextDisplayRoute extends PageRouteInfo<TextDisplayRouteArgs> {
   TextDisplayRoute({

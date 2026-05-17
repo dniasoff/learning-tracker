@@ -31,7 +31,9 @@ import 'package:learning_tracker/features/profiles/presentation/screens/manage_l
 import 'package:learning_tracker/features/profiles/presentation/screens/profile_picker_screen.dart';
 import 'package:learning_tracker/features/progress/presentation/screens/completion_history_screen.dart';
 import 'package:learning_tracker/features/progress/presentation/screens/curriculum_progress_screen.dart';
+import 'package:learning_tracker/features/progress/presentation/screens/items_learned_screen.dart';
 import 'package:learning_tracker/features/progress/presentation/screens/learning_journey_screen.dart';
+import 'package:learning_tracker/features/progress/presentation/screens/lifetime_view_screen.dart';
 import 'package:learning_tracker/features/progress/presentation/screens/progress_charts_screen.dart';
 import 'package:learning_tracker/features/progress/presentation/screens/progress_screen.dart';
 import 'package:learning_tracker/features/progress/presentation/screens/streak_history_screen.dart';
@@ -146,6 +148,16 @@ class AppRouter extends RootStackRouter {
     AutoRoute(
       path: '/progress/tasks-done',
       page: TasksDoneRoute.page,
+      guards: [authGuard],
+    ),
+    AutoRoute(
+      path: '/progress/items-learned',
+      page: ItemsLearnedRoute.page,
+      guards: [authGuard],
+    ),
+    AutoRoute(
+      path: '/progress/lifetime',
+      page: LifetimeViewRoute.page,
       guards: [authGuard],
     ),
 
