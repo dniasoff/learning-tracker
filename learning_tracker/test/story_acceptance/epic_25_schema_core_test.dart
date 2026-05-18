@@ -498,13 +498,22 @@ void main() {
             clock: FakeLocalDayClock(DateTime.utc(2026, 5, 14)),
           );
 
-          // Default: all push methods succeed.
+          // Default: pushCompletionsBatch succeeds and reports EVERY entry's
+          // entityKey as committed (the H3 per-entry success contract — the
+          // OutboxProcessor deletes exactly the rows whose entityKeys come
+          // back, so the stub must echo the entityKeys of the entries it was
+          // handed).
           when(
             () => mockPipeline.pushCompletionsBatch(
               profileId: any(named: 'profileId'),
               entries: any(named: 'entries'),
             ),
-          ).thenAnswer((_) async {});
+          ).thenAnswer((invocation) async {
+            final entries =
+                invocation.namedArguments[#entries]
+                    as List<({String entityKey, Map<String, dynamic> payload})>;
+            return entries.map((e) => e.entityKey).toList();
+          });
         });
 
         tearDown(() => db.close());

@@ -1,187 +1,116 @@
-/// Wave 0 — characterization tests for the sync rework push-path invariants.
+/// Sync-rework push-path invariants — exercised against the REAL
+/// [FirestoreGatewayImpl] backed by `fake_cloud_firestore`.
 ///
-/// S3: a completion is pushed to a deterministic Firestore doc ID;
-///     pushing the same completion twice creates no second document.
-/// S4: bulk-mark of 655 items pushes via ≤2 WriteBatch commits and
-///     0 individual collection.add() calls.
-/// S9: two devices marking overlapping items converge to the same state
-///     (union, no duplicate documents).
-///
-/// All tests are skipped; un-skip in Wave 1 once the fixes are in.
+/// S3: the real gateway derives a deterministic, collision-free completion
+///     document ID from the structured natural key — pushing the same
+///     completion twice yields exactly one document, and two completions
+///     whose `sefaria_ref` differs only by `.` vs `/` vs space land in
+///     DISTINCT documents (this would FAIL against the pre-H2 gateway,
+///     whose `_sanitizeDocId` collapsed all three to `_`).
+/// S4: a 655-item bulk push goes through real `WriteBatch` commits in
+///     ≤500-op chunks — every distinct completion reaches Firestore and
+///     the 500/501 boundary is handled.
+/// S9: two devices marking overlapping items converge to the union with
+///     no duplicate documents, through the real gateway + OutboxProcessor.
 library;
 
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:drift/drift.dart' show Value;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/learning/completion_command.dart';
 import 'package:learning_tracker/core/learning/completion_writer.dart';
-import 'package:learning_tracker/core/sync/firestore_gateway.dart';
+import 'package:learning_tracker/core/sync/firestore_gateway_impl.dart';
 import 'package:learning_tracker/core/sync/outbox/outbox_processor.dart';
 import 'package:learning_tracker/core/sync/push_pipeline_impl.dart';
 import 'package:learning_tracker/core/time/local_day_clock.dart';
+import 'package:learning_tracker/features/auth/domain/models/app_user.dart';
+import 'package:learning_tracker/features/auth/domain/repositories/auth_repository.dart';
 
 import '../helpers/drift_memory.dart';
+import '../helpers/firestore_fake.dart';
 
 // ---------------------------------------------------------------------------
-// Counting / recording fake gateway
+// Minimal stub AuthRepository — FirestoreGatewayImpl reads only currentUser.uid
 // ---------------------------------------------------------------------------
 
-/// Gateway fake that records every push call to enable S3/S4/S9 assertions.
-///
-/// - [pushCompletionCalls]: list of payloads pushed via [pushCompletion].
-/// - [batchCommitCount]: number of `WriteBatch.commit()` equivalents made.
-/// - [collectionAddCount]: number of un-keyed `collection.add()` calls.
-///
-/// The rework target is:
-///   * completions use `doc(deterministicId).set(...)` — not `collection.add()`.
-///   * large batches use `WriteBatch.commit()` (≤500 ops per commit → ≤2 for 655).
-///
-/// This fake models the *desired* post-rework semantics.  Implementations
-/// that call `collection.add()` will increment [collectionAddCount]; those
-/// that compute a doc ID and call `doc(...).set(...)` will increment
-/// [docSetCount].  Wave-1 wires the real `BatchingGateway`; until then the
-/// fake counts raw gateway calls.
-class _RecordingGateway implements FirestoreGateway {
-  /// Raw list of Map payloads received via [pushCompletion].
-  final List<Map<String, dynamic>> pushCompletionCalls = [];
-
-  /// Simulated batch commits.  The rework gateway implementation must call
-  /// this when it commits a [WriteBatch]; Wave 1 will wire a real
-  /// `WriteBatch`-counting wrapper.  For now we count pushCompletion calls
-  /// in groups of ≤500 to simulate the expected batch structure.
-  int batchCommitCount = 0;
-
-  /// Calls that went through `collection.add()` (must be 0 after rework).
-  int collectionAddCount = 0;
-
-  /// Calls that went through `doc(id).set(...)` (the desired path).
-  int docSetCount = 0;
-
-  // All stored documents keyed by the deterministic doc ID derived from the
-  // payload so S3 / S9 deduplication is verifiable.
-  final Map<String, Map<String, dynamic>> _store = {};
-
-  /// Derive the deterministic doc ID from a completion payload.
-  ///
-  /// The rework contract: doc ID = "<profileId>_<sefariaRef>_<stageId>_<trackType>"
-  /// (underscores replacing spaces).  This mirrors the entityKey computed in
-  /// [CompletionWriter._outboxEntityKey] so that re-pushing the same
-  /// completion resolves to the same document.
-  static String _docId(int profileId, Map<String, dynamic> payload) {
-    final ref = (payload['sefariaRef'] as String? ?? '').replaceAll(' ', '_');
-    final stage = payload['stageId'];
-    final tt = payload['trackType'] as String? ?? '';
-    return '${profileId}_${ref}_${stage}_$tt';
-  }
+class _StubAuthRepository implements AuthRepository {
+  const _StubAuthRepository(this._uid);
+  final String _uid;
 
   @override
-  Future<void> pushCompletion({
-    required int profileId,
-    required Map<String, dynamic> data,
-    String? docId,
-  }) async {
-    pushCompletionCalls.add({...data, '_profileId': profileId});
-    // Post-rework: use doc(id).set() — derive id from docId param or payload.
-    final id = docId != null
-        ? docId.replaceAll('/', '_').replaceAll(' ', '_')
-        : _docId(profileId, data);
-    final isNew = !_store.containsKey(id);
-    _store[id] = {...data, '_profileId': profileId};
-    if (isNew) {
-      docSetCount++;
-    }
-    // Post-rework: pushCompletion uses doc(id).set() — never collection.add().
-    // collectionAddCount is NOT incremented here.
-  }
-
-  // ── Batch push (RC3 / S4 fix) ─────────────────────────────────────────────
-
-  /// Implements the post-rework batch API.  Chunks payloads into ≤500-item
-  /// groups (matching the Firestore WriteBatch limit) and commits each chunk,
-  /// incrementing [batchCommitCount] once per chunk.
-  @override
-  Future<void> pushCompletionsBatch({
-    required int profileId,
-    required List<Map<String, dynamic>> items,
-  }) async {
-    // Simulate Firestore WriteBatch limit: 500 ops per batch.
-    const batchSize = 500;
-    for (var start = 0; start < items.length; start += batchSize) {
-      final chunk = items.sublist(
-        start,
-        (start + batchSize).clamp(0, items.length),
-      );
-      for (final data in chunk) {
-        final id = _docId(profileId, data);
-        _store[id] = {...data, '_profileId': profileId};
-        // Batch path does NOT increment collectionAddCount.
-        docSetCount++;
-      }
-      batchCommitCount++;
-    }
-  }
-
-  int get uniqueDocCount => _store.length;
-
-  // ── Stub implementations of unused gateway methods ─────────────────────
+  AppUser? get currentUser => AppUser(
+    uid: _uid,
+    email: 'test@example.com',
+    displayName: 'Test User',
+    emailVerified: true,
+    providers: const ['password'],
+  );
 
   @override
-  Future<void> pushStreak({required int profileId, required Map<String, dynamic> data}) async {}
+  Stream<AppUser?> onAuthStateChanged() => Stream.value(currentUser);
+
   @override
-  Future<void> pushSettings({required int profileId, required Map<String, dynamic> data}) async {}
+  Future<void> signInWithEmail(String e, String p) =>
+      throw UnimplementedError();
   @override
-  Future<void> pushTrack({required int profileId, required Map<String, dynamic> data}) async {}
+  Future<void> signInWithGoogle() => throw UnimplementedError();
   @override
-  Future<void> pushLearningOrder({required int profileId, required Map<String, dynamic> data}) async {}
+  Future<void> signUp(String e, String p, String n) =>
+      throw UnimplementedError();
   @override
-  Future<void> pushBookmark({required int profileId, required Map<String, dynamic> data}) async {}
+  Future<void> sendEmailVerification() => throw UnimplementedError();
   @override
-  Future<void> pushNotificationSettings({required int profileId, required Map<String, dynamic> data}) async {}
+  Future<void> sendSignInLinkToEmail(String e) => throw UnimplementedError();
   @override
-  Future<void> pushGamificationSettings({required int profileId, required Map<String, dynamic> data}) async {}
+  Future<AppUser?> signInWithEmailLink(String e, String l) =>
+      throw UnimplementedError();
   @override
-  Future<void> pushLearnerProfile({required int profileId, required Map<String, dynamic> data}) async {}
+  bool isSignInWithEmailLink(String l) => throw UnimplementedError();
   @override
-  Future<void> deleteLearnerProfile(int profileId) async {}
+  Future<void> sendPasswordResetEmail(String e) => throw UnimplementedError();
   @override
-  Future<void> pushLedgerEntry({required int profileId, required Map<String, dynamic> data}) async {}
+  Future<void> signOut() => throw UnimplementedError();
   @override
-  Future<void> pushLedgerEntriesBatch({required int profileId, required List<Map<String, dynamic>> entries}) async {}
+  Future<void> deleteAccount() => throw UnimplementedError();
   @override
-  Future<void> pushProfileProgram({required int profileId, required Map<String, dynamic> data}) async {}
+  Future<void> changePassword(String p) => throw UnimplementedError();
   @override
-  Future<void> removeProfileProgramAssignment({required int profileId, required String curriculumStorageKey}) async {}
+  Future<void> reauthenticateWithEmail(String e, String p) =>
+      throw UnimplementedError();
   @override
-  Future<FirestorePage> fetchPage({required int profileId, required String collection, required int pageSize, Map<String, dynamic>? cursor}) async => const FirestorePage(rows: []);
+  Future<void> reauthenticateWithGoogle() => throw UnimplementedError();
   @override
-  Future<List<Map<String, dynamic>>> fetchAll({required int profileId, required String collection}) async => [];
+  Future<void> linkGoogleProvider() => throw UnimplementedError();
   @override
-  Future<void> pushGoal({required int profileId, required Map<String, dynamic> data}) async {}
+  Future<void> linkEmailProvider(String e, String p) =>
+      throw UnimplementedError();
   @override
-  Future<void> pushUiPreferences({required int profileId, required Map<String, dynamic> data}) async {}
+  List<String> getLinkedProviders() => throw UnimplementedError();
   @override
-  Future<void> pushAccountProfile({required Map<String, dynamic> data}) async {}
+  Future<AppUser?> reloadCurrentUser() => throw UnimplementedError();
   @override
-  Future<void> pushCurriculumImportMetadata({required int profileId, required Map<String, dynamic> data}) async {}
+  Future<void> checkActionCode(String c) => throw UnimplementedError();
   @override
-  Future<void> deleteUserData(String uid) async {}
+  Future<void> applyActionCode(String c) => throw UnimplementedError();
   @override
-  Future<void> pushDiagnosticLog({required String uid, required Map<String, dynamic> data}) async {}
+  Future<String> createUserAccount(String e, String p) =>
+      throw UnimplementedError();
   @override
-  Future<void> pushAccountUserProfile({required String uid, required Map<String, dynamic> data}) async {}
+  Future<AppUser?> signInAndGetUser(String e, String p) =>
+      throw UnimplementedError();
   @override
-  Stream<List<Map<String, dynamic>>> listenToCollection({required int profileId, required String collection}) => const Stream.empty();
+  Future<void> updateDisplayName(String n) => throw UnimplementedError();
   @override
-  Stream<Map<String, dynamic>?> listenToDocument({required int profileId, required String collection, required String docId}) => const Stream.empty();
-  @override
-  Future<List<Map<String, dynamic>>> fetchLearnerProfiles() async => [];
-  @override
-  Future<Map<String, dynamic>?> fetchDocument({required int profileId, required String collection, required String docId}) async => null;
+  Future<void> deleteCurrentFirebaseUser() => throw UnimplementedError();
 }
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
+
+const _uid = 'uid_sync_rework_push';
+const _profileId = 1;
 
 Future<int> _seedTrack(UserDatabase db, {String curriculumId = 'mishnayos'}) =>
     db.into(db.curriculumTracks).insert(
@@ -194,125 +123,220 @@ Future<int> _seedTrack(UserDatabase db, {String curriculumId = 'mishnayos'}) =>
       ),
     );
 
+/// Count documents currently in the `completions` subcollection for the
+/// canonical learner-profile path.
+Future<int> _completionDocCount(FirebaseFirestore fs) async {
+  final snap = await fs
+      .collection('users')
+      .doc(_uid)
+      .collection('learner_profiles')
+      .doc(_profileId.toString())
+      .collection('completions')
+      .get();
+  return snap.docs.length;
+}
+
+/// snake_case completion payload (the canonical Firestore schema).
+Map<String, dynamic> _completion({
+  required String sefariaRef,
+  int stageId = 1,
+  String trackType = 'personal',
+  String curriculumId = 'mishnayos',
+  int points = 5,
+}) => {
+  'profile_id': _profileId,
+  'curriculum_id': curriculumId,
+  'sefaria_ref': sefariaRef,
+  'stage_id': stageId,
+  'track_type': trackType,
+  'completed_at': '2026-05-01T00:00:00.000Z',
+  'points': points,
+};
+
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
 
 void main() {
-  group('S3 / S4 / S9 — push-path invariants (Wave 0 characterization)', () {
+  group('S3 / S4 / S9 — push-path invariants (real FirestoreGatewayImpl)', () {
     // ── S3 ─────────────────────────────────────────────────────────────────
-    //
-    // Invariant: pushing the same completion payload twice must not produce
-    // a second Firestore document — the doc ID is deterministic and `set()`
-    // semantics overwrite in-place.
-    //
-    // Pre-rework: FirestoreGatewayImpl.pushCompletion uses collection.add()
-    // which always creates a new document — the fix must switch to
-    // doc(deterministicId).set().
-    test(
-      'S3: same completion pushed twice lands in exactly one Firestore doc (idempotent)',
-      () async {
-        final gateway = _RecordingGateway();
+    group('S3 — deterministic, collision-free completion doc IDs', () {
+      test(
+        'same completion pushed twice lands in exactly one Firestore doc',
+        () async {
+          final fs = createFakeFirestore(authenticatedUid: _uid);
+          final gateway = FirestoreGatewayImpl(
+            firestore: fs,
+            authRepository: const _StubAuthRepository(_uid),
+          );
 
-        // Post-rework: successive pushes with identical natural key resolve
-        // to the same document.  _RecordingGateway._docId models the
-        // expected behaviour.
-        const payload = {
-          'sefariaRef': 'Berakhot 1:1',
-          'stageId': 1,
-          'trackType': 'personal',
-          'curriculumId': 'mishnayos',
-          'completedAt': '2026-05-01T00:00:00.000Z',
-          'points': 5,
-        };
+          final payload = _completion(sefariaRef: 'Berakhot 1:1');
+          await gateway.pushCompletion(profileId: _profileId, data: payload);
+          await gateway.pushCompletion(profileId: _profileId, data: payload);
 
-        await gateway.pushCompletion(profileId: 1, data: payload);
-        await gateway.pushCompletion(profileId: 1, data: payload);
+          expect(
+            await _completionDocCount(fs),
+            equals(1),
+            reason:
+                'S3: a deterministic doc ID means re-pushing the same '
+                'completion overwrites in place — never a second document',
+          );
+        },
+      );
 
-        // Post-rework: only one document must exist (doc set with same ID).
+      test(
+        'completions whose sefaria_ref differs only by "." / "/" / space '
+        'get DISTINCT documents (would collide pre-H2)',
+        () async {
+          final fs = createFakeFirestore(authenticatedUid: _uid);
+          final gateway = FirestoreGatewayImpl(
+            firestore: fs,
+            authRepository: const _StubAuthRepository(_uid),
+          );
+
+          // Pre-H2 `_sanitizeDocId` replaced `.`, `/` and space all with `_`,
+          // so these three distinct natural keys collapsed to ONE doc id —
+          // silent data loss. The H2 percent-encoded scheme keeps them apart.
+          await gateway.pushCompletion(
+            profileId: _profileId,
+            data: _completion(sefariaRef: 'Berakhot 1.1'),
+          );
+          await gateway.pushCompletion(
+            profileId: _profileId,
+            data: _completion(sefariaRef: 'Berakhot 1/1'),
+          );
+          await gateway.pushCompletion(
+            profileId: _profileId,
+            data: _completion(sefariaRef: 'Berakhot 1 1'),
+          );
+
+          expect(
+            await _completionDocCount(fs),
+            equals(3),
+            reason:
+                'S3: distinct natural-key tuples MUST map to distinct doc '
+                'IDs — the doc-id function is collision-free',
+          );
+        },
+      );
+
+      test('the batch path derives the SAME id as the single-push path', () async {
+        final fs = createFakeFirestore(authenticatedUid: _uid);
+        final gateway = FirestoreGatewayImpl(
+          firestore: fs,
+          authRepository: const _StubAuthRepository(_uid),
+        );
+
+        final payload = _completion(sefariaRef: 'Berakhot 2:3');
+        // Single push, then the SAME completion via the batch path.
+        await gateway.pushCompletion(profileId: _profileId, data: payload);
+        await gateway.pushCompletionsBatch(
+          profileId: _profileId,
+          items: [(entityKey: '1:Berakhot 2:3:1:personal', payload: payload)],
+        );
+
         expect(
-          gateway.uniqueDocCount,
+          await _completionDocCount(fs),
           equals(1),
           reason:
-              'S3: pushing the same completion twice must not create a '
-              'second Firestore document',
+              'S3: pushCompletion and pushCompletionsBatch MUST derive the '
+              'same canonical doc ID — no path-dependent divergence',
         );
-
-        // Wave-1: collectionAddCount must be 0 — post-rework uses doc(id).set().
-        expect(
-          gateway.collectionAddCount,
-          equals(0),
-          reason: 'S3: must not use collection.add() — use doc(id).set()',
-        );
-      },
-    );
+      });
+    });
 
     // ── S4 ─────────────────────────────────────────────────────────────────
-    //
-    // Invariant: 655 completions → ≤2 WriteBatch commits, 0 add() calls.
-    //
-    // Firestore WriteBatch limit is 500 ops. 655 items requires 2 batches:
-    //   batch 1 → 500 items, batch 2 → 155 items.
-    //
-    // The rework must expose a batch push API on FirestoreGateway and the
-    // OutboxProcessor (or a dedicated BulkPushPipeline) must use it.
-    test(
-      'S4: 655-item bulk push uses ≤2 WriteBatch commits and 0 collection.add() calls',
-      () async {
-        final gateway = _RecordingGateway();
-        const n = 655;
+    group('S4 — bulk push via real WriteBatch chunks', () {
+      test(
+        '655 distinct completions all reach Firestore through chunked batches',
+        () async {
+          final fs = createFakeFirestore(authenticatedUid: _uid);
+          final gateway = FirestoreGatewayImpl(
+            firestore: fs,
+            authRepository: const _StubAuthRepository(_uid),
+          );
+          const n = 655;
 
-        final items = List.generate(n, (i) => <String, dynamic>{
-          'sefariaRef': 'Mishnah $i:1',
-          'stageId': 1,
-          'trackType': 'personal',
-          'curriculumId': 'mishnayos',
-          'completedAt': '2026-05-01T00:00:${i.toString().padLeft(2, '0')}.000Z',
-          'points': 5,
-        });
+          final items = List.generate(
+            n,
+            (i) => (
+              entityKey: '1:Mishnah $i:1:1:personal',
+              payload: _completion(sefariaRef: 'Mishnah $i:1'),
+            ),
+          );
 
-        // Post-rework: use the batch API (gateway.pushCompletionsBatch).
-        await gateway.pushCompletionsBatch(profileId: 1, items: items);
+          final committed = await gateway.pushCompletionsBatch(
+            profileId: _profileId,
+            items: items,
+          );
 
-        expect(
-          gateway.batchCommitCount,
-          lessThanOrEqualTo(2),
-          reason:
-              'S4: 655 items must fit in ≤2 WriteBatch commits '
-              '(Firestore limit: 500 ops per batch)',
+          // 655 > 500 (Firestore WriteBatch limit) → exactly 2 chunked
+          // commits. Every distinct completion must land.
+          expect(committed, hasLength(n));
+          expect(
+            await _completionDocCount(fs),
+            equals(n),
+            reason: 'S4: all 655 distinct completions must reach Firestore',
+          );
+        },
+      );
+
+      test('chunk boundary (500 → 1 chunk, 501 → 2 chunks) is exact', () async {
+        for (final n in [500, 501]) {
+          final fs = createFakeFirestore(authenticatedUid: _uid);
+          final gateway = FirestoreGatewayImpl(
+            firestore: fs,
+            authRepository: const _StubAuthRepository(_uid),
+          );
+          final items = List.generate(
+            n,
+            (i) => (
+              entityKey: '1:Item $i:1:1:personal',
+              payload: _completion(sefariaRef: 'Item $i:1'),
+            ),
+          );
+          final committed = await gateway.pushCompletionsBatch(
+            profileId: _profileId,
+            items: items,
+          );
+          expect(committed, hasLength(n));
+          expect(
+            await _completionDocCount(fs),
+            equals(n),
+            reason: 'S4: $n items must all land regardless of chunk count',
+          );
+        }
+      });
+
+      test('re-pushing the same 655 items is idempotent — still 655 docs',
+          () async {
+        final fs = createFakeFirestore(authenticatedUid: _uid);
+        final gateway = FirestoreGatewayImpl(
+          firestore: fs,
+          authRepository: const _StubAuthRepository(_uid),
         );
-        expect(
-          gateway.batchCommitCount,
-          greaterThan(0),
-          reason: 'S4: at least one WriteBatch must have been committed',
+        final items = List.generate(
+          655,
+          (i) => (
+            entityKey: '1:Mishnah $i:1:1:personal',
+            payload: _completion(sefariaRef: 'Mishnah $i:1'),
+          ),
         );
+        await gateway.pushCompletionsBatch(profileId: _profileId, items: items);
+        await gateway.pushCompletionsBatch(profileId: _profileId, items: items);
         expect(
-          gateway.collectionAddCount,
-          equals(0),
-          reason:
-              'S4: batch push must not call collection.add() — '
-              'use doc(id).set() inside WriteBatch',
+          await _completionDocCount(fs),
+          equals(655),
+          reason: 'S4: deterministic ids make the batch push idempotent',
         );
-        expect(
-          gateway.uniqueDocCount,
-          equals(n),
-          reason: 'S4: all 655 distinct completions must reach Firestore',
-        );
-      },
-    );
+      });
+    });
 
     // ── S9 ─────────────────────────────────────────────────────────────────
-    //
-    // Invariant: two devices marking overlapping items converge to the same
-    // state (set-union, no duplicate documents).
-    //
-    // Reuses the two-device pattern from test/sync/two_device_sync_test.dart
-    // (commit 1eba9dbf): both devices write to the same _RecordingGateway
-    // and the doc store deduplicates by natural key.
-    group('S9 — two-device overlap convergence', () {
+    group('S9 — two-device overlap convergence (real gateway)', () {
       late UserDatabase deviceA;
       late UserDatabase deviceB;
-      late _RecordingGateway sharedGateway;
+      late FirebaseFirestore sharedFs;
       late OutboxProcessor processorA;
       late OutboxProcessor processorB;
 
@@ -324,17 +348,26 @@ void main() {
         await _seedTrack(deviceA);
         await _seedTrack(deviceB);
 
-        sharedGateway = _RecordingGateway();
-        final pipelineA = OutboxPushPipeline(gateway: sharedGateway);
-        final pipelineB = OutboxPushPipeline(gateway: sharedGateway);
+        // Both devices push to the SAME backing Firestore — modelling the
+        // single cloud collection two devices converge into.
+        sharedFs = createFakeFirestore(authenticatedUid: _uid);
+        const authRepo = _StubAuthRepository(_uid);
+        final gatewayA = FirestoreGatewayImpl(
+          firestore: sharedFs,
+          authRepository: authRepo,
+        );
+        final gatewayB = FirestoreGatewayImpl(
+          firestore: sharedFs,
+          authRepository: authRepo,
+        );
         processorA = OutboxProcessor(
           outboxDao: deviceA.outboxDao,
-          pipeline: pipelineA,
+          pipeline: OutboxPushPipeline(gateway: gatewayA),
           clock: FakeLocalDayClock(DateTime.utc(2026, 5, 14)),
         );
         processorB = OutboxProcessor(
           outboxDao: deviceB.outboxDao,
-          pipeline: pipelineB,
+          pipeline: OutboxPushPipeline(gateway: gatewayB),
           clock: FakeLocalDayClock(DateTime.utc(2026, 5, 14)),
         );
       });
@@ -345,44 +378,34 @@ void main() {
       });
 
       test(
-        'S9: overlapping completions from two devices converge to union with no duplicates',
+        'overlapping completions from two devices converge to the union '
+        'with no duplicate documents',
         () async {
           final writerA = CompletionWriter(deviceA);
           final writerB = CompletionWriter(deviceB);
 
-          const sharedRef = 'Berakhot 2:1'; // overlapping item
-          final ts = DateTime.utc(2026, 5, 10, 12, 0, 0);
+          const sharedRef = 'Berakhot 2:1';
+          final ts = DateTime.utc(2026, 5, 10, 12);
 
-          // Both devices independently mark the same item (overlap).
+          // Both devices independently mark the SAME item (overlap).
+          for (final writer in [writerA, writerB]) {
+            await writer.commit(
+              CompletionCommand(
+                profileId: _profileId,
+                curriculumId: 'mishnayos',
+                sefariaRef: sharedRef,
+                stageId: 1,
+                trackType: 'personal',
+                trackId: 1,
+                completedAt: ts,
+                points: 5,
+              ),
+            );
+          }
+          // Device A marks a unique item.
           await writerA.commit(
             CompletionCommand(
-              profileId: 1,
-              curriculumId: 'mishnayos',
-              sefariaRef: sharedRef,
-              stageId: 1,
-              trackType: 'personal',
-              trackId: 1,
-              completedAt: ts,
-              points: 5,
-            ),
-          );
-          await writerB.commit(
-            CompletionCommand(
-              profileId: 1,
-              curriculumId: 'mishnayos',
-              sefariaRef: sharedRef,
-              stageId: 1,
-              trackType: 'personal',
-              trackId: 1,
-              completedAt: ts,
-              points: 5,
-            ),
-          );
-
-          // Device A also marks a unique item.
-          await writerA.commit(
-            CompletionCommand(
-              profileId: 1,
+              profileId: _profileId,
               curriculumId: 'mishnayos',
               sefariaRef: 'Berakhot 3:1',
               stageId: 1,
@@ -392,11 +415,10 @@ void main() {
               points: 5,
             ),
           );
-
-          // Device B also marks a different unique item.
+          // Device B marks a different unique item.
           await writerB.commit(
             CompletionCommand(
-              profileId: 1,
+              profileId: _profileId,
               curriculumId: 'mishnayos',
               sefariaRef: 'Berakhot 4:1',
               stageId: 1,
@@ -407,34 +429,17 @@ void main() {
             ),
           );
 
-          // Both flush to the shared gateway (simulating push to Firestore).
-          await processorA.drain(1);
-          await processorB.drain(1);
+          // Both flush to the shared cloud Firestore.
+          await processorA.drain(_profileId);
+          await processorB.drain(_profileId);
 
-          // Expected: 3 unique documents (sharedRef counted once + 2 unique).
-          // Post-rework: the deterministic doc ID must collapse the duplicate.
+          // 3 unique documents: the shared ref counted once + 2 unique.
           expect(
-            sharedGateway.uniqueDocCount,
+            await _completionDocCount(sharedFs),
             equals(3),
             reason:
-                'S9: two-device overlap must converge to union (3 unique docs); '
-                'the shared ref must NOT produce two documents',
-          );
-
-          // Verify that each unique ref is present exactly once.
-          final docIds = sharedGateway._store.keys.toSet();
-          final sharedDocId = _RecordingGateway._docId(
-            1,
-            {
-              'sefariaRef': sharedRef,
-              'stageId': 1,
-              'trackType': 'personal',
-            },
-          );
-          expect(
-            docIds.contains(sharedDocId),
-            isTrue,
-            reason: 'S9: shared completion must appear in the converged store',
+                'S9: the deterministic doc ID collapses the overlapping '
+                'completion to one document — convergence to the union',
           );
         },
       );

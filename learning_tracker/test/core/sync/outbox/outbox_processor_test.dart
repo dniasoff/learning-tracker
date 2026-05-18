@@ -28,7 +28,7 @@ class _FakePipeline extends Fake implements PushPipeline {
   }
 
   @override
-  Future<void> pushCompletionsBatch({
+  Future<List<String>> pushCompletionsBatch({
     required int profileId,
     required List<({String entityKey, Map<String, dynamic> payload})> entries,
   }) async {
@@ -39,6 +39,7 @@ class _FakePipeline extends Fake implements PushPipeline {
     for (final entry in entries) {
       calls.add(('completion', entry.entityKey));
     }
+    return entries.map((e) => e.entityKey).toList();
   }
 
   @override

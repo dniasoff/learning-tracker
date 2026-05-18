@@ -1,11 +1,15 @@
 /// Abstract interface for pushing local mutations to Firestore.
 ///
-/// Each method handles one entity kind. Implemented by [OutboxPushPipeline]
+/// Each method handles one entity kind. Implemented by `OutboxPushPipeline`
 /// (Story 25.12 — SyncEngine decomp Part 1).
 ///
-/// The [OutboxProcessor] calls these methods when draining the outbox table.
-/// Each method receives the raw JSON [payload] stored in the outbox row and
-/// the [profileId] that owns the mutation.
+/// The `OutboxProcessor` calls these methods when draining the outbox table.
+/// Each method receives the raw JSON `payload` stored in the outbox row and
+/// the `profileId` that owns the mutation.
+library;
+
+import 'package:learning_tracker/core/sync/firestore_gateway.dart';
+
 abstract class PushPipeline {
   Future<void> pushCompletion({
     required int profileId,
@@ -13,16 +17,23 @@ abstract class PushPipeline {
     required Map<String, dynamic> payload,
   });
 
-  /// Push multiple completions in a single batched operation.
+  /// Push multiple completions in a single batched operation and report which
+  /// entries committed.
   ///
-  /// Each entry in [entries] is a record of `(entityKey, payload)` so the
-  /// gateway can derive the deterministic Firestore doc ID from the natural
-  /// key rather than from arbitrary payload fields.
+  /// Each entry in [entries] is a record of `(entityKey, payload)`. The
+  /// gateway derives the deterministic Firestore doc ID from the payload's
+  /// structured natural key — the `entityKey` is only used to report which
+  /// rows committed.
+  ///
+  /// Returns the entityKeys of the completions that genuinely reached
+  /// Firestore. On full success that is every entityKey; on a partial
+  /// (per-chunk) failure the implementation throws a [BatchPushException]
+  /// whose `committed` field lists the entityKeys that did land.
   ///
   /// Implementations must:
   ///  1. Pass all entries to [FirestoreGateway.pushCompletionsBatch].
   ///  2. Never call [pushCompletion] in a loop — that defeats the batching.
-  Future<void> pushCompletionsBatch({
+  Future<List<String>> pushCompletionsBatch({
     required int profileId,
     required List<({String entityKey, Map<String, dynamic> payload})> entries,
   });

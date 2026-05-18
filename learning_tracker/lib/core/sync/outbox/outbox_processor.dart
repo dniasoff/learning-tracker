@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:math' as math;
 
 import 'package:learning_tracker/core/database/daos/outbox_dao.dart';
+import 'package:learning_tracker/core/sync/firestore_gateway.dart';
 import 'package:learning_tracker/core/sync/outbox/push_pipeline.dart';
 import 'package:learning_tracker/core/time/local_day_clock.dart';
 
@@ -37,11 +38,14 @@ class OutboxEntityKind {
 ///
 /// **Exponential backoff:** rows that have already failed are skipped when
 /// their computed [_nextAttemptAt] is still in the future. A row is
-/// dead-lettered (permanently skipped) once it reaches [_maxAttempts].
+/// dead-lettered (permanently skipped) once it reaches [_maxAttempts]. The
+/// delay is capped at [_maxBackoff] and randomly jittered to avoid a
+/// thundering-herd retry.
 ///
 /// **Error handling:** if a push fails, the row is NOT deleted — instead
 /// [OutboxDao.markAttempted] records the error so the next drain attempt
-/// retries it with backoff.
+/// retries it with backoff. A partially-successful completion batch deletes
+/// exactly the rows that committed and marks only the rest as attempted.
 class OutboxProcessor {
   OutboxProcessor({
     required OutboxDao outboxDao,
@@ -64,6 +68,26 @@ class OutboxProcessor {
   /// Base delay for exponential backoff (first retry: ~30 s).
   static const Duration _backoffBase = Duration(seconds: 30);
 
+  /// Hard ceiling on the exponential-backoff delay. Without a cap, an
+  /// attempt count near [_maxAttempts] would push the retry window out to
+  /// hours; one hour is the longest a stuck row should wait between tries.
+  static const Duration _maxBackoff = Duration(hours: 1);
+
+  /// Jitter fraction applied to the computed backoff delay (±20%) so that a
+  /// fleet of devices that all failed at once do not retry in lockstep.
+  static const double _backoffJitter = 0.2;
+
+  /// Upper bound on the number of completion rows collected for a single
+  /// [drain]. Completions are dispatched in one [PushPipeline.pushCompletionsBatch]
+  /// call (internally chunked into ≤500-op WriteBatches); this constant is an
+  /// intentional hard ceiling guarding against an unbounded query, not a
+  /// page size. It is far above any realistic offline backlog.
+  static const int _completionDrainCeiling = 100000;
+
+  /// Source of randomness for [_backoffJitter]. Jitter only perturbs a retry
+  /// window, so a plain (non-cryptographic) PRNG is appropriate.
+  final math.Random _random = math.Random();
+
   /// Drain pending outbox rows for [profileId].
   ///
   /// Completions are collected all at once and dispatched via
@@ -82,9 +106,10 @@ class OutboxProcessor {
     final completionRows = await _dao.getPendingByKind(
       OutboxEntityKind.completion,
       profileId,
-      // No artificial limit — collect ALL pending completions so they can be
-      // sent in a single pushCompletionsBatch call (≤500-op WriteBatch chunks).
-      limit: 999999,
+      // Collect (effectively) ALL pending completions so they can be sent in
+      // a single pushCompletionsBatch call (≤500-op WriteBatch chunks).
+      // [_completionDrainCeiling] is an intentional hard upper bound.
+      limit: _completionDrainCeiling,
     );
 
     // Filter rows that are eligible for a retry attempt.
@@ -103,20 +128,36 @@ class OutboxProcessor {
           )
           .toList();
 
+      // committed = entityKeys whose documents genuinely reached Firestore;
+      // failedError = the error to record on the rows that did NOT commit.
+      List<String> committed;
+      Object? failedError;
       try {
-        await _pipeline.pushCompletionsBatch(
+        committed = await _pipeline.pushCompletionsBatch(
           profileId: profileId,
           entries: entries,
         );
-        // All succeeded — delete all rows.
-        for (final row in eligibleCompletions) {
+      } on BatchPushException catch (e) {
+        // Partial failure: the chunks listed in `e.committed` are durable —
+        // delete exactly those rows; the remaining rows are marked attempted
+        // so only they are retried (committed rows are never re-pushed or
+        // dead-lettered — H3).
+        committed = e.committed;
+        failedError = e.cause;
+      } catch (e) {
+        // Total failure (e.g. unauthenticated before any chunk committed) —
+        // nothing committed; every eligible row is retried.
+        committed = const [];
+        failedError = e;
+      }
+
+      final committedKeys = committed.toSet();
+      for (final row in eligibleCompletions) {
+        if (committedKeys.contains(row.entityKey)) {
           await _dao.deleteRow(row.id);
           successCount++;
-        }
-      } catch (e) {
-        // Mark every eligible row as attempted on batch failure.
-        for (final row in eligibleCompletions) {
-          await _dao.markAttempted(row.id, error: e.toString());
+        } else if (failedError != null) {
+          await _dao.markAttempted(row.id, error: failedError.toString());
         }
       }
     }
@@ -168,21 +209,31 @@ class OutboxProcessor {
     OutboxEntityKind.settings,
   ];
 
-  /// Compute the earliest time at which [attempts]-th row may be retried.
+  /// Compute the earliest time at which the [attempts]-th row may be retried.
   ///
-  /// Uses exponential backoff with base [_backoffBase]:
-  ///   nextAttempt = lastAttemptAt + base * 2^(attempts - 1)
+  /// Uses capped, jittered exponential backoff:
+  ///   raw   = base * 2^(attempts - 1)
+  ///   delay = min(raw, [_maxBackoff]) perturbed by ±[_backoffJitter]
+  ///
+  /// The cap stops the delay from growing to hours near [_maxAttempts]; the
+  /// jitter spreads a fleet of simultaneously-failed devices so they do not
+  /// all retry in lockstep (thundering herd).
   ///
   /// When [lastAttemptAt] is null (never attempted), the row is immediately
   /// eligible.
-  static DateTime _nextAttemptAt(int attempts, DateTime? lastAttemptAt) {
+  DateTime _nextAttemptAt(int attempts, DateTime? lastAttemptAt) {
     if (attempts == 0 || lastAttemptAt == null) {
       return DateTime.fromMillisecondsSinceEpoch(0, isUtc: true);
     }
     final multiplier = math.pow(2, attempts - 1).toDouble();
-    final delay = Duration(
-      milliseconds: (_backoffBase.inMilliseconds * multiplier).round(),
-    );
+    final rawMs = _backoffBase.inMilliseconds * multiplier;
+    // Cap before applying jitter so the jittered value never exceeds the
+    // ceiling by more than the jitter band.
+    final cappedMs = math.min(rawMs, _maxBackoff.inMilliseconds.toDouble());
+    // Jitter factor in [1 - jitter, 1 + jitter].
+    final jitterFactor =
+        1.0 + (_random.nextDouble() * 2 - 1) * _backoffJitter;
+    final delay = Duration(milliseconds: (cappedMs * jitterFactor).round());
     return lastAttemptAt.add(delay);
   }
 

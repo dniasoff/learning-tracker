@@ -28,27 +28,21 @@ class OutboxPushPipeline implements PushPipeline {
     required Map<String, dynamic> payload,
   }) => _run(
     OutboxEntityKind.completion,
-    // Thread the entityKey as the deterministic Firestore doc ID so every
-    // re-push resolves to the same document (RC3 fix).  The entityKey format
-    // is "<profileId>:<sefariaRef>:<stageId>:<trackType>" — sanitized inside
-    // FirestoreGatewayImpl._completionDocId before use.
-    () => _gateway.pushCompletion(
-      profileId: profileId,
-      data: payload,
-      docId: entityKey,
-    ),
+    // The completion doc ID is derived inside the gateway from the payload's
+    // structured natural key — the outbox entityKey is a local-only dedup key
+    // and is NOT threaded as the Firestore doc ID (H2).
+    () => _gateway.pushCompletion(profileId: profileId, data: payload),
   );
 
   @override
-  Future<void> pushCompletionsBatch({
+  Future<List<String>> pushCompletionsBatch({
     required int profileId,
     required List<({String entityKey, Map<String, dynamic> payload})> entries,
-  }) => _run(
+  }) => _runValue(
     OutboxEntityKind.completion,
-    () => _gateway.pushCompletionsBatch(
-      profileId: profileId,
-      items: entries.map((e) => {...e.payload, '_entityKey': e.entityKey}).toList(),
-    ),
+    // Pass the (entityKey, payload) records straight through — the gateway
+    // derives each doc ID from the payload and reports committed entityKeys.
+    () => _gateway.pushCompletionsBatch(profileId: profileId, items: entries),
   );
 
   @override
@@ -104,38 +98,37 @@ class OutboxPushPipeline implements PushPipeline {
   /// Serialize calls per [kind]: wait on any prior in-flight future, then
   /// run [action]. The slot is cleared after the action completes so
   /// failures don't deadlock the chain.
-  Future<void> _run(String kind, Future<void> Function() action) {
-    final prior = _inFlight[kind];
-    late final Future<void> ours;
-    ours = _chain(
-      kind: kind,
-      prior: prior,
-      action: action,
-      ourFuture: () => ours,
-    );
-    _inFlight[kind] = ours;
-    return ours;
-  }
+  Future<void> _run(String kind, Future<void> Function() action) =>
+      _runValue<void>(kind, action);
 
-  Future<void> _chain({
-    required String kind,
-    required Future<void>? prior,
-    required Future<void> Function() action,
-    required Future<void> Function() ourFuture,
-  }) async {
-    if (prior != null) {
-      // Swallow prior error here — the original caller already saw it.
-      await prior.then<void>((_) {}, onError: (Object _) {});
-    }
-    try {
-      await action();
-    } finally {
-      // Only clear the slot if it still points at *our* future. Another
-      // call may have already chained ahead and replaced it.
-      if (identical(_inFlight[kind], ourFuture())) {
-        final removed = _inFlight.remove(kind);
-        if (removed != null) unawaited(removed.catchError((_) {}));
+  /// Value-returning variant of [_run]. Serializes per [kind] exactly like
+  /// [_run] and propagates [action]'s return value to the caller.
+  ///
+  /// The [_inFlight] slot stores a `Future<void>` *shadow* of our value-future
+  /// (so the map can hold every kind regardless of return type). We keep a
+  /// reference to that exact shadow and only clear the slot when it is still
+  /// the one we installed — guaranteeing a later call that chained ahead is
+  /// not evicted.
+  Future<T> _runValue<T>(String kind, Future<T> Function() action) {
+    final prior = _inFlight[kind];
+    late final Future<void> ourSlot;
+    final result = () async {
+      if (prior != null) {
+        // Swallow prior error here — the original caller already saw it.
+        await prior.then<void>((_) {}, onError: (Object _) {});
       }
-    }
+      try {
+        return await action();
+      } finally {
+        // Clear the slot only if no later call replaced it.
+        if (identical(_inFlight[kind], ourSlot)) {
+          final removed = _inFlight.remove(kind);
+          if (removed != null) unawaited(removed.catchError((_) {}));
+        }
+      }
+    }();
+    ourSlot = result.then<void>((_) {}, onError: (Object _) {});
+    _inFlight[kind] = ourSlot;
+    return result;
   }
 }

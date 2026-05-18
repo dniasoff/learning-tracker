@@ -11,24 +11,42 @@
 ///   * `push*` — write a single mutation document for an entity kind.
 ///   * `fetchPage` — paginated read for a collection, used by [PullPipeline].
 abstract class FirestoreGateway {
+  /// Push a single completion document.
+  ///
+  /// The Firestore document ID is always derived from the completion's
+  /// structured natural key (`profile_id`, `sefaria_ref`, `stage_id`,
+  /// `track_type`) — the [docId] parameter is **ignored for completions** and
+  /// retained only for non-completion callers that pass an explicit ID.
   Future<void> pushCompletion({
     required int profileId,
     required Map<String, dynamic> data,
     String? docId,
   });
 
-  /// Push multiple completions atomically using Firestore [WriteBatch]es.
+  /// Push multiple completions using Firestore [WriteBatch]es and report which
+  /// entries genuinely committed.
   ///
-  /// Each item in [items] must include the fields used for the deterministic
-  /// doc ID (sefariaRef, stageId, trackType). Payloads are chunked into
-  /// batches of ≤500 ops (Firestore limit) and each chunk is committed in a
-  /// single `WriteBatch.commit()` call — producing ≤⌈items.length/500⌉ commits.
+  /// Each entry carries the outbox `entityKey` (a local-only dedup key) and
+  /// the snake_case `payload`. The Firestore document ID is derived solely
+  /// from the payload's structured natural key — never from the entityKey.
   ///
-  /// This method never calls `collection.add()` — every write is a
-  /// `doc(deterministicId).set(...)`, making the operation fully idempotent.
-  Future<void> pushCompletionsBatch({
+  /// Payloads are chunked into batches of ≤500 ops (Firestore limit) and each
+  /// chunk is committed with a single `WriteBatch.commit()` call — producing
+  /// ≤⌈entries.length/500⌉ commits. This method never calls `collection.add()`;
+  /// every write is a `doc(deterministicId).set(...)`, so the operation is
+  /// fully idempotent.
+  ///
+  /// **Return value / partial-failure contract.** On full success the returned
+  /// list contains every entityKey. Chunks commit sequentially; if a later
+  /// chunk throws, the chunks that already committed are durable. Rather than
+  /// discard that fact by simply rethrowing, the implementation throws a
+  /// [BatchPushException] whose `committed` field lists the entityKeys of the
+  /// chunks that did land — so the caller can delete exactly those outbox rows
+  /// and retry only the rest, never re-pushing or dead-lettering a row that
+  /// already committed.
+  Future<List<String>> pushCompletionsBatch({
     required int profileId,
-    required List<Map<String, dynamic>> items,
+    required List<({String entityKey, Map<String, dynamic> payload})> items,
   });
 
   Future<void> pushStreak({
@@ -190,4 +208,26 @@ abstract class FirestoreGateway {
 class FirestorePage {
   const FirestorePage({required this.rows});
   final List<Map<String, dynamic>> rows;
+}
+
+/// Thrown by [FirestoreGateway.pushCompletionsBatch] when one of its
+/// sequentially-committed chunks fails.
+///
+/// [committed] holds the outbox entityKeys whose documents *did* reach
+/// Firestore (the chunks that committed before the failure). The caller
+/// (`OutboxProcessor`) deletes exactly those outbox rows and marks only the
+/// remainder as attempted — so a row that genuinely committed is never
+/// re-pushed and never dead-lettered (H3).
+class BatchPushException implements Exception {
+  BatchPushException({required this.committed, required this.cause});
+
+  /// entityKeys of completions that committed before the failure.
+  final List<String> committed;
+
+  /// The underlying error that aborted the failing chunk.
+  final Object cause;
+
+  @override
+  String toString() =>
+      'BatchPushException(committed: ${committed.length}, cause: $cause)';
 }

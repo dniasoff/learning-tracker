@@ -390,9 +390,14 @@ class _ToggleableFakeGateway implements FirestoreGateway {
     if (failOn.contains(attempt)) {
       throw Exception('injected failure on attempt $attempt');
     }
-    final ref = '${data['sefariaRef']}'.replaceAll(' ', '_');
-    final id = docId ??
-        '${uid}_${profileId}_${ref}_${data['stageId']}_${data['trackType']}';
+    // The canonical completion payload is snake_case; the doc ID is derived
+    // from the structured natural key (the [docId] parameter is no longer
+    // threaded by the pipeline — H2). A `.`/`/`/space-safe encoding keeps
+    // distinct natural keys in distinct documents.
+    final ref = Uri.encodeComponent('${data['sefaria_ref']}');
+    final stage = '${data['stage_id']}';
+    final trackType = '${data['track_type']}';
+    final id = '${uid}_${profileId}_${ref}_${stage}_$trackType';
     await _fs.collection('completion_events').doc(id).set({
       ...data,
       'uid': uid,
@@ -401,13 +406,18 @@ class _ToggleableFakeGateway implements FirestoreGateway {
   }
 
   @override
-  Future<void> pushCompletionsBatch({
+  Future<List<String>> pushCompletionsBatch({
     required int profileId,
-    required List<Map<String, dynamic>> items,
+    required List<({String entityKey, Map<String, dynamic> payload})> items,
   }) async {
-    for (final data in items) {
-      await pushCompletion(profileId: profileId, data: data);
+    // This fake models a NON-chunked gateway: an injected failure throws a
+    // plain exception, which OutboxProcessor.drain treats as a total batch
+    // failure (no committed entityKeys). On full success it reports every
+    // entityKey as committed.
+    for (final item in items) {
+      await pushCompletion(profileId: profileId, data: item.payload);
     }
+    return items.map((e) => e.entityKey).toList();
   }
 
   @override

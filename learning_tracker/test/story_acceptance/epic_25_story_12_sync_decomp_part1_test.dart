@@ -253,13 +253,14 @@ class _RecordingGateway implements FirestoreGateway {
   }
 
   @override
-  Future<void> pushCompletionsBatch({
+  Future<List<String>> pushCompletionsBatch({
     required int profileId,
-    required List<Map<String, dynamic>> items,
+    required List<({String entityKey, Map<String, dynamic> payload})> items,
   }) async {
     for (final item in items) {
-      if (onPushCompletion != null) await onPushCompletion!(item);
+      if (onPushCompletion != null) await onPushCompletion!(item.payload);
     }
+    return items.map((e) => e.entityKey).toList();
   }
 
   @override
@@ -423,10 +424,10 @@ class _PagingGateway implements FirestoreGateway {
     String? docId,
   }) async {}
   @override
-  Future<void> pushCompletionsBatch({
+  Future<List<String>> pushCompletionsBatch({
     required int profileId,
-    required List<Map<String, dynamic>> items,
-  }) async {}
+    required List<({String entityKey, Map<String, dynamic> payload})> items,
+  }) async => items.map((e) => e.entityKey).toList();
   @override
   Future<void> pushStreak({
     required int profileId,

@@ -1,4 +1,5 @@
 {
+  "//": "INTENTIONALLY EMPTY. The sync subsystem issues no Firestore query that combines .where(...) with .orderBy(...) on a non-documentId field, so no composite index is required. FirestoreGatewayImpl.fetchPage uses only orderBy(FieldPath.documentId); fetchAll/listenToCollection use unfiltered snapshots; pull_pipeline.dart drives pagination solely through fetchPage. The previously-declared completions (curriculumId/completedAt) and bookmarks (curriculumId/trackType) composite indexes backed queries that no longer exist after the sync rework. Restore an index here only if a composite-index-needing query is reintroduced.",
   "indexes": [],
   "fieldOverrides": []
 }

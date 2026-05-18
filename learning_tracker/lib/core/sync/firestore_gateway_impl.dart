@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:learning_tracker/core/sync/firestore_gateway.dart';
@@ -25,35 +27,87 @@ class FirestoreGatewayImpl implements FirestoreGateway {
 
   // ── push ──────────────────────────────────────────────────────────────────
 
-  /// Sanitize a string for use as a Firestore document ID.
-  ///
-  /// Firestore document IDs must not contain `/` (path separator). Spaces and
-  /// other non-alphanumeric characters are replaced with `_` to keep IDs
-  /// readable and safe across all Firestore SDK versions.
-  ///
-  /// The replacement is deterministic, so the same logical key always produces
-  /// the same document ID.
-  static String _sanitizeDocId(String raw) =>
-      raw.replaceAll('/', '_').replaceAll(' ', '_').replaceAll('.', '_');
+  /// Maximum number of operations Firestore permits in a single [WriteBatch].
+  static const int _writeBatchLimit = 500;
 
-  /// Derive a deterministic, URL-safe Firestore document ID from the
-  /// completion's natural key.
+  /// Percent-encode one natural-key component so it is safe to join into a
+  /// canonical completion key.
   ///
-  /// Format: `<profileId>_<sefariaRef>_<stageId>_<trackType>`
+  /// The set of *unescaped* characters is intentionally minimal — only ASCII
+  /// letters, digits, `-` and `~` survive unescaped. Every other byte
+  /// (including `%`, the chosen separator `_`, `/`, `.`, and space) is
+  /// percent-encoded as `%XX`. Because `%` itself is escaped, the encoding is
+  /// injective: decode is unambiguous, so distinct inputs always produce
+  /// distinct outputs.
+  static String _encodeKeyComponent(String raw) {
+    final out = StringBuffer();
+    for (final unit in utf8.encode(raw)) {
+      final isUnreserved =
+          (unit >= 0x30 && unit <= 0x39) || // 0-9
+          (unit >= 0x41 && unit <= 0x5A) || // A-Z
+          (unit >= 0x61 && unit <= 0x7A) || // a-z
+          unit == 0x2D || // -
+          unit == 0x7E; // ~
+      if (isUnreserved) {
+        out.writeCharCode(unit);
+      } else {
+        out
+          ..write('%')
+          ..write(unit.toRadixString(16).toUpperCase().padLeft(2, '0'));
+      }
+    }
+    return out.toString();
+  }
+
+  /// The single canonical completion document-ID function.
   ///
-  /// Invalid Firestore doc ID characters (`/`, space, `.`) are replaced with
-  /// `_`. The resulting ID is stable across pushes so that re-pushing the same
-  /// completion overwrites the existing document rather than creating a
-  /// duplicate.
+  /// The ID is derived **only** from the completion's structured natural key —
+  /// `profile_id` (int), `sefaria_ref` (string), `stage_id` (int) and
+  /// `track_type` (string). snake_case keys are authoritative; camelCase keys
+  /// are accepted as a defensive fallback.
+  ///
+  /// **Collision-free guarantee.** Each of the four components is
+  /// percent-encoded by [_encodeKeyComponent] before being joined with `_`.
+  /// The encoding escapes `%` and `_` themselves, so an encoded component can
+  /// never contain a literal `_`. The joined string therefore has exactly
+  /// three `_` separators at unambiguous positions — it can be split back into
+  /// the original four components. A reversible (injective) transform maps
+  /// distinct natural-key tuples to distinct IDs. In particular `Berakhot 1.1`,
+  /// `Berakhot 1/1` and `Berakhot 1 1` encode to three different strings
+  /// (`.`→`%2E`, `/`→`%2F`, space→`%20`) and thus three distinct documents.
+  ///
+  /// The result contains only `A-Z a-z 0-9 - ~ % _` — none of which is `/`,
+  /// none of which forms `.`/`..` or the reserved `__.*__` pattern — so it is
+  /// always a legal Firestore document ID.
+  ///
+  /// This is the **only** doc-ID derivation used for completions, by both
+  /// [pushCompletion] and [pushCompletionsBatch].
   static String _completionDocId(int profileId, Map<String, dynamic> data) {
-    final ref = _sanitizeDocId(
-      (data['sefariaRef'] ?? data['sefaria_ref']) as String? ?? '',
-    );
-    final stage = (data['stageId'] ?? data['stage_id'])?.toString() ?? '';
-    final tt = _sanitizeDocId(
-      (data['trackType'] ?? data['track_type']) as String? ?? '',
-    );
-    return '${profileId}_${ref}_${stage}_$tt';
+    final ref = (data['sefaria_ref'] ?? data['sefariaRef']) as String? ?? '';
+    final stage = (data['stage_id'] ?? data['stageId'])?.toString() ?? '';
+    final trackType =
+        (data['track_type'] ?? data['trackType']) as String? ?? '';
+    return [
+      _encodeKeyComponent(profileId.toString()),
+      _encodeKeyComponent(ref),
+      _encodeKeyComponent(stage),
+      _encodeKeyComponent(trackType),
+    ].join('_');
+  }
+
+  /// Return a copy of [data] with internal bookkeeping keys removed.
+  ///
+  /// Any key beginning with `_` is application-internal scaffolding (e.g. the
+  /// outbox `_entityKey` and `_target_profile_id`) and must never reach a
+  /// Firestore document. Centralising the strip here keeps every push path
+  /// — single and batch — defensively clean.
+  static Map<String, dynamic> _stripInternalKeys(Map<String, dynamic> data) {
+    final cleaned = <String, dynamic>{};
+    for (final entry in data.entries) {
+      if (entry.key.startsWith('_')) continue;
+      cleaned[entry.key] = entry.value;
+    }
+    return cleaned;
   }
 
   @override
@@ -64,50 +118,60 @@ class FirestoreGatewayImpl implements FirestoreGateway {
   }) async {
     final collection = _collection(profileId, 'completions');
     if (collection == null) throw _notAuthenticated;
-    // Use the caller-supplied docId (the outbox entityKey) when available so
-    // the document ID is exactly the same as what OutboxProcessor tracked.
-    // Fall back to deriving the ID from payload fields for callers that do not
-    // supply an entityKey (e.g. direct gateway use in tests).
-    final id = docId != null ? _sanitizeDocId(docId) : _completionDocId(profileId, data);
+    // The completion document ID is ALWAYS derived from the structured
+    // natural key — never from the caller-supplied [docId]. The outbox
+    // `entityKey` is a local-only dedup key and is deliberately NOT used as
+    // the Firestore document ID (it collides on `:`-vs-doc-id rules and
+    // diverges from the batch path). The [docId] parameter is retained on the
+    // interface for non-completion callers; for completions it is ignored.
+    final id = _completionDocId(profileId, data);
     await collection.doc(id).set(
-      {...data, 'synced_at': FieldValue.serverTimestamp()},
+      {..._stripInternalKeys(data), 'synced_at': FieldValue.serverTimestamp()},
       SetOptions(merge: true),
     );
   }
 
   @override
-  Future<void> pushCompletionsBatch({
+  Future<List<String>> pushCompletionsBatch({
     required int profileId,
-    required List<Map<String, dynamic>> items,
+    required List<({String entityKey, Map<String, dynamic> payload})> items,
   }) async {
-    if (items.isEmpty) return;
+    if (items.isEmpty) return const [];
     final collection = _collection(profileId, 'completions');
     if (collection == null) throw _notAuthenticated;
 
-    const chunkSize = 500;
-    for (var start = 0; start < items.length; start += chunkSize) {
-      final end = (start + chunkSize).clamp(0, items.length);
+    final pushed = <String>[];
+    for (var start = 0; start < items.length; start += _writeBatchLimit) {
+      final end = (start + _writeBatchLimit).clamp(0, items.length);
       final chunk = items.sublist(start, end);
       final batch = _firestore.batch();
-      for (final data in chunk) {
-        // Use _entityKey when present (injected by OutboxPushPipeline.pushCompletionsBatch);
-        // fall back to computing from payload fields for direct gateway callers.
-        final entityKey = data['_entityKey'] as String?;
-        final id = entityKey != null
-            ? _sanitizeDocId(entityKey)
-            : _completionDocId(profileId, data);
-        // Strip internal bookkeeping key before writing to Firestore.
-        final payload = entityKey != null
-            ? (Map<String, dynamic>.from(data)..remove('_entityKey'))
-            : data;
+      for (final item in chunk) {
+        // The doc ID is always derived from the payload's structured natural
+        // key — the same single function used by [pushCompletion]. The outbox
+        // entityKey is used only to report which rows committed.
+        final id = _completionDocId(profileId, item.payload);
         batch.set(
           collection.doc(id),
-          {...payload, 'synced_at': FieldValue.serverTimestamp()},
+          {
+            ..._stripInternalKeys(item.payload),
+            'synced_at': FieldValue.serverTimestamp(),
+          },
           SetOptions(merge: true),
         );
       }
-      await batch.commit();
+      // Per-chunk commit accounting: if this chunk throws, the entityKeys of
+      // the chunks that already committed are carried out on a
+      // [BatchPushException] so the caller (OutboxProcessor) can delete
+      // exactly the rows that genuinely landed and retry only the rest —
+      // committed rows are never re-pushed or dead-lettered (H3).
+      try {
+        await batch.commit();
+      } catch (e) {
+        throw BatchPushException(committed: List.unmodifiable(pushed), cause: e);
+      }
+      pushed.addAll(chunk.map((e) => e.entityKey));
     }
+    return pushed;
   }
 
   @override
@@ -470,21 +534,31 @@ class FirestoreGatewayImpl implements FirestoreGateway {
   }) {
     final ref = _collection(profileId, collection);
     if (ref == null) return const Stream.empty();
-    return ref.snapshots().map(
-      (s) =>
-          // RC4 fix: filter out documents that still have pending local writes
-          // (hasPendingWrites = true). These are self-writes from this device
-          // that have not yet been confirmed by the server. Emitting them would
-          // cause the merge pipeline to re-process the same completion that was
-          // just pushed — producing a listener echo storm.
-          //
-          // Only server-confirmed documents (hasPendingWrites = false) are
-          // forwarded to the merge pipeline.
-          s.docs
-              .where((d) => !d.metadata.hasPendingWrites)
-              .map((d) => _normalizeRow({...d.data(), 'firestore_id': d.id}))
-              .toList(growable: false),
-    );
+    // The stream must always reflect the full server-confirmed collection
+    // state — including, while offline, the locally-cached documents — so the
+    // consumer never sees the collection "vanish" off the network.
+    //
+    // The only thing we suppress is the *local echo*: when this device writes
+    // a document, the listener fires immediately with a snapshot in which that
+    // document's change carries `hasPendingWrites == true`. Re-processing that
+    // self-write would loop the merge pipeline. So we iterate `docChanges` and
+    // drop a document from the emitted list ONLY when it appears solely as an
+    // un-acked local write — i.e. it is `added` (or `modified`) with
+    // `hasPendingWrites` and the document is not otherwise present as a
+    // server-confirmed entry. Genuine remote snapshots still emit in full.
+    return ref.snapshots().map((snapshot) {
+      // Doc IDs that exist only as un-acked local writes in this snapshot.
+      final localOnly = <String>{};
+      for (final change in snapshot.docChanges) {
+        if (change.doc.metadata.hasPendingWrites) {
+          localOnly.add(change.doc.id);
+        }
+      }
+      return snapshot.docs
+          .where((d) => !localOnly.contains(d.id) || !d.metadata.hasPendingWrites)
+          .map((d) => _normalizeRow({...d.data(), 'firestore_id': d.id}))
+          .toList(growable: false);
+    });
   }
 
   @override
@@ -548,12 +622,14 @@ class FirestoreGatewayImpl implements FirestoreGateway {
     });
   }
 
-  /// Returns the account-level learner-profile document reference.
+  /// Returns the account-level learner-profile document reference, or `null`
+  /// when the caller is not authenticated.
   ///
   /// Path: `users/{uid}/learner_profiles/{profileId}`
   ///
-  /// This is distinct from the profile-scoped subcollections returned by
-  /// [_collection] — it is the profile's own document in the parent collection.
+  /// This single helper is the sole place the learner-profile document path
+  /// is constructed; both the public [_learnerProfileDoc] use site and the
+  /// per-profile [_collection] subcollections derive from it (H12).
   DocumentReference<Map<String, dynamic>>? _learnerProfileDoc(int profileId) {
     final uid = _authRepository.currentUser?.uid;
     if (uid == null) return null;
@@ -564,19 +640,16 @@ class FirestoreGatewayImpl implements FirestoreGateway {
         .doc(profileId.toString());
   }
 
+  /// Returns a per-profile subcollection reference, or `null` when the caller
+  /// is not authenticated.
+  ///
+  /// Path: `users/{uid}/learner_profiles/{profileId}/{name}`. Derives from
+  /// [_learnerProfileDoc] so the learner-profile path is built in exactly one
+  /// place.
   CollectionReference<Map<String, dynamic>>? _collection(
     int profileId,
     String name,
-  ) {
-    final uid = _authRepository.currentUser?.uid;
-    if (uid == null) return null;
-    return _firestore
-        .collection('users')
-        .doc(uid)
-        .collection('learner_profiles')
-        .doc(profileId.toString())
-        .collection(name);
-  }
+  ) => _learnerProfileDoc(profileId)?.collection(name);
 
   DocumentReference<Map<String, dynamic>>? _doc(
     int profileId,

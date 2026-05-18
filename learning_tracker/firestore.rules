@@ -27,10 +27,12 @@ rules_version = '2';
 //   goals/{goalId}
 //   curriculum_import_metadata/{curriculumId}
 //
-// Append-only collections (`completions`, `streak`, `learning_ledger`) deny
-// `update` and `delete`. Snapshot collections deny `delete` and gate writes
-// through `.hasOnly(...)` field whitelists. All ownership is enforced by
-// `isOwner(uid)` on the `users/{uid}` path segment.
+// Append-only collections (`completions`, `learning_ledger`) deny `update`
+// and `delete`. The `streak` collection is a running snapshot — it permits
+// `update` (the counter advances in place) but denies `delete`. Snapshot
+// collections deny `delete` and gate writes through `.hasOnly(...)` field
+// whitelists. All ownership is enforced by `isOwner(uid)` on the
+// `users/{uid}` path segment.
 //
 // TOP-LEVEL COMPAT BLOCKS
 // ───────────────────────
@@ -233,11 +235,25 @@ service cloud.firestore {
         // ── Append-only event collections ──────────────────────────────────
 
         // completions — one append-only event per discrete completion act.
+        // Field access is GUARDED: in Firestore rules, reading a field that
+        // is absent from `request.resource.data` raises an error which makes
+        // the whole rule evaluate false, denying an otherwise-valid write.
+        // `points` is therefore validated only when present, and `completed_at`
+        // — when present — must not be in the future.
         match /completions/{completionId} {
           allow read: if isOwner(uid);
           allow create: if isOwner(uid)
-            && request.resource.data.points >= 0
-            && request.resource.data.points <= 100;
+            && (
+              ('points' in request.resource.data)
+                ? (request.resource.data.points is number
+                    && request.resource.data.points >= 0
+                    && request.resource.data.points <= 100)
+                : true
+            )
+            && (
+              !('completed_at' in request.resource.data)
+                || request.resource.data.completed_at <= request.time
+            );
           allow update: if false;
           allow delete: if false;
         }
@@ -263,7 +279,22 @@ service cloud.firestore {
         // These hold current-state documents. Reads/writes are owner-gated;
         // deletes are denied except where the app explicitly removes an
         // assignment (profile_programs).
+        //
+        // Collections with a STABLE, fully-enumerable payload (the field set
+        // that `FirestoreGatewayImpl` writes is closed and known from every
+        // call site) gate `create`/`update` through a `.hasOnly(...)` field
+        // whitelist. The preference-bag collections (`settings`,
+        // `notification_settings`, `gamification_settings`, `ui_preferences`)
+        // carry a HETEROGENEOUS, open-ended payload — `settings`, for
+        // instance, is a documented catch-all that also transports goal
+        // mirror documents and study-day-config maps — so they are
+        // intentionally owner-gated WITHOUT a whitelist; a closed whitelist
+        // there would silently drop legitimate fields. The `_target_profile_id`
+        // bookkeeping key is stripped by the offline queue before any write,
+        // so it never appears in `request.resource.data`.
 
+        // settings — heterogeneous owner-scoped preference + goal-mirror bag.
+        // Intentionally NOT whitelisted (open-ended payload — see note above).
         match /settings/{settingId} {
           allow read: if isOwner(uid);
           allow create, update: if isOwner(uid);
@@ -272,34 +303,56 @@ service cloud.firestore {
 
         match /curriculum_tracks/{trackId} {
           allow read: if isOwner(uid);
-          allow create, update: if isOwner(uid);
+          allow create, update: if isOwner(uid)
+            && request.resource.data.keys().hasOnly([
+              'profile_id', 'track_id', 'curriculum_id', 'track_type',
+              'is_active', 'activated_at', 'deactivated_at',
+              'pace_reset_date', 'progress_schema_version',
+              'progress_computed_at', 'progress_model', 'program_progress',
+              'self_paced_progress', 'synced_at'
+            ]);
           allow delete: if false;
         }
 
         match /bookmarks/{bookmarkId} {
           allow read: if isOwner(uid);
-          allow create, update: if isOwner(uid);
+          allow create, update: if isOwner(uid)
+            && request.resource.data.keys().hasOnly([
+              'profile_id', 'curriculum_id', 'track_type',
+              'content_item_id', 'sefaria_ref', 'stage_id', 'updated_at',
+              'synced_at'
+            ]);
           allow delete: if false;
         }
 
         match /learning_order/{orderId} {
           allow read: if isOwner(uid);
-          allow create, update: if isOwner(uid);
+          allow create, update: if isOwner(uid)
+            && request.resource.data.keys().hasOnly([
+              'curriculum_id', 'sefaria_ref', 'ref', 'user_sort_order',
+              'updated_at', 'synced_at'
+            ]);
           allow delete: if false;
         }
 
+        // notification_settings — open-ended owner-scoped preference bag.
+        // Intentionally NOT whitelisted (see note above).
         match /notification_settings/{docId} {
           allow read: if isOwner(uid);
           allow create, update: if isOwner(uid);
           allow delete: if false;
         }
 
+        // gamification_settings — open-ended owner-scoped preference bag.
+        // Intentionally NOT whitelisted (see note above).
         match /gamification_settings/{docId} {
           allow read: if isOwner(uid);
           allow create, update: if isOwner(uid);
           allow delete: if false;
         }
 
+        // ui_preferences — open-ended owner-scoped preference bag.
+        // Intentionally NOT whitelisted (see note above).
         match /ui_preferences/{docId} {
           allow read: if isOwner(uid);
           allow create, update: if isOwner(uid);
@@ -308,21 +361,40 @@ service cloud.firestore {
 
         match /goals/{goalId} {
           allow read: if isOwner(uid);
-          allow create, update: if isOwner(uid);
+          allow create, update: if isOwner(uid)
+            && request.resource.data.keys().hasOnly([
+              'id', 'goal_id', 'profile_id', 'track_id', 'curriculum_id',
+              'curriculumId', 'description', 'target_percent',
+              'targetPercent', 'target_date', 'targetDate', 'date_type',
+              'dateType', 'goal_type', 'goalType', 'pace_value', 'paceValue',
+              'pace_unit', 'pacePeriod', 'paceGranularity', 'created_at',
+              'createdAt', 'updated_at', 'updatedAt', 'synced_at'
+            ]);
           allow delete: if false;
         }
 
         match /curriculum_import_metadata/{docId} {
           allow read: if isOwner(uid);
-          allow create, update: if isOwner(uid);
+          allow create, update: if isOwner(uid)
+            && request.resource.data.keys().hasOnly([
+              'profile_id', 'curriculum_id', 'item_count', 'imported_at',
+              'synced_at'
+            ]);
           allow delete: if false;
         }
 
         // profile_programs — curriculum assignments. The app explicitly
-        // removes an assignment, so client delete is permitted here.
+        // removes an assignment, so client delete is permitted here. The
+        // payload is a stable, fully-enumerable set, so writes are gated by
+        // a field whitelist.
         match /profile_programs/{curriculumId} {
           allow read: if isOwner(uid);
-          allow create, update, delete: if isOwner(uid);
+          allow create, update: if isOwner(uid)
+            && request.resource.data.keys().hasOnly([
+              'profile_id', 'curriculum_id', 'program_id',
+              'tracking_start_date', 'tracking_start_ref', 'synced_at'
+            ]);
+          allow delete: if isOwner(uid);
         }
       }
     }
