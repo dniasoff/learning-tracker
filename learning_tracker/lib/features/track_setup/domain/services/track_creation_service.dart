@@ -197,6 +197,10 @@ class TrackCreationService {
   }
 
   /// Create the goal from [result] if one is present.
+  ///
+  /// Falls back to [result.label] as the goal description when the [GoalEntity]
+  /// carries an empty description — this covers tracks created before B4 was
+  /// fixed and any code path that does not seed [GoalEntity.description].
   Future<void> _recreateGoal({
     required AddTrackResult result,
     required int profileId,
@@ -205,13 +209,17 @@ class TrackCreationService {
   }) async {
     if (result.goalResult is! GoalEntity) return;
     final goal = result.goalResult! as GoalEntity;
+    // Use the track label as the description when the goal entity has none
+    // (belt-and-suspenders: step_goal seeds it, but older flows may not).
+    final description =
+        goal.description.isNotEmpty ? goal.description : result.label;
     await _goalRepository.createGoal(
       profileId: profileId,
       curriculumId: curriculum,
       trackId: trackId,
       targetPercent: goal.targetPercent,
       targetDate: goal.targetDate,
-      description: goal.description,
+      description: description,
       dateType: goal.dateType,
       goalType: goal.goalType,
       paceValue: goal.paceValue,

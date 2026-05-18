@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
@@ -143,6 +144,12 @@ class _SelfPacedGoalStepState extends ConsumerState<SelfPacedGoalStep> {
 
   void _continue() {
     final now = DateTimeFactory.nowUtc();
+    // Seed the description with the curriculum's display name so that Edit
+    // Track's "Track Name" field is pre-filled on new tracks (B4 fix).
+    final defaultDescription = curriculumLabelText(
+      ref,
+      curriculum: widget.curriculumId,
+    );
     if (_mode == 'deadline') {
       if (_deadline == null) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -160,6 +167,7 @@ class _SelfPacedGoalStepState extends ConsumerState<SelfPacedGoalStep> {
           goalType: 'deadline',
           targetDate: _deadline!.toUtc(),
           dateType: useHebrew ? 'hebrew' : 'gregorian',
+          description: defaultDescription,
           paceGranularity: PaceGranularity.fromStorageKey(_paceGranularity),
           rawLearningUnit: _paceGranularity,
           createdAt: now,
@@ -176,6 +184,7 @@ class _SelfPacedGoalStepState extends ConsumerState<SelfPacedGoalStep> {
         goalType: 'pace',
         paceValue: _paceValue,
         pacePeriod: _paceUnit,
+        description: defaultDescription,
         paceGranularity: PaceGranularity.fromStorageKey(_paceGranularity),
         rawLearningUnit: _paceGranularity,
         createdAt: now,

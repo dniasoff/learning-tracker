@@ -224,6 +224,29 @@ void main() {
       expect(result.label, 'Daf Yomi');
       expect(result.programId, 1);
     });
+
+    // B4: label is always non-empty — used as the goal description fallback in
+    // TrackCreationService._recreateGoal when GoalEntity.description is ''.
+    test(
+      'buildResult label falls back to storageKey when no scope or program',
+      () {
+        final c = _makeContainer();
+        addTearDown(c.dispose);
+
+        _notifier(c).onCurriculumSelected(CurriculumId.mishnayos);
+        // Skip scope (pass null) and advance through remaining steps.
+        _notifier(c).onScopeComplete(null);
+        _notifier(c).onStudyDaysComplete({1: 'study'});
+        _notifier(c).onStagesComplete(null);
+        _notifier(c).onGoalComplete(null);
+
+        final result = _notifier(c).buildResult();
+        // When no scope or program, label must be non-empty (storageKey fallback)
+        // so TrackCreationService._recreateGoal has a valid description to use.
+        expect(result.label, isNotEmpty);
+        expect(result.label, CurriculumId.mishnayos.storageKey);
+      },
+    );
   });
 
   group('AddTrackController — markComplete()', () {

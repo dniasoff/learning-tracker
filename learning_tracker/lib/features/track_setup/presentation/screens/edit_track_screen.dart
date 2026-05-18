@@ -3,9 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/core/labels/curriculum_label.dart';
+import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
+import 'package:learning_tracker/core/utils/text_input_formatters.dart';
 import 'package:learning_tracker/core/widgets/learning_date_picker_theme.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/learning_process_wizard_service.dart';
@@ -88,9 +91,21 @@ class _EditTrackScreenState extends ConsumerState<EditTrackScreen> {
         .toList();
 
     if (!mounted) return;
+    // Fallback: when the stored goal has no description (tracks created before
+    // B4 was fixed), show the curriculum's display name so the field is never
+    // blank. Uses the current Hebrew Terms toggle to pick the right language.
+    final curriculum = _curriculumId;
+    var nameDefault = '';
+    if (curriculum != null) {
+      final useHebrew = ref.read(useHebrewTermsProvider);
+      nameDefault = useHebrew
+          ? curriculumHebrewName(curriculum)
+          : curriculumEnglishName(curriculum);
+    }
     setState(() {
       _goal = goal;
-      _nameController.text = goal?.description ?? '';
+      final desc = goal?.description ?? '';
+      _nameController.text = desc.isNotEmpty ? desc : nameDefault;
       _editedStudyDays = studyDays;
       _currentChazaraDelays = delays;
 
@@ -264,6 +279,7 @@ class _EditTrackScreenState extends ConsumerState<EditTrackScreen> {
             title: l10n.trackEditSectionName,
             child: TextField(
               controller: _nameController,
+              inputFormatters: const [TrimLeadingSpaceFormatter()],
               style: theme.textTheme.bodyLarge,
               decoration: const InputDecoration(
                 border: OutlineInputBorder(
