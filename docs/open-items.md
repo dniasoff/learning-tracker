@@ -16,11 +16,12 @@ Do not start any of these autonomously.
 
 ---
 
-## C2 — Add foreign keys on `profileId` / `curriculumId`
+## ~~C2 — Add foreign keys on `profileId` / `curriculumId`~~ ✓ CLOSED
 
-**What:** Currently only `trackId` is FK-constrained. A deleted profile silently orphans rows across multiple tables. Add explicit cascade-delete FKs for `profileId` and `curriculumId`.
-
-**Why it needs planning:** Requires a Drift schema version bump and a migration. Must be co-ordinated with C1 (if completion tables are consolidated first, the FK targets change).
+`profileId` FKs with `CASCADE DELETE` are in place on all profile-scoped tables (schema
+v16→v17, commit `5b2a4b05`). `curriculumId` FKs were intentionally omitted — curricula
+are defined in code (enum), not as mutable DB rows, so there is no parent table to
+reference.
 
 ---
 
