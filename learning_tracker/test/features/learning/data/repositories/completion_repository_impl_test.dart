@@ -275,7 +275,9 @@ void main() {
 
       expect(completions.length, 3);
       expect(completions.map((c) => c.sefariaRef).toList(), refs);
-      verify(() => mockSyncEngine.pushCompletionsBatch(any())).called(1);
+      // Completions now route through the outbox (not a direct syncEngine push).
+      final outboxRows = await database.select(database.outbox).get();
+      expect(outboxRows, hasLength(3));
     });
 
     test(
@@ -313,7 +315,9 @@ void main() {
 
         expect(completions.length, 60);
         expect(completions.every((c) => c.points == 0), isTrue);
-        verify(() => mockSyncEngine.pushCompletionsBatch(any())).called(1);
+        // All 60 completions land in the outbox for batched Firestore push.
+        final outboxRows = await database.select(database.outbox).get();
+        expect(outboxRows, hasLength(60));
         final rows = await database.completionDao
             .getCompletionsByCurriculumAndProfile(curriculumId, learnerId);
         expect(rows.length, 60);

@@ -49,6 +49,120 @@ class CompletionWriter {
   final UserDatabase _db;
   final AnalyticsService _analytics;
 
+  /// Batch-commit [commands] in a SINGLE Drift transaction (RC1 fix).
+  ///
+  /// All [commands] are assumed already de-duplicated by the caller.
+  /// Inside the transaction:
+  ///  1. All `completion_events` rows are batch-inserted via
+  ///     [InsertMode.insertOrIgnore] (idempotent on the natural key).
+  ///  2. All `outbox` rows are batch-inserted via [InsertMode.insertOrIgnore].
+  ///
+  /// Returns the [CompletionWriteResult] for each command in the same order.
+  /// Rows that already existed (duplicate natural key) are returned with
+  /// `isNew = false`.
+  Future<List<CompletionWriteResult>> commitBatch(
+    List<CompletionCommand> commands,
+  ) async {
+    if (commands.isEmpty) return const [];
+
+    return _db.transaction(() async {
+      // ── 1. Batch-insert completion_events (INSERT OR IGNORE) ───────────────
+      await _db.batch((b) {
+        b.insertAll(
+          _db.completionEvents,
+          commands.map(
+            (cmd) => CompletionEventsCompanion.insert(
+              profileId: cmd.profileId,
+              curriculumId: cmd.curriculumId,
+              sefariaRef: cmd.sefariaRef,
+              stageId: cmd.stageId,
+              trackType: cmd.trackType,
+              trackId: Value<int?>(cmd.trackId),
+              points: Value(cmd.points),
+              eventTimestamp: cmd.completedAt,
+            ),
+          ),
+          mode: InsertMode.insertOrIgnore,
+        );
+      });
+
+      // ── 2. Batch-insert outbox rows (INSERT OR IGNORE) ─────────────────────
+      await _db.batch((b) {
+        _db.outboxDao.batchInsertOutboxRows(
+          b,
+          commands
+              .map(
+                (cmd) => OutboxCompanion.insert(
+                  profileId: cmd.profileId,
+                  entityKind: OutboxEntityKind.completion,
+                  entityKey: _outboxEntityKey(cmd),
+                  payload: jsonEncode(_outboxPayload(cmd)),
+                  createdAt: cmd.completedAt,
+                ),
+              )
+              .toList(),
+        );
+      });
+
+      // ── 3. Resolve results by reading back the persisted events ────────────
+      final results = <CompletionWriteResult>[];
+      for (final cmd in commands) {
+        final event =
+            await (_db.select(_db.completionEvents)..where(
+                  (t) =>
+                      t.profileId.equals(cmd.profileId) &
+                      t.sefariaRef.equals(cmd.sefariaRef) &
+                      t.stageId.equals(cmd.stageId) &
+                      t.trackType.equals(cmd.trackType),
+                ))
+                .getSingleOrNull();
+
+        if (event == null) {
+          throw StateError(
+            'CompletionWriter.commitBatch: event not found after insert '
+            'for ${cmd.sefariaRef}:${cmd.stageId}:${cmd.trackType}',
+          );
+        }
+
+        final viewRow = await _db.completionDao.getCompletionById(event.id);
+        if (viewRow != null) {
+          results.add(CompletionWriteResult(completion: viewRow, isNew: true));
+        } else {
+          // C3 tombstone (purgedAt IS NOT NULL) — reconstruct from event row.
+          final purgedCompletion = Completion(
+            id: event.id,
+            profileId: event.profileId,
+            curriculumId: event.curriculumId,
+            sefariaRef: event.sefariaRef,
+            stageId: event.stageId,
+            trackType: event.trackType,
+            trackId: event.trackId ?? 0,
+            completedAt: event.eventTimestamp,
+            points: event.points,
+            derivedFromEvents: true,
+          );
+          results.add(
+            CompletionWriteResult(completion: purgedCompletion, isNew: false),
+          );
+        }
+      }
+
+      // Fire analytics for each new completion (fire-and-forget).
+      for (final r in results) {
+        if (r.isNew) {
+          unawaited(
+            _analytics.logCompletionRecorded(
+              sefariaRef: r.completion.sefariaRef,
+              trackType: r.completion.trackType,
+            ),
+          );
+        }
+      }
+
+      return results;
+    });
+  }
+
   Future<CompletionWriteResult> commit(CompletionCommand cmd) async {
     return _db.transaction(() async {
       // Idempotency check on completion_events (UNIQUE canonical table).

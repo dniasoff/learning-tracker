@@ -234,12 +234,9 @@ class CompletionRepositoryImpl implements CompletionRepository {
       return completions;
     });
 
-    final syncEngine = _syncEngine;
-    if (completions.isNotEmpty && syncEngine != null) {
-      await syncEngine.pushCompletionsBatch(
-        completions.map(_completionToSyncPayload).toList(),
-      );
-    }
+    // RC2 fix: outbox is the ONLY completion queue. The legacy
+    // pushCompletionsBatch (sync_queue) call has been removed; completions
+    // are already enqueued via outbox inside _createCompletion → CompletionWriter.
 
     if (completions.isNotEmpty) {
       await _advanceBookmark(
@@ -304,22 +301,24 @@ class CompletionRepositoryImpl implements CompletionRepository {
 
     final now = request.completedAt ?? DateTimeFactory.nowUtc();
 
-    // FR15: route all writes through CompletionWriter so each completion
-    // gets its own atomic (completion + outbox) transaction.
-    for (final ref in toInsertUnique) {
-      await _completionWriter.commit(
-        CompletionCommand(
-          profileId: effectiveProfileId,
-          curriculumId: request.curriculumId,
-          sefariaRef: ref,
-          stageId: request.stageId,
-          trackType: request.trackType,
-          trackId: trackId,
-          completedAt: now,
-          points: 0,
-        ),
-      );
-    }
+    // FR15 / RC1 fix: route all writes through CompletionWriter.commitBatch
+    // so ALL N completions land in a SINGLE Drift transaction (not N).
+    // The list is already de-duplicated above via toInsertUnique.
+    final commands = toInsertUnique
+        .map(
+          (ref) => CompletionCommand(
+            profileId: effectiveProfileId,
+            curriculumId: request.curriculumId,
+            sefariaRef: ref,
+            stageId: request.stageId,
+            trackType: request.trackType,
+            trackId: trackId,
+            completedAt: now,
+            points: 0,
+          ),
+        )
+        .toList();
+    await _completionWriter.commitBatch(commands);
 
     // Bulk-mark-prior is "I learned this in the past" — these completions
     // belong to historical learning, not today. They must NOT credit a
@@ -339,19 +338,10 @@ class CompletionRepositoryImpl implements CompletionRepository {
       for (final c in allRows) c.sefariaRef: c,
     };
 
-    final insertedRefSet = toInsertUnique.toSet();
-    final toSync = <Completion>[];
-    for (final c in allRows) {
-      if (insertedRefSet.contains(c.sefariaRef)) {
-        toSync.add(c);
-      }
-    }
-    final syncEngine = _syncEngine;
-    if (toSync.isNotEmpty && syncEngine != null) {
-      await syncEngine.pushCompletionsBatch(
-        toSync.map(_completionToSyncPayload).toList(),
-      );
-    }
+    // RC2 fix: outbox is now the ONLY completion queue. The legacy
+    // pushCompletionsBatch call to sync_queue has been removed — each
+    // completion_event written above already has a corresponding outbox row
+    // committed atomically by CompletionWriter.commitBatch.
 
     final ordered = request.sefariaRefs.map((r) => byRef[r]!).toList();
 

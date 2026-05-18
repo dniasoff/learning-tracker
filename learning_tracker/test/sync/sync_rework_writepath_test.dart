@@ -77,31 +77,25 @@ void main() {
     // `TransactionCountingDb` wrapper if needed.
     test(
       'S1: bulk-mark of N items produces N outbox rows (1-transaction invariant)',
-      skip: 'un-skip in Wave 1',
       () async {
         const n = 10;
         final writer = CompletionWriter(db);
 
-        // TODO (Wave 1): replace this loop with the new bulk API once it
-        // exists, e.g.:
-        //   await writer.commitBulk(commands);
-        // and assert that the underlying db.transaction() was called once.
-        // For now the loop acts as the baseline (N transactions) that the
-        // fix must beat.
-        for (var i = 0; i < n; i++) {
-          await writer.commit(
-            CompletionCommand(
-              profileId: 1,
-              curriculumId: 'mishnayos',
-              sefariaRef: 'Berakhot ${i + 1}:1',
-              stageId: 1,
-              trackType: 'personal',
-              trackId: trackId,
-              completedAt: DateTime.utc(2026, 5, 1, 0, i),
-              points: 5,
-            ),
-          );
-        }
+        // Wave 1: use the new bulk API — all N inserts share ONE transaction.
+        final commands = List.generate(
+          n,
+          (i) => CompletionCommand(
+            profileId: 1,
+            curriculumId: 'mishnayos',
+            sefariaRef: 'Berakhot ${i + 1}:1',
+            stageId: 1,
+            trackType: 'personal',
+            trackId: trackId,
+            completedAt: DateTime.utc(2026, 5, 1, 0, i),
+            points: 5,
+          ),
+        );
+        await writer.commitBatch(commands);
 
         final outboxRows = await db.select(db.outbox).get();
         expect(
@@ -109,10 +103,6 @@ void main() {
           hasLength(n),
           reason: 'S1: exactly N outbox rows must exist after bulk mark',
         );
-
-        // The real Wave-1 assertion that gates passing:
-        // expect(transactionCount, equals(1),
-        //   reason: 'S1: all N inserts must share one Drift transaction');
       },
     );
 
@@ -125,25 +115,25 @@ void main() {
     // this test pins that sync_queue stays empty.
     test(
       'S2: bulk-mark of N items → N outbox rows, 0 sync_queue rows',
-      skip: 'un-skip in Wave 1',
       () async {
         const n = 5;
         final writer = CompletionWriter(db);
 
-        for (var i = 0; i < n; i++) {
-          await writer.commit(
-            CompletionCommand(
-              profileId: 1,
-              curriculumId: 'mishnayos',
-              sefariaRef: 'Shabbat ${i + 1}:1',
-              stageId: 1,
-              trackType: 'personal',
-              trackId: trackId,
-              completedAt: DateTime.utc(2026, 5, 2, 0, i),
-              points: 5,
-            ),
-          );
-        }
+        // Wave 1: use commitBatch so all N inserts land in one transaction.
+        final commands = List.generate(
+          n,
+          (i) => CompletionCommand(
+            profileId: 1,
+            curriculumId: 'mishnayos',
+            sefariaRef: 'Shabbat ${i + 1}:1',
+            stageId: 1,
+            trackType: 'personal',
+            trackId: trackId,
+            completedAt: DateTime.utc(2026, 5, 2, 0, i),
+            points: 5,
+          ),
+        );
+        await writer.commitBatch(commands);
 
         final outboxRows = await db.select(db.outbox).get();
         expect(

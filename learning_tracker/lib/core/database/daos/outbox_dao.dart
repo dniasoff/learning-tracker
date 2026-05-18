@@ -58,6 +58,19 @@ class OutboxDao extends DatabaseAccessor<UserDatabase> with _$OutboxDaoMixin {
     );
   }
 
+  /// Batch-insert multiple outbox rows in the caller's current transaction.
+  ///
+  /// Uses [InsertMode.insertOrIgnore] so duplicate natural-key entries are
+  /// silently dropped rather than throwing. Must be called inside a
+  /// [DatabaseAccessor.batch] or an enclosing `db.transaction()`.
+  Future<void> batchInsertOutboxRows(
+    Batch batch,
+    List<OutboxCompanion> rows,
+  ) {
+    batch.insertAll(outbox, rows, mode: InsertMode.insertOrIgnore);
+    return Future.value();
+  }
+
   /// Delete a successfully-pushed outbox row.
   Future<int> deleteRow(int id) =>
       (delete(outbox)..where((t) => t.id.equals(id))).go();
