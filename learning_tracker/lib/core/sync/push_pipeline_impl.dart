@@ -28,7 +28,27 @@ class OutboxPushPipeline implements PushPipeline {
     required Map<String, dynamic> payload,
   }) => _run(
     OutboxEntityKind.completion,
-    () => _gateway.pushCompletion(profileId: profileId, data: payload),
+    // Thread the entityKey as the deterministic Firestore doc ID so every
+    // re-push resolves to the same document (RC3 fix).  The entityKey format
+    // is "<profileId>:<sefariaRef>:<stageId>:<trackType>" — sanitized inside
+    // FirestoreGatewayImpl._completionDocId before use.
+    () => _gateway.pushCompletion(
+      profileId: profileId,
+      data: payload,
+      docId: entityKey,
+    ),
+  );
+
+  @override
+  Future<void> pushCompletionsBatch({
+    required int profileId,
+    required List<({String entityKey, Map<String, dynamic> payload})> entries,
+  }) => _run(
+    OutboxEntityKind.completion,
+    () => _gateway.pushCompletionsBatch(
+      profileId: profileId,
+      items: entries.map((e) => {...e.payload, '_entityKey': e.entityKey}).toList(),
+    ),
   );
 
   @override

@@ -14,6 +14,21 @@ abstract class FirestoreGateway {
   Future<void> pushCompletion({
     required int profileId,
     required Map<String, dynamic> data,
+    String? docId,
+  });
+
+  /// Push multiple completions atomically using Firestore [WriteBatch]es.
+  ///
+  /// Each item in [items] must include the fields used for the deterministic
+  /// doc ID (sefariaRef, stageId, trackType). Payloads are chunked into
+  /// batches of ≤500 ops (Firestore limit) and each chunk is committed in a
+  /// single `WriteBatch.commit()` call — producing ≤⌈items.length/500⌉ commits.
+  ///
+  /// This method never calls `collection.add()` — every write is a
+  /// `doc(deterministicId).set(...)`, making the operation fully idempotent.
+  Future<void> pushCompletionsBatch({
+    required int profileId,
+    required List<Map<String, dynamic>> items,
   });
 
   Future<void> pushStreak({

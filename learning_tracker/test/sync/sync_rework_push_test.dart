@@ -18,6 +18,7 @@ import 'package:learning_tracker/core/learning/completion_writer.dart';
 import 'package:learning_tracker/core/sync/firestore_gateway.dart';
 import 'package:learning_tracker/core/sync/outbox/outbox_processor.dart';
 import 'package:learning_tracker/core/sync/push_pipeline_impl.dart';
+import 'package:learning_tracker/core/time/local_day_clock.dart';
 
 import '../helpers/drift_memory.dart';
 
@@ -77,30 +78,28 @@ class _RecordingGateway implements FirestoreGateway {
   Future<void> pushCompletion({
     required int profileId,
     required Map<String, dynamic> data,
+    String? docId,
   }) async {
     pushCompletionCalls.add({...data, '_profileId': profileId});
-    final id = _docId(profileId, data);
+    // Post-rework: use doc(id).set() — derive id from docId param or payload.
+    final id = docId != null
+        ? docId.replaceAll('/', '_').replaceAll(' ', '_')
+        : _docId(profileId, data);
     final isNew = !_store.containsKey(id);
     _store[id] = {...data, '_profileId': profileId};
     if (isNew) {
       docSetCount++;
     }
-    // The current FirestoreGatewayImpl uses collection.add() — post-rework it
-    // must use doc(id).set(). Track the legacy path explicitly so S4 can
-    // assert collectionAddCount == 0.
-    // For Wave-0 characterization: assume every pushCompletion is currently
-    // a collection.add() call (pre-rework baseline).
-    collectionAddCount++;
+    // Post-rework: pushCompletion uses doc(id).set() — never collection.add().
+    // collectionAddCount is NOT incremented here.
   }
 
-  // ── Batch simulation ──────────────────────────────────────────────────────
+  // ── Batch push (RC3 / S4 fix) ─────────────────────────────────────────────
 
-  /// Simulate flushing N completions through the post-rework batch API.
-  ///
-  /// Wave-1 implementation will expose a `pushCompletionsBatch` on the
-  /// gateway that internally chunks payloads into ≤500-item `WriteBatch`es.
-  /// This stub models the expected chunk/commit cycle so S4 can be written
-  /// now and will pass after the real implementation is wired.
+  /// Implements the post-rework batch API.  Chunks payloads into ≤500-item
+  /// groups (matching the Firestore WriteBatch limit) and commits each chunk,
+  /// incrementing [batchCommitCount] once per chunk.
+  @override
   Future<void> pushCompletionsBatch({
     required int profileId,
     required List<Map<String, dynamic>> items,
@@ -212,7 +211,6 @@ void main() {
     // doc(deterministicId).set().
     test(
       'S3: same completion pushed twice lands in exactly one Firestore doc (idempotent)',
-      skip: 'un-skip in Wave 1',
       () async {
         final gateway = _RecordingGateway();
 
@@ -240,10 +238,12 @@ void main() {
               'second Firestore document',
         );
 
-        // Wave-1 also verifies collectionAddCount == 0.
-        // For now, just document the current baseline.
-        // expect(gateway.collectionAddCount, equals(0),
-        //   reason: 'S3: must not use collection.add() — use doc(id).set()');
+        // Wave-1: collectionAddCount must be 0 — post-rework uses doc(id).set().
+        expect(
+          gateway.collectionAddCount,
+          equals(0),
+          reason: 'S3: must not use collection.add() — use doc(id).set()',
+        );
       },
     );
 
@@ -258,7 +258,6 @@ void main() {
     // OutboxProcessor (or a dedicated BulkPushPipeline) must use it.
     test(
       'S4: 655-item bulk push uses ≤2 WriteBatch commits and 0 collection.add() calls',
-      skip: 'un-skip in Wave 1',
       () async {
         final gateway = _RecordingGateway();
         const n = 655;
@@ -331,10 +330,12 @@ void main() {
         processorA = OutboxProcessor(
           outboxDao: deviceA.outboxDao,
           pipeline: pipelineA,
+          clock: FakeLocalDayClock(DateTime.utc(2026, 5, 14)),
         );
         processorB = OutboxProcessor(
           outboxDao: deviceB.outboxDao,
           pipeline: pipelineB,
+          clock: FakeLocalDayClock(DateTime.utc(2026, 5, 14)),
         );
       });
 
@@ -345,7 +346,6 @@ void main() {
 
       test(
         'S9: overlapping completions from two devices converge to union with no duplicates',
-        skip: 'un-skip in Wave 1',
         () async {
           final writerA = CompletionWriter(deviceA);
           final writerB = CompletionWriter(deviceB);

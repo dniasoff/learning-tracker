@@ -13,6 +13,20 @@ abstract class PushPipeline {
     required Map<String, dynamic> payload,
   });
 
+  /// Push multiple completions in a single batched operation.
+  ///
+  /// Each entry in [entries] is a record of `(entityKey, payload)` so the
+  /// gateway can derive the deterministic Firestore doc ID from the natural
+  /// key rather than from arbitrary payload fields.
+  ///
+  /// Implementations must:
+  ///  1. Pass all entries to [FirestoreGateway.pushCompletionsBatch].
+  ///  2. Never call [pushCompletion] in a loop — that defeats the batching.
+  Future<void> pushCompletionsBatch({
+    required int profileId,
+    required List<({String entityKey, Map<String, dynamic> payload})> entries,
+  });
+
   Future<void> pushStreak({
     required int profileId,
     required String entityKey,

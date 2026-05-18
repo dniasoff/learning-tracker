@@ -485,6 +485,13 @@ class _AlwaysOkGateway implements FirestoreGateway {
   Future<void> pushCompletion({
     required int profileId,
     required Map<String, dynamic> data,
+    String? docId,
+  }) async {}
+
+  @override
+  Future<void> pushCompletionsBatch({
+    required int profileId,
+    required List<Map<String, dynamic>> items,
   }) async {}
 
   @override

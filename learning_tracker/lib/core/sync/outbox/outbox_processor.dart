@@ -1,7 +1,9 @@
 import 'dart:convert';
+import 'dart:math' as math;
 
 import 'package:learning_tracker/core/database/daos/outbox_dao.dart';
 import 'package:learning_tracker/core/sync/outbox/push_pipeline.dart';
+import 'package:learning_tracker/core/time/local_day_clock.dart';
 
 /// Known entity kinds stored in the outbox.
 ///
@@ -25,33 +27,102 @@ class OutboxEntityKind {
 /// backlog of completions does not starve streak or settings pushes.
 /// Callers should invoke [drain] for each kind they wish to flush.
 ///
-/// **Batch limit:** at most [_batchSize] rows are drained per [drain] call to
-/// avoid holding the network for an unbounded duration.
+/// **Completion batching:** all pending completion rows are collected and
+/// dispatched in a single [PushPipeline.pushCompletionsBatch] call (which
+/// internally chunks into ≤500-op Firestore WriteBatches). This eliminates
+/// the N-round-trip problem that caused RC3.
+///
+/// **Non-completion batch limit:** at most [_batchSize] rows are drained per
+/// [drain] call to avoid holding the network for an unbounded duration.
+///
+/// **Exponential backoff:** rows that have already failed are skipped when
+/// their computed [_nextAttemptAt] is still in the future. A row is
+/// dead-lettered (permanently skipped) once it reaches [_maxAttempts].
 ///
 /// **Error handling:** if a push fails, the row is NOT deleted — instead
 /// [OutboxDao.markAttempted] records the error so the next drain attempt
-/// retries it.
+/// retries it with backoff.
 class OutboxProcessor {
   OutboxProcessor({
     required OutboxDao outboxDao,
     required PushPipeline pipeline,
+    required LocalDayClock clock,
   }) : _dao = outboxDao,
-       _pipeline = pipeline;
+       _pipeline = pipeline,
+       _clock = clock;
 
   final OutboxDao _dao;
   final PushPipeline _pipeline;
+  final LocalDayClock _clock;
 
+  /// Maximum number of push attempts before a row is dead-lettered.
+  static const int _maxAttempts = 10;
+
+  /// Non-completion entity batch limit.
   static const int _batchSize = 50;
 
-  /// Drain up to [_batchSize] pending outbox rows for [profileId].
+  /// Base delay for exponential backoff (first retry: ~30 s).
+  static const Duration _backoffBase = Duration(seconds: 30);
+
+  /// Drain pending outbox rows for [profileId].
   ///
-  /// Each entity kind is fetched and flushed in a deterministic order so
-  /// upstream callers get predictable behaviour. Returns the number of rows
-  /// successfully pushed.
+  /// Completions are collected all at once and dispatched via
+  /// [PushPipeline.pushCompletionsBatch]. All other kinds are drained up to
+  /// [_batchSize] rows each.
+  ///
+  /// Each entity kind is processed in a deterministic order so that
+  /// time-sensitive entities (completions, streaks) are flushed before
+  /// cosmetic ones (settings, order). Returns the number of rows successfully
+  /// pushed.
   Future<int> drain(int profileId) async {
+    final now = _clock.nowUtc();
     var successCount = 0;
 
-    for (final kind in _orderedKinds) {
+    // ── completions — batched ────────────────────────────────────────────────
+    final completionRows = await _dao.getPendingByKind(
+      OutboxEntityKind.completion,
+      profileId,
+      // No artificial limit — collect ALL pending completions so they can be
+      // sent in a single pushCompletionsBatch call (≤500-op WriteBatch chunks).
+      limit: 999999,
+    );
+
+    // Filter rows that are eligible for a retry attempt.
+    final eligibleCompletions = completionRows.where((row) {
+      if (row.attempts >= _maxAttempts) return false; // dead-lettered
+      return _nextAttemptAt(row.attempts, row.lastAttemptAt).isBefore(now);
+    }).toList();
+
+    if (eligibleCompletions.isNotEmpty) {
+      final entries = eligibleCompletions
+          .map(
+            (row) => (
+              entityKey: row.entityKey,
+              payload: _decodePayload(row.payload),
+            ),
+          )
+          .toList();
+
+      try {
+        await _pipeline.pushCompletionsBatch(
+          profileId: profileId,
+          entries: entries,
+        );
+        // All succeeded — delete all rows.
+        for (final row in eligibleCompletions) {
+          await _dao.deleteRow(row.id);
+          successCount++;
+        }
+      } catch (e) {
+        // Mark every eligible row as attempted on batch failure.
+        for (final row in eligibleCompletions) {
+          await _dao.markAttempted(row.id, error: e.toString());
+        }
+      }
+    }
+
+    // ── non-completion kinds — one at a time with backoff ────────────────────
+    for (final kind in _nonCompletionKinds) {
       final rows = await _dao.getPendingByKind(
         kind,
         profileId,
@@ -59,6 +130,11 @@ class OutboxProcessor {
       );
 
       for (final row in rows) {
+        if (row.attempts >= _maxAttempts) continue; // dead-lettered
+        if (_nextAttemptAt(row.attempts, row.lastAttemptAt).isAfter(now)) {
+          continue; // backoff window not yet elapsed
+        }
+
         final payload = _decodePayload(row.payload);
         try {
           await _dispatch(
@@ -82,16 +158,33 @@ class OutboxProcessor {
 
   // ── helpers ──────────────────────────────────────────────────────────────
 
-  /// Deterministic drain order so that time-sensitive entities (completions,
-  /// streaks) are flushed before cosmetic ones (settings, order).
-  static const _orderedKinds = [
-    OutboxEntityKind.completion,
+  /// Deterministic drain order for non-completion kinds — time-sensitive
+  /// entities (streaks) are flushed before cosmetic ones (settings, order).
+  static const _nonCompletionKinds = [
     OutboxEntityKind.streak,
     OutboxEntityKind.track,
     OutboxEntityKind.learningOrder,
     OutboxEntityKind.bookmark,
     OutboxEntityKind.settings,
   ];
+
+  /// Compute the earliest time at which [attempts]-th row may be retried.
+  ///
+  /// Uses exponential backoff with base [_backoffBase]:
+  ///   nextAttempt = lastAttemptAt + base * 2^(attempts - 1)
+  ///
+  /// When [lastAttemptAt] is null (never attempted), the row is immediately
+  /// eligible.
+  static DateTime _nextAttemptAt(int attempts, DateTime? lastAttemptAt) {
+    if (attempts == 0 || lastAttemptAt == null) {
+      return DateTime.fromMillisecondsSinceEpoch(0, isUtc: true);
+    }
+    final multiplier = math.pow(2, attempts - 1).toDouble();
+    final delay = Duration(
+      milliseconds: (_backoffBase.inMilliseconds * multiplier).round(),
+    );
+    return lastAttemptAt.add(delay);
+  }
 
   Map<String, dynamic> _decodePayload(String raw) {
     final decoded = jsonDecode(raw);
@@ -106,12 +199,6 @@ class OutboxProcessor {
     required Map<String, dynamic> payload,
   }) {
     switch (kind) {
-      case OutboxEntityKind.completion:
-        return _pipeline.pushCompletion(
-          profileId: profileId,
-          entityKey: entityKey,
-          payload: payload,
-        );
       case OutboxEntityKind.streak:
         return _pipeline.pushStreak(
           profileId: profileId,
@@ -143,7 +230,7 @@ class OutboxProcessor {
           payload: payload,
         );
       default:
-        throw ArgumentError('Unknown outbox entity kind: $kind');
+        throw ArgumentError('Unknown outbox entity kind for single dispatch: $kind');
     }
   }
 }

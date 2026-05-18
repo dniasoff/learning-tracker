@@ -4,6 +4,7 @@ import 'package:learning_tracker/core/sync/firestore_gateway_impl.dart';
 import 'package:learning_tracker/core/sync/outbox/outbox_processor.dart';
 import 'package:learning_tracker/core/sync/providers/firestore_instance_provider.dart';
 import 'package:learning_tracker/core/sync/push_pipeline_impl.dart';
+import 'package:learning_tracker/core/time/local_day_clock.dart';
 import 'package:learning_tracker/features/auth/presentation/providers/auth_providers.dart'
     show authRepositoryProvider;
 import 'package:learning_tracker/features/auth/presentation/providers/auth_state_provider.dart';
@@ -44,5 +45,6 @@ final outboxProcessorProvider = Provider<OutboxProcessor?>((ref) {
 
   final database = ref.watch(userDatabaseProvider);
 
-  return OutboxProcessor(outboxDao: database.outboxDao, pipeline: pipeline);
+  final clock = ref.watch(localDayClockProvider);
+  return OutboxProcessor(outboxDao: database.outboxDao, pipeline: pipeline, clock: clock);
 });

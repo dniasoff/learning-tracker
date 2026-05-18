@@ -25,14 +25,89 @@ class FirestoreGatewayImpl implements FirestoreGateway {
 
   // ── push ──────────────────────────────────────────────────────────────────
 
+  /// Sanitize a string for use as a Firestore document ID.
+  ///
+  /// Firestore document IDs must not contain `/` (path separator). Spaces and
+  /// other non-alphanumeric characters are replaced with `_` to keep IDs
+  /// readable and safe across all Firestore SDK versions.
+  ///
+  /// The replacement is deterministic, so the same logical key always produces
+  /// the same document ID.
+  static String _sanitizeDocId(String raw) =>
+      raw.replaceAll('/', '_').replaceAll(' ', '_').replaceAll('.', '_');
+
+  /// Derive a deterministic, URL-safe Firestore document ID from the
+  /// completion's natural key.
+  ///
+  /// Format: `<profileId>_<sefariaRef>_<stageId>_<trackType>`
+  ///
+  /// Invalid Firestore doc ID characters (`/`, space, `.`) are replaced with
+  /// `_`. The resulting ID is stable across pushes so that re-pushing the same
+  /// completion overwrites the existing document rather than creating a
+  /// duplicate.
+  static String _completionDocId(int profileId, Map<String, dynamic> data) {
+    final ref = _sanitizeDocId(
+      (data['sefariaRef'] ?? data['sefaria_ref']) as String? ?? '',
+    );
+    final stage = (data['stageId'] ?? data['stage_id'])?.toString() ?? '';
+    final tt = _sanitizeDocId(
+      (data['trackType'] ?? data['track_type']) as String? ?? '',
+    );
+    return '${profileId}_${ref}_${stage}_$tt';
+  }
+
   @override
   Future<void> pushCompletion({
     required int profileId,
     required Map<String, dynamic> data,
+    String? docId,
   }) async {
     final collection = _collection(profileId, 'completions');
     if (collection == null) throw _notAuthenticated;
-    await collection.add({...data, 'synced_at': FieldValue.serverTimestamp()});
+    // Use the caller-supplied docId (the outbox entityKey) when available so
+    // the document ID is exactly the same as what OutboxProcessor tracked.
+    // Fall back to deriving the ID from payload fields for callers that do not
+    // supply an entityKey (e.g. direct gateway use in tests).
+    final id = docId != null ? _sanitizeDocId(docId) : _completionDocId(profileId, data);
+    await collection.doc(id).set(
+      {...data, 'synced_at': FieldValue.serverTimestamp()},
+      SetOptions(merge: true),
+    );
+  }
+
+  @override
+  Future<void> pushCompletionsBatch({
+    required int profileId,
+    required List<Map<String, dynamic>> items,
+  }) async {
+    if (items.isEmpty) return;
+    final collection = _collection(profileId, 'completions');
+    if (collection == null) throw _notAuthenticated;
+
+    const chunkSize = 500;
+    for (var start = 0; start < items.length; start += chunkSize) {
+      final end = (start + chunkSize).clamp(0, items.length);
+      final chunk = items.sublist(start, end);
+      final batch = _firestore.batch();
+      for (final data in chunk) {
+        // Use _entityKey when present (injected by OutboxPushPipeline.pushCompletionsBatch);
+        // fall back to computing from payload fields for direct gateway callers.
+        final entityKey = data['_entityKey'] as String?;
+        final id = entityKey != null
+            ? _sanitizeDocId(entityKey)
+            : _completionDocId(profileId, data);
+        // Strip internal bookkeeping key before writing to Firestore.
+        final payload = entityKey != null
+            ? (Map<String, dynamic>.from(data)..remove('_entityKey'))
+            : data;
+        batch.set(
+          collection.doc(id),
+          {...payload, 'synced_at': FieldValue.serverTimestamp()},
+          SetOptions(merge: true),
+        );
+      }
+      await batch.commit();
+    }
   }
 
   @override
@@ -396,9 +471,19 @@ class FirestoreGatewayImpl implements FirestoreGateway {
     final ref = _collection(profileId, collection);
     if (ref == null) return const Stream.empty();
     return ref.snapshots().map(
-      (s) => s.docs
-          .map((d) => _normalizeRow({...d.data(), 'firestore_id': d.id}))
-          .toList(growable: false),
+      (s) =>
+          // RC4 fix: filter out documents that still have pending local writes
+          // (hasPendingWrites = true). These are self-writes from this device
+          // that have not yet been confirmed by the server. Emitting them would
+          // cause the merge pipeline to re-process the same completion that was
+          // just pushed — producing a listener echo storm.
+          //
+          // Only server-confirmed documents (hasPendingWrites = false) are
+          // forwarded to the merge pipeline.
+          s.docs
+              .where((d) => !d.metadata.hasPendingWrites)
+              .map((d) => _normalizeRow({...d.data(), 'firestore_id': d.id}))
+              .toList(growable: false),
     );
   }
 

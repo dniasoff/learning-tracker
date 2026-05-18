@@ -37,6 +37,7 @@ import 'package:learning_tracker/core/sync/firestore_gateway.dart';
 import 'package:learning_tracker/core/sync/outbox/outbox_processor.dart';
 import 'package:learning_tracker/core/sync/outbox/push_pipeline.dart';
 import 'package:learning_tracker/core/sync/push_pipeline_impl.dart';
+import 'package:learning_tracker/core/time/local_day_clock.dart';
 import 'package:test/test.dart';
 
 import '../helpers/drift_memory.dart';
@@ -184,6 +185,7 @@ void main() {
         processor = OutboxProcessor(
           outboxDao: db.outboxDao,
           pipeline: pipeline,
+          clock: FakeLocalDayClock(DateTime.utc(2026, 5, 14)),
         );
         trackId = await _seedTrack(db);
       });
@@ -262,11 +264,12 @@ void main() {
         );
       });
 
-      test('drain() does not silently absorb failures — a single broken row '
-          'is retained for retry while siblings still flush', () async {
+      test('drain() does not silently absorb failures — a batch error retains '
+          'all rows for retry', () async {
         const profileId = 1;
         gateway.online = true;
-        gateway.failOn = {1}; // fail on the second push (0-indexed)
+        // Fail on the second individual push so pushCompletionsBatch throws.
+        gateway.failOn = {1};
 
         for (var i = 0; i < 3; i++) {
           await writer.commit(
@@ -284,16 +287,19 @@ void main() {
         }
 
         final flushed = await processor.drain(profileId);
-        expect(flushed, equals(2), reason: 'two pushes succeed, one fails');
+        // With batch semantics, a failure anywhere in the batch fails all rows.
+        expect(flushed, equals(0), reason: 'batch failure means no rows counted as success');
 
         final remaining = await db.select(db.outbox).get();
         expect(
           remaining,
-          hasLength(1),
-          reason: 'failed row must remain in outbox for retry',
+          hasLength(3),
+          reason: 'all rows must remain in outbox for retry when batch fails',
         );
-        expect(remaining.single.attempts, equals(1));
-        expect(remaining.single.lastError, isNotNull);
+        for (final row in remaining) {
+          expect(row.attempts, equals(1));
+          expect(row.lastError, isNotNull);
+        }
       });
     },
   );
@@ -376,6 +382,7 @@ class _ToggleableFakeGateway implements FirestoreGateway {
   Future<void> pushCompletion({
     required int profileId,
     required Map<String, dynamic> data,
+    String? docId,
   }) async {
     final attempt = pushAttempts;
     pushAttempts++;
@@ -384,13 +391,23 @@ class _ToggleableFakeGateway implements FirestoreGateway {
       throw Exception('injected failure on attempt $attempt');
     }
     final ref = '${data['sefariaRef']}'.replaceAll(' ', '_');
-    final docId =
+    final id = docId ??
         '${uid}_${profileId}_${ref}_${data['stageId']}_${data['trackType']}';
-    await _fs.collection('completion_events').doc(docId).set({
+    await _fs.collection('completion_events').doc(id).set({
       ...data,
       'uid': uid,
       'profile_id': profileId,
     });
+  }
+
+  @override
+  Future<void> pushCompletionsBatch({
+    required int profileId,
+    required List<Map<String, dynamic>> items,
+  }) async {
+    for (final data in items) {
+      await pushCompletion(profileId: profileId, data: data);
+    }
   }
 
   @override
