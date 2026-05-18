@@ -1119,7 +1119,16 @@ class SyncEngine implements SyncWriteFacade {
     );
 
     var insertedCount = 0;
-    final trackIdCache = <String, int>{};
+    var skippedOrphanProfile = 0;
+    final trackIdCache = <String, int?>{};
+    // completion_events.profileId is an FK to learner_profiles. A remote
+    // completion whose profile was deleted/tombstoned locally must be skipped —
+    // inserting it would fail the FK (SqliteException 787). Gather the live
+    // profile ids once so the per-row check is a cheap set lookup.
+    final existingProfileIds =
+        (await _database.select(_database.learnerProfiles).get())
+            .map((p) => p.id)
+            .toSet();
     for (final remote in remoteCompletions) {
       try {
         final curriculumId =
@@ -1166,6 +1175,12 @@ class SyncEngine implements SyncWriteFacade {
             ? rawProfileId.toInt()
             : int.tryParse(rawProfileId?.toString() ?? '') ?? fallbackProfileId;
 
+        if (!existingProfileIds.contains(profileId)) {
+          // Profile deleted/tombstoned locally — skip rather than orphan-insert.
+          skippedOrphanProfile++;
+          continue;
+        }
+
         final exists = await _database.completionDao.completionExistsByProfile(
           curriculumId: curriculumId,
           sefariaRef: sefariaRef,
@@ -1176,33 +1191,28 @@ class SyncEngine implements SyncWriteFacade {
         );
 
         if (!exists) {
-          final rawTrackId = remote['track_id'] ?? remote['trackId'];
-          final remoteTrackId = rawTrackId is int
-              ? rawTrackId
-              : rawTrackId is num
-              ? rawTrackId.toInt()
-              : int.tryParse(rawTrackId?.toString() ?? '');
-          final resolvedTrackId =
-              remoteTrackId ??
-              await (() async {
-                final key = '$profileId|$curriculumId|$trackType';
-                final cached = trackIdCache[key];
-                if (cached != null) return cached;
-
-                final track =
-                    await (_database.select(_database.curriculumTracks)
-                          ..where(
-                            (t) =>
-                                t.profileId.equals(profileId) &
-                                t.curriculumId.equals(curriculumId) &
-                                t.trackType.equals(trackType),
-                          )
-                          ..limit(1))
-                        .getSingleOrNull();
-                final value = track?.id ?? 0;
-                trackIdCache[key] = value;
-                return value;
-              })();
+          // The remote `track_id` is the SOURCE device's row id and is
+          // meaningless on this device — always resolve the local track by its
+          // natural key. Falls back to null (track_id is nullable) when this
+          // device has no matching track, never a bogus/foreign id.
+          final trackKey = '$profileId|$curriculumId|$trackType';
+          final int? resolvedTrackId;
+          if (trackIdCache.containsKey(trackKey)) {
+            resolvedTrackId = trackIdCache[trackKey];
+          } else {
+            final track =
+                await (_database.select(_database.curriculumTracks)
+                      ..where(
+                        (t) =>
+                            t.profileId.equals(profileId) &
+                            t.curriculumId.equals(curriculumId) &
+                            t.trackType.equals(trackType),
+                      )
+                      ..limit(1))
+                    .getSingleOrNull();
+            resolvedTrackId = track?.id;
+            trackIdCache[trackKey] = resolvedTrackId;
+          }
 
           // C1: write to the canonical event log instead of the completions
           // projection table. INSERT OR IGNORE — idempotent on natural key.
@@ -1225,6 +1235,12 @@ class SyncEngine implements SyncWriteFacade {
       }
     }
 
+    if (skippedOrphanProfile > 0) {
+      _logger.warning(
+        event: 'sync_merge_completions_skipped_orphan_profile',
+        fields: {'count': skippedOrphanProfile},
+      );
+    }
     _logger.debug(
       event: 'sync_merge_completions_done',
       fields: {'insertedCount': insertedCount},
@@ -1245,6 +1261,14 @@ class SyncEngine implements SyncWriteFacade {
     );
 
     var insertedCount = 0;
+    var skippedOrphanProfile = 0;
+    // learning_ledger.profileId is an FK to learner_profiles. A remote entry
+    // whose profile was deleted/tombstoned locally must be skipped — inserting
+    // it would fail the FK (SqliteException 787).
+    final existingProfileIds =
+        (await _database.select(_database.learnerProfiles).get())
+            .map((p) => p.id)
+            .toSet();
     for (final remote in remoteLedgerEntries) {
       try {
         final curriculumId = remote['curriculumId'] as String?;
@@ -1259,6 +1283,12 @@ class SyncEngine implements SyncWriteFacade {
             : int.tryParse(rawPid?.toString() ?? '') ?? 0;
         if (profileId == 0) {
           profileId = fallbackProfileId;
+        }
+
+        if (!existingProfileIds.contains(profileId)) {
+          // Profile deleted/tombstoned locally — skip rather than orphan-insert.
+          skippedOrphanProfile++;
+          continue;
         }
 
         if (curriculumId == null ||
@@ -1308,6 +1338,12 @@ class SyncEngine implements SyncWriteFacade {
       }
     }
 
+    if (skippedOrphanProfile > 0) {
+      _logger.warning(
+        event: 'sync_merge_ledger_entries_skipped_orphan_profile',
+        fields: {'count': skippedOrphanProfile},
+      );
+    }
     _logger.debug(
       event: 'sync_merge_ledger_entries_done',
       fields: {'insertedCount': insertedCount},

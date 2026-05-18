@@ -124,28 +124,21 @@ class AccountManagementService {
 
   /// Clears all data from the local database.
   ///
-  /// Deletes all rows from every table in the user database.
-  /// Order matters: child tables (with FK references) before parent tables.
+  /// Wipes EVERY table. Foreign-key enforcement is disabled for the duration
+  /// so delete order is irrelevant and this cannot silently rot when a new
+  /// table is added — a prior hand-maintained list had missed the `outbox`
+  /// table (and `daily_plans`), leaving stale pending pushes alive after an
+  /// account deletion.
   Future<void> _clearLocalDatabase() async {
-    await _database.transaction(() async {
-      // Child / leaf tables first
-      await _database.delete(_database.syncQueue).go();
-      await _database.delete(_database.completions).go();
-      await _database.delete(_database.bookmarks).go();
-      await _database.delete(_database.learningLedger).go();
-      await _database.delete(_database.learningOrder).go();
-      await _database.delete(_database.goals).go();
-      await _database.delete(_database.streaks).go();
-      await _database.delete(_database.pointConfigs).go();
-      await _database.delete(_database.stageDefinitions).go();
-      await _database.delete(_database.studyDayConfigs).go();
-      await _database.delete(_database.curriculumScopes).go();
-      await _database.delete(_database.profilePrograms).go();
-      await _database.delete(_database.textDownloadStatuses).go();
-      // Parent tables
-      await _database.delete(_database.curriculumTracks).go();
-      await _database.delete(_database.learnerProfiles).go();
-      await _database.delete(_database.accounts).go();
-    });
+    await _database.customStatement('PRAGMA foreign_keys = OFF');
+    try {
+      await _database.transaction(() async {
+        for (final table in _database.allTables) {
+          await _database.delete(table).go();
+        }
+      });
+    } finally {
+      await _database.customStatement('PRAGMA foreign_keys = ON');
+    }
   }
 }

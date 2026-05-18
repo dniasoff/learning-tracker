@@ -798,6 +798,58 @@ void main() {
         expect(events.single.stageId, equals(3));
       },
     );
+
+    test(
+      'a remote completion for a non-existent profile is skipped, not '
+      'orphan-inserted (no FK 787 crash)',
+      () async {
+        await engine.attachListeners();
+
+        // profile_id 999 has no learner_profiles row. completion_events.profileId
+        // is an FK to learner_profiles — after an account/profile deletion the
+        // parent row is gone. The merge must skip the row, never crash on the
+        // foreign-key constraint.
+        completionsController.add([
+          {
+            'profile_id': 999,
+            'curriculum_id': 'mishnayos',
+            'sefaria_ref': 'Berakhot 5:1',
+            'stage_id': 1,
+            'track_type': 'personal',
+            'completed_at': DateTime.utc(2026, 5, 17, 12).toIso8601String(),
+            'points': 5,
+          },
+        ]);
+
+        await Future<void>.delayed(const Duration(milliseconds: 500));
+
+        expect(
+          await database.completionEventDao.getEventsByProfile(999),
+          isEmpty,
+          reason: 'a completion whose profile has no learner_profiles row '
+              'must be skipped, never orphan-inserted',
+        );
+        // The engine survived — a subsequent valid completion still merges.
+        completionsController.add([
+          {
+            'profile_id': 1,
+            'curriculum_id': 'mishnayos',
+            'sefaria_ref': 'Berakhot 5:2',
+            'stage_id': 1,
+            'track_type': 'personal',
+            'track_id': trackId,
+            'completed_at': DateTime.utc(2026, 5, 17, 13).toIso8601String(),
+            'points': 5,
+          },
+        ]);
+        await Future<void>.delayed(const Duration(milliseconds: 500));
+        expect(
+          (await database.completionEventDao.getEventsByProfile(1)).length,
+          equals(1),
+          reason: 'the orphan skip must not poison later valid merges',
+        );
+      },
+    );
   });
 
   group('S8 — SyncOrchestratorImpl.pullOnLaunch once-per-launch + throttle', () {

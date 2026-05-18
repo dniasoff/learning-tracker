@@ -214,6 +214,23 @@ class ProfileRepositoryImpl implements ProfileRepository {
       await (_db.delete(
         _db.profilePrograms,
       )..where((t) => t.profileId.equals(id))).go();
+      // Canonical event logs + pending-command queue + derived plans.
+      // completion_events / streak_events also cascade off the
+      // learner_profiles delete, but clear them explicitly so the wipe does
+      // not depend on FK-cascade ordering. `outbox` has no FK — without this
+      // its pending pushes for the deleted profile would survive.
+      await (_db.delete(
+        _db.completionEvents,
+      )..where((t) => t.profileId.equals(id))).go();
+      await (_db.delete(
+        _db.streakEvents,
+      )..where((t) => t.profileId.equals(id))).go();
+      await (_db.delete(
+        _db.dailyPlans,
+      )..where((t) => t.profileId.equals(id))).go();
+      await (_db.delete(
+        _db.outbox,
+      )..where((t) => t.profileId.equals(id))).go();
       // Finally delete the profile itself
       await _db.profileDao.deleteProfile(id);
     });

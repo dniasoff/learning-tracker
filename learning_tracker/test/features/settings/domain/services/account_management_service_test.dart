@@ -93,6 +93,31 @@ void main() {
       );
       expect(profile, isNull);
     });
+
+    test('clears the outbox — no pending push survives account deletion',
+        () async {
+      await db
+          .into(db.outbox)
+          .insert(
+            OutboxCompanion.insert(
+              profileId: 1,
+              entityKind: 'completion',
+              entityKey: '1:Berakhot 1:1:1:personal',
+              payload: '{}',
+              createdAt: DateTime.utc(2026, 5, 18),
+            ),
+          );
+      expect(await db.select(db.outbox).get(), isNotEmpty);
+
+      await service.deleteAccount('test-uid');
+
+      expect(
+        await db.select(db.outbox).get(),
+        isEmpty,
+        reason: 'the outbox is a pending-command queue — it must not survive '
+            'account deletion (a stale row would push to the next account)',
+      );
+    });
   });
 
   group('changePassword', () {
