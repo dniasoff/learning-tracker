@@ -6,13 +6,22 @@ Do not start any of these autonomously.
 
 ---
 
-## C1 — Collapse completion tables → single source of truth
+## C1 — Collapse completion tables → single source of truth (70% done)
 
-**What:** The same fact is currently written to `completions`, `completion_events`, and `outbox` in one transaction, then teed to `streak_events` and separately to `learning_ledger`. Consolidate to one append-only event log with derived projections.
+**What remains:** `completion_events` is now canonical (UNIQUE natural key, INSERT OR IGNORE).
+`CompletionWriter` writes `completion_events` first, then derives a `completions` row tagged
+`derivedFromEvents = true`. `purgeHistory` treats the `completions` rows as disposable.
 
-**Why it needs planning:** Schema migration across all DAOs and sync paths. Requires a full migration test harness before touching production code. The multi-table write path also affects the Firestore push layout, so conflict resolution for I-5 depends on this being settled first.
+The remaining step is making the derivation *automatic* — replacing the explicit
+`completions` insert with a Drift view that is backed by `completion_events`
+(filtered by `purgedAt IS NULL`), so the table rows no longer need to be written
+by `CompletionWriter` at all.
 
-**Prerequisite for:** C2, C3, I-5.
+**Why it needs planning:** Requires a schema migration (drop table, create view), code-gen
+regeneration, and verifying that all ~30 `completionDao` read methods still return correct
+results. N3/N5/N6 regression tests must stay green throughout.
+
+**Prerequisite for:** I-5 (conflict resolution is cleaner once the write path is settled).
 
 ---
 
@@ -32,10 +41,17 @@ Invariant N8 regression test guards this. Policy documented in `docs/delete-poli
 
 ---
 
-## I-5 — Two-way cross-device sync
+## I-5 — Two-way cross-device sync (design + harness complete; C1 prerequisite remains)
 
-**What:** Full bidirectional sync so two devices converge to identical state. Changes on either device must propagate reliably.
+**What:** Full bidirectional sync so two devices converge to identical state.
 
-**Why it needs planning:** Requires a conflict-resolution strategy (last-write-wins per field, or CRDT), pull-on-launch with additive merge, and an end-to-end test harness simulating two devices. The multi-table write path (C1) makes conflict resolution ambiguous until that is settled.
+**Done:**
+- Conflict-resolution strategy documented in `docs/sync-conflict-resolution.md` (hybrid: set-union for event logs, LWW by timestamp for mutable documents).
+- All 7 entity mergers audited and confirmed aligned with the strategy.
+- Two-device convergence test harness at `test/integration/two_device_sync_test.dart` (3 scenarios: set-union, LWW deactivation propagation, idempotent re-merge).
 
-**Recommended sequencing:** Complete C1 → C2 → C3 first, then design I-5.
+**Remaining:**
+- Pull-on-launch guarantee (end-to-end smoke test with real or fake Firestore).
+- C1 must land first before `completions` can be included in the convergence guarantee — until then, only `completion_events` rows are synced.
+
+**Prerequisite:** C1 (collapse `completions` table to a Drift view projection).
