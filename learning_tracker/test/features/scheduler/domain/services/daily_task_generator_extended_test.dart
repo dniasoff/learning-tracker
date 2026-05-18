@@ -70,6 +70,7 @@ void main() {
 
   setUp(() async {
     db = createTestDatabase();
+    await seedProfileZero(db);
 
     trackIdMishnayos = await insertTrack(mishnayos);
     trackIdBavli = await insertTrack(bavli);

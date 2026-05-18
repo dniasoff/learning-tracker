@@ -74,6 +74,7 @@ void main() {
 
       setUp(() async {
         db = createTestDatabase();
+        await seedProfile(db);
         trackId = await _insertTrack(db);
         profileRepo = ProfileRepositoryImpl(db);
       });
@@ -548,6 +549,7 @@ void main() {
 
       setUp(() async {
         db = createTestDatabase();
+        await seedProfile(db);
         await _insertTrack(db);
       });
 
@@ -724,6 +726,7 @@ void main() {
 
       setUp(() async {
         db = createTestDatabase();
+        await seedProfile(db);
         await _insertTrack(db);
       });
 
@@ -877,6 +880,7 @@ void main() {
 
       setUp(() async {
         db = createTestDatabase();
+        await seedProfile(db);
         trackId = await _insertTrack(db);
         profileRepo = ProfileRepositoryImpl(db);
       });
@@ -1073,6 +1077,7 @@ void main() {
 
       setUp(() async {
         db = createTestDatabase();
+        await seedProfile(db);
         trackId = await _insertTrack(db);
         profileRepo = ProfileRepositoryImpl(db);
       });
@@ -1525,6 +1530,7 @@ void main() {
 
     setUp(() async {
       db = createTestDatabase();
+      await seedProfile(db);
       trackId = await _insertTrack(db);
     });
 
@@ -2002,6 +2008,7 @@ void main() {
 
     setUp(() async {
       db = createTestDatabase();
+      await seedProfile(db);
       trackId = await _insertTrack(db);
       wizardService = LearningProcessWizardService(
         stageDao: db.stageDao,
@@ -2268,6 +2275,7 @@ void main() {
 
     setUp(() async {
       db = createTestDatabase();
+      await seedProfile(db);
       await _insertTrack(db);
     });
 
@@ -2374,6 +2382,7 @@ void main() {
 
     setUp(() async {
       db = createTestDatabase();
+      await seedProfile(db);
       await _insertTrack(db);
       profileRepo = ProfileRepositoryImpl(db);
     });
@@ -2548,6 +2557,7 @@ void main() {
 
     setUp(() async {
       db = createTestDatabase();
+      await seedProfile(db);
       trackId = await _insertTrack(db);
       wizardService = LearningProcessWizardService(
         stageDao: db.stageDao,
@@ -2774,6 +2784,7 @@ void main() {
 
     setUp(() async {
       db = createTestDatabase();
+      await seedProfile(db);
       trackId = await _insertTrack(db);
     });
 
@@ -3075,6 +3086,7 @@ void main() {
 
     setUp(() async {
       db = createTestDatabase();
+      await seedProfile(db);
       trackId = await _insertTrack(db);
     });
 

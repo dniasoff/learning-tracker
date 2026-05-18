@@ -25,6 +25,8 @@ import 'package:mocktail/mocktail.dart';
 import 'package:talker/talker.dart';
 import 'package:test/test.dart';
 
+import '../helpers/drift_memory.dart' show seedProfile;
+
 // ─── Shared helpers ──────────────────────────────────────────────────────────
 
 class _MockSecureStorage extends Mock implements FlutterSecureStorage {}
@@ -249,6 +251,7 @@ void main() {
 
       setUp(() async {
         db = UserDatabase(NativeDatabase.memory());
+        await seedProfile(db);
         // Insert one curriculum track row so the completion FK resolves —
         // see DNI-336 (CompletionWriter) test for the same helper.
         await db

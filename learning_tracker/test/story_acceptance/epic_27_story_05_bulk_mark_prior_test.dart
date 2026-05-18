@@ -51,6 +51,7 @@ void main() {
 
     setUp(() async {
       db = createTestDatabase();
+      await seedProfile(db);
       sync = _MockSyncEngine();
       content = _MockContentRepository();
 

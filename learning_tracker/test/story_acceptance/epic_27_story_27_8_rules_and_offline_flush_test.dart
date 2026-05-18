@@ -176,6 +176,7 @@ void main() {
 
       setUp(() async {
         db = inMemoryDb();
+        await seedProfile(db);
         writer = CompletionWriter(db);
         fakeFs = createFakeFirestore(authenticatedUid: 'uid_offline');
         gateway = _ToggleableFakeGateway(firestore: fakeFs, uid: 'uid_offline');

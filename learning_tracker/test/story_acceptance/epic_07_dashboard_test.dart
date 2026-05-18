@@ -80,6 +80,7 @@ void main() {
         'hebrew_terms_script_p0': true,
       });
       db = createTestDatabase();
+      await seedProfile(db);
       trackId = await _insertTrack(db);
       aggregator = CrossCurriculumAggregator();
     });
@@ -577,6 +578,7 @@ void main() {
 
     setUp(() async {
       db = createTestDatabase();
+      await seedProfile(db);
       trackId = await _insertTrack(db);
     });
 
@@ -917,8 +919,9 @@ void main() {
 
     setUp(() async {
       db = createTestDatabase();
+      await seedProfile(db);
       trackId = await _insertTrack(db);
-      chartService = ChartDataService(db);
+      chartService = ChartDataService(db, profileId: 1);
     });
 
     tearDown(() async {
@@ -932,7 +935,7 @@ void main() {
     }) async {
       await db.completionDao.insertCompletion(
         CompletionsCompanion.insert(
-          profileId: 0,
+          profileId: 1,
           curriculumId: curriculumId,
           sefariaRef: 'ref_${completedAt.millisecondsSinceEpoch}',
           stageId: 1,

@@ -14,8 +14,9 @@ void main() {
   group('Schema v1 smoke tests', () {
     late UserDatabase db;
 
-    setUp(() {
+    setUp(() async {
       db = createTestDatabase();
+      await seedProfile(db); // creates accounts(id=1) + learner_profiles(id=1)
     });
 
     tearDown(() async {
@@ -26,11 +27,11 @@ void main() {
     // 1. Schema version
     // -------------------------------------------------------------------------
 
-    test('schemaVersion is 15', () async {
+    test('schemaVersion is 19', () async {
       final version = await db.customSelect('PRAGMA user_version').map((row) {
         return row.read<int>('user_version');
       }).getSingle();
-      expect(version, equals(15));
+      expect(version, equals(19));
     });
 
     // -------------------------------------------------------------------------
@@ -81,7 +82,7 @@ void main() {
           .into(db.accounts)
           .insert(
             AccountsCompanion.insert(
-              email: 'test@example.com',
+              email: 'accounts-smoke@example.com',
               tier: 'localBorn',
               displayName: 'Test User',
               userMode: 'child',
@@ -93,7 +94,7 @@ void main() {
 
       final row = await db.userProfileDao.getUserProfileById(id);
       expect(row, isNotNull);
-      expect(row!.email, equals('test@example.com'));
+      expect(row!.email, equals('accounts-smoke@example.com'));
     });
 
     // -------------------------------------------------------------------------
@@ -113,12 +114,12 @@ void main() {
             ),
           );
 
-      // Insert with explicit profileId = 2 — should succeed
+      // Insert with explicit profileId = 1 — should succeed
       final id = await db
           .into(db.completions)
           .insert(
             CompletionsCompanion.insert(
-              profileId: 2,
+              profileId: 1,
               curriculumId: 'bavli',
               sefariaRef: 'Berakhot 2a',
               stageId: 1,
@@ -129,9 +130,9 @@ void main() {
           );
       expect(id, greaterThan(0));
 
-      final rows = await db.completionDao.getCompletionsByProfile(2);
+      final rows = await db.completionDao.getCompletionsByProfile(1);
       expect(rows.length, equals(1));
-      expect(rows.first.profileId, equals(2));
+      expect(rows.first.profileId, equals(1));
     });
 
     test('goals.profileId is required (no default)', () async {
@@ -149,7 +150,7 @@ void main() {
       final now = DateTime.now().toUtc();
       final id = await db.goalDao.insertGoal(
         GoalsCompanion.insert(
-          profileId: 3,
+          profileId: 1,
           curriculumId: 'bavli',
           trackId: trackId,
           createdAt: now,
@@ -160,7 +161,7 @@ void main() {
 
       final goal = await db.goalDao.getGoalById(id);
       expect(goal, isNotNull);
-      expect(goal!.profileId, equals(3));
+      expect(goal!.profileId, equals(1));
     });
 
     // -------------------------------------------------------------------------

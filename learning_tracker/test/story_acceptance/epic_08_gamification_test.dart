@@ -44,20 +44,21 @@ void main() {
 
     setUp(() async {
       db = createTestDatabase();
+      await seedProfile(db);
       trackId = await _insertTrack(db);
       final now = DateTime.now();
       await db
           .into(db.goals)
           .insert(
             GoalsCompanion.insert(
-              profileId: 0,
+              profileId: 1,
               curriculumId: 'mishnayos',
               trackId: trackId,
               createdAt: now,
               updatedAt: now,
             ),
           );
-      pointsService = PointsService(db);
+      pointsService = PointsService(db, profileId: 1);
     });
 
     tearDown(() async {
@@ -73,7 +74,7 @@ void main() {
     }) async {
       await db.completionDao.insertCompletion(
         CompletionsCompanion.insert(
-          profileId: 0,
+          profileId: 1,
           curriculumId: curriculumId,
           sefariaRef: sefariaRef,
           stageId: stageId,
@@ -169,8 +170,9 @@ void main() {
 
     setUp(() async {
       db = createTestDatabase();
+      await seedProfile(db);
       trackId = await _insertTrack(db);
-      streakService = StreakService(db);
+      streakService = StreakService(db, profileId: 1);
       log = StreakEventLog(db);
     });
 
@@ -182,7 +184,7 @@ void main() {
     // (post-DNI-337). Old `StreakService.recordCompletion` semantics
     // (incl. grace period) are gone; the reducer is UTC-day only.
     Future<void> recordOn(DateTime utc) => log.append(
-      StreakEvent(profileId: 0, eventType: 'completion', eventTimestamp: utc),
+      StreakEvent(profileId: 1, eventType: 'completion', eventTimestamp: utc),
     );
 
     test('three consecutive UTC days → streak=3 (no grace)', () async {
@@ -193,7 +195,7 @@ void main() {
       final state = await StreakStateProvider(
         db: db,
         clock: FakeLocalDayClock(DateTimeFactory.utc(2026, 3, 12, 15)),
-      ).read(profileId: 0);
+      ).read(profileId: 1);
       expect(state.currentStreak, 3);
       expect(state.maxStreak, 3);
     });
@@ -205,14 +207,14 @@ void main() {
       final state = await StreakStateProvider(
         db: db,
         clock: FakeLocalDayClock(DateTimeFactory.utc(2026, 3, 10, 22)),
-      ).read(profileId: 0);
+      ).read(profileId: 1);
       expect(state.currentStreak, 1);
     });
 
     test('streak calendar returns active dates for range', () async {
       await db.completionDao.insertCompletion(
         CompletionsCompanion.insert(
-          profileId: 0,
+          profileId: 1,
           curriculumId: 'test',
           sefariaRef: 'Genesis.1',
           stageId: 1,
@@ -223,7 +225,7 @@ void main() {
       );
       await db.completionDao.insertCompletion(
         CompletionsCompanion.insert(
-          profileId: 0,
+          profileId: 1,
           curriculumId: 'test',
           sefariaRef: 'Genesis.2',
           stageId: 1,

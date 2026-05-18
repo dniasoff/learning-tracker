@@ -62,7 +62,10 @@ void main() {
     () {
       late UserDatabase db;
 
-      setUp(() => db = inMemoryDb());
+      setUp(() async {
+        db = inMemoryDb();
+        await seedProfile(db);
+      });
       tearDown(() => db.close());
 
       // ── AC1: reducer reconciles a known event sequence ─────────────────

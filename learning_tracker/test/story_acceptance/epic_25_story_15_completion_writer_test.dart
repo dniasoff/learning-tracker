@@ -17,6 +17,8 @@ import 'package:learning_tracker/core/learning/completion_writer.dart';
 import 'package:learning_tracker/core/sync/outbox/outbox_processor.dart';
 import 'package:test/test.dart';
 
+import '../helpers/drift_memory.dart';
+
 // ── helpers ──────────────────────────────────────────────────────────────────
 
 UserDatabase _createDb() => UserDatabase(NativeDatabase.memory());
@@ -74,6 +76,7 @@ void main() {
 
       setUp(() async {
         db = _createDb();
+        await seedProfile(db);
         writer = CompletionWriter(db);
         trackId = await _insertTrack(db);
       });

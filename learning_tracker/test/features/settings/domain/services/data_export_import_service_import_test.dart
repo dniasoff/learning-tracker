@@ -152,16 +152,28 @@ Map<String, dynamic> learningOrderMap({
   'updatedAt': '2026-05-01T00:00:00.000Z',
 };
 
+/// Returns a learnerProfile map (id=1, accountId=1).
+Map<String, dynamic> learnerProfileMap({int id = 1, int accountId = 1}) => {
+  'id': id,
+  'accountId': accountId,
+  'displayName': 'Test User',
+  'mode': 'adult',
+  'avatarIndex': 0,
+  'createdAt': '2026-01-01T00:00:00.000Z',
+  'updatedAt': '2026-01-01T00:00:00.000Z',
+};
+
 void main() {
   late UserDatabase db;
   late DataExportImportService service;
 
-  setUp(() {
+  setUp(() async {
     db = inMemoryDb();
     service = DataExportImportService(
       database: db,
       appVersionFetcher: () async => '1.0.0',
     );
+    await seedProfile(db);
   });
 
   tearDown(() async {
@@ -365,6 +377,7 @@ void main() {
     test('inserts stage definition rows', () async {
       final payload = minimalPayload()
         ..['userProfiles'] = [userProfileMap(id: 1)]
+        ..['learnerProfiles'] = [learnerProfileMap()]
         ..['curriculumTracks'] = [trackMap(id: 1)]
         ..['stageDefinitions'] = [stageMap(trackId: 1)];
 
@@ -431,6 +444,7 @@ void main() {
     test('inserts completion rows', () async {
       final payload = minimalPayload()
         ..['userProfiles'] = [userProfileMap(id: 1)]
+        ..['learnerProfiles'] = [learnerProfileMap()]
         ..['curriculumTracks'] = [trackMap(id: 1)]
         ..['completions'] = [completionMap(trackId: 1, stageId: 1)];
 
@@ -451,6 +465,7 @@ void main() {
     test('inserts completion event rows', () async {
       final payload = minimalPayload()
         ..['userProfiles'] = [userProfileMap(id: 1)]
+        ..['learnerProfiles'] = [learnerProfileMap()]
         ..['completionEvents'] = [
           {
             'profileId': 1,
@@ -517,6 +532,7 @@ void main() {
     test('inserts learning ledger rows', () async {
       final payload = minimalPayload()
         ..['userProfiles'] = [userProfileMap(id: 1)]
+        ..['learnerProfiles'] = [learnerProfileMap()]
         ..['learningLedger'] = [
           {
             'profileId': 1,
@@ -552,6 +568,7 @@ void main() {
     test('inserts bookmark rows', () async {
       final payload = minimalPayload()
         ..['userProfiles'] = [userProfileMap(id: 1)]
+        ..['learnerProfiles'] = [learnerProfileMap()]
         ..['curriculumTracks'] = [trackMap(id: 1)]
         ..['bookmarks'] = [bookmarkMap(trackId: 1)];
 
@@ -611,6 +628,7 @@ void main() {
     test('inserts goal rows', () async {
       final payload = minimalPayload()
         ..['userProfiles'] = [userProfileMap(id: 1)]
+        ..['learnerProfiles'] = [learnerProfileMap()]
         ..['curriculumTracks'] = [trackMap(id: 1)]
         ..['goals'] = [goalMap(trackId: 1)];
 
@@ -623,6 +641,7 @@ void main() {
     test('handles optional targetDate field', () async {
       final payload = minimalPayload()
         ..['userProfiles'] = [userProfileMap(id: 1)]
+        ..['learnerProfiles'] = [learnerProfileMap()]
         ..['curriculumTracks'] = [trackMap(id: 1)]
         ..['goals'] = [
           {...goalMap(trackId: 1), 'targetDate': '2026-12-31T00:00:00.000Z'},
@@ -671,6 +690,8 @@ void main() {
   group('DataExportImportService.importData — streakEvents', () {
     test('inserts streak event rows', () async {
       final payload = minimalPayload()
+        ..['userProfiles'] = [userProfileMap(id: 1)]
+        ..['learnerProfiles'] = [learnerProfileMap()]
         ..['streakEvents'] = [
           {
             'profileId': 1,
@@ -698,28 +719,17 @@ void main() {
   group('DataExportImportService — full round-trip', () {
     test('round-trips all sections via export/import', () async {
       // 1. Populate source database.
+      // seedProfile (in setUp) already created account id=1 and learner
+      // profile id=1. Use profileId=1 throughout so FK constraints are met.
       final now = DateTime.utc(2026, 1, 1);
-
-      // Insert account.
-      final accountId = await db
-          .into(db.accounts)
-          .insert(
-            AccountsCompanion.insert(
-              email: 'user@test.example',
-              tier: 'localBorn',
-              displayName: 'Round-trip User',
-              userMode: 'parent',
-              createdAt: now,
-              updatedAt: now,
-            ),
-          );
+      const profileId = 1;
 
       // Insert track.
       final trackId = await db
           .into(db.curriculumTracks)
           .insert(
             CurriculumTracksCompanion.insert(
-              profileId: accountId,
+              profileId: profileId,
               curriculumId: 'bavli',
               trackType: 'personal',
               activatedAt: now,
@@ -731,7 +741,7 @@ void main() {
           .into(db.stageDefinitions)
           .insert(
             StageDefinitionsCompanion.insert(
-              profileId: accountId,
+              profileId: profileId,
               curriculumId: 'bavli',
               trackId: trackId,
               stageOrder: 1,
@@ -745,7 +755,7 @@ void main() {
           .into(db.pointConfigs)
           .insert(
             PointConfigsCompanion.insert(
-              profileId: accountId,
+              profileId: profileId,
               curriculumId: 'bavli',
               trackId: trackId,
               stageOrder: 1,
@@ -758,7 +768,7 @@ void main() {
           .into(db.completions)
           .insert(
             CompletionsCompanion.insert(
-              profileId: accountId,
+              profileId: profileId,
               curriculumId: 'bavli',
               sefariaRef: 'Berakhot.2a',
               stageId: 1,
@@ -772,7 +782,7 @@ void main() {
       // Insert goal.
       await db.goalDao.insertGoal(
         GoalsCompanion.insert(
-          profileId: accountId,
+          profileId: profileId,
           curriculumId: 'bavli',
           trackId: trackId,
           createdAt: now,
@@ -783,14 +793,14 @@ void main() {
       // Insert streak.
       await db
           .into(db.streaks)
-          .insert(StreaksCompanion.insert(profileId: accountId));
+          .insert(StreaksCompanion.insert(profileId: profileId));
 
       // Insert streak event.
       await db
           .into(db.streakEvents)
           .insert(
             StreakEventsCompanion.insert(
-              profileId: accountId,
+              profileId: profileId,
               eventType: 'study',
               dayUtc: now,
               eventTimestamp: now,
@@ -802,7 +812,7 @@ void main() {
           .into(db.bookmarks)
           .insert(
             BookmarksCompanion.insert(
-              profileId: accountId,
+              profileId: profileId,
               curriculumId: 'bavli',
               trackId: trackId,
               sefariaRef: 'Berakhot.2a',
@@ -815,7 +825,7 @@ void main() {
           .into(db.learningOrder)
           .insert(
             LearningOrderCompanion.insert(
-              profileId: accountId,
+              profileId: profileId,
               curriculumId: 'bavli',
               sefariaRef: 'Berakhot.2a',
               userSortOrder: 1,

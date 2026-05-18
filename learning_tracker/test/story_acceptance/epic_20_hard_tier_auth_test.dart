@@ -11,6 +11,8 @@ import 'package:learning_tracker/features/auth/domain/services/local_auth_servic
 import 'package:learning_tracker/features/auth/domain/services/password_hasher.dart';
 import 'package:learning_tracker/features/sync/domain/merge_rules.dart';
 
+import '../helpers/drift_memory.dart' show seedProfile;
+
 /// End-to-end story acceptance tests for Epic 20 — v2 hard-tier
 /// auth refactor. Covers the contract promised by the v2 architecture
 /// doc §3 and §4 against the implementation that landed in stories
@@ -20,8 +22,9 @@ void main() {
     late UserDatabase db;
     late LocalAuthService localAuth;
 
-    setUp(() {
+    setUp(() async {
       db = UserDatabase(NativeDatabase.memory());
+      await seedProfile(db);
       localAuth = LocalAuthService(
         dao: db.userProfileDao,
         hasher: PasswordHasher(params: Argon2idParams.test),
@@ -46,7 +49,9 @@ void main() {
                 updatedAt: DateTime.utc(2026, 1, 1),
               ),
             );
-        final row = await db.select(db.accounts).getSingle();
+        final row = await (db.select(db.accounts)
+              ..where((t) => t.email.equals('cloud@test.local')))
+            .getSingle();
         expect(row.email, 'cloud@test.local');
         expect(row.firebaseUid, 'fbuid-1');
         expect(row.tier, 'cloudBorn');
@@ -78,8 +83,9 @@ void main() {
         );
 
         final locals = await db.userProfileDao.findByTier(UserTier.localBorn);
-        expect(locals, hasLength(1));
-        expect(locals.first.email, 'b@test.local');
+        // seedProfile adds 1 localBorn account; this test adds another ('b')
+        expect(locals, hasLength(2));
+        expect(locals.any((l) => l.email == 'b@test.local'), isTrue);
 
         expect(
           await db.userProfileDao.findLocalBornByEmail('a@test.local'),
@@ -231,6 +237,21 @@ void main() {
     // ─── Story 20.11 gap: completion tee + reducer integration ─────
     group('Story 20.11 — completion tee pipeline', () {
       test('idempotent tee: same completion twice → one event row', () async {
+        // streak_events.profileId has a FK → learner_profiles(id).
+        // Insert a placeholder profile with id=99 to satisfy the FK.
+        await db
+            .into(db.learnerProfiles)
+            .insert(
+              LearnerProfilesCompanion.insert(
+                id: const Value(99),
+                accountId: 1,
+                displayName: 'Profile 99',
+                mode: 'adult',
+                createdAt: DateTime.utc(2026, 1, 1),
+                updatedAt: DateTime.utc(2026, 1, 1),
+              ),
+            );
+
         final at = DateTime.utc(2026, 3, 1);
         final day = DateTime.utc(at.year, at.month, at.day);
         for (var i = 0; i < 3; i++) {

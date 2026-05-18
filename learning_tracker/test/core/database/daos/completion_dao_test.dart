@@ -10,6 +10,7 @@ void main() {
 
   setUp(() async {
     database = inMemoryDb();
+    await seedProfile(database);
     // Insert a track first to satisfy FK constraint on completions.trackId
     trackId = await database
         .into(database.curriculumTracks)

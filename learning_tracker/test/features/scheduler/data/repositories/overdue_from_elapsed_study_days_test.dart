@@ -107,6 +107,7 @@ void main() {
 
   setUp(() async {
     db = createTestDatabase();
+    await seedProfile(db);
 
     trackId = await _insertTrack(db, activatedAt: activatedAt);
     await _insertLearnStage(db, trackId: trackId);

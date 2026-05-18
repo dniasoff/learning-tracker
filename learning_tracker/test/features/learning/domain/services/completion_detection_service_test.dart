@@ -25,6 +25,7 @@ void main() {
 
   setUp(() async {
     db = createTestDatabase();
+    await seedProfile(db);
     mockGateway = _MockFirestoreGateway();
     mockContentRepo = _MockContentRepository();
     when(

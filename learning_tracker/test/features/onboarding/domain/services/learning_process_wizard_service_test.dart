@@ -26,6 +26,7 @@ void main() {
 
   setUp(() async {
     db = inMemoryDb();
+    await seedProfile(db);
 
     // Insert a track to satisfy the FK on stage_definitions.
     trackId = await db

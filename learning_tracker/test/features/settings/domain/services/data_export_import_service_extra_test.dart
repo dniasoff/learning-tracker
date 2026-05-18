@@ -14,12 +14,13 @@ void main() {
   late UserDatabase db;
   late DataExportImportService service;
 
-  setUp(() {
+  setUp(() async {
     db = inMemoryDb();
     service = DataExportImportService(
       database: db,
       appVersionFetcher: () async => '2.0.0',
     );
+    await seedProfile(db);
   });
 
   tearDown(() async {
@@ -79,8 +80,7 @@ void main() {
         'stageDefinitions',
         'streaks',
         'curriculumTracks',
-        'learnerProfiles',
-        'userProfiles',
+        // 'learnerProfiles' and 'userProfiles' are seeded by setUp; skip them.
       ]) {
         expect(
           decoded[key] as List<dynamic>,

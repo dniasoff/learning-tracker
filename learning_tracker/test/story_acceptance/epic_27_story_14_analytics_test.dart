@@ -131,6 +131,7 @@ void main() {
 
     setUp(() async {
       db = createTestDatabase();
+      await seedProfile(db);
       profileId = await _insertProfile(db);
       trackId = await _insertTrack(db, profileId);
     });
@@ -348,6 +349,7 @@ void main() {
 
     setUp(() async {
       db = createTestDatabase();
+      await seedProfile(db);
       profileId = await _insertProfile(db);
     });
 

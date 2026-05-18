@@ -10,6 +10,8 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:test/test.dart';
 
+import '../helpers/drift_memory.dart' show seedProfile;
+
 void main() {
   group(
     'Story 18.x — restoreOrCreate prevents UNIQUE violation on track recreate',
@@ -17,7 +19,10 @@ void main() {
     () {
       late UserDatabase db;
 
-      setUp(() => db = UserDatabase(NativeDatabase.memory()));
+      setUp(() async {
+        db = UserDatabase(NativeDatabase.memory());
+        await seedProfile(db);
+      });
       tearDown(() => db.close());
 
       test('create → soft-delete → recreate returns same trackId', () async {

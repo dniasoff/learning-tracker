@@ -325,6 +325,7 @@ void main() {
 
     setUp(() async {
       db = createTestDatabase();
+      await seedProfile(db);
       trackId = await _insertTrack(db);
       addTearDown(() => db.close());
 
@@ -413,7 +414,7 @@ void main() {
         await db.bookmarkDao.upsertBookmark(
           curriculumId: CurriculumId.bavli.storageKey,
           trackId: bavliTrackId,
-          profileId: 0,
+          profileId: 1,
           sefariaRef: 'Berakhot.2a',
           updatedAt: DateTime.now().toUtc(),
         );
@@ -746,29 +747,32 @@ void main() {
 
     // ── AC: content_items table removed from Drift schema
 
-    test('content_items table is not in Drift schema', () {
+    test('content_items table is not in Drift schema', () async {
       final db = createTestDatabase();
+      await seedProfile(db);
       addTearDown(() => db.close());
       // The database should not have content_items or
       // curriculum_hierarchy_config tables; they were removed in schema v3.
       // v10 adds deleted_at to curriculum_tracks (DNI-317).
-      expect(db.schemaVersion, equals(15));
+      expect(db.schemaVersion, equals(19));
     });
 
     // ── AC: curriculum_hierarchy_config table removed from Drift schema
 
-    test('curriculum_hierarchy_config table removed from Drift schema', () {
+    test('curriculum_hierarchy_config table removed from Drift schema', () async {
       final db = createTestDatabase();
+      await seedProfile(db);
       addTearDown(() => db.close());
       // Schema v3 drops these tables.
       // v10 adds deleted_at to curriculum_tracks (DNI-317).
-      expect(db.schemaVersion, equals(15));
+      expect(db.schemaVersion, equals(19));
     });
 
     // ── AC: completions/bookmarks/learning_order use sefariaRef FK
 
     test('completions table uses sefariaRef column', () async {
       final db = createTestDatabase();
+      await seedProfile(db);
       addTearDown(() => db.close());
       final trackId = await _insertTrack(db);
 
@@ -795,6 +799,7 @@ void main() {
 
     test('bookmarks table uses sefariaRef column', () async {
       final db = createTestDatabase();
+      await seedProfile(db);
       addTearDown(() => db.close());
       final bTrackId = await _insertTrack(db);
       await db.bookmarkDao.insertBookmark(
@@ -817,6 +822,7 @@ void main() {
 
     test('learning_order table uses sefariaRef column', () async {
       final db = createTestDatabase();
+      await seedProfile(db);
       addTearDown(() => db.close());
       await db.learningOrderDao.insertLearningOrder(
         LearningOrderCompanion.insert(

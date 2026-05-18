@@ -11,10 +11,24 @@ import '../../../../helpers/drift_memory.dart';
 void main() {
   late UserDatabase db;
   late ChartDataService service;
+  late int defaultTrackId;
   const profileId = 1;
 
-  setUp(() {
+  setUp(() async {
     db = inMemoryDb();
+    await seedProfile(db);
+    // Insert default track to satisfy FK on goals and completions.
+    defaultTrackId = await db
+        .into(db.curriculumTracks)
+        .insert(
+          CurriculumTracksCompanion.insert(
+            profileId: profileId,
+            curriculumId: 'mishnayos',
+            trackType: 'personal',
+            isActive: const Value(true),
+            activatedAt: DateTime.utc(2026, 1, 1),
+          ),
+        );
     service = ChartDataService(db, profileId: profileId);
   });
 
@@ -22,27 +36,12 @@ void main() {
     await db.close();
   });
 
-  // Insert a basic curriculum track (needed for FK if any, but not always required).
-  Future<int> insertTrack({String curriculumId = 'mishnayos'}) {
-    return db
-        .into(db.curriculumTracks)
-        .insert(
-          CurriculumTracksCompanion.insert(
-            profileId: profileId,
-            curriculumId: curriculumId,
-            trackType: 'personal',
-            isActive: const Value(true),
-            activatedAt: DateTime.utc(2026, 1, 1),
-          ),
-        );
-  }
-
   Future<void> insertCompletion({
     String curriculumId = 'mishnayos',
     String sefariaRef = 'Berakhot 1:1',
     DateTime? completedAt,
     int stageId = 1,
-    int trackId = 1,
+    int? trackId,
   }) {
     return db
         .into(db.completions)
@@ -53,7 +52,7 @@ void main() {
             sefariaRef: sefariaRef,
             stageId: stageId,
             trackType: 'personal',
-            trackId: trackId,
+            trackId: trackId ?? defaultTrackId,
             completedAt: completedAt ?? DateTime.utc(2026, 5, 14),
           ),
         );
@@ -72,7 +71,7 @@ void main() {
           GoalsCompanion.insert(
             profileId: profileId,
             curriculumId: curriculumId,
-            trackId: 0,
+            trackId: defaultTrackId,
             createdAt: createdAt ?? now,
             updatedAt: updatedAt ?? now,
             targetDate: Value(targetDate),
@@ -123,7 +122,7 @@ void main() {
     test(
       'returns target line points when goal and targetDate are set',
       () async {
-        final trackId = await insertTrack();
+        final trackId = defaultTrackId;
         final goalCreatedAt = DateTime.utc(2026, 5, 1);
         final goalTargetDate = DateTime.utc(2026, 5, 31);
 
@@ -152,7 +151,7 @@ void main() {
     );
 
     test('target line is monotonically non-decreasing within range', () async {
-      final trackId = await insertTrack();
+      final trackId = defaultTrackId;
       final goalCreated = DateTime.utc(2026, 1, 1);
       final goalTarget = DateTime.utc(2026, 12, 31);
 

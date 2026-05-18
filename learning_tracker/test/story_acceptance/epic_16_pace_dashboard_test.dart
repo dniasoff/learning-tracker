@@ -748,6 +748,7 @@ void main() {
         () async {
           final db = createTestDatabase();
           addTearDown(db.close);
+          await seedProfile(db);
           final trackId = await _insertTrack(db);
 
           // Insert stage definitions first
@@ -776,7 +777,7 @@ void main() {
           final now = DateTime.now().toUtc();
           await db.completionDao.insertCompletion(
             CompletionsCompanion.insert(
-              profileId: 0,
+              profileId: 1,
               curriculumId: 'mishnayos',
               sefariaRef: 'Berakhot.1.1',
               stageId: 1,
@@ -788,7 +789,7 @@ void main() {
           );
           await db.completionDao.insertCompletion(
             CompletionsCompanion.insert(
-              profileId: 0,
+              profileId: 1,
               curriculumId: 'mishnayos',
               sefariaRef: 'Berakhot.1.1',
               stageId: 2,
@@ -800,7 +801,7 @@ void main() {
           );
           await db.completionDao.insertCompletion(
             CompletionsCompanion.insert(
-              profileId: 0,
+              profileId: 1,
               curriculumId: 'mishnayos',
               sefariaRef: 'Berakhot.1.1',
               stageId: 2,
@@ -814,7 +815,7 @@ void main() {
           final breakdown = await db.completionDao.getStageBreakdownByItem(
             'mishnayos',
             'Berakhot.1.1',
-            0,
+            1,
           );
           expect(breakdown[1], 1); // stage 1: 1 completion
           expect(breakdown[2], 2); // stage 2: 2 completions
@@ -827,13 +828,14 @@ void main() {
         () async {
           final db = createTestDatabase();
           addTearDown(db.close);
+          await seedProfile(db);
           final trackId = await _insertTrack(db);
 
           final now = DateTime.now().toUtc();
           for (var i = 0; i < 5; i++) {
             await db.completionDao.insertCompletion(
               CompletionsCompanion.insert(
-                profileId: 0,
+                profileId: 1,
                 curriculumId: 'mishnayos',
                 sefariaRef: 'Berakhot.1.1',
                 stageId: i % 2 + 1,
@@ -846,7 +848,7 @@ void main() {
           }
           await db.completionDao.insertCompletion(
             CompletionsCompanion.insert(
-              profileId: 0,
+              profileId: 1,
               curriculumId: 'mishnayos',
               sefariaRef: 'Berakhot.1.2',
               stageId: 1,
@@ -859,7 +861,7 @@ void main() {
 
           final counts = await db.completionDao.getReviewCountsByItem(
             'mishnayos',
-            0,
+            1,
           );
           expect(counts['Berakhot.1.1'], 5);
           expect(counts['Berakhot.1.2'], 1);
@@ -872,12 +874,13 @@ void main() {
         () async {
           final db = createTestDatabase();
           addTearDown(db.close);
+          await seedProfile(db);
           final trackId = await _insertTrack(db);
 
           final now = DateTime.now().toUtc();
           await db.completionDao.insertCompletion(
             CompletionsCompanion.insert(
-              profileId: 0,
+              profileId: 1,
               curriculumId: 'mishnayos',
               sefariaRef: 'Berakhot.1.1',
               stageId: 1,
@@ -889,7 +892,7 @@ void main() {
           );
           await db.completionDao.insertCompletion(
             CompletionsCompanion.insert(
-              profileId: 0,
+              profileId: 1,
               curriculumId: 'mishnayos',
               sefariaRef: 'Berakhot.1.2',
               stageId: 1,
@@ -901,7 +904,7 @@ void main() {
           );
           await db.completionDao.insertCompletion(
             CompletionsCompanion.insert(
-              profileId: 0,
+              profileId: 1,
               curriculumId: 'mishnayos',
               sefariaRef: 'Berakhot.1.2',
               stageId: 2,
@@ -913,7 +916,7 @@ void main() {
           );
 
           final nested = await db.completionDao
-              .getReviewCountsWithStageBreakdown('mishnayos', 0);
+              .getReviewCountsWithStageBreakdown('mishnayos', 1);
           expect(nested.keys, containsAll(['Berakhot.1.1', 'Berakhot.1.2']));
           expect(nested['Berakhot.1.1']![1], 1);
           expect(nested['Berakhot.1.2']![1], 1);
@@ -925,13 +928,24 @@ void main() {
       test('AC-3: review counts are scoped by profileId', () async {
         final db = createTestDatabase();
         addTearDown(db.close);
+        await seedProfile(db);
+        // Seed a second profile for isolation test.
+        await db.into(db.learnerProfiles).insert(
+          LearnerProfilesCompanion.insert(
+            accountId: 1,
+            displayName: 'Test User 2',
+            mode: 'adult',
+            createdAt: DateTime.utc(2026, 1, 1),
+            updatedAt: DateTime.utc(2026, 1, 1),
+          ),
+        );
         final trackId = await _insertTrack(db);
 
         final now = DateTime.now().toUtc();
-        // Profile 0
+        // Profile 1
         await db.completionDao.insertCompletion(
           CompletionsCompanion.insert(
-            profileId: 0,
+            profileId: 1,
             curriculumId: 'mishnayos',
             sefariaRef: 'Berakhot.1.1',
             stageId: 1,
@@ -941,10 +955,10 @@ void main() {
             points: const Value(1),
           ),
         );
-        // Profile 5
+        // Profile 2
         await db.completionDao.insertCompletion(
           CompletionsCompanion.insert(
-            profileId: 5,
+            profileId: 2,
             curriculumId: 'mishnayos',
             sefariaRef: 'Berakhot.1.1',
             stageId: 1,
@@ -955,16 +969,16 @@ void main() {
           ),
         );
 
-        final countsP0 = await db.completionDao.getReviewCountsByItem(
+        final countsP1 = await db.completionDao.getReviewCountsByItem(
           'mishnayos',
-          0,
+          1,
         );
-        final countsP5 = await db.completionDao.getReviewCountsByItem(
+        final countsP2 = await db.completionDao.getReviewCountsByItem(
           'mishnayos',
-          5,
+          2,
         );
-        expect(countsP0['Berakhot.1.1'], 1);
-        expect(countsP5['Berakhot.1.1'], 1);
+        expect(countsP1['Berakhot.1.1'], 1);
+        expect(countsP2['Berakhot.1.1'], 1);
       });
 
       // AC-2: Empty state

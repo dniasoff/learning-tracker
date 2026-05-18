@@ -11,8 +11,28 @@ import '../../../helpers/drift_memory.dart';
 void main() {
   late UserDatabase db;
 
-  setUp(() {
+  setUp(() async {
     db = inMemoryDb();
+    await seedProfile(db);
+    // Seed curriculum tracks so that trackId FK constraints are satisfied.
+    // The helper entries use trackId 1 and 2, so insert both with distinct
+    // track_type values to avoid the unique(profile_id, curriculum_id, track_type) constraint.
+    await db.into(db.curriculumTracks).insert(
+      CurriculumTracksCompanion.insert(
+        profileId: 1,
+        curriculumId: 'mishnayos',
+        trackType: 'personal',
+        activatedAt: DateTime.utc(2026, 1, 1),
+      ),
+    );
+    await db.into(db.curriculumTracks).insert(
+      CurriculumTracksCompanion.insert(
+        profileId: 1,
+        curriculumId: 'mishnayos',
+        trackType: 'amud',
+        activatedAt: DateTime.utc(2026, 1, 1),
+      ),
+    );
   });
 
   tearDown(() async {

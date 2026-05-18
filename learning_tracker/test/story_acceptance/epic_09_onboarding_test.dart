@@ -30,6 +30,8 @@ import 'package:mocktail/mocktail.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:test/test.dart' hide isNotNull, isNull;
 
+import '../helpers/drift_memory.dart' show seedProfile;
+
 class _MockContentRepository extends Mock implements ContentRepository {}
 
 class _MockTrackRepository extends Mock implements TrackRepository {}
@@ -63,6 +65,7 @@ void main() {
 
     setUp(() async {
       db = UserDatabase(NativeDatabase.memory());
+      await seedProfile(db);
       await _insertTrack(db);
       firestorePushes = [];
       profileService = UserProfileService(
@@ -154,6 +157,7 @@ void main() {
 
     setUp(() async {
       db = UserDatabase(NativeDatabase.memory());
+      await seedProfile(db);
       await _insertTrack(db);
     });
 
@@ -265,8 +269,9 @@ void main() {
 
     setUp(() async {
       db = UserDatabase(NativeDatabase.memory());
+      await seedProfile(db);
       trackId = await _insertTrack(db);
-      goalRepo = GoalRepositoryImpl(database: db);
+      goalRepo = GoalRepositoryImpl(database: db, profileId: 1);
     });
 
     tearDown(() async {
@@ -278,7 +283,7 @@ void main() {
       () async {
         final targetDate = DateTime.utc(2027, 6, 15);
         final goal = await goalRepo.createGoal(
-          profileId: 0,
+          profileId: 1,
           curriculumId: CurriculumId.mishnayos,
           trackId: trackId,
           targetPercent: 100.0,
@@ -361,7 +366,7 @@ void main() {
 
       // Set goal for first, skip second
       await goalRepo.createGoal(
-        profileId: 0,
+        profileId: 1,
         curriculumId: CurriculumId.mishnayos,
         trackId: trackId,
         targetPercent: 100.0,
@@ -446,7 +451,7 @@ void main() {
 
     test('goals saved to database and retrievable', () async {
       final goal = await goalRepo.createGoal(
-        profileId: 0,
+        profileId: 1,
         curriculumId: CurriculumId.chumash,
         trackId: trackId,
         targetPercent: 100.0,
@@ -463,7 +468,7 @@ void main() {
     test('user can modify goals later from goal management', () async {
       // Create during onboarding
       final goal = await goalRepo.createGoal(
-        profileId: 0,
+        profileId: 1,
         curriculumId: CurriculumId.mishnayos,
         trackId: trackId,
         targetPercent: 100.0,
@@ -490,7 +495,7 @@ void main() {
 
         // Set goal with deadline for mishnayos
         await goalRepo.createGoal(
-          profileId: 0,
+          profileId: 1,
           curriculumId: CurriculumId.mishnayos,
           trackId: trackId,
           targetPercent: 100.0,
@@ -630,6 +635,7 @@ void main() {
               trackType: req.trackType,
               completedAt: DateTime.now(),
               points: 10,
+              derivedFromEvents: false,
             ),
           ),
         );

@@ -206,7 +206,7 @@ void main() {
 
     test('filter by goalsRefs', () async {
       final rows = await db.managers.curriculumTracks
-          .filter((f) => f.goalsRefs((s) => s.profileId(profId)))
+          .filter((f) => f.goalsRefs((s) => s.profileId.id(profId)))
           .get();
       expect(rows, isNotEmpty);
     });

@@ -90,6 +90,7 @@ void main() {
 
     setUp(() async {
       db = createTestDatabase();
+      await seedProfile(db);
       trackId = await _insertTrack(db);
     });
 

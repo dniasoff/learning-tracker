@@ -23,6 +23,8 @@ import 'package:mocktail/mocktail.dart';
 import 'package:talker/talker.dart';
 import 'package:test/test.dart';
 
+import '../helpers/drift_memory.dart' show seedProfile;
+
 class MockFirestoreDataSource extends Mock implements FirestoreDataSource {}
 
 class _MockFirestoreGateway extends Mock implements FirestoreGateway {}
@@ -114,6 +116,7 @@ void main() {
 
       setUp(() async {
         database = _createInMemoryDatabase();
+        await seedProfile(database);
         await _insertTrack(database);
         mockFirestore = MockFirestoreDataSource();
         mockGateway = _MockFirestoreGateway();
@@ -334,6 +337,7 @@ void main() {
 
     setUp(() async {
       database = _createInMemoryDatabase();
+      await seedProfile(database);
       trackId = await _insertTrack(database);
       mockFirestore = MockFirestoreDataSource();
       mockGateway = _MockFirestoreGateway();
@@ -577,6 +581,7 @@ void main() {
 
       setUp(() async {
         database = _createInMemoryDatabase();
+        await seedProfile(database);
         trackId = await _insertTrack(database);
         mockFirestore = MockFirestoreDataSource();
         mockGateway = _MockFirestoreGateway();
@@ -870,6 +875,24 @@ void main() {
 
     setUp(() async {
       database = _createInMemoryDatabase();
+      // Seed a cloud account matching the mock firebaseUid so restore's
+      // upsertProfile updates it rather than inserting a second account.
+      // Also seeds learnerProfiles(id=1) so completions satisfy profileId FK.
+      await database.userProfileDao.upsertProfile(
+        firebaseUid: 'uid-123',
+        displayName: 'Test User',
+        userMode: 'adult',
+        updatedAt: DateTime.utc(2026, 1, 1),
+      );
+      await database.into(database.learnerProfiles).insert(
+        LearnerProfilesCompanion.insert(
+          accountId: 1,
+          displayName: 'Test User',
+          mode: 'adult',
+          createdAt: DateTime.utc(2026, 1, 1),
+          updatedAt: DateTime.utc(2026, 1, 1),
+        ),
+      );
       trackId = await _insertTrack(database);
       mockFirestore = MockFirestoreDataSource();
       mockGateway = _MockFirestoreGateway();

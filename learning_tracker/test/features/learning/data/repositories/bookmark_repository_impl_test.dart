@@ -32,6 +32,7 @@ void main() {
 
   setUp(() async {
     database = createTestDatabase();
+    await seedProfileZero(database);
     mockSyncEngine = MockSyncEngine();
     mockContentRepository = MockContentRepository();
 

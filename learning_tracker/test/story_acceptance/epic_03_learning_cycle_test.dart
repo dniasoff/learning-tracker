@@ -25,11 +25,13 @@ UserDatabase _db() => createTestDatabase();
 CompletionRepositoryImpl _repo(
   UserDatabase db,
   SyncWriteFacade engine,
-  ContentRepository content,
-) => CompletionRepositoryImpl(
+  ContentRepository content, {
+  int activeProfileId = 1,
+}) => CompletionRepositoryImpl(
   database: db,
   syncEngine: engine,
   contentRepository: content,
+  activeProfileId: activeProfileId,
 );
 
 /// Five-item default stub for ContentRepository.
@@ -52,7 +54,7 @@ Future<int> _insertTrack(UserDatabase db) async {
       .into(db.curriculumTracks)
       .insertReturning(
         CurriculumTracksCompanion.insert(
-          profileId: 0,
+          profileId: 1,
           curriculumId: 'mishnayos',
           trackType: 'personal',
           activatedAt: DateTime.now(),
@@ -76,6 +78,7 @@ void main() {
 
     setUp(() async {
       db = _db();
+      await seedProfile(db);
       await _insertTrack(db);
       syncEngine = _MockSyncEngine();
       contentRepo = _MockContentRepository();
@@ -233,6 +236,7 @@ void main() {
 
     setUp(() async {
       db = _db();
+      await seedProfile(db);
       trackId = await _insertTrack(db);
       syncEngine = _MockSyncEngine();
       contentRepo = _MockContentRepository();
@@ -353,6 +357,7 @@ void main() {
 
     setUp(() async {
       db = _db();
+      await seedProfile(db);
       await _insertTrack(db);
       syncEngine = _MockSyncEngine();
       contentRepo = _MockContentRepository();
@@ -403,7 +408,7 @@ void main() {
           );
         }
 
-        final progressRepo = ProgressRepositoryImpl(database: db);
+        final progressRepo = ProgressRepositoryImpl(database: db, profileId: 1);
         final totalCompleted = await progressRepo.getAggregateCount(
           curriculumId,
         );

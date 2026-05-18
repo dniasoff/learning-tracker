@@ -610,7 +610,7 @@ void main() {
 
     test('orderBy profileId', () async {
       final rows = await db.managers.stageDefinitions
-          .orderBy((o) => o.profileId.asc())
+          .orderBy((o) => o.profileId.id.asc())
           .get();
       expect(rows, hasLength(1));
     });
@@ -673,7 +673,7 @@ void main() {
 
     test('filter by profileId', () async {
       final rows = await db.managers.stageDefinitions
-          .filter((f) => f.profileId(1))
+          .filter((f) => f.profileId.id(1))
           .get();
       expect(rows, hasLength(1));
     });
@@ -913,7 +913,7 @@ void main() {
 
     test('orderBy profileId', () async {
       final rows = await db.managers.completions
-          .orderBy((o) => o.profileId.asc())
+          .orderBy((o) => o.profileId.id.asc())
           .get();
       expect(rows, hasLength(1));
     });
@@ -967,7 +967,7 @@ void main() {
 
     test('filter by profileId', () async {
       final rows = await db.managers.completions
-          .filter((f) => f.profileId(1))
+          .filter((f) => f.profileId.id(1))
           .get();
       expect(rows, hasLength(1));
     });
@@ -1046,7 +1046,7 @@ void main() {
 
     test('orderBy profileId', () async {
       final rows = await db.managers.completionEvents
-          .orderBy((o) => o.profileId.asc())
+          .orderBy((o) => o.profileId.id.asc())
           .get();
       expect(rows, hasLength(1));
     });
@@ -1369,7 +1369,7 @@ void main() {
 
     test('orderBy profileId', () async {
       final rows = await db.managers.learningLedger
-          .orderBy((o) => o.profileId.asc())
+          .orderBy((o) => o.profileId.id.asc())
           .get();
       expect(rows, hasLength(1));
     });
@@ -1460,7 +1460,7 @@ void main() {
 
     test('filter by profileId', () async {
       final rows = await db.managers.learningLedger
-          .filter((f) => f.profileId(1))
+          .filter((f) => f.profileId.id(1))
           .get();
       expect(rows, hasLength(1));
     });
@@ -1542,7 +1542,7 @@ void main() {
 
     test('orderBy profileId', () async {
       final rows = await db.managers.bookmarks
-          .orderBy((o) => o.profileId.asc())
+          .orderBy((o) => o.profileId.id.asc())
           .get();
       expect(rows, hasLength(1));
     });
@@ -1568,7 +1568,7 @@ void main() {
 
     test('filter by profileId', () async {
       final rows = await db.managers.bookmarks
-          .filter((f) => f.profileId(1))
+          .filter((f) => f.profileId.id(1))
           .get();
       expect(rows, hasLength(1));
     });
@@ -1768,7 +1768,7 @@ void main() {
 
     test('orderBy profileId', () async {
       final rows = await db.managers.goals
-          .orderBy((o) => o.profileId.asc())
+          .orderBy((o) => o.profileId.id.asc())
           .get();
       expect(rows, hasLength(1));
     });
@@ -1849,7 +1849,7 @@ void main() {
     });
 
     test('filter by profileId', () async {
-      final rows = await db.managers.goals.filter((f) => f.profileId(1)).get();
+      final rows = await db.managers.goals.filter((f) => f.profileId.id(1)).get();
       expect(rows, hasLength(1));
     });
 
@@ -2056,7 +2056,7 @@ void main() {
 
     test('orderBy profileId', () async {
       final rows = await db.managers.streakEvents
-          .orderBy((o) => o.profileId.asc())
+          .orderBy((o) => o.profileId.id.asc())
           .get();
       expect(rows, hasLength(1));
     });
@@ -2103,7 +2103,7 @@ void main() {
 
     test('filter by profileId', () async {
       final rows = await db.managers.streakEvents
-          .filter((f) => f.profileId(1))
+          .filter((f) => f.profileId.id(1))
           .get();
       expect(rows, hasLength(1));
     });

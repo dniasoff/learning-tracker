@@ -28,6 +28,7 @@ void main() {
 
   setUp(() async {
     db = createTestDatabase();
+    await seedProfile(db);
   });
 
   tearDown(() async {
@@ -89,6 +90,7 @@ void main() {
         completionRepository: SchedulerCompletionRepositoryImpl(
           completionDao: db.completionDao,
           stageDao: db.stageDao,
+          profileId: 1,
         ),
         stageRepository: SchedulerStageRepositoryImpl(stageDao: db.stageDao),
         learningOrderRepository: SchedulerLearningOrderRepositoryImpl(
@@ -121,7 +123,7 @@ void main() {
       for (var i = 0; i < 2; i++) {
         await db.completionDao.insertCompletion(
           CompletionsCompanion.insert(
-            profileId: 0,
+            profileId: 1,
             curriculumId: curriculum.storageKey,
             trackId: trackId,
             sefariaRef: 'Mishnah_Berakhot_1.$i',

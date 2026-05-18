@@ -76,6 +76,7 @@ void main() {
         // shipped in DNI-377; on origin/dev only createTestDatabase() is
         // available, and they are functionally identical.
         db = createTestDatabase();
+        await seedProfile(db);
         profileRepo = ProfileRepositoryImpl(db);
 
         profileA = await profileRepo.createProfile(

@@ -13,6 +13,8 @@ import 'package:learning_tracker/core/enums/cross_profile_scope.dart';
 import 'package:learning_tracker/features/settings/domain/services/data_export_import_service.dart';
 import 'package:test/test.dart';
 
+import '../helpers/drift_memory.dart';
+
 /// Helper: create an in-memory UserDatabase for tests.
 UserDatabase _db() => UserDatabase(NativeDatabase.memory());
 
@@ -96,7 +98,8 @@ void main() {
       test('every user-data row carries profileId', () async {
         final db = _db();
         addTearDown(db.close);
-        const pid = 7;
+        await seedProfile(db);
+        const pid = 1;
 
         // Insert a curriculum track (needed as FK)
         final trackId = await db

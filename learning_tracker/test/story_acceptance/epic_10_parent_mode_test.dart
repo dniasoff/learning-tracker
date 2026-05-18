@@ -20,6 +20,7 @@ import 'package:learning_tracker/features/gamification/domain/services/points_se
 import 'package:learning_tracker/features/parent_mode/domain/services/parent_dashboard_aggregator.dart';
 import 'package:learning_tracker/features/parent_mode/presentation/screens/pin_flow_screen.dart';
 import 'package:learning_tracker/features/parent_mode/presentation/screens/point_config_screen.dart';
+import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/stages/data/repositories/stage_definition_repository_impl.dart';
 import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
@@ -70,7 +71,7 @@ Future<int> _insertTrack(UserDatabase db) async {
       .into(db.curriculumTracks)
       .insertReturning(
         CurriculumTracksCompanion.insert(
-          profileId: 0,
+          profileId: 1,
           curriculumId: 'mishnayos',
           trackType: 'personal',
           activatedAt: DateTime.now(),
@@ -93,6 +94,7 @@ Widget _pointConfigTestApp(UserDatabase db, Widget child) => ProviderScope(
   overrides: [
     userDatabaseProvider.overrideWithValue(db),
     syncEngineProvider.overrideWithValue(null),
+    activeProfileIdProvider.overrideWithValue(1),
   ],
   child: MaterialApp(
     localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -174,6 +176,7 @@ void main() {
 
     test('parent mode access denied for adult accounts', () async {
       final db = createTestDatabase();
+      await seedProfile(db);
       addTearDown(() => db.close());
       await _insertTrack(db);
       await db.userProfileDao.insertUserProfile(
@@ -197,6 +200,7 @@ void main() {
 
     test('parent mode access allowed for child accounts', () async {
       final db = createTestDatabase();
+      await seedProfile(db);
       addTearDown(() => db.close());
       await _insertTrack(db);
       await db.userProfileDao.insertUserProfile(
@@ -211,8 +215,11 @@ void main() {
         ),
       );
       final profiles = await db.userProfileDao.getAllUserProfiles();
+      final childProfile = profiles.firstWhere(
+        (p) => p.email == 'child@test.local',
+      );
       final mode = UserMode.values.firstWhere(
-        (m) => m.name == profiles.first.userMode,
+        (m) => m.name == childProfile.userMode,
         orElse: () => UserMode.adult,
       );
       expect(mode, UserMode.child);
@@ -308,6 +315,7 @@ void main() {
 
     setUp(() async {
       db = createTestDatabase();
+      await seedProfile(db);
       trackId = await _insertTrack(db);
     });
 
@@ -330,7 +338,7 @@ void main() {
       for (var i = 1; i <= stageCount; i++) {
         await db.stageDao.insertStageDefinition(
           StageDefinitionsCompanion.insert(
-            profileId: 0,
+            profileId: 1,
             curriculumId: curriculumId,
             trackId: trackId,
             stageOrder: i,
@@ -345,7 +353,7 @@ void main() {
       for (var i = 0; i < completionCount; i++) {
         await db.completionDao.insertCompletion(
           CompletionsCompanion.insert(
-            profileId: 0,
+            profileId: 1,
             curriculumId: curriculumId,
             sefariaRef: 'ref-$curriculumId-$i',
             stageId: (i % stageCount) + 1,
@@ -371,6 +379,7 @@ void main() {
 
       final aggregator = ParentDashboardAggregator(
         db,
+        profileId: 1,
         stageRepository: StageDefinitionRepositoryImpl(
           stageDao: db.stageDao,
           completionDao: db.completionDao,
@@ -395,7 +404,7 @@ void main() {
         for (var i = 0; i < 3; i++) {
           await db.learningOrderDao.insertLearningOrder(
             LearningOrderCompanion.insert(
-              profileId: 0,
+              profileId: 1,
               curriculumId: 'mishnayos',
               sefariaRef: 'ref-mishnayos-$i',
               userSortOrder: i,
@@ -406,7 +415,7 @@ void main() {
         // 1 stage definition
         await db.stageDao.insertStageDefinition(
           StageDefinitionsCompanion.insert(
-            profileId: 0,
+            profileId: 1,
             curriculumId: 'mishnayos',
             trackId: trackId,
             stageOrder: 1,
@@ -419,7 +428,7 @@ void main() {
         for (var i = 0; i < 2; i++) {
           await db.completionDao.insertCompletion(
             CompletionsCompanion.insert(
-              profileId: 0,
+              profileId: 1,
               curriculumId: 'mishnayos',
               sefariaRef: 'ref-mishnayos-$i',
               stageId: 1,
@@ -434,6 +443,7 @@ void main() {
         await db.activeCurriculumDao.activate(CurriculumId.mishnayos);
         final aggregator = ParentDashboardAggregator(
           db,
+          profileId: 1,
           stageRepository: StageDefinitionRepositoryImpl(
             stageDao: db.stageDao,
             completionDao: db.completionDao,
@@ -453,6 +463,7 @@ void main() {
       await db.activeCurriculumDao.activate(CurriculumId.mishnayos);
       final aggregator = ParentDashboardAggregator(
         db,
+        profileId: 1,
         stageRepository: StageDefinitionRepositoryImpl(
           stageDao: db.stageDao,
           completionDao: db.completionDao,
@@ -482,6 +493,7 @@ void main() {
 
         final aggregator = ParentDashboardAggregator(
           db,
+          profileId: 1,
           stageRepository: StageDefinitionRepositoryImpl(
             stageDao: db.stageDao,
             completionDao: db.completionDao,
@@ -512,7 +524,7 @@ void main() {
       for (var i = 0; i < 2; i++) {
         await db.completionDao.insertCompletion(
           CompletionsCompanion.insert(
-            profileId: 0,
+            profileId: 1,
             curriculumId: 'mishnayos',
             sefariaRef: 'old-ref-$i',
             stageId: 1,
@@ -526,6 +538,7 @@ void main() {
 
       final aggregator = ParentDashboardAggregator(
         db,
+        profileId: 1,
         stageRepository: StageDefinitionRepositoryImpl(
           stageDao: db.stageDao,
           completionDao: db.completionDao,
@@ -558,9 +571,10 @@ void main() {
       );
 
       // Set up streak
-      await db.streakDao.upsertStreak(
+      await db.streakDao.upsertStreakByProfile(
+        1,
         StreaksCompanion.insert(
-          profileId: 0,
+          profileId: 1,
           currentStreak: const Value(5),
           maxStreak: const Value(12),
           lastCompletionDate: Value(now),
@@ -569,6 +583,7 @@ void main() {
 
       final aggregator = ParentDashboardAggregator(
         db,
+        profileId: 1,
         stageRepository: StageDefinitionRepositoryImpl(
           stageDao: db.stageDao,
           completionDao: db.completionDao,
@@ -588,13 +603,14 @@ void main() {
   // ── Story 10.4: Point Value Configuration ────────────────────
 
   group('Story 10.4 -- Point Value Configuration', tags: ['story_10_4'], () {
-    const testProfileId = 0;
+    const testProfileId = 1;
     late UserDatabase db;
     late int trackId;
     late PointsService pointsService;
 
     setUp(() async {
       db = createTestDatabase();
+      await seedProfile(db);
       trackId = await _insertTrack(db);
       pointsService = PointsService(db, profileId: testProfileId);
 

@@ -11,6 +11,7 @@ void main() {
 
     setUp(() async {
       db = createTestDatabase();
+      await seedProfile(db);
       trackId = await db
           .into(db.curriculumTracks)
           .insert(

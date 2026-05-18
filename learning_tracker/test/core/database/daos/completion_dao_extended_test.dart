@@ -40,8 +40,55 @@ CompletionsCompanion _completion({
 void main() {
   late UserDatabase db;
 
-  setUp(() {
+  setUp(() async {
     db = inMemoryDb();
+    await seedProfile(db);
+    // Seed a second learner profile (profileId = 2) for cross-profile tests.
+    await db.into(db.accounts).insert(
+      AccountsCompanion(
+        id: const Value(2),
+        email: const Value('test2@example.com'),
+        tier: const Value('localBorn'),
+        displayName: const Value('Test User 2'),
+        userMode: const Value('adult'),
+        createdAt: Value(DateTime.utc(2026, 1, 1)),
+        updatedAt: Value(DateTime.utc(2026, 1, 1)),
+      ),
+      mode: InsertMode.insertOrIgnore,
+    );
+    await db.into(db.learnerProfiles).insert(
+      LearnerProfilesCompanion(
+        id: const Value(2),
+        accountId: const Value(2),
+        displayName: const Value('Test User 2'),
+        mode: const Value('adult'),
+        createdAt: Value(DateTime.utc(2026, 1, 1)),
+        updatedAt: Value(DateTime.utc(2026, 1, 1)),
+      ),
+      mode: InsertMode.insertOrIgnore,
+    );
+    // Seed curriculum_tracks with the explicit IDs used across all tests.
+    // Each must have a distinct (profileId, curriculumId, trackType) tuple
+    // due to the unique constraint on curriculum_tracks.
+    final trackSeeds = [
+      (id: 1, curriculum: 'mishnayos'),
+      (id: 5, curriculum: 'bavli_5'),
+      (id: 7, curriculum: 'bavli_7'),
+      (id: 10, curriculum: 'bavli'),
+      (id: 20, curriculum: 'bavli_20'),
+    ];
+    for (final seed in trackSeeds) {
+      await db.into(db.curriculumTracks).insert(
+        CurriculumTracksCompanion(
+          id: Value(seed.id),
+          profileId: const Value(1),
+          curriculumId: Value(seed.curriculum),
+          trackType: const Value('personal'),
+          activatedAt: Value(DateTime.utc(2026, 1, 1)),
+        ),
+        mode: InsertMode.insertOrIgnore,
+      );
+    }
   });
 
   tearDown(() async {

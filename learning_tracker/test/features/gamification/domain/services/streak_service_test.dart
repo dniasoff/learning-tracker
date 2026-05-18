@@ -13,7 +13,8 @@ import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/gamification/domain/services/streak_service.dart';
 import 'package:test/test.dart';
 
-import '../../../../helpers/test_database.dart';
+import '../../../../helpers/test_database.dart'
+    show createTestDatabase, seedProfileZero;
 
 void main() {
   late UserDatabase db;
@@ -22,6 +23,7 @@ void main() {
 
   setUp(() async {
     db = createTestDatabase();
+    await seedProfileZero(db); // completions use profileId=0 (StreakService default)
     service = StreakService(db);
 
     final trackRow = await db

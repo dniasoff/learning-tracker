@@ -63,6 +63,7 @@ void main() {
 
     setUp(() async {
       db = createTestDatabase();
+      await seedProfile(db);
       trackId = await _insertTrack(db);
 
       // Set up 3 stages
@@ -102,6 +103,7 @@ void main() {
         completionRepository: SchedulerCompletionRepositoryImpl(
           completionDao: db.completionDao,
           stageDao: db.stageDao,
+          profileId: 1,
         ),
         stageRepository: SchedulerStageRepositoryImpl(stageDao: db.stageDao),
         learningOrderRepository: SchedulerLearningOrderRepositoryImpl(
@@ -145,7 +147,7 @@ void main() {
 
       await db.completionDao.insertCompletion(
         CompletionsCompanion.insert(
-          profileId: 0,
+          profileId: 1,
           curriculumId: curriculum.storageKey,
           sefariaRef: 'Mishnah_Berakhot_1.0',
           stageId: learnId,
@@ -198,6 +200,7 @@ void main() {
 
     setUp(() async {
       db = createTestDatabase();
+      await seedProfile(db);
       trackId = await _insertTrack(db);
 
       await db.stageDao.insertStageDefinition(
@@ -236,6 +239,7 @@ void main() {
         completionRepository: SchedulerCompletionRepositoryImpl(
           completionDao: db.completionDao,
           stageDao: db.stageDao,
+          profileId: 1,
         ),
         stageRepository: SchedulerStageRepositoryImpl(stageDao: db.stageDao),
         learningOrderRepository: SchedulerLearningOrderRepositoryImpl(
@@ -281,7 +285,7 @@ void main() {
         // Actually with delay=0, it's due same day, so 10 days overdue
         await db.completionDao.insertCompletion(
           CompletionsCompanion.insert(
-            profileId: 0,
+            profileId: 1,
             curriculumId: curriculum.storageKey,
             sefariaRef: 'Mishnah_Berakhot_1.0',
             stageId: learnId,
@@ -295,7 +299,7 @@ void main() {
         // Item 1: learned today → Chazara 1 due today (delay=0)
         await db.completionDao.insertCompletion(
           CompletionsCompanion.insert(
-            profileId: 0,
+            profileId: 1,
             curriculumId: curriculum.storageKey,
             sefariaRef: 'Mishnah_Berakhot_1.1',
             stageId: learnId,
@@ -356,7 +360,7 @@ void main() {
 
         await db.completionDao.insertCompletion(
           CompletionsCompanion.insert(
-            profileId: 0,
+            profileId: 1,
             curriculumId: curriculum.storageKey,
             sefariaRef: 'Mishnah_Berakhot_1.0',
             stageId: learnId,
@@ -397,7 +401,7 @@ void main() {
         for (var i = 0; i < 2; i++) {
           await db.completionDao.insertCompletion(
             CompletionsCompanion.insert(
-              profileId: 0,
+              profileId: 1,
               curriculumId: curriculum.storageKey,
               sefariaRef: 'Mishnah_Berakhot_1.$i',
               stageId: learnId,
@@ -457,8 +461,9 @@ void main() {
 
     setUp(() async {
       db = createTestDatabase();
+      await seedProfile(db);
       trackId = await _insertTrack(db);
-      goalRepo = GoalRepositoryImpl(database: db);
+      goalRepo = GoalRepositoryImpl(database: db, profileId: 1);
     });
 
     tearDown(() async {
@@ -472,7 +477,7 @@ void main() {
       () async {
         final targetDate = DateTime(2027, 1, 1, 12, 0); // local time
         final goal = await goalRepo.createGoal(
-          profileId: 0,
+          profileId: 1,
           curriculumId: curriculum,
           trackId: trackId,
           targetPercent: 100.0,
@@ -495,7 +500,7 @@ void main() {
         // (Hebrew date conversion is done by kosher_dart before calling repo)
         final hebrewConverted = DateTime.utc(2027, 9, 16); // 13 Tishrei 5788
         final goal = await goalRepo.createGoal(
-          profileId: 0,
+          profileId: 1,
           curriculumId: curriculum,
           trackId: trackId,
           targetPercent: 100.0,
@@ -515,21 +520,21 @@ void main() {
         final date3 = DateTime.utc(2027, 12, 1);
 
         await goalRepo.createGoal(
-          profileId: 0,
+          profileId: 1,
           curriculumId: curriculum,
           trackId: trackId,
           targetPercent: 100.0,
           targetDate: date1,
         );
         await goalRepo.createGoal(
-          profileId: 0,
+          profileId: 1,
           curriculumId: curriculum,
           trackId: trackId,
           targetPercent: 50.0,
           targetDate: date2,
         );
         await goalRepo.createGoal(
-          profileId: 0,
+          profileId: 1,
           curriculumId: curriculum,
           trackId: trackId,
           targetPercent: 75.0,
@@ -549,7 +554,7 @@ void main() {
       'GoalRepository.updateGoal updates deadline and target percentage',
       () async {
         final goal = await goalRepo.createGoal(
-          profileId: 0,
+          profileId: 1,
           curriculumId: curriculum,
           trackId: trackId,
           targetPercent: 100.0,
@@ -573,14 +578,14 @@ void main() {
       'Goal data keyed by CurriculumId.storageKey — goals independent',
       () async {
         await goalRepo.createGoal(
-          profileId: 0,
+          profileId: 1,
           curriculumId: curriculum,
           trackId: trackId,
           targetPercent: 100.0,
           targetDate: DateTime.utc(2027, 1, 1),
         );
         await goalRepo.createGoal(
-          profileId: 0,
+          profileId: 1,
           curriculumId: chumash,
           trackId: trackId,
           targetPercent: 50.0,
@@ -766,6 +771,7 @@ void main() {
 
     setUp(() async {
       db = createTestDatabase();
+      await seedProfile(db);
       trackId = await _insertTrack(db);
 
       // Set up stage definitions for mishnayos
@@ -882,6 +888,7 @@ void main() {
 
       setUp(() async {
         db = createTestDatabase();
+        await seedProfile(db);
         trackId = await _insertTrack(db);
 
         // Single "Learn only" stage — no chazara stages.
@@ -901,6 +908,7 @@ void main() {
           completionRepository: SchedulerCompletionRepositoryImpl(
             completionDao: db.completionDao,
             stageDao: db.stageDao,
+            profileId: 1,
           ),
           stageRepository: SchedulerStageRepositoryImpl(stageDao: db.stageDao),
           learningOrderRepository: SchedulerLearningOrderRepositoryImpl(
@@ -925,7 +933,7 @@ void main() {
           for (final item in contentItems) {
             await db.completionDao.insertCompletion(
               CompletionsCompanion.insert(
-                profileId: 0,
+                profileId: 1,
                 curriculumId: curriculum.storageKey,
                 sefariaRef: item.sefariaRef,
                 stageId: learnId,
@@ -975,7 +983,7 @@ void main() {
           for (var i = 0; i < 3; i++) {
             await db.completionDao.insertCompletion(
               CompletionsCompanion.insert(
-                profileId: 0,
+                profileId: 1,
                 curriculumId: curriculum.storageKey,
                 sefariaRef: contentItems[i].sefariaRef,
                 stageId: learnId,

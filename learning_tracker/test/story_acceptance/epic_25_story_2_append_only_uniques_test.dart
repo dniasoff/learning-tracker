@@ -18,6 +18,8 @@ import 'package:drift/native.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:test/test.dart';
 
+import '../helpers/drift_memory.dart';
+
 UserDatabase _db() => UserDatabase(NativeDatabase.memory());
 
 void main() {
@@ -215,13 +217,26 @@ void main() {
 
   group('AC5/AC6 — INSERT OR IGNORE collapses duplicates idempotently', () {
     late UserDatabase db;
-    setUp(() => db = _db());
+    setUp(() async {
+      db = _db();
+      await seedProfile(db);
+      // Seed a second profile (id=2) for the "distinct profiles" dedup test.
+      await db.into(db.learnerProfiles).insert(
+        LearnerProfilesCompanion.insert(
+          accountId: 1,
+          displayName: 'Test User 2',
+          mode: 'adult',
+          createdAt: DateTime.utc(2026, 1, 1),
+          updatedAt: DateTime.utc(2026, 1, 1),
+        ),
+      );
+    });
     tearDown(() => db.close());
 
     test(
       'completion_events: duplicate natural key returns same row id',
       () async {
-        const profileId = 7;
+        const profileId = 1;
         const sefariaRef = 'Mishnah Berakhot 1:1';
         const stageId = 1;
         const trackType = 'personal';
@@ -261,7 +276,7 @@ void main() {
     );
 
     test('streak_events: duplicate natural key returns same row id', () async {
-      const profileId = 9;
+      const profileId = 1;
       final dayUtc = DateTime.utc(2026, 5, 13);
 
       final firstId = await db.streakEventDao.appendEvent(
@@ -291,7 +306,7 @@ void main() {
     test(
       'learning_ledger: duplicate (profileId, ulid) returns same row id',
       () async {
-        const profileId = 11;
+        const profileId = 1;
         const ulid = '01HVABCDEFGHJKMNPQRSTVWXYZ';
 
         final firstId = await db.learningLedgerDao.insertEntry(

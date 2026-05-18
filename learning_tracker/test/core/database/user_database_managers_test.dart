@@ -278,7 +278,7 @@ void main() {
       );
 
       final rows = await db.managers.stageDefinitions
-          .filter((f) => f.profileId(profileId))
+          .filter((f) => f.profileId.id(profileId))
           .orderBy((o) => o.stageOrder.asc())
           .get();
       expect(rows, hasLength(2));
@@ -451,7 +451,7 @@ void main() {
           );
 
       final rows = await db.managers.completions
-          .filter((f) => f.profileId(profileId))
+          .filter((f) => f.profileId.id(profileId))
           .get();
       expect(rows, hasLength(1));
 
@@ -511,7 +511,7 @@ void main() {
           );
 
       final rows = await db.managers.completionEvents
-          .filter((f) => f.profileId(profileId))
+          .filter((f) => f.profileId.id(profileId))
           .get();
       expect(rows, hasLength(1));
 
@@ -571,7 +571,7 @@ void main() {
           );
 
       final rows = await db.managers.bookmarks
-          .filter((f) => f.profileId(profileId))
+          .filter((f) => f.profileId.id(profileId))
           .get();
       expect(rows, hasLength(1));
 
@@ -829,7 +829,7 @@ void main() {
           );
 
       final rows = await db.managers.streakEvents
-          .filter((f) => f.profileId(profileId))
+          .filter((f) => f.profileId.id(profileId))
           .get();
       expect(rows, hasLength(1));
 
@@ -875,7 +875,7 @@ void main() {
           );
 
       final rows = await db.managers.streakEvents
-          .filter((f) => f.profileId(profileId))
+          .filter((f) => f.profileId.id(profileId))
           .get();
       final se = rows.first;
 
@@ -972,7 +972,7 @@ void main() {
       }
 
       final rows = await db.managers.learningLedger
-          .filter((f) => f.profileId(profileId))
+          .filter((f) => f.profileId.id(profileId))
           .orderBy((o) => o.completionNumber.asc())
           .get();
       expect(rows, hasLength(3));
@@ -1058,7 +1058,7 @@ void main() {
       }
 
       final rows = await db.managers.goals
-          .filter((f) => f.profileId(profileId))
+          .filter((f) => f.profileId.id(profileId))
           .orderBy((o) => o.targetPercent.asc())
           .get();
       expect(rows, hasLength(3));
@@ -1089,7 +1089,7 @@ void main() {
       }
 
       final rows = await db.managers.bookmarks
-          .filter((f) => f.profileId(profileId))
+          .filter((f) => f.profileId.id(profileId))
           .orderBy((o) => o.sefariaRef.asc())
           .get();
       expect(rows, hasLength(2));

@@ -299,6 +299,7 @@ void main() {
 Completion _fakeCompletion(String ref) {
   return Completion(
     id: 0,
+    profileId: 0,
     curriculumId: 'mishnayos',
     sefariaRef: ref,
     stageId: 1,
@@ -306,7 +307,7 @@ Completion _fakeCompletion(String ref) {
     trackId: 1,
     completedAt: DateTime.now(),
     points: 10,
-    profileId: 0,
+    derivedFromEvents: false,
   );
 }
 

@@ -80,5 +80,6 @@ Completion _makeCompletion(DateTime completedAt) {
     trackId: 1,
     completedAt: completedAt,
     points: 10,
+    derivedFromEvents: false,
   );
 }

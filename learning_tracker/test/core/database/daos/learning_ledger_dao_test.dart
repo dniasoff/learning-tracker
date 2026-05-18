@@ -7,8 +7,28 @@ import '../../../helpers/drift_memory.dart';
 void main() {
   late UserDatabase db;
 
-  setUp(() {
+  setUp(() async {
     db = inMemoryDb();
+    await seedProfile(db);
+    final now = DateTime.now();
+    // Seed a second learner_profile and a curriculum_track for FK coverage.
+    await db.into(db.learnerProfiles).insert(
+      LearnerProfilesCompanion.insert(
+        accountId: 1,
+        displayName: 'Profile 2',
+        mode: 'adult',
+        createdAt: now,
+        updatedAt: now,
+      ),
+    );
+    await db.into(db.curriculumTracks).insert(
+      CurriculumTracksCompanion.insert(
+        profileId: 1,
+        curriculumId: 'mishna',
+        trackType: 'personal',
+        activatedAt: now,
+      ),
+    );
   });
 
   tearDown(() async {
@@ -407,7 +427,7 @@ void main() {
             unitDisplayNameHe: 'ברכות',
             unitDisplayNameEn: 'Berakhot',
             trackType: 'personal',
-            trackId: const Value(42),
+            trackId: const Value(1),
             completedAt: DateTime.utc(2026, 3, 1),
             completionNumber: 1,
             markedBy: 1,
@@ -415,7 +435,7 @@ void main() {
         );
 
         final entries = await db.learningLedgerDao.getEntriesByProfile(1);
-        expect(entries.first.trackId, 42);
+        expect(entries.first.trackId, 1);
       });
     });
   });

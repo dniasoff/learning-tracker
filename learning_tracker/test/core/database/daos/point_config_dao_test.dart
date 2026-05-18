@@ -9,6 +9,18 @@ void main() {
 
   setUp(() async {
     database = inMemoryDb();
+    await seedProfile(database);     // creates accounts(id=1) + learner_profiles(id=1)
+    await seedProfileZero(database); // creates accounts(id=0) + learner_profiles(id=0)
+    // Seed a second profile (id=2) for the multi-profile seedDefaults test.
+    await database.into(database.learnerProfiles).insert(
+      LearnerProfilesCompanion.insert(
+        accountId: 1,
+        displayName: 'Test User 2',
+        mode: 'adult',
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+      ),
+    );
     trackId = await database
         .into(database.curriculumTracks)
         .insert(

@@ -100,7 +100,10 @@ void main() {
       late UserDatabase db;
       const profileId = 1;
 
-      setUp(() => db = inMemoryDb());
+      setUp(() async {
+        db = inMemoryDb();
+        await seedProfile(db);
+      });
       tearDown(() => db.close());
 
       test('0 elapsed days (activatedAt = today) → 0 backfill calls', () async {
@@ -277,7 +280,10 @@ void main() {
       late UserDatabase db;
       const profileId = 1;
 
-      setUp(() => db = inMemoryDb());
+      setUp(() async {
+        db = inMemoryDb();
+        await seedProfile(db);
+      });
       tearDown(() => db.close());
 
       test('soft-deleted track is absent from active-tracks query', () async {
@@ -542,7 +548,10 @@ void main() {
       late UserDatabase db;
       const profileId = 1;
 
-      setUp(() => db = inMemoryDb());
+      setUp(() async {
+        db = inMemoryDb();
+        await seedProfile(db);
+      });
       tearDown(() => db.close());
 
       test('no backfill → getPriorlyShownRefsForTrack returns empty set', () async {
@@ -749,7 +758,10 @@ void main() {
       late UserDatabase db;
       const profileId = 1;
 
-      setUp(() => db = inMemoryDb());
+      setUp(() async {
+        db = inMemoryDb();
+        await seedProfile(db);
+      });
       tearDown(() => db.close());
 
       test('0 completions → count = 0', () async {
@@ -967,7 +979,20 @@ void main() {
     () {
       late UserDatabase db;
 
-      setUp(() => db = inMemoryDb());
+      setUp(() async {
+        db = inMemoryDb();
+        await seedProfile(db);
+        // Seed a second profile so profileId=2 completions satisfy FK.
+        await db.into(db.learnerProfiles).insert(
+          LearnerProfilesCompanion.insert(
+            accountId: 1,
+            displayName: 'Test User 2',
+            mode: 'adult',
+            createdAt: DateTimeFactory.nowUtc(),
+            updatedAt: DateTimeFactory.nowUtc(),
+          ),
+        );
+      });
       tearDown(() => db.close());
 
       test('two profiles have independent completion counts', () async {

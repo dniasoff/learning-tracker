@@ -16,12 +16,13 @@ void main() {
   late UserDatabase db;
   late DataExportImportService service;
 
-  setUp(() {
+  setUp(() async {
     db = inMemoryDb();
     service = DataExportImportService(
       database: db,
       appVersionFetcher: () async => '1.0.0',
     );
+    await seedProfile(db);
   });
 
   tearDown(() async {
@@ -162,6 +163,7 @@ void main() {
     /// Build a minimal valid import payload.
     String buildImportJson({
       List<Map<String, dynamic>> userProfiles = const [],
+      List<Map<String, dynamic>> learnerProfiles = const [],
       List<Map<String, dynamic>> curriculumTracks = const [],
       List<Map<String, dynamic>> goals = const [],
       List<Map<String, dynamic>> completions = const [],
@@ -176,7 +178,7 @@ void main() {
         'exportedAt': '2026-01-01T00:00:00.000Z',
         'appVersion': '1.0.0',
         'userProfiles': userProfiles,
-        'learnerProfiles': <dynamic>[],
+        'learnerProfiles': learnerProfiles,
         'curriculumTracks': curriculumTracks,
         'curriculumScopes': <dynamic>[],
         'profilePrograms': <dynamic>[],
@@ -243,6 +245,27 @@ void main() {
     test('importData imports goals', () async {
       // First import a track (goals have trackId FK).
       final payload = buildImportJson(
+        userProfiles: [
+          {
+            'id': 1,
+            'displayName': 'Test',
+            'tier': 'localBorn',
+            'userMode': 'adult',
+            'createdAt': '2026-01-01T00:00:00.000Z',
+            'updatedAt': '2026-01-01T00:00:00.000Z',
+          },
+        ],
+        learnerProfiles: [
+          {
+            'id': 1,
+            'accountId': 1,
+            'displayName': 'Test',
+            'mode': 'adult',
+            'avatarIndex': 0,
+            'createdAt': '2026-01-01T00:00:00.000Z',
+            'updatedAt': '2026-01-01T00:00:00.000Z',
+          },
+        ],
         curriculumTracks: [
           {
             'id': 1,
@@ -286,6 +309,27 @@ void main() {
     test('importData imports bookmarks', () async {
       // Insert a track first so the bookmark FK is valid.
       final trackPayload = buildImportJson(
+        userProfiles: [
+          {
+            'id': 1,
+            'displayName': 'Test',
+            'tier': 'localBorn',
+            'userMode': 'adult',
+            'createdAt': '2026-01-01T00:00:00.000Z',
+            'updatedAt': '2026-01-01T00:00:00.000Z',
+          },
+        ],
+        learnerProfiles: [
+          {
+            'id': 1,
+            'accountId': 1,
+            'displayName': 'Test',
+            'mode': 'adult',
+            'avatarIndex': 0,
+            'createdAt': '2026-01-01T00:00:00.000Z',
+            'updatedAt': '2026-01-01T00:00:00.000Z',
+          },
+        ],
         curriculumTracks: [
           {
             'id': 1,

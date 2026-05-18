@@ -51,6 +51,7 @@ void main() {
 
     setUp(() async {
       db = createTestDatabase();
+      await seedProfile(db);
       await _insertTrack(db);
       profileService = UserProfileService(
         userProfileDao: db.userProfileDao,
@@ -145,6 +146,7 @@ void main() {
 
     setUp(() async {
       db = createTestDatabase();
+      await seedProfile(db);
       trackId = await _insertTrack(db);
       service = DataExportImportService(
         database: db,
@@ -334,7 +336,8 @@ void main() {
         expect((data['bookmarks'] as List).length, equals(1));
         expect((data['learningOrder'] as List).length, equals(1));
         expect((data['curriculumTracks'] as List).length, equals(2));
-        expect((data['userProfiles'] as List).length, equals(1));
+        // 2 accounts: seedProfile's 'Test User' + seedTestData's upsertProfile
+        expect((data['userProfiles'] as List).length, equals(2));
       },
     );
 
@@ -423,8 +426,9 @@ void main() {
       expect(preview.bookmarkCount, equals(1));
       expect(preview.learningOrderCount, equals(1));
       expect(preview.curriculumTrackCount, equals(2));
-      expect(preview.userProfileCount, equals(1));
-      expect(preview.totalRecords, equals(12));
+      // 2 accounts: seedProfile's 'Test User' + seedTestData's upsertProfile
+      expect(preview.userProfileCount, equals(2));
+      expect(preview.totalRecords, equals(13));
       expect(preview.exportedAt, isNot('unknown'));
       expect(preview.appVersion, equals('1.0.0'));
     });
@@ -487,8 +491,12 @@ void main() {
         expect(bookmarks.length, equals(1));
 
         final profiles = await db.userProfileDao.getAllUserProfiles();
-        expect(profiles.length, equals(1));
-        expect(profiles.first.displayName, equals('Test User'));
+        // 2 accounts: seedProfile's 'Test User' + seedTestData's upsertProfile
+        expect(profiles.length, equals(2));
+        expect(
+          profiles.any((p) => p.displayName == 'Test User'),
+          isTrue,
+        );
       },
     );
 
@@ -608,7 +616,8 @@ void main() {
         equals(2),
       );
       expect((await db.select(db.curriculumTracks).get()).length, equals(2));
-      expect((await db.userProfileDao.getAllUserProfiles()).length, equals(1));
+      // 2 accounts: seedProfile's 'Test User' + seedTestData's upsertProfile
+      expect((await db.userProfileDao.getAllUserProfiles()).length, equals(2));
     });
   });
 
@@ -619,10 +628,11 @@ void main() {
     late UserDatabase db;
     late AccountManagementService service;
 
-    setUp(() {
+    setUp(() async {
       SharedPreferences.setMockInitialValues({});
       mockAuthRepo = MockAuthRepository();
       db = createTestDatabase();
+      await seedProfile(db);
       service = AccountManagementService(
         authRepository: mockAuthRepo,
         database: db,

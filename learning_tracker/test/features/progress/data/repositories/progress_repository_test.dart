@@ -1,25 +1,28 @@
 import 'package:drift/drift.dart' as drift;
-import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/features/progress/data/repositories/progress_repository_impl.dart';
 import 'package:learning_tracker/features/progress/domain/repositories/progress_repository.dart';
 
+import '../../../../helpers/test_database.dart';
+
 void main() {
   late UserDatabase database;
   late ProgressRepository repository;
   late int trackId;
+  const profileId = 1;
 
   setUp(() async {
-    database = UserDatabase(NativeDatabase.memory());
-    repository = ProgressRepositoryImpl(database: database);
+    database = createTestDatabase();
+    await seedProfile(database);
+    repository = ProgressRepositoryImpl(database: database, profileId: profileId);
 
     final trackRow = await database
         .into(database.curriculumTracks)
         .insertReturning(
           CurriculumTracksCompanion.insert(
-            profileId: 0,
+            profileId: profileId,
             curriculumId: 'bavli',
             trackType: 'personal',
             activatedAt: DateTime.now(),
@@ -40,7 +43,7 @@ void main() {
           // Arrange: Insert completions for different tracks
           await database.completionDao.insertCompletion(
             CompletionsCompanion.insert(
-              profileId: 0,
+              profileId: profileId,
               curriculumId: 'bavli',
               trackId: trackId,
               sefariaRef: 'Berakhot.2a',
@@ -52,7 +55,7 @@ void main() {
           );
           await database.completionDao.insertCompletion(
             CompletionsCompanion.insert(
-              profileId: 0,
+              profileId: profileId,
               curriculumId: 'bavli',
               trackId: trackId,
               sefariaRef: 'Berakhot.2b',
@@ -64,7 +67,7 @@ void main() {
           );
           await database.completionDao.insertCompletion(
             CompletionsCompanion.insert(
-              profileId: 0,
+              profileId: profileId,
               curriculumId: 'bavli',
               trackId: trackId,
               sefariaRef: 'Berakhot.3a',
@@ -89,7 +92,7 @@ void main() {
           // Arrange: Insert only personal track completions
           await database.completionDao.insertCompletion(
             CompletionsCompanion.insert(
-              profileId: 0,
+              profileId: profileId,
               curriculumId: 'bavli',
               trackId: trackId,
               sefariaRef: 'Berakhot.2a',
@@ -115,7 +118,7 @@ void main() {
           // Note: Track activation state is managed elsewhere; completions are preserved
           await database.completionDao.insertCompletion(
             CompletionsCompanion.insert(
-              profileId: 0,
+              profileId: profileId,
               curriculumId: 'bavli',
               trackId: trackId,
               sefariaRef: 'Berakhot.2a',
@@ -127,7 +130,7 @@ void main() {
           );
           await database.completionDao.insertCompletion(
             CompletionsCompanion.insert(
-              profileId: 0,
+              profileId: profileId,
               curriculumId: 'bavli',
               trackId: trackId,
               sefariaRef: 'Berakhot.2b',
@@ -160,7 +163,7 @@ void main() {
         // Arrange: Insert completions for different curricula
         await database.completionDao.insertCompletion(
           CompletionsCompanion.insert(
-            profileId: 0,
+            profileId: profileId,
             curriculumId: 'bavli',
             trackId: trackId,
             sefariaRef: 'Berakhot.2a',
@@ -172,7 +175,7 @@ void main() {
         );
         await database.completionDao.insertCompletion(
           CompletionsCompanion.insert(
-            profileId: 0,
+            profileId: profileId,
             curriculumId: 'mishnayos',
             trackId: trackId,
             sefariaRef: 'Berakhot.1.1',
@@ -200,7 +203,7 @@ void main() {
           // Arrange: Insert completions for different tracks
           await database.completionDao.insertCompletion(
             CompletionsCompanion.insert(
-              profileId: 0,
+              profileId: profileId,
               curriculumId: 'bavli',
               trackId: trackId,
               sefariaRef: 'Berakhot.2a',
@@ -212,7 +215,7 @@ void main() {
           );
           await database.completionDao.insertCompletion(
             CompletionsCompanion.insert(
-              profileId: 0,
+              profileId: profileId,
               curriculumId: 'bavli',
               trackId: trackId,
               sefariaRef: 'Berakhot.2b',
@@ -224,7 +227,7 @@ void main() {
           );
           await database.completionDao.insertCompletion(
             CompletionsCompanion.insert(
-              profileId: 0,
+              profileId: profileId,
               curriculumId: 'bavli',
               trackId: trackId,
               sefariaRef: 'Berakhot.3a',
@@ -261,7 +264,7 @@ void main() {
         // Arrange
         await database.completionDao.insertCompletion(
           CompletionsCompanion.insert(
-            profileId: 0,
+            profileId: profileId,
             curriculumId: 'bavli',
             trackId: trackId,
             sefariaRef: 'Berakhot.2a',
@@ -273,7 +276,7 @@ void main() {
         );
         await database.completionDao.insertCompletion(
           CompletionsCompanion.insert(
-            profileId: 0,
+            profileId: profileId,
             curriculumId: 'mishnayos',
             trackId: trackId,
             sefariaRef: 'Berakhot.1.1',

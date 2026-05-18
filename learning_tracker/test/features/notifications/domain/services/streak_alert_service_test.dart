@@ -5,7 +5,8 @@ import 'package:learning_tracker/features/notifications/domain/services/notifica
 import 'package:learning_tracker/features/notifications/domain/services/streak_alert_service.dart';
 import 'package:mocktail/mocktail.dart';
 
-import '../../../../helpers/test_database.dart';
+import '../../../../helpers/test_database.dart'
+    show createTestDatabase, seedProfileZero;
 
 class MockNotificationService extends Mock implements NotificationService {}
 
@@ -18,6 +19,7 @@ void main() {
 
   setUp(() async {
     db = createTestDatabase();
+    await seedProfileZero(db);
     mockNotificationService = MockNotificationService();
 
     // Default clock: noon UTC
@@ -27,7 +29,7 @@ void main() {
         .into(db.curriculumTracks)
         .insertReturning(
           CurriculumTracksCompanion.insert(
-            profileId: 1,
+            profileId: 0,
             curriculumId: 'test',
             trackType: 'review',
             activatedAt: DateTime.now(),

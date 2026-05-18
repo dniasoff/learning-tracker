@@ -76,6 +76,7 @@ void main() {
 
     setUp(() async {
       db = createTestDatabase();
+      await seedProfile(db);
       repo = _MockContentRepository();
 
       final now = DateTime.utc(2026, 5, 1);
@@ -213,6 +214,7 @@ void main() {
 
     setUp(() async {
       db = createTestDatabase();
+      await seedProfile(db);
       repo = _MockContentRepository();
 
       final now = DateTime.utc(2026, 5, 1);
@@ -312,6 +314,7 @@ void main() {
 
     setUp(() async {
       db = createTestDatabase();
+      await seedProfile(db);
       repo = _MockContentRepository();
 
       final now = DateTime.utc(2026, 5, 1);

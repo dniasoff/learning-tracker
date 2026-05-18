@@ -1743,7 +1743,7 @@ void main() {
           );
 
       final rows = await db.managers.completions
-          .filter((f) => f.profileId(profileId))
+          .filter((f) => f.profileId.id(profileId))
           .get();
       expect(rows, hasLength(1));
     });
@@ -1786,7 +1786,7 @@ void main() {
           );
 
       final rows = await db.managers.streakEvents
-          .filter((f) => f.profileId(profileId))
+          .filter((f) => f.profileId.id(profileId))
           .get();
       expect(rows, hasLength(1));
       expect(rows.first.eventType, 'completion');
@@ -1850,7 +1850,7 @@ void main() {
           );
 
       final rows = await db.managers.bookmarks
-          .filter((f) => f.profileId(profileId))
+          .filter((f) => f.profileId.id(profileId))
           .get();
       expect(rows, hasLength(1));
       expect(rows.first.sefariaRef, 'Berakhot 5a');

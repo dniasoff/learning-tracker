@@ -1,6 +1,6 @@
 /// Invariant test net — 2026-05-17 quality crisis.
 ///
-/// Characterization/invariant tests (N1–N7) documenting the correct system
+/// Characterization/invariant tests (N1–N8) documenting the correct system
 /// behaviour. Each becomes the regression anchor for a corresponding repair:
 ///
 ///   N1 → R2  offline-queue drains to 0 after an online flush
@@ -10,6 +10,7 @@
 ///   N5 → R4  restoreOrCreate resets activatedAt; lifetime preserved
 ///   N6 → R5  completion count and progress % share one "done" definition
 ///   N7 → F1  pace-goal projected finish anchors to createdAt, not now
+///   N8 → C3  purgeHistory never decreases completion_events row count
 ///
 /// Rule: a failing test is fixed by changing production code only — never by
 /// weakening the assertion. Each repair ships as one commit: failing test +
@@ -23,6 +24,8 @@ import 'package:drift/drift.dart' show Value;
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
+import 'package:learning_tracker/core/learning/completion_command.dart';
+import 'package:learning_tracker/core/learning/completion_writer.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/sync/firestore_gateway.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
@@ -161,6 +164,7 @@ void main() {
         () async {
           final db = inMemoryDb();
           addTearDown(db.close);
+          await seedProfile(db);
 
           // Create a track for profile 1.
           final originalId = await db.trackDao.restoreOrCreate(
@@ -300,6 +304,7 @@ void main() {
         () async {
           final db = inMemoryDb();
           addTearDown(db.close);
+          await seedProfile(db);
 
           // Seed a track so the FK constraint resolves.
           final trackId = await db.into(db.curriculumTracks).insert(
@@ -353,6 +358,66 @@ void main() {
                 'sefariaRefs (1), not total completion rows (2); otherwise '
                 'the completion count and lifetime-% disagree on what "done" '
                 'means',
+          );
+        },
+      );
+    });
+
+    // ── N8 — purgeHistory never decreases completion_events row count (C3) ───
+
+    group('N8: purgeHistory never decreases completion_events row count', () {
+      test(
+        'purging a track stamps purgedAt on events and keeps row count stable',
+        () async {
+          final db = inMemoryDb();
+          addTearDown(db.close);
+          await seedProfile(db);
+
+          final trackId = await db.trackDao.restoreOrCreate(
+            profileId: 1,
+            curriculumId: CurriculumId.mishnayos,
+            trackType: TrackType.personal,
+          );
+
+          final writer = CompletionWriter(db);
+          for (var i = 1; i <= 4; i++) {
+            await writer.commit(
+              CompletionCommand(
+                profileId: 1,
+                curriculumId: CurriculumId.mishnayos.storageKey,
+                sefariaRef: 'Berakhot $i:1',
+                stageId: 1,
+                trackType: TrackType.personal.storageKey,
+                trackId: trackId,
+                completedAt: DateTimeFactory.nowUtc(),
+                points: 5,
+              ),
+            );
+          }
+
+          final countBefore =
+              (await db.completionEventDao.getEventsByProfile(1)).length;
+
+          await db.trackDao.purgeHistory(trackId);
+
+          final eventsAfter =
+              await db.completionEventDao.getEventsByProfile(1);
+
+          expect(
+            eventsAfter.length,
+            countBefore,
+            reason: 'N8: completion_events row count must never decrease — '
+                'purgeHistory uses tombstones, not deletes',
+          );
+          expect(
+            eventsAfter.every((e) => e.purgedAt != null),
+            isTrue,
+            reason: 'N8: every purged event must have purgedAt set',
+          );
+          expect(
+            await db.completionDao.getCompletionsByProfile(1),
+            isEmpty,
+            reason: 'N8: completions projection must be empty after purge',
           );
         },
       );

@@ -6,8 +6,19 @@ import '../../../helpers/drift_memory.dart';
 void main() {
   late UserDatabase db;
 
-  setUp(() {
+  setUp(() async {
     db = inMemoryDb();
+    await seedProfile(db);
+    final now = DateTime.now();
+    await db.into(db.learnerProfiles).insert(
+      LearnerProfilesCompanion.insert(
+        accountId: 1,
+        displayName: 'Profile 2',
+        mode: 'adult',
+        createdAt: now,
+        updatedAt: now,
+      ),
+    );
   });
 
   tearDown(() async {

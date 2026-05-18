@@ -21,6 +21,18 @@ void main() {
 
   setUp(() async {
     db = inMemoryDb();
+    // Seed two learner profiles so completions/stages satisfy profileId FK.
+    await seedProfile(db);
+    final now = DateTime.now();
+    await db.into(db.learnerProfiles).insert(
+      LearnerProfilesCompanion.insert(
+        accountId: 1,
+        displayName: 'Profile 2',
+        mode: 'adult',
+        createdAt: now,
+        updatedAt: now,
+      ),
+    );
     final t1 = await db
         .into(db.curriculumTracks)
         .insertReturning(

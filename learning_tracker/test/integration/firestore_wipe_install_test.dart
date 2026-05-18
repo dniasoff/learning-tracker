@@ -261,13 +261,9 @@ void main() {
 
       // Phase 4: Merge pulled rows into device B's fresh local DB.
 
-      // Merge completion events via the DAO (INSERT OR IGNORE semantics,
-      // mirroring CompletionEventMerger through the MergeStore seam).
-      for (final row in completionsPage.rows) {
-        await _appendEvent(dbB, row);
-      }
-
-      // Merge learner profile (upsert / LWW).
+      // Merge learner profile first (upsert / LWW) — must precede completion
+      // events so the FK constraint (completion_events.profileId →
+      // learner_profiles.id) is satisfied.
       final profileData = profileSnap.data()!;
       final createdAt = profileData['created_at'] is DateTime
           ? profileData['created_at'] as DateTime
@@ -286,6 +282,12 @@ void main() {
               updatedAt: updatedAt,
             ),
           );
+
+      // Merge completion events via the DAO (INSERT OR IGNORE semantics,
+      // mirroring CompletionEventMerger through the MergeStore seam).
+      for (final row in completionsPage.rows) {
+        await _appendEvent(dbB, row);
+      }
 
       // Phase 5: Assert restored state matches what was pushed.
 
@@ -338,6 +340,10 @@ void main() {
           'points': 10,
         },
       );
+
+      // Seed the learner profile before merging completion_events rows
+      // (FK: completion_events.profileId → learner_profiles.id).
+      await seedProfile(db);
 
       Future<void> pullAndMerge() async {
         final page = await gateway.fetchPage(

@@ -10,6 +10,7 @@ void main() {
 
   setUp(() async {
     database = inMemoryDb();
+    await seedProfile(database);
     trackId = await database
         .into(database.curriculumTracks)
         .insert(

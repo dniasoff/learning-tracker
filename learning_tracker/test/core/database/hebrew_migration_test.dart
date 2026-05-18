@@ -13,6 +13,7 @@ void main() {
 
     setUp(() async {
       db = createTestDatabase();
+      await seedProfile(db);
       bavliTrackId = await db
           .into(db.curriculumTracks)
           .insert(

@@ -24,6 +24,31 @@ void main() {
   setUp(() async {
     SharedPreferences.setMockInitialValues({});
     db = inMemoryDb();
+    await seedProfile(db);
+    // Seed a second learner profile (profileId = 2) for cross-profile tests.
+    await db.into(db.accounts).insert(
+      AccountsCompanion(
+        id: const Value(2),
+        email: const Value('test2@example.com'),
+        tier: const Value('localBorn'),
+        displayName: const Value('Test User 2'),
+        userMode: const Value('adult'),
+        createdAt: Value(DateTime.utc(2026, 1, 1)),
+        updatedAt: Value(DateTime.utc(2026, 1, 1)),
+      ),
+      mode: InsertMode.insertOrIgnore,
+    );
+    await db.into(db.learnerProfiles).insert(
+      LearnerProfilesCompanion(
+        id: const Value(2),
+        accountId: const Value(2),
+        displayName: const Value('Test User 2'),
+        mode: const Value('adult'),
+        createdAt: Value(DateTime.utc(2026, 1, 1)),
+        updatedAt: Value(DateTime.utc(2026, 1, 1)),
+      ),
+      mode: InsertMode.insertOrIgnore,
+    );
     service = RewardMilestoneService(db, profileId: profileId);
   });
 

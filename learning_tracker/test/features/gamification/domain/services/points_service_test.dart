@@ -13,6 +13,7 @@ void main() {
 
   setUp(() async {
     db = createTestDatabase();
+    await seedProfileZero(db);
     service = PointsService(db);
 
     final trackRow = await db

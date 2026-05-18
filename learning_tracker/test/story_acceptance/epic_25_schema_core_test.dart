@@ -54,6 +54,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:talker_flutter/talker_flutter.dart';
 import 'package:test/test.dart';
 
+import '../helpers/drift_memory.dart' show seedProfile;
+
 // ── helpers ──────────────────────────────────────────────────────────────────
 
 UserDatabase _createDb() => UserDatabase(NativeDatabase.memory());
@@ -86,7 +88,10 @@ void main() {
     () {
       late UserDatabase db;
 
-      setUp(() => db = _createDb());
+      setUp(() async {
+        db = _createDb();
+        await seedProfile(db);
+      });
       tearDown(() => db.close());
 
       // ── Helpers ──────────────────────────────────────────────────────────
@@ -325,7 +330,10 @@ void main() {
       group('outbox table', () {
         late UserDatabase db;
 
-        setUp(() => db = _createDb());
+        setUp(() async {
+          db = _createDb();
+          await seedProfile(db);
+        });
         tearDown(() => db.close());
 
         test('can insert a row into the outbox table', () async {
@@ -421,7 +429,10 @@ void main() {
       group('transaction atomicity', () {
         late UserDatabase db;
 
-        setUp(() => db = _createDb());
+        setUp(() async {
+          db = _createDb();
+          await seedProfile(db);
+        });
         tearDown(() => db.close());
 
         test(
@@ -1750,7 +1761,10 @@ void main() {
     () {
       late UserDatabase db;
 
-      setUp(() => db = UserDatabase(NativeDatabase.memory()));
+      setUp(() async {
+        db = UserDatabase(NativeDatabase.memory());
+        await seedProfile(db);
+      });
       tearDown(() => db.close());
 
       // AC: TrackScope is a freezed record threaded through track-aware
@@ -1866,6 +1880,24 @@ void main() {
       // AC: Cross-profile aggregation goes through parentAnalyticsRepository.
       test('ParentAnalyticsRepository is the public surface for '
           'cross-profile reads', () async {
+        // Seed a curriculum track (id=1) and a second profile (id=2).
+        await db.into(db.curriculumTracks).insert(
+          CurriculumTracksCompanion.insert(
+            profileId: 1,
+            curriculumId: 'mishnayos',
+            trackType: 'personal',
+            activatedAt: DateTime.utc(2026, 1, 1),
+          ),
+        );
+        await db.into(db.learnerProfiles).insert(
+          LearnerProfilesCompanion.insert(
+            accountId: 1,
+            displayName: 'Test User 2',
+            mode: 'adult',
+            createdAt: DateTime.utc(2026, 1, 1),
+            updatedAt: DateTime.utc(2026, 1, 1),
+          ),
+        );
         await db.completionDao.insertCompletion(
           CompletionsCompanion.insert(
             profileId: 1,

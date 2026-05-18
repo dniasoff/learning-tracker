@@ -15,8 +15,9 @@ void main() {
   late ParentDashboardAggregator aggregator;
   const profileId = 1;
 
-  setUp(() {
+  setUp(() async {
     db = inMemoryDb();
+    await seedProfile(db);
     aggregator = ParentDashboardAggregator(db, profileId: profileId);
   });
 

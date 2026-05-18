@@ -5,6 +5,8 @@ import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/features/stages/data/repositories/stage_definition_repository_impl.dart';
 
+import '../helpers/test_database.dart' show seedProfile, seedProfileZero;
+
 /// Creates a default curriculum track and returns its ID.
 Future<int> _insertTrack(UserDatabase db) async {
   final row = await db
@@ -30,6 +32,8 @@ void main() {
 
   setUp(() async {
     database = UserDatabase(NativeDatabase.memory());
+    await seedProfile(database);
+    await seedProfileZero(database); // needed by initializeDefaults (profileId=0, DNI-322)
     trackId = await _insertTrack(database);
     pushedSettings = [];
     repository = StageDefinitionRepositoryImpl(

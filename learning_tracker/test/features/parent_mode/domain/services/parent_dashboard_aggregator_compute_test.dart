@@ -18,6 +18,7 @@ void main() {
 
   setUp(() async {
     db = inMemoryDb();
+    await seedProfile(db);
 
     trackId = await db
         .into(db.curriculumTracks)

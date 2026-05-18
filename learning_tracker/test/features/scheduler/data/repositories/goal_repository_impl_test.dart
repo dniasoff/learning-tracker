@@ -13,6 +13,8 @@ void main() {
 
   setUp(() async {
     db = createTestDatabase();
+    await seedProfile(db);
+    await seedProfileZero(db);
     repo = GoalRepositoryImpl(database: db);
 
     final trackRow = await db

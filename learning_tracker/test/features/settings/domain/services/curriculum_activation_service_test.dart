@@ -10,6 +10,8 @@ import 'package:learning_tracker/features/settings/domain/exceptions/last_active
 import 'package:learning_tracker/features/settings/domain/services/curriculum_activation_service.dart';
 import 'package:mocktail/mocktail.dart';
 
+import '../../../../helpers/drift_memory.dart' as drift_helpers;
+
 class MockTrackRepository extends Mock implements TrackRepository {}
 
 Future<void> _dummyPushCurriculumTrack(Map<String, dynamic> data) async {}
@@ -30,6 +32,10 @@ void main() {
       pushCurriculumTrack: _dummyPushCurriculumTrack,
       trackRepository: mockTrackRepository,
     );
+
+    // Seed parent rows required by FK constraints.
+    await drift_helpers.seedProfile(database);
+    await drift_helpers.seedProfileZero(database);
 
     // Mock TrackRepository to create the personal track in the test database
     // (mirrors real impl, skips the cloud push)

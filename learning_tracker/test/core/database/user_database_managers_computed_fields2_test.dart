@@ -357,7 +357,7 @@ void main() {
 
     test('computedField profileId', () async {
       final field = db.managers.stageDefinitions.computedField(
-        (a) => a.profileId,
+        (a) => a.profileId.id,
       );
       expect(
         await db.managers.stageDefinitions.withFields([field]).get(),
@@ -557,7 +557,7 @@ void main() {
     });
 
     test('computedField profileId', () async {
-      final field = db.managers.completions.computedField((a) => a.profileId);
+      final field = db.managers.completions.computedField((a) => a.profileId.id);
       expect(
         await db.managers.completions.withFields([field]).get(),
         isNotEmpty,
@@ -631,7 +631,7 @@ void main() {
 
     test('computedField profileId', () async {
       final field = db.managers.completionEvents.computedField(
-        (a) => a.profileId,
+        (a) => a.profileId.id,
       );
       expect(
         await db.managers.completionEvents.withFields([field]).get(),
@@ -848,7 +848,7 @@ void main() {
 
     test('computedField profileId', () async {
       final field = db.managers.learningLedger.computedField(
-        (a) => a.profileId,
+        (a) => a.profileId.id,
       );
       expect(
         await db.managers.learningLedger.withFields([field]).get(),
@@ -1057,7 +1057,7 @@ void main() {
     });
 
     test('computedField profileId', () async {
-      final field = db.managers.goals.computedField((a) => a.profileId);
+      final field = db.managers.goals.computedField((a) => a.profileId.id);
       expect(await db.managers.goals.withFields([field]).get(), isNotEmpty);
     });
 
@@ -1176,7 +1176,7 @@ void main() {
     });
 
     test('computedField profileId', () async {
-      final field = db.managers.streakEvents.computedField((a) => a.profileId);
+      final field = db.managers.streakEvents.computedField((a) => a.profileId.id);
       expect(
         await db.managers.streakEvents.withFields([field]).get(),
         isNotEmpty,

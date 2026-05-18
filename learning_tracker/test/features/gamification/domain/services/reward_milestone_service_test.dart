@@ -30,6 +30,7 @@ void main() {
   setUp(() async {
     SharedPreferences.setMockInitialValues({});
     db = inMemoryDb();
+    await seedProfile(db);
     service = RewardMilestoneService(db, profileId: profileId);
   });
 

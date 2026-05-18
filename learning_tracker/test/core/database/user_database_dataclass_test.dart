@@ -845,7 +845,7 @@ void main() {
           );
 
       final rows = await db.managers.goals
-          .filter((f) => f.profileId(profileId))
+          .filter((f) => f.profileId.id(profileId))
           .get();
       expect(rows, hasLength(1));
     });

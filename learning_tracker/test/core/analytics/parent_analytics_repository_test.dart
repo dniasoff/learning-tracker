@@ -32,8 +32,29 @@ void main() {
     late UserDatabase db;
     late ParentAnalyticsRepository repo;
 
-    setUp(() {
+    setUp(() async {
       db = UserDatabase(NativeDatabase.memory());
+      // Seed learner_profiles(1,2) and curriculum_tracks(1) for FK constraints.
+      final now = DateTime.utc(2026, 1, 1);
+      for (var i = 0; i < 2; i++) {
+        await db.into(db.learnerProfiles).insert(
+          LearnerProfilesCompanion.insert(
+            accountId: 1,
+            displayName: 'Profile ${i + 1}',
+            mode: 'adult',
+            createdAt: now,
+            updatedAt: now,
+          ),
+        );
+      }
+      await db.into(db.curriculumTracks).insert(
+        CurriculumTracksCompanion.insert(
+          profileId: 1,
+          curriculumId: 'mishnayos',
+          trackType: 'forwards',
+          activatedAt: now,
+        ),
+      );
       repo = ParentAnalyticsRepositoryImpl(db);
     });
 

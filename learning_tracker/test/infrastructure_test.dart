@@ -123,8 +123,8 @@ void main() {
         expect(db, isNotNull);
         expect(
           db.schemaVersion,
-          15,
-        ); // v15: SacredWindowEntries (DNI-367); v14: append-only event tables + UNIQUE composites (DNI-323); v13: outbox table (DNI-326); v12: profileId non-nullable + bookmarks trackId FK (DNI-322)
+          19,
+        ); // v19: current schema version
 
         db.close();
       });

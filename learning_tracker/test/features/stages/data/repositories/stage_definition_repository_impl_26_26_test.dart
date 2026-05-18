@@ -15,6 +15,8 @@ import 'package:learning_tracker/features/stages/domain/exceptions/protected_sta
 import 'package:learning_tracker/features/stages/domain/models/schedule_type.dart';
 import 'package:mocktail/mocktail.dart';
 
+import '../../../../helpers/test_database.dart' show seedProfile, seedProfileZero;
+
 class MockStageDao extends Mock implements StageDao {}
 
 class MockCompletionDao extends Mock implements CompletionDao {}
@@ -38,6 +40,8 @@ Future<
 >
 _makeRealRepo() async {
   final database = db.UserDatabase(NativeDatabase.memory());
+  await seedProfile(database);
+  await seedProfileZero(database); // needed by initializeDefaults (profileId=0, DNI-322)
   final trackId = await database
       .into(database.curriculumTracks)
       .insert(

@@ -2,6 +2,7 @@
 // getCompletionsByTrackAndProfile, getAggregateCountByTrack,
 // completionExistsByTrack, and getCompletionsByDateRangeAndTrack were not
 // exercised by the baseline test.
+import 'package:drift/drift.dart' show Value;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 
@@ -13,6 +14,28 @@ void main() {
 
   setUp(() async {
     db = inMemoryDb();
+    await seedProfile(db);
+    // Seed a second account + profile (id = 2) for cross-profile isolation tests.
+    final account2 = await db.into(db.accounts).insert(
+      AccountsCompanion.insert(
+        email: 'test2@example.com',
+        tier: 'localBorn',
+        displayName: 'Test User 2',
+        userMode: 'adult',
+        createdAt: DateTime.utc(2026, 1, 1),
+        updatedAt: DateTime.utc(2026, 1, 1),
+      ),
+    );
+    await db.into(db.learnerProfiles).insert(
+      LearnerProfilesCompanion.insert(
+        id: const Value(2),
+        accountId: account2,
+        displayName: 'Test User 2',
+        mode: 'adult',
+        createdAt: DateTime.utc(2026, 1, 1),
+        updatedAt: DateTime.utc(2026, 1, 1),
+      ),
+    );
     trackId = await db
         .into(db.curriculumTracks)
         .insert(

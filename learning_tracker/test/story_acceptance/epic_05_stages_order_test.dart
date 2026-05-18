@@ -2,6 +2,7 @@
 @Tags(['epic_5'])
 library;
 
+import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
@@ -13,6 +14,8 @@ import 'package:learning_tracker/features/learning_order/domain/models/learning_
 import 'package:learning_tracker/features/stages/data/repositories/stage_definition_repository_impl.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:test/test.dart';
+
+import '../helpers/drift_memory.dart' show seedProfile;
 
 class _MockContentRepository extends Mock implements ContentRepository {}
 
@@ -59,6 +62,19 @@ void main() {
 
     setUp(() async {
       database = UserDatabase(NativeDatabase.memory());
+      await seedProfile(database);
+      // StageDefinitionRepositoryImpl hardcodes profileId=0 (DNI-322 TODO),
+      // so we also need a learner_profiles row with id=0 to satisfy the FK.
+      await database.into(database.learnerProfiles).insert(
+        LearnerProfilesCompanion.insert(
+          id: const Value(0),
+          accountId: 1,
+          displayName: 'Profile 0 (placeholder)',
+          mode: 'adult',
+          createdAt: DateTime.utc(2026, 1, 1),
+          updatedAt: DateTime.utc(2026, 1, 1),
+        ),
+      );
       trackId = await _insertTrack(database);
       repository = StageDefinitionRepositoryImpl(
         stageDao: database.stageDao,
@@ -133,6 +149,7 @@ void main() {
 
     setUp(() async {
       database = UserDatabase(NativeDatabase.memory());
+      await seedProfile(database);
       await _insertTrack(database);
       mockContent = _MockContentRepository();
       repo = LearningOrderRepositoryImpl(

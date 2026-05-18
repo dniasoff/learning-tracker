@@ -11,10 +11,11 @@ void main() {
   late UserDatabase db;
   late ChartDataService service;
   late int trackId;
-  const profileId = 0;
+  const profileId = 1;
 
   setUp(() async {
     db = inMemoryDb();
+    await seedProfile(db);
     trackId = await db
         .into(db.curriculumTracks)
         .insert(
@@ -25,7 +26,7 @@ void main() {
             activatedAt: DateTime.utc(2026, 1, 1),
           ),
         );
-    service = ChartDataService(db);
+    service = ChartDataService(db, profileId: profileId);
   });
 
   tearDown(() async {

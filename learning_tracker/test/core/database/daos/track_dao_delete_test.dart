@@ -9,13 +9,15 @@ import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
 
-import '../../../helpers/drift_memory.dart';
+import '../../../helpers/drift_memory.dart'
+    show inMemoryDb, seedProfile;
 
 void main() {
   late UserDatabase db;
 
-  setUp(() {
+  setUp(() async {
     db = inMemoryDb();
+    await seedProfile(db);
   });
 
   tearDown(() async {
