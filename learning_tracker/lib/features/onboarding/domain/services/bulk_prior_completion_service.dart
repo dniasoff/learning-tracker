@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:drift/drift.dart';
 import 'package:learning_tracker/core/analytics/analytics_service.dart';
 import 'package:learning_tracker/core/content/hierarchy_selection.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
@@ -7,13 +8,31 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/sync/sync_write_facade.dart';
+import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 import 'package:learning_tracker/features/learning/data/repositories/bookmark_repository_impl.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_request.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/bookmark_repository.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/completion_repository.dart';
+import 'package:learning_tracker/features/stages/domain/repositories/stage_definition_repository.dart';
 
 export 'package:learning_tracker/core/content/hierarchy_selection.dart';
+
+/// Sentinel [DateTime] used by the bulk-mark-prior flow to stamp completions
+/// that represent "learned in the past, not today". Matches
+/// [SchedulerEngine.kBulkPriorSentinel].
+///
+/// This constant is declared here (not in SchedulerEngine) to avoid a
+/// core→features layering violation and is the single source of truth for the
+/// expunge query in [BulkPriorCompletionService.expungePriorCompletions].
+const kBulkPriorSentinel = Duration(
+  // Milliseconds since epoch for DateTime.utc(2000, 1, 1). Used as a
+  // constant so it can be referenced without constructing a DateTime.
+  milliseconds: 946684800000,
+);
+
+/// [DateTime] representation of the bulk-prior sentinel (UTC 2000-01-01).
+final kBulkPriorSentinelDate = DateTime.utc(2000, 1, 1);
 
 /// Result of a bulk prior completion operation.
 class BulkPriorCompletionResult {
@@ -31,8 +50,23 @@ class BulkPriorCompletionResult {
 /// Service for bulk-marking prior completions during onboarding.
 ///
 /// Resolves hierarchy selections (e.g., "all of Seder Zeraim") into
-/// individual leaf items, creates completion records for selected stages,
-/// and sets the bookmark to the first uncompleted item.
+/// individual leaf items, creates completion records for ALL required stages
+/// (learn + every chazara), and sets the bookmark to the first uncompleted
+/// item.
+///
+/// ### B6 — All-stages requirement
+/// Under the item-based completion rule (B1) an item is only "done" when
+/// completion_events exist for **every** stage the track defines. [execute]
+/// therefore looks up the full stage list for the curriculum and unions it
+/// with the caller-supplied [stageIds] before writing completions. This
+/// guarantees that prior-marked items show 100% completion, not 0%.
+///
+/// ### B8 — Expunge API
+/// [expungePriorCompletions] tombstones (sets `purgedAt`) the
+/// completion_events rows that were created by a prior-marking run. Prior
+/// rows are identified by their sentinel `eventTimestamp` of
+/// `DateTime.utc(2000, 1, 1)`. Agent F (UI layer) calls this method when the
+/// user un-selects a previously bulk-marked item.
 class BulkPriorCompletionService {
   final ContentRepository _contentRepository;
   final CompletionRepository _completionRepository;
@@ -40,6 +74,7 @@ class BulkPriorCompletionService {
   final UserDatabase _database;
   final SyncWriteFacade? _syncEngine;
   final AnalyticsService _analytics;
+  final StageDefinitionRepository? _stageRepository;
 
   /// Cached content items from the last [resolveSelections] call.
   List<ContentItem>? _cachedAllItems;
@@ -52,12 +87,14 @@ class BulkPriorCompletionService {
     required UserDatabase database,
     SyncWriteFacade? syncEngine,
     AnalyticsService? analytics,
+    StageDefinitionRepository? stageRepository,
   }) : _contentRepository = contentRepository,
        _completionRepository = completionRepository,
        _bookmarkRepository = bookmarkRepository,
        _database = database,
        _syncEngine = syncEngine,
-       _analytics = analytics ?? const NullAnalyticsService();
+       _analytics = analytics ?? const NullAnalyticsService(),
+       _stageRepository = stageRepository;
 
   /// Resolve hierarchy selections into leaf-level sefariaRefs.
   ///
@@ -105,14 +142,40 @@ class BulkPriorCompletionService {
         .toList();
   }
 
+  /// Resolve the full ordered list of stage IDs for [curriculumId].
+  ///
+  /// Returns the IDs sorted by [StageDefinition.stageOrder]. When no
+  /// [StageDefinitionRepository] is injected (e.g. in tests that do not need
+  /// B6 behaviour) falls back to the [fallback] list (default: `[1]`).
+  Future<List<int>> _allStageIds(
+    CurriculumId curriculumId, {
+    List<int> fallback = const [1],
+  }) async {
+    if (_stageRepository == null) return fallback;
+    final stages = await _stageRepository.getStagesForCurriculum(curriculumId);
+    if (stages.isEmpty) return fallback;
+    final ordered = [...stages]
+      ..sort((a, b) => a.stageOrder.compareTo(b.stageOrder));
+    return ordered.map((s) => s.stageOrder).toList();
+  }
+
   /// Execute bulk mark of prior completions.
   ///
-  /// Creates completion records for all resolved leaf items at the specified
-  /// stages, using the personal track. Runs as a single transaction.
-  /// After completion, sets the bookmark to the first uncompleted item.
+  /// B6 fix: ignores the caller-supplied [stageIds] and instead writes one
+  /// completion record per (item × track-stage) so that every stage defined
+  /// on the track is satisfied. The sentinel timestamp `DateTime.utc(2000,1,1)`
+  /// is written to [completedAt] so downstream consumers (scheduler, streak
+  /// restorer, items-learned screen) can distinguish these prior-mark records
+  /// from genuine learning sessions.
+  ///
+  /// After writing, sets the bookmark to the first uncompleted item.
   Future<BulkPriorCompletionResult> execute({
     required CurriculumId curriculumId,
     required List<ContentItem> resolvedItems,
+
+    /// Caller-supplied stage ids — kept for API compatibility but B6 replaces
+    /// these with the full track stage list. Pass `[1]` from the UI as before;
+    /// the service will union in all remaining stages automatically.
     required List<int> stageIds,
     int? profileId,
     bool awardGamificationPoints = false,
@@ -120,8 +183,18 @@ class BulkPriorCompletionService {
     final sefariaRefs = resolvedItems.map((item) => item.sefariaRef).toList();
     var totalCompletions = 0;
 
+    // B6: determine the full ordered stage list for this track.
+    // Union the caller-supplied ids with every configured stage so that even
+    // if the UI only sends [1] (learn), all chazara stages are also written.
+    final allConfiguredStageIds = await _allStageIds(
+      curriculumId,
+      fallback: stageIds,
+    );
+    final effectiveStageIds = {...stageIds, ...allConfiguredStageIds}.toList()
+      ..sort();
+
     // Create completions for each stage
-    for (final stageId in stageIds) {
+    for (final stageId in effectiveStageIds) {
       final request = BulkCompletionRequest(
         curriculumId: curriculumId.storageKey,
         sefariaRefs: sefariaRefs,
@@ -129,11 +202,7 @@ class BulkPriorCompletionService {
         trackType: TrackType.personal.storageKey,
         profileId: profileId,
         awardGamificationPoints: awardGamificationPoints,
-        completedAt: DateTime.utc(
-          2000,
-          1,
-          1,
-        ), // sentinel: "learned in the past, not today"
+        completedAt: kBulkPriorSentinelDate, // sentinel: "learned in the past"
       );
       final completions = await _completionRepository.bulkMarkComplete(request);
       totalCompletions += completions.length;
@@ -185,6 +254,41 @@ class BulkPriorCompletionService {
       completionCount: totalCompletions,
       bookmarkSefariaRef: bookmarkRef,
     );
+  }
+
+  /// B8 — Tombstone completion_events created by prior-marking for an item.
+  ///
+  /// Sets `purgedAt` to the current UTC timestamp on every row in
+  /// `completion_events` that matches:
+  ///   - `profileId` == [profileId] (or the session default when null)
+  ///   - `sefariaRef` == [sefariaRef]
+  ///   - `trackType` == personal (prior-marks are always on the personal track)
+  ///   - `eventTimestamp` == `DateTime.utc(2000, 1, 1)` — the bulk-prior
+  ///     sentinel date, distinguishing these rows from live-learning records.
+  ///
+  /// C3 invariant: rows are **never deleted** — this is a tombstone write only.
+  /// The `completions_view` (backed by `completion_events WHERE purgedAt IS
+  /// NULL`) will stop returning the row immediately after this call.
+  ///
+  /// Agent F (UI layer) calls this when the user un-selects a previously
+  /// bulk-marked item so the item reverts to "not started" status.
+  Future<void> expungePriorCompletions({
+    required int profileId,
+    required String sefariaRef,
+    required CurriculumId curriculumId,
+  }) async {
+    final purgedAt = DateTimeFactory.nowUtc();
+
+    // Tombstone all prior-mark rows for this item on the personal track.
+    // Prior rows are uniquely identified by the sentinel eventTimestamp.
+    await (_database.update(_database.completionEvents)..where(
+          (t) =>
+              t.profileId.equals(profileId) &
+              t.sefariaRef.equals(sefariaRef) &
+              t.trackType.equals(TrackType.personal.storageKey) &
+              t.eventTimestamp.equals(kBulkPriorSentinelDate),
+        ))
+        .write(CompletionEventsCompanion(purgedAt: Value(purgedAt)));
   }
 
   /// Find the first uncompleted leaf item in learning order.

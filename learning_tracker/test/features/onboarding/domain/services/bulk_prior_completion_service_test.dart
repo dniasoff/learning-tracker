@@ -10,6 +10,9 @@ import 'package:learning_tracker/features/learning/domain/entities/completion_re
 import 'package:learning_tracker/features/learning/domain/repositories/bookmark_repository.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/completion_repository.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/bulk_prior_completion_service.dart';
+import 'package:learning_tracker/features/stages/domain/models/stage_definition.dart'
+    as stage_model;
+import 'package:learning_tracker/features/stages/domain/repositories/stage_definition_repository.dart';
 import 'package:mocktail/mocktail.dart';
 
 class MockContentRepository extends Mock implements ContentRepository {}
@@ -17,6 +20,9 @@ class MockContentRepository extends Mock implements ContentRepository {}
 class MockCompletionRepository extends Mock implements CompletionRepository {}
 
 class MockBookmarkRepository extends Mock implements BookmarkRepository {}
+
+class MockStageDefinitionRepository extends Mock
+    implements StageDefinitionRepository {}
 
 ContentItem _leaf({
   required String ref,
@@ -55,6 +61,16 @@ ContentItem _container({
     isLeaf: false,
   );
 }
+
+/// Minimal [stage_model.StageDefinition] for tests — only [stageOrder] matters.
+stage_model.StageDefinition _stageDef(int order) => stage_model.StageDefinition(
+  id: order,
+  curriculumId: CurriculumId.mishnayos,
+  stageOrder: order,
+  stageName: order == 1 ? 'Learn' : 'Chazara $order',
+  delayDays: 0,
+  isDefault: true,
+);
 
 void main() {
   late MockContentRepository contentRepo;
@@ -293,6 +309,197 @@ void main() {
         ),
       );
     });
+  });
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // B6 — execute() writes learn + ALL configured chazara stages
+  // ──────────────────────────────────────────────────────────────────────────
+
+  group('B6 — execute writes all track stages, not just learn', () {
+    /// 2 items × 3 stages (learn + 2 chazara) = 6 completion_events.
+    test(
+      'writes learn + every chazara stage when stageRepository has 3 stages',
+      () async {
+        final stageRepo = MockStageDefinitionRepository();
+        // Track configured: stages 1, 2, 3.
+        when(
+          () => stageRepo.getStagesForCurriculum(curriculum),
+        ).thenAnswer((_) async => [_stageDef(1), _stageDef(2), _stageDef(3)]);
+
+        final svc = BulkPriorCompletionService(
+          contentRepository: contentRepo,
+          completionRepository: completionRepo,
+          bookmarkRepository: bookmarkRepo,
+          database: memoryDb,
+          syncEngine: null,
+          stageRepository: stageRepo,
+        );
+
+        final items = [
+          _leaf(ref: 'ref_0', sortOrder: 0),
+          _leaf(ref: 'ref_1', sortOrder: 1),
+        ];
+
+        // For each bulkMarkComplete call, return 2 completions (one per item).
+        when(() => completionRepo.bulkMarkComplete(any())).thenAnswer(
+          (_) async => [_fakeCompletion('ref_0'), _fakeCompletion('ref_1')],
+        );
+        when(
+          () => completionRepo.getCompletionsByCurriculum(any()),
+        ).thenAnswer((_) async => []);
+        when(() => contentRepo.getContentForCurriculum(curriculum)).thenAnswer(
+          (_) async => [...items, _leaf(ref: 'ref_2', sortOrder: 2)],
+        );
+        when(
+          () => bookmarkRepo.setBookmark(
+            curriculumId: any(named: 'curriculumId'),
+            trackType: any(named: 'trackType'),
+            sefariaRef: any(named: 'sefariaRef'),
+          ),
+        ).thenAnswer((_) async => _fakeBookmarkEntity());
+
+        // Caller passes only stageIds: [1]. B6 must union with [1, 2, 3].
+        final result = await svc.execute(
+          curriculumId: curriculum,
+          resolvedItems: items,
+          stageIds: [1],
+        );
+
+        // 2 items × 3 stages = 6 total (3 bulkMarkComplete calls × 2 each).
+        expect(result.completionCount, 6);
+        // bulkMarkComplete must be called once per effective stage (1, 2, 3).
+        verify(() => completionRepo.bulkMarkComplete(any())).called(3);
+      },
+    );
+
+    test('caller-supplied stageIds are unioned with configured stages '
+        '— no duplicate stage calls', () async {
+      final stageRepo = MockStageDefinitionRepository();
+      // Track has 2 stages.
+      when(
+        () => stageRepo.getStagesForCurriculum(curriculum),
+      ).thenAnswer((_) async => [_stageDef(1), _stageDef(2)]);
+
+      final svc = BulkPriorCompletionService(
+        contentRepository: contentRepo,
+        completionRepository: completionRepo,
+        bookmarkRepository: bookmarkRepo,
+        database: memoryDb,
+        syncEngine: null,
+        stageRepository: stageRepo,
+      );
+
+      final items = [_leaf(ref: 'ref_0', sortOrder: 0)];
+
+      when(
+        () => completionRepo.bulkMarkComplete(any()),
+      ).thenAnswer((_) async => [_fakeCompletion('ref_0')]);
+      when(
+        () => completionRepo.getCompletionsByCurriculum(any()),
+      ).thenAnswer((_) async => []);
+      when(
+        () => contentRepo.getContentForCurriculum(curriculum),
+      ).thenAnswer((_) async => [...items, _leaf(ref: 'ref_1', sortOrder: 1)]);
+      when(
+        () => bookmarkRepo.setBookmark(
+          curriculumId: any(named: 'curriculumId'),
+          trackType: any(named: 'trackType'),
+          sefariaRef: any(named: 'sefariaRef'),
+        ),
+      ).thenAnswer((_) async => _fakeBookmarkEntity());
+
+      // Caller passes [1, 2] — same as configured. Should call twice, not 4.
+      final result = await svc.execute(
+        curriculumId: curriculum,
+        resolvedItems: items,
+        stageIds: [1, 2],
+      );
+
+      expect(result.completionCount, 2); // 1 item × 2 stages
+      verify(() => completionRepo.bulkMarkComplete(any())).called(2);
+    });
+
+    test(
+      'falls back to caller stageIds when stageRepository returns empty list',
+      () async {
+        final stageRepo = MockStageDefinitionRepository();
+        when(
+          () => stageRepo.getStagesForCurriculum(curriculum),
+        ).thenAnswer((_) async => []);
+
+        final svc = BulkPriorCompletionService(
+          contentRepository: contentRepo,
+          completionRepository: completionRepo,
+          bookmarkRepository: bookmarkRepo,
+          database: memoryDb,
+          syncEngine: null,
+          stageRepository: stageRepo,
+        );
+
+        final items = [_leaf(ref: 'ref_0', sortOrder: 0)];
+
+        when(
+          () => completionRepo.bulkMarkComplete(any()),
+        ).thenAnswer((_) async => [_fakeCompletion('ref_0')]);
+        when(
+          () => completionRepo.getCompletionsByCurriculum(any()),
+        ).thenAnswer((_) async => []);
+        when(() => contentRepo.getContentForCurriculum(curriculum)).thenAnswer(
+          (_) async => [...items, _leaf(ref: 'ref_1', sortOrder: 1)],
+        );
+        when(
+          () => bookmarkRepo.setBookmark(
+            curriculumId: any(named: 'curriculumId'),
+            trackType: any(named: 'trackType'),
+            sefariaRef: any(named: 'sefariaRef'),
+          ),
+        ).thenAnswer((_) async => _fakeBookmarkEntity());
+
+        final result = await svc.execute(
+          curriculumId: curriculum,
+          resolvedItems: items,
+          stageIds: [1],
+        );
+
+        // Falls back: only stage 1 → 1 call.
+        expect(result.completionCount, 1);
+        verify(() => completionRepo.bulkMarkComplete(any())).called(1);
+      },
+    );
+
+    test(
+      'falls back to caller stageIds when no stageRepository is injected',
+      () async {
+        // service was created without stageRepository in setUp.
+        final items = [_leaf(ref: 'ref_0', sortOrder: 0)];
+
+        when(
+          () => completionRepo.bulkMarkComplete(any()),
+        ).thenAnswer((_) async => [_fakeCompletion('ref_0')]);
+        when(
+          () => completionRepo.getCompletionsByCurriculum(any()),
+        ).thenAnswer((_) async => []);
+        when(() => contentRepo.getContentForCurriculum(curriculum)).thenAnswer(
+          (_) async => [...items, _leaf(ref: 'ref_1', sortOrder: 1)],
+        );
+        when(
+          () => bookmarkRepo.setBookmark(
+            curriculumId: any(named: 'curriculumId'),
+            trackType: any(named: 'trackType'),
+            sefariaRef: any(named: 'sefariaRef'),
+          ),
+        ).thenAnswer((_) async => _fakeBookmarkEntity());
+
+        final result = await service.execute(
+          curriculumId: curriculum,
+          resolvedItems: items,
+          stageIds: [1, 2],
+        );
+
+        expect(result.completionCount, 2);
+        verify(() => completionRepo.bulkMarkComplete(any())).called(2);
+      },
+    );
   });
 }
 

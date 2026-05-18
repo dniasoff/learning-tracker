@@ -15,6 +15,7 @@ import 'package:learning_tracker/features/profiles/presentation/providers/active
 import 'package:learning_tracker/features/scheduler/data/repositories/goal_repository_impl.dart';
 import 'package:learning_tracker/features/scheduler/domain/repositories/goal_repository.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/curriculum_activation_providers.dart';
+import 'package:learning_tracker/features/stages/data/repositories/stage_definition_repository_impl.dart';
 import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
@@ -54,6 +55,13 @@ final bulkPriorCompletionServiceProvider = Provider<BulkPriorCompletionService>(
     final db = ref.watch(userDatabaseProvider);
     final syncEngine = ref.watch(syncEngineProvider);
     final analytics = ref.watch(analyticsServiceProvider);
+    // B6: inject StageDefinitionRepository so execute() can enumerate all
+    // configured stages and write completion records for learn + every chazara.
+    final stageRepo = StageDefinitionRepositoryImpl(
+      stageDao: db.stageDao,
+      completionDao: db.completionDao,
+      pushSettings: syncEngine?.pushSettings,
+    );
     return BulkPriorCompletionService(
       contentRepository: contentRepo,
       completionRepository: completionRepo,
@@ -61,6 +69,7 @@ final bulkPriorCompletionServiceProvider = Provider<BulkPriorCompletionService>(
       database: db,
       syncEngine: syncEngine,
       analytics: analytics,
+      stageRepository: stageRepo,
     );
   },
 );
