@@ -557,34 +557,46 @@ class DataExportImportService {
       }
 
       // --- Import learner profiles ---
+      // Preserve original `id` values so that all profileId FKs in
+      // completions, bookmarks, goals, etc. remain valid after import.
       for (final p in (data['learnerProfiles'] as List? ?? [])) {
         final map = p as Map<String, dynamic>;
+        final originalId = map['id'] as int?;
         await _database
             .into(_database.learnerProfiles)
             .insert(
-              LearnerProfilesCompanion.insert(
-                accountId: map['accountId'] as int,
-                displayName: map['displayName'] as String,
-                mode: map['mode'] as String,
+              LearnerProfilesCompanion(
+                id: originalId != null ? Value(originalId) : const Value.absent(),
+                accountId: Value(map['accountId'] as int),
+                displayName: Value(map['displayName'] as String),
+                mode: Value(map['mode'] as String),
                 avatarIndex: Value(map['avatarIndex'] as int? ?? 0),
-                createdAt: DateTime.parse(map['createdAt'] as String),
-                updatedAt: DateTime.parse(map['updatedAt'] as String),
+                createdAt: Value(DateTime.parse(map['createdAt'] as String)),
+                updatedAt: Value(DateTime.parse(map['updatedAt'] as String)),
               ),
             );
       }
 
       // --- Import curriculum tracks ---
+      // Preserve original `id` values so that all trackId FKs in
+      // stage_definitions, completions, goals, etc. remain valid after import.
       for (final t in data['curriculumTracks'] as List) {
         final map = t as Map<String, dynamic>;
+        final originalTrackId = map['id'] as int?;
         await _database
             .into(_database.curriculumTracks)
             .insert(
-              CurriculumTracksCompanion.insert(
-                profileId: map['profileId'] as int? ?? 0,
-                curriculumId: map['curriculumId'] as String,
-                trackType: map['trackType'] as String,
+              CurriculumTracksCompanion(
+                id: originalTrackId != null
+                    ? Value(originalTrackId)
+                    : const Value.absent(),
+                profileId: Value(map['profileId'] as int? ?? 0),
+                curriculumId: Value(map['curriculumId'] as String),
+                trackType: Value(map['trackType'] as String),
                 isActive: Value(map['isActive'] as bool? ?? true),
-                activatedAt: DateTime.parse(map['activatedAt'] as String),
+                activatedAt: Value(
+                  DateTime.parse(map['activatedAt'] as String),
+                ),
                 deactivatedAt: Value(
                   map['deactivatedAt'] != null
                       ? DateTime.parse(map['deactivatedAt'] as String)
