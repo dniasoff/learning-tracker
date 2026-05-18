@@ -1,33 +1,4 @@
 {
-  "indexes": [
-    {
-      "collectionGroup": "completions",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "curriculumId",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "completedAt",
-          "order": "DESCENDING"
-        }
-      ]
-    },
-    {
-      "collectionGroup": "bookmarks",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "curriculumId",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "trackType",
-          "order": "ASCENDING"
-        }
-      ]
-    }
-  ],
+  "indexes": [],
   "fieldOverrides": []
 }

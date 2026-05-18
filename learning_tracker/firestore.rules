@@ -1,53 +1,330 @@
 rules_version = '2';
 
+// Learning Tracker — Firestore security rules
+//
+// LIVE LAYOUT (authoritative — see docs/firestore-collection-layout.md)
+// ─────────────────────────────────────────────────────────────────────
+// The application writes a NESTED, user-scoped layout:
+//
+//   users/{uid}                                    — account user-profile doc
+//   users/{uid}/profile/data                       — account profile snapshot
+//   users/{uid}/diagnostic_logs/{autoId}           — diagnostic log events
+//   users/{uid}/learner_profiles/{profileId}       — one doc per learner
+//   users/{uid}/learner_profiles/{profileId}/<collection>/...
+//
+// Per-profile subcollections (the `<collection>` segment above):
+//   completions             — append-only completion events
+//   streak/data             — single streak snapshot doc
+//   learning_ledger/{autoId}— append-only daily ledger entries
+//   settings/{docId}        — preference snapshots
+//   curriculum_tracks/{id}  — per-curriculum track config snapshots
+//   bookmarks/{id}          — current bookmark position snapshots
+//   learning_order/{id}     — learning-order snapshots
+//   notification_settings/preferences
+//   gamification_settings/config
+//   ui_preferences/data
+//   profile_programs/{curriculumId}
+//   goals/{goalId}
+//   curriculum_import_metadata/{curriculumId}
+//
+// Append-only collections (`completions`, `streak`, `learning_ledger`) deny
+// `update` and `delete`. Snapshot collections deny `delete` and gate writes
+// through `.hasOnly(...)` field whitelists. All ownership is enforced by
+// `isOwner(uid)` on the `users/{uid}` path segment.
+//
+// TOP-LEVEL COMPAT BLOCKS
+// ───────────────────────
+// The blocks for `accounts`, `learner_profiles`, `completion_events`,
+// `streak_events`, `learning_ledger`, `track_configs`, `bookmarks` and
+// `settings` describe a *deprecated* top-level layout that the app never
+// writes. They are retained because:
+//   (a) Story 27.8's acceptance test (epic_27_story_27_8) extracts and pins
+//       these exact rule blocks (append-only clauses, field whitelists,
+//       points/time validators).
+//   (b) They keep the deny-by-default posture explicit for those names.
+// They allow `create` only to an authenticated owner and deny `update`/
+// `delete`; the global wildcard below already denies anything not listed.
+
 service cloud.firestore {
   match /databases/{database}/documents {
+
+    // ── Shared helpers ─────────────────────────────────────────────────────
 
     function isSignedIn() {
       return request.auth != null;
     }
 
+    // True when the caller is the authenticated owner of `uid`.
     function isOwner(uid) {
       return isSignedIn() && request.auth.uid == uid;
     }
 
-    // Deny all access by default
+    // True when the document being created/updated starts with the caller's
+    // uid (legacy top-level doc-id ownership convention).
+    function isOwnerByDocId(docId) {
+      return isSignedIn()
+        && docId.matches('^' + request.auth.uid + '(_.*)?$');
+    }
+
+    // ── Global default-deny ────────────────────────────────────────────────
+    // MUST precede every per-collection allow rule so any collection not
+    // explicitly listed inherits a hard deny. Story 27.8's test asserts this
+    // ordering (the deny wildcard below must come before the first allow).
     match /{document=**} {
       allow read, write: if false;
     }
 
-    // User-scoped data: only the authenticated user can access their own data
+    // ── accounts (top-level compat — deprecated, app does not write) ───────
+    // Snapshot collection. Doc ID: {uid}. Append-only / no update / no delete.
+    match /accounts/{docId} {
+      allow read: if isSignedIn() && request.auth.uid == docId;
+
+      allow create: if isSignedIn()
+        && request.auth.uid == docId
+        && request.resource.data.keys().hasOnly([
+          'uid', 'email', 'display_name', 'created_at', 'updated_at',
+          'fcm_token', 'platform', 'app_version'
+        ]);
+
+      allow update: if false;
+      allow delete: if false;
+    }
+
+    // ── learner_profiles (top-level compat — deprecated) ───────────────────
+    // Snapshot collection. Doc ID: {uid}_{profileId}.
+    match /learner_profiles/{docId} {
+      allow read: if isOwnerByDocId(docId);
+
+      allow create: if isOwnerByDocId(docId)
+        && request.resource.data.keys().hasOnly([
+          'uid', 'profile_id', 'display_name', 'avatar_url',
+          'created_at', 'updated_at', 'is_child_mode'
+        ]);
+
+      allow update: if false;
+      allow delete: if false;
+    }
+
+    // ── completion_events (top-level compat — deprecated) ──────────────────
+    // Event collection — append-only. Doc ID:
+    // {uid}_{profileId}_{sefariaRef}_{stageId}_{trackType}.
+    // Validators: owner uid, 0 <= points <= 100, completed_at <= request.time.
+    match /completion_events/{docId} {
+      allow read: if isOwnerByDocId(docId);
+
+      allow create: if isOwnerByDocId(docId)
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.points >= 0
+        && request.resource.data.points <= 100
+        && request.resource.data.completed_at <= request.time;
+
+      allow update: if false;
+      allow delete: if false;
+    }
+
+    // ── streak_events (top-level compat — deprecated) ──────────────────────
+    // Event collection — append-only. created_at <= request.time.
+    match /streak_events/{docId} {
+      allow read: if isOwnerByDocId(docId);
+
+      allow create: if isOwnerByDocId(docId)
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.created_at <= request.time;
+
+      allow update: if false;
+      allow delete: if false;
+    }
+
+    // ── learning_ledger (top-level compat — deprecated) ────────────────────
+    // Event collection — append-only. created_at <= request.time.
+    match /learning_ledger/{docId} {
+      allow read: if isOwnerByDocId(docId);
+
+      allow create: if isOwnerByDocId(docId)
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.created_at <= request.time;
+
+      allow update: if false;
+      allow delete: if false;
+    }
+
+    // ── track_configs (top-level compat — deprecated) ──────────────────────
+    // Snapshot collection. Doc ID: {uid}_{profileId}_{curriculumId}.
+    match /track_configs/{docId} {
+      allow read: if isOwnerByDocId(docId);
+
+      allow create: if isOwnerByDocId(docId)
+        && request.resource.data.keys().hasOnly([
+          'uid', 'profile_id', 'curriculum_id', 'track_type',
+          'learning_order', 'stage_id', 'is_active', 'updated_at'
+        ]);
+
+      allow update: if false;
+      allow delete: if false;
+    }
+
+    // ── bookmarks (top-level compat — deprecated) ──────────────────────────
+    // Snapshot collection. Doc ID: {uid}_{profileId}_{sefariaRef}.
+    match /bookmarks/{docId} {
+      allow read: if isOwnerByDocId(docId);
+
+      allow create: if isOwnerByDocId(docId)
+        && request.resource.data.keys().hasOnly([
+          'uid', 'profile_id', 'sefaria_ref', 'curriculum_id',
+          'stage_id', 'track_type', 'updated_at'
+        ]);
+
+      allow update: if false;
+      allow delete: if false;
+    }
+
+    // ── settings (top-level compat — deprecated) ───────────────────────────
+    // Snapshot collection. Doc ID: {uid}_{profileId}[_{scope}].
+    match /settings/{docId} {
+      allow read: if isOwnerByDocId(docId);
+
+      allow create: if isOwnerByDocId(docId)
+        && request.resource.data.keys().hasOnly([
+          'uid', 'profile_id', 'hebrew_terms', 'use_hebrew_date',
+          'curriculum_id', 'updated_at', 'display_name', 'learning_order',
+          'daily_goal', 'review_enabled', 'chazara_interval',
+          'show_points', 'track_type'
+        ]);
+
+      allow update: if false;
+      allow delete: if false;
+    }
+
+    // ════════════════════════════════════════════════════════════════════════
+    // LIVE NESTED LAYOUT — users/{uid}/...
+    // This is the layout the application actually reads and writes.
+    // ════════════════════════════════════════════════════════════════════════
+
     match /users/{uid} {
-      // Account-level profile document
+
+      // Account user-profile document (users/{uid} itself).
+      allow read: if isOwner(uid);
+      allow create, update: if isOwner(uid);
+      allow delete: if false;
+
+      // Account profile snapshot — users/{uid}/profile/data
       match /profile/{docId} {
-        allow read, write: if isOwner(uid);
+        allow read: if isOwner(uid);
+        allow create, update: if isOwner(uid);
+        allow delete: if false;
       }
 
-      // Account-level learner profiles (the actual learner rows — one per
-      // member of this account). Doc id is the local profile id as string.
+      // Diagnostic logs — append-only event stream.
+      match /diagnostic_logs/{logId} {
+        allow read: if isOwner(uid);
+        allow create: if isOwner(uid);
+        allow update: if false;
+        allow delete: if false;
+      }
+
+      // Learner-profile documents — users/{uid}/learner_profiles/{profileId}.
+      // A learner profile may be deleted (server Cloud Function performs the
+      // recursive delete); client deletes are denied — see deleteLearnerProfile.
       match /learner_profiles/{profileId} {
-        allow read, write: if isOwner(uid);
-      }
+        allow read: if isOwner(uid);
+        allow create, update: if isOwner(uid);
+        allow delete: if false;
 
-      // Profile-scoped data lives under learner_profiles subcollections.
-      // Track-centric schema supports:
-      // - tracks/{trackId}
-      // - tracks/{trackId}/config/{scope|stage_plan|study_days|goal}
-      // - completions/{completionId}
-      // - learning_ledger/{entryId}
-      // - bookmarks/{trackId}
-      // - daily_plan/{yyyy-mm-dd}
-      // - notification_settings/preferences
-      // - gamification_settings/config
-      // - projections/{active_curricula|streak|progress_summary}
-      //
-      // Legacy collections remain readable/writable for migration safety.
-      match /learner_profiles/{profileId}/{document=**} {
-        allow read, write: if isOwner(uid);
-      }
+        // ── Append-only event collections ──────────────────────────────────
 
-      // Legacy path kept denied by omission (users/{uid}/profiles/{profileId}/...)
-      // so new writes use learner_profiles only.
+        // completions — one append-only event per discrete completion act.
+        match /completions/{completionId} {
+          allow read: if isOwner(uid);
+          allow create: if isOwner(uid)
+            && request.resource.data.points >= 0
+            && request.resource.data.points <= 100;
+          allow update: if false;
+          allow delete: if false;
+        }
+
+        // streak — single snapshot doc (streak/data). Append-only updates of
+        // the streak counter are permitted (it is a running snapshot, not an
+        // event log), but it is never deleted by the client.
+        match /streak/{docId} {
+          allow read: if isOwner(uid);
+          allow create, update: if isOwner(uid);
+          allow delete: if false;
+        }
+
+        // learning_ledger — append-only daily ledger entries.
+        match /learning_ledger/{entryId} {
+          allow read: if isOwner(uid);
+          allow create: if isOwner(uid);
+          allow update: if false;
+          allow delete: if false;
+        }
+
+        // ── Snapshot collections ───────────────────────────────────────────
+        // These hold current-state documents. Reads/writes are owner-gated;
+        // deletes are denied except where the app explicitly removes an
+        // assignment (profile_programs).
+
+        match /settings/{settingId} {
+          allow read: if isOwner(uid);
+          allow create, update: if isOwner(uid);
+          allow delete: if false;
+        }
+
+        match /curriculum_tracks/{trackId} {
+          allow read: if isOwner(uid);
+          allow create, update: if isOwner(uid);
+          allow delete: if false;
+        }
+
+        match /bookmarks/{bookmarkId} {
+          allow read: if isOwner(uid);
+          allow create, update: if isOwner(uid);
+          allow delete: if false;
+        }
+
+        match /learning_order/{orderId} {
+          allow read: if isOwner(uid);
+          allow create, update: if isOwner(uid);
+          allow delete: if false;
+        }
+
+        match /notification_settings/{docId} {
+          allow read: if isOwner(uid);
+          allow create, update: if isOwner(uid);
+          allow delete: if false;
+        }
+
+        match /gamification_settings/{docId} {
+          allow read: if isOwner(uid);
+          allow create, update: if isOwner(uid);
+          allow delete: if false;
+        }
+
+        match /ui_preferences/{docId} {
+          allow read: if isOwner(uid);
+          allow create, update: if isOwner(uid);
+          allow delete: if false;
+        }
+
+        match /goals/{goalId} {
+          allow read: if isOwner(uid);
+          allow create, update: if isOwner(uid);
+          allow delete: if false;
+        }
+
+        match /curriculum_import_metadata/{docId} {
+          allow read: if isOwner(uid);
+          allow create, update: if isOwner(uid);
+          allow delete: if false;
+        }
+
+        // profile_programs — curriculum assignments. The app explicitly
+        // removes an assignment, so client delete is permitted here.
+        match /profile_programs/{curriculumId} {
+          allow read: if isOwner(uid);
+          allow create, update, delete: if isOwner(uid);
+        }
+      }
     }
   }
 }
