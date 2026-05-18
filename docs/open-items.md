@@ -6,22 +6,13 @@ Do not start any of these autonomously.
 
 ---
 
-## C1 — Collapse completion tables → single source of truth (70% done)
+## ~~C1 — Collapse completion tables → single source of truth~~ ✓ CLOSED
 
-**What remains:** `completion_events` is now canonical (UNIQUE natural key, INSERT OR IGNORE).
-`CompletionWriter` writes `completion_events` first, then derives a `completions` row tagged
-`derivedFromEvents = true`. `purgeHistory` treats the `completions` rows as disposable.
-
-The remaining step is making the derivation *automatic* — replacing the explicit
-`completions` insert with a Drift view that is backed by `completion_events`
-(filtered by `purgedAt IS NULL`), so the table rows no longer need to be written
-by `CompletionWriter` at all.
-
-**Why it needs planning:** Requires a schema migration (drop table, create view), code-gen
-regeneration, and verifying that all ~30 `completionDao` read methods still return correct
-results. N3/N5/N6 regression tests must stay green throughout.
-
-**Prerequisite for:** I-5 (conflict resolution is cleaner once the write path is settled).
+`completion_events` is the canonical write table. `completions_view` (schema v20, commit
+`298a80d3`) is the read surface for all DAOs and services — a Drift view backed by
+`completion_events WHERE purged_at IS NULL`. `CompletionWriter` writes `completion_events`
+only. The `completions` physical table is retained as an empty legacy artifact (no rows
+written post-C1).
 
 ---
 
@@ -41,7 +32,7 @@ Invariant N8 regression test guards this. Policy documented in `docs/delete-poli
 
 ---
 
-## I-5 — Two-way cross-device sync (design + harness complete; C1 prerequisite remains)
+## I-5 — Two-way cross-device sync (design + harness complete)
 
 **What:** Full bidirectional sync so two devices converge to identical state.
 
@@ -51,7 +42,4 @@ Invariant N8 regression test guards this. Policy documented in `docs/delete-poli
 - Two-device convergence test harness at `test/integration/two_device_sync_test.dart` (3 scenarios: set-union, LWW deactivation propagation, idempotent re-merge).
 
 **Remaining:**
-- Pull-on-launch guarantee (end-to-end smoke test with real or fake Firestore).
-- C1 must land first before `completions` can be included in the convergence guarantee — until then, only `completion_events` rows are synced.
-
-**Prerequisite:** C1 (collapse `completions` table to a Drift view projection).
+- Pull-on-launch guarantee (end-to-end smoke test — in progress).
