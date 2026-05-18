@@ -796,7 +796,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get reviewSection => 'REVIEW SECTION';
 
   @override
-  String get chazaraReview => 'Chazara/Review';
+  String get chazaraReview => 'Chazara';
 
   @override
   String get activeTrackChazaraLabel => 'Chazara';
@@ -815,6 +815,12 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get bubbleChazara => 'CHAZARA';
+
+  @override
+  String get talmidChochom => 'Talmid Chochom';
+
+  @override
+  String get talmidChochomCaps => 'TALMID CHOCHOM';
 
   @override
   String get mainFocus => 'MAIN FOCUS';
@@ -2616,6 +2622,48 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get chazaraAddNew => 'ADD NEW';
+
+  @override
+  String get termChazara => 'Chazara';
+
+  @override
+  String get termBubbleChazara => 'CHAZARA';
+
+  @override
+  String get termReviewSection => 'REVIEW SECTION';
+
+  @override
+  String get termDaf => 'Daf';
+
+  @override
+  String get termAmud => 'Amud';
+
+  @override
+  String get termPerek => 'Perek';
+
+  @override
+  String get termMishnah => 'Mishna';
+
+  @override
+  String get termSeder => 'Seder';
+
+  @override
+  String get termMasechta => 'Masechta';
+
+  @override
+  String get termChumash => 'Chumash';
+
+  @override
+  String get termTalmidChochom => 'Talmid Chochom';
+
+  @override
+  String get termTalmidChochomCaps => 'TALMID CHOCHOM';
+
+  @override
+  String get termStageLearn => 'Learn';
+
+  @override
+  String get termStageChazaraPrefix => 'Chazara';
 
   @override
   String get authSignInTimeout =>

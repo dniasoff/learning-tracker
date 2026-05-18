@@ -404,13 +404,15 @@
   "todaysMissions": "Today’s Missions",
   "noTasksInLane": "No tasks in this lane",
   "reviewSection": "REVIEW SECTION",
-  "chazaraReview": "Chazara/Review",
+  "chazaraReview": "Chazara",
   "activeTrackChazaraLabel": "Chazara",
   "urgent": "URGENT",
   "missedOverdue": "Missed/Overdue",
   "bubbleOverdue": "OVERDUE",
   "bubbleTodayDue": "TODAY\nDUE",
   "bubbleChazara": "CHAZARA",
+  "talmidChochom": "Talmid Chochom",
+  "talmidChochomCaps": "TALMID CHOCHOM",
   "mainFocus": "MAIN FOCUS",
   "carouselCompletion": "Completion (with {chazara})",
   "@carouselCompletion": {
@@ -1296,6 +1298,21 @@
     }
   },
   "chazaraAddNew": "ADD NEW",
+
+  "termChazara": "Chazara",
+  "termBubbleChazara": "CHAZARA",
+  "termReviewSection": "REVIEW SECTION",
+  "termDaf": "Daf",
+  "termAmud": "Amud",
+  "termPerek": "Perek",
+  "termMishnah": "Mishna",
+  "termSeder": "Seder",
+  "termMasechta": "Masechta",
+  "termChumash": "Chumash",
+  "termTalmidChochom": "Talmid Chochom",
+  "termTalmidChochomCaps": "TALMID CHOCHOM",
+  "termStageLearn": "Learn",
+  "termStageChazaraPrefix": "Chazara",
 
   "authSignInTimeout": "Sign-in is taking too long. Check your connection and try again.",
 

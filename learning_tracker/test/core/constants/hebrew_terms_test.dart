@@ -99,22 +99,13 @@ void main() {
       });
     });
 
-    group('curriculumDisplayNames map', () {
-      test('has entry for every CurriculumId', () {
+    group('getCurriculumDisplayName', () {
+      test('returns displayNameHe for every CurriculumId', () {
         for (final id in CurriculumId.values) {
           expect(
-            HebrewTerms.curriculumDisplayNames.containsKey(id.storageKey),
-            isTrue,
-            reason: '${id.storageKey} missing from curriculumDisplayNames',
-          );
-        }
-      });
-
-      test('map values match enum displayNameHe', () {
-        for (final id in CurriculumId.values) {
-          expect(
-            HebrewTerms.curriculumDisplayNames[id.storageKey],
+            HebrewTerms.getCurriculumDisplayName(id),
             id.displayNameHe,
+            reason: '${id.storageKey} should return displayNameHe',
           );
         }
       });

@@ -809,6 +809,12 @@ class AppLocalizationsHe extends AppLocalizations {
   String get bubbleChazara => 'חזרה';
 
   @override
+  String get talmidChochom => 'תלמיד חכם';
+
+  @override
+  String get talmidChochomCaps => 'תלמיד חכם';
+
+  @override
   String get mainFocus => 'מיקוד ראשי';
 
   @override
@@ -2586,6 +2592,48 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String get chazaraAddNew => 'הוסף';
+
+  @override
+  String get termChazara => 'חזרה';
+
+  @override
+  String get termBubbleChazara => 'חזרה';
+
+  @override
+  String get termReviewSection => 'חזרה';
+
+  @override
+  String get termDaf => 'דף';
+
+  @override
+  String get termAmud => 'עמוד';
+
+  @override
+  String get termPerek => 'פרק';
+
+  @override
+  String get termMishnah => 'משנה';
+
+  @override
+  String get termSeder => 'סדר';
+
+  @override
+  String get termMasechta => 'מסכת';
+
+  @override
+  String get termChumash => 'חומש';
+
+  @override
+  String get termTalmidChochom => 'תלמיד חכם';
+
+  @override
+  String get termTalmidChochomCaps => 'תלמיד חכם';
+
+  @override
+  String get termStageLearn => 'לימוד';
+
+  @override
+  String get termStageChazaraPrefix => 'חזרה';
 
   @override
   String get authSignInTimeout =>

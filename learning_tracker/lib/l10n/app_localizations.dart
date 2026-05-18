@@ -1484,7 +1484,7 @@ abstract class AppLocalizations {
   /// No description provided for @chazaraReview.
   ///
   /// In en, this message translates to:
-  /// **'Chazara/Review'**
+  /// **'Chazara'**
   String get chazaraReview;
 
   /// No description provided for @activeTrackChazaraLabel.
@@ -1522,6 +1522,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'CHAZARA'**
   String get bubbleChazara;
+
+  /// No description provided for @talmidChochom.
+  ///
+  /// In en, this message translates to:
+  /// **'Talmid Chochom'**
+  String get talmidChochom;
+
+  /// No description provided for @talmidChochomCaps.
+  ///
+  /// In en, this message translates to:
+  /// **'TALMID CHOCHOM'**
+  String get talmidChochomCaps;
 
   /// No description provided for @mainFocus.
   ///
@@ -4648,6 +4660,90 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'ADD NEW'**
   String get chazaraAddNew;
+
+  /// No description provided for @termChazara.
+  ///
+  /// In en, this message translates to:
+  /// **'Chazara'**
+  String get termChazara;
+
+  /// No description provided for @termBubbleChazara.
+  ///
+  /// In en, this message translates to:
+  /// **'CHAZARA'**
+  String get termBubbleChazara;
+
+  /// No description provided for @termReviewSection.
+  ///
+  /// In en, this message translates to:
+  /// **'REVIEW SECTION'**
+  String get termReviewSection;
+
+  /// No description provided for @termDaf.
+  ///
+  /// In en, this message translates to:
+  /// **'Daf'**
+  String get termDaf;
+
+  /// No description provided for @termAmud.
+  ///
+  /// In en, this message translates to:
+  /// **'Amud'**
+  String get termAmud;
+
+  /// No description provided for @termPerek.
+  ///
+  /// In en, this message translates to:
+  /// **'Perek'**
+  String get termPerek;
+
+  /// No description provided for @termMishnah.
+  ///
+  /// In en, this message translates to:
+  /// **'Mishna'**
+  String get termMishnah;
+
+  /// No description provided for @termSeder.
+  ///
+  /// In en, this message translates to:
+  /// **'Seder'**
+  String get termSeder;
+
+  /// No description provided for @termMasechta.
+  ///
+  /// In en, this message translates to:
+  /// **'Masechta'**
+  String get termMasechta;
+
+  /// No description provided for @termChumash.
+  ///
+  /// In en, this message translates to:
+  /// **'Chumash'**
+  String get termChumash;
+
+  /// No description provided for @termTalmidChochom.
+  ///
+  /// In en, this message translates to:
+  /// **'Talmid Chochom'**
+  String get termTalmidChochom;
+
+  /// No description provided for @termTalmidChochomCaps.
+  ///
+  /// In en, this message translates to:
+  /// **'TALMID CHOCHOM'**
+  String get termTalmidChochomCaps;
+
+  /// No description provided for @termStageLearn.
+  ///
+  /// In en, this message translates to:
+  /// **'Learn'**
+  String get termStageLearn;
+
+  /// No description provided for @termStageChazaraPrefix.
+  ///
+  /// In en, this message translates to:
+  /// **'Chazara'**
+  String get termStageChazaraPrefix;
 
   /// No description provided for @authSignInTimeout.
   ///

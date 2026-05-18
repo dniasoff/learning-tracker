@@ -2,8 +2,19 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 
 /// Central Hebrew terminology constants for domain-specific terms.
 ///
-/// **In scope:** Stage names (chazara/review), curriculum display names.
+/// **In scope:** Stage names (chazara/review), domain term constants,
+/// curriculum helpers.
 /// **Not in scope:** UI labels (buttons, headers), general i18n.
+///
+/// ## Toggle pattern
+///
+/// Every domain term has:
+///   - A `uiXxx` Hebrew-script constant (Hebrew mode, this file).
+///   - A matching ARB key in `app_en.arb` (transliteration / English mode).
+///   - A matching ARB key in `app_he.arb` (Hebrew script, same as the constant).
+///
+/// Call sites and `lib/core/labels/` helpers resolve the two forms via
+/// `useHebrewTermsProvider`.  No domain term may be hardcoded at a call site.
 class HebrewTerms {
   HebrewTerms._();
 
@@ -47,80 +58,119 @@ class HebrewTerms {
   /// Default stage name for the learning (first) stage.
   static const String stageLearn = 'לימוד';
 
-  /// Default chazara stage name pattern.
+  /// Default chazara stage name prefix (Hebrew).
   /// Use [getChazaraStageName] for numbered chazara stages.
   static const String stageChazaraPrefix = 'חזרה';
 
+  // ── English (transliteration) stage name equivalents ────────────────────
+  //
+  // These are used by the stage-label helpers in `lib/core/labels/` to
+  // return the correct form in English / transliteration mode.
+
+  /// English transliteration: first (learn) stage.
+  static const String stageLearnEn = 'Learn';
+
+  /// English transliteration prefix for numbered chazara stages.
+  static const String stageChazaraPrefixEn = 'Chazara';
+
   // ── UI Term Display (Hebrew script variants) ─────────────────────────────
   //
-  // Strings in this section are the *only* ones swapped by the
-  // "Hebrew Terms" settings toggle (useHebrewTermsProvider).
-  // The toggle is independent of the UI locale (en/he):
-  //   ON  → use the Hebrew-script string defined here
+  // Strings in this section are swapped by the "Hebrew Terms" settings toggle
+  // (useHebrewTermsProvider).  The toggle is independent of the UI locale
+  // (en/he):
+  //   ON  → use the Hebrew-script constant defined here
   //   OFF → use the locale-driven ARB string (English transliteration in en)
   //
-  // The toggle deliberately does NOT cover general UI labels such as
-  // "Today's Missions", "No tasks in this lane", "URGENT", etc. Those follow
-  // the app's locale only.
+  // The toggle does NOT cover general UI labels such as "Today's Missions",
+  // "No tasks in this lane", "URGENT", etc. Those follow the app's locale.
   //
   // To add a new term to the toggle:
   //   1. Add a `static const String uiXxx = 'עברית';` constant below.
-  //   2. At the call site, swap with:
-  //        ref.watch(useHebrewTermsProvider)
-  //          ? HebrewTerms.uiXxx : l10n.xxx
-  //   3. Add a row to the table below so the scope stays discoverable.
+  //   2. Add matching ARB keys `termXxx` to app_en.arb (transliteration) and
+  //      app_he.arb (Hebrew script).
+  //   3. In `lib/core/labels/domain_term_labels.dart`, expose a resolved
+  //      helper so call sites never inline the toggle check.
   //
-  // ┌──────────────────────────┬────────────────────┬────────────────────┐
-  // │ Constant                 │ Hebrew             │ English fallback   │
-  // ├──────────────────────────┼────────────────────┼────────────────────┤
-  // │ uiChazaraReview          │ חזרה                │ Chazara/Review     │
-  // │ uiReviewSection          │ חזרה                │ REVIEW SECTION     │
-  // │ uiBubbleChazara          │ חזרה                │ CHAZARA            │
-  // │ uiActiveTrackChazara     │ חזרה                │ CHAZARA            │
-  // │ uiTalmidChochom          │ תלמיד חכם            │ Talmid Chochom     │
-  // │ uiTalmidChochomCaps      │ תלמיד חכם            │ TALMID CHOCHOM     │
-  // └──────────────────────────┴────────────────────┴────────────────────┘
+  // ┌──────────────────────────┬────────────────────┬────────────────────────┐
+  // │ Constant                 │ Hebrew             │ ARB key (en)           │
+  // ├──────────────────────────┼────────────────────┼────────────────────────┤
+  // │ uiChazara                │ חזרה                │ termChazara            │
+  // │ uiReviewSection          │ חזרה                │ termReviewSection      │
+  // │ uiBubbleChazara          │ חזרה                │ termBubbleChazara      │
+  // │ uiActiveTrackChazara     │ חזרה                │ termChazara            │
+  // │ uiDaf                    │ דף                  │ termDaf                │
+  // │ uiAmud                   │ עמוד                │ termAmud               │
+  // │ uiPerek                  │ פרק                 │ termPerek              │
+  // │ uiMishnah                │ משנה                │ termMishnah            │
+  // │ uiSeder                  │ סדר                 │ termSeder              │
+  // │ uiMasechta               │ מסכת                │ termMasechta           │
+  // │ uiChumash                │ חומש                │ termChumash            │
+  // │ uiTalmidChochom          │ תלמיד חכם            │ termTalmidChochom      │
+  // │ uiTalmidChochomCaps      │ תלמיד חכם            │ termTalmidChochomCaps  │
+  // └──────────────────────────┴────────────────────┴────────────────────────┘
 
-  /// "Chazara/Review" → Hebrew script.
-  static const String uiChazaraReview = 'חזרה';
+  // ── Chazara / Review terms ───────────────────────────────────────────────
+
+  /// "Chazara" (the review concept) → Hebrew script.
+  ///
+  /// Use the [domainTermLabels.chazara] helper in `lib/core/labels/` to get
+  /// the toggle-resolved form. This constant is the Hebrew half.
+  static const String uiChazara = 'חזרה';
+
+  /// Deprecated alias for [uiChazara].
+  ///
+  /// The old name encoded "Review" as part of the English fallback, which
+  /// violates the §3 transliteration-only rule (Defect 2). Call sites in
+  /// `features/` should migrate to `domainTermLabels(ref).chazara`.
+  @Deprecated('Use HebrewTerms.uiChazara or domainTermLabels(ref).chazara')
+  static const String uiChazaraReview = uiChazara;
 
   /// "REVIEW SECTION" header → Hebrew.
   static const String uiReviewSection = 'חזרה';
 
   /// "CHAZARA" bubble label → Hebrew script.
+  ///
+  /// Wired to the toggle via [domainTermLabels.bubbleChazara].
   static const String uiBubbleChazara = 'חזרה';
 
   /// Active-track "Chazara" metric label → Hebrew script.
   static const String uiActiveTrackChazara = 'חזרה';
 
+  // ── Structural Torah unit terms ──────────────────────────────────────────
+
+  /// "Daf" (two-sided Talmud leaf) → Hebrew script.
+  static const String uiDaf = 'דף';
+
+  /// "Amud" (one side of a Talmud daf) → Hebrew script.
+  static const String uiAmud = 'עמוד';
+
+  /// "Perek" (chapter) → Hebrew script.
+  static const String uiPerek = 'פרק';
+
+  /// "Mishna" (a single mishna within a perek) → Hebrew script.
+  static const String uiMishnah = 'משנה';
+
+  /// "Seder" (order of Mishnah / Talmud) → Hebrew script.
+  static const String uiSeder = 'סדר';
+
+  /// "Masechta" (tractate) → Hebrew script.
+  static const String uiMasechta = 'מסכת';
+
+  /// "Chumash" (one of the five books of Torah) → Hebrew script.
+  static const String uiChumash = 'חומש';
+
+  // ── Scholar tier / honorific terms ──────────────────────────────────────
+
   /// "Talmid Chochom" (highest scholar tier) → Hebrew script.
   static const String uiTalmidChochom = 'תלמיד חכם';
-
-  // ── Curriculum Display Names ─────────────────────────────────────────────
-
-  /// Maps [CurriculumId.storageKey] to the Hebrew display name.
-  ///
-  /// These are identical to [CurriculumId.displayNameHe] but provided here
-  /// as a flat map for use in migrations and non-enum contexts.
-  static const Map<String, String> curriculumDisplayNames = {
-    'mishnayos': 'משניות',
-    'bavli': 'תלמוד בבלי',
-    'yerushalmi': 'תלמוד ירושלמי',
-    'chumash': 'חומש',
-    'nach': 'נ"ך',
-    'tanach': 'תנ"ך',
-    'mishna_berurah': 'משנה ברורה',
-    'mussar': 'מוסר',
-    'mishneh_torah': 'משנה תורה',
-  };
 
   // ── Helpers ──────────────────────────────────────────────────────────────
 
   /// Returns the Hebrew display name for [id].
   ///
-  /// Delegates to [CurriculumId.displayNameHe] — this wrapper exists so
-  /// callers that only have an enum value don't need to know which getter
-  /// to use.
+  /// Delegates to [CurriculumId.displayNameHe] — the single authoritative
+  /// source for curriculum Hebrew names. The old `curriculumDisplayNames` map
+  /// has been removed to eliminate duplication (Defect 8).
   static String getCurriculumDisplayName(CurriculumId id) => id.displayNameHe;
 
   /// Returns the Hebrew stage name for a 0-based [stageIndex].
@@ -142,6 +192,12 @@ class HebrewTerms {
     // Fallback for numbers beyond 5.
     return '$stageChazaraPrefix $roundNumber';
   }
+
+  /// Returns the English transliteration for a numbered chazara stage.
+  ///
+  /// [roundNumber] is 1-based: 1 → "Chazara 1", 2 → "Chazara 2", etc.
+  static String getChazaraStageNameEn(int roundNumber) =>
+      '$stageChazaraPrefixEn $roundNumber';
 
   /// Converts an English default stage name to Hebrew, if it matches a known
   /// default. Returns [null] if the name is user-customized (not a default).

@@ -411,6 +411,8 @@
   "bubbleOverdue": "איחור",
   "bubbleTodayDue": "היום",
   "bubbleChazara": "חזרה",
+  "talmidChochom": "תלמיד חכם",
+  "talmidChochomCaps": "תלמיד חכם",
   "mainFocus": "מיקוד ראשי",
   "carouselCompletion": "השלמה (עם {chazara})",
   "continueCta": "המשך",
@@ -1291,6 +1293,21 @@
     }
   },
   "chazaraAddNew": "הוסף",
+
+  "termChazara": "חזרה",
+  "termBubbleChazara": "חזרה",
+  "termReviewSection": "חזרה",
+  "termDaf": "דף",
+  "termAmud": "עמוד",
+  "termPerek": "פרק",
+  "termMishnah": "משנה",
+  "termSeder": "סדר",
+  "termMasechta": "מסכת",
+  "termChumash": "חומש",
+  "termTalmidChochom": "תלמיד חכם",
+  "termTalmidChochomCaps": "תלמיד חכם",
+  "termStageLearn": "לימוד",
+  "termStageChazaraPrefix": "חזרה",
 
   "authSignInTimeout": "הכניסה לוקחת יותר מדי זמן. בדוק את החיבור ונסה שוב.",
 
