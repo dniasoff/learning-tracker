@@ -233,13 +233,13 @@ class RewardMilestoneService {
   }
 
   Future<int> getTrackPointsTotal(int trackId) async {
-    final totalExpr = _database.completions.points.sum();
+    final totalExpr = _database.completionsView.points.sum();
     final row =
-        await (_database.selectOnly(_database.completions)
+        await (_database.selectOnly(_database.completionsView)
               ..addColumns([totalExpr])
               ..where(
-                _database.completions.profileId.equals(profileId) &
-                    _database.completions.trackId.equals(trackId),
+                _database.completionsView.profileId.equals(profileId) &
+                    _database.completionsView.trackId.equals(trackId),
               ))
             .getSingle();
     return row.read(totalExpr) ?? 0;

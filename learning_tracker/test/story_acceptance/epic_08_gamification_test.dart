@@ -17,6 +17,7 @@ import 'package:learning_tracker/features/gamification/domain/services/streak_se
 import 'package:learning_tracker/features/learning/presentation/widgets/completion_feedback_controller.dart';
 import 'package:test/test.dart';
 
+import '../helpers/drift_memory.dart' show seedCompletion;
 import '../helpers/test_database.dart';
 
 /// Creates a default curriculum track and returns its ID.
@@ -72,7 +73,7 @@ void main() {
       required int points,
       String trackType = 'personal',
     }) async {
-      await db.completionDao.insertCompletion(
+      await seedCompletion(db, 
         CompletionsCompanion.insert(
           profileId: 1,
           curriculumId: curriculumId,
@@ -212,7 +213,7 @@ void main() {
     });
 
     test('streak calendar returns active dates for range', () async {
-      await db.completionDao.insertCompletion(
+      await seedCompletion(db, 
         CompletionsCompanion.insert(
           profileId: 1,
           curriculumId: 'test',
@@ -223,7 +224,7 @@ void main() {
           completedAt: DateTimeFactory.utc(2026, 3, 10, 12),
         ),
       );
-      await db.completionDao.insertCompletion(
+      await seedCompletion(db, 
         CompletionsCompanion.insert(
           profileId: 1,
           curriculumId: 'test',

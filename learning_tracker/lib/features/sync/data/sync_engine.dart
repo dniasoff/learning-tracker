@@ -1139,16 +1139,17 @@ class SyncEngine implements SyncWriteFacade {
                 return value;
               })();
 
-          await _database.completionDao.insertCompletion(
-            CompletionsCompanion.insert(
+          // C1: write to the canonical event log instead of the completions
+          // projection table. INSERT OR IGNORE — idempotent on natural key.
+          await _database.completionEventDao.appendEvent(
+            CompletionEventsCompanion.insert(
               profileId: profileId,
               curriculumId: curriculumId,
               sefariaRef: sefariaRef,
               stageId: stageId,
               trackType: trackType,
-              trackId: resolvedTrackId,
-              completedAt: completedAt,
-              points: Value(remote['points'] as int? ?? 0),
+              trackId: Value<int?>(resolvedTrackId),
+              eventTimestamp: completedAt,
             ),
           );
           insertedCount++;

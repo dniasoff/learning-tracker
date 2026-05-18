@@ -54,7 +54,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:talker_flutter/talker_flutter.dart';
 import 'package:test/test.dart';
 
-import '../helpers/drift_memory.dart' show seedProfile;
+import '../helpers/drift_memory.dart' show seedCompletion, seedProfile;
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -1898,7 +1898,7 @@ void main() {
             updatedAt: DateTime.utc(2026, 1, 1),
           ),
         );
-        await db.completionDao.insertCompletion(
+        await seedCompletion(db, 
           CompletionsCompanion.insert(
             profileId: 1,
             curriculumId: 'mishnayos',
@@ -1909,7 +1909,7 @@ void main() {
             completedAt: DateTime.utc(2026, 5, 13),
           ),
         );
-        await db.completionDao.insertCompletion(
+        await seedCompletion(db, 
           CompletionsCompanion.insert(
             profileId: 2,
             curriculumId: 'mishnayos',

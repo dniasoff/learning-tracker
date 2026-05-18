@@ -44,6 +44,7 @@ import 'package:learning_tracker/core/database/tables/study_day_configs.dart';
 import 'package:learning_tracker/core/database/tables/sync_queue.dart';
 import 'package:learning_tracker/core/database/tables/text_download_status.dart';
 import 'package:learning_tracker/core/database/tables/track_learning_order.dart';
+import 'package:learning_tracker/core/database/views/completions_view.dart';
 import 'package:learning_tracker/core/time/ulid.dart';
 
 part 'user_database.g.dart';
@@ -84,6 +85,7 @@ part 'user_database.g.dart';
     Outbox,
     SacredWindowEntries,
   ],
+  views: [CompletionsView],
   daos: [
     ActiveCurriculumDao,
     CurriculumScopeDao,
@@ -114,14 +116,31 @@ class UserDatabase extends _$UserDatabase {
   UserDatabase(super.e);
 
   @override
-  int get schemaVersion => 19;
+  int get schemaVersion => 20;
+
+  // drift_dev cannot express WHERE in a Dart-defined view's `as()` body
+  // (cascade `..where()` confuses the generator).  The auto-generated SQL for
+  // completions_view therefore omits the filter.  We drop and recreate the
+  // view with this explicit SQL both on fresh install and during migrations.
+  static const _completionsViewSql =
+      'CREATE VIEW completions_view AS '
+      'SELECT id, profile_id, curriculum_id, sefaria_ref, stage_id, '
+      'track_type, track_id, points, event_timestamp '
+      'FROM completion_events '
+      'WHERE purged_at IS NULL';
 
   @override
   MigrationStrategy get migration {
     return MigrationStrategy(
       // C2: enable FK enforcement on every connection open (connection-level).
       beforeOpen: (_) => customStatement('PRAGMA foreign_keys = ON'),
-      onCreate: (Migrator m) => m.createAll(),
+      onCreate: (Migrator m) async {
+        await m.createAll();
+        // Replace the auto-generated completions_view (no WHERE) with the
+        // filtered version.
+        await customStatement('DROP VIEW IF EXISTS completions_view');
+        await customStatement(_completionsViewSql);
+      },
       onUpgrade: (Migrator m, int from, int to) async {
         if (from < 15) {
           await m.createTable(sacredWindowEntries);
@@ -200,6 +219,48 @@ class UserDatabase extends _$UserDatabase {
             'CREATE UNIQUE INDEX IF NOT EXISTS sync_queue_entity_key '
             'ON sync_queue (entity_key)',
           );
+        }
+
+        // C1 (v19 → v20): add trackId to completion_events and backfill it
+        // from the completions projection so view-based queries can filter by
+        // track.  Also create completions_view (new at v20) with the
+        // purged_at IS NULL guard applied via raw SQL — see _completionsViewSql.
+        // C1 (v19 → v20): add trackId + points to completion_events; backfill
+        // both from completions; create filtered completions_view.
+        // Guard: alterTable at v17 recreates completion_events with the
+        // current schema, so track_id / points may already exist when
+        // migrating from v15, v16, or v17.
+        if (from < 20) {
+          final evtCols = await customSelect(
+            'PRAGMA table_info(completion_events)',
+          ).get();
+          if (!evtCols.any((r) => r.data['name'] == 'track_id')) {
+            await m.addColumn(completionEvents, completionEvents.trackId);
+          }
+          if (!evtCols.any((r) => r.data['name'] == 'points')) {
+            await m.addColumn(completionEvents, completionEvents.points);
+          }
+          await customStatement('''
+            UPDATE completion_events
+            SET track_id = COALESCE(track_id, (
+              SELECT c.track_id FROM completions c
+              WHERE c.profile_id  = completion_events.profile_id
+                AND c.sefaria_ref = completion_events.sefaria_ref
+                AND c.stage_id    = completion_events.stage_id
+                AND c.track_type  = completion_events.track_type
+              LIMIT 1
+            )),
+            points = COALESCE(NULLIF(points, 0), (
+              SELECT c.points FROM completions c
+              WHERE c.profile_id  = completion_events.profile_id
+                AND c.sefaria_ref = completion_events.sefaria_ref
+                AND c.stage_id    = completion_events.stage_id
+                AND c.track_type  = completion_events.track_type
+              LIMIT 1
+            ), 0)
+          ''');
+          await customStatement('DROP VIEW IF EXISTS completions_view');
+          await customStatement(_completionsViewSql);
         }
       },
     );

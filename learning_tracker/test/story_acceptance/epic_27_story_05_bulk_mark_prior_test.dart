@@ -141,8 +141,9 @@ void main() {
       }
 
       // 150 completion rows should exist (50 refs × 3 stages).
+      // C1: completions live in completion_events (not the legacy completions table).
       final completionRows = await (db.select(
-        db.completions,
+        db.completionEvents,
       )..where((t) => t.profileId.equals(profileId))).get();
       expect(
         completionRows,

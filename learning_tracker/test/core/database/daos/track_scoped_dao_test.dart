@@ -66,19 +66,18 @@ void main() {
       int trackId,
       int profileId,
       String ref,
-    ) async {
-      await db.completionDao.insertCompletion(
-        CompletionsCompanion.insert(
-          profileId: profileId,
-          curriculumId: 'mishnayos',
-          sefariaRef: ref,
-          stageId: 1,
-          trackType: 'personal',
-          trackId: trackId,
-          completedAt: DateTime.now(),
-        ),
-      );
-    }
+    ) => seedCompletion(
+      db,
+      CompletionsCompanion.insert(
+        profileId: profileId,
+        curriculumId: 'mishnayos',
+        sefariaRef: ref,
+        stageId: 1,
+        trackType: 'personal',
+        trackId: trackId,
+        completedAt: DateTime.now(),
+      ),
+    );
 
     test('getCompletionsByTrack returns only that track', () async {
       await insertCompletion(track1Id, _p1, 'ref1');

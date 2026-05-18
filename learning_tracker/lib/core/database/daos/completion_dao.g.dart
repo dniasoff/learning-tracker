@@ -5,9 +5,9 @@ part of 'completion_dao.dart';
 // ignore_for_file: type=lint
 mixin _$CompletionDaoMixin on DatabaseAccessor<UserDatabase> {
   $LearnerProfilesTable get learnerProfiles => attachedDatabase.learnerProfiles;
-  $CurriculumTracksTable get curriculumTracks =>
-      attachedDatabase.curriculumTracks;
-  $CompletionsTable get completions => attachedDatabase.completions;
+  $CompletionEventsTable get completionEvents =>
+      attachedDatabase.completionEvents;
+  $CompletionsViewView get completionsView => attachedDatabase.completionsView;
   CompletionDaoManager get managers => CompletionDaoManager(this);
 }
 
@@ -19,11 +19,9 @@ class CompletionDaoManager {
         _db.attachedDatabase,
         _db.learnerProfiles,
       );
-  $$CurriculumTracksTableTableManager get curriculumTracks =>
-      $$CurriculumTracksTableTableManager(
+  $$CompletionEventsTableTableManager get completionEvents =>
+      $$CompletionEventsTableTableManager(
         _db.attachedDatabase,
-        _db.curriculumTracks,
+        _db.completionEvents,
       );
-  $$CompletionsTableTableManager get completions =>
-      $$CompletionsTableTableManager(_db.attachedDatabase, _db.completions);
 }

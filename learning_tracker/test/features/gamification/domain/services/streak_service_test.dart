@@ -13,6 +13,7 @@ import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/gamification/domain/services/streak_service.dart';
 import 'package:test/test.dart';
 
+import '../../../../helpers/drift_memory.dart' show seedCompletion;
 import '../../../../helpers/test_database.dart'
     show createTestDatabase, seedProfileZero;
 
@@ -43,12 +44,18 @@ void main() {
     await db.close();
   });
 
+  var refCounter = 0;
+
   Future<void> addCompletion(UserDatabase db, DateTime completedAtUtc) async {
-    await db.completionDao.insertCompletion(
+    // Each call uses a unique sefariaRef so the UNIQUE constraint on
+    // completion_events(profileId, sefariaRef, stageId, trackType) does not
+    // deduplicate completions from different dates.
+    final ref = 'Genesis.${++refCounter}';
+    await seedCompletion(db,
       CompletionsCompanion.insert(
         profileId: 0,
         curriculumId: 'test-curriculum',
-        sefariaRef: 'Genesis.1',
+        sefariaRef: ref,
         stageId: 1,
         trackType: 'primary',
         trackId: trackId,

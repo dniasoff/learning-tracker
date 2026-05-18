@@ -35,6 +35,10 @@ class CompletionEvents extends Table {
   TextColumn get sefariaRef => text()();
   IntColumn get stageId => integer()();
   TextColumn get trackType => text()();
+  /// FK → CurriculumTracks.id. Added v20 to enable the completions view.
+  /// Nullable for legacy rows that pre-date this column.
+  IntColumn get trackId => integer().nullable()();
+  IntColumn get points => integer().withDefault(const Constant<int>(0))();
   DateTimeColumn get eventTimestamp => dateTime()();
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
 

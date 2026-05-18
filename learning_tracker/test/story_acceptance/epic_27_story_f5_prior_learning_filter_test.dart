@@ -18,6 +18,7 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dart';
 import 'package:learning_tracker/features/scheduler/domain/services/scheduler_engine.dart';
 
+import '../helpers/drift_memory.dart' show seedCompletion;
 import '../helpers/test_database.dart';
 
 // ---------------------------------------------------------------------------
@@ -119,7 +120,7 @@ void main() {
       'BUG REPRO: buggy isTaskCompleted returns true for sentinel completion '
       '(this test documents the pre-fix behaviour and must FAIL until F5 is applied)',
       () async {
-        await db.completionDao.insertCompletion(
+        await seedCompletion(db, 
           CompletionsCompanion.insert(
             profileId: profileId,
             curriculumId: curriculum.storageKey,
@@ -179,7 +180,7 @@ void main() {
     test(
       'AC1: sentinel completion does not hide a task (F5 fix)',
       () async {
-        await db.completionDao.insertCompletion(
+        await seedCompletion(db, 
           CompletionsCompanion.insert(
             profileId: profileId,
             curriculumId: curriculum.storageKey,
@@ -228,7 +229,7 @@ void main() {
       () async {
         final genuineDate = DateTime.utc(2026, 5, 17, 10);
 
-        await db.completionDao.insertCompletion(
+        await seedCompletion(db, 
           CompletionsCompanion.insert(
             profileId: profileId,
             curriculumId: curriculum.storageKey,
@@ -277,19 +278,33 @@ void main() {
       () async {
         final genuineDate = DateTime.utc(2026, 5, 17, 10);
 
-        await db.completionDao.insertCompletion(
+        // C1: completion_events has a UNIQUE(profileId, sefariaRef, stageId,
+        // trackType) constraint, so sentinel and genuine cannot share the
+        // same key. Use a distinct sentinel stage to populate the completions
+        // list alongside the genuine completion for the task's actual stage.
+        final sentinelStageId = await db.stageDao.insertStageDefinition(
+          StageDefinitionsCompanion.insert(
+            profileId: profileId,
+            curriculumId: curriculum.storageKey,
+            trackId: trackId,
+            stageOrder: 0,
+            stageName: 'Bulk-Prior Sentinel',
+            delayDays: 0,
+          ),
+        );
+        await seedCompletion(db,
           CompletionsCompanion.insert(
             profileId: profileId,
             curriculumId: curriculum.storageKey,
             sefariaRef: sefariaRef,
-            stageId: stageDefinitionId,
+            stageId: sentinelStageId,
             trackType: 'personal',
             trackId: trackId,
             completedAt: sentinel,
             points: const Value(0),
           ),
         );
-        await db.completionDao.insertCompletion(
+        await seedCompletion(db,
           CompletionsCompanion.insert(
             profileId: profileId,
             curriculumId: curriculum.storageKey,

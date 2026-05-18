@@ -39,6 +39,7 @@ import '../../tool/lib/sefaria/mishna_fetcher.dart';
 import '../../tool/lib/sefaria/sefaria_fetcher_base.dart';
 // ignore: avoid_relative_lib_imports
 import '../../tool/lib/sefaria/yerushalmi_fetcher.dart';
+import '../helpers/drift_memory.dart' show seedCompletion;
 import '../helpers/test_database.dart';
 
 // ── Mocks ──────────────────────────────────────────────────────────
@@ -123,7 +124,7 @@ void main() {
     });
 
     test('basic CRUD round-trip on completions', () async {
-      final id = await db.completionDao.insertCompletion(
+      final id = await seedCompletion(db, 
         CompletionsCompanion.insert(
           profileId: 1,
           curriculumId: CurriculumId.mishnayos.storageKey,

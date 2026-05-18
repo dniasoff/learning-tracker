@@ -28,6 +28,7 @@ import 'package:learning_tracker/features/scheduler/domain/models/delta_value.da
 import 'package:learning_tracker/features/scheduler/domain/models/pace_status.dart';
 import 'package:test/test.dart';
 
+import '../helpers/drift_memory.dart' show seedCompletion;
 import '../helpers/test_database.dart';
 
 const _curriculumId = 'mishnayos';
@@ -92,7 +93,7 @@ void main() {
 
         // A completion lives under profileA only.
         trackIdA = await _insertTrackFor(db, profileA.id);
-        completionIdA = await db.completionDao.insertCompletion(
+        completionIdA = await seedCompletion(db, 
           CompletionsCompanion.insert(
             profileId: profileA.id,
             curriculumId: _curriculumId,

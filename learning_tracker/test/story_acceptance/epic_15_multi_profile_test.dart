@@ -36,6 +36,7 @@ import 'package:learning_tracker/features/stages/domain/services/stage_validator
 import 'package:mocktail/mocktail.dart';
 import 'package:test/test.dart';
 
+import '../helpers/drift_memory.dart' show seedCompletion;
 import '../helpers/test_database.dart';
 
 class _InMemoryContentRepo implements SchedulerContentRepository {
@@ -128,7 +129,7 @@ void main() {
           );
 
           // Insert completions for each profile
-          await db.completionDao.insertCompletion(
+          await seedCompletion(db, 
             CompletionsCompanion.insert(
               profileId: p1.id,
               curriculumId: 'mishnah',
@@ -139,7 +140,7 @@ void main() {
               completedAt: DateTime.now().toUtc(),
             ),
           );
-          await db.completionDao.insertCompletion(
+          await seedCompletion(db, 
             CompletionsCompanion.insert(
               profileId: p2.id,
               curriculumId: 'mishnah',
@@ -381,7 +382,7 @@ void main() {
             final pid = profile.id;
 
             // Insert data for this profile
-            await db.completionDao.insertCompletion(
+            await seedCompletion(db, 
               CompletionsCompanion.insert(
                 profileId: pid,
                 curriculumId: 'mishnah',
@@ -462,7 +463,7 @@ void main() {
           );
 
           // Add data for both profiles
-          await db.completionDao.insertCompletion(
+          await seedCompletion(db, 
             CompletionsCompanion.insert(
               profileId: p1.id,
               curriculumId: 'mishnah',
@@ -473,7 +474,7 @@ void main() {
               completedAt: DateTime.now().toUtc(),
             ),
           );
-          await db.completionDao.insertCompletion(
+          await seedCompletion(db, 
             CompletionsCompanion.insert(
               profileId: p2.id,
               curriculumId: 'mishnah',
@@ -1001,7 +1002,7 @@ void main() {
           );
 
           // Add some data
-          await db.completionDao.insertCompletion(
+          await seedCompletion(db, 
             CompletionsCompanion.insert(
               profileId: profile.id,
               curriculumId: 'mishnah',
@@ -1102,7 +1103,7 @@ void main() {
             );
 
             // Insert completions for each profile
-            await db.completionDao.insertCompletion(
+            await seedCompletion(db, 
               CompletionsCompanion.insert(
                 profileId: p1.id,
                 curriculumId: 'mishnah',
@@ -1113,7 +1114,7 @@ void main() {
                 completedAt: DateTime.now().toUtc(),
               ),
             );
-            await db.completionDao.insertCompletion(
+            await seedCompletion(db, 
               CompletionsCompanion.insert(
                 profileId: p2.id,
                 curriculumId: 'mishnah',
@@ -1150,7 +1151,7 @@ void main() {
             mode: 'child',
           );
 
-          await db.completionDao.insertCompletion(
+          await seedCompletion(db, 
             CompletionsCompanion.insert(
               profileId: p1.id,
               curriculumId: 'mishnah',
@@ -1161,7 +1162,7 @@ void main() {
               completedAt: DateTime.now().toUtc(),
             ),
           );
-          await db.completionDao.insertCompletion(
+          await seedCompletion(db, 
             CompletionsCompanion.insert(
               profileId: p2.id,
               curriculumId: 'mishnah',
@@ -1346,7 +1347,7 @@ void main() {
             );
 
             // Simulate synced completions for different profiles
-            await db.completionDao.insertCompletion(
+            await seedCompletion(db, 
               CompletionsCompanion.insert(
                 profileId: p1.id,
                 curriculumId: 'mishnah',
@@ -1357,7 +1358,7 @@ void main() {
                 completedAt: DateTime.now().toUtc(),
               ),
             );
-            await db.completionDao.insertCompletion(
+            await seedCompletion(db, 
               CompletionsCompanion.insert(
                 profileId: p2.id,
                 curriculumId: 'mishnah',
@@ -1399,7 +1400,7 @@ void main() {
 
           // P1 has 2 personal completions
           for (var i = 1; i <= 2; i++) {
-            await db.completionDao.insertCompletion(
+            await seedCompletion(db, 
               CompletionsCompanion.insert(
                 profileId: p1.id,
                 curriculumId: 'mishnah',
@@ -1413,7 +1414,7 @@ void main() {
           }
 
           // P2 has 1 personal completion
-          await db.completionDao.insertCompletion(
+          await seedCompletion(db, 
             CompletionsCompanion.insert(
               profileId: p2.id,
               curriculumId: 'mishnah',
@@ -1475,7 +1476,7 @@ void main() {
           );
 
           // P1 earns 10 points
-          await db.completionDao.insertCompletion(
+          await seedCompletion(db, 
             CompletionsCompanion.insert(
               profileId: p1.id,
               curriculumId: 'mishnah',
@@ -1489,7 +1490,7 @@ void main() {
           );
 
           // P2 earns 5 points
-          await db.completionDao.insertCompletion(
+          await seedCompletion(db, 
             CompletionsCompanion.insert(
               profileId: p2.id,
               curriculumId: 'mishnah',
@@ -1684,7 +1685,7 @@ void main() {
 
         // Complete Learn for first 3 items
         for (var i = 0; i < 3; i++) {
-          await db.completionDao.insertCompletion(
+          await seedCompletion(db, 
             CompletionsCompanion.insert(
               profileId: 1,
               curriculumId: curriculum.storageKey,
@@ -1746,7 +1747,7 @@ void main() {
             ),
           );
 
-          await db.completionDao.insertCompletion(
+          await seedCompletion(db, 
             CompletionsCompanion.insert(
               profileId: 1,
               curriculumId: curriculum.storageKey,
@@ -1806,7 +1807,7 @@ void main() {
 
         // Complete Learn for 10 items at different times
         for (var i = 0; i < 10; i++) {
-          await db.completionDao.insertCompletion(
+          await seedCompletion(db, 
             CompletionsCompanion.insert(
               profileId: 1,
               curriculumId: curriculum.storageKey,
@@ -1871,7 +1872,7 @@ void main() {
 
           // Complete Learn for 5 items
           for (var i = 0; i < 5; i++) {
-            await db.completionDao.insertCompletion(
+            await seedCompletion(db, 
               CompletionsCompanion.insert(
                 profileId: 1,
                 curriculumId: curriculum.storageKey,
@@ -1885,7 +1886,7 @@ void main() {
             );
           }
           // Complete rolling stage for the most recent item
-          await db.completionDao.insertCompletion(
+          await seedCompletion(db, 
             CompletionsCompanion.insert(
               profileId: 1,
               curriculumId: curriculum.storageKey,
@@ -2652,7 +2653,7 @@ void main() {
           final oldStageIds = stagesBefore.map((s) => s.id).toSet();
 
           // Record a completion against the first stage.
-          await db.completionDao.insertCompletion(
+          await seedCompletion(db, 
             CompletionsCompanion.insert(
               profileId: 1,
               curriculumId: 'bavli',

@@ -21,6 +21,7 @@ import 'package:learning_tracker/features/content_browsing/domain/repositories/c
 import 'package:learning_tracker/features/progress/presentation/providers/items_learned_providers.dart';
 import 'package:mocktail/mocktail.dart';
 
+import '../helpers/drift_memory.dart' show seedCompletion;
 import '../helpers/test_database.dart';
 
 // ---------------------------------------------------------------------------
@@ -122,7 +123,7 @@ void main() {
 
         // Insert 4 real-study completions (leaves[0..3]).
         for (var i = 0; i < 4; i++) {
-          await db.completionDao.insertCompletion(
+          await seedCompletion(db, 
             CompletionsCompanion.insert(
               profileId: profileId,
               curriculumId: CurriculumId.mishnayos.storageKey,
@@ -138,7 +139,7 @@ void main() {
         // Insert 3 bulk-prior SENTINEL completions (leaves[5..7]) — these
         // must NOT be counted by computeItemsLearnedSummary.
         for (var i = 5; i < 8; i++) {
-          await db.completionDao.insertCompletion(
+          await seedCompletion(db, 
             CompletionsCompanion.insert(
               profileId: profileId,
               curriculumId: CurriculumId.mishnayos.storageKey,
@@ -181,7 +182,7 @@ void main() {
 
         // Only sentinel completions.
         for (var i = 0; i < 3; i++) {
-          await db.completionDao.insertCompletion(
+          await seedCompletion(db, 
             CompletionsCompanion.insert(
               profileId: profileId,
               curriculumId: CurriculumId.mishnayos.storageKey,
@@ -259,7 +260,7 @@ void main() {
 
         // 3 real-date completions.
         for (var i = 0; i < 3; i++) {
-          await db.completionDao.insertCompletion(
+          await seedCompletion(db, 
             CompletionsCompanion.insert(
               profileId: profileId,
               curriculumId: CurriculumId.mishnayos.storageKey,
@@ -274,7 +275,7 @@ void main() {
 
         // 4 sentinel completions — must be counted by lifetime.
         for (var i = 3; i < 7; i++) {
-          await db.completionDao.insertCompletion(
+          await seedCompletion(db, 
             CompletionsCompanion.insert(
               profileId: profileId,
               curriculumId: CurriculumId.mishnayos.storageKey,
@@ -361,7 +362,7 @@ void main() {
 
         // 2 real-date track completions (leaves[0], leaves[1]).
         for (var i = 0; i < 2; i++) {
-          await db.completionDao.insertCompletion(
+          await seedCompletion(db, 
             CompletionsCompanion.insert(
               profileId: profileId,
               curriculumId: CurriculumId.mishnayos.storageKey,
@@ -375,7 +376,7 @@ void main() {
         }
 
         // 1 sentinel completion (leaves[2]) — bulk-prior mark.
-        await db.completionDao.insertCompletion(
+        await seedCompletion(db, 
           CompletionsCompanion.insert(
             profileId: profileId,
             curriculumId: CurriculumId.mishnayos.storageKey,

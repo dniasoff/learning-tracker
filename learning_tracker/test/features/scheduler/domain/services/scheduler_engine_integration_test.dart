@@ -10,6 +10,7 @@ import 'package:learning_tracker/features/scheduler/domain/models/schedule_confi
 import 'package:learning_tracker/features/scheduler/domain/repositories/scheduler_content_repository.dart';
 import 'package:learning_tracker/features/scheduler/domain/services/scheduler_engine.dart';
 
+import '../../../../helpers/drift_memory.dart' show seedCompletion;
 import '../../../../helpers/test_database.dart';
 
 /// Fake content repository that returns in-memory items (no asset loading).
@@ -121,7 +122,7 @@ void main() {
       final learnStageId = stages.firstWhere((s) => s.stageOrder == 1).id;
 
       for (var i = 0; i < 2; i++) {
-        await db.completionDao.insertCompletion(
+        await seedCompletion(db, 
           CompletionsCompanion.insert(
             profileId: 1,
             curriculumId: curriculum.storageKey,

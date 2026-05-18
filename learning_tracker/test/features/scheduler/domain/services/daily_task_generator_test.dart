@@ -10,6 +10,7 @@ import 'package:learning_tracker/features/scheduler/domain/services/daily_task_g
 import 'package:learning_tracker/features/scheduler/domain/services/scheduler_engine.dart';
 import 'package:test/test.dart';
 
+import '../../../../helpers/drift_memory.dart' show seedCompletion;
 import '../../../../helpers/test_database.dart';
 
 class _InMemoryContentRepo implements SchedulerContentRepository {
@@ -123,7 +124,7 @@ void main() {
     );
     final learnId = stages.firstWhere((s) => s.stageOrder == 1).id;
     // Item 0: learned 3 days ago → Chazara 1 overdue (delay=1)
-    await db.completionDao.insertCompletion(
+    await seedCompletion(db, 
       CompletionsCompanion.insert(
         profileId: 0,
         curriculumId: curriculum.storageKey,
@@ -137,7 +138,7 @@ void main() {
     );
 
     // Item 1: learned yesterday → Chazara 1 due today (delay=1)
-    await db.completionDao.insertCompletion(
+    await seedCompletion(db, 
       CompletionsCompanion.insert(
         profileId: 0,
         curriculumId: curriculum.storageKey,
@@ -195,7 +196,7 @@ void main() {
     final learnId = stages.firstWhere((s) => s.stageOrder == 1).id;
 
     // Complete item 0 Learn right now (Chazara 1 delay=1, so not due today)
-    await db.completionDao.insertCompletion(
+    await seedCompletion(db, 
       CompletionsCompanion.insert(
         profileId: 0,
         curriculumId: curriculum.storageKey,
@@ -272,7 +273,7 @@ void main() {
     final learnId = stages.firstWhere((s) => s.stageOrder == 1).id;
 
     // Complete Learn for item 0
-    await db.completionDao.insertCompletion(
+    await seedCompletion(db, 
       CompletionsCompanion.insert(
         profileId: 0,
         curriculumId: curriculum.storageKey,

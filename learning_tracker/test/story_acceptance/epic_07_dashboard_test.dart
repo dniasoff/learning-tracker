@@ -30,6 +30,7 @@ import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:test/test.dart' hide isNotNull, isNull;
 
+import '../helpers/drift_memory.dart' show seedCompletion;
 import '../helpers/test_database.dart';
 
 ContentItem _leaf({
@@ -279,7 +280,7 @@ void main() {
     });
 
     test('global points total sums across all completions', () async {
-      await db.completionDao.insertCompletion(
+      await seedCompletion(db, 
         CompletionsCompanion.insert(
           profileId: 1,
           curriculumId: 'mishnayos',
@@ -291,7 +292,7 @@ void main() {
           points: const Value(10),
         ),
       );
-      await db.completionDao.insertCompletion(
+      await seedCompletion(db, 
         CompletionsCompanion.insert(
           profileId: 1,
           curriculumId: 'bavli',
@@ -303,7 +304,7 @@ void main() {
           points: const Value(5),
         ),
       );
-      await db.completionDao.insertCompletion(
+      await seedCompletion(db, 
         CompletionsCompanion.insert(
           profileId: 1,
           curriculumId: 'mishnayos',
@@ -372,7 +373,7 @@ void main() {
       'last completion timestamp resolves per curriculum for continue learning',
       () async {
         // Insert completions for two curricula at different times
-        await db.completionDao.insertCompletion(
+        await seedCompletion(db, 
           CompletionsCompanion.insert(
             profileId: 1,
             curriculumId: 'mishnayos',
@@ -383,7 +384,7 @@ void main() {
             completedAt: DateTime.utc(2026, 3, 15, 10, 0),
           ),
         );
-        await db.completionDao.insertCompletion(
+        await seedCompletion(db, 
           CompletionsCompanion.insert(
             profileId: 1,
             curriculumId: 'bavli',
@@ -616,7 +617,7 @@ void main() {
       required int stageId,
       String trackType = 'personal',
     }) async {
-      final id = await db.completionDao.insertCompletion(
+      final id = await seedCompletion(db, 
         CompletionsCompanion.insert(
           profileId: 1,
           curriculumId: 'mishnayos',
@@ -860,7 +861,7 @@ void main() {
       );
 
       for (var i = 1; i <= 7; i++) {
-        await db.completionDao.insertCompletion(
+        await seedCompletion(db, 
           CompletionsCompanion.insert(
             profileId: 1,
             curriculumId: 'mishnayos',
@@ -916,8 +917,10 @@ void main() {
     late UserDatabase db;
     late int trackId;
     late ChartDataService chartService;
+    var refCounter = 0;
 
     setUp(() async {
+      refCounter = 0;
       db = createTestDatabase();
       await seedProfile(db);
       trackId = await _insertTrack(db);
@@ -933,11 +936,11 @@ void main() {
       String curriculumId = 'mishnayos',
       int points = 10,
     }) async {
-      await db.completionDao.insertCompletion(
+      await seedCompletion(db,
         CompletionsCompanion.insert(
           profileId: 1,
           curriculumId: curriculumId,
-          sefariaRef: 'ref_${completedAt.millisecondsSinceEpoch}',
+          sefariaRef: 'ref_${++refCounter}',
           stageId: 1,
           trackType: 'personal',
           trackId: trackId,

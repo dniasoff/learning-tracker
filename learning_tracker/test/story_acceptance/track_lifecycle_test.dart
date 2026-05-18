@@ -27,7 +27,7 @@ import '../helpers/drift_memory.dart';
 
 // ── Shared helpers ────────────────────────────────────────────────────────────
 
-/// Insert a completion row directly (bypasses CompletionWriter for speed).
+/// Insert a completion row via the event log (C1 canonical write path).
 Future<void> _addCompletion(
   UserDatabase db, {
   required int profileId,
@@ -36,7 +36,8 @@ Future<void> _addCompletion(
   CurriculumId curriculum = CurriculumId.mishnayos,
   int stageId = 1,
   DateTime? completedAt,
-}) => db.into(db.completions).insert(
+}) => seedCompletion(
+  db,
   CompletionsCompanion.insert(
     profileId: profileId,
     curriculumId: curriculum.storageKey,

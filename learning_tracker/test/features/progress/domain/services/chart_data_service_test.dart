@@ -39,22 +39,19 @@ void main() {
     int stageId = 1,
     String sefariaRef = 'ref_1',
     int? trackIdOverride,
-  }) async {
-    return db
-        .into(db.completions)
-        .insert(
-          CompletionsCompanion.insert(
-            profileId: profileId,
-            curriculumId: curriculumId,
-            sefariaRef: sefariaRef,
-            stageId: stageId,
-            trackType: 'personal',
-            trackId: trackIdOverride ?? trackId,
-            completedAt: completedAt,
-            points: Value(points),
-          ),
-        );
-  }
+  }) => seedCompletion(
+    db,
+    CompletionsCompanion.insert(
+      profileId: profileId,
+      curriculumId: curriculumId,
+      sefariaRef: sefariaRef,
+      stageId: stageId,
+      trackType: 'personal',
+      trackId: trackIdOverride ?? trackId,
+      completedAt: completedAt,
+      points: Value(points),
+    ),
+  );
 
   group('ChartDataService', () {
     group('getDailyCompletions', () {

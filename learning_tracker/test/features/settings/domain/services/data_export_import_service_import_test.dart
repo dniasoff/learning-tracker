@@ -764,20 +764,18 @@ void main() {
           );
 
       // Insert completion.
-      await db
-          .into(db.completions)
-          .insert(
-            CompletionsCompanion.insert(
-              profileId: profileId,
-              curriculumId: 'bavli',
-              sefariaRef: 'Berakhot.2a',
-              stageId: 1,
-              trackType: 'personal',
-              trackId: trackId,
-              completedAt: now,
-              points: const Value(5),
-            ),
-          );
+      await seedCompletion(
+        db,
+        CompletionsCompanion.insert(
+          profileId: profileId,
+          curriculumId: 'bavli',
+          sefariaRef: 'Berakhot.2a',
+          stageId: 1,
+          trackType: 'personal',
+          trackId: trackId,
+          completedAt: now,
+        ),
+      );
 
       // Insert goal.
       await db.goalDao.insertGoal(
@@ -854,7 +852,7 @@ void main() {
       expect(await db.select(db.curriculumTracks).get(), hasLength(1));
       expect(await db.select(db.stageDefinitions).get(), hasLength(1));
       expect(await db.select(db.pointConfigs).get(), hasLength(1));
-      expect(await db.select(db.completions).get(), hasLength(1));
+      expect(await db.select(db.completionEvents).get(), hasLength(1));
       expect(await db.select(db.streaks).get(), hasLength(1));
       expect(await db.select(db.streakEvents).get(), hasLength(1));
       expect(await db.select(db.bookmarks).get(), hasLength(1));

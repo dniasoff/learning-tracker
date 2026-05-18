@@ -42,21 +42,18 @@ void main() {
     DateTime? completedAt,
     int stageId = 1,
     int? trackId,
-  }) {
-    return db
-        .into(db.completions)
-        .insert(
-          CompletionsCompanion.insert(
-            profileId: profileId,
-            curriculumId: curriculumId,
-            sefariaRef: sefariaRef,
-            stageId: stageId,
-            trackType: 'personal',
-            trackId: trackId ?? defaultTrackId,
-            completedAt: completedAt ?? DateTime.utc(2026, 5, 14),
-          ),
-        );
-  }
+  }) => seedCompletion(
+    db,
+    CompletionsCompanion.insert(
+      profileId: profileId,
+      curriculumId: curriculumId,
+      sefariaRef: sefariaRef,
+      stageId: stageId,
+      trackType: 'personal',
+      trackId: trackId ?? defaultTrackId,
+      completedAt: completedAt ?? DateTime.utc(2026, 5, 14),
+    ),
+  ).then((_) {});
 
   Future<void> insertGoal({
     String curriculumId = 'mishnayos',

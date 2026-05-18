@@ -16,6 +16,7 @@ import 'package:learning_tracker/features/scheduler/domain/models/schedule_confi
 import 'package:learning_tracker/features/scheduler/domain/services/pace_calculator.dart';
 import 'package:test/test.dart';
 
+import '../helpers/drift_memory.dart' show seedCompletion;
 import '../helpers/test_database.dart';
 
 /// Inline copy of milestone logic to avoid importing Flutter-dependent widget.
@@ -773,44 +774,23 @@ void main() {
             ),
           );
 
-          // Insert completions: 1 learn + 2 chazara for same item
+          // Insert completions: 1 learn + 1 chazara1 + 1 chazara2 for same item.
+          // Each (profileId, sefariaRef, stageId, trackType) is unique (C1).
           final now = DateTime.now().toUtc();
-          await db.completionDao.insertCompletion(
-            CompletionsCompanion.insert(
-              profileId: 1,
-              curriculumId: 'mishnayos',
-              sefariaRef: 'Berakhot.1.1',
-              stageId: 1,
-              trackType: 'personal',
-              trackId: trackId,
-              completedAt: now,
-              points: const Value(1),
-            ),
-          );
-          await db.completionDao.insertCompletion(
-            CompletionsCompanion.insert(
-              profileId: 1,
-              curriculumId: 'mishnayos',
-              sefariaRef: 'Berakhot.1.1',
-              stageId: 2,
-              trackType: 'personal',
-              trackId: trackId,
-              completedAt: now,
-              points: const Value(1),
-            ),
-          );
-          await db.completionDao.insertCompletion(
-            CompletionsCompanion.insert(
-              profileId: 1,
-              curriculumId: 'mishnayos',
-              sefariaRef: 'Berakhot.1.1',
-              stageId: 2,
-              trackType: 'personal',
-              trackId: trackId,
-              completedAt: now.add(const Duration(days: 1)),
-              points: const Value(1),
-            ),
-          );
+          for (final stageId in [1, 2, 3]) {
+            await seedCompletion(db,
+              CompletionsCompanion.insert(
+                profileId: 1,
+                curriculumId: 'mishnayos',
+                sefariaRef: 'Berakhot.1.1',
+                stageId: stageId,
+                trackType: 'personal',
+                trackId: trackId,
+                completedAt: now.add(Duration(days: stageId)),
+                points: const Value(1),
+              ),
+            );
+          }
 
           final breakdown = await db.completionDao.getStageBreakdownByItem(
             'mishnayos',
@@ -818,7 +798,8 @@ void main() {
             1,
           );
           expect(breakdown[1], 1); // stage 1: 1 completion
-          expect(breakdown[2], 2); // stage 2: 2 completions
+          expect(breakdown[2], 1); // stage 2: 1 completion
+          expect(breakdown[3], 1); // stage 3: 1 completion
         },
       );
 
@@ -831,14 +812,16 @@ void main() {
           await seedProfile(db);
           final trackId = await _insertTrack(db);
 
+          // Each (profileId, sefariaRef, stageId, trackType) is unique (C1).
+          // Use 5 distinct stages to get a count of 5 for 'Berakhot.1.1'.
           final now = DateTime.now().toUtc();
-          for (var i = 0; i < 5; i++) {
-            await db.completionDao.insertCompletion(
+          for (var i = 1; i <= 5; i++) {
+            await seedCompletion(db,
               CompletionsCompanion.insert(
                 profileId: 1,
                 curriculumId: 'mishnayos',
                 sefariaRef: 'Berakhot.1.1',
-                stageId: i % 2 + 1,
+                stageId: i,
                 trackType: 'personal',
                 trackId: trackId,
                 completedAt: now.add(Duration(days: i)),
@@ -846,7 +829,7 @@ void main() {
               ),
             );
           }
-          await db.completionDao.insertCompletion(
+          await seedCompletion(db,
             CompletionsCompanion.insert(
               profileId: 1,
               curriculumId: 'mishnayos',
@@ -878,7 +861,7 @@ void main() {
           final trackId = await _insertTrack(db);
 
           final now = DateTime.now().toUtc();
-          await db.completionDao.insertCompletion(
+          await seedCompletion(db, 
             CompletionsCompanion.insert(
               profileId: 1,
               curriculumId: 'mishnayos',
@@ -890,7 +873,7 @@ void main() {
               points: const Value(1),
             ),
           );
-          await db.completionDao.insertCompletion(
+          await seedCompletion(db, 
             CompletionsCompanion.insert(
               profileId: 1,
               curriculumId: 'mishnayos',
@@ -902,7 +885,7 @@ void main() {
               points: const Value(1),
             ),
           );
-          await db.completionDao.insertCompletion(
+          await seedCompletion(db, 
             CompletionsCompanion.insert(
               profileId: 1,
               curriculumId: 'mishnayos',
@@ -943,7 +926,7 @@ void main() {
 
         final now = DateTime.now().toUtc();
         // Profile 1
-        await db.completionDao.insertCompletion(
+        await seedCompletion(db, 
           CompletionsCompanion.insert(
             profileId: 1,
             curriculumId: 'mishnayos',
@@ -956,7 +939,7 @@ void main() {
           ),
         );
         // Profile 2
-        await db.completionDao.insertCompletion(
+        await seedCompletion(db, 
           CompletionsCompanion.insert(
             profileId: 2,
             curriculumId: 'mishnayos',

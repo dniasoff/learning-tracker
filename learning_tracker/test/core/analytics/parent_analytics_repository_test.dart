@@ -8,6 +8,8 @@ import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/cross_profile_scope.dart';
 import 'package:test/test.dart';
 
+import '../../helpers/drift_memory.dart' show seedCompletion;
+
 CompletionsCompanion _completion({
   required int profileId,
   required String curriculumId,
@@ -61,10 +63,10 @@ void main() {
     tearDown(() => db.close());
 
     test('getAllCompletions returns rows across every profile', () async {
-      await db.completionDao.insertCompletion(
+      await seedCompletion(db, 
         _completion(profileId: 1, curriculumId: 'mishnayos'),
       );
-      await db.completionDao.insertCompletion(
+      await seedCompletion(db, 
         _completion(profileId: 2, curriculumId: 'mishnayos', ref: 'ref-2'),
       );
 
@@ -79,10 +81,10 @@ void main() {
     test(
       'getCompletionsByCurriculum filters by curriculum, across profiles',
       () async {
-        await db.completionDao.insertCompletion(
+        await seedCompletion(db, 
           _completion(profileId: 1, curriculumId: 'mishnayos'),
         );
-        await db.completionDao.insertCompletion(
+        await seedCompletion(db, 
           _completion(profileId: 2, curriculumId: 'bavli', ref: 'ref-2'),
         );
 
@@ -98,14 +100,14 @@ void main() {
     test(
       'getCompletionsByDateRange filters by date range, across profiles',
       () async {
-        await db.completionDao.insertCompletion(
+        await seedCompletion(db, 
           _completion(
             profileId: 1,
             curriculumId: 'mishnayos',
             completedAt: DateTime.utc(2026, 1, 1),
           ),
         );
-        await db.completionDao.insertCompletion(
+        await seedCompletion(db, 
           _completion(
             profileId: 2,
             curriculumId: 'mishnayos',
@@ -125,13 +127,13 @@ void main() {
     );
 
     test('getAggregateCount counts across profiles', () async {
-      await db.completionDao.insertCompletion(
+      await seedCompletion(db, 
         _completion(profileId: 1, curriculumId: 'mishnayos'),
       );
-      await db.completionDao.insertCompletion(
+      await seedCompletion(db, 
         _completion(profileId: 2, curriculumId: 'mishnayos', ref: 'ref-2'),
       );
-      await db.completionDao.insertCompletion(
+      await seedCompletion(db, 
         _completion(profileId: 1, curriculumId: 'bavli', ref: 'ref-3'),
       );
 
@@ -143,14 +145,14 @@ void main() {
     });
 
     test('getTrackBreakdown groups by trackType, across profiles', () async {
-      await db.completionDao.insertCompletion(
+      await seedCompletion(db, 
         _completion(
           profileId: 1,
           curriculumId: 'mishnayos',
           trackType: 'forwards',
         ),
       );
-      await db.completionDao.insertCompletion(
+      await seedCompletion(db, 
         _completion(
           profileId: 2,
           curriculumId: 'mishnayos',
@@ -158,7 +160,7 @@ void main() {
           trackType: 'forwards',
         ),
       );
-      await db.completionDao.insertCompletion(
+      await seedCompletion(db, 
         _completion(
           profileId: 1,
           curriculumId: 'mishnayos',

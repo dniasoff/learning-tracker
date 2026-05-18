@@ -123,8 +123,8 @@ void main() {
         expect(db, isNotNull);
         expect(
           db.schemaVersion,
-          19,
-        ); // v19: current schema version
+          20,
+        ); // v20: current schema version
 
         db.close();
       });

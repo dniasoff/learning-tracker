@@ -5,7 +5,7 @@ import 'package:drift/drift.dart' show Value;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 
-import '../../../helpers/drift_memory.dart';
+import '../../../helpers/drift_memory.dart' show inMemoryDb, seedCompletion, seedProfile;
 
 void main() {
   late UserDatabase db;
@@ -50,20 +50,18 @@ void main() {
     required String sefariaRef,
     int? stageIdOverride,
     DateTime? completedAt,
-  }) async {
-    await db.completionDao.insertCompletion(
-      CompletionsCompanion.insert(
-        profileId: profileId,
-        curriculumId: curriculumId,
-        sefariaRef: sefariaRef,
-        stageId: stageIdOverride ?? stageId,
-        trackType: 'personal',
-        trackId: trackId,
-        completedAt: completedAt ?? DateTime.utc(2026, 3, 15),
-        points: const Value(10),
-      ),
-    );
-  }
+  }) => seedCompletion(
+    db,
+    CompletionsCompanion.insert(
+      profileId: profileId,
+      curriculumId: curriculumId,
+      sefariaRef: sefariaRef,
+      stageId: stageIdOverride ?? stageId,
+      trackType: 'personal',
+      trackId: trackId,
+      completedAt: completedAt ?? DateTime.utc(2026, 3, 15),
+    ),
+  );
 
   // =========================================================================
   // getReviewCountsByItemAndTrack
@@ -80,8 +78,24 @@ void main() {
     });
 
     test('counts completions per sefariaRef', () async {
+      // Each row in completion_events is unique on (profileId, sefariaRef,
+      // stageId, trackType). To get 2 rows for the same ref we use 2 stages.
+      final stage2Id = await db.stageDao.insertStageDefinition(
+        StageDefinitionsCompanion.insert(
+          profileId: profileId,
+          curriculumId: curriculumId,
+          trackId: trackId,
+          stageOrder: 2,
+          stageName: 'Chazara 1',
+          delayDays: 1,
+        ),
+      );
+
       await insertCompletion(sefariaRef: 'Berakhot 1:1');
-      await insertCompletion(sefariaRef: 'Berakhot 1:1'); // second review
+      await insertCompletion(
+        sefariaRef: 'Berakhot 1:1',
+        stageIdOverride: stage2Id,
+      ); // second stage → separate row
       await insertCompletion(sefariaRef: 'Berakhot 1:2');
 
       final counts = await db.completionDao.getReviewCountsByItemAndTrack(
@@ -121,7 +135,7 @@ void main() {
       await insertCompletion(sefariaRef: 'ref_A');
 
       // Insert into the other track.
-      await db.completionDao.insertCompletion(
+      await seedCompletion(db, 
         CompletionsCompanion.insert(
           profileId: profileId,
           curriculumId: 'bavli',
@@ -187,7 +201,6 @@ void main() {
       );
 
       await insertCompletion(sefariaRef: 'Berakhot 1:1'); // stage 1
-      await insertCompletion(sefariaRef: 'Berakhot 1:1'); // stage 1 again
       await insertCompletion(
         sefariaRef: 'Berakhot 1:1',
         stageIdOverride: stage2Id,
@@ -200,7 +213,7 @@ void main() {
         profileId,
       );
 
-      expect(breakdown[stageId], 2); // 2 completions at stage 1
+      expect(breakdown[stageId], 1); // 1 completion at stage 1
       expect(breakdown[stage2Id], 1); // 1 completion at stage 2
     });
 

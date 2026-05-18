@@ -20,6 +20,8 @@ import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/curriculum_overlap_registry.dart';
 
+import '../helpers/drift_memory.dart' show seedCompletion;
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -68,7 +70,7 @@ Future<void> _insertCompletion(
   required String sefariaRef,
   int stageId = 1,
 }) async {
-  await db.completionDao.insertCompletion(
+  await seedCompletion(db, 
     CompletionsCompanion.insert(
       profileId: profileId,
       curriculumId: curriculumId,

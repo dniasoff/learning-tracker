@@ -51,22 +51,19 @@ void main() {
     int trackId = 1,
     int points = 10,
     DateTime? completedAt,
-  }) {
-    return db
-        .into(db.completions)
-        .insert(
-          CompletionsCompanion.insert(
-            profileId: profileId,
-            curriculumId: curriculumId,
-            sefariaRef: sefariaRef,
-            stageId: stageId,
-            trackType: 'personal',
-            trackId: trackId,
-            completedAt: completedAt ?? DateTime.utc(2026, 5, 14),
-            points: Value(points),
-          ),
-        );
-  }
+  }) => seedCompletion(
+    db,
+    CompletionsCompanion.insert(
+      profileId: profileId,
+      curriculumId: curriculumId,
+      sefariaRef: sefariaRef,
+      stageId: stageId,
+      trackType: 'personal',
+      trackId: trackId,
+      completedAt: completedAt ?? DateTime.utc(2026, 5, 14),
+      points: Value(points),
+    ),
+  ).then((_) {});
 
   // ── compute() ────────────────────────────────────────────────────────────
 

@@ -316,6 +316,8 @@ class DataExportImportService {
               'sefariaRef': e.sefariaRef,
               'stageId': e.stageId,
               'trackType': e.trackType,
+              'trackId': e.trackId,
+              'points': e.points,
               'eventTimestamp': e.eventTimestamp.toIso8601String(),
               'createdAt': e.createdAt.toIso8601String(),
             },
@@ -729,6 +731,8 @@ class DataExportImportService {
       // --- Import completion events ---
       for (final e in (data['completionEvents'] as List? ?? [])) {
         final map = e as Map<String, dynamic>;
+        final rawTrackId = map['trackId'];
+        final rawPoints = map['points'];
         await _database
             .into(_database.completionEvents)
             .insert(
@@ -738,6 +742,12 @@ class DataExportImportService {
                 sefariaRef: map['sefariaRef'] as String,
                 stageId: map['stageId'] as int,
                 trackType: map['trackType'] as String,
+                trackId: rawTrackId != null
+                    ? Value<int?>(rawTrackId as int)
+                    : const Value<int?>.absent(),
+                points: rawPoints != null
+                    ? Value(rawPoints as int)
+                    : const Value(0),
                 eventTimestamp: DateTime.parse(map['eventTimestamp'] as String),
                 createdAt: Value(DateTime.parse(map['createdAt'] as String)),
               ),

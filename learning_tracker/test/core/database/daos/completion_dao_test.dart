@@ -2,7 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/cross_profile_scope.dart';
 
-import '../../../helpers/drift_memory.dart';
+import '../../../helpers/drift_memory.dart' show inMemoryDb, seedCompletion, seedProfile;
 
 void main() {
   late UserDatabase database;
@@ -34,19 +34,18 @@ void main() {
     int stageId = 1,
     String trackType = 'amud',
     DateTime? completedAt,
-  }) {
-    return database.completionDao.insertCompletion(
-      CompletionsCompanion.insert(
-        profileId: 1,
-        curriculumId: curriculumId,
-        sefariaRef: sefariaRef,
-        stageId: stageId,
-        trackType: trackType,
-        trackId: trackId,
-        completedAt: completedAt ?? DateTime(2024, 6, 15),
-      ),
-    );
-  }
+  }) => seedCompletion(
+    database,
+    CompletionsCompanion.insert(
+      profileId: 1,
+      curriculumId: curriculumId,
+      sefariaRef: sefariaRef,
+      stageId: stageId,
+      trackType: trackType,
+      trackId: trackId,
+      completedAt: completedAt ?? DateTime(2024, 6, 15),
+    ),
+  );
 
   group('CompletionDao', () {
     test('getAllCompletions returns empty list initially', () async {

@@ -23,7 +23,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:talker/talker.dart';
 import 'package:test/test.dart';
 
-import '../helpers/drift_memory.dart' show seedProfile;
+import '../helpers/drift_memory.dart' show seedCompletion, seedProfile;
 
 class MockFirestoreDataSource extends Mock implements FirestoreDataSource {}
 
@@ -395,7 +395,7 @@ void main() {
         '(no duplicates)', () async {
       // Insert one local completion
       final completedAt = DateTime.utc(2026, 2, 9, 12);
-      await database.completionDao.insertCompletion(
+      await seedCompletion(database, 
         CompletionsCompanion.insert(
           profileId: 1,
           curriculumId: 'mishnayos',
@@ -522,7 +522,7 @@ void main() {
         syncEngine.setOnlineState(false);
 
         // Insert local data
-        await database.completionDao.insertCompletion(
+        await seedCompletion(database, 
           CompletionsCompanion.insert(
             profileId: 1,
             curriculumId: 'mishnayos',
@@ -1174,7 +1174,7 @@ void main() {
 
     test('restore not triggered on existing device (has data)', () async {
       // Insert existing data — not a new device
-      await database.completionDao.insertCompletion(
+      await seedCompletion(database, 
         CompletionsCompanion.insert(
           profileId: 1,
           curriculumId: 'mishnayos',

@@ -9,6 +9,7 @@ import 'package:learning_tracker/features/stages/data/repositories/stage_definit
 import 'package:mocktail/mocktail.dart';
 import 'package:test/test.dart';
 
+import '../../../../helpers/drift_memory.dart' show seedCompletion;
 import '../../../../helpers/test_database.dart';
 
 class _MockFirestoreGateway extends Mock implements FirestoreGateway {}
@@ -88,7 +89,7 @@ void main() {
     int profileId = 1,
     String trackType = 'personal',
   }) async {
-    await db.completionDao.insertCompletion(
+    await seedCompletion(db, 
       CompletionsCompanion.insert(
         profileId: profileId,
         curriculumId: _currId,

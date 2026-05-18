@@ -4779,6 +4779,27 @@ class $CompletionEventsTable extends CompletionEvents
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _trackIdMeta = const VerificationMeta(
+    'trackId',
+  );
+  @override
+  late final GeneratedColumn<int> trackId = GeneratedColumn<int>(
+    'track_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _pointsMeta = const VerificationMeta('points');
+  @override
+  late final GeneratedColumn<int> points = GeneratedColumn<int>(
+    'points',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant<int>(0),
+  );
   static const VerificationMeta _eventTimestampMeta = const VerificationMeta(
     'eventTimestamp',
   );
@@ -4822,6 +4843,8 @@ class $CompletionEventsTable extends CompletionEvents
     sefariaRef,
     stageId,
     trackType,
+    trackId,
+    points,
     eventTimestamp,
     createdAt,
     purgedAt,
@@ -4884,6 +4907,18 @@ class $CompletionEventsTable extends CompletionEvents
     } else if (isInserting) {
       context.missing(_trackTypeMeta);
     }
+    if (data.containsKey('track_id')) {
+      context.handle(
+        _trackIdMeta,
+        trackId.isAcceptableOrUnknown(data['track_id']!, _trackIdMeta),
+      );
+    }
+    if (data.containsKey('points')) {
+      context.handle(
+        _pointsMeta,
+        points.isAcceptableOrUnknown(data['points']!, _pointsMeta),
+      );
+    }
     if (data.containsKey('event_timestamp')) {
       context.handle(
         _eventTimestampMeta,
@@ -4940,6 +4975,14 @@ class $CompletionEventsTable extends CompletionEvents
         DriftSqlType.string,
         data['${effectivePrefix}track_type'],
       )!,
+      trackId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}track_id'],
+      ),
+      points: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}points'],
+      )!,
       eventTimestamp: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}event_timestamp'],
@@ -4970,6 +5013,11 @@ class CompletionEvent extends DataClass implements Insertable<CompletionEvent> {
   final String sefariaRef;
   final int stageId;
   final String trackType;
+
+  /// FK → CurriculumTracks.id. Added v20 to enable the completions view.
+  /// Nullable for legacy rows that pre-date this column.
+  final int? trackId;
+  final int points;
   final DateTime eventTimestamp;
   final DateTime createdAt;
 
@@ -4983,6 +5031,8 @@ class CompletionEvent extends DataClass implements Insertable<CompletionEvent> {
     required this.sefariaRef,
     required this.stageId,
     required this.trackType,
+    this.trackId,
+    required this.points,
     required this.eventTimestamp,
     required this.createdAt,
     this.purgedAt,
@@ -4996,6 +5046,10 @@ class CompletionEvent extends DataClass implements Insertable<CompletionEvent> {
     map['sefaria_ref'] = Variable<String>(sefariaRef);
     map['stage_id'] = Variable<int>(stageId);
     map['track_type'] = Variable<String>(trackType);
+    if (!nullToAbsent || trackId != null) {
+      map['track_id'] = Variable<int>(trackId);
+    }
+    map['points'] = Variable<int>(points);
     map['event_timestamp'] = Variable<DateTime>(eventTimestamp);
     map['created_at'] = Variable<DateTime>(createdAt);
     if (!nullToAbsent || purgedAt != null) {
@@ -5012,6 +5066,10 @@ class CompletionEvent extends DataClass implements Insertable<CompletionEvent> {
       sefariaRef: Value(sefariaRef),
       stageId: Value(stageId),
       trackType: Value(trackType),
+      trackId: trackId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(trackId),
+      points: Value(points),
       eventTimestamp: Value(eventTimestamp),
       createdAt: Value(createdAt),
       purgedAt: purgedAt == null && nullToAbsent
@@ -5032,6 +5090,8 @@ class CompletionEvent extends DataClass implements Insertable<CompletionEvent> {
       sefariaRef: serializer.fromJson<String>(json['sefariaRef']),
       stageId: serializer.fromJson<int>(json['stageId']),
       trackType: serializer.fromJson<String>(json['trackType']),
+      trackId: serializer.fromJson<int?>(json['trackId']),
+      points: serializer.fromJson<int>(json['points']),
       eventTimestamp: serializer.fromJson<DateTime>(json['eventTimestamp']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       purgedAt: serializer.fromJson<DateTime?>(json['purgedAt']),
@@ -5047,6 +5107,8 @@ class CompletionEvent extends DataClass implements Insertable<CompletionEvent> {
       'sefariaRef': serializer.toJson<String>(sefariaRef),
       'stageId': serializer.toJson<int>(stageId),
       'trackType': serializer.toJson<String>(trackType),
+      'trackId': serializer.toJson<int?>(trackId),
+      'points': serializer.toJson<int>(points),
       'eventTimestamp': serializer.toJson<DateTime>(eventTimestamp),
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'purgedAt': serializer.toJson<DateTime?>(purgedAt),
@@ -5060,6 +5122,8 @@ class CompletionEvent extends DataClass implements Insertable<CompletionEvent> {
     String? sefariaRef,
     int? stageId,
     String? trackType,
+    Value<int?> trackId = const Value.absent(),
+    int? points,
     DateTime? eventTimestamp,
     DateTime? createdAt,
     Value<DateTime?> purgedAt = const Value.absent(),
@@ -5070,6 +5134,8 @@ class CompletionEvent extends DataClass implements Insertable<CompletionEvent> {
     sefariaRef: sefariaRef ?? this.sefariaRef,
     stageId: stageId ?? this.stageId,
     trackType: trackType ?? this.trackType,
+    trackId: trackId.present ? trackId.value : this.trackId,
+    points: points ?? this.points,
     eventTimestamp: eventTimestamp ?? this.eventTimestamp,
     createdAt: createdAt ?? this.createdAt,
     purgedAt: purgedAt.present ? purgedAt.value : this.purgedAt,
@@ -5086,6 +5152,8 @@ class CompletionEvent extends DataClass implements Insertable<CompletionEvent> {
           : this.sefariaRef,
       stageId: data.stageId.present ? data.stageId.value : this.stageId,
       trackType: data.trackType.present ? data.trackType.value : this.trackType,
+      trackId: data.trackId.present ? data.trackId.value : this.trackId,
+      points: data.points.present ? data.points.value : this.points,
       eventTimestamp: data.eventTimestamp.present
           ? data.eventTimestamp.value
           : this.eventTimestamp,
@@ -5103,6 +5171,8 @@ class CompletionEvent extends DataClass implements Insertable<CompletionEvent> {
           ..write('sefariaRef: $sefariaRef, ')
           ..write('stageId: $stageId, ')
           ..write('trackType: $trackType, ')
+          ..write('trackId: $trackId, ')
+          ..write('points: $points, ')
           ..write('eventTimestamp: $eventTimestamp, ')
           ..write('createdAt: $createdAt, ')
           ..write('purgedAt: $purgedAt')
@@ -5118,6 +5188,8 @@ class CompletionEvent extends DataClass implements Insertable<CompletionEvent> {
     sefariaRef,
     stageId,
     trackType,
+    trackId,
+    points,
     eventTimestamp,
     createdAt,
     purgedAt,
@@ -5132,6 +5204,8 @@ class CompletionEvent extends DataClass implements Insertable<CompletionEvent> {
           other.sefariaRef == this.sefariaRef &&
           other.stageId == this.stageId &&
           other.trackType == this.trackType &&
+          other.trackId == this.trackId &&
+          other.points == this.points &&
           other.eventTimestamp == this.eventTimestamp &&
           other.createdAt == this.createdAt &&
           other.purgedAt == this.purgedAt);
@@ -5144,6 +5218,8 @@ class CompletionEventsCompanion extends UpdateCompanion<CompletionEvent> {
   final Value<String> sefariaRef;
   final Value<int> stageId;
   final Value<String> trackType;
+  final Value<int?> trackId;
+  final Value<int> points;
   final Value<DateTime> eventTimestamp;
   final Value<DateTime> createdAt;
   final Value<DateTime?> purgedAt;
@@ -5154,6 +5230,8 @@ class CompletionEventsCompanion extends UpdateCompanion<CompletionEvent> {
     this.sefariaRef = const Value.absent(),
     this.stageId = const Value.absent(),
     this.trackType = const Value.absent(),
+    this.trackId = const Value.absent(),
+    this.points = const Value.absent(),
     this.eventTimestamp = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.purgedAt = const Value.absent(),
@@ -5165,6 +5243,8 @@ class CompletionEventsCompanion extends UpdateCompanion<CompletionEvent> {
     required String sefariaRef,
     required int stageId,
     required String trackType,
+    this.trackId = const Value.absent(),
+    this.points = const Value.absent(),
     required DateTime eventTimestamp,
     this.createdAt = const Value.absent(),
     this.purgedAt = const Value.absent(),
@@ -5181,6 +5261,8 @@ class CompletionEventsCompanion extends UpdateCompanion<CompletionEvent> {
     Expression<String>? sefariaRef,
     Expression<int>? stageId,
     Expression<String>? trackType,
+    Expression<int>? trackId,
+    Expression<int>? points,
     Expression<DateTime>? eventTimestamp,
     Expression<DateTime>? createdAt,
     Expression<DateTime>? purgedAt,
@@ -5192,6 +5274,8 @@ class CompletionEventsCompanion extends UpdateCompanion<CompletionEvent> {
       if (sefariaRef != null) 'sefaria_ref': sefariaRef,
       if (stageId != null) 'stage_id': stageId,
       if (trackType != null) 'track_type': trackType,
+      if (trackId != null) 'track_id': trackId,
+      if (points != null) 'points': points,
       if (eventTimestamp != null) 'event_timestamp': eventTimestamp,
       if (createdAt != null) 'created_at': createdAt,
       if (purgedAt != null) 'purged_at': purgedAt,
@@ -5205,6 +5289,8 @@ class CompletionEventsCompanion extends UpdateCompanion<CompletionEvent> {
     Value<String>? sefariaRef,
     Value<int>? stageId,
     Value<String>? trackType,
+    Value<int?>? trackId,
+    Value<int>? points,
     Value<DateTime>? eventTimestamp,
     Value<DateTime>? createdAt,
     Value<DateTime?>? purgedAt,
@@ -5216,6 +5302,8 @@ class CompletionEventsCompanion extends UpdateCompanion<CompletionEvent> {
       sefariaRef: sefariaRef ?? this.sefariaRef,
       stageId: stageId ?? this.stageId,
       trackType: trackType ?? this.trackType,
+      trackId: trackId ?? this.trackId,
+      points: points ?? this.points,
       eventTimestamp: eventTimestamp ?? this.eventTimestamp,
       createdAt: createdAt ?? this.createdAt,
       purgedAt: purgedAt ?? this.purgedAt,
@@ -5243,6 +5331,12 @@ class CompletionEventsCompanion extends UpdateCompanion<CompletionEvent> {
     if (trackType.present) {
       map['track_type'] = Variable<String>(trackType.value);
     }
+    if (trackId.present) {
+      map['track_id'] = Variable<int>(trackId.value);
+    }
+    if (points.present) {
+      map['points'] = Variable<int>(points.value);
+    }
     if (eventTimestamp.present) {
       map['event_timestamp'] = Variable<DateTime>(eventTimestamp.value);
     }
@@ -5264,6 +5358,8 @@ class CompletionEventsCompanion extends UpdateCompanion<CompletionEvent> {
           ..write('sefariaRef: $sefariaRef, ')
           ..write('stageId: $stageId, ')
           ..write('trackType: $trackType, ')
+          ..write('trackId: $trackId, ')
+          ..write('points: $points, ')
           ..write('eventTimestamp: $eventTimestamp, ')
           ..write('createdAt: $createdAt, ')
           ..write('purgedAt: $purgedAt')
@@ -11954,6 +12050,272 @@ class SacredWindowEntriesCompanion extends UpdateCompanion<SacredWindowEntry> {
   }
 }
 
+class CompletionsViewData extends DataClass {
+  final int id;
+  final int profileId;
+  final String curriculumId;
+  final String sefariaRef;
+  final int stageId;
+  final String trackType;
+  final int? trackId;
+  final int points;
+  final DateTime eventTimestamp;
+  const CompletionsViewData({
+    required this.id,
+    required this.profileId,
+    required this.curriculumId,
+    required this.sefariaRef,
+    required this.stageId,
+    required this.trackType,
+    this.trackId,
+    required this.points,
+    required this.eventTimestamp,
+  });
+  factory CompletionsViewData.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return CompletionsViewData(
+      id: serializer.fromJson<int>(json['id']),
+      profileId: serializer.fromJson<int>(json['profileId']),
+      curriculumId: serializer.fromJson<String>(json['curriculumId']),
+      sefariaRef: serializer.fromJson<String>(json['sefariaRef']),
+      stageId: serializer.fromJson<int>(json['stageId']),
+      trackType: serializer.fromJson<String>(json['trackType']),
+      trackId: serializer.fromJson<int?>(json['trackId']),
+      points: serializer.fromJson<int>(json['points']),
+      eventTimestamp: serializer.fromJson<DateTime>(json['eventTimestamp']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'profileId': serializer.toJson<int>(profileId),
+      'curriculumId': serializer.toJson<String>(curriculumId),
+      'sefariaRef': serializer.toJson<String>(sefariaRef),
+      'stageId': serializer.toJson<int>(stageId),
+      'trackType': serializer.toJson<String>(trackType),
+      'trackId': serializer.toJson<int?>(trackId),
+      'points': serializer.toJson<int>(points),
+      'eventTimestamp': serializer.toJson<DateTime>(eventTimestamp),
+    };
+  }
+
+  CompletionsViewData copyWith({
+    int? id,
+    int? profileId,
+    String? curriculumId,
+    String? sefariaRef,
+    int? stageId,
+    String? trackType,
+    Value<int?> trackId = const Value.absent(),
+    int? points,
+    DateTime? eventTimestamp,
+  }) => CompletionsViewData(
+    id: id ?? this.id,
+    profileId: profileId ?? this.profileId,
+    curriculumId: curriculumId ?? this.curriculumId,
+    sefariaRef: sefariaRef ?? this.sefariaRef,
+    stageId: stageId ?? this.stageId,
+    trackType: trackType ?? this.trackType,
+    trackId: trackId.present ? trackId.value : this.trackId,
+    points: points ?? this.points,
+    eventTimestamp: eventTimestamp ?? this.eventTimestamp,
+  );
+  @override
+  String toString() {
+    return (StringBuffer('CompletionsViewData(')
+          ..write('id: $id, ')
+          ..write('profileId: $profileId, ')
+          ..write('curriculumId: $curriculumId, ')
+          ..write('sefariaRef: $sefariaRef, ')
+          ..write('stageId: $stageId, ')
+          ..write('trackType: $trackType, ')
+          ..write('trackId: $trackId, ')
+          ..write('points: $points, ')
+          ..write('eventTimestamp: $eventTimestamp')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    profileId,
+    curriculumId,
+    sefariaRef,
+    stageId,
+    trackType,
+    trackId,
+    points,
+    eventTimestamp,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is CompletionsViewData &&
+          other.id == this.id &&
+          other.profileId == this.profileId &&
+          other.curriculumId == this.curriculumId &&
+          other.sefariaRef == this.sefariaRef &&
+          other.stageId == this.stageId &&
+          other.trackType == this.trackType &&
+          other.trackId == this.trackId &&
+          other.points == this.points &&
+          other.eventTimestamp == this.eventTimestamp);
+}
+
+class $CompletionsViewView
+    extends ViewInfo<$CompletionsViewView, CompletionsViewData>
+    implements HasResultSet {
+  final String? _alias;
+  @override
+  final _$UserDatabase attachedDatabase;
+  $CompletionsViewView(this.attachedDatabase, [this._alias]);
+  $CompletionEventsTable get completionEvents =>
+      attachedDatabase.completionEvents.createAlias('t0');
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    profileId,
+    curriculumId,
+    sefariaRef,
+    stageId,
+    trackType,
+    trackId,
+    points,
+    eventTimestamp,
+  ];
+  @override
+  String get aliasedName => _alias ?? entityName;
+  @override
+  String get entityName => 'completions_view';
+  @override
+  Map<SqlDialect, String>? get createViewStatements => null;
+  @override
+  $CompletionsViewView get asDslTable => this;
+  @override
+  CompletionsViewData map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return CompletionsViewData(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      profileId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}profile_id'],
+      )!,
+      curriculumId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}curriculum_id'],
+      )!,
+      sefariaRef: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}sefaria_ref'],
+      )!,
+      stageId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}stage_id'],
+      )!,
+      trackType: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}track_type'],
+      )!,
+      trackId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}track_id'],
+      ),
+      points: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}points'],
+      )!,
+      eventTimestamp: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}event_timestamp'],
+      )!,
+    );
+  }
+
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    generatedAs: GeneratedAs(completionEvents.id, false),
+    type: DriftSqlType.int,
+  );
+  late final GeneratedColumn<int> profileId = GeneratedColumn<int>(
+    'profile_id',
+    aliasedName,
+    false,
+    generatedAs: GeneratedAs(completionEvents.profileId, false),
+    type: DriftSqlType.int,
+  );
+  late final GeneratedColumn<String> curriculumId = GeneratedColumn<String>(
+    'curriculum_id',
+    aliasedName,
+    false,
+    generatedAs: GeneratedAs(completionEvents.curriculumId, false),
+    type: DriftSqlType.string,
+  );
+  late final GeneratedColumn<String> sefariaRef = GeneratedColumn<String>(
+    'sefaria_ref',
+    aliasedName,
+    false,
+    generatedAs: GeneratedAs(completionEvents.sefariaRef, false),
+    type: DriftSqlType.string,
+  );
+  late final GeneratedColumn<int> stageId = GeneratedColumn<int>(
+    'stage_id',
+    aliasedName,
+    false,
+    generatedAs: GeneratedAs(completionEvents.stageId, false),
+    type: DriftSqlType.int,
+  );
+  late final GeneratedColumn<String> trackType = GeneratedColumn<String>(
+    'track_type',
+    aliasedName,
+    false,
+    generatedAs: GeneratedAs(completionEvents.trackType, false),
+    type: DriftSqlType.string,
+  );
+  late final GeneratedColumn<int> trackId = GeneratedColumn<int>(
+    'track_id',
+    aliasedName,
+    true,
+    generatedAs: GeneratedAs(completionEvents.trackId, false),
+    type: DriftSqlType.int,
+  );
+  late final GeneratedColumn<int> points = GeneratedColumn<int>(
+    'points',
+    aliasedName,
+    false,
+    generatedAs: GeneratedAs(completionEvents.points, false),
+    type: DriftSqlType.int,
+  );
+  late final GeneratedColumn<DateTime> eventTimestamp =
+      GeneratedColumn<DateTime>(
+        'event_timestamp',
+        aliasedName,
+        false,
+        generatedAs: GeneratedAs(completionEvents.eventTimestamp, false),
+        type: DriftSqlType.dateTime,
+      );
+  @override
+  $CompletionsViewView createAlias(String alias) {
+    return $CompletionsViewView(attachedDatabase, alias);
+  }
+
+  @override
+  Query? get query =>
+      (attachedDatabase.selectOnly(completionEvents)..addColumns($columns));
+  @override
+  Set<String> get readTables => const {'completion_events'};
+}
+
 abstract class _$UserDatabase extends GeneratedDatabase {
   _$UserDatabase(QueryExecutor e) : super(e);
   $UserDatabaseManager get managers => $UserDatabaseManager(this);
@@ -11996,6 +12358,7 @@ abstract class _$UserDatabase extends GeneratedDatabase {
   late final $OutboxTable outbox = $OutboxTable(this);
   late final $SacredWindowEntriesTable sacredWindowEntries =
       $SacredWindowEntriesTable(this);
+  late final $CompletionsViewView completionsView = $CompletionsViewView(this);
   late final Index completionsPidxPidCurCompleted = Index(
     'completions_pidx_pid_cur_completed',
     'CREATE INDEX completions_pidx_pid_cur_completed ON completions (profile_id, curriculum_id, completed_at DESC)',
@@ -12102,6 +12465,7 @@ abstract class _$UserDatabase extends GeneratedDatabase {
     textDownloadStatuses,
     outbox,
     sacredWindowEntries,
+    completionsView,
     completionsPidxPidCurCompleted,
     completionsNaturalKey,
     completionEventsNaturalKey,
@@ -16813,6 +17177,8 @@ typedef $$CompletionEventsTableCreateCompanionBuilder =
       required String sefariaRef,
       required int stageId,
       required String trackType,
+      Value<int?> trackId,
+      Value<int> points,
       required DateTime eventTimestamp,
       Value<DateTime> createdAt,
       Value<DateTime?> purgedAt,
@@ -16825,6 +17191,8 @@ typedef $$CompletionEventsTableUpdateCompanionBuilder =
       Value<String> sefariaRef,
       Value<int> stageId,
       Value<String> trackType,
+      Value<int?> trackId,
+      Value<int> points,
       Value<DateTime> eventTimestamp,
       Value<DateTime> createdAt,
       Value<DateTime?> purgedAt,
@@ -16897,6 +17265,16 @@ class $$CompletionEventsTableFilterComposer
 
   ColumnFilters<String> get trackType => $composableBuilder(
     column: $table.trackType,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get trackId => $composableBuilder(
+    column: $table.trackId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get points => $composableBuilder(
+    column: $table.points,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -16973,6 +17351,16 @@ class $$CompletionEventsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<int> get trackId => $composableBuilder(
+    column: $table.trackId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get points => $composableBuilder(
+    column: $table.points,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get eventTimestamp => $composableBuilder(
     column: $table.eventTimestamp,
     builder: (column) => ColumnOrderings(column),
@@ -17039,6 +17427,12 @@ class $$CompletionEventsTableAnnotationComposer
 
   GeneratedColumn<String> get trackType =>
       $composableBuilder(column: $table.trackType, builder: (column) => column);
+
+  GeneratedColumn<int> get trackId =>
+      $composableBuilder(column: $table.trackId, builder: (column) => column);
+
+  GeneratedColumn<int> get points =>
+      $composableBuilder(column: $table.points, builder: (column) => column);
 
   GeneratedColumn<DateTime> get eventTimestamp => $composableBuilder(
     column: $table.eventTimestamp,
@@ -17111,6 +17505,8 @@ class $$CompletionEventsTableTableManager
                 Value<String> sefariaRef = const Value.absent(),
                 Value<int> stageId = const Value.absent(),
                 Value<String> trackType = const Value.absent(),
+                Value<int?> trackId = const Value.absent(),
+                Value<int> points = const Value.absent(),
                 Value<DateTime> eventTimestamp = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime?> purgedAt = const Value.absent(),
@@ -17121,6 +17517,8 @@ class $$CompletionEventsTableTableManager
                 sefariaRef: sefariaRef,
                 stageId: stageId,
                 trackType: trackType,
+                trackId: trackId,
+                points: points,
                 eventTimestamp: eventTimestamp,
                 createdAt: createdAt,
                 purgedAt: purgedAt,
@@ -17133,6 +17531,8 @@ class $$CompletionEventsTableTableManager
                 required String sefariaRef,
                 required int stageId,
                 required String trackType,
+                Value<int?> trackId = const Value.absent(),
+                Value<int> points = const Value.absent(),
                 required DateTime eventTimestamp,
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime?> purgedAt = const Value.absent(),
@@ -17143,6 +17543,8 @@ class $$CompletionEventsTableTableManager
                 sefariaRef: sefariaRef,
                 stageId: stageId,
                 trackType: trackType,
+                trackId: trackId,
+                points: points,
                 eventTimestamp: eventTimestamp,
                 createdAt: createdAt,
                 purgedAt: purgedAt,

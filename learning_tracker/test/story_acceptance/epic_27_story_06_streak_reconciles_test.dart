@@ -195,27 +195,25 @@ void main() {
           final preExisting = await db.select(db.streakEvents).get();
           expect(preExisting, isEmpty);
 
-          // 4. Mirror the pulled documents into local `completions` (which
-          //    is what `PullPipeline` + `CompletionEventMerger` would do
-          //    via the MergeStore seam). `StreakRestorer.restoreIfEmpty`
-          //    reads from `completions`, not from Firestore directly.
+          // 4. Mirror the pulled documents into local completion_events (C1:
+          //    the canonical write path). `StreakRestorer.restoreIfEmpty`
+          //    reads from completionsView, which is backed by completion_events.
           final trackId = await _seedTrack(db);
           for (final doc in snap.docs) {
             final data = doc.data();
             final completedAt = DateTime.parse(data['completed_at'] as String);
-            await db
-                .into(db.completions)
-                .insert(
-                  CompletionsCompanion.insert(
-                    profileId: _profileId,
-                    curriculumId: data['curriculum_id'] as String,
-                    sefariaRef: data['sefaria_ref'] as String,
-                    stageId: data['stage_id'] as int,
-                    trackType: data['track_type'] as String,
-                    trackId: trackId,
-                    completedAt: completedAt,
-                  ),
-                );
+            await seedCompletion(
+              db,
+              CompletionsCompanion.insert(
+                profileId: _profileId,
+                curriculumId: data['curriculum_id'] as String,
+                sefariaRef: data['sefaria_ref'] as String,
+                stageId: data['stage_id'] as int,
+                trackType: data['track_type'] as String,
+                trackId: trackId,
+                completedAt: completedAt,
+              ),
+            );
           }
 
           // 5. Run cloud-restore path: empty streak_events → reconstitute
@@ -269,19 +267,18 @@ void main() {
         'AC2 — calling restoreIfEmpty twice is a no-op (idempotent)',
         () async {
           final trackId = await _seedTrack(db);
-          await db
-              .into(db.completions)
-              .insert(
-                CompletionsCompanion.insert(
-                  profileId: _profileId,
-                  curriculumId: _curriculumId,
-                  sefariaRef: 'Mishnah Berakhot 1',
-                  stageId: 1,
-                  trackType: 'programmed',
-                  trackId: trackId,
-                  completedAt: DateTime.utc(2026, 5, 9),
-                ),
-              );
+          await seedCompletion(
+            db,
+            CompletionsCompanion.insert(
+              profileId: _profileId,
+              curriculumId: _curriculumId,
+              sefariaRef: 'Mishnah Berakhot 1',
+              stageId: 1,
+              trackType: 'programmed',
+              trackId: trackId,
+              completedAt: DateTime.utc(2026, 5, 9),
+            ),
+          );
 
           final restorer = StreakRestorer(db);
           await restorer.restoreIfEmpty(profileId: _profileId);

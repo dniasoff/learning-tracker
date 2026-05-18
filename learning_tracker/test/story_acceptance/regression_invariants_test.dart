@@ -175,7 +175,8 @@ void main() {
 
           // Directly insert 3 completions attached to that track, all in the past.
           for (var i = 0; i < 3; i++) {
-            await db.into(db.completions).insert(
+            await seedCompletion(
+              db,
               CompletionsCompanion.insert(
                 profileId: 1,
                 curriculumId: CurriculumId.mishnayos.storageKey,
@@ -319,7 +320,8 @@ void main() {
 
           // Insert the same sefariaRef at two different stages.
           // By the "distinct refs" definition, 1 ref is done — not 2.
-          await db.into(db.completions).insert(
+          await seedCompletion(
+            db,
             CompletionsCompanion.insert(
               profileId: 1,
               curriculumId: CurriculumId.mishnayos.storageKey,
@@ -330,7 +332,8 @@ void main() {
               completedAt: DateTime.utc(2026, 5, 1),
             ),
           );
-          await db.into(db.completions).insert(
+          await seedCompletion(
+            db,
             CompletionsCompanion.insert(
               profileId: 1,
               curriculumId: CurriculumId.mishnayos.storageKey,

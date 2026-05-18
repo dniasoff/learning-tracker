@@ -14,6 +14,7 @@ import 'package:test/test.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz_lib;
 
+import '../helpers/drift_memory.dart' show seedCompletion;
 import '../helpers/test_database.dart';
 
 class MockNotificationService extends Mock implements NotificationService {}
@@ -183,7 +184,7 @@ void main() {
         ),
       );
 
-      await db.completionDao.insertCompletion(
+      await seedCompletion(db, 
         CompletionsCompanion.insert(
           profileId: 1,
           curriculumId: 'test',

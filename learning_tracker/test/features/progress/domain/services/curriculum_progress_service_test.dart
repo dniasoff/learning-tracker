@@ -8,6 +8,7 @@ import 'package:learning_tracker/features/stages/domain/models/stage_definition.
     as domain_stage;
 import 'package:test/test.dart';
 
+import '../../../../helpers/drift_memory.dart' show seedCompletion;
 import '../../../../helpers/test_database.dart';
 
 void main() {
@@ -61,7 +62,7 @@ void main() {
     String trackType = 'personal',
     String curriculumId = 'mishnayos',
   }) async {
-    final id = await db.completionDao.insertCompletion(
+    final id = await seedCompletion(db, 
       CompletionsCompanion.insert(
         profileId: 1,
         curriculumId: curriculumId,

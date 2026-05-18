@@ -2,33 +2,50 @@ import 'dart:math' as math;
 
 import 'package:drift/drift.dart';
 import 'package:flutter/foundation.dart';
-import 'package:learning_tracker/core/database/base_dao.dart';
-import 'package:learning_tracker/core/database/tables/completions.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
+import 'package:learning_tracker/core/database/views/completions_view.dart';
 import 'package:learning_tracker/core/enums/cross_profile_scope.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 
 part 'completion_dao.g.dart';
 
-/// DAO for the completions table.
+/// DAO for the completions view (C1).
 ///
-/// Completions are append-only: only insert operations are exposed.
-/// No update or delete methods are provided to enforce immutability.
-@DriftAccessor(tables: [Completions])
+/// All reads are served from [CompletionsView] — a Drift view over
+/// [CompletionEvents] filtered by `purgedAt IS NULL`.  The old `completions`
+/// table remains in the schema for backward-compatibility with legacy rows but
+/// is no longer written to after schema v20.
+///
+/// Write methods ([insertCompletion], [insertCompletionsBatch]) have been
+/// removed.  New completions are written exclusively through
+/// [CompletionWriter] which inserts into [CompletionEvents].
+@DriftAccessor(views: [CompletionsView])
 class CompletionDao extends DatabaseAccessor<UserDatabase>
-    with
-        _$CompletionDaoMixin,
-        BaseDao<$CompletionsTable, Completion, UserDatabase> {
+    with _$CompletionDaoMixin {
   CompletionDao(super.db);
 
-  @override
-  TableInfo<$CompletionsTable, Completion> get table => completions;
+  // ── Private mapping helper ──────────────────────────────────────────────────
 
-  @override
-  Expression<int> idColumn($CompletionsTable t) => t.id;
-
-  @override
-  Expression<int> profileIdColumn($CompletionsTable t) => t.profileId;
+  /// Maps a [CompletionsViewData] row to a [Completion] object so callers
+  /// keep their existing return types after the completions-table → view
+  /// migration (C1).
+  ///
+  /// `completedAt` is taken from `eventTimestamp` (same instant, different
+  /// column name).  `points` defaults to 0 — [PointsService] recalculates
+  /// from [PointConfig] rules independently.  `derivedFromEvents` is always
+  /// `true` for view rows.
+  Completion _fromView(CompletionsViewData v) => Completion(
+    id: v.id,
+    profileId: v.profileId,
+    curriculumId: v.curriculumId,
+    sefariaRef: v.sefariaRef,
+    stageId: v.stageId,
+    trackType: v.trackType,
+    trackId: v.trackId ?? 0,
+    completedAt: v.eventTimestamp,
+    points: v.points,
+    derivedFromEvents: true,
+  );
 
   // ── Cross-profile internals (DNI-338) ───────────────────────────────────
   //
@@ -40,48 +57,63 @@ class CompletionDao extends DatabaseAccessor<UserDatabase>
 
   Future<List<Completion>> internalGetAllCompletionsCrossProfile({
     required CrossProfileScope scope,
-  }) {
+  }) async {
     _assertCrossProfileScope(scope, 'internalGetAllCompletionsCrossProfile');
-    return select(completions).get();
+    final rows = await select(completionsView).get();
+    return rows.map(_fromView).toList();
   }
 
-  Future<Completion?> getCompletionById(int id) =>
-      (select(completions)..where((t) => t.id.equals(id))).getSingleOrNull();
+  Future<Completion?> getCompletionById(int id) async {
+    final row = await (select(completionsView)
+          ..where((t) => t.id.equals(id)))
+        .getSingleOrNull();
+    return row == null ? null : _fromView(row);
+  }
 
   Future<List<Completion>> internalGetCompletionsByCurriculumCrossProfile(
     String curriculumId, {
     required CrossProfileScope scope,
-  }) {
+  }) async {
     _assertCrossProfileScope(scope, 'getCompletionsByCurriculum');
-    return (select(
-      completions,
-    )..where((t) => t.curriculumId.equals(curriculumId))).get();
+    final rows = await (select(completionsView)
+          ..where((t) => t.curriculumId.equals(curriculumId)))
+        .get();
+    return rows.map(_fromView).toList();
   }
 
   Future<List<Completion>> internalGetCompletionsForContentCrossProfile(
     String sefariaRef, {
     required CrossProfileScope scope,
-  }) {
+  }) async {
     _assertCrossProfileScope(scope, 'getCompletionsForContent');
-    return (select(
-      completions,
-    )..where((t) => t.sefariaRef.equals(sefariaRef))).get();
+    final rows = await (select(completionsView)
+          ..where((t) => t.sefariaRef.equals(sefariaRef)))
+        .get();
+    return rows.map(_fromView).toList();
   }
 
   // ========== Profile-Scoped Queries ==========
 
   /// Get all completions for a specific profile.
-  Future<List<Completion>> getCompletionsByProfile(int profileId) =>
-      (select(completions)..where((t) => t.profileId.equals(profileId))).get();
+  Future<List<Completion>> getCompletionsByProfile(int profileId) async {
+    final rows = await (select(completionsView)
+          ..where((t) => t.profileId.equals(profileId)))
+        .get();
+    return rows.map(_fromView).toList();
+  }
 
   /// Track-only completions for [profileId] — excludes the bulk-mark sentinel
   /// (trackId = 0) at the SQL layer so that lifetime bulk-marked items do not
   /// inflate the ITEMS LEARNED / TASKS DONE counters on the Progress screen.
-  Future<List<Completion>> getTrackOnlyCompletionsByProfile(int profileId) =>
-      (select(completions)..where(
-            (t) => t.profileId.equals(profileId) & t.trackId.isNotValue(0),
+  Future<List<Completion>> getTrackOnlyCompletionsByProfile(int profileId) async {
+    final rows = await (select(completionsView)
+          ..where(
+            (t) =>
+                t.profileId.equals(profileId) & t.trackId.isNotValue(0),
           ))
-          .get();
+        .get();
+    return rows.map(_fromView).toList();
+  }
 
   /// Completions for [profileId] whose [sefariaRef] is in [refs] (chunked `IN`).
   ///
@@ -97,12 +129,13 @@ class CompletionDao extends DatabaseAccessor<UserDatabase>
     for (var i = 0; i < list.length; i += _kInChunkSize) {
       final end = math.min(i + _kInChunkSize, list.length);
       final part = list.sublist(i, end);
-      final rows =
-          await (select(completions)..where(
-                (t) => t.profileId.equals(profileId) & t.sefariaRef.isIn(part),
-              ))
-              .get();
-      out.addAll(rows);
+      final rows = await (select(completionsView)
+            ..where(
+              (t) =>
+                  t.profileId.equals(profileId) & t.sefariaRef.isIn(part),
+            ))
+          .get();
+      out.addAll(rows.map(_fromView));
     }
     return out;
   }
@@ -111,24 +144,31 @@ class CompletionDao extends DatabaseAccessor<UserDatabase>
   Future<List<Completion>> getCompletionsByCurriculumAndProfile(
     String curriculumId,
     int profileId,
-  ) =>
-      (select(completions)..where(
+  ) async {
+    final rows = await (select(completionsView)
+          ..where(
             (t) =>
                 t.curriculumId.equals(curriculumId) &
                 t.profileId.equals(profileId),
           ))
-          .get();
+        .get();
+    return rows.map(_fromView).toList();
+  }
 
   /// Get completions for a content item scoped to a specific profile.
   Future<List<Completion>> getCompletionsForContentAndProfile(
     String sefariaRef,
     int profileId,
-  ) =>
-      (select(completions)..where(
+  ) async {
+    final rows = await (select(completionsView)
+          ..where(
             (t) =>
-                t.sefariaRef.equals(sefariaRef) & t.profileId.equals(profileId),
+                t.sefariaRef.equals(sefariaRef) &
+                t.profileId.equals(profileId),
           ))
-          .get();
+        .get();
+    return rows.map(_fromView).toList();
+  }
 
   /// Get the count of distinct sefariaRefs completed for a curriculum by a profile.
   ///
@@ -139,12 +179,12 @@ class CompletionDao extends DatabaseAccessor<UserDatabase>
     String curriculumId,
     int profileId,
   ) async {
-    final expr = completions.sefariaRef.count(distinct: true);
-    final query = selectOnly(completions)
+    final expr = completionsView.sefariaRef.count(distinct: true);
+    final query = selectOnly(completionsView)
       ..addColumns([expr])
       ..where(
-        completions.curriculumId.equals(curriculumId) &
-            completions.profileId.equals(profileId),
+        completionsView.curriculumId.equals(curriculumId) &
+            completionsView.profileId.equals(profileId),
       );
 
     final result = await query.getSingle();
@@ -156,20 +196,20 @@ class CompletionDao extends DatabaseAccessor<UserDatabase>
     String curriculumId,
     int profileId,
   ) async {
-    final query = selectOnly(completions)
-      ..addColumns([completions.trackType, completions.id.count()])
+    final query = selectOnly(completionsView)
+      ..addColumns([completionsView.trackType, completionsView.id.count()])
       ..where(
-        completions.curriculumId.equals(curriculumId) &
-            completions.profileId.equals(profileId),
+        completionsView.curriculumId.equals(curriculumId) &
+            completionsView.profileId.equals(profileId),
       )
-      ..groupBy([completions.trackType]);
+      ..groupBy([completionsView.trackType]);
 
     final results = await query.get();
 
     final breakdown = <String, int>{};
     for (final row in results) {
-      final trackType = row.read(completions.trackType);
-      final count = row.read(completions.id.count());
+      final trackType = row.read(completionsView.trackType);
+      final count = row.read(completionsView.id.count());
       if (trackType != null && count != null) {
         breakdown[trackType] = count;
       }
@@ -187,19 +227,18 @@ class CompletionDao extends DatabaseAccessor<UserDatabase>
     required DateTime completedAt,
     required int profileId,
   }) async {
-    final result =
-        await (select(completions)
-              ..where(
-                (t) =>
-                    t.curriculumId.equals(curriculumId) &
-                    t.sefariaRef.equals(sefariaRef) &
-                    t.stageId.equals(stageId) &
-                    t.trackType.equals(trackType) &
-                    t.completedAt.equals(completedAt) &
-                    t.profileId.equals(profileId),
-              )
-              ..limit(1))
-            .get();
+    final result = await (select(completionsView)
+          ..where(
+            (t) =>
+                t.curriculumId.equals(curriculumId) &
+                t.sefariaRef.equals(sefariaRef) &
+                t.stageId.equals(stageId) &
+                t.trackType.equals(trackType) &
+                t.eventTimestamp.equals(completedAt) &
+                t.profileId.equals(profileId),
+          )
+          ..limit(1))
+        .get();
     return result.isNotEmpty;
   }
 
@@ -208,14 +247,17 @@ class CompletionDao extends DatabaseAccessor<UserDatabase>
     DateTime start,
     DateTime end,
     int profileId,
-  ) =>
-      (select(completions)..where(
+  ) async {
+    final rows = await (select(completionsView)
+          ..where(
             (t) =>
-                t.completedAt.isBiggerOrEqualValue(start) &
-                t.completedAt.isSmallerOrEqualValue(end) &
+                t.eventTimestamp.isBiggerOrEqualValue(start) &
+                t.eventTimestamp.isSmallerOrEqualValue(end) &
                 t.profileId.equals(profileId),
           ))
-          .get();
+        .get();
+    return rows.map(_fromView).toList();
+  }
 
   /// Check if any completions exist within a date range for a specific profile.
   Future<bool> hasCompletionsInDateRangeByProfile(
@@ -223,33 +265,16 @@ class CompletionDao extends DatabaseAccessor<UserDatabase>
     DateTime end,
     int profileId,
   ) async {
-    final result =
-        await (select(completions)
-              ..where(
-                (t) =>
-                    t.completedAt.isBiggerOrEqualValue(start) &
-                    t.completedAt.isSmallerOrEqualValue(end) &
-                    t.profileId.equals(profileId),
-              )
-              ..limit(1))
-            .get();
+    final result = await (select(completionsView)
+          ..where(
+            (t) =>
+                t.eventTimestamp.isBiggerOrEqualValue(start) &
+                t.eventTimestamp.isSmallerOrEqualValue(end) &
+                t.profileId.equals(profileId),
+          )
+          ..limit(1))
+        .get();
     return result.isNotEmpty;
-  }
-
-  /// Insert a completion record. This is the only write operation allowed.
-  Future<int> insertCompletion(CompletionsCompanion entry) =>
-      into(completions).insert(entry);
-
-  /// Insert many rows in one sqlite batch (single round-trip for bulk prior).
-  Future<void> insertCompletionsBatch(
-    List<CompletionsCompanion> entries,
-  ) async {
-    if (entries.isEmpty) return;
-    await db.batch((batch) {
-      for (final entry in entries) {
-        batch.insert(completions, entry);
-      }
-    });
   }
 
   static const int _kInChunkSize = 400;
@@ -268,16 +293,16 @@ class CompletionDao extends DatabaseAccessor<UserDatabase>
     for (var i = 0; i < sefariaRefs.length; i += _kInChunkSize) {
       final end = math.min(i + _kInChunkSize, sefariaRefs.length);
       final part = sefariaRefs.sublist(i, end);
-      final rows =
-          await (select(completions)..where(
-                (t) =>
-                    t.profileId.equals(profileId) &
-                    t.curriculumId.equals(curriculumId) &
-                    t.stageId.equals(stageId) &
-                    t.trackType.equals(trackType) &
-                    t.sefariaRef.isIn(part),
-              ))
-              .get();
+      final rows = await (select(completionsView)
+            ..where(
+              (t) =>
+                  t.profileId.equals(profileId) &
+                  t.curriculumId.equals(curriculumId) &
+                  t.stageId.equals(stageId) &
+                  t.trackType.equals(trackType) &
+                  t.sefariaRef.isIn(part),
+            ))
+          .get();
       for (final r in rows) {
         out.add(r.sefariaRef);
       }
@@ -298,17 +323,17 @@ class CompletionDao extends DatabaseAccessor<UserDatabase>
     for (var i = 0; i < sefariaRefs.length; i += _kInChunkSize) {
       final end = math.min(i + _kInChunkSize, sefariaRefs.length);
       final part = sefariaRefs.sublist(i, end);
-      final rows =
-          await (select(completions)..where(
-                (t) =>
-                    t.profileId.equals(profileId) &
-                    t.curriculumId.equals(curriculumId) &
-                    t.stageId.equals(stageId) &
-                    t.trackType.equals(trackType) &
-                    t.sefariaRef.isIn(part),
-              ))
-              .get();
-      out.addAll(rows);
+      final rows = await (select(completionsView)
+            ..where(
+              (t) =>
+                  t.profileId.equals(profileId) &
+                  t.curriculumId.equals(curriculumId) &
+                  t.stageId.equals(stageId) &
+                  t.trackType.equals(trackType) &
+                  t.sefariaRef.isIn(part),
+            ))
+          .get();
+      out.addAll(rows.map(_fromView));
     }
     return out;
   }
@@ -318,14 +343,16 @@ class CompletionDao extends DatabaseAccessor<UserDatabase>
     DateTime start,
     DateTime end, {
     required CrossProfileScope scope,
-  }) {
+  }) async {
     _assertCrossProfileScope(scope, 'getCompletionsByDateRange');
-    return (select(completions)..where(
-          (t) =>
-              t.completedAt.isBiggerOrEqualValue(start) &
-              t.completedAt.isSmallerOrEqualValue(end),
-        ))
+    final rows = await (select(completionsView)
+          ..where(
+            (t) =>
+                t.eventTimestamp.isBiggerOrEqualValue(start) &
+                t.eventTimestamp.isSmallerOrEqualValue(end),
+          ))
         .get();
+    return rows.map(_fromView).toList();
   }
 
   /// Cross-profile: any completions in [start]..[end] inclusive.
@@ -338,15 +365,14 @@ class CompletionDao extends DatabaseAccessor<UserDatabase>
       scope,
       'internalHasCompletionsInDateRangeCrossProfile',
     );
-    final result =
-        await (select(completions)
-              ..where(
-                (t) =>
-                    t.completedAt.isBiggerOrEqualValue(start) &
-                    t.completedAt.isSmallerOrEqualValue(end),
-              )
-              ..limit(1))
-            .get();
+    final result = await (select(completionsView)
+          ..where(
+            (t) =>
+                t.eventTimestamp.isBiggerOrEqualValue(start) &
+                t.eventTimestamp.isSmallerOrEqualValue(end),
+          )
+          ..limit(1))
+        .get();
     return result.isNotEmpty;
   }
 
@@ -360,18 +386,17 @@ class CompletionDao extends DatabaseAccessor<UserDatabase>
     required String trackType,
     required DateTime completedAt,
   }) async {
-    final result =
-        await (select(completions)
-              ..where(
-                (t) =>
-                    t.curriculumId.equals(curriculumId) &
-                    t.sefariaRef.equals(sefariaRef) &
-                    t.stageId.equals(stageId) &
-                    t.trackType.equals(trackType) &
-                    t.completedAt.equals(completedAt),
-              )
-              ..limit(1))
-            .get();
+    final result = await (select(completionsView)
+          ..where(
+            (t) =>
+                t.curriculumId.equals(curriculumId) &
+                t.sefariaRef.equals(sefariaRef) &
+                t.stageId.equals(stageId) &
+                t.trackType.equals(trackType) &
+                t.eventTimestamp.equals(completedAt),
+          )
+          ..limit(1))
+        .get();
     return result.isNotEmpty;
   }
 
@@ -381,17 +406,17 @@ class CompletionDao extends DatabaseAccessor<UserDatabase>
     required CrossProfileScope scope,
   }) async {
     _assertCrossProfileScope(scope, 'internalGetTrackBreakdownCrossProfile');
-    final query = selectOnly(completions)
-      ..addColumns([completions.trackType, completions.id.count()])
-      ..where(completions.curriculumId.equals(curriculumId))
-      ..groupBy([completions.trackType]);
+    final query = selectOnly(completionsView)
+      ..addColumns([completionsView.trackType, completionsView.id.count()])
+      ..where(completionsView.curriculumId.equals(curriculumId))
+      ..groupBy([completionsView.trackType]);
 
     final results = await query.get();
 
     final breakdown = <String, int>{};
     for (final row in results) {
-      final trackType = row.read(completions.trackType);
-      final count = row.read(completions.id.count());
+      final trackType = row.read(completionsView.trackType);
+      final count = row.read(completionsView.id.count());
       if (trackType != null && count != null) {
         breakdown[trackType] = count;
       }
@@ -406,12 +431,12 @@ class CompletionDao extends DatabaseAccessor<UserDatabase>
     required CrossProfileScope scope,
   }) async {
     _assertCrossProfileScope(scope, 'internalGetAggregateCountCrossProfile');
-    final query = selectOnly(completions)
-      ..addColumns([completions.id.count()])
-      ..where(completions.curriculumId.equals(curriculumId));
+    final query = selectOnly(completionsView)
+      ..addColumns([completionsView.id.count()])
+      ..where(completionsView.curriculumId.equals(curriculumId));
 
     final result = await query.getSingle();
-    return result.read(completions.id.count()) ?? 0;
+    return result.read(completionsView.id.count()) ?? 0;
   }
 
   // ========== Review Count Queries (Story 16.4) ==========
@@ -422,19 +447,19 @@ class CompletionDao extends DatabaseAccessor<UserDatabase>
     String curriculumId,
     int profileId,
   ) async {
-    final query = selectOnly(completions)
-      ..addColumns([completions.sefariaRef, completions.id.count()])
+    final query = selectOnly(completionsView)
+      ..addColumns([completionsView.sefariaRef, completionsView.id.count()])
       ..where(
-        completions.curriculumId.equals(curriculumId) &
-            completions.profileId.equals(profileId),
+        completionsView.curriculumId.equals(curriculumId) &
+            completionsView.profileId.equals(profileId),
       )
-      ..groupBy([completions.sefariaRef]);
+      ..groupBy([completionsView.sefariaRef]);
 
     final results = await query.get();
     final counts = <String, int>{};
     for (final row in results) {
-      final ref = row.read(completions.sefariaRef);
-      final count = row.read(completions.id.count());
+      final ref = row.read(completionsView.sefariaRef);
+      final count = row.read(completionsView.id.count());
       if (ref != null && count != null) {
         counts[ref] = count;
       }
@@ -449,20 +474,20 @@ class CompletionDao extends DatabaseAccessor<UserDatabase>
     String sefariaRef,
     int profileId,
   ) async {
-    final query = selectOnly(completions)
-      ..addColumns([completions.stageId, completions.id.count()])
+    final query = selectOnly(completionsView)
+      ..addColumns([completionsView.stageId, completionsView.id.count()])
       ..where(
-        completions.curriculumId.equals(curriculumId) &
-            completions.sefariaRef.equals(sefariaRef) &
-            completions.profileId.equals(profileId),
+        completionsView.curriculumId.equals(curriculumId) &
+            completionsView.sefariaRef.equals(sefariaRef) &
+            completionsView.profileId.equals(profileId),
       )
-      ..groupBy([completions.stageId]);
+      ..groupBy([completionsView.stageId]);
 
     final results = await query.get();
     final breakdown = <int, int>{};
     for (final row in results) {
-      final stageId = row.read(completions.stageId);
-      final count = row.read(completions.id.count());
+      final stageId = row.read(completionsView.stageId);
+      final count = row.read(completionsView.id.count());
       if (stageId != null && count != null) {
         breakdown[stageId] = count;
       }
@@ -476,24 +501,24 @@ class CompletionDao extends DatabaseAccessor<UserDatabase>
     String curriculumId,
     int profileId,
   ) async {
-    final query = selectOnly(completions)
+    final query = selectOnly(completionsView)
       ..addColumns([
-        completions.sefariaRef,
-        completions.stageId,
-        completions.id.count(),
+        completionsView.sefariaRef,
+        completionsView.stageId,
+        completionsView.id.count(),
       ])
       ..where(
-        completions.curriculumId.equals(curriculumId) &
-            completions.profileId.equals(profileId),
+        completionsView.curriculumId.equals(curriculumId) &
+            completionsView.profileId.equals(profileId),
       )
-      ..groupBy([completions.sefariaRef, completions.stageId]);
+      ..groupBy([completionsView.sefariaRef, completionsView.stageId]);
 
     final results = await query.get();
     final nested = <String, Map<int, int>>{};
     for (final row in results) {
-      final ref = row.read(completions.sefariaRef);
-      final stageId = row.read(completions.stageId);
-      final count = row.read(completions.id.count());
+      final ref = row.read(completionsView.sefariaRef);
+      final stageId = row.read(completionsView.stageId);
+      final count = row.read(completionsView.id.count());
       if (ref != null && stageId != null && count != null) {
         nested.putIfAbsent(ref, () => {})[stageId] = count;
       }
@@ -504,18 +529,26 @@ class CompletionDao extends DatabaseAccessor<UserDatabase>
   // ========== Track-Scoped Queries (Story 20.2) ==========
 
   /// Get all completions for a specific track.
-  Future<List<Completion>> getCompletionsByTrack(int trackId) =>
-      (select(completions)..where((t) => t.trackId.equals(trackId))).get();
+  Future<List<Completion>> getCompletionsByTrack(int trackId) async {
+    final rows = await (select(completionsView)
+          ..where((t) => t.trackId.equals(trackId)))
+        .get();
+    return rows.map(_fromView).toList();
+  }
 
   /// Get completions for a track scoped to a specific profile.
   Future<List<Completion>> getCompletionsByTrackAndProfile(
     int trackId,
     int profileId,
-  ) =>
-      (select(completions)..where(
-            (t) => t.trackId.equals(trackId) & t.profileId.equals(profileId),
+  ) async {
+    final rows = await (select(completionsView)
+          ..where(
+            (t) =>
+                t.trackId.equals(trackId) & t.profileId.equals(profileId),
           ))
-          .get();
+        .get();
+    return rows.map(_fromView).toList();
+  }
 
   /// Get completions for a track on or after [since] — the current-session
   /// boundary. Used to compute current-cycle progress independently of
@@ -524,25 +557,28 @@ class CompletionDao extends DatabaseAccessor<UserDatabase>
     int trackId,
     int profileId,
     DateTime since,
-  ) =>
-      (select(completions)..where(
+  ) async {
+    final rows = await (select(completionsView)
+          ..where(
             (t) =>
                 t.trackId.equals(trackId) &
                 t.profileId.equals(profileId) &
-                t.completedAt.isBiggerOrEqualValue(since),
+                t.eventTimestamp.isBiggerOrEqualValue(since),
           ))
-          .get();
+        .get();
+    return rows.map(_fromView).toList();
+  }
 
   /// Get completion count for a track scoped to a specific profile.
   Future<int> getAggregateCountByTrack(int trackId, int profileId) async {
-    final query = selectOnly(completions)
-      ..addColumns([completions.id.count()])
+    final query = selectOnly(completionsView)
+      ..addColumns([completionsView.id.count()])
       ..where(
-        completions.trackId.equals(trackId) &
-            completions.profileId.equals(profileId),
+        completionsView.trackId.equals(trackId) &
+            completionsView.profileId.equals(profileId),
       );
     final result = await query.getSingle();
-    return result.read(completions.id.count()) ?? 0;
+    return result.read(completionsView.id.count()) ?? 0;
   }
 
   /// Check if a completion exists scoped to a specific track.
@@ -553,18 +589,17 @@ class CompletionDao extends DatabaseAccessor<UserDatabase>
     required int stageId,
     required DateTime completedAt,
   }) async {
-    final result =
-        await (select(completions)
-              ..where(
-                (t) =>
-                    t.trackId.equals(trackId) &
-                    t.curriculumId.equals(curriculumId) &
-                    t.sefariaRef.equals(sefariaRef) &
-                    t.stageId.equals(stageId) &
-                    t.completedAt.equals(completedAt),
-              )
-              ..limit(1))
-            .get();
+    final result = await (select(completionsView)
+          ..where(
+            (t) =>
+                t.trackId.equals(trackId) &
+                t.curriculumId.equals(curriculumId) &
+                t.sefariaRef.equals(sefariaRef) &
+                t.stageId.equals(stageId) &
+                t.eventTimestamp.equals(completedAt),
+          )
+          ..limit(1))
+        .get();
     return result.isNotEmpty;
   }
 
@@ -574,15 +609,18 @@ class CompletionDao extends DatabaseAccessor<UserDatabase>
     DateTime end,
     int trackId,
     int profileId,
-  ) =>
-      (select(completions)..where(
+  ) async {
+    final rows = await (select(completionsView)
+          ..where(
             (t) =>
-                t.completedAt.isBiggerOrEqualValue(start) &
-                t.completedAt.isSmallerOrEqualValue(end) &
+                t.eventTimestamp.isBiggerOrEqualValue(start) &
+                t.eventTimestamp.isSmallerOrEqualValue(end) &
                 t.trackId.equals(trackId) &
                 t.profileId.equals(profileId),
           ))
-          .get();
+        .get();
+    return rows.map(_fromView).toList();
+  }
 
   /// Get review counts per item for a track.
   Future<Map<String, int>> getReviewCountsByItemAndTrack(
@@ -590,20 +628,20 @@ class CompletionDao extends DatabaseAccessor<UserDatabase>
     String curriculumId,
     int profileId,
   ) async {
-    final query = selectOnly(completions)
-      ..addColumns([completions.sefariaRef, completions.id.count()])
+    final query = selectOnly(completionsView)
+      ..addColumns([completionsView.sefariaRef, completionsView.id.count()])
       ..where(
-        completions.trackId.equals(trackId) &
-            completions.curriculumId.equals(curriculumId) &
-            completions.profileId.equals(profileId),
+        completionsView.trackId.equals(trackId) &
+            completionsView.curriculumId.equals(curriculumId) &
+            completionsView.profileId.equals(profileId),
       )
-      ..groupBy([completions.sefariaRef]);
+      ..groupBy([completionsView.sefariaRef]);
 
     final results = await query.get();
     final counts = <String, int>{};
     for (final row in results) {
-      final ref = row.read(completions.sefariaRef);
-      final count = row.read(completions.id.count());
+      final ref = row.read(completionsView.sefariaRef);
+      final count = row.read(completionsView.id.count());
       if (ref != null && count != null) {
         counts[ref] = count;
       }
@@ -618,21 +656,21 @@ class CompletionDao extends DatabaseAccessor<UserDatabase>
     String sefariaRef,
     int profileId,
   ) async {
-    final query = selectOnly(completions)
-      ..addColumns([completions.stageId, completions.id.count()])
+    final query = selectOnly(completionsView)
+      ..addColumns([completionsView.stageId, completionsView.id.count()])
       ..where(
-        completions.trackId.equals(trackId) &
-            completions.curriculumId.equals(curriculumId) &
-            completions.sefariaRef.equals(sefariaRef) &
-            completions.profileId.equals(profileId),
+        completionsView.trackId.equals(trackId) &
+            completionsView.curriculumId.equals(curriculumId) &
+            completionsView.sefariaRef.equals(sefariaRef) &
+            completionsView.profileId.equals(profileId),
       )
-      ..groupBy([completions.stageId]);
+      ..groupBy([completionsView.stageId]);
 
     final results = await query.get();
     final breakdown = <int, int>{};
     for (final row in results) {
-      final stageId = row.read(completions.stageId);
-      final count = row.read(completions.id.count());
+      final stageId = row.read(completionsView.stageId);
+      final count = row.read(completionsView.id.count());
       if (stageId != null && count != null) {
         breakdown[stageId] = count;
       }
@@ -642,11 +680,10 @@ class CompletionDao extends DatabaseAccessor<UserDatabase>
 
   /// Returns true if any completions reference the given stage ID.
   Future<bool> hasCompletionsForStage(int stageId) async {
-    final result =
-        await (select(completions)
-              ..where((t) => t.stageId.equals(stageId))
-              ..limit(1))
-            .get();
+    final result = await (select(completionsView)
+          ..where((t) => t.stageId.equals(stageId))
+          ..limit(1))
+        .get();
     return result.isNotEmpty;
   }
 
@@ -661,9 +698,6 @@ class CompletionDao extends DatabaseAccessor<UserDatabase>
     assert(scope != null, 'CrossProfileScope must be provided for $method');
     final log = AppLogger(AppLogger.instance);
     if (kDebugMode) {
-      // Stable caller hash: method name → identity integer (no stack-unwinding
-      // needed; real stack hash would require dart:developer which is
-      // unavailable in release).
       final callerHash = method.hashCode & 0xFFFF;
       log.debug(
         event: 'cross_profile_read',
@@ -674,8 +708,6 @@ class CompletionDao extends DatabaseAccessor<UserDatabase>
         },
       );
     } else {
-      // In release mode log a structured breadcrumb as a warning so it surfaces
-      // through AppLogger -> Talker -> Crashlytics breadcrumbs.
       log.warning(
         event: 'cross_profile_read',
         fields: {'method': method, 'scope': scope.name},

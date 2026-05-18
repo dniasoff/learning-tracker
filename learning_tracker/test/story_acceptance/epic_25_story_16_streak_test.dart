@@ -54,19 +54,18 @@ Future<void> _seedCompletion(
   String sefariaRef = 'Mishnah Berakhot 1',
   int stageId = 1,
 }) async {
-  await db
-      .into(db.completions)
-      .insert(
-        CompletionsCompanion.insert(
-          profileId: profileId,
-          curriculumId: 'shas-bavli',
-          sefariaRef: sefariaRef,
-          stageId: stageId,
-          trackType: 'programmed',
-          trackId: trackId,
-          completedAt: completedAt,
-        ),
-      );
+  await seedCompletion(
+    db,
+    CompletionsCompanion.insert(
+      profileId: profileId,
+      curriculumId: 'shas-bavli',
+      sefariaRef: sefariaRef,
+      stageId: stageId,
+      trackType: 'programmed',
+      trackId: trackId,
+      completedAt: completedAt,
+    ),
+  );
 }
 
 void main() {

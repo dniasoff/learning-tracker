@@ -100,17 +100,12 @@ void main() {
 
       // ── AC: writer is the single path; writes both rows atomically ──────
 
-      test('commit() inserts a completion row, an outbox row, AND a '
-          'completion_events row in one atomic transaction', () async {
+      test('commit() inserts an outbox row AND a completion_events row in one '
+          'atomic transaction (C1: completions table no longer written)', () async {
         final result = await writer.commit(_cmd(trackId: trackId));
 
         expect(result.isNew, isTrue);
         expect(result.completion.sefariaRef, equals('Mishnah Berakhot 1'));
-
-        final completions = await db.select(db.completions).get();
-        expect(completions, hasLength(1));
-        expect(completions.first.profileId, equals(1));
-        expect(completions.first.points, equals(5));
 
         final outboxRows = await db.select(db.outbox).get();
         expect(outboxRows, hasLength(1));
@@ -140,6 +135,7 @@ void main() {
         expect(events.first.stageId, equals(1));
         expect(events.first.trackType, equals('personal'));
         expect(events.first.curriculumId, equals('mishnah_yomit'));
+        expect(events.first.points, equals(5));
         expect(
           events.first.eventTimestamp.toUtc().microsecondsSinceEpoch,
           equals(DateTime.utc(2026, 5, 13, 12).microsecondsSinceEpoch),
@@ -157,9 +153,6 @@ void main() {
         expect(first.isNew, isTrue);
         expect(second.isNew, isFalse);
         expect(second.completion.id, equals(first.completion.id));
-
-        final completions = await db.select(db.completions).get();
-        expect(completions, hasLength(1));
 
         final outboxRows = await db.select(db.outbox).get();
         expect(
@@ -199,10 +192,8 @@ void main() {
           throwsA(isA<Exception>()),
         );
 
-        final completions = await db.select(db.completions).get();
         final outbox = await db.select(db.outbox).get();
         final events = await db.select(db.completionEvents).get();
-        expect(completions, isEmpty);
         expect(outbox, isEmpty);
         // AC 25.15: completion_events is part of the same transaction.
         expect(events, isEmpty);
@@ -221,9 +212,6 @@ void main() {
 
         expect(a.isNew, isTrue);
         expect(b.isNew, isTrue);
-
-        final completions = await db.select(db.completions).get();
-        expect(completions, hasLength(2));
 
         final outbox = await db.select(db.outbox).get();
         expect(outbox, hasLength(2));

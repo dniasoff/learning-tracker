@@ -16,6 +16,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:test/test.dart';
 
+import '../helpers/drift_memory.dart' show seedCompletion;
 import '../helpers/test_database.dart';
 
 class MockAuthRepository extends Mock implements AuthRepository {}
@@ -160,34 +161,31 @@ void main() {
 
     Future<void> seedTestData(UserDatabase db) async {
       // Completions
-      await db
-          .into(db.completions)
-          .insert(
-            CompletionsCompanion.insert(
-              profileId: 1,
-              curriculumId: 'mishna',
-              sefariaRef: 'Mishnah_Berakhot.1.1',
-              stageId: 1,
-              trackType: 'personal',
-              trackId: trackId,
-              completedAt: DateTime(2026, 1, 15),
-              points: const Value(10),
-            ),
-          );
-      await db
-          .into(db.completions)
-          .insert(
-            CompletionsCompanion.insert(
-              profileId: 1,
-              curriculumId: 'mishna',
-              sefariaRef: 'Mishnah_Berakhot.1.2',
-              stageId: 2,
-              trackType: 'personal',
-              trackId: trackId,
-              completedAt: DateTime(2026, 1, 16),
-              points: const Value(5),
-            ),
-          );
+      await seedCompletion(
+        db,
+        CompletionsCompanion.insert(
+          profileId: 1,
+          curriculumId: 'mishna',
+          sefariaRef: 'Mishnah_Berakhot.1.1',
+          stageId: 1,
+          trackType: 'personal',
+          trackId: trackId,
+          completedAt: DateTime(2026, 1, 15),
+          points: const Value(10),
+        ),
+      );
+      await seedCompletion(
+        db,
+        CompletionsCompanion.insert(
+          profileId: 1,
+          curriculumId: 'mishna',
+          sefariaRef: 'Mishnah_Berakhot.1.2',
+          stageId: 2,
+          trackType: 'personal',
+          trackId: trackId,
+          completedAt: DateTime(2026, 1, 16),
+        ),
+      );
 
       // Goals
       await db
@@ -441,6 +439,7 @@ void main() {
 
         // Clear the database
         await db.transaction(() async {
+          await db.delete(db.completionEvents).go(); // C1: canonical table
           await db.delete(db.completions).go();
           await db.delete(db.goals).go();
           await db.delete(db.stageDefinitions).go();
@@ -568,6 +567,7 @@ void main() {
 
       // Clear all tables
       await db.transaction(() async {
+        await db.delete(db.completionEvents).go(); // C1: canonical table
         await db.delete(db.completions).go();
         await db.delete(db.goals).go();
         await db.delete(db.stageDefinitions).go();

@@ -57,7 +57,7 @@ void main() {
     String ref = 'Berakhot 1:1',
     DateTime? completedAt,
   }) async {
-    await db.completionDao.insertCompletion(
+    await seedCompletion(db, 
       CompletionsCompanion.insert(
         profileId: profileId,
         curriculumId: curriculumId,

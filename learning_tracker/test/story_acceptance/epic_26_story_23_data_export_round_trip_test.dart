@@ -115,19 +115,18 @@ void main() {
             .then((r) => r.id);
 
         // Insert one row per profileId-bearing table
-        await db
-            .into(db.completions)
-            .insert(
-              CompletionsCompanion.insert(
-                profileId: pid,
-                curriculumId: 'mishnayos',
-                sefariaRef: 'Mishnah_Berakhot.1.1',
-                stageId: 1,
-                trackType: 'personal',
-                trackId: trackId,
-                completedAt: DateTime(2026, 3, 1),
-              ),
-            );
+        await seedCompletion(
+          db,
+          CompletionsCompanion.insert(
+            profileId: pid,
+            curriculumId: 'mishnayos',
+            sefariaRef: 'Mishnah_Berakhot.1.1',
+            stageId: 1,
+            trackType: 'personal',
+            trackId: trackId,
+            completedAt: DateTime(2026, 3, 1),
+          ),
+        );
 
         await db
             .into(db.goals)
@@ -325,36 +324,34 @@ void main() {
               .then((r) => r.id);
 
           // Completions for profile 1
-          await db
-              .into(db.completions)
-              .insert(
-                CompletionsCompanion.insert(
-                  profileId: acct1Id,
-                  curriculumId: 'mishnayos',
-                  sefariaRef: 'Mishnah_Berakhot.1.1',
-                  stageId: 1,
-                  trackType: 'personal',
-                  trackId: track1Id,
-                  completedAt: DateTime(2026, 1, 10),
-                  points: const Value(10),
-                ),
-              );
+          await seedCompletion(
+            db,
+            CompletionsCompanion.insert(
+              profileId: acct1Id,
+              curriculumId: 'mishnayos',
+              sefariaRef: 'Mishnah_Berakhot.1.1',
+              stageId: 1,
+              trackType: 'personal',
+              trackId: track1Id,
+              completedAt: DateTime(2026, 1, 10),
+              points: const Value(10),
+            ),
+          );
 
           // Completions for profile 2
-          await db
-              .into(db.completions)
-              .insert(
-                CompletionsCompanion.insert(
-                  profileId: acct2Id,
-                  curriculumId: 'bavli',
-                  sefariaRef: 'Berakhot.2a',
-                  stageId: 1,
-                  trackType: 'personal',
-                  trackId: track2Id,
-                  completedAt: DateTime(2026, 2, 15),
-                  points: const Value(5),
-                ),
-              );
+          await seedCompletion(
+            db,
+            CompletionsCompanion.insert(
+              profileId: acct2Id,
+              curriculumId: 'bavli',
+              sefariaRef: 'Berakhot.2a',
+              stageId: 1,
+              trackType: 'personal',
+              trackId: track2Id,
+              completedAt: DateTime(2026, 2, 15),
+              points: const Value(5),
+            ),
+          );
 
           // Streaks for both profiles
           await db

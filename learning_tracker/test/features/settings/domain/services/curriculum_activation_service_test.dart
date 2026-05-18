@@ -198,7 +198,7 @@ void main() {
 
         // Insert a completion for Bavli
         final bavliTrackId = await getTrackId(CurriculumId.bavli);
-        await database.completionDao.insertCompletion(
+        await drift_helpers.seedCompletion(database,
           CompletionsCompanion.insert(
             profileId: 1,
             curriculumId: CurriculumId.bavli.storageKey,

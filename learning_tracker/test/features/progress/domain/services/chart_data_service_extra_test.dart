@@ -33,27 +33,26 @@ void main() {
     await db.close();
   });
 
+  var refCounter = 0;
+
   Future<void> insertCompletion({
     required DateTime completedAt,
     String curriculumId = 'mishnayos',
     int points = 10,
     int stageId = 1,
-  }) async {
-    await db
-        .into(db.completions)
-        .insert(
-          CompletionsCompanion.insert(
-            profileId: profileId,
-            curriculumId: curriculumId,
-            sefariaRef: 'Berakhot.1.1',
-            stageId: stageId,
-            trackType: 'personal',
-            trackId: trackId,
-            completedAt: completedAt,
-            points: Value(points),
-          ),
-        );
-  }
+  }) => seedCompletion(
+    db,
+    CompletionsCompanion.insert(
+      profileId: profileId,
+      curriculumId: curriculumId,
+      sefariaRef: 'Berakhot.${++refCounter}',
+      stageId: stageId,
+      trackType: 'personal',
+      trackId: trackId,
+      completedAt: completedAt,
+      points: Value(points),
+    ),
+  ).then((_) {});
 
   // =========================================================================
   // getTargetLine — returns null when no goal

@@ -38,9 +38,9 @@ void main() {
         ),
       );
 
-      // Insert via the low-level DAO (bypasses CompletionWriter) to simulate
-      // a legacy row that predates C1.
-      await db.completionDao.insertCompletion(
+      // Insert directly into the completions table (bypasses CompletionWriter
+      // and completion_events) to simulate a legacy row that predates C1.
+      await db.into(db.completions).insert(
         CompletionsCompanion.insert(
           profileId: 1,
           curriculumId: CurriculumId.mishnayos.storageKey,

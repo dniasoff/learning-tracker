@@ -8,6 +8,7 @@ library;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 
+import '../../helpers/drift_memory.dart' show seedCompletion;
 import '../../helpers/test_database.dart';
 
 void main() {
@@ -27,11 +28,11 @@ void main() {
     // 1. Schema version
     // -------------------------------------------------------------------------
 
-    test('schemaVersion is 19', () async {
+    test('schemaVersion is 20', () async {
       final version = await db.customSelect('PRAGMA user_version').map((row) {
         return row.read<int>('user_version');
       }).getSingle();
-      expect(version, equals(19));
+      expect(version, equals(20));
     });
 
     // -------------------------------------------------------------------------
@@ -115,19 +116,18 @@ void main() {
           );
 
       // Insert with explicit profileId = 1 — should succeed
-      final id = await db
-          .into(db.completions)
-          .insert(
-            CompletionsCompanion.insert(
-              profileId: 1,
-              curriculumId: 'bavli',
-              sefariaRef: 'Berakhot 2a',
-              stageId: 1,
-              trackType: 'personal',
-              trackId: trackId,
-              completedAt: DateTime.now().toUtc(),
-            ),
-          );
+      final id = await seedCompletion(
+        db,
+        CompletionsCompanion.insert(
+          profileId: 1,
+          curriculumId: 'bavli',
+          sefariaRef: 'Berakhot 2a',
+          stageId: 1,
+          trackType: 'personal',
+          trackId: trackId,
+          completedAt: DateTime.now().toUtc(),
+        ),
+      );
       expect(id, greaterThan(0));
 
       final rows = await db.completionDao.getCompletionsByProfile(1);

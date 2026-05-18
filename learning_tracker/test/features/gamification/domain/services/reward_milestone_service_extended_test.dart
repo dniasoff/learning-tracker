@@ -82,22 +82,19 @@ void main() {
     int stageId = 1,
     int points = 10,
     DateTime? completedAt,
-  }) {
-    return db
-        .into(db.completions)
-        .insert(
-          CompletionsCompanion.insert(
-            profileId: profileId,
-            curriculumId: curriculumId,
-            sefariaRef: sefariaRef,
-            stageId: stageId,
-            trackType: 'personal',
-            trackId: trackId,
-            completedAt: completedAt ?? DateTime.utc(2026, 5, 14),
-            points: Value(points),
-          ),
-        );
-  }
+  }) => seedCompletion(
+    db,
+    CompletionsCompanion.insert(
+      profileId: profileId,
+      curriculumId: curriculumId,
+      sefariaRef: sefariaRef,
+      stageId: stageId,
+      trackType: 'personal',
+      trackId: trackId,
+      completedAt: completedAt ?? DateTime.utc(2026, 5, 14),
+      points: Value(points),
+    ),
+  ).then((_) {});
 
   Future<void> insertGoal(int trackId) async {
     await db
@@ -137,20 +134,18 @@ void main() {
     test('does not include points from other profiles', () async {
       final trackId = await insertTrack();
       // Insert a completion for profile 2 in the same track.
-      await db
-          .into(db.completions)
-          .insert(
-            CompletionsCompanion.insert(
-              profileId: 2,
-              curriculumId: 'mishnayos',
-              sefariaRef: 'Berakhot 1:1',
-              stageId: 1,
-              trackType: 'personal',
-              trackId: trackId,
-              completedAt: DateTime.utc(2026, 5, 14),
-              points: const Value(100),
-            ),
-          );
+      await seedCompletion(
+        db,
+        CompletionsCompanion.insert(
+          profileId: 2,
+          curriculumId: 'mishnayos',
+          sefariaRef: 'Berakhot 1:1',
+          stageId: 1,
+          trackType: 'personal',
+          trackId: trackId,
+          completedAt: DateTime.utc(2026, 5, 14),
+        ),
+      );
       await insertCompletion(trackId: trackId, points: 7);
 
       final total = await service.getTrackPointsTotal(trackId);

@@ -95,7 +95,7 @@ void main() {
       const nonExistentProfileId = 9999;
 
       expect(
-        () => db.completionDao.insertCompletion(
+        () => seedCompletion(db, 
           CompletionsCompanion.insert(
             profileId: nonExistentProfileId,
             curriculumId: CurriculumId.mishnayos.storageKey,
@@ -119,7 +119,7 @@ void main() {
 
       final seed = await seedProfileAndTrack(db);
 
-      await db.completionDao.insertCompletion(
+      await seedCompletion(db, 
         CompletionsCompanion.insert(
           profileId: seed.profileId,
           curriculumId: CurriculumId.mishnayos.storageKey,

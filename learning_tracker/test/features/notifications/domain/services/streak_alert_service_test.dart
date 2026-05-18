@@ -5,6 +5,7 @@ import 'package:learning_tracker/features/notifications/domain/services/notifica
 import 'package:learning_tracker/features/notifications/domain/services/streak_alert_service.dart';
 import 'package:mocktail/mocktail.dart';
 
+import '../../../../helpers/drift_memory.dart' show seedCompletion;
 import '../../../../helpers/test_database.dart'
     show createTestDatabase, seedProfileZero;
 
@@ -97,7 +98,7 @@ void main() {
       );
 
       // Add a completion today
-      await db.completionDao.insertCompletion(
+      await seedCompletion(db, 
         CompletionsCompanion.insert(
           profileId: 0,
           curriculumId: 'test',
