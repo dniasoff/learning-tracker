@@ -6,6 +6,8 @@ import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/cross_profile_scope.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
+import 'package:learning_tracker/core/learning/completion_command.dart';
+import 'package:learning_tracker/core/learning/completion_writer.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/network/connectivity_service.dart';
 import 'package:learning_tracker/core/sync/outbox/outbox_processor.dart';
@@ -173,6 +175,11 @@ class SyncEngine implements SyncWriteFacade {
   /// Initialize sync engine and pull data on launch.
   Future<void> initialize() async {
     _logger.info(event: 'sync_engine_initializing');
+
+    // One-time cleanup: drop stale `completion` rows left in the legacy
+    // sync_queue by pre-rework builds. The outbox is now the canonical
+    // completion queue, so these rows are unreachable dead data.
+    await _purgeLegacyCompletionQueueRows();
 
     // Restore persisted last-sync timestamp (issue #5)
     await _restoreLastSyncTimestamp();
@@ -774,27 +781,6 @@ class SyncEngine implements SyncWriteFacade {
     }
 
     return enriched;
-  }
-
-  /// Push a completion to Firestore after local write.
-  @override
-  Future<void> pushCompletion(Map<String, dynamic> completion) async {
-    await _offlineQueue.enqueueCompletion(_withQueueTargetProfile(completion));
-    await _afterEnqueueForBackgroundFlush(context: 'completion');
-  }
-
-  /// After bulk local completion inserts (prior learning / batch marks),
-  /// enqueue all payloads and run a single background flush instead of N
-  /// separate schedules.
-  @override
-  Future<void> pushCompletionsBatch(
-    List<Map<String, dynamic>> completions,
-  ) async {
-    if (completions.isEmpty) return;
-    for (final c in completions) {
-      await _offlineQueue.enqueueCompletion(_withQueueTargetProfile(c));
-    }
-    await _afterEnqueueForBackgroundFlush(context: 'completion batch');
   }
 
   /// Push a ledger entry to Firestore after local write.
@@ -2351,6 +2337,23 @@ class SyncEngine implements SyncWriteFacade {
     // completions table is empty post-migration. This repair path is obsolete.
   }
 
+  /// One-time purge of stale `completion` rows in the legacy sync_queue.
+  ///
+  /// Pre-rework builds double-wrote completions into both the outbox table
+  /// and the legacy sync_queue. The outbox is now the canonical completion
+  /// queue and the OfflineQueue no longer enqueues or flushes `completion`
+  /// operations, so any leftover rows are unreachable dead data. This runs
+  /// once per launch from [initialize] and is a cheap no-op once drained.
+  Future<void> _purgeLegacyCompletionQueueRows() async {
+    final removed = await _database.syncQueueDao.purgeCompletionRows();
+    if (removed > 0) {
+      _logger.info(
+        event: 'sync_legacy_completion_queue_purged',
+        fields: {'rowsRemoved': removed},
+      );
+    }
+  }
+
   /// Enrich learner profile payload with user-visible snapshot data so
   /// account-level `learner_profiles` docs contain profile settings and
   /// progress metadata for quick inspection and restore UX.
@@ -3077,25 +3080,35 @@ class SyncEngine implements SyncWriteFacade {
 
     try {
       // --- Completions (append-only) ---
+      // Route local completions through the canonical outbox path. Building a
+      // CompletionCommand list and calling CompletionWriter.commitBatch is
+      // idempotent: completion_events and outbox rows both insert with
+      // InsertMode.insertOrIgnore, so re-running leaves existing rows untouched
+      // and only fills in missing outbox rows (including pre-v20 legacy
+      // completions that never had one). The background-flush machinery then
+      // drains the outbox — no manual push loop here.
       final analytics = ParentAnalyticsRepositoryImpl(_database);
       final completions = await analytics.getAllCompletions(
         scope: CrossProfileScope.syncRestore,
       );
-      for (final c in completions) {
-        await pushCompletion({
-          'profile_id': c.profileId,
-          'curriculum_id': c.curriculumId,
-          'content_item_id': c.sefariaRef,
-          'stage_id': c.stageId,
-          'track_type': c.trackType,
-          'track_id': c.trackId,
-          'completed_at': c.completedAt.toIso8601String(),
-          'points': c.points,
-        });
-      }
+      final completionCommands = completions
+          .map(
+            (c) => CompletionCommand(
+              profileId: c.profileId,
+              curriculumId: c.curriculumId,
+              sefariaRef: c.sefariaRef,
+              stageId: c.stageId,
+              trackType: c.trackType,
+              trackId: c.trackId,
+              completedAt: c.completedAt,
+              points: c.points,
+            ),
+          )
+          .toList();
+      await CompletionWriter(_database).commitBatch(completionCommands);
       _logger.debug(
         event: 'sync_push_all_completions_queued',
-        fields: {'count': completions.length},
+        fields: {'count': completionCommands.length},
       );
 
       // --- Bookmarks ---

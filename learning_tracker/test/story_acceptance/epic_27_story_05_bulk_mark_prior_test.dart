@@ -59,12 +59,6 @@ void main() {
         () => content.getContentForCurriculum(any()),
       ).thenAnswer((_) async => []);
       when(
-        () => sync.pushCompletion(any()),
-      ).thenAnswer((_) async => Future.value());
-      when(
-        () => sync.pushCompletionsBatch(any()),
-      ).thenAnswer((_) async => Future.value());
-      when(
         () => sync.pushBookmark(any()),
       ).thenAnswer((_) async => Future.value());
 

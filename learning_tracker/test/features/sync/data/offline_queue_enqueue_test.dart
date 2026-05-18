@@ -44,21 +44,6 @@ void main() {
     expect(count, 0);
   });
 
-  // ── enqueueCompletion ──────────────────────────────────────────────────────
-
-  group('enqueueCompletion', () {
-    test('adds one item to the queue', () async {
-      await queue.enqueueCompletion({'id': 'abc', 'sefariaRef': 'Berakhot.1'});
-      expect(await queue.getPendingCount(), 1);
-    });
-
-    test('stores operationType = completion', () async {
-      await queue.enqueueCompletion({'id': 'x'});
-      final items = await db.syncQueueDao.getAllPending();
-      expect(items.first.operationType, 'completion');
-    });
-  });
-
   // ── enqueueBookmark ────────────────────────────────────────────────────────
 
   group('enqueueBookmark', () {
@@ -211,14 +196,14 @@ void main() {
   // ── multiple enqueues ─────────────────────────────────────────────────────
 
   test('multiple enqueues accumulate in FIFO order', () async {
-    await queue.enqueueCompletion({'id': 'a'});
+    await queue.enqueueGoal({'id': 'a'});
     await queue.enqueueBookmark({'ref': 'b'});
     await queue.enqueueStreak({'current': 5});
 
     expect(await queue.getPendingCount(), 3);
 
     final items = await db.syncQueueDao.getAllPending();
-    expect(items[0].operationType, 'completion');
+    expect(items[0].operationType, 'goal');
     expect(items[1].operationType, 'bookmark');
     expect(items[2].operationType, 'streak');
   });
@@ -227,7 +212,7 @@ void main() {
 
   group('clearAll', () {
     test('empties the queue', () async {
-      await queue.enqueueCompletion({'id': '1'});
+      await queue.enqueueGoal({'id': '1'});
       await queue.enqueueBookmark({'ref': '2'});
       expect(await queue.getPendingCount(), 2);
 
@@ -248,7 +233,7 @@ void main() {
     final count = await queue.flush();
     expect(count, 0);
     verifyNever(
-      () => mockGateway.pushCompletion(
+      () => mockGateway.pushBookmark(
         profileId: any(named: 'profileId'),
         data: any(named: 'data'),
       ),

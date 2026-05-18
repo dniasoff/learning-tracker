@@ -42,16 +42,6 @@ class OfflineQueue {
     return _queue.getPendingCount();
   }
 
-  /// Enqueue a completion operation.
-  Future<void> enqueueCompletion(Map<String, dynamic> completion) async {
-    final payload = jsonEncode(completion);
-    await _queue.enqueue('completion', payload);
-    _logger.info(
-      event: 'offline_queue_enqueue_completion',
-      fields: {'id': completion['id']},
-    );
-  }
-
   /// Enqueue a bookmark operation.
   Future<void> enqueueBookmark(Map<String, dynamic> bookmark) async {
     final payload = jsonEncode(bookmark);
@@ -277,11 +267,11 @@ class OfflineQueue {
           );
 
           switch (operation.operationType) {
-            case 'completion':
-              await _gateway.pushCompletion(
-                profileId: profileId ?? 0,
-                data: payload,
-              );
+            // NOTE: `completion` is intentionally absent. Post-rework the
+            // outbox table is the canonical completion queue; the OfflineQueue
+            // no longer flushes `completion` rows. Any stale rows are purged
+            // once at launch (SyncEngine._purgeLegacyCompletionQueueRows) and
+            // fall through to the `default` warning branch in the meantime.
             case 'bookmark':
               await _gateway.pushBookmark(
                 profileId: profileId ?? 0,

@@ -93,10 +93,6 @@ class FirestoreDataSource {
     );
   }
 
-  Future<void> pushCompletion(Map<String, dynamic> completionData) async {
-    await _gateway.pushCompletion(profileId: profileId, data: completionData);
-  }
-
   // ========== Learning Ledger Operations ==========
 
   Future<void> pushLedgerEntry(Map<String, dynamic> entryData) async {

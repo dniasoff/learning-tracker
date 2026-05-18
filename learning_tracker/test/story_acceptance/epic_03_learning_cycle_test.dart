@@ -84,7 +84,6 @@ void main() {
       contentRepo = _MockContentRepository();
       repo = _repo(db, syncEngine, contentRepo);
 
-      when(() => syncEngine.pushCompletion(any())).thenAnswer((_) async {});
       when(
         () => syncEngine.pushGamificationSettingsSnapshot(),
       ).thenAnswer((_) async {});
@@ -221,7 +220,6 @@ void main() {
       final second = (await repo.markComplete(request)).completion;
 
       expect(second.id, first.id);
-      verify(() => syncEngine.pushCompletion(any())).called(1);
     });
   });
 
@@ -242,7 +240,6 @@ void main() {
       contentRepo = _MockContentRepository();
       repo = _repo(db, syncEngine, contentRepo);
 
-      when(() => syncEngine.pushCompletion(any())).thenAnswer((_) async {});
       when(
         () => contentRepo.getContentForCurriculum(any()),
       ).thenAnswer((_) async => []);
@@ -363,7 +360,6 @@ void main() {
       contentRepo = _MockContentRepository();
       repo = _repo(db, syncEngine, contentRepo);
 
-      when(() => syncEngine.pushCompletion(any())).thenAnswer((_) async {});
       when(() => syncEngine.pushBookmark(any())).thenAnswer((_) async {});
       when(
         () => contentRepo.getContentForCurriculum(any()),

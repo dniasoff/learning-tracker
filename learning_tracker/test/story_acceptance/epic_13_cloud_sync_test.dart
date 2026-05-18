@@ -144,6 +144,13 @@ void main() {
         await database.close();
       });
 
+      // NOTE: completions are intentionally NOT exercised here. Post-rework
+      // (RC2 fix) completions flow exclusively through the `outbox` table
+      // drained by OutboxProcessor — never the legacy `sync_queue` /
+      // OfflineQueue path. These tests use `settings`/`bookmark` to validate
+      // the OfflineQueue push-on-write machinery that still serves those
+      // entities. Completion → outbox is covered by the outbox test suite.
+
       test('local write creates corresponding sync_queue entry', () async {
         // Offline: enqueue only; gateway is not called until reconnect/flush.
         // (No stub needed — OfflineQueue is in queue-only mode when offline.)
@@ -151,11 +158,9 @@ void main() {
 
         final data = {
           'curriculum_id': 'mishnayos',
-          'content_item_id': 'mishna-1',
-          'stage_id': 1,
-          'track_type': 'personal',
+          'stages': <dynamic>[],
         };
-        await syncEngine.pushCompletion(data);
+        await syncEngine.pushSettings(data);
 
         final count = await database.syncQueueDao.getPendingCount();
         expect(count, 1);
@@ -165,7 +170,7 @@ void main() {
         'online local write enqueues then background flush reaches Firestore',
         () async {
           when(
-            () => mockGateway.pushCompletion(
+            () => mockGateway.pushSettings(
               profileId: any(named: 'profileId'),
               data: any(named: 'data'),
             ),
@@ -173,17 +178,15 @@ void main() {
 
           final data = <String, dynamic>{
             'curriculum_id': 'mishnayos',
-            'content_item_id': 'mishna-1',
-            'stage_id': 1,
-            'track_type': 'personal',
+            'stages': <dynamic>[],
           };
-          await syncEngine.pushCompletion(data);
+          await syncEngine.pushSettings(data);
           // Background flush is scheduled without awaiting Firestore on caller.
           await Future<void>.delayed(Duration.zero);
           await Future<void>.delayed(Duration.zero);
 
           verify(
-            () => mockGateway.pushCompletion(
+            () => mockGateway.pushSettings(
               profileId: any(named: 'profileId'),
               data: any(named: 'data'),
             ),
@@ -196,13 +199,13 @@ void main() {
         final pushOrder = <String>[];
 
         when(
-          () => mockGateway.pushCompletion(
+          () => mockGateway.pushSettings(
             profileId: any(named: 'profileId'),
             data: any(named: 'data'),
           ),
         ).thenAnswer((inv) async {
           final p = inv.namedArguments[#data] as Map<String, dynamic>;
-          pushOrder.add('c:${p['id']}');
+          pushOrder.add('s:${p['id']}');
         });
         when(
           () => mockGateway.pushBookmark(
@@ -214,17 +217,17 @@ void main() {
           pushOrder.add('b:${p['id']}');
         });
 
-        await offlineQueue.enqueueCompletion({'id': '1'});
+        await offlineQueue.enqueueSettings({'id': '1'});
         await offlineQueue.enqueueBookmark({'id': '2'});
-        await offlineQueue.enqueueCompletion({'id': '3'});
+        await offlineQueue.enqueueSettings({'id': '3'});
 
         await offlineQueue.flush();
 
-        expect(pushOrder, ['c:1', 'b:2', 'c:3']);
+        expect(pushOrder, ['s:1', 'b:2', 's:3']);
       });
 
       test('queue entries persist across simulated app restart', () async {
-        await offlineQueue.enqueueCompletion({'id': '1'});
+        await offlineQueue.enqueueBookmark({'id': '1'});
         await offlineQueue.enqueueSettings({'id': '2'});
 
         // Create new queue instance (simulates restart with same DB)
@@ -240,13 +243,13 @@ void main() {
 
       test('failed push retries with exponential backoff', () async {
         when(
-          () => mockGateway.pushCompletion(
+          () => mockGateway.pushSettings(
             profileId: any(named: 'profileId'),
             data: any(named: 'data'),
           ),
         ).thenThrow(Exception('err'));
 
-        await offlineQueue.enqueueCompletion({'id': '1'});
+        await offlineQueue.enqueueSettings({'id': '1'});
 
         // First flush fails (retryCount=0, no backoff), retry count → 1
         await offlineQueue.flush();
@@ -263,13 +266,13 @@ void main() {
 
       test('after 5 retries, entry marked as failed (not retried)', () async {
         when(
-          () => mockGateway.pushCompletion(
+          () => mockGateway.pushSettings(
             profileId: any(named: 'profileId'),
             data: any(named: 'data'),
           ),
         ).thenThrow(Exception('persistent'));
 
-        await offlineQueue.enqueueCompletion({'id': '1'});
+        await offlineQueue.enqueueSettings({'id': '1'});
         final items = await database.syncQueueDao.getAllPending();
         final id = items.first.id;
 
@@ -290,7 +293,7 @@ void main() {
 
         // After offline + push → offline with pending
         syncEngine.setOnlineState(false);
-        await syncEngine.pushCompletion({'id': '1'});
+        await syncEngine.pushSettings({'id': '1'});
 
         expect(syncEngine.currentStatus, isA<SyncStatusOffline>());
         final offlineStatus = syncEngine.currentStatus as SyncStatusOffline;

@@ -45,14 +45,16 @@ void main() {
           final db = inMemoryDb();
           addTearDown(db.close);
 
-          // Seed three heterogeneous operations.
+          // Seed three heterogeneous operations. `completion` is intentionally
+          // NOT used: post-rework the outbox table is the canonical completion
+          // queue and OfflineQueue no longer flushes `completion` rows.
           await db.syncQueueDao.enqueue(
-            'completion',
+            'bookmark',
             '{"profile_id":1,"sefariaRef":"Berakhot 1:1"}',
           );
           await db.syncQueueDao.enqueue(
-            'completion',
-            '{"profile_id":1,"sefariaRef":"Berakhot 1:2"}',
+            'streak',
+            '{"profile_id":1}',
           );
           await db.syncQueueDao.enqueue('settings', '{"profile_id":1}');
 

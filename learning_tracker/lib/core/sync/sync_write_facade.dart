@@ -8,12 +8,6 @@
 /// **Contract:** every method is a no-op when the caller holds `null`
 /// (local-born accounts never instantiate a facade).
 abstract class SyncWriteFacade {
-  /// Push a completion record to Firestore after a local write.
-  Future<void> pushCompletion(Map<String, dynamic> completion);
-
-  /// Push multiple completion records in a single batch.
-  Future<void> pushCompletionsBatch(List<Map<String, dynamic>> completions);
-
   /// Rebuild and push the gamification-settings snapshot for the active profile.
   Future<void> pushGamificationSettingsSnapshot();
 

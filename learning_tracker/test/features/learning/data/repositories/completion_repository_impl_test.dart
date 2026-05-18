@@ -86,12 +86,6 @@ void main() {
 
     // Sync engine stubs
     when(
-      () => mockSyncEngine.pushCompletion(any()),
-    ).thenAnswer((_) async => Future.value());
-    when(
-      () => mockSyncEngine.pushCompletionsBatch(any()),
-    ).thenAnswer((_) async => Future.value());
-    when(
       () => mockSyncEngine.pushBookmark(any()),
     ).thenAnswer((_) async => Future.value());
     when(
@@ -124,8 +118,6 @@ void main() {
       expect(completion.trackType, 'personal');
       expect(completion.points, greaterThan(0));
       expect(completion.id, greaterThan(0));
-
-      verify(() => mockSyncEngine.pushCompletion(any())).called(1);
     });
 
     test('throws StageProgressionException when skipping stages', () async {
@@ -171,9 +163,6 @@ void main() {
 
       expect(second.id, first.id);
       expect(second.completedAt, first.completedAt);
-
-      // Sync only called once (for the first completion)
-      verify(() => mockSyncEngine.pushCompletion(any())).called(1);
     });
 
     test('enforces stage progression per track independently', () async {

@@ -84,4 +84,17 @@ class SyncQueueDao extends DatabaseAccessor<UserDatabase>
   Future<int> clearAll() {
     return delete(syncQueue).go();
   }
+
+  /// Purge stale `completion` rows left in the legacy queue.
+  ///
+  /// Post-rework the outbox table is the canonical completion queue, so the
+  /// `OfflineQueue` no longer enqueues or flushes `completion` operations.
+  /// Any `operationType == 'completion'` rows still present were written by a
+  /// pre-fix build and are now unreachable dead data — this deletes them once
+  /// at launch. Returns the number of rows removed.
+  Future<int> purgeCompletionRows() {
+    return (delete(
+      syncQueue,
+    )..where((t) => t.operationType.equals('completion'))).go();
+  }
 }

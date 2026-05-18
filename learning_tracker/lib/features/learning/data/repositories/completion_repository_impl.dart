@@ -155,10 +155,7 @@ class CompletionRepositoryImpl implements CompletionRepository {
         completedSefariaRef: request.sefariaRef,
       );
 
-      // 7. Push to Firestore sync queue (fire-and-forget)
-      unawaited(_syncCompletion(completion));
-
-      // 8. Auto-detect unit completions (fire-and-forget)
+      // 7. Auto-detect unit completions (fire-and-forget)
       if (_completionDetectionService != null) {
         unawaited(
           _completionDetectionService.checkAndRecordCompletions(
@@ -421,17 +418,6 @@ class CompletionRepositoryImpl implements CompletionRepository {
     return completion;
   }
 
-  Map<String, dynamic> _completionToSyncPayload(Completion completion) => {
-    'profile_id': completion.profileId,
-    'curriculum_id': completion.curriculumId,
-    'content_item_id': completion.sefariaRef,
-    'stage_id': completion.stageId,
-    'track_type': completion.trackType,
-    'track_id': completion.trackId,
-    'completed_at': completion.completedAt.toIso8601String(),
-    'points': completion.points,
-  };
-
   /// Validate that stage progression rules are followed.
   ///
   /// Throws [StageProgressionException] if attempting to complete stage N+1
@@ -657,11 +643,6 @@ class CompletionRepositoryImpl implements CompletionRepository {
       trackType: track,
       completedSefariaRef: completedSefariaRef,
     );
-  }
-
-  /// Queue completion for Firestore sync.
-  Future<void> _syncCompletion(Completion completion) async {
-    await _syncEngine?.pushCompletion(_completionToSyncPayload(completion));
   }
 
   @override

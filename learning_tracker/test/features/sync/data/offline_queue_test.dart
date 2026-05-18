@@ -36,14 +36,6 @@ void main() {
   });
 
   group('OfflineQueue enqueue operations', () {
-    test('enqueues a completion', () async {
-      final data = {'curriculum_id': 'mishnayos', 'content_item_id': 1};
-      await offlineQueue.enqueueCompletion(data);
-
-      final count = await offlineQueue.getPendingCount();
-      expect(count, 1);
-    });
-
     test('enqueues a bookmark', () async {
       final data = {
         'curriculum_id': 'mishnayos',
@@ -97,7 +89,7 @@ void main() {
     });
 
     test('getPendingCount returns correct count for multiple items', () async {
-      await offlineQueue.enqueueCompletion({'id': '1'});
+      await offlineQueue.enqueueStreak({'id': '1'});
       await offlineQueue.enqueueBookmark({'id': '2'});
       await offlineQueue.enqueueSettings({'id': '3'});
 
@@ -110,37 +102,6 @@ void main() {
     test('flush returns 0 when queue is empty', () async {
       final count = await offlineQueue.flush();
       expect(count, 0);
-    });
-
-    test('flush pushes completions to Firestore', () async {
-      when(
-        () => mockFirestore.pushCompletion(
-          profileId: any(named: 'profileId'),
-          data: any(named: 'data'),
-        ),
-      ).thenAnswer((_) async {});
-
-      final data = {'curriculum_id': 'mishnayos', 'content_item_id': 1};
-      await offlineQueue.enqueueCompletion(data);
-
-      final syncedCount = await offlineQueue.flush();
-      expect(syncedCount, 1);
-
-      verify(
-        () => mockFirestore.pushCompletion(
-          profileId: any(named: 'profileId'),
-          data: any(
-            named: 'data',
-            that: predicate<Map<String, dynamic>>(
-              (m) => m['curriculum_id'] == 'mishnayos',
-            ),
-          ),
-        ),
-      ).called(1);
-
-      // Queue should be empty now
-      final remaining = await offlineQueue.getPendingCount();
-      expect(remaining, 0);
     });
 
     test('flush pushes bookmarks to Firestore', () async {
@@ -245,7 +206,7 @@ void main() {
 
     test('flush handles mixed operation types', () async {
       when(
-        () => mockFirestore.pushCompletion(
+        () => mockFirestore.pushStreak(
           profileId: any(named: 'profileId'),
           data: any(named: 'data'),
         ),
@@ -263,7 +224,7 @@ void main() {
         ),
       ).thenAnswer((_) async {});
 
-      await offlineQueue.enqueueCompletion({'id': '1'});
+      await offlineQueue.enqueueStreak({'id': '1'});
       await offlineQueue.enqueueBookmark({'id': '2'});
       await offlineQueue.enqueueSettings({'id': '3'});
 
@@ -276,7 +237,7 @@ void main() {
 
     test('flush marks failed operations and continues', () async {
       when(
-        () => mockFirestore.pushCompletion(
+        () => mockFirestore.pushStreak(
           profileId: any(named: 'profileId'),
           data: any(named: 'data'),
         ),
@@ -288,13 +249,13 @@ void main() {
         ),
       ).thenAnswer((_) async {});
 
-      await offlineQueue.enqueueCompletion({'id': '1'});
+      await offlineQueue.enqueueStreak({'id': '1'});
       await offlineQueue.enqueueBookmark({'id': '2'});
 
       final syncedCount = await offlineQueue.flush();
       expect(syncedCount, 1); // Only bookmark succeeded
 
-      // Failed completion should still be in queue (with incremented retry count)
+      // Failed streak should still be in queue (with incremented retry count)
       final remaining = await offlineQueue.getPendingCount();
       expect(remaining, 1);
     });
@@ -302,7 +263,7 @@ void main() {
 
   group('OfflineQueue clearAll', () {
     test('clears all queued operations', () async {
-      await offlineQueue.enqueueCompletion({'id': '1'});
+      await offlineQueue.enqueueStreak({'id': '1'});
       await offlineQueue.enqueueBookmark({'id': '2'});
       await offlineQueue.enqueueSettings({'id': '3'});
 
@@ -318,13 +279,13 @@ void main() {
       final pushOrder = <String>[];
 
       when(
-        () => mockFirestore.pushCompletion(
+        () => mockFirestore.pushStreak(
           profileId: any(named: 'profileId'),
           data: any(named: 'data'),
         ),
       ).thenAnswer((inv) async {
         final payload = inv.namedArguments[#data] as Map<String, dynamic>;
-        pushOrder.add('completion:${payload['id']}');
+        pushOrder.add('streak:${payload['id']}');
       });
       when(
         () => mockFirestore.pushBookmark(
@@ -345,20 +306,20 @@ void main() {
         pushOrder.add('settings:${payload['id']}');
       });
 
-      await offlineQueue.enqueueCompletion({'id': '1'});
+      await offlineQueue.enqueueStreak({'id': '1'});
       await offlineQueue.enqueueBookmark({'id': '2'});
       await offlineQueue.enqueueSettings({'id': '3'});
 
       await offlineQueue.flush();
 
-      expect(pushOrder, ['completion:1', 'bookmark:2', 'settings:3']);
+      expect(pushOrder, ['streak:1', 'bookmark:2', 'settings:3']);
     });
   });
 
   group('OfflineQueue persistence', () {
     test('queue entries persist across simulated app restart', () async {
       // Enqueue items
-      await offlineQueue.enqueueCompletion({'id': '1'});
+      await offlineQueue.enqueueStreak({'id': '1'});
       await offlineQueue.enqueueBookmark({'id': '2'});
 
       // Create a new OfflineQueue instance pointing to the same database
@@ -381,13 +342,13 @@ void main() {
   group('OfflineQueue retry with exponential backoff', () {
     test('failed push increments retry count', () async {
       when(
-        () => mockFirestore.pushCompletion(
+        () => mockFirestore.pushStreak(
           profileId: any(named: 'profileId'),
           data: any(named: 'data'),
         ),
       ).thenThrow(Exception('Network error'));
 
-      await offlineQueue.enqueueCompletion({'id': '1'});
+      await offlineQueue.enqueueStreak({'id': '1'});
 
       // First flush: fails, marks retry count = 1
       await offlineQueue.flush();
@@ -400,14 +361,14 @@ void main() {
 
     test('after 5 retries, entry marked as failed (not retried)', () async {
       when(
-        () => mockFirestore.pushCompletion(
+        () => mockFirestore.pushStreak(
           profileId: any(named: 'profileId'),
           data: any(named: 'data'),
         ),
       ).thenThrow(Exception('persistent error'));
 
       // Enqueue and manually set retryCount to 5 (= maxRetries)
-      await offlineQueue.enqueueCompletion({'id': '1'});
+      await offlineQueue.enqueueStreak({'id': '1'});
       final pending = await database.syncQueueDao.getAllPending();
       final id = pending.first.id;
 
@@ -431,7 +392,7 @@ void main() {
   group('OfflineQueue batch processing', () {
     test('flush with batchSize processes all items in batches', () async {
       when(
-        () => mockFirestore.pushCompletion(
+        () => mockFirestore.pushStreak(
           profileId: any(named: 'profileId'),
           data: any(named: 'data'),
         ),
@@ -449,7 +410,7 @@ void main() {
         ),
       ).thenAnswer((_) async {});
 
-      await offlineQueue.enqueueCompletion({'id': '1'});
+      await offlineQueue.enqueueStreak({'id': '1'});
       await offlineQueue.enqueueBookmark({'id': '2'});
       await offlineQueue.enqueueSettings({'id': '3'});
 
@@ -470,7 +431,7 @@ void main() {
     });
 
     test('non-empty queue means pending', () async {
-      await offlineQueue.enqueueCompletion({'id': '1'});
+      await offlineQueue.enqueueStreak({'id': '1'});
       final count = await offlineQueue.getPendingCount();
       expect(count, greaterThan(0));
     });
