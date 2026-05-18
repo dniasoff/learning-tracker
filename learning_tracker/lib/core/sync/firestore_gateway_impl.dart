@@ -100,7 +100,10 @@ class FirestoreGatewayImpl implements FirestoreGateway {
   /// Any key beginning with `_` is application-internal scaffolding (e.g. the
   /// outbox `_entityKey` and `_target_profile_id`) and must never reach a
   /// Firestore document. Centralising the strip here keeps every push path
-  /// — single and batch — defensively clean.
+  /// — single, batch, snapshot and event — defensively clean. Every push
+  /// method that writes a `Map` to Firestore routes its payload through this
+  /// so a closed `hasOnly()` whitelist in `firestore.rules` is never tripped
+  /// by an internal key.
   static Map<String, dynamic> _stripInternalKeys(Map<String, dynamic> data) {
     final cleaned = <String, dynamic>{};
     for (final entry in data.entries) {
@@ -108,6 +111,38 @@ class FirestoreGatewayImpl implements FirestoreGateway {
       cleaned[entry.key] = entry.value;
     }
     return cleaned;
+  }
+
+  /// Return a copy of [data] in which the `completed_at` field is a genuine
+  /// Firestore [Timestamp] rather than an ISO-8601 string.
+  ///
+  /// The outbox payload is JSON, so `completed_at` arrives here as an
+  /// ISO-8601 *string* (`cmd.completedAt.toUtc().toIso8601String()`). The
+  /// `completions` security rule compares `completed_at <= request.time`;
+  /// in Firestore Security Rules a `string <= timestamp` comparison is
+  /// `false`, which would deny EVERY completion create. Writing a real
+  /// `Timestamp` makes the rule comparison sound.
+  ///
+  /// The value is left untouched when it is already a [Timestamp] (defensive
+  /// — a future caller may pre-convert) or absent/null (the rule guards the
+  /// field with `'completed_at' in request.resource.data`, so an omitted
+  /// field is not denied). The read path is unaffected: [_normalizeRow]
+  /// converts any Firestore `Timestamp` back to an ISO-8601 string on read.
+  static Map<String, dynamic> _timestampifyCompletedAt(
+    Map<String, dynamic> data,
+  ) {
+    final value = data['completed_at'];
+    if (value == null || value is Timestamp) return data;
+    if (value is DateTime) {
+      return {...data, 'completed_at': Timestamp.fromDate(value.toUtc())};
+    }
+    if (value is String) {
+      return {
+        ...data,
+        'completed_at': Timestamp.fromDate(DateTime.parse(value).toUtc()),
+      };
+    }
+    return data;
   }
 
   @override
@@ -126,7 +161,10 @@ class FirestoreGatewayImpl implements FirestoreGateway {
     // interface for non-completion callers; for completions it is ignored.
     final id = _completionDocId(profileId, data);
     await collection.doc(id).set(
-      {..._stripInternalKeys(data), 'synced_at': FieldValue.serverTimestamp()},
+      {
+        ..._timestampifyCompletedAt(_stripInternalKeys(data)),
+        'synced_at': FieldValue.serverTimestamp(),
+      },
       SetOptions(merge: true),
     );
   }
@@ -153,7 +191,7 @@ class FirestoreGatewayImpl implements FirestoreGateway {
         batch.set(
           collection.doc(id),
           {
-            ..._stripInternalKeys(item.payload),
+            ..._timestampifyCompletedAt(_stripInternalKeys(item.payload)),
             'synced_at': FieldValue.serverTimestamp(),
           },
           SetOptions(merge: true),
@@ -182,7 +220,7 @@ class FirestoreGatewayImpl implements FirestoreGateway {
     final doc = _doc(profileId, 'streak', 'data');
     if (doc == null) throw _notAuthenticated;
     await doc.set({
-      ...data,
+      ..._stripInternalKeys(data),
       'synced_at': FieldValue.serverTimestamp(),
     }, SetOptions(merge: true));
   }
@@ -196,7 +234,7 @@ class FirestoreGatewayImpl implements FirestoreGateway {
     if (collection == null) throw _notAuthenticated;
     final docId = data['curriculum_id']?.toString() ?? 'default';
     await collection.doc(docId).set({
-      ...data,
+      ..._stripInternalKeys(data),
       'synced_at': FieldValue.serverTimestamp(),
     }, SetOptions(merge: true));
   }
@@ -212,7 +250,7 @@ class FirestoreGatewayImpl implements FirestoreGateway {
     final trackType = data['track_type']?.toString() ?? '';
     final docId = '${curriculumId}_$trackType';
     await collection.doc(docId).set({
-      ...data,
+      ..._stripInternalKeys(data),
       'synced_at': FieldValue.serverTimestamp(),
     }, SetOptions(merge: true));
   }
@@ -229,7 +267,7 @@ class FirestoreGatewayImpl implements FirestoreGateway {
         data['sefaria_ref']?.toString() ?? data['ref']?.toString() ?? '';
     final docId = '${curriculumId}_$ref';
     await collection.doc(docId).set({
-      ...data,
+      ..._stripInternalKeys(data),
       'synced_at': FieldValue.serverTimestamp(),
     }, SetOptions(merge: true));
   }
@@ -245,7 +283,7 @@ class FirestoreGatewayImpl implements FirestoreGateway {
     final trackType = data['track_type']?.toString() ?? '';
     final docId = '${curriculumId}_$trackType';
     await collection.doc(docId).set({
-      ...data,
+      ..._stripInternalKeys(data),
       'synced_at': FieldValue.serverTimestamp(),
     }, SetOptions(merge: true));
   }
@@ -260,7 +298,7 @@ class FirestoreGatewayImpl implements FirestoreGateway {
     final doc = _doc(profileId, 'notification_settings', 'preferences');
     if (doc == null) throw _notAuthenticated;
     await doc.set({
-      ...data,
+      ..._stripInternalKeys(data),
       'synced_at': FieldValue.serverTimestamp(),
     }, SetOptions(merge: true));
   }
@@ -273,7 +311,7 @@ class FirestoreGatewayImpl implements FirestoreGateway {
     final doc = _doc(profileId, 'gamification_settings', 'config');
     if (doc == null) throw _notAuthenticated;
     await doc.set({
-      ...data,
+      ..._stripInternalKeys(data),
       'synced_at': FieldValue.serverTimestamp(),
     }, SetOptions(merge: true));
   }
@@ -290,7 +328,7 @@ class FirestoreGatewayImpl implements FirestoreGateway {
     final learnerProfileDoc = _learnerProfileDoc(profileId);
     if (learnerProfileDoc == null) throw _notAuthenticated;
     await learnerProfileDoc.set({
-      ...data,
+      ..._stripInternalKeys(data),
       'updated_at': FieldValue.serverTimestamp(),
     }, SetOptions(merge: true));
   }
@@ -316,7 +354,10 @@ class FirestoreGatewayImpl implements FirestoreGateway {
   }) async {
     final collection = _collection(profileId, 'learning_ledger');
     if (collection == null) throw _notAuthenticated;
-    await collection.add({...data, 'synced_at': FieldValue.serverTimestamp()});
+    await collection.add({
+      ..._stripInternalKeys(data),
+      'synced_at': FieldValue.serverTimestamp(),
+    });
   }
 
   @override
@@ -330,7 +371,10 @@ class FirestoreGatewayImpl implements FirestoreGateway {
     final batch = _firestore.batch();
     for (final entry in entries) {
       final doc = collection.doc();
-      batch.set(doc, {...entry, 'synced_at': FieldValue.serverTimestamp()});
+      batch.set(doc, {
+        ..._stripInternalKeys(entry),
+        'synced_at': FieldValue.serverTimestamp(),
+      });
     }
     await batch.commit();
   }
@@ -346,7 +390,7 @@ class FirestoreGatewayImpl implements FirestoreGateway {
     if (collection == null) throw _notAuthenticated;
     final curriculumId = data['curriculum_id']?.toString() ?? '';
     await collection.doc(curriculumId).set({
-      ...data,
+      ..._stripInternalKeys(data),
       'synced_at': FieldValue.serverTimestamp(),
     }, SetOptions(merge: true));
   }
@@ -363,6 +407,12 @@ class FirestoreGatewayImpl implements FirestoreGateway {
 
   // ── pull ──────────────────────────────────────────────────────────────────
 
+  /// No composite Firestore index is required by the sync subsystem, so
+  /// `firestore.indexes.json` carries an empty `indexes` array. [fetchPage]
+  /// orders solely by `FieldPath.documentId`; [fetchAll] and
+  /// [listenToCollection] issue unfiltered snapshots; no query combines
+  /// `.where(...)` with `.orderBy(...)` on a non-documentId field. Restore an
+  /// index declaration only if a composite-index-needing query is added.
   @override
   Future<FirestorePage> fetchPage({
     required int profileId,
@@ -412,12 +462,12 @@ class FirestoreGatewayImpl implements FirestoreGateway {
     final docId = data['id']?.toString() ?? data['goal_id']?.toString();
     if (docId != null) {
       await collection.doc(docId).set({
-        ...data,
+        ..._stripInternalKeys(data),
         'synced_at': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
     } else {
       await collection.add({
-        ...data,
+        ..._stripInternalKeys(data),
         'synced_at': FieldValue.serverTimestamp(),
       });
     }
@@ -431,7 +481,7 @@ class FirestoreGatewayImpl implements FirestoreGateway {
     final doc = _doc(profileId, 'ui_preferences', 'data');
     if (doc == null) throw _notAuthenticated;
     await doc.set({
-      ...data,
+      ..._stripInternalKeys(data),
       'synced_at': FieldValue.serverTimestamp(),
     }, SetOptions(merge: true));
   }
@@ -446,7 +496,7 @@ class FirestoreGatewayImpl implements FirestoreGateway {
         .collection('profile')
         .doc('data')
         .set({
-          ...data,
+          ..._stripInternalKeys(data),
           'synced_at': FieldValue.serverTimestamp(),
         }, SetOptions(merge: true));
   }
@@ -460,7 +510,7 @@ class FirestoreGatewayImpl implements FirestoreGateway {
     if (collection == null) throw _notAuthenticated;
     final docId = data['curriculum_id']?.toString() ?? 'default';
     await collection.doc(docId).set({
-      ...data,
+      ..._stripInternalKeys(data),
       'synced_at': FieldValue.serverTimestamp(),
     }, SetOptions(merge: true));
   }
@@ -513,7 +563,10 @@ class FirestoreGatewayImpl implements FirestoreGateway {
         .collection('users')
         .doc(uid)
         .collection('diagnostic_logs')
-        .add({...data, 'captured_at': FieldValue.serverTimestamp()});
+        .add({
+          ..._stripInternalKeys(data),
+          'captured_at': FieldValue.serverTimestamp(),
+        });
   }
 
   @override
@@ -522,7 +575,7 @@ class FirestoreGatewayImpl implements FirestoreGateway {
     required Map<String, dynamic> data,
   }) async {
     await _firestore.collection('users').doc(uid).set({
-      ...data,
+      ..._stripInternalKeys(data),
       'updatedAt': FieldValue.serverTimestamp(),
     }, SetOptions(merge: true));
   }

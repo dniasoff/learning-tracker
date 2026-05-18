@@ -119,11 +119,31 @@ class OutboxProcessor {
     }).toList();
 
     if (eligibleCompletions.isNotEmpty) {
-      final entries = eligibleCompletions
+      // The `outbox` table has no UNIQUE index on `entityKey`, so two (or
+      // more) eligible rows can share one key — they represent the SAME
+      // completion (its Firestore doc ID is derived from the natural key, so
+      // re-pushing is idempotent). De-duplicate by `entityKey` BEFORE
+      // building the push entries: push exactly one representative row per
+      // key (so each key lands in exactly one chunk and `BatchPushException`
+      // accounting is unambiguous), while tracking every row id that shares
+      // that key so commit/retry is applied to ALL of them.
+      final rowIdsByKey = <String, List<int>>{};
+      final representativePayload = <String, Map<String, dynamic>>{};
+      final orderedKeys = <String>[];
+      for (final row in eligibleCompletions) {
+        final ids = rowIdsByKey.putIfAbsent(row.entityKey, () {
+          orderedKeys.add(row.entityKey);
+          representativePayload[row.entityKey] = _decodePayload(row.payload);
+          return <int>[];
+        });
+        ids.add(row.id);
+      }
+
+      final entries = orderedKeys
           .map(
-            (row) => (
-              entityKey: row.entityKey,
-              payload: _decodePayload(row.payload),
+            (key) => (
+              entityKey: key,
+              payload: representativePayload[key]!,
             ),
           )
           .toList();
@@ -152,12 +172,21 @@ class OutboxProcessor {
       }
 
       final committedKeys = committed.toSet();
-      for (final row in eligibleCompletions) {
-        if (committedKeys.contains(row.entityKey)) {
-          await _dao.deleteRow(row.id);
+      for (final key in orderedKeys) {
+        final ids = rowIdsByKey[key]!;
+        if (committedKeys.contains(key)) {
+          // The completion landed — delete EVERY outbox row carrying this
+          // key (duplicates all describe the same idempotent completion).
+          for (final id in ids) {
+            await _dao.deleteRow(id);
+          }
           successCount++;
         } else if (failedError != null) {
-          await _dao.markAttempted(row.id, error: failedError.toString());
+          // Not committed — mark every row with this key as attempted so the
+          // whole group is retried together on the next drain.
+          for (final id in ids) {
+            await _dao.markAttempted(id, error: failedError.toString());
+          }
         }
       }
     }

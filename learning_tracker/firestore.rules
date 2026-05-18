@@ -240,6 +240,13 @@ service cloud.firestore {
         // the whole rule evaluate false, denying an otherwise-valid write.
         // `points` is therefore validated only when present, and `completed_at`
         // — when present — must not be in the future.
+        //
+        // `completed_at` is written on the wire as a genuine Firestore
+        // `Timestamp` (FirestoreGatewayImpl._timestampifyCompletedAt converts
+        // the ISO-8601 outbox payload before the write). This is REQUIRED for
+        // the `completed_at <= request.time` comparison below: a `string <=
+        // timestamp` comparison in Security Rules is always false, which
+        // would otherwise deny every completion create.
         match /completions/{completionId} {
           allow read: if isOwner(uid);
           allow create: if isOwner(uid)
@@ -289,9 +296,30 @@ service cloud.firestore {
         // instance, is a documented catch-all that also transports goal
         // mirror documents and study-day-config maps — so they are
         // intentionally owner-gated WITHOUT a whitelist; a closed whitelist
-        // there would silently drop legitimate fields. The `_target_profile_id`
-        // bookkeeping key is stripped by the offline queue before any write,
-        // so it never appears in `request.resource.data`.
+        // there would silently drop legitimate fields.
+        //
+        // Internal `_`-prefixed bookkeeping keys (e.g. `_target_profile_id`)
+        // never reach a document: `FirestoreGatewayImpl._stripInternalKeys`
+        // is applied on EVERY push method that writes a Map, so a closed
+        // whitelist below can never be tripped by an internal key.
+        //
+        // WHITELIST VERIFICATION (Wave 4b / K2) — each whitelist below was
+        // cross-checked against the exact fields its gateway push method
+        // writes (payload spread keys + `synced_at`):
+        //   curriculum_tracks         — all 14 fields match exactly.
+        //   bookmarks                 — written fields {curriculum_id,
+        //     track_type, content_item_id, updated_at, synced_at} are all
+        //     whitelisted; {profile_id, sefaria_ref, stage_id} are listed
+        //     but never written (allowed — a superset is safe).
+        //   learning_order            — written fields {curriculum_id,
+        //     sefaria_ref, user_sort_order, updated_at, synced_at} all
+        //     whitelisted; `ref` is listed but never written (allowed).
+        //   goals                     — all written snake_case and camelCase
+        //     fields are whitelisted (both casings are listed).
+        //   curriculum_import_metadata— written {curriculum_id, item_count,
+        //     imported_at, synced_at} all whitelisted; `profile_id` listed
+        //     but not written (allowed).
+        //   profile_programs          — all 6 fields match exactly.
 
         // settings — heterogeneous owner-scoped preference + goal-mirror bag.
         // Intentionally NOT whitelisted (open-ended payload — see note above).
