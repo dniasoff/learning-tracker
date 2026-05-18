@@ -10,8 +10,6 @@ import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/utils/percentage_formatter.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/onboarding/presentation/screens/bulk_mark_screen.dart';
-import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
-import 'package:learning_tracker/features/progress/presentation/providers/lifetime_knowledge_providers.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/curriculum_scope_providers.dart';
 import 'package:learning_tracker/features/track_learning_order/presentation/screens/track_learning_order_screen.dart';
 import 'package:learning_tracker/features/track_setup/domain/entities/add_track_result.dart';
@@ -47,7 +45,6 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
         : track.curriculumId;
 
     final l10n = AppLocalizations.of(context)!;
-    final profileId = ref.watch(activeProfileIdProvider);
     final theme = Theme.of(context);
 
     final completionAsync = ref.watch(
@@ -63,24 +60,6 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
                   ?.value ??
               false)
         : false;
-
-    final lifetimeSummaryAsync = curriculum != null
-        ? ref.watch(
-            lifetimeDataProvider((
-              profileId: profileId,
-              curriculumId: curriculum,
-            )),
-          )
-        : null;
-    final lifetimeFraction = lifetimeSummaryAsync?.when(
-      data: (summary) => summary?.percentage ?? 0.0,
-      loading: () => null,
-      error: (_, __) => 0.0,
-    );
-    final lifetimeProgress = lifetimeFraction ?? 0.0;
-    final lifetimePercentDisplay = lifetimeFraction == null
-        ? '…'
-        : formatFractionAsPercent(lifetimeFraction);
 
     final curriculumBarColor = AppTheme.getCurriculumColorByKey(
       track.curriculumId,
@@ -130,8 +109,6 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
             cycleFraction,
             cyclePercentDisplay,
             curriculumBarColor,
-            lifetimeProgress,
-            lifetimePercentDisplay,
             goal: goal,
             itemsRemaining: itemsRemaining,
             estimatedFinish: estimatedFinish,
@@ -161,9 +138,7 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
     bool hasProgramEnrollment,
     double cycleFraction,
     String cyclePercentDisplay,
-    Color curriculumBarColor,
-    double lifetimeProgress,
-    String lifetimePercentDisplay, {
+    Color curriculumBarColor, {
     Goal? goal,
     int? itemsRemaining,
     String? estimatedFinish,
@@ -252,37 +227,6 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
             ),
             const SizedBox(height: 10),
           ],
-          Row(
-            children: [
-              Text(
-                l10n.trackLifetimeLearning,
-                style: theme.textTheme.labelSmall?.copyWith(
-                  color: AppTheme.brandInkMuted,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              const Spacer(),
-              Text(
-                lifetimePercentDisplay,
-                style: theme.textTheme.labelMedium?.copyWith(
-                  color: AppTheme.brandInk,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 6),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(999),
-            child: LinearProgressIndicator(
-              value: lifetimeProgress,
-              minHeight: 10,
-              backgroundColor: const Color(0xFFE8ECF3),
-              valueColor: const AlwaysStoppedAnimation<Color>(
-                Color(0xFF2CC597),
-              ),
-            ),
-          ),
           const SizedBox(height: 16),
           const Divider(height: 1, color: Color(0xFFEEF0F6)),
           const SizedBox(height: 14),
