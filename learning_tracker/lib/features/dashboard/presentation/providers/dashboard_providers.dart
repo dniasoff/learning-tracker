@@ -98,8 +98,13 @@ Stream<List<CurriculumId>> dashboardActiveCurriculaStream(Ref ref) {
   });
 }
 
-/// Stage-based completion for one track (same denominator as
-/// [dashboardCompletionPercentage] for the curriculum, completions from this track only).
+/// Item-based completion for one track.
+///
+/// An item is "done" when ALL of the track's required stages have a
+/// completion record for it.  Required stages = every non-superseded
+/// stage defined for the track (stageOrder 1 = learn, 2+ = chazara).
+///
+/// Formula: `(items where all required stages are done) / totalItems`.
 @riverpod
 Future<double> dashboardTrackCompletionPercentage(Ref ref, int trackId) async {
   final db = ref.watch(userDatabaseProvider);
@@ -110,29 +115,42 @@ Future<double> dashboardTrackCompletionPercentage(Ref ref, int trackId) async {
     (c) => c.storageKey == track.curriculumId,
     orElse: () => CurriculumId.mishnayos,
   );
+  final stageRepository = ref.watch(globalStageRepositoryProvider);
+  final stages = await stageRepository.getStagesByTrack(trackId);
+  if (stages.isEmpty) return 0.0;
+  final requiredStageIds = stages.map((s) => s.id).toSet();
+
   final completions = await db.completionDao.getCompletionsByTrackAndProfile(
     trackId,
     profileId,
   );
-  final stageRepository = ref.watch(
-    stageDefinitionRepositoryProvider(curriculum),
-  );
-  final stages = await stageRepository.getStagesForCurriculum(curriculum);
-  if (stages.isEmpty) return 0.0;
+
+  // Build a map of sefariaRef → set of completed stageIds for this track.
+  final completedStagesByRef = <String, Set<int>>{};
+  for (final c in completions) {
+    completedStagesByRef.putIfAbsent(c.sefariaRef, () => {}).add(c.stageId);
+  }
+
+  // Count items where every required stage has a completion record.
+  final doneItems = completedStagesByRef.values
+      .where((doneStages) => requiredStageIds.every(doneStages.contains))
+      .length;
+
   final totalItems = await ref.watch(
     scopedItemCountProvider(curriculum).future,
   );
-  final denominator = totalItems * stages.length;
-  if (denominator == 0) return 0.0;
-  return (completions.length / denominator).clamp(0.0, 1.0);
+  if (totalItems == 0) return 0.0;
+  return (doneItems / totalItems).clamp(0.0, 1.0);
 }
 
-/// Per-curriculum completion percentage, scoped to active profile.
+/// Per-curriculum item-based completion percentage, scoped to active profile.
 ///
-/// Formula: `completions.length / (totalLeafItems * totalStages)`.
-/// Every stage completion nudges the bar, and the denominator is the
-/// scoped total leaf items (not items touched) so the bar never regresses
-/// when a new item is started.
+/// An item (sefariaRef) is "done" when every required stage for its track has
+/// a completion record.  Required stages = the non-superseded stages defined
+/// for that track.  An item that is fully done in any of its tracks counts
+/// once toward the numerator.
+///
+/// Formula: `(distinct sefariaRefs fully done in any track) / totalLeafItems`.
 @riverpod
 Future<double> dashboardCompletionPercentage(
   Ref ref,
@@ -141,21 +159,43 @@ Future<double> dashboardCompletionPercentage(
   ref.watch<int>(completionCommittedProvider);
   final db = ref.watch(userDatabaseProvider);
   final profileId = ref.watch(activeProfileIdProvider);
+
   final completions = await db.completionDao
       .getCompletionsByCurriculumAndProfile(curriculum.storageKey, profileId);
-  final stageRepository = ref.watch(
-    stageDefinitionRepositoryProvider(curriculum),
-  );
-  final stages = await stageRepository.getStagesForCurriculum(curriculum);
-  if (stages.isEmpty) return 0.0;
 
   final totalItems = await ref.watch(
     scopedItemCountProvider(curriculum).future,
   );
-  final denominator = totalItems * stages.length;
-  if (denominator == 0) return 0.0;
+  if (totalItems == 0) return 0.0;
+  if (completions.isEmpty) return 0.0;
 
-  return (completions.length / denominator).clamp(0.0, 1.0);
+  // Group completed stageIds by (trackId → sefariaRef → Set<stageId>).
+  final byTrack = <int, Map<String, Set<int>>>{};
+  for (final c in completions) {
+    byTrack
+        .putIfAbsent(c.trackId, () => {})
+        .putIfAbsent(c.sefariaRef, () => {})
+        .add(c.stageId);
+  }
+
+  // Fetch required stages for each track encountered, then count done items.
+  final stageRepository = ref.watch(globalStageRepositoryProvider);
+  final doneRefs = <String>{};
+  for (final entry in byTrack.entries) {
+    final trackId = entry.key;
+    final refStages = entry.value;
+    if (trackId == 0) continue; // bulk-mark sentinel — skip
+    final stages = await stageRepository.getStagesByTrack(trackId);
+    if (stages.isEmpty) continue;
+    final requiredStageIds = stages.map((s) => s.id).toSet();
+    for (final refEntry in refStages.entries) {
+      if (requiredStageIds.every(refEntry.value.contains)) {
+        doneRefs.add(refEntry.key);
+      }
+    }
+  }
+
+  return (doneRefs.length / totalItems).clamp(0.0, 1.0);
 }
 
 /// Per-curriculum last completion timestamp, scoped to active profile.
