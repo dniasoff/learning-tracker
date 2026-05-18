@@ -5,15 +5,17 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
+import 'package:learning_tracker/core/utils/text_input_formatters.dart';
 import 'package:learning_tracker/core/widgets/app_bar_title.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/widgets/hierarchy_selection_panel.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
+import 'package:learning_tracker/features/learning/presentation/providers/completion_providers.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/bulk_prior_completion_service.dart';
 import 'package:learning_tracker/features/onboarding/presentation/providers/onboarding_providers.dart';
+import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/progress_providers.dart';
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
-import 'package:learning_tracker/features/stages/presentation/providers/stage_providers.dart';
 import 'package:learning_tracker/features/track_setup/domain/entities/add_track_result.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
@@ -33,6 +35,11 @@ class BulkMarkResult {
 /// Allows users to browse the content hierarchy and select items they've
 /// already completed. Selecting at a higher level (e.g., seder) automatically
 /// includes all items within.
+///
+/// Previously-completed content is pre-ticked on open (B7). Unticking a
+/// previously-ticked item calls expungePriorCompletions to tombstone those
+/// completion records (B8). The stage-picker step has been removed — all
+/// stages are recorded automatically by the data layer (B5).
 class BulkMarkScreen extends ConsumerStatefulWidget {
   final CurriculumId curriculumId;
 
@@ -55,12 +62,18 @@ class BulkMarkScreen extends ConsumerStatefulWidget {
   ConsumerState<BulkMarkScreen> createState() => _BulkMarkScreenState();
 }
 
-enum _Phase { selection, stageSelection, confirmation, processing, done }
+// B5: Stage-picker phase removed. Flow is now: selection → confirmation →
+// processing → done.
+enum _Phase { selection, confirmation, processing, done }
 
 class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
   var _phase = _Phase.selection;
   final _selections = <HierarchySelection>{};
-  final _selectedStageIds = <int>{};
+
+  /// Leaf sefariaRefs that were pre-ticked because they already exist in the DB.
+  /// Unticking one of these triggers an expunge call (B8).
+  final _preTickedRefs = <String>{};
+
   List<ContentItem>? _resolvedItems;
   BulkPriorCompletionResult? _result;
   String? _error;
@@ -70,12 +83,61 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
   String _searchQuery = '';
   bool _isSearching = false;
 
-  // Per-stage marking: maps each selection to its own stage set
-  final _perSelectionStages = <HierarchySelection, Set<int>>{};
-
   // Panel navigation state (synced via onNavigationChanged).
   bool _hasNavStack = false;
   final _panelKey = GlobalKey<HierarchySelectionPanelState>();
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPreExistingCompletions();
+  }
+
+  /// B7: Load existing completions and pre-tick any content that is already
+  /// marked so the checkbox state reflects reality when the screen opens.
+  Future<void> _loadPreExistingCompletions() async {
+    try {
+      final completionRepo = ref.read(completionRepositoryProvider);
+      final existingCompletions = await completionRepo
+          .getCompletionsByCurriculum(widget.curriculumId.storageKey);
+
+      if (existingCompletions.isEmpty) return;
+
+      // Collect all sefariaRefs that have at least one completion record.
+      final completedRefs = existingCompletions
+          .map((c) => c.sefariaRef)
+          .toSet();
+
+      // Load the full content list to map refs → HierarchySelections.
+      final contentRepo = ref.read(contentRepositoryProvider);
+      final allItems = await contentRepo.getContentForCurriculum(
+        widget.curriculumId,
+      );
+
+      // Build pre-ticked leaf-level selections for every already-completed ref.
+      final preTickedSelections = <HierarchySelection>{};
+      for (final item in allItems) {
+        if (!item.isLeaf) continue;
+        if (completedRefs.contains(item.sefariaRef)) {
+          preTickedSelections.add(
+            HierarchySelection(
+              level1: item.level1,
+              level2: item.level2,
+              level3: item.level3,
+              level4: item.level4,
+            ),
+          );
+          _preTickedRefs.add(item.sefariaRef);
+        }
+      }
+
+      if (mounted && preTickedSelections.isNotEmpty) {
+        setState(() => _selections.addAll(preTickedSelections));
+      }
+    } catch (_) {
+      // Non-fatal: if pre-tick loading fails just open with unticked state.
+    }
+  }
 
   /// Filter items by scope constraints if provided.
   List<ContentItem> _applyScope(List<ContentItem> items) {
@@ -109,9 +171,11 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
   }
 
   void _toggleItem(ContentItem item, int depth) {
+    final wasSelected = _isItemSelected(item);
+
     setState(() {
       final sel = _selectionForItem(item, depth);
-      if (_isItemSelected(item)) {
+      if (wasSelected) {
         _selections.removeWhere((s) {
           if (s.level1 != null && s.level1 != item.level1) return false;
           if (s.level2 != null && s.level2 != item.level2) return false;
@@ -130,6 +194,67 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
         _selections.add(sel);
       }
     });
+
+    // B8: When the user unticks a previously-completed item, expunge those
+    // completion records so the data layer stays consistent.
+    if (wasSelected && _preTickedRefs.isNotEmpty) {
+      _maybeExpunge(item, depth);
+    }
+  }
+
+  /// B8: Expunge completion records for the leaf refs covered by [item] that
+  /// were originally pre-ticked (i.e., previously existed in the DB).
+  void _maybeExpunge(ContentItem item, int depth) {
+    final sel = _selectionForItem(item, depth);
+
+    // Collect the leaf sefariaRefs covered by the unticked selection, restricted
+    // to refs that were pre-ticked (i.e., came from the DB).
+    List<String> refs;
+
+    final resolved = _resolvedItems;
+    if (resolved != null) {
+      // Fast path: use already-resolved items.
+      refs = resolved
+          .where((leaf) {
+            if (sel.level1 != null && leaf.level1 != sel.level1) return false;
+            if (sel.level2 != null && leaf.level2 != sel.level2) return false;
+            if (sel.level3 != null && leaf.level3 != sel.level3) return false;
+            if (sel.level4 != null && leaf.level4 != sel.level4) return false;
+            return true;
+          })
+          .map((leaf) => leaf.sefariaRef)
+          .where(_preTickedRefs.contains)
+          .toList();
+    } else if (item.isLeaf && _preTickedRefs.contains(item.sefariaRef)) {
+      // Slow path: item itself is a leaf.
+      refs = [item.sefariaRef];
+    } else {
+      return;
+    }
+
+    if (refs.isEmpty) return;
+    _expungeRefs(refs);
+  }
+
+  void _expungeRefs(List<String> refs) {
+    final service = ref.read(bulkPriorCompletionServiceProvider);
+    final profileId = ref.read(activeProfileIdProvider);
+
+    // B8: expunge each ref individually — service API is per-ref.
+    for (final ref_ in refs) {
+      service
+          .expungePriorCompletions(
+            profileId: profileId,
+            sefariaRef: ref_,
+            curriculumId: widget.curriculumId,
+          )
+          .ignore();
+    }
+
+    // Refresh progress surfaces after expunge.
+    ref.invalidate(dashboardCompletionPercentageProvider(widget.curriculumId));
+    ref.invalidate(dashboardLastCompletionProvider(widget.curriculumId));
+    ref.invalidate(progressOverviewStatsProvider);
   }
 
   @override
@@ -138,7 +263,7 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
     super.dispose();
   }
 
-  Future<void> _proceedToStageSelection() async {
+  Future<void> _proceedToConfirmation() async {
     if (_selections.isEmpty) return;
 
     final service = ref.read(bulkPriorCompletionServiceProvider);
@@ -168,21 +293,8 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
 
     setState(() {
       _resolvedItems = resolved;
-      _phase = _Phase.stageSelection;
-      // Initialize per-selection stage maps with stage 1 (Learn) as default
-      for (final sel in _selections) {
-        _perSelectionStages.putIfAbsent(sel, () => {1});
-      }
-      // Also keep the global set for backward compat
-      _selectedStageIds.add(1);
+      _phase = _Phase.confirmation;
     });
-  }
-
-  Future<void> _proceedToConfirmation() async {
-    // Validate at least one selection has stages
-    final hasStages = _perSelectionStages.values.any((s) => s.isNotEmpty);
-    if (!hasStages) return;
-    setState(() => _phase = _Phase.confirmation);
   }
 
   Future<void> _executeBulkMark() async {
@@ -192,39 +304,19 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
 
     try {
       final service = ref.read(bulkPriorCompletionServiceProvider);
-      var totalItems = 0;
-      var totalCompletions = 0;
-      String? bookmarkRef;
 
-      // Execute per-selection-group with their own stage sets
-      for (final entry in _perSelectionStages.entries) {
-        final selection = entry.key;
-        final stageIds = entry.value.toList()..sort();
-        if (stageIds.isEmpty) continue;
-
-        final groupItems = await service.resolveSelections(
-          curriculumId: widget.curriculumId,
-          selections: [selection],
-        );
-        if (groupItems.isEmpty) continue;
-
-        final result = await service.execute(
-          curriculumId: widget.curriculumId,
-          resolvedItems: groupItems,
-          stageIds: stageIds,
-          awardGamificationPoints: widget.awardGamificationPoints,
-        );
-        totalItems += result.itemCount;
-        totalCompletions += result.completionCount;
-        bookmarkRef ??= result.bookmarkSefariaRef;
-      }
+      // B5: Stage-picker removed — pass stage 1 as the baseline; the service
+      // (B6 fix in Agent E's version) automatically unions in all configured
+      // stages so every track stage is satisfied.
+      final result = await service.execute(
+        curriculumId: widget.curriculumId,
+        resolvedItems: _resolvedItems!,
+        stageIds: const [1],
+        awardGamificationPoints: widget.awardGamificationPoints,
+      );
 
       setState(() {
-        _result = BulkPriorCompletionResult(
-          itemCount: totalItems,
-          completionCount: totalCompletions,
-          bookmarkSefariaRef: bookmarkRef,
-        );
+        _result = result;
         _phase = _Phase.done;
       });
 
@@ -253,6 +345,7 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
             ? TextField(
                 controller: _searchController,
                 autofocus: true,
+                inputFormatters: const [TrimLeadingSpaceFormatter()],
                 decoration: const InputDecoration(
                   hintText: 'Search content...',
                   border: InputBorder.none,
@@ -288,7 +381,6 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
       ),
       body: switch (_phase) {
         _Phase.selection => _buildSelection(theme),
-        _Phase.stageSelection => _buildStageSelection(theme),
         _Phase.confirmation => _buildConfirmation(theme),
         _Phase.processing => _buildProcessing(theme),
         _Phase.done => _buildDone(theme),
@@ -377,7 +469,7 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
                 Expanded(
                   child: FilledButton(
                     onPressed: _selections.isNotEmpty
-                        ? _proceedToStageSelection
+                        ? _proceedToConfirmation
                         : null,
                     child: Text(l10n.actionNext),
                   ),
@@ -438,175 +530,8 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
     );
   }
 
-  String _selectionLabel(HierarchySelection sel) {
-    final parts = [
-      sel.level1,
-      sel.level2,
-      sel.level3,
-      sel.level4,
-    ].whereType<String>().toList();
-    return parts.isEmpty ? 'All' : parts.last;
-  }
-
-  Widget _buildStageSelection(ThemeData theme) {
-    final stagesAsync = ref.watch(stageListProvider(widget.curriculumId));
-    final selections = _perSelectionStages.keys.toList();
-
-    return SafeArea(
-      top: false,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(24, 24, 24, 8),
-            child: Text(
-              'Which stages have you completed?',
-              style: theme.textTheme.titleLarge,
-              textAlign: TextAlign.center,
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: Text(
-              'Set stages per selection, or use "Apply to All" for the same stages everywhere.',
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ),
-          const SizedBox(height: 16),
-          Expanded(
-            child: stagesAsync.when(
-              data: (stages) => ListView(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                children: [
-                  for (final sel in selections) ...[
-                    Padding(
-                      padding: const EdgeInsets.only(top: 8, bottom: 4),
-                      child: Text(
-                        _selectionLabel(sel),
-                        style: theme.textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                    for (final stage in stages)
-                      CheckboxListTile(
-                        dense: true,
-                        value:
-                            _perSelectionStages[sel]?.contains(
-                              stage.stageOrder,
-                            ) ??
-                            false,
-                        onChanged: (checked) {
-                          setState(() {
-                            final stageSet = _perSelectionStages[sel] ??= {};
-                            if (checked ?? false) {
-                              for (var i = 1; i <= stage.stageOrder; i++) {
-                                stageSet.add(i);
-                              }
-                            } else {
-                              stageSet.removeWhere(
-                                (id) => id >= stage.stageOrder,
-                              );
-                            }
-                          });
-                        },
-                        title: Text(stage.stageName),
-                        subtitle: stage.delayDays > 0
-                            ? Text(
-                                AppLocalizations.of(
-                                  context,
-                                )!.reviewStageDayDelay(stage.delayDays),
-                              )
-                            : null,
-                      ),
-                    const Divider(),
-                  ],
-                  // "Apply to All" shortcut
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 8),
-                    child: Text(
-                      AppLocalizations.of(context)!.applyToAll,
-                      style: theme.textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: theme.colorScheme.primary,
-                      ),
-                    ),
-                  ),
-                  for (final stage in stages)
-                    CheckboxListTile(
-                      dense: true,
-                      value: _selectedStageIds.contains(stage.stageOrder),
-                      onChanged: (checked) {
-                        setState(() {
-                          if (checked ?? false) {
-                            for (var i = 1; i <= stage.stageOrder; i++) {
-                              _selectedStageIds.add(i);
-                              for (final s in selections) {
-                                _perSelectionStages[s]?.add(i);
-                              }
-                            }
-                          } else {
-                            _selectedStageIds.removeWhere(
-                              (id) => id >= stage.stageOrder,
-                            );
-                            for (final s in selections) {
-                              _perSelectionStages[s]?.removeWhere(
-                                (id) => id >= stage.stageOrder,
-                              );
-                            }
-                          }
-                        });
-                      },
-                      title: Text(stage.stageName),
-                      subtitle: stage.delayDays > 0
-                          ? Text('${stage.delayDays} day delay')
-                          : null,
-                    ),
-                ],
-              ),
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (e, _) => Center(
-                child: Text(
-                  AppLocalizations.of(context)!.errorGeneric(e.toString()),
-                ),
-              ),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: () => setState(() => _phase = _Phase.selection),
-                    child: Text(AppLocalizations.of(context)!.actionBack),
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: FilledButton(
-                    onPressed:
-                        _perSelectionStages.values.any((s) => s.isNotEmpty)
-                        ? _proceedToConfirmation
-                        : null,
-                    child: Text(AppLocalizations.of(context)!.actionNext),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildConfirmation(ThemeData theme) {
     final itemCount = _resolvedItems?.length ?? 0;
-    final stageCount = _selectedStageIds.length;
-    final totalCompletions = itemCount * stageCount;
 
     return SafeArea(
       top: false,
@@ -623,13 +548,10 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
                 style: theme.textTheme.headlineSmall,
               ),
               const SizedBox(height: 16),
-              Text(
-                '$itemCount items across $stageCount stage(s)',
-                style: theme.textTheme.titleMedium,
-              ),
+              Text('$itemCount items', style: theme.textTheme.titleMedium),
               const SizedBox(height: 8),
               Text(
-                '$totalCompletions completion records will be created',
+                '$itemCount completion records will be created',
                 style: theme.textTheme.bodyMedium?.copyWith(
                   color: theme.colorScheme.onSurfaceVariant,
                 ),
@@ -648,8 +570,7 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   OutlinedButton(
-                    onPressed: () =>
-                        setState(() => _phase = _Phase.stageSelection),
+                    onPressed: () => setState(() => _phase = _Phase.selection),
                     child: Text(AppLocalizations.of(context)!.actionBack),
                   ),
                   const SizedBox(width: 16),
