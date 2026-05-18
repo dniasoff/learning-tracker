@@ -3133,12 +3133,17 @@ class SyncEngine implements SyncWriteFacade {
     try {
       // --- Completions (append-only) ---
       // Route local completions through the canonical outbox path. Building a
-      // CompletionCommand list and calling CompletionWriter.commitBatch is
-      // idempotent: completion_events and outbox rows both insert with
-      // InsertMode.insertOrIgnore, so re-running leaves existing rows untouched
-      // and only fills in missing outbox rows (including pre-v20 legacy
-      // completions that never had one). The background-flush machinery then
-      // drains the outbox — no manual push loop here.
+      // CompletionCommand list and calling CompletionWriter.commitBatch is an
+      // idempotent safety pass: commitBatch enqueues an outbox row ONLY for a
+      // completion whose natural key is NOT yet in completion_events — it does
+      // NOT regenerate an outbox row for a completion whose event already
+      // exists (a present event is treated as already-queued). For a
+      // local-born account upgrading to cloud, every completion already
+      // received its outbox row at creation time and the outbox is never
+      // drained pre-upgrade, so in practice this call inserts nothing for
+      // existing completions and only covers any genuinely-new one recorded
+      // between account creation and this push. The background-flush
+      // machinery then drains the outbox — no manual push loop here.
       final analytics = ParentAnalyticsRepositoryImpl(_database);
       final completions = await analytics.getAllCompletions(
         scope: CrossProfileScope.syncRestore,

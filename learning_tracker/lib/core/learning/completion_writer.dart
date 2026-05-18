@@ -66,6 +66,15 @@ class CompletionWriter {
   ///     or bulk-marking overlapping sets).
   ///  3. All inserts and read-backs run inside one `db.transaction()`.
   ///
+  /// Behavioural trade-off — re-pushing drained completions is out of scope:
+  /// the enqueue decision is driven purely by presence in `completion_events`.
+  /// A completion already in `completion_events` is treated as already-queued,
+  /// so if its `outbox` row was previously drained and deleted, `commitBatch`
+  /// will NOT regenerate it (it returns `isNew = false` and enqueues nothing).
+  /// This is deliberate — it keeps `commitBatch` idempotent and avoids
+  /// duplicate pushes; re-pushing an already-drained completion must be
+  /// handled by a dedicated path, not by this method.
+  ///
   /// Returns one [CompletionWriteResult] per input command, in the same
   /// order. Duplicate input commands all map to the same resolved result.
   Future<List<CompletionWriteResult>> commitBatch(
@@ -208,10 +217,12 @@ class CompletionWriter {
     return results;
   }
 
-  /// Delimiter for natural-key composites. NUL cannot occur in a sefariaRef,
-  /// curriculumId, or trackType, so the four-part composite key is
-  /// collision-proof even though a sefariaRef contains spaces and colons.
-  static const String _keyDelim = ' ';
+  /// Delimiter for natural-key composites: the NUL character (`\u0000`). NUL
+  /// cannot occur in a sefariaRef, curriculumId, or trackType, so the
+  /// four-part composite key is collision-proof even though a sefariaRef
+  /// contains spaces and colons. The composed key is only ever used as an
+  /// in-memory `Map` key — never persisted — so embedding a NUL byte is safe.
+  static const String _keyDelim = '\u0000';
 
   /// Natural-key string for a command — the idempotency key for completions.
   static String _naturalKey(CompletionCommand cmd) => _composeKey(
