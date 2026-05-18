@@ -1521,11 +1521,14 @@ class SyncEngine implements SyncWriteFacade {
       now.millisecondsSinceEpoch,
     );
 
-    final totalPointsExpr = _database.completions.points.sum();
+    final totalPointsExpr = _database.completionEvents.points.sum();
     final totalPointsRow =
-        await (_database.selectOnly(_database.completions)
+        await (_database.selectOnly(_database.completionEvents)
               ..addColumns([totalPointsExpr])
-              ..where(_database.completions.profileId.equals(profileId)))
+              ..where(
+                _database.completionEvents.profileId.equals(profileId) &
+                    _database.completionEvents.purgedAt.isNull(),
+              ))
             .getSingle();
     final totalPointsSum = totalPointsRow.read(totalPointsExpr) ?? 0;
 
@@ -2294,58 +2297,8 @@ class SyncEngine implements SyncWriteFacade {
   /// dashboard/progress views. We repair by mapping (profile,curriculum,
   /// trackType) -> trackId when possible.
   Future<void> _repairLegacyCompletionTrackIds() async {
-    final profileId = _firestoreDataSource.profileId;
-
-    try {
-      final legacyRows =
-          await (_database.select(_database.completions)..where(
-                (t) => t.profileId.equals(profileId) & t.trackId.equals(0),
-              ))
-              .get();
-      if (legacyRows.isEmpty) return;
-
-      final trackIdCache = <String, int>{};
-      var updated = 0;
-
-      for (final row in legacyRows) {
-        final key = '${row.curriculumId}|${row.trackType}';
-        var trackId = trackIdCache[key];
-        if (trackId == null) {
-          final track =
-              await (_database.select(_database.curriculumTracks)
-                    ..where(
-                      (t) =>
-                          t.profileId.equals(profileId) &
-                          t.curriculumId.equals(row.curriculumId) &
-                          t.trackType.equals(row.trackType),
-                    )
-                    ..limit(1))
-                  .getSingleOrNull();
-          trackId = track?.id ?? 0;
-          trackIdCache[key] = trackId;
-        }
-
-        if (trackId == 0) continue;
-
-        await (_database.update(_database.completions)
-              ..where((t) => t.id.equals(row.id)))
-            .write(CompletionsCompanion(trackId: Value(trackId)));
-        updated++;
-      }
-
-      if (updated > 0) {
-        _logger.info(
-          event: 'sync_repair_legacy_completion_track_ids_done',
-          fields: {'updatedCount': updated},
-        );
-      }
-    } catch (e) {
-      // ignore: avoid_catches_without_on_clauses — best-effort repair path
-      _logger.warning(
-        event: 'sync_repair_legacy_completion_track_ids_skipped',
-        exception: e,
-      );
-    }
+    // C1 (v20): completion_events is the canonical table; the physical
+    // completions table is empty post-migration. This repair path is obsolete.
   }
 
   /// Enrich learner profile payload with user-visible snapshot data so
@@ -2422,16 +2375,21 @@ class SyncEngine implements SyncWriteFacade {
           row.dayType;
     }
 
-    final totalCompletionsExpr = _database.completions.id.count();
+    final totalCompletionsExpr = _database.completionEvents.id.count();
     final completionStats =
-        await (_database.selectOnly(_database.completions)
+        await (_database.selectOnly(_database.completionEvents)
               ..addColumns([totalCompletionsExpr])
-              ..where(_database.completions.profileId.equals(profileId)))
+              ..where(
+                _database.completionEvents.profileId.equals(profileId) &
+                    _database.completionEvents.purgedAt.isNull(),
+              ))
             .getSingle();
     final lastCompletion =
-        await (_database.select(_database.completions)
-              ..where((t) => t.profileId.equals(profileId))
-              ..orderBy([(t) => OrderingTerm.desc(t.completedAt)])
+        await (_database.select(_database.completionEvents)
+              ..where(
+                (t) => t.profileId.equals(profileId) & t.purgedAt.isNull(),
+              )
+              ..orderBy([(t) => OrderingTerm.desc(t.eventTimestamp)])
               ..limit(1))
             .getSingleOrNull();
     final streak = await _database.streakDao.getStreakByProfile(profileId);
@@ -2445,7 +2403,7 @@ class SyncEngine implements SyncWriteFacade {
       ...profile,
       'progress_summary': {
         'total_completions': completionStats.read(totalCompletionsExpr) ?? 0,
-        'last_completion_at': lastCompletion?.completedAt.toIso8601String(),
+        'last_completion_at': lastCompletion?.eventTimestamp.toIso8601String(),
       },
       'streak_summary': {
         'current_streak': streak?.currentStreak ?? 0,
@@ -2462,11 +2420,14 @@ class SyncEngine implements SyncWriteFacade {
 
     // Handbook alignment: gamification payload is child-mode only.
     if (isChildProfile) {
-      final totalPointsExpr = _database.completions.points.sum();
+      final totalPointsExpr = _database.completionEvents.points.sum();
       final totalPointsRow =
-          await (_database.selectOnly(_database.completions)
+          await (_database.selectOnly(_database.completionEvents)
                 ..addColumns([totalPointsExpr])
-                ..where(_database.completions.profileId.equals(profileId)))
+                ..where(
+                  _database.completionEvents.profileId.equals(profileId) &
+                      _database.completionEvents.purgedAt.isNull(),
+                ))
               .getSingle();
       final totalPoints = totalPointsRow.read(totalPointsExpr) ?? 0;
 
