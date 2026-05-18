@@ -87,6 +87,23 @@ class SyncEngine implements SyncWriteFacade {
   bool _isOnline = true;
   bool _listenersAttached = false;
 
+  /// Single-flight guard for [_runBackgroundFlush].
+  /// When true, a drain is already in progress; new calls set [_rerunRequested]
+  /// and return immediately to avoid concurrent drains.
+  bool _flushInProgress = false;
+  bool _rerunRequested = false;
+
+  /// Guard ensuring [pullOnLaunch] runs at most once per app launch.
+  /// Re-entrant calls (e.g. from both SyncEngine and SyncOrchestrator) are
+  /// no-ops once the first call has started. [triggeredFromResume] throttle
+  /// still applies on top of this for resume-driven calls.
+  bool _pullOnLaunchExecuted = false;
+
+  /// Debounce timer for [_onCompletionsUpdate] — batches rapid Firestore
+  /// snapshots into a single merge pass (300 ms window).
+  Timer? _completionsDebounceTimer;
+  List<Map<String, dynamic>>? _pendingCompletionsSnapshot;
+
   /// Tracks consecutive listener errors for quota monitoring (NFR21).
   int _consecutiveListenerErrors = 0;
 
@@ -322,6 +339,17 @@ class SyncEngine implements SyncWriteFacade {
   /// successful pull was within [pullOnResumeMinInterval] (foreground listeners
   /// still deliver realtime updates).
   Future<void> pullOnLaunch({bool triggeredFromResume = false}) async {
+    // Re-entrancy guard: if a cold-start pull has already been kicked off
+    // (or completed), additional non-resume calls are no-ops. Resume-triggered
+    // calls still proceed through the timestamp throttle below.
+    if (!triggeredFromResume && _pullOnLaunchExecuted) {
+      _logger.debug(event: 'sync_pull_on_launch_skipped_already_executed');
+      return;
+    }
+    if (!triggeredFromResume) {
+      _pullOnLaunchExecuted = true;
+    }
+
     if (!_firestoreDataSource.isAuthenticated) {
       _logger.info(event: 'sync_pull_on_launch_skipped_unauthenticated');
       return;
@@ -411,6 +439,9 @@ class SyncEngine implements SyncWriteFacade {
       await _persistLastSyncTimestamp(syncedAt);
       _updateStatus(SyncStatus.synced(lastSyncedAt: syncedAt));
     } catch (e, stackTrace) {
+      // Reset the guard so DeviceRestoreService.retry() (or any external
+      // retry) can call pullOnLaunch again after a failed attempt.
+      if (!triggeredFromResume) _pullOnLaunchExecuted = false;
       _logger.error(
         event: 'sync_pull_on_launch_failed',
         exception: e,
@@ -578,23 +609,35 @@ class SyncEngine implements SyncWriteFacade {
   }
 
   Future<void> _runBackgroundFlush({required String context}) async {
+    // Single-flight guard: if a drain is already in progress, set the re-run
+    // flag so the in-flight drain picks it up when done.
+    if (_flushInProgress) {
+      _rerunRequested = true;
+      return;
+    }
+    _flushInProgress = true;
     try {
       final batchSize = _isBatterySaverMode ? 5 : null;
-      final synced = await _offlineQueue.flush(batchSize: batchSize);
 
-      // Phase 1 (DNI-333): also drain the new Outbox table when wired.
-      // Both the legacy OfflineQueue drain and this new drain run in the same
-      // background flush so the caller never needs to know which path is active.
+      // Drain the legacy OfflineQueue to completion (loop until 0 rows remain).
+      int synced;
+      do {
+        synced = await _offlineQueue.flush(batchSize: batchSize);
+        if (synced > 0) {
+          _consecutivePushPermissionErrors = 0;
+          _updateStatus(
+            SyncStatus.synced(lastSyncedAt: DateTimeFactory.nowUtc()),
+          );
+        }
+      } while (synced > 0);
+
+      // Phase 1 (DNI-333): also drain the new Outbox table to completion.
       final processor = _outboxProcessor;
       if (processor != null) {
-        await processor.drain(_firestoreDataSource.profileId);
-      }
-
-      if (synced > 0) {
-        _consecutivePushPermissionErrors = 0;
-        _updateStatus(
-          SyncStatus.synced(lastSyncedAt: DateTimeFactory.nowUtc()),
-        );
+        int drained;
+        do {
+          drained = await processor.drain(_firestoreDataSource.profileId);
+        } while (drained > 0);
       }
     } catch (e) {
       // ignore: avoid_catches_without_on_clauses — intentional Firestore error boundary
@@ -604,6 +647,13 @@ class SyncEngine implements SyncWriteFacade {
         fields: {'context': context},
         exception: e,
       );
+    } finally {
+      _flushInProgress = false;
+      // If a concurrent caller requested a re-run, honour it now.
+      if (_rerunRequested) {
+        _rerunRequested = false;
+        unawaited(_runBackgroundFlush(context: 'rerun'));
+      }
     }
   }
 
@@ -2309,8 +2359,10 @@ class SyncEngine implements SyncWriteFacade {
   ) async {
     final profileId = profile['id'] as int?;
     if (profileId == null) return profile;
-    final mode = (profile['mode'] as String?)?.toLowerCase();
-    final isChildProfile = mode == 'child';
+
+    // RC7 fix: progress_summary, streak_summary, and gamification_summary were
+    // write-only fields (no readers confirmed in repo-wide search). Removed to
+    // eliminate 6 unnecessary DB queries per learner profile push.
 
     final stageRows = await (_database.select(
       _database.stageDefinitions,
@@ -2375,71 +2427,10 @@ class SyncEngine implements SyncWriteFacade {
           row.dayType;
     }
 
-    final totalCompletionsExpr = _database.completionEvents.id.count();
-    final completionStats =
-        await (_database.selectOnly(_database.completionEvents)
-              ..addColumns([totalCompletionsExpr])
-              ..where(
-                _database.completionEvents.profileId.equals(profileId) &
-                    _database.completionEvents.purgedAt.isNull(),
-              ))
-            .getSingle();
-    final lastCompletion =
-        await (_database.select(_database.completionEvents)
-              ..where(
-                (t) => t.profileId.equals(profileId) & t.purgedAt.isNull(),
-              )
-              ..orderBy([(t) => OrderingTerm.desc(t.eventTimestamp)])
-              ..limit(1))
-            .getSingleOrNull();
-    final streak = await _database.streakDao.getStreakByProfile(profileId);
-    final rewardService = RewardMilestoneService(
-      _database,
-      profileId: profileId,
-    );
-    final rewardPayload = await rewardService.exportCloudPayload();
-
-    final enriched = <String, dynamic>{
+    return <String, dynamic>{
       ...profile,
-      'progress_summary': {
-        'total_completions': completionStats.read(totalCompletionsExpr) ?? 0,
-        'last_completion_at': lastCompletion?.eventTimestamp.toIso8601String(),
-      },
-      'streak_summary': {
-        'current_streak': streak?.currentStreak ?? 0,
-        'max_streak': streak?.maxStreak ?? 0,
-        'last_completion_date': streak?.lastCompletionDate?.toIso8601String(),
-      },
-      'reward_configuration':
-          rewardPayload['milestones'] ?? const <Map<String, dynamic>>[],
-      'reward_progress': {
-        'unlocks': rewardPayload['unlocks'] ?? const <Map<String, dynamic>>[],
-      },
       'settings_snapshot': curriculumSettings,
     };
-
-    // Handbook alignment: gamification payload is child-mode only.
-    if (isChildProfile) {
-      final totalPointsExpr = _database.completionEvents.points.sum();
-      final totalPointsRow =
-          await (_database.selectOnly(_database.completionEvents)
-                ..addColumns([totalPointsExpr])
-                ..where(
-                  _database.completionEvents.profileId.equals(profileId) &
-                      _database.completionEvents.purgedAt.isNull(),
-                ))
-              .getSingle();
-      final totalPoints = totalPointsRow.read(totalPointsExpr) ?? 0;
-
-      enriched['gamification_summary'] = {
-        'total_points': totalPoints,
-        'current_streak': streak?.currentStreak ?? 0,
-        'max_streak': streak?.maxStreak ?? 0,
-        'last_completion_date': streak?.lastCompletionDate?.toIso8601String(),
-      };
-    }
-
-    return enriched;
   }
 
   // ========== Listener Callbacks ==========
@@ -2447,21 +2438,27 @@ class SyncEngine implements SyncWriteFacade {
   Future<void> _onCompletionsUpdate(
     List<Map<String, dynamic>> completions,
   ) async {
-    if (_mergingCompletions) return;
-    _mergingCompletions = true;
     _consecutiveListenerErrors = 0;
-    try {
+    // Debounce: batch rapid successive snapshots into a single merge pass.
+    // Agent B's gateway filter already strips hasPendingWrites==true snapshots
+    // upstream, so every snapshot reaching here is server-confirmed.
+    _pendingCompletionsSnapshot = completions;
+    _completionsDebounceTimer?.cancel();
+    _completionsDebounceTimer = Timer(const Duration(milliseconds: 300), () {
+      final pending = _pendingCompletionsSnapshot;
+      _pendingCompletionsSnapshot = null;
+      if (pending == null) return;
+      if (_mergingCompletions) return;
+      _mergingCompletions = true;
       _logger.debug(
         event: 'sync_listener_completions_received',
-        fields: {'count': completions.length},
+        fields: {'count': pending.length},
       );
-      await _mergeCompletions(
-        completions,
+      _mergeCompletions(
+        pending,
         fallbackProfileId: _firestoreDataSource.profileId,
-      );
-    } finally {
-      _mergingCompletions = false;
-    }
+      ).whenComplete(() => _mergingCompletions = false);
+    });
   }
 
   Future<void> _onBookmarksUpdate(List<Map<String, dynamic>> bookmarks) async {

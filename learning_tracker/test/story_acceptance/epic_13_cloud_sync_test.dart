@@ -696,7 +696,7 @@ void main() {
         ]);
 
         // Allow async merge to process
-        await Future<void>.delayed(const Duration(milliseconds: 50));
+        await Future<void>.delayed(const Duration(milliseconds: 400));
 
         final completions = await database.completionDao
             .internalGetAllCompletionsCrossProfile(
@@ -740,7 +740,7 @@ void main() {
           },
         ]);
 
-        await Future<void>.delayed(const Duration(milliseconds: 50));
+        await Future<void>.delayed(const Duration(milliseconds: 400));
 
         final goals = await database.goalDao.getAllGoals();
         expect(goals.length, 1);

@@ -55,7 +55,8 @@ class _SinglePageGateway implements FirestoreGateway {
   }
 
   // ── Unused stubs ──────────────────────────────────────────────────────────
-  @override Future<void> pushCompletion({required int profileId, required Map<String, dynamic> data}) async {}
+  @override Future<void> pushCompletion({required int profileId, required Map<String, dynamic> data, String? docId}) async {}
+  @override Future<void> pushCompletionsBatch({required int profileId, required List<Map<String, dynamic>> items}) async {}
   @override Future<void> pushStreak({required int profileId, required Map<String, dynamic> data}) async {}
   @override Future<void> pushSettings({required int profileId, required Map<String, dynamic> data}) async {}
   @override Future<void> pushTrack({required int profileId, required Map<String, dynamic> data}) async {}
@@ -195,7 +196,6 @@ void main() {
     // concurrent drains. The fix adds a boolean guard or Mutex.
     test(
       'S5: concurrent background flush calls → only one drain executes',
-      skip: 'un-skip in Wave 1',
       () async {
         final stub = _DrainGuardStub();
 
@@ -230,7 +230,6 @@ void main() {
     // QuerySnapshotMetadata.hasPendingWrites and skip processing when true.
     test(
       'S6: snapshot with hasPendingWrites=true is skipped (no merge triggered)',
-      skip: 'un-skip in Wave 1',
       () async {
         final filter = _SnapshotFilterStub();
 
@@ -274,7 +273,6 @@ void main() {
     // until then this stub exercises the throttle logic in isolation.
     test(
       'S8: pullOnLaunch executes once on launch; rapid resume pull is throttled',
-      skip: 'un-skip in Wave 1',
       () async {
         final stub = _PullCountStub();
 
@@ -305,7 +303,6 @@ void main() {
     // depend on.
     test(
       'PullPipeline dispatches exactly once for a single-page collection',
-      skip: 'un-skip in Wave 1',
       () async {
         final dispatcher = _CountingDispatcher();
         final gateway = _SinglePageGateway();

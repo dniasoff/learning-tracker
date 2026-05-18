@@ -492,14 +492,17 @@ void main() {
           db = _createDb();
           dao = db.outboxDao;
           mockPipeline = MockPushPipeline();
-          processor = OutboxProcessor(outboxDao: dao, pipeline: mockPipeline);
+          processor = OutboxProcessor(
+            outboxDao: dao,
+            pipeline: mockPipeline,
+            clock: FakeLocalDayClock(DateTime.utc(2026, 5, 14)),
+          );
 
           // Default: all push methods succeed.
           when(
-            () => mockPipeline.pushCompletion(
+            () => mockPipeline.pushCompletionsBatch(
               profileId: any(named: 'profileId'),
-              entityKey: any(named: 'entityKey'),
-              payload: any(named: 'payload'),
+              entries: any(named: 'entries'),
             ),
           ).thenAnswer((_) async {});
         });
@@ -516,26 +519,24 @@ void main() {
           expect(remaining, isEmpty);
         });
 
-        test('drain calls pushCompletion with correct arguments', () async {
+        test('drain calls pushCompletionsBatch with correct arguments', () async {
           await dao.insertOutboxRow(_completionRow(entityKey: 'comp-abc'));
 
           await processor.drain(1);
 
           verify(
-            () => mockPipeline.pushCompletion(
+            () => mockPipeline.pushCompletionsBatch(
               profileId: 1,
-              entityKey: 'comp-abc',
-              payload: {'ref': 'Mishnah Berakhot 1'},
+              entries: any(named: 'entries'),
             ),
           ).called(1);
         });
 
         test('drain marks row with error when push fails', () async {
           when(
-            () => mockPipeline.pushCompletion(
+            () => mockPipeline.pushCompletionsBatch(
               profileId: any(named: 'profileId'),
-              entityKey: any(named: 'entityKey'),
-              payload: any(named: 'payload'),
+              entries: any(named: 'entries'),
             ),
           ).thenThrow(Exception('network error'));
 
@@ -566,7 +567,7 @@ void main() {
             );
             expect(pendingBefore, hasLength(50));
 
-            // Drain (device "reconnects") — all 50 should push and be deleted.
+            // Drain (device "reconnects") — all 50 cleared in a single batch call.
             final pushed = await processor.drain(1);
 
             expect(pushed, equals(50));
@@ -574,28 +575,28 @@ void main() {
             expect(remaining, isEmpty);
 
             verify(
-              () => mockPipeline.pushCompletion(
+              () => mockPipeline.pushCompletionsBatch(
                 profileId: 1,
-                entityKey: any(named: 'entityKey'),
-                payload: any(named: 'payload'),
+                entries: any(named: 'entries'),
               ),
-            ).called(50);
+            ).called(1);
           },
         );
 
         test(
-          'drain respects batch size of 50 — leaves excess rows untouched',
+          'drain clears all completion rows regardless of count',
           () async {
-            // Insert 60 rows; only 50 should be processed per drain call.
+            // Insert 60 rows — completions have no per-drain cap; all are
+            // dispatched in a single pushCompletionsBatch call.
             for (var i = 0; i < 60; i++) {
               await dao.insertOutboxRow(_completionRow(entityKey: 'comp-$i'));
             }
 
             final pushed = await processor.drain(1);
 
-            expect(pushed, equals(50));
+            expect(pushed, equals(60));
             final remaining = await db.select(db.outbox).get();
-            expect(remaining, hasLength(10));
+            expect(remaining, isEmpty);
           },
         );
 

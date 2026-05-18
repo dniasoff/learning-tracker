@@ -8,6 +8,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/sync/outbox/outbox_processor.dart';
 import 'package:learning_tracker/core/sync/outbox/push_pipeline.dart';
+import 'package:learning_tracker/core/time/local_day_clock.dart';
 
 import '../../../helpers/drift_memory.dart';
 
@@ -23,11 +24,21 @@ class _FakePipeline extends Fake implements PushPipeline {
     required String entityKey,
     required Map<String, dynamic> payload,
   }) async {
+    calls.add(('completion', entityKey));
+  }
+
+  @override
+  Future<void> pushCompletionsBatch({
+    required int profileId,
+    required List<({String entityKey, Map<String, dynamic> payload})> entries,
+  }) async {
     if (failNextPush) {
       failNextPush = false;
       throw Exception('network error');
     }
-    calls.add(('completion', entityKey));
+    for (final entry in entries) {
+      calls.add(('completion', entry.entityKey));
+    }
   }
 
   @override
@@ -87,7 +98,11 @@ void main() {
   setUp(() {
     db = inMemoryDb();
     pipeline = _FakePipeline();
-    processor = OutboxProcessor(outboxDao: db.outboxDao, pipeline: pipeline);
+    processor = OutboxProcessor(
+      outboxDao: db.outboxDao,
+      pipeline: pipeline,
+      clock: FakeLocalDayClock(DateTime.utc(2026, 5, 14)),
+    );
   });
 
   tearDown(() async {
