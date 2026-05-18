@@ -103,8 +103,10 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
 
       if (existingCompletions.isEmpty) return;
 
-      // Collect all sefariaRefs that have at least one completion record.
+      // Only pre-tick items that were marked via the prior-marking flow.
+      // Live-learning completions (normal daily learning) do not pre-tick.
       final completedRefs = existingCompletions
+          .where((c) => c.completedAt == kBulkPriorSentinelDate)
           .map((c) => c.sefariaRef)
           .toSet();
 
@@ -197,7 +199,7 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
 
     // B8: When the user unticks a previously-completed item, expunge those
     // completion records so the data layer stays consistent.
-    if (wasSelected && _preTickedRefs.isNotEmpty) {
+    if (wasSelected) {
       _maybeExpunge(item, depth);
     }
   }
@@ -248,6 +250,7 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
             sefariaRef: ref_,
             curriculumId: widget.curriculumId,
           )
+          // Non-fatal: expunge failures are retried on next open via pre-tick reload.
           .ignore();
     }
 

@@ -107,6 +107,7 @@ Stream<List<CurriculumId>> dashboardActiveCurriculaStream(Ref ref) {
 /// Formula: `(items where all required stages are done) / totalItems`.
 @riverpod
 Future<double> dashboardTrackCompletionPercentage(Ref ref, int trackId) async {
+  ref.watch<int>(completionCommittedProvider);
   final db = ref.watch(userDatabaseProvider);
   final profileId = ref.watch(activeProfileIdProvider);
   final track = await db.trackDao.getTrackById(trackId);
@@ -118,7 +119,9 @@ Future<double> dashboardTrackCompletionPercentage(Ref ref, int trackId) async {
   final stageRepository = ref.watch(globalStageRepositoryProvider);
   final stages = await stageRepository.getStagesByTrack(trackId);
   if (stages.isEmpty) return 0.0;
-  final requiredStageIds = stages.map((s) => s.id).toSet();
+  // Use stageOrder (1 = learn, 2 = chazara 1, …) — the value stored in
+  // completion_events.stageId — NOT the stage definition's database primary key.
+  final requiredStageIds = stages.map((s) => s.stageOrder).toSet();
 
   final completions = await db.completionDao.getCompletionsByTrackAndProfile(
     trackId,
@@ -187,7 +190,9 @@ Future<double> dashboardCompletionPercentage(
     if (trackId == 0) continue; // bulk-mark sentinel — skip
     final stages = await stageRepository.getStagesByTrack(trackId);
     if (stages.isEmpty) continue;
-    final requiredStageIds = stages.map((s) => s.id).toSet();
+    // Use stageOrder (1 = learn, 2 = chazara 1, …) — the value stored in
+    // completion_events.stageId — NOT the stage definition's database primary key.
+    final requiredStageIds = stages.map((s) => s.stageOrder).toSet();
     for (final refEntry in refStages.entries) {
       if (requiredStageIds.every(refEntry.value.contains)) {
         doneRefs.add(refEntry.key);

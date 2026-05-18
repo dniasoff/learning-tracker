@@ -165,6 +165,30 @@ Future<void> _seedStages(
   }
 }
 
+/// Seeds [count] active stages plus one extra superseded stage at
+/// stageOrder [count + 1] (supersededAt set to a past timestamp).
+/// Used to verify that M1 fix excludes superseded stages from bulk-mark.
+Future<void> _seedStagesWithSuperseded(
+  UserDatabase db, {
+  required int profileId,
+  required int trackId,
+  required int count,
+}) async {
+  await _seedStages(db, profileId: profileId, trackId: trackId, count: count);
+  // Insert one superseded stage at stageOrder count+1.
+  await db.into(db.stageDefinitions).insert(
+    StageDefinitionsCompanion.insert(
+      profileId: profileId,
+      curriculumId: 'mishnayos',
+      trackId: trackId,
+      stageOrder: count + 1,
+      stageName: 'Old Chazara (superseded)',
+      delayDays: 0,
+      supersededAt: Value(DateTime.utc(2026, 1, 1)),
+    ),
+  );
+}
+
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
 void main() {
@@ -249,6 +273,72 @@ void main() {
       }
       expect(stagesByRef['ref_a'], containsAll([1, 2, 3]));
       expect(stagesByRef['ref_b'], containsAll([1, 2, 3]));
+    });
+
+    test('AC3 (M1): superseded stages are excluded — '
+        'only active stages receive completion_events', () async {
+      // Seed 2 active stages + 1 superseded stage at stageOrder 3.
+      await _seedStagesWithSuperseded(
+        db,
+        profileId: profileId,
+        trackId: trackId,
+        count: 2,
+      );
+
+      final items = [_leaf('ref_m1', 0)];
+      final bookmarkRepo = MockBookmarkRepository();
+      when(
+        () => bookmarkRepo.setBookmark(
+          curriculumId: any(named: 'curriculumId'),
+          trackType: any(named: 'trackType'),
+          sefariaRef: any(named: 'sefariaRef'),
+        ),
+      ).thenAnswer((_) async => _fakeBookmark());
+
+      final completionRepo = CompletionRepositoryImpl(
+        database: db,
+        syncEngine: null,
+        contentRepository: _StubContentRepository([...items]),
+        activeProfileId: profileId,
+      );
+      final stageRepo = StageDefinitionRepositoryImpl(
+        stageDao: db.stageDao,
+        completionDao: db.completionDao,
+        pushSettings: null,
+      );
+      final service = BulkPriorCompletionService(
+        contentRepository: _StubContentRepository([...items]),
+        completionRepository: completionRepo,
+        bookmarkRepository: bookmarkRepo,
+        database: db,
+        syncEngine: null,
+        stageRepository: stageRepo,
+      );
+
+      final result = await service.execute(
+        curriculumId: CurriculumId.mishnayos,
+        resolvedItems: items,
+        stageIds: [1],
+        profileId: profileId,
+      );
+
+      // 1 item × 2 active stages = 2 completions; superseded stage 3 excluded.
+      expect(
+        result.completionCount,
+        2,
+        reason:
+            'M1: superseded stage must be excluded; only 2 active stages '
+            'produce completions',
+      );
+
+      final events = await db.completionDao.getCompletionsByProfile(profileId);
+      final stageIds = events.map((e) => e.stageId).toSet();
+      expect(
+        stageIds,
+        equals({1, 2}),
+        reason: 'Only active stageOrders (1, 2) must appear; '
+            'superseded stageOrder 3 must be absent',
+      );
     });
 
     test('AC2: completion_events for all stages carry the sentinel timestamp '

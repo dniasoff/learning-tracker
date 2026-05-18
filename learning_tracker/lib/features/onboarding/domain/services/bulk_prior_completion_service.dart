@@ -147,6 +147,16 @@ class BulkPriorCompletionService {
   /// Returns the IDs sorted by [StageDefinition.stageOrder]. When no
   /// [StageDefinitionRepository] is injected (e.g. in tests that do not need
   /// B6 behaviour) falls back to the [fallback] list (default: `[1]`).
+  ///
+  /// ### Superseded stages
+  /// [StageDefinitionRepository.getStagesForCurriculum] is backed by
+  /// [StageDao.getStageDefinitionsByCurriculum], which filters
+  /// `supersededAt IS NULL`. Superseded stage rows (left over from a
+  /// previous track-edit operation) are therefore excluded here, so no
+  /// phantom completions are written for stale stageOrders.
+  ///
+  /// Note: [StageDefinition] (the domain model) intentionally omits
+  /// `supersededAt` — the filtering is enforced at the DAO layer.
   Future<List<int>> _allStageIds(
     CurriculumId curriculumId, {
     List<int> fallback = const [1],

@@ -15,11 +15,21 @@ class StageDao extends DatabaseAccessor<UserDatabase> with _$StageDaoMixin {
     stageDefinitions,
   )..where((t) => t.id.equals(id))).getSingleOrNull();
 
+  /// Returns active (non-superseded) stage definitions for a curriculum,
+  /// ordered by stageOrder.
+  ///
+  /// Filters out rows where `supersededAt IS NOT NULL` so that callers
+  /// (e.g. [BulkPriorCompletionService._allStageIds]) only see the current
+  /// stage set and do not write completions for stageOrders that belonged to
+  /// a previous track-edit cycle.
   Future<List<StageDefinition>> getStageDefinitionsByCurriculum(
     String curriculumId,
   ) =>
       (select(stageDefinitions)
-            ..where((t) => t.curriculumId.equals(curriculumId))
+            ..where(
+              (t) =>
+                  t.curriculumId.equals(curriculumId) & t.supersededAt.isNull(),
+            )
             ..orderBy([(t) => OrderingTerm.asc(t.stageOrder)]))
           .get();
 
@@ -64,10 +74,7 @@ class StageDao extends DatabaseAccessor<UserDatabase> with _$StageDaoMixin {
   /// always see only the current stage set.
   Future<List<StageDefinition>> getStagesByTrack(int trackId) =>
       (select(stageDefinitions)
-            ..where(
-              (t) =>
-                  t.trackId.equals(trackId) & t.supersededAt.isNull(),
-            )
+            ..where((t) => t.trackId.equals(trackId) & t.supersededAt.isNull())
             ..orderBy([(t) => OrderingTerm.asc(t.stageOrder)]))
           .get();
 
@@ -81,10 +88,7 @@ class StageDao extends DatabaseAccessor<UserDatabase> with _$StageDaoMixin {
   /// Old rows survive so completions.stageId FKs remain valid.
   Future<int> supersedeStagesToTrack(int trackId, DateTime at) =>
       (update(stageDefinitions)
-            ..where(
-              (t) =>
-                  t.trackId.equals(trackId) & t.supersededAt.isNull(),
-            ))
+            ..where((t) => t.trackId.equals(trackId) & t.supersededAt.isNull()))
           .write(StageDefinitionsCompanion(supersededAt: Value(at)));
 
   /// Replace all stage definitions for a track.
