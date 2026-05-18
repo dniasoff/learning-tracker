@@ -25,6 +25,8 @@ import 'package:learning_tracker/features/track_setup/domain/services/track_crea
 import 'package:mocktail/mocktail.dart';
 import 'package:test/test.dart' hide isNotNull, isNull;
 
+import '../helpers/test_database.dart' show seedProfile;
+
 class _MockTrackRepository extends Mock implements TrackRepository {}
 
 /// Creates a default curriculum track and returns its ID.
@@ -372,6 +374,7 @@ void main() {
           () async {
             final db = UserDatabase(NativeDatabase.memory());
             addTearDown(db.close);
+            await seedProfile(db);
             final trackId = await _insertTrack(db);
 
             final repo = StageDefinitionRepositoryImpl(
@@ -382,6 +385,7 @@ void main() {
 
             await repo.initializeDefaults(
               CurriculumId.mishnayos,
+              profileId: 1,
               trackId: trackId,
             );
             final stages = await repo.getStagesForCurriculum(

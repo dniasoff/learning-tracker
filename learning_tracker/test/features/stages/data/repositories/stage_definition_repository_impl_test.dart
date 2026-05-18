@@ -139,6 +139,7 @@ void main() {
           curriculum,
           'Chazara 3',
           30,
+          profileId: 1,
           trackId: 1,
         );
 
@@ -241,7 +242,7 @@ void main() {
           ],
         );
 
-        await repository.resetToDefaults(curriculum, trackId: 1);
+        await repository.resetToDefaults(curriculum, profileId: 1, trackId: 1);
 
         verify(
           () => mockStageDao.deleteAllForCurriculum(curriculumKey),
@@ -257,7 +258,7 @@ void main() {
       ).thenAnswer((_) async => 10);
 
       expect(
-        () => repository.addStage(curriculum, 'Extra Stage', 60, trackId: 1),
+        () => repository.addStage(curriculum, 'Extra Stage', 60, profileId: 1, trackId: 1),
         throwsA(isA<StageLimitExceededException>()),
       );
     });
@@ -268,7 +269,7 @@ void main() {
         () => mockStageDao.getStagesByTrack(1),
       ).thenAnswer((_) async => [makeRow(id: 1)]);
 
-      await repository.initializeDefaults(curriculum, trackId: 1);
+      await repository.initializeDefaults(curriculum, profileId: 1, trackId: 1);
 
       verifyNever(() => mockStageDao.insertStageDefinition(any()));
     });
@@ -280,9 +281,28 @@ void main() {
         () => mockStageDao.insertStageDefinition(any()),
       ).thenAnswer((_) async => 1);
 
-      await repository.initializeDefaults(curriculum, trackId: 1);
+      await repository.initializeDefaults(curriculum, profileId: 1, trackId: 1);
 
       verify(() => mockStageDao.insertStageDefinition(any())).called(3);
+    });
+
+    // Scenario 8c: initializeDefaults passes profileId through to DAO (DNI-322)
+    test('initializeDefaults writes the supplied profileId to inserted rows', () async {
+      when(() => mockStageDao.getStagesByTrack(1)).thenAnswer((_) async => []);
+      when(
+        () => mockStageDao.insertStageDefinition(any()),
+      ).thenAnswer((_) async => 1);
+
+      await repository.initializeDefaults(curriculum, profileId: 42, trackId: 1);
+
+      final calls = verify(
+        () => mockStageDao.insertStageDefinition(captureAny()),
+      ).captured;
+      expect(calls, hasLength(3));
+      for (final call in calls) {
+        final companion = call as db.StageDefinitionsCompanion;
+        expect(companion.profileId.value, 42);
+      }
     });
 
     // Scenario 9: Firestore push is called after each mutation
@@ -309,7 +329,7 @@ void main() {
         () => mockStageDao.getStageDefinitionsByCurriculum(curriculumKey),
       ).thenAnswer((_) async => [makeRow(id: 1)]);
 
-      await repository.addStage(curriculum, 'Extra', 30, trackId: 1);
+      await repository.addStage(curriculum, 'Extra', 30, profileId: 1, trackId: 1);
 
       expect(pushedSettings, hasLength(1));
       expect(pushedSettings[0]['curriculum_id'], curriculumKey);
@@ -349,7 +369,7 @@ void main() {
         () => mockStageDao.getStageDefinitionsByCurriculum(curriculumKey),
       ).thenAnswer((_) async => [makeRow(id: 1)]);
 
-      await repository.resetToDefaults(curriculum, trackId: 1);
+      await repository.resetToDefaults(curriculum, profileId: 1, trackId: 1);
 
       expect(pushedSettings, hasLength(1));
     });

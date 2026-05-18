@@ -91,7 +91,7 @@ final _pointConfigDataProvider = FutureProvider.autoDispose<List<_TrackPointData
       final stageRepo = ref.read(stageDefinitionRepositoryProvider(curriculum));
       var stages = await stageRepo.getStagesByTrack(track.id);
       if (stages.isEmpty) {
-        await stageRepo.initializeDefaults(curriculum, trackId: track.id);
+        await stageRepo.initializeDefaults(curriculum, profileId: profileId, trackId: track.id);
         stages = await stageRepo.getStagesByTrack(track.id);
       }
       if (stages.isEmpty) {

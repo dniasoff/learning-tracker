@@ -17,6 +17,7 @@ abstract class StageDefinitionRepository {
     CurriculumId curriculumId,
     String name,
     int delayDays, {
+    required int profileId,
     required int trackId,
     ScheduleType scheduleType = ScheduleType.delay,
     List<int>? daysOfWeek,
@@ -44,12 +45,14 @@ abstract class StageDefinitionRepository {
   /// Idempotent — no-op if stages already exist for this track.
   Future<void> initializeDefaults(
     CurriculumId curriculumId, {
+    required int profileId,
     required int trackId,
   });
 
   /// Removes all stages and restores the 3 defaults.
   Future<void> resetToDefaults(
     CurriculumId curriculumId, {
+    required int profileId,
     required int trackId,
   });
 

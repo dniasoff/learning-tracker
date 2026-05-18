@@ -15,7 +15,7 @@ import 'package:learning_tracker/features/stages/domain/exceptions/protected_sta
 import 'package:learning_tracker/features/stages/domain/models/schedule_type.dart';
 import 'package:mocktail/mocktail.dart';
 
-import '../../../../helpers/test_database.dart' show seedProfile, seedProfileZero;
+import '../../../../helpers/test_database.dart' show seedProfile;
 
 class MockStageDao extends Mock implements StageDao {}
 
@@ -41,7 +41,6 @@ Future<
 _makeRealRepo() async {
   final database = db.UserDatabase(NativeDatabase.memory());
   await seedProfile(database);
-  await seedProfileZero(database); // needed by initializeDefaults (profileId=0, DNI-322)
   final trackId = await database
       .into(database.curriculumTracks)
       .insert(
@@ -146,6 +145,7 @@ void main() {
         curriculum,
         'Extra',
         14,
+        profileId: 1,
         trackId: 1,
       );
 
@@ -181,6 +181,7 @@ void main() {
           curriculum,
           'Weekly Review',
           0,
+          profileId: 1,
           trackId: 1,
           scheduleType: ScheduleType.weekly,
           daysOfWeek: [1, 3, 5],
@@ -218,6 +219,7 @@ void main() {
           curriculum,
           'Rolling',
           0,
+          profileId: 1,
           trackId: 1,
           scheduleType: ScheduleType.rolling,
           rollingWindowSize: 10,
@@ -244,6 +246,7 @@ void main() {
             curriculum,
             'Bad Weekly',
             0,
+            profileId: 1,
             trackId: 1,
             scheduleType: ScheduleType.weekly,
             // daysOfWeek deliberately omitted
@@ -263,6 +266,7 @@ void main() {
             curriculum,
             'Bad Rolling',
             0,
+            profileId: 1,
             trackId: 1,
             scheduleType: ScheduleType.rolling,
             // rollingWindowSize deliberately omitted
@@ -282,6 +286,7 @@ void main() {
             curriculum,
             'Bad Weekly',
             0,
+            profileId: 1,
             trackId: 1,
             scheduleType: ScheduleType.weekly,
             daysOfWeek: [], // empty list
@@ -299,6 +304,7 @@ void main() {
           curriculum,
           'Bad Rolling',
           0,
+          profileId: 1,
           trackId: 1,
           scheduleType: ScheduleType.rolling,
           rollingWindowSize: 0, // non-positive
@@ -319,12 +325,13 @@ void main() {
       final ctx = await _makeRealRepo();
       addTearDown(() => ctx.database.close());
 
-      await ctx.repository.initializeDefaults(curriculum, trackId: ctx.trackId);
+      await ctx.repository.initializeDefaults(curriculum, profileId: 1, trackId: ctx.trackId);
 
       final stage = await ctx.repository.addStage(
         curriculum,
         'Weekly Review',
         0,
+        profileId: 1,
         trackId: ctx.trackId,
         scheduleType: ScheduleType.weekly,
         daysOfWeek: [2, 4],
@@ -349,6 +356,7 @@ void main() {
 
         await ctx.repository.initializeDefaults(
           curriculum,
+          profileId: 1,
           trackId: ctx.trackId,
         );
 
@@ -356,6 +364,7 @@ void main() {
           curriculum,
           'Rolling',
           0,
+          profileId: 1,
           trackId: ctx.trackId,
           scheduleType: ScheduleType.rolling,
           rollingWindowSize: 7,
@@ -382,7 +391,7 @@ void main() {
       final ctx = await _makeRealRepo();
       addTearDown(() => ctx.database.close());
 
-      await ctx.repository.initializeDefaults(curriculum, trackId: ctx.trackId);
+      await ctx.repository.initializeDefaults(curriculum, profileId: 1, trackId: ctx.trackId);
 
       final before = await ctx.repository.getStagesForCurriculum(curriculum);
       // Default order: Learn(1), Chazara1(2), Chazara2(3)
@@ -416,6 +425,7 @@ void main() {
 
         await ctx.repository.initializeDefaults(
           curriculum,
+          profileId: 1,
           trackId: ctx.trackId,
         );
 
@@ -444,6 +454,7 @@ void main() {
 
         await ctx.repository.initializeDefaults(
           curriculum,
+          profileId: 1,
           trackId: ctx.trackId,
         );
 

@@ -55,6 +55,7 @@ class StageDefinitionRepositoryImpl implements StageDefinitionRepository {
     CurriculumId curriculumId,
     String name,
     int delayDays, {
+    required int profileId,
     required int trackId,
     ScheduleType scheduleType = ScheduleType.delay,
     List<int>? daysOfWeek,
@@ -90,7 +91,7 @@ class StageDefinitionRepositoryImpl implements StageDefinitionRepository {
 
     final id = await _stageDao.insertStageDefinition(
       db.StageDefinitionsCompanion.insert(
-        profileId: 0, // TODO(DNI-322): wire real profileId from caller
+        profileId: profileId,
         curriculumId: curriculumId.storageKey,
         trackId: trackId,
         stageOrder: newOrder,
@@ -244,6 +245,7 @@ class StageDefinitionRepositoryImpl implements StageDefinitionRepository {
   @override
   Future<void> initializeDefaults(
     CurriculumId curriculumId, {
+    required int profileId,
     required int trackId,
   }) async {
     final existing = await _stageDao.getStagesByTrack(trackId);
@@ -252,7 +254,7 @@ class StageDefinitionRepositoryImpl implements StageDefinitionRepository {
     for (final d in _defaults) {
       await _stageDao.insertStageDefinition(
         db.StageDefinitionsCompanion.insert(
-          profileId: 0, // TODO(DNI-322): wire real profileId from caller
+          profileId: profileId,
           curriculumId: curriculumId.storageKey,
           trackId: trackId,
           stageOrder: d.stageOrder,
@@ -267,13 +269,14 @@ class StageDefinitionRepositoryImpl implements StageDefinitionRepository {
   @override
   Future<void> resetToDefaults(
     CurriculumId curriculumId, {
+    required int profileId,
     required int trackId,
   }) async {
     await _stageDao.deleteAllForCurriculum(curriculumId.storageKey);
     for (final d in _defaults) {
       await _stageDao.insertStageDefinition(
         db.StageDefinitionsCompanion.insert(
-          profileId: 0, // TODO(DNI-322): wire real profileId from caller
+          profileId: profileId,
           curriculumId: curriculumId.storageKey,
           trackId: trackId,
           stageOrder: d.stageOrder,

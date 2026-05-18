@@ -2,7 +2,6 @@
 @Tags(['epic_5'])
 library;
 
-import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
@@ -63,18 +62,6 @@ void main() {
     setUp(() async {
       database = UserDatabase(NativeDatabase.memory());
       await seedProfile(database);
-      // StageDefinitionRepositoryImpl hardcodes profileId=0 (DNI-322 TODO),
-      // so we also need a learner_profiles row with id=0 to satisfy the FK.
-      await database.into(database.learnerProfiles).insert(
-        LearnerProfilesCompanion.insert(
-          id: const Value(0),
-          accountId: 1,
-          displayName: 'Profile 0 (placeholder)',
-          mode: 'adult',
-          createdAt: DateTime.utc(2026, 1, 1),
-          updatedAt: DateTime.utc(2026, 1, 1),
-        ),
-      );
       trackId = await _insertTrack(database);
       repository = StageDefinitionRepositoryImpl(
         stageDao: database.stageDao,
@@ -88,12 +75,13 @@ void main() {
     });
 
     test('user can add a custom chazara stage', () async {
-      await repository.initializeDefaults(curriculum, trackId: trackId);
+      await repository.initializeDefaults(curriculum, profileId: 1, trackId: trackId);
 
       final newStage = await repository.addStage(
         curriculum,
         'Chazara 3',
         30,
+        profileId: 1,
         trackId: trackId,
       );
 
@@ -107,7 +95,7 @@ void main() {
     });
 
     test('user can reorder stages (Learn must stay at position 1)', () async {
-      await repository.initializeDefaults(curriculum, trackId: trackId);
+      await repository.initializeDefaults(curriculum, profileId: 1, trackId: trackId);
       final stages = await repository.getStagesForCurriculum(curriculum);
       // Learn must remain first; swap Chazara 1 and Chazara 2 only.
       final learnId = stages[0].id; // stageOrder == 1
@@ -128,7 +116,7 @@ void main() {
     });
 
     test('user can adjust delay days for a stage', () async {
-      await repository.initializeDefaults(curriculum, trackId: trackId);
+      await repository.initializeDefaults(curriculum, profileId: 1, trackId: trackId);
       final stages = await repository.getStagesForCurriculum(curriculum);
       final chazara1 = stages.firstWhere((s) => s.stageName == 'חזרה א׳');
 

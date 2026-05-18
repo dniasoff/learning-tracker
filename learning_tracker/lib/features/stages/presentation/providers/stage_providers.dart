@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
+import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/stages/data/repositories/stage_definition_repository_impl.dart';
 import 'package:learning_tracker/features/stages/domain/models/schedule_type.dart';
 import 'package:learning_tracker/features/stages/domain/models/stage_definition.dart';
@@ -75,10 +76,12 @@ class StageEditorNotifier extends AsyncNotifier<List<StageDefinition>> {
     List<int>? daysOfWeek,
     int? rollingWindowSize,
   }) async {
+    final profileId = ref.read(activeProfileIdProvider);
     await _repository.addStage(
       _curriculum,
       name,
       delayDays,
+      profileId: profileId,
       trackId: trackId,
       scheduleType: scheduleType,
       daysOfWeek: daysOfWeek,
@@ -115,7 +118,8 @@ class StageEditorNotifier extends AsyncNotifier<List<StageDefinition>> {
   }
 
   Future<void> resetToDefaults({required int trackId}) async {
-    await _repository.resetToDefaults(_curriculum, trackId: trackId);
+    final profileId = ref.read(activeProfileIdProvider);
+    await _repository.resetToDefaults(_curriculum, profileId: profileId, trackId: trackId);
     ref.invalidate(stageListProvider(_curriculum));
     state = await AsyncValue.guard(
       () => _repository.getStagesForCurriculum(_curriculum),
