@@ -4,7 +4,6 @@ import 'package:intl/intl.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
-import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
@@ -97,10 +96,7 @@ class _EditTrackScreenState extends ConsumerState<EditTrackScreen> {
     final curriculum = _curriculumId;
     var nameDefault = '';
     if (curriculum != null) {
-      final useHebrew = ref.read(useHebrewTermsProvider);
-      nameDefault = useHebrew
-          ? curriculumHebrewName(curriculum)
-          : curriculumEnglishName(curriculum);
+      nameDefault = curriculumLabelText(ref, curriculum: curriculum);
     }
     setState(() {
       _goal = goal;
@@ -265,9 +261,7 @@ class _EditTrackScreenState extends ConsumerState<EditTrackScreen> {
               onPressed: _save,
               child: Text(
                 l10n.trackEditSaveButton,
-                style: const TextStyle(
-                  fontWeight: FontWeight.w700,
-                ),
+                style: const TextStyle(fontWeight: FontWeight.w700),
               ),
             ),
         ],
@@ -449,10 +443,7 @@ class _EditTrackScreenState extends ConsumerState<EditTrackScreen> {
               ),
             ),
             const Spacer(),
-            const Icon(
-              Icons.edit_rounded,
-              size: 18,
-            ),
+            const Icon(Icons.edit_rounded, size: 18),
           ],
         ),
       ),
@@ -486,8 +477,9 @@ class _EditTrackScreenState extends ConsumerState<EditTrackScreen> {
             isShabbos: kStepStudyDayNumbers[i] == 6,
             isOn: _editedStudyDays[kStepStudyDayNumbers[i]] == 'study',
             onChanged: (v) => setState(
-              () => _editedStudyDays[kStepStudyDayNumbers[i]] =
-                  v ? 'study' : 'review',
+              () => _editedStudyDays[kStepStudyDayNumbers[i]] = v
+                  ? 'study'
+                  : 'review',
             ),
           ),
         ],
@@ -500,8 +492,9 @@ class _EditTrackScreenState extends ConsumerState<EditTrackScreen> {
     ThemeData theme,
     AppLocalizations l10n,
   ) {
-    final delays =
-        _pendingChazarah != null ? _pendingDelays() : _currentChazaraDelays;
+    final delays = _pendingChazarah != null
+        ? _pendingDelays()
+        : _currentChazaraDelays;
     final summary = _chazaraSummary(delays, l10n);
 
     return Row(
@@ -549,8 +542,9 @@ class _EditTrackScreenState extends ConsumerState<EditTrackScreen> {
     final curriculum = _curriculumId;
     if (curriculum == null) return;
 
-    final currentDelays =
-        _pendingChazarah != null ? _pendingDelays() : _currentChazaraDelays;
+    final currentDelays = _pendingChazarah != null
+        ? _pendingDelays()
+        : _currentChazaraDelays;
 
     await showModalBottomSheet<void>(
       context: context,
@@ -589,7 +583,11 @@ class _EditTrackScreenState extends ConsumerState<EditTrackScreen> {
       ),
       child: Row(
         children: [
-          const Icon(Icons.lock_outline_rounded, size: 18, color: Color(0xFF6B84D6)),
+          const Icon(
+            Icons.lock_outline_rounded,
+            size: 18,
+            color: Color(0xFF6B84D6),
+          ),
           const SizedBox(width: 10),
           Expanded(
             child: Text(
@@ -606,8 +604,10 @@ class _EditTrackScreenState extends ConsumerState<EditTrackScreen> {
 
   String _goalTypeLabel(String goalType, AppLocalizations l10n) {
     return switch (goalType) {
-      'pace' => '${l10n.trackEditSectionGoal} · ${l10n.pacePerDay}/${l10n.pacePerWeek}',
-      'deadline' => '${l10n.trackEditSectionGoal} · ${l10n.trackDetailConfigEstFinish}',
+      'pace' =>
+        '${l10n.trackEditSectionGoal} · ${l10n.pacePerDay}/${l10n.pacePerWeek}',
+      'deadline' =>
+        '${l10n.trackEditSectionGoal} · ${l10n.trackDetailConfigEstFinish}',
       _ => l10n.trackEditSectionGoal,
     };
   }
@@ -719,7 +719,9 @@ class _PeriodChip extends StatelessWidget {
         duration: const Duration(milliseconds: 150),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
-          color: isSelected ? AppTheme.brandBlueBright : const Color(0xFFF0F2F8),
+          color: isSelected
+              ? AppTheme.brandBlueBright
+              : const Color(0xFFF0F2F8),
           borderRadius: BorderRadius.circular(20),
         ),
         child: Text(

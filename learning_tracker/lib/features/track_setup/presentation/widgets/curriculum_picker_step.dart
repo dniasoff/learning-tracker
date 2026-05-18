@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
-import 'package:learning_tracker/core/preferences/preference_providers.dart';
+import 'package:learning_tracker/core/labels/domain_term_labels.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
@@ -127,7 +127,7 @@ class _CurriculumTile extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final style = _curriculumStyle(curriculum);
-    final useHebrew = ref.watch(useHebrewTermsProvider);
+    final terms = domainTermLabels(ref);
 
     return DecoratedBox(
       decoration: BoxDecoration(
@@ -181,7 +181,7 @@ class _CurriculumTile extends ConsumerWidget {
                                   fontWeight: FontWeight.w800,
                                 ),
                               ),
-                              if (!useHebrew) ...[
+                              if (!terms.isHebrew) ...[
                                 const SizedBox(height: 2),
                                 Text(
                                   curriculumHebrewName(curriculum),

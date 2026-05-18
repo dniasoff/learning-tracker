@@ -2,11 +2,10 @@ import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
-import 'package:learning_tracker/core/constants/hebrew_terms.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
-import 'package:learning_tracker/core/preferences/preference_providers.dart';
+import 'package:learning_tracker/core/labels/domain_term_labels.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/utils/percentage_formatter.dart';
@@ -51,9 +50,7 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
 
     // The "chazara" term renders per the Hebrew-terms preference: transliterated
     // in English, Hebrew script when the toggle is on (or in Hebrew locale).
-    final chazaraTerm = ref.watch(useHebrewTermsProvider)
-        ? HebrewTerms.uiActiveTrackChazara
-        : l10n.activeTrackChazaraLabel;
+    final chazaraTerm = domainTermLabels(ref).chazara;
 
     final completionAsync = ref.watch(
       dashboardTrackCompletionPercentageProvider(track.id),
@@ -230,9 +227,17 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
           const Divider(height: 1, color: Color(0xFFEEF0F6)),
           const SizedBox(height: 14),
           if (goal != null)
-            _configRow(theme, l10n.trackDetailConfigGoal, _goalLabel(goal, l10n)),
+            _configRow(
+              theme,
+              l10n.trackDetailConfigGoal,
+              _goalLabel(goal, l10n),
+            ),
           if (itemsRemaining != null)
-            _configRow(theme, l10n.trackDetailConfigItemsRemaining, '$itemsRemaining'),
+            _configRow(
+              theme,
+              l10n.trackDetailConfigItemsRemaining,
+              '$itemsRemaining',
+            ),
           if (estimatedFinish != null)
             _configRow(theme, l10n.trackDetailConfigEstFinish, estimatedFinish),
         ],
@@ -270,8 +275,9 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
     if (goal.goalType == 'pace' &&
         goal.paceValue != null &&
         goal.pacePeriod != null) {
-      final period =
-          goal.pacePeriod == 'per_day' ? l10n.pacePerDay : l10n.pacePerWeek;
+      final period = goal.pacePeriod == 'per_day'
+          ? l10n.pacePerDay
+          : l10n.pacePerWeek;
       return '${goal.paceValue} · $period';
     }
     if (goal.goalType == 'deadline' && goal.targetDate != null) {
@@ -296,8 +302,9 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
           : goal.paceValue!;
       if (weeklyRate > 0) {
         final days = (itemsRemaining / weeklyRate * 7).ceil();
-        return DateFormat.yMMMd(locale)
-            .format(goal.createdAt.toLocal().add(Duration(days: days)));
+        return DateFormat.yMMMd(
+          locale,
+        ).format(goal.createdAt.toLocal().add(Duration(days: days)));
       }
     }
     return null;
@@ -372,24 +379,17 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
                     ),
                   )
                 : null,
-            leading: const Icon(
-              Icons.edit_outlined,
-              color: Color(0xFF1C47C4),
-            ),
+            leading: const Icon(Icons.edit_outlined, color: Color(0xFF1C47C4)),
             title: Text(AppLocalizations.of(context)!.trackEditLabel),
             trailing: const Icon(Icons.chevron_right_rounded),
             onTap: () => Navigator.of(context).push<void>(
-              MaterialPageRoute(
-                builder: (_) => EditTrackScreen(track: track),
-              ),
+              MaterialPageRoute(builder: (_) => EditTrackScreen(track: track)),
             ),
           ),
           const Divider(height: 1, indent: 56),
           ListTile(
             shape: const RoundedRectangleBorder(
-              borderRadius: BorderRadius.vertical(
-                bottom: Radius.circular(24),
-              ),
+              borderRadius: BorderRadius.vertical(bottom: Radius.circular(24)),
             ),
             leading: Icon(
               Icons.delete_outline_rounded,

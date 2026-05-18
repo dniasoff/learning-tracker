@@ -307,7 +307,6 @@ class _ContentBrowserTreeState extends ConsumerState<ContentBrowserTree> {
 
   Widget _buildMultiList(BuildContext context, List<ContentItem> items) {
     final theme = Theme.of(context);
-    final useHebrew = ref.watch(useHebrewTermsProvider);
     final variant = ref.watch(currentTransliterationVariantProvider);
     final displayItems = _groupItems(items, variant);
 
@@ -328,7 +327,6 @@ class _ContentBrowserTreeState extends ConsumerState<ContentBrowserTree> {
           title: CurriculumLabel.item(
             item,
             mode: CurriculumLabelMode.leaf,
-            textDirection: useHebrew ? TextDirection.rtl : TextDirection.ltr,
             textAlign: TextAlign.start,
             style: theme.textTheme.titleLarge?.copyWith(
               fontWeight: FontWeight.w700,

@@ -4,6 +4,7 @@ import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
 import 'package:learning_tracker/core/content/content_grouping.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
+import 'package:learning_tracker/core/labels/domain_term_labels.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
@@ -239,7 +240,7 @@ class _ScopeStepContentState extends ConsumerState<ScopeStepContent> {
     final contentAsync = ref.watch(
       curriculumContentProvider(widget.curriculumId),
     );
-    final useHebrew = ref.watch(useHebrewTermsProvider);
+    final useHebrew = domainTermLabels(ref).isHebrew;
     final variant = ref.watch(currentTransliterationVariantProvider);
     final theme = Theme.of(context);
 

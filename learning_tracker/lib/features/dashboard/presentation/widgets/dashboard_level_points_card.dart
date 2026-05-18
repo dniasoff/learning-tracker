@@ -21,6 +21,7 @@ class DashboardLevelPointsCard extends ConsumerWidget {
     required this.doneDisplay,
     required this.lifetimeSectionsDetail,
     required this.cumulativeLifetime,
+    required this.chazaraLabel,
   });
 
   final UserMode userMode;
@@ -32,6 +33,10 @@ class DashboardLevelPointsCard extends ConsumerWidget {
   final String doneDisplay;
   final String lifetimeSectionsDetail;
   final double cumulativeLifetime;
+  /// Resolved chazara bubble label — Hebrew script or transliteration depending
+  /// on the Hebrew Terms setting. Pre-resolved by the parent so this widget
+  /// does not need to read [useHebrewTermsProvider] directly.
+  final String chazaraLabel;
 
   static const List<SchedulerTaskSection> _bubbleSections = [
     SchedulerTaskSection.overdue,
@@ -43,7 +48,6 @@ class DashboardLevelPointsCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context)!;
-    final chazaraLabel = l10n.bubbleChazara;
     final bubbleData = userMode == UserMode.child
         ? [
             (l10n.bubbleOverdue, '$overdueCount', Colors.white),

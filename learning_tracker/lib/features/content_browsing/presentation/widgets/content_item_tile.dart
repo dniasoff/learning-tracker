@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
-import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/widgets/item_review_breakdown.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/widgets/review_count_badge.dart';
@@ -51,7 +50,6 @@ class ContentItemTile extends ConsumerWidget {
             .value ??
         0;
 
-    final useHebrew = ref.watch(useHebrewTermsProvider);
     return ListTile(
       minLeadingWidth: 48,
       minVerticalPadding: 14,
@@ -61,7 +59,6 @@ class ContentItemTile extends ConsumerWidget {
         style: theme.textTheme.titleLarge?.copyWith(
           fontWeight: FontWeight.w700,
         ),
-        textDirection: useHebrew ? TextDirection.rtl : TextDirection.ltr,
         textAlign: TextAlign.start,
       ),
       trailing: _buildTrailing(theme, count),

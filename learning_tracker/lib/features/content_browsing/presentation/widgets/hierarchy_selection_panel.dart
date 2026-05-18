@@ -6,6 +6,7 @@ import 'package:learning_tracker/core/content/hierarchy_selection.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/labels/curriculum_label_renderer.dart';
+import 'package:learning_tracker/core/labels/domain_term_labels.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
@@ -162,7 +163,7 @@ class HierarchySelectionPanelState
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context)!;
-    final useHebrew = ref.watch(useHebrewTermsProvider);
+    final terms = domainTermLabels(ref);
     final variant = ref.watch(currentTransliterationVariantProvider);
     final contentAsync = ref.watch(
       curriculumContentProvider(widget.curriculumId),
@@ -182,7 +183,6 @@ class HierarchySelectionPanelState
             title: CurriculumLabel.item(
               item,
               mode: CurriculumLabelMode.leaf,
-              textDirection: useHebrew ? TextDirection.rtl : TextDirection.ltr,
               textAlign: TextAlign.start,
               style: theme.textTheme.titleLarge?.copyWith(
                 fontWeight: FontWeight.w700,
@@ -224,7 +224,7 @@ class HierarchySelectionPanelState
                       CurriculumLabelRenderer.renderBreadcrumb(
                         curriculumId: widget.curriculumId,
                         rawSegmentValues: _navigationStack.sublist(0, i + 1),
-                        useHebrew: useHebrew,
+                        useHebrew: terms.isHebrew,
                         hebrewNamesPerSegment: _navigationStackHebrewNames
                             .sublist(0, i + 1),
                         transliterationVariant: variant,

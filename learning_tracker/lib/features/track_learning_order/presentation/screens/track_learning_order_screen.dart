@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
-import 'package:learning_tracker/core/preferences/preference_providers.dart';
+import 'package:learning_tracker/core/labels/domain_term_labels.dart';
 import 'package:learning_tracker/features/learning_order/domain/models/learning_order_item.dart';
 import 'package:learning_tracker/features/learning_order/presentation/widgets/draggable_order_item.dart';
 import 'package:learning_tracker/features/learning_order/presentation/widgets/reset_order_dialog.dart';
@@ -48,7 +48,7 @@ class _TrackLearningOrderScreenState
 
     final theme = Theme.of(context);
     final isLoading = sedarimAsync.isLoading || masechtosAsync.isLoading;
-    final useHebrew = ref.watch(useHebrewTermsProvider);
+    final terms = domainTermLabels(ref);
 
     return Scaffold(
       appBar: AppBar(
@@ -76,7 +76,7 @@ class _TrackLearningOrderScreenState
                       theme,
                       CurriculumLabels.topSectionHeader(
                         widget.curriculumId,
-                        useHebrew: useHebrew,
+                        useHebrew: terms.isHebrew,
                       ),
                     ),
                     ReorderableListView(
@@ -103,7 +103,7 @@ class _TrackLearningOrderScreenState
                       theme,
                       CurriculumLabels.containerSectionHeader(
                             widget.curriculumId,
-                            useHebrew: useHebrew,
+                            useHebrew: terms.isHebrew,
                           ) ??
                           '',
                     ),

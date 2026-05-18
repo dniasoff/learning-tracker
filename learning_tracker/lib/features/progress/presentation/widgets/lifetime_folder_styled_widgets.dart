@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
-import 'package:learning_tracker/core/preferences/preference_providers.dart';
+import 'package:learning_tracker/core/labels/domain_term_labels.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/utils/percentage_formatter.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/lifetime_knowledge_providers.dart';
@@ -221,7 +221,7 @@ class LifetimeCurriculumFolderRow extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    final useHebrew = ref.watch(useHebrewTermsProvider);
+    final terms = domainTermLabels(ref);
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -256,7 +256,7 @@ class LifetimeCurriculumFolderRow extends ConsumerWidget {
                           fontWeight: FontWeight.w700,
                         ),
                       ),
-                      if (!useHebrew) ...[
+                      if (!terms.isHebrew) ...[
                         const SizedBox(height: 2),
                         Text(
                           curriculumHebrewName(curriculumId),

@@ -7,7 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
-import 'package:learning_tracker/core/preferences/preference_providers.dart';
+import 'package:learning_tracker/core/labels/domain_term_labels.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
@@ -91,7 +91,11 @@ final _pointConfigDataProvider = FutureProvider.autoDispose<List<_TrackPointData
       final stageRepo = ref.read(stageDefinitionRepositoryProvider(curriculum));
       var stages = await stageRepo.getStagesByTrack(track.id);
       if (stages.isEmpty) {
-        await stageRepo.initializeDefaults(curriculum, profileId: profileId, trackId: track.id);
+        await stageRepo.initializeDefaults(
+          curriculum,
+          profileId: profileId,
+          trackId: track.id,
+        );
         stages = await stageRepo.getStagesByTrack(track.id);
       }
       if (stages.isEmpty) {
@@ -473,7 +477,7 @@ class _CurriculumPointsCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    final useHebrew = ref.watch(useHebrewTermsProvider);
+    final terms = domainTermLabels(ref);
     return Material(
       color: Colors.white,
       elevation: 2,
@@ -498,7 +502,7 @@ class _CurriculumPointsCard extends ConsumerWidget {
                           color: AppTheme.brandInk,
                         ),
                       ),
-                      if (!useHebrew) ...[
+                      if (!terms.isHebrew) ...[
                         const SizedBox(height: 4),
                         Text(
                           curriculumHebrewName(data.curriculum),

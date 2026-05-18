@@ -6,6 +6,7 @@ import 'package:learning_tracker/core/content/content_tree.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/labels/curriculum_label_renderer.dart';
+import 'package:learning_tracker/core/labels/domain_term_labels.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
@@ -191,7 +192,7 @@ class _ContentHierarchyScreenState
                   Expanded(
                     child: configAsync.when(
                       data: (config) {
-                        final useHebrew = ref.watch(useHebrewTermsProvider);
+                        final terms = domainTermLabels(ref);
                         final variant = ref.watch(
                           currentTransliterationVariantProvider,
                         );
@@ -210,7 +211,7 @@ class _ContentHierarchyScreenState
                             CurriculumLabelRenderer.renderBreadcrumb(
                               curriculumId: curriculum,
                               rawSegmentValues: _navigationStack,
-                              useHebrew: useHebrew,
+                              useHebrew: terms.isHebrew,
                               transliterationVariant: variant,
                               hebrewNamesPerSegment: hebrewNames,
                             );
@@ -258,13 +259,11 @@ class _ContentHierarchyScreenState
                   );
                 }
 
-                final useHebrew = ref.watch(useHebrewTermsProvider);
                 final variant = ref.watch(
                   currentTransliterationVariantProvider,
                 );
                 final groupedItems = _groupItemsByNextLevel(
                   items,
-                  useHebrew,
                   variant,
                 );
 
@@ -319,7 +318,6 @@ class _ContentHierarchyScreenState
   /// the perek-or-equivalent row opens the reader directly instead.
   List<ContentItem> _groupItemsByNextLevel(
     List<ContentItem> items,
-    bool useHebrew,
     TransliterationVariant variant,
   ) {
     final curriculum = _curriculumOrNull;

@@ -271,11 +271,13 @@ audit: ## Run all 12 enforcement greps (NFR19) — exits non-zero on any violati
 	    | grep -v "lib/core/time/" | grep -v "\.g\.dart" | grep -v "\.freezed\.dart" | grep -v "test/"; \
 	  FAIL=1; \
 	fi; \
-	echo "7/12 — No hebrewTermsScriptProvider read outside core/labels, core/preferences, or settings screens"; \
-	if grep -rn "hebrewTermsScriptProvider" lib/ --include="*.dart" \
-	    | grep -v "lib/core/labels/" | grep -v "lib/core/preferences/" | grep -v "settings/.*_screen\.dart" | grep -q .; then \
-	  grep -rn "hebrewTermsScriptProvider" lib/ --include="*.dart" \
-	    | grep -v "lib/core/labels/" | grep -v "lib/core/preferences/" | grep -v "settings/.*_screen\.dart"; \
+	echo "7/12 — No useHebrewTermsProvider read outside core/labels, core/preferences, or settings screens"; \
+	if grep -rn "useHebrewTermsProvider" lib/ --include="*.dart" \
+	    | grep -v "lib/core/" | grep -v "lib/features/settings/.*_screen\.dart" | grep -v "\.g\.dart" \
+	    | grep -v ":[[:space:]]*//" | grep -v "\.notifier)" | grep -q .; then \
+	  grep -rn "useHebrewTermsProvider" lib/ --include="*.dart" \
+	    | grep -v "lib/core/" | grep -v "lib/features/settings/.*_screen\.dart" | grep -v "\.g\.dart" \
+	    | grep -v ":[[:space:]]*//" | grep -v "\.notifier)"; \
 	  FAIL=1; \
 	fi; \
 	echo "8/12 — No displayNameEn/He() outside core/labels (excluding generated files)"; \

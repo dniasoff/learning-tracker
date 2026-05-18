@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
-import 'package:learning_tracker/core/preferences/preference_providers.dart';
+
 import 'package:learning_tracker/features/learning_order/domain/models/learning_order_item.dart';
 
 /// A single item tile in the learning order list.
@@ -23,13 +23,11 @@ class DraggableOrderItem extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final colorScheme = Theme.of(context).colorScheme;
-    final useHebrew = ref.watch(useHebrewTermsProvider);
 
     return ListTile(
       key: ValueKey(item.sefariaRef),
       title: CurriculumLabel.local(
         item.sefariaRef,
-        textDirection: useHebrew ? TextDirection.rtl : TextDirection.ltr,
         style: Theme.of(context).textTheme.titleMedium,
       ),
       trailing: showDragHandle

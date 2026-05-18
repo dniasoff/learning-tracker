@@ -4,8 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
+import 'package:learning_tracker/core/labels/domain_term_labels.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
-import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/utils/percentage_formatter.dart';
 import 'package:learning_tracker/core/widgets/app_bar_title.dart';
@@ -199,7 +199,7 @@ class _CurriculumCard extends ConsumerWidget {
                           color: AppTheme.brandInk,
                         ),
                       ),
-                      if (!ref.watch(useHebrewTermsProvider)) ...[
+                      if (!domainTermLabels(ref).isHebrew) ...[
                         const SizedBox(height: 4),
                         Text(
                           curriculumHebrewName(curriculum),

@@ -2,12 +2,12 @@ import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
-import 'package:learning_tracker/core/constants/hebrew_terms.dart';
+
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/user_mode.dart';
+import 'package:learning_tracker/core/labels/domain_term_labels.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
-import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/core/utils/percentage_formatter.dart';
@@ -124,13 +124,10 @@ class DashboardBody extends ConsumerWidget {
     final lifetimeTotalsAsync = ref.watch(
       lifetimeTotalsAcrossAllCurriculaProvider(profileId),
     );
-    final useHebrew = ref.watch(useHebrewTermsProvider);
-    final reviewSectionLabel = useHebrew
-        ? HebrewTerms.uiReviewSection
-        : l10n.reviewSection;
-    final chazaraReviewLabel = useHebrew
-        ? HebrewTerms.uiChazaraReview
-        : l10n.chazaraReview;
+    final terms = domainTermLabels(ref);
+    final reviewSectionLabel = terms.reviewSection;
+    final chazaraReviewLabel = terms.chazara;
+    final chazaraBubbleLabel = terms.bubbleChazara;
     final name = profileName ?? l10n.learner;
     final now = DateTimeFactory.nowLocal();
 
@@ -307,6 +304,7 @@ class DashboardBody extends ConsumerWidget {
             doneDisplay: doneDisplay,
             lifetimeSectionsDetail: sectionsDetail,
             cumulativeLifetime: cumulativeLifetime,
+            chazaraLabel: chazaraBubbleLabel,
           ),
         const SizedBox(height: 30),
         Row(

@@ -1,13 +1,13 @@
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:learning_tracker/core/constants/hebrew_terms.dart';
+
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/labels/curriculum_label_providers.dart';
+import 'package:learning_tracker/core/labels/domain_term_labels.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
-import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/utils/percentage_formatter.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
@@ -58,9 +58,9 @@ class ActiveTrackCard extends ConsumerWidget {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context)!;
     final curriculum = _curriculumIdForTrack(track);
-    final useHebrew = ref.watch(useHebrewTermsProvider);
+    final terms = domainTermLabels(ref);
     final displayNamePrimary = curriculumLabelText(ref, curriculum: curriculum);
-    final displayNameSecondary = useHebrew
+    final displayNameSecondary = terms.isHebrew
         ? null
         : curriculumHebrewName(curriculum);
     final curriculumColor = AppTheme.getCurriculumColor(curriculum);
@@ -73,7 +73,9 @@ class ActiveTrackCard extends ConsumerWidget {
       dashboardHasProgramEnrollmentProvider(curriculum),
     );
     final profileId = ref.watch(activeProfileIdProvider);
-    final dualMetricsAsync = ref.watch(trackDualProgressMetricsProvider(profileId));
+    final dualMetricsAsync = ref.watch(
+      trackDualProgressMetricsProvider(profileId),
+    );
     final dualMetricMatches = dualMetricsAsync.asData?.value
         .where((m) => m.trackId == track.id)
         .toList();
@@ -191,9 +193,7 @@ class ActiveTrackCard extends ConsumerWidget {
               TrackStatGrid(
                 buckets: taskBuckets,
                 l10n: l10n,
-                chazaraLabel: ref.watch(useHebrewTermsProvider)
-                    ? HebrewTerms.uiActiveTrackChazara
-                    : l10n.activeTrackMetricChazara,
+                chazaraLabel: terms.bubbleChazara,
               ),
               if (taskBuckets.total == 0)
                 Padding(

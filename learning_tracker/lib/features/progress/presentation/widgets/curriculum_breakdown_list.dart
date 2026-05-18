@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
-import 'package:learning_tracker/core/preferences/preference_providers.dart';
+import 'package:learning_tracker/core/labels/domain_term_labels.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/utils/percentage_formatter.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/items_learned_providers.dart';
@@ -13,10 +13,7 @@ import 'package:learning_tracker/l10n/app_localizations.dart';
 /// per-curriculum tree views. Shared between [ItemsLearnedScreen] and
 /// [LifetimeViewScreen].
 class CurriculumBreakdownList extends StatefulWidget {
-  const CurriculumBreakdownList({
-    super.key,
-    required this.summaries,
-  });
+  const CurriculumBreakdownList({super.key, required this.summaries});
 
   final List<CurriculumCompletionSummary> summaries;
 
@@ -78,7 +75,7 @@ class _CurriculumCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final useHebrew = ref.watch(useHebrewTermsProvider);
+    final terms = domainTermLabels(ref);
     final theme = Theme.of(context);
     final curriculumColor = AppTheme.getCurriculumColorByKey(
       summary.curriculumId.storageKey,
@@ -123,8 +120,9 @@ class _CurriculumCard extends ConsumerWidget {
                         children: [
                           CircularProgressIndicator(
                             value: pct,
-                            backgroundColor:
-                                curriculumColor.withValues(alpha: 0.15),
+                            backgroundColor: curriculumColor.withValues(
+                              alpha: 0.15,
+                            ),
                             valueColor: AlwaysStoppedAnimation<Color>(
                               curriculumColor,
                             ),
@@ -154,7 +152,7 @@ class _CurriculumCard extends ConsumerWidget {
                               color: AppTheme.brandInk,
                             ),
                           ),
-                          if (!useHebrew)
+                          if (!terms.isHebrew)
                             Text(
                               curriculumHebrewName(summary.curriculumId),
                               style: theme.textTheme.labelSmall?.copyWith(
@@ -263,8 +261,9 @@ class CurriculumBreakdownTreeNode extends StatelessWidget {
       children: [
         InkWell(
           borderRadius: BorderRadius.circular(6),
-          onTap:
-              hasChildren ? () => onExpandToggle(nodeKey, !isExpanded) : null,
+          onTap: hasChildren
+              ? () => onExpandToggle(nodeKey, !isExpanded)
+              : null,
           child: Padding(
             padding: EdgeInsets.only(
               left: depth * 16.0,

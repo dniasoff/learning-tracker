@@ -347,7 +347,7 @@ class _HebrewDateTile extends ConsumerWidget {
 /// Hebrew-terms toggle — renders Jewish learning terminology in Hebrew script
 /// vs English transliteration.
 ///
-/// Default: `hebrewTerms: false` (English transliteration).
+/// Default: `hebrewTerms: true` (Hebrew script). See spec §9.
 /// Surfaced via [PreferenceListTile] with a [Switch] trailing widget.
 class _HebrewTermsTile extends ConsumerWidget {
   const _HebrewTermsTile();

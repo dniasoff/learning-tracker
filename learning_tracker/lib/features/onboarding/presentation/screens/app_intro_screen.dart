@@ -5,9 +5,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:learning_tracker/core/constants/hebrew_terms.dart';
+import 'package:learning_tracker/core/labels/domain_term_labels.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
-import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 const kIntroSeen = 'intro_seen';
@@ -259,7 +260,7 @@ class _IntroPage extends ConsumerWidget {
 
   /// Pages 2 & 3: full-page scroll.
   Widget _buildScrolledPage(WidgetRef ref) {
-    final useHebrew = ref.watch(useHebrewTermsProvider);
+    final terms = domainTermLabels(ref);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: CustomScrollView(
@@ -280,9 +281,9 @@ class _IntroPage extends ConsumerWidget {
                 ],
                 _buildTitleBlock(),
                 const SizedBox(height: 14),
-                _buildSubtitleBlock(useHebrew: useHebrew),
+                _buildSubtitleBlock(useHebrew: terms.isHebrew),
                 const SizedBox(height: 20),
-                _buildProgressArea(useHebrew: useHebrew),
+                _buildProgressArea(useHebrew: terms.isHebrew),
                 const SizedBox(height: 24),
               ],
             ),
@@ -366,15 +367,25 @@ class _IntroPage extends ConsumerWidget {
           parent: iconAnimation,
           curve: const Interval(0.3, 0.85, curve: Curves.easeOut),
         ).value;
+        final l10n = AppLocalizations.of(context)!;
+        final talmidChochomLabel = useHebrew
+            ? HebrewTerms.uiTalmidChochom
+            : l10n.talmidChochom;
         return Opacity(
           opacity: fade,
-          child: _subtitleRich(useHebrew: useHebrew),
+          child: _subtitleRich(
+            useHebrew: useHebrew,
+            talmidChochomLabel: talmidChochomLabel,
+          ),
         );
       },
     );
   }
 
-  Widget _subtitleRich({bool useHebrew = false}) {
+  Widget _subtitleRich({
+    bool useHebrew = false,
+    String talmidChochomLabel = 'Talmid Chochom',
+  }) {
     switch (data.variant) {
       case _IntroPageVariant.dailyPlan:
         return Text.rich(
@@ -416,12 +427,9 @@ class _IntroPage extends ConsumerWidget {
           textAlign: TextAlign.center,
         );
       case _IntroPageVariant.rewards:
-        final tierLabel = useHebrew
-            ? HebrewTerms.uiTalmidChochom
-            : 'Talmid Chochom';
         return Text(
           'Collect points, build streaks, and unlock mystery rewards as you '
-          'climb from a Novice to a $tierLabel!',
+          'climb from a Novice to a $talmidChochomLabel!',
           textAlign: TextAlign.center,
           style: _subStyle,
         );
@@ -1184,6 +1192,10 @@ class _ScholarLevelCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final talmidChochomCapsLabel = useHebrew
+        ? HebrewTerms.uiTalmidChochom
+        : l10n.talmidChochomCaps;
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
@@ -1265,7 +1277,7 @@ class _ScholarLevelCard extends StatelessWidget {
                 ),
               ),
               Text(
-                useHebrew ? HebrewTerms.uiTalmidChochom : 'TALMID CHOCHOM',
+                talmidChochomCapsLabel,
                 style: GoogleFonts.plusJakartaSans(
                   color: AppTheme.brandInkSoft,
                   fontSize: useHebrew ? 11 : 9,
