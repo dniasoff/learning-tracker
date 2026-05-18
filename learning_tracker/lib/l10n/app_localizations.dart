@@ -1538,8 +1538,8 @@ abstract class AppLocalizations {
   /// No description provided for @carouselCompletion.
   ///
   /// In en, this message translates to:
-  /// **'Completion'**
-  String get carouselCompletion;
+  /// **'Completion (with {chazara})'**
+  String carouselCompletion(String chazara);
 
   /// No description provided for @continueCta.
   ///

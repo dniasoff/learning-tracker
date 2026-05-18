@@ -2,9 +2,11 @@ import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:learning_tracker/core/constants/hebrew_terms.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
+import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/utils/percentage_formatter.dart';
@@ -46,6 +48,12 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
 
     final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
+
+    // The "chazara" term renders per the Hebrew-terms preference: transliterated
+    // in English, Hebrew script when the toggle is on (or in Hebrew locale).
+    final chazaraTerm = ref.watch(useHebrewTermsProvider)
+        ? HebrewTerms.uiActiveTrackChazara
+        : l10n.activeTrackChazaraLabel;
 
     final completionAsync = ref.watch(
       dashboardTrackCompletionPercentageProvider(track.id),
@@ -109,6 +117,7 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
             cycleFraction,
             cyclePercentDisplay,
             curriculumBarColor,
+            chazaraTerm,
             goal: goal,
             itemsRemaining: itemsRemaining,
             estimatedFinish: estimatedFinish,
@@ -138,7 +147,8 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
     bool hasProgramEnrollment,
     double cycleFraction,
     String cyclePercentDisplay,
-    Color curriculumBarColor, {
+    Color curriculumBarColor,
+    String chazaraTerm, {
     Goal? goal,
     int? itemsRemaining,
     String? estimatedFinish,
@@ -199,7 +209,7 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
             Row(
               children: [
                 Text(
-                  l10n.carouselCompletion,
+                  l10n.carouselCompletion(chazaraTerm),
                   style: theme.textTheme.labelSmall?.copyWith(
                     color: AppTheme.brandInkMuted,
                     fontWeight: FontWeight.w700,

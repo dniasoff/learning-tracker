@@ -218,7 +218,7 @@ void main() {
       ignore = en.bubbleTodayDue;
       ignore = en.bubbleChazara;
       ignore = en.mainFocus;
-      ignore = en.carouselCompletion;
+      ignore = en.carouselCompletion('');
       ignore = en.continueCta;
       ignore = en.tabSchedule;
       ignore = en.dueToday;
@@ -960,7 +960,7 @@ void main() {
       ignore = he.bubbleTodayDue;
       ignore = he.bubbleChazara;
       ignore = he.mainFocus;
-      ignore = he.carouselCompletion;
+      ignore = he.carouselCompletion('');
       ignore = he.continueCta;
       ignore = he.tabSchedule;
       ignore = he.dueToday;

@@ -823,7 +823,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get mainFocus => 'MAIN FOCUS';
 
   @override
-  String get carouselCompletion => 'Completion';
+  String carouselCompletion(String chazara) {
+    return 'Completion (with $chazara)';
+  }
 
   @override
   String get continueCta => 'CONTINUE';

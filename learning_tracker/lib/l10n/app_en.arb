@@ -413,7 +413,12 @@
   "bubbleTodayDue": "TODAY\nDUE",
   "bubbleChazara": "CHAZARA",
   "mainFocus": "MAIN FOCUS",
-  "carouselCompletion": "Completion",
+  "carouselCompletion": "Completion (with {chazara})",
+  "@carouselCompletion": {
+    "placeholders": {
+      "chazara": { "type": "String" }
+    }
+  },
   "continueCta": "CONTINUE",
   "tabSchedule": "Schedule",
   "dueToday": "Due today",

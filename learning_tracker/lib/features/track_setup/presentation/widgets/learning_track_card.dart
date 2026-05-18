@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:learning_tracker/core/constants/hebrew_terms.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
+import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/utils/percentage_formatter.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
@@ -49,6 +51,12 @@ class LearningTrackCard extends ConsumerWidget {
     );
     final cycleFraction = completionAsync.asData?.value ?? 0.0;
     final cyclePercentDisplay = formatFractionAsPercent(cycleFraction);
+
+    // The "chazara" term renders per the Hebrew-terms preference: transliterated
+    // in English, Hebrew script when the toggle is on (or in Hebrew locale).
+    final chazaraTerm = ref.watch(useHebrewTermsProvider)
+        ? HebrewTerms.uiActiveTrackChazara
+        : l10n.activeTrackChazaraLabel;
 
     final hasProgramEnrollment = curriculum != null
         ? (ref
@@ -160,7 +168,7 @@ class LearningTrackCard extends ConsumerWidget {
                         Row(
                           children: [
                             Text(
-                              l10n.carouselCompletion,
+                              l10n.carouselCompletion(chazaraTerm),
                               style: theme.textTheme.labelSmall?.copyWith(
                                 color: AppTheme.brandInkMuted,
                                 fontWeight: FontWeight.w700,

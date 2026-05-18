@@ -815,7 +815,9 @@ class AppLocalizationsHe extends AppLocalizations {
   String get mainFocus => 'מיקוד ראשי';
 
   @override
-  String get carouselCompletion => 'השלמה';
+  String carouselCompletion(String chazara) {
+    return 'השלמה (עם $chazara)';
+  }
 
   @override
   String get continueCta => 'המשך';

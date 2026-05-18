@@ -413,7 +413,7 @@
   "bubbleTodayDue": "היום",
   "bubbleChazara": "חזרה",
   "mainFocus": "מיקוד ראשי",
-  "carouselCompletion": "השלמה",
+  "carouselCompletion": "השלמה (עם {chazara})",
   "continueCta": "המשך",
   "tabSchedule": "לוח",
   "dueToday": "להיום",
