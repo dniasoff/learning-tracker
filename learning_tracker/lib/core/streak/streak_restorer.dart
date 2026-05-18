@@ -32,14 +32,25 @@ class StreakRestorer {
             .getSingleOrNull();
     if (existing != null) return;
 
-    // Only track-based completions credit the streak. Bulk-marked lifetime
-    // items use trackId = 0 as a sentinel and must not create streak events
-    // (matches the write-path gate in CompletionRepositoryImpl / DNI-381).
+    // Skip (a) non-track completions (trackId == 0) and (b) bulk-prior sentinel
+    // completions (completedAt == year-2000 sentinel date). Neither should seed
+    // streak_events — (a) are lifetime/non-tracked items; (b) are prior-mark
+    // placeholders inserted when a user bulk-marks past learning, not genuine
+    // learning sessions. The sentinel date matches SchedulerEngine
+    // kBulkPriorSentinelMs (DateTime.utc(2000, 1, 1)); we define it locally to
+    // avoid a core→features layering violation.
     // Reads from completionsView (C1: backed by completion_events).
+    const bulkPriorSentinelMs = 946684800000; // DateTime.utc(2000,1,1) ms
     final allCompletions = await _db.completionDao.getCompletionsByProfile(
       profileId,
     );
-    final completions = allCompletions.where((c) => c.trackId != 0).toList();
+    final completions = allCompletions
+        .where(
+          (c) =>
+              c.trackId != 0 &&
+              c.completedAt.millisecondsSinceEpoch != bulkPriorSentinelMs,
+        )
+        .toList();
 
     final firstPerDay = <DateTime, DateTime>{};
     for (final c in completions) {
