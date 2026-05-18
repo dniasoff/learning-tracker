@@ -195,4 +195,172 @@ void main() {
       expect(aliasP, equals(newP));
     });
   });
+
+  group('lifetimeTotalsAcrossAllCurriculaProvider — deduplication', () {
+    // Helpers for constructing fake summaries with explicit ref sets.
+    CurriculumLifetimeSummary fakeSummary({
+      required CurriculumId id,
+      required Set<String> allRefs,
+      required Set<String> learnedRefs,
+    }) {
+      return CurriculumLifetimeSummary(
+        curriculumId: id,
+        learnedLeafCount: learnedRefs.length,
+        totalLeafCount: allRefs.length,
+        percentage: allRefs.isEmpty ? 0.0 : learnedRefs.length / allRefs.length,
+        tree: const [],
+        allLeafRefs: allRefs,
+        learnedLeafRefs: learnedRefs,
+      );
+    }
+
+    test(
+      'Chumash + Tanach overlap: totals equal Tanach alone, not the naive sum',
+      () async {
+        // Tanach contains all Chumash sections plus additional Nach sections.
+        // Chumash sections: ref_A, ref_B, ref_C (3 sections, 2 learned).
+        // Tanach sections: ref_A, ref_B, ref_C (Chumash) + ref_D, ref_E (Nach).
+        //   Total distinct sections = 5; learned distinct = ref_A + ref_B + ref_D = 3.
+        //
+        // Naive sum would be: learnedTotal = 2+3=5, sectionTotal = 3+5=8 — WRONG.
+        // Correct union: learnedDistinct = 3, allDistinct = 5.
+
+        const chumashAll = {'ref_A', 'ref_B', 'ref_C'};
+        const chumashLearned = {'ref_A', 'ref_B'};
+        const tanachAll = {'ref_A', 'ref_B', 'ref_C', 'ref_D', 'ref_E'};
+        const tanachLearned = {'ref_A', 'ref_B', 'ref_D'};
+
+        final chumashSummary = fakeSummary(
+          id: CurriculumId.chumash,
+          allRefs: chumashAll,
+          learnedRefs: chumashLearned,
+        );
+        final tanachSummary = fakeSummary(
+          id: CurriculumId.tanach,
+          allRefs: tanachAll,
+          learnedRefs: tanachLearned,
+        );
+
+        final container = ProviderContainer(
+          overrides: [
+            lifetimeSummariesProvider(
+              1,
+            ).overrideWith(
+              (ref) => Future.value([chumashSummary, tanachSummary]),
+            ),
+          ],
+        );
+        addTearDown(container.dispose);
+
+        final totals = await container.read(
+          lifetimeTotalsAcrossAllCurriculaProvider(1).future,
+        );
+
+        // Union of allLeafRefs: {ref_A, ref_B, ref_C, ref_D, ref_E} = 5
+        expect(
+          totals.totalSections,
+          5,
+          reason:
+              'Chumash sections are a subset of Tanach; union must not double-count them',
+        );
+        // Union of learnedLeafRefs: {ref_A, ref_B, ref_D} = 3
+        expect(
+          totals.learnedSections,
+          3,
+          reason:
+              'Learned union should count each distinct ref once, not once per curriculum',
+        );
+        // Verify the naive sum would have been wrong (regression guard).
+        expect(totals.totalSections, isNot(equals(chumashAll.length + tanachAll.length)));
+        expect(totals.learnedSections, isNot(equals(chumashLearned.length + tanachLearned.length)));
+      },
+    );
+
+    test(
+      'non-overlapping curricula: totals equal the naive sum',
+      () async {
+        // When curricula are disjoint the union equals the sum.
+        const mishAll = {'m_A', 'm_B'};
+        const mishLearned = {'m_A'};
+        const bavliAll = {'b_1', 'b_2', 'b_3'};
+        const bavliLearned = {'b_1', 'b_2'};
+
+        final mishSummary = fakeSummary(
+          id: CurriculumId.mishnayos,
+          allRefs: mishAll,
+          learnedRefs: mishLearned,
+        );
+        final bavliSummary = fakeSummary(
+          id: CurriculumId.bavli,
+          allRefs: bavliAll,
+          learnedRefs: bavliLearned,
+        );
+
+        final container = ProviderContainer(
+          overrides: [
+            lifetimeSummariesProvider(
+              2,
+            ).overrideWith(
+              (ref) => Future.value([mishSummary, bavliSummary]),
+            ),
+          ],
+        );
+        addTearDown(container.dispose);
+
+        final totals = await container.read(
+          lifetimeTotalsAcrossAllCurriculaProvider(2).future,
+        );
+
+        expect(totals.totalSections, mishAll.length + bavliAll.length);
+        expect(totals.learnedSections, mishLearned.length + bavliLearned.length);
+      },
+    );
+
+    test('empty summaries list returns zeros', () async {
+      final container = ProviderContainer(
+        overrides: [
+          lifetimeSummariesProvider(
+            3,
+          ).overrideWith((ref) => Future.value([])),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final totals = await container.read(
+        lifetimeTotalsAcrossAllCurriculaProvider(3).future,
+      );
+
+      expect(totals.totalSections, 0);
+      expect(totals.learnedSections, 0);
+      expect(totals.percentage, 0.0);
+    });
+
+    test(
+      'single curriculum with no refs carries through correctly',
+      () async {
+        final summary = fakeSummary(
+          id: CurriculumId.mishnayos,
+          allRefs: {'x', 'y', 'z'},
+          learnedRefs: {'x'},
+        );
+
+        final container = ProviderContainer(
+          overrides: [
+            lifetimeSummariesProvider(
+              4,
+            ).overrideWith((ref) => Future.value([summary])),
+          ],
+        );
+        addTearDown(container.dispose);
+
+        final totals = await container.read(
+          lifetimeTotalsAcrossAllCurriculaProvider(4).future,
+        );
+
+        expect(totals.totalSections, 3);
+        expect(totals.learnedSections, 1);
+        expect(totals.percentage, closeTo(1 / 3, 0.001));
+      },
+    );
+  });
 }

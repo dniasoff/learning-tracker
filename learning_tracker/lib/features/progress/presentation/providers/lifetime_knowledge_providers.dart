@@ -54,6 +54,8 @@ class CurriculumLifetimeSummary {
     required this.totalLeafCount,
     required this.percentage,
     required this.tree,
+    this.learnedLeafRefs = const {},
+    this.allLeafRefs = const {},
   });
 
   final CurriculumId curriculumId;
@@ -61,6 +63,16 @@ class CurriculumLifetimeSummary {
   final int totalLeafCount;
   final double percentage;
   final List<LifetimeTreeNode> tree;
+
+  /// Distinct `sefariaRef` strings for leaf sections that have been learned.
+  /// Used by [lifetimeTotalsAcrossAllCurriculaProvider] to deduplicate across
+  /// overlapping curricula (e.g. Chumash ⊂ Tanach).
+  final Set<String> learnedLeafRefs;
+
+  /// Distinct `sefariaRef` strings for all leaf sections in this curriculum.
+  /// Used by [lifetimeTotalsAcrossAllCurriculaProvider] to deduplicate totals
+  /// across overlapping curricula (e.g. Chumash ⊂ Tanach).
+  final Set<String> allLeafRefs;
 }
 
 class TrackDualProgressMetric {
@@ -178,6 +190,8 @@ final lifetimeDataProvider = FutureProvider.autoDispose
         totalLeafCount: leaves.length,
         percentage: percentage.clamp(0.0, 1.0),
         tree: tree,
+        learnedLeafRefs: learnedLeafRefs,
+        allLeafRefs: leaves.map((l) => l.sefariaRef).toSet(),
       );
     });
 
@@ -315,15 +329,18 @@ final lifetimeTotalsAcrossAllCurriculaProvider = FutureProvider.autoDispose
       final summaries = await ref.watch(
         lifetimeSummariesProvider(profileId).future,
       );
-      var learnedTotal = 0;
-      var sectionTotal = 0;
+      // Build union sets so that a section appearing in N curricula (e.g. a
+      // Chumash parasha that also belongs to Tanach) counts only ONCE in both
+      // the numerator and the denominator.
+      final allDistinct = <String>{};
+      final learnedDistinct = <String>{};
       for (final s in summaries) {
-        learnedTotal += s.learnedLeafCount;
-        sectionTotal += s.totalLeafCount;
+        allDistinct.addAll(s.allLeafRefs);
+        learnedDistinct.addAll(s.learnedLeafRefs);
       }
       return LifetimeTotals(
-        learnedSections: learnedTotal,
-        totalSections: sectionTotal,
+        learnedSections: learnedDistinct.length,
+        totalSections: allDistinct.length,
         totalCurricula: CurriculumId.values.length,
       );
     });
