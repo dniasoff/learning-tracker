@@ -25,6 +25,13 @@ class StageDefinitions extends Table {
   TextColumn get daysOfWeek => text().nullable()();
   IntColumn get rollingWindowSize => integer().nullable()();
 
+  /// Set when a stage row is superseded by an edit-track operation.
+  ///
+  /// Completions already recorded keep their stageId FK pointing at the old
+  /// row. The scheduler only uses rows where supersededAt IS NULL when
+  /// assigning stages to newly-learned items.
+  DateTimeColumn get supersededAt => dateTime().nullable()();
+
   @override
   List<Set<Column>> get uniqueKeys => [
     {profileId, curriculumId, stageOrder, trackId},

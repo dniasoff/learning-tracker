@@ -2437,6 +2437,52 @@ class AppLocalizationsHe extends AppLocalizations {
   }
 
   @override
+  String get trackEditLabel => 'ערוך מסלול';
+
+  @override
+  String get trackEditTitle => 'ערוך מסלול';
+
+  @override
+  String get trackEditSectionName => 'שם מסלול';
+
+  @override
+  String get trackEditSectionGoal => 'יעד';
+
+  @override
+  String get trackEditSectionStudyDays => 'ימי לימוד';
+
+  @override
+  String get trackEditSectionReview => 'חזרה';
+
+  @override
+  String get trackEditGoalTypeLocked => 'לא ניתן לשנות את סוג היעד לאחר ההגדרה';
+
+  @override
+  String get trackEditProgramLocked =>
+      'חזרה, היקף ויימי לימוד מנוהלים על ידי התוכנית.';
+
+  @override
+  String get trackEditReviewSummaryNone => 'ללא חזרה';
+
+  @override
+  String trackEditReviewSummaryDays(String delays) {
+    return 'אחרי $delays';
+  }
+
+  @override
+  String get trackEditChangeReview => 'שנה';
+
+  @override
+  String get trackEditSaveButton => 'שמור שינויים';
+
+  @override
+  String get trackEditConfirmTitle => 'להחיל שינויים?';
+
+  @override
+  String get trackEditConfirmBody =>
+      'השינויים חלים על לימוד עתידי בלבד. השלמות קיימות אינן מושפעות.';
+
+  @override
   String get trackDeleteLabel => 'מחק מסלול';
 
   @override
@@ -2589,6 +2635,7 @@ class AppLocalizationsHe extends AppLocalizations {
       'השלם משימות יומיות כדי לראות את ההתקדמות כאן';
 
   @override
-  String itemsLearnedOf(int completed, int total) =>
-      '$completed מתוך $total';
+  String itemsLearnedOf(int completed, int total) {
+    return '$completed מתוך $total';
+  }
 }

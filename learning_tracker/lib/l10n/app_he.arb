@@ -1208,6 +1208,25 @@
       "date": { "type": "String" }
     }
   },
+  "trackEditLabel": "ערוך מסלול",
+  "trackEditTitle": "ערוך מסלול",
+  "trackEditSectionName": "שם מסלול",
+  "trackEditSectionGoal": "יעד",
+  "trackEditSectionStudyDays": "ימי לימוד",
+  "trackEditSectionReview": "חזרה",
+  "trackEditGoalTypeLocked": "לא ניתן לשנות את סוג היעד לאחר ההגדרה",
+  "trackEditProgramLocked": "חזרה, היקף ויימי לימוד מנוהלים על ידי התוכנית.",
+  "trackEditReviewSummaryNone": "ללא חזרה",
+  "trackEditReviewSummaryDays": "אחרי {delays}",
+  "@trackEditReviewSummaryDays": {
+    "placeholders": {
+      "delays": { "type": "String" }
+    }
+  },
+  "trackEditChangeReview": "שנה",
+  "trackEditSaveButton": "שמור שינויים",
+  "trackEditConfirmTitle": "להחיל שינויים?",
+  "trackEditConfirmBody": "השינויים חלים על לימוד עתידי בלבד. השלמות קיימות אינן מושפעות.",
   "trackDeleteLabel": "מחק מסלול",
   "trackDeleteContent": "למחוק לצמיתות את \"{name}\"? כל ההתקדמות והנתונים של מסלול זה יוסרו. לא ניתן לבטל פעולה זו.",
   "@trackDeleteContent": {

@@ -133,7 +133,7 @@ void main() {
   });
 
   // --------------------------------------------------------------------------
-  // AC1 — Schema migration: fresh DB at schemaVersion 20, all tables exist,
+  // AC1 — Schema migration: fresh DB at schemaVersion 21, all tables exist,
   //        all UNIQUE indexes exist, no migration error thrown.
   // --------------------------------------------------------------------------
 
@@ -143,19 +143,19 @@ void main() {
     setUp(() => db = inMemoryDb());
     tearDown(() => db.close());
 
-    test('UserDatabase.schemaVersion is 20', () {
+    test('UserDatabase.schemaVersion is 21', () {
       // schemaVersion is a Dart constant — no I/O needed.
-      expect(db.schemaVersion, equals(20));
+      expect(db.schemaVersion, equals(21));
     });
 
     test(
-      'PRAGMA user_version matches schemaVersion 20 after first query',
+      'PRAGMA user_version matches schemaVersion 21 after first query',
       () async {
         // Trigger schema materialisation by issuing any query.
         await db.customSelect('SELECT 1').get();
 
         final row = await db.customSelect('PRAGMA user_version').getSingle();
-        expect(row.read<int>('user_version'), equals(20));
+        expect(row.read<int>('user_version'), equals(21));
       },
     );
 

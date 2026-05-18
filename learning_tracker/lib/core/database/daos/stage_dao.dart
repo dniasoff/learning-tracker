@@ -58,16 +58,34 @@ class StageDao extends DatabaseAccessor<UserDatabase> with _$StageDaoMixin {
 
   // ========== Track-Scoped Queries (Story 20.2) ==========
 
-  /// Get stage definitions for a specific track, ordered by stageOrder.
+  /// Get active stage definitions for a specific track, ordered by stageOrder.
+  ///
+  /// Excludes superseded rows (set by edit-track) so the scheduler and UI
+  /// always see only the current stage set.
   Future<List<StageDefinition>> getStagesByTrack(int trackId) =>
       (select(stageDefinitions)
-            ..where((t) => t.trackId.equals(trackId))
+            ..where(
+              (t) =>
+                  t.trackId.equals(trackId) & t.supersededAt.isNull(),
+            )
             ..orderBy([(t) => OrderingTerm.asc(t.stageOrder)]))
           .get();
 
   /// Delete all stage definitions for a specific track.
   Future<int> deleteStagesForTrack(int trackId) =>
       (delete(stageDefinitions)..where((t) => t.trackId.equals(trackId))).go();
+
+  /// Stamp supersededAt on every currently-active stage for [trackId].
+  ///
+  /// Called by the edit-track flow before inserting replacement stages.
+  /// Old rows survive so completions.stageId FKs remain valid.
+  Future<int> supersedeStagesToTrack(int trackId, DateTime at) =>
+      (update(stageDefinitions)
+            ..where(
+              (t) =>
+                  t.trackId.equals(trackId) & t.supersededAt.isNull(),
+            ))
+          .write(StageDefinitionsCompanion(supersededAt: Value(at)));
 
   /// Replace all stage definitions for a track.
   Future<void> replaceStagesForTrack(

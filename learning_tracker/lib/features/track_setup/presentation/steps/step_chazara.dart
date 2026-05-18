@@ -21,6 +21,7 @@ class ChazaraInlineSetup extends StatefulWidget {
     required this.headerTitle,
     required this.headerSubtitle,
     required this.onComplete,
+    this.initialDelays,
     super.key,
   });
 
@@ -28,6 +29,10 @@ class ChazaraInlineSetup extends StatefulWidget {
   final String headerTitle;
   final String headerSubtitle;
   final ValueChanged<LearningProcessWizardResult?> onComplete;
+
+  /// When provided, pre-selects the matching preset or switches to Custom mode.
+  /// Each value is the delayDays of one chazarah round (learn stage excluded).
+  final List<int>? initialDelays;
 
   @override
   State<ChazaraInlineSetup> createState() => _ChazaraInlineSetupState();
@@ -55,7 +60,29 @@ class _ChazaraInlineSetupState extends State<ChazaraInlineSetup> {
   @override
   void initState() {
     super.initState();
-    _customDelays = List.of(_presets[_selectedPresetIndex].delays);
+    final initial = widget.initialDelays;
+    if (initial != null) {
+      final match = _presets.indexWhere(
+        (p) => _listEquals(p.delays, initial),
+      );
+      if (match >= 0) {
+        _selectedPresetIndex = match;
+        _customDelays = List.of(_presets[match].delays);
+      } else {
+        _selectedPresetIndex = -1;
+        _customDelays = List.of(initial);
+      }
+    } else {
+      _customDelays = List.of(_presets[_selectedPresetIndex].delays);
+    }
+  }
+
+  static bool _listEquals(List<int> a, List<int> b) {
+    if (a.length != b.length) return false;
+    for (var i = 0; i < a.length; i++) {
+      if (a[i] != b[i]) return false;
+    }
+    return true;
   }
 
   List<int> get _activeDelays => _selectedPresetIndex >= 0

@@ -4427,6 +4427,90 @@ abstract class AppLocalizations {
   /// **'Since {date}'**
   String trackSince(String date);
 
+  /// No description provided for @trackEditLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit Track'**
+  String get trackEditLabel;
+
+  /// No description provided for @trackEditTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit Track'**
+  String get trackEditTitle;
+
+  /// No description provided for @trackEditSectionName.
+  ///
+  /// In en, this message translates to:
+  /// **'Track Name'**
+  String get trackEditSectionName;
+
+  /// No description provided for @trackEditSectionGoal.
+  ///
+  /// In en, this message translates to:
+  /// **'Goal'**
+  String get trackEditSectionGoal;
+
+  /// No description provided for @trackEditSectionStudyDays.
+  ///
+  /// In en, this message translates to:
+  /// **'Study Days'**
+  String get trackEditSectionStudyDays;
+
+  /// No description provided for @trackEditSectionReview.
+  ///
+  /// In en, this message translates to:
+  /// **'Review (Chazara)'**
+  String get trackEditSectionReview;
+
+  /// No description provided for @trackEditGoalTypeLocked.
+  ///
+  /// In en, this message translates to:
+  /// **'Goal type cannot be changed after setup'**
+  String get trackEditGoalTypeLocked;
+
+  /// No description provided for @trackEditProgramLocked.
+  ///
+  /// In en, this message translates to:
+  /// **'Review, scope, and study days are managed by the program.'**
+  String get trackEditProgramLocked;
+
+  /// No description provided for @trackEditReviewSummaryNone.
+  ///
+  /// In en, this message translates to:
+  /// **'No review'**
+  String get trackEditReviewSummaryNone;
+
+  /// No description provided for @trackEditReviewSummaryDays.
+  ///
+  /// In en, this message translates to:
+  /// **'After {delays}'**
+  String trackEditReviewSummaryDays(String delays);
+
+  /// No description provided for @trackEditChangeReview.
+  ///
+  /// In en, this message translates to:
+  /// **'Change'**
+  String get trackEditChangeReview;
+
+  /// No description provided for @trackEditSaveButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Save Changes'**
+  String get trackEditSaveButton;
+
+  /// No description provided for @trackEditConfirmTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Apply changes?'**
+  String get trackEditConfirmTitle;
+
+  /// No description provided for @trackEditConfirmBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Changes apply to future learning only. Existing completions are not affected.'**
+  String get trackEditConfirmBody;
+
   /// No description provided for @trackDeleteLabel.
   ///
   /// In en, this message translates to:

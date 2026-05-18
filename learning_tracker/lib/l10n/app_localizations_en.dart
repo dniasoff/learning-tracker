@@ -2464,6 +2464,53 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get trackEditLabel => 'Edit Track';
+
+  @override
+  String get trackEditTitle => 'Edit Track';
+
+  @override
+  String get trackEditSectionName => 'Track Name';
+
+  @override
+  String get trackEditSectionGoal => 'Goal';
+
+  @override
+  String get trackEditSectionStudyDays => 'Study Days';
+
+  @override
+  String get trackEditSectionReview => 'Review (Chazara)';
+
+  @override
+  String get trackEditGoalTypeLocked =>
+      'Goal type cannot be changed after setup';
+
+  @override
+  String get trackEditProgramLocked =>
+      'Review, scope, and study days are managed by the program.';
+
+  @override
+  String get trackEditReviewSummaryNone => 'No review';
+
+  @override
+  String trackEditReviewSummaryDays(String delays) {
+    return 'After $delays';
+  }
+
+  @override
+  String get trackEditChangeReview => 'Change';
+
+  @override
+  String get trackEditSaveButton => 'Save Changes';
+
+  @override
+  String get trackEditConfirmTitle => 'Apply changes?';
+
+  @override
+  String get trackEditConfirmBody =>
+      'Changes apply to future learning only. Existing completions are not affected.';
+
+  @override
   String get trackDeleteLabel => 'Delete Track';
 
   @override
@@ -2619,6 +2666,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'Complete daily tasks to see your progress here';
 
   @override
-  String itemsLearnedOf(int completed, int total) =>
-      '$completed of $total';
+  String itemsLearnedOf(int completed, int total) {
+    return '$completed of $total';
+  }
 }

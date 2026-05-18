@@ -74,14 +74,21 @@ class LearningProcessWizardService {
   ///
   /// [profileId] identifies the profile to associate with the preset program.
   /// [trackId] is the FK to curriculum_tracks.id for the target track.
+  ///
+  /// Pass [clearFirst] = false when the caller has already superseded the old
+  /// stage rows (edit-track flow) and must not hard-delete them — those rows
+  /// are retained so completions.stageId FKs stay valid.
   Future<void> applyWizardResult(
     WizardResult result, {
     required int profileId,
     required int trackId,
+    bool clearFirst = true,
   }) async {
-    // Replace stages for this track only — other active tracks for the same
-    // curriculum keep their own stage rows (Story 20.2 track-scoping).
-    await _stageDao.deleteStagesForTrack(trackId);
+    if (clearFirst) {
+      // Replace stages for this track only — other active tracks for the same
+      // curriculum keep their own stage rows (Story 20.2 track-scoping).
+      await _stageDao.deleteStagesForTrack(trackId);
+    }
 
     switch (result.choice) {
       case WizardChoice.preset:

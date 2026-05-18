@@ -2691,6 +2691,17 @@ class $StageDefinitionsTable extends StageDefinitions
     type: DriftSqlType.int,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _supersededAtMeta = const VerificationMeta(
+    'supersededAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> supersededAt = GeneratedColumn<DateTime>(
+    'superseded_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -2704,6 +2715,7 @@ class $StageDefinitionsTable extends StageDefinitions
     scheduleType,
     daysOfWeek,
     rollingWindowSize,
+    supersededAt,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -2804,6 +2816,15 @@ class $StageDefinitionsTable extends StageDefinitions
         ),
       );
     }
+    if (data.containsKey('superseded_at')) {
+      context.handle(
+        _supersededAtMeta,
+        supersededAt.isAcceptableOrUnknown(
+          data['superseded_at']!,
+          _supersededAtMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -2861,6 +2882,10 @@ class $StageDefinitionsTable extends StageDefinitions
         DriftSqlType.int,
         data['${effectivePrefix}rolling_window_size'],
       ),
+      supersededAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}superseded_at'],
+      ),
     );
   }
 
@@ -2884,6 +2909,13 @@ class StageDefinition extends DataClass implements Insertable<StageDefinition> {
   final String scheduleType;
   final String? daysOfWeek;
   final int? rollingWindowSize;
+
+  /// Set when a stage row is superseded by an edit-track operation.
+  ///
+  /// Completions already recorded keep their stageId FK pointing at the old
+  /// row. The scheduler only uses rows where supersededAt IS NULL when
+  /// assigning stages to newly-learned items.
+  final DateTime? supersededAt;
   const StageDefinition({
     required this.id,
     required this.profileId,
@@ -2896,6 +2928,7 @@ class StageDefinition extends DataClass implements Insertable<StageDefinition> {
     required this.scheduleType,
     this.daysOfWeek,
     this.rollingWindowSize,
+    this.supersededAt,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -2914,6 +2947,9 @@ class StageDefinition extends DataClass implements Insertable<StageDefinition> {
     }
     if (!nullToAbsent || rollingWindowSize != null) {
       map['rolling_window_size'] = Variable<int>(rollingWindowSize);
+    }
+    if (!nullToAbsent || supersededAt != null) {
+      map['superseded_at'] = Variable<DateTime>(supersededAt);
     }
     return map;
   }
@@ -2935,6 +2971,9 @@ class StageDefinition extends DataClass implements Insertable<StageDefinition> {
       rollingWindowSize: rollingWindowSize == null && nullToAbsent
           ? const Value.absent()
           : Value(rollingWindowSize),
+      supersededAt: supersededAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(supersededAt),
     );
   }
 
@@ -2955,6 +2994,7 @@ class StageDefinition extends DataClass implements Insertable<StageDefinition> {
       scheduleType: serializer.fromJson<String>(json['scheduleType']),
       daysOfWeek: serializer.fromJson<String?>(json['daysOfWeek']),
       rollingWindowSize: serializer.fromJson<int?>(json['rollingWindowSize']),
+      supersededAt: serializer.fromJson<DateTime?>(json['supersededAt']),
     );
   }
   @override
@@ -2972,6 +3012,7 @@ class StageDefinition extends DataClass implements Insertable<StageDefinition> {
       'scheduleType': serializer.toJson<String>(scheduleType),
       'daysOfWeek': serializer.toJson<String?>(daysOfWeek),
       'rollingWindowSize': serializer.toJson<int?>(rollingWindowSize),
+      'supersededAt': serializer.toJson<DateTime?>(supersededAt),
     };
   }
 
@@ -2987,6 +3028,7 @@ class StageDefinition extends DataClass implements Insertable<StageDefinition> {
     String? scheduleType,
     Value<String?> daysOfWeek = const Value.absent(),
     Value<int?> rollingWindowSize = const Value.absent(),
+    Value<DateTime?> supersededAt = const Value.absent(),
   }) => StageDefinition(
     id: id ?? this.id,
     profileId: profileId ?? this.profileId,
@@ -3001,6 +3043,7 @@ class StageDefinition extends DataClass implements Insertable<StageDefinition> {
     rollingWindowSize: rollingWindowSize.present
         ? rollingWindowSize.value
         : this.rollingWindowSize,
+    supersededAt: supersededAt.present ? supersededAt.value : this.supersededAt,
   );
   StageDefinition copyWithCompanion(StageDefinitionsCompanion data) {
     return StageDefinition(
@@ -3025,6 +3068,9 @@ class StageDefinition extends DataClass implements Insertable<StageDefinition> {
       rollingWindowSize: data.rollingWindowSize.present
           ? data.rollingWindowSize.value
           : this.rollingWindowSize,
+      supersededAt: data.supersededAt.present
+          ? data.supersededAt.value
+          : this.supersededAt,
     );
   }
 
@@ -3041,7 +3087,8 @@ class StageDefinition extends DataClass implements Insertable<StageDefinition> {
           ..write('isDefault: $isDefault, ')
           ..write('scheduleType: $scheduleType, ')
           ..write('daysOfWeek: $daysOfWeek, ')
-          ..write('rollingWindowSize: $rollingWindowSize')
+          ..write('rollingWindowSize: $rollingWindowSize, ')
+          ..write('supersededAt: $supersededAt')
           ..write(')'))
         .toString();
   }
@@ -3059,6 +3106,7 @@ class StageDefinition extends DataClass implements Insertable<StageDefinition> {
     scheduleType,
     daysOfWeek,
     rollingWindowSize,
+    supersededAt,
   );
   @override
   bool operator ==(Object other) =>
@@ -3074,7 +3122,8 @@ class StageDefinition extends DataClass implements Insertable<StageDefinition> {
           other.isDefault == this.isDefault &&
           other.scheduleType == this.scheduleType &&
           other.daysOfWeek == this.daysOfWeek &&
-          other.rollingWindowSize == this.rollingWindowSize);
+          other.rollingWindowSize == this.rollingWindowSize &&
+          other.supersededAt == this.supersededAt);
 }
 
 class StageDefinitionsCompanion extends UpdateCompanion<StageDefinition> {
@@ -3089,6 +3138,7 @@ class StageDefinitionsCompanion extends UpdateCompanion<StageDefinition> {
   final Value<String> scheduleType;
   final Value<String?> daysOfWeek;
   final Value<int?> rollingWindowSize;
+  final Value<DateTime?> supersededAt;
   const StageDefinitionsCompanion({
     this.id = const Value.absent(),
     this.profileId = const Value.absent(),
@@ -3101,6 +3151,7 @@ class StageDefinitionsCompanion extends UpdateCompanion<StageDefinition> {
     this.scheduleType = const Value.absent(),
     this.daysOfWeek = const Value.absent(),
     this.rollingWindowSize = const Value.absent(),
+    this.supersededAt = const Value.absent(),
   });
   StageDefinitionsCompanion.insert({
     this.id = const Value.absent(),
@@ -3114,6 +3165,7 @@ class StageDefinitionsCompanion extends UpdateCompanion<StageDefinition> {
     this.scheduleType = const Value.absent(),
     this.daysOfWeek = const Value.absent(),
     this.rollingWindowSize = const Value.absent(),
+    this.supersededAt = const Value.absent(),
   }) : profileId = Value(profileId),
        curriculumId = Value(curriculumId),
        trackId = Value(trackId),
@@ -3132,6 +3184,7 @@ class StageDefinitionsCompanion extends UpdateCompanion<StageDefinition> {
     Expression<String>? scheduleType,
     Expression<String>? daysOfWeek,
     Expression<int>? rollingWindowSize,
+    Expression<DateTime>? supersededAt,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -3145,6 +3198,7 @@ class StageDefinitionsCompanion extends UpdateCompanion<StageDefinition> {
       if (scheduleType != null) 'schedule_type': scheduleType,
       if (daysOfWeek != null) 'days_of_week': daysOfWeek,
       if (rollingWindowSize != null) 'rolling_window_size': rollingWindowSize,
+      if (supersededAt != null) 'superseded_at': supersededAt,
     });
   }
 
@@ -3160,6 +3214,7 @@ class StageDefinitionsCompanion extends UpdateCompanion<StageDefinition> {
     Value<String>? scheduleType,
     Value<String?>? daysOfWeek,
     Value<int?>? rollingWindowSize,
+    Value<DateTime?>? supersededAt,
   }) {
     return StageDefinitionsCompanion(
       id: id ?? this.id,
@@ -3173,6 +3228,7 @@ class StageDefinitionsCompanion extends UpdateCompanion<StageDefinition> {
       scheduleType: scheduleType ?? this.scheduleType,
       daysOfWeek: daysOfWeek ?? this.daysOfWeek,
       rollingWindowSize: rollingWindowSize ?? this.rollingWindowSize,
+      supersededAt: supersededAt ?? this.supersededAt,
     );
   }
 
@@ -3212,6 +3268,9 @@ class StageDefinitionsCompanion extends UpdateCompanion<StageDefinition> {
     if (rollingWindowSize.present) {
       map['rolling_window_size'] = Variable<int>(rollingWindowSize.value);
     }
+    if (supersededAt.present) {
+      map['superseded_at'] = Variable<DateTime>(supersededAt.value);
+    }
     return map;
   }
 
@@ -3228,7 +3287,8 @@ class StageDefinitionsCompanion extends UpdateCompanion<StageDefinition> {
           ..write('isDefault: $isDefault, ')
           ..write('scheduleType: $scheduleType, ')
           ..write('daysOfWeek: $daysOfWeek, ')
-          ..write('rollingWindowSize: $rollingWindowSize')
+          ..write('rollingWindowSize: $rollingWindowSize, ')
+          ..write('supersededAt: $supersededAt')
           ..write(')'))
         .toString();
   }
@@ -15444,6 +15504,7 @@ typedef $$StageDefinitionsTableCreateCompanionBuilder =
       Value<String> scheduleType,
       Value<String?> daysOfWeek,
       Value<int?> rollingWindowSize,
+      Value<DateTime?> supersededAt,
     });
 typedef $$StageDefinitionsTableUpdateCompanionBuilder =
     StageDefinitionsCompanion Function({
@@ -15458,6 +15519,7 @@ typedef $$StageDefinitionsTableUpdateCompanionBuilder =
       Value<String> scheduleType,
       Value<String?> daysOfWeek,
       Value<int?> rollingWindowSize,
+      Value<DateTime?> supersededAt,
     });
 
 final class $$StageDefinitionsTableReferences
@@ -15572,6 +15634,11 @@ class $$StageDefinitionsTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
+  ColumnFilters<DateTime> get supersededAt => $composableBuilder(
+    column: $table.supersededAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
   $$LearnerProfilesTableFilterComposer get profileId {
     final $$LearnerProfilesTableFilterComposer composer = $composerBuilder(
       composer: this,
@@ -15673,6 +15740,11 @@ class $$StageDefinitionsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<DateTime> get supersededAt => $composableBuilder(
+    column: $table.supersededAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   $$LearnerProfilesTableOrderingComposer get profileId {
     final $$LearnerProfilesTableOrderingComposer composer = $composerBuilder(
       composer: this,
@@ -15766,6 +15838,11 @@ class $$StageDefinitionsTableAnnotationComposer
     builder: (column) => column,
   );
 
+  GeneratedColumn<DateTime> get supersededAt => $composableBuilder(
+    column: $table.supersededAt,
+    builder: (column) => column,
+  );
+
   $$LearnerProfilesTableAnnotationComposer get profileId {
     final $$LearnerProfilesTableAnnotationComposer composer = $composerBuilder(
       composer: this,
@@ -15854,6 +15931,7 @@ class $$StageDefinitionsTableTableManager
                 Value<String> scheduleType = const Value.absent(),
                 Value<String?> daysOfWeek = const Value.absent(),
                 Value<int?> rollingWindowSize = const Value.absent(),
+                Value<DateTime?> supersededAt = const Value.absent(),
               }) => StageDefinitionsCompanion(
                 id: id,
                 profileId: profileId,
@@ -15866,6 +15944,7 @@ class $$StageDefinitionsTableTableManager
                 scheduleType: scheduleType,
                 daysOfWeek: daysOfWeek,
                 rollingWindowSize: rollingWindowSize,
+                supersededAt: supersededAt,
               ),
           createCompanionCallback:
               ({
@@ -15880,6 +15959,7 @@ class $$StageDefinitionsTableTableManager
                 Value<String> scheduleType = const Value.absent(),
                 Value<String?> daysOfWeek = const Value.absent(),
                 Value<int?> rollingWindowSize = const Value.absent(),
+                Value<DateTime?> supersededAt = const Value.absent(),
               }) => StageDefinitionsCompanion.insert(
                 id: id,
                 profileId: profileId,
@@ -15892,6 +15972,7 @@ class $$StageDefinitionsTableTableManager
                 scheduleType: scheduleType,
                 daysOfWeek: daysOfWeek,
                 rollingWindowSize: rollingWindowSize,
+                supersededAt: supersededAt,
               ),
           withReferenceMapper: (p0) => p0
               .map(

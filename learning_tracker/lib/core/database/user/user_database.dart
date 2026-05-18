@@ -116,7 +116,7 @@ class UserDatabase extends _$UserDatabase {
   UserDatabase(super.e);
 
   @override
-  int get schemaVersion => 20;
+  int get schemaVersion => 21;
 
   // drift_dev cannot express WHERE in a Dart-defined view's `as()` body
   // (cascade `..where()` confuses the generator).  The auto-generated SQL for
@@ -261,6 +261,23 @@ class UserDatabase extends _$UserDatabase {
           ''');
           await customStatement('DROP VIEW IF EXISTS completions_view');
           await customStatement(_completionsViewSql);
+        }
+
+        // Edit-track (v20 → v21): add supersededAt to stage_definitions so
+        // in-progress review items keep their stage FK while new items pick
+        // up the replacement stages.
+        // Guard: alterTable at v17 recreates stage_definitions with the current
+        // schema, so the column may already exist when migrating from ≤ v16.
+        if (from < 21) {
+          final stageCols = await customSelect(
+            'PRAGMA table_info(stage_definitions)',
+          ).get();
+          if (!stageCols.any((r) => r.data['name'] == 'superseded_at')) {
+            await m.addColumn(
+              stageDefinitions,
+              stageDefinitions.supersededAt,
+            );
+          }
         }
       },
     );

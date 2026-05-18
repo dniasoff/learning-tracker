@@ -1208,6 +1208,25 @@
       "date": { "type": "String" }
     }
   },
+  "trackEditLabel": "Edit Track",
+  "trackEditTitle": "Edit Track",
+  "trackEditSectionName": "Track Name",
+  "trackEditSectionGoal": "Goal",
+  "trackEditSectionStudyDays": "Study Days",
+  "trackEditSectionReview": "Review (Chazara)",
+  "trackEditGoalTypeLocked": "Goal type cannot be changed after setup",
+  "trackEditProgramLocked": "Review, scope, and study days are managed by the program.",
+  "trackEditReviewSummaryNone": "No review",
+  "trackEditReviewSummaryDays": "After {delays}",
+  "@trackEditReviewSummaryDays": {
+    "placeholders": {
+      "delays": { "type": "String" }
+    }
+  },
+  "trackEditChangeReview": "Change",
+  "trackEditSaveButton": "Save Changes",
+  "trackEditConfirmTitle": "Apply changes?",
+  "trackEditConfirmBody": "Changes apply to future learning only. Existing completions are not affected.",
   "trackDeleteLabel": "Delete Track",
   "trackDeleteContent": "Permanently delete \"{name}\"? All progress and data for this track will be removed. This cannot be undone.",
   "@trackDeleteContent": {
