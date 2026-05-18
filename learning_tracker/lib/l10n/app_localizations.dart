@@ -260,12 +260,6 @@ abstract class AppLocalizations {
   /// **'OVERDUE'**
   String get activeTrackMetricOverdue;
 
-  /// No description provided for @trackLifetimeLearning.
-  ///
-  /// In en, this message translates to:
-  /// **'Lifetime learning'**
-  String get trackLifetimeLearning;
-
   /// No description provided for @trackCurrentCycle.
   ///
   /// In en, this message translates to:
@@ -4396,12 +4390,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{count} RUNNING'**
   String activeTracksRunning(int count);
-
-  /// No description provided for @trackDetailConfigType.
-  ///
-  /// In en, this message translates to:
-  /// **'Track type'**
-  String get trackDetailConfigType;
 
   /// No description provided for @trackDetailConfigGoal.
   ///

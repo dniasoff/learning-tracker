@@ -3,7 +3,7 @@
 ///
 /// AC1: lib/features/dashboard/presentation/widgets/track_card/ contains
 ///      TrackCard, TrackCardHeader, NextTaskBreadcrumb, TrackStatGrid,
-///      LifetimeLearningLine, TrackContinueButton.
+///      TrackContinueButton.
 /// AC2: TrackCardViewModel is a freezed value type importable from
 ///      lib/features/dashboard/domain/models/track_card_view_model.dart.
 /// AC3: All 4 TrackCardShape values exist and resolve:
@@ -24,7 +24,7 @@ import 'package:test/test.dart';
 void main() {
   // ── AC1: Directory and file presence ────────────────────────────────────────
   group(
-    'Story 26.6 AC1 — track_card/ directory contains all 6 files',
+    'Story 26.6 AC1 — track_card/ directory contains all 5 files',
     tags: ['story_26_6'],
     () {
       const base =
@@ -34,7 +34,6 @@ void main() {
         'track_card_header.dart',
         'next_task_breadcrumb.dart',
         'track_stat_grid.dart',
-        'lifetime_learning_line.dart',
         'track_continue_button.dart',
       ];
 
@@ -85,10 +84,6 @@ void main() {
 
       test('TrackStatGrid widget is importable', () {
         expect(TrackStatGrid, isNotNull);
-      });
-
-      test('LifetimeLearningLine widget is importable', () {
-        expect(LifetimeLearningLine, isNotNull);
       });
 
       test('TrackContinueButton widget is importable', () {

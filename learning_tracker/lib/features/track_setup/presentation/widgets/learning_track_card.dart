@@ -8,17 +8,13 @@ import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/utils/percentage_formatter.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
-import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
-import 'package:learning_tracker/features/progress/presentation/providers/lifetime_knowledge_providers.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// Rich track row used on [TrackManagementHubScreen] and
 /// [ParentTrackManagementScreen] (same visual design).
 ///
 /// **Completion** (stage/cycle) matches [dashboardTrackCompletionPercentageProvider]
-/// when not on a program track. **Lifetime learning** uses
-/// [lifetimeDataProvider] / [CurriculumLifetimeSummary.percentage] —
-/// same per-curriculum % as Settings → Add what you've learned.
+/// when not on a program track.
 class LearningTrackCard extends ConsumerWidget {
   const LearningTrackCard({
     super.key,
@@ -44,7 +40,6 @@ class LearningTrackCard extends ConsumerWidget {
     }
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context)!;
-    final profileId = ref.watch(activeProfileIdProvider);
 
     final completionAsync = ref.watch(
       dashboardTrackCompletionPercentageProvider(track.id),
@@ -66,31 +61,12 @@ class LearningTrackCard extends ConsumerWidget {
               false)
         : false;
 
-    final lifetimeSummaryAsync = curriculum != null
-        ? ref.watch(
-            lifetimeDataProvider((
-              profileId: profileId,
-              curriculumId: curriculum,
-            )),
-          )
-        : null;
-    final lifetimeFraction = lifetimeSummaryAsync?.when(
-      data: (summary) => summary?.percentage ?? 0.0,
-      loading: () => null,
-      error: (_, __) => 0.0,
-    );
-    final lifetimeProgress = lifetimeFraction ?? 0.0;
-    final lifetimePercentDisplay = lifetimeFraction == null
-        ? '…'
-        : formatFractionAsPercent(lifetimeFraction);
-
     final curriculumBarColor = AppTheme.getCurriculumColorByKey(
       track.curriculumId,
     );
 
     final accent = trackAccentForType(track.trackType);
     final icon = trackTypeIconData(track.trackType);
-    final trackLabel = trackTypeDisplayLabel(track.trackType);
 
     return Material(
       color: Colors.transparent,
@@ -154,14 +130,6 @@ class LearningTrackCard extends ConsumerWidget {
                           fontWeight: FontWeight.w800,
                         ),
                       ),
-                    const SizedBox(height: 2),
-                    Text(
-                      trackLabel,
-                      style: theme.textTheme.titleSmall?.copyWith(
-                        color: AppTheme.brandInkMuted,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
                     if (showProgress) ...[
                       const SizedBox(height: 9),
                       if (!hasProgramEnrollment) ...[
@@ -198,37 +166,6 @@ class LearningTrackCard extends ConsumerWidget {
                         ),
                         const SizedBox(height: 8),
                       ],
-                      Row(
-                        children: [
-                          Text(
-                            l10n.trackLifetimeLearning,
-                            style: theme.textTheme.labelSmall?.copyWith(
-                              color: AppTheme.brandInkMuted,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                          const Spacer(),
-                          Text(
-                            lifetimePercentDisplay,
-                            style: theme.textTheme.labelMedium?.copyWith(
-                              color: AppTheme.brandInk,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 6),
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(999),
-                        child: LinearProgressIndicator(
-                          value: lifetimeProgress,
-                          minHeight: 10,
-                          backgroundColor: const Color(0xFFE8ECF3),
-                          valueColor: const AlwaysStoppedAnimation<Color>(
-                            Color(0xFF2CC597),
-                          ),
-                        ),
-                      ),
                     ],
                   ],
                 ),
@@ -252,15 +189,6 @@ IconData trackTypeIconData(String trackType) {
     'school' => Icons.auto_awesome_rounded,
     'advanced' => Icons.verified_rounded,
     _ => Icons.menu_book_rounded,
-  };
-}
-
-String trackTypeDisplayLabel(String trackType) {
-  return switch (trackType) {
-    'personal' => 'Personal Track',
-    'school' => 'School Track',
-    'advanced' => 'Advanced Track',
-    _ => 'Learning Track',
   };
 }
 

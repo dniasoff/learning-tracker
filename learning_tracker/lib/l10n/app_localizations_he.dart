@@ -98,9 +98,6 @@ class AppLocalizationsHe extends AppLocalizations {
   String get activeTrackMetricOverdue => 'באיחור';
 
   @override
-  String get trackLifetimeLearning => 'לימוד לאורך חיים';
-
-  @override
   String get trackCurrentCycle => 'מחזור נוכחי';
 
   @override
@@ -2420,9 +2417,6 @@ class AppLocalizationsHe extends AppLocalizations {
   String activeTracksRunning(int count) {
     return '$count פעיל';
   }
-
-  @override
-  String get trackDetailConfigType => 'סוג מסלול';
 
   @override
   String get trackDetailConfigGoal => 'יעד';

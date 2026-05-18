@@ -39,7 +39,6 @@ void main() {
       ignore = en.activeTrackMetricChazara;
       ignore = en.activeTrackMetricDueToday;
       ignore = en.activeTrackMetricOverdue;
-      ignore = en.trackLifetimeLearning;
       ignore = en.continueLearning;
       ignore = en.recentActivity;
       ignore = en.myLearningJourney;
@@ -781,7 +780,6 @@ void main() {
       ignore = he.activeTrackMetricChazara;
       ignore = he.activeTrackMetricDueToday;
       ignore = he.activeTrackMetricOverdue;
-      ignore = he.trackLifetimeLearning;
       ignore = he.continueLearning;
       ignore = he.recentActivity;
       ignore = he.myLearningJourney;

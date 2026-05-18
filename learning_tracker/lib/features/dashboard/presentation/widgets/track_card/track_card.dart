@@ -3,14 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/dashboard/domain/models/track_card_view_model.dart';
-import 'package:learning_tracker/features/dashboard/presentation/widgets/track_card/lifetime_learning_line.dart';
 import 'package:learning_tracker/features/dashboard/presentation/widgets/track_card/next_task_breadcrumb.dart';
 import 'package:learning_tracker/features/dashboard/presentation/widgets/track_card/track_card_header.dart';
 import 'package:learning_tracker/features/dashboard/presentation/widgets/track_card/track_continue_button.dart';
 import 'package:learning_tracker/features/dashboard/presentation/widgets/track_card/track_stat_grid.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
-export 'lifetime_learning_line.dart';
 export 'next_task_breadcrumb.dart';
 export 'track_card_header.dart';
 export 'track_continue_button.dart';
@@ -32,7 +30,6 @@ export 'track_stat_grid.dart';
 ///   ├── NextTaskBreadcrumb
 ///   ├── TrackStatGrid
 ///   ├── (optional) empty-queue hint
-///   ├── LifetimeLearningLine
 ///   └── TrackContinueButton
 class TrackCard extends StatelessWidget {
   const TrackCard({super.key, required this.vm});
@@ -84,14 +81,12 @@ class TrackCard extends StatelessWidget {
                   ),
                 ),
 
-              // ── Lifetime + CTA ───────────────────────────────────────────
+              // ── CTA ─────────────────────────────────────────────────────
               Expanded(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.end,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    LifetimeLearningLine(vm: vm, l10n: l10n),
-                    const SizedBox(height: 8),
                     TrackContinueButton(vm: vm, l10n: l10n),
                   ],
                 ),

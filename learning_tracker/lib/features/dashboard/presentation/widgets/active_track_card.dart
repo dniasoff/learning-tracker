@@ -73,19 +73,6 @@ class ActiveTrackCard extends ConsumerWidget {
       dashboardHasProgramEnrollmentProvider(curriculum),
     );
     final profileId = ref.watch(activeProfileIdProvider);
-    final lifetimeSummariesAsync = ref.watch(
-      globalLifetimeCurriculaProvider(profileId),
-    );
-    final lifetimeFraction = lifetimeSummariesAsync.when(
-      data: (summaries) {
-        for (final s in summaries) {
-          if (s.curriculumId == curriculum) return s.percentage;
-        }
-        return 0.0;
-      },
-      loading: () => null,
-      error: (_, __) => 0.0,
-    );
     final dualMetricsAsync = ref.watch(trackDualProgressMetricsProvider(profileId));
     final dualMetricMatches = dualMetricsAsync.asData?.value
         .where((m) => m.trackId == track.id)
@@ -94,7 +81,6 @@ class ActiveTrackCard extends ConsumerWidget {
         ? null
         : dualMetricMatches.first;
     final currentCyclePct = dualMetric?.currentCyclePercentage ?? 0.0;
-    final lifetimePct = dualMetric?.lifetimePercentage ?? lifetimeFraction ?? 0.0;
     final currentCycleDisplay = dualMetricsAsync.isLoading
         ? '…'
         : formatFractionAsPercent(currentCyclePct);
@@ -123,12 +109,6 @@ class ActiveTrackCard extends ConsumerWidget {
             ref.watch(renderedDisplayForRefProvider(focusRef)).asData?.value ??
                 focusRef,
           );
-    // Icon and text both use the same value: dual-metric track-scoped lifetime
-    // when available, falling back to the full-curriculum global provider.
-    // The icon is shown as soon as either source has resolved (not loading).
-    final showLifetimeIcon = lifetimeFraction != null || dualMetric != null;
-    final lifetimeFull = (lifetimePct - 1.0).abs() < 1e-6;
-
     return Card(
       elevation: 5,
       shadowColor: Colors.black26,
@@ -243,33 +223,6 @@ class ActiveTrackCard extends ConsumerWidget {
                       ),
                     ),
                     const SizedBox(height: 2),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            '${l10n.trackLifetimeLearning} • ${formatFractionAsPercent(lifetimePct)}',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: theme.textTheme.labelSmall?.copyWith(
-                              color: AppTheme.brandInkMuted,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                        if (!showLifetimeIcon)
-                          const SizedBox.shrink()
-                        else
-                          Icon(
-                            lifetimeFull
-                                ? Icons.check_circle_rounded
-                                : Icons.show_chart_rounded,
-                            size: 20,
-                            color: lifetimeFull
-                                ? kActiveTrackCompletionGreen
-                                : AppTheme.brandInkMuted,
-                          ),
-                      ],
-                    ),
                     const SizedBox(height: 8),
                     FilledButton(
                       onPressed: () {

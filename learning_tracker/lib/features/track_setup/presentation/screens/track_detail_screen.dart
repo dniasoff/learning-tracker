@@ -74,7 +74,6 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
     );
     final accent = trackAccentForType(track.trackType);
     final icon = trackTypeIconData(track.trackType);
-    final trackLabel = trackTypeDisplayLabel(track.trackType);
     final locale = Localizations.localeOf(context).toString();
     final activatedDate = DateFormat.yMMMd(locale).format(track.activatedAt);
 
@@ -111,7 +110,6 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
             track,
             accent,
             icon,
-            trackLabel,
             activatedDate,
             hasProgramEnrollment,
             cycleFraction,
@@ -142,7 +140,6 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
     CurriculumTrack track,
     Color accent,
     IconData icon,
-    String trackLabel,
     String activatedDate,
     bool hasProgramEnrollment,
     double cycleFraction,
@@ -185,14 +182,6 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      trackLabel,
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        color: AppTheme.brandBlueDeep,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
                     Text(
                       AppLocalizations.of(context)!.trackSince(activatedDate),
                       style: theme.textTheme.bodySmall?.copyWith(
@@ -240,7 +229,6 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
           const SizedBox(height: 16),
           const Divider(height: 1, color: Color(0xFFEEF0F6)),
           const SizedBox(height: 14),
-          _configRow(theme, l10n.trackDetailConfigType, trackLabel),
           if (goal != null)
             _configRow(theme, l10n.trackDetailConfigGoal, _goalLabel(goal, l10n)),
           if (itemsRemaining != null)

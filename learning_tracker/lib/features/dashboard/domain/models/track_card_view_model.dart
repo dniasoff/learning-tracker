@@ -34,7 +34,7 @@ abstract class NextTaskData with _$NextTaskData {
   }) = _NextTaskData;
 }
 
-/// Data for the [LifetimeLearningLine] row.
+/// Data for the lifetime-learning summary row.
 @freezed
 abstract class LifetimeLearningData with _$LifetimeLearningData {
   const factory LifetimeLearningData({
@@ -55,7 +55,7 @@ abstract class LifetimeLearningData with _$LifetimeLearningData {
 ///   • [TrackCardHeader]      — displayNamePrimary / displayNameSecondary / icon
 ///   • [NextTaskBreadcrumb]   — nextTask breadcrumb + label
 ///   • [TrackStatGrid]        — three stat buckets (review / today / overdue)
-///   • [LifetimeLearningLine] — lifetime fraction + completion icon
+///   • lifetime fraction + completion icon (now inline in TrackCard)
 ///   • [TrackContinueButton]  — CTA that navigates to sefariaRef or fallback
 ///
 /// All four shapes ([TrackCardShape]) render through the same widget tree;

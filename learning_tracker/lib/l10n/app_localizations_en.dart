@@ -99,9 +99,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get activeTrackMetricOverdue => 'OVERDUE';
 
   @override
-  String get trackLifetimeLearning => 'Lifetime learning';
-
-  @override
   String get trackCurrentCycle => 'This cycle';
 
   @override
@@ -2447,9 +2444,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String activeTracksRunning(int count) {
     return '$count RUNNING';
   }
-
-  @override
-  String get trackDetailConfigType => 'Track type';
 
   @override
   String get trackDetailConfigGoal => 'Goal';
