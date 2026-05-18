@@ -78,11 +78,11 @@ void main() {
         await deviceB.completionEventDao.appendEvent(
           CompletionEventsCompanion.insert(
             profileId: row.profileId,
-            curriculumId: data['curriculumId'] as String,
-            sefariaRef: data['sefariaRef'] as String,
-            stageId: (data['stageId'] as num).toInt(),
-            trackType: data['trackType'] as String,
-            eventTimestamp: DateTime.parse(data['completedAt'] as String),
+            curriculumId: data['curriculum_id'] as String,
+            sefariaRef: data['sefaria_ref'] as String,
+            stageId: (data['stage_id'] as num).toInt(),
+            trackType: data['track_type'] as String,
+            eventTimestamp: DateTime.parse(data['completed_at'] as String),
           ),
         );
       }

@@ -120,12 +120,12 @@ void main() {
 
         final payload =
             jsonDecode(outboxRows.first.payload) as Map<String, dynamic>;
-        expect(payload['profileId'], equals(1));
-        expect(payload['sefariaRef'], equals('Mishnah Berakhot 1'));
-        expect(payload['stageId'], equals(1));
-        expect(payload['trackType'], equals('personal'));
+        expect(payload['profile_id'], equals(1));
+        expect(payload['sefaria_ref'], equals('Mishnah Berakhot 1'));
+        expect(payload['stage_id'], equals(1));
+        expect(payload['track_type'], equals('personal'));
         expect(payload['points'], equals(5));
-        expect(payload['curriculumId'], equals('mishnah_yomit'));
+        expect(payload['curriculum_id'], equals('mishnah_yomit'));
 
         // AC 25.15: completion_events row must be inserted atomically.
         final events = await db.select(db.completionEvents).get();
@@ -245,15 +245,15 @@ void main() {
           final payload =
               jsonDecode(outboxRows.first.payload) as Map<String, dynamic>;
 
-          expect(payload, containsPair('profileId', 1));
-          expect(payload, containsPair('curriculumId', 'mishnah_yomit'));
-          expect(payload, containsPair('sefariaRef', 'Mishnah Berakhot 1'));
-          expect(payload, containsPair('stageId', 1));
-          expect(payload, containsPair('trackType', 'personal'));
+          expect(payload, containsPair('profile_id', 1));
+          expect(payload, containsPair('curriculum_id', 'mishnah_yomit'));
+          expect(payload, containsPair('sefaria_ref', 'Mishnah Berakhot 1'));
+          expect(payload, containsPair('stage_id', 1));
+          expect(payload, containsPair('track_type', 'personal'));
           expect(payload, containsPair('points', 5));
           expect(
             payload,
-            containsPair('completedAt', '2026-05-13T14:30:00.000Z'),
+            containsPair('completed_at', '2026-05-13T14:30:00.000Z'),
           );
         },
       );

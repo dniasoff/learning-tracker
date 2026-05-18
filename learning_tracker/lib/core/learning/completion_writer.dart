@@ -30,10 +30,12 @@ class CompletionWriteResult {
 /// written to after schema v20 (C1); it is now a legacy projection and the
 /// Drift view `completions_view` is the read surface.
 ///
-/// Idempotency: the writer checks for an existing
-/// `(profileId, sefariaRef, stageId, trackType)` row in `completion_events`.
-/// A duplicate command returns the existing view row with `isNew = false`
-/// and does NOT enqueue a second outbox push.
+/// Idempotency: both [commit] and [commitBatch] check for an existing
+/// `(profileId, sefariaRef, stageId, trackType)` row in `completion_events`
+/// BEFORE inserting. A duplicate command returns the existing row with
+/// `isNew = false` and does NOT enqueue a second outbox push. The `outbox`
+/// table has no UNIQUE index, so this pre-insert existence check — not
+/// `INSERT OR IGNORE` — is what prevents duplicate pushes.
 ///
 /// Out of scope for this writer:
 ///  - Streak-event tee (moved into CompletionWriter by DNI-337).
@@ -51,26 +53,53 @@ class CompletionWriter {
 
   /// Batch-commit [commands] in a SINGLE Drift transaction (RC1 fix).
   ///
-  /// All [commands] are assumed already de-duplicated by the caller.
-  /// Inside the transaction:
-  ///  1. All `completion_events` rows are batch-inserted via
-  ///     [InsertMode.insertOrIgnore] (idempotent on the natural key).
-  ///  2. All `outbox` rows are batch-inserted via [InsertMode.insertOrIgnore].
+  /// Behaviour mirrors [commit]'s correctness, batched:
+  ///  1. [commands] are de-duplicated on the natural key
+  ///     `(profileId, sefariaRef, stageId, trackType)` — two commands with the
+  ///     same key collapse to one event + at most one outbox row.
+  ///  2. The natural keys that ALREADY exist in `completion_events` are
+  ///     snapshotted before any insert. The `outbox` table has NO unique
+  ///     index, so an `outbox` row is enqueued ONLY for genuinely-new
+  ///     completions; pre-existing ones enqueue NO outbox row and resolve
+  ///     with `isNew = false`. This prevents duplicate pushes when
+  ///     `commitBatch` is re-run (e.g. `pushAllLocalData` on cloud upgrade,
+  ///     or bulk-marking overlapping sets).
+  ///  3. All inserts and read-backs run inside one `db.transaction()`.
   ///
-  /// Returns the [CompletionWriteResult] for each command in the same order.
-  /// Rows that already existed (duplicate natural key) are returned with
-  /// `isNew = false`.
+  /// Returns one [CompletionWriteResult] per input command, in the same
+  /// order. Duplicate input commands all map to the same resolved result.
   Future<List<CompletionWriteResult>> commitBatch(
     List<CompletionCommand> commands,
   ) async {
     if (commands.isEmpty) return const [];
 
-    return _db.transaction(() async {
-      // ── 1. Batch-insert completion_events (INSERT OR IGNORE) ───────────────
+    // ── De-duplicate the input on the natural key ──────────────────────────
+    // Two commands with the same natural key must produce one event + one
+    // outbox row. Keep the FIRST occurrence as the canonical command; remember
+    // each input command's natural key so the per-command results can be
+    // reconstructed in input order afterwards.
+    final uniqueByKey = <String, CompletionCommand>{};
+    for (final cmd in commands) {
+      uniqueByKey.putIfAbsent(_naturalKey(cmd), () => cmd);
+    }
+    final distinctCommands = uniqueByKey.values.toList();
+
+    final results = await _db.transaction(() async {
+      // ── 1. Snapshot which natural keys ALREADY exist ─────────────────────
+      // Bounded: one SELECT over completion_events filtered to the batch keys.
+      final preExisting = await _existingNaturalKeys(distinctCommands);
+
+      final newCommands = distinctCommands
+          .where((cmd) => !preExisting.contains(_naturalKey(cmd)))
+          .toList();
+
+      // ── 2. Batch-insert completion_events (INSERT OR IGNORE) ─────────────
+      // INSERT OR IGNORE remains correct: the natural-key UNIQUE index makes
+      // pre-existing rows no-op, and the de-dup above ensures one row per key.
       await _db.batch((b) {
         b.insertAll(
           _db.completionEvents,
-          commands.map(
+          distinctCommands.map(
             (cmd) => CompletionEventsCompanion.insert(
               profileId: cmd.profileId,
               curriculumId: cmd.curriculumId,
@@ -86,85 +115,196 @@ class CompletionWriter {
         );
       });
 
-      // ── 2. Batch-insert outbox rows (INSERT OR IGNORE) ─────────────────────
-      await _db.batch((b) {
-        _db.outboxDao.batchInsertOutboxRows(
-          b,
-          commands
-              .map(
-                (cmd) => OutboxCompanion.insert(
-                  profileId: cmd.profileId,
-                  entityKind: OutboxEntityKind.completion,
-                  entityKey: _outboxEntityKey(cmd),
-                  payload: jsonEncode(_outboxPayload(cmd)),
-                  createdAt: cmd.completedAt,
-                ),
-              )
-              .toList(),
-        );
-      });
+      // ── 3. Batch-insert outbox rows for GENUINELY-NEW completions only ───
+      // The outbox table has no unique index, so enqueuing a row for a
+      // pre-existing completion would pile up duplicate pushes.
+      if (newCommands.isNotEmpty) {
+        await _db.batch((b) {
+          _db.outboxDao.batchInsertOutboxRows(
+            b,
+            newCommands
+                .map(
+                  (cmd) => OutboxCompanion.insert(
+                    profileId: cmd.profileId,
+                    entityKind: OutboxEntityKind.completion,
+                    entityKey: _outboxEntityKey(cmd),
+                    payload: jsonEncode(_outboxPayload(cmd)),
+                    createdAt: cmd.completedAt,
+                  ),
+                )
+                .toList(),
+          );
+        });
+      }
 
-      // ── 3. Resolve results by reading back the persisted events ────────────
-      final results = <CompletionWriteResult>[];
-      for (final cmd in commands) {
-        final event =
-            await (_db.select(_db.completionEvents)..where(
-                  (t) =>
-                      t.profileId.equals(cmd.profileId) &
-                      t.sefariaRef.equals(cmd.sefariaRef) &
-                      t.stageId.equals(cmd.stageId) &
-                      t.trackType.equals(cmd.trackType),
-                ))
-                .getSingleOrNull();
+      // ── 4. Resolve results with bounded queries (no per-command query) ───
+      // One SELECT over completion_events filtered to the batch keys, one
+      // SELECT over completions_view by the collected event ids.
+      final events = await _selectEventsForBatch(distinctCommands);
+      final eventByKey = <String, CompletionEvent>{
+        for (final e in events)
+          _naturalKeyForEvent(e): e,
+      };
 
+      final eventIds = events.map((e) => e.id).toList();
+      final viewRows = eventIds.isEmpty
+          ? const <CompletionsViewData>[]
+          : await (_db.select(_db.completionsView)
+                  ..where((t) => t.id.isIn(eventIds)))
+              .get();
+      final viewById = <int, CompletionsViewData>{
+        for (final v in viewRows) v.id: v,
+      };
+
+      // ── 5. Build a result per DISTINCT natural key ───────────────────────
+      final resultByKey = <String, CompletionWriteResult>{};
+      for (final cmd in distinctCommands) {
+        final key = _naturalKey(cmd);
+        final event = eventByKey[key];
         if (event == null) {
           throw StateError(
             'CompletionWriter.commitBatch: event not found after insert '
             'for ${cmd.sefariaRef}:${cmd.stageId}:${cmd.trackType}',
           );
         }
-
-        final viewRow = await _db.completionDao.getCompletionById(event.id);
+        final isNew = !preExisting.contains(key);
+        final viewRow = viewById[event.id];
         if (viewRow != null) {
-          results.add(CompletionWriteResult(completion: viewRow, isNew: true));
+          resultByKey[key] = CompletionWriteResult(
+            completion: _completionFromView(viewRow),
+            isNew: isNew,
+          );
         } else {
           // C3 tombstone (purgedAt IS NOT NULL) — reconstruct from event row.
-          final purgedCompletion = Completion(
-            id: event.id,
-            profileId: event.profileId,
-            curriculumId: event.curriculumId,
-            sefariaRef: event.sefariaRef,
-            stageId: event.stageId,
-            trackType: event.trackType,
-            trackId: event.trackId ?? 0,
-            completedAt: event.eventTimestamp,
-            points: event.points,
-            derivedFromEvents: true,
-          );
-          results.add(
-            CompletionWriteResult(completion: purgedCompletion, isNew: false),
+          resultByKey[key] = CompletionWriteResult(
+            completion: _completionFromEvent(event),
+            isNew: isNew,
           );
         }
       }
 
-      // Fire analytics for each new completion (fire-and-forget).
-      for (final r in results) {
-        if (r.isNew) {
-          unawaited(
-            _analytics.logCompletionRecorded(
-              sefariaRef: r.completion.sefariaRef,
-              trackType: r.completion.trackType,
-            ),
-          );
-        }
-      }
-
-      return results;
+      // Return one result per INPUT command, in input order (duplicate input
+      // commands all resolve to the same natural-key result).
+      return commands.map((cmd) => resultByKey[_naturalKey(cmd)]!).toList();
     });
+
+    // ── Analytics fired AFTER the transaction commits (G7) ─────────────────
+    // Telemetry must not be emitted for a write that then rolls back. Fire
+    // once per genuinely-new DISTINCT completion (not once per input command).
+    final firedKeys = <String>{};
+    for (final result in results) {
+      if (!result.isNew) continue;
+      final c = result.completion;
+      final key = _naturalKeyForCompletion(c);
+      if (!firedKeys.add(key)) continue;
+      unawaited(
+        _analytics.logCompletionRecorded(
+          sefariaRef: c.sefariaRef,
+          trackType: c.trackType,
+        ),
+      );
+    }
+
+    return results;
   }
 
+  /// Delimiter for natural-key composites. NUL cannot occur in a sefariaRef,
+  /// curriculumId, or trackType, so the four-part composite key is
+  /// collision-proof even though a sefariaRef contains spaces and colons.
+  static const String _keyDelim = ' ';
+
+  /// Natural-key string for a command — the idempotency key for completions.
+  static String _naturalKey(CompletionCommand cmd) => _composeKey(
+    cmd.profileId,
+    cmd.sefariaRef,
+    cmd.stageId,
+    cmd.trackType,
+  );
+
+  /// Natural-key string for a persisted event row.
+  static String _naturalKeyForEvent(CompletionEvent e) => _composeKey(
+    e.profileId,
+    e.sefariaRef,
+    e.stageId,
+    e.trackType,
+  );
+
+  /// Natural-key string for a resolved [Completion] row.
+  static String _naturalKeyForCompletion(Completion c) => _composeKey(
+    c.profileId,
+    c.sefariaRef,
+    c.stageId,
+    c.trackType,
+  );
+
+  static String _composeKey(
+    int profileId,
+    String sefariaRef,
+    int stageId,
+    String trackType,
+  ) => [profileId, sefariaRef, stageId, trackType].join(_keyDelim);
+
+  /// Returns the natural keys (from [_naturalKey]) that already have a row in
+  /// `completion_events`. Bounded: one SELECT filtered to the batch keys.
+  Future<Set<String>> _existingNaturalKeys(
+    List<CompletionCommand> commands,
+  ) async {
+    final events = await _selectEventsForBatch(commands);
+    return {for (final e in events) _naturalKeyForEvent(e)};
+  }
+
+  /// One bounded SELECT over `completion_events` matching any of [commands]'
+  /// natural keys. The IN-list filters over-fetch slightly (the cross-product
+  /// of the four columns); callers index the result by the full natural key
+  /// so an over-fetched row is never mistaken for a batch member.
+  Future<List<CompletionEvent>> _selectEventsForBatch(
+    List<CompletionCommand> commands,
+  ) {
+    final profileIds = {for (final c in commands) c.profileId}.toList();
+    final sefariaRefs = {for (final c in commands) c.sefariaRef}.toList();
+    final stageIds = {for (final c in commands) c.stageId}.toList();
+    final trackTypes = {for (final c in commands) c.trackType}.toList();
+    return (_db.select(_db.completionEvents)..where(
+          (t) =>
+              t.profileId.isIn(profileIds) &
+              t.sefariaRef.isIn(sefariaRefs) &
+              t.stageId.isIn(stageIds) &
+              t.trackType.isIn(trackTypes),
+        ))
+        .get();
+  }
+
+  /// Maps a `completions_view` row to a [Completion] (purgedAt IS NULL row).
+  static Completion _completionFromView(CompletionsViewData v) => Completion(
+    id: v.id,
+    profileId: v.profileId,
+    curriculumId: v.curriculumId,
+    sefariaRef: v.sefariaRef,
+    stageId: v.stageId,
+    trackType: v.trackType,
+    trackId: v.trackId ?? 0,
+    completedAt: v.eventTimestamp,
+    points: v.points,
+    derivedFromEvents: true,
+  );
+
+  /// Reconstructs a [Completion] from a raw event row — used when the
+  /// `completions_view` has no row (C3 tombstone, purgedAt IS NOT NULL).
+  static Completion _completionFromEvent(CompletionEvent e) => Completion(
+    id: e.id,
+    profileId: e.profileId,
+    curriculumId: e.curriculumId,
+    sefariaRef: e.sefariaRef,
+    stageId: e.stageId,
+    trackType: e.trackType,
+    trackId: e.trackId ?? 0,
+    completedAt: e.eventTimestamp,
+    points: e.points,
+    derivedFromEvents: true,
+  );
+
   Future<CompletionWriteResult> commit(CompletionCommand cmd) async {
-    return _db.transaction(() async {
+    final result = await _db.transaction(() async {
       // Idempotency check on completion_events (UNIQUE canonical table).
       // getSingleOrNull() is safe because the UNIQUE constraint guarantees
       // at most one row per natural key.
@@ -256,28 +396,40 @@ class CompletionWriter {
           'CompletionWriter: event id=$eventId not found in completions_view',
         );
       }
-      // Story 27.14 (DNI-390): fire analytics event for new completions only.
-      unawaited(
-        _analytics.logCompletionRecorded(
-          sefariaRef: cmd.sefariaRef,
-          trackType: cmd.trackType,
-        ),
-      );
       return CompletionWriteResult(completion: inserted, isNew: true);
     });
+
+    // Story 27.14 (DNI-390): fire analytics event for new completions only.
+    // Fired AFTER the transaction commits (G7) so telemetry is never emitted
+    // for a write that then rolls back.
+    if (result.isNew) {
+      unawaited(
+        _analytics.logCompletionRecorded(
+          sefariaRef: result.completion.sefariaRef,
+          trackType: result.completion.trackType,
+        ),
+      );
+    }
+    return result;
   }
 
   static String _outboxEntityKey(CompletionCommand cmd) =>
       '${cmd.profileId}:${cmd.sefariaRef}:${cmd.stageId}:${cmd.trackType}';
 
+  /// Builds the Firestore completion-document payload.
+  ///
+  /// Keys are **snake_case** — the canonical Firestore schema convention. The
+  /// merge path (`_mergeCompletions`) and `firestore.rules` both read
+  /// snake_case keys; emitting camelCase here causes every pulled completion
+  /// to be skipped (`insertedCount:0`).
   static Map<String, Object?> _outboxPayload(CompletionCommand cmd) => {
-    'profileId': cmd.profileId,
-    'curriculumId': cmd.curriculumId,
-    'sefariaRef': cmd.sefariaRef,
-    'stageId': cmd.stageId,
-    'trackType': cmd.trackType,
-    'trackId': cmd.trackId,
-    'completedAt': cmd.completedAt.toUtc().toIso8601String(),
+    'profile_id': cmd.profileId,
+    'curriculum_id': cmd.curriculumId,
+    'sefaria_ref': cmd.sefariaRef,
+    'stage_id': cmd.stageId,
+    'track_type': cmd.trackType,
+    'track_id': cmd.trackId,
+    'completed_at': cmd.completedAt.toUtc().toIso8601String(),
     'points': cmd.points,
   };
 }

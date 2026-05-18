@@ -1,6 +1,7 @@
 import 'package:drift/drift.dart';
 import 'package:learning_tracker/core/database/tables/sync_queue.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
+import 'package:learning_tracker/core/sync/outbox/outbox_processor.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 
 part 'sync_queue_dao.g.dart';
@@ -93,8 +94,9 @@ class SyncQueueDao extends DatabaseAccessor<UserDatabase>
   /// pre-fix build and are now unreachable dead data — this deletes them once
   /// at launch. Returns the number of rows removed.
   Future<int> purgeCompletionRows() {
-    return (delete(
-      syncQueue,
-    )..where((t) => t.operationType.equals('completion'))).go();
+    return (delete(syncQueue)..where(
+          (t) => t.operationType.equals(OutboxEntityKind.completion),
+        ))
+        .go();
   }
 }
