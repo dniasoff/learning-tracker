@@ -137,10 +137,12 @@ class FirestoreGatewayImpl implements FirestoreGateway {
       return {...data, 'completed_at': Timestamp.fromDate(value.toUtc())};
     }
     if (value is String) {
-      return {
-        ...data,
-        'completed_at': Timestamp.fromDate(DateTime.parse(value).toUtc()),
-      };
+      // A malformed string must not throw out of the whole batch — leave the
+      // value untouched so only this one document is affected (denied by the
+      // completed_at rule) rather than poisoning every sibling in the chunk.
+      final parsed = DateTime.tryParse(value);
+      if (parsed == null) return data;
+      return {...data, 'completed_at': Timestamp.fromDate(parsed.toUtc())};
     }
     return data;
   }
