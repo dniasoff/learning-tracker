@@ -25,11 +25,10 @@ reference.
 
 ---
 
-## C3 — Unify delete semantics
+## ~~C3 — Unify delete semantics~~ ✓ CLOSED
 
-**What:** Three delete policies exist in one flow: tracks soft-delete (`deletedAt`), stages/goals hard-delete, completions are append-only except `purgeHistory` which hard-deletes them against the table's INSERT-only contract. Unify to one stated policy per entity with a single enforcement point.
-
-**Why it needs planning:** Any change to delete semantics touches the sync engine's conflict-resolution logic and the `purgeHistory` path. Must be designed alongside C1 so the event-log contract and the delete policy are consistent.
+`purgeHistory` uses `purgedAt` tombstones on `completion_events` (never deletes rows).
+Invariant N8 regression test guards this. Policy documented in `docs/delete-policy.md`.
 
 ---
 
