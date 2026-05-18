@@ -32,14 +32,11 @@ Invariant N8 regression test guards this. Policy documented in `docs/delete-poli
 
 ---
 
-## I-5 — Two-way cross-device sync (design + harness complete)
+## ~~I-5 — Two-way cross-device sync~~ ✓ CLOSED
 
-**What:** Full bidirectional sync so two devices converge to identical state.
-
-**Done:**
-- Conflict-resolution strategy documented in `docs/sync-conflict-resolution.md` (hybrid: set-union for event logs, LWW by timestamp for mutable documents).
-- All 7 entity mergers audited and confirmed aligned with the strategy.
-- Two-device convergence test harness at `test/integration/two_device_sync_test.dart` (3 scenarios: set-union, LWW deactivation propagation, idempotent re-merge).
-
-**Remaining:**
-- Pull-on-launch guarantee (end-to-end smoke test — in progress).
+Conflict-resolution strategy documented in `docs/sync-conflict-resolution.md` (hybrid:
+set-union for event logs, LWW by timestamp for mutable documents). All 7 entity mergers
+audited. Two-device convergence harness at `test/integration/two_device_sync_test.dart`.
+Pull-on-launch smoke test at `test/integration/pull_on_launch_test.dart` (commit `49559f78`)
+— verifies Firestore `completion_events` documents land in `completions_view` via the merge
+layer after a first pull, and re-pulls are idempotent.
