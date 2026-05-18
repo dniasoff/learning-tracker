@@ -43,10 +43,25 @@ class _MockFirestoreDataSource extends Mock implements FirestoreDataSource {}
 
 class _MockConnectivityService extends Mock implements ConnectivityService {}
 
-/// [FirestoreGateway] that records every `pushSettings` call and tracks the
-/// maximum number of pushes in flight at once. The S5 single-flight guard is
-/// observable as `maxConcurrentPushes == 1` and as each enqueued row being
-/// pushed exactly once (a double-drain would re-push the same rows).
+/// [FirestoreGateway] that instruments the S5 single-flight guard.
+///
+/// The guard (`_flushInProgress` / `_rerunRequested` in
+/// `SyncEngine._runBackgroundFlush`) coalesces overlapping flush triggers into
+/// one drain. Two signals make the guard observable, and BOTH fail if the guard
+/// is removed:
+///
+/// * [maxConcurrentPushes] — the high-water mark of `pushSettings` calls in
+///   flight at one instant. With the guard exactly 1; without it, two drains
+///   run their `OfflineQueue.flush()` loops concurrently and their pushes
+///   interleave, so this reaches 2.
+/// * [pushSettingsCalls] — `OfflineQueue.flush()` removes a queue row only
+///   AFTER its push succeeds (see `offline_queue.dart`). With the guard each of
+///   the two queued rows is pushed exactly once (total 2). Without the guard
+///   two concurrent drains each call `getAllPending()` before either has
+///   removed a row, so each drain re-pushes both rows (total 4).
+///
+/// Each push is held open long enough that, absent the guard, a second drain's
+/// pushes genuinely overlap the first.
 class _ConcurrencyTrackingGateway implements FirestoreGateway {
   int pushSettingsCalls = 0;
   int _inFlight = 0;
@@ -62,7 +77,7 @@ class _ConcurrencyTrackingGateway implements FirestoreGateway {
     if (_inFlight > maxConcurrentPushes) maxConcurrentPushes = _inFlight;
     // Hold the push open long enough that a second concurrent drain would
     // overlap if the single-flight guard were broken.
-    await Future<void>.delayed(const Duration(milliseconds: 20));
+    await Future<void>.delayed(const Duration(milliseconds: 60));
     _inFlight--;
   }
 
@@ -278,38 +293,55 @@ void main() {
     });
 
     test(
-      'S5: two concurrent pushSettings → single-flight drain pushes each '
-      'queued row exactly once (no overlapping drains)',
+      'S5: two genuinely-overlapping flush triggers run as ONE drain — each '
+      'queued row pushed exactly once, never two concurrent drains',
       () async {
-        // Two rapid writes. The first push kicks off a background flush; while
-        // that drain is still pushing (the gateway holds each push open for
-        // ~20 ms), the second write triggers _runBackgroundFlush again — the
-        // _flushInProgress guard must coalesce it into the in-flight drain.
+        // Write 1 enqueues row A and kicks off drain 1, which starts pushing A
+        // (the gateway holds each push open ~60 ms).
         await engine.pushSettings({
           'curriculum_id': 'mishnayos',
           'stages': <dynamic>[],
         });
+
+        // Wait long enough for drain 1 to have entered the gateway push for
+        // row A (well inside its 60 ms hold), but not long enough for that
+        // push to have finished. Write 2 then enqueues row B and fires
+        // _runBackgroundFlush again WHILE drain 1 is still pushing — the exact
+        // overlap the _flushInProgress / _rerunRequested single-flight guard
+        // must coalesce. Without the guard this second trigger spawns a
+        // concurrent drain that re-pushes the not-yet-removed row A.
+        await Future<void>.delayed(const Duration(milliseconds: 20));
         await engine.pushSettings({
           'curriculum_id': 'shabbos',
           'stages': <dynamic>[],
         });
 
-        // Let every drain (and the re-run requested by the guard) finish.
-        await Future<void>.delayed(const Duration(milliseconds: 200));
+        // Let every drain (and the re-run the guard schedules) finish.
+        await Future<void>.delayed(const Duration(milliseconds: 400));
 
+        // Guard-specific signal #1: the drains never overlap. Without the
+        // guard, drain 2 runs its OfflineQueue.flush() loop concurrently with
+        // drain 1 and their pushes interleave, so this would reach 2.
         expect(
           gateway.maxConcurrentPushes,
           equals(1),
           reason:
-              'S5: a single-flight drain serialises all pushes — two '
-              'overlapping drains would push concurrently',
+              'S5: the single-flight guard serialises drains — at no instant '
+              'may two drains have pushes in flight at once. Removing the '
+              'guard lets a second concurrent drain run, so this reaches 2.',
         );
+        // Guard-specific signal #2: each queued row is pushed exactly once.
+        // OfflineQueue.flush() removes a row only after its push succeeds, so
+        // two concurrent drains each call getAllPending() before either has
+        // removed a row and both re-push the SAME rows — total 4. Only the
+        // single-flight guard keeps this at exactly 2 (one push per row).
         expect(
           gateway.pushSettingsCalls,
           equals(2),
           reason:
-              'S5: each of the two queued rows must be pushed exactly once; '
-              'a double-drain would re-push rows the other drain already saw',
+              'S5: with the guard each of the two queued rows is pushed once '
+              '(total 2). Without the guard two concurrent drains both see '
+              'the not-yet-removed rows and re-push them (total 4).',
         );
         expect(
           await database.syncQueueDao.getPendingCount(),
@@ -577,16 +609,29 @@ void main() {
           await Future<void>.delayed(const Duration(milliseconds: 330));
         }
 
-        // Let the final debounce window + merge (and any re-armed timer)
-        // settle.
-        await Future<void>.delayed(const Duration(seconds: 2));
+        // Poll until every burst snapshot has merged rather than waiting a
+        // fixed window: a fixed delay is flaky on a loaded CI box where the
+        // final debounce window + merge tail (plus any re-armed timer) can run
+        // long. Poll every 50 ms for a bounded number of iterations (a ~10 s
+        // ceiling), stopping as soon as all `burst` refs are present — so the
+        // test waits exactly as long as needed and no longer. A bounded
+        // iteration count keeps the deadline wall-clock-independent without
+        // reaching for DateTime.now().
+        const pollInterval = Duration(milliseconds: 50);
+        const maxPollIterations = 200; // 200 * 50 ms = 10 s ceiling.
+        final expected = <String>{for (var i = 0; i < burst; i++) 'Burst $i'};
+        var refs = <String>{};
+        for (var poll = 0; poll < maxPollIterations; poll++) {
+          refs = (await database.completionEventDao.getEventsByProfile(1))
+              .map((e) => e.sefariaRef)
+              .toSet();
+          if (refs.containsAll(expected)) break;
+          await Future<void>.delayed(pollInterval);
+        }
 
-        final refs = (await database.completionEventDao.getEventsByProfile(1))
-            .map((e) => e.sefariaRef)
-            .toSet();
         expect(
           refs,
-          containsAll(<String>[for (var i = 0; i < burst; i++) 'Burst $i']),
+          containsAll(expected),
           reason:
               'I1: every snapshot delivered in the burst must be merged — no '
               'snapshot may be dropped because a prior merge had not yet '

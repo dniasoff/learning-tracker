@@ -279,7 +279,18 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
     final supervisor = _listenerSupervisor;
     if (supervisor == null) return;
     _logger?.info(event: 'sync_orchestrator_listeners_restart_for_profile');
-    unawaited(supervisor.restart());
+    // Fire-and-forget, but never silently: if restart() throws (e.g. the
+    // gateway resolver returns null mid-upgrade), log it so the failure is
+    // observable and the supervisor is not left silently detached (L2).
+    unawaited(
+      supervisor.restart().catchError((Object e, StackTrace stackTrace) {
+        _logger?.error(
+          event: 'sync_orchestrator_listeners_restart_failed',
+          exception: e,
+          stackTrace: stackTrace,
+        );
+      }),
+    );
   }
 
   /// Dispose listeners and unregister from [WidgetsBinding].
