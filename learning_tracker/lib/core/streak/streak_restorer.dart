@@ -1,10 +1,11 @@
 /// `StreakRestorer` — empty-log restore.
 ///
 /// First-launch on a new device sees an empty `streak_events` log even
-/// though the user's `completions` log (synced or local) may have
-/// history. [restoreIfEmpty] reconstitutes one synthetic `completion`
-/// event per distinct UTC completion day so the [StreakReducer]
-/// produces the right answer before any new completion is recorded.
+/// though the user's `completions_view` (backed by `completion_events`,
+/// synced or local) may have history. [restoreIfEmpty] reconstitutes one
+/// synthetic `completion` event per distinct UTC completion day so the
+/// [StreakReducer] produces the right answer before any new completion
+/// is recorded.
 ///
 /// Idempotent: re-running on a non-empty log is a no-op.
 library;
@@ -20,7 +21,7 @@ class StreakRestorer {
   final UserDatabase _db;
   final StreakEventLog _log;
 
-  /// Reconstitute events from `completions` if the log is empty for
+  /// Reconstitute events from `completions_view` if the log is empty for
   /// [profileId]. Picks the earliest completion per distinct UTC day so
   /// the natural-key UNIQUE on `streak_events` remains stable across
   /// repeated restores.

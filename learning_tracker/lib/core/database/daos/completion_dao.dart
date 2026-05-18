@@ -219,6 +219,12 @@ class CompletionDao extends DatabaseAccessor<UserDatabase>
   }
 
   /// Check if a completion exists for a specific profile.
+  ///
+  /// Queries [completionEvents] directly (not [completionsView]) so that
+  /// C3-purged rows are also detected. Querying only the view would return
+  /// `false` for purged rows, causing the sync engine to attempt a redundant
+  /// re-insert on every pull — the INSERT OR IGNORE would silently no-op
+  /// (UNIQUE key exists) but the insertedCount metric would be inflated.
   Future<bool> completionExistsByProfile({
     required String curriculumId,
     required String sefariaRef,
@@ -227,7 +233,7 @@ class CompletionDao extends DatabaseAccessor<UserDatabase>
     required DateTime completedAt,
     required int profileId,
   }) async {
-    final result = await (select(completionsView)
+    final result = await (select(completionEvents)
           ..where(
             (t) =>
                 t.curriculumId.equals(curriculumId) &
@@ -379,6 +385,10 @@ class CompletionDao extends DatabaseAccessor<UserDatabase>
   /// Check if a completion already exists by composite key.
   ///
   /// Used during sync merge to avoid inserting duplicates (additive merge per D4).
+  /// Queries [completionEvents] directly (not [completionsView]) so that C3-purged
+  /// rows are also considered existing — the INSERT OR IGNORE UNIQUE constraint
+  /// would block a re-insert anyway, and querying the view would falsely report
+  /// "not found" for purged rows on every sync pull.
   Future<bool> completionExists({
     required String curriculumId,
     required String sefariaRef,
@@ -386,7 +396,7 @@ class CompletionDao extends DatabaseAccessor<UserDatabase>
     required String trackType,
     required DateTime completedAt,
   }) async {
-    final result = await (select(completionsView)
+    final result = await (select(completionEvents)
           ..where(
             (t) =>
                 t.curriculumId.equals(curriculumId) &
