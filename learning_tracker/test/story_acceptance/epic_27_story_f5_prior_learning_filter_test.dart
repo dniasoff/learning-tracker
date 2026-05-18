@@ -25,10 +25,7 @@ import '../helpers/test_database.dart';
 // Helper: mirrors the isTaskCompleted logic as it existed BEFORE the F5 fix.
 // This is the BUGGY version — it does not check for sentinel completions.
 // ---------------------------------------------------------------------------
-bool _isTaskCompletedBuggy(
-  DailyTask task,
-  List<Completion> completions,
-) {
+bool _isTaskCompletedBuggy(DailyTask task, List<Completion> completions) {
   return completions.any((c) {
     if (c.sefariaRef != task.contentItemSefariaRef) return false;
     if (task.trackId != 0 && c.trackId != task.trackId) return false;
@@ -41,10 +38,7 @@ bool _isTaskCompletedBuggy(
 // Helper: mirrors the isTaskCompleted logic AFTER the F5 fix.
 // Sentinel completions (completedAt = 2000-01-01) are skipped.
 // ---------------------------------------------------------------------------
-bool _isTaskCompletedFixed(
-  DailyTask task,
-  List<Completion> completions,
-) {
+bool _isTaskCompletedFixed(DailyTask task, List<Completion> completions) {
   final sentinelMs = SchedulerEngine.kBulkPriorSentinelMs;
   return completions.any((c) {
     if (c.sefariaRef != task.contentItemSefariaRef) return false;
@@ -120,7 +114,8 @@ void main() {
       'BUG REPRO: buggy isTaskCompleted returns true for sentinel completion '
       '(this test documents the pre-fix behaviour and must FAIL until F5 is applied)',
       () async {
-        await seedCompletion(db, 
+        await seedCompletion(
+          db,
           CompletionsCompanion.insert(
             profileId: profileId,
             curriculumId: curriculum.storageKey,
@@ -147,11 +142,8 @@ void main() {
           estimatedEffortMinutes: 5,
         );
 
-        final completions =
-            await db.completionDao.getCompletionsByProfileForSefariaRefs(
-              profileId,
-              {sefariaRef},
-            );
+        final completions = await db.completionDao
+            .getCompletionsByProfileForSefariaRefs(profileId, {sefariaRef});
 
         // The buggy implementation treats the sentinel completion as "done",
         // which is WRONG. This assertion documents what the bug produces:
@@ -177,51 +169,46 @@ void main() {
     );
 
     // ── AC1: sentinel completion must NOT mark a task as completed ─────────
-    test(
-      'AC1: sentinel completion does not hide a task (F5 fix)',
-      () async {
-        await seedCompletion(db, 
-          CompletionsCompanion.insert(
-            profileId: profileId,
-            curriculumId: curriculum.storageKey,
-            sefariaRef: sefariaRef,
-            stageId: stageDefinitionId,
-            trackType: 'personal',
-            trackId: trackId,
-            completedAt: sentinel,
-            points: const Value(0),
-          ),
-        );
-
-        final task = DailyTask(
-          curriculumId: curriculum,
-          contentItemSefariaRef: sefariaRef,
-          stageOrder: 1,
-          stageDefinitionId: stageDefinitionId,
-          priority: DailyTaskPriority.newLearning,
-          isOverdue: false,
-          reason: 'New learning',
-          stageName: 'Learn',
+    test('AC1: sentinel completion does not hide a task (F5 fix)', () async {
+      await seedCompletion(
+        db,
+        CompletionsCompanion.insert(
+          profileId: profileId,
+          curriculumId: curriculum.storageKey,
+          sefariaRef: sefariaRef,
+          stageId: stageDefinitionId,
+          trackType: 'personal',
           trackId: trackId,
-          trackLabel: 'personal',
-          estimatedEffortMinutes: 5,
-        );
+          completedAt: sentinel,
+          points: const Value(0),
+        ),
+      );
 
-        final completions =
-            await db.completionDao.getCompletionsByProfileForSefariaRefs(
-              profileId,
-              {sefariaRef},
-            );
+      final task = DailyTask(
+        curriculumId: curriculum,
+        contentItemSefariaRef: sefariaRef,
+        stageOrder: 1,
+        stageDefinitionId: stageDefinitionId,
+        priority: DailyTaskPriority.newLearning,
+        isOverdue: false,
+        reason: 'New learning',
+        stageName: 'Learn',
+        trackId: trackId,
+        trackLabel: 'personal',
+        estimatedEffortMinutes: 5,
+      );
 
-        expect(
-          _isTaskCompletedFixed(task, completions),
-          isFalse,
-          reason:
-              'A sentinel completion (completedAt = 2000-01-01) must not '
-              'cause the task to be filtered from today\'s task list.',
-        );
-      },
-    );
+      final completions = await db.completionDao
+          .getCompletionsByProfileForSefariaRefs(profileId, {sefariaRef});
+
+      expect(
+        _isTaskCompletedFixed(task, completions),
+        isFalse,
+        reason:
+            'A sentinel completion (completedAt = 2000-01-01) must not '
+            'cause the task to be filtered from today\'s task list.',
+      );
+    });
 
     // ── AC2: genuine completion still marks the task as completed ──────────
     test(
@@ -229,7 +216,8 @@ void main() {
       () async {
         final genuineDate = DateTime.utc(2026, 5, 17, 10);
 
-        await seedCompletion(db, 
+        await seedCompletion(
+          db,
           CompletionsCompanion.insert(
             profileId: profileId,
             curriculumId: curriculum.storageKey,
@@ -256,11 +244,8 @@ void main() {
           estimatedEffortMinutes: 5,
         );
 
-        final completions =
-            await db.completionDao.getCompletionsByProfileForSefariaRefs(
-              profileId,
-              {sefariaRef},
-            );
+        final completions = await db.completionDao
+            .getCompletionsByProfileForSefariaRefs(profileId, {sefariaRef});
 
         expect(
           _isTaskCompletedFixed(task, completions),
@@ -292,7 +277,8 @@ void main() {
             delayDays: 0,
           ),
         );
-        await seedCompletion(db,
+        await seedCompletion(
+          db,
           CompletionsCompanion.insert(
             profileId: profileId,
             curriculumId: curriculum.storageKey,
@@ -304,7 +290,8 @@ void main() {
             points: const Value(0),
           ),
         );
-        await seedCompletion(db,
+        await seedCompletion(
+          db,
           CompletionsCompanion.insert(
             profileId: profileId,
             curriculumId: curriculum.storageKey,
@@ -331,11 +318,8 @@ void main() {
           estimatedEffortMinutes: 5,
         );
 
-        final completions =
-            await db.completionDao.getCompletionsByProfileForSefariaRefs(
-              profileId,
-              {sefariaRef},
-            );
+        final completions = await db.completionDao
+            .getCompletionsByProfileForSefariaRefs(profileId, {sefariaRef});
 
         expect(
           _isTaskCompletedFixed(task, completions),

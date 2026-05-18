@@ -52,10 +52,7 @@ void main() {
             'bookmark',
             '{"profile_id":1,"sefariaRef":"Berakhot 1:1"}',
           );
-          await db.syncQueueDao.enqueue(
-            'streak',
-            '{"profile_id":1}',
-          );
+          await db.syncQueueDao.enqueue('streak', '{"profile_id":1}');
           await db.syncQueueDao.enqueue('settings', '{"profile_id":1}');
 
           expect(await db.syncQueueDao.getPendingCount(), 3);
@@ -87,66 +84,67 @@ void main() {
     // ── N2 — single SyncOrchestrator per session ────────────────────────────
 
     group('N2: exactly one SyncOrchestrator instance per session', () {
-      test(
-        'syncOrchestratorProvider does not watch activeProfileIdProvider',
-        () {
-          // A `ref.watch(activeProfileIdProvider)` would rebuild the provider on
-          // every profile change, creating a second SyncOrchestratorImpl (and a
-          // second LifecycleObserver) before the first is disposed.
-          //
-          // The fix (R1): the provider is a keepAlive singleton. It may use
-          // `ref.listen(activeProfileIdProvider, ...)` to restart its listener
-          // set on a profile change — `ref.listen` runs a callback WITHOUT
-          // rebuilding the provider, so no duplicate orchestrator/observer is
-          // created. Only a `ref.watch` on activeProfileIdProvider is forbidden.
-          const srcPath =
-              'lib/core/sync/providers/sync_orchestrator_providers.dart';
-          final file = File(srcPath);
-          if (!file.existsSync()) {
-            fail('N2: provider source not found at $srcPath');
-          }
-          final source = file.readAsStringSync();
+      test('syncOrchestratorProvider does not watch activeProfileIdProvider', () {
+        // A `ref.watch(activeProfileIdProvider)` would rebuild the provider on
+        // every profile change, creating a second SyncOrchestratorImpl (and a
+        // second LifecycleObserver) before the first is disposed.
+        //
+        // The fix (R1): the provider is a keepAlive singleton. It may use
+        // `ref.listen(activeProfileIdProvider, ...)` to restart its listener
+        // set on a profile change — `ref.listen` runs a callback WITHOUT
+        // rebuilding the provider, so no duplicate orchestrator/observer is
+        // created. Only a `ref.watch` on activeProfileIdProvider is forbidden.
+        const srcPath =
+            'lib/core/sync/providers/sync_orchestrator_providers.dart';
+        final file = File(srcPath);
+        if (!file.existsSync()) {
+          fail('N2: provider source not found at $srcPath');
+        }
+        final source = file.readAsStringSync();
 
-          expect(
-            source,
-            isNot(contains('watch(activeProfileIdProvider')),
-            reason:
-                'N2: syncOrchestratorProvider must not WATCH '
-                'activeProfileIdProvider — a profile change must not tear down '
-                'and recreate the SyncOrchestrator, which would register a '
-                'duplicate LifecycleObserver with WidgetsBinding. '
-                '(ref.listen is permitted — it does not rebuild the provider.)',
-          );
-        },
-      );
+        expect(
+          source,
+          isNot(contains('watch(activeProfileIdProvider')),
+          reason:
+              'N2: syncOrchestratorProvider must not WATCH '
+              'activeProfileIdProvider — a profile change must not tear down '
+              'and recreate the SyncOrchestrator, which would register a '
+              'duplicate LifecycleObserver with WidgetsBinding. '
+              '(ref.listen is permitted — it does not rebuild the provider.)',
+        );
+      });
     });
 
     // ── N3 — fresh profile = 0 everything ──────────────────────────────────
 
     group('N3: fresh profile reports 0 completions and 0 streak', () {
-      test('getAggregateCountByProfile returns 0 for a profile with no data', () async {
-        final db = inMemoryDb();
-        addTearDown(db.close);
+      test(
+        'getAggregateCountByProfile returns 0 for a profile with no data',
+        () async {
+          final db = inMemoryDb();
+          addTearDown(db.close);
 
-        final count = await db.completionDao.getAggregateCountByProfile(
-          'mishnayos',
-          1,
-        );
-        expect(
-          count,
-          0,
-          reason: 'N3: a profile that has never marked a completion must '
-              'report 0 completions',
-        );
-      });
+          final count = await db.completionDao.getAggregateCountByProfile(
+            'mishnayos',
+            1,
+          );
+          expect(
+            count,
+            0,
+            reason:
+                'N3: a profile that has never marked a completion must '
+                'report 0 completions',
+          );
+        },
+      );
 
       test('streaks table has no row for a fresh profile', () async {
         final db = inMemoryDb();
         addTearDown(db.close);
 
-        final row = await (db.select(db.streaks)
-              ..where((t) => t.profileId.equals(1)))
-            .getSingleOrNull();
+        final row = await (db.select(
+          db.streaks,
+        )..where((t) => t.profileId.equals(1))).getSingleOrNull();
 
         expect(
           row,
@@ -162,83 +160,81 @@ void main() {
     // ── N4 — delete+re-add: lifetime completions preserved, session starts at 0
 
     group('N4: delete+re-add track leaves 0 completions', () {
-      test(
-        'restoreOrCreate after deleteTrackAndData: old completions preserved for '
-        'lifetime; current session starts at 0',
-        () async {
-          final db = inMemoryDb();
-          addTearDown(db.close);
-          await seedProfile(db);
+      test('restoreOrCreate after deleteTrackAndData: old completions preserved for '
+          'lifetime; current session starts at 0', () async {
+        final db = inMemoryDb();
+        addTearDown(db.close);
+        await seedProfile(db);
 
-          // Create a track for profile 1.
-          final originalId = await db.trackDao.restoreOrCreate(
-            profileId: 1,
-            curriculumId: CurriculumId.mishnayos,
-            trackType: TrackType.personal,
+        // Create a track for profile 1.
+        final originalId = await db.trackDao.restoreOrCreate(
+          profileId: 1,
+          curriculumId: CurriculumId.mishnayos,
+          trackType: TrackType.personal,
+        );
+
+        // Directly insert 3 completions attached to that track, all in the past.
+        for (var i = 0; i < 3; i++) {
+          await seedCompletion(
+            db,
+            CompletionsCompanion.insert(
+              profileId: 1,
+              curriculumId: CurriculumId.mishnayos.storageKey,
+              sefariaRef: 'Berakhot 1:${i + 1}',
+              stageId: 1,
+              trackType: TrackType.personal.storageKey,
+              trackId: originalId,
+              completedAt: DateTime.utc(2026, 5, 1),
+            ),
           );
+        }
 
-          // Directly insert 3 completions attached to that track, all in the past.
-          for (var i = 0; i < 3; i++) {
-            await seedCompletion(
-              db,
-              CompletionsCompanion.insert(
-                profileId: 1,
-                curriculumId: CurriculumId.mishnayos.storageKey,
-                sefariaRef: 'Berakhot 1:${i + 1}',
-                stageId: 1,
-                trackType: TrackType.personal.storageKey,
-                trackId: originalId,
-                completedAt: DateTime.utc(2026, 5, 1),
-              ),
+        expect(
+          await db.completionDao.getAggregateCountByProfile('mishnayos', 1),
+          3,
+        );
+
+        // Delete the track (soft-delete; completions are intentionally kept).
+        await db.trackDao.deleteTrackAndData(originalId);
+
+        // Re-add the same curriculum — restoreOrCreate reuses the old row ID.
+        final restoredId = await db.trackDao.restoreOrCreate(
+          profileId: 1,
+          curriculumId: CurriculumId.mishnayos,
+          trackType: TrackType.personal,
+        );
+
+        expect(
+          restoredId,
+          equals(originalId),
+          reason:
+              'N4 pre-condition: restoreOrCreate must reuse the same row id',
+        );
+
+        final restored = await db.trackDao.getTrackById(restoredId);
+
+        // Lifetime count still includes pre-restore completions.
+        expect(
+          await db.completionDao.getAggregateCountByProfile('mishnayos', 1),
+          3,
+          reason: 'N4: lifetime completions must survive delete+restore',
+        );
+
+        // Current-session count (completedAt >= activatedAt) is 0 — fresh start.
+        final sessionCompletions = await db.completionDao
+            .getCompletionsByTrackAndProfileSince(
+              restoredId,
+              1,
+              restored!.activatedAt,
             );
-          }
-
-          expect(
-            await db.completionDao.getAggregateCountByProfile('mishnayos', 1),
-            3,
-          );
-
-          // Delete the track (soft-delete; completions are intentionally kept).
-          await db.trackDao.deleteTrackAndData(originalId);
-
-          // Re-add the same curriculum — restoreOrCreate reuses the old row ID.
-          final restoredId = await db.trackDao.restoreOrCreate(
-            profileId: 1,
-            curriculumId: CurriculumId.mishnayos,
-            trackType: TrackType.personal,
-          );
-
-          expect(
-            restoredId,
-            equals(originalId),
-            reason: 'N4 pre-condition: restoreOrCreate must reuse the same row id',
-          );
-
-          final restored = await db.trackDao.getTrackById(restoredId);
-
-          // Lifetime count still includes pre-restore completions.
-          expect(
-            await db.completionDao.getAggregateCountByProfile('mishnayos', 1),
-            3,
-            reason: 'N4: lifetime completions must survive delete+restore',
-          );
-
-          // Current-session count (completedAt >= activatedAt) is 0 — fresh start.
-          final sessionCompletions = await db.completionDao
-              .getCompletionsByTrackAndProfileSince(
-                restoredId,
-                1,
-                restored!.activatedAt,
-              );
-          expect(
-            sessionCompletions,
-            isEmpty,
-            reason:
-                'N4: current-session completions must be 0 — pre-restore rows '
-                'predate the new activatedAt and are excluded from the current cycle',
-          );
-        },
-      );
+        expect(
+          sessionCompletions,
+          isEmpty,
+          reason:
+              'N4: current-session completions must be 0 — pre-restore rows '
+              'predate the new activatedAt and are excluded from the current cycle',
+        );
+      });
     });
 
     // ── N5 — restoreOrCreate resets activatedAt to mark a new session ────────
@@ -255,15 +251,17 @@ void main() {
           );
 
           // Insert a track with an activatedAt 5 days in the past.
-          final trackId = await db.into(db.curriculumTracks).insert(
-            CurriculumTracksCompanion.insert(
-              profileId: 1,
-              curriculumId: CurriculumId.mishnayos.storageKey,
-              trackType: TrackType.personal.storageKey,
-              isActive: const Value(true),
-              activatedAt: originalActivatedAt,
-            ),
-          );
+          final trackId = await db
+              .into(db.curriculumTracks)
+              .insert(
+                CurriculumTracksCompanion.insert(
+                  profileId: 1,
+                  curriculumId: CurriculumId.mishnayos.storageKey,
+                  trackType: TrackType.personal.storageKey,
+                  isActive: const Value(true),
+                  activatedAt: originalActivatedAt,
+                ),
+              );
 
           // Soft-delete the track.
           await db.trackDao.deleteTrackAndData(trackId);
@@ -312,15 +310,17 @@ void main() {
           await seedProfile(db);
 
           // Seed a track so the FK constraint resolves.
-          final trackId = await db.into(db.curriculumTracks).insert(
-            CurriculumTracksCompanion.insert(
-              profileId: 1,
-              curriculumId: CurriculumId.mishnayos.storageKey,
-              trackType: TrackType.personal.storageKey,
-              isActive: const Value(true),
-              activatedAt: DateTimeFactory.nowUtc(),
-            ),
-          );
+          final trackId = await db
+              .into(db.curriculumTracks)
+              .insert(
+                CurriculumTracksCompanion.insert(
+                  profileId: 1,
+                  curriculumId: CurriculumId.mishnayos.storageKey,
+                  trackType: TrackType.personal.storageKey,
+                  isActive: const Value(true),
+                  activatedAt: DateTimeFactory.nowUtc(),
+                ),
+              );
 
           // Insert the same sefariaRef at two different stages.
           // By the "distinct refs" definition, 1 ref is done — not 2.
@@ -402,18 +402,19 @@ void main() {
             );
           }
 
-          final countBefore =
-              (await db.completionEventDao.getEventsByProfile(1)).length;
+          final countBefore = (await db.completionEventDao.getEventsByProfile(
+            1,
+          )).length;
 
           await db.trackDao.purgeHistory(trackId);
 
-          final eventsAfter =
-              await db.completionEventDao.getEventsByProfile(1);
+          final eventsAfter = await db.completionEventDao.getEventsByProfile(1);
 
           expect(
             eventsAfter.length,
             countBefore,
-            reason: 'N8: completion_events row count must never decrease — '
+            reason:
+                'N8: completion_events row count must never decrease — '
                 'purgeHistory uses tombstones, not deletes',
           );
           expect(
@@ -433,49 +434,59 @@ void main() {
     // ── N7 — pace-goal projected finish anchors to createdAt, not now ────────
 
     group('N7: pace-goal projected finish anchors to createdAt, not now', () {
-      test('projected finish uses goal.createdAt as anchor — stable across days',
-          () {
-        final createdAt = DateTime.now().subtract(const Duration(days: 7));
+      test(
+        'projected finish uses goal.createdAt as anchor — stable across days',
+        () {
+          final createdAt = DateTime.now().subtract(const Duration(days: 7));
 
-        const pacePerWeek = 10;
-        const totalItems = 100;
-        const completedItems = 0;
-        const itemsRemaining = totalItems - completedItems; // 100
+          const pacePerWeek = 10;
+          const totalItems = 100;
+          const completedItems = 0;
+          const itemsRemaining = totalItems - completedItems; // 100
 
-        final daysNeeded = (itemsRemaining / pacePerWeek * 7).ceil(); // 70
+          final daysNeeded = (itemsRemaining / pacePerWeek * 7).ceil(); // 70
 
-        final projected1 = createdAt.toLocal().add(Duration(days: daysNeeded));
-        final projected2 = createdAt.toLocal().add(Duration(days: daysNeeded));
+          final projected1 = createdAt.toLocal().add(
+            Duration(days: daysNeeded),
+          );
+          final projected2 = createdAt.toLocal().add(
+            Duration(days: daysNeeded),
+          );
 
-        expect(
-          projected1,
-          equals(createdAt.toLocal().add(const Duration(days: 70))),
-          reason: 'N7: projected finish must be createdAt + 70 days for '
-              '100 items at 10/week',
-        );
+          expect(
+            projected1,
+            equals(createdAt.toLocal().add(const Duration(days: 70))),
+            reason:
+                'N7: projected finish must be createdAt + 70 days for '
+                '100 items at 10/week',
+          );
 
-        final nowBased = DateTime.now().add(const Duration(days: 70));
-        final differenceMillis =
-            (projected1.millisecondsSinceEpoch - nowBased.millisecondsSinceEpoch)
-                .abs();
-        expect(
-          differenceMillis,
-          greaterThan(
-            const Duration(days: 6, hours: 23, minutes: 50).inMilliseconds,
-          ),
-          reason: 'N7: createdAt-anchored projection must differ from '
-              'now-anchored projection by approximately 7 days',
-        );
+          final nowBased = DateTime.now().add(const Duration(days: 70));
+          final differenceMillis =
+              (projected1.millisecondsSinceEpoch -
+                      nowBased.millisecondsSinceEpoch)
+                  .abs();
+          expect(
+            differenceMillis,
+            greaterThan(
+              const Duration(days: 6, hours: 23, minutes: 50).inMilliseconds,
+            ),
+            reason:
+                'N7: createdAt-anchored projection must differ from '
+                'now-anchored projection by approximately 7 days',
+          );
 
-        expect(
-          projected1.year == projected2.year &&
-              projected1.month == projected2.month &&
-              projected1.day == projected2.day,
-          isTrue,
-          reason: 'N7: computing the projected finish twice must yield the '
-              'same calendar day — createdAt is fixed, so there is no drift',
-        );
-      });
+          expect(
+            projected1.year == projected2.year &&
+                projected1.month == projected2.month &&
+                projected1.day == projected2.day,
+            isTrue,
+            reason:
+                'N7: computing the projected finish twice must yield the '
+                'same calendar day — createdAt is fixed, so there is no drift',
+          );
+        },
+      );
     });
   });
 }

@@ -24,9 +24,7 @@ class LifetimeViewScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final profileId = ref.watch(activeProfileIdProvider);
-    final summariesAsync = ref.watch(
-      lifetimeViewSummariesProvider(profileId),
-    );
+    final summariesAsync = ref.watch(lifetimeViewSummariesProvider(profileId));
     final l10n = AppLocalizations.of(context)!;
     final baseTheme = Theme.of(context);
     final textTheme = GoogleFonts.plusJakartaSansTextTheme(baseTheme.textTheme);
@@ -52,12 +50,11 @@ class LifetimeViewScreen extends ConsumerWidget {
         child: summariesAsync.when(
           data: (summaries) {
             // Sort by canonical learning order (CurriculumId enum index).
-            final withProgress = summaries
-                .where((s) => s.learnedLeafCount > 0)
-                .toList()
-              ..sort(
-                (a, b) => a.curriculumId.index.compareTo(b.curriculumId.index),
-              );
+            final withProgress =
+                summaries.where((s) => s.learnedLeafCount > 0).toList()..sort(
+                  (a, b) =>
+                      a.curriculumId.index.compareTo(b.curriculumId.index),
+                );
 
             if (withProgress.isEmpty) {
               return EmptyState(

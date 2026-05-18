@@ -124,7 +124,8 @@ void main() {
     });
 
     test('basic CRUD round-trip on completions', () async {
-      final id = await seedCompletion(db, 
+      final id = await seedCompletion(
+        db,
         CompletionsCompanion.insert(
           profileId: 1,
           curriculumId: CurriculumId.mishnayos.storageKey,

@@ -64,25 +64,29 @@ UserDatabase inMemoryDb() => UserDatabase(NativeDatabase.memory());
 /// completion_events, streak_events). Call this at the top of each such
 /// test or in setUp before any FK-constrained insert.
 Future<void> seedProfile(UserDatabase db) async {
-  final accountId = await db.into(db.accounts).insert(
-    AccountsCompanion.insert(
-      email: 'test@example.com',
-      tier: 'localBorn',
-      displayName: 'Test User',
-      userMode: 'adult',
-      createdAt: DateTimeFactory.nowUtc(),
-      updatedAt: DateTimeFactory.nowUtc(),
-    ),
-  );
-  await db.into(db.learnerProfiles).insert(
-    LearnerProfilesCompanion.insert(
-      accountId: accountId,
-      displayName: 'Test User',
-      mode: 'adult',
-      createdAt: DateTimeFactory.nowUtc(),
-      updatedAt: DateTimeFactory.nowUtc(),
-    ),
-  );
+  final accountId = await db
+      .into(db.accounts)
+      .insert(
+        AccountsCompanion.insert(
+          email: 'test@example.com',
+          tier: 'localBorn',
+          displayName: 'Test User',
+          userMode: 'adult',
+          createdAt: DateTimeFactory.nowUtc(),
+          updatedAt: DateTimeFactory.nowUtc(),
+        ),
+      );
+  await db
+      .into(db.learnerProfiles)
+      .insert(
+        LearnerProfilesCompanion.insert(
+          accountId: accountId,
+          displayName: 'Test User',
+          mode: 'adult',
+          createdAt: DateTimeFactory.nowUtc(),
+          updatedAt: DateTimeFactory.nowUtc(),
+        ),
+      );
 }
 
 /// Seeds a learner profile with id = 0 into [db].
@@ -91,27 +95,31 @@ Future<void> seedProfile(UserDatabase db) async {
 /// [StageDefinitionRepositoryImpl.initializeDefaults] — DNI-322). Call
 /// this alongside [seedProfile] in any setUp that exercises such code.
 Future<void> seedProfileZero(UserDatabase db) async {
-  await db.into(db.accounts).insert(
-    AccountsCompanion(
-      id: const Value(0),
-      email: const Value('test0@example.com'),
-      tier: const Value('localBorn'),
-      displayName: const Value('Test User 0'),
-      userMode: const Value('adult'),
-      createdAt: Value(DateTimeFactory.nowUtc()),
-      updatedAt: Value(DateTimeFactory.nowUtc()),
-    ),
-    mode: InsertMode.insertOrIgnore,
-  );
-  await db.into(db.learnerProfiles).insert(
-    LearnerProfilesCompanion(
-      id: const Value(0),
-      accountId: const Value(0),
-      displayName: const Value('Test User 0'),
-      mode: const Value('adult'),
-      createdAt: Value(DateTimeFactory.nowUtc()),
-      updatedAt: Value(DateTimeFactory.nowUtc()),
-    ),
-    mode: InsertMode.insertOrIgnore,
-  );
+  await db
+      .into(db.accounts)
+      .insert(
+        AccountsCompanion(
+          id: const Value(0),
+          email: const Value('test0@example.com'),
+          tier: const Value('localBorn'),
+          displayName: const Value('Test User 0'),
+          userMode: const Value('adult'),
+          createdAt: Value(DateTimeFactory.nowUtc()),
+          updatedAt: Value(DateTimeFactory.nowUtc()),
+        ),
+        mode: InsertMode.insertOrIgnore,
+      );
+  await db
+      .into(db.learnerProfiles)
+      .insert(
+        LearnerProfilesCompanion(
+          id: const Value(0),
+          accountId: const Value(0),
+          displayName: const Value('Test User 0'),
+          mode: const Value('adult'),
+          createdAt: Value(DateTimeFactory.nowUtc()),
+          updatedAt: Value(DateTimeFactory.nowUtc()),
+        ),
+        mode: InsertMode.insertOrIgnore,
+      );
 }

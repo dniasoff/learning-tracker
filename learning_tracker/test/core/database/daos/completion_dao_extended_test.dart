@@ -44,29 +44,33 @@ void main() {
     db = inMemoryDb();
     await seedProfile(db);
     // Seed a second learner profile (profileId = 2) for cross-profile tests.
-    await db.into(db.accounts).insert(
-      AccountsCompanion(
-        id: const Value(2),
-        email: const Value('test2@example.com'),
-        tier: const Value('localBorn'),
-        displayName: const Value('Test User 2'),
-        userMode: const Value('adult'),
-        createdAt: Value(DateTime.utc(2026, 1, 1)),
-        updatedAt: Value(DateTime.utc(2026, 1, 1)),
-      ),
-      mode: InsertMode.insertOrIgnore,
-    );
-    await db.into(db.learnerProfiles).insert(
-      LearnerProfilesCompanion(
-        id: const Value(2),
-        accountId: const Value(2),
-        displayName: const Value('Test User 2'),
-        mode: const Value('adult'),
-        createdAt: Value(DateTime.utc(2026, 1, 1)),
-        updatedAt: Value(DateTime.utc(2026, 1, 1)),
-      ),
-      mode: InsertMode.insertOrIgnore,
-    );
+    await db
+        .into(db.accounts)
+        .insert(
+          AccountsCompanion(
+            id: const Value(2),
+            email: const Value('test2@example.com'),
+            tier: const Value('localBorn'),
+            displayName: const Value('Test User 2'),
+            userMode: const Value('adult'),
+            createdAt: Value(DateTime.utc(2026, 1, 1)),
+            updatedAt: Value(DateTime.utc(2026, 1, 1)),
+          ),
+          mode: InsertMode.insertOrIgnore,
+        );
+    await db
+        .into(db.learnerProfiles)
+        .insert(
+          LearnerProfilesCompanion(
+            id: const Value(2),
+            accountId: const Value(2),
+            displayName: const Value('Test User 2'),
+            mode: const Value('adult'),
+            createdAt: Value(DateTime.utc(2026, 1, 1)),
+            updatedAt: Value(DateTime.utc(2026, 1, 1)),
+          ),
+          mode: InsertMode.insertOrIgnore,
+        );
     // Seed curriculum_tracks with the explicit IDs used across all tests.
     // Each must have a distinct (profileId, curriculumId, trackType) tuple
     // due to the unique constraint on curriculum_tracks.
@@ -78,16 +82,18 @@ void main() {
       (id: 20, curriculum: 'bavli_20'),
     ];
     for (final seed in trackSeeds) {
-      await db.into(db.curriculumTracks).insert(
-        CurriculumTracksCompanion(
-          id: Value(seed.id),
-          profileId: const Value(1),
-          curriculumId: Value(seed.curriculum),
-          trackType: const Value('personal'),
-          activatedAt: Value(DateTime.utc(2026, 1, 1)),
-        ),
-        mode: InsertMode.insertOrIgnore,
-      );
+      await db
+          .into(db.curriculumTracks)
+          .insert(
+            CurriculumTracksCompanion(
+              id: Value(seed.id),
+              profileId: const Value(1),
+              curriculumId: Value(seed.curriculum),
+              trackType: const Value('personal'),
+              activatedAt: Value(DateTime.utc(2026, 1, 1)),
+            ),
+            mode: InsertMode.insertOrIgnore,
+          );
     }
   });
 
@@ -126,9 +132,7 @@ void main() {
     });
 
     test('inserts a single completion via batch', () async {
-      await seedCompletionsBatch(db, [
-        makeCompletion(ref: 'Berakhot.1.1'),
-      ]);
+      await seedCompletionsBatch(db, [makeCompletion(ref: 'Berakhot.1.1')]);
       final all = await db.completionDao.getCompletionsByProfile(1);
       expect(all, hasLength(1));
       expect(all.first.sefariaRef, 'Berakhot.1.1');
@@ -195,9 +199,7 @@ void main() {
     });
 
     test('returns only the refs that have existing completions', () async {
-      await seedCompletion(db, 
-        makeCompletion(ref: 'Berakhot.1.1'),
-      );
+      await seedCompletion(db, makeCompletion(ref: 'Berakhot.1.1'));
 
       final result = await db.completionDao.getExistingSefariaRefsForBulkStage(
         profileId: 1,
@@ -228,7 +230,8 @@ void main() {
     test(
       'filters by profileId — does not return other profiles completions',
       () async {
-        await seedCompletion(db, 
+        await seedCompletion(
+          db,
           makeCompletion(ref: 'Berakhot.1.1', profileId: 2),
         );
 
@@ -245,7 +248,8 @@ void main() {
     );
 
     test('filters by curriculumId', () async {
-      await seedCompletion(db, 
+      await seedCompletion(
+        db,
         makeCompletion(ref: 'Berakhot.2a', curriculumId: 'bavli'),
       );
 
@@ -275,16 +279,10 @@ void main() {
     });
 
     test('returns matching completions', () async {
-      await seedCompletion(db, 
-        makeCompletion(ref: 'Berakhot.1.1'),
-      );
-      await seedCompletion(db, 
-        makeCompletion(ref: 'Berakhot.1.2'),
-      );
+      await seedCompletion(db, makeCompletion(ref: 'Berakhot.1.1'));
+      await seedCompletion(db, makeCompletion(ref: 'Berakhot.1.2'));
       // This ref is not in the query list.
-      await seedCompletion(db, 
-        makeCompletion(ref: 'Berakhot.1.3'),
-      );
+      await seedCompletion(db, makeCompletion(ref: 'Berakhot.1.3'));
 
       final result = await db.completionDao.getCompletionsForRefsBulkStage(
         profileId: 1,
@@ -303,12 +301,8 @@ void main() {
 
   group('CompletionDao.getCompletionsByTrack', () {
     test('returns only completions for the specified track', () async {
-      await seedCompletion(db, 
-        _completion(trackId: 10, sefariaRef: 'A.1'),
-      );
-      await seedCompletion(db, 
-        _completion(trackId: 20, sefariaRef: 'B.1'),
-      );
+      await seedCompletion(db, _completion(trackId: 10, sefariaRef: 'A.1'));
+      await seedCompletion(db, _completion(trackId: 20, sefariaRef: 'B.1'));
 
       final forTrack10 = await db.completionDao.getCompletionsByTrack(10);
       expect(forTrack10, hasLength(1));
@@ -323,10 +317,12 @@ void main() {
 
   group('CompletionDao.getCompletionsByTrackAndProfile', () {
     test('scopes by both trackId and profileId', () async {
-      await seedCompletion(db, 
+      await seedCompletion(
+        db,
         _completion(trackId: 10, profileId: 1, sefariaRef: 'A.1'),
       );
-      await seedCompletion(db, 
+      await seedCompletion(
+        db,
         _completion(trackId: 10, profileId: 2, sefariaRef: 'B.1'),
       );
 
@@ -341,13 +337,16 @@ void main() {
 
   group('CompletionDao.getAggregateCountByTrack', () {
     test('returns count of completions for track+profile', () async {
-      await seedCompletion(db, 
+      await seedCompletion(
+        db,
         _completion(trackId: 5, profileId: 1, sefariaRef: 'A.1'),
       );
-      await seedCompletion(db, 
+      await seedCompletion(
+        db,
         _completion(trackId: 5, profileId: 1, sefariaRef: 'A.2'),
       );
-      await seedCompletion(db, 
+      await seedCompletion(
+        db,
         _completion(trackId: 5, profileId: 2, sefariaRef: 'A.3'),
       );
 
@@ -363,7 +362,8 @@ void main() {
   group('CompletionDao.completionExistsByTrack', () {
     test('returns true when matching completion exists', () async {
       final at = DateTime.utc(2026, 5, 14);
-      await seedCompletion(db, 
+      await seedCompletion(
+        db,
         _completion(
           trackId: 7,
           curriculumId: 'bavli',
@@ -401,7 +401,8 @@ void main() {
       final mid = DateTime.utc(2026, 5, 14);
       final late = DateTime.utc(2026, 12, 31);
 
-      await seedCompletion(db, 
+      await seedCompletion(
+        db,
         _completion(
           trackId: 10,
           profileId: 1,
@@ -409,7 +410,8 @@ void main() {
           completedAt: early,
         ),
       );
-      await seedCompletion(db, 
+      await seedCompletion(
+        db,
         _completion(
           trackId: 10,
           profileId: 1,
@@ -417,7 +419,8 @@ void main() {
           completedAt: mid,
         ),
       );
-      await seedCompletion(db, 
+      await seedCompletion(
+        db,
         _completion(
           trackId: 10,
           profileId: 1,
@@ -449,13 +452,16 @@ void main() {
   group('CompletionDao.getReviewCountsByItemAndTrack', () {
     test('returns count per sefariaRef for the track', () async {
       // 2 completions for A.1, 1 for A.2
-      await seedCompletion(db, 
+      await seedCompletion(
+        db,
         _completion(trackId: 10, profileId: 1, sefariaRef: 'A.1', stageId: 1),
       );
-      await seedCompletion(db, 
+      await seedCompletion(
+        db,
         _completion(trackId: 10, profileId: 1, sefariaRef: 'A.1', stageId: 2),
       );
-      await seedCompletion(db, 
+      await seedCompletion(
+        db,
         _completion(trackId: 10, profileId: 1, sefariaRef: 'A.2', stageId: 1),
       );
 
@@ -480,13 +486,16 @@ void main() {
 
   group('CompletionDao.getStageBreakdownByItemAndTrack', () {
     test('returns count per stageId for the specific item', () async {
-      await seedCompletion(db, 
+      await seedCompletion(
+        db,
         _completion(trackId: 10, profileId: 1, sefariaRef: 'B.1', stageId: 1),
       );
-      await seedCompletion(db, 
+      await seedCompletion(
+        db,
         _completion(trackId: 10, profileId: 1, sefariaRef: 'B.1', stageId: 2),
       );
-      await seedCompletion(db, 
+      await seedCompletion(
+        db,
         _completion(trackId: 10, profileId: 1, sefariaRef: 'B.1', stageId: 2),
       );
 

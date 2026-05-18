@@ -156,10 +156,7 @@ void main() {
         // (No stub needed — OfflineQueue is in queue-only mode when offline.)
         syncEngine.setOnlineState(false);
 
-        final data = {
-          'curriculum_id': 'mishnayos',
-          'stages': <dynamic>[],
-        };
+        final data = {'curriculum_id': 'mishnayos', 'stages': <dynamic>[]};
         await syncEngine.pushSettings(data);
 
         final count = await database.syncQueueDao.getPendingCount();
@@ -398,7 +395,8 @@ void main() {
         '(no duplicates)', () async {
       // Insert one local completion
       final completedAt = DateTime.utc(2026, 2, 9, 12);
-      await seedCompletion(database, 
+      await seedCompletion(
+        database,
         CompletionsCompanion.insert(
           profileId: 1,
           curriculumId: 'mishnayos',
@@ -525,7 +523,8 @@ void main() {
         syncEngine.setOnlineState(false);
 
         // Insert local data
-        await seedCompletion(database, 
+        await seedCompletion(
+          database,
           CompletionsCompanion.insert(
             profileId: 1,
             curriculumId: 'mishnayos',
@@ -887,15 +886,17 @@ void main() {
         userMode: 'adult',
         updatedAt: DateTime.utc(2026, 1, 1),
       );
-      await database.into(database.learnerProfiles).insert(
-        LearnerProfilesCompanion.insert(
-          accountId: 1,
-          displayName: 'Test User',
-          mode: 'adult',
-          createdAt: DateTime.utc(2026, 1, 1),
-          updatedAt: DateTime.utc(2026, 1, 1),
-        ),
-      );
+      await database
+          .into(database.learnerProfiles)
+          .insert(
+            LearnerProfilesCompanion.insert(
+              accountId: 1,
+              displayName: 'Test User',
+              mode: 'adult',
+              createdAt: DateTime.utc(2026, 1, 1),
+              updatedAt: DateTime.utc(2026, 1, 1),
+            ),
+          );
       trackId = await _insertTrack(database);
       mockFirestore = MockFirestoreDataSource();
       mockGateway = _MockFirestoreGateway();
@@ -1177,7 +1178,8 @@ void main() {
 
     test('restore not triggered on existing device (has data)', () async {
       // Insert existing data — not a new device
-      await seedCompletion(database, 
+      await seedCompletion(
+        database,
         CompletionsCompanion.insert(
           profileId: 1,
           curriculumId: 'mishnayos',

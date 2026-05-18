@@ -573,7 +573,9 @@ class DataExportImportService {
             .into(_database.learnerProfiles)
             .insert(
               LearnerProfilesCompanion(
-                id: originalId != null ? Value(originalId) : const Value.absent(),
+                id: originalId != null
+                    ? Value(originalId)
+                    : const Value.absent(),
                 accountId: Value(map['accountId'] as int),
                 displayName: Value(map['displayName'] as String),
                 mode: Value(map['mode'] as String),

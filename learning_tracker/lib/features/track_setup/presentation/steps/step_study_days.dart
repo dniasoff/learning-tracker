@@ -121,7 +121,6 @@ class _StudyDaysEditableState extends State<StudyDaysEditable> {
       _ => 'Day',
     };
   }
-
 }
 
 class StudyDayCard extends StatelessWidget {

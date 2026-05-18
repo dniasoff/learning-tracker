@@ -288,7 +288,11 @@ void main() {
 
         final flushed = await processor.drain(profileId);
         // With batch semantics, a failure anywhere in the batch fails all rows.
-        expect(flushed, equals(0), reason: 'batch failure means no rows counted as success');
+        expect(
+          flushed,
+          equals(0),
+          reason: 'batch failure means no rows counted as success',
+        );
 
         final remaining = await db.select(db.outbox).get();
         expect(

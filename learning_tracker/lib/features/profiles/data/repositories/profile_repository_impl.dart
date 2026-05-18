@@ -228,9 +228,7 @@ class ProfileRepositoryImpl implements ProfileRepository {
       await (_db.delete(
         _db.dailyPlans,
       )..where((t) => t.profileId.equals(id))).go();
-      await (_db.delete(
-        _db.outbox,
-      )..where((t) => t.profileId.equals(id))).go();
+      await (_db.delete(_db.outbox)..where((t) => t.profileId.equals(id))).go();
       // Finally delete the profile itself
       await _db.profileDao.deleteProfile(id);
     });

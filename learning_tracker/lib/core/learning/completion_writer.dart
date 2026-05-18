@@ -151,16 +151,15 @@ class CompletionWriter {
       // SELECT over completions_view by the collected event ids.
       final events = await _selectEventsForBatch(distinctCommands);
       final eventByKey = <String, CompletionEvent>{
-        for (final e in events)
-          _naturalKeyForEvent(e): e,
+        for (final e in events) _naturalKeyForEvent(e): e,
       };
 
       final eventIds = events.map((e) => e.id).toList();
       final viewRows = eventIds.isEmpty
           ? const <CompletionsViewData>[]
-          : await (_db.select(_db.completionsView)
-                  ..where((t) => t.id.isIn(eventIds)))
-              .get();
+          : await (_db.select(
+              _db.completionsView,
+            )..where((t) => t.id.isIn(eventIds))).get();
       final viewById = <int, CompletionsViewData>{
         for (final v in viewRows) v.id: v,
       };
@@ -225,28 +224,16 @@ class CompletionWriter {
   static const String _keyDelim = '\u0000';
 
   /// Natural-key string for a command — the idempotency key for completions.
-  static String _naturalKey(CompletionCommand cmd) => _composeKey(
-    cmd.profileId,
-    cmd.sefariaRef,
-    cmd.stageId,
-    cmd.trackType,
-  );
+  static String _naturalKey(CompletionCommand cmd) =>
+      _composeKey(cmd.profileId, cmd.sefariaRef, cmd.stageId, cmd.trackType);
 
   /// Natural-key string for a persisted event row.
-  static String _naturalKeyForEvent(CompletionEvent e) => _composeKey(
-    e.profileId,
-    e.sefariaRef,
-    e.stageId,
-    e.trackType,
-  );
+  static String _naturalKeyForEvent(CompletionEvent e) =>
+      _composeKey(e.profileId, e.sefariaRef, e.stageId, e.trackType);
 
   /// Natural-key string for a resolved [Completion] row.
-  static String _naturalKeyForCompletion(Completion c) => _composeKey(
-    c.profileId,
-    c.sefariaRef,
-    c.stageId,
-    c.trackType,
-  );
+  static String _naturalKeyForCompletion(Completion c) =>
+      _composeKey(c.profileId, c.sefariaRef, c.stageId, c.trackType);
 
   static String _composeKey(
     int profileId,
@@ -331,8 +318,9 @@ class CompletionWriter {
 
       if (existingEvent != null) {
         // Event already recorded — read from the view (purgedAt IS NULL).
-        final existing =
-            await _db.completionDao.getCompletionById(existingEvent.id);
+        final existing = await _db.completionDao.getCompletionById(
+          existingEvent.id,
+        );
         if (existing != null) {
           return CompletionWriteResult(completion: existing, isNew: false);
         }

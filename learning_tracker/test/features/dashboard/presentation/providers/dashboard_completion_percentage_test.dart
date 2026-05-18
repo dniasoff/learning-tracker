@@ -175,87 +175,100 @@ void main() {
 
   // ── Curriculum-level logic ─────────────────────────────────────────────────
 
-  group('dashboardCompletionPercentage — item-based rule (curriculum-wide)', () {
-    test('0.0 when no completions exist', () {
-      final pct = _computeCurriculumCompletion(
-        byTrack: {},
-        requiredStagesByTrack: {},
-        totalItems: 10,
-      );
-      expect(pct, 0.0);
-    });
+  group(
+    'dashboardCompletionPercentage — item-based rule (curriculum-wide)',
+    () {
+      test('0.0 when no completions exist', () {
+        final pct = _computeCurriculumCompletion(
+          byTrack: {},
+          requiredStagesByTrack: {},
+          totalItems: 10,
+        );
+        expect(pct, 0.0);
+      });
 
-    test('bulk-mark sentinel (trackId 0) is excluded', () {
-      final pct = _computeCurriculumCompletion(
-        byTrack: {
-          0: {
-            'ref/1': {learnStageId},
+      test('bulk-mark sentinel (trackId 0) is excluded', () {
+        final pct = _computeCurriculumCompletion(
+          byTrack: {
+            0: {
+              'ref/1': {learnStageId},
+            },
           },
-        },
-        requiredStagesByTrack: {
-          0: {learnStageId},
-        },
-        totalItems: 5,
-      );
-      expect(pct, 0.0, reason: 'trackId 0 is a bulk-mark sentinel; must not count');
-    });
+          requiredStagesByTrack: {
+            0: {learnStageId},
+          },
+          totalItems: 5,
+        );
+        expect(
+          pct,
+          0.0,
+          reason: 'trackId 0 is a bulk-mark sentinel; must not count',
+        );
+      });
 
-    test('item done in one track counts once even if in multiple tracks', () {
-      // Same sefariaRef appears in track 1 (all done) and track 2 (partial).
-      final pct = _computeCurriculumCompletion(
-        byTrack: {
-          1: {
-            'ref/shared': {learnStageId, chazara1StageId}, // all done for 2-stage track
+      test('item done in one track counts once even if in multiple tracks', () {
+        // Same sefariaRef appears in track 1 (all done) and track 2 (partial).
+        final pct = _computeCurriculumCompletion(
+          byTrack: {
+            1: {
+              'ref/shared': {
+                learnStageId,
+                chazara1StageId,
+              }, // all done for 2-stage track
+            },
+            2: {
+              'ref/shared': {learnStageId}, // partial in track 2
+            },
           },
-          2: {
-            'ref/shared': {learnStageId}, // partial in track 2
+          requiredStagesByTrack: {
+            1: {learnStageId, chazara1StageId},
+            2: {learnStageId, chazara1StageId, chazara2StageId},
           },
-        },
-        requiredStagesByTrack: {
-          1: {learnStageId, chazara1StageId},
-          2: {learnStageId, chazara1StageId, chazara2StageId},
-        },
-        totalItems: 4,
-      );
-      // ref/shared is done in track 1, so it counts once.
-      expect(pct, 1 / 4);
-    });
+          totalItems: 4,
+        );
+        // ref/shared is done in track 1, so it counts once.
+        expect(pct, 1 / 4);
+      });
 
-    test('item only counted once even if done in two different tracks', () {
-      final pct = _computeCurriculumCompletion(
-        byTrack: {
-          1: {
-            'ref/a': {learnStageId}, // done in learn-only track
+      test('item only counted once even if done in two different tracks', () {
+        final pct = _computeCurriculumCompletion(
+          byTrack: {
+            1: {
+              'ref/a': {learnStageId}, // done in learn-only track
+            },
+            2: {
+              'ref/a': {
+                learnStageId,
+                chazara1StageId,
+              }, // also done in 2-stage track
+            },
           },
-          2: {
-            'ref/a': {learnStageId, chazara1StageId}, // also done in 2-stage track
+          requiredStagesByTrack: {
+            1: {learnStageId},
+            2: {learnStageId, chazara1StageId},
           },
-        },
-        requiredStagesByTrack: {
-          1: {learnStageId},
-          2: {learnStageId, chazara1StageId},
-        },
-        totalItems: 10,
-      );
-      // ref/a is done in both tracks — counted only once.
-      expect(pct, 1 / 10);
-    });
+          totalItems: 10,
+        );
+        // ref/a is done in both tracks — counted only once.
+        expect(pct, 1 / 10);
+      });
 
-    test('correct fraction when mix of done and partial items', () {
-      final pct = _computeCurriculumCompletion(
-        byTrack: {
-          1: {
-            'ref/1': {learnStageId, chazara1StageId}, // done
-            'ref/2': {learnStageId}, // partial — missing chazara1
-            'ref/3': {learnStageId, chazara1StageId}, // done
+      test('correct fraction when mix of done and partial items', () {
+        final pct = _computeCurriculumCompletion(
+          byTrack: {
+            1: {
+              'ref/1': {learnStageId, chazara1StageId}, // done
+              'ref/2': {learnStageId}, // partial — missing chazara1
+              'ref/3': {learnStageId, chazara1StageId}, // done
+            },
           },
-        },
-        requiredStagesByTrack: {
-          1: {learnStageId, chazara1StageId},
-        },
-        totalItems: 5,
-      );
-      expect(pct, 2 / 5);
-    });
-  });
+          requiredStagesByTrack: {
+            1: {learnStageId, chazara1StageId},
+          },
+          totalItems: 5,
+        );
+        expect(pct, 2 / 5);
+      });
+    },
+  );
 }

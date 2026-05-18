@@ -347,9 +347,9 @@ class TrackDao extends DatabaseAccessor<UserDatabase>
         // Reset activatedAt to now so this is treated as a new learning session.
         // Old completions stay in the DB for lifetime stats; current-session
         // progress queries filter by completedAt >= activatedAt.
-        await (update(curriculumTracks)
-              ..where((t) => t.id.equals(existing.id)))
-            .write(
+        await (update(
+          curriculumTracks,
+        )..where((t) => t.id.equals(existing.id))).write(
           CurriculumTracksCompanion(
             isActive: const Value(true),
             activatedAt: Value(DateTimeFactory.nowUtc()),

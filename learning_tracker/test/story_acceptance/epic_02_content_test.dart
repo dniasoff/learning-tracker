@@ -400,7 +400,8 @@ void main() {
         )).first.id;
 
         // Add completion and bookmark for Bavli
-        await seedCompletion(db, 
+        await seedCompletion(
+          db,
           CompletionsCompanion.insert(
             profileId: 1,
             curriculumId: CurriculumId.bavli.storageKey,
@@ -446,7 +447,8 @@ void main() {
         await service.activate(CurriculumId.mishnayos);
 
         // Add data
-        await seedCompletion(db, 
+        await seedCompletion(
+          db,
           CompletionsCompanion.insert(
             profileId: 1,
             curriculumId: CurriculumId.bavli.storageKey,
@@ -760,14 +762,17 @@ void main() {
 
     // ── AC: curriculum_hierarchy_config table removed from Drift schema
 
-    test('curriculum_hierarchy_config table removed from Drift schema', () async {
-      final db = createTestDatabase();
-      await seedProfile(db);
-      addTearDown(() => db.close());
-      // Schema v3 drops these tables.
-      // v10 adds deleted_at to curriculum_tracks (DNI-317).
-      expect(db.schemaVersion, equals(21));
-    });
+    test(
+      'curriculum_hierarchy_config table removed from Drift schema',
+      () async {
+        final db = createTestDatabase();
+        await seedProfile(db);
+        addTearDown(() => db.close());
+        // Schema v3 drops these tables.
+        // v10 adds deleted_at to curriculum_tracks (DNI-317).
+        expect(db.schemaVersion, equals(21));
+      },
+    );
 
     // ── AC: completions/bookmarks/learning_order use sefariaRef FK
 
@@ -777,7 +782,8 @@ void main() {
       addTearDown(() => db.close());
       final trackId = await _insertTrack(db);
 
-      await seedCompletion(db, 
+      await seedCompletion(
+        db,
         CompletionsCompanion.insert(
           profileId: 1,
           curriculumId: CurriculumId.mishnayos.storageKey,

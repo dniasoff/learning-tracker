@@ -75,7 +75,11 @@ void main() {
     });
 
     test('user can add a custom chazara stage', () async {
-      await repository.initializeDefaults(curriculum, profileId: 1, trackId: trackId);
+      await repository.initializeDefaults(
+        curriculum,
+        profileId: 1,
+        trackId: trackId,
+      );
 
       final newStage = await repository.addStage(
         curriculum,
@@ -95,7 +99,11 @@ void main() {
     });
 
     test('user can reorder stages (Learn must stay at position 1)', () async {
-      await repository.initializeDefaults(curriculum, profileId: 1, trackId: trackId);
+      await repository.initializeDefaults(
+        curriculum,
+        profileId: 1,
+        trackId: trackId,
+      );
       final stages = await repository.getStagesForCurriculum(curriculum);
       // Learn must remain first; swap Chazara 1 and Chazara 2 only.
       final learnId = stages[0].id; // stageOrder == 1
@@ -116,7 +124,11 @@ void main() {
     });
 
     test('user can adjust delay days for a stage', () async {
-      await repository.initializeDefaults(curriculum, profileId: 1, trackId: trackId);
+      await repository.initializeDefaults(
+        curriculum,
+        profileId: 1,
+        trackId: trackId,
+      );
       final stages = await repository.getStagesForCurriculum(curriculum);
       final chazara1 = stages.firstWhere((s) => s.stageName == 'חזרה א׳');
 

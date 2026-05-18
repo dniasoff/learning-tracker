@@ -121,10 +121,7 @@ void main() {
         final db = createTestDatabase();
 
         expect(db, isNotNull);
-        expect(
-          db.schemaVersion,
-          21,
-        ); // v21: current schema version
+        expect(db.schemaVersion, 21); // v21: current schema version
 
         db.close();
       });

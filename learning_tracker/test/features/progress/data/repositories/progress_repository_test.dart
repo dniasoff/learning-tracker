@@ -17,7 +17,10 @@ void main() {
   setUp(() async {
     database = createTestDatabase();
     await seedProfile(database);
-    repository = ProgressRepositoryImpl(database: database, profileId: profileId);
+    repository = ProgressRepositoryImpl(
+      database: database,
+      profileId: profileId,
+    );
 
     final trackRow = await database
         .into(database.curriculumTracks)
@@ -42,7 +45,8 @@ void main() {
         'returns Map<TrackType, int> with correct counts per track',
         () async {
           // Arrange: Insert completions for different tracks
-          await seedCompletion(database, 
+          await seedCompletion(
+            database,
             CompletionsCompanion.insert(
               profileId: profileId,
               curriculumId: 'bavli',
@@ -54,7 +58,8 @@ void main() {
               points: const drift.Value(10),
             ),
           );
-          await seedCompletion(database, 
+          await seedCompletion(
+            database,
             CompletionsCompanion.insert(
               profileId: profileId,
               curriculumId: 'bavli',
@@ -66,7 +71,8 @@ void main() {
               points: const drift.Value(10),
             ),
           );
-          await seedCompletion(database, 
+          await seedCompletion(
+            database,
             CompletionsCompanion.insert(
               profileId: profileId,
               curriculumId: 'bavli',
@@ -91,7 +97,8 @@ void main() {
         'returns zero counts for inactive tracks that have no completions',
         () async {
           // Arrange: Insert only personal track completions
-          await seedCompletion(database, 
+          await seedCompletion(
+            database,
             CompletionsCompanion.insert(
               profileId: profileId,
               curriculumId: 'bavli',
@@ -117,7 +124,8 @@ void main() {
         () async {
           // Arrange: Insert completions for a track that might be deactivated
           // Note: Track activation state is managed elsewhere; completions are preserved
-          await seedCompletion(database, 
+          await seedCompletion(
+            database,
             CompletionsCompanion.insert(
               profileId: profileId,
               curriculumId: 'bavli',
@@ -129,7 +137,8 @@ void main() {
               points: const drift.Value(10),
             ),
           );
-          await seedCompletion(database, 
+          await seedCompletion(
+            database,
             CompletionsCompanion.insert(
               profileId: profileId,
               curriculumId: 'bavli',
@@ -162,7 +171,8 @@ void main() {
 
       test('filters by curriculum correctly', () async {
         // Arrange: Insert completions for different curricula
-        await seedCompletion(database, 
+        await seedCompletion(
+          database,
           CompletionsCompanion.insert(
             profileId: profileId,
             curriculumId: 'bavli',
@@ -174,7 +184,8 @@ void main() {
             points: const drift.Value(10),
           ),
         );
-        await seedCompletion(database, 
+        await seedCompletion(
+          database,
           CompletionsCompanion.insert(
             profileId: profileId,
             curriculumId: 'mishnayos',
@@ -202,7 +213,8 @@ void main() {
         'returns sum across all tracks, matching individual track counts',
         () async {
           // Arrange: Insert completions for different tracks
-          await seedCompletion(database, 
+          await seedCompletion(
+            database,
             CompletionsCompanion.insert(
               profileId: profileId,
               curriculumId: 'bavli',
@@ -214,7 +226,8 @@ void main() {
               points: const drift.Value(10),
             ),
           );
-          await seedCompletion(database, 
+          await seedCompletion(
+            database,
             CompletionsCompanion.insert(
               profileId: profileId,
               curriculumId: 'bavli',
@@ -226,7 +239,8 @@ void main() {
               points: const drift.Value(10),
             ),
           );
-          await seedCompletion(database, 
+          await seedCompletion(
+            database,
             CompletionsCompanion.insert(
               profileId: profileId,
               curriculumId: 'bavli',
@@ -263,7 +277,8 @@ void main() {
 
       test('filters by curriculum correctly', () async {
         // Arrange
-        await seedCompletion(database, 
+        await seedCompletion(
+          database,
           CompletionsCompanion.insert(
             profileId: profileId,
             curriculumId: 'bavli',
@@ -275,7 +290,8 @@ void main() {
             points: const drift.Value(10),
           ),
         );
-        await seedCompletion(database, 
+        await seedCompletion(
+          database,
           CompletionsCompanion.insert(
             profileId: profileId,
             curriculumId: 'mishnayos',

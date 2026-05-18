@@ -16,26 +16,30 @@ void main() {
     db = inMemoryDb();
     await seedProfile(db);
     // Seed a second account + profile (id = 2) for cross-profile isolation tests.
-    final account2 = await db.into(db.accounts).insert(
-      AccountsCompanion.insert(
-        email: 'test2@example.com',
-        tier: 'localBorn',
-        displayName: 'Test User 2',
-        userMode: 'adult',
-        createdAt: DateTime.utc(2026, 1, 1),
-        updatedAt: DateTime.utc(2026, 1, 1),
-      ),
-    );
-    await db.into(db.learnerProfiles).insert(
-      LearnerProfilesCompanion.insert(
-        id: const Value(2),
-        accountId: account2,
-        displayName: 'Test User 2',
-        mode: 'adult',
-        createdAt: DateTime.utc(2026, 1, 1),
-        updatedAt: DateTime.utc(2026, 1, 1),
-      ),
-    );
+    final account2 = await db
+        .into(db.accounts)
+        .insert(
+          AccountsCompanion.insert(
+            email: 'test2@example.com',
+            tier: 'localBorn',
+            displayName: 'Test User 2',
+            userMode: 'adult',
+            createdAt: DateTime.utc(2026, 1, 1),
+            updatedAt: DateTime.utc(2026, 1, 1),
+          ),
+        );
+    await db
+        .into(db.learnerProfiles)
+        .insert(
+          LearnerProfilesCompanion.insert(
+            id: const Value(2),
+            accountId: account2,
+            displayName: 'Test User 2',
+            mode: 'adult',
+            createdAt: DateTime.utc(2026, 1, 1),
+            updatedAt: DateTime.utc(2026, 1, 1),
+          ),
+        );
     trackId = await db
         .into(db.curriculumTracks)
         .insert(
@@ -116,7 +120,8 @@ void main() {
   group('CompletionDao.getCompletionsByTrackAndProfile', () {
     test('returns completions for the given track and profile', () async {
       await seedCompletion(db, makeCompletion());
-      await seedCompletion(db, 
+      await seedCompletion(
+        db,
         makeCompletion(
           sefariaRef: 'Shabbat.2a',
           completedAt: DateTime.utc(2026, 2, 1),
@@ -145,7 +150,8 @@ void main() {
               activatedAt: DateTime.utc(2026, 1, 1),
             ),
           );
-      await seedCompletion(db, 
+      await seedCompletion(
+        db,
         makeCompletion(profileId: 2, overrideTrackId: track2),
       );
 
@@ -177,13 +183,15 @@ void main() {
     });
 
     test('counts all completions for the given track and profile', () async {
-      await seedCompletion(db, 
+      await seedCompletion(
+        db,
         makeCompletion(
           sefariaRef: 'Berakhot.2a',
           completedAt: DateTime.utc(2026, 1, 1),
         ),
       );
-      await seedCompletion(db, 
+      await seedCompletion(
+        db,
         makeCompletion(
           sefariaRef: 'Berakhot.2b',
           completedAt: DateTime.utc(2026, 1, 2),
@@ -206,7 +214,8 @@ void main() {
             ),
           );
       await seedCompletion(db, makeCompletion(profileId: 1));
-      await seedCompletion(db, 
+      await seedCompletion(
+        db,
         makeCompletion(profileId: 2, overrideTrackId: track2),
       );
 
@@ -221,7 +230,8 @@ void main() {
   group('CompletionDao.completionExistsByTrack', () {
     test('returns true when a matching completion exists', () async {
       final completedAt = DateTime.utc(2026, 3, 10);
-      await seedCompletion(db, 
+      await seedCompletion(
+        db,
         makeCompletion(stageId: 2, completedAt: completedAt),
       );
 
@@ -248,7 +258,8 @@ void main() {
 
     test('returns false when stageId does not match', () async {
       final completedAt = DateTime.utc(2026, 3, 10);
-      await seedCompletion(db, 
+      await seedCompletion(
+        db,
         makeCompletion(stageId: 1, completedAt: completedAt),
       );
 
@@ -269,19 +280,22 @@ void main() {
 
   group('CompletionDao.getCompletionsByDateRangeAndTrack', () {
     test('returns completions within the date range', () async {
-      await seedCompletion(db, 
+      await seedCompletion(
+        db,
         makeCompletion(
           sefariaRef: 'Berakhot.2a',
           completedAt: DateTime.utc(2026, 3, 5),
         ),
       );
-      await seedCompletion(db, 
+      await seedCompletion(
+        db,
         makeCompletion(
           sefariaRef: 'Berakhot.2b',
           completedAt: DateTime.utc(2026, 3, 15),
         ),
       );
-      await seedCompletion(db, 
+      await seedCompletion(
+        db,
         makeCompletion(
           sefariaRef: 'Berakhot.3a',
           completedAt: DateTime.utc(2026, 4, 1),
@@ -302,7 +316,8 @@ void main() {
     });
 
     test('returns empty list when no completions fall in range', () async {
-      await seedCompletion(db, 
+      await seedCompletion(
+        db,
         makeCompletion(completedAt: DateTime.utc(2025, 12, 31)),
       );
 
@@ -327,7 +342,8 @@ void main() {
             ),
           );
 
-      await seedCompletion(db, 
+      await seedCompletion(
+        db,
         makeCompletion(
           completedAt: DateTime.utc(2026, 3, 10),
           overrideTrackId: other,

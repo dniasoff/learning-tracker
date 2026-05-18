@@ -5,7 +5,8 @@ import 'package:drift/drift.dart' show Value;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 
-import '../../../helpers/drift_memory.dart' show inMemoryDb, seedCompletion, seedProfile;
+import '../../../helpers/drift_memory.dart'
+    show inMemoryDb, seedCompletion, seedProfile;
 
 void main() {
   late UserDatabase db;
@@ -135,7 +136,8 @@ void main() {
       await insertCompletion(sefariaRef: 'ref_A');
 
       // Insert into the other track.
-      await seedCompletion(db, 
+      await seedCompletion(
+        db,
         CompletionsCompanion.insert(
           profileId: profileId,
           curriculumId: 'bavli',

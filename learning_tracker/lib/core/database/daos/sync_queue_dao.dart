@@ -94,9 +94,8 @@ class SyncQueueDao extends DatabaseAccessor<UserDatabase>
   /// pre-fix build and are now unreachable dead data — this deletes them once
   /// at launch. Returns the number of rows removed.
   Future<int> purgeCompletionRows() {
-    return (delete(syncQueue)..where(
-          (t) => t.operationType.equals(OutboxEntityKind.completion),
-        ))
-        .go();
+    return (delete(
+      syncQueue,
+    )..where((t) => t.operationType.equals(OutboxEntityKind.completion))).go();
   }
 }

@@ -61,7 +61,8 @@ class _ChannelCountingGateway implements FirestoreGateway {
   final List<int> openedProfileIds = [];
 
   /// Total channels opened across every `start()` call.
-  int get totalChannelsOpened => collectionListenerCount + documentListenerCount;
+  int get totalChannelsOpened =>
+      collectionListenerCount + documentListenerCount;
 
   @override
   Stream<List<Map<String, dynamic>>> listenToCollection({
@@ -93,55 +94,120 @@ class _ChannelCountingGateway implements FirestoreGateway {
     Map<String, dynamic>? cursor,
   }) async => const FirestorePage(rows: []);
   @override
-  Future<void> pushCompletion({required int profileId, required Map<String, dynamic> data, String? docId}) async {}
+  Future<void> pushCompletion({
+    required int profileId,
+    required Map<String, dynamic> data,
+    String? docId,
+  }) async {}
   @override
-  Future<List<String>> pushCompletionsBatch({required int profileId, required List<({String entityKey, Map<String, dynamic> payload})> items}) async => const [];
+  Future<List<String>> pushCompletionsBatch({
+    required int profileId,
+    required List<({String entityKey, Map<String, dynamic> payload})> items,
+  }) async => const [];
   @override
-  Future<void> pushStreak({required int profileId, required Map<String, dynamic> data}) async {}
+  Future<void> pushStreak({
+    required int profileId,
+    required Map<String, dynamic> data,
+  }) async {}
   @override
-  Future<void> pushSettings({required int profileId, required Map<String, dynamic> data}) async {}
+  Future<void> pushSettings({
+    required int profileId,
+    required Map<String, dynamic> data,
+  }) async {}
   @override
-  Future<void> pushTrack({required int profileId, required Map<String, dynamic> data}) async {}
+  Future<void> pushTrack({
+    required int profileId,
+    required Map<String, dynamic> data,
+  }) async {}
   @override
-  Future<void> pushLearningOrder({required int profileId, required Map<String, dynamic> data}) async {}
+  Future<void> pushLearningOrder({
+    required int profileId,
+    required Map<String, dynamic> data,
+  }) async {}
   @override
-  Future<void> pushBookmark({required int profileId, required Map<String, dynamic> data}) async {}
+  Future<void> pushBookmark({
+    required int profileId,
+    required Map<String, dynamic> data,
+  }) async {}
   @override
-  Future<void> pushNotificationSettings({required int profileId, required Map<String, dynamic> data}) async {}
+  Future<void> pushNotificationSettings({
+    required int profileId,
+    required Map<String, dynamic> data,
+  }) async {}
   @override
-  Future<void> pushGamificationSettings({required int profileId, required Map<String, dynamic> data}) async {}
+  Future<void> pushGamificationSettings({
+    required int profileId,
+    required Map<String, dynamic> data,
+  }) async {}
   @override
-  Future<void> pushLearnerProfile({required int profileId, required Map<String, dynamic> data}) async {}
+  Future<void> pushLearnerProfile({
+    required int profileId,
+    required Map<String, dynamic> data,
+  }) async {}
   @override
   Future<void> deleteLearnerProfile(int profileId) async {}
   @override
-  Future<void> pushLedgerEntry({required int profileId, required Map<String, dynamic> data}) async {}
+  Future<void> pushLedgerEntry({
+    required int profileId,
+    required Map<String, dynamic> data,
+  }) async {}
   @override
-  Future<void> pushLedgerEntriesBatch({required int profileId, required List<Map<String, dynamic>> entries}) async {}
+  Future<void> pushLedgerEntriesBatch({
+    required int profileId,
+    required List<Map<String, dynamic>> entries,
+  }) async {}
   @override
-  Future<void> pushProfileProgram({required int profileId, required Map<String, dynamic> data}) async {}
+  Future<void> pushProfileProgram({
+    required int profileId,
+    required Map<String, dynamic> data,
+  }) async {}
   @override
-  Future<void> removeProfileProgramAssignment({required int profileId, required String curriculumStorageKey}) async {}
+  Future<void> removeProfileProgramAssignment({
+    required int profileId,
+    required String curriculumStorageKey,
+  }) async {}
   @override
-  Future<List<Map<String, dynamic>>> fetchAll({required int profileId, required String collection}) async => [];
+  Future<List<Map<String, dynamic>>> fetchAll({
+    required int profileId,
+    required String collection,
+  }) async => [];
   @override
-  Future<void> pushGoal({required int profileId, required Map<String, dynamic> data}) async {}
+  Future<void> pushGoal({
+    required int profileId,
+    required Map<String, dynamic> data,
+  }) async {}
   @override
-  Future<void> pushUiPreferences({required int profileId, required Map<String, dynamic> data}) async {}
+  Future<void> pushUiPreferences({
+    required int profileId,
+    required Map<String, dynamic> data,
+  }) async {}
   @override
   Future<void> pushAccountProfile({required Map<String, dynamic> data}) async {}
   @override
-  Future<void> pushCurriculumImportMetadata({required int profileId, required Map<String, dynamic> data}) async {}
+  Future<void> pushCurriculumImportMetadata({
+    required int profileId,
+    required Map<String, dynamic> data,
+  }) async {}
   @override
   Future<void> deleteUserData(String uid) async {}
   @override
-  Future<void> pushDiagnosticLog({required String uid, required Map<String, dynamic> data}) async {}
+  Future<void> pushDiagnosticLog({
+    required String uid,
+    required Map<String, dynamic> data,
+  }) async {}
   @override
-  Future<void> pushAccountUserProfile({required String uid, required Map<String, dynamic> data}) async {}
+  Future<void> pushAccountUserProfile({
+    required String uid,
+    required Map<String, dynamic> data,
+  }) async {}
   @override
   Future<List<Map<String, dynamic>>> fetchLearnerProfiles() async => [];
   @override
-  Future<Map<String, dynamic>?> fetchDocument({required int profileId, required String collection, required String docId}) async => null;
+  Future<Map<String, dynamic>?> fetchDocument({
+    required int profileId,
+    required String collection,
+    required String docId,
+  }) async => null;
 }
 
 /// Builds a real [SyncOrchestratorImpl] wired against fakes.
@@ -287,53 +353,50 @@ void main() {
     // Post-fix, FirestoreListenerSource resolves the profile id lazily and
     // SyncOrchestratorImpl.restartListeners() re-opens the listener set. The
     // provider calls restartListeners() on every profile change.
-    test(
-      'I3: restartListeners() rebinds the live listener set to the current '
-      'profile',
-      () async {
-        final gateway = _ChannelCountingGateway();
-        // The resolver models activeProfileIdProvider: it starts on the
-        // bootstrap profile (0) and flips to a real profile after a switch.
-        var currentProfile = 0;
-        final orchestrator = _buildOrchestrator(
-          gateway,
-          resolveProfileId: () => currentProfile,
-        );
-        addTearDown(orchestrator.dispose);
+    test('I3: restartListeners() rebinds the live listener set to the current '
+        'profile', () async {
+      final gateway = _ChannelCountingGateway();
+      // The resolver models activeProfileIdProvider: it starts on the
+      // bootstrap profile (0) and flips to a real profile after a switch.
+      var currentProfile = 0;
+      final orchestrator = _buildOrchestrator(
+        gateway,
+        resolveProfileId: () => currentProfile,
+      );
+      addTearDown(orchestrator.dispose);
 
-        orchestrator.start();
-        expect(
-          gateway.openedProfileIds.every((id) => id == 0),
-          isTrue,
-          reason:
-              'I3: the cold-start listener set must open against the '
-              'bootstrap profile that was active at start()',
-        );
-        final channelsPerSet = gateway.totalChannelsOpened;
+      orchestrator.start();
+      expect(
+        gateway.openedProfileIds.every((id) => id == 0),
+        isTrue,
+        reason:
+            'I3: the cold-start listener set must open against the '
+            'bootstrap profile that was active at start()',
+      );
+      final channelsPerSet = gateway.totalChannelsOpened;
 
-        // The user picks a real profile — the provider would observe this and
-        // call restartListeners().
-        currentProfile = 7;
-        orchestrator.restartListeners();
-        // restart() is stop()-then-start(); both are async.
-        await Future<void>.delayed(Duration.zero);
+      // The user picks a real profile — the provider would observe this and
+      // call restartListeners().
+      currentProfile = 7;
+      orchestrator.restartListeners();
+      // restart() is stop()-then-start(); both are async.
+      await Future<void>.delayed(Duration.zero);
 
-        expect(
-          gateway.totalChannelsOpened,
-          equals(channelsPerSet * 2),
-          reason:
-              'I3: restartListeners() must re-open exactly one fresh listener '
-              'set (not zero, not a duplicate)',
-        );
-        expect(
-          gateway.openedProfileIds.sublist(channelsPerSet),
-          everyElement(equals(7)),
-          reason:
-              'I3: every channel opened after the profile switch must be '
-              'bound to the new profile id — not the stale bootstrap profile',
-        );
-      },
-    );
+      expect(
+        gateway.totalChannelsOpened,
+        equals(channelsPerSet * 2),
+        reason:
+            'I3: restartListeners() must re-open exactly one fresh listener '
+            'set (not zero, not a duplicate)',
+      );
+      expect(
+        gateway.openedProfileIds.sublist(channelsPerSet),
+        everyElement(equals(7)),
+        reason:
+            'I3: every channel opened after the profile switch must be '
+            'bound to the new profile id — not the stale bootstrap profile',
+      );
+    });
 
     // ── S7.4 ────────────────────────────────────────────────────────────────
     //
@@ -350,90 +413,84 @@ void main() {
     // Riverpod wiring contract — keepAlive + the absence of any
     // ref.watch(syncEngineProvider) — so the provider's build closure runs
     // exactly once and an unrelated invalidation does not re-run it.
-    test(
-      'S7 provider: invalidating syncEngineProvider does not rebuild '
-      'syncOrchestratorProvider',
-      () {
-        var orchestratorRebuilds = 0;
+    test('S7 provider: invalidating syncEngineProvider does not rebuild '
+        'syncOrchestratorProvider', () {
+      var orchestratorRebuilds = 0;
 
-        final container = ProviderContainer(
-          overrides: [
-            authStateProvider.overrideWithValue(const AuthState.signedOut()),
-          ],
-        );
-        addTearDown(container.dispose);
+      final container = ProviderContainer(
+        overrides: [
+          authStateProvider.overrideWithValue(const AuthState.signedOut()),
+        ],
+      );
+      addTearDown(container.dispose);
 
-        // Subscribe so the provider stays mounted; count every rebuild.
-        container.listen<SyncOrchestrator?>(
-          syncOrchestratorProvider,
-          (_, _) => orchestratorRebuilds++,
-          fireImmediately: true,
-        );
+      // Subscribe so the provider stays mounted; count every rebuild.
+      container.listen<SyncOrchestrator?>(
+        syncOrchestratorProvider,
+        (_, _) => orchestratorRebuilds++,
+        fireImmediately: true,
+      );
 
-        final first = container.read(syncOrchestratorProvider);
-        final rebuildsAfterFirstRead = orchestratorRebuilds;
+      final first = container.read(syncOrchestratorProvider);
+      final rebuildsAfterFirstRead = orchestratorRebuilds;
 
-        // Invalidate the engine — the Bug #1 trigger from the sign-in flow.
-        container.invalidate(syncEngineProvider);
-        // Force the engine provider to rebuild so the invalidation is real.
-        container.read(syncEngineProvider);
+      // Invalidate the engine — the Bug #1 trigger from the sign-in flow.
+      container.invalidate(syncEngineProvider);
+      // Force the engine provider to rebuild so the invalidation is real.
+      container.read(syncEngineProvider);
 
-        final second = container.read(syncOrchestratorProvider);
+      final second = container.read(syncOrchestratorProvider);
 
-        expect(
-          identical(first, second),
-          isTrue,
-          reason:
-              'S7: reading syncOrchestratorProvider before and after a '
-              'syncEngineProvider invalidation must yield the same instance',
-        );
-        expect(
-          orchestratorRebuilds,
-          equals(rebuildsAfterFirstRead),
-          reason:
-              'S7: invalidating syncEngineProvider must NOT rebuild '
-              'syncOrchestratorProvider — exactly one orchestrator per session',
-        );
-      },
-    );
+      expect(
+        identical(first, second),
+        isTrue,
+        reason:
+            'S7: reading syncOrchestratorProvider before and after a '
+            'syncEngineProvider invalidation must yield the same instance',
+      );
+      expect(
+        orchestratorRebuilds,
+        equals(rebuildsAfterFirstRead),
+        reason:
+            'S7: invalidating syncEngineProvider must NOT rebuild '
+            'syncOrchestratorProvider — exactly one orchestrator per session',
+      );
+    });
 
     // ── S7.5 ────────────────────────────────────────────────────────────────
     //
     // Source-level guard: the production syncOrchestratorProvider must keep
     // itself alive and must NOT watch syncEngineProvider. This pins the
     // mechanism that S7.4 exercises against accidental regression.
-    test(
-      'S7 provider: production source is keepAlive and does not watch the '
-      'sync engine',
-      () {
-        const srcPath =
-            'lib/core/sync/providers/sync_orchestrator_providers.dart';
-        final source = _readSource(srcPath);
+    test('S7 provider: production source is keepAlive and does not watch the '
+        'sync engine', () {
+      const srcPath =
+          'lib/core/sync/providers/sync_orchestrator_providers.dart';
+      final source = _readSource(srcPath);
 
-        expect(
-          source,
-          contains('ref.keepAlive()'),
-          reason:
-              'S7: syncOrchestratorProvider must call ref.keepAlive() so a '
-              'transient unmount of any reader cannot dispose the singleton',
-        );
-        expect(
-          source,
-          isNot(contains('ref.watch(syncEngineProvider)')),
-          reason:
-              'S7: syncOrchestratorProvider must NOT ref.watch '
-              'syncEngineProvider — invalidating the engine would otherwise '
-              'rebuild the orchestrator (Bug #1)',
-        );
-        expect(
-          source,
-          contains('orchestrator.start()'),
-          reason:
-              'S7: the provider must call the idempotent start() so the '
-              'lifecycle observer + listener set are registered exactly once',
-        );
-      },
-    );
+      expect(
+        source,
+        contains('ref.keepAlive()'),
+        reason:
+            'S7: syncOrchestratorProvider must call ref.keepAlive() so a '
+            'transient unmount of any reader cannot dispose the singleton',
+      );
+      expect(
+        source,
+        isNot(contains('ref.watch(syncEngineProvider)')),
+        reason:
+            'S7: syncOrchestratorProvider must NOT ref.watch '
+            'syncEngineProvider — invalidating the engine would otherwise '
+            'rebuild the orchestrator (Bug #1)',
+      );
+      expect(
+        source,
+        contains('orchestrator.start()'),
+        reason:
+            'S7: the provider must call the idempotent start() so the '
+            'lifecycle observer + listener set are registered exactly once',
+      );
+    });
 
     // ── S7.6 ────────────────────────────────────────────────────────────────
     //
@@ -441,29 +498,26 @@ void main() {
     // syncEngineProvider — that invalidation was the call that recreated the
     // orchestrator. Pinned at the source level so a future edit re-introducing
     // it fails loudly.
-    test(
-      'S7 call-sites: sign-in and upgrade flows no longer invalidate '
-      'syncEngineProvider',
-      () {
-        const signInPath =
-            'lib/features/auth/presentation/screens/sign_in_screen.dart';
-        const upgradePath =
-            'lib/features/settings/presentation/screens/'
-            'upgrade_to_cloud_screen.dart';
+    test('S7 call-sites: sign-in and upgrade flows no longer invalidate '
+        'syncEngineProvider', () {
+      const signInPath =
+          'lib/features/auth/presentation/screens/sign_in_screen.dart';
+      const upgradePath =
+          'lib/features/settings/presentation/screens/'
+          'upgrade_to_cloud_screen.dart';
 
-        for (final path in [signInPath, upgradePath]) {
-          final source = _readSource(path);
-          expect(
-            source,
-            isNot(contains('invalidate(syncEngineProvider)')),
-            reason:
-                'S7: $path must not call ref.invalidate(syncEngineProvider) — '
-                'it rebuilt the SyncOrchestrator singleton. Pulls are now '
-                'triggered directly via orchestrator.pullOnLaunch().',
-          );
-        }
-      },
-    );
+      for (final path in [signInPath, upgradePath]) {
+        final source = _readSource(path);
+        expect(
+          source,
+          isNot(contains('invalidate(syncEngineProvider)')),
+          reason:
+              'S7: $path must not call ref.invalidate(syncEngineProvider) — '
+              'it rebuilt the SyncOrchestrator singleton. Pulls are now '
+              'triggered directly via orchestrator.pullOnLaunch().',
+        );
+      }
+    });
   });
 }
 

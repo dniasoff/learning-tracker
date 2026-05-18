@@ -103,7 +103,9 @@ void main() {
           ];
 
           // Pre-condition: local DB is empty for this profile.
-          final before = await db.completionDao.getCompletionsByProfile(profileId);
+          final before = await db.completionDao.getCompletionsByProfile(
+            profileId,
+          );
           expect(before, isEmpty, reason: 'DB must be empty before pull');
 
           // Act: dispatch the Firestore documents through the merge layer —
@@ -116,7 +118,9 @@ void main() {
 
           // Assert: all three completions are now visible through
           // completions_view, which is the C1-backed read path the UI uses.
-          final after = await db.completionDao.getCompletionsByProfile(profileId);
+          final after = await db.completionDao.getCompletionsByProfile(
+            profileId,
+          );
 
           expect(
             after.length,
@@ -161,11 +165,14 @@ void main() {
             rows: [doc],
           );
 
-          final after = await db.completionDao.getCompletionsByProfile(profileId);
+          final after = await db.completionDao.getCompletionsByProfile(
+            profileId,
+          );
           expect(
             after.where((c) => c.sefariaRef == 'Shabbat 10a').length,
             1,
-            reason: 'INSERT OR IGNORE must collapse duplicate pull into one row',
+            reason:
+                'INSERT OR IGNORE must collapse duplicate pull into one row',
           );
         },
       );

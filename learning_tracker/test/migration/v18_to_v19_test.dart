@@ -31,29 +31,33 @@ void main() {
 
     // ── 2. enqueueWithKey deduplicates ────────────────────────────────────
 
-    test('enqueueWithKey replaces the existing row for the same entityKey', () async {
-      final db = inMemoryDb();
-      addTearDown(db.close);
+    test(
+      'enqueueWithKey replaces the existing row for the same entityKey',
+      () async {
+        final db = inMemoryDb();
+        addTearDown(db.close);
 
-      await db.syncQueueDao.enqueueWithKey(
-        'track_config',
-        '{"active":true}',
-        'track_config:42',
-      );
-      await db.syncQueueDao.enqueueWithKey(
-        'track_config',
-        '{"active":false}',
-        'track_config:42',
-      );
+        await db.syncQueueDao.enqueueWithKey(
+          'track_config',
+          '{"active":true}',
+          'track_config:42',
+        );
+        await db.syncQueueDao.enqueueWithKey(
+          'track_config',
+          '{"active":false}',
+          'track_config:42',
+        );
 
-      final rows = await db.syncQueueDao.getAllPending();
-      expect(
-        rows,
-        hasLength(1),
-        reason: 'I-5: second enqueueWithKey for same entityKey must replace first',
-      );
-      expect(rows.first.payload, contains('"active":false'));
-    });
+        final rows = await db.syncQueueDao.getAllPending();
+        expect(
+          rows,
+          hasLength(1),
+          reason:
+              'I-5: second enqueueWithKey for same entityKey must replace first',
+        );
+        expect(rows.first.payload, contains('"active":false'));
+      },
+    );
 
     // ── 3. Different entity keys don't interfere ──────────────────────────
 

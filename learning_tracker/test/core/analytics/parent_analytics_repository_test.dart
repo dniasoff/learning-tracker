@@ -39,34 +39,40 @@ void main() {
       // Seed learner_profiles(1,2) and curriculum_tracks(1) for FK constraints.
       final now = DateTime.utc(2026, 1, 1);
       for (var i = 0; i < 2; i++) {
-        await db.into(db.learnerProfiles).insert(
-          LearnerProfilesCompanion.insert(
-            accountId: 1,
-            displayName: 'Profile ${i + 1}',
-            mode: 'adult',
-            createdAt: now,
-            updatedAt: now,
-          ),
-        );
+        await db
+            .into(db.learnerProfiles)
+            .insert(
+              LearnerProfilesCompanion.insert(
+                accountId: 1,
+                displayName: 'Profile ${i + 1}',
+                mode: 'adult',
+                createdAt: now,
+                updatedAt: now,
+              ),
+            );
       }
-      await db.into(db.curriculumTracks).insert(
-        CurriculumTracksCompanion.insert(
-          profileId: 1,
-          curriculumId: 'mishnayos',
-          trackType: 'forwards',
-          activatedAt: now,
-        ),
-      );
+      await db
+          .into(db.curriculumTracks)
+          .insert(
+            CurriculumTracksCompanion.insert(
+              profileId: 1,
+              curriculumId: 'mishnayos',
+              trackType: 'forwards',
+              activatedAt: now,
+            ),
+          );
       repo = ParentAnalyticsRepositoryImpl(db);
     });
 
     tearDown(() => db.close());
 
     test('getAllCompletions returns rows across every profile', () async {
-      await seedCompletion(db, 
+      await seedCompletion(
+        db,
         _completion(profileId: 1, curriculumId: 'mishnayos'),
       );
-      await seedCompletion(db, 
+      await seedCompletion(
+        db,
         _completion(profileId: 2, curriculumId: 'mishnayos', ref: 'ref-2'),
       );
 
@@ -81,10 +87,12 @@ void main() {
     test(
       'getCompletionsByCurriculum filters by curriculum, across profiles',
       () async {
-        await seedCompletion(db, 
+        await seedCompletion(
+          db,
           _completion(profileId: 1, curriculumId: 'mishnayos'),
         );
-        await seedCompletion(db, 
+        await seedCompletion(
+          db,
           _completion(profileId: 2, curriculumId: 'bavli', ref: 'ref-2'),
         );
 
@@ -100,14 +108,16 @@ void main() {
     test(
       'getCompletionsByDateRange filters by date range, across profiles',
       () async {
-        await seedCompletion(db, 
+        await seedCompletion(
+          db,
           _completion(
             profileId: 1,
             curriculumId: 'mishnayos',
             completedAt: DateTime.utc(2026, 1, 1),
           ),
         );
-        await seedCompletion(db, 
+        await seedCompletion(
+          db,
           _completion(
             profileId: 2,
             curriculumId: 'mishnayos',
@@ -127,13 +137,16 @@ void main() {
     );
 
     test('getAggregateCount counts across profiles', () async {
-      await seedCompletion(db, 
+      await seedCompletion(
+        db,
         _completion(profileId: 1, curriculumId: 'mishnayos'),
       );
-      await seedCompletion(db, 
+      await seedCompletion(
+        db,
         _completion(profileId: 2, curriculumId: 'mishnayos', ref: 'ref-2'),
       );
-      await seedCompletion(db, 
+      await seedCompletion(
+        db,
         _completion(profileId: 1, curriculumId: 'bavli', ref: 'ref-3'),
       );
 
@@ -145,14 +158,16 @@ void main() {
     });
 
     test('getTrackBreakdown groups by trackType, across profiles', () async {
-      await seedCompletion(db, 
+      await seedCompletion(
+        db,
         _completion(
           profileId: 1,
           curriculumId: 'mishnayos',
           trackType: 'forwards',
         ),
       );
-      await seedCompletion(db, 
+      await seedCompletion(
+        db,
         _completion(
           profileId: 2,
           curriculumId: 'mishnayos',
@@ -160,7 +175,8 @@ void main() {
           trackType: 'forwards',
         ),
       );
-      await seedCompletion(db, 
+      await seedCompletion(
+        db,
         _completion(
           profileId: 1,
           curriculumId: 'mishnayos',

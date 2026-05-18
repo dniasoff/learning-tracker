@@ -100,47 +100,50 @@ void main() {
 
       // ── AC: writer is the single path; writes both rows atomically ──────
 
-      test('commit() inserts an outbox row AND a completion_events row in one '
-          'atomic transaction (C1: completions table no longer written)', () async {
-        final result = await writer.commit(_cmd(trackId: trackId));
+      test(
+        'commit() inserts an outbox row AND a completion_events row in one '
+        'atomic transaction (C1: completions table no longer written)',
+        () async {
+          final result = await writer.commit(_cmd(trackId: trackId));
 
-        expect(result.isNew, isTrue);
-        expect(result.completion.sefariaRef, equals('Mishnah Berakhot 1'));
+          expect(result.isNew, isTrue);
+          expect(result.completion.sefariaRef, equals('Mishnah Berakhot 1'));
 
-        final outboxRows = await db.select(db.outbox).get();
-        expect(outboxRows, hasLength(1));
-        expect(
-          outboxRows.first.entityKind,
-          equals(OutboxEntityKind.completion),
-        );
-        expect(
-          outboxRows.first.entityKey,
-          equals('1:Mishnah Berakhot 1:1:personal'),
-        );
+          final outboxRows = await db.select(db.outbox).get();
+          expect(outboxRows, hasLength(1));
+          expect(
+            outboxRows.first.entityKind,
+            equals(OutboxEntityKind.completion),
+          );
+          expect(
+            outboxRows.first.entityKey,
+            equals('1:Mishnah Berakhot 1:1:personal'),
+          );
 
-        final payload =
-            jsonDecode(outboxRows.first.payload) as Map<String, dynamic>;
-        expect(payload['profile_id'], equals(1));
-        expect(payload['sefaria_ref'], equals('Mishnah Berakhot 1'));
-        expect(payload['stage_id'], equals(1));
-        expect(payload['track_type'], equals('personal'));
-        expect(payload['points'], equals(5));
-        expect(payload['curriculum_id'], equals('mishnah_yomit'));
+          final payload =
+              jsonDecode(outboxRows.first.payload) as Map<String, dynamic>;
+          expect(payload['profile_id'], equals(1));
+          expect(payload['sefaria_ref'], equals('Mishnah Berakhot 1'));
+          expect(payload['stage_id'], equals(1));
+          expect(payload['track_type'], equals('personal'));
+          expect(payload['points'], equals(5));
+          expect(payload['curriculum_id'], equals('mishnah_yomit'));
 
-        // AC 25.15: completion_events row must be inserted atomically.
-        final events = await db.select(db.completionEvents).get();
-        expect(events, hasLength(1));
-        expect(events.first.profileId, equals(1));
-        expect(events.first.sefariaRef, equals('Mishnah Berakhot 1'));
-        expect(events.first.stageId, equals(1));
-        expect(events.first.trackType, equals('personal'));
-        expect(events.first.curriculumId, equals('mishnah_yomit'));
-        expect(events.first.points, equals(5));
-        expect(
-          events.first.eventTimestamp.toUtc().microsecondsSinceEpoch,
-          equals(DateTime.utc(2026, 5, 13, 12).microsecondsSinceEpoch),
-        );
-      });
+          // AC 25.15: completion_events row must be inserted atomically.
+          final events = await db.select(db.completionEvents).get();
+          expect(events, hasLength(1));
+          expect(events.first.profileId, equals(1));
+          expect(events.first.sefariaRef, equals('Mishnah Berakhot 1'));
+          expect(events.first.stageId, equals(1));
+          expect(events.first.trackType, equals('personal'));
+          expect(events.first.curriculumId, equals('mishnah_yomit'));
+          expect(events.first.points, equals(5));
+          expect(
+            events.first.eventTimestamp.toUtc().microsecondsSinceEpoch,
+            equals(DateTime.utc(2026, 5, 13, 12).microsecondsSinceEpoch),
+          );
+        },
+      );
 
       // ── AC: idempotency on duplicate command ─────────────────────────────
 

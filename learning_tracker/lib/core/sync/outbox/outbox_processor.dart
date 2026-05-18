@@ -140,12 +140,7 @@ class OutboxProcessor {
       }
 
       final entries = orderedKeys
-          .map(
-            (key) => (
-              entityKey: key,
-              payload: representativePayload[key]!,
-            ),
-          )
+          .map((key) => (entityKey: key, payload: representativePayload[key]!))
           .toList();
 
       // committed = entityKeys whose documents genuinely reached Firestore;
@@ -260,8 +255,7 @@ class OutboxProcessor {
     // ceiling by more than the jitter band.
     final cappedMs = math.min(rawMs, _maxBackoff.inMilliseconds.toDouble());
     // Jitter factor in [1 - jitter, 1 + jitter].
-    final jitterFactor =
-        1.0 + (_random.nextDouble() * 2 - 1) * _backoffJitter;
+    final jitterFactor = 1.0 + (_random.nextDouble() * 2 - 1) * _backoffJitter;
     final delay = Duration(milliseconds: (cappedMs * jitterFactor).round());
     return lastAttemptAt.add(delay);
   }
@@ -310,7 +304,9 @@ class OutboxProcessor {
           payload: payload,
         );
       default:
-        throw ArgumentError('Unknown outbox entity kind for single dispatch: $kind');
+        throw ArgumentError(
+          'Unknown outbox entity kind for single dispatch: $kind',
+        );
     }
   }
 }

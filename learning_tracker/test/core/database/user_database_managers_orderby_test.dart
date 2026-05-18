@@ -1849,7 +1849,9 @@ void main() {
     });
 
     test('filter by profileId', () async {
-      final rows = await db.managers.goals.filter((f) => f.profileId.id(1)).get();
+      final rows = await db.managers.goals
+          .filter((f) => f.profileId.id(1))
+          .get();
       expect(rows, hasLength(1));
     });
 

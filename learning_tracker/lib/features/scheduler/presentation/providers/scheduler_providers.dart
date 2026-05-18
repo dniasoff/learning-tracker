@@ -359,7 +359,8 @@ Future<List<DailyTask>> allDailyTasks(Ref ref) async {
       // not genuine study sessions. They must NOT filter today's new-learning
       // tasks — the user still needs to study these items. (F5)
       if (c.completedAt.millisecondsSinceEpoch ==
-          SchedulerEngine.kBulkPriorSentinelMs) return false;
+          SchedulerEngine.kBulkPriorSentinelMs)
+        return false;
       return c.stageId == task.stageDefinitionId ||
           c.stageId == task.stageOrder;
     });
@@ -1006,7 +1007,6 @@ Future<List<DailyTask>> _applyProgramCalendarOverrides({
 
   return result;
 }
-
 
 /// Calendar date in the user's local timezone (time stripped).
 DateTime _localDateOnly(DateTime utc) {

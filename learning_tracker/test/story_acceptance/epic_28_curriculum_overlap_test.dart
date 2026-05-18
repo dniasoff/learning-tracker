@@ -31,15 +31,17 @@ UserDatabase _openDb() => UserDatabase(NativeDatabase.memory());
 /// Insert a minimal learner profile and return its id.
 Future<int> _insertProfile(UserDatabase db) async {
   final now = DateTime.utc(2026, 1, 1);
-  final p = await db.into(db.learnerProfiles).insertReturning(
-    LearnerProfilesCompanion.insert(
-      accountId: 1,
-      displayName: 'Tester',
-      mode: 'adult',
-      createdAt: now,
-      updatedAt: now,
-    ),
-  );
+  final p = await db
+      .into(db.learnerProfiles)
+      .insertReturning(
+        LearnerProfilesCompanion.insert(
+          accountId: 1,
+          displayName: 'Tester',
+          mode: 'adult',
+          createdAt: now,
+          updatedAt: now,
+        ),
+      );
   return p.id;
 }
 
@@ -50,14 +52,16 @@ Future<int> _insertTrack(
   String curriculumId,
 ) async {
   final now = DateTime.utc(2026, 1, 1);
-  final t = await db.into(db.curriculumTracks).insertReturning(
-    CurriculumTracksCompanion.insert(
-      profileId: profileId,
-      curriculumId: curriculumId,
-      trackType: 'personal',
-      activatedAt: now,
-    ),
-  );
+  final t = await db
+      .into(db.curriculumTracks)
+      .insertReturning(
+        CurriculumTracksCompanion.insert(
+          profileId: profileId,
+          curriculumId: curriculumId,
+          trackType: 'personal',
+          activatedAt: now,
+        ),
+      );
   return t.id;
 }
 
@@ -70,7 +74,8 @@ Future<void> _insertCompletion(
   required String sefariaRef,
   int stageId = 1,
 }) async {
-  await seedCompletion(db, 
+  await seedCompletion(
+    db,
     CompletionsCompanion.insert(
       profileId: profileId,
       curriculumId: curriculumId,
@@ -202,28 +207,31 @@ void main() {
       },
     );
 
-    test('Chumash completion does NOT appear in Tanach direct-only fetch', () async {
-      const ref = 'Genesis 1';
+    test(
+      'Chumash completion does NOT appear in Tanach direct-only fetch',
+      () async {
+        const ref = 'Genesis 1';
 
-      await _insertCompletion(
-        db,
-        profileId: profileId,
-        trackId: chumashTrackId,
-        curriculumId: 'chumash',
-        sefariaRef: ref,
-      );
+        await _insertCompletion(
+          db,
+          profileId: profileId,
+          trackId: chumashTrackId,
+          curriculumId: 'chumash',
+          sefariaRef: ref,
+        );
 
-      // Direct Tanach fetch (no subset union) should NOT contain the ref
-      final directTanach = await db.completionDao
-          .getCompletionsByCurriculumAndProfile('tanach', profileId);
-      expect(
-        directTanach.map((c) => c.sefariaRef),
-        isNot(contains(ref)),
-        reason:
-            'The DB stores chumash completions under chumash curriculumId, '
-            'not tanach — the union is a read-time computation only',
-      );
-    });
+        // Direct Tanach fetch (no subset union) should NOT contain the ref
+        final directTanach = await db.completionDao
+            .getCompletionsByCurriculumAndProfile('tanach', profileId);
+        expect(
+          directTanach.map((c) => c.sefariaRef),
+          isNot(contains(ref)),
+          reason:
+              'The DB stores chumash completions under chumash curriculumId, '
+              'not tanach — the union is a read-time computation only',
+        );
+      },
+    );
   });
 
   // ── D. Nach completions appear in Tanach union ───────────────────────────
@@ -241,29 +249,32 @@ void main() {
 
     tearDown(() async => db.close());
 
-    test('Isaiah perek completed via Nach track appears in Tanach refs', () async {
-      const ref = 'Isaiah 1';
+    test(
+      'Isaiah perek completed via Nach track appears in Tanach refs',
+      () async {
+        const ref = 'Isaiah 1';
 
-      await _insertCompletion(
-        db,
-        profileId: profileId,
-        trackId: nachTrackId,
-        curriculumId: 'nach',
-        sefariaRef: ref,
-      );
+        await _insertCompletion(
+          db,
+          profileId: profileId,
+          trackId: nachTrackId,
+          curriculumId: 'nach',
+          sefariaRef: ref,
+        );
 
-      final tanachRefs = await _completedRefsWithSubsets(
-        db,
-        profileId,
-        CurriculumId.tanach,
-      );
+        final tanachRefs = await _completedRefsWithSubsets(
+          db,
+          profileId,
+          CurriculumId.tanach,
+        );
 
-      expect(
-        tanachRefs,
-        contains(ref),
-        reason: 'Nach completion should be visible in Tanach refs',
-      );
-    });
+        expect(
+          tanachRefs,
+          contains(ref),
+          reason: 'Nach completion should be visible in Tanach refs',
+        );
+      },
+    );
   });
 
   // ── E. No double-counting when same ref in both Chumash and Tanach tracks ─
@@ -378,30 +389,24 @@ void main() {
       expect(subsetsOf(CurriculumId.mishnehTorah), isEmpty);
     });
 
-    test(
-      'Mishnayos completion does not pollute Tanach refs',
-      () async {
-        final trackId = await _insertTrack(db, profileId, 'mishnayos');
-        await _insertCompletion(
-          db,
-          profileId: profileId,
-          trackId: trackId,
-          curriculumId: 'mishnayos',
-          sefariaRef: 'Mishnah Berakhot 1:1',
-        );
+    test('Mishnayos completion does not pollute Tanach refs', () async {
+      final trackId = await _insertTrack(db, profileId, 'mishnayos');
+      await _insertCompletion(
+        db,
+        profileId: profileId,
+        trackId: trackId,
+        curriculumId: 'mishnayos',
+        sefariaRef: 'Mishnah Berakhot 1:1',
+      );
 
-        final tanachRefs = await _completedRefsWithSubsets(
-          db,
-          profileId,
-          CurriculumId.tanach,
-        );
+      final tanachRefs = await _completedRefsWithSubsets(
+        db,
+        profileId,
+        CurriculumId.tanach,
+      );
 
-        expect(
-          tanachRefs,
-          isNot(contains('Mishnah Berakhot 1:1')),
-        );
-      },
-    );
+      expect(tanachRefs, isNot(contains('Mishnah Berakhot 1:1')));
+    });
 
     test(
       'Chumash completion is visible in Chumash refs (subset does not lose its own refs)',

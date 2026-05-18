@@ -667,7 +667,9 @@ class SyncEngine implements SyncWriteFacade {
       // Emit a single `synced` status once both drain loops have fully
       // completed, only if any rows were actually flushed.
       if (didSyncWork) {
-        _updateStatus(SyncStatus.synced(lastSyncedAt: DateTimeFactory.nowUtc()));
+        _updateStatus(
+          SyncStatus.synced(lastSyncedAt: DateTimeFactory.nowUtc()),
+        );
       }
     } catch (e) {
       // ignore: avoid_catches_without_on_clauses — intentional Firestore error boundary

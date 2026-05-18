@@ -12,23 +12,27 @@ void main() {
     await seedProfile(db);
     final now = DateTime.now();
     // Seed a second learner_profile and a curriculum_track for FK coverage.
-    await db.into(db.learnerProfiles).insert(
-      LearnerProfilesCompanion.insert(
-        accountId: 1,
-        displayName: 'Profile 2',
-        mode: 'adult',
-        createdAt: now,
-        updatedAt: now,
-      ),
-    );
-    await db.into(db.curriculumTracks).insert(
-      CurriculumTracksCompanion.insert(
-        profileId: 1,
-        curriculumId: 'mishna',
-        trackType: 'personal',
-        activatedAt: now,
-      ),
-    );
+    await db
+        .into(db.learnerProfiles)
+        .insert(
+          LearnerProfilesCompanion.insert(
+            accountId: 1,
+            displayName: 'Profile 2',
+            mode: 'adult',
+            createdAt: now,
+            updatedAt: now,
+          ),
+        );
+    await db
+        .into(db.curriculumTracks)
+        .insert(
+          CurriculumTracksCompanion.insert(
+            profileId: 1,
+            curriculumId: 'mishna',
+            trackType: 'personal',
+            activatedAt: now,
+          ),
+        );
   });
 
   tearDown(() async {

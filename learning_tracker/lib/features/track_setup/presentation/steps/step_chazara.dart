@@ -62,9 +62,7 @@ class _ChazaraInlineSetupState extends State<ChazaraInlineSetup> {
     super.initState();
     final initial = widget.initialDelays;
     if (initial != null) {
-      final match = _presets.indexWhere(
-        (p) => _listEquals(p.delays, initial),
-      );
+      final match = _presets.indexWhere((p) => _listEquals(p.delays, initial));
       if (match >= 0) {
         _selectedPresetIndex = match;
         _customDelays = List.of(_presets[match].delays);

@@ -325,7 +325,11 @@ void main() {
       final ctx = await _makeRealRepo();
       addTearDown(() => ctx.database.close());
 
-      await ctx.repository.initializeDefaults(curriculum, profileId: 1, trackId: ctx.trackId);
+      await ctx.repository.initializeDefaults(
+        curriculum,
+        profileId: 1,
+        trackId: ctx.trackId,
+      );
 
       final stage = await ctx.repository.addStage(
         curriculum,
@@ -391,7 +395,11 @@ void main() {
       final ctx = await _makeRealRepo();
       addTearDown(() => ctx.database.close());
 
-      await ctx.repository.initializeDefaults(curriculum, profileId: 1, trackId: ctx.trackId);
+      await ctx.repository.initializeDefaults(
+        curriculum,
+        profileId: 1,
+        trackId: ctx.trackId,
+      );
 
       final before = await ctx.repository.getStagesForCurriculum(curriculum);
       // Default order: Learn(1), Chazara1(2), Chazara2(3)

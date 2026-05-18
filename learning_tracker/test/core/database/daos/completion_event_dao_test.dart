@@ -10,15 +10,17 @@ void main() {
     db = inMemoryDb();
     await seedProfile(db);
     final now = DateTime.now();
-    await db.into(db.learnerProfiles).insert(
-      LearnerProfilesCompanion.insert(
-        accountId: 1,
-        displayName: 'Profile 2',
-        mode: 'adult',
-        createdAt: now,
-        updatedAt: now,
-      ),
-    );
+    await db
+        .into(db.learnerProfiles)
+        .insert(
+          LearnerProfilesCompanion.insert(
+            accountId: 1,
+            displayName: 'Profile 2',
+            mode: 'adult',
+            createdAt: now,
+            updatedAt: now,
+          ),
+        );
   });
 
   tearDown(() async {

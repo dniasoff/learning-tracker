@@ -86,9 +86,7 @@ class TrackCard extends StatelessWidget {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.end,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    TrackContinueButton(vm: vm, l10n: l10n),
-                  ],
+                  children: [TrackContinueButton(vm: vm, l10n: l10n)],
                 ),
               ),
             ],

@@ -50,7 +50,11 @@ void main() {
     test(
       'initializeDefaults then addStage — push payload contains all stages',
       () async {
-        await repository.initializeDefaults(curriculum, profileId: 1, trackId: trackId);
+        await repository.initializeDefaults(
+          curriculum,
+          profileId: 1,
+          trackId: trackId,
+        );
 
         pushedSettings.clear();
 
@@ -85,7 +89,11 @@ void main() {
     test(
       'replaceStagesForCurriculum restores stages from Firestore payload',
       () async {
-        await repository.initializeDefaults(curriculum, profileId: 1, trackId: trackId);
+        await repository.initializeDefaults(
+          curriculum,
+          profileId: 1,
+          trackId: trackId,
+        );
 
         // Simulate Firestore payload arriving with 4 stages
         final firestoreStages = [
@@ -142,11 +150,25 @@ void main() {
     );
 
     test('resetToDefaults restores exactly 3 stages and pushes', () async {
-      await repository.initializeDefaults(curriculum, profileId: 1, trackId: trackId);
-      await repository.addStage(curriculum, 'Custom', 60, profileId: 1, trackId: trackId);
+      await repository.initializeDefaults(
+        curriculum,
+        profileId: 1,
+        trackId: trackId,
+      );
+      await repository.addStage(
+        curriculum,
+        'Custom',
+        60,
+        profileId: 1,
+        trackId: trackId,
+      );
 
       pushedSettings.clear();
-      await repository.resetToDefaults(curriculum, profileId: 1, trackId: trackId);
+      await repository.resetToDefaults(
+        curriculum,
+        profileId: 1,
+        trackId: trackId,
+      );
 
       final stages = await repository.getStagesForCurriculum(curriculum);
       expect(stages, hasLength(3));

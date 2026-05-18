@@ -119,7 +119,11 @@ class StageEditorNotifier extends AsyncNotifier<List<StageDefinition>> {
 
   Future<void> resetToDefaults({required int trackId}) async {
     final profileId = ref.read(activeProfileIdProvider);
-    await _repository.resetToDefaults(_curriculum, profileId: profileId, trackId: trackId);
+    await _repository.resetToDefaults(
+      _curriculum,
+      profileId: profileId,
+      trackId: trackId,
+    );
     ref.invalidate(stageListProvider(_curriculum));
     state = await AsyncValue.guard(
       () => _repository.getStagesForCurriculum(_curriculum),

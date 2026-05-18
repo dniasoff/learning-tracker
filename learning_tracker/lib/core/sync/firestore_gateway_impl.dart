@@ -162,13 +162,10 @@ class FirestoreGatewayImpl implements FirestoreGateway {
     // diverges from the batch path). The [docId] parameter is retained on the
     // interface for non-completion callers; for completions it is ignored.
     final id = _completionDocId(profileId, data);
-    await collection.doc(id).set(
-      {
-        ..._timestampifyCompletedAt(_stripInternalKeys(data)),
-        'synced_at': FieldValue.serverTimestamp(),
-      },
-      SetOptions(merge: true),
-    );
+    await collection.doc(id).set({
+      ..._timestampifyCompletedAt(_stripInternalKeys(data)),
+      'synced_at': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
   }
 
   @override
@@ -190,14 +187,10 @@ class FirestoreGatewayImpl implements FirestoreGateway {
         // key — the same single function used by [pushCompletion]. The outbox
         // entityKey is used only to report which rows committed.
         final id = _completionDocId(profileId, item.payload);
-        batch.set(
-          collection.doc(id),
-          {
-            ..._timestampifyCompletedAt(_stripInternalKeys(item.payload)),
-            'synced_at': FieldValue.serverTimestamp(),
-          },
-          SetOptions(merge: true),
-        );
+        batch.set(collection.doc(id), {
+          ..._timestampifyCompletedAt(_stripInternalKeys(item.payload)),
+          'synced_at': FieldValue.serverTimestamp(),
+        }, SetOptions(merge: true));
       }
       // Per-chunk commit accounting: if this chunk throws, the entityKeys of
       // the chunks that already committed are carried out on a
@@ -207,7 +200,10 @@ class FirestoreGatewayImpl implements FirestoreGateway {
       try {
         await batch.commit();
       } catch (e) {
-        throw BatchPushException(committed: List.unmodifiable(pushed), cause: e);
+        throw BatchPushException(
+          committed: List.unmodifiable(pushed),
+          cause: e,
+        );
       }
       pushed.addAll(chunk.map((e) => e.entityKey));
     }
@@ -610,7 +606,9 @@ class FirestoreGatewayImpl implements FirestoreGateway {
         }
       }
       return snapshot.docs
-          .where((d) => !localOnly.contains(d.id) || !d.metadata.hasPendingWrites)
+          .where(
+            (d) => !localOnly.contains(d.id) || !d.metadata.hasPendingWrites,
+          )
           .map((d) => _normalizeRow({...d.data(), 'firestore_id': d.id}))
           .toList(growable: false);
     });

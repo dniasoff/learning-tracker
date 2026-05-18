@@ -18,26 +18,30 @@ void main() {
     db = createTestDatabase();
     await seedProfile(db);
     // Seed a second learner profile (id=5) used by child-profile tests.
-    await db.into(db.learnerProfiles).insert(
-      LearnerProfilesCompanion(
-        id: const Value(5),
-        accountId: const Value(1),
-        displayName: const Value('Child User'),
-        mode: const Value('child'),
-        createdAt: Value(DateTime.now().toUtc()),
-        updatedAt: Value(DateTime.now().toUtc()),
-      ),
-    );
+    await db
+        .into(db.learnerProfiles)
+        .insert(
+          LearnerProfilesCompanion(
+            id: const Value(5),
+            accountId: const Value(1),
+            displayName: const Value('Child User'),
+            mode: const Value('child'),
+            createdAt: Value(DateTime.now().toUtc()),
+            updatedAt: Value(DateTime.now().toUtc()),
+          ),
+        );
     // Seed a curriculum track with id=42 for the 'stores trackId' test.
-    await db.into(db.curriculumTracks).insert(
-      CurriculumTracksCompanion(
-        id: const Value(42),
-        profileId: const Value(1),
-        curriculumId: const Value('mishna'),
-        trackType: const Value('personal'),
-        activatedAt: Value(DateTime.now().toUtc()),
-      ),
-    );
+    await db
+        .into(db.curriculumTracks)
+        .insert(
+          CurriculumTracksCompanion(
+            id: const Value(42),
+            profileId: const Value(1),
+            curriculumId: const Value('mishna'),
+            trackType: const Value('personal'),
+            activatedAt: Value(DateTime.now().toUtc()),
+          ),
+        );
     mockGateway = _MockFirestoreGateway();
     when(
       () => mockGateway.pushLedgerEntry(

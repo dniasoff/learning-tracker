@@ -62,7 +62,8 @@ void main() {
     String trackType = 'personal',
     String curriculumId = 'mishnayos',
   }) async {
-    final id = await seedCompletion(db, 
+    final id = await seedCompletion(
+      db,
       CompletionsCompanion.insert(
         profileId: 1,
         curriculumId: curriculumId,

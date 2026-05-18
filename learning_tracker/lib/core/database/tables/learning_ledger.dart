@@ -25,11 +25,8 @@ class LearningLedger extends Table {
   IntColumn get id => integer().autoIncrement()();
 
   /// C2: FK → learner_profiles(id) CASCADE DELETE.
-  IntColumn get profileId => integer().references(
-    LearnerProfiles,
-    #id,
-    onDelete: KeyAction.cascade,
-  )();
+  IntColumn get profileId =>
+      integer().references(LearnerProfiles, #id, onDelete: KeyAction.cascade)();
 
   /// ULID identifying the logical ledger entry across devices. Two devices
   /// writing the same entry use the same ULID so the UNIQUE composite

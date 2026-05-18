@@ -73,7 +73,8 @@ void main() {
       required int points,
       String trackType = 'personal',
     }) async {
-      await seedCompletion(db, 
+      await seedCompletion(
+        db,
         CompletionsCompanion.insert(
           profileId: 1,
           curriculumId: curriculumId,
@@ -213,7 +214,8 @@ void main() {
     });
 
     test('streak calendar returns active dates for range', () async {
-      await seedCompletion(db, 
+      await seedCompletion(
+        db,
         CompletionsCompanion.insert(
           profileId: 1,
           curriculumId: 'test',
@@ -224,7 +226,8 @@ void main() {
           completedAt: DateTimeFactory.utc(2026, 3, 10, 12),
         ),
       );
-      await seedCompletion(db, 
+      await seedCompletion(
+        db,
         CompletionsCompanion.insert(
           profileId: 1,
           curriculumId: 'test',

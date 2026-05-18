@@ -352,7 +352,8 @@ void main() {
       // Add completions
       final base = completionBaseDate ?? DateTime.now().toUtc();
       for (var i = 0; i < completionCount; i++) {
-        await seedCompletion(db, 
+        await seedCompletion(
+          db,
           CompletionsCompanion.insert(
             profileId: 1,
             curriculumId: curriculumId,
@@ -427,7 +428,8 @@ void main() {
 
         // Complete 2 out of 3 items (all stages)
         for (var i = 0; i < 2; i++) {
-          await seedCompletion(db, 
+          await seedCompletion(
+            db,
             CompletionsCompanion.insert(
               profileId: 1,
               curriculumId: 'mishnayos',
@@ -523,7 +525,8 @@ void main() {
 
       // Add old completions (beyond 7 days)
       for (var i = 0; i < 2; i++) {
-        await seedCompletion(db, 
+        await seedCompletion(
+          db,
           CompletionsCompanion.insert(
             profileId: 1,
             curriculumId: 'mishnayos',
@@ -714,7 +717,8 @@ void main() {
 
     test('existing points history unaffected by config changes', () async {
       // Record a completion with current config (10 points for stage 1)
-      await seedCompletion(db, 
+      await seedCompletion(
+        db,
         CompletionsCompanion.insert(
           profileId: 1,
           curriculumId: CurriculumId.mishnayos.storageKey,
@@ -882,7 +886,8 @@ void main() {
         expect(points, 15);
 
         // Record a completion with the new point value
-        await seedCompletion(db, 
+        await seedCompletion(
+          db,
           CompletionsCompanion.insert(
             profileId: testProfileId,
             curriculumId: CurriculumId.mishnayos.storageKey,

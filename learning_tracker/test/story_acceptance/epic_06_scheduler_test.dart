@@ -146,7 +146,8 @@ void main() {
       );
       final learnId = stages.firstWhere((s) => s.stageOrder == 1).id;
 
-      await seedCompletion(db, 
+      await seedCompletion(
+        db,
         CompletionsCompanion.insert(
           profileId: 1,
           curriculumId: curriculum.storageKey,
@@ -284,7 +285,8 @@ void main() {
 
         // Item 0: learned 10 days ago → Chazara 1 (delay=0) overdue
         // Actually with delay=0, it's due same day, so 10 days overdue
-        await seedCompletion(db, 
+        await seedCompletion(
+          db,
           CompletionsCompanion.insert(
             profileId: 1,
             curriculumId: curriculum.storageKey,
@@ -298,7 +300,8 @@ void main() {
         );
 
         // Item 1: learned today → Chazara 1 due today (delay=0)
-        await seedCompletion(db, 
+        await seedCompletion(
+          db,
           CompletionsCompanion.insert(
             profileId: 1,
             curriculumId: curriculum.storageKey,
@@ -359,7 +362,8 @@ void main() {
         );
         final learnId = stages.firstWhere((s) => s.stageOrder == 1).id;
 
-        await seedCompletion(db, 
+        await seedCompletion(
+          db,
           CompletionsCompanion.insert(
             profileId: 1,
             curriculumId: curriculum.storageKey,
@@ -400,7 +404,8 @@ void main() {
 
         // 2 items with Learn completed (Chazara 1 due today since delay=0)
         for (var i = 0; i < 2; i++) {
-          await seedCompletion(db, 
+          await seedCompletion(
+            db,
             CompletionsCompanion.insert(
               profileId: 1,
               curriculumId: curriculum.storageKey,
@@ -808,7 +813,8 @@ void main() {
           final date = DateTime.utc(2026, 3, 15 - dayOffset);
           dailyCounts[date] = 2;
           for (var j = 0; j < 2; j++) {
-            await seedCompletion(db, 
+            await seedCompletion(
+              db,
               CompletionsCompanion.insert(
                 profileId: 1,
                 curriculumId: curriculum.storageKey,
@@ -830,7 +836,8 @@ void main() {
         // But let's say we also had earlier completions to total 93
         // Add 79 earlier completions
         for (var i = 0; i < 79; i++) {
-          await seedCompletion(db, 
+          await seedCompletion(
+            db,
             CompletionsCompanion.insert(
               profileId: 1,
               curriculumId: curriculum.storageKey,
@@ -932,7 +939,8 @@ void main() {
 
           // Bulk-mark ALL items with sentinel date.
           for (final item in contentItems) {
-            await seedCompletion(db, 
+            await seedCompletion(
+              db,
               CompletionsCompanion.insert(
                 profileId: 1,
                 curriculumId: curriculum.storageKey,
@@ -982,7 +990,8 @@ void main() {
 
           // Bulk-mark first 3 items with sentinel date.
           for (var i = 0; i < 3; i++) {
-            await seedCompletion(db, 
+            await seedCompletion(
+              db,
               CompletionsCompanion.insert(
                 profileId: 1,
                 curriculumId: curriculum.storageKey,

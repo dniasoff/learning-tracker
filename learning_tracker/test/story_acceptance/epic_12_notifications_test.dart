@@ -154,7 +154,8 @@ void main() {
     });
 
     test('alert fires when streak > 0 and no completions today', () async {
-      await db.streakDao.upsertStreakByProfile(1, 
+      await db.streakDao.upsertStreakByProfile(
+        1,
         StreaksCompanion.insert(
           profileId: 1,
           currentStreak: const Value(5),
@@ -175,7 +176,8 @@ void main() {
     });
 
     test('alert does NOT fire when completions exist today', () async {
-      await db.streakDao.upsertStreakByProfile(1, 
+      await db.streakDao.upsertStreakByProfile(
+        1,
         StreaksCompanion.insert(
           profileId: 1,
           currentStreak: const Value(3),
@@ -184,7 +186,8 @@ void main() {
         ),
       );
 
-      await seedCompletion(db, 
+      await seedCompletion(
+        db,
         CompletionsCompanion.insert(
           profileId: 1,
           curriculumId: 'test',
@@ -209,7 +212,8 @@ void main() {
     });
 
     test('alert does NOT fire when streak is 0', () async {
-      await db.streakDao.upsertStreakByProfile(1, 
+      await db.streakDao.upsertStreakByProfile(
+        1,
         StreaksCompanion.insert(
           profileId: 1,
           currentStreak: const Value(0),
@@ -235,7 +239,8 @@ void main() {
 
     test('integration: 5-day streak with no learning triggers alert', () async {
       // Build a 5-day streak via streak record
-      await db.streakDao.upsertStreakByProfile(1, 
+      await db.streakDao.upsertStreakByProfile(
+        1,
         StreaksCompanion.insert(
           profileId: 1,
           currentStreak: const Value(5),

@@ -90,57 +90,126 @@ class _ConcurrencyTrackingGateway implements FirestoreGateway {
     Map<String, dynamic>? cursor,
   }) async => const FirestorePage(rows: []);
   @override
-  Future<void> pushCompletion({required int profileId, required Map<String, dynamic> data, String? docId}) async {}
+  Future<void> pushCompletion({
+    required int profileId,
+    required Map<String, dynamic> data,
+    String? docId,
+  }) async {}
   @override
-  Future<List<String>> pushCompletionsBatch({required int profileId, required List<({String entityKey, Map<String, dynamic> payload})> items}) async => const [];
+  Future<List<String>> pushCompletionsBatch({
+    required int profileId,
+    required List<({String entityKey, Map<String, dynamic> payload})> items,
+  }) async => const [];
   @override
-  Future<void> pushStreak({required int profileId, required Map<String, dynamic> data}) async {}
+  Future<void> pushStreak({
+    required int profileId,
+    required Map<String, dynamic> data,
+  }) async {}
   @override
-  Future<void> pushTrack({required int profileId, required Map<String, dynamic> data}) async {}
+  Future<void> pushTrack({
+    required int profileId,
+    required Map<String, dynamic> data,
+  }) async {}
   @override
-  Future<void> pushLearningOrder({required int profileId, required Map<String, dynamic> data}) async {}
+  Future<void> pushLearningOrder({
+    required int profileId,
+    required Map<String, dynamic> data,
+  }) async {}
   @override
-  Future<void> pushBookmark({required int profileId, required Map<String, dynamic> data}) async {}
+  Future<void> pushBookmark({
+    required int profileId,
+    required Map<String, dynamic> data,
+  }) async {}
   @override
-  Future<void> pushNotificationSettings({required int profileId, required Map<String, dynamic> data}) async {}
+  Future<void> pushNotificationSettings({
+    required int profileId,
+    required Map<String, dynamic> data,
+  }) async {}
   @override
-  Future<void> pushGamificationSettings({required int profileId, required Map<String, dynamic> data}) async {}
+  Future<void> pushGamificationSettings({
+    required int profileId,
+    required Map<String, dynamic> data,
+  }) async {}
   @override
-  Future<void> pushLearnerProfile({required int profileId, required Map<String, dynamic> data}) async {}
+  Future<void> pushLearnerProfile({
+    required int profileId,
+    required Map<String, dynamic> data,
+  }) async {}
   @override
   Future<void> deleteLearnerProfile(int profileId) async {}
   @override
-  Future<void> pushLedgerEntry({required int profileId, required Map<String, dynamic> data}) async {}
+  Future<void> pushLedgerEntry({
+    required int profileId,
+    required Map<String, dynamic> data,
+  }) async {}
   @override
-  Future<void> pushLedgerEntriesBatch({required int profileId, required List<Map<String, dynamic>> entries}) async {}
+  Future<void> pushLedgerEntriesBatch({
+    required int profileId,
+    required List<Map<String, dynamic>> entries,
+  }) async {}
   @override
-  Future<void> pushProfileProgram({required int profileId, required Map<String, dynamic> data}) async {}
+  Future<void> pushProfileProgram({
+    required int profileId,
+    required Map<String, dynamic> data,
+  }) async {}
   @override
-  Future<void> removeProfileProgramAssignment({required int profileId, required String curriculumStorageKey}) async {}
+  Future<void> removeProfileProgramAssignment({
+    required int profileId,
+    required String curriculumStorageKey,
+  }) async {}
   @override
-  Future<List<Map<String, dynamic>>> fetchAll({required int profileId, required String collection}) async => [];
+  Future<List<Map<String, dynamic>>> fetchAll({
+    required int profileId,
+    required String collection,
+  }) async => [];
   @override
-  Future<void> pushGoal({required int profileId, required Map<String, dynamic> data}) async {}
+  Future<void> pushGoal({
+    required int profileId,
+    required Map<String, dynamic> data,
+  }) async {}
   @override
-  Future<void> pushUiPreferences({required int profileId, required Map<String, dynamic> data}) async {}
+  Future<void> pushUiPreferences({
+    required int profileId,
+    required Map<String, dynamic> data,
+  }) async {}
   @override
   Future<void> pushAccountProfile({required Map<String, dynamic> data}) async {}
   @override
-  Future<void> pushCurriculumImportMetadata({required int profileId, required Map<String, dynamic> data}) async {}
+  Future<void> pushCurriculumImportMetadata({
+    required int profileId,
+    required Map<String, dynamic> data,
+  }) async {}
   @override
   Future<void> deleteUserData(String uid) async {}
   @override
-  Future<void> pushDiagnosticLog({required String uid, required Map<String, dynamic> data}) async {}
+  Future<void> pushDiagnosticLog({
+    required String uid,
+    required Map<String, dynamic> data,
+  }) async {}
   @override
-  Future<void> pushAccountUserProfile({required String uid, required Map<String, dynamic> data}) async {}
+  Future<void> pushAccountUserProfile({
+    required String uid,
+    required Map<String, dynamic> data,
+  }) async {}
   @override
-  Stream<List<Map<String, dynamic>>> listenToCollection({required int profileId, required String collection}) => const Stream.empty();
+  Stream<List<Map<String, dynamic>>> listenToCollection({
+    required int profileId,
+    required String collection,
+  }) => const Stream.empty();
   @override
-  Stream<Map<String, dynamic>?> listenToDocument({required int profileId, required String collection, required String docId}) => const Stream.empty();
+  Stream<Map<String, dynamic>?> listenToDocument({
+    required int profileId,
+    required String collection,
+    required String docId,
+  }) => const Stream.empty();
   @override
   Future<List<Map<String, dynamic>>> fetchLearnerProfiles() async => [];
   @override
-  Future<Map<String, dynamic>?> fetchDocument({required int profileId, required String collection, required String docId}) async => null;
+  Future<Map<String, dynamic>?> fetchDocument({
+    required int profileId,
+    required String collection,
+    required String docId,
+  }) async => null;
 }
 
 /// [FirestoreGateway] that counts `fetchPage` calls and always returns one
@@ -163,59 +232,131 @@ class _FetchPageCountingGateway implements FirestoreGateway {
 
   // ── Unused stubs ──────────────────────────────────────────────────────────
   @override
-  Future<void> pushCompletion({required int profileId, required Map<String, dynamic> data, String? docId}) async {}
+  Future<void> pushCompletion({
+    required int profileId,
+    required Map<String, dynamic> data,
+    String? docId,
+  }) async {}
   @override
-  Future<List<String>> pushCompletionsBatch({required int profileId, required List<({String entityKey, Map<String, dynamic> payload})> items}) async => const [];
+  Future<List<String>> pushCompletionsBatch({
+    required int profileId,
+    required List<({String entityKey, Map<String, dynamic> payload})> items,
+  }) async => const [];
   @override
-  Future<void> pushStreak({required int profileId, required Map<String, dynamic> data}) async {}
+  Future<void> pushStreak({
+    required int profileId,
+    required Map<String, dynamic> data,
+  }) async {}
   @override
-  Future<void> pushSettings({required int profileId, required Map<String, dynamic> data}) async {}
+  Future<void> pushSettings({
+    required int profileId,
+    required Map<String, dynamic> data,
+  }) async {}
   @override
-  Future<void> pushTrack({required int profileId, required Map<String, dynamic> data}) async {}
+  Future<void> pushTrack({
+    required int profileId,
+    required Map<String, dynamic> data,
+  }) async {}
   @override
-  Future<void> pushLearningOrder({required int profileId, required Map<String, dynamic> data}) async {}
+  Future<void> pushLearningOrder({
+    required int profileId,
+    required Map<String, dynamic> data,
+  }) async {}
   @override
-  Future<void> pushBookmark({required int profileId, required Map<String, dynamic> data}) async {}
+  Future<void> pushBookmark({
+    required int profileId,
+    required Map<String, dynamic> data,
+  }) async {}
   @override
-  Future<void> pushNotificationSettings({required int profileId, required Map<String, dynamic> data}) async {}
+  Future<void> pushNotificationSettings({
+    required int profileId,
+    required Map<String, dynamic> data,
+  }) async {}
   @override
-  Future<void> pushGamificationSettings({required int profileId, required Map<String, dynamic> data}) async {}
+  Future<void> pushGamificationSettings({
+    required int profileId,
+    required Map<String, dynamic> data,
+  }) async {}
   @override
-  Future<void> pushLearnerProfile({required int profileId, required Map<String, dynamic> data}) async {}
+  Future<void> pushLearnerProfile({
+    required int profileId,
+    required Map<String, dynamic> data,
+  }) async {}
   @override
   Future<void> deleteLearnerProfile(int profileId) async {}
   @override
-  Future<void> pushLedgerEntry({required int profileId, required Map<String, dynamic> data}) async {}
+  Future<void> pushLedgerEntry({
+    required int profileId,
+    required Map<String, dynamic> data,
+  }) async {}
   @override
-  Future<void> pushLedgerEntriesBatch({required int profileId, required List<Map<String, dynamic>> entries}) async {}
+  Future<void> pushLedgerEntriesBatch({
+    required int profileId,
+    required List<Map<String, dynamic>> entries,
+  }) async {}
   @override
-  Future<void> pushProfileProgram({required int profileId, required Map<String, dynamic> data}) async {}
+  Future<void> pushProfileProgram({
+    required int profileId,
+    required Map<String, dynamic> data,
+  }) async {}
   @override
-  Future<void> removeProfileProgramAssignment({required int profileId, required String curriculumStorageKey}) async {}
+  Future<void> removeProfileProgramAssignment({
+    required int profileId,
+    required String curriculumStorageKey,
+  }) async {}
   @override
-  Future<List<Map<String, dynamic>>> fetchAll({required int profileId, required String collection}) async => [];
+  Future<List<Map<String, dynamic>>> fetchAll({
+    required int profileId,
+    required String collection,
+  }) async => [];
   @override
-  Future<void> pushGoal({required int profileId, required Map<String, dynamic> data}) async {}
+  Future<void> pushGoal({
+    required int profileId,
+    required Map<String, dynamic> data,
+  }) async {}
   @override
-  Future<void> pushUiPreferences({required int profileId, required Map<String, dynamic> data}) async {}
+  Future<void> pushUiPreferences({
+    required int profileId,
+    required Map<String, dynamic> data,
+  }) async {}
   @override
   Future<void> pushAccountProfile({required Map<String, dynamic> data}) async {}
   @override
-  Future<void> pushCurriculumImportMetadata({required int profileId, required Map<String, dynamic> data}) async {}
+  Future<void> pushCurriculumImportMetadata({
+    required int profileId,
+    required Map<String, dynamic> data,
+  }) async {}
   @override
   Future<void> deleteUserData(String uid) async {}
   @override
-  Future<void> pushDiagnosticLog({required String uid, required Map<String, dynamic> data}) async {}
+  Future<void> pushDiagnosticLog({
+    required String uid,
+    required Map<String, dynamic> data,
+  }) async {}
   @override
-  Future<void> pushAccountUserProfile({required String uid, required Map<String, dynamic> data}) async {}
+  Future<void> pushAccountUserProfile({
+    required String uid,
+    required Map<String, dynamic> data,
+  }) async {}
   @override
-  Stream<List<Map<String, dynamic>>> listenToCollection({required int profileId, required String collection}) => const Stream.empty();
+  Stream<List<Map<String, dynamic>>> listenToCollection({
+    required int profileId,
+    required String collection,
+  }) => const Stream.empty();
   @override
-  Stream<Map<String, dynamic>?> listenToDocument({required int profileId, required String collection, required String docId}) => const Stream.empty();
+  Stream<Map<String, dynamic>?> listenToDocument({
+    required int profileId,
+    required String collection,
+    required String docId,
+  }) => const Stream.empty();
   @override
   Future<List<Map<String, dynamic>>> fetchLearnerProfiles() async => [];
   @override
-  Future<Map<String, dynamic>?> fetchDocument({required int profileId, required String collection, required String docId}) async => null;
+  Future<Map<String, dynamic>?> fetchDocument({
+    required int profileId,
+    required String collection,
+    required String docId,
+  }) async => null;
 }
 
 // ---------------------------------------------------------------------------
@@ -429,73 +570,71 @@ void main() {
       await database.close();
     });
 
-    test(
-      'S6: a completion already present locally is not re-merged; a new '
-      'remote completion is merged',
-      () async {
-        // Seed a completion that already exists locally — this models a
-        // "local echo" the engine must defend against by existence-checking
-        // rather than blindly re-inserting.
-        await seedCompletion(
-          database,
-          CompletionsCompanion.insert(
-            profileId: 1,
-            curriculumId: 'mishnayos',
-            sefariaRef: 'Berakhot 1:1',
-            stageId: 1,
-            trackType: 'personal',
-            trackId: trackId,
-            completedAt: DateTime.utc(2026, 5, 17, 8),
-          ),
-        );
-        final eventsBefore =
-            (await database.completionEventDao.getEventsByProfile(1)).length;
+    test('S6: a completion already present locally is not re-merged; a new '
+        'remote completion is merged', () async {
+      // Seed a completion that already exists locally — this models a
+      // "local echo" the engine must defend against by existence-checking
+      // rather than blindly re-inserting.
+      await seedCompletion(
+        database,
+        CompletionsCompanion.insert(
+          profileId: 1,
+          curriculumId: 'mishnayos',
+          sefariaRef: 'Berakhot 1:1',
+          stageId: 1,
+          trackType: 'personal',
+          trackId: trackId,
+          completedAt: DateTime.utc(2026, 5, 17, 8),
+        ),
+      );
+      final eventsBefore =
+          (await database.completionEventDao.getEventsByProfile(1)).length;
 
-        await engine.attachListeners();
+      await engine.attachListeners();
 
-        // A snapshot containing the already-present completion plus one
-        // genuinely-new remote completion.
-        completionsController.add([
-          {
-            'profile_id': 1,
-            'curriculum_id': 'mishnayos',
-            'sefaria_ref': 'Berakhot 1:1',
-            'stage_id': 1,
-            'track_type': 'personal',
-            'track_id': trackId,
-            'completed_at': DateTime.utc(2026, 5, 17, 8).toIso8601String(),
-          },
-          {
-            'profile_id': 1,
-            'curriculum_id': 'mishnayos',
-            'sefaria_ref': 'Berakhot 2:1',
-            'stage_id': 1,
-            'track_type': 'personal',
-            'track_id': trackId,
-            'completed_at': DateTime.utc(2026, 5, 17, 9).toIso8601String(),
-          },
-        ]);
+      // A snapshot containing the already-present completion plus one
+      // genuinely-new remote completion.
+      completionsController.add([
+        {
+          'profile_id': 1,
+          'curriculum_id': 'mishnayos',
+          'sefaria_ref': 'Berakhot 1:1',
+          'stage_id': 1,
+          'track_type': 'personal',
+          'track_id': trackId,
+          'completed_at': DateTime.utc(2026, 5, 17, 8).toIso8601String(),
+        },
+        {
+          'profile_id': 1,
+          'curriculum_id': 'mishnayos',
+          'sefaria_ref': 'Berakhot 2:1',
+          'stage_id': 1,
+          'track_type': 'personal',
+          'track_id': trackId,
+          'completed_at': DateTime.utc(2026, 5, 17, 9).toIso8601String(),
+        },
+      ]);
 
-        // Wait past the 300 ms debounce window and the merge.
-        await Future<void>.delayed(const Duration(milliseconds: 500));
+      // Wait past the 300 ms debounce window and the merge.
+      await Future<void>.delayed(const Duration(milliseconds: 500));
 
-        final eventsAfter =
-            await database.completionEventDao.getEventsByProfile(1);
-        expect(
-          eventsAfter.length,
-          equals(eventsBefore + 1),
-          reason:
-              'S6: only the new remote completion (Berakhot 2:1) is inserted; '
-              'the already-present one (Berakhot 1:1) is deduped, not '
-              're-merged',
-        );
-        expect(
-          eventsAfter.any((e) => e.sefariaRef == 'Berakhot 2:1'),
-          isTrue,
-          reason: 'S6: the genuinely-new remote completion must be merged',
-        );
-      },
-    );
+      final eventsAfter = await database.completionEventDao.getEventsByProfile(
+        1,
+      );
+      expect(
+        eventsAfter.length,
+        equals(eventsBefore + 1),
+        reason:
+            'S6: only the new remote completion (Berakhot 2:1) is inserted; '
+            'the already-present one (Berakhot 1:1) is deduped, not '
+            're-merged',
+      );
+      expect(
+        eventsAfter.any((e) => e.sefariaRef == 'Berakhot 2:1'),
+        isTrue,
+        reason: 'S6: the genuinely-new remote completion must be merged',
+      );
+    });
   });
 
   group('I1 — debounced completions snapshot survives an in-flight merge', () {
@@ -584,67 +723,63 @@ void main() {
       'completed_at': at.toIso8601String(),
     };
 
-    test(
-      'I1: every snapshot in a rapid burst is merged — none is silently '
-      'dropped across overlapping debounce/merge cycles',
-      () async {
-        await engine.attachListeners();
+    test('I1: every snapshot in a rapid burst is merged — none is silently '
+        'dropped across overlapping debounce/merge cycles', () async {
+      await engine.attachListeners();
 
-        // Drive the REAL completions listener path: a burst of distinct
-        // snapshots, each spaced just past the 300 ms debounce window so each
-        // one triggers its own _drainPendingCompletionsSnapshot → merge cycle.
-        // The pre-fix _drainPendingCompletionsSnapshot nulled the pending
-        // snapshot before checking the merge lock, so any snapshot whose
-        // debounce timer fired while a prior merge had not yet released the
-        // lock was silently dropped. The fix re-arms the timer instead, so
-        // EVERY snapshot in the burst must end up merged.
-        const burst = 12;
-        for (var i = 0; i < burst; i++) {
-          completionsController.add([
-            remoteCompletion(
-              'Burst $i',
-              DateTime.utc(2026, 5, 17, 8).add(Duration(minutes: i)),
-            ),
-          ]);
-          await Future<void>.delayed(const Duration(milliseconds: 330));
-        }
+      // Drive the REAL completions listener path: a burst of distinct
+      // snapshots, each spaced just past the 300 ms debounce window so each
+      // one triggers its own _drainPendingCompletionsSnapshot → merge cycle.
+      // The pre-fix _drainPendingCompletionsSnapshot nulled the pending
+      // snapshot before checking the merge lock, so any snapshot whose
+      // debounce timer fired while a prior merge had not yet released the
+      // lock was silently dropped. The fix re-arms the timer instead, so
+      // EVERY snapshot in the burst must end up merged.
+      const burst = 12;
+      for (var i = 0; i < burst; i++) {
+        completionsController.add([
+          remoteCompletion(
+            'Burst $i',
+            DateTime.utc(2026, 5, 17, 8).add(Duration(minutes: i)),
+          ),
+        ]);
+        await Future<void>.delayed(const Duration(milliseconds: 330));
+      }
 
-        // Poll until every burst snapshot has merged rather than waiting a
-        // fixed window: a fixed delay is flaky on a loaded CI box where the
-        // final debounce window + merge tail (plus any re-armed timer) can run
-        // long. Poll every 50 ms for a bounded number of iterations (a ~10 s
-        // ceiling), stopping as soon as all `burst` refs are present — so the
-        // test waits exactly as long as needed and no longer. A bounded
-        // iteration count keeps the deadline wall-clock-independent without
-        // reaching for DateTime.now().
-        const pollInterval = Duration(milliseconds: 50);
-        const maxPollIterations = 200; // 200 * 50 ms = 10 s ceiling.
-        final expected = <String>{for (var i = 0; i < burst; i++) 'Burst $i'};
-        var refs = <String>{};
-        for (var poll = 0; poll < maxPollIterations; poll++) {
-          refs = (await database.completionEventDao.getEventsByProfile(1))
-              .map((e) => e.sefariaRef)
-              .toSet();
-          if (refs.containsAll(expected)) break;
-          await Future<void>.delayed(pollInterval);
-        }
+      // Poll until every burst snapshot has merged rather than waiting a
+      // fixed window: a fixed delay is flaky on a loaded CI box where the
+      // final debounce window + merge tail (plus any re-armed timer) can run
+      // long. Poll every 50 ms for a bounded number of iterations (a ~10 s
+      // ceiling), stopping as soon as all `burst` refs are present — so the
+      // test waits exactly as long as needed and no longer. A bounded
+      // iteration count keeps the deadline wall-clock-independent without
+      // reaching for DateTime.now().
+      const pollInterval = Duration(milliseconds: 50);
+      const maxPollIterations = 200; // 200 * 50 ms = 10 s ceiling.
+      final expected = <String>{for (var i = 0; i < burst; i++) 'Burst $i'};
+      var refs = <String>{};
+      for (var poll = 0; poll < maxPollIterations; poll++) {
+        refs = (await database.completionEventDao.getEventsByProfile(
+          1,
+        )).map((e) => e.sefariaRef).toSet();
+        if (refs.containsAll(expected)) break;
+        await Future<void>.delayed(pollInterval);
+      }
 
-        expect(
-          refs,
-          containsAll(expected),
-          reason:
-              'I1: every snapshot delivered in the burst must be merged — no '
-              'snapshot may be dropped because a prior merge had not yet '
-              'released the completions merge lock',
-        );
-        expect(
-          refs.length,
-          equals(burst),
-          reason: 'I1: exactly the burst completions are merged, no more',
-        );
-      },
-      timeout: const Timeout(Duration(seconds: 30)),
-    );
+      expect(
+        refs,
+        containsAll(expected),
+        reason:
+            'I1: every snapshot delivered in the burst must be merged — no '
+            'snapshot may be dropped because a prior merge had not yet '
+            'released the completions merge lock',
+      );
+      expect(
+        refs.length,
+        equals(burst),
+        reason: 'I1: exactly the burst completions are merged, no more',
+      );
+    }, timeout: const Timeout(Duration(seconds: 30)));
   });
 
   group('I6 — snake_case remote completion merges', () {
@@ -747,8 +882,7 @@ void main() {
 
         await Future<void>.delayed(const Duration(milliseconds: 500));
 
-        final events =
-            await database.completionEventDao.getEventsByProfile(1);
+        final events = await database.completionEventDao.getEventsByProfile(1);
         expect(
           events.length,
           equals(1),
@@ -786,8 +920,7 @@ void main() {
 
         await Future<void>.delayed(const Duration(milliseconds: 500));
 
-        final events =
-            await database.completionEventDao.getEventsByProfile(1);
+        final events = await database.completionEventDao.getEventsByProfile(1);
         expect(
           events.length,
           equals(1),
@@ -799,159 +932,160 @@ void main() {
       },
     );
 
-    test(
-      'a remote completion for a non-existent profile is skipped, not '
-      'orphan-inserted (no FK 787 crash)',
-      () async {
-        await engine.attachListeners();
+    test('a remote completion for a non-existent profile is skipped, not '
+        'orphan-inserted (no FK 787 crash)', () async {
+      await engine.attachListeners();
 
-        // profile_id 999 has no learner_profiles row. completion_events.profileId
-        // is an FK to learner_profiles — after an account/profile deletion the
-        // parent row is gone. The merge must skip the row, never crash on the
-        // foreign-key constraint.
-        completionsController.add([
-          {
-            'profile_id': 999,
-            'curriculum_id': 'mishnayos',
-            'sefaria_ref': 'Berakhot 5:1',
-            'stage_id': 1,
-            'track_type': 'personal',
-            'completed_at': DateTime.utc(2026, 5, 17, 12).toIso8601String(),
-            'points': 5,
-          },
-        ]);
+      // profile_id 999 has no learner_profiles row. completion_events.profileId
+      // is an FK to learner_profiles — after an account/profile deletion the
+      // parent row is gone. The merge must skip the row, never crash on the
+      // foreign-key constraint.
+      completionsController.add([
+        {
+          'profile_id': 999,
+          'curriculum_id': 'mishnayos',
+          'sefaria_ref': 'Berakhot 5:1',
+          'stage_id': 1,
+          'track_type': 'personal',
+          'completed_at': DateTime.utc(2026, 5, 17, 12).toIso8601String(),
+          'points': 5,
+        },
+      ]);
 
-        await Future<void>.delayed(const Duration(milliseconds: 500));
+      await Future<void>.delayed(const Duration(milliseconds: 500));
 
-        expect(
-          await database.completionEventDao.getEventsByProfile(999),
-          isEmpty,
-          reason: 'a completion whose profile has no learner_profiles row '
-              'must be skipped, never orphan-inserted',
-        );
-        // The engine survived — a subsequent valid completion still merges.
-        completionsController.add([
-          {
-            'profile_id': 1,
-            'curriculum_id': 'mishnayos',
-            'sefaria_ref': 'Berakhot 5:2',
-            'stage_id': 1,
-            'track_type': 'personal',
-            'track_id': trackId,
-            'completed_at': DateTime.utc(2026, 5, 17, 13).toIso8601String(),
-            'points': 5,
-          },
-        ]);
-        await Future<void>.delayed(const Duration(milliseconds: 500));
-        expect(
-          (await database.completionEventDao.getEventsByProfile(1)).length,
-          equals(1),
-          reason: 'the orphan skip must not poison later valid merges',
-        );
-      },
-    );
-  });
-
-  group('S8 — SyncOrchestratorImpl.pullOnLaunch once-per-launch + throttle', () {
-    late _FetchPageCountingGateway gateway;
-    late SyncOrchestratorImpl orchestrator;
-
-    /// `fetchPage` calls issued by one full `pullOnLaunch` — one empty page
-    /// per pulled collection (completions, bookmarks, settings, tracks,
-    /// learner_profiles, learning_order).
-    const fetchesPerPull = 6;
-
-    setUp(() {
-      // pullOnLaunch reads/writes SharedPreferences for the resume throttle.
-      SharedPreferences.setMockInitialValues(<String, Object>{});
-      gateway = _FetchPageCountingGateway();
-      orchestrator = SyncOrchestratorImpl(
-        resolveEngine: () =>
-            throw StateError('S8: pullOnLaunch must not touch the engine'),
-        resolveMergeRouter: () =>
-            MergeRouter(mergers: const <String, EntityMerger>{}),
-        resolveGateway: () => gateway,
-        resolveProfileId: () => 1,
+      expect(
+        await database.completionEventDao.getEventsByProfile(999),
+        isEmpty,
+        reason:
+            'a completion whose profile has no learner_profiles row '
+            'must be skipped, never orphan-inserted',
+      );
+      // The engine survived — a subsequent valid completion still merges.
+      completionsController.add([
+        {
+          'profile_id': 1,
+          'curriculum_id': 'mishnayos',
+          'sefaria_ref': 'Berakhot 5:2',
+          'stage_id': 1,
+          'track_type': 'personal',
+          'track_id': trackId,
+          'completed_at': DateTime.utc(2026, 5, 17, 13).toIso8601String(),
+          'points': 5,
+        },
+      ]);
+      await Future<void>.delayed(const Duration(milliseconds: 500));
+      expect(
+        (await database.completionEventDao.getEventsByProfile(1)).length,
+        equals(1),
+        reason: 'the orphan skip must not poison later valid merges',
       );
     });
+  });
 
-    test(
-      'S8: a second cold-start pullOnLaunch in the same launch is a no-op',
-      () async {
-        await orchestrator.pullOnLaunch();
-        expect(
-          gateway.fetchPageCalls,
-          equals(fetchesPerPull),
-          reason: 'S8: the first cold-start pullOnLaunch must run',
-        );
+  group(
+    'S8 — SyncOrchestratorImpl.pullOnLaunch once-per-launch + throttle',
+    () {
+      late _FetchPageCountingGateway gateway;
+      late SyncOrchestratorImpl orchestrator;
 
-        // A second non-resume call — e.g. the sign-in screen and the
-        // lifecycle observer both firing on the same launch.
-        await orchestrator.pullOnLaunch();
-        expect(
-          gateway.fetchPageCalls,
-          equals(fetchesPerPull),
-          reason:
-              'S8: the once-per-launch guard must make the second cold-start '
-              'pullOnLaunch a no-op (no further fetches)',
-        );
-      },
-    );
+      /// `fetchPage` calls issued by one full `pullOnLaunch` — one empty page
+      /// per pulled collection (completions, bookmarks, settings, tracks,
+      /// learner_profiles, learning_order).
+      const fetchesPerPull = 6;
 
-    test(
-      'S8: a resume-triggered pull within the throttle window is skipped',
-      () async {
-        await orchestrator.pullOnLaunch();
-        expect(gateway.fetchPageCalls, equals(fetchesPerPull));
-
-        // A resume pull immediately after — within the 5-minute throttle.
-        await orchestrator.pullOnLaunch(triggeredFromResume: true);
-        expect(
-          gateway.fetchPageCalls,
-          equals(fetchesPerPull),
-          reason:
-              'S8: a resume pull inside pullOnResumeMinInterval must be '
-              'throttled — no extra fetches',
-        );
-      },
-    );
-
-    test(
-      'S8: DeviceRestoreService.retry path — a failed cold-start pull resets '
-      'the guard so a subsequent pull re-runs',
-      () async {
-        // A gateway whose first pull throws, then succeeds — models a
-        // transient failure followed by a retry.
-        final flakyGateway = _FlakyFetchGateway();
-        final retryOrchestrator = SyncOrchestratorImpl(
+      setUp(() {
+        // pullOnLaunch reads/writes SharedPreferences for the resume throttle.
+        SharedPreferences.setMockInitialValues(<String, Object>{});
+        gateway = _FetchPageCountingGateway();
+        orchestrator = SyncOrchestratorImpl(
           resolveEngine: () =>
               throw StateError('S8: pullOnLaunch must not touch the engine'),
           resolveMergeRouter: () =>
               MergeRouter(mergers: const <String, EntityMerger>{}),
-          resolveGateway: () => flakyGateway,
+          resolveGateway: () => gateway,
           resolveProfileId: () => 1,
         );
+      });
 
-        // First pull fails — pullOnLaunch rethrows.
-        await expectLater(
-          retryOrchestrator.pullOnLaunch(),
-          throwsA(isA<Exception>()),
-        );
+      test(
+        'S8: a second cold-start pullOnLaunch in the same launch is a no-op',
+        () async {
+          await orchestrator.pullOnLaunch();
+          expect(
+            gateway.fetchPageCalls,
+            equals(fetchesPerPull),
+            reason: 'S8: the first cold-start pullOnLaunch must run',
+          );
 
-        // The guard was reset on failure, so a retry genuinely re-pulls
-        // (this is the DeviceRestoreService.retry() path).
-        flakyGateway.failNextPull = false;
-        await retryOrchestrator.pullOnLaunch();
-        expect(
-          flakyGateway.successfulPullCount,
-          equals(1),
-          reason:
-              'S8 / I4: after a failed cold-start pull the once-per-launch '
-              'guard must reset so DeviceRestoreService.retry() can re-pull',
-        );
-      },
-    );
-  });
+          // A second non-resume call — e.g. the sign-in screen and the
+          // lifecycle observer both firing on the same launch.
+          await orchestrator.pullOnLaunch();
+          expect(
+            gateway.fetchPageCalls,
+            equals(fetchesPerPull),
+            reason:
+                'S8: the once-per-launch guard must make the second cold-start '
+                'pullOnLaunch a no-op (no further fetches)',
+          );
+        },
+      );
+
+      test(
+        'S8: a resume-triggered pull within the throttle window is skipped',
+        () async {
+          await orchestrator.pullOnLaunch();
+          expect(gateway.fetchPageCalls, equals(fetchesPerPull));
+
+          // A resume pull immediately after — within the 5-minute throttle.
+          await orchestrator.pullOnLaunch(triggeredFromResume: true);
+          expect(
+            gateway.fetchPageCalls,
+            equals(fetchesPerPull),
+            reason:
+                'S8: a resume pull inside pullOnResumeMinInterval must be '
+                'throttled — no extra fetches',
+          );
+        },
+      );
+
+      test(
+        'S8: DeviceRestoreService.retry path — a failed cold-start pull resets '
+        'the guard so a subsequent pull re-runs',
+        () async {
+          // A gateway whose first pull throws, then succeeds — models a
+          // transient failure followed by a retry.
+          final flakyGateway = _FlakyFetchGateway();
+          final retryOrchestrator = SyncOrchestratorImpl(
+            resolveEngine: () =>
+                throw StateError('S8: pullOnLaunch must not touch the engine'),
+            resolveMergeRouter: () =>
+                MergeRouter(mergers: const <String, EntityMerger>{}),
+            resolveGateway: () => flakyGateway,
+            resolveProfileId: () => 1,
+          );
+
+          // First pull fails — pullOnLaunch rethrows.
+          await expectLater(
+            retryOrchestrator.pullOnLaunch(),
+            throwsA(isA<Exception>()),
+          );
+
+          // The guard was reset on failure, so a retry genuinely re-pulls
+          // (this is the DeviceRestoreService.retry() path).
+          flakyGateway.failNextPull = false;
+          await retryOrchestrator.pullOnLaunch();
+          expect(
+            flakyGateway.successfulPullCount,
+            equals(1),
+            reason:
+                'S8 / I4: after a failed cold-start pull the once-per-launch '
+                'guard must reset so DeviceRestoreService.retry() can re-pull',
+          );
+        },
+      );
+    },
+  );
 }
 
 /// [FirestoreGateway] whose `fetchPage` throws on the first pull when
@@ -984,57 +1118,129 @@ class _FlakyFetchGateway implements FirestoreGateway {
 
   // ── Unused stubs ──────────────────────────────────────────────────────────
   @override
-  Future<void> pushCompletion({required int profileId, required Map<String, dynamic> data, String? docId}) async {}
+  Future<void> pushCompletion({
+    required int profileId,
+    required Map<String, dynamic> data,
+    String? docId,
+  }) async {}
   @override
-  Future<List<String>> pushCompletionsBatch({required int profileId, required List<({String entityKey, Map<String, dynamic> payload})> items}) async => const [];
+  Future<List<String>> pushCompletionsBatch({
+    required int profileId,
+    required List<({String entityKey, Map<String, dynamic> payload})> items,
+  }) async => const [];
   @override
-  Future<void> pushStreak({required int profileId, required Map<String, dynamic> data}) async {}
+  Future<void> pushStreak({
+    required int profileId,
+    required Map<String, dynamic> data,
+  }) async {}
   @override
-  Future<void> pushSettings({required int profileId, required Map<String, dynamic> data}) async {}
+  Future<void> pushSettings({
+    required int profileId,
+    required Map<String, dynamic> data,
+  }) async {}
   @override
-  Future<void> pushTrack({required int profileId, required Map<String, dynamic> data}) async {}
+  Future<void> pushTrack({
+    required int profileId,
+    required Map<String, dynamic> data,
+  }) async {}
   @override
-  Future<void> pushLearningOrder({required int profileId, required Map<String, dynamic> data}) async {}
+  Future<void> pushLearningOrder({
+    required int profileId,
+    required Map<String, dynamic> data,
+  }) async {}
   @override
-  Future<void> pushBookmark({required int profileId, required Map<String, dynamic> data}) async {}
+  Future<void> pushBookmark({
+    required int profileId,
+    required Map<String, dynamic> data,
+  }) async {}
   @override
-  Future<void> pushNotificationSettings({required int profileId, required Map<String, dynamic> data}) async {}
+  Future<void> pushNotificationSettings({
+    required int profileId,
+    required Map<String, dynamic> data,
+  }) async {}
   @override
-  Future<void> pushGamificationSettings({required int profileId, required Map<String, dynamic> data}) async {}
+  Future<void> pushGamificationSettings({
+    required int profileId,
+    required Map<String, dynamic> data,
+  }) async {}
   @override
-  Future<void> pushLearnerProfile({required int profileId, required Map<String, dynamic> data}) async {}
+  Future<void> pushLearnerProfile({
+    required int profileId,
+    required Map<String, dynamic> data,
+  }) async {}
   @override
   Future<void> deleteLearnerProfile(int profileId) async {}
   @override
-  Future<void> pushLedgerEntry({required int profileId, required Map<String, dynamic> data}) async {}
+  Future<void> pushLedgerEntry({
+    required int profileId,
+    required Map<String, dynamic> data,
+  }) async {}
   @override
-  Future<void> pushLedgerEntriesBatch({required int profileId, required List<Map<String, dynamic>> entries}) async {}
+  Future<void> pushLedgerEntriesBatch({
+    required int profileId,
+    required List<Map<String, dynamic>> entries,
+  }) async {}
   @override
-  Future<void> pushProfileProgram({required int profileId, required Map<String, dynamic> data}) async {}
+  Future<void> pushProfileProgram({
+    required int profileId,
+    required Map<String, dynamic> data,
+  }) async {}
   @override
-  Future<void> removeProfileProgramAssignment({required int profileId, required String curriculumStorageKey}) async {}
+  Future<void> removeProfileProgramAssignment({
+    required int profileId,
+    required String curriculumStorageKey,
+  }) async {}
   @override
-  Future<List<Map<String, dynamic>>> fetchAll({required int profileId, required String collection}) async => [];
+  Future<List<Map<String, dynamic>>> fetchAll({
+    required int profileId,
+    required String collection,
+  }) async => [];
   @override
-  Future<void> pushGoal({required int profileId, required Map<String, dynamic> data}) async {}
+  Future<void> pushGoal({
+    required int profileId,
+    required Map<String, dynamic> data,
+  }) async {}
   @override
-  Future<void> pushUiPreferences({required int profileId, required Map<String, dynamic> data}) async {}
+  Future<void> pushUiPreferences({
+    required int profileId,
+    required Map<String, dynamic> data,
+  }) async {}
   @override
   Future<void> pushAccountProfile({required Map<String, dynamic> data}) async {}
   @override
-  Future<void> pushCurriculumImportMetadata({required int profileId, required Map<String, dynamic> data}) async {}
+  Future<void> pushCurriculumImportMetadata({
+    required int profileId,
+    required Map<String, dynamic> data,
+  }) async {}
   @override
   Future<void> deleteUserData(String uid) async {}
   @override
-  Future<void> pushDiagnosticLog({required String uid, required Map<String, dynamic> data}) async {}
+  Future<void> pushDiagnosticLog({
+    required String uid,
+    required Map<String, dynamic> data,
+  }) async {}
   @override
-  Future<void> pushAccountUserProfile({required String uid, required Map<String, dynamic> data}) async {}
+  Future<void> pushAccountUserProfile({
+    required String uid,
+    required Map<String, dynamic> data,
+  }) async {}
   @override
-  Stream<List<Map<String, dynamic>>> listenToCollection({required int profileId, required String collection}) => const Stream.empty();
+  Stream<List<Map<String, dynamic>>> listenToCollection({
+    required int profileId,
+    required String collection,
+  }) => const Stream.empty();
   @override
-  Stream<Map<String, dynamic>?> listenToDocument({required int profileId, required String collection, required String docId}) => const Stream.empty();
+  Stream<Map<String, dynamic>?> listenToDocument({
+    required int profileId,
+    required String collection,
+    required String docId,
+  }) => const Stream.empty();
   @override
   Future<List<Map<String, dynamic>>> fetchLearnerProfiles() async => [];
   @override
-  Future<Map<String, dynamic>?> fetchDocument({required int profileId, required String collection, required String docId}) async => null;
+  Future<Map<String, dynamic>?> fetchDocument({
+    required int profileId,
+    required String collection,
+    required String docId,
+  }) async => null;
 }

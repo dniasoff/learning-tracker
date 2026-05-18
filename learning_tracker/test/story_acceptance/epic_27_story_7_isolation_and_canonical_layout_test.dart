@@ -93,7 +93,8 @@ void main() {
 
         // A completion lives under profileA only.
         trackIdA = await _insertTrackFor(db, profileA.id);
-        completionIdA = await seedCompletion(db, 
+        completionIdA = await seedCompletion(
+          db,
           CompletionsCompanion.insert(
             profileId: profileA.id,
             curriculumId: _curriculumId,

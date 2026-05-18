@@ -13,11 +13,8 @@ class Bookmarks extends Table {
   IntColumn get id => integer().autoIncrement()();
 
   /// C2: FK → learner_profiles(id) CASCADE DELETE.
-  IntColumn get profileId => integer().references(
-    LearnerProfiles,
-    #id,
-    onDelete: KeyAction.cascade,
-  )();
+  IntColumn get profileId =>
+      integer().references(LearnerProfiles, #id, onDelete: KeyAction.cascade)();
 
   TextColumn get curriculumId => text()();
 

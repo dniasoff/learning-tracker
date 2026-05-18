@@ -210,18 +210,18 @@ void main() {
         );
 
         // Device A deactivates its track.
-        await (deviceA.update(deviceA.curriculumTracks)
-          ..where(
-            (t) =>
-                t.profileId.equals(profileId) &
-                t.curriculumId.equals('mishnayos') &
-                t.trackType.equals('personal'),
-          )).write(
-          CurriculumTracksCompanion(
-            isActive: const Value(false),
-            deactivatedAt: Value(deactivatedAt),
-          ),
-        );
+        await (deviceA.update(deviceA.curriculumTracks)..where(
+              (t) =>
+                  t.profileId.equals(profileId) &
+                  t.curriculumId.equals('mishnayos') &
+                  t.trackType.equals('personal'),
+            ))
+            .write(
+              CurriculumTracksCompanion(
+                isActive: const Value(false),
+                deactivatedAt: Value(deactivatedAt),
+              ),
+            );
 
         // Wire-format map representing Device A's deactivated track.
         final wireFromA = {
@@ -258,7 +258,8 @@ void main() {
         expect(
           trackB.deactivatedAt!.millisecondsSinceEpoch,
           deactivatedAt.millisecondsSinceEpoch,
-          reason: 'Device B must carry the deactivatedAt timestamp from Device A',
+          reason:
+              'Device B must carry the deactivatedAt timestamp from Device A',
         );
       },
     );

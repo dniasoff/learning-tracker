@@ -280,7 +280,8 @@ void main() {
     });
 
     test('global points total sums across all completions', () async {
-      await seedCompletion(db, 
+      await seedCompletion(
+        db,
         CompletionsCompanion.insert(
           profileId: 1,
           curriculumId: 'mishnayos',
@@ -292,7 +293,8 @@ void main() {
           points: const Value(10),
         ),
       );
-      await seedCompletion(db, 
+      await seedCompletion(
+        db,
         CompletionsCompanion.insert(
           profileId: 1,
           curriculumId: 'bavli',
@@ -304,7 +306,8 @@ void main() {
           points: const Value(5),
         ),
       );
-      await seedCompletion(db, 
+      await seedCompletion(
+        db,
         CompletionsCompanion.insert(
           profileId: 1,
           curriculumId: 'mishnayos',
@@ -373,7 +376,8 @@ void main() {
       'last completion timestamp resolves per curriculum for continue learning',
       () async {
         // Insert completions for two curricula at different times
-        await seedCompletion(db, 
+        await seedCompletion(
+          db,
           CompletionsCompanion.insert(
             profileId: 1,
             curriculumId: 'mishnayos',
@@ -384,7 +388,8 @@ void main() {
             completedAt: DateTime.utc(2026, 3, 15, 10, 0),
           ),
         );
-        await seedCompletion(db, 
+        await seedCompletion(
+          db,
           CompletionsCompanion.insert(
             profileId: 1,
             curriculumId: 'bavli',
@@ -617,7 +622,8 @@ void main() {
       required int stageId,
       String trackType = 'personal',
     }) async {
-      final id = await seedCompletion(db, 
+      final id = await seedCompletion(
+        db,
         CompletionsCompanion.insert(
           profileId: 1,
           curriculumId: 'mishnayos',
@@ -861,7 +867,8 @@ void main() {
       );
 
       for (var i = 1; i <= 7; i++) {
-        await seedCompletion(db, 
+        await seedCompletion(
+          db,
           CompletionsCompanion.insert(
             profileId: 1,
             curriculumId: 'mishnayos',
@@ -936,7 +943,8 @@ void main() {
       String curriculumId = 'mishnayos',
       int points = 10,
     }) async {
-      await seedCompletion(db,
+      await seedCompletion(
+        db,
         CompletionsCompanion.insert(
           profileId: 1,
           curriculumId: curriculumId,

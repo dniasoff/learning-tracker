@@ -739,194 +739,127 @@ void main() {
     },
   );
   // ── Story 16.4: Per-Item Review Count Display ─────────────────────────
-  group(
-    'Story 16.4 -- Per-Item Review Count Display',
-    tags: ['story_16_4'],
-    () {
-      // AC-1: DAO returns per-item review counts grouped by stage
-      test(
-        'AC-1: getStageBreakdownByItem returns stage-to-count map',
-        () async {
-          final db = createTestDatabase();
-          addTearDown(db.close);
-          await seedProfile(db);
-          final trackId = await _insertTrack(db);
+  group('Story 16.4 -- Per-Item Review Count Display', tags: ['story_16_4'], () {
+    // AC-1: DAO returns per-item review counts grouped by stage
+    test('AC-1: getStageBreakdownByItem returns stage-to-count map', () async {
+      final db = createTestDatabase();
+      addTearDown(db.close);
+      await seedProfile(db);
+      final trackId = await _insertTrack(db);
 
-          // Insert stage definitions first
-          await db.stageDao.insertStageDefinition(
-            StageDefinitionsCompanion.insert(
-              profileId: 1,
-              curriculumId: 'mishnayos',
-              trackId: trackId,
-              stageOrder: 0,
-              stageName: 'Learn',
-              delayDays: 0,
-            ),
-          );
-          await db.stageDao.insertStageDefinition(
-            StageDefinitionsCompanion.insert(
-              profileId: 1,
-              curriculumId: 'mishnayos',
-              trackId: trackId,
-              stageOrder: 1,
-              stageName: 'Chazara 1',
-              delayDays: 1,
-            ),
-          );
-
-          // Insert completions: 1 learn + 1 chazara1 + 1 chazara2 for same item.
-          // Each (profileId, sefariaRef, stageId, trackType) is unique (C1).
-          final now = DateTime.now().toUtc();
-          for (final stageId in [1, 2, 3]) {
-            await seedCompletion(db,
-              CompletionsCompanion.insert(
-                profileId: 1,
-                curriculumId: 'mishnayos',
-                sefariaRef: 'Berakhot.1.1',
-                stageId: stageId,
-                trackType: 'personal',
-                trackId: trackId,
-                completedAt: now.add(Duration(days: stageId)),
-                points: const Value(1),
-              ),
-            );
-          }
-
-          final breakdown = await db.completionDao.getStageBreakdownByItem(
-            'mishnayos',
-            'Berakhot.1.1',
-            1,
-          );
-          expect(breakdown[1], 1); // stage 1: 1 completion
-          expect(breakdown[2], 1); // stage 2: 1 completion
-          expect(breakdown[3], 1); // stage 3: 1 completion
-        },
+      // Insert stage definitions first
+      await db.stageDao.insertStageDefinition(
+        StageDefinitionsCompanion.insert(
+          profileId: 1,
+          curriculumId: 'mishnayos',
+          trackId: trackId,
+          stageOrder: 0,
+          stageName: 'Learn',
+          delayDays: 0,
+        ),
+      );
+      await db.stageDao.insertStageDefinition(
+        StageDefinitionsCompanion.insert(
+          profileId: 1,
+          curriculumId: 'mishnayos',
+          trackId: trackId,
+          stageOrder: 1,
+          stageName: 'Chazara 1',
+          delayDays: 1,
+        ),
       );
 
-      // AC-2: DAO returns total review count per item
-      test(
-        'AC-2: getReviewCountsByItem returns total count per sefariaRef',
-        () async {
-          final db = createTestDatabase();
-          addTearDown(db.close);
-          await seedProfile(db);
-          final trackId = await _insertTrack(db);
+      // Insert completions: 1 learn + 1 chazara1 + 1 chazara2 for same item.
+      // Each (profileId, sefariaRef, stageId, trackType) is unique (C1).
+      final now = DateTime.now().toUtc();
+      for (final stageId in [1, 2, 3]) {
+        await seedCompletion(
+          db,
+          CompletionsCompanion.insert(
+            profileId: 1,
+            curriculumId: 'mishnayos',
+            sefariaRef: 'Berakhot.1.1',
+            stageId: stageId,
+            trackType: 'personal',
+            trackId: trackId,
+            completedAt: now.add(Duration(days: stageId)),
+            points: const Value(1),
+          ),
+        );
+      }
 
-          // Each (profileId, sefariaRef, stageId, trackType) is unique (C1).
-          // Use 5 distinct stages to get a count of 5 for 'Berakhot.1.1'.
-          final now = DateTime.now().toUtc();
-          for (var i = 1; i <= 5; i++) {
-            await seedCompletion(db,
-              CompletionsCompanion.insert(
-                profileId: 1,
-                curriculumId: 'mishnayos',
-                sefariaRef: 'Berakhot.1.1',
-                stageId: i,
-                trackType: 'personal',
-                trackId: trackId,
-                completedAt: now.add(Duration(days: i)),
-                points: const Value(1),
-              ),
-            );
-          }
-          await seedCompletion(db,
-            CompletionsCompanion.insert(
-              profileId: 1,
-              curriculumId: 'mishnayos',
-              sefariaRef: 'Berakhot.1.2',
-              stageId: 1,
-              trackType: 'personal',
-              trackId: trackId,
-              completedAt: now,
-              points: const Value(1),
-            ),
-          );
-
-          final counts = await db.completionDao.getReviewCountsByItem(
-            'mishnayos',
-            1,
-          );
-          expect(counts['Berakhot.1.1'], 5);
-          expect(counts['Berakhot.1.2'], 1);
-        },
+      final breakdown = await db.completionDao.getStageBreakdownByItem(
+        'mishnayos',
+        'Berakhot.1.1',
+        1,
       );
+      expect(breakdown[1], 1); // stage 1: 1 completion
+      expect(breakdown[2], 1); // stage 2: 1 completion
+      expect(breakdown[3], 1); // stage 3: 1 completion
+    });
 
-      // AC-3: Batch query returns counts for all items
-      test(
-        'AC-3: getReviewCountsWithStageBreakdown returns nested map',
-        () async {
-          final db = createTestDatabase();
-          addTearDown(db.close);
-          await seedProfile(db);
-          final trackId = await _insertTrack(db);
+    // AC-2: DAO returns total review count per item
+    test(
+      'AC-2: getReviewCountsByItem returns total count per sefariaRef',
+      () async {
+        final db = createTestDatabase();
+        addTearDown(db.close);
+        await seedProfile(db);
+        final trackId = await _insertTrack(db);
 
-          final now = DateTime.now().toUtc();
-          await seedCompletion(db, 
+        // Each (profileId, sefariaRef, stageId, trackType) is unique (C1).
+        // Use 5 distinct stages to get a count of 5 for 'Berakhot.1.1'.
+        final now = DateTime.now().toUtc();
+        for (var i = 1; i <= 5; i++) {
+          await seedCompletion(
+            db,
             CompletionsCompanion.insert(
               profileId: 1,
               curriculumId: 'mishnayos',
               sefariaRef: 'Berakhot.1.1',
-              stageId: 1,
+              stageId: i,
               trackType: 'personal',
               trackId: trackId,
-              completedAt: now,
+              completedAt: now.add(Duration(days: i)),
               points: const Value(1),
             ),
           );
-          await seedCompletion(db, 
-            CompletionsCompanion.insert(
-              profileId: 1,
-              curriculumId: 'mishnayos',
-              sefariaRef: 'Berakhot.1.2',
-              stageId: 1,
-              trackType: 'personal',
-              trackId: trackId,
-              completedAt: now,
-              points: const Value(1),
-            ),
-          );
-          await seedCompletion(db, 
-            CompletionsCompanion.insert(
-              profileId: 1,
-              curriculumId: 'mishnayos',
-              sefariaRef: 'Berakhot.1.2',
-              stageId: 2,
-              trackType: 'personal',
-              trackId: trackId,
-              completedAt: now,
-              points: const Value(1),
-            ),
-          );
+        }
+        await seedCompletion(
+          db,
+          CompletionsCompanion.insert(
+            profileId: 1,
+            curriculumId: 'mishnayos',
+            sefariaRef: 'Berakhot.1.2',
+            stageId: 1,
+            trackType: 'personal',
+            trackId: trackId,
+            completedAt: now,
+            points: const Value(1),
+          ),
+        );
 
-          final nested = await db.completionDao
-              .getReviewCountsWithStageBreakdown('mishnayos', 1);
-          expect(nested.keys, containsAll(['Berakhot.1.1', 'Berakhot.1.2']));
-          expect(nested['Berakhot.1.1']![1], 1);
-          expect(nested['Berakhot.1.2']![1], 1);
-          expect(nested['Berakhot.1.2']![2], 1);
-        },
-      );
+        final counts = await db.completionDao.getReviewCountsByItem(
+          'mishnayos',
+          1,
+        );
+        expect(counts['Berakhot.1.1'], 5);
+        expect(counts['Berakhot.1.2'], 1);
+      },
+    );
 
-      // AC-3: Profile isolation
-      test('AC-3: review counts are scoped by profileId', () async {
+    // AC-3: Batch query returns counts for all items
+    test(
+      'AC-3: getReviewCountsWithStageBreakdown returns nested map',
+      () async {
         final db = createTestDatabase();
         addTearDown(db.close);
         await seedProfile(db);
-        // Seed a second profile for isolation test.
-        await db.into(db.learnerProfiles).insert(
-          LearnerProfilesCompanion.insert(
-            accountId: 1,
-            displayName: 'Test User 2',
-            mode: 'adult',
-            createdAt: DateTime.utc(2026, 1, 1),
-            updatedAt: DateTime.utc(2026, 1, 1),
-          ),
-        );
         final trackId = await _insertTrack(db);
 
         final now = DateTime.now().toUtc();
-        // Profile 1
-        await seedCompletion(db, 
+        await seedCompletion(
+          db,
           CompletionsCompanion.insert(
             profileId: 1,
             curriculumId: 'mishnayos',
@@ -938,12 +871,12 @@ void main() {
             points: const Value(1),
           ),
         );
-        // Profile 2
-        await seedCompletion(db, 
+        await seedCompletion(
+          db,
           CompletionsCompanion.insert(
-            profileId: 2,
+            profileId: 1,
             curriculumId: 'mishnayos',
-            sefariaRef: 'Berakhot.1.1',
+            sefariaRef: 'Berakhot.1.2',
             stageId: 1,
             trackType: 'personal',
             trackId: trackId,
@@ -951,67 +884,136 @@ void main() {
             points: const Value(1),
           ),
         );
+        await seedCompletion(
+          db,
+          CompletionsCompanion.insert(
+            profileId: 1,
+            curriculumId: 'mishnayos',
+            sefariaRef: 'Berakhot.1.2',
+            stageId: 2,
+            trackType: 'personal',
+            trackId: trackId,
+            completedAt: now,
+            points: const Value(1),
+          ),
+        );
 
-        final countsP1 = await db.completionDao.getReviewCountsByItem(
+        final nested = await db.completionDao.getReviewCountsWithStageBreakdown(
           'mishnayos',
           1,
         );
-        final countsP2 = await db.completionDao.getReviewCountsByItem(
-          'mishnayos',
-          2,
-        );
-        expect(countsP1['Berakhot.1.1'], 1);
-        expect(countsP2['Berakhot.1.1'], 1);
-      });
+        expect(nested.keys, containsAll(['Berakhot.1.1', 'Berakhot.1.2']));
+        expect(nested['Berakhot.1.1']![1], 1);
+        expect(nested['Berakhot.1.2']![1], 1);
+        expect(nested['Berakhot.1.2']![2], 1);
+      },
+    );
 
-      // AC-2: Empty state
-      test(
-        'AC-2: returns empty map for curriculum with no completions',
-        () async {
-          final db = createTestDatabase();
-          addTearDown(db.close);
-          await _insertTrack(db);
-
-          final counts = await db.completionDao.getReviewCountsByItem(
-            'mishnayos',
-            0,
+    // AC-3: Profile isolation
+    test('AC-3: review counts are scoped by profileId', () async {
+      final db = createTestDatabase();
+      addTearDown(db.close);
+      await seedProfile(db);
+      // Seed a second profile for isolation test.
+      await db
+          .into(db.learnerProfiles)
+          .insert(
+            LearnerProfilesCompanion.insert(
+              accountId: 1,
+              displayName: 'Test User 2',
+              mode: 'adult',
+              createdAt: DateTime.utc(2026, 1, 1),
+              updatedAt: DateTime.utc(2026, 1, 1),
+            ),
           );
-          expect(counts, isEmpty);
-        },
+      final trackId = await _insertTrack(db);
+
+      final now = DateTime.now().toUtc();
+      // Profile 1
+      await seedCompletion(
+        db,
+        CompletionsCompanion.insert(
+          profileId: 1,
+          curriculumId: 'mishnayos',
+          sefariaRef: 'Berakhot.1.1',
+          stageId: 1,
+          trackType: 'personal',
+          trackId: trackId,
+          completedAt: now,
+          points: const Value(1),
+        ),
+      );
+      // Profile 2
+      await seedCompletion(
+        db,
+        CompletionsCompanion.insert(
+          profileId: 2,
+          curriculumId: 'mishnayos',
+          sefariaRef: 'Berakhot.1.1',
+          stageId: 1,
+          trackType: 'personal',
+          trackId: trackId,
+          completedAt: now,
+          points: const Value(1),
+        ),
       );
 
-      // AC-1: Empty breakdown
-      test('AC-1: returns empty map for item with no completions', () async {
+      final countsP1 = await db.completionDao.getReviewCountsByItem(
+        'mishnayos',
+        1,
+      );
+      final countsP2 = await db.completionDao.getReviewCountsByItem(
+        'mishnayos',
+        2,
+      );
+      expect(countsP1['Berakhot.1.1'], 1);
+      expect(countsP2['Berakhot.1.1'], 1);
+    });
+
+    // AC-2: Empty state
+    test(
+      'AC-2: returns empty map for curriculum with no completions',
+      () async {
         final db = createTestDatabase();
         addTearDown(db.close);
         await _insertTrack(db);
 
-        final breakdown = await db.completionDao.getStageBreakdownByItem(
+        final counts = await db.completionDao.getReviewCountsByItem(
           'mishnayos',
-          'Berakhot.1.1',
           0,
         );
-        expect(breakdown, isEmpty);
-      });
+        expect(counts, isEmpty);
+      },
+    );
 
-      // AC-6: Zero count badge behavior
-      test(
-        'AC-6: ReviewCountBadge with count 0 produces no visible widget',
-        () {
-          // This is a unit-level assertion on the badge logic.
-          // The badge returns SizedBox.shrink() when count <= 0.
-          expect(0 <= 0, isTrue); // Badge guard condition
-        },
+    // AC-1: Empty breakdown
+    test('AC-1: returns empty map for item with no completions', () async {
+      final db = createTestDatabase();
+      addTearDown(db.close);
+      await _insertTrack(db);
+
+      final breakdown = await db.completionDao.getStageBreakdownByItem(
+        'mishnayos',
+        'Berakhot.1.1',
+        0,
       );
+      expect(breakdown, isEmpty);
+    });
 
-      // AC-4: Badge display for completed items
-      test('AC-4: ReviewCountBadge formats count as "Nx"', () {
-        // Badge shows "${count}x" for count > 0
-        expect('${11}x', '11x');
-        expect('${150}x', '150x');
-      });
-    },
-  );
+    // AC-6: Zero count badge behavior
+    test('AC-6: ReviewCountBadge with count 0 produces no visible widget', () {
+      // This is a unit-level assertion on the badge logic.
+      // The badge returns SizedBox.shrink() when count <= 0.
+      expect(0 <= 0, isTrue); // Badge guard condition
+    });
+
+    // AC-4: Badge display for completed items
+    test('AC-4: ReviewCountBadge formats count as "Nx"', () {
+      // Badge shows "${count}x" for count > 0
+      expect('${11}x', '11x');
+      expect('${150}x', '150x');
+    });
+  });
   // ── Story 16.5: Onboarding Goal & Study Day Steps ─────────────────────
   group(
     'Story 16.5 -- Onboarding Goal & Study Day Steps',

@@ -528,18 +528,21 @@ void main() {
           expect(remaining, isEmpty);
         });
 
-        test('drain calls pushCompletionsBatch with correct arguments', () async {
-          await dao.insertOutboxRow(_completionRow(entityKey: 'comp-abc'));
+        test(
+          'drain calls pushCompletionsBatch with correct arguments',
+          () async {
+            await dao.insertOutboxRow(_completionRow(entityKey: 'comp-abc'));
 
-          await processor.drain(1);
+            await processor.drain(1);
 
-          verify(
-            () => mockPipeline.pushCompletionsBatch(
-              profileId: 1,
-              entries: any(named: 'entries'),
-            ),
-          ).called(1);
-        });
+            verify(
+              () => mockPipeline.pushCompletionsBatch(
+                profileId: 1,
+                entries: any(named: 'entries'),
+              ),
+            ).called(1);
+          },
+        );
 
         test('drain marks row with error when push fails', () async {
           when(
@@ -592,22 +595,19 @@ void main() {
           },
         );
 
-        test(
-          'drain clears all completion rows regardless of count',
-          () async {
-            // Insert 60 rows — completions have no per-drain cap; all are
-            // dispatched in a single pushCompletionsBatch call.
-            for (var i = 0; i < 60; i++) {
-              await dao.insertOutboxRow(_completionRow(entityKey: 'comp-$i'));
-            }
+        test('drain clears all completion rows regardless of count', () async {
+          // Insert 60 rows — completions have no per-drain cap; all are
+          // dispatched in a single pushCompletionsBatch call.
+          for (var i = 0; i < 60; i++) {
+            await dao.insertOutboxRow(_completionRow(entityKey: 'comp-$i'));
+          }
 
-            final pushed = await processor.drain(1);
+          final pushed = await processor.drain(1);
 
-            expect(pushed, equals(60));
-            final remaining = await db.select(db.outbox).get();
-            expect(remaining, isEmpty);
-          },
-        );
+          expect(pushed, equals(60));
+          final remaining = await db.select(db.outbox).get();
+          expect(remaining, isEmpty);
+        });
 
         test('drain does not process rows for other profiles', () async {
           // Insert rows for profile 1 and profile 2.
@@ -1891,24 +1891,29 @@ void main() {
       test('ParentAnalyticsRepository is the public surface for '
           'cross-profile reads', () async {
         // Seed a curriculum track (id=1) and a second profile (id=2).
-        await db.into(db.curriculumTracks).insert(
-          CurriculumTracksCompanion.insert(
-            profileId: 1,
-            curriculumId: 'mishnayos',
-            trackType: 'personal',
-            activatedAt: DateTime.utc(2026, 1, 1),
-          ),
-        );
-        await db.into(db.learnerProfiles).insert(
-          LearnerProfilesCompanion.insert(
-            accountId: 1,
-            displayName: 'Test User 2',
-            mode: 'adult',
-            createdAt: DateTime.utc(2026, 1, 1),
-            updatedAt: DateTime.utc(2026, 1, 1),
-          ),
-        );
-        await seedCompletion(db, 
+        await db
+            .into(db.curriculumTracks)
+            .insert(
+              CurriculumTracksCompanion.insert(
+                profileId: 1,
+                curriculumId: 'mishnayos',
+                trackType: 'personal',
+                activatedAt: DateTime.utc(2026, 1, 1),
+              ),
+            );
+        await db
+            .into(db.learnerProfiles)
+            .insert(
+              LearnerProfilesCompanion.insert(
+                accountId: 1,
+                displayName: 'Test User 2',
+                mode: 'adult',
+                createdAt: DateTime.utc(2026, 1, 1),
+                updatedAt: DateTime.utc(2026, 1, 1),
+              ),
+            );
+        await seedCompletion(
+          db,
           CompletionsCompanion.insert(
             profileId: 1,
             curriculumId: 'mishnayos',
@@ -1919,7 +1924,8 @@ void main() {
             completedAt: DateTime.utc(2026, 5, 13),
           ),
         );
-        await seedCompletion(db, 
+        await seedCompletion(
+          db,
           CompletionsCompanion.insert(
             profileId: 2,
             curriculumId: 'mishnayos',

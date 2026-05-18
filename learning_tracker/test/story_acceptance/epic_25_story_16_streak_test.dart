@@ -355,15 +355,17 @@ void main() {
       group('AC5 — empty-log restore reconstitutes from completions', () {
         setUp(() async {
           // Seed a second learner profile so profileId=2 completions satisfy FK.
-          await db.into(db.learnerProfiles).insert(
-            LearnerProfilesCompanion.insert(
-              accountId: 1,
-              displayName: 'Test User 2',
-              mode: 'adult',
-              createdAt: DateTime.utc(2026, 1, 1),
-              updatedAt: DateTime.utc(2026, 1, 1),
-            ),
-          );
+          await db
+              .into(db.learnerProfiles)
+              .insert(
+                LearnerProfilesCompanion.insert(
+                  accountId: 1,
+                  displayName: 'Test User 2',
+                  mode: 'adult',
+                  createdAt: DateTime.utc(2026, 1, 1),
+                  updatedAt: DateTime.utc(2026, 1, 1),
+                ),
+              );
         });
 
         test('one streak_events row per distinct UTC completion day', () async {

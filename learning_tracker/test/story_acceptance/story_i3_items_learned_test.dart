@@ -123,7 +123,8 @@ void main() {
 
         // Insert 4 real-study completions (leaves[0..3]).
         for (var i = 0; i < 4; i++) {
-          await seedCompletion(db, 
+          await seedCompletion(
+            db,
             CompletionsCompanion.insert(
               profileId: profileId,
               curriculumId: CurriculumId.mishnayos.storageKey,
@@ -139,7 +140,8 @@ void main() {
         // Insert 3 bulk-prior SENTINEL completions (leaves[5..7]) — these
         // must NOT be counted by computeItemsLearnedSummary.
         for (var i = 5; i < 8; i++) {
-          await seedCompletion(db, 
+          await seedCompletion(
+            db,
             CompletionsCompanion.insert(
               profileId: profileId,
               curriculumId: CurriculumId.mishnayos.storageKey,
@@ -182,7 +184,8 @@ void main() {
 
         // Only sentinel completions.
         for (var i = 0; i < 3; i++) {
-          await seedCompletion(db, 
+          await seedCompletion(
+            db,
             CompletionsCompanion.insert(
               profileId: profileId,
               curriculumId: CurriculumId.mishnayos.storageKey,
@@ -247,64 +250,63 @@ void main() {
 
     tearDown(() async => db.close());
 
-    test(
-      'AC-2: counts both real-date AND sentinel completions',
-      () async {
-        final leaves = List.generate(
-          10,
-          (i) => _leaf('Mishnah Berakhot ${i + 1}:1', sortOrder: i),
+    test('AC-2: counts both real-date AND sentinel completions', () async {
+      final leaves = List.generate(
+        10,
+        (i) => _leaf('Mishnah Berakhot ${i + 1}:1', sortOrder: i),
+      );
+      when(
+        () => repo.getContentForCurriculum(CurriculumId.mishnayos),
+      ).thenAnswer((_) async => leaves);
+
+      // 3 real-date completions.
+      for (var i = 0; i < 3; i++) {
+        await seedCompletion(
+          db,
+          CompletionsCompanion.insert(
+            profileId: profileId,
+            curriculumId: CurriculumId.mishnayos.storageKey,
+            sefariaRef: leaves[i].sefariaRef,
+            stageId: 1,
+            trackType: 'personal',
+            trackId: trackId,
+            completedAt: _kRealDate,
+          ),
         );
-        when(
-          () => repo.getContentForCurriculum(CurriculumId.mishnayos),
-        ).thenAnswer((_) async => leaves);
+      }
 
-        // 3 real-date completions.
-        for (var i = 0; i < 3; i++) {
-          await seedCompletion(db, 
-            CompletionsCompanion.insert(
-              profileId: profileId,
-              curriculumId: CurriculumId.mishnayos.storageKey,
-              sefariaRef: leaves[i].sefariaRef,
-              stageId: 1,
-              trackType: 'personal',
-              trackId: trackId,
-              completedAt: _kRealDate,
-            ),
-          );
-        }
-
-        // 4 sentinel completions — must be counted by lifetime.
-        for (var i = 3; i < 7; i++) {
-          await seedCompletion(db, 
-            CompletionsCompanion.insert(
-              profileId: profileId,
-              curriculumId: CurriculumId.mishnayos.storageKey,
-              sefariaRef: leaves[i].sefariaRef,
-              stageId: 1,
-              trackType: 'personal',
-              trackId: trackId,
-              completedAt: _kSentinel,
-            ),
-          );
-        }
-
-        final summary = await computeLifetimeViewSummary(
-          db: db,
-          repo: repo,
-          curriculum: CurriculumId.mishnayos,
-          profileId: profileId,
+      // 4 sentinel completions — must be counted by lifetime.
+      for (var i = 3; i < 7; i++) {
+        await seedCompletion(
+          db,
+          CompletionsCompanion.insert(
+            profileId: profileId,
+            curriculumId: CurriculumId.mishnayos.storageKey,
+            sefariaRef: leaves[i].sefariaRef,
+            stageId: 1,
+            trackType: 'personal',
+            trackId: trackId,
+            completedAt: _kSentinel,
+          ),
         );
+      }
 
-        expect(summary, isNotNull);
-        // 3 real + 4 sentinel = 7 unique learned leaf refs.
-        expect(
-          summary!.learnedLeafCount,
-          7,
-          reason: 'lifetime must include sentinel rows',
-        );
-        expect(summary.totalLeafCount, 10);
-      },
-    );
+      final summary = await computeLifetimeViewSummary(
+        db: db,
+        repo: repo,
+        curriculum: CurriculumId.mishnayos,
+        profileId: profileId,
+      );
+
+      expect(summary, isNotNull);
+      // 3 real + 4 sentinel = 7 unique learned leaf refs.
+      expect(
+        summary!.learnedLeafCount,
+        7,
+        reason: 'lifetime must include sentinel rows',
+      );
+      expect(summary.totalLeafCount, 10);
+    });
   });
 
   group('I-3 — known-dataset correctness (AC-3)', () {
@@ -347,104 +349,103 @@ void main() {
 
     tearDown(() async => db.close());
 
-    test(
-      'AC-3: known dataset — 2 real-date + 1 sentinel + 1 ledger mark; '
-      'items-learned=2, lifetime=4',
-      () async {
-        // 8 leaf items.
-        final leaves = List.generate(
-          8,
-          (i) => _leaf('Mishnah Berakhot ${i + 1}:1', sortOrder: i),
-        );
-        when(
-          () => repo.getContentForCurriculum(CurriculumId.mishnayos),
-        ).thenAnswer((_) async => leaves);
+    test('AC-3: known dataset — 2 real-date + 1 sentinel + 1 ledger mark; '
+        'items-learned=2, lifetime=4', () async {
+      // 8 leaf items.
+      final leaves = List.generate(
+        8,
+        (i) => _leaf('Mishnah Berakhot ${i + 1}:1', sortOrder: i),
+      );
+      when(
+        () => repo.getContentForCurriculum(CurriculumId.mishnayos),
+      ).thenAnswer((_) async => leaves);
 
-        // 2 real-date track completions (leaves[0], leaves[1]).
-        for (var i = 0; i < 2; i++) {
-          await seedCompletion(db, 
-            CompletionsCompanion.insert(
-              profileId: profileId,
-              curriculumId: CurriculumId.mishnayos.storageKey,
-              sefariaRef: leaves[i].sefariaRef,
-              stageId: 1,
-              trackType: 'personal',
-              trackId: trackId,
-              completedAt: _kRealDate,
-            ),
-          );
-        }
-
-        // 1 sentinel completion (leaves[2]) — bulk-prior mark.
-        await seedCompletion(db, 
+      // 2 real-date track completions (leaves[0], leaves[1]).
+      for (var i = 0; i < 2; i++) {
+        await seedCompletion(
+          db,
           CompletionsCompanion.insert(
             profileId: profileId,
             curriculumId: CurriculumId.mishnayos.storageKey,
-            sefariaRef: leaves[2].sefariaRef,
+            sefariaRef: leaves[i].sefariaRef,
             stageId: 1,
             trackType: 'personal',
             trackId: trackId,
-            completedAt: _kSentinel,
+            completedAt: _kRealDate,
           ),
         );
+      }
 
-        // 1 ledger mark at leaf-ref level (leaves[3]) — counted by lifetime only.
-        // Use entryScope='mishna' which maps to level4Actions, then
-        // 'unitIdentifier' is compared against leaf.level4. Since our test
-        // leaves have level4=null we use the masechta scope, which maps to
-        // level2Actions keyed by the masechta value ('Berakhot'), and ALL
-        // leaves in that masechta would be marked — that's too broad.
-        //
-        // Instead we use the direct-ref path via the `default` branch, which
-        // fires when entryScope doesn't match any named case and doesn't start
-        // with 'level'. Using 'ref_mark' as a synthetic scope triggers:
-        //   learnedRefs.add(unitIdentifier)
-        // and then the leaf check `learnedRefs.contains(leaf.sefariaRef)`
-        // picks it up.
-        await db.learningLedgerDao.insertEntry(
-          LearningLedgerCompanion.insert(
-            profileId: profileId,
-            ulid: Value(newUlid()),
-            curriculumId: CurriculumId.mishnayos.storageKey,
-            entryScope: 'ref_mark',
-            unitIdentifier: leaves[3].sefariaRef,
-            unitDisplayNameHe: '',
-            unitDisplayNameEn: '',
-            trackType: 'personal',
-            completedAt: DateTime.utc(2026, 1, 1),
-            completionNumber: 1,
-            markedBy: profileId,
-          ),
-        );
-
-        // Items-learned: only real-date completions → 2.
-        final trackSummary = await computeItemsLearnedSummary(
-          db: db,
-          repo: repo,
-          curriculum: CurriculumId.mishnayos,
+      // 1 sentinel completion (leaves[2]) — bulk-prior mark.
+      await seedCompletion(
+        db,
+        CompletionsCompanion.insert(
           profileId: profileId,
-        );
-        expect(trackSummary, isNotNull);
-        expect(
-          trackSummary!.learnedLeafCount,
-          2,
-          reason: 'items-learned counts only real-date completions',
-        );
+          curriculumId: CurriculumId.mishnayos.storageKey,
+          sefariaRef: leaves[2].sefariaRef,
+          stageId: 1,
+          trackType: 'personal',
+          trackId: trackId,
+          completedAt: _kSentinel,
+        ),
+      );
 
-        // Lifetime: real-date (2) + sentinel (1) + ledger (1) = 4 unique refs.
-        final lifeSummary = await computeLifetimeViewSummary(
-          db: db,
-          repo: repo,
-          curriculum: CurriculumId.mishnayos,
+      // 1 ledger mark at leaf-ref level (leaves[3]) — counted by lifetime only.
+      // Use entryScope='mishna' which maps to level4Actions, then
+      // 'unitIdentifier' is compared against leaf.level4. Since our test
+      // leaves have level4=null we use the masechta scope, which maps to
+      // level2Actions keyed by the masechta value ('Berakhot'), and ALL
+      // leaves in that masechta would be marked — that's too broad.
+      //
+      // Instead we use the direct-ref path via the `default` branch, which
+      // fires when entryScope doesn't match any named case and doesn't start
+      // with 'level'. Using 'ref_mark' as a synthetic scope triggers:
+      //   learnedRefs.add(unitIdentifier)
+      // and then the leaf check `learnedRefs.contains(leaf.sefariaRef)`
+      // picks it up.
+      await db.learningLedgerDao.insertEntry(
+        LearningLedgerCompanion.insert(
           profileId: profileId,
-        );
-        expect(lifeSummary, isNotNull);
-        expect(
-          lifeSummary!.learnedLeafCount,
-          4,
-          reason: 'lifetime counts all sources',
-        );
-      },
-    );
+          ulid: Value(newUlid()),
+          curriculumId: CurriculumId.mishnayos.storageKey,
+          entryScope: 'ref_mark',
+          unitIdentifier: leaves[3].sefariaRef,
+          unitDisplayNameHe: '',
+          unitDisplayNameEn: '',
+          trackType: 'personal',
+          completedAt: DateTime.utc(2026, 1, 1),
+          completionNumber: 1,
+          markedBy: profileId,
+        ),
+      );
+
+      // Items-learned: only real-date completions → 2.
+      final trackSummary = await computeItemsLearnedSummary(
+        db: db,
+        repo: repo,
+        curriculum: CurriculumId.mishnayos,
+        profileId: profileId,
+      );
+      expect(trackSummary, isNotNull);
+      expect(
+        trackSummary!.learnedLeafCount,
+        2,
+        reason: 'items-learned counts only real-date completions',
+      );
+
+      // Lifetime: real-date (2) + sentinel (1) + ledger (1) = 4 unique refs.
+      final lifeSummary = await computeLifetimeViewSummary(
+        db: db,
+        repo: repo,
+        curriculum: CurriculumId.mishnayos,
+        profileId: profileId,
+      );
+      expect(lifeSummary, isNotNull);
+      expect(
+        lifeSummary!.learnedLeafCount,
+        4,
+        reason: 'lifetime counts all sources',
+      );
+    });
   });
 }

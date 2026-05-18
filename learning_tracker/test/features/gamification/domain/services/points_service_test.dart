@@ -54,7 +54,8 @@ void main() {
     DateTime? completedAt,
     int? completionTrackId,
   }) async {
-    await seedCompletion(db, 
+    await seedCompletion(
+      db,
       CompletionsCompanion.insert(
         profileId: 0,
         curriculumId: curriculumId,
@@ -250,7 +251,8 @@ void main() {
           stageId: 1,
           points: 10,
         );
-        await seedCompletion(db, 
+        await seedCompletion(
+          db,
           CompletionsCompanion.insert(
             profileId: 0,
             curriculumId: CurriculumId.bavli.storageKey,

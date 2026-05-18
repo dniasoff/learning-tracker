@@ -32,25 +32,29 @@ void main() {
     db = inMemoryDb();
     await seedProfile(db); // creates learner_profiles(id=1)
     // Insert a second profile so streak_events with profileId=2 can satisfy FK.
-    await db.into(db.accounts).insert(
-      AccountsCompanion.insert(
-        email: 'test2@example.com',
-        tier: 'localBorn',
-        displayName: 'Test User 2',
-        userMode: 'adult',
-        createdAt: DateTime.utc(2026, 1, 1),
-        updatedAt: DateTime.utc(2026, 1, 1),
-      ),
-    );
-    await db.into(db.learnerProfiles).insert(
-      LearnerProfilesCompanion.insert(
-        accountId: 2,
-        displayName: 'Test User 2',
-        mode: 'adult',
-        createdAt: DateTime.utc(2026, 1, 1),
-        updatedAt: DateTime.utc(2026, 1, 1),
-      ),
-    );
+    await db
+        .into(db.accounts)
+        .insert(
+          AccountsCompanion.insert(
+            email: 'test2@example.com',
+            tier: 'localBorn',
+            displayName: 'Test User 2',
+            userMode: 'adult',
+            createdAt: DateTime.utc(2026, 1, 1),
+            updatedAt: DateTime.utc(2026, 1, 1),
+          ),
+        );
+    await db
+        .into(db.learnerProfiles)
+        .insert(
+          LearnerProfilesCompanion.insert(
+            accountId: 2,
+            displayName: 'Test User 2',
+            mode: 'adult',
+            createdAt: DateTime.utc(2026, 1, 1),
+            updatedAt: DateTime.utc(2026, 1, 1),
+          ),
+        );
     clock = FakeLocalDayClock(DateTime.utc(2026, 5, 14, 12));
     provider = StreakStateProvider(db: db, clock: clock);
   });

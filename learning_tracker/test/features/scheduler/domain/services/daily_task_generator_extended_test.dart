@@ -140,7 +140,8 @@ void main() {
       );
       final learnId = stages.first.id;
 
-      await seedCompletion(db, 
+      await seedCompletion(
+        db,
         CompletionsCompanion.insert(
           profileId: 0,
           curriculumId: mishnayos.storageKey,

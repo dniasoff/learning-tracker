@@ -113,15 +113,17 @@ const _uid = 'uid_sync_rework_push';
 const _profileId = 1;
 
 Future<int> _seedTrack(UserDatabase db, {String curriculumId = 'mishnayos'}) =>
-    db.into(db.curriculumTracks).insert(
-      CurriculumTracksCompanion.insert(
-        profileId: 1,
-        curriculumId: curriculumId,
-        trackType: 'personal',
-        activatedAt: DateTime.utc(2026, 1, 1),
-        isActive: const Value(true),
-      ),
-    );
+    db
+        .into(db.curriculumTracks)
+        .insert(
+          CurriculumTracksCompanion.insert(
+            profileId: 1,
+            curriculumId: curriculumId,
+            trackType: 'personal',
+            activatedAt: DateTime.utc(2026, 1, 1),
+            isActive: const Value(true),
+          ),
+        );
 
 /// Count documents currently in the `completions` subcollection for the
 /// canonical learner-profile path.
@@ -184,9 +186,41 @@ void main() {
         },
       );
 
+      test('completions whose sefaria_ref differs only by "." / "/" / space '
+          'get DISTINCT documents (would collide pre-H2)', () async {
+        final fs = createFakeFirestore(authenticatedUid: _uid);
+        final gateway = FirestoreGatewayImpl(
+          firestore: fs,
+          authRepository: const _StubAuthRepository(_uid),
+        );
+
+        // Pre-H2 `_sanitizeDocId` replaced `.`, `/` and space all with `_`,
+        // so these three distinct natural keys collapsed to ONE doc id —
+        // silent data loss. The H2 percent-encoded scheme keeps them apart.
+        await gateway.pushCompletion(
+          profileId: _profileId,
+          data: _completion(sefariaRef: 'Berakhot 1.1'),
+        );
+        await gateway.pushCompletion(
+          profileId: _profileId,
+          data: _completion(sefariaRef: 'Berakhot 1/1'),
+        );
+        await gateway.pushCompletion(
+          profileId: _profileId,
+          data: _completion(sefariaRef: 'Berakhot 1 1'),
+        );
+
+        expect(
+          await _completionDocCount(fs),
+          equals(3),
+          reason:
+              'S3: distinct natural-key tuples MUST map to distinct doc '
+              'IDs — the doc-id function is collision-free',
+        );
+      });
+
       test(
-        'completions whose sefaria_ref differs only by "." / "/" / space '
-        'get DISTINCT documents (would collide pre-H2)',
+        'the batch path derives the SAME id as the single-push path',
         () async {
           final fs = createFakeFirestore(authenticatedUid: _uid);
           final gateway = FirestoreGatewayImpl(
@@ -194,55 +228,23 @@ void main() {
             authRepository: const _StubAuthRepository(_uid),
           );
 
-          // Pre-H2 `_sanitizeDocId` replaced `.`, `/` and space all with `_`,
-          // so these three distinct natural keys collapsed to ONE doc id —
-          // silent data loss. The H2 percent-encoded scheme keeps them apart.
-          await gateway.pushCompletion(
+          final payload = _completion(sefariaRef: 'Berakhot 2:3');
+          // Single push, then the SAME completion via the batch path.
+          await gateway.pushCompletion(profileId: _profileId, data: payload);
+          await gateway.pushCompletionsBatch(
             profileId: _profileId,
-            data: _completion(sefariaRef: 'Berakhot 1.1'),
-          );
-          await gateway.pushCompletion(
-            profileId: _profileId,
-            data: _completion(sefariaRef: 'Berakhot 1/1'),
-          );
-          await gateway.pushCompletion(
-            profileId: _profileId,
-            data: _completion(sefariaRef: 'Berakhot 1 1'),
+            items: [(entityKey: '1:Berakhot 2:3:1:personal', payload: payload)],
           );
 
           expect(
             await _completionDocCount(fs),
-            equals(3),
+            equals(1),
             reason:
-                'S3: distinct natural-key tuples MUST map to distinct doc '
-                'IDs — the doc-id function is collision-free',
+                'S3: pushCompletion and pushCompletionsBatch MUST derive the '
+                'same canonical doc ID — no path-dependent divergence',
           );
         },
       );
-
-      test('the batch path derives the SAME id as the single-push path', () async {
-        final fs = createFakeFirestore(authenticatedUid: _uid);
-        final gateway = FirestoreGatewayImpl(
-          firestore: fs,
-          authRepository: const _StubAuthRepository(_uid),
-        );
-
-        final payload = _completion(sefariaRef: 'Berakhot 2:3');
-        // Single push, then the SAME completion via the batch path.
-        await gateway.pushCompletion(profileId: _profileId, data: payload);
-        await gateway.pushCompletionsBatch(
-          profileId: _profileId,
-          items: [(entityKey: '1:Berakhot 2:3:1:personal', payload: payload)],
-        );
-
-        expect(
-          await _completionDocCount(fs),
-          equals(1),
-          reason:
-              'S3: pushCompletion and pushCompletionsBatch MUST derive the '
-              'same canonical doc ID — no path-dependent divergence',
-        );
-      });
     });
 
     // ── S4 ─────────────────────────────────────────────────────────────────
@@ -308,28 +310,36 @@ void main() {
         }
       });
 
-      test('re-pushing the same 655 items is idempotent — still 655 docs',
-          () async {
-        final fs = createFakeFirestore(authenticatedUid: _uid);
-        final gateway = FirestoreGatewayImpl(
-          firestore: fs,
-          authRepository: const _StubAuthRepository(_uid),
-        );
-        final items = List.generate(
-          655,
-          (i) => (
-            entityKey: '1:Mishnah $i:1:1:personal',
-            payload: _completion(sefariaRef: 'Mishnah $i:1'),
-          ),
-        );
-        await gateway.pushCompletionsBatch(profileId: _profileId, items: items);
-        await gateway.pushCompletionsBatch(profileId: _profileId, items: items);
-        expect(
-          await _completionDocCount(fs),
-          equals(655),
-          reason: 'S4: deterministic ids make the batch push idempotent',
-        );
-      });
+      test(
+        're-pushing the same 655 items is idempotent — still 655 docs',
+        () async {
+          final fs = createFakeFirestore(authenticatedUid: _uid);
+          final gateway = FirestoreGatewayImpl(
+            firestore: fs,
+            authRepository: const _StubAuthRepository(_uid),
+          );
+          final items = List.generate(
+            655,
+            (i) => (
+              entityKey: '1:Mishnah $i:1:1:personal',
+              payload: _completion(sefariaRef: 'Mishnah $i:1'),
+            ),
+          );
+          await gateway.pushCompletionsBatch(
+            profileId: _profileId,
+            items: items,
+          );
+          await gateway.pushCompletionsBatch(
+            profileId: _profileId,
+            items: items,
+          );
+          expect(
+            await _completionDocCount(fs),
+            equals(655),
+            reason: 'S4: deterministic ids make the batch push idempotent',
+          );
+        },
+      );
     });
 
     // ── S9 ─────────────────────────────────────────────────────────────────
@@ -377,72 +387,69 @@ void main() {
         await deviceB.close();
       });
 
-      test(
-        'overlapping completions from two devices converge to the union '
-        'with no duplicate documents',
-        () async {
-          final writerA = CompletionWriter(deviceA);
-          final writerB = CompletionWriter(deviceB);
+      test('overlapping completions from two devices converge to the union '
+          'with no duplicate documents', () async {
+        final writerA = CompletionWriter(deviceA);
+        final writerB = CompletionWriter(deviceB);
 
-          const sharedRef = 'Berakhot 2:1';
-          final ts = DateTime.utc(2026, 5, 10, 12);
+        const sharedRef = 'Berakhot 2:1';
+        final ts = DateTime.utc(2026, 5, 10, 12);
 
-          // Both devices independently mark the SAME item (overlap).
-          for (final writer in [writerA, writerB]) {
-            await writer.commit(
-              CompletionCommand(
-                profileId: _profileId,
-                curriculumId: 'mishnayos',
-                sefariaRef: sharedRef,
-                stageId: 1,
-                trackType: 'personal',
-                trackId: 1,
-                completedAt: ts,
-                points: 5,
-              ),
-            );
-          }
-          // Device A marks a unique item.
-          await writerA.commit(
+        // Both devices independently mark the SAME item (overlap).
+        for (final writer in [writerA, writerB]) {
+          await writer.commit(
             CompletionCommand(
               profileId: _profileId,
               curriculumId: 'mishnayos',
-              sefariaRef: 'Berakhot 3:1',
+              sefariaRef: sharedRef,
               stageId: 1,
               trackType: 'personal',
               trackId: 1,
-              completedAt: DateTime.utc(2026, 5, 10, 13),
+              completedAt: ts,
               points: 5,
             ),
           );
-          // Device B marks a different unique item.
-          await writerB.commit(
-            CompletionCommand(
-              profileId: _profileId,
-              curriculumId: 'mishnayos',
-              sefariaRef: 'Berakhot 4:1',
-              stageId: 1,
-              trackType: 'personal',
-              trackId: 1,
-              completedAt: DateTime.utc(2026, 5, 10, 14),
-              points: 5,
-            ),
-          );
+        }
+        // Device A marks a unique item.
+        await writerA.commit(
+          CompletionCommand(
+            profileId: _profileId,
+            curriculumId: 'mishnayos',
+            sefariaRef: 'Berakhot 3:1',
+            stageId: 1,
+            trackType: 'personal',
+            trackId: 1,
+            completedAt: DateTime.utc(2026, 5, 10, 13),
+            points: 5,
+          ),
+        );
+        // Device B marks a different unique item.
+        await writerB.commit(
+          CompletionCommand(
+            profileId: _profileId,
+            curriculumId: 'mishnayos',
+            sefariaRef: 'Berakhot 4:1',
+            stageId: 1,
+            trackType: 'personal',
+            trackId: 1,
+            completedAt: DateTime.utc(2026, 5, 10, 14),
+            points: 5,
+          ),
+        );
 
-          // Both flush to the shared cloud Firestore.
-          await processorA.drain(_profileId);
-          await processorB.drain(_profileId);
+        // Both flush to the shared cloud Firestore.
+        await processorA.drain(_profileId);
+        await processorB.drain(_profileId);
 
-          // 3 unique documents: the shared ref counted once + 2 unique.
-          expect(
-            await _completionDocCount(sharedFs),
-            equals(3),
-            reason:
-                'S9: the deterministic doc ID collapses the overlapping '
-                'completion to one document — convergence to the union',
-          );
-        },
-      );
+        // 3 unique documents: the shared ref counted once + 2 unique.
+        expect(
+          await _completionDocCount(sharedFs),
+          equals(3),
+          reason:
+              'S9: the deterministic doc ID collapses the overlapping '
+              'completion to one document — convergence to the union',
+        );
+      });
     });
   });
 }

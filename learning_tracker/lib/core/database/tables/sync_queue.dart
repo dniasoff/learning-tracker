@@ -9,11 +9,7 @@ import 'package:drift/drift.dart';
 /// provide a non-null entityKey use INSERT OR REPLACE via
 /// [SyncQueueDao.enqueueWithKey] so rapid successive edits to the same
 /// entity collapse to a single pending row.
-@TableIndex(
-  name: 'sync_queue_entity_key',
-  columns: {#entityKey},
-  unique: true,
-)
+@TableIndex(name: 'sync_queue_entity_key', columns: {#entityKey}, unique: true)
 class SyncQueue extends Table {
   IntColumn get id => integer().autoIncrement()();
 

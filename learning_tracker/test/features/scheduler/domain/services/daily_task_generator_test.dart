@@ -124,7 +124,8 @@ void main() {
     );
     final learnId = stages.firstWhere((s) => s.stageOrder == 1).id;
     // Item 0: learned 3 days ago → Chazara 1 overdue (delay=1)
-    await seedCompletion(db, 
+    await seedCompletion(
+      db,
       CompletionsCompanion.insert(
         profileId: 0,
         curriculumId: curriculum.storageKey,
@@ -138,7 +139,8 @@ void main() {
     );
 
     // Item 1: learned yesterday → Chazara 1 due today (delay=1)
-    await seedCompletion(db, 
+    await seedCompletion(
+      db,
       CompletionsCompanion.insert(
         profileId: 0,
         curriculumId: curriculum.storageKey,
@@ -196,7 +198,8 @@ void main() {
     final learnId = stages.firstWhere((s) => s.stageOrder == 1).id;
 
     // Complete item 0 Learn right now (Chazara 1 delay=1, so not due today)
-    await seedCompletion(db, 
+    await seedCompletion(
+      db,
       CompletionsCompanion.insert(
         profileId: 0,
         curriculumId: curriculum.storageKey,
@@ -273,7 +276,8 @@ void main() {
     final learnId = stages.firstWhere((s) => s.stageOrder == 1).id;
 
     // Complete Learn for item 0
-    await seedCompletion(db, 
+    await seedCompletion(
+      db,
       CompletionsCompanion.insert(
         profileId: 0,
         curriculumId: curriculum.storageKey,

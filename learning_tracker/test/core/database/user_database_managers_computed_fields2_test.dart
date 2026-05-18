@@ -557,7 +557,9 @@ void main() {
     });
 
     test('computedField profileId', () async {
-      final field = db.managers.completions.computedField((a) => a.profileId.id);
+      final field = db.managers.completions.computedField(
+        (a) => a.profileId.id,
+      );
       expect(
         await db.managers.completions.withFields([field]).get(),
         isNotEmpty,
@@ -1176,7 +1178,9 @@ void main() {
     });
 
     test('computedField profileId', () async {
-      final field = db.managers.streakEvents.computedField((a) => a.profileId.id);
+      final field = db.managers.streakEvents.computedField(
+        (a) => a.profileId.id,
+      );
       expect(
         await db.managers.streakEvents.withFields([field]).get(),
         isNotEmpty,

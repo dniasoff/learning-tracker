@@ -46,5 +46,9 @@ final outboxProcessorProvider = Provider<OutboxProcessor?>((ref) {
   final database = ref.watch(userDatabaseProvider);
 
   final clock = ref.watch(localDayClockProvider);
-  return OutboxProcessor(outboxDao: database.outboxDao, pipeline: pipeline, clock: clock);
+  return OutboxProcessor(
+    outboxDao: database.outboxDao,
+    pipeline: pipeline,
+    clock: clock,
+  );
 });

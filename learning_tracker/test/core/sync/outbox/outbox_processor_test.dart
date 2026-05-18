@@ -305,79 +305,60 @@ void main() {
       return rows.map((r) => r.entityKey).toList()..sort();
     }
 
-    test(
-      'partial failure — committed rows are deleted, the rest are retained '
-      'and marked attempted',
-      () async {
-        // Three distinct completions queued.
-        await insertRow(
-          entityKind: OutboxEntityKind.completion,
-          entityKey: 'c1',
-        );
-        await insertRow(
-          entityKind: OutboxEntityKind.completion,
-          entityKey: 'c2',
-        );
-        await insertRow(
-          entityKind: OutboxEntityKind.completion,
-          entityKey: 'c3',
-        );
+    test('partial failure — committed rows are deleted, the rest are retained '
+        'and marked attempted', () async {
+      // Three distinct completions queued.
+      await insertRow(entityKind: OutboxEntityKind.completion, entityKey: 'c1');
+      await insertRow(entityKind: OutboxEntityKind.completion, entityKey: 'c2');
+      await insertRow(entityKind: OutboxEntityKind.completion, entityKey: 'c3');
 
-        // Model a per-chunk partial failure: c1 + c2 committed, then a later
-        // chunk threw before c3 landed.
-        pipeline.partialFailureCommitted = ['c1', 'c2'];
+      // Model a per-chunk partial failure: c1 + c2 committed, then a later
+      // chunk threw before c3 landed.
+      pipeline.partialFailureCommitted = ['c1', 'c2'];
 
-        final count = await processor.drain(profileId);
+      final count = await processor.drain(profileId);
 
-        // Only the committed completions count as success.
-        expect(count, 2);
+      // Only the committed completions count as success.
+      expect(count, 2);
 
-        // c1 / c2 deleted; c3 retained for retry.
-        final remaining = await pendingCompletionKeys();
-        expect(remaining, equals(['c3']));
+      // c1 / c2 deleted; c3 retained for retry.
+      final remaining = await pendingCompletionKeys();
+      expect(remaining, equals(['c3']));
 
-        // c3's attempt counter was incremented (markAttempted).
-        final c3 = (await db.outboxDao.getPendingByKind(
-          OutboxEntityKind.completion,
-          profileId,
-        )).single;
-        expect(c3.attempts, 1);
-        expect(c3.lastError, isNotNull);
-      },
-    );
+      // c3's attempt counter was incremented (markAttempted).
+      final c3 = (await db.outboxDao.getPendingByKind(
+        OutboxEntityKind.completion,
+        profileId,
+      )).single;
+      expect(c3.attempts, 1);
+      expect(c3.lastError, isNotNull);
+    });
 
-    test(
-      'a subsequent drain retries ONLY the uncommitted rows after a partial '
-      'failure',
-      () async {
-        await insertRow(
-          entityKind: OutboxEntityKind.completion,
-          entityKey: 'c1',
-        );
-        await insertRow(
-          entityKind: OutboxEntityKind.completion,
-          entityKey: 'c2',
-        );
-        await insertRow(
-          entityKind: OutboxEntityKind.completion,
-          entityKey: 'c3',
-        );
+    test('a subsequent drain retries ONLY the uncommitted rows after a partial '
+        'failure', () async {
+      await insertRow(entityKind: OutboxEntityKind.completion, entityKey: 'c1');
+      await insertRow(entityKind: OutboxEntityKind.completion, entityKey: 'c2');
+      await insertRow(entityKind: OutboxEntityKind.completion, entityKey: 'c3');
 
-        pipeline.partialFailureCommitted = ['c1', 'c2'];
-        await processor.drain(profileId);
-        pipeline.batchCalls.clear();
+      pipeline.partialFailureCommitted = ['c1', 'c2'];
+      await processor.drain(profileId);
+      pipeline.batchCalls.clear();
 
-        // c3 was marked attempted (attempts=1) — its retry-backoff window is
-        // ~30 s. Advance the (shared) clock past it so c3 is eligible again.
-        clock.advance(const Duration(minutes: 5));
+      // c3 was marked attempted (attempts=1) — its retry-backoff window is
+      // ~30 s. Advance the (shared) clock past it so c3 is eligible again.
+      clock.advance(const Duration(minutes: 5));
 
-        // Second drain — only c3 remains, so only c3 is pushed.
-        final count = await processor.drain(profileId);
-        expect(count, 1);
-        expect(pipeline.batchCalls, equals([['c3']]));
-        expect(await pendingCompletionKeys(), isEmpty);
-      },
-    );
+      // Second drain — only c3 remains, so only c3 is pushed.
+      final count = await processor.drain(profileId);
+      expect(count, 1);
+      expect(
+        pipeline.batchCalls,
+        equals([
+          ['c3'],
+        ]),
+      );
+      expect(await pendingCompletionKeys(), isEmpty);
+    });
 
     test(
       'total failure — first chunk throws, all rows retained and retried',
@@ -447,35 +428,32 @@ void main() {
       },
     );
 
-    test(
-      'K4 — duplicate entityKey rows are all retained when the key is NOT '
-      'committed (total failure)',
-      () async {
-        await insertRow(
-          entityKind: OutboxEntityKind.completion,
-          entityKey: 'dup',
-        );
-        await insertRow(
-          entityKind: OutboxEntityKind.completion,
-          entityKey: 'dup',
-        );
+    test('K4 — duplicate entityKey rows are all retained when the key is NOT '
+        'committed (total failure)', () async {
+      await insertRow(
+        entityKind: OutboxEntityKind.completion,
+        entityKey: 'dup',
+      );
+      await insertRow(
+        entityKind: OutboxEntityKind.completion,
+        entityKey: 'dup',
+      );
 
-        pipeline.failTotalNextBatch = true;
+      pipeline.failTotalNextBatch = true;
 
-        final count = await processor.drain(profileId);
-        expect(count, 0);
+      final count = await processor.drain(profileId);
+      expect(count, 0);
 
-        // Both rows retained and each marked attempted.
-        final rows = await db.outboxDao.getPendingByKind(
-          OutboxEntityKind.completion,
-          profileId,
-        );
-        expect(rows, hasLength(2));
-        for (final row in rows) {
-          expect(row.attempts, 1);
-        }
-      },
-    );
+      // Both rows retained and each marked attempted.
+      final rows = await db.outboxDao.getPendingByKind(
+        OutboxEntityKind.completion,
+        profileId,
+      );
+      expect(rows, hasLength(2));
+      for (final row in rows) {
+        expect(row.attempts, 1);
+      }
+    });
   });
 
   group('OutboxEntityKind constants', () {

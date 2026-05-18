@@ -76,7 +76,8 @@ void main() {
     String trackType = 'personal',
     DateTime? completedAt,
   }) async {
-    await seedCompletion(db, 
+    await seedCompletion(
+      db,
       CompletionsCompanion.insert(
         profileId: profileId,
         curriculumId: 'bavli',

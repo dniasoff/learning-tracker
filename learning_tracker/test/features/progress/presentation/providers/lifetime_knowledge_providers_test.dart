@@ -243,9 +243,7 @@ void main() {
 
         final container = ProviderContainer(
           overrides: [
-            lifetimeSummariesProvider(
-              1,
-            ).overrideWith(
+            lifetimeSummariesProvider(1).overrideWith(
               (ref) => Future.value([chumashSummary, tanachSummary]),
             ),
           ],
@@ -271,57 +269,56 @@ void main() {
               'Learned union should count each distinct ref once, not once per curriculum',
         );
         // Verify the naive sum would have been wrong (regression guard).
-        expect(totals.totalSections, isNot(equals(chumashAll.length + tanachAll.length)));
-        expect(totals.learnedSections, isNot(equals(chumashLearned.length + tanachLearned.length)));
+        expect(
+          totals.totalSections,
+          isNot(equals(chumashAll.length + tanachAll.length)),
+        );
+        expect(
+          totals.learnedSections,
+          isNot(equals(chumashLearned.length + tanachLearned.length)),
+        );
       },
     );
 
-    test(
-      'non-overlapping curricula: totals equal the naive sum',
-      () async {
-        // When curricula are disjoint the union equals the sum.
-        const mishAll = {'m_A', 'm_B'};
-        const mishLearned = {'m_A'};
-        const bavliAll = {'b_1', 'b_2', 'b_3'};
-        const bavliLearned = {'b_1', 'b_2'};
+    test('non-overlapping curricula: totals equal the naive sum', () async {
+      // When curricula are disjoint the union equals the sum.
+      const mishAll = {'m_A', 'm_B'};
+      const mishLearned = {'m_A'};
+      const bavliAll = {'b_1', 'b_2', 'b_3'};
+      const bavliLearned = {'b_1', 'b_2'};
 
-        final mishSummary = fakeSummary(
-          id: CurriculumId.mishnayos,
-          allRefs: mishAll,
-          learnedRefs: mishLearned,
-        );
-        final bavliSummary = fakeSummary(
-          id: CurriculumId.bavli,
-          allRefs: bavliAll,
-          learnedRefs: bavliLearned,
-        );
+      final mishSummary = fakeSummary(
+        id: CurriculumId.mishnayos,
+        allRefs: mishAll,
+        learnedRefs: mishLearned,
+      );
+      final bavliSummary = fakeSummary(
+        id: CurriculumId.bavli,
+        allRefs: bavliAll,
+        learnedRefs: bavliLearned,
+      );
 
-        final container = ProviderContainer(
-          overrides: [
-            lifetimeSummariesProvider(
-              2,
-            ).overrideWith(
-              (ref) => Future.value([mishSummary, bavliSummary]),
-            ),
-          ],
-        );
-        addTearDown(container.dispose);
+      final container = ProviderContainer(
+        overrides: [
+          lifetimeSummariesProvider(
+            2,
+          ).overrideWith((ref) => Future.value([mishSummary, bavliSummary])),
+        ],
+      );
+      addTearDown(container.dispose);
 
-        final totals = await container.read(
-          lifetimeTotalsAcrossAllCurriculaProvider(2).future,
-        );
+      final totals = await container.read(
+        lifetimeTotalsAcrossAllCurriculaProvider(2).future,
+      );
 
-        expect(totals.totalSections, mishAll.length + bavliAll.length);
-        expect(totals.learnedSections, mishLearned.length + bavliLearned.length);
-      },
-    );
+      expect(totals.totalSections, mishAll.length + bavliAll.length);
+      expect(totals.learnedSections, mishLearned.length + bavliLearned.length);
+    });
 
     test('empty summaries list returns zeros', () async {
       final container = ProviderContainer(
         overrides: [
-          lifetimeSummariesProvider(
-            3,
-          ).overrideWith((ref) => Future.value([])),
+          lifetimeSummariesProvider(3).overrideWith((ref) => Future.value([])),
         ],
       );
       addTearDown(container.dispose);
@@ -335,32 +332,29 @@ void main() {
       expect(totals.percentage, 0.0);
     });
 
-    test(
-      'single curriculum with no refs carries through correctly',
-      () async {
-        final summary = fakeSummary(
-          id: CurriculumId.mishnayos,
-          allRefs: {'x', 'y', 'z'},
-          learnedRefs: {'x'},
-        );
+    test('single curriculum with no refs carries through correctly', () async {
+      final summary = fakeSummary(
+        id: CurriculumId.mishnayos,
+        allRefs: {'x', 'y', 'z'},
+        learnedRefs: {'x'},
+      );
 
-        final container = ProviderContainer(
-          overrides: [
-            lifetimeSummariesProvider(
-              4,
-            ).overrideWith((ref) => Future.value([summary])),
-          ],
-        );
-        addTearDown(container.dispose);
+      final container = ProviderContainer(
+        overrides: [
+          lifetimeSummariesProvider(
+            4,
+          ).overrideWith((ref) => Future.value([summary])),
+        ],
+      );
+      addTearDown(container.dispose);
 
-        final totals = await container.read(
-          lifetimeTotalsAcrossAllCurriculaProvider(4).future,
-        );
+      final totals = await container.read(
+        lifetimeTotalsAcrossAllCurriculaProvider(4).future,
+      );
 
-        expect(totals.totalSections, 3);
-        expect(totals.learnedSections, 1);
-        expect(totals.percentage, closeTo(1 / 3, 0.001));
-      },
-    );
+      expect(totals.totalSections, 3);
+      expect(totals.learnedSections, 1);
+      expect(totals.percentage, closeTo(1 / 3, 0.001));
+    });
   });
 }

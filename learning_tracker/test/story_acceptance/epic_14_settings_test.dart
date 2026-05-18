@@ -492,10 +492,7 @@ void main() {
         final profiles = await db.userProfileDao.getAllUserProfiles();
         // 2 accounts: seedProfile's 'Test User' + seedTestData's upsertProfile
         expect(profiles.length, equals(2));
-        expect(
-          profiles.any((p) => p.displayName == 'Test User'),
-          isTrue,
-        );
+        expect(profiles.any((p) => p.displayName == 'Test User'), isTrue);
       },
     );
 

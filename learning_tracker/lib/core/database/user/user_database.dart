@@ -273,10 +273,7 @@ class UserDatabase extends _$UserDatabase {
             'PRAGMA table_info(stage_definitions)',
           ).get();
           if (!stageCols.any((r) => r.data['name'] == 'superseded_at')) {
-            await m.addColumn(
-              stageDefinitions,
-              stageDefinitions.supersededAt,
-            );
+            await m.addColumn(stageDefinitions, stageDefinitions.supersededAt);
           }
         }
       },

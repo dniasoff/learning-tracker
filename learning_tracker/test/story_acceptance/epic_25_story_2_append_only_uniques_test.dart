@@ -221,15 +221,17 @@ void main() {
       db = _db();
       await seedProfile(db);
       // Seed a second profile (id=2) for the "distinct profiles" dedup test.
-      await db.into(db.learnerProfiles).insert(
-        LearnerProfilesCompanion.insert(
-          accountId: 1,
-          displayName: 'Test User 2',
-          mode: 'adult',
-          createdAt: DateTime.utc(2026, 1, 1),
-          updatedAt: DateTime.utc(2026, 1, 1),
-        ),
-      );
+      await db
+          .into(db.learnerProfiles)
+          .insert(
+            LearnerProfilesCompanion.insert(
+              accountId: 1,
+              displayName: 'Test User 2',
+              mode: 'adult',
+              createdAt: DateTime.utc(2026, 1, 1),
+              updatedAt: DateTime.utc(2026, 1, 1),
+            ),
+          );
     });
     tearDown(() => db.close());
 

@@ -11,8 +11,7 @@ import 'package:learning_tracker/features/progress/presentation/providers/lifeti
 /// items learned in the past ("before this app"). Matches
 /// `DateTime.utc(2000, 1, 1)` — compared by millisecondsSinceEpoch so
 /// timezone normalization does not cause false positives.
-final kBulkPriorSentinelMs =
-    DateTime.utc(2000, 1, 1).millisecondsSinceEpoch;
+final kBulkPriorSentinelMs = DateTime.utc(2000, 1, 1).millisecondsSinceEpoch;
 
 /// Summary of per-curriculum completion data for the Items Learned /
 /// Lifetime View screens.
@@ -61,16 +60,12 @@ Future<CurriculumCompletionSummary?> computeItemsLearnedSummary({
 
   // Load all completions for this curriculum + profile.
   final allCompletions = await db.completionDao
-      .getCompletionsByCurriculumAndProfile(
-        curriculum.storageKey,
-        profileId,
-      );
+      .getCompletionsByCurriculumAndProfile(curriculum.storageKey, profileId);
 
   // Filter: exclude bulk-prior sentinel rows.
   final trackCompletions = allCompletions
       .where(
-        (c) =>
-            c.completedAt.millisecondsSinceEpoch != kBulkPriorSentinelMs,
+        (c) => c.completedAt.millisecondsSinceEpoch != kBulkPriorSentinelMs,
       )
       .toList();
 
@@ -119,10 +114,7 @@ Future<CurriculumCompletionSummary?> computeLifetimeViewSummary({
   if (leaves.isEmpty) return null;
 
   final completions = await db.completionDao
-      .getCompletionsByCurriculumAndProfile(
-        curriculum.storageKey,
-        profileId,
-      );
+      .getCompletionsByCurriculumAndProfile(curriculum.storageKey, profileId);
   final ledger = await db.learningLedgerDao.getEntriesByCurriculum(
     profileId,
     curriculum.storageKey,

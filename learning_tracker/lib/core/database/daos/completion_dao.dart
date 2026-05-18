@@ -64,9 +64,9 @@ class CompletionDao extends DatabaseAccessor<UserDatabase>
   }
 
   Future<Completion?> getCompletionById(int id) async {
-    final row = await (select(completionsView)
-          ..where((t) => t.id.equals(id)))
-        .getSingleOrNull();
+    final row = await (select(
+      completionsView,
+    )..where((t) => t.id.equals(id))).getSingleOrNull();
     return row == null ? null : _fromView(row);
   }
 
@@ -75,9 +75,9 @@ class CompletionDao extends DatabaseAccessor<UserDatabase>
     required CrossProfileScope scope,
   }) async {
     _assertCrossProfileScope(scope, 'getCompletionsByCurriculum');
-    final rows = await (select(completionsView)
-          ..where((t) => t.curriculumId.equals(curriculumId)))
-        .get();
+    final rows = await (select(
+      completionsView,
+    )..where((t) => t.curriculumId.equals(curriculumId))).get();
     return rows.map(_fromView).toList();
   }
 
@@ -86,9 +86,9 @@ class CompletionDao extends DatabaseAccessor<UserDatabase>
     required CrossProfileScope scope,
   }) async {
     _assertCrossProfileScope(scope, 'getCompletionsForContent');
-    final rows = await (select(completionsView)
-          ..where((t) => t.sefariaRef.equals(sefariaRef)))
-        .get();
+    final rows = await (select(
+      completionsView,
+    )..where((t) => t.sefariaRef.equals(sefariaRef))).get();
     return rows.map(_fromView).toList();
   }
 
@@ -96,22 +96,23 @@ class CompletionDao extends DatabaseAccessor<UserDatabase>
 
   /// Get all completions for a specific profile.
   Future<List<Completion>> getCompletionsByProfile(int profileId) async {
-    final rows = await (select(completionsView)
-          ..where((t) => t.profileId.equals(profileId)))
-        .get();
+    final rows = await (select(
+      completionsView,
+    )..where((t) => t.profileId.equals(profileId))).get();
     return rows.map(_fromView).toList();
   }
 
   /// Track-only completions for [profileId] — excludes the bulk-mark sentinel
   /// (trackId = 0) at the SQL layer so that lifetime bulk-marked items do not
   /// inflate the ITEMS LEARNED / TASKS DONE counters on the Progress screen.
-  Future<List<Completion>> getTrackOnlyCompletionsByProfile(int profileId) async {
-    final rows = await (select(completionsView)
-          ..where(
-            (t) =>
-                t.profileId.equals(profileId) & t.trackId.isNotValue(0),
-          ))
-        .get();
+  Future<List<Completion>> getTrackOnlyCompletionsByProfile(
+    int profileId,
+  ) async {
+    final rows =
+        await (select(completionsView)..where(
+              (t) => t.profileId.equals(profileId) & t.trackId.isNotValue(0),
+            ))
+            .get();
     return rows.map(_fromView).toList();
   }
 
@@ -129,12 +130,11 @@ class CompletionDao extends DatabaseAccessor<UserDatabase>
     for (var i = 0; i < list.length; i += _kInChunkSize) {
       final end = math.min(i + _kInChunkSize, list.length);
       final part = list.sublist(i, end);
-      final rows = await (select(completionsView)
-            ..where(
-              (t) =>
-                  t.profileId.equals(profileId) & t.sefariaRef.isIn(part),
-            ))
-          .get();
+      final rows =
+          await (select(completionsView)..where(
+                (t) => t.profileId.equals(profileId) & t.sefariaRef.isIn(part),
+              ))
+              .get();
       out.addAll(rows.map(_fromView));
     }
     return out;
@@ -145,13 +145,13 @@ class CompletionDao extends DatabaseAccessor<UserDatabase>
     String curriculumId,
     int profileId,
   ) async {
-    final rows = await (select(completionsView)
-          ..where(
-            (t) =>
-                t.curriculumId.equals(curriculumId) &
-                t.profileId.equals(profileId),
-          ))
-        .get();
+    final rows =
+        await (select(completionsView)..where(
+              (t) =>
+                  t.curriculumId.equals(curriculumId) &
+                  t.profileId.equals(profileId),
+            ))
+            .get();
     return rows.map(_fromView).toList();
   }
 
@@ -160,13 +160,13 @@ class CompletionDao extends DatabaseAccessor<UserDatabase>
     String sefariaRef,
     int profileId,
   ) async {
-    final rows = await (select(completionsView)
-          ..where(
-            (t) =>
-                t.sefariaRef.equals(sefariaRef) &
-                t.profileId.equals(profileId),
-          ))
-        .get();
+    final rows =
+        await (select(completionsView)..where(
+              (t) =>
+                  t.sefariaRef.equals(sefariaRef) &
+                  t.profileId.equals(profileId),
+            ))
+            .get();
     return rows.map(_fromView).toList();
   }
 
@@ -233,18 +233,19 @@ class CompletionDao extends DatabaseAccessor<UserDatabase>
     required DateTime completedAt,
     required int profileId,
   }) async {
-    final result = await (select(completionEvents)
-          ..where(
-            (t) =>
-                t.curriculumId.equals(curriculumId) &
-                t.sefariaRef.equals(sefariaRef) &
-                t.stageId.equals(stageId) &
-                t.trackType.equals(trackType) &
-                t.eventTimestamp.equals(completedAt) &
-                t.profileId.equals(profileId),
-          )
-          ..limit(1))
-        .get();
+    final result =
+        await (select(completionEvents)
+              ..where(
+                (t) =>
+                    t.curriculumId.equals(curriculumId) &
+                    t.sefariaRef.equals(sefariaRef) &
+                    t.stageId.equals(stageId) &
+                    t.trackType.equals(trackType) &
+                    t.eventTimestamp.equals(completedAt) &
+                    t.profileId.equals(profileId),
+              )
+              ..limit(1))
+            .get();
     return result.isNotEmpty;
   }
 
@@ -254,14 +255,14 @@ class CompletionDao extends DatabaseAccessor<UserDatabase>
     DateTime end,
     int profileId,
   ) async {
-    final rows = await (select(completionsView)
-          ..where(
-            (t) =>
-                t.eventTimestamp.isBiggerOrEqualValue(start) &
-                t.eventTimestamp.isSmallerOrEqualValue(end) &
-                t.profileId.equals(profileId),
-          ))
-        .get();
+    final rows =
+        await (select(completionsView)..where(
+              (t) =>
+                  t.eventTimestamp.isBiggerOrEqualValue(start) &
+                  t.eventTimestamp.isSmallerOrEqualValue(end) &
+                  t.profileId.equals(profileId),
+            ))
+            .get();
     return rows.map(_fromView).toList();
   }
 
@@ -271,15 +272,16 @@ class CompletionDao extends DatabaseAccessor<UserDatabase>
     DateTime end,
     int profileId,
   ) async {
-    final result = await (select(completionsView)
-          ..where(
-            (t) =>
-                t.eventTimestamp.isBiggerOrEqualValue(start) &
-                t.eventTimestamp.isSmallerOrEqualValue(end) &
-                t.profileId.equals(profileId),
-          )
-          ..limit(1))
-        .get();
+    final result =
+        await (select(completionsView)
+              ..where(
+                (t) =>
+                    t.eventTimestamp.isBiggerOrEqualValue(start) &
+                    t.eventTimestamp.isSmallerOrEqualValue(end) &
+                    t.profileId.equals(profileId),
+              )
+              ..limit(1))
+            .get();
     return result.isNotEmpty;
   }
 
@@ -299,16 +301,16 @@ class CompletionDao extends DatabaseAccessor<UserDatabase>
     for (var i = 0; i < sefariaRefs.length; i += _kInChunkSize) {
       final end = math.min(i + _kInChunkSize, sefariaRefs.length);
       final part = sefariaRefs.sublist(i, end);
-      final rows = await (select(completionsView)
-            ..where(
-              (t) =>
-                  t.profileId.equals(profileId) &
-                  t.curriculumId.equals(curriculumId) &
-                  t.stageId.equals(stageId) &
-                  t.trackType.equals(trackType) &
-                  t.sefariaRef.isIn(part),
-            ))
-          .get();
+      final rows =
+          await (select(completionsView)..where(
+                (t) =>
+                    t.profileId.equals(profileId) &
+                    t.curriculumId.equals(curriculumId) &
+                    t.stageId.equals(stageId) &
+                    t.trackType.equals(trackType) &
+                    t.sefariaRef.isIn(part),
+              ))
+              .get();
       for (final r in rows) {
         out.add(r.sefariaRef);
       }
@@ -329,16 +331,16 @@ class CompletionDao extends DatabaseAccessor<UserDatabase>
     for (var i = 0; i < sefariaRefs.length; i += _kInChunkSize) {
       final end = math.min(i + _kInChunkSize, sefariaRefs.length);
       final part = sefariaRefs.sublist(i, end);
-      final rows = await (select(completionsView)
-            ..where(
-              (t) =>
-                  t.profileId.equals(profileId) &
-                  t.curriculumId.equals(curriculumId) &
-                  t.stageId.equals(stageId) &
-                  t.trackType.equals(trackType) &
-                  t.sefariaRef.isIn(part),
-            ))
-          .get();
+      final rows =
+          await (select(completionsView)..where(
+                (t) =>
+                    t.profileId.equals(profileId) &
+                    t.curriculumId.equals(curriculumId) &
+                    t.stageId.equals(stageId) &
+                    t.trackType.equals(trackType) &
+                    t.sefariaRef.isIn(part),
+              ))
+              .get();
       out.addAll(rows.map(_fromView));
     }
     return out;
@@ -351,13 +353,13 @@ class CompletionDao extends DatabaseAccessor<UserDatabase>
     required CrossProfileScope scope,
   }) async {
     _assertCrossProfileScope(scope, 'getCompletionsByDateRange');
-    final rows = await (select(completionsView)
-          ..where(
-            (t) =>
-                t.eventTimestamp.isBiggerOrEqualValue(start) &
-                t.eventTimestamp.isSmallerOrEqualValue(end),
-          ))
-        .get();
+    final rows =
+        await (select(completionsView)..where(
+              (t) =>
+                  t.eventTimestamp.isBiggerOrEqualValue(start) &
+                  t.eventTimestamp.isSmallerOrEqualValue(end),
+            ))
+            .get();
     return rows.map(_fromView).toList();
   }
 
@@ -371,14 +373,15 @@ class CompletionDao extends DatabaseAccessor<UserDatabase>
       scope,
       'internalHasCompletionsInDateRangeCrossProfile',
     );
-    final result = await (select(completionsView)
-          ..where(
-            (t) =>
-                t.eventTimestamp.isBiggerOrEqualValue(start) &
-                t.eventTimestamp.isSmallerOrEqualValue(end),
-          )
-          ..limit(1))
-        .get();
+    final result =
+        await (select(completionsView)
+              ..where(
+                (t) =>
+                    t.eventTimestamp.isBiggerOrEqualValue(start) &
+                    t.eventTimestamp.isSmallerOrEqualValue(end),
+              )
+              ..limit(1))
+            .get();
     return result.isNotEmpty;
   }
 
@@ -396,17 +399,18 @@ class CompletionDao extends DatabaseAccessor<UserDatabase>
     required String trackType,
     required DateTime completedAt,
   }) async {
-    final result = await (select(completionEvents)
-          ..where(
-            (t) =>
-                t.curriculumId.equals(curriculumId) &
-                t.sefariaRef.equals(sefariaRef) &
-                t.stageId.equals(stageId) &
-                t.trackType.equals(trackType) &
-                t.eventTimestamp.equals(completedAt),
-          )
-          ..limit(1))
-        .get();
+    final result =
+        await (select(completionEvents)
+              ..where(
+                (t) =>
+                    t.curriculumId.equals(curriculumId) &
+                    t.sefariaRef.equals(sefariaRef) &
+                    t.stageId.equals(stageId) &
+                    t.trackType.equals(trackType) &
+                    t.eventTimestamp.equals(completedAt),
+              )
+              ..limit(1))
+            .get();
     return result.isNotEmpty;
   }
 
@@ -540,9 +544,9 @@ class CompletionDao extends DatabaseAccessor<UserDatabase>
 
   /// Get all completions for a specific track.
   Future<List<Completion>> getCompletionsByTrack(int trackId) async {
-    final rows = await (select(completionsView)
-          ..where((t) => t.trackId.equals(trackId)))
-        .get();
+    final rows = await (select(
+      completionsView,
+    )..where((t) => t.trackId.equals(trackId))).get();
     return rows.map(_fromView).toList();
   }
 
@@ -551,12 +555,11 @@ class CompletionDao extends DatabaseAccessor<UserDatabase>
     int trackId,
     int profileId,
   ) async {
-    final rows = await (select(completionsView)
-          ..where(
-            (t) =>
-                t.trackId.equals(trackId) & t.profileId.equals(profileId),
-          ))
-        .get();
+    final rows =
+        await (select(completionsView)..where(
+              (t) => t.trackId.equals(trackId) & t.profileId.equals(profileId),
+            ))
+            .get();
     return rows.map(_fromView).toList();
   }
 
@@ -568,14 +571,14 @@ class CompletionDao extends DatabaseAccessor<UserDatabase>
     int profileId,
     DateTime since,
   ) async {
-    final rows = await (select(completionsView)
-          ..where(
-            (t) =>
-                t.trackId.equals(trackId) &
-                t.profileId.equals(profileId) &
-                t.eventTimestamp.isBiggerOrEqualValue(since),
-          ))
-        .get();
+    final rows =
+        await (select(completionsView)..where(
+              (t) =>
+                  t.trackId.equals(trackId) &
+                  t.profileId.equals(profileId) &
+                  t.eventTimestamp.isBiggerOrEqualValue(since),
+            ))
+            .get();
     return rows.map(_fromView).toList();
   }
 
@@ -599,17 +602,18 @@ class CompletionDao extends DatabaseAccessor<UserDatabase>
     required int stageId,
     required DateTime completedAt,
   }) async {
-    final result = await (select(completionsView)
-          ..where(
-            (t) =>
-                t.trackId.equals(trackId) &
-                t.curriculumId.equals(curriculumId) &
-                t.sefariaRef.equals(sefariaRef) &
-                t.stageId.equals(stageId) &
-                t.eventTimestamp.equals(completedAt),
-          )
-          ..limit(1))
-        .get();
+    final result =
+        await (select(completionsView)
+              ..where(
+                (t) =>
+                    t.trackId.equals(trackId) &
+                    t.curriculumId.equals(curriculumId) &
+                    t.sefariaRef.equals(sefariaRef) &
+                    t.stageId.equals(stageId) &
+                    t.eventTimestamp.equals(completedAt),
+              )
+              ..limit(1))
+            .get();
     return result.isNotEmpty;
   }
 
@@ -620,15 +624,15 @@ class CompletionDao extends DatabaseAccessor<UserDatabase>
     int trackId,
     int profileId,
   ) async {
-    final rows = await (select(completionsView)
-          ..where(
-            (t) =>
-                t.eventTimestamp.isBiggerOrEqualValue(start) &
-                t.eventTimestamp.isSmallerOrEqualValue(end) &
-                t.trackId.equals(trackId) &
-                t.profileId.equals(profileId),
-          ))
-        .get();
+    final rows =
+        await (select(completionsView)..where(
+              (t) =>
+                  t.eventTimestamp.isBiggerOrEqualValue(start) &
+                  t.eventTimestamp.isSmallerOrEqualValue(end) &
+                  t.trackId.equals(trackId) &
+                  t.profileId.equals(profileId),
+            ))
+            .get();
     return rows.map(_fromView).toList();
   }
 
@@ -690,10 +694,11 @@ class CompletionDao extends DatabaseAccessor<UserDatabase>
 
   /// Returns true if any completions reference the given stage ID.
   Future<bool> hasCompletionsForStage(int stageId) async {
-    final result = await (select(completionsView)
-          ..where((t) => t.stageId.equals(stageId))
-          ..limit(1))
-        .get();
+    final result =
+        await (select(completionsView)
+              ..where((t) => t.stageId.equals(stageId))
+              ..limit(1))
+            .get();
     return result.isNotEmpty;
   }
 

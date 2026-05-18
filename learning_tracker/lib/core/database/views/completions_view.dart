@@ -20,14 +20,14 @@ abstract class CompletionsView extends View {
   @override
   // ignore: strict_raw_type
   Query as() => select([
-        completionEvents.id,
-        completionEvents.profileId,
-        completionEvents.curriculumId,
-        completionEvents.sefariaRef,
-        completionEvents.stageId,
-        completionEvents.trackType,
-        completionEvents.trackId,
-        completionEvents.points,
-        completionEvents.eventTimestamp,
-      ]).from(completionEvents);
+    completionEvents.id,
+    completionEvents.profileId,
+    completionEvents.curriculumId,
+    completionEvents.sefariaRef,
+    completionEvents.stageId,
+    completionEvents.trackType,
+    completionEvents.trackId,
+    completionEvents.points,
+    completionEvents.eventTimestamp,
+  ]).from(completionEvents);
 }

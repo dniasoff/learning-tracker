@@ -96,45 +96,42 @@ void main() {
     //
     // Invariant: a bulk-mark of N distinct completions executes exactly ONE
     // Drift transaction (not N), and writes exactly N completion_events rows.
-    test(
-      'S1: commitBatch of N items opens exactly 1 transaction and writes N '
-      'completion_events rows',
-      () async {
-        const n = 10;
-        final writer = CompletionWriter(db);
+    test('S1: commitBatch of N items opens exactly 1 transaction and writes N '
+        'completion_events rows', () async {
+      const n = 10;
+      final writer = CompletionWriter(db);
 
-        final results = await writer.commitBatch(
-          commands(n, refPrefix: 'Berakhot'),
-        );
+      final results = await writer.commitBatch(
+        commands(n, refPrefix: 'Berakhot'),
+      );
 
-        expect(
-          db.transactionCount,
-          equals(1),
-          reason: 'S1: commitBatch must wrap all N inserts in ONE transaction',
-        );
+      expect(
+        db.transactionCount,
+        equals(1),
+        reason: 'S1: commitBatch must wrap all N inserts in ONE transaction',
+      );
 
-        final events = await db.select(db.completionEvents).get();
-        expect(
-          events,
-          hasLength(n),
-          reason: 'S1: exactly N completion_events rows must exist',
-        );
+      final events = await db.select(db.completionEvents).get();
+      expect(
+        events,
+        hasLength(n),
+        reason: 'S1: exactly N completion_events rows must exist',
+      );
 
-        final outboxRows = await db.select(db.outbox).get();
-        expect(
-          outboxRows,
-          hasLength(n),
-          reason: 'S1: exactly N outbox rows must exist after bulk mark',
-        );
+      final outboxRows = await db.select(db.outbox).get();
+      expect(
+        outboxRows,
+        hasLength(n),
+        reason: 'S1: exactly N outbox rows must exist after bulk mark',
+      );
 
-        expect(results, hasLength(n));
-        expect(
-          results.every((r) => r.isNew),
-          isTrue,
-          reason: 'S1: all N completions are genuinely new',
-        );
-      },
-    );
+      expect(results, hasLength(n));
+      expect(
+        results.every((r) => r.isNew),
+        isTrue,
+        reason: 'S1: all N completions are genuinely new',
+      );
+    });
 
     // ── S2 ─────────────────────────────────────────────────────────────────
     //
@@ -172,56 +169,53 @@ void main() {
     // FAILS against the pre-G1 writer (which inserted unconditionally) and
     // PASSES once commitBatch enqueues outbox rows only for genuinely-new
     // completions.
-    test(
-      'S2: commitBatch called twice with overlapping commands keeps exactly '
-      'the distinct-N outbox rows (no duplicate pushes)',
-      () async {
-        final writer = CompletionWriter(db);
+    test('S2: commitBatch called twice with overlapping commands keeps exactly '
+        'the distinct-N outbox rows (no duplicate pushes)', () async {
+      final writer = CompletionWriter(db);
 
-        // Seven distinct completions: Eruvin 1..7.
-        final all = commands(7, refPrefix: 'Eruvin');
+      // Seven distinct completions: Eruvin 1..7.
+      final all = commands(7, refPrefix: 'Eruvin');
 
-        // First call: the first 5 (Eruvin 1..5).
-        final firstResults = await writer.commitBatch(all.take(5).toList());
-        expect(firstResults.every((r) => r.isNew), isTrue);
+      // First call: the first 5 (Eruvin 1..5).
+      final firstResults = await writer.commitBatch(all.take(5).toList());
+      expect(firstResults.every((r) => r.isNew), isTrue);
 
-        // Second call: 3 of the SAME completions (Eruvin 1..3) overlapping
-        // the first call + 2 brand-new ones (Eruvin 6..7).
-        final secondResults = await writer.commitBatch([
-          ...all.take(3),
-          ...all.skip(5),
-        ]);
+      // Second call: 3 of the SAME completions (Eruvin 1..3) overlapping
+      // the first call + 2 brand-new ones (Eruvin 6..7).
+      final secondResults = await writer.commitBatch([
+        ...all.take(3),
+        ...all.skip(5),
+      ]);
 
-        // The 3 overlapping commands resolve as NOT new; the 2 fresh ones do.
-        expect(
-          secondResults.where((r) => r.isNew).length,
-          equals(2),
-          reason: 'only the 2 genuinely-new completions report isNew=true',
-        );
-        expect(
-          secondResults.where((r) => !r.isNew).length,
-          equals(3),
-          reason: 'the 3 pre-existing completions report isNew=false',
-        );
+      // The 3 overlapping commands resolve as NOT new; the 2 fresh ones do.
+      expect(
+        secondResults.where((r) => r.isNew).length,
+        equals(2),
+        reason: 'only the 2 genuinely-new completions report isNew=true',
+      );
+      expect(
+        secondResults.where((r) => !r.isNew).length,
+        equals(3),
+        reason: 'the 3 pre-existing completions report isNew=false',
+      );
 
-        // 5 distinct from the first call + 2 new from the second = 7.
-        final outboxRows = await db.select(db.outbox).get();
-        expect(
-          outboxRows,
-          hasLength(7),
-          reason:
-              'G1: re-running commitBatch must NOT pile up duplicate outbox '
-              'rows for already-persisted completions',
-        );
+      // 5 distinct from the first call + 2 new from the second = 7.
+      final outboxRows = await db.select(db.outbox).get();
+      expect(
+        outboxRows,
+        hasLength(7),
+        reason:
+            'G1: re-running commitBatch must NOT pile up duplicate outbox '
+            'rows for already-persisted completions',
+      );
 
-        final events = await db.select(db.completionEvents).get();
-        expect(
-          events,
-          hasLength(7),
-          reason: 'completion_events likewise holds 7 distinct rows',
-        );
-      },
-    );
+      final events = await db.select(db.completionEvents).get();
+      expect(
+        events,
+        hasLength(7),
+        reason: 'completion_events likewise holds 7 distinct rows',
+      );
+    });
 
     // ── S2 (in-batch dedup) — catches G1/G3: duplicate commands in one call ─
     test(
@@ -367,36 +361,33 @@ void main() {
 
     tearDown(() => db.close());
 
-    test(
-      'purgeCompletionRows removes a seeded completion row and leaves other '
-      'operation types untouched',
-      () async {
-        // Seed a legacy `completion` row plus a non-completion row.
-        await db.syncQueueDao.enqueue(OutboxEntityKind.completion, '{}');
-        await db.syncQueueDao.enqueue(OutboxEntityKind.streak, '{}');
+    test('purgeCompletionRows removes a seeded completion row and leaves other '
+        'operation types untouched', () async {
+      // Seed a legacy `completion` row plus a non-completion row.
+      await db.syncQueueDao.enqueue(OutboxEntityKind.completion, '{}');
+      await db.syncQueueDao.enqueue(OutboxEntityKind.streak, '{}');
 
-        expect(
-          await db.syncQueueDao.getPendingCount(),
-          equals(2),
-          reason: 'precondition: two rows queued',
-        );
+      expect(
+        await db.syncQueueDao.getPendingCount(),
+        equals(2),
+        reason: 'precondition: two rows queued',
+      );
 
-        final removed = await db.syncQueueDao.purgeCompletionRows();
-        expect(
-          removed,
-          equals(1),
-          reason: 'exactly the one completion row must be purged',
-        );
+      final removed = await db.syncQueueDao.purgeCompletionRows();
+      expect(
+        removed,
+        equals(1),
+        reason: 'exactly the one completion row must be purged',
+      );
 
-        final remaining = await db.syncQueueDao.getAllPending();
-        expect(remaining, hasLength(1));
-        expect(
-          remaining.single.operationType,
-          equals(OutboxEntityKind.streak),
-          reason: 'non-completion rows must survive the purge',
-        );
-      },
-    );
+      final remaining = await db.syncQueueDao.getAllPending();
+      expect(remaining, hasLength(1));
+      expect(
+        remaining.single.operationType,
+        equals(OutboxEntityKind.streak),
+        reason: 'non-completion rows must survive the purge',
+      );
+    });
   });
 }
 

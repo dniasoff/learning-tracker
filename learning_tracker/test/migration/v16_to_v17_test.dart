@@ -26,90 +26,107 @@ void main() {
       UserDatabase db,
     ) async {
       // Need an account first (learner_profiles.accountId)
-      final accountId = await db.into(db.accounts).insert(
-        AccountsCompanion.insert(
-          email: 'test@example.com',
-          tier: 'localBorn',
-          displayName: 'Tester',
-          userMode: 'adult',
-          createdAt: DateTimeFactory.nowUtc(),
-          updatedAt: DateTimeFactory.nowUtc(),
-        ),
-      );
-      final profileId = await db.into(db.learnerProfiles).insert(
-        LearnerProfilesCompanion.insert(
-          accountId: accountId,
-          displayName: 'Tester',
-          mode: 'adult',
-          createdAt: DateTimeFactory.nowUtc(),
-          updatedAt: DateTimeFactory.nowUtc(),
-        ),
-      );
-      final trackId = await db.into(db.curriculumTracks).insert(
-        CurriculumTracksCompanion.insert(
-          profileId: profileId,
-          curriculumId: CurriculumId.mishnayos.storageKey,
-          trackType: TrackType.personal.storageKey,
-          activatedAt: DateTimeFactory.nowUtc(),
-        ),
-      );
+      final accountId = await db
+          .into(db.accounts)
+          .insert(
+            AccountsCompanion.insert(
+              email: 'test@example.com',
+              tier: 'localBorn',
+              displayName: 'Tester',
+              userMode: 'adult',
+              createdAt: DateTimeFactory.nowUtc(),
+              updatedAt: DateTimeFactory.nowUtc(),
+            ),
+          );
+      final profileId = await db
+          .into(db.learnerProfiles)
+          .insert(
+            LearnerProfilesCompanion.insert(
+              accountId: accountId,
+              displayName: 'Tester',
+              mode: 'adult',
+              createdAt: DateTimeFactory.nowUtc(),
+              updatedAt: DateTimeFactory.nowUtc(),
+            ),
+          );
+      final trackId = await db
+          .into(db.curriculumTracks)
+          .insert(
+            CurriculumTracksCompanion.insert(
+              profileId: profileId,
+              curriculumId: CurriculumId.mishnayos.storageKey,
+              trackType: TrackType.personal.storageKey,
+              activatedAt: DateTimeFactory.nowUtc(),
+            ),
+          );
       return (profileId: profileId, trackId: trackId);
     }
 
     // ── 1. FK enforcement is on ───────────────────────────────────────────
 
-    test('PRAGMA foreign_keys is enabled — inserting orphan completion fails', () async {
-      final db = inMemoryDb();
-      addTearDown(db.close);
+    test(
+      'PRAGMA foreign_keys is enabled — inserting orphan completion fails',
+      () async {
+        final db = inMemoryDb();
+        addTearDown(db.close);
 
-      // Ensure a track exists so trackId FK is satisfied, but use a
-      // non-existent profileId to test the new profileId FK.
-      final accountId = await db.into(db.accounts).insert(
-        AccountsCompanion.insert(
-          email: 'test@example.com',
-          tier: 'localBorn',
-          displayName: 'Tester',
-          userMode: 'adult',
-          createdAt: DateTimeFactory.nowUtc(),
-          updatedAt: DateTimeFactory.nowUtc(),
-        ),
-      );
-      final profileId = await db.into(db.learnerProfiles).insert(
-        LearnerProfilesCompanion.insert(
-          accountId: accountId,
-          displayName: 'Tester',
-          mode: 'adult',
-          createdAt: DateTimeFactory.nowUtc(),
-          updatedAt: DateTimeFactory.nowUtc(),
-        ),
-      );
-      final trackId = await db.into(db.curriculumTracks).insert(
-        CurriculumTracksCompanion.insert(
-          profileId: profileId,
-          curriculumId: CurriculumId.mishnayos.storageKey,
-          trackType: TrackType.personal.storageKey,
-          activatedAt: DateTimeFactory.nowUtc(),
-        ),
-      );
+        // Ensure a track exists so trackId FK is satisfied, but use a
+        // non-existent profileId to test the new profileId FK.
+        final accountId = await db
+            .into(db.accounts)
+            .insert(
+              AccountsCompanion.insert(
+                email: 'test@example.com',
+                tier: 'localBorn',
+                displayName: 'Tester',
+                userMode: 'adult',
+                createdAt: DateTimeFactory.nowUtc(),
+                updatedAt: DateTimeFactory.nowUtc(),
+              ),
+            );
+        final profileId = await db
+            .into(db.learnerProfiles)
+            .insert(
+              LearnerProfilesCompanion.insert(
+                accountId: accountId,
+                displayName: 'Tester',
+                mode: 'adult',
+                createdAt: DateTimeFactory.nowUtc(),
+                updatedAt: DateTimeFactory.nowUtc(),
+              ),
+            );
+        final trackId = await db
+            .into(db.curriculumTracks)
+            .insert(
+              CurriculumTracksCompanion.insert(
+                profileId: profileId,
+                curriculumId: CurriculumId.mishnayos.storageKey,
+                trackType: TrackType.personal.storageKey,
+                activatedAt: DateTimeFactory.nowUtc(),
+              ),
+            );
 
-      const nonExistentProfileId = 9999;
+        const nonExistentProfileId = 9999;
 
-      expect(
-        () => seedCompletion(db, 
-          CompletionsCompanion.insert(
-            profileId: nonExistentProfileId,
-            curriculumId: CurriculumId.mishnayos.storageKey,
-            sefariaRef: 'Berakhot 1:1',
-            stageId: 1,
-            trackType: TrackType.personal.storageKey,
-            trackId: trackId,
-            completedAt: DateTimeFactory.nowUtc(),
+        expect(
+          () => seedCompletion(
+            db,
+            CompletionsCompanion.insert(
+              profileId: nonExistentProfileId,
+              curriculumId: CurriculumId.mishnayos.storageKey,
+              sefariaRef: 'Berakhot 1:1',
+              stageId: 1,
+              trackType: TrackType.personal.storageKey,
+              trackId: trackId,
+              completedAt: DateTimeFactory.nowUtc(),
+            ),
           ),
-        ),
-        throwsA(anything),
-        reason: 'C2: FK enforcement must reject completion with non-existent profileId',
-      );
-    });
+          throwsA(anything),
+          reason:
+              'C2: FK enforcement must reject completion with non-existent profileId',
+        );
+      },
+    );
 
     // ── 2. Profile cascade-deletes completions ────────────────────────────
 
@@ -119,7 +136,8 @@ void main() {
 
       final seed = await seedProfileAndTrack(db);
 
-      await seedCompletion(db, 
+      await seedCompletion(
+        db,
         CompletionsCompanion.insert(
           profileId: seed.profileId,
           curriculumId: CurriculumId.mishnayos.storageKey,
@@ -132,12 +150,15 @@ void main() {
         ),
       );
 
-      expect(await db.completionDao.getCompletionsByProfile(seed.profileId), hasLength(1));
+      expect(
+        await db.completionDao.getCompletionsByProfile(seed.profileId),
+        hasLength(1),
+      );
 
       // Delete the learner profile — should cascade.
-      await (db.delete(db.learnerProfiles)
-            ..where((t) => t.id.equals(seed.profileId)))
-          .go();
+      await (db.delete(
+        db.learnerProfiles,
+      )..where((t) => t.id.equals(seed.profileId))).go();
 
       expect(
         await db.completionDao.getCompletionsByProfile(seed.profileId),
@@ -154,34 +175,37 @@ void main() {
 
       final seed = await seedProfileAndTrack(db);
 
-      await db.into(db.bookmarks).insert(
-        BookmarksCompanion.insert(
-          profileId: seed.profileId,
-          curriculumId: CurriculumId.mishnayos.storageKey,
-          trackId: seed.trackId,
-          sefariaRef: 'Berakhot 2:1',
-          updatedAt: DateTimeFactory.nowUtc(),
-        ),
-      );
+      await db
+          .into(db.bookmarks)
+          .insert(
+            BookmarksCompanion.insert(
+              profileId: seed.profileId,
+              curriculumId: CurriculumId.mishnayos.storageKey,
+              trackId: seed.trackId,
+              sefariaRef: 'Berakhot 2:1',
+              updatedAt: DateTimeFactory.nowUtc(),
+            ),
+          );
 
       expect(
-        await (db.select(db.bookmarks)
-              ..where((t) => t.profileId.equals(seed.profileId)))
-            .get(),
+        await (db.select(
+          db.bookmarks,
+        )..where((t) => t.profileId.equals(seed.profileId))).get(),
         hasLength(1),
       );
 
       // Hard-delete the track (simulates purgeHistory's final step).
-      await (db.delete(db.curriculumTracks)
-            ..where((t) => t.id.equals(seed.trackId)))
-          .go();
+      await (db.delete(
+        db.curriculumTracks,
+      )..where((t) => t.id.equals(seed.trackId))).go();
 
       expect(
-        await (db.select(db.bookmarks)
-              ..where((t) => t.profileId.equals(seed.profileId)))
-            .get(),
+        await (db.select(
+          db.bookmarks,
+        )..where((t) => t.profileId.equals(seed.profileId))).get(),
         isEmpty,
-        reason: 'C2: bookmarks.trackId ON DELETE CASCADE must remove bookmarks '
+        reason:
+            'C2: bookmarks.trackId ON DELETE CASCADE must remove bookmarks '
             'when the track is hard-deleted',
       );
     });

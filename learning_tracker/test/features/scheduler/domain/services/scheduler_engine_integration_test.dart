@@ -122,7 +122,8 @@ void main() {
       final learnStageId = stages.firstWhere((s) => s.stageOrder == 1).id;
 
       for (var i = 0; i < 2; i++) {
-        await seedCompletion(db, 
+        await seedCompletion(
+          db,
           CompletionsCompanion.insert(
             profileId: 1,
             curriculumId: curriculum.storageKey,

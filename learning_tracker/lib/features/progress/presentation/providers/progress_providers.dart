@@ -85,8 +85,8 @@ Future<ProgressOverviewStats> progressOverviewStats(Ref ref) async {
   final db = ref.watch(userDatabaseProvider);
   final profileId = ref.watch(activeProfileIdProvider);
   // SQL-filtered: excludes bulk-mark sentinel (trackId = 0) at the DB layer.
-  final trackCompletions =
-      await db.completionDao.getTrackOnlyCompletionsByProfile(profileId);
+  final trackCompletions = await db.completionDao
+      .getTrackOnlyCompletionsByProfile(profileId);
   final uniqueItems = <String>{};
   for (final c in trackCompletions) {
     uniqueItems.add('${c.curriculumId}:${c.sefariaRef}');

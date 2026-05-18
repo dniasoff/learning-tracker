@@ -55,57 +55,63 @@ void main() {
 
     // ── 2. purgeHistory stamps purgedAt — does NOT delete events ────────────
 
-    test('purgeHistory sets purgedAt on events and removes completions projection', () async {
-      final db = inMemoryDb();
-      addTearDown(db.close);
-      await seedProfile(db);
+    test(
+      'purgeHistory sets purgedAt on events and removes completions projection',
+      () async {
+        final db = inMemoryDb();
+        addTearDown(db.close);
+        await seedProfile(db);
 
-      final trackId = await db.trackDao.restoreOrCreate(
-        profileId: 1,
-        curriculumId: CurriculumId.mishnayos,
-        trackType: TrackType.personal,
-      );
-
-      final writer = CompletionWriter(db);
-      for (var i = 1; i <= 3; i++) {
-        await writer.commit(
-          CompletionCommand(
-            profileId: 1,
-            curriculumId: CurriculumId.mishnayos.storageKey,
-            sefariaRef: 'Berakhot $i:1',
-            stageId: 1,
-            trackType: TrackType.personal.storageKey,
-            trackId: trackId,
-            completedAt: DateTimeFactory.nowUtc(),
-            points: 5,
-          ),
+        final trackId = await db.trackDao.restoreOrCreate(
+          profileId: 1,
+          curriculumId: CurriculumId.mishnayos,
+          trackType: TrackType.personal,
         );
-      }
 
-      final countBefore = (await db.completionEventDao.getEventsByProfile(1)).length;
-      expect(countBefore, 3);
+        final writer = CompletionWriter(db);
+        for (var i = 1; i <= 3; i++) {
+          await writer.commit(
+            CompletionCommand(
+              profileId: 1,
+              curriculumId: CurriculumId.mishnayos.storageKey,
+              sefariaRef: 'Berakhot $i:1',
+              stageId: 1,
+              trackType: TrackType.personal.storageKey,
+              trackId: trackId,
+              completedAt: DateTimeFactory.nowUtc(),
+              points: 5,
+            ),
+          );
+        }
 
-      await db.trackDao.purgeHistory(trackId);
+        final countBefore = (await db.completionEventDao.getEventsByProfile(
+          1,
+        )).length;
+        expect(countBefore, 3);
 
-      final eventsAfter = await db.completionEventDao.getEventsByProfile(1);
-      expect(
-        eventsAfter.length,
-        countBefore,
-        reason: 'N8 pre-check: completion_events row count must not decrease',
-      );
-      expect(
-        eventsAfter.every((e) => e.purgedAt != null),
-        isTrue,
-        reason: 'C3: purgeHistory must stamp purgedAt on all affected events',
-      );
+        await db.trackDao.purgeHistory(trackId);
 
-      final completionsAfter =
-          await db.completionDao.getCompletionsByProfile(1);
-      expect(
-        completionsAfter,
-        isEmpty,
-        reason: 'C3: completions projection rows must be removed after purge',
-      );
-    });
+        final eventsAfter = await db.completionEventDao.getEventsByProfile(1);
+        expect(
+          eventsAfter.length,
+          countBefore,
+          reason: 'N8 pre-check: completion_events row count must not decrease',
+        );
+        expect(
+          eventsAfter.every((e) => e.purgedAt != null),
+          isTrue,
+          reason: 'C3: purgeHistory must stamp purgedAt on all affected events',
+        );
+
+        final completionsAfter = await db.completionDao.getCompletionsByProfile(
+          1,
+        );
+        expect(
+          completionsAfter,
+          isEmpty,
+          reason: 'C3: completions projection rows must be removed after purge',
+        );
+      },
+    );
   });
 }

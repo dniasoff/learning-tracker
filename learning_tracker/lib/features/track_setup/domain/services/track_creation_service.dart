@@ -211,8 +211,9 @@ class TrackCreationService {
     final goal = result.goalResult! as GoalEntity;
     // Use the track label as the description when the goal entity has none
     // (belt-and-suspenders: step_goal seeds it, but older flows may not).
-    final description =
-        goal.description.isNotEmpty ? goal.description : result.label;
+    final description = goal.description.isNotEmpty
+        ? goal.description
+        : result.label;
     await _goalRepository.createGoal(
       profileId: profileId,
       curriculumId: curriculum,
@@ -234,10 +235,7 @@ class TrackCreationService {
     required CurriculumId curriculum,
   }) async {
     final removed = await _database.profileProgramDao
-        .clearProgramForProfileAndCurriculum(
-          profileId,
-          curriculum.storageKey,
-        );
+        .clearProgramForProfileAndCurriculum(profileId, curriculum.storageKey);
     if (removed > 0) {
       await _gateway?.removeProfileProgramAssignment(
         profileId: profileId,

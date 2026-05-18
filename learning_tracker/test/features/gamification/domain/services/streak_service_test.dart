@@ -24,7 +24,9 @@ void main() {
 
   setUp(() async {
     db = createTestDatabase();
-    await seedProfileZero(db); // completions use profileId=0 (StreakService default)
+    await seedProfileZero(
+      db,
+    ); // completions use profileId=0 (StreakService default)
     service = StreakService(db);
 
     final trackRow = await db
@@ -51,7 +53,8 @@ void main() {
     // completion_events(profileId, sefariaRef, stageId, trackType) does not
     // deduplicate completions from different dates.
     final ref = 'Genesis.${++refCounter}';
-    await seedCompletion(db,
+    await seedCompletion(
+      db,
       CompletionsCompanion.insert(
         profileId: 0,
         curriculumId: 'test-curriculum',

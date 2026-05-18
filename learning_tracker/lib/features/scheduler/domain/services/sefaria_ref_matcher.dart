@@ -268,8 +268,7 @@ Set<String> resolveIndexedUnitRefs(
 
   final topContainer = contentItems.firstWhere(
     (item) =>
-        !item.isLeaf &&
-        normalizeRef(item.sefariaRef) == normalizeRef(rawTitle),
+        !item.isLeaf && normalizeRef(item.sefariaRef) == normalizeRef(rawTitle),
     orElse: () => const ContentItem(
       curriculumId: '',
       level1: '',
@@ -335,8 +334,7 @@ Set<String> leafChildrenForContainer(
     if (container.level4 != null && item.level4 != container.level4)
       return false;
     return true;
-  }).toList()
-    ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+  }).toList()..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
   return leaves.map((leaf) => leaf.sefariaRef).toSet();
 }
 

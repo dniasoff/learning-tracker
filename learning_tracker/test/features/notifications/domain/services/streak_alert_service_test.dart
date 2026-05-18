@@ -98,7 +98,8 @@ void main() {
       );
 
       // Add a completion today
-      await seedCompletion(db, 
+      await seedCompletion(
+        db,
         CompletionsCompanion.insert(
           profileId: 0,
           curriculumId: 'test',

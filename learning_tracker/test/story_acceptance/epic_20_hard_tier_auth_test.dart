@@ -49,9 +49,9 @@ void main() {
                 updatedAt: DateTime.utc(2026, 1, 1),
               ),
             );
-        final row = await (db.select(db.accounts)
-              ..where((t) => t.email.equals('cloud@test.local')))
-            .getSingle();
+        final row = await (db.select(
+          db.accounts,
+        )..where((t) => t.email.equals('cloud@test.local'))).getSingle();
         expect(row.email, 'cloud@test.local');
         expect(row.firebaseUid, 'fbuid-1');
         expect(row.tier, 'cloudBorn');
