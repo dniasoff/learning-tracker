@@ -1,70 +1,158 @@
-/// Wave 0 — characterization test for the SyncOrchestrator singleton invariant.
+/// Wave 2 — S7: the SyncOrchestrator singleton invariant.
 ///
-/// S7: exactly one SyncOrchestrator instance exists per app session.
+/// S7: exactly one SyncOrchestrator instance exists per app session, and the
+/// wiring it owns (the WidgetsBinding lifecycle observer + the Firestore
+/// real-time listener set) is registered exactly once.
 ///
-/// The test is skipped; un-skip in Wave 2 (after the Riverpod provider fix
-/// that prevents duplicate listener registration on profile switch).
+/// Background (Bug #1, quality crisis 2026-05-17):
+///
+///   `syncOrchestratorProvider` was a plain `Provider<SyncOrchestrator?>` that
+///   `ref.watch`ed `syncEngineProvider`. The sign-in / upgrade-to-cloud flows
+///   called `ref.invalidate(syncEngineProvider)`, which forced the orchestrator
+///   to rebuild — transiently constructing a second `SyncOrchestratorImpl`
+///   (with a fresh `LifecycleObserver` and `ListenerSupervisor`) before the
+///   old one's `onDispose` fired. The result: two lifecycle observers on
+///   `WidgetsBinding` and two open Firestore listener sets.
+///
+/// The Wave-2 fix has two parts, both pinned below:
+///
+///   1. Provider: `syncOrchestratorProvider` is now a `keepAlive` singleton
+///      that does NOT `ref.watch` `syncEngineProvider`. Invalidating the sync
+///      engine therefore does not rebuild the orchestrator.
+///      → verified by `S7 provider — invalidating syncEngineProvider does not
+///        rebuild syncOrchestratorProvider`.
+///
+///   2. Orchestrator: `SyncOrchestratorImpl.start()` is idempotent — the
+///      lifecycle observer and the listener set are registered exactly once,
+///      even if `start()` is called repeatedly.
+///      → verified by the `S7 — SyncOrchestratorImpl.start()` tests, which run
+///        against the real `SyncOrchestratorImpl` (the class the bug lived in).
 library;
 
+import 'dart:async';
+import 'dart:io';
+
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:learning_tracker/core/sync/firestore_gateway.dart';
+import 'package:learning_tracker/core/sync/merge/entity_merger.dart';
+import 'package:learning_tracker/core/sync/merge/merge_router.dart';
+import 'package:learning_tracker/core/sync/providers/sync_orchestrator_providers.dart';
+import 'package:learning_tracker/core/sync/pull_pipeline.dart';
+import 'package:learning_tracker/core/sync/sync_orchestrator.dart';
+import 'package:learning_tracker/features/auth/domain/models/auth_state.dart';
+import 'package:learning_tracker/features/auth/presentation/providers/auth_state_provider.dart';
+import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
 
 // ---------------------------------------------------------------------------
-// Background / context
-// ---------------------------------------------------------------------------
-//
-// Current issue (Bug #1, quality crisis 2026-05-17):
-//
-//   `syncOrchestratorProvider` is a `Provider<SyncOrchestrator?>` that
-//   watches `authStateProvider` AND (indirectly) the active-profile provider.
-//   When the user switches profiles the provider rebuilds, constructing a
-//   second `SyncOrchestratorImpl` (with a new LifecycleObserver and
-//   ListenerSupervisor) before the old one's `onDispose` fires. This means:
-//     - Two LifecycleObservers are registered simultaneously on WidgetsBinding.
-//     - Two sets of Firestore listeners are open.
-//     - pullOnLaunch is called for every rebuild.
-//
-//   R1 fix (partially applied in commit e5c052d0): `syncOrchestratorProvider`
-//   no longer watches the active-profile provider directly. The active profile
-//   is resolved lazily via `resolveProfileIdProvider`.
-//
-//   S7 pins the observable invariant: at any point during a session, at most
-//   one `SyncOrchestrator` instance must be alive. This is validated via a
-//   reference-counting fake that tracks construction/disposal.
-//
+// Fakes
 // ---------------------------------------------------------------------------
 
-// ---------------------------------------------------------------------------
-// Fake / counting harness
-// ---------------------------------------------------------------------------
+/// [FirestoreGateway] fake that counts how many real-time listener channels
+/// have been opened. The S7 invariant uses this count as the observable proxy
+/// for "the Firestore listener set was registered exactly once": one
+/// `start()` opens 4 collection channels + 1 document channel.
+class _ChannelCountingGateway implements FirestoreGateway {
+  int collectionListenerCount = 0;
+  int documentListenerCount = 0;
 
-/// Tracks live instances of a simulated SyncOrchestrator.
-///
-/// In production, the Riverpod container manages object lifetimes. Here we
-/// use a shared counter that each fake instance increments on construction
-/// and decrements on [dispose] so the test can assert the singleton property
-/// at any point.
-class _InstanceTracker {
-  int _live = 0;
-  int _everCreated = 0;
+  /// Total channels opened across every `start()` call.
+  int get totalChannelsOpened => collectionListenerCount + documentListenerCount;
 
-  int get liveCount => _live;
-  int get totalCreated => _everCreated;
-
-  _FakeOrchestrator create() {
-    _live++;
-    _everCreated++;
-    return _FakeOrchestrator(
-      onDispose: () {
-        _live--;
-      },
-    );
+  @override
+  Stream<List<Map<String, dynamic>>> listenToCollection({
+    required int profileId,
+    required String collection,
+  }) {
+    collectionListenerCount++;
+    return const Stream.empty();
   }
+
+  @override
+  Stream<Map<String, dynamic>?> listenToDocument({
+    required int profileId,
+    required String collection,
+    required String docId,
+  }) {
+    documentListenerCount++;
+    return const Stream.empty();
+  }
+
+  // ── Unused stubs ──────────────────────────────────────────────────────────
+  @override
+  Future<FirestorePage> fetchPage({
+    required int profileId,
+    required String collection,
+    required int pageSize,
+    Map<String, dynamic>? cursor,
+  }) async => const FirestorePage(rows: []);
+  @override
+  Future<void> pushCompletion({required int profileId, required Map<String, dynamic> data, String? docId}) async {}
+  @override
+  Future<void> pushCompletionsBatch({required int profileId, required List<Map<String, dynamic>> items}) async {}
+  @override
+  Future<void> pushStreak({required int profileId, required Map<String, dynamic> data}) async {}
+  @override
+  Future<void> pushSettings({required int profileId, required Map<String, dynamic> data}) async {}
+  @override
+  Future<void> pushTrack({required int profileId, required Map<String, dynamic> data}) async {}
+  @override
+  Future<void> pushLearningOrder({required int profileId, required Map<String, dynamic> data}) async {}
+  @override
+  Future<void> pushBookmark({required int profileId, required Map<String, dynamic> data}) async {}
+  @override
+  Future<void> pushNotificationSettings({required int profileId, required Map<String, dynamic> data}) async {}
+  @override
+  Future<void> pushGamificationSettings({required int profileId, required Map<String, dynamic> data}) async {}
+  @override
+  Future<void> pushLearnerProfile({required int profileId, required Map<String, dynamic> data}) async {}
+  @override
+  Future<void> deleteLearnerProfile(int profileId) async {}
+  @override
+  Future<void> pushLedgerEntry({required int profileId, required Map<String, dynamic> data}) async {}
+  @override
+  Future<void> pushLedgerEntriesBatch({required int profileId, required List<Map<String, dynamic>> entries}) async {}
+  @override
+  Future<void> pushProfileProgram({required int profileId, required Map<String, dynamic> data}) async {}
+  @override
+  Future<void> removeProfileProgramAssignment({required int profileId, required String curriculumStorageKey}) async {}
+  @override
+  Future<List<Map<String, dynamic>>> fetchAll({required int profileId, required String collection}) async => [];
+  @override
+  Future<void> pushGoal({required int profileId, required Map<String, dynamic> data}) async {}
+  @override
+  Future<void> pushUiPreferences({required int profileId, required Map<String, dynamic> data}) async {}
+  @override
+  Future<void> pushAccountProfile({required Map<String, dynamic> data}) async {}
+  @override
+  Future<void> pushCurriculumImportMetadata({required int profileId, required Map<String, dynamic> data}) async {}
+  @override
+  Future<void> deleteUserData(String uid) async {}
+  @override
+  Future<void> pushDiagnosticLog({required String uid, required Map<String, dynamic> data}) async {}
+  @override
+  Future<void> pushAccountUserProfile({required String uid, required Map<String, dynamic> data}) async {}
+  @override
+  Future<List<Map<String, dynamic>>> fetchLearnerProfiles() async => [];
+  @override
+  Future<Map<String, dynamic>?> fetchDocument({required int profileId, required String collection, required String docId}) async => null;
 }
 
-class _FakeOrchestrator {
-  _FakeOrchestrator({required this.onDispose});
-  final void Function() onDispose;
-  void dispose() => onDispose();
+/// Builds a real [SyncOrchestratorImpl] wired against fakes.
+///
+/// `start()` and `dispose()` — the methods S7 exercises — never touch the
+/// `SyncEngine`, so the engine resolver throws: that doubles as an assertion
+/// that the singleton lifecycle path does not depend on the engine.
+SyncOrchestratorImpl _buildOrchestrator(_ChannelCountingGateway gateway) {
+  final mergeRouter = MergeRouter(mergers: const <String, EntityMerger>{});
+  return SyncOrchestratorImpl(
+    resolveEngine: () =>
+        throw StateError('S7: start()/dispose() must not touch the engine'),
+    pullPipeline: PullPipeline(gateway: gateway, dispatcher: mergeRouter),
+    mergeRouter: mergeRouter,
+    gateway: gateway,
+    resolveProfileId: () => 1,
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -72,97 +160,252 @@ class _FakeOrchestrator {
 // ---------------------------------------------------------------------------
 
 void main() {
-  group('S7 — SyncOrchestrator singleton invariant (Wave 0 characterization)', () {
-    // ── S7 ─────────────────────────────────────────────────────────────────
+  // LifecycleObserver.start() registers a WidgetsBindingObserver, so a binding
+  // must exist.
+  TestWidgetsFlutterBinding.ensureInitialized();
+
+  group('S7 — SyncOrchestrator singleton invariant', () {
+    // ── S7.1 ────────────────────────────────────────────────────────────────
     //
-    // Invariant: exactly one SyncOrchestrator is alive at any time during
-    // an app session.
+    // Invariant: a single SyncOrchestratorImpl registers its Firestore
+    // listener set exactly once, even when start() is called repeatedly.
     //
-    // The test simulates the Riverpod provider lifecycle:
-    //   1. Provider builds → creates instance #1.
-    //   2. Profile switch (or auth change) → provider rebuilds:
-    //        a. new instance #2 is created.
-    //        b. old instance #1 is disposed (onDispose callback fires).
-    //   3. After the transition, liveCount must be 1.
-    //
-    // Pre-rework (Bug #1): step (b) sometimes fires AFTER step (a) has
-    // already registered a second LifecycleObserver. The Riverpod `Provider`
-    // (not `StreamProvider`) guarantees that `onDispose` fires before the
-    // new value is handed out, so this test should pass once the provider
-    // correctly avoids watching the profile provider directly.
-    //
-    // Wave-2 un-skip will wire this against the real Riverpod ProviderContainer
-    // with `syncOrchestratorProvider` to catch regressions in the real stack.
+    // Pre-fix, the listener/observer wiring ran in the constructor, so the
+    // only way to avoid duplicates was to avoid constructing twice. The fix
+    // moved wiring into an idempotent start(): the orchestrator can now be a
+    // genuine keepAlive singleton because start() is safe to call from any
+    // number of entry points.
     test(
-      'S7: only one SyncOrchestrator instance is alive at any time',
-      skip: 'un-skip in Wave 2',
-      () async {
-        final tracker = _InstanceTracker();
+      'S7: start() is idempotent — the listener set is opened exactly once',
+      () {
+        final gateway = _ChannelCountingGateway();
+        final orchestrator = _buildOrchestrator(gateway);
+        addTearDown(orchestrator.dispose);
 
-        // ── Step 1: initial build ──────────────────────────────────────────
-        final instance1 = tracker.create();
+        orchestrator.start();
+        final channelsAfterFirstStart = gateway.totalChannelsOpened;
+
         expect(
-          tracker.liveCount,
-          equals(1),
-          reason: 'S7: exactly 1 live instance after initial construction',
+          channelsAfterFirstStart,
+          greaterThan(0),
+          reason: 'S7: the first start() must open the Firestore listener set',
         );
 
-        // ── Step 2: provider rebuild (e.g., profile switch) ────────────────
-        // Correct Riverpod behavior: dispose old → create new.
-        instance1.dispose();
-        final instance2 = tracker.create();
+        // Repeated start() calls — as could happen now that start() is invoked
+        // from the provider and is safe to call defensively elsewhere.
+        orchestrator
+          ..start()
+          ..start();
 
         expect(
-          tracker.liveCount,
-          equals(1),
+          gateway.totalChannelsOpened,
+          equals(channelsAfterFirstStart),
           reason:
-              'S7: after dispose+rebuild cycle, still exactly 1 live instance',
-        );
-        expect(
-          tracker.totalCreated,
-          equals(2),
-          reason: 'S7: two instances were created in total (one per session)',
-        );
-
-        // ── Step 3: cleanup ────────────────────────────────────────────────
-        instance2.dispose();
-        expect(
-          tracker.liveCount,
-          equals(0),
-          reason: 'S7: after final dispose, no live instances remain',
+              'S7: a second/third start() must be a no-op — no duplicate '
+              'Firestore listener set, no duplicate lifecycle observer',
         );
       },
     );
 
-    // ── Regression guard: double-creation without dispose ──────────────────
+    // ── S7.2 ────────────────────────────────────────────────────────────────
     //
-    // Pins the Bug #1 scenario: two instances alive simultaneously.
-    // This must FAIL before the fix and PASS after. The test is also skipped
-    // in Wave 0 since it exercises production provider wiring; Wave 2 will
-    // wire the real ProviderContainer.
+    // Regression guard for Bug #1: the duplicate-listener-set scenario.
+    //
+    // Pre-fix this was only reachable by constructing a second orchestrator.
+    // Post-fix the orchestrator is a singleton AND start() is guarded, so a
+    // re-trigger of start() can never produce a second listener set.
     test(
-      'S7 regression: two live instances simultaneously is detected',
-      skip: 'un-skip in Wave 2',
-      () async {
-        final tracker = _InstanceTracker();
+      'S7 regression: a second start() without dispose does not double-register',
+      () {
+        final gateway = _ChannelCountingGateway();
+        final orchestrator = _buildOrchestrator(gateway);
+        addTearDown(orchestrator.dispose);
 
-        // Simulate the buggy case: new instance created BEFORE old is disposed.
-        final old = tracker.create();
-        final newer = tracker.create(); // Bug #1: old not yet disposed
+        orchestrator.start();
+        final firstCount = gateway.totalChannelsOpened;
 
-        // This should fail (== 2) before the fix:
+        // Bug #1 shape: a second "start" while the first is still live.
+        orchestrator.start();
+
         expect(
-          tracker.liveCount,
-          equals(1),
+          gateway.totalChannelsOpened,
+          equals(firstCount),
           reason:
-              'S7 regression: creating a second instance without disposing '
-              'the first must be prevented by the provider or detected here',
+              'S7 regression: two live listener sets must never coexist — '
+              'the second start() is suppressed by the _started guard',
+        );
+      },
+    );
+
+    // ── S7.3 ────────────────────────────────────────────────────────────────
+    //
+    // After dispose(), the orchestrator can be started again cleanly (one
+    // session ends, a fresh wiring begins) — still exactly one listener set.
+    test(
+      'S7: dispose() then start() rewires exactly one fresh listener set',
+      () {
+        final gateway = _ChannelCountingGateway();
+        final orchestrator = _buildOrchestrator(gateway);
+
+        orchestrator.start();
+        final perStartCount = gateway.totalChannelsOpened;
+        expect(perStartCount, greaterThan(0));
+
+        orchestrator.dispose();
+        // dispose() is also idempotent.
+        orchestrator.dispose();
+
+        orchestrator.start();
+        addTearDown(orchestrator.dispose);
+
+        expect(
+          gateway.totalChannelsOpened,
+          equals(perStartCount * 2),
+          reason:
+              'S7: a post-dispose start() opens exactly one new listener set '
+              '(not zero, not two)',
+        );
+      },
+    );
+
+    // ── S7.4 ────────────────────────────────────────────────────────────────
+    //
+    // Provider-level invariant on the REAL syncOrchestratorProvider:
+    // invalidating syncEngineProvider must NOT rebuild it. This is the root
+    // cause of Bug #1 — the sign-in flow called
+    // ref.invalidate(syncEngineProvider), which used to tear down and
+    // recreate the orchestrator (a fresh LifecycleObserver + listener set).
+    //
+    // The test drives the production provider in a ProviderContainer. It runs
+    // on the signed-out path (authStateProvider overridden to signedOut) so
+    // no Firebase is required: the production provider short-circuits at its
+    // cloud-born tier gate and returns null. What is being verified is the
+    // Riverpod wiring contract — keepAlive + the absence of any
+    // ref.watch(syncEngineProvider) — so the provider's build closure runs
+    // exactly once and an unrelated invalidation does not re-run it.
+    test(
+      'S7 provider: invalidating syncEngineProvider does not rebuild '
+      'syncOrchestratorProvider',
+      () {
+        var orchestratorRebuilds = 0;
+
+        final container = ProviderContainer(
+          overrides: [
+            authStateProvider.overrideWithValue(const AuthState.signedOut()),
+          ],
+        );
+        addTearDown(container.dispose);
+
+        // Subscribe so the provider stays mounted; count every rebuild.
+        container.listen<SyncOrchestrator?>(
+          syncOrchestratorProvider,
+          (_, _) => orchestratorRebuilds++,
+          fireImmediately: true,
         );
 
-        // Cleanup.
-        old.dispose();
-        newer.dispose();
+        final first = container.read(syncOrchestratorProvider);
+        final rebuildsAfterFirstRead = orchestratorRebuilds;
+
+        // Invalidate the engine — the Bug #1 trigger from the sign-in flow.
+        container.invalidate(syncEngineProvider);
+        // Force the engine provider to rebuild so the invalidation is real.
+        container.read(syncEngineProvider);
+
+        final second = container.read(syncOrchestratorProvider);
+
+        expect(
+          identical(first, second),
+          isTrue,
+          reason:
+              'S7: reading syncOrchestratorProvider before and after a '
+              'syncEngineProvider invalidation must yield the same instance',
+        );
+        expect(
+          orchestratorRebuilds,
+          equals(rebuildsAfterFirstRead),
+          reason:
+              'S7: invalidating syncEngineProvider must NOT rebuild '
+              'syncOrchestratorProvider — exactly one orchestrator per session',
+        );
+      },
+    );
+
+    // ── S7.5 ────────────────────────────────────────────────────────────────
+    //
+    // Source-level guard: the production syncOrchestratorProvider must keep
+    // itself alive and must NOT watch syncEngineProvider. This pins the
+    // mechanism that S7.4 exercises against accidental regression.
+    test(
+      'S7 provider: production source is keepAlive and does not watch the '
+      'sync engine',
+      () {
+        const srcPath =
+            'lib/core/sync/providers/sync_orchestrator_providers.dart';
+        final source = _readSource(srcPath);
+
+        expect(
+          source,
+          contains('ref.keepAlive()'),
+          reason:
+              'S7: syncOrchestratorProvider must call ref.keepAlive() so a '
+              'transient unmount of any reader cannot dispose the singleton',
+        );
+        expect(
+          source,
+          isNot(contains('ref.watch(syncEngineProvider)')),
+          reason:
+              'S7: syncOrchestratorProvider must NOT ref.watch '
+              'syncEngineProvider — invalidating the engine would otherwise '
+              'rebuild the orchestrator (Bug #1)',
+        );
+        expect(
+          source,
+          contains('orchestrator.start()'),
+          reason:
+              'S7: the provider must call the idempotent start() so the '
+              'lifecycle observer + listener set are registered exactly once',
+        );
+      },
+    );
+
+    // ── S7.6 ────────────────────────────────────────────────────────────────
+    //
+    // The sign-in and upgrade-to-cloud flows must no longer invalidate
+    // syncEngineProvider — that invalidation was the call that recreated the
+    // orchestrator. Pinned at the source level so a future edit re-introducing
+    // it fails loudly.
+    test(
+      'S7 call-sites: sign-in and upgrade flows no longer invalidate '
+      'syncEngineProvider',
+      () {
+        const signInPath =
+            'lib/features/auth/presentation/screens/sign_in_screen.dart';
+        const upgradePath =
+            'lib/features/settings/presentation/screens/'
+            'upgrade_to_cloud_screen.dart';
+
+        for (final path in [signInPath, upgradePath]) {
+          final source = _readSource(path);
+          expect(
+            source,
+            isNot(contains('invalidate(syncEngineProvider)')),
+            reason:
+                'S7: $path must not call ref.invalidate(syncEngineProvider) — '
+                'it rebuilt the SyncOrchestrator singleton. Pulls are now '
+                'triggered directly via orchestrator.pullOnLaunch().',
+          );
+        }
       },
     );
   });
+}
+
+/// Reads a file relative to the package root, regardless of the CWD the test
+/// runner is launched from.
+String _readSource(String relativePath) {
+  for (final candidate in [relativePath, 'learning_tracker/$relativePath']) {
+    final file = File(candidate);
+    if (file.existsSync()) return file.readAsStringSync();
+  }
+  fail('S7: source file not found: $relativePath');
 }

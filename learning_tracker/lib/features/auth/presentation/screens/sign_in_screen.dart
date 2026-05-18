@@ -28,7 +28,6 @@ import 'package:learning_tracker/features/onboarding/domain/validators/auth_vali
 import 'package:learning_tracker/features/onboarding/presentation/screens/onboarding_screen.dart'
     show kOnboardingComplete;
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
-import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
@@ -269,7 +268,11 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
             password: password,
           );
           if (finalized != null && mounted) {
-            ref.invalidate(syncEngineProvider);
+            // S7: the SyncOrchestrator is a per-session singleton. Do NOT
+            // invalidate syncEngineProvider — that used to rebuild the
+            // orchestrator and register duplicate lifecycle observers /
+            // Firestore listeners. The orchestrator picks up the cloud-born
+            // engine on its own; just trigger the push + pull directly.
             final orchestrator = ref.read(syncOrchestratorProvider);
             if (orchestrator != null) {
               await orchestrator.pushAllLocalData();
@@ -604,11 +607,15 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
     }
 
     // Sync profiles from Firestore into local DB before navigating.
-    // Invalidate the sync engine so it picks up the just-swapped DB +
-    // auth state, then pull with a timeout so the next route decision
-    // sees the real profile count rather than an empty local table.
-    // A bounded 8s timeout prevents a slow network from blocking navigation.
-    ref.invalidate(syncEngineProvider);
+    // The sync engine watches authStateProvider + userDatabaseProvider, so it
+    // already reflects the just-swapped DB + promoted auth state without an
+    // explicit invalidate. Pull with a bounded 8s timeout so the next route
+    // decision sees the real profile count rather than an empty local table,
+    // and a slow network cannot block navigation.
+    //
+    // S7: do NOT invalidate syncEngineProvider here — that rebuilt the
+    // per-session SyncOrchestrator and registered duplicate lifecycle
+    // observers / Firestore listeners (Bug #1).
     final orchestrator = ref.read(syncOrchestratorProvider);
     if (orchestrator != null) {
       await orchestrator.pullOnLaunch().timeout(
@@ -678,7 +685,9 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
         .getProfilesByAccount(ref.read(currentAccountIdProvider));
     if (profiles.length == 1) {
       ref.read(selectedProfileIdProvider.notifier).select(profiles.first.id);
-      ref.invalidate(syncEngineProvider);
+      // S7: no syncEngineProvider invalidate — the orchestrator is a
+      // per-session singleton and resolves the active profile lazily, so the
+      // re-pull below already runs with the just-selected profileId.
       final selectedOrchestrator = ref.read(syncOrchestratorProvider);
       if (selectedOrchestrator != null) {
         // Fire the single-profile re-pull in the background — navigation

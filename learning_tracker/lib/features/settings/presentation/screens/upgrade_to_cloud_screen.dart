@@ -10,7 +10,6 @@ import 'package:learning_tracker/features/auth/presentation/providers/auth_provi
 import 'package:learning_tracker/features/auth/presentation/providers/auth_state_provider.dart';
 import 'package:learning_tracker/features/auth/presentation/providers/connectivity_providers.dart';
 import 'package:learning_tracker/features/auth/presentation/widgets/email_verification_confirm_panel.dart';
-import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// Local → cloud upgrade flow entry screen (Epic 20 v2 §4.3).
@@ -59,8 +58,12 @@ class _UpgradeToCloudScreenState extends ConsumerState<UpgradeToCloudScreen> {
   }
 
   Future<void> _pushLocalDataAfterUpgrade() async {
-    // Rebuild provider graph with cloud-born tier before initial push.
-    ref.invalidate(syncEngineProvider);
+    // S7: do NOT invalidate syncEngineProvider — the SyncOrchestrator is a
+    // per-session singleton and an invalidate used to rebuild it, registering
+    // duplicate lifecycle observers / Firestore listeners (Bug #1). The
+    // cloud-born tier flip is already reflected via authStateProvider, which
+    // both the engine and the orchestrator gate on; just trigger the push +
+    // pull directly on the orchestrator.
     final orchestrator = ref.read(syncOrchestratorProvider);
     if (orchestrator == null) return;
     await orchestrator.pushAllLocalData();

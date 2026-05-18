@@ -63,19 +63,58 @@ abstract class SyncOrchestrator {
 /// [WidgetsBinding] so resume-time pulls are triggered automatically.
 class SyncOrchestratorImpl implements SyncOrchestrator {
   SyncOrchestratorImpl({
-    required SyncEngine engine,
+    required SyncEngine Function() resolveEngine,
     required PullPipeline pullPipeline,
     required MergeRouter mergeRouter,
     required FirestoreGateway gateway,
     required int Function() resolveProfileId,
     AppLogger? logger,
-  }) : _engine = engine,
+  }) : _resolveEngine = resolveEngine,
        _pullPipeline = pullPipeline,
        _mergeRouter = mergeRouter,
        _gateway = gateway,
        _resolveProfileId = resolveProfileId,
-       _logger = logger {
-    _listenerSupervisor = ListenerSupervisor(
+       _logger = logger;
+
+  /// Resolves the current [SyncEngine] on demand.
+  ///
+  /// The orchestrator is a per-session singleton (S7); the [SyncEngine] it
+  /// delegates push/status to may itself be rebuilt (e.g. after a DB swap),
+  /// so the engine is resolved lazily rather than captured at construction.
+  final SyncEngine Function() _resolveEngine;
+  final PullPipeline _pullPipeline;
+  final MergeRouter _mergeRouter;
+  final FirestoreGateway _gateway;
+  final int Function() _resolveProfileId;
+  final AppLogger? _logger;
+
+  SyncEngine get _engine => _resolveEngine();
+
+  int get _profileId => _resolveProfileId();
+
+  ListenerSupervisor? _listenerSupervisor;
+  LifecycleObserver? _lifecycleObserver;
+
+  /// Guards [start] / [dispose] so the lifecycle observer and listener set are
+  /// registered exactly once per session (S7). A second [start] is a no-op.
+  bool _started = false;
+
+  /// Begin lifecycle observation and open Firestore real-time listeners.
+  ///
+  /// Idempotent: a second [start] call without an intervening [dispose] is a
+  /// no-op. The orchestrator is a per-session singleton (S7), so [start] is
+  /// safe to call from multiple entry points without registering duplicate
+  /// [WidgetsBinding] observers or listener subscriptions.
+  ///
+  /// Declared on the concrete class (not the [SyncOrchestrator] interface) so
+  /// lightweight test stubs that `implements SyncOrchestrator` are unaffected;
+  /// only the real provider, which constructs a [SyncOrchestratorImpl]
+  /// directly, calls [start].
+  void start() {
+    if (_started) return;
+    _started = true;
+
+    final listenerSupervisor = ListenerSupervisor(
       source: FirestoreListenerSource(
         gateway: _gateway,
         profileId: _resolveProfileId(),
@@ -83,8 +122,9 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
       onEvent: _onListenerEvent,
       onError: _onListenerError,
     );
+    _listenerSupervisor = listenerSupervisor;
 
-    _lifecycleObserver = LifecycleObserver(
+    final lifecycleObserver = LifecycleObserver(
       redetectTimezone: () async {
         // No-op until DNI-26.24 wires timezone redetection — seam exists.
       },
@@ -93,22 +133,11 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
       },
       triggerPull: () => pullOnLaunch(triggeredFromResume: true),
     );
+    _lifecycleObserver = lifecycleObserver;
 
-    _lifecycleObserver.start();
-    _listenerSupervisor.start();
+    lifecycleObserver.start();
+    listenerSupervisor.start();
   }
-
-  final SyncEngine _engine;
-  final PullPipeline _pullPipeline;
-  final MergeRouter _mergeRouter;
-  final FirestoreGateway _gateway;
-  final int Function() _resolveProfileId;
-  final AppLogger? _logger;
-
-  int get _profileId => _resolveProfileId();
-
-  late final ListenerSupervisor _listenerSupervisor;
-  late final LifecycleObserver _lifecycleObserver;
 
   /// Minimum time between full pull-on-launch runs when triggered from resume
   /// (foreground listeners still deliver real-time updates during this window).
@@ -183,10 +212,15 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
   /// Dispose listeners and unregister from [WidgetsBinding].
   ///
   /// Called by the Riverpod provider's `onDispose` callback. After disposal,
-  /// no further pulls or listener events will be processed.
+  /// no further pulls or listener events will be processed. A no-op when
+  /// [start] was never called.
   void dispose() {
-    _lifecycleObserver.stop();
-    _listenerSupervisor.stop();
+    if (!_started) return;
+    _started = false;
+    _lifecycleObserver?.stop();
+    _listenerSupervisor?.stop();
+    _lifecycleObserver = null;
+    _listenerSupervisor = null;
   }
 
   // ── Listener event handling ─────────────────────────────────────────────────
