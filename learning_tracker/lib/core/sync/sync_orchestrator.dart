@@ -64,15 +64,13 @@ abstract class SyncOrchestrator {
 class SyncOrchestratorImpl implements SyncOrchestrator {
   SyncOrchestratorImpl({
     required SyncEngine Function() resolveEngine,
-    required PullPipeline pullPipeline,
-    required MergeRouter mergeRouter,
-    required FirestoreGateway gateway,
+    required MergeRouter Function() resolveMergeRouter,
+    required FirestoreGateway Function() resolveGateway,
     required int Function() resolveProfileId,
     AppLogger? logger,
   }) : _resolveEngine = resolveEngine,
-       _pullPipeline = pullPipeline,
-       _mergeRouter = mergeRouter,
-       _gateway = gateway,
+       _resolveMergeRouter = resolveMergeRouter,
+       _resolveGateway = resolveGateway,
        _resolveProfileId = resolveProfileId,
        _logger = logger;
 
@@ -82,9 +80,21 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
   /// delegates push/status to may itself be rebuilt (e.g. after a DB swap),
   /// so the engine is resolved lazily rather than captured at construction.
   final SyncEngine Function() _resolveEngine;
-  final PullPipeline _pullPipeline;
-  final MergeRouter _mergeRouter;
-  final FirestoreGateway _gateway;
+
+  /// Resolves the current [MergeRouter] on demand.
+  ///
+  /// `mergeRouterProvider` watches `userDatabaseProvider`, so a DB swap
+  /// rebuilds it. Resolving lazily means the orchestrator dispatches listener
+  /// payloads to the live router, never a stale one (I5).
+  final MergeRouter Function() _resolveMergeRouter;
+
+  /// Resolves the current [FirestoreGateway] on demand.
+  ///
+  /// `firestoreGatewayProvider` watches the auth + Firestore providers, so it
+  /// rebuilds across the upgrade-to-cloud transition. Resolving lazily means
+  /// the orchestrator never holds a dead gateway handle (I5).
+  final FirestoreGateway Function() _resolveGateway;
+
   final int Function() _resolveProfileId;
   final AppLogger? _logger;
 
@@ -98,6 +108,20 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
   /// Guards [start] / [dispose] so the lifecycle observer and listener set are
   /// registered exactly once per session (S7). A second [start] is a no-op.
   bool _started = false;
+
+  /// Guards [pullOnLaunch] so the cold-start pull runs at most once per app
+  /// launch (S8). Resume-triggered pulls bypass this guard and are governed by
+  /// the [pullOnResumeMinInterval] throttle instead.
+  ///
+  /// This is the once-per-launch guard that protects the REAL production
+  /// pull path: every production caller of [pullOnLaunch] — the sign-in /
+  /// upgrade-to-cloud screens, the lifecycle observer, and
+  /// `DeviceRestoreService` — goes through this class, not through
+  /// `SyncEngine.pullOnLaunch` directly.
+  ///
+  /// Reset to false when a non-resume pull fails, so `DeviceRestoreService`'s
+  /// retry path can genuinely re-pull after a failed restore (I4).
+  bool _pullOnLaunchExecuted = false;
 
   /// Begin lifecycle observation and open Firestore real-time listeners.
   ///
@@ -115,9 +139,13 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
     _started = true;
 
     final listenerSupervisor = ListenerSupervisor(
+      // The source resolves the active profile and gateway lazily on each
+      // openChannels() call, so a restart() after a profile switch (or a
+      // gateway rebuild) rebinds the live listener set to the current
+      // profile and gateway (I3 / I5 / R1).
       source: FirestoreListenerSource(
-        gateway: _gateway,
-        profileId: _resolveProfileId(),
+        resolveGateway: _resolveGateway,
+        resolveProfileId: _resolveProfileId,
       ),
       onEvent: _onListenerEvent,
       onError: _onListenerError,
@@ -173,19 +201,40 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
       } catch (_) {
         // Swallow SharedPreferences errors — fall through to pull.
       }
+    } else if (_pullOnLaunchExecuted) {
+      // Once-per-launch guard (S8): a cold-start pull has already run. Any
+      // additional non-resume call — e.g. the sign-in screen and the lifecycle
+      // observer both firing on the same launch — is a no-op. The guard is
+      // reset on failure below so DeviceRestoreService.retry() can re-pull.
+      _logger?.info(event: 'sync_orchestrator_pull_skipped_already_executed');
+      return;
+    }
+
+    if (!triggeredFromResume) {
+      _pullOnLaunchExecuted = true;
     }
 
     _logger?.info(event: 'sync_orchestrator_pull_on_launch_start');
 
     try {
+      // Build the PullPipeline against the CURRENT gateway + MergeRouter so a
+      // gateway rebuild (upgrade-to-cloud) or a router rebuild (DB swap) is
+      // picked up — the orchestrator never pulls through a stale handle (I5).
+      // PullPipeline is a trivial value holder, so per-pull construction is
+      // cheap.
+      final pullPipeline = PullPipeline(
+        gateway: _resolveGateway(),
+        dispatcher: _resolveMergeRouter(),
+      );
+
       // Pull each entity kind through the PullPipeline → MergeRouter path.
       // The MergeRouter dispatches each page to the appropriate EntityMerger.
-      await _pullPipeline.pullCompletions(profileId: _profileId);
-      await _pullPipeline.pullBookmarks(profileId: _profileId);
-      await _pullPipeline.pullSettings(profileId: _profileId);
-      await _pullPipeline.pullTracks(profileId: _profileId);
-      await _pullPipeline.pullLearnerProfiles(profileId: _profileId);
-      await _pullPipeline.pullLearningOrder(profileId: _profileId);
+      await pullPipeline.pullCompletions(profileId: _profileId);
+      await pullPipeline.pullBookmarks(profileId: _profileId);
+      await pullPipeline.pullSettings(profileId: _profileId);
+      await pullPipeline.pullTracks(profileId: _profileId);
+      await pullPipeline.pullLearnerProfiles(profileId: _profileId);
+      await pullPipeline.pullLearningOrder(profileId: _profileId);
 
       // Record successful pull timestamp for resume-throttle.
       try {
@@ -200,6 +249,10 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
 
       _logger?.info(event: 'sync_orchestrator_pull_on_launch_complete');
     } catch (e, stackTrace) {
+      // Reset the once-per-launch guard so DeviceRestoreService.retry() (or
+      // any other external retry) can re-run a cold-start pull after a
+      // failed attempt (I4 / S8).
+      if (!triggeredFromResume) _pullOnLaunchExecuted = false;
       _logger?.error(
         event: 'sync_orchestrator_pull_on_launch_failed',
         exception: e,
@@ -207,6 +260,26 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
       );
       rethrow;
     }
+  }
+
+  /// Re-open the Firestore real-time listener set against the current profile.
+  ///
+  /// Called when the active profile changes (I3 / R1). The live listener set
+  /// is bound to a concrete profile id at the moment each channel stream is
+  /// opened, so a profile switch requires the supervisor to `restart()`:
+  /// [FirestoreListenerSource.openChannels] then resolves the new profile id
+  /// and the supervisor re-subscribes to the correct subcollections.
+  ///
+  /// Only the [ListenerSupervisor] is restarted — the [LifecycleObserver] (and
+  /// its single [WidgetsBinding] registration) is left untouched, so no
+  /// duplicate lifecycle observer is ever created (the Bug #1 failure mode).
+  ///
+  /// A no-op when [start] was never called.
+  void restartListeners() {
+    final supervisor = _listenerSupervisor;
+    if (supervisor == null) return;
+    _logger?.info(event: 'sync_orchestrator_listeners_restart_for_profile');
+    unawaited(supervisor.restart());
   }
 
   /// Dispose listeners and unregister from [WidgetsBinding].
@@ -247,7 +320,8 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
 
     // Fire-and-forget merge — errors are logged but not surfaced to the UI
     // since listeners are best-effort (the pull-on-launch path is authoritative).
-    _mergeRouter
+    // Resolve the MergeRouter lazily so a router rebuild is picked up (I5).
+    _resolveMergeRouter()
         .dispatch(profileId: _profileId, kind: kind, rows: rows)
         .catchError((Object e, StackTrace st) {
           _logger?.error(

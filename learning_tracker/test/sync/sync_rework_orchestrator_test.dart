@@ -38,7 +38,6 @@ import 'package:learning_tracker/core/sync/firestore_gateway.dart';
 import 'package:learning_tracker/core/sync/merge/entity_merger.dart';
 import 'package:learning_tracker/core/sync/merge/merge_router.dart';
 import 'package:learning_tracker/core/sync/providers/sync_orchestrator_providers.dart';
-import 'package:learning_tracker/core/sync/pull_pipeline.dart';
 import 'package:learning_tracker/core/sync/sync_orchestrator.dart';
 import 'package:learning_tracker/features/auth/domain/models/auth_state.dart';
 import 'package:learning_tracker/features/auth/presentation/providers/auth_state_provider.dart';
@@ -56,6 +55,11 @@ class _ChannelCountingGateway implements FirestoreGateway {
   int collectionListenerCount = 0;
   int documentListenerCount = 0;
 
+  /// Every profile id a listener channel was opened against, in order. Used by
+  /// the I3 profile-switch regression test to assert the live listener set
+  /// rebinds to the current profile after a restart.
+  final List<int> openedProfileIds = [];
+
   /// Total channels opened across every `start()` call.
   int get totalChannelsOpened => collectionListenerCount + documentListenerCount;
 
@@ -65,6 +69,7 @@ class _ChannelCountingGateway implements FirestoreGateway {
     required String collection,
   }) {
     collectionListenerCount++;
+    openedProfileIds.add(profileId);
     return const Stream.empty();
   }
 
@@ -75,6 +80,7 @@ class _ChannelCountingGateway implements FirestoreGateway {
     required String docId,
   }) {
     documentListenerCount++;
+    openedProfileIds.add(profileId);
     return const Stream.empty();
   }
 
@@ -89,7 +95,7 @@ class _ChannelCountingGateway implements FirestoreGateway {
   @override
   Future<void> pushCompletion({required int profileId, required Map<String, dynamic> data, String? docId}) async {}
   @override
-  Future<void> pushCompletionsBatch({required int profileId, required List<Map<String, dynamic>> items}) async {}
+  Future<List<String>> pushCompletionsBatch({required int profileId, required List<({String entityKey, Map<String, dynamic> payload})> items}) async => const [];
   @override
   Future<void> pushStreak({required int profileId, required Map<String, dynamic> data}) async {}
   @override
@@ -143,15 +149,17 @@ class _ChannelCountingGateway implements FirestoreGateway {
 /// `start()` and `dispose()` — the methods S7 exercises — never touch the
 /// `SyncEngine`, so the engine resolver throws: that doubles as an assertion
 /// that the singleton lifecycle path does not depend on the engine.
-SyncOrchestratorImpl _buildOrchestrator(_ChannelCountingGateway gateway) {
+SyncOrchestratorImpl _buildOrchestrator(
+  _ChannelCountingGateway gateway, {
+  int Function()? resolveProfileId,
+}) {
   final mergeRouter = MergeRouter(mergers: const <String, EntityMerger>{});
   return SyncOrchestratorImpl(
     resolveEngine: () =>
         throw StateError('S7: start()/dispose() must not touch the engine'),
-    pullPipeline: PullPipeline(gateway: gateway, dispatcher: mergeRouter),
-    mergeRouter: mergeRouter,
-    gateway: gateway,
-    resolveProfileId: () => 1,
+    resolveMergeRouter: () => mergeRouter,
+    resolveGateway: () => gateway,
+    resolveProfileId: resolveProfileId ?? () => 1,
   );
 }
 
@@ -264,6 +272,65 @@ void main() {
           reason:
               'S7: a post-dispose start() opens exactly one new listener set '
               '(not zero, not two)',
+        );
+      },
+    );
+
+    // ── I3 ──────────────────────────────────────────────────────────────────
+    //
+    // Regression guard for I3 / R1: the live Firestore listener set must track
+    // the CURRENT profile. Pre-fix, FirestoreListenerSource captured the
+    // profile id at start() (cold start → bootstrap profile 0), and the
+    // orchestrator never re-opened its listeners, so a profile switch left the
+    // real-time listeners pinned to the stale profile forever.
+    //
+    // Post-fix, FirestoreListenerSource resolves the profile id lazily and
+    // SyncOrchestratorImpl.restartListeners() re-opens the listener set. The
+    // provider calls restartListeners() on every profile change.
+    test(
+      'I3: restartListeners() rebinds the live listener set to the current '
+      'profile',
+      () async {
+        final gateway = _ChannelCountingGateway();
+        // The resolver models activeProfileIdProvider: it starts on the
+        // bootstrap profile (0) and flips to a real profile after a switch.
+        var currentProfile = 0;
+        final orchestrator = _buildOrchestrator(
+          gateway,
+          resolveProfileId: () => currentProfile,
+        );
+        addTearDown(orchestrator.dispose);
+
+        orchestrator.start();
+        expect(
+          gateway.openedProfileIds.every((id) => id == 0),
+          isTrue,
+          reason:
+              'I3: the cold-start listener set must open against the '
+              'bootstrap profile that was active at start()',
+        );
+        final channelsPerSet = gateway.totalChannelsOpened;
+
+        // The user picks a real profile — the provider would observe this and
+        // call restartListeners().
+        currentProfile = 7;
+        orchestrator.restartListeners();
+        // restart() is stop()-then-start(); both are async.
+        await Future<void>.delayed(Duration.zero);
+
+        expect(
+          gateway.totalChannelsOpened,
+          equals(channelsPerSet * 2),
+          reason:
+              'I3: restartListeners() must re-open exactly one fresh listener '
+              'set (not zero, not a duplicate)',
+        );
+        expect(
+          gateway.openedProfileIds.sublist(channelsPerSet),
+          everyElement(equals(7)),
+          reason:
+              'I3: every channel opened after the profile switch must be '
+              'bound to the new profile id — not the stale bootstrap profile',
         );
       },
     );

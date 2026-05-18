@@ -197,6 +197,12 @@ class SyncEngine implements SyncWriteFacade {
   /// Dispose resources and detach listeners.
   Future<void> dispose() async {
     _logger.info(event: 'sync_engine_disposing');
+    // detachListeners() cancels the completions debounce timer; cancel it here
+    // too so disposal stays correct even if detachListeners() short-circuits or
+    // is reordered by a future refactor (I2).
+    _completionsDebounceTimer?.cancel();
+    _completionsDebounceTimer = null;
+    _pendingCompletionsSnapshot = null;
     await detachListeners();
     await _statusController.close();
   }
@@ -303,6 +309,13 @@ class SyncEngine implements SyncWriteFacade {
 
   /// Detach foreground listeners (on app background).
   Future<void> detachListeners() async {
+    // Cancel the completions debounce timer unconditionally — a pending timer
+    // outlives the listener subscriptions and would otherwise fire ~300 ms
+    // later, merging into a detached (or, after dispose, closed) engine (I2).
+    _completionsDebounceTimer?.cancel();
+    _completionsDebounceTimer = null;
+    _pendingCompletionsSnapshot = null;
+
     if (!_listenersAttached) {
       _logger.debug(event: 'sync_listeners_already_detached');
       return;
@@ -626,15 +639,18 @@ class SyncEngine implements SyncWriteFacade {
     try {
       final batchSize = _isBatterySaverMode ? 5 : null;
 
+      // Track whether any work was done across both drain loops so a single
+      // `synced` status is emitted once at the end — emitting per iteration
+      // makes the status flap while a multi-batch drain is still running (I9).
+      var didSyncWork = false;
+
       // Drain the legacy OfflineQueue to completion (loop until 0 rows remain).
       int synced;
       do {
         synced = await _offlineQueue.flush(batchSize: batchSize);
         if (synced > 0) {
           _consecutivePushPermissionErrors = 0;
-          _updateStatus(
-            SyncStatus.synced(lastSyncedAt: DateTimeFactory.nowUtc()),
-          );
+          didSyncWork = true;
         }
       } while (synced > 0);
 
@@ -644,7 +660,14 @@ class SyncEngine implements SyncWriteFacade {
         int drained;
         do {
           drained = await processor.drain(_firestoreDataSource.profileId);
+          if (drained > 0) didSyncWork = true;
         } while (drained > 0);
+      }
+
+      // Emit a single `synced` status once both drain loops have fully
+      // completed, only if any rows were actually flushed.
+      if (didSyncWork) {
+        _updateStatus(SyncStatus.synced(lastSyncedAt: DateTimeFactory.nowUtc()));
       }
     } catch (e) {
       // ignore: avoid_catches_without_on_clauses — intentional Firestore error boundary
@@ -1107,8 +1130,14 @@ class SyncEngine implements SyncWriteFacade {
                     remote['sefariaRef'])
                 as String?;
 
+        // `stage_id` is the canonical snake_case key the outbox payload now
+        // emits; `stageId` / `stageOrder` / `stage_order` are accepted so any
+        // lingering camelCase or legacy Firestore docs still merge (I6).
         final rawStageId =
-            remote['stage_id'] ?? remote['stageOrder'] ?? remote['stage_order'];
+            remote['stage_id'] ??
+            remote['stageId'] ??
+            remote['stageOrder'] ??
+            remote['stage_order'];
         final stageId = rawStageId is int
             ? rawStageId
             : rawStageId is num
@@ -2443,25 +2472,48 @@ class SyncEngine implements SyncWriteFacade {
   ) async {
     _consecutiveListenerErrors = 0;
     // Debounce: batch rapid successive snapshots into a single merge pass.
-    // Agent B's gateway filter already strips hasPendingWrites==true snapshots
-    // upstream, so every snapshot reaching here is server-confirmed.
+    // The Firestore listener stream feeding this callback
+    // (FirestoreDataSource.listenToCompletions) only emits server-confirmed
+    // snapshots — local-echo (hasPendingWrites==true) snapshots are filtered
+    // upstream — so every snapshot reaching here is authoritative.
     _pendingCompletionsSnapshot = completions;
     _completionsDebounceTimer?.cancel();
-    _completionsDebounceTimer = Timer(const Duration(milliseconds: 300), () {
-      final pending = _pendingCompletionsSnapshot;
-      _pendingCompletionsSnapshot = null;
-      if (pending == null) return;
-      if (_mergingCompletions) return;
-      _mergingCompletions = true;
-      _logger.debug(
-        event: 'sync_listener_completions_received',
-        fields: {'count': pending.length},
+    _completionsDebounceTimer = Timer(
+      const Duration(milliseconds: 300),
+      _drainPendingCompletionsSnapshot,
+    );
+  }
+
+  /// Debounce-timer callback: merge the most recent completions snapshot.
+  ///
+  /// If a prior merge is still running, the pending snapshot is left intact
+  /// and the debounce timer is re-armed so the snapshot is merged once the
+  /// merge lock frees — a snapshot is never silently dropped (I1).
+  void _drainPendingCompletionsSnapshot() {
+    final pending = _pendingCompletionsSnapshot;
+    if (pending == null) return;
+
+    // A merge is in flight: do NOT consume the pending snapshot. Re-arm the
+    // debounce timer so this snapshot is picked up after the lock frees.
+    if (_mergingCompletions) {
+      _completionsDebounceTimer?.cancel();
+      _completionsDebounceTimer = Timer(
+        const Duration(milliseconds: 300),
+        _drainPendingCompletionsSnapshot,
       );
-      _mergeCompletions(
-        pending,
-        fallbackProfileId: _firestoreDataSource.profileId,
-      ).whenComplete(() => _mergingCompletions = false);
-    });
+      return;
+    }
+
+    _pendingCompletionsSnapshot = null;
+    _mergingCompletions = true;
+    _logger.debug(
+      event: 'sync_listener_completions_received',
+      fields: {'count': pending.length},
+    );
+    _mergeCompletions(
+      pending,
+      fallbackProfileId: _firestoreDataSource.profileId,
+    ).whenComplete(() => _mergingCompletions = false);
   }
 
   Future<void> _onBookmarksUpdate(List<Map<String, dynamic>> bookmarks) async {

@@ -1,13 +1,12 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/providers/talker_provider.dart';
-import 'package:learning_tracker/core/sync/merge/merge_router.dart';
 import 'package:learning_tracker/core/sync/providers/merge_router_provider.dart';
 import 'package:learning_tracker/core/sync/providers/outbox_providers.dart';
 import 'package:learning_tracker/core/sync/providers/resolve_profile_id_provider.dart';
-import 'package:learning_tracker/core/sync/pull_pipeline.dart';
 import 'package:learning_tracker/core/sync/sync_orchestrator.dart';
 import 'package:learning_tracker/features/auth/presentation/providers/auth_state_provider.dart';
+import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
 
 /// Provider for [SyncOrchestrator].
@@ -55,28 +54,43 @@ final syncOrchestratorProvider = Provider<SyncOrchestrator?>((ref) {
   final engine = ref.read(syncEngineProvider);
   if (engine == null) return null;
 
+  // Gate on the gateway being available at build time, but do NOT capture it:
+  // firestoreGatewayProvider watches the auth/Firestore providers and can
+  // rebuild (e.g. across upgrade-to-cloud), so the orchestrator resolves it
+  // lazily instead of freezing a stale handle (I5).
   final gateway = ref.read(firestoreGatewayProvider);
   if (gateway == null) return null;
 
-  final mergeRouter = ref.read(mergeRouterProvider);
   final resolveProfileId = ref.read(resolveProfileIdProvider);
   final talker = ref.read(talkerProvider);
 
-  final pullPipeline = PullPipeline(gateway: gateway, dispatcher: mergeRouter);
-
   final orchestrator = SyncOrchestratorImpl(
-    // Resolve the engine lazily — a DB swap rebuilds syncEngineProvider, and
-    // the orchestrator must delegate to the current engine, not a stale one.
+    // Every collaborator that can itself rebuild is handed in as a lazy
+    // resolver, so a later rebuild of any of these providers is picked up
+    // without recreating the orchestrator (which would duplicate the
+    // LifecycleObserver — Bug #1):
+    //   * syncEngineProvider     — rebuilds on a DB swap
+    //   * mergeRouterProvider    — watches userDatabaseProvider (DB swap)
+    //   * firestoreGatewayProvider — watches the auth/Firestore providers
     resolveEngine: () => ref.read(syncEngineProvider)!,
-    pullPipeline: pullPipeline,
-    mergeRouter: mergeRouter,
-    gateway: gateway,
+    resolveMergeRouter: () => ref.read(mergeRouterProvider),
+    resolveGateway: () => ref.read(firestoreGatewayProvider)!,
     resolveProfileId: resolveProfileId,
     logger: AppLogger(talker),
   );
 
   // Idempotent: registers the lifecycle observer + Firestore listeners once.
   orchestrator.start();
+
+  // R1 / I3: the orchestrator must NOT ref.watch the active-profile provider
+  // (a watch-dependency would rebuild the orchestrator on every profile
+  // switch, duplicating the LifecycleObserver — Bug #1). Instead, listen for
+  // profile changes and restart ONLY the Firestore listener set so the live
+  // listeners track the active profile. ref.listen does not rebuild the
+  // provider, so the singleton invariant (S7) is preserved.
+  ref.listen<int>(activeProfileIdProvider, (previous, next) {
+    if (previous != next) orchestrator.restartListeners();
+  });
 
   ref.onDispose(orchestrator.dispose);
 

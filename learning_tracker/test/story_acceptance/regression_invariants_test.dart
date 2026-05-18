@@ -90,14 +90,15 @@ void main() {
       test(
         'syncOrchestratorProvider does not watch activeProfileIdProvider',
         () {
-          // The provider currently rebuilds whenever activeProfileIdProvider
-          // changes, which creates a second SyncOrchestratorImpl (and registers
-          // a second LifecycleObserver) before the first is disposed.
+          // A `ref.watch(activeProfileIdProvider)` would rebuild the provider on
+          // every profile change, creating a second SyncOrchestratorImpl (and a
+          // second LifecycleObserver) before the first is disposed.
           //
-          // The fix (R1): either keep the provider alive via ref.keepAlive()
-          // while removing the activeProfileIdProvider watch, or promote the
-          // provider to keepAlive: true. Either way the source must not contain
-          // a watch call on activeProfileIdProvider.
+          // The fix (R1): the provider is a keepAlive singleton. It may use
+          // `ref.listen(activeProfileIdProvider, ...)` to restart its listener
+          // set on a profile change — `ref.listen` runs a callback WITHOUT
+          // rebuilding the provider, so no duplicate orchestrator/observer is
+          // created. Only a `ref.watch` on activeProfileIdProvider is forbidden.
           const srcPath =
               'lib/core/sync/providers/sync_orchestrator_providers.dart';
           final file = File(srcPath);
@@ -108,12 +109,13 @@ void main() {
 
           expect(
             source,
-            isNot(contains('activeProfileIdProvider')),
+            isNot(contains('watch(activeProfileIdProvider')),
             reason:
-                'N2: syncOrchestratorProvider must not watch '
+                'N2: syncOrchestratorProvider must not WATCH '
                 'activeProfileIdProvider — a profile change must not tear down '
                 'and recreate the SyncOrchestrator, which would register a '
-                'duplicate LifecycleObserver with WidgetsBinding',
+                'duplicate LifecycleObserver with WidgetsBinding. '
+                '(ref.listen is permitted — it does not rebuild the provider.)',
           );
         },
       );
@@ -491,10 +493,10 @@ class _AlwaysOkGateway implements FirestoreGateway {
   }) async {}
 
   @override
-  Future<void> pushCompletionsBatch({
+  Future<List<String>> pushCompletionsBatch({
     required int profileId,
-    required List<Map<String, dynamic>> items,
-  }) async {}
+    required List<({String entityKey, Map<String, dynamic> payload})> items,
+  }) async => items.map((e) => e.entityKey).toList();
 
   @override
   Future<void> pushStreak({
