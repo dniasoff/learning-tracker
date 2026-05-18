@@ -137,6 +137,8 @@ class DataExportImportService {
         );
 
     // --- Completion events (cross-profile via direct query) ---
+    // All rows including C3 purgedAt tombstones are exported so that a
+    // round-trip preserves the tombstone and does not resurrect purged history.
     final completionEvents = await _database
         .select(_database.completionEvents)
         .get();
@@ -320,6 +322,9 @@ class DataExportImportService {
               'points': e.points,
               'eventTimestamp': e.eventTimestamp.toIso8601String(),
               'createdAt': e.createdAt.toIso8601String(),
+              // C3: include purgedAt tombstone so round-trips do not resurrect
+              // purged history. null = active; non-null = purged at that instant.
+              'purgedAt': e.purgedAt?.toIso8601String(),
             },
           )
           .toList(),
@@ -733,6 +738,9 @@ class DataExportImportService {
         final map = e as Map<String, dynamic>;
         final rawTrackId = map['trackId'];
         final rawPoints = map['points'];
+        // C3: restore purgedAt tombstone so purged history is not resurrected.
+        // Older exports lack 'purgedAt' — treat absence as active (null).
+        final rawPurgedAt = map['purgedAt'] as String?;
         await _database
             .into(_database.completionEvents)
             .insert(
@@ -750,6 +758,9 @@ class DataExportImportService {
                     : const Value(0),
                 eventTimestamp: DateTime.parse(map['eventTimestamp'] as String),
                 createdAt: Value(DateTime.parse(map['createdAt'] as String)),
+                purgedAt: rawPurgedAt != null
+                    ? Value(DateTime.parse(rawPurgedAt))
+                    : const Value<DateTime?>.absent(),
               ),
             );
       }

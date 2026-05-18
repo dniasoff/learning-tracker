@@ -71,8 +71,28 @@ class CompletionWriter {
         if (existing != null) {
           return CompletionWriteResult(completion: existing, isNew: false);
         }
-        // Event exists but view row missing (purgedAt may be set — edge case).
-        // Fall through; appendEvent below is INSERT OR IGNORE.
+        // Event exists but the view row is absent (purgedAt IS NOT NULL — C3
+        // tombstone). Falling through to appendEvent would call INSERT OR IGNORE
+        // (the UNIQUE key already exists), return the purged row's id, then
+        // getCompletionById would return null → StateError. Instead reconstruct
+        // the Completion directly from the raw event row and return isNew=false.
+        // The caller is responsible for deciding whether to act on a purged row.
+        final purgedCompletion = Completion(
+          id: existingEvent.id,
+          profileId: existingEvent.profileId,
+          curriculumId: existingEvent.curriculumId,
+          sefariaRef: existingEvent.sefariaRef,
+          stageId: existingEvent.stageId,
+          trackType: existingEvent.trackType,
+          trackId: existingEvent.trackId ?? 0,
+          completedAt: existingEvent.eventTimestamp,
+          points: existingEvent.points,
+          derivedFromEvents: true,
+        );
+        return CompletionWriteResult(
+          completion: purgedCompletion,
+          isNew: false,
+        );
       } else {
         // No event yet — also guard against legacy completions rows that
         // predate v20 (derivedFromEvents = false) so we don't double-count.

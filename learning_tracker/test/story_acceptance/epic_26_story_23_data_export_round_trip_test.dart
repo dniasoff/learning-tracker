@@ -595,6 +595,139 @@ void main() {
           throwsA(isA<FormatException>()),
         );
       });
+
+      // ── 26.23.8: C3 purgedAt tombstone survives export/import round-trip ─
+      //
+      // HIGH finding (adversarial review): before this fix, the export omitted
+      // purgedAt from the completionEvents map, so a re-import would resurrect
+      // purged history as active rows — contradicting the C3 tombstone invariant.
+      test(
+        'C3 purgedAt tombstone is preserved across export/import round-trip',
+        () async {
+          final db = _db();
+          addTearDown(db.close);
+
+          await seedProfile(db);
+
+          // Seed a curriculum track so FK constraints are satisfied.
+          await db.into(db.curriculumTracks).insert(
+            CurriculumTracksCompanion.insert(
+              profileId: 1,
+              curriculumId: 'bavli',
+              trackType: 'programmed',
+              activatedAt: DateTime.utc(2026, 1, 1),
+            ),
+          );
+          final trackId = await (db.select(db.curriculumTracks)
+                ..where((t) => t.profileId.equals(1)))
+              .getSingle()
+              .then((r) => r.id);
+
+          final purgedAt = DateTime.utc(2026, 3, 1, 12);
+
+          // Insert two events: one active, one purged (C3 tombstone).
+          await db.into(db.completionEvents).insert(
+            CompletionEventsCompanion.insert(
+              profileId: 1,
+              curriculumId: 'bavli',
+              sefariaRef: 'Berakhot 2a',
+              stageId: 1,
+              trackType: 'programmed',
+              trackId: Value<int?>(trackId),
+              points: const Value(10),
+              eventTimestamp: DateTime.utc(2026, 2, 1),
+            ),
+          );
+          await db.into(db.completionEvents).insert(
+            CompletionEventsCompanion.insert(
+              profileId: 1,
+              curriculumId: 'bavli',
+              sefariaRef: 'Berakhot 3a',
+              stageId: 1,
+              trackType: 'programmed',
+              trackId: Value<int?>(trackId),
+              points: const Value(5),
+              eventTimestamp: DateTime.utc(2026, 2, 2),
+              purgedAt: Value(purgedAt),
+            ),
+          );
+
+          // Confirm pre-export state: completions_view only shows the active row.
+          final prePurge = await db.completionDao.internalGetAllCompletionsCrossProfile(
+            scope: CrossProfileScope.dataExport,
+          );
+          expect(prePurge, hasLength(1), reason: 'view hides purged row');
+
+          // Export then wipe then import.
+          final jsonStr = await _service(db).exportData();
+          final exported = json.decode(jsonStr) as Map<String, dynamic>;
+          final exportedEvents = exported['completionEvents'] as List;
+          expect(exportedEvents, hasLength(2), reason: 'both rows exported');
+          final exportedPurged = exportedEvents.firstWhere(
+            (e) => (e as Map)['sefariaRef'] == 'Berakhot 3a',
+          ) as Map<String, dynamic>;
+          // The ISO-8601 string in the export may use local-time notation
+          // depending on how Drift round-tripped the DateTime — compare
+          // the parsed instant in UTC to avoid tz-offset mismatches.
+          final exportedPurgedAt = DateTime.parse(
+            exportedPurged['purgedAt'] as String,
+          ).toUtc();
+          expect(
+            exportedPurgedAt,
+            equals(purgedAt),
+            reason: 'purgedAt must be serialised into the export',
+          );
+
+          await db.transaction(() async {
+            await db.delete(db.completionEvents).go();
+            await db.delete(db.completions).go();
+            await db.delete(db.streakEvents).go();
+            await db.delete(db.streaks).go();
+            await db.delete(db.learningLedger).go();
+            await db.delete(db.dailyPlans).go();
+            await db.delete(db.trackLearningOrder).go();
+            await db.delete(db.learningOrder).go();
+            await db.delete(db.bookmarks).go();
+            await db.delete(db.goals).go();
+            await db.delete(db.studyDayConfigs).go();
+            await db.delete(db.pointConfigs).go();
+            await db.delete(db.stageDefinitions).go();
+            await db.delete(db.profilePrograms).go();
+            await db.delete(db.curriculumScopes).go();
+            await db.delete(db.curriculumTracks).go();
+            await db.delete(db.learnerProfiles).go();
+            await db.delete(db.accounts).go();
+          });
+
+          await _service(db).importData(jsonStr);
+
+          // After import, completions_view must still show only the active row.
+          final postImport = await db.completionDao.internalGetAllCompletionsCrossProfile(
+            scope: CrossProfileScope.dataExport,
+          );
+          expect(
+            postImport,
+            hasLength(1),
+            reason:
+                'purgedAt tombstone must be restored on import so the purged '
+                'row stays hidden from the view — no resurrection',
+          );
+
+          // The raw completion_events table must still hold both rows.
+          final rawEvents = await db.select(db.completionEvents).get();
+          expect(rawEvents, hasLength(2), reason: 'both rows survive round-trip');
+
+          // The purged row must have its purgedAt restored.
+          final restoredPurged = rawEvents.firstWhere(
+            (e) => e.sefariaRef == 'Berakhot 3a',
+          );
+          expect(
+            restoredPurged.purgedAt?.toUtc(),
+            equals(purgedAt),
+            reason: 'purgedAt must be restored exactly after import',
+          );
+        },
+      );
     },
   );
 }
