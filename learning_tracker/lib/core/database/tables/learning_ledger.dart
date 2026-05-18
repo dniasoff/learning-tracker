@@ -1,5 +1,6 @@
 import 'package:drift/drift.dart';
 import 'package:learning_tracker/core/database/tables/curriculum_tracks.dart';
+import 'package:learning_tracker/core/database/tables/learner_profiles.dart';
 import 'package:learning_tracker/core/time/ulid.dart';
 
 /// Learning Ledger table — append-only record of lifetime learning completions.
@@ -22,7 +23,13 @@ import 'package:learning_tracker/core/time/ulid.dart';
 )
 class LearningLedger extends Table {
   IntColumn get id => integer().autoIncrement()();
-  IntColumn get profileId => integer()();
+
+  /// C2: FK → learner_profiles(id) CASCADE DELETE.
+  IntColumn get profileId => integer().references(
+    LearnerProfiles,
+    #id,
+    onDelete: KeyAction.cascade,
+  )();
 
   /// ULID identifying the logical ledger entry across devices. Two devices
   /// writing the same entry use the same ULID so the UNIQUE composite
@@ -38,10 +45,13 @@ class LearningLedger extends Table {
   TextColumn get unitDisplayNameHe => text()();
   TextColumn get unitDisplayNameEn => text()();
   TextColumn get trackType => text()(); // v1: always 'personal'
+  /// Nullable FK. ON DELETE SET NULL so ledger entries survive track deletion
+  /// (purgeHistory hard-deletes the track row but ledger rows are append-only).
   IntColumn get trackId => integer().nullable().references(
     CurriculumTracks,
     #id,
-  )(); // survives track deletion
+    onDelete: KeyAction.setNull,
+  )();
   DateTimeColumn get completedAt => dateTime()();
   IntColumn get completionNumber => integer()(); // nth time completing
   IntColumn get markedBy => integer()(); // profile_id of who marked it

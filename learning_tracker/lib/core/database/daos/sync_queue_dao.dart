@@ -36,6 +36,28 @@ class SyncQueueDao extends DatabaseAccessor<UserDatabase>
     );
   }
 
+  /// Enqueue with a dedup key (I-5).
+  ///
+  /// Uses INSERT OR REPLACE so that a second call with the same [entityKey]
+  /// replaces the previous pending row, keeping only the latest payload.
+  /// NULL [entityKey] values are never considered equal in SQLite, so callers
+  /// without a meaningful key should use [enqueue] instead.
+  Future<int> enqueueWithKey(
+    String operationType,
+    String payload,
+    String entityKey,
+  ) {
+    return into(syncQueue).insert(
+      SyncQueueCompanion.insert(
+        operationType: operationType,
+        payload: payload,
+        queuedAt: DateTimeFactory.nowUtc(),
+        entityKey: Value(entityKey),
+      ),
+      mode: InsertMode.insertOrReplace,
+    );
+  }
+
   /// Mark an operation as failed with error message.
   Future<void> markFailed(int id, String error) async {
     final current = await (select(

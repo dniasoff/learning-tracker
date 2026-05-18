@@ -1,4 +1,5 @@
 import 'package:drift/drift.dart';
+import 'package:learning_tracker/core/database/tables/learner_profiles.dart';
 
 /// Append-only event log of completions (Story 25.2 / DNI-323).
 ///
@@ -12,6 +13,9 @@ import 'package:drift/drift.dart';
 /// INSERT-only. No update or delete. Duplicate inserts use
 /// `INSERT OR IGNORE` so two devices writing the same logical event collapse
 /// to one row.
+///
+/// C3: [purgedAt] is the tombstone for purgeHistory — never delete rows,
+/// instead set this field. Row count never decreases (N8 invariant).
 @TableIndex(
   name: 'completion_events_natural_key',
   columns: {#profileId, #sefariaRef, #stageId, #trackType},
@@ -19,11 +23,22 @@ import 'package:drift/drift.dart';
 )
 class CompletionEvents extends Table {
   IntColumn get id => integer().autoIncrement()();
-  IntColumn get profileId => integer()();
+
+  /// C2: FK → learner_profiles(id) CASCADE DELETE.
+  IntColumn get profileId => integer().references(
+    LearnerProfiles,
+    #id,
+    onDelete: KeyAction.cascade,
+  )();
+
   TextColumn get curriculumId => text()();
   TextColumn get sefariaRef => text()();
   IntColumn get stageId => integer()();
   TextColumn get trackType => text()();
   DateTimeColumn get eventTimestamp => dateTime()();
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
+
+  /// C3: tombstone timestamp set by purgeHistory instead of deleting the row.
+  /// null = active; non-null = purged at this UTC timestamp.
+  DateTimeColumn get purgedAt => dateTime().nullable()();
 }

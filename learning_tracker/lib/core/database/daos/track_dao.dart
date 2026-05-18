@@ -1,9 +1,12 @@
+import 'dart:convert';
+
 import 'package:drift/drift.dart';
 import 'package:learning_tracker/core/database/base_dao.dart';
 import 'package:learning_tracker/core/database/tables/curriculum_tracks.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
+import 'package:learning_tracker/core/sync/outbox/outbox_processor.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 
 part 'track_dao.g.dart';
@@ -199,13 +202,30 @@ class TrackDao extends DatabaseAccessor<UserDatabase>
       await db.curriculumScopeDao.clearScopesForTrack(trackId);
       await db.studyDayConfigDao.deleteConfigsForTrack(trackId);
       await db.trackLearningOrderDao.deleteByTrack(trackId);
+      final deletedAt = DateTimeFactory.nowUtc();
       // Soft-delete: stamp deletedAt instead of removing the row.
       await (update(
         curriculumTracks,
       )..where((t) => t.id.equals(trackId))).write(
         CurriculumTracksCompanion(
           isActive: const Value(false),
-          deletedAt: Value(DateTimeFactory.nowUtc()),
+          deletedAt: Value(deletedAt),
+        ),
+      );
+      // I-5: push soft-delete to Firestore so other devices apply it.
+      await db.outboxDao.insertOutboxRow(
+        OutboxCompanion.insert(
+          profileId: track.profileId,
+          entityKind: OutboxEntityKind.track,
+          entityKey: 'track_delete:$trackId',
+          payload: jsonEncode({
+            'track_id': trackId,
+            'curriculum_id': track.curriculumId,
+            'track_type': track.trackType,
+            'deleted_at': deletedAt.toUtc().toIso8601String(),
+            'profile_id': track.profileId,
+          }),
+          createdAt: deletedAt,
         ),
       );
       final curriculum = CurriculumId.values
@@ -359,12 +379,33 @@ class TrackDao extends DatabaseAccessor<UserDatabase>
   /// Unlike [deleteTrackAndData], this leaves no tombstone: the track row is
   /// hard-deleted so [restoreOrCreate] will create a brand-new row next time.
   /// streak_events are profile-scoped and are not touched.
+  ///
+  /// C3: completion_events are never deleted (append-only, N8 invariant).
+  /// Instead, each event row is stamped with [purgedAt] as a tombstone.
+  /// The completions projection rows are deleted (safe — derived table).
+  /// N8 guarantees: completion_events row count never decreases after purge.
   Future<void> purgeHistory(int trackId) async {
     // Fetch before the transaction — the row will be gone afterwards.
     final track = await getTrackById(trackId);
     if (track == null) return;
 
     await db.transaction(() async {
+      // C3: stamp purgedAt on completion_events (tombstone — never delete rows).
+      final purgedAt = DateTimeFactory.nowUtc();
+      final completionsForTrack = await db.completionDao.getCompletionsByTrack(
+        trackId,
+      );
+      for (final c in completionsForTrack) {
+        await (db.update(db.completionEvents)..where(
+              (t) =>
+                  t.profileId.equals(c.profileId) &
+                  t.sefariaRef.equals(c.sefariaRef) &
+                  t.stageId.equals(c.stageId) &
+                  t.trackType.equals(c.trackType),
+            ))
+            .write(CompletionEventsCompanion(purgedAt: Value(purgedAt)));
+      }
+      // C3: delete from completions projection (safe — derived table).
       await (db.delete(
         db.completions,
       )..where((t) => t.trackId.equals(trackId))).go();
@@ -377,7 +418,8 @@ class TrackDao extends DatabaseAccessor<UserDatabase>
       await db.curriculumScopeDao.clearScopesForTrack(trackId);
       await db.studyDayConfigDao.deleteConfigsForTrack(trackId);
       await db.trackLearningOrderDao.deleteByTrack(trackId);
-      // Hard-delete the track row — no tombstone left behind.
+      // Hard-delete the track row. Bookmarks cascade-delete via ON DELETE
+      // CASCADE (C2). Learning ledger trackId is SET NULL via ON DELETE SET NULL.
       await (db.delete(
         curriculumTracks,
       )..where((t) => t.id.equals(trackId))).go();

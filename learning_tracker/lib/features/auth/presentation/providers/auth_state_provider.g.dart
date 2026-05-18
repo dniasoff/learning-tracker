@@ -59,7 +59,7 @@ final class AuthStateNotifierProvider
   }
 }
 
-String _$authStateNotifierHash() => r'a98cf12267665d88ccfc0954853a71a15acf13c4';
+String _$authStateNotifierHash() => r'0e99ac33e0c181232eef3a6bbda3633f882c7a89';
 
 /// Unified auth state notifier (Epic 20 v2 §3).
 ///

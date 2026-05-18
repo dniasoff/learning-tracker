@@ -2580,6 +2580,9 @@ class $StageDefinitionsTable extends StageDefinitions
     false,
     type: DriftSqlType.int,
     requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES learner_profiles (id) ON DELETE CASCADE',
+    ),
   );
   static const VerificationMeta _curriculumIdMeta = const VerificationMeta(
     'curriculumId',
@@ -2869,6 +2872,8 @@ class $StageDefinitionsTable extends StageDefinitions
 
 class StageDefinition extends DataClass implements Insertable<StageDefinition> {
   final int id;
+
+  /// C2: FK → learner_profiles(id) CASCADE DELETE.
   final int profileId;
   final String curriculumId;
   final int trackId;
@@ -4103,6 +4108,9 @@ class $CompletionsTable extends Completions
     false,
     type: DriftSqlType.int,
     requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES learner_profiles (id) ON DELETE CASCADE',
+    ),
   );
   static const VerificationMeta _curriculumIdMeta = const VerificationMeta(
     'curriculumId',
@@ -4183,6 +4191,21 @@ class $CompletionsTable extends Completions
     requiredDuringInsert: false,
     defaultValue: const Constant<int>(0),
   );
+  static const VerificationMeta _derivedFromEventsMeta = const VerificationMeta(
+    'derivedFromEvents',
+  );
+  @override
+  late final GeneratedColumn<bool> derivedFromEvents = GeneratedColumn<bool>(
+    'derived_from_events',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("derived_from_events" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -4194,6 +4217,7 @@ class $CompletionsTable extends Completions
     trackId,
     completedAt,
     points,
+    derivedFromEvents,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -4278,6 +4302,15 @@ class $CompletionsTable extends Completions
         points.isAcceptableOrUnknown(data['points']!, _pointsMeta),
       );
     }
+    if (data.containsKey('derived_from_events')) {
+      context.handle(
+        _derivedFromEventsMeta,
+        derivedFromEvents.isAcceptableOrUnknown(
+          data['derived_from_events']!,
+          _derivedFromEventsMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -4323,6 +4356,10 @@ class $CompletionsTable extends Completions
         DriftSqlType.int,
         data['${effectivePrefix}points'],
       )!,
+      derivedFromEvents: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}derived_from_events'],
+      )!,
     );
   }
 
@@ -4334,6 +4371,8 @@ class $CompletionsTable extends Completions
 
 class Completion extends DataClass implements Insertable<Completion> {
   final int id;
+
+  /// C2: FK → learner_profiles(id) CASCADE DELETE.
   final int profileId;
   final String curriculumId;
   final String sefariaRef;
@@ -4342,6 +4381,10 @@ class Completion extends DataClass implements Insertable<Completion> {
   final int trackId;
   final DateTime completedAt;
   final int points;
+
+  /// C1: true when this row was derived from a completion_events write.
+  /// false for legacy rows written before C1 was deployed.
+  final bool derivedFromEvents;
   const Completion({
     required this.id,
     required this.profileId,
@@ -4352,6 +4395,7 @@ class Completion extends DataClass implements Insertable<Completion> {
     required this.trackId,
     required this.completedAt,
     required this.points,
+    required this.derivedFromEvents,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -4365,6 +4409,7 @@ class Completion extends DataClass implements Insertable<Completion> {
     map['track_id'] = Variable<int>(trackId);
     map['completed_at'] = Variable<DateTime>(completedAt);
     map['points'] = Variable<int>(points);
+    map['derived_from_events'] = Variable<bool>(derivedFromEvents);
     return map;
   }
 
@@ -4379,6 +4424,7 @@ class Completion extends DataClass implements Insertable<Completion> {
       trackId: Value(trackId),
       completedAt: Value(completedAt),
       points: Value(points),
+      derivedFromEvents: Value(derivedFromEvents),
     );
   }
 
@@ -4397,6 +4443,7 @@ class Completion extends DataClass implements Insertable<Completion> {
       trackId: serializer.fromJson<int>(json['trackId']),
       completedAt: serializer.fromJson<DateTime>(json['completedAt']),
       points: serializer.fromJson<int>(json['points']),
+      derivedFromEvents: serializer.fromJson<bool>(json['derivedFromEvents']),
     );
   }
   @override
@@ -4412,6 +4459,7 @@ class Completion extends DataClass implements Insertable<Completion> {
       'trackId': serializer.toJson<int>(trackId),
       'completedAt': serializer.toJson<DateTime>(completedAt),
       'points': serializer.toJson<int>(points),
+      'derivedFromEvents': serializer.toJson<bool>(derivedFromEvents),
     };
   }
 
@@ -4425,6 +4473,7 @@ class Completion extends DataClass implements Insertable<Completion> {
     int? trackId,
     DateTime? completedAt,
     int? points,
+    bool? derivedFromEvents,
   }) => Completion(
     id: id ?? this.id,
     profileId: profileId ?? this.profileId,
@@ -4435,6 +4484,7 @@ class Completion extends DataClass implements Insertable<Completion> {
     trackId: trackId ?? this.trackId,
     completedAt: completedAt ?? this.completedAt,
     points: points ?? this.points,
+    derivedFromEvents: derivedFromEvents ?? this.derivedFromEvents,
   );
   Completion copyWithCompanion(CompletionsCompanion data) {
     return Completion(
@@ -4453,6 +4503,9 @@ class Completion extends DataClass implements Insertable<Completion> {
           ? data.completedAt.value
           : this.completedAt,
       points: data.points.present ? data.points.value : this.points,
+      derivedFromEvents: data.derivedFromEvents.present
+          ? data.derivedFromEvents.value
+          : this.derivedFromEvents,
     );
   }
 
@@ -4467,7 +4520,8 @@ class Completion extends DataClass implements Insertable<Completion> {
           ..write('trackType: $trackType, ')
           ..write('trackId: $trackId, ')
           ..write('completedAt: $completedAt, ')
-          ..write('points: $points')
+          ..write('points: $points, ')
+          ..write('derivedFromEvents: $derivedFromEvents')
           ..write(')'))
         .toString();
   }
@@ -4483,6 +4537,7 @@ class Completion extends DataClass implements Insertable<Completion> {
     trackId,
     completedAt,
     points,
+    derivedFromEvents,
   );
   @override
   bool operator ==(Object other) =>
@@ -4496,7 +4551,8 @@ class Completion extends DataClass implements Insertable<Completion> {
           other.trackType == this.trackType &&
           other.trackId == this.trackId &&
           other.completedAt == this.completedAt &&
-          other.points == this.points);
+          other.points == this.points &&
+          other.derivedFromEvents == this.derivedFromEvents);
 }
 
 class CompletionsCompanion extends UpdateCompanion<Completion> {
@@ -4509,6 +4565,7 @@ class CompletionsCompanion extends UpdateCompanion<Completion> {
   final Value<int> trackId;
   final Value<DateTime> completedAt;
   final Value<int> points;
+  final Value<bool> derivedFromEvents;
   const CompletionsCompanion({
     this.id = const Value.absent(),
     this.profileId = const Value.absent(),
@@ -4519,6 +4576,7 @@ class CompletionsCompanion extends UpdateCompanion<Completion> {
     this.trackId = const Value.absent(),
     this.completedAt = const Value.absent(),
     this.points = const Value.absent(),
+    this.derivedFromEvents = const Value.absent(),
   });
   CompletionsCompanion.insert({
     this.id = const Value.absent(),
@@ -4530,6 +4588,7 @@ class CompletionsCompanion extends UpdateCompanion<Completion> {
     required int trackId,
     required DateTime completedAt,
     this.points = const Value.absent(),
+    this.derivedFromEvents = const Value.absent(),
   }) : profileId = Value(profileId),
        curriculumId = Value(curriculumId),
        sefariaRef = Value(sefariaRef),
@@ -4547,6 +4606,7 @@ class CompletionsCompanion extends UpdateCompanion<Completion> {
     Expression<int>? trackId,
     Expression<DateTime>? completedAt,
     Expression<int>? points,
+    Expression<bool>? derivedFromEvents,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -4558,6 +4618,7 @@ class CompletionsCompanion extends UpdateCompanion<Completion> {
       if (trackId != null) 'track_id': trackId,
       if (completedAt != null) 'completed_at': completedAt,
       if (points != null) 'points': points,
+      if (derivedFromEvents != null) 'derived_from_events': derivedFromEvents,
     });
   }
 
@@ -4571,6 +4632,7 @@ class CompletionsCompanion extends UpdateCompanion<Completion> {
     Value<int>? trackId,
     Value<DateTime>? completedAt,
     Value<int>? points,
+    Value<bool>? derivedFromEvents,
   }) {
     return CompletionsCompanion(
       id: id ?? this.id,
@@ -4582,6 +4644,7 @@ class CompletionsCompanion extends UpdateCompanion<Completion> {
       trackId: trackId ?? this.trackId,
       completedAt: completedAt ?? this.completedAt,
       points: points ?? this.points,
+      derivedFromEvents: derivedFromEvents ?? this.derivedFromEvents,
     );
   }
 
@@ -4615,6 +4678,9 @@ class CompletionsCompanion extends UpdateCompanion<Completion> {
     if (points.present) {
       map['points'] = Variable<int>(points.value);
     }
+    if (derivedFromEvents.present) {
+      map['derived_from_events'] = Variable<bool>(derivedFromEvents.value);
+    }
     return map;
   }
 
@@ -4629,7 +4695,8 @@ class CompletionsCompanion extends UpdateCompanion<Completion> {
           ..write('trackType: $trackType, ')
           ..write('trackId: $trackId, ')
           ..write('completedAt: $completedAt, ')
-          ..write('points: $points')
+          ..write('points: $points, ')
+          ..write('derivedFromEvents: $derivedFromEvents')
           ..write(')'))
         .toString();
   }
@@ -4664,6 +4731,9 @@ class $CompletionEventsTable extends CompletionEvents
     false,
     type: DriftSqlType.int,
     requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES learner_profiles (id) ON DELETE CASCADE',
+    ),
   );
   static const VerificationMeta _curriculumIdMeta = const VerificationMeta(
     'curriculumId',
@@ -4733,6 +4803,17 @@ class $CompletionEventsTable extends CompletionEvents
     requiredDuringInsert: false,
     defaultValue: currentDateAndTime,
   );
+  static const VerificationMeta _purgedAtMeta = const VerificationMeta(
+    'purgedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> purgedAt = GeneratedColumn<DateTime>(
+    'purged_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -4743,6 +4824,7 @@ class $CompletionEventsTable extends CompletionEvents
     trackType,
     eventTimestamp,
     createdAt,
+    purgedAt,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -4819,6 +4901,12 @@ class $CompletionEventsTable extends CompletionEvents
         createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
       );
     }
+    if (data.containsKey('purged_at')) {
+      context.handle(
+        _purgedAtMeta,
+        purgedAt.isAcceptableOrUnknown(data['purged_at']!, _purgedAtMeta),
+      );
+    }
     return context;
   }
 
@@ -4860,6 +4948,10 @@ class $CompletionEventsTable extends CompletionEvents
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
       )!,
+      purgedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}purged_at'],
+      ),
     );
   }
 
@@ -4871,6 +4963,8 @@ class $CompletionEventsTable extends CompletionEvents
 
 class CompletionEvent extends DataClass implements Insertable<CompletionEvent> {
   final int id;
+
+  /// C2: FK → learner_profiles(id) CASCADE DELETE.
   final int profileId;
   final String curriculumId;
   final String sefariaRef;
@@ -4878,6 +4972,10 @@ class CompletionEvent extends DataClass implements Insertable<CompletionEvent> {
   final String trackType;
   final DateTime eventTimestamp;
   final DateTime createdAt;
+
+  /// C3: tombstone timestamp set by purgeHistory instead of deleting the row.
+  /// null = active; non-null = purged at this UTC timestamp.
+  final DateTime? purgedAt;
   const CompletionEvent({
     required this.id,
     required this.profileId,
@@ -4887,6 +4985,7 @@ class CompletionEvent extends DataClass implements Insertable<CompletionEvent> {
     required this.trackType,
     required this.eventTimestamp,
     required this.createdAt,
+    this.purgedAt,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -4899,6 +4998,9 @@ class CompletionEvent extends DataClass implements Insertable<CompletionEvent> {
     map['track_type'] = Variable<String>(trackType);
     map['event_timestamp'] = Variable<DateTime>(eventTimestamp);
     map['created_at'] = Variable<DateTime>(createdAt);
+    if (!nullToAbsent || purgedAt != null) {
+      map['purged_at'] = Variable<DateTime>(purgedAt);
+    }
     return map;
   }
 
@@ -4912,6 +5014,9 @@ class CompletionEvent extends DataClass implements Insertable<CompletionEvent> {
       trackType: Value(trackType),
       eventTimestamp: Value(eventTimestamp),
       createdAt: Value(createdAt),
+      purgedAt: purgedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(purgedAt),
     );
   }
 
@@ -4929,6 +5034,7 @@ class CompletionEvent extends DataClass implements Insertable<CompletionEvent> {
       trackType: serializer.fromJson<String>(json['trackType']),
       eventTimestamp: serializer.fromJson<DateTime>(json['eventTimestamp']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+      purgedAt: serializer.fromJson<DateTime?>(json['purgedAt']),
     );
   }
   @override
@@ -4943,6 +5049,7 @@ class CompletionEvent extends DataClass implements Insertable<CompletionEvent> {
       'trackType': serializer.toJson<String>(trackType),
       'eventTimestamp': serializer.toJson<DateTime>(eventTimestamp),
       'createdAt': serializer.toJson<DateTime>(createdAt),
+      'purgedAt': serializer.toJson<DateTime?>(purgedAt),
     };
   }
 
@@ -4955,6 +5062,7 @@ class CompletionEvent extends DataClass implements Insertable<CompletionEvent> {
     String? trackType,
     DateTime? eventTimestamp,
     DateTime? createdAt,
+    Value<DateTime?> purgedAt = const Value.absent(),
   }) => CompletionEvent(
     id: id ?? this.id,
     profileId: profileId ?? this.profileId,
@@ -4964,6 +5072,7 @@ class CompletionEvent extends DataClass implements Insertable<CompletionEvent> {
     trackType: trackType ?? this.trackType,
     eventTimestamp: eventTimestamp ?? this.eventTimestamp,
     createdAt: createdAt ?? this.createdAt,
+    purgedAt: purgedAt.present ? purgedAt.value : this.purgedAt,
   );
   CompletionEvent copyWithCompanion(CompletionEventsCompanion data) {
     return CompletionEvent(
@@ -4981,6 +5090,7 @@ class CompletionEvent extends DataClass implements Insertable<CompletionEvent> {
           ? data.eventTimestamp.value
           : this.eventTimestamp,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      purgedAt: data.purgedAt.present ? data.purgedAt.value : this.purgedAt,
     );
   }
 
@@ -4994,7 +5104,8 @@ class CompletionEvent extends DataClass implements Insertable<CompletionEvent> {
           ..write('stageId: $stageId, ')
           ..write('trackType: $trackType, ')
           ..write('eventTimestamp: $eventTimestamp, ')
-          ..write('createdAt: $createdAt')
+          ..write('createdAt: $createdAt, ')
+          ..write('purgedAt: $purgedAt')
           ..write(')'))
         .toString();
   }
@@ -5009,6 +5120,7 @@ class CompletionEvent extends DataClass implements Insertable<CompletionEvent> {
     trackType,
     eventTimestamp,
     createdAt,
+    purgedAt,
   );
   @override
   bool operator ==(Object other) =>
@@ -5021,7 +5133,8 @@ class CompletionEvent extends DataClass implements Insertable<CompletionEvent> {
           other.stageId == this.stageId &&
           other.trackType == this.trackType &&
           other.eventTimestamp == this.eventTimestamp &&
-          other.createdAt == this.createdAt);
+          other.createdAt == this.createdAt &&
+          other.purgedAt == this.purgedAt);
 }
 
 class CompletionEventsCompanion extends UpdateCompanion<CompletionEvent> {
@@ -5033,6 +5146,7 @@ class CompletionEventsCompanion extends UpdateCompanion<CompletionEvent> {
   final Value<String> trackType;
   final Value<DateTime> eventTimestamp;
   final Value<DateTime> createdAt;
+  final Value<DateTime?> purgedAt;
   const CompletionEventsCompanion({
     this.id = const Value.absent(),
     this.profileId = const Value.absent(),
@@ -5042,6 +5156,7 @@ class CompletionEventsCompanion extends UpdateCompanion<CompletionEvent> {
     this.trackType = const Value.absent(),
     this.eventTimestamp = const Value.absent(),
     this.createdAt = const Value.absent(),
+    this.purgedAt = const Value.absent(),
   });
   CompletionEventsCompanion.insert({
     this.id = const Value.absent(),
@@ -5052,6 +5167,7 @@ class CompletionEventsCompanion extends UpdateCompanion<CompletionEvent> {
     required String trackType,
     required DateTime eventTimestamp,
     this.createdAt = const Value.absent(),
+    this.purgedAt = const Value.absent(),
   }) : profileId = Value(profileId),
        curriculumId = Value(curriculumId),
        sefariaRef = Value(sefariaRef),
@@ -5067,6 +5183,7 @@ class CompletionEventsCompanion extends UpdateCompanion<CompletionEvent> {
     Expression<String>? trackType,
     Expression<DateTime>? eventTimestamp,
     Expression<DateTime>? createdAt,
+    Expression<DateTime>? purgedAt,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -5077,6 +5194,7 @@ class CompletionEventsCompanion extends UpdateCompanion<CompletionEvent> {
       if (trackType != null) 'track_type': trackType,
       if (eventTimestamp != null) 'event_timestamp': eventTimestamp,
       if (createdAt != null) 'created_at': createdAt,
+      if (purgedAt != null) 'purged_at': purgedAt,
     });
   }
 
@@ -5089,6 +5207,7 @@ class CompletionEventsCompanion extends UpdateCompanion<CompletionEvent> {
     Value<String>? trackType,
     Value<DateTime>? eventTimestamp,
     Value<DateTime>? createdAt,
+    Value<DateTime?>? purgedAt,
   }) {
     return CompletionEventsCompanion(
       id: id ?? this.id,
@@ -5099,6 +5218,7 @@ class CompletionEventsCompanion extends UpdateCompanion<CompletionEvent> {
       trackType: trackType ?? this.trackType,
       eventTimestamp: eventTimestamp ?? this.eventTimestamp,
       createdAt: createdAt ?? this.createdAt,
+      purgedAt: purgedAt ?? this.purgedAt,
     );
   }
 
@@ -5129,6 +5249,9 @@ class CompletionEventsCompanion extends UpdateCompanion<CompletionEvent> {
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
+    if (purgedAt.present) {
+      map['purged_at'] = Variable<DateTime>(purgedAt.value);
+    }
     return map;
   }
 
@@ -5142,7 +5265,8 @@ class CompletionEventsCompanion extends UpdateCompanion<CompletionEvent> {
           ..write('stageId: $stageId, ')
           ..write('trackType: $trackType, ')
           ..write('eventTimestamp: $eventTimestamp, ')
-          ..write('createdAt: $createdAt')
+          ..write('createdAt: $createdAt, ')
+          ..write('purgedAt: $purgedAt')
           ..write(')'))
         .toString();
   }
@@ -6090,6 +6214,9 @@ class $LearningLedgerTable extends LearningLedger
     false,
     type: DriftSqlType.int,
     requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES learner_profiles (id) ON DELETE CASCADE',
+    ),
   );
   static const VerificationMeta _ulidMeta = const VerificationMeta('ulid');
   @override
@@ -6180,7 +6307,7 @@ class $LearningLedgerTable extends LearningLedger
     type: DriftSqlType.int,
     requiredDuringInsert: false,
     defaultConstraints: GeneratedColumn.constraintIsAlways(
-      'REFERENCES curriculum_tracks (id)',
+      'REFERENCES curriculum_tracks (id) ON DELETE SET NULL',
     ),
   );
   static const VerificationMeta _completedAtMeta = const VerificationMeta(
@@ -6479,6 +6606,8 @@ class $LearningLedgerTable extends LearningLedger
 class LearningLedgerData extends DataClass
     implements Insertable<LearningLedgerData> {
   final int id;
+
+  /// C2: FK → learner_profiles(id) CASCADE DELETE.
   final int profileId;
 
   /// ULID identifying the logical ledger entry across devices. Two devices
@@ -6492,6 +6621,9 @@ class LearningLedgerData extends DataClass
   final String unitDisplayNameHe;
   final String unitDisplayNameEn;
   final String trackType;
+
+  /// Nullable FK. ON DELETE SET NULL so ledger entries survive track deletion
+  /// (purgeHistory hard-deletes the track row but ledger rows are append-only).
   final int? trackId;
   final DateTime completedAt;
   final int completionNumber;
@@ -6967,6 +7099,9 @@ class $BookmarksTable extends Bookmarks
     false,
     type: DriftSqlType.int,
     requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES learner_profiles (id) ON DELETE CASCADE',
+    ),
   );
   static const VerificationMeta _curriculumIdMeta = const VerificationMeta(
     'curriculumId',
@@ -6990,7 +7125,7 @@ class $BookmarksTable extends Bookmarks
     type: DriftSqlType.int,
     requiredDuringInsert: true,
     defaultConstraints: GeneratedColumn.constraintIsAlways(
-      'REFERENCES curriculum_tracks (id)',
+      'REFERENCES curriculum_tracks (id) ON DELETE CASCADE',
     ),
   );
   static const VerificationMeta _sefariaRefMeta = const VerificationMeta(
@@ -7130,10 +7265,14 @@ class $BookmarksTable extends Bookmarks
 
 class Bookmark extends DataClass implements Insertable<Bookmark> {
   final int id;
+
+  /// C2: FK → learner_profiles(id) CASCADE DELETE.
   final int profileId;
   final String curriculumId;
 
-  /// FK to curriculum_tracks.id — replaces the old trackType TEXT column.
+  /// FK to curriculum_tracks.id. ON DELETE CASCADE so bookmarks are removed
+  /// when a track is hard-deleted (purgeHistory), preserving referential
+  /// integrity after PRAGMA foreign_keys = ON is enabled in C2.
   final int trackId;
   final String sefariaRef;
   final DateTime updatedAt;
@@ -8111,6 +8250,9 @@ class $GoalsTable extends Goals with TableInfo<$GoalsTable, Goal> {
     false,
     type: DriftSqlType.int,
     requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES learner_profiles (id) ON DELETE CASCADE',
+    ),
   );
   static const VerificationMeta _curriculumIdMeta = const VerificationMeta(
     'curriculumId',
@@ -8459,6 +8601,8 @@ class $GoalsTable extends Goals with TableInfo<$GoalsTable, Goal> {
 
 class Goal extends DataClass implements Insertable<Goal> {
   final int id;
+
+  /// C2: FK → learner_profiles(id) CASCADE DELETE.
   final int profileId;
   final String curriculumId;
   final int trackId;
@@ -9407,6 +9551,9 @@ class $StreakEventsTable extends StreakEvents
     false,
     type: DriftSqlType.int,
     requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES learner_profiles (id) ON DELETE CASCADE',
+    ),
   );
   static const VerificationMeta _eventTypeMeta = const VerificationMeta(
     'eventType',
@@ -9586,6 +9733,8 @@ class $StreakEventsTable extends StreakEvents
 
 class StreakEvent extends DataClass implements Insertable<StreakEvent> {
   final int id;
+
+  /// C2: FK → learner_profiles(id) CASCADE DELETE.
   final int profileId;
 
   /// `completion` | `day_boundary` | `manual_adjust`
@@ -9928,6 +10077,17 @@ class $SyncQueueTable extends SyncQueue
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _entityKeyMeta = const VerificationMeta(
+    'entityKey',
+  );
+  @override
+  late final GeneratedColumn<String> entityKey = GeneratedColumn<String>(
+    'entity_key',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -9936,6 +10096,7 @@ class $SyncQueueTable extends SyncQueue
     queuedAt,
     retryCount,
     lastError,
+    entityKey,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -9991,6 +10152,12 @@ class $SyncQueueTable extends SyncQueue
         lastError.isAcceptableOrUnknown(data['last_error']!, _lastErrorMeta),
       );
     }
+    if (data.containsKey('entity_key')) {
+      context.handle(
+        _entityKeyMeta,
+        entityKey.isAcceptableOrUnknown(data['entity_key']!, _entityKeyMeta),
+      );
+    }
     return context;
   }
 
@@ -10024,6 +10191,10 @@ class $SyncQueueTable extends SyncQueue
         DriftSqlType.string,
         data['${effectivePrefix}last_error'],
       ),
+      entityKey: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}entity_key'],
+      ),
     );
   }
 
@@ -10050,6 +10221,11 @@ class SyncQueueData extends DataClass implements Insertable<SyncQueueData> {
 
   /// Last error message (if any)
   final String? lastError;
+
+  /// I-5: Stable entity key for dedup (e.g. "track_config:42", "profile:1").
+  /// Null for operations that do not require dedup (legacy callers, one-off events).
+  /// UNIQUE — INSERT OR REPLACE on this key keeps only the latest payload.
+  final String? entityKey;
   const SyncQueueData({
     required this.id,
     required this.operationType,
@@ -10057,6 +10233,7 @@ class SyncQueueData extends DataClass implements Insertable<SyncQueueData> {
     required this.queuedAt,
     required this.retryCount,
     this.lastError,
+    this.entityKey,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -10068,6 +10245,9 @@ class SyncQueueData extends DataClass implements Insertable<SyncQueueData> {
     map['retry_count'] = Variable<int>(retryCount);
     if (!nullToAbsent || lastError != null) {
       map['last_error'] = Variable<String>(lastError);
+    }
+    if (!nullToAbsent || entityKey != null) {
+      map['entity_key'] = Variable<String>(entityKey);
     }
     return map;
   }
@@ -10082,6 +10262,9 @@ class SyncQueueData extends DataClass implements Insertable<SyncQueueData> {
       lastError: lastError == null && nullToAbsent
           ? const Value.absent()
           : Value(lastError),
+      entityKey: entityKey == null && nullToAbsent
+          ? const Value.absent()
+          : Value(entityKey),
     );
   }
 
@@ -10097,6 +10280,7 @@ class SyncQueueData extends DataClass implements Insertable<SyncQueueData> {
       queuedAt: serializer.fromJson<DateTime>(json['queuedAt']),
       retryCount: serializer.fromJson<int>(json['retryCount']),
       lastError: serializer.fromJson<String?>(json['lastError']),
+      entityKey: serializer.fromJson<String?>(json['entityKey']),
     );
   }
   @override
@@ -10109,6 +10293,7 @@ class SyncQueueData extends DataClass implements Insertable<SyncQueueData> {
       'queuedAt': serializer.toJson<DateTime>(queuedAt),
       'retryCount': serializer.toJson<int>(retryCount),
       'lastError': serializer.toJson<String?>(lastError),
+      'entityKey': serializer.toJson<String?>(entityKey),
     };
   }
 
@@ -10119,6 +10304,7 @@ class SyncQueueData extends DataClass implements Insertable<SyncQueueData> {
     DateTime? queuedAt,
     int? retryCount,
     Value<String?> lastError = const Value.absent(),
+    Value<String?> entityKey = const Value.absent(),
   }) => SyncQueueData(
     id: id ?? this.id,
     operationType: operationType ?? this.operationType,
@@ -10126,6 +10312,7 @@ class SyncQueueData extends DataClass implements Insertable<SyncQueueData> {
     queuedAt: queuedAt ?? this.queuedAt,
     retryCount: retryCount ?? this.retryCount,
     lastError: lastError.present ? lastError.value : this.lastError,
+    entityKey: entityKey.present ? entityKey.value : this.entityKey,
   );
   SyncQueueData copyWithCompanion(SyncQueueCompanion data) {
     return SyncQueueData(
@@ -10139,6 +10326,7 @@ class SyncQueueData extends DataClass implements Insertable<SyncQueueData> {
           ? data.retryCount.value
           : this.retryCount,
       lastError: data.lastError.present ? data.lastError.value : this.lastError,
+      entityKey: data.entityKey.present ? data.entityKey.value : this.entityKey,
     );
   }
 
@@ -10150,14 +10338,22 @@ class SyncQueueData extends DataClass implements Insertable<SyncQueueData> {
           ..write('payload: $payload, ')
           ..write('queuedAt: $queuedAt, ')
           ..write('retryCount: $retryCount, ')
-          ..write('lastError: $lastError')
+          ..write('lastError: $lastError, ')
+          ..write('entityKey: $entityKey')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode =>
-      Object.hash(id, operationType, payload, queuedAt, retryCount, lastError);
+  int get hashCode => Object.hash(
+    id,
+    operationType,
+    payload,
+    queuedAt,
+    retryCount,
+    lastError,
+    entityKey,
+  );
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -10167,7 +10363,8 @@ class SyncQueueData extends DataClass implements Insertable<SyncQueueData> {
           other.payload == this.payload &&
           other.queuedAt == this.queuedAt &&
           other.retryCount == this.retryCount &&
-          other.lastError == this.lastError);
+          other.lastError == this.lastError &&
+          other.entityKey == this.entityKey);
 }
 
 class SyncQueueCompanion extends UpdateCompanion<SyncQueueData> {
@@ -10177,6 +10374,7 @@ class SyncQueueCompanion extends UpdateCompanion<SyncQueueData> {
   final Value<DateTime> queuedAt;
   final Value<int> retryCount;
   final Value<String?> lastError;
+  final Value<String?> entityKey;
   const SyncQueueCompanion({
     this.id = const Value.absent(),
     this.operationType = const Value.absent(),
@@ -10184,6 +10382,7 @@ class SyncQueueCompanion extends UpdateCompanion<SyncQueueData> {
     this.queuedAt = const Value.absent(),
     this.retryCount = const Value.absent(),
     this.lastError = const Value.absent(),
+    this.entityKey = const Value.absent(),
   });
   SyncQueueCompanion.insert({
     this.id = const Value.absent(),
@@ -10192,6 +10391,7 @@ class SyncQueueCompanion extends UpdateCompanion<SyncQueueData> {
     required DateTime queuedAt,
     this.retryCount = const Value.absent(),
     this.lastError = const Value.absent(),
+    this.entityKey = const Value.absent(),
   }) : operationType = Value(operationType),
        payload = Value(payload),
        queuedAt = Value(queuedAt);
@@ -10202,6 +10402,7 @@ class SyncQueueCompanion extends UpdateCompanion<SyncQueueData> {
     Expression<DateTime>? queuedAt,
     Expression<int>? retryCount,
     Expression<String>? lastError,
+    Expression<String>? entityKey,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -10210,6 +10411,7 @@ class SyncQueueCompanion extends UpdateCompanion<SyncQueueData> {
       if (queuedAt != null) 'queued_at': queuedAt,
       if (retryCount != null) 'retry_count': retryCount,
       if (lastError != null) 'last_error': lastError,
+      if (entityKey != null) 'entity_key': entityKey,
     });
   }
 
@@ -10220,6 +10422,7 @@ class SyncQueueCompanion extends UpdateCompanion<SyncQueueData> {
     Value<DateTime>? queuedAt,
     Value<int>? retryCount,
     Value<String?>? lastError,
+    Value<String?>? entityKey,
   }) {
     return SyncQueueCompanion(
       id: id ?? this.id,
@@ -10228,6 +10431,7 @@ class SyncQueueCompanion extends UpdateCompanion<SyncQueueData> {
       queuedAt: queuedAt ?? this.queuedAt,
       retryCount: retryCount ?? this.retryCount,
       lastError: lastError ?? this.lastError,
+      entityKey: entityKey ?? this.entityKey,
     );
   }
 
@@ -10252,6 +10456,9 @@ class SyncQueueCompanion extends UpdateCompanion<SyncQueueData> {
     if (lastError.present) {
       map['last_error'] = Variable<String>(lastError.value);
     }
+    if (entityKey.present) {
+      map['entity_key'] = Variable<String>(entityKey.value);
+    }
     return map;
   }
 
@@ -10263,7 +10470,8 @@ class SyncQueueCompanion extends UpdateCompanion<SyncQueueData> {
           ..write('payload: $payload, ')
           ..write('queuedAt: $queuedAt, ')
           ..write('retryCount: $retryCount, ')
-          ..write('lastError: $lastError')
+          ..write('lastError: $lastError, ')
+          ..write('entityKey: $entityKey')
           ..write(')'))
         .toString();
   }
@@ -11812,6 +12020,10 @@ abstract class _$UserDatabase extends GeneratedDatabase {
     'streak_events_natural_key',
     'CREATE UNIQUE INDEX streak_events_natural_key ON streak_events (profile_id, day_utc, event_type)',
   );
+  late final Index syncQueueEntityKey = Index(
+    'sync_queue_entity_key',
+    'CREATE UNIQUE INDEX sync_queue_entity_key ON sync_queue (entity_key)',
+  );
   late final Index outboxProfileKind = Index(
     'outbox_profile_kind',
     'CREATE INDEX outbox_profile_kind ON outbox (profile_id, entity_kind)',
@@ -11896,8 +12108,75 @@ abstract class _$UserDatabase extends GeneratedDatabase {
     learningLedgerProfileCreated,
     learningLedgerProfileUlid,
     streakEventsNaturalKey,
+    syncQueueEntityKey,
     outboxProfileKind,
   ];
+  @override
+  StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules([
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'learner_profiles',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('stage_definitions', kind: UpdateKind.delete)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'learner_profiles',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('completions', kind: UpdateKind.delete)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'learner_profiles',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('completion_events', kind: UpdateKind.delete)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'learner_profiles',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('learning_ledger', kind: UpdateKind.delete)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'curriculum_tracks',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('learning_ledger', kind: UpdateKind.update)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'learner_profiles',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('bookmarks', kind: UpdateKind.delete)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'curriculum_tracks',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('bookmarks', kind: UpdateKind.delete)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'learner_profiles',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('goals', kind: UpdateKind.delete)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'learner_profiles',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('streak_events', kind: UpdateKind.delete)],
+    ),
+  ]);
 }
 
 typedef $$AccountsTableCreateCompanionBuilder =
@@ -12191,6 +12470,167 @@ typedef $$LearnerProfilesTableUpdateCompanionBuilder =
       Value<DateTime> updatedAt,
     });
 
+final class $$LearnerProfilesTableReferences
+    extends
+        BaseReferences<_$UserDatabase, $LearnerProfilesTable, LearnerProfile> {
+  $$LearnerProfilesTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static MultiTypedResultKey<$StageDefinitionsTable, List<StageDefinition>>
+  _stageDefinitionsRefsTable(_$UserDatabase db) =>
+      MultiTypedResultKey.fromTable(
+        db.stageDefinitions,
+        aliasName: $_aliasNameGenerator(
+          db.learnerProfiles.id,
+          db.stageDefinitions.profileId,
+        ),
+      );
+
+  $$StageDefinitionsTableProcessedTableManager get stageDefinitionsRefs {
+    final manager = $$StageDefinitionsTableTableManager(
+      $_db,
+      $_db.stageDefinitions,
+    ).filter((f) => f.profileId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _stageDefinitionsRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<$CompletionsTable, List<Completion>>
+  _completionsRefsTable(_$UserDatabase db) => MultiTypedResultKey.fromTable(
+    db.completions,
+    aliasName: $_aliasNameGenerator(
+      db.learnerProfiles.id,
+      db.completions.profileId,
+    ),
+  );
+
+  $$CompletionsTableProcessedTableManager get completionsRefs {
+    final manager = $$CompletionsTableTableManager(
+      $_db,
+      $_db.completions,
+    ).filter((f) => f.profileId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_completionsRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<$CompletionEventsTable, List<CompletionEvent>>
+  _completionEventsRefsTable(_$UserDatabase db) =>
+      MultiTypedResultKey.fromTable(
+        db.completionEvents,
+        aliasName: $_aliasNameGenerator(
+          db.learnerProfiles.id,
+          db.completionEvents.profileId,
+        ),
+      );
+
+  $$CompletionEventsTableProcessedTableManager get completionEventsRefs {
+    final manager = $$CompletionEventsTableTableManager(
+      $_db,
+      $_db.completionEvents,
+    ).filter((f) => f.profileId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _completionEventsRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<$LearningLedgerTable, List<LearningLedgerData>>
+  _learningLedgerRefsTable(_$UserDatabase db) => MultiTypedResultKey.fromTable(
+    db.learningLedger,
+    aliasName: $_aliasNameGenerator(
+      db.learnerProfiles.id,
+      db.learningLedger.profileId,
+    ),
+  );
+
+  $$LearningLedgerTableProcessedTableManager get learningLedgerRefs {
+    final manager = $$LearningLedgerTableTableManager(
+      $_db,
+      $_db.learningLedger,
+    ).filter((f) => f.profileId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_learningLedgerRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<$BookmarksTable, List<Bookmark>>
+  _bookmarksRefsTable(_$UserDatabase db) => MultiTypedResultKey.fromTable(
+    db.bookmarks,
+    aliasName: $_aliasNameGenerator(
+      db.learnerProfiles.id,
+      db.bookmarks.profileId,
+    ),
+  );
+
+  $$BookmarksTableProcessedTableManager get bookmarksRefs {
+    final manager = $$BookmarksTableTableManager(
+      $_db,
+      $_db.bookmarks,
+    ).filter((f) => f.profileId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_bookmarksRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<$GoalsTable, List<Goal>> _goalsRefsTable(
+    _$UserDatabase db,
+  ) => MultiTypedResultKey.fromTable(
+    db.goals,
+    aliasName: $_aliasNameGenerator(db.learnerProfiles.id, db.goals.profileId),
+  );
+
+  $$GoalsTableProcessedTableManager get goalsRefs {
+    final manager = $$GoalsTableTableManager(
+      $_db,
+      $_db.goals,
+    ).filter((f) => f.profileId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_goalsRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<$StreakEventsTable, List<StreakEvent>>
+  _streakEventsRefsTable(_$UserDatabase db) => MultiTypedResultKey.fromTable(
+    db.streakEvents,
+    aliasName: $_aliasNameGenerator(
+      db.learnerProfiles.id,
+      db.streakEvents.profileId,
+    ),
+  );
+
+  $$StreakEventsTableProcessedTableManager get streakEventsRefs {
+    final manager = $$StreakEventsTableTableManager(
+      $_db,
+      $_db.streakEvents,
+    ).filter((f) => f.profileId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_streakEventsRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+}
+
 class $$LearnerProfilesTableFilterComposer
     extends Composer<_$UserDatabase, $LearnerProfilesTable> {
   $$LearnerProfilesTableFilterComposer({
@@ -12234,6 +12674,181 @@ class $$LearnerProfilesTableFilterComposer
     column: $table.updatedAt,
     builder: (column) => ColumnFilters(column),
   );
+
+  Expression<bool> stageDefinitionsRefs(
+    Expression<bool> Function($$StageDefinitionsTableFilterComposer f) f,
+  ) {
+    final $$StageDefinitionsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.stageDefinitions,
+      getReferencedColumn: (t) => t.profileId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$StageDefinitionsTableFilterComposer(
+            $db: $db,
+            $table: $db.stageDefinitions,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> completionsRefs(
+    Expression<bool> Function($$CompletionsTableFilterComposer f) f,
+  ) {
+    final $$CompletionsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.completions,
+      getReferencedColumn: (t) => t.profileId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$CompletionsTableFilterComposer(
+            $db: $db,
+            $table: $db.completions,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> completionEventsRefs(
+    Expression<bool> Function($$CompletionEventsTableFilterComposer f) f,
+  ) {
+    final $$CompletionEventsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.completionEvents,
+      getReferencedColumn: (t) => t.profileId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$CompletionEventsTableFilterComposer(
+            $db: $db,
+            $table: $db.completionEvents,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> learningLedgerRefs(
+    Expression<bool> Function($$LearningLedgerTableFilterComposer f) f,
+  ) {
+    final $$LearningLedgerTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.learningLedger,
+      getReferencedColumn: (t) => t.profileId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$LearningLedgerTableFilterComposer(
+            $db: $db,
+            $table: $db.learningLedger,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> bookmarksRefs(
+    Expression<bool> Function($$BookmarksTableFilterComposer f) f,
+  ) {
+    final $$BookmarksTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.bookmarks,
+      getReferencedColumn: (t) => t.profileId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$BookmarksTableFilterComposer(
+            $db: $db,
+            $table: $db.bookmarks,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> goalsRefs(
+    Expression<bool> Function($$GoalsTableFilterComposer f) f,
+  ) {
+    final $$GoalsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.goals,
+      getReferencedColumn: (t) => t.profileId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$GoalsTableFilterComposer(
+            $db: $db,
+            $table: $db.goals,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> streakEventsRefs(
+    Expression<bool> Function($$StreakEventsTableFilterComposer f) f,
+  ) {
+    final $$StreakEventsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.streakEvents,
+      getReferencedColumn: (t) => t.profileId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$StreakEventsTableFilterComposer(
+            $db: $db,
+            $table: $db.streakEvents,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
 }
 
 class $$LearnerProfilesTableOrderingComposer
@@ -12314,6 +12929,181 @@ class $$LearnerProfilesTableAnnotationComposer
 
   GeneratedColumn<DateTime> get updatedAt =>
       $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  Expression<T> stageDefinitionsRefs<T extends Object>(
+    Expression<T> Function($$StageDefinitionsTableAnnotationComposer a) f,
+  ) {
+    final $$StageDefinitionsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.stageDefinitions,
+      getReferencedColumn: (t) => t.profileId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$StageDefinitionsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.stageDefinitions,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<T> completionsRefs<T extends Object>(
+    Expression<T> Function($$CompletionsTableAnnotationComposer a) f,
+  ) {
+    final $$CompletionsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.completions,
+      getReferencedColumn: (t) => t.profileId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$CompletionsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.completions,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<T> completionEventsRefs<T extends Object>(
+    Expression<T> Function($$CompletionEventsTableAnnotationComposer a) f,
+  ) {
+    final $$CompletionEventsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.completionEvents,
+      getReferencedColumn: (t) => t.profileId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$CompletionEventsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.completionEvents,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<T> learningLedgerRefs<T extends Object>(
+    Expression<T> Function($$LearningLedgerTableAnnotationComposer a) f,
+  ) {
+    final $$LearningLedgerTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.learningLedger,
+      getReferencedColumn: (t) => t.profileId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$LearningLedgerTableAnnotationComposer(
+            $db: $db,
+            $table: $db.learningLedger,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<T> bookmarksRefs<T extends Object>(
+    Expression<T> Function($$BookmarksTableAnnotationComposer a) f,
+  ) {
+    final $$BookmarksTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.bookmarks,
+      getReferencedColumn: (t) => t.profileId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$BookmarksTableAnnotationComposer(
+            $db: $db,
+            $table: $db.bookmarks,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<T> goalsRefs<T extends Object>(
+    Expression<T> Function($$GoalsTableAnnotationComposer a) f,
+  ) {
+    final $$GoalsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.goals,
+      getReferencedColumn: (t) => t.profileId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$GoalsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.goals,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<T> streakEventsRefs<T extends Object>(
+    Expression<T> Function($$StreakEventsTableAnnotationComposer a) f,
+  ) {
+    final $$StreakEventsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.streakEvents,
+      getReferencedColumn: (t) => t.profileId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$StreakEventsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.streakEvents,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
 }
 
 class $$LearnerProfilesTableTableManager
@@ -12327,16 +13117,17 @@ class $$LearnerProfilesTableTableManager
           $$LearnerProfilesTableAnnotationComposer,
           $$LearnerProfilesTableCreateCompanionBuilder,
           $$LearnerProfilesTableUpdateCompanionBuilder,
-          (
-            LearnerProfile,
-            BaseReferences<
-              _$UserDatabase,
-              $LearnerProfilesTable,
-              LearnerProfile
-            >,
-          ),
+          (LearnerProfile, $$LearnerProfilesTableReferences),
           LearnerProfile,
-          PrefetchHooks Function()
+          PrefetchHooks Function({
+            bool stageDefinitionsRefs,
+            bool completionsRefs,
+            bool completionEventsRefs,
+            bool learningLedgerRefs,
+            bool bookmarksRefs,
+            bool goalsRefs,
+            bool streakEventsRefs,
+          })
         > {
   $$LearnerProfilesTableTableManager(
     _$UserDatabase db,
@@ -12388,9 +13179,188 @@ class $$LearnerProfilesTableTableManager
                 updatedAt: updatedAt,
               ),
           withReferenceMapper: (p0) => p0
-              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$LearnerProfilesTableReferences(db, table, e),
+                ),
+              )
               .toList(),
-          prefetchHooksCallback: null,
+          prefetchHooksCallback:
+              ({
+                stageDefinitionsRefs = false,
+                completionsRefs = false,
+                completionEventsRefs = false,
+                learningLedgerRefs = false,
+                bookmarksRefs = false,
+                goalsRefs = false,
+                streakEventsRefs = false,
+              }) {
+                return PrefetchHooks(
+                  db: db,
+                  explicitlyWatchedTables: [
+                    if (stageDefinitionsRefs) db.stageDefinitions,
+                    if (completionsRefs) db.completions,
+                    if (completionEventsRefs) db.completionEvents,
+                    if (learningLedgerRefs) db.learningLedger,
+                    if (bookmarksRefs) db.bookmarks,
+                    if (goalsRefs) db.goals,
+                    if (streakEventsRefs) db.streakEvents,
+                  ],
+                  addJoins: null,
+                  getPrefetchedDataCallback: (items) async {
+                    return [
+                      if (stageDefinitionsRefs)
+                        await $_getPrefetchedData<
+                          LearnerProfile,
+                          $LearnerProfilesTable,
+                          StageDefinition
+                        >(
+                          currentTable: table,
+                          referencedTable: $$LearnerProfilesTableReferences
+                              ._stageDefinitionsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$LearnerProfilesTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).stageDefinitionsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.profileId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                      if (completionsRefs)
+                        await $_getPrefetchedData<
+                          LearnerProfile,
+                          $LearnerProfilesTable,
+                          Completion
+                        >(
+                          currentTable: table,
+                          referencedTable: $$LearnerProfilesTableReferences
+                              ._completionsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$LearnerProfilesTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).completionsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.profileId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                      if (completionEventsRefs)
+                        await $_getPrefetchedData<
+                          LearnerProfile,
+                          $LearnerProfilesTable,
+                          CompletionEvent
+                        >(
+                          currentTable: table,
+                          referencedTable: $$LearnerProfilesTableReferences
+                              ._completionEventsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$LearnerProfilesTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).completionEventsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.profileId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                      if (learningLedgerRefs)
+                        await $_getPrefetchedData<
+                          LearnerProfile,
+                          $LearnerProfilesTable,
+                          LearningLedgerData
+                        >(
+                          currentTable: table,
+                          referencedTable: $$LearnerProfilesTableReferences
+                              ._learningLedgerRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$LearnerProfilesTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).learningLedgerRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.profileId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                      if (bookmarksRefs)
+                        await $_getPrefetchedData<
+                          LearnerProfile,
+                          $LearnerProfilesTable,
+                          Bookmark
+                        >(
+                          currentTable: table,
+                          referencedTable: $$LearnerProfilesTableReferences
+                              ._bookmarksRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$LearnerProfilesTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).bookmarksRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.profileId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                      if (goalsRefs)
+                        await $_getPrefetchedData<
+                          LearnerProfile,
+                          $LearnerProfilesTable,
+                          Goal
+                        >(
+                          currentTable: table,
+                          referencedTable: $$LearnerProfilesTableReferences
+                              ._goalsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$LearnerProfilesTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).goalsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.profileId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                      if (streakEventsRefs)
+                        await $_getPrefetchedData<
+                          LearnerProfile,
+                          $LearnerProfilesTable,
+                          StreakEvent
+                        >(
+                          currentTable: table,
+                          referencedTable: $$LearnerProfilesTableReferences
+                              ._streakEventsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$LearnerProfilesTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).streakEventsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.profileId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                    ];
+                  },
+                );
+              },
         ),
       );
 }
@@ -12405,12 +13375,17 @@ typedef $$LearnerProfilesTableProcessedTableManager =
       $$LearnerProfilesTableAnnotationComposer,
       $$LearnerProfilesTableCreateCompanionBuilder,
       $$LearnerProfilesTableUpdateCompanionBuilder,
-      (
-        LearnerProfile,
-        BaseReferences<_$UserDatabase, $LearnerProfilesTable, LearnerProfile>,
-      ),
+      (LearnerProfile, $$LearnerProfilesTableReferences),
       LearnerProfile,
-      PrefetchHooks Function()
+      PrefetchHooks Function({
+        bool stageDefinitionsRefs,
+        bool completionsRefs,
+        bool completionEventsRefs,
+        bool learningLedgerRefs,
+        bool bookmarksRefs,
+        bool goalsRefs,
+        bool streakEventsRefs,
+      })
     >;
 typedef $$CurriculumTracksTableCreateCompanionBuilder =
     CurriculumTracksCompanion Function({
@@ -14134,6 +15109,28 @@ final class $$StageDefinitionsTableReferences
     super.$_typedResult,
   );
 
+  static $LearnerProfilesTable _profileIdTable(_$UserDatabase db) =>
+      db.learnerProfiles.createAlias(
+        $_aliasNameGenerator(
+          db.stageDefinitions.profileId,
+          db.learnerProfiles.id,
+        ),
+      );
+
+  $$LearnerProfilesTableProcessedTableManager get profileId {
+    final $_column = $_itemColumn<int>('profile_id')!;
+
+    final manager = $$LearnerProfilesTableTableManager(
+      $_db,
+      $_db.learnerProfiles,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_profileIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
   static $CurriculumTracksTable _trackIdTable(_$UserDatabase db) =>
       db.curriculumTracks.createAlias(
         $_aliasNameGenerator(
@@ -14168,11 +15165,6 @@ class $$StageDefinitionsTableFilterComposer
   });
   ColumnFilters<int> get id => $composableBuilder(
     column: $table.id,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<int> get profileId => $composableBuilder(
-    column: $table.profileId,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -14216,6 +15208,29 @@ class $$StageDefinitionsTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
+  $$LearnerProfilesTableFilterComposer get profileId {
+    final $$LearnerProfilesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.profileId,
+      referencedTable: $db.learnerProfiles,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$LearnerProfilesTableFilterComposer(
+            $db: $db,
+            $table: $db.learnerProfiles,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
   $$CurriculumTracksTableFilterComposer get trackId {
     final $$CurriculumTracksTableFilterComposer composer = $composerBuilder(
       composer: this,
@@ -14251,11 +15266,6 @@ class $$StageDefinitionsTableOrderingComposer
   });
   ColumnOrderings<int> get id => $composableBuilder(
     column: $table.id,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<int> get profileId => $composableBuilder(
-    column: $table.profileId,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -14299,6 +15309,29 @@ class $$StageDefinitionsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  $$LearnerProfilesTableOrderingComposer get profileId {
+    final $$LearnerProfilesTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.profileId,
+      referencedTable: $db.learnerProfiles,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$LearnerProfilesTableOrderingComposer(
+            $db: $db,
+            $table: $db.learnerProfiles,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
   $$CurriculumTracksTableOrderingComposer get trackId {
     final $$CurriculumTracksTableOrderingComposer composer = $composerBuilder(
       composer: this,
@@ -14335,9 +15368,6 @@ class $$StageDefinitionsTableAnnotationComposer
   GeneratedColumn<int> get id =>
       $composableBuilder(column: $table.id, builder: (column) => column);
 
-  GeneratedColumn<int> get profileId =>
-      $composableBuilder(column: $table.profileId, builder: (column) => column);
-
   GeneratedColumn<String> get curriculumId => $composableBuilder(
     column: $table.curriculumId,
     builder: (column) => column,
@@ -14371,6 +15401,29 @@ class $$StageDefinitionsTableAnnotationComposer
     column: $table.rollingWindowSize,
     builder: (column) => column,
   );
+
+  $$LearnerProfilesTableAnnotationComposer get profileId {
+    final $$LearnerProfilesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.profileId,
+      referencedTable: $db.learnerProfiles,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$LearnerProfilesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.learnerProfiles,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
 
   $$CurriculumTracksTableAnnotationComposer get trackId {
     final $$CurriculumTracksTableAnnotationComposer composer = $composerBuilder(
@@ -14409,7 +15462,7 @@ class $$StageDefinitionsTableTableManager
           $$StageDefinitionsTableUpdateCompanionBuilder,
           (StageDefinition, $$StageDefinitionsTableReferences),
           StageDefinition,
-          PrefetchHooks Function({bool trackId})
+          PrefetchHooks Function({bool profileId, bool trackId})
         > {
   $$StageDefinitionsTableTableManager(
     _$UserDatabase db,
@@ -14484,7 +15537,7 @@ class $$StageDefinitionsTableTableManager
                 ),
               )
               .toList(),
-          prefetchHooksCallback: ({trackId = false}) {
+          prefetchHooksCallback: ({profileId = false, trackId = false}) {
             return PrefetchHooks(
               db: db,
               explicitlyWatchedTables: [],
@@ -14504,6 +15557,21 @@ class $$StageDefinitionsTableTableManager
                       dynamic
                     >
                   >(state) {
+                    if (profileId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.profileId,
+                                referencedTable:
+                                    $$StageDefinitionsTableReferences
+                                        ._profileIdTable(db),
+                                referencedColumn:
+                                    $$StageDefinitionsTableReferences
+                                        ._profileIdTable(db)
+                                        .id,
+                              )
+                              as T;
+                    }
                     if (trackId) {
                       state =
                           state.withJoin(
@@ -14543,7 +15611,7 @@ typedef $$StageDefinitionsTableProcessedTableManager =
       $$StageDefinitionsTableUpdateCompanionBuilder,
       (StageDefinition, $$StageDefinitionsTableReferences),
       StageDefinition,
-      PrefetchHooks Function({bool trackId})
+      PrefetchHooks Function({bool profileId, bool trackId})
     >;
 typedef $$PointConfigsTableCreateCompanionBuilder =
     PointConfigsCompanion Function({
@@ -15244,6 +16312,7 @@ typedef $$CompletionsTableCreateCompanionBuilder =
       required int trackId,
       required DateTime completedAt,
       Value<int> points,
+      Value<bool> derivedFromEvents,
     });
 typedef $$CompletionsTableUpdateCompanionBuilder =
     CompletionsCompanion Function({
@@ -15256,11 +16325,31 @@ typedef $$CompletionsTableUpdateCompanionBuilder =
       Value<int> trackId,
       Value<DateTime> completedAt,
       Value<int> points,
+      Value<bool> derivedFromEvents,
     });
 
 final class $$CompletionsTableReferences
     extends BaseReferences<_$UserDatabase, $CompletionsTable, Completion> {
   $$CompletionsTableReferences(super.$_db, super.$_table, super.$_typedResult);
+
+  static $LearnerProfilesTable _profileIdTable(_$UserDatabase db) =>
+      db.learnerProfiles.createAlias(
+        $_aliasNameGenerator(db.completions.profileId, db.learnerProfiles.id),
+      );
+
+  $$LearnerProfilesTableProcessedTableManager get profileId {
+    final $_column = $_itemColumn<int>('profile_id')!;
+
+    final manager = $$LearnerProfilesTableTableManager(
+      $_db,
+      $_db.learnerProfiles,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_profileIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
 
   static $CurriculumTracksTable _trackIdTable(_$UserDatabase db) =>
       db.curriculumTracks.createAlias(
@@ -15296,11 +16385,6 @@ class $$CompletionsTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<int> get profileId => $composableBuilder(
-    column: $table.profileId,
-    builder: (column) => ColumnFilters(column),
-  );
-
   ColumnFilters<String> get curriculumId => $composableBuilder(
     column: $table.curriculumId,
     builder: (column) => ColumnFilters(column),
@@ -15330,6 +16414,34 @@ class $$CompletionsTableFilterComposer
     column: $table.points,
     builder: (column) => ColumnFilters(column),
   );
+
+  ColumnFilters<bool> get derivedFromEvents => $composableBuilder(
+    column: $table.derivedFromEvents,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$LearnerProfilesTableFilterComposer get profileId {
+    final $$LearnerProfilesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.profileId,
+      referencedTable: $db.learnerProfiles,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$LearnerProfilesTableFilterComposer(
+            $db: $db,
+            $table: $db.learnerProfiles,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
 
   $$CurriculumTracksTableFilterComposer get trackId {
     final $$CurriculumTracksTableFilterComposer composer = $composerBuilder(
@@ -15369,11 +16481,6 @@ class $$CompletionsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<int> get profileId => $composableBuilder(
-    column: $table.profileId,
-    builder: (column) => ColumnOrderings(column),
-  );
-
   ColumnOrderings<String> get curriculumId => $composableBuilder(
     column: $table.curriculumId,
     builder: (column) => ColumnOrderings(column),
@@ -15403,6 +16510,34 @@ class $$CompletionsTableOrderingComposer
     column: $table.points,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<bool> get derivedFromEvents => $composableBuilder(
+    column: $table.derivedFromEvents,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$LearnerProfilesTableOrderingComposer get profileId {
+    final $$LearnerProfilesTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.profileId,
+      referencedTable: $db.learnerProfiles,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$LearnerProfilesTableOrderingComposer(
+            $db: $db,
+            $table: $db.learnerProfiles,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
 
   $$CurriculumTracksTableOrderingComposer get trackId {
     final $$CurriculumTracksTableOrderingComposer composer = $composerBuilder(
@@ -15440,9 +16575,6 @@ class $$CompletionsTableAnnotationComposer
   GeneratedColumn<int> get id =>
       $composableBuilder(column: $table.id, builder: (column) => column);
 
-  GeneratedColumn<int> get profileId =>
-      $composableBuilder(column: $table.profileId, builder: (column) => column);
-
   GeneratedColumn<String> get curriculumId => $composableBuilder(
     column: $table.curriculumId,
     builder: (column) => column,
@@ -15466,6 +16598,34 @@ class $$CompletionsTableAnnotationComposer
 
   GeneratedColumn<int> get points =>
       $composableBuilder(column: $table.points, builder: (column) => column);
+
+  GeneratedColumn<bool> get derivedFromEvents => $composableBuilder(
+    column: $table.derivedFromEvents,
+    builder: (column) => column,
+  );
+
+  $$LearnerProfilesTableAnnotationComposer get profileId {
+    final $$LearnerProfilesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.profileId,
+      referencedTable: $db.learnerProfiles,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$LearnerProfilesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.learnerProfiles,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
 
   $$CurriculumTracksTableAnnotationComposer get trackId {
     final $$CurriculumTracksTableAnnotationComposer composer = $composerBuilder(
@@ -15504,7 +16664,7 @@ class $$CompletionsTableTableManager
           $$CompletionsTableUpdateCompanionBuilder,
           (Completion, $$CompletionsTableReferences),
           Completion,
-          PrefetchHooks Function({bool trackId})
+          PrefetchHooks Function({bool profileId, bool trackId})
         > {
   $$CompletionsTableTableManager(_$UserDatabase db, $CompletionsTable table)
     : super(
@@ -15528,6 +16688,7 @@ class $$CompletionsTableTableManager
                 Value<int> trackId = const Value.absent(),
                 Value<DateTime> completedAt = const Value.absent(),
                 Value<int> points = const Value.absent(),
+                Value<bool> derivedFromEvents = const Value.absent(),
               }) => CompletionsCompanion(
                 id: id,
                 profileId: profileId,
@@ -15538,6 +16699,7 @@ class $$CompletionsTableTableManager
                 trackId: trackId,
                 completedAt: completedAt,
                 points: points,
+                derivedFromEvents: derivedFromEvents,
               ),
           createCompanionCallback:
               ({
@@ -15550,6 +16712,7 @@ class $$CompletionsTableTableManager
                 required int trackId,
                 required DateTime completedAt,
                 Value<int> points = const Value.absent(),
+                Value<bool> derivedFromEvents = const Value.absent(),
               }) => CompletionsCompanion.insert(
                 id: id,
                 profileId: profileId,
@@ -15560,6 +16723,7 @@ class $$CompletionsTableTableManager
                 trackId: trackId,
                 completedAt: completedAt,
                 points: points,
+                derivedFromEvents: derivedFromEvents,
               ),
           withReferenceMapper: (p0) => p0
               .map(
@@ -15569,7 +16733,7 @@ class $$CompletionsTableTableManager
                 ),
               )
               .toList(),
-          prefetchHooksCallback: ({trackId = false}) {
+          prefetchHooksCallback: ({profileId = false, trackId = false}) {
             return PrefetchHooks(
               db: db,
               explicitlyWatchedTables: [],
@@ -15589,6 +16753,19 @@ class $$CompletionsTableTableManager
                       dynamic
                     >
                   >(state) {
+                    if (profileId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.profileId,
+                                referencedTable: $$CompletionsTableReferences
+                                    ._profileIdTable(db),
+                                referencedColumn: $$CompletionsTableReferences
+                                    ._profileIdTable(db)
+                                    .id,
+                              )
+                              as T;
+                    }
                     if (trackId) {
                       state =
                           state.withJoin(
@@ -15626,7 +16803,7 @@ typedef $$CompletionsTableProcessedTableManager =
       $$CompletionsTableUpdateCompanionBuilder,
       (Completion, $$CompletionsTableReferences),
       Completion,
-      PrefetchHooks Function({bool trackId})
+      PrefetchHooks Function({bool profileId, bool trackId})
     >;
 typedef $$CompletionEventsTableCreateCompanionBuilder =
     CompletionEventsCompanion Function({
@@ -15638,6 +16815,7 @@ typedef $$CompletionEventsTableCreateCompanionBuilder =
       required String trackType,
       required DateTime eventTimestamp,
       Value<DateTime> createdAt,
+      Value<DateTime?> purgedAt,
     });
 typedef $$CompletionEventsTableUpdateCompanionBuilder =
     CompletionEventsCompanion Function({
@@ -15649,7 +16827,44 @@ typedef $$CompletionEventsTableUpdateCompanionBuilder =
       Value<String> trackType,
       Value<DateTime> eventTimestamp,
       Value<DateTime> createdAt,
+      Value<DateTime?> purgedAt,
     });
+
+final class $$CompletionEventsTableReferences
+    extends
+        BaseReferences<
+          _$UserDatabase,
+          $CompletionEventsTable,
+          CompletionEvent
+        > {
+  $$CompletionEventsTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static $LearnerProfilesTable _profileIdTable(_$UserDatabase db) =>
+      db.learnerProfiles.createAlias(
+        $_aliasNameGenerator(
+          db.completionEvents.profileId,
+          db.learnerProfiles.id,
+        ),
+      );
+
+  $$LearnerProfilesTableProcessedTableManager get profileId {
+    final $_column = $_itemColumn<int>('profile_id')!;
+
+    final manager = $$LearnerProfilesTableTableManager(
+      $_db,
+      $_db.learnerProfiles,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_profileIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
 
 class $$CompletionEventsTableFilterComposer
     extends Composer<_$UserDatabase, $CompletionEventsTable> {
@@ -15662,11 +16877,6 @@ class $$CompletionEventsTableFilterComposer
   });
   ColumnFilters<int> get id => $composableBuilder(
     column: $table.id,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<int> get profileId => $composableBuilder(
-    column: $table.profileId,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -15699,6 +16909,34 @@ class $$CompletionEventsTableFilterComposer
     column: $table.createdAt,
     builder: (column) => ColumnFilters(column),
   );
+
+  ColumnFilters<DateTime> get purgedAt => $composableBuilder(
+    column: $table.purgedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$LearnerProfilesTableFilterComposer get profileId {
+    final $$LearnerProfilesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.profileId,
+      referencedTable: $db.learnerProfiles,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$LearnerProfilesTableFilterComposer(
+            $db: $db,
+            $table: $db.learnerProfiles,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
 }
 
 class $$CompletionEventsTableOrderingComposer
@@ -15712,11 +16950,6 @@ class $$CompletionEventsTableOrderingComposer
   });
   ColumnOrderings<int> get id => $composableBuilder(
     column: $table.id,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<int> get profileId => $composableBuilder(
-    column: $table.profileId,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -15749,6 +16982,34 @@ class $$CompletionEventsTableOrderingComposer
     column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<DateTime> get purgedAt => $composableBuilder(
+    column: $table.purgedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$LearnerProfilesTableOrderingComposer get profileId {
+    final $$LearnerProfilesTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.profileId,
+      referencedTable: $db.learnerProfiles,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$LearnerProfilesTableOrderingComposer(
+            $db: $db,
+            $table: $db.learnerProfiles,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
 }
 
 class $$CompletionEventsTableAnnotationComposer
@@ -15762,9 +17023,6 @@ class $$CompletionEventsTableAnnotationComposer
   });
   GeneratedColumn<int> get id =>
       $composableBuilder(column: $table.id, builder: (column) => column);
-
-  GeneratedColumn<int> get profileId =>
-      $composableBuilder(column: $table.profileId, builder: (column) => column);
 
   GeneratedColumn<String> get curriculumId => $composableBuilder(
     column: $table.curriculumId,
@@ -15789,6 +17047,32 @@ class $$CompletionEventsTableAnnotationComposer
 
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get purgedAt =>
+      $composableBuilder(column: $table.purgedAt, builder: (column) => column);
+
+  $$LearnerProfilesTableAnnotationComposer get profileId {
+    final $$LearnerProfilesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.profileId,
+      referencedTable: $db.learnerProfiles,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$LearnerProfilesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.learnerProfiles,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
 }
 
 class $$CompletionEventsTableTableManager
@@ -15802,16 +17086,9 @@ class $$CompletionEventsTableTableManager
           $$CompletionEventsTableAnnotationComposer,
           $$CompletionEventsTableCreateCompanionBuilder,
           $$CompletionEventsTableUpdateCompanionBuilder,
-          (
-            CompletionEvent,
-            BaseReferences<
-              _$UserDatabase,
-              $CompletionEventsTable,
-              CompletionEvent
-            >,
-          ),
+          (CompletionEvent, $$CompletionEventsTableReferences),
           CompletionEvent,
-          PrefetchHooks Function()
+          PrefetchHooks Function({bool profileId})
         > {
   $$CompletionEventsTableTableManager(
     _$UserDatabase db,
@@ -15836,6 +17113,7 @@ class $$CompletionEventsTableTableManager
                 Value<String> trackType = const Value.absent(),
                 Value<DateTime> eventTimestamp = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
+                Value<DateTime?> purgedAt = const Value.absent(),
               }) => CompletionEventsCompanion(
                 id: id,
                 profileId: profileId,
@@ -15845,6 +17123,7 @@ class $$CompletionEventsTableTableManager
                 trackType: trackType,
                 eventTimestamp: eventTimestamp,
                 createdAt: createdAt,
+                purgedAt: purgedAt,
               ),
           createCompanionCallback:
               ({
@@ -15856,6 +17135,7 @@ class $$CompletionEventsTableTableManager
                 required String trackType,
                 required DateTime eventTimestamp,
                 Value<DateTime> createdAt = const Value.absent(),
+                Value<DateTime?> purgedAt = const Value.absent(),
               }) => CompletionEventsCompanion.insert(
                 id: id,
                 profileId: profileId,
@@ -15865,11 +17145,59 @@ class $$CompletionEventsTableTableManager
                 trackType: trackType,
                 eventTimestamp: eventTimestamp,
                 createdAt: createdAt,
+                purgedAt: purgedAt,
               ),
           withReferenceMapper: (p0) => p0
-              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$CompletionEventsTableReferences(db, table, e),
+                ),
+              )
               .toList(),
-          prefetchHooksCallback: null,
+          prefetchHooksCallback: ({profileId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (profileId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.profileId,
+                                referencedTable:
+                                    $$CompletionEventsTableReferences
+                                        ._profileIdTable(db),
+                                referencedColumn:
+                                    $$CompletionEventsTableReferences
+                                        ._profileIdTable(db)
+                                        .id,
+                              )
+                              as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
         ),
       );
 }
@@ -15884,12 +17212,9 @@ typedef $$CompletionEventsTableProcessedTableManager =
       $$CompletionEventsTableAnnotationComposer,
       $$CompletionEventsTableCreateCompanionBuilder,
       $$CompletionEventsTableUpdateCompanionBuilder,
-      (
-        CompletionEvent,
-        BaseReferences<_$UserDatabase, $CompletionEventsTable, CompletionEvent>,
-      ),
+      (CompletionEvent, $$CompletionEventsTableReferences),
       CompletionEvent,
-      PrefetchHooks Function()
+      PrefetchHooks Function({bool profileId})
     >;
 typedef $$DailyPlansTableCreateCompanionBuilder =
     DailyPlansCompanion Function({
@@ -16353,6 +17678,28 @@ final class $$LearningLedgerTableReferences
     super.$_typedResult,
   );
 
+  static $LearnerProfilesTable _profileIdTable(_$UserDatabase db) =>
+      db.learnerProfiles.createAlias(
+        $_aliasNameGenerator(
+          db.learningLedger.profileId,
+          db.learnerProfiles.id,
+        ),
+      );
+
+  $$LearnerProfilesTableProcessedTableManager get profileId {
+    final $_column = $_itemColumn<int>('profile_id')!;
+
+    final manager = $$LearnerProfilesTableTableManager(
+      $_db,
+      $_db.learnerProfiles,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_profileIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
   static $CurriculumTracksTable _trackIdTable(_$UserDatabase db) =>
       db.curriculumTracks.createAlias(
         $_aliasNameGenerator(db.learningLedger.trackId, db.curriculumTracks.id),
@@ -16384,11 +17731,6 @@ class $$LearningLedgerTableFilterComposer
   });
   ColumnFilters<int> get id => $composableBuilder(
     column: $table.id,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<int> get profileId => $composableBuilder(
-    column: $table.profileId,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -16452,6 +17794,29 @@ class $$LearningLedgerTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
+  $$LearnerProfilesTableFilterComposer get profileId {
+    final $$LearnerProfilesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.profileId,
+      referencedTable: $db.learnerProfiles,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$LearnerProfilesTableFilterComposer(
+            $db: $db,
+            $table: $db.learnerProfiles,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
   $$CurriculumTracksTableFilterComposer get trackId {
     final $$CurriculumTracksTableFilterComposer composer = $composerBuilder(
       composer: this,
@@ -16487,11 +17852,6 @@ class $$LearningLedgerTableOrderingComposer
   });
   ColumnOrderings<int> get id => $composableBuilder(
     column: $table.id,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<int> get profileId => $composableBuilder(
-    column: $table.profileId,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -16555,6 +17915,29 @@ class $$LearningLedgerTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  $$LearnerProfilesTableOrderingComposer get profileId {
+    final $$LearnerProfilesTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.profileId,
+      referencedTable: $db.learnerProfiles,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$LearnerProfilesTableOrderingComposer(
+            $db: $db,
+            $table: $db.learnerProfiles,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
   $$CurriculumTracksTableOrderingComposer get trackId {
     final $$CurriculumTracksTableOrderingComposer composer = $composerBuilder(
       composer: this,
@@ -16590,9 +17973,6 @@ class $$LearningLedgerTableAnnotationComposer
   });
   GeneratedColumn<int> get id =>
       $composableBuilder(column: $table.id, builder: (column) => column);
-
-  GeneratedColumn<int> get profileId =>
-      $composableBuilder(column: $table.profileId, builder: (column) => column);
 
   GeneratedColumn<String> get ulid =>
       $composableBuilder(column: $table.ulid, builder: (column) => column);
@@ -16644,6 +18024,29 @@ class $$LearningLedgerTableAnnotationComposer
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
 
+  $$LearnerProfilesTableAnnotationComposer get profileId {
+    final $$LearnerProfilesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.profileId,
+      referencedTable: $db.learnerProfiles,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$LearnerProfilesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.learnerProfiles,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
   $$CurriculumTracksTableAnnotationComposer get trackId {
     final $$CurriculumTracksTableAnnotationComposer composer = $composerBuilder(
       composer: this,
@@ -16681,7 +18084,7 @@ class $$LearningLedgerTableTableManager
           $$LearningLedgerTableUpdateCompanionBuilder,
           (LearningLedgerData, $$LearningLedgerTableReferences),
           LearningLedgerData,
-          PrefetchHooks Function({bool trackId})
+          PrefetchHooks Function({bool profileId, bool trackId})
         > {
   $$LearningLedgerTableTableManager(
     _$UserDatabase db,
@@ -16772,7 +18175,7 @@ class $$LearningLedgerTableTableManager
                 ),
               )
               .toList(),
-          prefetchHooksCallback: ({trackId = false}) {
+          prefetchHooksCallback: ({profileId = false, trackId = false}) {
             return PrefetchHooks(
               db: db,
               explicitlyWatchedTables: [],
@@ -16792,6 +18195,20 @@ class $$LearningLedgerTableTableManager
                       dynamic
                     >
                   >(state) {
+                    if (profileId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.profileId,
+                                referencedTable: $$LearningLedgerTableReferences
+                                    ._profileIdTable(db),
+                                referencedColumn:
+                                    $$LearningLedgerTableReferences
+                                        ._profileIdTable(db)
+                                        .id,
+                              )
+                              as T;
+                    }
                     if (trackId) {
                       state =
                           state.withJoin(
@@ -16830,7 +18247,7 @@ typedef $$LearningLedgerTableProcessedTableManager =
       $$LearningLedgerTableUpdateCompanionBuilder,
       (LearningLedgerData, $$LearningLedgerTableReferences),
       LearningLedgerData,
-      PrefetchHooks Function({bool trackId})
+      PrefetchHooks Function({bool profileId, bool trackId})
     >;
 typedef $$BookmarksTableCreateCompanionBuilder =
     BookmarksCompanion Function({
@@ -16854,6 +18271,25 @@ typedef $$BookmarksTableUpdateCompanionBuilder =
 final class $$BookmarksTableReferences
     extends BaseReferences<_$UserDatabase, $BookmarksTable, Bookmark> {
   $$BookmarksTableReferences(super.$_db, super.$_table, super.$_typedResult);
+
+  static $LearnerProfilesTable _profileIdTable(_$UserDatabase db) =>
+      db.learnerProfiles.createAlias(
+        $_aliasNameGenerator(db.bookmarks.profileId, db.learnerProfiles.id),
+      );
+
+  $$LearnerProfilesTableProcessedTableManager get profileId {
+    final $_column = $_itemColumn<int>('profile_id')!;
+
+    final manager = $$LearnerProfilesTableTableManager(
+      $_db,
+      $_db.learnerProfiles,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_profileIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
 
   static $CurriculumTracksTable _trackIdTable(_$UserDatabase db) =>
       db.curriculumTracks.createAlias(
@@ -16889,11 +18325,6 @@ class $$BookmarksTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<int> get profileId => $composableBuilder(
-    column: $table.profileId,
-    builder: (column) => ColumnFilters(column),
-  );
-
   ColumnFilters<String> get curriculumId => $composableBuilder(
     column: $table.curriculumId,
     builder: (column) => ColumnFilters(column),
@@ -16908,6 +18339,29 @@ class $$BookmarksTableFilterComposer
     column: $table.updatedAt,
     builder: (column) => ColumnFilters(column),
   );
+
+  $$LearnerProfilesTableFilterComposer get profileId {
+    final $$LearnerProfilesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.profileId,
+      referencedTable: $db.learnerProfiles,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$LearnerProfilesTableFilterComposer(
+            $db: $db,
+            $table: $db.learnerProfiles,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
 
   $$CurriculumTracksTableFilterComposer get trackId {
     final $$CurriculumTracksTableFilterComposer composer = $composerBuilder(
@@ -16947,11 +18401,6 @@ class $$BookmarksTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<int> get profileId => $composableBuilder(
-    column: $table.profileId,
-    builder: (column) => ColumnOrderings(column),
-  );
-
   ColumnOrderings<String> get curriculumId => $composableBuilder(
     column: $table.curriculumId,
     builder: (column) => ColumnOrderings(column),
@@ -16966,6 +18415,29 @@ class $$BookmarksTableOrderingComposer
     column: $table.updatedAt,
     builder: (column) => ColumnOrderings(column),
   );
+
+  $$LearnerProfilesTableOrderingComposer get profileId {
+    final $$LearnerProfilesTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.profileId,
+      referencedTable: $db.learnerProfiles,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$LearnerProfilesTableOrderingComposer(
+            $db: $db,
+            $table: $db.learnerProfiles,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
 
   $$CurriculumTracksTableOrderingComposer get trackId {
     final $$CurriculumTracksTableOrderingComposer composer = $composerBuilder(
@@ -17003,9 +18475,6 @@ class $$BookmarksTableAnnotationComposer
   GeneratedColumn<int> get id =>
       $composableBuilder(column: $table.id, builder: (column) => column);
 
-  GeneratedColumn<int> get profileId =>
-      $composableBuilder(column: $table.profileId, builder: (column) => column);
-
   GeneratedColumn<String> get curriculumId => $composableBuilder(
     column: $table.curriculumId,
     builder: (column) => column,
@@ -17018,6 +18487,29 @@ class $$BookmarksTableAnnotationComposer
 
   GeneratedColumn<DateTime> get updatedAt =>
       $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  $$LearnerProfilesTableAnnotationComposer get profileId {
+    final $$LearnerProfilesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.profileId,
+      referencedTable: $db.learnerProfiles,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$LearnerProfilesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.learnerProfiles,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
 
   $$CurriculumTracksTableAnnotationComposer get trackId {
     final $$CurriculumTracksTableAnnotationComposer composer = $composerBuilder(
@@ -17056,7 +18548,7 @@ class $$BookmarksTableTableManager
           $$BookmarksTableUpdateCompanionBuilder,
           (Bookmark, $$BookmarksTableReferences),
           Bookmark,
-          PrefetchHooks Function({bool trackId})
+          PrefetchHooks Function({bool profileId, bool trackId})
         > {
   $$BookmarksTableTableManager(_$UserDatabase db, $BookmarksTable table)
     : super(
@@ -17109,7 +18601,7 @@ class $$BookmarksTableTableManager
                 ),
               )
               .toList(),
-          prefetchHooksCallback: ({trackId = false}) {
+          prefetchHooksCallback: ({profileId = false, trackId = false}) {
             return PrefetchHooks(
               db: db,
               explicitlyWatchedTables: [],
@@ -17129,6 +18621,19 @@ class $$BookmarksTableTableManager
                       dynamic
                     >
                   >(state) {
+                    if (profileId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.profileId,
+                                referencedTable: $$BookmarksTableReferences
+                                    ._profileIdTable(db),
+                                referencedColumn: $$BookmarksTableReferences
+                                    ._profileIdTable(db)
+                                    .id,
+                              )
+                              as T;
+                    }
                     if (trackId) {
                       state =
                           state.withJoin(
@@ -17166,7 +18671,7 @@ typedef $$BookmarksTableProcessedTableManager =
       $$BookmarksTableUpdateCompanionBuilder,
       (Bookmark, $$BookmarksTableReferences),
       Bookmark,
-      PrefetchHooks Function({bool trackId})
+      PrefetchHooks Function({bool profileId, bool trackId})
     >;
 typedef $$LearningOrderTableCreateCompanionBuilder =
     LearningOrderCompanion Function({
@@ -17620,6 +19125,25 @@ final class $$GoalsTableReferences
     extends BaseReferences<_$UserDatabase, $GoalsTable, Goal> {
   $$GoalsTableReferences(super.$_db, super.$_table, super.$_typedResult);
 
+  static $LearnerProfilesTable _profileIdTable(_$UserDatabase db) =>
+      db.learnerProfiles.createAlias(
+        $_aliasNameGenerator(db.goals.profileId, db.learnerProfiles.id),
+      );
+
+  $$LearnerProfilesTableProcessedTableManager get profileId {
+    final $_column = $_itemColumn<int>('profile_id')!;
+
+    final manager = $$LearnerProfilesTableTableManager(
+      $_db,
+      $_db.learnerProfiles,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_profileIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
   static $CurriculumTracksTable _trackIdTable(_$UserDatabase db) =>
       db.curriculumTracks.createAlias(
         $_aliasNameGenerator(db.goals.trackId, db.curriculumTracks.id),
@@ -17650,11 +19174,6 @@ class $$GoalsTableFilterComposer extends Composer<_$UserDatabase, $GoalsTable> {
   });
   ColumnFilters<int> get id => $composableBuilder(
     column: $table.id,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<int> get profileId => $composableBuilder(
-    column: $table.profileId,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -17713,6 +19232,29 @@ class $$GoalsTableFilterComposer extends Composer<_$UserDatabase, $GoalsTable> {
     builder: (column) => ColumnFilters(column),
   );
 
+  $$LearnerProfilesTableFilterComposer get profileId {
+    final $$LearnerProfilesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.profileId,
+      referencedTable: $db.learnerProfiles,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$LearnerProfilesTableFilterComposer(
+            $db: $db,
+            $table: $db.learnerProfiles,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
   $$CurriculumTracksTableFilterComposer get trackId {
     final $$CurriculumTracksTableFilterComposer composer = $composerBuilder(
       composer: this,
@@ -17748,11 +19290,6 @@ class $$GoalsTableOrderingComposer
   });
   ColumnOrderings<int> get id => $composableBuilder(
     column: $table.id,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<int> get profileId => $composableBuilder(
-    column: $table.profileId,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -17811,6 +19348,29 @@ class $$GoalsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  $$LearnerProfilesTableOrderingComposer get profileId {
+    final $$LearnerProfilesTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.profileId,
+      referencedTable: $db.learnerProfiles,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$LearnerProfilesTableOrderingComposer(
+            $db: $db,
+            $table: $db.learnerProfiles,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
   $$CurriculumTracksTableOrderingComposer get trackId {
     final $$CurriculumTracksTableOrderingComposer composer = $composerBuilder(
       composer: this,
@@ -17846,9 +19406,6 @@ class $$GoalsTableAnnotationComposer
   });
   GeneratedColumn<int> get id =>
       $composableBuilder(column: $table.id, builder: (column) => column);
-
-  GeneratedColumn<int> get profileId =>
-      $composableBuilder(column: $table.profileId, builder: (column) => column);
 
   GeneratedColumn<String> get curriculumId => $composableBuilder(
     column: $table.curriculumId,
@@ -17895,6 +19452,29 @@ class $$GoalsTableAnnotationComposer
   GeneratedColumn<DateTime> get updatedAt =>
       $composableBuilder(column: $table.updatedAt, builder: (column) => column);
 
+  $$LearnerProfilesTableAnnotationComposer get profileId {
+    final $$LearnerProfilesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.profileId,
+      referencedTable: $db.learnerProfiles,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$LearnerProfilesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.learnerProfiles,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
   $$CurriculumTracksTableAnnotationComposer get trackId {
     final $$CurriculumTracksTableAnnotationComposer composer = $composerBuilder(
       composer: this,
@@ -17932,7 +19512,7 @@ class $$GoalsTableTableManager
           $$GoalsTableUpdateCompanionBuilder,
           (Goal, $$GoalsTableReferences),
           Goal,
-          PrefetchHooks Function({bool trackId})
+          PrefetchHooks Function({bool profileId, bool trackId})
         > {
   $$GoalsTableTableManager(_$UserDatabase db, $GoalsTable table)
     : super(
@@ -18015,7 +19595,7 @@ class $$GoalsTableTableManager
                     (e.readTable(table), $$GoalsTableReferences(db, table, e)),
               )
               .toList(),
-          prefetchHooksCallback: ({trackId = false}) {
+          prefetchHooksCallback: ({profileId = false, trackId = false}) {
             return PrefetchHooks(
               db: db,
               explicitlyWatchedTables: [],
@@ -18035,6 +19615,19 @@ class $$GoalsTableTableManager
                       dynamic
                     >
                   >(state) {
+                    if (profileId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.profileId,
+                                referencedTable: $$GoalsTableReferences
+                                    ._profileIdTable(db),
+                                referencedColumn: $$GoalsTableReferences
+                                    ._profileIdTable(db)
+                                    .id,
+                              )
+                              as T;
+                    }
                     if (trackId) {
                       state =
                           state.withJoin(
@@ -18072,7 +19665,7 @@ typedef $$GoalsTableProcessedTableManager =
       $$GoalsTableUpdateCompanionBuilder,
       (Goal, $$GoalsTableReferences),
       Goal,
-      PrefetchHooks Function({bool trackId})
+      PrefetchHooks Function({bool profileId, bool trackId})
     >;
 typedef $$StreaksTableCreateCompanionBuilder =
     StreaksCompanion Function({
@@ -18329,6 +19922,30 @@ typedef $$StreakEventsTableUpdateCompanionBuilder =
       Value<DateTime> createdAt,
     });
 
+final class $$StreakEventsTableReferences
+    extends BaseReferences<_$UserDatabase, $StreakEventsTable, StreakEvent> {
+  $$StreakEventsTableReferences(super.$_db, super.$_table, super.$_typedResult);
+
+  static $LearnerProfilesTable _profileIdTable(_$UserDatabase db) =>
+      db.learnerProfiles.createAlias(
+        $_aliasNameGenerator(db.streakEvents.profileId, db.learnerProfiles.id),
+      );
+
+  $$LearnerProfilesTableProcessedTableManager get profileId {
+    final $_column = $_itemColumn<int>('profile_id')!;
+
+    final manager = $$LearnerProfilesTableTableManager(
+      $_db,
+      $_db.learnerProfiles,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_profileIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
 class $$StreakEventsTableFilterComposer
     extends Composer<_$UserDatabase, $StreakEventsTable> {
   $$StreakEventsTableFilterComposer({
@@ -18340,11 +19957,6 @@ class $$StreakEventsTableFilterComposer
   });
   ColumnFilters<int> get id => $composableBuilder(
     column: $table.id,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<int> get profileId => $composableBuilder(
-    column: $table.profileId,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -18372,6 +19984,29 @@ class $$StreakEventsTableFilterComposer
     column: $table.createdAt,
     builder: (column) => ColumnFilters(column),
   );
+
+  $$LearnerProfilesTableFilterComposer get profileId {
+    final $$LearnerProfilesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.profileId,
+      referencedTable: $db.learnerProfiles,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$LearnerProfilesTableFilterComposer(
+            $db: $db,
+            $table: $db.learnerProfiles,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
 }
 
 class $$StreakEventsTableOrderingComposer
@@ -18385,11 +20020,6 @@ class $$StreakEventsTableOrderingComposer
   });
   ColumnOrderings<int> get id => $composableBuilder(
     column: $table.id,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<int> get profileId => $composableBuilder(
-    column: $table.profileId,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -18417,6 +20047,29 @@ class $$StreakEventsTableOrderingComposer
     column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
   );
+
+  $$LearnerProfilesTableOrderingComposer get profileId {
+    final $$LearnerProfilesTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.profileId,
+      referencedTable: $db.learnerProfiles,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$LearnerProfilesTableOrderingComposer(
+            $db: $db,
+            $table: $db.learnerProfiles,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
 }
 
 class $$StreakEventsTableAnnotationComposer
@@ -18430,9 +20083,6 @@ class $$StreakEventsTableAnnotationComposer
   });
   GeneratedColumn<int> get id =>
       $composableBuilder(column: $table.id, builder: (column) => column);
-
-  GeneratedColumn<int> get profileId =>
-      $composableBuilder(column: $table.profileId, builder: (column) => column);
 
   GeneratedColumn<String> get eventType =>
       $composableBuilder(column: $table.eventType, builder: (column) => column);
@@ -18452,6 +20102,29 @@ class $$StreakEventsTableAnnotationComposer
 
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  $$LearnerProfilesTableAnnotationComposer get profileId {
+    final $$LearnerProfilesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.profileId,
+      referencedTable: $db.learnerProfiles,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$LearnerProfilesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.learnerProfiles,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
 }
 
 class $$StreakEventsTableTableManager
@@ -18465,12 +20138,9 @@ class $$StreakEventsTableTableManager
           $$StreakEventsTableAnnotationComposer,
           $$StreakEventsTableCreateCompanionBuilder,
           $$StreakEventsTableUpdateCompanionBuilder,
-          (
-            StreakEvent,
-            BaseReferences<_$UserDatabase, $StreakEventsTable, StreakEvent>,
-          ),
+          (StreakEvent, $$StreakEventsTableReferences),
           StreakEvent,
-          PrefetchHooks Function()
+          PrefetchHooks Function({bool profileId})
         > {
   $$StreakEventsTableTableManager(_$UserDatabase db, $StreakEventsTable table)
     : super(
@@ -18520,9 +20190,54 @@ class $$StreakEventsTableTableManager
                 createdAt: createdAt,
               ),
           withReferenceMapper: (p0) => p0
-              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$StreakEventsTableReferences(db, table, e),
+                ),
+              )
               .toList(),
-          prefetchHooksCallback: null,
+          prefetchHooksCallback: ({profileId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (profileId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.profileId,
+                                referencedTable: $$StreakEventsTableReferences
+                                    ._profileIdTable(db),
+                                referencedColumn: $$StreakEventsTableReferences
+                                    ._profileIdTable(db)
+                                    .id,
+                              )
+                              as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
         ),
       );
 }
@@ -18537,12 +20252,9 @@ typedef $$StreakEventsTableProcessedTableManager =
       $$StreakEventsTableAnnotationComposer,
       $$StreakEventsTableCreateCompanionBuilder,
       $$StreakEventsTableUpdateCompanionBuilder,
-      (
-        StreakEvent,
-        BaseReferences<_$UserDatabase, $StreakEventsTable, StreakEvent>,
-      ),
+      (StreakEvent, $$StreakEventsTableReferences),
       StreakEvent,
-      PrefetchHooks Function()
+      PrefetchHooks Function({bool profileId})
     >;
 typedef $$SyncQueueTableCreateCompanionBuilder =
     SyncQueueCompanion Function({
@@ -18552,6 +20264,7 @@ typedef $$SyncQueueTableCreateCompanionBuilder =
       required DateTime queuedAt,
       Value<int> retryCount,
       Value<String?> lastError,
+      Value<String?> entityKey,
     });
 typedef $$SyncQueueTableUpdateCompanionBuilder =
     SyncQueueCompanion Function({
@@ -18561,6 +20274,7 @@ typedef $$SyncQueueTableUpdateCompanionBuilder =
       Value<DateTime> queuedAt,
       Value<int> retryCount,
       Value<String?> lastError,
+      Value<String?> entityKey,
     });
 
 class $$SyncQueueTableFilterComposer
@@ -18599,6 +20313,11 @@ class $$SyncQueueTableFilterComposer
 
   ColumnFilters<String> get lastError => $composableBuilder(
     column: $table.lastError,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get entityKey => $composableBuilder(
+    column: $table.entityKey,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -18641,6 +20360,11 @@ class $$SyncQueueTableOrderingComposer
     column: $table.lastError,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<String> get entityKey => $composableBuilder(
+    column: $table.entityKey,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$SyncQueueTableAnnotationComposer
@@ -18673,6 +20397,9 @@ class $$SyncQueueTableAnnotationComposer
 
   GeneratedColumn<String> get lastError =>
       $composableBuilder(column: $table.lastError, builder: (column) => column);
+
+  GeneratedColumn<String> get entityKey =>
+      $composableBuilder(column: $table.entityKey, builder: (column) => column);
 }
 
 class $$SyncQueueTableTableManager
@@ -18712,6 +20439,7 @@ class $$SyncQueueTableTableManager
                 Value<DateTime> queuedAt = const Value.absent(),
                 Value<int> retryCount = const Value.absent(),
                 Value<String?> lastError = const Value.absent(),
+                Value<String?> entityKey = const Value.absent(),
               }) => SyncQueueCompanion(
                 id: id,
                 operationType: operationType,
@@ -18719,6 +20447,7 @@ class $$SyncQueueTableTableManager
                 queuedAt: queuedAt,
                 retryCount: retryCount,
                 lastError: lastError,
+                entityKey: entityKey,
               ),
           createCompanionCallback:
               ({
@@ -18728,6 +20457,7 @@ class $$SyncQueueTableTableManager
                 required DateTime queuedAt,
                 Value<int> retryCount = const Value.absent(),
                 Value<String?> lastError = const Value.absent(),
+                Value<String?> entityKey = const Value.absent(),
               }) => SyncQueueCompanion.insert(
                 id: id,
                 operationType: operationType,
@@ -18735,6 +20465,7 @@ class $$SyncQueueTableTableManager
                 queuedAt: queuedAt,
                 retryCount: retryCount,
                 lastError: lastError,
+                entityKey: entityKey,
               ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), BaseReferences(db, table, e)))

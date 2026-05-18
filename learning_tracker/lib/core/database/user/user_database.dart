@@ -114,15 +114,92 @@ class UserDatabase extends _$UserDatabase {
   UserDatabase(super.e);
 
   @override
-  int get schemaVersion => 15;
+  int get schemaVersion => 19;
 
   @override
   MigrationStrategy get migration {
     return MigrationStrategy(
+      // C2: enable FK enforcement on every connection open (connection-level).
+      beforeOpen: (_) => customStatement('PRAGMA foreign_keys = ON'),
       onCreate: (Migrator m) => m.createAll(),
       onUpgrade: (Migrator m, int from, int to) async {
         if (from < 15) {
           await m.createTable(sacredWindowEntries);
+        }
+
+        // C1 (v15 → v16): add derived_from_events to completions; backfill
+        // existing rows that already have a matching completion_events record.
+        if (from < 16) {
+          await m.addColumn(completions, completions.derivedFromEvents);
+          await customStatement('''
+            UPDATE completions
+            SET derived_from_events = 1
+            WHERE EXISTS (
+              SELECT 1 FROM completion_events ce
+              WHERE ce.profile_id  = completions.profile_id
+                AND ce.sefaria_ref = completions.sefaria_ref
+                AND ce.stage_id    = completions.stage_id
+                AND ce.track_type  = completions.track_type
+            )
+          ''');
+        }
+
+        // C2 (v16 → v17): add profileId FKs via table-recreate (SQLite does
+        // not support ALTER TABLE ADD CONSTRAINT). FK enforcement is off
+        // during recreation so existing data is copied without validation;
+        // orphan cleanup runs after.
+        if (from < 17) {
+          await customStatement('PRAGMA foreign_keys = OFF');
+          // Recreate the tables that receive the new profileId FK using
+          // Drift's alterTable (TableMigration) pattern:
+          //   create new table → copy data → drop old → rename.
+          // learner_profiles is the FK target and does not need recreation.
+          await m.alterTable(TableMigration(completions));
+          await m.alterTable(TableMigration(completionEvents));
+          await m.alterTable(TableMigration(streakEvents));
+          await m.alterTable(TableMigration(learningLedger));
+          await m.alterTable(TableMigration(bookmarks));
+          await m.alterTable(TableMigration(goals));
+          await m.alterTable(TableMigration(stageDefinitions));
+          // Delete orphaned rows whose profile no longer exists.
+          for (final t in [
+            'completions',
+            'completion_events',
+            'streak_events',
+            'learning_ledger',
+            'bookmarks',
+            'goals',
+            'stage_definitions',
+          ]) {
+            await customStatement(
+              'DELETE FROM $t WHERE profile_id NOT IN '
+              '(SELECT id FROM learner_profiles)',
+            );
+          }
+          await customStatement('PRAGMA foreign_keys = ON');
+        }
+
+        // C3 (v17 → v18): add purgedAt tombstone column to completion_events.
+        // Guard: when migrating from v15 via alterTable in v16→v17 the column
+        // may already exist (Drift always recreates tables with the current
+        // schema). SQLite has no ADD COLUMN IF NOT EXISTS, so we check first.
+        if (from < 18) {
+          final cols = await customSelect(
+            'PRAGMA table_info(completion_events)',
+          ).get();
+          if (!cols.any((r) => r.data['name'] == 'purged_at')) {
+            await m.addColumn(completionEvents, completionEvents.purgedAt);
+          }
+        }
+
+        // I-5 (v18 → v19): add entityKey dedup column to sync_queue.
+        if (from < 19) {
+          await m.addColumn(syncQueue, syncQueue.entityKey);
+          // Backfill index — SQLite requires a new CREATE UNIQUE INDEX.
+          await customStatement(
+            'CREATE UNIQUE INDEX IF NOT EXISTS sync_queue_entity_key '
+            'ON sync_queue (entity_key)',
+          );
         }
       },
     );

@@ -494,6 +494,14 @@ final class DashboardLastCompletionFamily extends $Family
 /// only read path post-DNI-337. The provider replays the append-only
 /// `streak_events` log through `StreakReducer` (UTC day boundaries),
 /// restoring from `completions` on a new-device empty-log first launch.
+///
+/// Performance note: `completionCommittedProvider` is intentionally NOT
+/// watched here. [CompletionRepositoryImpl._createCompletion] writes a
+/// `streak_events` row on each completion, which Drift surfaces via the
+/// reactive `watch()` query below — no manual trigger needed.
+/// Watching `completionCommittedProvider` would tear down and rebuild the
+/// entire stream subscription on every completion, causing unnecessary
+/// work on every task mark.
 
 @ProviderFor(dashboardStreak)
 final dashboardStreakProvider = DashboardStreakProvider._();
@@ -504,6 +512,14 @@ final dashboardStreakProvider = DashboardStreakProvider._();
 /// only read path post-DNI-337. The provider replays the append-only
 /// `streak_events` log through `StreakReducer` (UTC day boundaries),
 /// restoring from `completions` on a new-device empty-log first launch.
+///
+/// Performance note: `completionCommittedProvider` is intentionally NOT
+/// watched here. [CompletionRepositoryImpl._createCompletion] writes a
+/// `streak_events` row on each completion, which Drift surfaces via the
+/// reactive `watch()` query below — no manual trigger needed.
+/// Watching `completionCommittedProvider` would tear down and rebuild the
+/// entire stream subscription on every completion, causing unnecessary
+/// work on every task mark.
 
 final class DashboardStreakProvider
     extends
@@ -521,6 +537,14 @@ final class DashboardStreakProvider
   /// only read path post-DNI-337. The provider replays the append-only
   /// `streak_events` log through `StreakReducer` (UTC day boundaries),
   /// restoring from `completions` on a new-device empty-log first launch.
+  ///
+  /// Performance note: `completionCommittedProvider` is intentionally NOT
+  /// watched here. [CompletionRepositoryImpl._createCompletion] writes a
+  /// `streak_events` row on each completion, which Drift surfaces via the
+  /// reactive `watch()` query below — no manual trigger needed.
+  /// Watching `completionCommittedProvider` would tear down and rebuild the
+  /// entire stream subscription on every completion, causing unnecessary
+  /// work on every task mark.
   DashboardStreakProvider._()
     : super(
         from: null,
@@ -547,7 +571,7 @@ final class DashboardStreakProvider
   }
 }
 
-String _$dashboardStreakHash() => r'5d30985d5cf41fcbb11c1001e57e240a3804c3a2';
+String _$dashboardStreakHash() => r'0370557f7b040536a349a20b951070cb1fefa7f1';
 
 /// Global points total, scoped to active profile.
 ///

@@ -1,10 +1,16 @@
 import 'package:drift/drift.dart';
 import 'package:learning_tracker/core/database/tables/curriculum_tracks.dart';
+import 'package:learning_tracker/core/database/tables/learner_profiles.dart';
 
-/// Completions table — append-only record of all completions.
+/// Completions table — read-only projection derived from completion_events (C1).
 ///
-/// This table is INSERT-only. No UPDATE or DELETE operations
-/// should be performed on completion records.
+/// New rows are written by [CompletionWriter] which writes to
+/// [CompletionEvents] first (canonical), then derives this row with
+/// [derivedFromEvents] = true. Legacy rows (pre-C1) have [derivedFromEvents]
+/// = false and are left untouched by the new write path.
+///
+/// Deleting from this table is safe (it is a projection); the canonical
+/// history lives in [CompletionEvents].
 // AR4 hot-path composite index for dashboard reads filtering by
 // (profileId, curriculumId) ordered by completedAt DESC. Defined via
 // raw SQL so the trailing column can be DESC-ordered (Drift's
@@ -24,7 +30,14 @@ import 'package:learning_tracker/core/database/tables/curriculum_tracks.dart';
 )
 class Completions extends Table {
   IntColumn get id => integer().autoIncrement()();
-  IntColumn get profileId => integer()();
+
+  /// C2: FK → learner_profiles(id) CASCADE DELETE.
+  IntColumn get profileId => integer().references(
+    LearnerProfiles,
+    #id,
+    onDelete: KeyAction.cascade,
+  )();
+
   TextColumn get curriculumId => text()();
   TextColumn get sefariaRef => text()();
   IntColumn get stageId => integer()();
@@ -32,4 +45,9 @@ class Completions extends Table {
   IntColumn get trackId => integer().references(CurriculumTracks, #id)();
   DateTimeColumn get completedAt => dateTime()();
   IntColumn get points => integer().withDefault(const Constant<int>(0))();
+
+  /// C1: true when this row was derived from a completion_events write.
+  /// false for legacy rows written before C1 was deployed.
+  BoolColumn get derivedFromEvents =>
+      boolean().withDefault(const Constant(false))();
 }

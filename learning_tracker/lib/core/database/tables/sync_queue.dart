@@ -4,6 +4,16 @@ import 'package:drift/drift.dart';
 ///
 /// Operations are queued when the device is offline and flushed
 /// when connectivity is restored.
+///
+/// I-5: [entityKey] is a nullable business-key for dedup. Callers that
+/// provide a non-null entityKey use INSERT OR REPLACE via
+/// [SyncQueueDao.enqueueWithKey] so rapid successive edits to the same
+/// entity collapse to a single pending row.
+@TableIndex(
+  name: 'sync_queue_entity_key',
+  columns: {#entityKey},
+  unique: true,
+)
 class SyncQueue extends Table {
   IntColumn get id => integer().autoIncrement()();
 
@@ -21,4 +31,9 @@ class SyncQueue extends Table {
 
   /// Last error message (if any)
   TextColumn get lastError => text().nullable()();
+
+  /// I-5: Stable entity key for dedup (e.g. "track_config:42", "profile:1").
+  /// Null for operations that do not require dedup (legacy callers, one-off events).
+  /// UNIQUE — INSERT OR REPLACE on this key keeps only the latest payload.
+  TextColumn get entityKey => text().nullable()();
 }

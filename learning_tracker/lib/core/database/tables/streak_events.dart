@@ -1,4 +1,5 @@
 import 'package:drift/drift.dart';
+import 'package:learning_tracker/core/database/tables/learner_profiles.dart';
 
 /// Append-only event log for streak state reconstruction (Epic 20 v2 §4.1).
 ///
@@ -16,7 +17,13 @@ import 'package:drift/drift.dart';
 )
 class StreakEvents extends Table {
   IntColumn get id => integer().autoIncrement()();
-  IntColumn get profileId => integer()();
+
+  /// C2: FK → learner_profiles(id) CASCADE DELETE.
+  IntColumn get profileId => integer().references(
+    LearnerProfiles,
+    #id,
+    onDelete: KeyAction.cascade,
+  )();
 
   /// `completion` | `day_boundary` | `manual_adjust`
   TextColumn get eventType => text()();

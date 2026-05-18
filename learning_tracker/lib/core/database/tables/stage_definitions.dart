@@ -1,5 +1,6 @@
 import 'package:drift/drift.dart';
 import 'package:learning_tracker/core/database/tables/curriculum_tracks.dart';
+import 'package:learning_tracker/core/database/tables/learner_profiles.dart';
 
 /// Stage definitions table per D3.
 ///
@@ -7,7 +8,13 @@ import 'package:learning_tracker/core/database/tables/curriculum_tracks.dart';
 /// for each curriculum with ordering and delay configuration.
 class StageDefinitions extends Table {
   IntColumn get id => integer().autoIncrement()();
-  IntColumn get profileId => integer()();
+
+  /// C2: FK → learner_profiles(id) CASCADE DELETE.
+  IntColumn get profileId => integer().references(
+    LearnerProfiles,
+    #id,
+    onDelete: KeyAction.cascade,
+  )();
   TextColumn get curriculumId => text()();
   IntColumn get trackId => integer().references(CurriculumTracks, #id)();
   IntColumn get stageOrder => integer()();

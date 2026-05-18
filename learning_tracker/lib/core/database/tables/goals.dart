@@ -1,5 +1,6 @@
 import 'package:drift/drift.dart';
 import 'package:learning_tracker/core/database/tables/curriculum_tracks.dart';
+import 'package:learning_tracker/core/database/tables/learner_profiles.dart';
 
 /// Goals table — learning goals with per-curriculum deadlines.
 ///
@@ -7,7 +8,13 @@ import 'package:learning_tracker/core/database/tables/curriculum_tracks.dart';
 /// Multiple goals per curriculum are allowed.
 class Goals extends Table {
   IntColumn get id => integer().autoIncrement()();
-  IntColumn get profileId => integer()();
+
+  /// C2: FK → learner_profiles(id) CASCADE DELETE.
+  IntColumn get profileId => integer().references(
+    LearnerProfiles,
+    #id,
+    onDelete: KeyAction.cascade,
+  )();
   TextColumn get curriculumId => text()();
   IntColumn get trackId => integer().references(CurriculumTracks, #id)();
   RealColumn get targetPercent => real().withDefault(const Constant(100.0))();

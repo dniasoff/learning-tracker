@@ -51,8 +51,11 @@ class CompletionWriter {
 
   Future<CompletionWriteResult> commit(CompletionCommand cmd) async {
     return _db.transaction(() async {
-      final existing =
-          await (_db.select(_db.completions)..where(
+      // C1: idempotency check on completion_events (UNIQUE canonical table).
+      // getSingleOrNull() is safe here because the UNIQUE constraint guarantees
+      // at most one row per natural key.
+      final existingEvent =
+          await (_db.select(_db.completionEvents)..where(
                 (t) =>
                     t.profileId.equals(cmd.profileId) &
                     t.sefariaRef.equals(cmd.sefariaRef) &
@@ -60,10 +63,54 @@ class CompletionWriter {
                     t.trackType.equals(cmd.trackType),
               ))
               .getSingleOrNull();
-      if (existing != null) {
-        return CompletionWriteResult(completion: existing, isNew: false);
+
+      if (existingEvent != null) {
+        // Event already recorded — locate the derived completions row.
+        final existing =
+            await (_db.select(_db.completions)..where(
+                  (t) =>
+                      t.profileId.equals(cmd.profileId) &
+                      t.sefariaRef.equals(cmd.sefariaRef) &
+                      t.stageId.equals(cmd.stageId) &
+                      t.trackType.equals(cmd.trackType),
+                ))
+                .getSingleOrNull();
+        if (existing != null) {
+          return CompletionWriteResult(completion: existing, isNew: false);
+        }
+        // Event exists but no derived row (edge case after partial failure).
+        // Fall through to re-derive; appendEvent below is INSERT OR IGNORE.
+      } else {
+        // No event yet — also guard against legacy completions rows that
+        // predate C1 (derived_from_events = false) so we don't double-count.
+        final legacy =
+            await (_db.select(_db.completions)..where(
+                  (t) =>
+                      t.profileId.equals(cmd.profileId) &
+                      t.sefariaRef.equals(cmd.sefariaRef) &
+                      t.stageId.equals(cmd.stageId) &
+                      t.trackType.equals(cmd.trackType) &
+                      t.derivedFromEvents.equals(false),
+                ))
+                .getSingleOrNull();
+        if (legacy != null) {
+          return CompletionWriteResult(completion: legacy, isNew: false);
+        }
       }
 
+      // C1: write canonical event first (INSERT OR IGNORE — idempotent).
+      await _db.completionEventDao.appendEvent(
+        CompletionEventsCompanion.insert(
+          profileId: cmd.profileId,
+          curriculumId: cmd.curriculumId,
+          sefariaRef: cmd.sefariaRef,
+          stageId: cmd.stageId,
+          trackType: cmd.trackType,
+          eventTimestamp: cmd.completedAt,
+        ),
+      );
+
+      // C1: derive completions projection row, tagged as event-derived.
       final id = await _db.completionDao.insertCompletion(
         CompletionsCompanion.insert(
           profileId: cmd.profileId,
@@ -74,6 +121,7 @@ class CompletionWriter {
           trackId: cmd.trackId,
           completedAt: cmd.completedAt,
           points: Value(cmd.points),
+          derivedFromEvents: const Value(true),
         ),
       );
 
@@ -87,25 +135,8 @@ class CompletionWriter {
         ),
       );
 
-      // DNI-336 / AC 25.15: completion_events is the third atomic leg.
-      // INSERT OR IGNORE so a duplicate natural key (profileId, sefariaRef,
-      // stageId, trackType) is a silent no-op rather than an error — the
-      // completions check above already guards against re-entrant duplicates.
-      await _db.completionEventDao.appendEvent(
-        CompletionEventsCompanion.insert(
-          profileId: cmd.profileId,
-          curriculumId: cmd.curriculumId,
-          sefariaRef: cmd.sefariaRef,
-          stageId: cmd.stageId,
-          trackType: cmd.trackType,
-          eventTimestamp: cmd.completedAt,
-        ),
-      );
-
       final inserted = await _db.completionDao.getCompletionById(id);
       if (inserted == null) {
-        // Drift returned a row id but the read-back failed inside the same
-        // transaction — surface a hard error so the transaction rolls back.
         throw StateError(
           'CompletionWriter: inserted row id=$id could not be read back',
         );
