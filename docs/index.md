@@ -39,10 +39,11 @@ Active planning artifacts — the design intent and the rationale behind the cur
 - [Architecture Quick Reference](planning/architecture-quick-reference.md)
 - [Offline-First Architecture v2](planning/architecture-offline-v2.md) — current direction for the auth refactor (Epic 20 b)
 - [Two-Database Architecture](planning/two-database-architecture.md) — Content DB + User DB split (Epic 19)
+- [Overdue System — Refactor Architecture](planning/overdue-refactor-architecture.md) — target design for the overdue/scheduler refactor (2026-05-19)
 - [Epics](planning/epics.md) — detailed epic + story breakdowns
 - [v1 Developer Roadmap](planning/v1-developer-roadmap.md)
 - [Calendar Cycle Computation Analysis](planning/calendar-cycle-analysis.md)
-- [Catch-up & Amnesty Scenarios](planning/catchup-and-amnesty-scenarios.md)
+- [Catch-up & Amnesty Scenarios](planning/catchup-and-amnesty-scenarios.md) — **superseded 2026-05-19** by [Overdue System — Refactor Architecture](planning/overdue-refactor-architecture.md)
 - [Upgrade Flow — UX Spec](planning/ux-upgrade-flow-spec.md)
 - [Upgrade Flow — Visual Design](planning/ux-upgrade-flow-visual.md)
 - [UX Patterns Quick Reference](planning/ux-patterns-quick-reference.md)
@@ -61,7 +62,7 @@ Feature-flow documentation — how a specific user flow works end-to-end.
 UX scenario specifications driving upcoming epics.
 
 - [Dashboard Redesign Set](scenarios/dashboard-redesign-set/) — Epic 20 (a)
-- [Evolution Set](scenarios/evolution/) — Catch-up, amnesty, pause, cycle boundary (Epic 22)
+- [Evolution Set](scenarios/evolution/) — **superseded 2026-05-19**; catch-up/amnesty design replaced by [Overdue System — Refactor Architecture](planning/overdue-refactor-architecture.md)
 - [Stitch Prompts](scenarios/stitch-prompts/) — AI-generated UI design prompts
 
 ## Stories (`stories/`)

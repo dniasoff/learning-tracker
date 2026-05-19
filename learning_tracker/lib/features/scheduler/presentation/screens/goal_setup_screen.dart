@@ -4,6 +4,7 @@ import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/utils/hebrew_calendar_utils.dart';
+import 'package:learning_tracker/core/utils/text_input_formatters.dart';
 import 'package:learning_tracker/core/widgets/app_bar_title.dart';
 import 'package:learning_tracker/core/widgets/learning_date_picker_theme.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/goal_entity.dart';
@@ -257,6 +258,7 @@ class _GoalSetupFormState extends ConsumerState<GoalSetupForm> {
         // Optional occasion/label field
         TextField(
           controller: _descriptionController,
+          inputFormatters: const [TrimLeadingSpaceFormatter()],
           decoration: const InputDecoration(
             labelText: 'Occasion (optional)',
             hintText: 'e.g., Bar Mitzvah, Yahrzeit, Siyum',

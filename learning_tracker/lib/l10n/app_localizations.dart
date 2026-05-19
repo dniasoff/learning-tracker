@@ -4511,6 +4511,24 @@ abstract class AppLocalizations {
   /// **'Changes apply to future learning only. Existing completions are not affected.'**
   String get trackEditConfirmBody;
 
+  /// No description provided for @trackEditClearOverdueButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear Overdue'**
+  String get trackEditClearOverdueButton;
+
+  /// No description provided for @trackEditClearOverdueConfirmTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear overdue items?'**
+  String get trackEditClearOverdueConfirmTitle;
+
+  /// No description provided for @trackEditClearOverdueConfirmBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Overdue items will be removed from your dashboard. They won\'t be marked as done.'**
+  String get trackEditClearOverdueConfirmBody;
+
   /// No description provided for @trackDeleteLabel.
   ///
   /// In en, this message translates to:

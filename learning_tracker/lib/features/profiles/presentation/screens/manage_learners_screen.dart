@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/providers/network_providers.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/utils/text_input_formatters.dart';
 import 'package:learning_tracker/core/widgets/app_bar_title.dart';
 import 'package:learning_tracker/features/auth/presentation/providers/auth_state_provider.dart';
 import 'package:learning_tracker/features/parent_mode/presentation/widgets/parent_pin_setup_dialog.dart';
@@ -268,6 +269,7 @@ class _ProfileFormDialogState extends State<_ProfileFormDialog> {
           children: [
             TextField(
               controller: _nameController,
+              inputFormatters: const [TrimLeadingSpaceFormatter()],
               decoration: InputDecoration(
                 labelText: 'Name',
                 hintText: AppLocalizations.of(

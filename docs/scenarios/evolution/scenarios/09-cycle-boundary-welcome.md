@@ -1,3 +1,5 @@
+> **OBSOLETE — superseded 2026-05-19.** The catch-up & amnesty design has been assessed as over-scoped and is **not being implemented**. The overdue/recovery model is being refactored under a simpler approach — see `docs/planning/overdue-refactor-architecture.md`. Retained for historical reference only.
+
 # Cycle-boundary Welcome Flow
 
 ## Target

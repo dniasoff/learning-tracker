@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:learning_tracker/core/utils/text_input_formatters.dart';
 import 'package:learning_tracker/features/settings/domain/services/account_management_service.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
@@ -74,6 +75,7 @@ class _ChangePasswordDialogState extends State<_ChangePasswordDialog> {
             TextFormField(
               controller: _newPasswordController,
               obscureText: true,
+              inputFormatters: const [NoSpaceFormatter()],
               decoration: const InputDecoration(labelText: 'New Password'),
               validator: (value) {
                 if (value == null || value.length < 6) {
@@ -86,6 +88,7 @@ class _ChangePasswordDialogState extends State<_ChangePasswordDialog> {
             TextFormField(
               controller: _confirmPasswordController,
               obscureText: true,
+              inputFormatters: const [NoSpaceFormatter()],
               decoration: const InputDecoration(
                 labelText: 'Confirm New Password',
               ),

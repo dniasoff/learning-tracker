@@ -1227,6 +1227,9 @@
   "trackEditSaveButton": "שמור שינויים",
   "trackEditConfirmTitle": "להחיל שינויים?",
   "trackEditConfirmBody": "השינויים חלים על לימוד עתידי בלבד. השלמות קיימות אינן מושפעות.",
+  "trackEditClearOverdueButton": "נקה פיגורים",
+  "trackEditClearOverdueConfirmTitle": "לנקות פיגורים?",
+  "trackEditClearOverdueConfirmBody": "הפיגורים יוסרו מהדשבורד. הם לא יסומנו כנעשה.",
   "trackDeleteLabel": "מחק מסלול",
   "trackDeleteContent": "למחוק לצמיתות את \"{name}\"? כל ההתקדמות והנתונים של מסלול זה יוסרו. לא ניתן לבטל פעולה זו.",
   "@trackDeleteContent": {

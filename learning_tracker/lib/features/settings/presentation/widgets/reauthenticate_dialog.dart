@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:learning_tracker/core/utils/text_input_formatters.dart';
 import 'package:learning_tracker/features/settings/domain/services/account_management_service.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
@@ -70,6 +71,7 @@ class _ReauthenticateDialogState extends State<_ReauthenticateDialog> {
           TextField(
             controller: _passwordController,
             obscureText: true,
+            inputFormatters: const [NoSpaceFormatter()],
             decoration: InputDecoration(
               labelText: 'Current Password',
               errorText: _error,

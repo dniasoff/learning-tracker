@@ -12,6 +12,7 @@ import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/providers/registry_provider.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/utils/text_input_formatters.dart';
 import 'package:learning_tracker/features/auth/domain/services/local_auth_service.dart';
 import 'package:learning_tracker/features/auth/domain/services/pending_local_signup.dart';
 import 'package:learning_tracker/features/auth/domain/services/session_persistence_service.dart';
@@ -896,6 +897,12 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
       obscureText: obscureText,
       enabled: !_isLoading,
       onFieldSubmitted: onFieldSubmitted,
+      inputFormatters: [
+        if (obscureText)
+          const NoSpaceFormatter()
+        else
+          const TrimLeadingSpaceFormatter(),
+      ],
       decoration: InputDecoration(
         hintText: hintText,
         hintStyle: const TextStyle(

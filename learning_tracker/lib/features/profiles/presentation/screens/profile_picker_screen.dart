@@ -7,6 +7,7 @@ import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/providers/network_providers.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/utils/text_input_formatters.dart';
 import 'package:learning_tracker/features/auth/presentation/providers/auth_state_provider.dart';
 import 'package:learning_tracker/features/auth/presentation/widgets/no_backup_badge.dart';
 import 'package:learning_tracker/features/parent_mode/presentation/widgets/parent_mode_dialog_frame.dart';
@@ -252,6 +253,7 @@ class _ProfilePickerScreenState extends ConsumerState<ProfilePickerScreen> {
                   controller: ctrl,
                   autofocus: true,
                   textCapitalization: TextCapitalization.words,
+                  inputFormatters: const [TrimLeadingSpaceFormatter()],
                   style: theme.textTheme.bodyLarge?.copyWith(
                     color: AppTheme.brandInk,
                     fontWeight: FontWeight.w500,
@@ -479,6 +481,7 @@ class _ProfilePickerScreenState extends ConsumerState<ProfilePickerScreen> {
               controller: ctrl,
               autofocus: true,
               textCapitalization: TextCapitalization.words,
+              inputFormatters: const [TrimLeadingSpaceFormatter()],
               decoration: InputDecoration(
                 labelText: l10n.displayName,
                 border: const OutlineInputBorder(),

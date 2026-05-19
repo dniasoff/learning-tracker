@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:learning_tracker/core/utils/text_input_formatters.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// Shows a dialog requiring the user to type "DELETE" to confirm account deletion.
@@ -78,6 +79,7 @@ class _DeleteAccountDialogState extends State<_DeleteAccountDialog> {
             const SizedBox(height: 8),
             TextField(
               controller: _controller,
+              inputFormatters: const [TrimLeadingSpaceFormatter()],
               decoration: InputDecoration(
                 hintText: AppLocalizations.of(context)!.deleteAccountHint,
               ),

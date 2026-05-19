@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/providers/registry_provider.dart';
 import 'package:learning_tracker/core/sync/providers/sync_orchestrator_providers.dart';
+import 'package:learning_tracker/core/utils/text_input_formatters.dart';
 import 'package:learning_tracker/features/auth/domain/services/upgrade_to_cloud_service.dart';
 import 'package:learning_tracker/features/auth/presentation/providers/auth_providers.dart'
     show authRepositoryProvider;
@@ -383,6 +384,7 @@ class _UpgradeToCloudScreenState extends ConsumerState<UpgradeToCloudScreen> {
                   TextFormField(
                     controller: _passwordController,
                     obscureText: true,
+                    inputFormatters: const [NoSpaceFormatter()],
                     decoration: const InputDecoration(
                       labelText: 'Confirm your password',
                     ),
@@ -537,6 +539,7 @@ class _CollisionBlock extends StatelessWidget {
             TextField(
               controller: cloudPasswordController,
               obscureText: true,
+              inputFormatters: const [NoSpaceFormatter()],
               decoration: const InputDecoration(
                 labelText: 'Cloud account password',
                 hintText: 'The password for the existing cloud account',

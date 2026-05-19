@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart'
     show GoogleSignInException, GoogleSignInExceptionCode;
+import 'package:learning_tracker/core/utils/text_input_formatters.dart';
 import 'package:learning_tracker/features/settings/domain/services/account_management_service.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
@@ -174,6 +175,7 @@ class _LinkProviderDialogState extends State<_LinkProviderDialog> {
             if (_showEmailForm) ...[
               TextField(
                 controller: _emailController,
+                inputFormatters: const [TrimLeadingSpaceFormatter()],
                 decoration: const InputDecoration(labelText: 'Email'),
                 keyboardType: TextInputType.emailAddress,
               ),
@@ -181,6 +183,7 @@ class _LinkProviderDialogState extends State<_LinkProviderDialog> {
               TextField(
                 controller: _passwordController,
                 obscureText: true,
+                inputFormatters: const [NoSpaceFormatter()],
                 decoration: const InputDecoration(labelText: 'Password'),
               ),
               const SizedBox(height: 8),

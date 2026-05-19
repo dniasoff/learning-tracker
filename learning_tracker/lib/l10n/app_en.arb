@@ -1232,6 +1232,9 @@
   "trackEditSaveButton": "Save Changes",
   "trackEditConfirmTitle": "Apply changes?",
   "trackEditConfirmBody": "Changes apply to future learning only. Existing completions are not affected.",
+  "trackEditClearOverdueButton": "Clear Overdue",
+  "trackEditClearOverdueConfirmTitle": "Clear overdue items?",
+  "trackEditClearOverdueConfirmBody": "Overdue items will be removed from your dashboard. They won't be marked as done.",
   "trackDeleteLabel": "Delete Track",
   "trackDeleteContent": "Permanently delete \"{name}\"? All progress and data for this track will be removed. This cannot be undone.",
   "@trackDeleteContent": {

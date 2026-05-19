@@ -31,6 +31,7 @@ class EditTrackScreen extends ConsumerStatefulWidget {
 class _EditTrackScreenState extends ConsumerState<EditTrackScreen> {
   bool _loading = true;
   bool _saving = false;
+  bool _hasOverdue = false;
 
   Goal? _goal;
 
@@ -69,11 +70,13 @@ class _EditTrackScreenState extends ConsumerState<EditTrackScreen> {
       db.goalDao.getGoalByTrack(widget.track.id),
       db.studyDayConfigDao.getConfigsByTrack(widget.track.id),
       db.stageDao.getStagesByTrack(widget.track.id),
+      db.dailyPlanDao.hasOverdueForTrack(widget.track.id),
     ]);
 
     final goal = results[0] as Goal?;
     final studyDayList = results[1] as List<StudyDayConfig>;
     final stages = results[2] as List<StageDefinition>;
+    final hasOverdue = results[3] as bool;
 
     final studyDays = <int, String>{};
     for (final d in studyDayList) {
@@ -104,6 +107,7 @@ class _EditTrackScreenState extends ConsumerState<EditTrackScreen> {
       _nameController.text = desc.isNotEmpty ? desc : nameDefault;
       _editedStudyDays = studyDays;
       _currentChazaraDelays = delays;
+      _hasOverdue = hasOverdue;
 
       if (goal != null) {
         _paceValue = goal.paceValue ?? 1;
@@ -218,6 +222,42 @@ class _EditTrackScreenState extends ConsumerState<EditTrackScreen> {
     }
   }
 
+  Future<void> _clearOverdue() async {
+    final l10n = AppLocalizations.of(context)!;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(l10n.trackEditClearOverdueConfirmTitle),
+        content: Text(l10n.trackEditClearOverdueConfirmBody),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(l10n.actionCancel),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: Colors.red.shade600),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(l10n.trackEditClearOverdueButton),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    final db = ref.read(userDatabaseProvider);
+    final profileId = ref.read(activeProfileIdProvider);
+    final now = DateTimeFactory.nowLocal();
+    final today = DateTime(now.year, now.month, now.day);
+
+    await db.dailyPlanDao.clearOverdueForTrack(
+      trackId: widget.track.id,
+      today: today,
+    );
+    await onTrackChanged(ref, profileId);
+
+    if (mounted) setState(() => _hasOverdue = false);
+  }
+
   // ──────────────────────────────────────────────────────────────────────────
   // Build helpers
   // ──────────────────────────────────────────────────────────────────────────
@@ -311,6 +351,10 @@ class _EditTrackScreenState extends ConsumerState<EditTrackScreen> {
               title: l10n.trackEditSectionReview,
               child: _buildChazaraSection(context, theme, l10n),
             ),
+          ],
+          if (_isProgramTrack) ...[
+            const SizedBox(height: 14),
+            _buildClearOverdueSection(theme, l10n),
           ],
           const SizedBox(height: 32),
         ],
@@ -568,6 +612,27 @@ class _EditTrackScreenState extends ConsumerState<EditTrackScreen> {
             if (result == null) return;
             setState(() => _pendingChazarah = result.wizardResult);
           },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildClearOverdueSection(ThemeData theme, AppLocalizations l10n) {
+    return SizedBox(
+      width: double.infinity,
+      child: OutlinedButton.icon(
+        onPressed: _hasOverdue ? _clearOverdue : null,
+        icon: const Icon(Icons.clear_all_rounded),
+        label: Text(l10n.trackEditClearOverdueButton),
+        style: OutlinedButton.styleFrom(
+          foregroundColor: _hasOverdue ? Colors.red.shade600 : null,
+          side: BorderSide(
+            color: _hasOverdue ? Colors.red.shade300 : theme.disabledColor,
+          ),
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
         ),
       ),
     );

@@ -8,6 +8,7 @@ import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
+import 'package:learning_tracker/core/utils/text_input_formatters.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/gamification/domain/models/reward_milestone.dart';
 import 'package:learning_tracker/features/gamification/domain/reward_milestone_icons.dart';
@@ -456,6 +457,7 @@ class _RewardConfigurationScreenState
                       TextField(
                         controller: _nameController,
                         textCapitalization: TextCapitalization.sentences,
+                        inputFormatters: const [TrimLeadingSpaceFormatter()],
                         decoration: InputDecoration(
                           hintText: l10n.rewardConfigNamePlaceholder,
                           filled: true,

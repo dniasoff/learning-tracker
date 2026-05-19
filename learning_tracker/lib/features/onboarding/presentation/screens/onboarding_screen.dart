@@ -9,6 +9,7 @@ import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/services/pin_service.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/utils/text_input_formatters.dart';
 import 'package:learning_tracker/core/widgets/app_bar_title.dart';
 import 'package:learning_tracker/core/widgets/pin_entry_widget.dart';
 import 'package:learning_tracker/features/auth/domain/services/pending_local_signup.dart';
@@ -621,6 +622,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
             const SizedBox(height: 8),
             TextField(
               controller: _nameController,
+              inputFormatters: const [TrimLeadingSpaceFormatter()],
               decoration: InputDecoration(
                 hintText: 'Enter name',
                 filled: true,

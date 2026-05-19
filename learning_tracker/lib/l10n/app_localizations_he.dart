@@ -2485,6 +2485,16 @@ class AppLocalizationsHe extends AppLocalizations {
       'השינויים חלים על לימוד עתידי בלבד. השלמות קיימות אינן מושפעות.';
 
   @override
+  String get trackEditClearOverdueButton => 'נקה פיגורים';
+
+  @override
+  String get trackEditClearOverdueConfirmTitle => 'לנקות פיגורים?';
+
+  @override
+  String get trackEditClearOverdueConfirmBody =>
+      'הפיגורים יוסרו מהדשבורד. הם לא יסומנו כנעשה.';
+
+  @override
   String get trackDeleteLabel => 'מחק מסלול';
 
   @override

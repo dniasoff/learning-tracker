@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:learning_tracker/core/utils/text_input_formatters.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// Stage 7: Name the track with a smart default pre-filled.
@@ -65,6 +66,7 @@ class _TrackLabelStepState extends State<TrackLabelStep> {
               controller: _controller,
               autofocus: true,
               textDirection: TextDirection.rtl,
+              inputFormatters: const [TrimLeadingSpaceFormatter()],
               decoration: InputDecoration(
                 labelText: AppLocalizations.of(context)!.trackNameLabel,
                 border: const OutlineInputBorder(),

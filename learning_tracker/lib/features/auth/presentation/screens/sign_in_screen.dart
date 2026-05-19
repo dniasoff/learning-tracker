@@ -14,6 +14,7 @@ import 'package:learning_tracker/core/sync/providers/outbox_providers.dart'
     show firestoreGatewayProvider;
 import 'package:learning_tracker/core/sync/providers/sync_orchestrator_providers.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/utils/text_input_formatters.dart';
 import 'package:learning_tracker/features/auth/data/services/magic_link_service.dart';
 import 'package:learning_tracker/features/auth/domain/services/local_auth_service.dart';
 import 'package:learning_tracker/features/auth/domain/services/session_persistence_service.dart';
@@ -1198,6 +1199,12 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
       enabled: !_isLoading,
       onChanged: onChanged,
       onFieldSubmitted: onFieldSubmitted,
+      inputFormatters: [
+        if (obscureText)
+          const NoSpaceFormatter()
+        else
+          const TrimLeadingSpaceFormatter(),
+      ],
       decoration: InputDecoration(
         hintText: hintText,
         hintStyle: const TextStyle(

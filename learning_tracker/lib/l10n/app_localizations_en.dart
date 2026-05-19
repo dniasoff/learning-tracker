@@ -2513,6 +2513,16 @@ class AppLocalizationsEn extends AppLocalizations {
       'Changes apply to future learning only. Existing completions are not affected.';
 
   @override
+  String get trackEditClearOverdueButton => 'Clear Overdue';
+
+  @override
+  String get trackEditClearOverdueConfirmTitle => 'Clear overdue items?';
+
+  @override
+  String get trackEditClearOverdueConfirmBody =>
+      'Overdue items will be removed from your dashboard. They won\'t be marked as done.';
+
+  @override
   String get trackDeleteLabel => 'Delete Track';
 
   @override

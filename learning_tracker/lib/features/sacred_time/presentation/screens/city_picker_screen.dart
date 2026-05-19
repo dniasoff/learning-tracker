@@ -1,6 +1,7 @@
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:learning_tracker/core/utils/text_input_formatters.dart';
 import 'package:learning_tracker/features/sacred_time/domain/models/city.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/providers/cities_provider.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/providers/sacred_location_provider.dart';
@@ -46,6 +47,7 @@ class _CityPickerScreenState extends ConsumerState<CityPickerScreen> {
             child: TextField(
               controller: _controller,
               autofocus: true,
+              inputFormatters: const [TrimLeadingSpaceFormatter()],
               decoration: InputDecoration(
                 hintText: AppLocalizations.of(context)!.cityPickerHint,
                 prefixIcon: const Icon(Icons.search),
