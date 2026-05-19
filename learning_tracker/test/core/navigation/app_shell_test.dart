@@ -15,6 +15,7 @@ import 'package:learning_tracker/core/navigation/guards/pin_guard.dart';
 import 'package:learning_tracker/core/navigation/guards/profile_guard.dart';
 import 'package:learning_tracker/core/navigation/guards/restore_guard.dart';
 import 'package:learning_tracker/core/navigation/pin_scope.dart';
+import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/services/pin_service.dart';
 import 'package:learning_tracker/features/auth/domain/models/auth_state.dart';
@@ -433,7 +434,12 @@ void main() {
       };
       addTearDown(() => FlutterError.onError = originalOnError);
 
-      await tester.pumpWidget(_wrapApp(router.config()));
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [useHebrewTermsProvider.overrideWithValue(false)],
+          child: _wrapApp(router.config()),
+        ),
+      );
       await _pumpDashboard(tester);
 
       // Auth guard redirects to AppIntroRoute; the shell's bottom-nav
