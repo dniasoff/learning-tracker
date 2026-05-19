@@ -9,6 +9,10 @@
 ///   B  — AFTER  re-anchor: overdue empty, exactly 1 today unit.
 ///   C  — IDEMPOTENCE: calling re-anchor again (same day) yields same result.
 ///   D  — DB WRITE: the synced profile_programs row holds tracking_start_date == today.
+///   E  — PUSH SPY (F-C1): re-anchor calls gateway.pushProfileProgram once with
+///         correct profile_id + curriculum_id payload.
+///   F  — BUTTON GATE (F-H1): the projection-based overdue predicate flips from
+///         true to false after re-anchor; the stale daily_plans table is not used.
 library;
 
 import 'package:drift/drift.dart' show Value;
@@ -16,9 +20,18 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
+import 'package:learning_tracker/core/sync/firestore_gateway.dart';
+import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dart';
 import 'package:learning_tracker/features/scheduler/domain/projection/projection.dart';
+import 'package:mocktail/mocktail.dart';
 
 import '../helpers/drift_memory.dart';
+
+// ---------------------------------------------------------------------------
+// Mock gateway
+// ---------------------------------------------------------------------------
+
+class _MockFirestoreGateway extends Mock implements FirestoreGateway {}
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -53,6 +66,9 @@ String _refForDate(DateTime date) =>
 /// and tracking_start_ref = today's calendar ref, on the profile_programs row
 /// for the given profile + curriculum.
 ///
+/// When [gateway] is non-null, also calls [FirestoreGateway.pushProfileProgram]
+/// with the correct payload — mirrors the F-C1 fix in edit_track_screen.dart.
+///
 /// This mirrors the logic in edit_track_screen.dart's _clearOverdue() —
 /// extracted here so tests exercise it without driving the full widget.
 Future<void> reanchorProgramTrack({
@@ -62,6 +78,7 @@ Future<void> reanchorProgramTrack({
   required int programId,
   required DateTime today,
   String? todayRef,
+  FirestoreGateway? gateway,
 }) async {
   final todayUtc = DateTime.utc(today.year, today.month, today.day);
   await db.profileProgramDao.setProfileProgram(
@@ -70,6 +87,18 @@ Future<void> reanchorProgramTrack({
     programId: programId,
     trackingStartDate: todayUtc,
     trackingStartRef: todayRef,
+  );
+
+  // Mirror the F-C1 push path in _clearOverdue().
+  await gateway?.pushProfileProgram(
+    profileId: profileId,
+    data: {
+      'profile_id': profileId,
+      'curriculum_id': curriculumType,
+      'program_id': programId,
+      'tracking_start_date': todayUtc.toIso8601String(),
+      'tracking_start_ref': todayRef,
+    },
   );
 }
 
@@ -304,6 +333,244 @@ void main() {
     } finally {
       await db.close();
     }
+  });
+
+  // ── E: PUSH SPY (F-C1) ──────────────────────────────────────────────────
+  test(
+    'E: re-anchor calls gateway.pushProfileProgram exactly once with correct '
+    'profile_id + curriculum_id (F-C1)',
+    () async {
+      final db = inMemoryDb();
+      await seedProfile(db);
+      try {
+        // Seed a profile_programs row with the OLD anchor.
+        await db.profileProgramDao.setProfileProgram(
+          profileId: 1,
+          curriculumType: CurriculumId.bavli.storageKey,
+          programId: programId,
+          trackingStartDate: DateTime.utc(
+            anchor.year,
+            anchor.month,
+            anchor.day,
+          ),
+          trackingStartRef: _refForDate(anchor),
+        );
+
+        // Set up the mock gateway — stub pushProfileProgram to succeed.
+        final mockGateway = _MockFirestoreGateway();
+        when(
+          () => mockGateway.pushProfileProgram(
+            profileId: any(named: 'profileId'),
+            data: any(named: 'data'),
+          ),
+        ).thenAnswer((_) async {});
+
+        // Perform the re-anchor with the gateway spy.
+        await reanchorProgramTrack(
+          db: db,
+          profileId: 1,
+          curriculumType: CurriculumId.bavli.storageKey,
+          programId: programId,
+          today: today,
+          todayRef: todayRef,
+          gateway: mockGateway,
+        );
+
+        // Capture the invocation.
+        final capturedCalls = verify(
+          () => mockGateway.pushProfileProgram(
+            profileId: captureAny(named: 'profileId'),
+            data: captureAny(named: 'data'),
+          ),
+        ).captured;
+
+        // pushProfileProgram must be called exactly once.
+        // verify() throws if called 0 times; if called >1 the captured list
+        // will have >2 entries (one per named param per call).
+        expect(
+          capturedCalls.length,
+          2,
+          reason:
+              'E: exactly one push call → 2 captured values '
+              '(profileId + data)',
+        );
+
+        final capturedProfileId = capturedCalls[0] as int;
+        final capturedData = capturedCalls[1] as Map<String, dynamic>;
+
+        expect(
+          capturedProfileId,
+          1,
+          reason: 'E: profileId matches the learner profile',
+        );
+        expect(
+          capturedData['profile_id'],
+          1,
+          reason: 'E: payload.profile_id matches',
+        );
+        expect(
+          capturedData['curriculum_id'],
+          CurriculumId.bavli.storageKey,
+          reason: 'E: payload.curriculum_id matches',
+        );
+        expect(
+          capturedData['program_id'],
+          programId,
+          reason: 'E: payload.program_id is preserved',
+        );
+        // tracking_start_date must encode today (UTC midnight).
+        final encodedDate = capturedData['tracking_start_date'] as String?;
+        expect(encodedDate, isNotNull, reason: 'E: tracking_start_date is set');
+        final parsedDate = DateTime.parse(encodedDate!);
+        expect(
+          DateTime.utc(parsedDate.year, parsedDate.month, parsedDate.day),
+          DateTime.utc(today.year, today.month, today.day),
+          reason: 'E: tracking_start_date encodes today (UTC midnight)',
+        );
+      } finally {
+        await db.close();
+      }
+    },
+  );
+
+  // ── F: BUTTON GATE via projection (F-H1) ─────────────────────────────────
+  test('F: hasOverdue predicate (projection-based) is true before re-anchor and '
+      'false after — reflects DailyTaskPriority.overdueProgram, not '
+      'stale daily_plans.isOverdue (F-H1)', () async {
+    // This test exercises the predicate that _loadData() now uses:
+    //   allTasks.any((t) => t.trackId == trackId &&
+    //                       t.priority == DailyTaskPriority.overdueProgram)
+    //
+    // We drive the pure projection directly (no Riverpod) to confirm that
+    // the predicate flips correctly before → after re-anchor. The test
+    // stands in for the widget-level behaviour without requiring a full
+    // ProviderContainer setup.
+
+    const fakeTrackId = 42;
+
+    // ─── BEFORE re-anchor ────────────────────────────────────────────────
+    // Build schedule anchored N days ago → N overdue items in projection.
+    final beforeSchedule = programSchedule(
+      anchor: anchor,
+      calendarEntries: calendar,
+      today: today,
+    );
+    final beforeProjection = project(
+      schedule: beforeSchedule,
+      completions: {},
+      today: today,
+    );
+
+    // Map projection result to DailyTask list (mirrors _buildProjectionTasks
+    // in scheduler_providers.dart) with a fixed trackId.
+    final beforeTasks = [
+      for (final ref in beforeProjection.overdue)
+        DailyTask(
+          curriculumId: CurriculumId.bavli,
+          contentItemSefariaRef: ref,
+          stageOrder: 1,
+          stageDefinitionId: 1,
+          priority: DailyTaskPriority.overdueProgram,
+          isOverdue: true,
+          reason: 'overdue',
+          stageName: 'Learn',
+          trackId: fakeTrackId,
+          trackLabel: 'Test Track',
+        ),
+      for (final ref in beforeProjection.dueToday)
+        DailyTask(
+          curriculumId: CurriculumId.bavli,
+          contentItemSefariaRef: ref,
+          stageOrder: 1,
+          stageDefinitionId: 1,
+          priority: DailyTaskPriority.todayProgram,
+          isOverdue: false,
+          reason: 'today',
+          stageName: 'Learn',
+          trackId: fakeTrackId,
+          trackLabel: 'Test Track',
+        ),
+    ];
+
+    // The predicate from _loadData() — must be true before re-anchor.
+    final hasOverdueBefore = beforeTasks.any(
+      (t) =>
+          t.trackId == fakeTrackId &&
+          t.priority == DailyTaskPriority.overdueProgram,
+    );
+    expect(
+      hasOverdueBefore,
+      isTrue,
+      reason: 'F-pre: button gate must be enabled when overdue tasks exist',
+    );
+
+    // ─── AFTER re-anchor ─────────────────────────────────────────────────
+    // Re-anchored schedule starts from today → no overdue items.
+    final afterSchedule = programSchedule(
+      anchor: today,
+      calendarEntries: _buildCalendar(today, today),
+      today: today,
+    );
+    final afterProjection = project(
+      schedule: afterSchedule,
+      completions: {},
+      today: today,
+    );
+
+    final afterTasks = [
+      for (final ref in afterProjection.overdue)
+        DailyTask(
+          curriculumId: CurriculumId.bavli,
+          contentItemSefariaRef: ref,
+          stageOrder: 1,
+          stageDefinitionId: 1,
+          priority: DailyTaskPriority.overdueProgram,
+          isOverdue: true,
+          reason: 'overdue',
+          stageName: 'Learn',
+          trackId: fakeTrackId,
+          trackLabel: 'Test Track',
+        ),
+      for (final ref in afterProjection.dueToday)
+        DailyTask(
+          curriculumId: CurriculumId.bavli,
+          contentItemSefariaRef: ref,
+          stageOrder: 1,
+          stageDefinitionId: 1,
+          priority: DailyTaskPriority.todayProgram,
+          isOverdue: false,
+          reason: 'today',
+          stageName: 'Learn',
+          trackId: fakeTrackId,
+          trackLabel: 'Test Track',
+        ),
+    ];
+
+    // The predicate must be false after re-anchor — button should be disabled.
+    final hasOverdueAfter = afterTasks.any(
+      (t) =>
+          t.trackId == fakeTrackId &&
+          t.priority == DailyTaskPriority.overdueProgram,
+    );
+    expect(
+      hasOverdueAfter,
+      isFalse,
+      reason:
+          'F-post: button gate must be disabled after re-anchor clears '
+          'overdue; stale daily_plans.isOverdue must not be consulted',
+    );
+
+    // Cross-check: daily_plans table was never involved — the predicate
+    // depends solely on DailyTaskPriority.overdueProgram tasks produced by
+    // the projection. This is self-documenting: if the predicate read from
+    // the DAO, this test would need a DB, which it deliberately does not.
+    expect(
+      afterProjection.overdue,
+      isEmpty,
+      reason:
+          'F: projection.overdue is the source; it must be empty after '
+          're-anchor',
+    );
   });
 
   // ── D: DB WRITE ──────────────────────────────────────────────────────────

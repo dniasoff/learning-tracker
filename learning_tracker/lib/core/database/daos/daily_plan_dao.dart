@@ -110,19 +110,6 @@ class DailyPlanDao extends DatabaseAccessor<UserDatabase>
     });
   }
 
-  /// Whether any overdue rows currently exist for [trackId].
-  Future<bool> hasOverdueForTrack(int trackId) async {
-    final count =
-        await (selectOnly(dailyPlans)
-              ..addColumns([dailyPlans.id.count()])
-              ..where(
-                dailyPlans.trackId.equals(trackId) &
-                    dailyPlans.isOverdue.equals(true),
-              ))
-            .getSingle();
-    return (count.read(dailyPlans.id.count()) ?? 0) > 0;
-  }
-
   /// Delete all plan rows for a specific track (used when hard-deleting a track).
   Future<void> deletePlansByTrack(int trackId) =>
       (delete(dailyPlans)..where((t) => t.trackId.equals(trackId))).go();

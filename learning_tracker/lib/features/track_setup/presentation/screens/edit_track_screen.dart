@@ -4,10 +4,12 @@ import 'package:intl/intl.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
+import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/providers/calendar_providers.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/services/calendar_program_registry.dart';
 import 'package:learning_tracker/core/services/learning_program_service.dart';
+import 'package:learning_tracker/core/sync/providers/outbox_providers.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/core/utils/text_input_formatters.dart';
@@ -15,6 +17,8 @@ import 'package:learning_tracker/core/widgets/learning_date_picker_theme.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/learning_process_wizard_service.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
+import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dart';
+import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
 import 'package:learning_tracker/features/track_setup/domain/services/track_creation_service.dart';
 import 'package:learning_tracker/features/track_setup/presentation/providers/after_track_change_invalidation.dart';
 import 'package:learning_tracker/features/track_setup/presentation/providers/track_edit_providers.dart';
@@ -73,13 +77,21 @@ class _EditTrackScreenState extends ConsumerState<EditTrackScreen> {
       db.goalDao.getGoalByTrack(widget.track.id),
       db.studyDayConfigDao.getConfigsByTrack(widget.track.id),
       db.stageDao.getStagesByTrack(widget.track.id),
-      db.dailyPlanDao.hasOverdueForTrack(widget.track.id),
     ]);
 
     final goal = results[0] as Goal?;
     final studyDayList = results[1] as List<StudyDayConfig>;
     final stages = results[2] as List<StageDefinition>;
-    final hasOverdue = results[3] as bool;
+
+    // F-H1: Read overdue state from the projection — the authoritative source
+    // after the projection cutover. daily_plans.isOverdue is stale and must
+    // not be used.
+    final allTasks = await ref.read(allDailyTasksProvider.future);
+    final hasOverdue = allTasks.any(
+      (t) =>
+          t.trackId == widget.track.id &&
+          t.priority == DailyTaskPriority.overdueProgram,
+    );
 
     final studyDays = <int, String>{};
     for (final d in studyDayList) {
@@ -292,6 +304,28 @@ class _EditTrackScreenState extends ConsumerState<EditTrackScreen> {
       trackingStartDate: todayUtc,
       trackingStartRef: todayRef,
     );
+
+    // F-C1: Push the updated profile_program row to Firestore so the
+    // new anchor survives reinstall / sync pull. Non-fatal when offline.
+    try {
+      final gateway = ref.read(firestoreGatewayProvider);
+      await gateway?.pushProfileProgram(
+        profileId: profileId,
+        data: {
+          'profile_id': profileId,
+          'curriculum_id': curriculum.storageKey,
+          'program_id': enrollment.programId,
+          'tracking_start_date': todayUtc.toIso8601String(),
+          'tracking_start_ref': todayRef,
+        },
+      );
+    } catch (e, st) {
+      AppLogger.instance.warning(
+        'clear_overdue_push_failed: curriculum=${curriculum.storageKey}',
+        e,
+        st,
+      );
+    }
 
     await onTrackChanged(ref, profileId);
 
