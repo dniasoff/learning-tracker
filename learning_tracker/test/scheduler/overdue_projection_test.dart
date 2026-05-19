@@ -19,6 +19,7 @@ library;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/services/calendar_program_service.dart';
 import 'package:learning_tracker/core/services/local_calendar_engine.dart';
+import 'package:learning_tracker/features/scheduler/domain/projection/projection.dart';
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
 
 // ---------------------------------------------------------------------------
@@ -201,11 +202,123 @@ void main() {
   //
   // The test must NOT reference any symbol from projection/ that does not
   // exist yet.  Wave 2 fills in this body once the module ships.
+  // ── O1 — DETERMINISM ─────────────────────────────────────────────────────
+  //
+  // Computes the overdue projection twice with identical inputs and asserts
+  // the results are equal.  Covers zero, partial, and all-completed scenarios.
+  //
+  // Uses the pure [project] + [programSchedule] functions from the new
+  // projection module — no DB, no clock, no providers.
   test(
     'O1: identical inputs → identical overdue projection result (determinism)',
-    skip: 'un-skip in Wave 2',
     () {
-      // TODO(Wave 2): implement with OverdueProjection.compute().
+      // Fixed "today" — must never be DateTime.now().
+      final today = DateTime.utc(2026, 5, 19);
+      const n = 3; // N days of overdue.
+      final anchor = today.subtract(const Duration(days: n)); // 2026-05-16
+
+      // Build a fake calendar: one ref per day in [anchor, today].
+      List<(DateTime, String)> buildCalendar() {
+        final entries = <(DateTime, String)>[];
+        var cursor = anchor;
+        while (!cursor.isAfter(today)) {
+          final label =
+              'program ${cursor.year}-'
+              '${cursor.month.toString().padLeft(2, '0')}-'
+              '${cursor.day.toString().padLeft(2, '0')}';
+          entries.add((cursor, label));
+          cursor = cursor.add(const Duration(days: 1));
+        }
+        return entries;
+      }
+
+      final schedule = programSchedule(
+        anchor: anchor,
+        calendarEntries: buildCalendar(),
+        today: today,
+      );
+
+      // ── Scenario A: zero completions ──────────────────────────────────────
+      final r1a = project(schedule: schedule, completions: {}, today: today);
+      final r2a = project(schedule: schedule, completions: {}, today: today);
+
+      expect(r1a, equals(r2a), reason: 'O1: zero-completions — results differ');
+      expect(r1a.overdue.length, n, reason: 'O1: zero-completions — N overdue');
+      expect(r1a.dueToday.length, 1, reason: 'O1: zero-completions — 1 today');
+      expect(
+        r2a.overdue,
+        equals(r1a.overdue),
+        reason: 'O1: zero-completions — overdue sets are equal',
+      );
+      expect(
+        r2a.dueToday,
+        equals(r1a.dueToday),
+        reason: 'O1: zero-completions — dueToday sets are equal',
+      );
+
+      // ── Scenario B: partial completions (complete one overdue unit) ────────
+      final partialCompleted = {schedule.first.sefariaRef};
+      final r1b = project(
+        schedule: schedule,
+        completions: partialCompleted,
+        today: today,
+      );
+      final r2b = project(
+        schedule: schedule,
+        completions: partialCompleted,
+        today: today,
+      );
+
+      expect(
+        r1b,
+        equals(r2b),
+        reason: 'O1: partial-completions — results differ',
+      );
+      expect(
+        r1b.overdue.length,
+        n - 1,
+        reason: 'O1: partial-completions — N-1 overdue after 1 completed',
+      );
+      expect(
+        r1b.dueToday.length,
+        1,
+        reason: 'O1: partial-completions — today unit still pending',
+      );
+      expect(
+        r2b.overdue,
+        equals(r1b.overdue),
+        reason: 'O1: partial-completions — overdue sets are equal',
+      );
+      expect(
+        r2b.dueToday,
+        equals(r1b.dueToday),
+        reason: 'O1: partial-completions — dueToday sets are equal',
+      );
+
+      // ── Scenario C: all completed (including today) ────────────────────────
+      final allRefs = schedule.map((u) => u.sefariaRef).toSet();
+      final r1c = project(
+        schedule: schedule,
+        completions: allRefs,
+        today: today,
+      );
+      final r2c = project(
+        schedule: schedule,
+        completions: allRefs,
+        today: today,
+      );
+
+      expect(r1c, equals(r2c), reason: 'O1: all-completed — results differ');
+      expect(
+        r1c.overdue,
+        isEmpty,
+        reason: 'O1: all-completed — overdue must be empty',
+      );
+      expect(
+        r1c.dueToday,
+        isEmpty,
+        reason: 'O1: all-completed — dueToday must be empty',
+      );
     },
   );
 
@@ -232,12 +345,114 @@ void main() {
   //
   // Dependency: O3 only works after Bug 1 is fixed (Wave 1) — the re-anchor
   // is inert when the program is frozen on its start ref.
+  // ── O3 — RE-ANCHOR ───────────────────────────────────────────────────────
+  //
+  // At the projection level, moving the anchor to today collapses overdue to
+  // empty and leaves exactly one dueToday unit.
+  //
+  // "Re-anchor" here means: pass anchor = today to programSchedule().
+  // The DB write is Wave 4's job; this test validates the pure projection
+  // behaviour under a today-anchor.
+  //
+  // Idempotent: computing again with the same today-anchor gives the same
+  // result.
   test(
     'O3: re-anchoring to today collapses overdue to empty; idempotent same-day',
-    skip: 'un-skip in Wave 2',
     () {
-      // TODO(Wave 2): implement after Bug 1 is fixed (Wave 1) and the
-      // pure projection module exists.
+      final today = DateTime.utc(2026, 5, 19);
+      const n = 3;
+      final originalAnchor = today.subtract(const Duration(days: n));
+
+      // Build calendar helper: returns (date, ref) pairs for [anchor, today].
+      List<(DateTime, String)> buildCalendar(DateTime anchor) {
+        final entries = <(DateTime, String)>[];
+        var cursor = anchor;
+        while (!cursor.isAfter(today)) {
+          final label =
+              'daf_yomi ${cursor.year}-'
+              '${cursor.month.toString().padLeft(2, '0')}-'
+              '${cursor.day.toString().padLeft(2, '0')}';
+          entries.add((cursor, label));
+          cursor = cursor.add(const Duration(days: 1));
+        }
+        return entries;
+      }
+
+      // Step 1: original anchor — verify N overdue units.
+      final initialSchedule = programSchedule(
+        anchor: originalAnchor,
+        calendarEntries: buildCalendar(originalAnchor),
+        today: today,
+      );
+      final initial = project(
+        schedule: initialSchedule,
+        completions: {},
+        today: today,
+      );
+      expect(
+        initial.overdue.length,
+        n,
+        reason: 'O3: initial anchor → N overdue',
+      );
+      expect(
+        initial.dueToday.length,
+        1,
+        reason: 'O3: initial anchor → 1 today',
+      );
+
+      // Step 2: re-anchor to today — overdue must be empty, exactly 1 today.
+      // "Re-anchor" = pass anchor = today.  The calendar now spans [today, today].
+      final reanchoredSchedule = programSchedule(
+        anchor: today, // <-- the re-anchor
+        calendarEntries: buildCalendar(today),
+        today: today,
+      );
+      final reanchored = project(
+        schedule: reanchoredSchedule,
+        completions: {},
+        today: today,
+      );
+
+      expect(
+        reanchored.overdue,
+        isEmpty,
+        reason: 'O3: after re-anchor overdue must be empty',
+      );
+      expect(
+        reanchored.dueToday.length,
+        1,
+        reason: 'O3: after re-anchor exactly 1 today unit',
+      );
+      // The today unit must be the calendar unit for today.
+      expect(
+        reanchored.dueToday,
+        contains('daf_yomi 2026-05-19'),
+        reason: 'O3: the today unit is the calendar entry for today',
+      );
+
+      // Step 3: idempotent — calling again with the same today-anchor gives
+      // the identical result.
+      final reanchoredAgain = project(
+        schedule: reanchoredSchedule,
+        completions: {},
+        today: today,
+      );
+
+      expect(
+        reanchoredAgain,
+        equals(reanchored),
+        reason: 'O3: idempotent — same result on second call with today-anchor',
+      );
+      expect(
+        reanchoredAgain.overdue,
+        isEmpty,
+        reason: 'O3: idempotent — overdue still empty',
+      );
+      expect(
+        reanchoredAgain.dueToday.length,
+        1,
+        reason: 'O3: idempotent — still exactly 1 today unit',
+      );
     },
   );
 
@@ -268,12 +483,132 @@ void main() {
   //      (cannot be negative).
   //
   // Do NOT reference any symbol from projection/ that does not exist yet.
-  test(
-    'O7: self-paced track without a pace throws; '
-    'with pace yields pace × elapsed_study_days − completed',
-    skip: 'un-skip in Wave 2',
-    () {
-      // TODO(Wave 2): implement using OverdueProjection for self-paced tracks.
-    },
-  );
+  // ── O7 — SELF-PACED NEEDS A PACE ─────────────────────────────────────────
+  //
+  // Part A: selfPacedSchedule() with pace = null throws MissingPaceError.
+  //
+  // Part B: with an explicit pace:
+  //   overdue_count == max(0, pace × elapsed_study_days − completed_count)
+  //
+  // Uses a deterministic study-day pattern and a fixed anchor date so
+  // elapsed_study_days is stable.
+  test('O7: self-paced track without a pace throws; '
+      'with pace yields pace × elapsed_study_days − completed', () {
+    final today = DateTime.utc(2026, 5, 19); // Tuesday (weekday = 2)
+    // Anchor: 7 days before today = 2026-05-12 (Tuesday).
+    final anchor = today.subtract(const Duration(days: 7));
+
+    // Study pattern: Mon-Fri only (ISO 1-5).
+    const pattern = StudyDayPattern({1, 2, 3, 4, 5});
+
+    // 28 distinct ordered refs.
+    final orderedRefs = List.generate(28, (i) => 'mishna_$i');
+
+    // ── Part A: no pace → throws MissingPaceError ─────────────────────────
+    expect(
+      () => selfPacedSchedule(
+        anchor: anchor,
+        pace: null, // intentionally no pace
+        studyDayPattern: pattern,
+        orderedRefs: orderedRefs,
+        today: today,
+      ),
+      throwsA(isA<MissingPaceError>()),
+      reason:
+          'O7: a self-paced track without a pace must throw MissingPaceError',
+    );
+
+    // ── Part B: explicit pace = 3/day ─────────────────────────────────────
+    const pace = 3;
+
+    // Count elapsed study days in [anchor, today) manually so the test
+    // is self-contained and verifiable:
+    //   2026-05-12 Tue  ✓
+    //   2026-05-13 Wed  ✓
+    //   2026-05-14 Thu  ✓
+    //   2026-05-15 Fri  ✓
+    //   2026-05-16 Sat  ✗
+    //   2026-05-17 Sun  ✗
+    //   2026-05-18 Mon  ✓
+    // Total = 5 elapsed study days before today.
+    const expectedElapsed = 5;
+
+    // Verify via the helper exported from the module.
+    final actualElapsed = elapsedStudyDays(
+      anchor: anchor,
+      today: today,
+      studyDayPattern: pattern,
+    );
+    expect(
+      actualElapsed,
+      expectedElapsed,
+      reason: 'O7: elapsed_study_days helper sanity-check',
+    );
+
+    // Build the schedule; the schedule covers [anchor, today] inclusive so
+    // today (Tue = study day) adds another pace units as dueToday.
+    final schedule = selfPacedSchedule(
+      anchor: anchor,
+      pace: pace,
+      studyDayPattern: pattern,
+      orderedRefs: orderedRefs,
+      today: today,
+    );
+
+    // Total scheduled = (elapsed + 1-today) × pace = 6 × 3 = 18 refs.
+    // (assuming orderedRefs has enough items.)
+    expect(
+      schedule.length,
+      6 * pace,
+      reason: 'O7: schedule should have 6 study-day slots × $pace refs',
+    );
+
+    // ── Sub-case: zero completions ────────────────────────────────────────
+    // overdue = pace × elapsed = 3 × 5 = 15;  dueToday = 3.
+    final r0 = project(schedule: schedule, completions: {}, today: today);
+    expect(
+      r0.overdue.length,
+      pace * expectedElapsed,
+      reason: 'O7: 0 completions → overdue = pace × elapsed',
+    );
+    expect(
+      r0.dueToday.length,
+      pace,
+      reason: 'O7: 0 completions → dueToday = pace',
+    );
+
+    // ── Sub-case: partial completions (5 completed from overdue) ─────────
+    // overdue = 15 - 5 = 10.
+    const completedCount = 5;
+    final completed = schedule
+        .take(completedCount)
+        .map((u) => u.sefariaRef)
+        .toSet();
+    final rPartial = project(
+      schedule: schedule,
+      completions: completed,
+      today: today,
+    );
+    expect(
+      rPartial.overdue.length,
+      (pace * expectedElapsed) - completedCount,
+      reason: 'O7: partial completions → overdue = pace×elapsed − completed',
+    );
+
+    // ── Sub-case: completed_count > pace × elapsed → overdue = 0 ─────────
+    // Complete MORE than pace × elapsed so overdue can never go negative.
+    // Complete all overdue refs (15) + today's refs (3) = all 18.
+    final allCompleted = schedule.map((u) => u.sefariaRef).toSet();
+    final rAll = project(
+      schedule: schedule,
+      completions: allCompleted,
+      today: today,
+    );
+    expect(
+      rAll.overdue,
+      isEmpty,
+      reason: 'O7: all completed → overdue = 0 (never negative)',
+    );
+    expect(rAll.dueToday, isEmpty, reason: 'O7: all completed → dueToday = 0');
+  });
 }
