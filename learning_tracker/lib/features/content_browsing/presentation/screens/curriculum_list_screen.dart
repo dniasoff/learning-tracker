@@ -287,7 +287,7 @@ class _CurriculumCard extends ConsumerWidget {
               children: [
                 if (containerCount > 0) ...[
                   Text(
-                    '$containerCount ${CurriculumLabels.containerCountLabelPlural(curriculum)}',
+                    '$containerCount ${CurriculumLabels.containerCountLabel(curriculum, useHebrew: domainTermLabels(ref).isHebrew)}',
                     style: const TextStyle(
                       fontSize: 12,
                       color: AppTheme.brandInkMuted,
@@ -298,7 +298,7 @@ class _CurriculumCard extends ConsumerWidget {
                 ],
                 if (leafCount > 0)
                   Text(
-                    '$leafCount ${CurriculumLabels.primaryUnitLabelPlural(curriculum)}',
+                    '$leafCount ${CurriculumLabels.primaryUnitLabel(curriculum, useHebrew: domainTermLabels(ref).isHebrew)}',
                     style: const TextStyle(
                       fontSize: 12,
                       color: AppTheme.brandInkMuted,

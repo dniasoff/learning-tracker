@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
+import 'package:learning_tracker/core/labels/domain_term_labels.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/services/learning_program_service.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
@@ -41,8 +43,11 @@ class _StartingPositionStepState extends ConsumerState<StartingPositionStep> {
   List<ContentItem> _leaves = [];
   ContentItem? _selectedLeaf;
 
-  String _containerLabel = 'Section';
-  String _leafLabel = 'Item';
+  // 1-based level indices for container and leaf, resolved after content loads.
+  // Used with CurriculumLabels.level() + inLanguage() so they respect the
+  // Hebrew Terms toggle at render time rather than being baked in as English.
+  int? _containerLevelIndex;
+  int? _leafLevelIndex;
 
   bool get _isCalendarProgram =>
       widget.selectedProgram?.isCalendarProgram ?? false;
@@ -63,19 +68,18 @@ class _StartingPositionStepState extends ConsumerState<StartingPositionStep> {
       final config = await repo.getHierarchyConfig(widget.curriculumId);
       final items = await repo.getContentForCurriculum(widget.curriculumId);
 
-      final labels = config.levelLabels;
-      final containerLvl = labels.length >= 3 ? 1 : 0;
-      final containerLevelLabel = containerLvl < labels.length
-          ? labels[containerLvl]
-          : 'Section';
-      final leafLevelLabel = containerLvl + 1 < labels.length
-          ? labels[containerLvl + 1]
-          : 'Item';
+      // Compute 0-based container level index, then convert to 1-based for
+      // CurriculumLabels.level(). Store indices rather than English strings so
+      // the build method can apply the Hebrew Terms toggle at render time.
+      final levelCount = config.levelLabels.length;
+      final containerLvl0 = levelCount >= 3 ? 1 : 0; // 0-based
+      final containerLvl1 = containerLvl0 + 1; // 1-based
+      final leafLvl1 = containerLvl1 + 1; // 1-based
 
       final containers = <String, ContentItem>{};
       for (final item in items) {
         if (item.isLeaf) continue;
-        final key = containerLvl == 0 ? item.level1 : item.level2;
+        final key = containerLvl0 == 0 ? item.level1 : item.level2;
         if (key != null && !containers.containsKey(key)) {
           containers[key] = item;
         }
@@ -101,8 +105,8 @@ class _StartingPositionStepState extends ConsumerState<StartingPositionStep> {
         _selectedContainer = defaultContainer;
         _leaves = defaultLeaves;
         _selectedLeaf = defaultLeaves.isNotEmpty ? defaultLeaves.first : null;
-        _containerLabel = containerLevelLabel;
-        _leafLabel = leafLevelLabel;
+        _containerLevelIndex = containerLvl1;
+        _leafLevelIndex = leafLvl1;
         _loading = false;
       });
     } catch (_) {
@@ -143,6 +147,20 @@ class _StartingPositionStepState extends ConsumerState<StartingPositionStep> {
 
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context)!;
+    final useHebrewTerms = domainTermLabels(ref).isHebrew;
+
+    // Resolve level labels respecting the Hebrew Terms toggle.
+    final containerLabel = _containerLevelIndex != null &&
+            _containerLevelIndex! <=
+                CurriculumLabels.depth(widget.curriculumId)
+        ? CurriculumLabels.level(widget.curriculumId, _containerLevelIndex!)
+            .inLanguage(useHebrew: useHebrewTerms)
+        : 'Section';
+    final leafLabel = _leafLevelIndex != null &&
+            _leafLevelIndex! <= CurriculumLabels.depth(widget.curriculumId)
+        ? CurriculumLabels.level(widget.curriculumId, _leafLevelIndex!)
+            .inLanguage(useHebrew: useHebrewTerms)
+        : 'Item';
 
     if (_loading) {
       return const Center(child: CircularProgressIndicator());
@@ -164,7 +182,7 @@ class _StartingPositionStepState extends ConsumerState<StartingPositionStep> {
           ),
           const SizedBox(height: 4),
           Text(
-            'Select the $_leafLabel you are currently up to.',
+            'Select the $leafLabel you are currently up to.',
             style: theme.textTheme.bodySmall?.copyWith(
               color: theme.colorScheme.onSurfaceVariant,
             ),
@@ -209,7 +227,7 @@ class _StartingPositionStepState extends ConsumerState<StartingPositionStep> {
                   IconButton(
                     icon: const Icon(Icons.arrow_back),
                     onPressed: _clearSelection,
-                    tooltip: 'Back to $_containerLabel list',
+                    tooltip: 'Back to $containerLabel list',
                   ),
                   CurriculumLabel.item(
                     _selectedContainer!,

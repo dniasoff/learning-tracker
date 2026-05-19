@@ -656,6 +656,25 @@ class CurriculumLabels {
     };
   }
 
+  /// Toggle-aware variant of [primaryUnitLabelPlural].
+  static String primaryUnitLabel(CurriculumId id, {required bool useHebrew}) {
+    return switch (id) {
+      CurriculumId.bavli => level(id, 3).inLanguage(
+        useHebrew: useHebrew,
+        plural: true,
+      ),
+      CurriculumId.yerushalmi => level(id, 2).inLanguage(
+        useHebrew: useHebrew,
+        plural: true,
+      ),
+      CurriculumId.chumash => level(id, 2).inLanguage(
+        useHebrew: useHebrew,
+        plural: true,
+      ),
+      _ => leaf(id).inLanguage(useHebrew: useHebrew, plural: true),
+    };
+  }
+
   /// User-facing container count (plural English) for browse cards
   /// (e.g. "63 Masechtos"). Maps to whichever level the user thinks of as
   /// "the top grouping" for that curriculum.
@@ -666,6 +685,24 @@ class CurriculumLabels {
       CurriculumId.mishnehTorah => level(id, 1).enPlural,
       CurriculumId.mishnayos || CurriculumId.bavli => level(id, 2).enPlural,
       _ => 'Sections',
+    };
+  }
+
+  /// Toggle-aware variant of [containerCountLabelPlural].
+  static String containerCountLabel(CurriculumId id, {required bool useHebrew}) {
+    return switch (id) {
+      CurriculumId.yerushalmi ||
+      CurriculumId.chumash ||
+      CurriculumId.mishnehTorah => level(id, 1).inLanguage(
+        useHebrew: useHebrew,
+        plural: true,
+      ),
+      CurriculumId.mishnayos ||
+      CurriculumId.bavli => level(id, 2).inLanguage(
+        useHebrew: useHebrew,
+        plural: true,
+      ),
+      _ => useHebrew ? 'חלקים' : 'Sections',
     };
   }
 

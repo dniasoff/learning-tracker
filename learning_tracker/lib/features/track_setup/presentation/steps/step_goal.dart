@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
+import 'package:learning_tracker/core/labels/domain_term_labels.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
@@ -57,8 +58,11 @@ class _SelfPacedGoalStepState extends ConsumerState<SelfPacedGoalStep> {
 
   LevelLabels get _paceUnitLevel => _opts.levelFor(_paceGranularity);
 
-  String get _unitSingular => _paceUnitLevel.en;
-  String get _unitPlural => _paceUnitLevel.enPlural;
+  String _unitSingular({required bool useHebrew}) =>
+      _paceUnitLevel.inLanguage(useHebrew: useHebrew);
+
+  String _unitPlural({required bool useHebrew}) =>
+      _paceUnitLevel.inLanguage(useHebrew: useHebrew, plural: true);
 
   String _formatDate(DateTime value, {required bool useHebrew}) {
     if (useHebrew) {
@@ -137,9 +141,14 @@ class _SelfPacedGoalStepState extends ConsumerState<SelfPacedGoalStep> {
     await _pickDeadline();
   }
 
-  String _formatUnitForEstimate(int perStudyDay) {
-    final s = perStudyDay == 1 ? _unitSingular : _unitPlural;
-    return s[0].toUpperCase() + s.substring(1);
+  String _formatUnitForEstimate(
+    int perStudyDay, {
+    required bool useHebrew,
+  }) {
+    final s = perStudyDay == 1
+        ? _unitSingular(useHebrew: useHebrew)
+        : _unitPlural(useHebrew: useHebrew);
+    return s.isNotEmpty ? s[0].toUpperCase() + s.substring(1) : s;
   }
 
   void _continue() {
@@ -198,6 +207,7 @@ class _SelfPacedGoalStepState extends ConsumerState<SelfPacedGoalStep> {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context)!;
     final useHebrew = ref.watch(useHebrewDateProvider);
+    final useHebrewTerms = domainTermLabels(ref).isHebrew;
     final scopeCountAsync = ref.watch(
       scopedItemCountProvider(widget.curriculumId),
     );
@@ -226,13 +236,16 @@ class _SelfPacedGoalStepState extends ConsumerState<SelfPacedGoalStep> {
       isActive: _mode == 'pace',
       paceValue: _paceValue,
       pacePeriod: _paceUnit,
-      unitSingular: _unitSingular,
-      unitPlural: _unitPlural,
+      unitSingular: _unitSingular(useHebrew: useHebrewTerms),
+      unitPlural: _unitPlural(useHebrew: useHebrewTerms),
       hasUnitChoice: opts.hasChoice,
       coarseKey: opts.coarseKey,
-      coarseLabel: opts.coarse.enPlural,
+      coarseLabel: opts.coarse.inLanguage(
+        useHebrew: useHebrewTerms,
+        plural: true,
+      ),
       fineKey: opts.fineKey,
-      fineLabel: opts.fine?.enPlural,
+      fineLabel: opts.fine?.inLanguage(useHebrew: useHebrewTerms, plural: true),
       paceGranularity: _paceGranularity,
       projectedFinishLabel: _projectedFinishLabel(
         useHebrew,
@@ -268,7 +281,10 @@ class _SelfPacedGoalStepState extends ConsumerState<SelfPacedGoalStep> {
       itemsPerStudyDay: itemsPerStudyDay,
       totalScopeItems: totalScopeItems,
       scopeIsLoading: scopeLoading,
-      unitLabel: _formatUnitForEstimate(itemsPerStudyDay),
+      unitLabel: _formatUnitForEstimate(
+        itemsPerStudyDay,
+        useHebrew: useHebrewTerms,
+      ),
       onTapDate: _pickDeadline,
       l10n: l10n,
     );
