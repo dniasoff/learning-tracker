@@ -18,7 +18,7 @@ import 'package:learning_tracker/core/database/tables/learner_profiles.dart';
 /// instead set this field. Row count never decreases (N8 invariant).
 @TableIndex(
   name: 'completion_events_natural_key',
-  columns: {#profileId, #sefariaRef, #stageId, #trackType},
+  columns: {#profileId, #sefariaRef, #stageId, #trackType, #curriculumId},
   unique: true,
 )
 class CompletionEvents extends Table {

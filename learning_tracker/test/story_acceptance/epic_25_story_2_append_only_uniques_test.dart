@@ -68,8 +68,9 @@ void main() {
                 'sefaria_ref',
                 'stage_id',
                 'track_type',
+                'curriculum_id',
               ]) &&
-              colNames.length == 4) {
+              colNames.length == 5) {
             hits.add(indexName);
           }
         }
@@ -77,7 +78,8 @@ void main() {
           hits,
           isNotEmpty,
           reason:
-              'No UNIQUE index covers (profileId, sefariaRef, stageId, trackType)',
+              'No UNIQUE index covers (profileId, sefariaRef, stageId, '
+              'trackType, curriculumId) — v22 per-curriculum natural key',
         );
       },
     );

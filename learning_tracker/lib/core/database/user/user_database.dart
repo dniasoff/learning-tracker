@@ -116,7 +116,7 @@ class UserDatabase extends _$UserDatabase {
   UserDatabase(super.e);
 
   @override
-  int get schemaVersion => 21;
+  int get schemaVersion => 22;
 
   // drift_dev cannot express WHERE in a Dart-defined view's `as()` body
   // (cascade `..where()` confuses the generator).  The auto-generated SQL for
@@ -275,6 +275,21 @@ class UserDatabase extends _$UserDatabase {
           if (!stageCols.any((r) => r.data['name'] == 'superseded_at')) {
             await m.addColumn(stageDefinitions, stageDefinitions.supersededAt);
           }
+        }
+
+        // B1 (v21 → v22): completion identity is per-curriculum — widen the
+        // natural key unique index to include curriculum_id.
+        // Widening a unique index cannot create collisions: existing rows are
+        // unique on the 4-tuple; the 5-tuple is at least as discriminating.
+        if (from < 22) {
+          await customStatement(
+            'DROP INDEX IF EXISTS completion_events_natural_key',
+          );
+          await customStatement(
+            'CREATE UNIQUE INDEX completion_events_natural_key '
+            'ON completion_events '
+            '(profile_id, sefaria_ref, stage_id, track_type, curriculum_id)',
+          );
         }
       },
     );
