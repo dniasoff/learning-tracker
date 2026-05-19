@@ -12,7 +12,7 @@ part 'cloud_content_providers.g.dart';
 @Riverpod(keepAlive: true)
 CloudContentService cloudContentService(Ref ref) {
   final storage = ref.watch(firebaseStorageProvider);
-  return CloudContentService(storage: storage);
+  return CloudContentService(fetchBlob: (path) => storage.ref(path).getData());
 }
 
 /// Provides the TextDownloadStatusDao from UserDatabase.

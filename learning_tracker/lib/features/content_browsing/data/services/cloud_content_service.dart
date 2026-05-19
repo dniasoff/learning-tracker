@@ -2,11 +2,18 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
-import 'package:firebase_storage/firebase_storage.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/network/sefaria/models/curriculum_hierarchy_config.dart';
+
+/// Fetches a raw content blob from remote storage by path.
+///
+/// Injected so [CloudContentService] carries no direct Firebase dependency
+/// (layering Rule 3 — Firebase imports are confined to core/sync +
+/// features/auth). Production wiring builds this from `FirebaseStorage` in
+/// `cloud_content_providers.dart`.
+typedef ContentBlobFetcher = Future<Uint8List?> Function(String path);
 
 /// Storage path prefix for all content.
 const String _contentPrefix = 'content/v1';
@@ -169,9 +176,10 @@ class TextChunkInfo {
 ///   content/v1/{curriculum}/hierarchy/{language}.json.gz
 ///   content/v1/{curriculum}/text/{language}/{chunk}.json.gz
 class CloudContentService {
-  CloudContentService({required FirebaseStorage storage}) : _storage = storage;
+  CloudContentService({required this.fetchBlob});
 
-  final FirebaseStorage _storage;
+  /// Fetches a raw content blob from storage by path.
+  final ContentBlobFetcher fetchBlob;
 
   /// Cached manifest to avoid repeated downloads.
   ContentManifest? _cachedManifest;
@@ -185,8 +193,7 @@ class CloudContentService {
     }
 
     try {
-      final ref = _storage.ref('$_contentPrefix/manifest.json');
-      final data = await ref.getData();
+      final data = await fetchBlob('$_contentPrefix/manifest.json');
 
       if (data == null) {
         throw const ContentDownloadException('Manifest not found');
@@ -218,8 +225,7 @@ class CloudContentService {
 
     AppLogger.instance.info('CloudContentService: downloading hierarchy $path');
 
-    final ref = _storage.ref(path);
-    final data = await ref.getData();
+    final data = await fetchBlob(path);
 
     if (data == null) {
       throw ContentDownloadException('No hierarchy found at $path');
@@ -249,8 +255,7 @@ class CloudContentService {
       'CloudContentService: downloading text chunk $path',
     );
 
-    final ref = _storage.ref(path);
-    final data = await ref.getData();
+    final data = await fetchBlob(path);
 
     if (data == null) {
       throw ContentDownloadException('No text chunk found at $path');

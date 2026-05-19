@@ -4,32 +4,24 @@ library;
 import 'dart:convert';
 import 'dart:typed_data';
 
-import 'package:firebase_storage/firebase_storage.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/features/content_browsing/data/services/cloud_content_service.dart';
-import 'package:mocktail/mocktail.dart';
 import 'package:test/test.dart';
 
-class MockFirebaseStorage extends Mock implements FirebaseStorage {}
-
-class MockReference extends Mock implements Reference {}
-
 void main() {
-  late MockFirebaseStorage mockStorage;
   late CloudContentService service;
+  // The blob the injected fetcher returns; each test sets it before acting.
+  Uint8List? blob;
 
   setUp(() {
-    mockStorage = MockFirebaseStorage();
-    service = CloudContentService(storage: mockStorage);
+    blob = null;
+    service = CloudContentService(fetchBlob: (_) async => blob);
   });
 
   group('CloudContentService', () {
     group('downloadHierarchy', () {
       test('parses valid JSON blob into items and config', () async {
-        final mockRef = MockReference();
-        when(() => mockStorage.ref(any())).thenReturn(mockRef);
-
-        final blob = {
+        final payload = {
           'hierarchyConfig': {
             'curriculumId': 'bavli',
             'levelLabels': ['Masechta', 'Daf', 'Amud'],
@@ -50,10 +42,7 @@ void main() {
             },
           ],
         };
-
-        when(() => mockRef.getData()).thenAnswer(
-          (_) async => Uint8List.fromList(utf8.encode(jsonEncode(blob))),
-        );
+        blob = Uint8List.fromList(utf8.encode(jsonEncode(payload)));
 
         final result = await service.downloadHierarchy(
           curriculum: CurriculumId.bavli,
@@ -67,9 +56,7 @@ void main() {
       });
 
       test('throws on null data', () async {
-        final mockRef = MockReference();
-        when(() => mockStorage.ref(any())).thenReturn(mockRef);
-        when(() => mockRef.getData()).thenAnswer((_) async => null);
+        blob = null;
 
         expect(
           () => service.downloadHierarchy(
@@ -83,18 +70,12 @@ void main() {
 
     group('downloadTextChunk', () {
       test('parses text chunk items', () async {
-        final mockRef = MockReference();
-        when(() => mockStorage.ref(any())).thenReturn(mockRef);
-
-        final blob = {
+        final payload = {
           'items': [
             {'ref': 'Berakhot.1', 'he': 'Hebrew text', 'en': 'English text'},
           ],
         };
-
-        when(() => mockRef.getData()).thenAnswer(
-          (_) async => Uint8List.fromList(utf8.encode(jsonEncode(blob))),
-        );
+        blob = Uint8List.fromList(utf8.encode(jsonEncode(payload)));
 
         final result = await service.downloadTextChunk(
           curriculum: CurriculumId.bavli,
@@ -110,9 +91,6 @@ void main() {
 
     group('checkForUpdates', () {
       test('returns curricula with different versions', () async {
-        final mockRef = MockReference();
-        when(() => mockStorage.ref(any())).thenReturn(mockRef);
-
         final manifest = {
           'schemaVersion': 1,
           'updatedAt': '2026-01-01',
@@ -131,10 +109,7 @@ void main() {
             },
           },
         };
-
-        when(() => mockRef.getData()).thenAnswer(
-          (_) async => Uint8List.fromList(utf8.encode(jsonEncode(manifest))),
-        );
+        blob = Uint8List.fromList(utf8.encode(jsonEncode(manifest)));
 
         final updates = await service.checkForUpdates(
           activeCurricula: [CurriculumId.bavli],
@@ -145,9 +120,6 @@ void main() {
       });
 
       test('returns empty when versions match', () async {
-        final mockRef = MockReference();
-        when(() => mockStorage.ref(any())).thenReturn(mockRef);
-
         final manifest = {
           'schemaVersion': 1,
           'updatedAt': '2026-01-01',
@@ -166,10 +138,7 @@ void main() {
             },
           },
         };
-
-        when(() => mockRef.getData()).thenAnswer(
-          (_) async => Uint8List.fromList(utf8.encode(jsonEncode(manifest))),
-        );
+        blob = Uint8List.fromList(utf8.encode(jsonEncode(manifest)));
 
         final updates = await service.checkForUpdates(
           activeCurricula: [CurriculumId.bavli],
