@@ -9,12 +9,16 @@ Paste the fenced block below into a fresh Claude Code session on the `dev` branc
 - **Owner decision (2026-05-19):** prior-marking and per-track Completion are
   **per-curriculum** (Option B). See "THE OPTION-B DESIGN" inside the fenced block.
 - **Remediation complete (2026-05-19):** Waves 1–7 executed and committed on `dev`.
+  Schema reached v22 (per-curriculum natural key) then v23 (priorMarkOnly column).
+  `make audit` now runs 13 greps (audit check 13 added for raw HebrewTerms.* in features/).
   See `docs/planning/tracks-and-completion-bug-report.md § Remediation status` for
   the per-bug resolution table. **Wave 4 false-positive note:** findings 11 and 14
-  (canonical B4/B5) were found to be false positives during Wave 4 execution —
-  `TrackCardViewModel` is actively used in `lib/`, and "Personal" is already
-  single-sourced in `TrackType.displayNameEn`. No code changes were made for those
-  two items; their canonical bug entries are marked FALSE POSITIVE in the status table.
+  (labelled "B2" and "B4" in the second-round review's re-numbering) were found to be
+  false positives during Wave 4 execution — `TrackCardViewModel` is actively used in
+  `lib/`, and "Personal" is already single-sourced in `TrackType.displayNameEn`. No
+  code changes were made for those two items. NOTE: these second-review re-numbered
+  items are NOT the canonical B4 (Track Name defaults to blank) and B5 (delete the
+  stage-picker screen) — those are real bugs that ARE fixed (see the status table).
 - **Companion docs:** `docs/planning/tracks-and-completion-bug-report.md`
   (canonical B1–B11); `docs/hebrew-terms.md` (B11 spec);
   `docs/planning/tracks-and-completion-fix-plan.md` (the prior effort).
@@ -109,7 +113,7 @@ NO-WORKTREE COORDINATION PROTOCOL
        (only if a Drift/Freezed/Riverpod codegen input changed)
     2. flutter gen-l10n            (only if an .arb changed)
     3. make ci                    (analyze + seed validation + all tests)
-    4. make audit                 (12 layering greps)
+    4. make audit                 (13 layering greps)
 - Gate RED → dispatch ONE fix agent against the offending files, re-run, repeat
   until GREEN.
 - Gate GREEN → commit each agent's slice as its OWN commit, sequentially:
@@ -176,21 +180,22 @@ WAVE 1 — Per-curriculum foundation: schema + sync   (2 parallel agents)
 Shared contract: a completion's identity is now the 5-tuple
 (profileId, sefariaRef, stageId, trackType, curriculumId).
 
-── Agent A — Schema v20 → v21 ──
+── Agent A — Schema v20 → v22/v23 ──
 Owns: lib/core/database/tables/completion_events.dart,
       lib/core/database/user/user_database.dart,
       lib/core/database/views/completions_view.dart (only if it must expose
         curriculumId for Wave 2's consumers),
-      test/migration/v20_to_v21_test.dart (new).
+      test/migration/v20_to_v22_test.dart (new).
 Task (Finding 1, schema half): change the `completion_events_natural_key` unique
   @TableIndex to {profileId, sefariaRef, stageId, trackType, curriculumId}. Bump
-  schemaVersion to 21. Add the onUpgrade v20→v21 step: drop the old index, create
-  the new one (existing rows stay unique — widening a unique index cannot create
-  a collision). The write path already uses InsertMode.insertOrIgnore, which now
-  collapses on the 5-tuple automatically. Write v20_to_v21_test.dart: seed v20
-  rows, migrate, assert the new index exists and that two rows differing only in
-  curriculumId can now coexist.
-Commit: feat(sync): completion identity is per-curriculum — v21 natural key
+  schemaVersion to v22 (per-curriculum natural key). Add the onUpgrade v20→v22 step:
+  drop the old index, create the new one (existing rows stay unique — widening a
+  unique index cannot create a collision). The write path already uses
+  InsertMode.insertOrIgnore, which now collapses on the 5-tuple automatically.
+  A subsequent v23 migration adds the priorMarkOnly column (used by B8 expunge).
+  Write v20_to_v22_test.dart: seed v20 rows, migrate, assert the new index exists
+  and that two rows differing only in curriculumId can now coexist.
+Commit: feat(sync): completion identity is per-curriculum — v22/v23 natural key
 
 ── Agent B — Per-curriculum completion doc id + tombstone propagation ──
 Owns: lib/core/sync/firestore_gateway_impl.dart, firestore_gateway.dart,
@@ -247,7 +252,7 @@ Commit: fix(tracks): per-curriculum expunge; harden prior-mark stage resolution
 ── Agent E — Lifetime stays content-identity (regression guard) ──
 Owns: lib/features/progress/presentation/providers/lifetime_knowledge_providers.dart,
       test/features/progress/presentation/providers/lifetime_knowledge_providers_test.dart.
-Task (Option-B design): add a test that, after the v21 change, B9 still counts a
+Task (Option-B design): add a test that, after the v22/v23 change, B9 still counts a
   section completed under two curricula EXACTLY ONCE in lifetime totals
   (numerator and denominator). No production change is expected — if the test
   fails, fix lifetime_knowledge_providers.dart so the union dedupes by sefariaRef.
@@ -299,10 +304,16 @@ sequentially (H owns that file).
 WAVE 4 — Track-screen cleanup   (2 parallel agents, disjoint files)
 ═══════════════════════════════════════════════════════════════════════
 
-NOTE (2026-05-19 post-execution): Both Wave 4 findings were FALSE POSITIVES.
-Agent I confirmed `TrackCardViewModel` IS actively used in `lib/` — the file was
-not orphaned. Agent J confirmed `TrackType.displayNameEn` already single-sources
-the "Personal" label — no divergent default existed. No code was changed in Wave 4.
+NOTE (2026-05-19 post-execution): Both Wave 4 findings were FALSE POSITIVES in the
+second adversarial review's re-numbering. Agent I confirmed `TrackCardViewModel` IS
+actively used in `lib/` — the file was not orphaned. Agent J confirmed
+`TrackType.displayNameEn` already single-sources the "Personal" label — no divergent
+default existed. No code was changed in Wave 4.
+
+IMPORTANT: The second review re-labelled these findings "B4" and "B5" in its own
+internal numbering. They are NOT the canonical B4 (Track Name defaults to blank) and
+B5 (delete the stage-picker screen) from the bug report. Those canonical B4 and B5
+ARE real bugs and ARE fixed — see the remediation status table.
 
 ── Agent I — Remove orphan TrackCardViewModel ──
 Owns: lib/features/dashboard/domain/models/track_card_view_model.dart
@@ -311,6 +322,8 @@ Task (Finding 11): confirm TrackCardViewModel + LifetimeLearningData are
   constructed nowhere in lib/ (grep `TrackCardViewModel(`); delete them; rerun
   build_runner; remove now-dead imports.
 STATUS: FALSE POSITIVE — TrackCardViewModel is actively used; no deletion made.
+  (This finding's internal "B4" label is the second review's re-numbering, NOT
+  canonical B4 = Track Name blank.)
 
 ── Agent J — Single-source the default track name ──
 Owns: lib/features/track_setup/domain/services/track_creation_service.dart,
@@ -322,6 +335,8 @@ Task (Finding 14): both the goal-creation default and the edit-screen fallback
   the curriculum name in Edit Track.
 STATUS: FALSE POSITIVE — "Personal" is already single-sourced in TrackType.displayNameEn;
   no divergent default found; no change made.
+  (This finding's internal "B5" label is the second review's re-numbering, NOT
+  canonical B5 = delete the stage-picker screen.)
 
 Gate, then commit I, J.
 
@@ -374,7 +389,7 @@ that re-implements the code under test instead of calling it.
 | Wave | Agents | Delivers | Findings |
 |---|---|---|---|
 | 0 | orchestrator | baseline — `make ci` + `make audit` green | — |
-| 1 | A · B | v21 per-curriculum schema; per-curriculum completion doc id + tombstone sync | 1, 2 |
+| 1 | A · B | v22/v23 per-curriculum schema (natural key + priorMarkOnly column); per-curriculum completion doc id + tombstone sync | 1, 2 |
 | 2 | C · D · E | curriculum-scoped Completion % + real B1 provider tests; per-curriculum expunge + B6/B8 hardening; lifetime-dedup guard | 1, 3, 8, 9, 10 |
 | 3 | F · G · H | stage names re-render live; structural unit words toggle-aware; honorific + `חזרה` + audit grep | 4, 5, 6, 12, 13 |
 | 4 | I · J | ~~remove orphan TrackCardViewModel; single-source the default track name~~ — both findings were FALSE POSITIVES; no code changed | 11, 14 |

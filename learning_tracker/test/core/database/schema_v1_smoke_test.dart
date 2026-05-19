@@ -28,11 +28,11 @@ void main() {
     // 1. Schema version
     // -------------------------------------------------------------------------
 
-    test('schemaVersion is 22', () async {
+    test('schemaVersion is 23', () async {
       final version = await db.customSelect('PRAGMA user_version').map((row) {
         return row.read<int>('user_version');
       }).getSingle();
-      expect(version, equals(22));
+      expect(version, equals(23));
     });
 
     // -------------------------------------------------------------------------

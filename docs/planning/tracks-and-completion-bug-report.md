@@ -16,7 +16,7 @@ plan.
 ## How to verify
 
 - Gates: `cd learning_tracker && make ci` (analyze + all tests) and `make audit`
-  (12 layering greps).
+  (13 layering greps).
 - **CAVEAT — pre-existing tree noise:** the working tree contains unrelated
   in-progress work by the repo owner — a new `lib/core/utils/text_input_formatters.dart`
   imported across ~16 screen/dialog files. That WIP makes `dart analyze` emit
@@ -195,39 +195,39 @@ on `dev`; Wave 7 is the final docs reconciliation pass.
 
 | Bug | Severity | Status | Date | Notes |
 |-----|----------|--------|------|-------|
-| B1 | HIGH | RESOLVED | 2026-05-19 | Completion identity is now per-curriculum 5-tuple; dashboard % tests replaced with real provider integration tests driving in-memory Drift. |
-| B2 | MEDIUM | RESOLVED | 2026-05-19 | Lifetime learning row removed from the Track hub card (`learning_track_card.dart`); only the detail-screen removal was done pre-plan (`1bf11dbc`). |
-| B3 | MEDIUM | RESOLVED | 2026-05-19 | Option B chosen and implemented: per-curriculum natural key with UNIQUE index on 5-tuple `(profileId, sefariaRef, stageId, trackType, curriculumId)`; v22 migration. |
-| B4 | MEDIUM | FALSE POSITIVE | 2026-05-19 | `TrackCardViewModel` is actively used in `lib/`; not dead code — adversarial review finding 11 was incorrect. No change needed. |
-| B5 | MEDIUM | FALSE POSITIVE | 2026-05-19 | "Personal" is already single-sourced in `TrackType.displayNameEn`; no duplication existed — adversarial review finding was incorrect. No change needed. |
-| B6 | HIGH | RESOLVED | 2026-05-19 | `expungePriorCompletions` now filters by `curriculumId`; confirmed in integration tests (`bulk_prior_completion_b6_b8_test.dart`). |
-| B7 | MEDIUM | RESOLVED | 2026-05-19 | Outbox `entityKey` is now 5-component including `curriculumId`; Firestore document id is the same 5-component key, preventing per-curriculum collisions. |
-| B8 | MEDIUM | RESOLVED | 2026-05-19 | Bulk-prior-completion service uses `allConfiguredStageIds` only; the caller `stageId` union that re-admitted superseded stages (finding 10) was removed. |
-| B9 | HIGH | RESOLVED | 2026-05-19 | Lifetime knowledge dedup verified correct across per-curriculum completions; two new regression guard tests added to `lifetime_knowledge_providers_test.dart`. |
-| B10 | LOW | RESOLVED | 2026-05-19 | `_allStageOrders` renamed (was `_allStageIds`) for clarity; added comment explaining purpose; `AppLogger` warning logged when `stages.isEmpty`. |
-| B11 | MEDIUM | RESOLVED | 2026-05-19 | All 8 sub-defects addressed across Waves 3–6: see sub-items below. |
+| B1 | HIGH | FIXED (edge open) | 2026-05-19 | Item-based completion now correct; dashboard uses real provider tests. Silent under-report when `stages.isEmpty` now logs a warning. |
+| B2 | MEDIUM | FIXED | 2026-05-19 | Lifetime removed from track hub card (`learning_track_card.dart`). |
+| B3 | MEDIUM | FIXED | 2026-05-19 | "Personal Track" label removed from heading, hub-card subtitle, and config row. |
+| B4 | MEDIUM | FIXED | 2026-05-19 | Track name default aligned to curriculum label; seeded at creation; edit-screen fallback uses curriculum name. |
+| B5 | MEDIUM | FIXED | 2026-05-19 | Stage-picker screen deleted (commit `dd3e0f53`); prior-marking flow now select-and-mark with no per-stage choice. |
+| B6 | HIGH | FIXED | 2026-05-19 | Prior-mark writes all configured stages; per-curriculum isolated; `expungePriorCompletions` filters by `curriculumId`. |
+| B7 | MEDIUM | FIXED | 2026-05-19 | Pre-tick wired on re-open; untick removes the prior-mark record. |
+| B8 | MEDIUM | FIXED | 2026-05-19 | `priorMarkOnly` column added (schema v23); expunge skips rows that have a real-learning record; tombstone path confirmed via sync tests. |
+| B9 | HIGH | FIXED | 2026-05-19 | Dedup via `Set` union in lifetime providers; two regression tests added to `lifetime_knowledge_providers_test.dart`. |
+| B10 | LOW | FIXED | 2026-05-19 | Completion label correct; `carouselCompletion` ARB key parameterised with chazara term; both call sites updated. |
+| B11 | MEDIUM | PARTIALLY FIXED | 2026-05-19 | 7 of 8 sub-defects fully resolved; B11-1 partially fixed — see sub-items below. |
 
 ### B11 sub-items
 
 | Sub-item | Status | Notes |
 |----------|--------|-------|
-| B11-1 (structural unit words not toggle-aware) | RESOLVED | `daf/amud/perek/mishnah/seder/masechta/chumash` getters wired into label resolution; `levelLabels` now toggle-aware. |
-| B11-2 (translated form leaking) | RESOLVED | All UI uses pure transliteration ("Chazara") or Hebrew script ("חזרה"); translated hybrid form removed. |
-| B11-3 (dead `uiBubbleChazara` constant) | RESOLVED | Structural unit words now toggle via `CurriculumLabels.inLanguage(useHebrew:)`; dead constant removed. |
-| B11-4 (hardcoded "Talmid Chochom" literals) | RESOLVED | `app_intro_screen.dart` routes honorific through `domainTermLabels(ref).talmidChochom` / `.talmidChochomCaps`. |
-| B11-5 (audit grep targeted wrong symbol) | RESOLVED | Makefile rule 7 grep now targets the real provider `useHebrewTermsProvider`; blanket `.notifier)` exclusion replaced with path-specific allowlist. |
-| B11-6 (stage names frozen at creation) | RESOLVED | Stage names re-render live via `domainTermLabels(ref).resolveStoredStageName`; `daily_task_card.dart` and `dashboard_task_item.dart` updated. |
-| B11-7 (stale settings-screen comment) | RESOLVED | All raw `HebrewTerms.*` calls removed from `lib/features/`; audit check 13 enforces this going forward. |
-| B11-8 (חזרה string in add_track_flow_screen) | RESOLVED | `חזרה` string in `add_track_flow_screen` now uses `domainTermLabels(ref).chazara`; `חזרה` literal consolidated to one const in `hebrew_terms.dart`. |
+| B11-1 — structural unit words not toggle-aware | PARTIALLY FIXED | Toggle-aware labels added via `CurriculumLabels.inLanguage`; `domainTermLabels` structural-unit accessors (`daf/amud/perek/mishnah/seder/masechta/chumash`) not yet consumed at every call site. |
+| B11-2 — translated form leaking | FIXED | All UI uses pure transliteration ("Chazara") or Hebrew script ("חזרה"); translated hybrid form removed. |
+| B11-3 — dead `uiBubbleChazara` constant | FIXED | Structural unit words now toggle via `CurriculumLabels.inLanguage(useHebrew:)`; dead constant removed. |
+| B11-4 — hardcoded "Talmid Chochom" literals | FIXED | `app_intro_screen.dart` routes honorific through `domainTermLabels(ref).talmidChochom` / `.talmidChochomCaps`. |
+| B11-5 — audit grep targeted wrong symbol | FIXED | Audit check 13 now enforces no raw `HebrewTerms.*` in `lib/features/`; blanket `.notifier)` exclusion replaced with path-specific allowances for legitimate writer paths. |
+| B11-6 — stage names frozen at creation | FIXED | Stage names re-render live via `resolveStoredStageName`; `daily_task_card.dart` fixed. |
+| B11-7 — stale settings-screen comment | FIXED | Raw `HebrewTerms.*` calls removed from `lib/features/`; audit check 13 enforces this going forward. |
+| B11-8 — חזרה in `add_track_flow_screen` | FIXED | `חזרה` resolved via `domainTermLabels(ref).chazara`; literal consolidated to one const in `hebrew_terms.dart`. |
 
-### Wave 6 code-review findings (HIGH severity)
+### Wave 6 additional findings (code review)
 
-Two HIGH issues were found by the Wave 5 `/bmad-code-review` and fixed in Wave 6:
+Two HIGH issues found by the Wave 5 `/bmad-code-review` and fixed in Wave 6:
 
 | Finding | Status | Notes |
 |---------|--------|-------|
-| H1 — Tombstoned completions permanently blocked from re-activation | RESOLVED | Fixed in `completion_writer.dart`: tombstoned rows can now be re-activated by a subsequent real-learning completion. |
-| H2 — Pull-merge skipped tombstoned rows instead of clearing them | RESOLVED | Fixed in `sync_engine.dart` + `drift_merge_store.dart`: pull-merge now correctly clears tombstones when the remote has a live record. |
+| H1 — Tombstoned completions permanently blocked from re-activation | FIXED | `completion_writer.dart`: tombstoned rows can now be re-activated by a subsequent real-learning completion. |
+| H2 — Pull-merge skipped tombstoned rows instead of clearing them | FIXED | `sync_engine.dart` + `drift_merge_store.dart`: pull-merge now correctly clears tombstones when the remote has a live record. |
 
 ### Option-B behaviour change note
 

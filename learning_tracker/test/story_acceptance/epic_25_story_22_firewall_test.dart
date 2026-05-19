@@ -143,19 +143,19 @@ void main() {
     setUp(() => db = inMemoryDb());
     tearDown(() => db.close());
 
-    test('UserDatabase.schemaVersion is 22', () {
+    test('UserDatabase.schemaVersion is 23', () {
       // schemaVersion is a Dart constant — no I/O needed.
-      expect(db.schemaVersion, equals(22));
+      expect(db.schemaVersion, equals(23));
     });
 
     test(
-      'PRAGMA user_version matches schemaVersion 22 after first query',
+      'PRAGMA user_version matches schemaVersion 23 after first query',
       () async {
         // Trigger schema materialisation by issuing any query.
         await db.customSelect('SELECT 1').get();
 
         final row = await db.customSelect('PRAGMA user_version').getSingle();
-        expect(row.read<int>('user_version'), equals(22));
+        expect(row.read<int>('user_version'), equals(23));
       },
     );
 
