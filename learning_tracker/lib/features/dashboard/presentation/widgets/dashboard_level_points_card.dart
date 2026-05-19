@@ -22,6 +22,7 @@ class DashboardLevelPointsCard extends ConsumerWidget {
     required this.lifetimeSectionsDetail,
     required this.cumulativeLifetime,
     required this.chazaraLabel,
+    this.tasksReady = true,
   });
 
   final UserMode userMode;
@@ -39,6 +40,14 @@ class DashboardLevelPointsCard extends ConsumerWidget {
   /// does not need to read [useHebrewTermsProvider] directly.
   final String chazaraLabel;
 
+  /// Whether the task counts are ready to display.
+  ///
+  /// When `false` (initial sync has not yet completed), the OVERDUE / TODAY /
+  /// CHAZARA bubbles show "…" instead of a number — never 0, never a positive
+  /// integer.  The remaining tiles (level, points, lifetime progress) are
+  /// unaffected.
+  final bool tasksReady;
+
   static const List<SchedulerTaskSection> _bubbleSections = [
     SchedulerTaskSection.overdue,
     SchedulerTaskSection.today,
@@ -49,16 +58,23 @@ class DashboardLevelPointsCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context)!;
+    // When tasksReady is false (initial sync not yet complete), show "…"
+    // instead of any numeric count — the data is incomplete and must not be
+    // presented as a meaningful number to the user.
+    final overdueDisplay = tasksReady ? '$overdueCount' : '…';
+    final todayDisplay = tasksReady ? '$todayCount' : '…';
+    final reviewDisplay = tasksReady ? '$reviewCount' : '…';
+
     final bubbleData = userMode == UserMode.child
         ? [
-            (l10n.bubbleOverdue, '$overdueCount', Colors.white),
-            (l10n.bubbleTodayDue, '$todayCount', Colors.white),
-            (chazaraLabel, '$reviewCount', const Color(0xFFFFC107)),
+            (l10n.bubbleOverdue, overdueDisplay, Colors.white),
+            (l10n.bubbleTodayDue, todayDisplay, Colors.white),
+            (chazaraLabel, reviewDisplay, const Color(0xFFFFC107)),
           ]
         : [
-            (l10n.bubbleOverdue, '$overdueCount', Colors.white),
-            (l10n.bubbleTodayDue, '$todayCount', Colors.white),
-            (chazaraLabel, '$reviewCount', const Color(0xFFFFC107)),
+            (l10n.bubbleOverdue, overdueDisplay, Colors.white),
+            (l10n.bubbleTodayDue, todayDisplay, Colors.white),
+            (chazaraLabel, reviewDisplay, const Color(0xFFFFC107)),
           ];
 
     return Container(

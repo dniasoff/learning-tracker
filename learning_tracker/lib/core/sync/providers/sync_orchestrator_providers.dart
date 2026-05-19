@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/providers/talker_provider.dart';
+import 'package:learning_tracker/core/sync/initial_sync_state.dart';
 import 'package:learning_tracker/core/sync/providers/merge_router_provider.dart';
 import 'package:learning_tracker/core/sync/providers/outbox_providers.dart';
 import 'package:learning_tracker/core/sync/providers/resolve_profile_id_provider.dart';
@@ -77,6 +78,9 @@ final syncOrchestratorProvider = Provider<SyncOrchestrator?>((ref) {
     resolveGateway: () => ref.read(firestoreGatewayProvider)!,
     resolveProfileId: resolveProfileId,
     logger: AppLogger(talker),
+    // §10.2: invalidate initialSyncCompleteProvider the first time a full pull
+    // completes so the dashboard re-evaluates its readiness check immediately.
+    onFirstSyncComplete: () => ref.invalidate(initialSyncCompleteProvider),
   );
 
   // Idempotent: registers the lifecycle observer + Firestore listeners once.

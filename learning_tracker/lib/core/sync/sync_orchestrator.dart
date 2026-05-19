@@ -4,6 +4,7 @@ import 'package:flutter/widgets.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/sync/firestore_gateway.dart';
 import 'package:learning_tracker/core/sync/firestore_listener_source.dart';
+import 'package:learning_tracker/core/sync/initial_sync_state.dart';
 import 'package:learning_tracker/core/sync/lifecycle_observer.dart';
 import 'package:learning_tracker/core/sync/listener_supervisor.dart';
 import 'package:learning_tracker/core/sync/merge/entity_merger.dart';
@@ -68,11 +69,20 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
     required FirestoreGateway Function() resolveGateway,
     required int Function() resolveProfileId,
     AppLogger? logger,
+
+    /// Called once — the first time a full pull completes successfully.
+    ///
+    /// Wired by [syncOrchestratorProvider] to invalidate
+    /// [initialSyncCompleteProvider] so the dashboard re-evaluates its
+    /// readiness check immediately after the first pull finishes.  Optional so
+    /// tests that do not need the Riverpod notification can omit it.
+    void Function()? onFirstSyncComplete,
   }) : _resolveEngine = resolveEngine,
        _resolveMergeRouter = resolveMergeRouter,
        _resolveGateway = resolveGateway,
        _resolveProfileId = resolveProfileId,
-       _logger = logger;
+       _logger = logger,
+       _onFirstSyncComplete = onFirstSyncComplete;
 
   /// Resolves the current [SyncEngine] on demand.
   ///
@@ -80,6 +90,10 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
   /// delegates push/status to may itself be rebuilt (e.g. after a DB swap),
   /// so the engine is resolved lazily rather than captured at construction.
   final SyncEngine Function() _resolveEngine;
+
+  /// Optional callback invoked the first time a full pull completes.  See
+  /// constructor doc for [onFirstSyncComplete].
+  final void Function()? _onFirstSyncComplete;
 
   /// Resolves the current [MergeRouter] on demand.
   ///
@@ -245,6 +259,20 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
         );
       } catch (_) {
         // Non-fatal: resume throttle degrades gracefully.
+      }
+
+      // Set the "initial sync complete" flag the first time a full pull
+      // finishes (idempotent — only writes once; callback is only invoked on
+      // the transition from unset → true).
+      //
+      // An offline-skip (triggeredFromResume with throttle active) never
+      // reaches here — that path returns early above — so the flag is only
+      // ever set after an actual Firestore pull completes.
+      try {
+        await markInitialSyncComplete(onComplete: _onFirstSyncComplete);
+      } catch (_) {
+        // Non-fatal: dashboard gate will remain in "syncing" state until
+        // the next successful pull, which will retry the write.
       }
 
       _logger?.info(event: 'sync_orchestrator_pull_on_launch_complete');

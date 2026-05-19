@@ -8,6 +8,7 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/user_mode.dart';
 import 'package:learning_tracker/core/labels/domain_term_labels.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
+import 'package:learning_tracker/core/sync/initial_sync_state.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/core/utils/percentage_formatter.dart';
@@ -131,6 +132,23 @@ class DashboardBody extends ConsumerWidget {
     final name = profileName ?? l10n.learner;
     final now = DateTimeFactory.nowLocal();
 
+    // §10.2 — "initial sync complete" gate.
+    //
+    // Before the first full Firestore pull finishes, the local DB may be empty
+    // or partially merged.  Running the projection on that data would produce
+    // a misleading count (artificially high overdue, or 0 that looks like
+    // "all done").  We therefore treat the dashboard count tiles as "not ready"
+    // until both conditions hold:
+    //   1. dailyTasksAsync has emitted at least one value (DB query resolved).
+    //   2. initialSyncCompleteProvider is true (full pull has completed once).
+    //
+    // An absent / loading / false value is treated the same: not ready.
+    final initialSyncComplete =
+        ref.watch(initialSyncCompleteProvider).asData?.value ?? false;
+
+    // Provide an empty task list while not ready so the list-grouping helpers
+    // below can run without null checks.  The counts derived from this list
+    // are only shown when `tasksReady` is true.
     final allTasks = dailyTasksAsync.value ?? const <DailyTask>[];
     final lifetimeTotals = lifetimeTotalsAsync.hasValue
         ? lifetimeTotalsAsync.value
@@ -165,8 +183,14 @@ class DashboardBody extends ConsumerWidget {
     final doneDisplay = lifetimePercentStr;
     final sectionsDetail = lifetimeSectionsStr;
 
-    final tasksReady = dailyTasksAsync.hasValue;
+    // Tasks are "ready" only when the DB query has resolved AND the first full
+    // Firestore pull has completed.  If either condition is unmet, the count
+    // tiles show "…" — never 0, never a positive integer.
+    final tasksReady = dailyTasksAsync.hasValue && initialSyncComplete;
     final lifetimeReady = lifetimeTotalsAsync.hasValue;
+    // "All caught up" is suppressed until tasks are ready: showing it before
+    // sync completes would mislead the user into thinking there's nothing to do
+    // when in fact the data hasn't arrived yet.
     final showAllCaughtUp =
         tasksReady &&
         lifetimeReady &&
@@ -305,6 +329,7 @@ class DashboardBody extends ConsumerWidget {
             lifetimeSectionsDetail: sectionsDetail,
             cumulativeLifetime: cumulativeLifetime,
             chazaraLabel: chazaraBubbleLabel,
+            tasksReady: tasksReady,
           ),
         const SizedBox(height: 30),
         Row(
