@@ -13,6 +13,7 @@ import 'package:learning_tracker/core/services/calendar_program_registry.dart';
 import 'package:learning_tracker/core/services/calendar_program_service.dart';
 import 'package:learning_tracker/core/services/learning_program_service.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
+import 'package:learning_tracker/core/utils/pace_derivation.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/scheduler/data/repositories/daily_plan_repository.dart';
 import 'package:learning_tracker/features/scheduler/data/repositories/scheduler_completion_repository_impl.dart';
@@ -589,17 +590,47 @@ Future<List<DailyTask>> _buildProjectionTasks({
     final startedAt = trackStartedAtMap[curriculum];
     if (startedAt == null) continue;
 
-    // Fetch pace from the goal.  Setup UI guarantees an explicit pace; if
-    // none is present (legacy/transient state) the track is skipped — the
-    // projection itself would throw MissingPaceError.
+    // Fetch the goal. Prefer an explicit pace; fall back to deriving one from
+    // the deadline + scope + study-day density so a deadline-only goal still
+    // emits today's tasks instead of being skipped. Older deadline goals
+    // (written before F-M2 saved an explicit pace) and anything else where
+    // pace fields are null but a target date exists land in the fallback.
     final goal = await db.goalDao.getGoalByTrack(trackId);
-    if (goal == null || goal.paceValue == null || goal.pacePeriod == null) {
-      continue;
+    if (goal == null) continue;
+
+    // Fetch ordered curriculum refs via the engine (which respects the
+    // content repository and scoped overrides — the same path used by the
+    // snapshot builder).
+    final orderedItems = await engine.getOrderedLeafItems(curriculum);
+    final orderedRefs = orderedItems.map((i) => i.sefariaRef).toList();
+
+    var paceValue = goal.paceValue;
+    var pacePeriod = goal.pacePeriod;
+    if ((paceValue == null || pacePeriod == null) &&
+        goal.goalType == 'deadline' &&
+        goal.targetDate != null) {
+      final startLocal = DateUtils.extractLocalDate(DateTimeFactory.nowLocal());
+      final endLocal = DateUtils.extractLocalDate(goal.targetDate!.toLocal());
+      if (!endLocal.isBefore(startLocal)) {
+        final studyDaysInWindow = await db.studyDayConfigDao
+            .countStudyDaysInInclusiveDateRangeForTrack(
+              trackId: trackId,
+              startInclusive: startLocal,
+              endInclusive: endLocal,
+            );
+        final studyDaysPerWeek = await db.studyDayConfigDao
+            .getStudyDaysPerWeekForTrack(trackId: trackId);
+        final derived = derivePaceFromDeadline(
+          totalScopeItems: orderedItems.length,
+          studyDaysInWindow: studyDaysInWindow,
+          studyDaysPerWeek: studyDaysPerWeek,
+        );
+        paceValue = derived.paceValue;
+        pacePeriod = derived.pacePeriod;
+      }
     }
-    final pace = PaceCalculator.paceToDaily(
-      goal.paceValue!,
-      goal.pacePeriod!,
-    ).ceil();
+    if (paceValue == null || pacePeriod == null) continue;
+    final pace = PaceCalculator.paceToDaily(paceValue, pacePeriod).ceil();
 
     // Fetch study-day pattern.
     final studyConfigs = await db.studyDayConfigDao.getConfigsByTrack(trackId);
@@ -610,12 +641,6 @@ Future<List<DailyTask>> _buildProjectionTasks({
               if (c.dayType == 'study') c.dayOfWeek,
           };
     final pattern = StudyDayPattern(studyWeekdays);
-
-    // Fetch ordered curriculum refs via the engine (which respects the
-    // content repository and scoped overrides — the same path used by the
-    // snapshot builder).
-    final orderedItems = await engine.getOrderedLeafItems(curriculum);
-    final orderedRefs = orderedItems.map((i) => i.sefariaRef).toList();
 
     final anchor = DateUtils.extractLocalDate(startedAt);
 

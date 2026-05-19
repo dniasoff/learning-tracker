@@ -168,6 +168,11 @@ class _ConcurrencyTrackingGateway implements FirestoreGateway {
     required Map<String, dynamic> data,
   }) async {}
   @override
+  Future<void> deleteGoal({
+    required int profileId,
+    required String firestoreId,
+  }) async {}
+  @override
   Future<void> pushUiPreferences({
     required int profileId,
     required Map<String, dynamic> data,
@@ -313,6 +318,11 @@ class _FetchPageCountingGateway implements FirestoreGateway {
   Future<void> pushGoal({
     required int profileId,
     required Map<String, dynamic> data,
+  }) async {}
+  @override
+  Future<void> deleteGoal({
+    required int profileId,
+    required String firestoreId,
   }) async {}
   @override
   Future<void> pushUiPreferences({
@@ -1199,6 +1209,11 @@ class _FlakyFetchGateway implements FirestoreGateway {
   Future<void> pushGoal({
     required int profileId,
     required Map<String, dynamic> data,
+  }) async {}
+  @override
+  Future<void> deleteGoal({
+    required int profileId,
+    required String firestoreId,
   }) async {}
   @override
   Future<void> pushUiPreferences({

@@ -5,11 +5,17 @@ import 'package:intl/intl.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
+import 'package:learning_tracker/core/labels/curriculum_visuals.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/utils/natural_sort.dart';
 import 'package:learning_tracker/core/widgets/app_bar_title.dart';
 import 'package:learning_tracker/core/widgets/error_display.dart';
 import 'package:learning_tracker/core/widgets/loading_indicator.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/progress_providers.dart';
+
+/// Diameter of the curriculum icon in the section header. Sized to balance
+/// with the title's `titleMedium` text height.
+const double _curriculumIconSize = 22;
 
 /// A single unique item learned (earliest completion per sefariaRef).
 class _UniqueItem {
@@ -57,8 +63,15 @@ Map<CurriculumId, List<_UniqueItem>> _groupUnique(List<Completion> all) {
     }
     result.putIfAbsent(id, () => []).add(entry.value);
   }
+  // Within each curriculum: newest completion first, with a natural-order
+  // sefariaRef tie-break so items completed on the same date appear in
+  // seder/perek/mishna order rather than lexical ("1:10" before "1:2").
   for (final list in result.values) {
-    list.sort((a, b) => a.firstCompletedAt.compareTo(b.firstCompletedAt));
+    list.sort((a, b) {
+      final byDate = b.firstCompletedAt.compareTo(a.firstCompletedAt);
+      if (byDate != 0) return byDate;
+      return compareNaturalString(a.sefariaRef, b.sefariaRef);
+    });
   }
   // Sort curricula by canonical enum order
   final sorted = Map.fromEntries(
@@ -184,6 +197,12 @@ class _CurriculumSection extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
               child: Row(
                 children: [
+                  Icon(
+                    curriculumIcon(curriculumId),
+                    color: AppTheme.getCurriculumColor(curriculumId),
+                    size: _curriculumIconSize,
+                  ),
+                  const SizedBox(width: 10),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -226,13 +245,14 @@ class _ItemRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final date = item.firstCompletedAt.toLocal();
-    final formatted = DateFormat.yMMMd().format(date);
+    final locale = Localizations.localeOf(context).toString();
+    final formatted = DateFormat.yMMMd(locale).format(date);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       child: Row(
         children: [
           Expanded(
-            child: Text(
+            child: CurriculumLabel.local(
               item.sefariaRef,
               style: const TextStyle(fontWeight: FontWeight.w500),
             ),

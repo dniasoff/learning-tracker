@@ -346,6 +346,11 @@ class _RecordingGateway implements FirestoreGateway {
     required Map<String, dynamic> data,
   }) async {}
   @override
+  Future<void> deleteGoal({
+    required int profileId,
+    required String firestoreId,
+  }) async {}
+  @override
   Future<void> pushUiPreferences({
     required int profileId,
     required Map<String, dynamic> data,
@@ -499,6 +504,11 @@ class _PagingGateway implements FirestoreGateway {
   Future<void> pushGoal({
     required int profileId,
     required Map<String, dynamic> data,
+  }) async {}
+  @override
+  Future<void> deleteGoal({
+    required int profileId,
+    required String firestoreId,
   }) async {}
   @override
   Future<void> pushUiPreferences({

@@ -9,6 +9,8 @@ import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/services/cross_curriculum_aggregator.dart';
 import 'package:learning_tracker/core/streak/streak_state_provider.dart';
 import 'package:learning_tracker/core/time/local_day_clock.dart';
+import 'package:learning_tracker/core/utils/date_utils.dart';
+import 'package:learning_tracker/core/utils/pace_derivation.dart';
 import 'package:learning_tracker/features/gamification/domain/models/reward_milestone.dart';
 import 'package:learning_tracker/features/gamification/domain/models/streak_recovery_info.dart';
 import 'package:learning_tracker/features/gamification/domain/services/points_service.dart';
@@ -429,8 +431,48 @@ Future<PaceStatus?> dashboardPaceStatus(
     );
   }
 
-  // Deadline-based goal
+  // Deadline-based goal. Prefer an explicit pace if the goal carries one;
+  // otherwise derive a transient pace from the deadline + scope + study-day
+  // density so the dashboard always projects when a deadline exists. Mirrors
+  // the scheduler's fallback (scheduler_providers.dart) so today's queue and
+  // the dashboard summary card never disagree on whether the track has a
+  // projection.
   if (goal.targetDate == null) return null;
+
+  var paceValue = goal.paceValue;
+  var pacePeriod = goal.pacePeriod;
+  if ((paceValue == null || pacePeriod == null) && totalItems > 0) {
+    final start = DateUtils.extractLocalDate(now);
+    final end = DateUtils.extractLocalDate(goal.targetDate!.toLocal());
+    if (!end.isBefore(start)) {
+      final studyDaysInWindow = await db.studyDayConfigDao
+          .countStudyDaysInInclusiveDateRangeForTrack(
+            trackId: goal.trackId,
+            startInclusive: start,
+            endInclusive: end,
+          );
+      final studyDaysPerWeek = await db.studyDayConfigDao
+          .getStudyDaysPerWeekForTrack(trackId: goal.trackId);
+      final derived = derivePaceFromDeadline(
+        totalScopeItems: totalItems,
+        studyDaysInWindow: studyDaysInWindow,
+        studyDaysPerWeek: studyDaysPerWeek,
+      );
+      paceValue = derived.paceValue;
+      pacePeriod = derived.pacePeriod;
+    }
+  }
+
+  if (paceValue != null && pacePeriod != null) {
+    final dailyRate = PaceCalculator.paceToDaily(paceValue, pacePeriod);
+    return PaceCalculator.calculateForPaceGoal(
+      targetPacePerDay: dailyRate,
+      totalItems: totalItems,
+      completedItems: personalCompletions.length,
+      dailyCompletionCounts: dailyCounts,
+      today: now,
+    );
+  }
 
   return PaceCalculator.calculate(
     goalStartDate: goal.createdAt,

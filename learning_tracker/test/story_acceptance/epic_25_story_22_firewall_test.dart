@@ -56,6 +56,9 @@ class _StubSyncOrchestrator implements SyncOrchestrator {
   Future<void> pullOnLaunch({bool triggeredFromResume = false}) async {}
 
   @override
+  Future<void> retryPull() async {}
+
+  @override
   Future<void> pushAllLocalData() async {}
 
   @override

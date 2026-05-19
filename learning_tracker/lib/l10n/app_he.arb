@@ -1048,6 +1048,7 @@
       "message": { "type": "String" }
     }
   },
+  "backupSyncTapToRetry": "הקש לניסיון חוזר",
   "backupUpgradeToCloud": "שדרג לענן",
 
   "reauthDialogTitle": "אמתו את זהותכם",

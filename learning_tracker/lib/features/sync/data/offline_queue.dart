@@ -119,6 +119,18 @@ class OfflineQueue {
     _logger.info(event: 'offline_queue_enqueue_goal');
   }
 
+  /// Enqueue deletion of a goal (after a local hard-delete). The payload
+  /// must carry the Firestore document id under `firestore_id` so the
+  /// outbox dispatcher can target the correct doc.
+  Future<void> enqueueGoalDelete(Map<String, dynamic> payload) async {
+    final encoded = jsonEncode(payload);
+    await _queue.enqueue('goal_delete', encoded);
+    _logger.info(
+      event: 'offline_queue_enqueue_goal_delete',
+      fields: {'firestoreId': payload['firestore_id']},
+    );
+  }
+
   /// Enqueue a profile-program assignment operation.
   Future<void> enqueueProfileProgram(
     Map<String, dynamic> profileProgram,
@@ -329,6 +341,22 @@ class OfflineQueue {
               await _gateway.deleteLearnerProfile(pid);
             case 'goal':
               await _gateway.pushGoal(profileId: profileId ?? 0, data: payload);
+            case 'goal_delete':
+              final fid = rawPayload['firestore_id'] as String?;
+              if (fid == null || fid.isEmpty) {
+                _logger.warning(
+                  event: 'offline_queue_invalid_payload',
+                  fields: {
+                    'operationType': 'goal_delete',
+                    'reason': 'missing_firestore_id',
+                  },
+                );
+                continue;
+              }
+              await _gateway.deleteGoal(
+                profileId: profileId ?? 0,
+                firestoreId: fid,
+              );
             case 'profile_program':
               await _gateway.pushProfileProgram(
                 profileId: profileId ?? 0,

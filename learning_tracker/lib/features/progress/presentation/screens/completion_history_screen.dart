@@ -1,10 +1,15 @@
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
+import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
+import 'package:learning_tracker/core/labels/curriculum_visuals.dart';
+import 'package:learning_tracker/core/labels/domain_term_labels.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/utils/natural_sort.dart';
 import 'package:learning_tracker/core/widgets/app_bar_title.dart';
 import 'package:learning_tracker/core/widgets/error_display.dart';
 import 'package:learning_tracker/core/widgets/loading_indicator.dart';
@@ -73,19 +78,36 @@ class _CompletionHistoryScreenState
         },
       ),
       data: (allCompletions) {
-        // Apply track filter in-memory (SQL filter is a future optimisation)
         var completions = allCompletions;
         if (_trackFilter != null) {
           completions = completions
               .where((c) => c.trackType == _trackFilter!.storageKey)
               .toList();
         }
-        // Sort by completion date descending (most recent first)
-        completions = [...completions]
-          ..sort((a, b) => b.completedAt.compareTo(a.completedAt));
+        // Primary: completion date descending. Secondary: canonical curriculum
+        // order (seder), then natural sefariaRef order so "1:2" sorts before
+        // "1:10".
+        completions = [...completions]..sort(_compareCompletions);
         return _buildCompletionsList(completions);
       },
     );
+  }
+
+  int _compareCompletions(Completion a, Completion b) {
+    final byDate = b.completedAt.compareTo(a.completedAt);
+    if (byDate != 0) return byDate;
+    final byCurriculum = _curriculumOrder(
+      a.curriculumId,
+    ).compareTo(_curriculumOrder(b.curriculumId));
+    if (byCurriculum != 0) return byCurriculum;
+    return compareNaturalString(a.sefariaRef, b.sefariaRef);
+  }
+
+  static int _curriculumOrder(String storageKey) {
+    for (final c in CurriculumId.values) {
+      if (c.storageKey == storageKey) return c.index;
+    }
+    return CurriculumId.values.length;
   }
 
   Widget _buildTrackFilterMenu() {
@@ -189,12 +211,16 @@ class _CompletionHistoryScreenState
   }
 
   Widget _buildCompletionCard(Completion completion) {
-    final trackType = TrackType.fromStorageKey(completion.trackType);
-    final trackColor = AppTheme.getTrackColor(trackType);
-    // Format: "Feb 11, 2026 2:30 PM"
+    final curriculumId = _parseCurriculumId(completion.curriculumId);
+    final accentColor = stageAccentColor(context, completion.stageId);
+    final stageLabel = domainTermLabels(
+      ref,
+    ).stageNameFromStageId(completion.stageId);
     final completedDate = completion.completedAt.toLocal();
-    final formattedDate =
-        '${_monthName(completedDate.month)} ${completedDate.day}, ${completedDate.year} ${_formatTime(completedDate)}';
+    final locale = Localizations.localeOf(context).toString();
+    final formattedDate = DateFormat.yMMMd(
+      locale,
+    ).add_jm().format(completedDate);
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
@@ -203,27 +229,35 @@ class _CompletionHistoryScreenState
           width: 12,
           height: 48,
           decoration: BoxDecoration(
-            color: trackColor,
+            color: accentColor,
             borderRadius: BorderRadius.circular(6),
           ),
         ),
-        title: Text(
-          completion.sefariaRef,
-          style: const TextStyle(fontWeight: FontWeight.w500),
+        title: Row(
+          children: [
+            if (curriculumId != null) ...[
+              Icon(
+                curriculumIcon(curriculumId),
+                size: 18,
+                color: AppTheme.getCurriculumColor(curriculumId),
+              ),
+              const SizedBox(width: 8),
+            ],
+            Expanded(
+              child: CurriculumLabel.local(
+                completion.sefariaRef,
+                style: const TextStyle(fontWeight: FontWeight.w500),
+              ),
+            ),
+          ],
         ),
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const SizedBox(height: 4),
-            Row(
-              children: [
-                Text(
-                  AppLocalizations.of(
-                    context,
-                  )!.completionHistoryStagePrefix(completion.stageId),
-                ),
-                CurriculumLabel.trackType(trackType),
-              ],
+            Text(
+              stageLabel,
+              style: TextStyle(color: accentColor, fontWeight: FontWeight.w500),
             ),
             const SizedBox(height: 2),
             Text(
@@ -249,31 +283,10 @@ class _CompletionHistoryScreenState
     );
   }
 
-  String _monthName(int month) {
-    const months = [
-      '',
-      'Jan',
-      'Feb',
-      'Mar',
-      'Apr',
-      'May',
-      'Jun',
-      'Jul',
-      'Aug',
-      'Sep',
-      'Oct',
-      'Nov',
-      'Dec',
-    ];
-    return months[month];
-  }
-
-  String _formatTime(DateTime date) {
-    final hour = date.hour;
-    final minute = date.minute.toString().padLeft(2, '0');
-    if (hour == 0) return '12:$minute AM';
-    if (hour < 12) return '$hour:$minute AM';
-    if (hour == 12) return '12:$minute PM';
-    return '${hour - 12}:$minute PM';
+  static CurriculumId? _parseCurriculumId(String storageKey) {
+    for (final c in CurriculumId.values) {
+      if (c.storageKey == storageKey) return c;
+    }
+    return null;
   }
 }

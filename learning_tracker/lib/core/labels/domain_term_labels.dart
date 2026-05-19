@@ -140,6 +140,15 @@ class _DomainTermLabels {
     return chazaraStage(stageIndex);
   }
 
+  /// Returns the display name for a DB-stored stage id (1-based).
+  ///
+  /// `stage_definitions.stage_order` and `completions.stage_id` both store
+  /// 1-based stage numbers: 1 → Learn, 2 → Chazara 1, 3 → Chazara 2, …
+  /// (see `stage_definition_repository_impl.dart` seed defaults). This is
+  /// the right entry point for any screen that has a `stageId` int —
+  /// e.g. the Completion History row.
+  String stageNameFromStageId(int stageId) => stageName(stageId - 1);
+
   /// Resolves an existing stored stage name to the correct display form for
   /// the current toggle state.
   ///

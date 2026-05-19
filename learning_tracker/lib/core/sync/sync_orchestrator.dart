@@ -35,6 +35,14 @@ abstract class SyncOrchestrator {
   /// successful pull was within [SyncOrchestratorImpl.pullOnResumeMinInterval].
   Future<void> pullOnLaunch({bool triggeredFromResume = false});
 
+  /// Bypass the once-per-launch guard and re-run a cold-start pull.
+  ///
+  /// Wired to the tap-to-retry affordance on the Backup & Sync error card so
+  /// the user can recover from a stuck or failed sync without restarting the
+  /// app. Implementations should reset the in-flight guard before delegating
+  /// back to [pullOnLaunch].
+  Future<void> retryPull();
+
   /// Push all locally-stored data to Firestore.
   ///
   /// Called once after a local-born account is upgraded to cloud (story 19.7)
@@ -186,6 +194,25 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
   static const Duration pullOnResumeMinInterval = Duration(minutes: 5);
   static const _lastSyncKey = 'sync_orchestrator_last_synced_at';
 
+  /// Cap each individual pull step (one entity kind). If a single Firestore
+  /// fetch or merge hangs longer than this, the step throws and the whole
+  /// pull surfaces as an error rather than wedging the UI on "Syncing…".
+  ///
+  /// Tuned for normal mobile networks (4G/LTE). On a 100-item Firestore page
+  /// a healthy fetch returns in <2 s; 30 s tolerates a slow round trip plus
+  /// a couple of retries inside the SDK. If users on flaky 2G/3G regularly
+  /// trip the per-step timeout, raise this — the cost is a longer "Syncing…"
+  /// state, not a worse error state, since the UI still flips to a tappable
+  /// "tap to retry" card.
+  static const Duration _perStepTimeout = Duration(seconds: 30);
+
+  /// Hard ceiling on the whole pull-on-launch. Defence-in-depth in case the
+  /// per-step timeout is bypassed (e.g. by a never-resolving Future not
+  /// driven by Firestore). 90 s comfortably covers all 7 sequential steps
+  /// even with one slow fetch; tune up if a real account legitimately needs
+  /// longer.
+  static const Duration _overallTimeout = Duration(seconds: 90);
+
   @override
   SyncStatus get currentStatus => _engine.currentStatus;
 
@@ -230,6 +257,13 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
 
     _logger?.info(event: 'sync_orchestrator_pull_on_launch_start');
 
+    // P5: announce the pull on the shared status stream. The previous
+    // orchestrator delegated pulls to PullPipeline but never updated the
+    // engine's SyncStatus — `pull_on_launch_complete` fired in the logs while
+    // the UI sat on "Syncing…" forever. Emitting `syncing` here (and
+    // `synced` / `error` below) makes the Backup & Sync card track reality.
+    _safeEmitStatus(SyncStatus.syncing(startedAt: DateTimeFactory.nowUtc()));
+
     try {
       // Build the PullPipeline against the CURRENT gateway + MergeRouter so a
       // gateway rebuild (upgrade-to-cloud) or a router rebuild (DB swap) is
@@ -241,23 +275,61 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
         dispatcher: _resolveMergeRouter(),
       );
 
-      // Pull each entity kind through the PullPipeline → MergeRouter path.
-      // The MergeRouter dispatches each page to the appropriate EntityMerger.
-      await pullPipeline.pullCompletions(profileId: _profileId);
-      await pullPipeline.pullBookmarks(profileId: _profileId);
-      await pullPipeline.pullSettings(profileId: _profileId);
-      await pullPipeline.pullTracks(profileId: _profileId);
-      await pullPipeline.pullLearnerProfiles(profileId: _profileId);
-      await pullPipeline.pullLearningOrder(profileId: _profileId);
-      await pullPipeline.pullProfilePrograms(profileId: _profileId);
+      Future<void> step(String label, Future<void> Function() op) {
+        return op().timeout(
+          _perStepTimeout,
+          onTimeout: () => throw TimeoutException(
+            'sync_pull_step_timeout: $label',
+            _perStepTimeout,
+          ),
+        );
+      }
+
+      await Future<void>(() async {
+        // Pull each entity kind through the PullPipeline → MergeRouter path.
+        // The MergeRouter dispatches each page to the appropriate EntityMerger.
+        await step(
+          'completions',
+          () => pullPipeline.pullCompletions(profileId: _profileId),
+        );
+        await step(
+          'bookmarks',
+          () => pullPipeline.pullBookmarks(profileId: _profileId),
+        );
+        await step(
+          'settings',
+          () => pullPipeline.pullSettings(profileId: _profileId),
+        );
+        await step(
+          'tracks',
+          () => pullPipeline.pullTracks(profileId: _profileId),
+        );
+        await step(
+          'learner_profiles',
+          () => pullPipeline.pullLearnerProfiles(profileId: _profileId),
+        );
+        await step(
+          'learning_order',
+          () => pullPipeline.pullLearningOrder(profileId: _profileId),
+        );
+        await step(
+          'profile_programs',
+          () => pullPipeline.pullProfilePrograms(profileId: _profileId),
+        );
+      }).timeout(
+        _overallTimeout,
+        onTimeout: () => throw TimeoutException(
+          'sync_pull_overall_timeout',
+          _overallTimeout,
+        ),
+      );
+
+      final syncedAt = DateTimeFactory.nowUtc();
 
       // Record successful pull timestamp for resume-throttle.
       try {
         final prefs = await SharedPreferences.getInstance();
-        await prefs.setInt(
-          _lastSyncKey,
-          DateTimeFactory.nowUtc().millisecondsSinceEpoch,
-        );
+        await prefs.setInt(_lastSyncKey, syncedAt.millisecondsSinceEpoch);
       } catch (_) {
         // Non-fatal: resume throttle degrades gracefully.
       }
@@ -276,7 +348,24 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
         // the next successful pull, which will retry the write.
       }
 
+      _safeEmitStatus(SyncStatus.synced(lastSyncedAt: syncedAt));
       _logger?.info(event: 'sync_orchestrator_pull_on_launch_complete');
+
+      // One-time backfill of goals (DNI-334 cutover misrouted them through
+      // `pushSettings` so they never reached the cloud — fixed 2026-05-19).
+      // Idempotent + guarded by SharedPreferences flag; logs a no-op count
+      // on every subsequent launch.  Best-effort: a missing/throwing engine
+      // (some test stubs deliberately throw to enforce the "pull doesn't
+      // touch the engine" invariant) must not fail the pull.
+      try {
+        await _engine.backfillGoalsForCloudCutover();
+      } catch (e, stackTrace) {
+        _logger?.warning(
+          event: 'sync_goal_backfill_failed',
+          exception: e,
+          stackTrace: stackTrace,
+        );
+      }
     } catch (e, stackTrace) {
       // Reset the once-per-launch guard so DeviceRestoreService.retry() (or
       // any other external retry) can re-run a cold-start pull after a
@@ -287,7 +376,37 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
         exception: e,
         stackTrace: stackTrace,
       );
+      final message = e is TimeoutException
+          ? 'Sync timed out — tap to retry'
+          : e.toString();
+      _safeEmitStatus(
+        SyncStatus.error(message: message, failedAt: DateTimeFactory.nowUtc()),
+      );
       rethrow;
+    }
+  }
+
+  @override
+  Future<void> retryPull() async {
+    _pullOnLaunchExecuted = false;
+    return pullOnLaunch();
+  }
+
+  /// Best-effort proxy to [SyncEngine.emitStatus]. Status transitions go
+  /// through the engine's broadcast stream, but a test stub or a
+  /// transitively-rebuilt provider may temporarily make the engine
+  /// unresolvable — in that case the pull must still complete and the
+  /// per-launch guard must still flip, so swallowing a failed emit is
+  /// strictly safer than letting it propagate.
+  void _safeEmitStatus(SyncStatus status) {
+    try {
+      _engine.emitStatus(status);
+    } catch (e, stackTrace) {
+      _logger?.warning(
+        event: 'sync_orchestrator_emit_status_failed',
+        exception: e,
+        stackTrace: stackTrace,
+      );
     }
   }
 

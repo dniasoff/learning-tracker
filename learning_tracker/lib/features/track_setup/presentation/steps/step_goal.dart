@@ -373,11 +373,6 @@ class _SelfPacedGoalStepState extends ConsumerState<SelfPacedGoalStep> {
             ),
             child: Text(l10n.actionContinue),
           ),
-          const SizedBox(height: 8),
-          TextButton(
-            onPressed: () => widget.onComplete(null),
-            child: Text(l10n.actionSkipForNow),
-          ),
         ],
       ),
     );

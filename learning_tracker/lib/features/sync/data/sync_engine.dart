@@ -1013,10 +1013,77 @@ class SyncEngine implements SyncWriteFacade {
   }
 
   /// Push a goal to Firestore after local write.
+  @override
   Future<void> pushGoal(Map<String, dynamic> goal) async {
     await _offlineQueue.enqueueGoal(_withQueueTargetProfile(goal));
     await _afterEnqueueForBackgroundFlush(context: 'goal');
   }
+
+  /// Delete a goal in Firestore after a local hard-delete. Mirrors the
+  /// `removeProfileProgramAssignment` / `deleteLearnerProfile` flow: the
+  /// payload carries `firestore_id` so the outbox dispatcher can call
+  /// `FirestoreGateway.deleteGoal`.
+  @override
+  Future<void> deleteGoal(Map<String, dynamic> payload) async {
+    await _offlineQueue.enqueueGoalDelete(_withQueueTargetProfile(payload));
+    await _afterEnqueueForBackgroundFlush(context: 'goal delete');
+  }
+
+  /// One-time backfill of every locally-known goal to Firestore. Compensates
+  /// for the historic [_syncGoal] misroute (goals were enqueued as `settings`
+  /// and never reached the `goals` subcollection) so users who created goals
+  /// before 2026-05-19 don't have to manually re-save every track.
+  ///
+  /// Idempotent across runs (guarded by [_goalsBackfilledKey] in
+  /// SharedPreferences) and across calls within a run (each [pushGoal] hits
+  /// the deterministic doc id, so a second enqueue is a no-op merge on the
+  /// server). Safe to call before a real pull completes — the enqueue is
+  /// queue-only and flushes when push pipeline next drains.
+  ///
+  /// Returns the number of goals enqueued (zero on subsequent launches).
+  Future<int> backfillGoalsForCloudCutover() async {
+    if (!_firestoreDataSource.isAuthenticated) return 0;
+    final prefs = await SharedPreferences.getInstance();
+    if (prefs.getBool(_goalsBackfilledKey) ?? false) return 0;
+
+    final goals = await _database.goalDao.getAllGoals();
+    for (final g in goals) {
+      final firestoreId = _deterministicGoalFirestoreId(g);
+      await pushGoal({
+        'id': firestoreId,
+        'profile_id': g.profileId,
+        'track_id': g.trackId,
+        'curriculumId': g.curriculumId,
+        'targetPercent': g.targetPercent,
+        'targetDate': g.targetDate?.toIso8601String(),
+        'description': g.description,
+        'dateType': g.dateType,
+        'goalType': g.goalType,
+        'paceValue': g.paceValue,
+        'pacePeriod': g.pacePeriod,
+        'paceGranularity': g.paceGranularity,
+        'createdAt': g.createdAt.toIso8601String(),
+        'updatedAt': g.updatedAt.toIso8601String(),
+      });
+    }
+    await prefs.setBool(_goalsBackfilledKey, true);
+    _logger.info(
+      event: 'sync_goals_backfilled_for_cloud_cutover',
+      fields: {'count': goals.length},
+    );
+    return goals.length;
+  }
+
+  /// SharedPreferences flag for the one-time goal backfill (see
+  /// [backfillGoalsForCloudCutover]).
+  static const _goalsBackfilledKey = 'sync_goals_backfilled_v1';
+
+  /// Mirrors [GoalEntity.firestoreId] so the backfill picks the same
+  /// deterministic doc id the live write path produces — keeps the cloud
+  /// doc count = local goal count instead of duplicating.
+  String _deterministicGoalFirestoreId(Goal g) =>
+      '${g.curriculumId}_${g.targetPercent.toStringAsFixed(1)}_'
+      '${g.createdAt.millisecondsSinceEpoch}';
 
   /// Push a profile-program assignment to Firestore after local write.
   Future<void> pushProfileProgram(Map<String, dynamic> profileProgram) async {
@@ -3046,6 +3113,13 @@ class SyncEngine implements SyncWriteFacade {
       _statusController.add(status);
     }
   }
+
+  /// Public entry point for collaborators (notably [SyncOrchestratorImpl]) to
+  /// emit a status transition through this engine's stream. The new sync
+  /// orchestrator owns the pull pipeline but delegates status tracking here,
+  /// so it needs a way to push transitions without inheriting all of
+  /// [_updateStatus]'s internal call-site assumptions.
+  void emitStatus(SyncStatus status) => _updateStatus(status);
 
   /// Emit pending status when online but queue has items.
   Future<void> _emitPendingStatus() async {

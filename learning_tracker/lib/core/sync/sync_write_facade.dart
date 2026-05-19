@@ -14,8 +14,22 @@ abstract class SyncWriteFacade {
   /// Push a bookmark to Firestore after a local write.
   Future<void> pushBookmark(Map<String, dynamic> bookmark);
 
-  /// Push settings (goals, stage configs, …) to Firestore after a local write.
+  /// Push settings (stage configs, study-day patterns, …) to Firestore after
+  /// a local write.
   Future<void> pushSettings(Map<String, dynamic> settings);
+
+  /// Push a goal to Firestore after a local write. Routes to the `goals`
+  /// subcollection — the pull-side listener (`fetchGoals` /
+  /// `_onGoalsUpdate`) subscribes to that exact path, so goals MUST NOT be
+  /// piggybacked on [pushSettings] (which targets the `settings`
+  /// subcollection and never reaches the goals listener — historic bug,
+  /// fixed 2026-05-19).
+  Future<void> pushGoal(Map<String, dynamic> goal);
+
+  /// Delete a goal document in Firestore. Caller passes the deterministic
+  /// `firestore_id` inside the payload so the outbox dispatcher can call
+  /// `FirestoreGateway.deleteGoal`.
+  Future<void> deleteGoal(Map<String, dynamic> payload);
 
   /// Push curriculum-track state to Firestore after a local write.
   Future<void> pushCurriculumTrack(Map<String, dynamic> trackData);

@@ -3941,6 +3941,12 @@ abstract class AppLocalizations {
   /// **'Sync error: {message}'**
   String backupSyncError(String message);
 
+  /// No description provided for @backupSyncTapToRetry.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap to retry'**
+  String get backupSyncTapToRetry;
+
   /// No description provided for @backupUpgradeToCloud.
   ///
   /// In en, this message translates to:

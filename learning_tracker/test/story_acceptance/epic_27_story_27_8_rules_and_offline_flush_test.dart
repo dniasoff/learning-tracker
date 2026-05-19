@@ -603,6 +603,11 @@ class _ToggleableFakeGateway implements FirestoreGateway {
     required int profileId,
     required Map<String, dynamic> data,
   }) async {}
+  @override
+  Future<void> deleteGoal({
+    required int profileId,
+    required String firestoreId,
+  }) async {}
 
   @override
   Future<void> pushUiPreferences({

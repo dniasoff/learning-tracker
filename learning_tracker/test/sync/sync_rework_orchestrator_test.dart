@@ -177,6 +177,11 @@ class _ChannelCountingGateway implements FirestoreGateway {
     required Map<String, dynamic> data,
   }) async {}
   @override
+  Future<void> deleteGoal({
+    required int profileId,
+    required String firestoreId,
+  }) async {}
+  @override
   Future<void> pushUiPreferences({
     required int profileId,
     required Map<String, dynamic> data,

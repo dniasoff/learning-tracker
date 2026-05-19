@@ -1053,6 +1053,7 @@
       "message": { "type": "String" }
     }
   },
+  "backupSyncTapToRetry": "Tap to retry",
   "backupUpgradeToCloud": "Upgrade to Cloud",
 
   "reauthDialogTitle": "Verify Your Identity",

@@ -514,6 +514,16 @@ class FirestoreGatewayImpl implements FirestoreGateway {
   }
 
   @override
+  Future<void> deleteGoal({
+    required int profileId,
+    required String firestoreId,
+  }) async {
+    final collection = _collection(profileId, 'goals');
+    if (collection == null) throw _notAuthenticated;
+    await collection.doc(firestoreId).delete();
+  }
+
+  @override
   Future<void> pushUiPreferences({
     required int profileId,
     required Map<String, dynamic> data,

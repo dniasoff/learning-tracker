@@ -2,6 +2,7 @@ import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
+import 'package:learning_tracker/core/sync/providers/sync_orchestrator_providers.dart';
 import 'package:learning_tracker/core/sync/providers/sync_status_providers.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/auth/presentation/providers/auth_state_provider.dart';
@@ -53,7 +54,9 @@ class BackupSyncSection extends ConsumerWidget {
       SyncStatusError(:final message) => _buildCloudStatusCard(
         theme,
         icon: Icons.warning_amber_rounded,
-        subtitle: l10n.backupSyncError(message),
+        subtitle:
+            '${l10n.backupSyncError(message)}\n${l10n.backupSyncTapToRetry}',
+        onTap: () => ref.read(syncOrchestratorProvider)?.retryPull(),
       ),
       SyncStatusDegraded(:final pendingChanges, :final reason) =>
         _buildCloudStatusCard(
@@ -261,8 +264,9 @@ class BackupSyncSection extends ConsumerWidget {
     ThemeData theme, {
     required IconData icon,
     required String subtitle,
+    VoidCallback? onTap,
   }) {
-    return DecoratedBox(
+    final card = DecoratedBox(
       decoration: BoxDecoration(
         color: const Color(0xFF0B3FB4),
         borderRadius: BorderRadius.circular(24),
@@ -311,6 +315,16 @@ class BackupSyncSection extends ConsumerWidget {
             ),
           ],
         ),
+      ),
+    );
+    if (onTap == null) return card;
+    return Material(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(24),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(24),
+        child: card,
       ),
     );
   }

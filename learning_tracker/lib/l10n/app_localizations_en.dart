@@ -2168,6 +2168,9 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get backupSyncTapToRetry => 'Tap to retry';
+
+  @override
   String get backupUpgradeToCloud => 'Upgrade to Cloud';
 
   @override

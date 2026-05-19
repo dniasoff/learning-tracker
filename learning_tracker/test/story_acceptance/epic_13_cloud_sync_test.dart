@@ -47,6 +47,9 @@ class _SyncEngineOrchestrator implements SyncOrchestrator {
       _engine.pullOnLaunch(triggeredFromResume: triggeredFromResume);
 
   @override
+  Future<void> retryPull() => _engine.pullOnLaunch();
+
+  @override
   Future<void> pushAllLocalData() => _engine.pushAllLocalData();
 
   @override

@@ -157,6 +157,14 @@ abstract class FirestoreGateway {
     required Map<String, dynamic> data,
   });
 
+  /// Hard-delete a goal document from Firestore. Mirrors the
+  /// `removeProfileProgramAssignment` pattern — the cloud row goes away,
+  /// the local row was already removed by the caller.
+  Future<void> deleteGoal({
+    required int profileId,
+    required String firestoreId,
+  });
+
   Future<void> pushUiPreferences({
     required int profileId,
     required Map<String, dynamic> data,

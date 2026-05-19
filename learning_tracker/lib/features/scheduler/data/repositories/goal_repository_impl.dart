@@ -181,23 +181,28 @@ class GoalRepositoryImpl implements GoalRepository {
   Future<void> _syncGoal(GoalEntity entity) async {
     if (_syncEngine == null) return;
 
-    // Goals are synced via the settings collection per the tech notes
+    // Route to the `goals` subcollection, NOT `settings`. The pull-side
+    // listener (`SyncEngine._onGoalsUpdate`) subscribes to `goals` directly,
+    // so a goal pushed via `pushSettings` lands somewhere the listener never
+    // looks and silently never replicates (fixed 2026-05-19).
+    //
+    // `id` (not `_id`) is what `FirestoreGateway.pushGoal` reads to pick the
+    // deterministic doc id — passing `_id` falls through to `collection.add`
+    // and creates a new duplicate doc per save.
     final data = entity.toFirestore();
-    data['_type'] = 'goal';
-    data['_id'] = entity.firestoreId;
-    await _syncEngine.pushSettings(data);
+    data['id'] = entity.firestoreId;
+    await _syncEngine.pushGoal(data);
   }
 
   Future<void> _syncDeleteGoal(GoalEntity entity) async {
     if (_syncEngine == null) return;
 
-    // Mark as deleted in Firestore via the settings collection
-    final data = <String, dynamic>{
-      '_type': 'goal',
-      '_id': entity.firestoreId,
-      '_deleted': true,
-      'curriculumId': entity.curriculumId.storageKey,
-    };
-    await _syncEngine.pushSettings(data);
+    // Hard delete in Firestore via the dedicated goal_delete queue type —
+    // mirrors the existing profile_program_delete / learner_profile_delete
+    // pattern so the cloud row goes away when the local row does.
+    await _syncEngine.deleteGoal({
+      'firestore_id': entity.firestoreId,
+      'curriculum_id': entity.curriculumId.storageKey,
+    });
   }
 }

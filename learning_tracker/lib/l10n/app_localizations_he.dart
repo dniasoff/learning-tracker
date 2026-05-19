@@ -2146,6 +2146,9 @@ class AppLocalizationsHe extends AppLocalizations {
   }
 
   @override
+  String get backupSyncTapToRetry => 'הקש לניסיון חוזר';
+
+  @override
   String get backupUpgradeToCloud => 'שדרג לענן';
 
   @override
