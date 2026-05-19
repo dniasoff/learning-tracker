@@ -283,7 +283,7 @@ final class DashboardTrackCompletionPercentageProvider
 }
 
 String _$dashboardTrackCompletionPercentageHash() =>
-    r'ffc494633d3d2a6d02800de1c7760ecc8bfc628c';
+    r'62b4a26ecfecaaa54550b18fa32d780a517d7d06';
 
 /// Item-based completion for one track.
 ///
@@ -400,7 +400,7 @@ final class DashboardCompletionPercentageProvider
 }
 
 String _$dashboardCompletionPercentageHash() =>
-    r'ce0474ab96d79c7ce8a09a56f30306e90c0602c7';
+    r'2ae6dcefadedaece939fe5296246bfee4ebd96eb';
 
 /// Per-curriculum item-based completion percentage, scoped to active profile.
 ///

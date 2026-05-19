@@ -4,6 +4,7 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/core/enums/user_mode.dart';
 import 'package:learning_tracker/core/learning/completion_writer_providers.dart';
+import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/services/cross_curriculum_aggregator.dart';
 import 'package:learning_tracker/core/streak/streak_state_provider.dart';
@@ -112,10 +113,16 @@ Future<double> dashboardTrackCompletionPercentage(Ref ref, int trackId) async {
   final profileId = ref.watch(activeProfileIdProvider);
   final track = await db.trackDao.getTrackById(trackId);
   if (track == null) return 0.0;
-  final curriculum = CurriculumId.values.firstWhere(
-    (c) => c.storageKey == track.curriculumId,
-    orElse: () => CurriculumId.mishnayos,
-  );
+  final curriculum = CurriculumId.values
+      .where((c) => c.storageKey == track.curriculumId)
+      .firstOrNull;
+  if (curriculum == null) {
+    AppLogger.instance.warning(
+      'dashboardTrackCompletionPercentage: unknown curriculumId '
+      '"${track.curriculumId}" for track $trackId — skipping',
+    );
+    return 0.0;
+  }
   final stageRepository = ref.watch(globalStageRepositoryProvider);
   final stages = await stageRepository.getStagesByTrack(trackId);
   if (stages.isEmpty) return 0.0;
@@ -189,7 +196,13 @@ Future<double> dashboardCompletionPercentage(
     final refStages = entry.value;
     if (trackId == 0) continue; // bulk-mark sentinel — skip
     final stages = await stageRepository.getStagesByTrack(trackId);
-    if (stages.isEmpty) continue;
+    if (stages.isEmpty) {
+      AppLogger.instance.warning(
+        'dashboardCompletionPercentage: no stages for curriculum '
+        '${curriculum.storageKey}, skipping — track may be misconfigured',
+      );
+      continue;
+    }
     // Use stageOrder (1 = learn, 2 = chazara 1, …) — the value stored in
     // completion_events.stageId — NOT the stage definition's database primary key.
     final requiredStageIds = stages.map((s) => s.stageOrder).toSet();

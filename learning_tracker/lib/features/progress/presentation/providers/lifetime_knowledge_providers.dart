@@ -3,6 +3,7 @@ import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/curriculum_overlap_registry.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
+import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
@@ -236,10 +237,16 @@ final trackDualProgressMetricsProvider = FutureProvider.autoDispose
 
       final metrics = <TrackDualProgressMetric>[];
       for (final track in tracks) {
-        final curriculum = CurriculumId.values.firstWhere(
-          (c) => c.storageKey == track.curriculumId,
-          orElse: () => CurriculumId.mishnayos,
-        );
+        final curriculum = CurriculumId.values
+            .where((c) => c.storageKey == track.curriculumId)
+            .firstOrNull;
+        if (curriculum == null) {
+          AppLogger.instance.warning(
+            'trackDualProgressMetrics: unknown curriculumId key: '
+            '"${track.curriculumId}" — skipping',
+          );
+          continue;
+        }
         // Denominator = leaf count **within this track's curriculum scope** (not the
         // whole curriculum), so "lifetime %" reflects completion of *this track's*
         // slice — otherwise full-curriculum denominators yield tiny fractions.
@@ -525,7 +532,9 @@ Set<String> _learnedLeafRefs({
     }
   }
 
-  return learnedRefs.where((r) => leaves.any((l) => l.sefariaRef == r)).toSet();
+  // Build a Set for O(1) membership checks instead of O(n) per element.
+  final leafRefSet = leaves.map((l) => l.sefariaRef).toSet();
+  return learnedRefs.where(leafRefSet.contains).toSet();
 }
 
 List<LifetimeTreeNode> _buildTree(
