@@ -4,7 +4,6 @@ import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:learning_tracker/core/constants/hebrew_terms.dart';
 import 'package:learning_tracker/core/labels/domain_term_labels.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
@@ -208,13 +207,14 @@ class _IntroPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     if (data.variant == _IntroPageVariant.dailyPlan) {
-      return _buildDailyPlanBottomAnchored();
+      return _buildDailyPlanBottomAnchored(ref);
     }
     return _buildScrolledPage(ref);
   }
 
   /// First intro: taller hero zone, then copy + bar; scrolls on very short viewports.
-  Widget _buildDailyPlanBottomAnchored() {
+  Widget _buildDailyPlanBottomAnchored(WidgetRef ref) {
+    final terms = domainTermLabels(ref);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: LayoutBuilder(
@@ -245,9 +245,9 @@ class _IntroPage extends ConsumerWidget {
                   const SizedBox(height: 12),
                   _buildTitleBlock(),
                   const SizedBox(height: 10),
-                  _buildSubtitleBlock(),
+                  _buildSubtitleBlock(useHebrew: terms.isHebrew),
                   const SizedBox(height: 12),
-                  _buildProgressArea(),
+                  _buildProgressArea(useHebrew: terms.isHebrew),
                   const SizedBox(height: _kIntroCtaOverlayReserve),
                 ],
               ),
@@ -367,10 +367,10 @@ class _IntroPage extends ConsumerWidget {
           parent: iconAnimation,
           curve: const Interval(0.3, 0.85, curve: Curves.easeOut),
         ).value;
-        final l10n = AppLocalizations.of(context)!;
+        // Use domainTermLabels-consistent logic: toggle-resolved, not locale-driven.
         final talmidChochomLabel = useHebrew
-            ? HebrewTerms.uiTalmidChochom
-            : l10n.talmidChochom;
+            ? AppLocalizations.of(context)!.termTalmidChochom
+            : 'Talmid Chochom';
         return Opacity(
           opacity: fade,
           child: _subtitleRich(
@@ -531,11 +531,11 @@ class _IntroPage extends ConsumerWidget {
           ),
         );
       case _IntroPageVariant.rewards:
-        return Column(
+        return const Column(
           children: [
-            const _FeatureCardsRow(),
-            const SizedBox(height: 20),
-            _ScholarLevelCard(useHebrew: useHebrew),
+            _FeatureCardsRow(),
+            SizedBox(height: 20),
+            _ScholarLevelCard(),
           ],
         );
     }
@@ -1185,17 +1185,14 @@ class _ChildModeTag extends StatelessWidget {
   }
 }
 
-class _ScholarLevelCard extends StatelessWidget {
-  const _ScholarLevelCard({required this.useHebrew});
-
-  final bool useHebrew;
+class _ScholarLevelCard extends ConsumerWidget {
+  const _ScholarLevelCard();
 
   @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-    final talmidChochomCapsLabel = useHebrew
-        ? HebrewTerms.uiTalmidChochom
-        : l10n.talmidChochomCaps;
+  Widget build(BuildContext context, WidgetRef ref) {
+    final terms = domainTermLabels(ref);
+    final useHebrew = terms.isHebrew;
+    final talmidChochomCapsLabel = terms.talmidChochomCaps;
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),

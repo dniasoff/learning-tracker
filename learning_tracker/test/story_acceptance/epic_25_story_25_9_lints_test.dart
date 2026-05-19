@@ -160,4 +160,45 @@ void main() {
           '${offenders.join('\n')}',
     );
   });
+
+  // B11-7 — No raw HebrewTerms. calls in lib/features/ presentation code.
+  //
+  // All presentation code must go through domainTermLabels(ref).* accessors.
+  // The only allowed consumers of raw HebrewTerms.* are lib/core/labels/ and
+  // lib/core/constants/ themselves.
+  test(
+    'no raw HebrewTerms. calls in lib/features/ (B11-7)',
+    () {
+      final pattern = RegExp(r'\bHebrewTerms\.');
+      final offenders = <String>[];
+
+      final featuresDir = Directory('${root.path}/lib/features');
+      if (!featuresDir.existsSync()) {
+        fail('lib/features/ not found — run from learning_tracker/ root');
+      }
+
+      for (final f in _dartFilesUnder(featuresDir)) {
+        if (f.path.endsWith('.g.dart') || f.path.endsWith('.freezed.dart')) {
+          continue;
+        }
+        if (f.path.endsWith('_test.dart')) continue;
+
+        final src = f.readAsStringSync();
+        if (pattern.hasMatch(src)) {
+          final rel = f.path.substring(root.path.length + 1);
+          offenders.add(rel);
+        }
+      }
+
+      expect(
+        offenders,
+        isEmpty,
+        reason:
+            'Raw HebrewTerms.* call(s) found in lib/features/. '
+            'Use domainTermLabels(ref).chazaraStage(n), .stageLearn, '
+            '.talmidChochom, etc. instead. Offenders:\n'
+            '${offenders.join('\n')}',
+      );
+    },
+  );
 }

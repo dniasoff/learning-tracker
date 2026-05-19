@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:learning_tracker/core/constants/hebrew_terms.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/core/labels/domain_term_labels.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/onboarding/domain/models/wizard_result_wrapper.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/learning_process_wizard_service.dart';
@@ -15,7 +16,7 @@ import 'package:learning_tracker/l10n/app_localizations.dart';
 //   "All חזרה config on ONE screen"
 // Replaces a Navigator.push to LearningProcessWizardScreen.
 
-class ChazaraInlineSetup extends StatefulWidget {
+class ChazaraInlineSetup extends ConsumerStatefulWidget {
   const ChazaraInlineSetup({
     required this.curriculumId,
     required this.headerTitle,
@@ -35,7 +36,8 @@ class ChazaraInlineSetup extends StatefulWidget {
   final List<int>? initialDelays;
 
   @override
-  State<ChazaraInlineSetup> createState() => _ChazaraInlineSetupState();
+  ConsumerState<ChazaraInlineSetup> createState() =>
+      _ChazaraInlineSetupState();
 }
 
 /// Built-in preset templates expressed as round delays in days.
@@ -45,7 +47,7 @@ class _ChazaraPreset {
   final List<int> delays;
 }
 
-class _ChazaraInlineSetupState extends State<ChazaraInlineSetup> {
+class _ChazaraInlineSetupState extends ConsumerState<ChazaraInlineSetup> {
   static const List<_ChazaraPreset> _presets = [
     _ChazaraPreset(label: 'Learn Only', delays: []),
     _ChazaraPreset(label: '1 day', delays: [1]),
@@ -131,11 +133,12 @@ class _ChazaraInlineSetupState extends State<ChazaraInlineSetup> {
       return;
     }
 
+    final terms = domainTermLabels(ref);
     final rounds = <CustomRound>[];
     for (var i = 0; i < delays.length; i++) {
       rounds.add(
         CustomRound(
-          label: HebrewTerms.getChazaraStageName(i + 1),
+          label: terms.chazaraStage(i + 1),
           scheduleType: ScheduleType.delay,
           delayDays: delays[i],
         ),

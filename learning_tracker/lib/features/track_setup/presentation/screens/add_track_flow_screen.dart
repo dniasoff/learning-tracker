@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/content/hierarchy_selection.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
+import 'package:learning_tracker/core/labels/domain_term_labels.dart';
 import 'package:learning_tracker/core/services/learning_program_service.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
@@ -850,7 +851,7 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
     final headerSubtitle = _isProgramTrack
         ? '${_state.programName} doesn\'t include a review schedule. '
               'Set one up now or skip.'
-        : 'Pick a preset or build your own חזרה schedule.';
+        : 'Pick a preset or build your own ${domainTermLabels(ref).chazara} schedule.';
 
     return ChazaraInlineSetup(
       curriculumId: _state.curriculumId!,

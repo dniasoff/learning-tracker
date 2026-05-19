@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:learning_tracker/core/constants/hebrew_terms.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
+import 'package:learning_tracker/core/labels/domain_term_labels.dart';
 import 'package:learning_tracker/core/services/learning_program_service.dart';
 import 'package:learning_tracker/features/onboarding/domain/models/wizard_result_wrapper.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/learning_process_wizard_service.dart';
@@ -455,7 +455,7 @@ class WizardCustomStep3 extends OnboardingStep {
   }
 }
 
-class _CustomStep3Widget extends StatelessWidget {
+class _CustomStep3Widget extends ConsumerWidget {
   const _CustomStep3Widget({
     required this.curriculumId,
     required this.data,
@@ -481,8 +481,9 @@ class _CustomStep3Widget extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final terms = domainTermLabels(ref);
     return SafeArea(
       top: false,
       child: Padding(
@@ -503,7 +504,7 @@ class _CustomStep3Widget extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      HebrewTerms.stageLearn,
+                      terms.stageLearn,
                       style: theme.textTheme.titleMedium,
                     ),
                     Text(
@@ -515,7 +516,7 @@ class _CustomStep3Widget extends StatelessWidget {
                     const Divider(),
                     for (var i = 0; i < data.rounds.length; i++) ...[
                       Text(
-                        HebrewTerms.getChazaraStageName(i + 1),
+                        terms.chazaraStage(i + 1),
                         style: theme.textTheme.titleMedium,
                       ),
                       Text(
@@ -540,7 +541,7 @@ class _CustomStep3Widget extends StatelessWidget {
                   final r = data.rounds[i];
                   rounds.add(
                     CustomRound(
-                      label: HebrewTerms.getChazaraStageName(i + 1),
+                      label: terms.chazaraStage(i + 1),
                       scheduleType: r.useWeekly
                           ? ScheduleType.weekly
                           : ScheduleType.delay,
@@ -692,7 +693,7 @@ class _PresetCard extends StatelessWidget {
   }
 }
 
-class _RoundTimingCard extends StatelessWidget {
+class _RoundTimingCard extends ConsumerWidget {
   const _RoundTimingCard({
     required this.roundIndex,
     required this.state,
@@ -704,8 +705,9 @@ class _RoundTimingCard extends StatelessWidget {
   final VoidCallback onChanged;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final terms = domainTermLabels(ref);
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       child: Padding(
@@ -714,7 +716,7 @@ class _RoundTimingCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              HebrewTerms.getChazaraStageName(roundIndex + 1),
+              terms.chazaraStage(roundIndex + 1),
               style: theme.textTheme.titleMedium,
             ),
             const SizedBox(height: 8),
