@@ -244,9 +244,9 @@ DailyPlanRepository dailyPlanRepository(Ref ref) {
 /// All daily tasks across active curricula.
 ///
 /// The projection (pure overdue/today computation from synced inputs) is
-/// authoritative.  Self-paced tracks without an explicit pace emit no tasks
-/// for that track (MissingPaceError is caught and the track is skipped —
-/// the setup UI must prompt the user to set a pace).
+/// authoritative.  Every self-paced track is required by the setup UI to
+/// carry an explicit pace; the projection's API enforces it
+/// (`MissingPaceError`).
 ///
 /// daily_plans is used as a write-through cache for chazara tasks produced
 /// by the engine (review items that require stage-completion timing data the
@@ -380,9 +380,9 @@ Future<List<DailyTask>> allDailyTasks(Ref ref) async {
 /// curriculum_tracks, completions, study_day_config) and never persists
 /// any result.
 ///
-/// Self-paced tracks without an explicit pace throw [MissingPaceError];
-/// that error is caught here and the track emits NO tasks (the setup UI
-/// must prompt the user to configure a pace — architecture §10.3).
+/// Every self-paced track is required by the setup UI to carry an explicit
+/// pace; the projection enforces it via [MissingPaceError]
+/// (architecture §10.3).
 Future<List<DailyTask>> _buildProjectionTasks({
   required UserDatabase db,
   required StageDefinitionRepository stageRepository,
@@ -562,19 +562,17 @@ Future<List<DailyTask>> _buildProjectionTasks({
     final startedAt = trackStartedAtMap[curriculum];
     if (startedAt == null) continue;
 
-    // Fetch pace from the goal.
-    int? pace;
+    // Fetch pace from the goal.  Setup UI guarantees an explicit pace; if
+    // none is present (legacy/transient state) the track is skipped — the
+    // projection itself would throw MissingPaceError.
     final goal = await db.goalDao.getGoalByTrack(trackId);
-    if (goal != null &&
-        goal.goalType == 'pace' &&
-        goal.paceValue != null &&
-        goal.pacePeriod != null) {
-      pace = PaceCalculator.paceToDaily(
-        goal.paceValue!,
-        goal.pacePeriod!,
-      ).ceil();
+    if (goal == null || goal.paceValue == null || goal.pacePeriod == null) {
+      continue;
     }
-    // pace == null → MissingPaceError will be thrown below; track is skipped.
+    final pace = PaceCalculator.paceToDaily(
+      goal.paceValue!,
+      goal.pacePeriod!,
+    ).ceil();
 
     // Fetch study-day pattern.
     final studyConfigs = await db.studyDayConfigDao.getConfigsByTrack(trackId);
@@ -594,66 +592,53 @@ Future<List<DailyTask>> _buildProjectionTasks({
 
     final anchor = DateUtils.extractLocalDate(startedAt);
 
-    try {
-      final schedule = selfPacedSchedule(
-        anchor: anchor,
-        pace: pace, // throws MissingPaceError when null
-        studyDayPattern: pattern,
-        orderedRefs: orderedRefs,
-        today: todayDate,
+    final schedule = selfPacedSchedule(
+      anchor: anchor,
+      pace: pace,
+      studyDayPattern: pattern,
+      orderedRefs: orderedRefs,
+      today: todayDate,
+    );
+
+    final projection = project(
+      schedule: schedule,
+      completions: completionRefs,
+      today: todayDate,
+    );
+
+    for (final ref in projection.overdue) {
+      result.add(
+        DailyTask(
+          curriculumId: curriculum,
+          contentItemSefariaRef: ref,
+          stageOrder: firstStage.stageOrder,
+          stageDefinitionId: firstStage.id,
+          priority: DailyTaskPriority.overdueProgram,
+          isOverdue: true,
+          reason: 'Behind pace',
+          stageName: firstStage.stageName,
+          trackId: trackId,
+          trackLabel: trackLabels[curriculum] ?? TrackType.personal.storageKey,
+          estimatedEffortMinutes: 5,
+        ),
       );
+    }
 
-      final projection = project(
-        schedule: schedule,
-        completions: completionRefs,
-        today: todayDate,
-      );
-
-      for (final ref in projection.overdue) {
-        result.add(
-          DailyTask(
-            curriculumId: curriculum,
-            contentItemSefariaRef: ref,
-            stageOrder: firstStage.stageOrder,
-            stageDefinitionId: firstStage.id,
-            priority: DailyTaskPriority.overdueProgram,
-            isOverdue: true,
-            reason: 'Behind pace',
-            stageName: firstStage.stageName,
-            trackId: trackId,
-            trackLabel:
-                trackLabels[curriculum] ?? TrackType.personal.storageKey,
-            estimatedEffortMinutes: 5,
-          ),
-        );
-      }
-
-      for (final ref in projection.dueToday) {
-        result.add(
-          DailyTask(
-            curriculumId: curriculum,
-            contentItemSefariaRef: ref,
-            stageOrder: firstStage.stageOrder,
-            stageDefinitionId: firstStage.id,
-            priority: DailyTaskPriority.newLearning,
-            isOverdue: false,
-            reason: 'Due today',
-            stageName: firstStage.stageName,
-            trackId: trackId,
-            trackLabel:
-                trackLabels[curriculum] ?? TrackType.personal.storageKey,
-            estimatedEffortMinutes: 5,
-          ),
-        );
-      }
-    } on MissingPaceError {
-      // Architecture §10.3: a self-paced track without an explicit pace must
-      // NOT default — emit no tasks for this track so the user is prompted
-      // via the setup UI to configure a pace.
-      AppLogger.instance.warning(
-        'Track $trackId (${curriculum.storageKey}) has no pace configured; '
-        'skipping overdue/today projection for this track. '
-        'The setup UI should prompt the user to set a pace.',
+    for (final ref in projection.dueToday) {
+      result.add(
+        DailyTask(
+          curriculumId: curriculum,
+          contentItemSefariaRef: ref,
+          stageOrder: firstStage.stageOrder,
+          stageDefinitionId: firstStage.id,
+          priority: DailyTaskPriority.newLearning,
+          isOverdue: false,
+          reason: 'Due today',
+          stageName: firstStage.stageName,
+          trackId: trackId,
+          trackLabel: trackLabels[curriculum] ?? TrackType.personal.storageKey,
+          estimatedEffortMinutes: 5,
+        ),
       );
     }
   }

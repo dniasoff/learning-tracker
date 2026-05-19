@@ -87,6 +87,43 @@ DateTime localDateOnlyFromDt(DateTime utc) {
   return DateTime(l.year, l.month, l.day);
 }
 
+/// Derives an explicit weekly pace from a deadline + scope size + study-day
+/// pattern.  Extracted so the logic is testable without driving the widget.
+///
+/// Returns `(paceValue: N, pacePeriod: 'per_week')`.  The per-week period is
+/// always used so the stored pace remains meaningful if the study-day
+/// configuration changes later.
+///
+/// Falls back to `1/week` when [studyDaysInWindow] ≤ 0 or [totalScopeItems]
+/// ≤ 0 so the goal is always stored with a valid pace (architecture §10.3).
+///
+/// Parameters:
+///   [studyDays] — the profile's study-day map (`{weekday: 'study'|'rest'}`).
+///   [totalScopeItems] — total leaf-item count in scope.
+///   [studyDaysInWindow] — number of study days between today and the deadline
+///     (inclusive), computed by [countStudyDaysInInclusiveMapRange].
+({int paceValue, String pacePeriod}) derivePaceFromDeadline({
+  required Map<int, String> studyDays,
+  required int totalScopeItems,
+  required int studyDaysInWindow,
+}) {
+  final studyDaysPerWeek = studyDays.values
+      .where((v) => v == 'study')
+      .length
+      .clamp(1, 7);
+
+  if (studyDaysInWindow <= 0 || totalScopeItems <= 0) {
+    return (paceValue: 1, pacePeriod: 'per_week');
+  }
+
+  final perStudyDay = (totalScopeItems / studyDaysInWindow).ceil().clamp(
+    1,
+    999999,
+  );
+  final perWeek = (perStudyDay * studyDaysPerWeek).clamp(1, 999999);
+  return (paceValue: perWeek, pacePeriod: 'per_week');
+}
+
 /// Returns [PaceUnitOptions] for the given [curriculumId].
 PaceUnitOptions paceUnitOptionsFor(CurriculumId id) {
   return switch (id) {

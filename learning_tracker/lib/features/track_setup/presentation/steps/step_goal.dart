@@ -148,6 +148,19 @@ class _SelfPacedGoalStepState extends ConsumerState<SelfPacedGoalStep> {
     return s.isNotEmpty ? s[0].toUpperCase() + s.substring(1) : s;
   }
 
+  /// Derives an explicit weekly pace from the current deadline + scope + study
+  /// day pattern.  Delegates to the top-level [derivePaceFromDeadline] in
+  /// goal_helpers.dart so the logic is directly testable without the widget.
+  ({int paceValue, String pacePeriod}) _derivedPaceFromDeadline({
+    required DateTime deadline,
+    required int totalScopeItems,
+    required int studyDaysInWindow,
+  }) => derivePaceFromDeadline(
+    studyDays: widget.studyDays,
+    totalScopeItems: totalScopeItems,
+    studyDaysInWindow: studyDaysInWindow,
+  );
+
   void _continue() {
     final now = DateTimeFactory.nowUtc();
     // Seed the description with the curriculum's display name so that Edit
@@ -165,6 +178,26 @@ class _SelfPacedGoalStepState extends ConsumerState<SelfPacedGoalStep> {
         );
         return;
       }
+      // Derive an explicit pace from the deadline + scope so that every
+      // self-paced GoalEntity carries paceValue+pacePeriod (architecture §10.3).
+      // The deadline mode stores BOTH the target date AND an explicit pace;
+      // the projection uses the pace; the goal edit screen shows the deadline.
+      final scopeCountAsync = ref.read(
+        scopedItemCountProvider(widget.curriculumId),
+      );
+      final totalScopeItems = scopeCountAsync.asData?.value ?? 120;
+      final start = localDateOnlyFromDt(DateTimeFactory.nowLocal());
+      final end = localDateOnlyFromDt(_deadline!.toLocal());
+      final studyDaysInWindow = countStudyDaysInInclusiveMapRange(
+        widget.studyDays,
+        start,
+        end,
+      );
+      final derived = _derivedPaceFromDeadline(
+        deadline: _deadline!,
+        totalScopeItems: totalScopeItems,
+        studyDaysInWindow: studyDaysInWindow,
+      );
       final useHebrew = ref.read(useHebrewDateProvider);
       widget.onComplete(
         GoalEntity(
@@ -173,6 +206,8 @@ class _SelfPacedGoalStepState extends ConsumerState<SelfPacedGoalStep> {
           goalType: 'deadline',
           targetDate: _deadline!.toUtc(),
           dateType: useHebrew ? 'hebrew' : 'gregorian',
+          paceValue: derived.paceValue,
+          pacePeriod: derived.pacePeriod,
           description: defaultDescription,
           paceGranularity: PaceGranularity.fromStorageKey(_paceGranularity),
           rawLearningUnit: _paceGranularity,
