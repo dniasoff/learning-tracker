@@ -61,6 +61,7 @@ class LocalCalendarEngine {
       todayRef: row.sefariaRef,
       todayRefHe: row.sefariaRefHe,
       apiSource: 'local',
+      date: _parseDateKey(row.dateKey),
     );
   }
 
@@ -88,6 +89,7 @@ class LocalCalendarEngine {
           todayRef: row.sefariaRef,
           todayRefHe: row.sefariaRefHe,
           apiSource: 'local',
+          date: _parseDateKey(row.dateKey),
         ),
       );
     }
@@ -117,9 +119,23 @@ class LocalCalendarEngine {
             displayNameHe: def.displayNameHe,
             todayRef: row.sefariaRef,
             apiSource: 'local',
+            date: _parseDateKey(row.dateKey),
           ),
         )
         .toList();
+  }
+
+  /// Parse a `YYYY-MM-DD` string (as stored in the DB `date_key` column)
+  /// back to a local-midnight [DateTime].  Returns null on malformed input
+  /// so callers can safely skip corrupt rows.
+  static DateTime? _parseDateKey(String dateKey) {
+    final parts = dateKey.split('-');
+    if (parts.length != 3) return null;
+    final year = int.tryParse(parts[0]);
+    final month = int.tryParse(parts[1]);
+    final day = int.tryParse(parts[2]);
+    if (year == null || month == null || day == null) return null;
+    return DateTime(year, month, day);
   }
 
   /// Legacy alias retained from the pre-19.4 engine — kept so existing

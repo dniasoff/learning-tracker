@@ -433,9 +433,18 @@ Future<List<DailyTask>> _buildProjectionTasks({
     );
 
     // ── Fetch all completions for this track ─────────────────────────────
+    // F-H4: filter to first-stage completions only.  A chazara-stage
+    // completion for ref X must NOT mask an unlearned ref X in the
+    // projection's overdue set; only a first-stage (learn) completion counts.
     final allCompletions = await db.completionDao
         .getCompletionsByCurriculumAndProfile(curriculum.storageKey, profileId);
-    final completionRefs = allCompletions.map((c) => c.sefariaRef).toSet();
+    final completionRefs = allCompletions
+        .where(
+          (c) =>
+              c.stageId == firstStage.id || c.stageId == firstStage.stageOrder,
+        )
+        .map((c) => c.sefariaRef)
+        .toSet();
 
     // ── Program track path ────────────────────────────────────────────────
     final enrollment = await db.profileProgramDao
@@ -478,13 +487,22 @@ Future<List<DailyTask>> _buildProjectionTasks({
             if (entries.isNotEmpty) {
               final contentItems = await getScopedContent(curriculum);
               // Build calendarEntries in the format programSchedule() expects.
-              // getEntriesForRange returns entries in order for [anchor, today];
-              // pair each with its calendar date by walking forward from anchor.
+              // F-H2: use the entry's own date field instead of a sequential
+              // cursor walk.  For weekly programs the DB has one row per week
+              // (not per day), so the cursor walk mis-dates every entry after
+              // the first.  entry.date is populated from the DB's date_key
+              // column by LocalCalendarEngine and reflects the true calendar
+              // date, regardless of cadence.
               final calendarEntries = <(DateTime, String)>[];
-              var cursor = anchor;
               for (final entry in entries) {
-                calendarEntries.add((cursor, entry.todayRef));
-                cursor = cursor.add(const Duration(days: 1));
+                final entryDate = entry.date;
+                assert(
+                  entryDate != null,
+                  'CalendarProgramEntry.date must be populated by '
+                  'LocalCalendarEngine; got null for ref ${entry.todayRef}',
+                );
+                if (entryDate == null) continue;
+                calendarEntries.add((entryDate, entry.todayRef));
               }
 
               final schedule = programSchedule(
@@ -864,8 +882,25 @@ Future<List<CalendarProgramEntry>> programCalendarSchedule({
   if (entries.isNotEmpty) return entries;
 
   // Calendar engine returned nothing for the range — fall back to just today.
+  // F-M1: ensure the fallback entry's date field is populated with `today`
+  // so that _buildProjectionTasks classifies it correctly (dueToday, not
+  // overdue) when building calendarEntries from entry.date.
   final todayEntry = await calendarService.getEntry(programKey, today);
-  return todayEntry != null ? [todayEntry] : const [];
+  if (todayEntry == null) return const [];
+  // If the engine already populated date, use it directly; otherwise stamp
+  // today explicitly so the projection path never sees a null date.
+  final entryWithDate = todayEntry.date != null
+      ? todayEntry
+      : CalendarProgramEntry(
+          programId: todayEntry.programId,
+          displayNameEn: todayEntry.displayNameEn,
+          displayNameHe: todayEntry.displayNameHe,
+          todayRef: todayEntry.todayRef,
+          todayRefHe: todayEntry.todayRefHe,
+          apiSource: todayEntry.apiSource,
+          date: today,
+        );
+  return [entryWithDate];
 }
 
 Future<List<DailyTask>> _applyProgramCalendarOverrides({

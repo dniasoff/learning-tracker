@@ -16,6 +16,7 @@ class CalendarProgramEntry {
     required this.todayRef,
     required this.apiSource,
     this.todayRefHe = '',
+    this.date,
   });
 
   final String programId;
@@ -30,6 +31,15 @@ class CalendarProgramEntry {
   /// fall back to [todayRef] when this is empty.
   final String todayRefHe;
   final String apiSource;
+
+  /// The calendar date this entry represents (local, time stripped).
+  ///
+  /// Populated by [LocalCalendarEngine] from the DB's `date_key` column so
+  /// that projection code can use the true calendar date rather than
+  /// inferring it from a sequential cursor walk.  Null only in legacy
+  /// construction paths that pre-date this field; the scheduler projection
+  /// asserts non-null before using it.
+  final DateTime? date;
 }
 
 /// Pure-string label for a [CalendarProgramEntry] respecting the Hebrew

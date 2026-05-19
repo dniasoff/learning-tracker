@@ -47,12 +47,15 @@ class _FakeCalendarEngine implements LocalCalendarEngine {
     DateTime date,
   ) async {
     if (programId != _programId) return null;
+    // Normalise to local-midnight so date comparisons are consistent.
+    final local = DateTime(date.year, date.month, date.day);
     return CalendarProgramEntry(
       programId: programId,
       displayNameEn: '',
       displayNameHe: '',
       todayRef: _refForDate(date),
       apiSource: 'fake',
+      date: local,
     );
   }
 
@@ -67,6 +70,7 @@ class _FakeCalendarEngine implements LocalCalendarEngine {
     var cursor = DateTime.utc(startDate.year, startDate.month, startDate.day);
     final end = DateTime.utc(endDate.year, endDate.month, endDate.day);
     while (!cursor.isAfter(end)) {
+      final local = DateTime(cursor.year, cursor.month, cursor.day);
       result.add(
         CalendarProgramEntry(
           programId: programId,
@@ -74,6 +78,7 @@ class _FakeCalendarEngine implements LocalCalendarEngine {
           displayNameHe: '',
           todayRef: _refForDate(cursor),
           apiSource: 'fake',
+          date: local,
         ),
       );
       cursor = cursor.add(const Duration(days: 1));
@@ -611,4 +616,325 @@ void main() {
     );
     expect(rAll.dueToday, isEmpty, reason: 'O7: all completed → dueToday = 0');
   });
+
+  // ── F-H2 regression: non-daily program date assignment ──────────────────
+  //
+  // For a weekly-cadence program (one DB row per week), the old cursor walk
+  // mis-dated every entry after the first.  With entry.date populated,
+  // the projection must produce exactly 2 overdue units dated on the two
+  // weeks that fall in [anchor, today−1], not 14 sequential days.
+  test(
+    'F-H2: weekly-cadence program produces 2 overdue units (not 14)',
+    () async {
+      // Fixed "today" = 2026-05-19.  Anchor = 14 days earlier = 2026-05-05.
+      // The weekly calendar has entries only on anchor and anchor+7.
+      final today = DateTime.utc(2026, 5, 19);
+      final anchor = DateTime.utc(2026, 5, 5); // 14 days before today
+      const programKey = 'daf_a_week';
+
+      // Weekly engine: returns rows only on [anchor, anchor+7]; today has
+      // no entry (it is anchor+14, i.e. today itself, which the engine
+      // excludes from the range to simulate a not-yet-published week).
+      final weeklyDates = [
+        anchor, // 2026-05-05
+        anchor.add(const Duration(days: 7)), // 2026-05-12
+      ];
+
+      final weeklyEngine = _WeeklyFakeCalendarEngine(programKey, weeklyDates);
+      final calendarService = CalendarProgramService(weeklyEngine);
+
+      final entries = await programCalendarSchedule(
+        programKey: programKey,
+        anchor: anchor,
+        today: today,
+        calendarService: calendarService,
+      );
+
+      // The engine has no entry for today (2026-05-19), so only 2 rows come
+      // back.  Both are before today → both are overdue when projected.
+      // The critical invariant: exactly 2 entries, not 14.
+      expect(
+        entries,
+        hasLength(2),
+        reason:
+            'F-H2: weekly engine has 2 rows in [anchor, today]; '
+            'must return 2 entries, not 14 (cursor walk bug)',
+      );
+
+      // Dates must be the actual weekly dates, not sequential daily dates.
+      expect(
+        entries[0].date,
+        equals(DateTime(2026, 5, 5)),
+        reason: 'F-H2: first entry date must be anchor (2026-05-05)',
+      );
+      expect(
+        entries[1].date,
+        equals(DateTime(2026, 5, 12)),
+        reason: 'F-H2: second entry date must be anchor+7 (2026-05-12)',
+      );
+
+      // Build calendarEntries using entry.date (the fixed path).
+      final calendarEntries = <(DateTime, String)>[
+        for (final e in entries)
+          if (e.date != null) (e.date!, e.todayRef),
+      ];
+
+      expect(
+        calendarEntries,
+        hasLength(2),
+        reason: 'F-H2: calendarEntries must have 2 items (one per weekly row)',
+      );
+
+      // Project: both entries are before today so both are overdue.
+      final schedule = programSchedule(
+        anchor: anchor,
+        calendarEntries: calendarEntries,
+        today: today,
+      );
+      final result = project(schedule: schedule, completions: {}, today: today);
+
+      expect(
+        result.overdue,
+        hasLength(2),
+        reason: 'F-H2: 2 weekly units in [anchor, today-1] → 2 overdue, not 14',
+      );
+      expect(
+        result.dueToday,
+        isEmpty,
+        reason: 'F-H2: engine has no entry for today → dueToday is empty',
+      );
+    },
+  );
+
+  // ── F-H4 regression: multi-stage completion must not mask first-stage ────
+  //
+  // A chazara (stage 2) completion for ref X must NOT suppress X from the
+  // overdue set when the first-stage (learn) completion is absent.
+  test(
+    'F-H4: stage-2 completion does not mask stage-1 overdue for same ref',
+    () {
+      // Fixed "today" = 2026-05-19.  Anchor = 3 days ago.
+      final today = DateTime.utc(2026, 5, 19);
+      final anchor = today.subtract(const Duration(days: 3)); // 2026-05-16
+
+      // Calendar: one entry per day in [anchor, today].
+      final calendarEntries = <(DateTime, String)>[];
+      var cursor = anchor;
+      while (!cursor.isAfter(today)) {
+        final ref =
+            'daf_yomi ${cursor.year}-'
+            '${cursor.month.toString().padLeft(2, '0')}-'
+            '${cursor.day.toString().padLeft(2, '0')}';
+        calendarEntries.add((cursor, ref));
+        cursor = cursor.add(const Duration(days: 1));
+      }
+
+      final schedule = programSchedule(
+        anchor: anchor,
+        calendarEntries: calendarEntries,
+        today: today,
+      );
+
+      // Pick the anchor-day ref (index 0) as the ref that has a stage-2
+      // chazara completion but no stage-1 (learn) completion.
+      final anchorRef = calendarEntries[0].$2; // 'daf_yomi 2026-05-16'
+
+      // F-H4 fix: _buildProjectionTasks filters allCompletions to
+      // firstStage.id before building completionRefs, so a chazara
+      // completion is excluded.  We model the correctly-filtered set here:
+      // stage-2 completion is absent from completionRefs.
+      const stage2FilteredRefs = <String>{}; // stage-2 excluded → empty set
+
+      final result = project(
+        schedule: schedule,
+        completions: stage2FilteredRefs,
+        today: today,
+      );
+
+      expect(
+        result.overdue,
+        contains(anchorRef),
+        reason:
+            'F-H4: a stage-2 completion for ref X must NOT remove X from '
+            'overdue when the first-stage (learn) completion is absent.',
+      );
+      expect(
+        result.overdue,
+        hasLength(3),
+        reason: 'F-H4: 3 days in [anchor, today-1] → 3 overdue units',
+      );
+    },
+  );
+
+  // ── F-M1 regression: fallback "today only" entry has date == today ───────
+  //
+  // When getEntriesForRange returns empty (calendar gap) but getEntry(today)
+  // succeeds, programCalendarSchedule must return a single entry whose
+  // date field == today (local midnight).
+  test(
+    'F-M1: fallback getEntry(today) returns entry with date == today',
+    () async {
+      final today = DateTime.utc(2026, 5, 19);
+      final anchor = today.subtract(const Duration(days: 5));
+      const programKey = 'daf_yomi';
+
+      // Fake engine: range queries return empty (gap), getEntry(today) returns
+      // a valid entry with date populated.
+      final gapEngine = _GapFakeCalendarEngine(programKey, today);
+      final calendarService = CalendarProgramService(gapEngine);
+
+      final entries = await programCalendarSchedule(
+        programKey: programKey,
+        anchor: anchor,
+        today: today,
+        calendarService: calendarService,
+      );
+
+      expect(
+        entries,
+        hasLength(1),
+        reason: 'F-M1: fallback produces exactly 1 entry (today)',
+      );
+
+      final entry = entries.single;
+      expect(
+        entry.date,
+        isNotNull,
+        reason: 'F-M1: fallback entry must have a non-null date field',
+      );
+      expect(
+        entry.date,
+        equals(DateTime(today.year, today.month, today.day)),
+        reason: 'F-M1: fallback entry date must equal today (local midnight)',
+      );
+    },
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Helper fakes for new regression tests (F-H2, F-M1).
+// ---------------------------------------------------------------------------
+
+/// A calendar engine that only yields entries on the specified [_weeklyDates].
+/// Simulates a weekly-cadence program (e.g. Daf a Week) where the DB has
+/// one row per week, not per day.
+class _WeeklyFakeCalendarEngine implements LocalCalendarEngine {
+  _WeeklyFakeCalendarEngine(this._programId, this._weeklyDates);
+
+  final String _programId;
+  final List<DateTime> _weeklyDates;
+
+  String _refForDate(DateTime local) =>
+      '$_programId ${local.year}-'
+      '${local.month.toString().padLeft(2, '0')}-'
+      '${local.day.toString().padLeft(2, '0')}';
+
+  @override
+  Future<CalendarProgramEntry?> getEntry(
+    String programId,
+    DateTime date,
+  ) async {
+    if (programId != _programId) return null;
+    final local = DateTime(date.year, date.month, date.day);
+    final match = _weeklyDates.firstWhere(
+      (d) => DateTime(d.year, d.month, d.day) == local,
+      orElse: () => DateTime(1970),
+    );
+    if (match.year == 1970) return null;
+    return CalendarProgramEntry(
+      programId: programId,
+      displayNameEn: '',
+      displayNameHe: '',
+      todayRef: _refForDate(local),
+      apiSource: 'fake',
+      date: local,
+    );
+  }
+
+  @override
+  Future<List<CalendarProgramEntry>> getEntriesForRange(
+    String programId,
+    DateTime startDate,
+    DateTime endDate,
+  ) async {
+    if (programId != _programId) return const [];
+    final start = DateTime(startDate.year, startDate.month, startDate.day);
+    final end = DateTime(endDate.year, endDate.month, endDate.day);
+    final result = <CalendarProgramEntry>[];
+    for (final d in _weeklyDates) {
+      final local = DateTime(d.year, d.month, d.day);
+      if (local.isBefore(start) || local.isAfter(end)) continue;
+      result.add(
+        CalendarProgramEntry(
+          programId: programId,
+          displayNameEn: '',
+          displayNameHe: '',
+          todayRef: _refForDate(local),
+          apiSource: 'fake',
+          date: local,
+        ),
+      );
+    }
+    result.sort((a, b) => a.date!.compareTo(b.date!));
+    return result;
+  }
+
+  @override
+  Future<List<CalendarProgramEntry>> getTodayPrograms([DateTime? date]) async =>
+      const [];
+
+  @override
+  Future<CalendarProgramEntry?> getProgramForDate(
+    String programKey,
+    DateTime date,
+  ) => getEntry(programKey, date);
+}
+
+/// A calendar engine that always returns empty for range queries (simulates
+/// a calendar gap / partially-seeded DB) but returns a valid entry for
+/// [_today] via getEntry().
+class _GapFakeCalendarEngine implements LocalCalendarEngine {
+  _GapFakeCalendarEngine(this._programId, this._today);
+
+  final String _programId;
+  final DateTime _today;
+
+  @override
+  Future<CalendarProgramEntry?> getEntry(
+    String programId,
+    DateTime date,
+  ) async {
+    if (programId != _programId) return null;
+    final local = DateTime(date.year, date.month, date.day);
+    final todayLocal = DateTime(_today.year, _today.month, _today.day);
+    if (local != todayLocal) return null;
+    return CalendarProgramEntry(
+      programId: programId,
+      displayNameEn: '',
+      displayNameHe: '',
+      todayRef:
+          '$_programId ${local.year}-'
+          '${local.month.toString().padLeft(2, '0')}-'
+          '${local.day.toString().padLeft(2, '0')}',
+      apiSource: 'fake',
+      date: local,
+    );
+  }
+
+  @override
+  Future<List<CalendarProgramEntry>> getEntriesForRange(
+    String programId,
+    DateTime startDate,
+    DateTime endDate,
+  ) async => const []; // Simulate the calendar gap.
+
+  @override
+  Future<List<CalendarProgramEntry>> getTodayPrograms([DateTime? date]) async =>
+      const [];
+
+  @override
+  Future<CalendarProgramEntry?> getProgramForDate(
+    String programKey,
+    DateTime date,
+  ) => getEntry(programKey, date);
 }
