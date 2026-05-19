@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/enums/user_mode.dart';
 import 'package:learning_tracker/core/labels/curriculum_label_providers.dart';
+import 'package:learning_tracker/core/labels/domain_term_labels.dart';
 import 'package:learning_tracker/core/learning/completion_writer_providers.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
@@ -809,7 +810,7 @@ class _CompletionSectionState extends ConsumerState<_CompletionSection> {
                       const SizedBox(width: 10),
                       Text(
                         isDone
-                            ? 'Completed (${task.stageName})'
+                            ? 'Completed (${domainTermLabels(ref).resolveStoredStageName(task.stageName)})'
                             : 'Mark Complete',
                         style: const TextStyle(
                           fontSize: 31 / 2,

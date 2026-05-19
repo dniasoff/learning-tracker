@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
+import 'package:learning_tracker/core/labels/domain_term_labels.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/widgets/item_review_breakdown.dart';
@@ -194,6 +195,7 @@ class _StageBreakdownSheet extends ConsumerWidget {
     final stageRepository = ref.watch(
       stageDefinitionRepositoryProvider(curriculumEnum),
     );
+    final terms = domainTermLabels(ref);
 
     return Padding(
       padding: const EdgeInsets.all(24),
@@ -237,7 +239,15 @@ class _StageBreakdownSheet extends ConsumerWidget {
               return FutureBuilder<Map<int, String>>(
                 future: _resolveStageNames(stageRepository, curriculumEnum),
                 builder: (context, snapshot) {
-                  final names = snapshot.data ?? {};
+                  final rawNames = snapshot.data ?? {};
+                  // Resolve each stored name through the toggle-aware resolver
+                  // so the breakdown re-renders live when the Hebrew Terms
+                  // toggle changes.
+                  final names = {
+                    for (final entry in rawNames.entries)
+                      entry.key:
+                          terms.resolveStoredStageName(entry.value),
+                  };
                   return ItemReviewBreakdown(
                     stageBreakdown: breakdown,
                     stageNames: names,

@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/labels/curriculum_label_providers.dart';
+import 'package:learning_tracker/core/labels/domain_term_labels.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/widgets/empty_state.dart';
@@ -333,6 +334,8 @@ class _LearnTaskCard extends ConsumerWidget {
             ?.value ??
         task.contentItemSefariaRef.replaceAll('_', ' ');
     final isOverdue = task.isOverdue;
+    final stageLabel =
+        domainTermLabels(ref).resolveStoredStageName(task.stageName);
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -410,7 +413,7 @@ class _LearnTaskCard extends ConsumerWidget {
                             borderRadius: BorderRadius.circular(999),
                           ),
                           child: Text(
-                            task.stageName,
+                            stageLabel,
                             style: theme.textTheme.labelSmall?.copyWith(
                               color: const Color(0xFF6A7282),
                               fontWeight: FontWeight.w700,

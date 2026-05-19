@@ -96,8 +96,15 @@ class DashboardTaskItem extends ConsumerWidget {
     final l10n = AppLocalizations.of(context)!;
     return Consumer(
       builder: (context, ref, _) {
-        final chazaraReviewLabel = domainTermLabels(ref).chazara;
-        return _buildSubtitleInner(theme, l10n, chazaraReviewLabel);
+        final terms = domainTermLabels(ref);
+        final chazaraReviewLabel = terms.chazara;
+        final resolvedStageName = terms.resolveStoredStageName(task.stageName);
+        return _buildSubtitleInner(
+          theme,
+          l10n,
+          chazaraReviewLabel,
+          resolvedStageName,
+        );
       },
     );
   }
@@ -106,6 +113,7 @@ class DashboardTaskItem extends ConsumerWidget {
     ThemeData theme,
     AppLocalizations l10n,
     String chazaraReviewLabel,
+    String resolvedStageName,
   ) {
     final baseStyle = theme.textTheme.bodySmall?.copyWith(
       color: theme.colorScheme.onSurfaceVariant,
@@ -149,13 +157,13 @@ class DashboardTaskItem extends ConsumerWidget {
     }
 
     if (suffixSpans.isEmpty) {
-      return Text(task.stageName, style: baseStyle);
+      return Text(resolvedStageName, style: baseStyle);
     }
 
     return Text.rich(
       TextSpan(
         children: [
-          TextSpan(text: task.stageName, style: baseStyle),
+          TextSpan(text: resolvedStageName, style: baseStyle),
           ...suffixSpans,
         ],
       ),
