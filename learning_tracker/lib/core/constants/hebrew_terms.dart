@@ -97,7 +97,6 @@ class HebrewTerms {
   // │ uiChazara                │ חזרה                │ termChazara            │
   // │ uiReviewSection          │ חזרה                │ termReviewSection      │
   // │ uiBubbleChazara          │ חזרה                │ termBubbleChazara      │
-  // │ uiActiveTrackChazara     │ חזרה                │ termChazara            │
   // │ uiDaf                    │ דף                  │ termDaf                │
   // │ uiAmud                   │ עמוד                │ termAmud               │
   // │ uiPerek                  │ פרק                 │ termPerek              │
@@ -117,14 +116,6 @@ class HebrewTerms {
   /// the toggle-resolved form. This constant is the Hebrew half.
   static const String uiChazara = 'חזרה';
 
-  /// Deprecated alias for [uiChazara].
-  ///
-  /// The old name encoded "Review" as part of the English fallback, which
-  /// violates the §3 transliteration-only rule (Defect 2). Call sites in
-  /// `features/` should migrate to `domainTermLabels(ref).chazara`.
-  @Deprecated('Use HebrewTerms.uiChazara or domainTermLabels(ref).chazara')
-  static const String uiChazaraReview = uiChazara;
-
   /// "REVIEW SECTION" header → Hebrew.
   static const String uiReviewSection = 'חזרה';
 
@@ -132,9 +123,6 @@ class HebrewTerms {
   ///
   /// Wired to the toggle via [domainTermLabels.bubbleChazara].
   static const String uiBubbleChazara = 'חזרה';
-
-  /// Active-track "Chazara" metric label → Hebrew script.
-  static const String uiActiveTrackChazara = 'חזרה';
 
   // ── Structural Torah unit terms ──────────────────────────────────────────
 

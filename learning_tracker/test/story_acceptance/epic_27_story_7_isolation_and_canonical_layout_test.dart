@@ -1,31 +1,22 @@
 /// Story acceptance tests for Story 27.7 (DNI-383).
 ///
-/// Two integration test surfaces:
+/// Integration test surface:
 ///
-///   1. multi_profile_isolation
+///   multi_profile_isolation
 ///      Creates Profile A and Profile B against an in-memory Drift database,
 ///      records a completion for A, and asserts that every profile-aware
 ///      CompletionDao query for B returns empty. Pins down the FR1 / NFR13
 ///      invariant that one profile's data never leaks into another's reads.
 ///
-///   2. track_card_canonical_layout
-///      Verifies that all 4 [TrackCardShape]s (programCalendar,
-///      deadlineGoal, velocityGoal, momentum) flow through the same
-///      [TrackCardViewModel] constructor surface. The widget-tree comparison
-///      portion of UX-DR10 is left as a skip-stub because the canonical
-///      [TrackCard] widget integration is not yet under test.
+/// Note: the track_card_canonical_layout surface tested TrackCardViewModel /
+/// TrackCardShape which have been removed as confirmed dead code (zero call
+/// sites outside their own directory).
 @Tags(['epic_27'])
 library;
 
 import 'package:learning_tracker/core/database/user/user_database.dart';
-import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/features/dashboard/domain/models/calendar_position.dart';
-import 'package:learning_tracker/features/dashboard/domain/models/momentum_status.dart';
-import 'package:learning_tracker/features/dashboard/domain/models/track_card_view_model.dart';
 import 'package:learning_tracker/features/profiles/data/repositories/profile_repository_impl.dart';
 import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
-import 'package:learning_tracker/features/scheduler/domain/models/delta_value.dart';
-import 'package:learning_tracker/features/scheduler/domain/models/pace_status.dart';
 import 'package:test/test.dart';
 
 import '../helpers/drift_memory.dart' show seedCompletion;
@@ -38,6 +29,7 @@ const _trackType = 'personal';
 
 /// Inserts a [CurriculumTracks] row for [profileId] and returns its id.
 Future<int> _insertTrackFor(UserDatabase db, int profileId) async {
+
   final row = await db
       .into(db.curriculumTracks)
       .insertReturning(
@@ -50,12 +42,6 @@ Future<int> _insertTrackFor(UserDatabase db, int profileId) async {
       );
   return row.id;
 }
-
-/// Minimal [NextTaskData] for constructing a [TrackCardViewModel].
-const _nextTask = NextTaskData(displayLabel: 'Berakhot 1:1');
-
-/// Minimal [LifetimeLearningData] for constructing a [TrackCardViewModel].
-const _lifetime = LifetimeLearningData(fraction: 0.0, isComplete: false);
 
 void main() {
   // ── Story 27.7.1 ─ multi-profile isolation ─────────────────────────────
@@ -311,177 +297,8 @@ void main() {
       });
     },
   );
-
-  // ── Story 27.7.2 ─ track-card canonical layout ─────────────────────────
-
-  group(
-    'Story 27.7 — track-card canonical layout: all 4 data shapes flow '
-    'through one canonical model surface',
-    tags: ['story_27_7'],
-    () {
-      test(
-        'TrackCardShape has exactly 4 values (programCalendar, deadlineGoal, '
-        'velocityGoal, momentum)',
-        () {
-          expect(TrackCardShape.values, hasLength(4));
-          expect(
-            TrackCardShape.values,
-            containsAll([
-              TrackCardShape.programCalendar,
-              TrackCardShape.deadlineGoal,
-              TrackCardShape.velocityGoal,
-              TrackCardShape.momentum,
-            ]),
-          );
-        },
-      );
-
-      test(
-        'all 4 TrackCardShapes are constructible through the same '
-        'TrackCardViewModel() factory surface (data-shape canonical-form check)',
-        () {
-          final viewModels = <TrackCardViewModel>[
-            const TrackCardViewModel(
-              trackId: 1,
-              curriculumId: CurriculumId.bavli,
-              shape: TrackCardShape.programCalendar,
-              displayNamePrimary: 'Daf Yomi',
-              curriculumColorValue: 0xFF1565C0,
-              nextTask: _nextTask,
-              breadcrumbLabel: 'CURRENT FOCUS',
-              reviewCount: 0,
-              dueTodayCount: 1,
-              overdueCount: 0,
-              chazaraLabel: 'Review',
-              lifetime: _lifetime,
-              calendarPos: CalendarPosition(
-                currentDay: 12,
-                totalDays: 2711,
-                todayRef: 'Berakhot.13a',
-                todayDisplayHe: 'ברכות יג.',
-                delta: 0,
-                status: CalendarStatus.caughtUp,
-              ),
-            ),
-            const TrackCardViewModel(
-              trackId: 2,
-              curriculumId: CurriculumId.mishnayos,
-              shape: TrackCardShape.deadlineGoal,
-              displayNamePrimary: 'Mishnah Berakhot',
-              curriculumColorValue: 0xFF2E7D32,
-              nextTask: _nextTask,
-              breadcrumbLabel: 'NEXT TASK',
-              reviewCount: 0,
-              dueTodayCount: 2,
-              overdueCount: 0,
-              chazaraLabel: 'Review',
-              lifetime: _lifetime,
-              paceStatus: PaceStatus(
-                status: PaceStatusType.onPace,
-                daysDelta: 0,
-                delta: DateScheduleDelta(DateDelta(0)),
-                rollingAverage: 0.71,
-              ),
-            ),
-            const TrackCardViewModel(
-              trackId: 3,
-              curriculumId: CurriculumId.mishnayos,
-              shape: TrackCardShape.velocityGoal,
-              displayNamePrimary: 'Mishnayos cover-to-cover',
-              curriculumColorValue: 0xFF2E7D32,
-              nextTask: _nextTask,
-              breadcrumbLabel: 'NEXT TASK',
-              reviewCount: 0,
-              dueTodayCount: 1,
-              overdueCount: 0,
-              chazaraLabel: 'Review',
-              lifetime: _lifetime,
-              paceStatus: PaceStatus(
-                status: PaceStatusType.behind,
-                daysDelta: -3,
-                delta: DateScheduleDelta(DateDelta(-3)),
-                rollingAverage: 0.4,
-              ),
-            ),
-            const TrackCardViewModel(
-              trackId: 4,
-              curriculumId: CurriculumId.tanach,
-              shape: TrackCardShape.momentum,
-              displayNamePrimary: 'Tanach free-study',
-              curriculumColorValue: 0xFF6A1B9A,
-              nextTask: _nextTask,
-              breadcrumbLabel: 'NEXT TASK',
-              reviewCount: 0,
-              dueTodayCount: 0,
-              overdueCount: 0,
-              chazaraLabel: 'Review',
-              lifetime: _lifetime,
-              momentum: MomentumStatus(
-                recentCount: 3,
-                personalAverage: 4.2,
-                level: MomentumLevel.active,
-              ),
-            ),
-          ];
-
-          // Same runtime type — proves the 4 shapes are not structurally
-          // divergent at the model layer.
-          expect(viewModels, hasLength(4));
-          expect(viewModels.map((vm) => vm.runtimeType).toSet(), hasLength(1));
-
-          // Shape ↔ shape-specific field correspondence (the contract the
-          // TrackCard widget tree relies on).
-          expect(
-            viewModels
-                .where((vm) => vm.shape == TrackCardShape.programCalendar)
-                .single
-                .calendarPos,
-            isNotNull,
-          );
-          expect(
-            viewModels
-                .where((vm) => vm.shape == TrackCardShape.deadlineGoal)
-                .single
-                .paceStatus,
-            isNotNull,
-          );
-          expect(
-            viewModels
-                .where((vm) => vm.shape == TrackCardShape.velocityGoal)
-                .single
-                .paceStatus,
-            isNotNull,
-          );
-          expect(
-            viewModels
-                .where((vm) => vm.shape == TrackCardShape.momentum)
-                .single
-                .momentum,
-            isNotNull,
-          );
-
-          // All 4 shapes enumerated — no orphan shapes that bypass the
-          // canonical form.
-          expect(
-            viewModels.map((vm) => vm.shape).toSet(),
-            equals(TrackCardShape.values.toSet()),
-          );
-        },
-      );
-
-      test(
-        'TrackCard widget-tree canonical-layout assertion (UX-DR10)',
-        () {
-          // Skip-stub. Widget-tree integration tests for the canonical
-          // TrackCard and its 5 subcomponents (TrackCardHeader,
-          // NextTaskBreadcrumb, TrackStatGrid, LifetimeLearningLine,
-          // TrackContinueButton) are deferred to a dedicated widget-test
-          // story.
-        },
-        skip:
-            'Deferred to widget-test story — TrackCard widget integration '
-            'tests not yet in scope for this acceptance suite.',
-      );
-    },
-  );
 }
+
+// Note: the track_card_canonical_layout group (Story 27.7.2) tested
+// TrackCardShape / TrackCardViewModel which were removed as confirmed dead
+// code. The multi-profile isolation group above covers the live AC.

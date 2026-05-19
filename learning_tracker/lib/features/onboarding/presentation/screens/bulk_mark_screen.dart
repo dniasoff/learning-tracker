@@ -3,8 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/content/content_grouping.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
+import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
-
 import 'package:learning_tracker/core/utils/text_input_formatters.dart';
 import 'package:learning_tracker/core/widgets/app_bar_title.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
@@ -231,6 +231,10 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
       // Slow path: item itself is a leaf.
       refs = [item.sefariaRef];
     } else {
+      // _resolvedItems is null and the item is a container (not a leaf).
+      // We cannot enumerate children yet, so expunge is deferred — on next
+      // open the pre-tick reload will re-evaluate and the stale records
+      // will not re-appear because the user did not tap "Next" on them.
       return;
     }
 
@@ -250,8 +254,9 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
             sefariaRef: ref_,
             curriculumId: widget.curriculumId,
           )
-          // Non-fatal: expunge failures are retried on next open via pre-tick reload.
-          .ignore();
+          .catchError((Object e, StackTrace st) {
+        AppLogger.instance.error('expunge failed', e, st);
+      });
     }
 
     // Refresh progress surfaces after expunge.
