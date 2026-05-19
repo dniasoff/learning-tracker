@@ -40,10 +40,20 @@ final curriculumImportServiceProvider = Provider<CurriculumImportService>((
 });
 
 /// Provider for GoalRepository used during onboarding goal setup.
+///
+/// `syncEngine` MUST be wired here — without it `GoalRepositoryImpl._syncGoal`
+/// bails on its first line (`if (_syncEngine == null) return;`) and every
+/// goal create/update/delete silently never reaches Firestore. `syncEngine`
+/// is null for local-born accounts, which is the intended no-op.
 final goalRepositoryProvider = Provider<GoalRepository>((ref) {
   final db = ref.watch(userDatabaseProvider);
   final profileId = ref.watch(activeProfileIdProvider);
-  return GoalRepositoryImpl(database: db, profileId: profileId);
+  final syncEngine = ref.watch(syncEngineProvider);
+  return GoalRepositoryImpl(
+    database: db,
+    profileId: profileId,
+    syncEngine: syncEngine,
+  );
 });
 
 /// Provider for BulkPriorCompletionService used during onboarding.

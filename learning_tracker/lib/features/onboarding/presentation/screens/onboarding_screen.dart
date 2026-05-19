@@ -844,12 +844,16 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
     return SafeArea(
       top: false,
-      child: Padding(
+      // Scrollable so the soft keyboard squeezing the viewport scrolls the
+      // card instead of overflowing it (was a 10px bottom overflow). The
+      // Column is mainAxisSize.min so it only claims the height it needs.
+      child: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
         child: Card(
           child: Padding(
             padding: const EdgeInsets.all(20),
             child: Column(
+              mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 const SizedBox(height: 24),

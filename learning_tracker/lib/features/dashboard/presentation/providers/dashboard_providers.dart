@@ -390,7 +390,10 @@ Future<PaceStatus?> dashboardPaceStatus(
   );
   if (goals.isEmpty) return null;
 
-  final goal = goals.first;
+  // Pick the most recently created goal — defends against a stale row from
+  // an earlier track setup outliving a re-add (the projection must reflect
+  // the goal the user just set, not whichever row the DB returns first).
+  final goal = goals.reduce((a, b) => a.createdAt.isAfter(b.createdAt) ? a : b);
 
   // Get personal-track completions for daily counts
   final allCompletions = await db.completionDao
@@ -431,52 +434,41 @@ Future<PaceStatus?> dashboardPaceStatus(
     );
   }
 
-  // Deadline-based goal. Prefer an explicit pace if the goal carries one;
-  // otherwise derive a transient pace from the deadline + scope + study-day
-  // density so the dashboard always projects when a deadline exists. Mirrors
-  // the scheduler's fallback (scheduler_providers.dart) so today's queue and
-  // the dashboard summary card never disagree on whether the track has a
-  // projection.
+  // Deadline-based goal. A deadline goal ALWAYS yields a projection: prefer
+  // the explicit pace the wizard stored, otherwise derive one from the
+  // deadline + scope + study-day density. `calculateForPaceGoal` projects
+  // deterministically from the target pace (no completion history needed),
+  // so "No projection" can never appear for a track that has a deadline —
+  // unlike `PaceCalculator.calculate`, whose rolling-average projection is
+  // null on day one.
   if (goal.targetDate == null) return null;
 
   var paceValue = goal.paceValue;
   var pacePeriod = goal.pacePeriod;
-  if ((paceValue == null || pacePeriod == null) && totalItems > 0) {
+  if (paceValue == null || pacePeriod == null) {
     final start = DateUtils.extractLocalDate(now);
     final end = DateUtils.extractLocalDate(goal.targetDate!.toLocal());
-    if (!end.isBefore(start)) {
-      final studyDaysInWindow = await db.studyDayConfigDao
-          .countStudyDaysInInclusiveDateRangeForTrack(
+    final studyDaysInWindow = end.isBefore(start)
+        ? 0
+        : await db.studyDayConfigDao.countStudyDaysInInclusiveDateRangeForTrack(
             trackId: goal.trackId,
             startInclusive: start,
             endInclusive: end,
           );
-      final studyDaysPerWeek = await db.studyDayConfigDao
-          .getStudyDaysPerWeekForTrack(trackId: goal.trackId);
-      final derived = derivePaceFromDeadline(
-        totalScopeItems: totalItems,
-        studyDaysInWindow: studyDaysInWindow,
-        studyDaysPerWeek: studyDaysPerWeek,
-      );
-      paceValue = derived.paceValue;
-      pacePeriod = derived.pacePeriod;
-    }
-  }
-
-  if (paceValue != null && pacePeriod != null) {
-    final dailyRate = PaceCalculator.paceToDaily(paceValue, pacePeriod);
-    return PaceCalculator.calculateForPaceGoal(
-      targetPacePerDay: dailyRate,
-      totalItems: totalItems,
-      completedItems: personalCompletions.length,
-      dailyCompletionCounts: dailyCounts,
-      today: now,
+    final studyDaysPerWeek = await db.studyDayConfigDao
+        .getStudyDaysPerWeekForTrack(trackId: goal.trackId);
+    final derived = derivePaceFromDeadline(
+      totalScopeItems: totalItems,
+      studyDaysInWindow: studyDaysInWindow,
+      studyDaysPerWeek: studyDaysPerWeek,
     );
+    paceValue = derived.paceValue;
+    pacePeriod = derived.pacePeriod;
   }
 
-  return PaceCalculator.calculate(
-    goalStartDate: goal.createdAt,
-    goalDeadline: goal.targetDate!,
+  final dailyRate = PaceCalculator.paceToDaily(paceValue, pacePeriod);
+  return PaceCalculator.calculateForPaceGoal(
+    targetPacePerDay: dailyRate,
     totalItems: totalItems,
     completedItems: personalCompletions.length,
     dailyCompletionCounts: dailyCounts,

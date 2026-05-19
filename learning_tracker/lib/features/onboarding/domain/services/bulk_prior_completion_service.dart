@@ -38,6 +38,17 @@ const kBulkPriorSentinel = Duration(
 /// [DateTime] representation of the bulk-prior sentinel (UTC 2000-01-01).
 final kBulkPriorSentinelDate = DateTime.utc(2000, 1, 1);
 
+/// True when [completedAt] is the bulk-prior sentinel.
+///
+/// Compares the moment (not the object) because a sentinel completion that
+/// has round-tripped through Firestore (`Timestamp` → local `DateTime`) or
+/// Drift comes back with a different `isUtc` flag than the original
+/// `DateTime.utc(2000, 1, 1)` — a plain `==` then silently returns false and
+/// the prior-completions pre-tick fails. `isAtSameMomentAs` after `toUtc()`
+/// is flag-independent.
+bool isBulkPriorSentinel(DateTime completedAt) =>
+    completedAt.toUtc().isAtSameMomentAs(kBulkPriorSentinelDate);
+
 /// Result of a bulk prior completion operation.
 class BulkPriorCompletionResult {
   final int itemCount;

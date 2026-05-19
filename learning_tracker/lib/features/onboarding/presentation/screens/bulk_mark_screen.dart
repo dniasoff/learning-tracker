@@ -74,6 +74,11 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
   /// Unticking one of these triggers an expunge call (B8).
   final _preTickedRefs = <String>{};
 
+  /// Full (scope-applied) content list for this curriculum. Loaded once on
+  /// open — used both to map pre-ticked refs to selections and to compute the
+  /// tri-state (partial) checkbox value for container rows.
+  List<ContentItem>? _allItems;
+
   List<ContentItem>? _resolvedItems;
   BulkPriorCompletionResult? _result;
   String? _error;
@@ -97,6 +102,16 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
   /// marked so the checkbox state reflects reality when the screen opens.
   Future<void> _loadPreExistingCompletions() async {
     try {
+      // Load the full content list up-front (scope-applied). Needed both to
+      // map pre-ticked refs to selections AND to compute partial checkbox
+      // state — so load it unconditionally, even when there are no prior
+      // completions to pre-tick.
+      final contentRepo = ref.read(contentRepositoryProvider);
+      final allItems = _applyScope(
+        await contentRepo.getContentForCurriculum(widget.curriculumId),
+      );
+      if (mounted) setState(() => _allItems = allItems);
+
       final completionRepo = ref.read(completionRepositoryProvider);
       final existingCompletions = await completionRepo
           .getCompletionsByCurriculum(widget.curriculumId.storageKey);
@@ -105,16 +120,14 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
 
       // Only pre-tick items that were marked via the prior-marking flow.
       // Live-learning completions (normal daily learning) do not pre-tick.
+      // Use isBulkPriorSentinel (moment-based) — a prior completion synced
+      // down from Firestore comes back with a different isUtc flag than
+      // DateTime.utc(2000,1,1), so a plain `==` misses every synced row and
+      // nothing pre-ticks.
       final completedRefs = existingCompletions
-          .where((c) => c.completedAt == kBulkPriorSentinelDate)
+          .where((c) => isBulkPriorSentinel(c.completedAt))
           .map((c) => c.sefariaRef)
           .toSet();
-
-      // Load the full content list to map refs → HierarchySelections.
-      final contentRepo = ref.read(contentRepositoryProvider);
-      final allItems = await contentRepo.getContentForCurriculum(
-        widget.curriculumId,
-      );
 
       // Build pre-ticked leaf-level selections for every already-completed ref.
       final preTickedSelections = <HierarchySelection>{};
@@ -139,6 +152,42 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
     } catch (_) {
       // Non-fatal: if pre-tick loading fails just open with unticked state.
     }
+  }
+
+  /// Tri-state selection value for a hierarchy row at [depth]:
+  ///   true  — every leaf descendant is selected
+  ///   false — none selected
+  ///   null  — some, but not all, selected (indeterminate)
+  ///
+  /// Leaf rows are always a plain true/false. Container rows resolve their
+  /// state from the leaf descendants in [_allItems]; before that list has
+  /// loaded they fall back to the covering-selection check.
+  bool? _itemSelectionState(ContentItem item, int depth) {
+    if (item.isLeaf) return _isItemSelected(item);
+    final all = _allItems;
+    if (all == null) return _isItemSelected(item);
+
+    // rowLevel: 1=seder, 2=masechta, 3=perek, 4=mishna.
+    final rowLevel = depth + 1;
+    bool underRow(ContentItem leaf) {
+      if (leaf.level1 != item.level1) return false;
+      if (rowLevel >= 2 && leaf.level2 != item.level2) return false;
+      if (rowLevel >= 3 && leaf.level3 != item.level3) return false;
+      if (rowLevel >= 4 && leaf.level4 != item.level4) return false;
+      return true;
+    }
+
+    var total = 0;
+    var selected = 0;
+    for (final leaf in all) {
+      if (!leaf.isLeaf || !underRow(leaf)) continue;
+      total++;
+      if (_isItemSelected(leaf)) selected++;
+    }
+    if (total == 0) return _isItemSelected(item);
+    if (selected == 0) return false;
+    if (selected == total) return true;
+    return null;
   }
 
   /// Filter items by scope constraints if provided.
@@ -425,10 +474,12 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
                       setState(() => _hasNavStack = path.isNotEmpty);
                     },
                     tileBuilder: (item, currentPath, onDrill) {
-                      final isSelected = _isItemSelected(item);
                       return ListTile(
                         leading: Checkbox(
-                          value: isSelected,
+                          // tristate: a container row whose children are
+                          // partially selected shows the indeterminate dash.
+                          tristate: true,
+                          value: _itemSelectionState(item, currentPath.length),
                           onChanged: (_) =>
                               _toggleItem(item, currentPath.length),
                         ),
