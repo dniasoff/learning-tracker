@@ -113,6 +113,14 @@ grep -r "\.displayNameEn\|\.displayNameHe" \
   | grep -v "lib/core/labels/\|\.g\.dart"
 ```
 
+### Hebrew Terms and domainTermLabels
+
+**Hebrew terms in UI widgets**: All presentation code that renders Jewish learning terms (stage names, masechet/perek/daf labels, חזרה, etc.) MUST use `domainTermLabels(ref)` from `lib/core/labels/domain_term_labels.dart`. Never access `HebrewTerms.*` directly in `lib/features/` — this is enforced by audit check 13. Widgets that need `domainTermLabels` must be `ConsumerWidget` or `ConsumerStatefulWidget`.
+
+**Why:** `HebrewTerms.*` are raw constants that ignore the user's Hebrew-terms toggle. `domainTermLabels(ref)` reads `useHebrewTermsProvider` and returns the correct script (Hebrew ↔ transliteration) at runtime, including live re-render when the toggle changes mid-session.
+
+**Audit check 13** (enforced by `make audit`) greps for direct `HebrewTerms.` references in `lib/features/` and fails CI if any are found. The only permitted call sites for `useHebrewTermsProvider` are `lib/core/labels/`, `lib/core/preferences/`, and settings screen files — all other code must go through `domainTermLabels(ref)`.
+
 ---
 
 ## File Naming Conventions
