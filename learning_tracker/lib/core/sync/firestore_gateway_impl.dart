@@ -61,17 +61,24 @@ class FirestoreGatewayImpl implements FirestoreGateway {
 
   /// The single canonical completion document-ID function.
   ///
-  /// The ID is derived **only** from the completion's structured natural key —
-  /// `profile_id` (int), `sefaria_ref` (string), `stage_id` (int) and
-  /// `track_type` (string). snake_case keys are authoritative; camelCase keys
-  /// are accepted as a defensive fallback.
+  /// The ID is derived from the completion's structured natural key —
+  /// `profile_id` (int), `sefaria_ref` (string), `stage_id` (int),
+  /// `track_type` (string), and `curriculum_id` (string). snake_case keys are
+  /// authoritative; camelCase keys are accepted as a defensive fallback.
   ///
-  /// **Collision-free guarantee.** Each of the four components is
+  /// **Per-curriculum isolation (Option B).** Including `curriculum_id` as the
+  /// fifth component ensures that two completions with the same
+  /// (profileId, sefariaRef, stageId, trackType) but different curriculumIds
+  /// map to DISTINCT Firestore documents. Without this, a learner enrolled in
+  /// two curricula covering the same sefariaRef would collide on the same doc,
+  /// causing one curriculum's data to silently overwrite the other's.
+  ///
+  /// **Collision-free guarantee.** Each of the five components is
   /// percent-encoded by [_encodeKeyComponent] before being joined with `_`.
   /// The encoding escapes `%` and `_` themselves, so an encoded component can
   /// never contain a literal `_`. The joined string therefore has exactly
-  /// three `_` separators at unambiguous positions — it can be split back into
-  /// the original four components. A reversible (injective) transform maps
+  /// four `_` separators at unambiguous positions — it can be split back into
+  /// the original five components. A reversible (injective) transform maps
   /// distinct natural-key tuples to distinct IDs. In particular `Berakhot 1.1`,
   /// `Berakhot 1/1` and `Berakhot 1 1` encode to three different strings
   /// (`.`→`%2E`, `/`→`%2F`, space→`%20`) and thus three distinct documents.
@@ -87,11 +94,14 @@ class FirestoreGatewayImpl implements FirestoreGateway {
     final stage = (data['stage_id'] ?? data['stageId'])?.toString() ?? '';
     final trackType =
         (data['track_type'] ?? data['trackType']) as String? ?? '';
+    final curriculumId =
+        (data['curriculum_id'] ?? data['curriculumId']) as String? ?? '';
     return [
       _encodeKeyComponent(profileId.toString()),
       _encodeKeyComponent(ref),
       _encodeKeyComponent(stage),
       _encodeKeyComponent(trackType),
+      _encodeKeyComponent(curriculumId),
     ].join('_');
   }
 

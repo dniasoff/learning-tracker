@@ -234,12 +234,12 @@ void main() {
           completedAt: DateTime.utc(2026, 5, 3),
           points: 5,
         );
-        // Two commands with the SAME natural key but differing curriculumId /
-        // trackId — they must still collapse to one event + one outbox row.
-        final results = await writer.commitBatch([
-          dup,
-          dup.copyWith(curriculumId: 'shas', trackId: trackId + 999),
-        ]);
+        // Two commands with EXACTLY the same five-part natural key
+        // (profileId, sefariaRef, stageId, trackType, curriculumId) — they
+        // must collapse to one event + one outbox row.
+        // Note: since curriculumId is now part of the natural key (Option B),
+        // only commands with identical curriculumIds are considered duplicates.
+        final results = await writer.commitBatch([dup, dup]);
 
         expect(results, hasLength(2), reason: 'one result per input command');
 

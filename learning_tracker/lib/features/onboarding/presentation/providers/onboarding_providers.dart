@@ -70,6 +70,7 @@ final bulkPriorCompletionServiceProvider = Provider<BulkPriorCompletionService>(
       syncEngine: syncEngine,
       analytics: analytics,
       stageRepository: stageRepo,
+      outboxDao: db.outboxDao,
     );
   },
 );

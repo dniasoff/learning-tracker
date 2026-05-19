@@ -117,7 +117,7 @@ void main() {
           );
           expect(
             outboxRows.first.entityKey,
-            equals('1:Mishnah Berakhot 1:1:personal'),
+            equals('1:Mishnah Berakhot 1:1:personal:mishnah_yomit'),
           );
 
           final payload =
@@ -221,8 +221,8 @@ void main() {
         expect(
           outbox.map((r) => r.entityKey).toSet(),
           equals({
-            '1:Mishnah Berakhot 1:1:personal',
-            '1:Mishnah Berakhot 2:1:personal',
+            '1:Mishnah Berakhot 1:1:personal:mishnah_yomit',
+            '1:Mishnah Berakhot 2:1:personal:mishnah_yomit',
           }),
         );
 

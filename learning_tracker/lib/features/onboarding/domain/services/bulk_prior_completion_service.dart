@@ -1,12 +1,15 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:drift/drift.dart';
 import 'package:learning_tracker/core/analytics/analytics_service.dart';
 import 'package:learning_tracker/core/content/hierarchy_selection.dart';
+import 'package:learning_tracker/core/database/daos/outbox_dao.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
+import 'package:learning_tracker/core/sync/outbox/outbox_processor.dart';
 import 'package:learning_tracker/core/sync/sync_write_facade.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
@@ -76,6 +79,11 @@ class BulkPriorCompletionService {
   final AnalyticsService _analytics;
   final StageDefinitionRepository? _stageRepository;
 
+  /// Optional outbox DAO for enqueuing tombstone propagation after
+  /// [expungePriorCompletions]. When `null`, tombstones are written locally
+  /// but NOT propagated to Firestore (a warning is logged).
+  final OutboxDao? _outboxDao;
+
   /// Cached content items from the last [resolveSelections] call.
   List<ContentItem>? _cachedAllItems;
   CurriculumId? _cachedCurriculumId;
@@ -88,13 +96,15 @@ class BulkPriorCompletionService {
     SyncWriteFacade? syncEngine,
     AnalyticsService? analytics,
     StageDefinitionRepository? stageRepository,
+    OutboxDao? outboxDao,
   }) : _contentRepository = contentRepository,
        _completionRepository = completionRepository,
        _bookmarkRepository = bookmarkRepository,
        _database = database,
        _syncEngine = syncEngine,
        _analytics = analytics ?? const NullAnalyticsService(),
-       _stageRepository = stageRepository;
+       _stageRepository = stageRepository,
+       _outboxDao = outboxDao;
 
   /// Resolve hierarchy selections into leaf-level sefariaRefs.
   ///
@@ -280,6 +290,12 @@ class BulkPriorCompletionService {
   /// The `completions_view` (backed by `completion_events WHERE purgedAt IS
   /// NULL`) will stop returning the row immediately after this call.
   ///
+  /// **Tombstone propagation (Finding 2).** After writing the local tombstone,
+  /// each affected row is enqueued into the outbox so the tombstone reaches
+  /// Firestore. The gateway writes `purged_at` onto the document; other devices
+  /// see it on pull and tombstone their local rows. Requires [_outboxDao] to be
+  /// set; when absent, a warning is logged and propagation is skipped.
+  ///
   /// Agent F (UI layer) calls this when the user un-selects a previously
   /// bulk-marked item so the item reverts to "not started" status.
   Future<void> expungePriorCompletions({
@@ -295,10 +311,58 @@ class BulkPriorCompletionService {
           (t) =>
               t.profileId.equals(profileId) &
               t.sefariaRef.equals(sefariaRef) &
+              t.curriculumId.equals(curriculumId.storageKey) &
               t.trackType.equals(TrackType.personal.storageKey) &
               t.eventTimestamp.equals(kBulkPriorSentinelDate),
         ))
         .write(CompletionEventsCompanion(purgedAt: Value(purgedAt)));
+
+    // ── Propagate tombstones to Firestore via outbox ──────────────────────
+    // Query the rows that were just tombstoned so we can build per-row outbox
+    // entries. We use the same WHERE conditions plus purgedAt IS NOT NULL to
+    // avoid re-enqueuing rows that were already tombstoned in a prior call.
+    if (_outboxDao == null) {
+      // No outbox DAO injected — tombstone is local-only. This is acceptable
+      // for test environments but should not happen in production.
+      return;
+    }
+
+    final tombstonedRows = await (_database.select(_database.completionEvents)
+          ..where(
+            (t) =>
+                t.profileId.equals(profileId) &
+                t.sefariaRef.equals(sefariaRef) &
+                t.curriculumId.equals(curriculumId.storageKey) &
+                t.trackType.equals(TrackType.personal.storageKey) &
+                t.eventTimestamp.equals(kBulkPriorSentinelDate) &
+                t.purgedAt.isNotNull(),
+          ))
+        .get();
+
+    for (final row in tombstonedRows) {
+      final entityKey =
+          '${row.profileId}:${row.sefariaRef}:${row.stageId}:${row.trackType}:${row.curriculumId}';
+      final payload = jsonEncode({
+        'profile_id': row.profileId,
+        'curriculum_id': row.curriculumId,
+        'sefaria_ref': row.sefariaRef,
+        'stage_id': row.stageId,
+        'track_type': row.trackType,
+        'track_id': row.trackId,
+        'completed_at': row.eventTimestamp.toUtc().toIso8601String(),
+        'points': row.points,
+        'purged_at': purgedAt.toUtc().toIso8601String(),
+      });
+      await _outboxDao.insertOutboxRow(
+        OutboxCompanion.insert(
+          profileId: profileId,
+          entityKind: OutboxEntityKind.completion,
+          entityKey: entityKey,
+          payload: payload,
+          createdAt: purgedAt,
+        ),
+      );
+    }
   }
 
   /// Find the first uncompleted leaf item in learning order.

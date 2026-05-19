@@ -15,8 +15,14 @@ abstract class FirestoreGateway {
   ///
   /// The Firestore document ID is always derived from the completion's
   /// structured natural key (`profile_id`, `sefaria_ref`, `stage_id`,
-  /// `track_type`) — the [docId] parameter is **ignored for completions** and
-  /// retained only for non-completion callers that pass an explicit ID.
+  /// `track_type`, `curriculum_id`) — the [docId] parameter is **ignored for
+  /// completions** and retained only for non-completion callers that pass an
+  /// explicit ID.
+  ///
+  /// Including `curriculum_id` in the doc ID ensures that two completions with
+  /// the same (profileId, sefariaRef, stageId, trackType) but different
+  /// curriculumIds are stored as DISTINCT Firestore documents (Option B /
+  /// per-curriculum isolation).
   Future<void> pushCompletion({
     required int profileId,
     required Map<String, dynamic> data,
@@ -28,7 +34,9 @@ abstract class FirestoreGateway {
   ///
   /// Each entry carries the outbox `entityKey` (a local-only dedup key) and
   /// the snake_case `payload`. The Firestore document ID is derived solely
-  /// from the payload's structured natural key — never from the entityKey.
+  /// from the payload's structured natural key (`profile_id`, `sefaria_ref`,
+  /// `stage_id`, `track_type`, `curriculum_id`) — never from the entityKey.
+  /// The `curriculum_id` component ensures per-curriculum document isolation.
   ///
   /// Payloads are chunked into batches of ≤500 ops (Firestore limit) and each
   /// chunk is committed with a single `WriteBatch.commit()` call — producing

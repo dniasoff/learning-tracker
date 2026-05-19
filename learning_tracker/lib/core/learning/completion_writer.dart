@@ -218,29 +218,49 @@ class CompletionWriter {
 
   /// Delimiter for natural-key composites: the NUL character (`\u0000`). NUL
   /// cannot occur in a sefariaRef, curriculumId, or trackType, so the
-  /// four-part composite key is collision-proof even though a sefariaRef
+  /// five-part composite key is collision-proof even though a sefariaRef
   /// contains spaces and colons. The composed key is only ever used as an
   /// in-memory `Map` key — never persisted — so embedding a NUL byte is safe.
   static const String _keyDelim = '\u0000';
 
   /// Natural-key string for a command — the idempotency key for completions.
-  static String _naturalKey(CompletionCommand cmd) =>
-      _composeKey(cmd.profileId, cmd.sefariaRef, cmd.stageId, cmd.trackType);
+  ///
+  /// Includes `curriculumId` so that two completions with the same
+  /// (profileId, sefariaRef, stageId, trackType) but different curricula are
+  /// treated as distinct completions (per-curriculum isolation, Option B).
+  static String _naturalKey(CompletionCommand cmd) => _composeKey(
+    cmd.profileId,
+    cmd.sefariaRef,
+    cmd.stageId,
+    cmd.trackType,
+    cmd.curriculumId,
+  );
 
   /// Natural-key string for a persisted event row.
-  static String _naturalKeyForEvent(CompletionEvent e) =>
-      _composeKey(e.profileId, e.sefariaRef, e.stageId, e.trackType);
+  static String _naturalKeyForEvent(CompletionEvent e) => _composeKey(
+    e.profileId,
+    e.sefariaRef,
+    e.stageId,
+    e.trackType,
+    e.curriculumId,
+  );
 
   /// Natural-key string for a resolved [Completion] row.
-  static String _naturalKeyForCompletion(Completion c) =>
-      _composeKey(c.profileId, c.sefariaRef, c.stageId, c.trackType);
+  static String _naturalKeyForCompletion(Completion c) => _composeKey(
+    c.profileId,
+    c.sefariaRef,
+    c.stageId,
+    c.trackType,
+    c.curriculumId,
+  );
 
   static String _composeKey(
     int profileId,
     String sefariaRef,
     int stageId,
     String trackType,
-  ) => [profileId, sefariaRef, stageId, trackType].join(_keyDelim);
+    String curriculumId,
+  ) => [profileId, sefariaRef, stageId, trackType, curriculumId].join(_keyDelim);
 
   /// Returns the natural keys (from [_naturalKey]) that already have a row in
   /// `completion_events`. Bounded: one SELECT filtered to the batch keys.
@@ -253,7 +273,7 @@ class CompletionWriter {
 
   /// One bounded SELECT over `completion_events` matching any of [commands]'
   /// natural keys. The IN-list filters over-fetch slightly (the cross-product
-  /// of the four columns); callers index the result by the full natural key
+  /// of the five columns); callers index the result by the full natural key
   /// so an over-fetched row is never mistaken for a batch member.
   Future<List<CompletionEvent>> _selectEventsForBatch(
     List<CompletionCommand> commands,
@@ -262,12 +282,14 @@ class CompletionWriter {
     final sefariaRefs = {for (final c in commands) c.sefariaRef}.toList();
     final stageIds = {for (final c in commands) c.stageId}.toList();
     final trackTypes = {for (final c in commands) c.trackType}.toList();
+    final curriculumIds = {for (final c in commands) c.curriculumId}.toList();
     return (_db.select(_db.completionEvents)..where(
           (t) =>
               t.profileId.isIn(profileIds) &
               t.sefariaRef.isIn(sefariaRefs) &
               t.stageId.isIn(stageIds) &
-              t.trackType.isIn(trackTypes),
+              t.trackType.isIn(trackTypes) &
+              t.curriculumId.isIn(curriculumIds),
         ))
         .get();
   }
@@ -305,14 +327,18 @@ class CompletionWriter {
     final result = await _db.transaction(() async {
       // Idempotency check on completion_events (UNIQUE canonical table).
       // getSingleOrNull() is safe because the UNIQUE constraint guarantees
-      // at most one row per natural key.
+      // at most one row per natural key (profileId, sefariaRef, stageId,
+      // trackType, curriculumId). curriculumId MUST be included here so that
+      // two completions for the same section in different curricula are treated
+      // as distinct rows (per-curriculum isolation, Option B).
       final existingEvent =
           await (_db.select(_db.completionEvents)..where(
                 (t) =>
                     t.profileId.equals(cmd.profileId) &
                     t.sefariaRef.equals(cmd.sefariaRef) &
                     t.stageId.equals(cmd.stageId) &
-                    t.trackType.equals(cmd.trackType),
+                    t.trackType.equals(cmd.trackType) &
+                    t.curriculumId.equals(cmd.curriculumId),
               ))
               .getSingleOrNull();
 
@@ -413,7 +439,7 @@ class CompletionWriter {
   }
 
   static String _outboxEntityKey(CompletionCommand cmd) =>
-      '${cmd.profileId}:${cmd.sefariaRef}:${cmd.stageId}:${cmd.trackType}';
+      '${cmd.profileId}:${cmd.sefariaRef}:${cmd.stageId}:${cmd.trackType}:${cmd.curriculumId}';
 
   /// Builds the Firestore completion-document payload.
   ///
