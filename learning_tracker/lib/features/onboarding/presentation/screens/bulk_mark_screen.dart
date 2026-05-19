@@ -222,7 +222,13 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
   }
 
   void _toggleItem(ContentItem item, int depth) {
-    final wasSelected = _isItemSelected(item);
+    // Tri-state aware: a row counts as "selected" only when it is FULLY
+    // selected. Tapping a partial (indeterminate) container therefore
+    // selects all of its descendants rather than clearing the few that
+    // were ticked — the standard tri-state cycle none/partial → all → none.
+    // For leaf rows _itemSelectionState collapses to _isItemSelected, so
+    // their behaviour is unchanged.
+    final wasSelected = _itemSelectionState(item, depth) ?? false;
 
     setState(() {
       final sel = _selectionForItem(item, depth);
