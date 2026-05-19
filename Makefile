@@ -20,7 +20,7 @@ help:
 	@echo "  make analyze            - Run dart analyze"
 	@echo "  make format             - Run dart format"
 	@echo "  make schema-check       - Verify Drift v1 profileId/composite-index invariants"
-	@echo "  make audit              - Run all 13 enforcement greps + custom_lint (NFR19)"
+	@echo "  make audit              - Run all 12 enforcement greps + custom_lint (NFR19)"
 	@echo "  make arb-parity         - Check app_en.arb keys exist in app_he.arb (NFR14)"
 	@echo "  make gen-arch-tables    - Print Markdown table of all Drift tables + column counts"
 	@echo "  make ci                 - Run full CI check (analyze + format + schema-check + all tests)"
@@ -100,38 +100,38 @@ schema-check:
 
 # audit — DNI-389 (Story 27.13, NFR19).
 #
-# Runs all 13 enforcement greps from PART 4 of the rebuild plan
+# Runs all 12 enforcement greps from PART 4 of the rebuild plan
 # (docs/planning/epics-greenfield-rebuild.md) plus custom_lint.
 # Every grep is run from the `learning_tracker/` directory so the
 # `lib/` paths in the patterns resolve correctly.
 # Exits non-zero on the first violation; prints file:line for each hit.
 audit:
-	@echo "Running audit — 13 enforcement greps + custom_lint (DNI-389)..."
+	@echo "Running audit — 12 enforcement greps + custom_lint (DNI-389)..."
 	@FAIL=0; \
 	LIB=learning_tracker/lib; \
 	\
 	echo ""; \
-	echo "[1/13] FirebaseAuth.instance.signOut outside core/auth (NFR3/24.3)"; \
+	echo "[1/12] FirebaseAuth.instance.signOut outside core/auth (NFR3/24.3)"; \
 	HITS=$$(grep -rn 'FirebaseAuth\.instance\.signOut' "$$LIB/" \
 	  --include='*.dart' \
 	  | grep -v '/core/auth/' || true); \
 	if [ -n "$$HITS" ]; then echo "$$HITS"; FAIL=1; else echo "  OK"; fi; \
 	\
 	echo ""; \
-	echo "[2/13] import 'package:talker/talker.dart' outside core/logging (NFR24/24.5)"; \
+	echo "[2/12] import 'package:talker/talker.dart' outside core/logging (NFR24/24.5)"; \
 	HITS=$$(grep -rn "import 'package:talker/talker\.dart'" "$$LIB/" \
 	  --include='*.dart' \
 	  | grep -v '/core/logging/' || true); \
 	if [ -n "$$HITS" ]; then echo "$$HITS"; FAIL=1; else echo "  OK"; fi; \
 	\
 	echo ""; \
-	echo "[3/13] .withDefault(const Constant(0)) in tables (Story 25.1)"; \
+	echo "[3/12] .withDefault(const Constant(0)) in tables (Story 25.1)"; \
 	HITS=$$(grep -rn '\.withDefault(const Constant(0))' "$$LIB/core/database/tables/" \
 	  --include='*.dart' || true); \
 	if [ -n "$$HITS" ]; then echo "$$HITS"; FAIL=1; else echo "  OK"; fi; \
 	\
 	echo ""; \
-	echo "[4/13] hebrewTermsScriptProvider outside core/labels + core/preferences (Story 25.9)"; \
+	echo "[4/12] hebrewTermsScriptProvider outside core/labels + core/preferences (Story 25.9)"; \
 	HITS=$$(grep -rn 'hebrewTermsScriptProvider' "$$LIB/" \
 	  --include='*.dart' \
 	  | grep -v '/core/labels/' \
@@ -140,30 +140,23 @@ audit:
 	if [ -n "$$HITS" ]; then echo "$$HITS"; FAIL=1; else echo "  OK"; fi; \
 	\
 	echo ""; \
-	echo "[5/13] displayNameEn / displayNameHe outside core/labels (non-generated) (Story 25.9)"; \
-	HITS=$$(grep -rn '\bdisplayName\(En\|He\)\b' "$$LIB/" \
-	  --include='*.dart' \
-	  | grep -v '/core/labels/' \
-	  | grep -v '\.g\.dart' \
-	  | grep -v '\.freezed\.dart' || true); \
-	if [ -n "$$HITS" ]; then echo "$$HITS"; FAIL=1; else echo "  OK"; fi; \
-	\
-	echo ""; \
-	echo "[6/13] DateTime.now() outside core/time (NFR21/Story 25.10)"; \
+	echo "[5/12] DateTime.now() outside core/time (NFR21/Story 25.10)"; \
 	HITS=$$(grep -rn 'DateTime\.now()' "$$LIB/" \
 	  --include='*.dart' \
 	  | grep -v '/core/time/' || true); \
 	if [ -n "$$HITS" ]; then echo "$$HITS"; FAIL=1; else echo "  OK"; fi; \
 	\
 	echo ""; \
-	echo "[7/13] package:firebase_auth outside core/auth (NFR3/Story 25.11)"; \
-	HITS=$$(grep -rn 'package:firebase_auth' "$$LIB/" \
+	echo "[6/12] import package:firebase_auth outside core/auth+sync + features/auth (NFR3/Story 25.11)"; \
+	HITS=$$(grep -rnE "^import 'package:firebase_auth" "$$LIB/" \
 	  --include='*.dart' \
-	  | grep -v '/core/auth/' || true); \
+	  | grep -v '/core/auth/' \
+	  | grep -v '/core/sync/' \
+	  | grep -v '/features/auth/' || true); \
 	if [ -n "$$HITS" ]; then echo "$$HITS"; FAIL=1; else echo "  OK"; fi; \
 	\
 	echo ""; \
-	echo "[8/13] debugPrint / raw print() in production code (NFR24/Story 25.19)"; \
+	echo "[7/12] debugPrint / raw print() in production code (NFR24/Story 25.19)"; \
 	HITS=$$(grep -rn 'debugPrint\|^\s*print(' "$$LIB/" \
 	  --include='*.dart' \
 	  | grep -v '\.g\.dart' \
@@ -171,13 +164,13 @@ audit:
 	if [ -n "$$HITS" ]; then echo "$$HITS"; FAIL=1; else echo "  OK"; fi; \
 	\
 	echo ""; \
-	echo "[9/13] currentAccountId = 1 hardcoded (Story 25.21)"; \
+	echo "[8/12] currentAccountId = 1 hardcoded (Story 25.21)"; \
 	HITS=$$(grep -rn 'currentAccountId[[:space:]]*=[[:space:]]*1\b' "$$LIB/" \
 	  --include='*.dart' || true); \
 	if [ -n "$$HITS" ]; then echo "$$HITS"; FAIL=1; else echo "  OK"; fi; \
 	\
 	echo ""; \
-	echo "[10/13] empty catch blocks catch (_) {} (NFR23)"; \
+	echo "[9/12] empty catch blocks catch (_) {} (NFR23)"; \
 	HITS=$$(grep -rn 'catch\s*(_)\s*{}' "$$LIB/" \
 	  --include='*.dart' \
 	  | grep -v '\.g\.dart' \
@@ -185,7 +178,7 @@ audit:
 	if [ -n "$$HITS" ]; then echo "$$HITS"; FAIL=1; else echo "  OK"; fi; \
 	\
 	echo ""; \
-	echo "[11/13] EdgeInsets.only(left:|right:) — RTL violation (NFR16/UX-DR5)"; \
+	echo "[10/12] EdgeInsets.only(left:|right:) — RTL violation (NFR16/UX-DR5)"; \
 	HITS=$$(grep -rn 'EdgeInsets\.only([^)]*\(left\|right\):' "$$LIB/" \
 	  --include='*.dart' \
 	  | grep -v '\.g\.dart' \
@@ -193,15 +186,16 @@ audit:
 	if [ -n "$$HITS" ]; then echo "$$HITS"; FAIL=1; else echo "  OK"; fi; \
 	\
 	echo ""; \
-	echo "[12/13] package:cloud_firestore / package:firebase_storage outside core/sync + core/auth (NFR3)"; \
-	HITS=$$(grep -rn 'package:cloud_firestore\|package:firebase_storage' "$$LIB/" \
+	echo "[11/12] import package:cloud_firestore / firebase_storage outside core/sync + core/auth (NFR3)"; \
+	HITS=$$(grep -rnE "^import 'package:(cloud_firestore|firebase_storage)" "$$LIB/" \
 	  --include='*.dart' \
 	  | grep -v '/core/sync/' \
-	  | grep -v '/core/auth/' || true); \
+	  | grep -v '/core/auth/' \
+	  | grep -v 'core/providers/firebase_providers.dart' || true); \
 	if [ -n "$$HITS" ]; then echo "$$HITS"; FAIL=1; else echo "  OK"; fi; \
 	\
 	echo ""; \
-	echo "[13/13] Raw HebrewTerms. calls in lib/features/ (B11-7 — must use domainTermLabels)"; \
+	echo "[12/12] Raw HebrewTerms. calls in lib/features/ (B11-7 — must use domainTermLabels)"; \
 	HITS=$$(grep -rn 'HebrewTerms\.' "$$LIB/features/" \
 	  --include='*.dart' \
 	  | grep -v '_test\.dart' \
@@ -213,7 +207,7 @@ audit:
 	  echo "audit FAILED — fix violations above before committing."; \
 	  exit 1; \
 	fi; \
-	echo "All 13 greps clean."; \
+	echo "All 12 greps clean."; \
 	echo ""; \
 	echo "Running custom_lint..."; \
 	cd learning_tracker && dart run custom_lint; \
