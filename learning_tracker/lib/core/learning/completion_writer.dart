@@ -94,39 +94,75 @@ class CompletionWriter {
     final distinctCommands = uniqueByKey.values.toList();
 
     final results = await _db.transaction(() async {
-      // ── 1. Snapshot which natural keys ALREADY exist ─────────────────────
+      // ── 1. Snapshot which natural keys ALREADY exist (active rows only) ──
       // Bounded: one SELECT over completion_events filtered to the batch keys.
+      // Only active (purgedAt IS NULL) rows count as pre-existing — tombstoned
+      // rows must be resurrected, not silently ignored (H1 bug fix).
       final preExisting = await _existingNaturalKeys(distinctCommands);
 
-      final newCommands = distinctCommands
-          .where((cmd) => !preExisting.contains(_naturalKey(cmd)))
-          .toList();
+      // ── 1b. Detect tombstoned rows that need resurrection (H1 fix) ───────
+      // A command whose natural key matches a tombstoned row is NOT in
+      // preExisting (because _selectEventsForBatch excludes tombstones), so it
+      // would fall into newCommands and hit INSERT OR IGNORE — which is a no-op
+      // because the unique-key row still exists. We must explicitly resurrect
+      // these rows instead.
+      final tombstoned = await _selectTombstonedEventsForBatch(distinctCommands);
+      final tombstoneByKey = <String, CompletionEvent>{
+        for (final e in tombstoned) _naturalKeyForEvent(e): e,
+      };
+      // Separate commands into: brand-new inserts vs. resurrections.
+      final commandsToResurrect = <CompletionCommand>[];
+      final commandsToInsert = <CompletionCommand>[];
+      for (final cmd in distinctCommands) {
+        final key = _naturalKey(cmd);
+        if (preExisting.contains(key)) {
+          // Truly pre-existing active row — no action needed.
+        } else if (tombstoneByKey.containsKey(key)) {
+          commandsToResurrect.add(cmd);
+        } else {
+          commandsToInsert.add(cmd);
+        }
+      }
+
+      // Resurrect tombstoned rows (clears purgedAt + enqueues outbox push).
+      for (final cmd in commandsToResurrect) {
+        await _resurrectTombstone(tombstoneByKey[_naturalKey(cmd)]!, cmd);
+      }
+
+      final newCommands = [...commandsToInsert]; // brand-new only
 
       // ── 2. Batch-insert completion_events (INSERT OR IGNORE) ─────────────
       // INSERT OR IGNORE remains correct: the natural-key UNIQUE index makes
       // pre-existing rows no-op, and the de-dup above ensures one row per key.
-      await _db.batch((b) {
-        b.insertAll(
-          _db.completionEvents,
-          distinctCommands.map(
-            (cmd) => CompletionEventsCompanion.insert(
-              profileId: cmd.profileId,
-              curriculumId: cmd.curriculumId,
-              sefariaRef: cmd.sefariaRef,
-              stageId: cmd.stageId,
-              trackType: cmd.trackType,
-              trackId: Value<int?>(cmd.trackId),
-              points: Value(cmd.points),
-              eventTimestamp: cmd.completedAt,
+      // Resurrected commands are intentionally excluded — they already have a
+      // row (now active again); inserting them would be a no-op anyway, but
+      // excluding them keeps the intent explicit.
+      if (commandsToInsert.isNotEmpty) {
+        await _db.batch((b) {
+          b.insertAll(
+            _db.completionEvents,
+            commandsToInsert.map(
+              (cmd) => CompletionEventsCompanion.insert(
+                profileId: cmd.profileId,
+                curriculumId: cmd.curriculumId,
+                sefariaRef: cmd.sefariaRef,
+                stageId: cmd.stageId,
+                trackType: cmd.trackType,
+                trackId: Value<int?>(cmd.trackId),
+                points: Value(cmd.points),
+                eventTimestamp: cmd.completedAt,
+              ),
             ),
-          ),
-          mode: InsertMode.insertOrIgnore,
-        );
-      });
+            mode: InsertMode.insertOrIgnore,
+          );
+        });
+      }
 
       // ── 3. Batch-insert outbox rows for GENUINELY-NEW completions only ───
       // The outbox table has no unique index, so enqueuing a row for a
       // pre-existing completion would pile up duplicate pushes.
+      // Resurrected completions already had their outbox rows enqueued inside
+      // _resurrectTombstone above, so they are excluded here.
       if (newCommands.isNotEmpty) {
         await _db.batch((b) {
           _db.outboxDao.batchInsertOutboxRows(
@@ -175,6 +211,8 @@ class CompletionWriter {
             'for ${cmd.sefariaRef}:${cmd.stageId}:${cmd.trackType}',
           );
         }
+        // isNew is true for brand-new inserts AND for resurrected tombstones
+        // (both are absent from preExisting, which only contains active rows).
         final isNew = !preExisting.contains(key);
         final viewRow = viewById[event.id];
         if (viewRow != null) {
@@ -183,7 +221,10 @@ class CompletionWriter {
             isNew: isNew,
           );
         } else {
-          // C3 tombstone (purgedAt IS NOT NULL) — reconstruct from event row.
+          // Fallback: view row absent — reconstruct from raw event row.
+          // This branch is only reached if resurrection failed to clear
+          // purgedAt (should not happen in practice), or for a genuinely
+          // new insert whose view refresh hasn't propagated yet.
           resultByKey[key] = CompletionWriteResult(
             completion: _completionFromEvent(event),
             isNew: isNew,
@@ -272,9 +313,14 @@ class CompletionWriter {
   }
 
   /// One bounded SELECT over `completion_events` matching any of [commands]'
-  /// natural keys. The IN-list filters over-fetch slightly (the cross-product
-  /// of the five columns); callers index the result by the full natural key
-  /// so an over-fetched row is never mistaken for a batch member.
+  /// natural keys. Only returns **active** (non-tombstoned) rows
+  /// (`purgedAt IS NULL`). Tombstoned rows must not participate in the
+  /// idempotency pre-check — if they did, a re-mark after expunge would be
+  /// silently swallowed (H1 bug fix).
+  ///
+  /// The IN-list filters over-fetch slightly (the cross-product of the five
+  /// columns); callers index the result by the full natural key so an
+  /// over-fetched row is never mistaken for a batch member.
   Future<List<CompletionEvent>> _selectEventsForBatch(
     List<CompletionCommand> commands,
   ) {
@@ -289,9 +335,60 @@ class CompletionWriter {
               t.sefariaRef.isIn(sefariaRefs) &
               t.stageId.isIn(stageIds) &
               t.trackType.isIn(trackTypes) &
-              t.curriculumId.isIn(curriculumIds),
+              t.curriculumId.isIn(curriculumIds) &
+              t.purgedAt.isNull(),
         ))
         .get();
+  }
+
+  /// One bounded SELECT over `completion_events` matching any of [commands]'
+  /// natural keys, returning ONLY tombstoned rows (`purgedAt IS NOT NULL`).
+  /// Used by [commitBatch] to detect re-marks after expunge (H1 fix).
+  Future<List<CompletionEvent>> _selectTombstonedEventsForBatch(
+    List<CompletionCommand> commands,
+  ) {
+    final profileIds = {for (final c in commands) c.profileId}.toList();
+    final sefariaRefs = {for (final c in commands) c.sefariaRef}.toList();
+    final stageIds = {for (final c in commands) c.stageId}.toList();
+    final trackTypes = {for (final c in commands) c.trackType}.toList();
+    final curriculumIds = {for (final c in commands) c.curriculumId}.toList();
+    return (_db.select(_db.completionEvents)..where(
+          (t) =>
+              t.profileId.isIn(profileIds) &
+              t.sefariaRef.isIn(sefariaRefs) &
+              t.stageId.isIn(stageIds) &
+              t.trackType.isIn(trackTypes) &
+              t.curriculumId.isIn(curriculumIds) &
+              t.purgedAt.isNotNull(),
+        ))
+        .get();
+  }
+
+  /// Resurrects a tombstoned [event] for the given [cmd]:
+  ///  - Clears `purgedAt` and updates `eventTimestamp` to the new command's
+  ///    timestamp (so the re-mark reflects the current instant).
+  ///  - Enqueues an outbox row so Firestore receives the re-activation push.
+  Future<void> _resurrectTombstone(
+    CompletionEvent event,
+    CompletionCommand cmd,
+  ) async {
+    await (_db.update(_db.completionEvents)
+          ..where((t) => t.id.equals(event.id)))
+        .write(
+          CompletionEventsCompanion(
+            purgedAt: const Value(null),
+            eventTimestamp: Value(cmd.completedAt),
+          ),
+        );
+    await _db.outboxDao.insertOutboxRow(
+      OutboxCompanion.insert(
+        profileId: cmd.profileId,
+        entityKind: OutboxEntityKind.completion,
+        entityKey: _outboxEntityKey(cmd),
+        payload: jsonEncode(_outboxPayload(cmd)),
+        createdAt: cmd.completedAt,
+      ),
+    );
   }
 
   /// Maps a `completions_view` row to a [Completion] (purgedAt IS NULL row).
@@ -343,20 +440,41 @@ class CompletionWriter {
               .getSingleOrNull();
 
       if (existingEvent != null) {
-        // Event already recorded — read from the view (purgedAt IS NULL).
+        if (existingEvent.purgedAt != null) {
+          // C3 tombstone — this is a re-mark after expunge (H1 bug fix).
+          // Resurrect the row: clear purgedAt, update timestamp, push outbox.
+          await _resurrectTombstone(existingEvent, cmd);
+          final resurrected = await _db.completionDao.getCompletionById(
+            existingEvent.id,
+          );
+          if (resurrected != null) {
+            return CompletionWriteResult(completion: resurrected, isNew: true);
+          }
+          // View refresh edge-case — reconstruct from the event row directly.
+          final rebuilt = Completion(
+            id: existingEvent.id,
+            profileId: existingEvent.profileId,
+            curriculumId: existingEvent.curriculumId,
+            sefariaRef: existingEvent.sefariaRef,
+            stageId: existingEvent.stageId,
+            trackType: existingEvent.trackType,
+            trackId: existingEvent.trackId ?? 0,
+            completedAt: cmd.completedAt,
+            points: existingEvent.points,
+            derivedFromEvents: true,
+          );
+          return CompletionWriteResult(completion: rebuilt, isNew: true);
+        }
+        // Active event already recorded — read from the view (purgedAt IS NULL).
         final existing = await _db.completionDao.getCompletionById(
           existingEvent.id,
         );
         if (existing != null) {
           return CompletionWriteResult(completion: existing, isNew: false);
         }
-        // Event exists but the view row is absent (purgedAt IS NOT NULL — C3
-        // tombstone). Falling through to appendEvent would call INSERT OR IGNORE
-        // (the UNIQUE key already exists), return the purged row's id, then
-        // getCompletionById would return null → StateError. Instead reconstruct
-        // the Completion directly from the raw event row and return isNew=false.
-        // The caller is responsible for deciding whether to act on a purged row.
-        final purgedCompletion = Completion(
+        // Unexpected: view row missing for an active event. Reconstruct and
+        // return isNew=false so we don't double-push.
+        final activeCompletion = Completion(
           id: existingEvent.id,
           profileId: existingEvent.profileId,
           curriculumId: existingEvent.curriculumId,
@@ -369,7 +487,7 @@ class CompletionWriter {
           derivedFromEvents: true,
         );
         return CompletionWriteResult(
-          completion: purgedCompletion,
+          completion: activeCompletion,
           isNew: false,
         );
       } else {
