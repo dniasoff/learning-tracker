@@ -784,6 +784,351 @@ void main() {
       },
     );
   });
+
+  // ── Finding 8 — Cross-curriculum isolation and edge-case tests ─────────────
+
+  group('Finding 8 — per-curriculum expunge isolation', () {
+    /// Seeds a curriculum track for [curriculumId] on [profileId].
+    /// Returns the new trackId.
+    Future<int> seedTrack(
+      UserDatabase db,
+      int pid,
+      String curriculumId,
+    ) =>
+        db.into(db.curriculumTracks).insert(
+          CurriculumTracksCompanion.insert(
+            profileId: pid,
+            curriculumId: curriculumId,
+            trackType: 'personal',
+            activatedAt: DateTimeFactory.nowUtc(),
+          ),
+        );
+
+    ContentItem leafForCurriculum(
+      String ref,
+      int sortOrder,
+      String curriculumId,
+    ) => ContentItem(
+      curriculumId: curriculumId,
+      level1: 'Zeraim',
+      displayNameHe: ref,
+      displayNameEn: ref,
+      sefariaRef: ref,
+      sortOrder: sortOrder,
+      isLeaf: true,
+    );
+
+    test(
+      'Test 1: untick under curriculum A leaves curriculum B completions intact',
+      () async {
+        // Seed tracks for both curricula on the same profile.
+        final bavliTrackId = await seedTrack(db, profileId, 'bavli');
+
+        // Helper: insert a sentinel completion row directly.
+        Future<void> insertSentinel(
+          String sefariaRef,
+          String curriculumId,
+          int tid,
+        ) => db.into(db.completionEvents).insert(
+          CompletionEventsCompanion.insert(
+            profileId: profileId,
+            curriculumId: curriculumId,
+            sefariaRef: sefariaRef,
+            stageId: 1,
+            trackType: 'personal',
+            trackId: Value(tid),
+            points: const Value(0),
+            eventTimestamp: kBulkPriorSentinelDate,
+          ),
+        );
+
+        // Prior-mark same sefariaRef under BOTH curricula.
+        await insertSentinel('Berakhot 1', 'mishnayos', trackId);
+        await insertSentinel('Berakhot 1', 'bavli', bavliTrackId);
+
+        final service = BulkPriorCompletionService(
+          contentRepository: _StubContentRepository(const []),
+          completionRepository: CompletionRepositoryImpl(
+            database: db,
+            syncEngine: null,
+            contentRepository: _StubContentRepository(const []),
+            activeProfileId: profileId,
+          ),
+          bookmarkRepository: MockBookmarkRepository(),
+          database: db,
+          syncEngine: null,
+        );
+
+        // Expunge ONLY under mishnayos.
+        await service.expungePriorCompletions(
+          profileId: profileId,
+          sefariaRef: 'Berakhot 1',
+          curriculumId: CurriculumId.mishnayos,
+        );
+
+        // mishnayos row must be tombstoned.
+        final mishnayosRow = await (db.select(db.completionEvents)..where(
+              (t) =>
+                  t.sefariaRef.equals('Berakhot 1') &
+                  t.curriculumId.equals('mishnayos') &
+                  t.profileId.equals(profileId),
+            ))
+            .getSingle();
+        expect(
+          mishnayosRow.purgedAt,
+          isNotNull,
+          reason: 'mishnayos sentinel row must be tombstoned',
+        );
+
+        // bavli row must remain active (purgedAt IS NULL).
+        final bavliRow = await (db.select(db.completionEvents)..where(
+              (t) =>
+                  t.sefariaRef.equals('Berakhot 1') &
+                  t.curriculumId.equals('bavli') &
+                  t.profileId.equals(profileId),
+            ))
+            .getSingle();
+        expect(
+          bavliRow.purgedAt,
+          isNull,
+          reason:
+              'bavli completion must NOT be tombstoned by a mishnayos expunge',
+        );
+      },
+    );
+
+    test(
+      'Test 2: prior-marking under both A and B creates separate active rows',
+      () async {
+        await seedTrack(db, profileId, 'bavli');
+
+        final mishnayosItems = [leafForCurriculum('Berakhot 2', 0, 'mishnayos')];
+        final bavliItems = [leafForCurriculum('Berakhot 2', 0, 'bavli')];
+
+        final bookmarkRepo = MockBookmarkRepository();
+        when(
+          () => bookmarkRepo.setBookmark(
+            curriculumId: any(named: 'curriculumId'),
+            trackType: any(named: 'trackType'),
+            sefariaRef: any(named: 'sefariaRef'),
+          ),
+        ).thenAnswer((_) async => _fakeBookmark());
+
+        // Prior-mark under mishnayos.
+        final mishnayosSvc = BulkPriorCompletionService(
+          contentRepository: _StubContentRepository(mishnayosItems),
+          completionRepository: CompletionRepositoryImpl(
+            database: db,
+            syncEngine: null,
+            contentRepository: _StubContentRepository(mishnayosItems),
+            activeProfileId: profileId,
+          ),
+          bookmarkRepository: bookmarkRepo,
+          database: db,
+          syncEngine: null,
+        );
+        await mishnayosSvc.execute(
+          curriculumId: CurriculumId.mishnayos,
+          resolvedItems: mishnayosItems,
+          stageIds: [1],
+          profileId: profileId,
+        );
+
+        // Prior-mark under bavli.
+        final bavliSvc = BulkPriorCompletionService(
+          contentRepository: _StubContentRepository(bavliItems),
+          completionRepository: CompletionRepositoryImpl(
+            database: db,
+            syncEngine: null,
+            contentRepository: _StubContentRepository(bavliItems),
+            activeProfileId: profileId,
+          ),
+          bookmarkRepository: bookmarkRepo,
+          database: db,
+          syncEngine: null,
+        );
+        await bavliSvc.execute(
+          curriculumId: CurriculumId.bavli,
+          resolvedItems: bavliItems,
+          stageIds: [1],
+          profileId: profileId,
+        );
+
+        // Query all completion_events for 'Berakhot 2'.
+        final rows = await (db.select(db.completionEvents)..where(
+              (t) => t.sefariaRef.equals('Berakhot 2') & t.purgedAt.isNull(),
+            ))
+            .get();
+
+        // Must have 2+ active rows — one per curriculum.
+        expect(
+          rows.length,
+          greaterThanOrEqualTo(2),
+          reason:
+              'Should have one active completion per curriculum for Berakhot 2',
+        );
+
+        // They must have different curriculumIds.
+        final curricula = rows.map((r) => r.curriculumId).toSet();
+        expect(
+          curricula,
+          containsAll(['mishnayos', 'bavli']),
+          reason: 'Active rows must span both curricula',
+        );
+      },
+    );
+
+    test(
+      'Test 3: untick leaves live-learning row intact (non-sentinel timestamp)',
+      () async {
+        final liveDate = DateTime.utc(2026, 5, 10, 9, 0);
+
+        // Insert a real-learning row FIRST (non-sentinel timestamp, stage 1).
+        // Use a distinct trackType combo to avoid 5-tuple UNIQUE collision:
+        // we use stageId=1 for live learning and stageId=2 for the sentinel.
+        await db.into(db.completionEvents).insert(
+          CompletionEventsCompanion.insert(
+            profileId: profileId,
+            curriculumId: 'mishnayos',
+            sefariaRef: 'Berakhot 3',
+            stageId: 1,
+            trackType: 'personal',
+            trackId: Value(trackId),
+            points: const Value(10),
+            eventTimestamp: liveDate,
+          ),
+        );
+
+        // Insert a prior-mark row at stageId=2 for the same item (sentinel
+        // timestamp). Different stageId avoids the UNIQUE constraint.
+        await db.into(db.completionEvents).insert(
+          CompletionEventsCompanion.insert(
+            profileId: profileId,
+            curriculumId: 'mishnayos',
+            sefariaRef: 'Berakhot 3',
+            stageId: 2,
+            trackType: 'personal',
+            trackId: Value(trackId),
+            points: const Value(0),
+            eventTimestamp: kBulkPriorSentinelDate,
+          ),
+        );
+
+        final service = BulkPriorCompletionService(
+          contentRepository: _StubContentRepository(const []),
+          completionRepository: CompletionRepositoryImpl(
+            database: db,
+            syncEngine: null,
+            contentRepository: _StubContentRepository(const []),
+            activeProfileId: profileId,
+          ),
+          bookmarkRepository: MockBookmarkRepository(),
+          database: db,
+          syncEngine: null,
+        );
+
+        // Expunge under mishnayos — only the sentinel row (stageId=2) should be
+        // tombstoned; the real-learning row (stageId=1, liveDate) must survive.
+        await service.expungePriorCompletions(
+          profileId: profileId,
+          sefariaRef: 'Berakhot 3',
+          curriculumId: CurriculumId.mishnayos,
+        );
+
+        final rows = await (db.select(db.completionEvents)..where(
+              (t) => t.sefariaRef.equals('Berakhot 3'),
+            ))
+            .get();
+
+        final liveRow = rows.firstWhere((r) => r.stageId == 1);
+        final priorRow = rows.firstWhere((r) => r.stageId == 2);
+
+        expect(
+          liveRow.purgedAt,
+          isNull,
+          reason: 'Real-learning row must NOT be tombstoned',
+        );
+        expect(
+          priorRow.purgedAt,
+          isNotNull,
+          reason: 'Prior-mark (sentinel) row must be tombstoned',
+        );
+      },
+    );
+
+    test(
+      'Test 4 (insert-or-ignore edge): prior-mark followed by real-learning '
+      'insert — real-learning is silently dropped by UNIQUE constraint',
+      () async {
+        // Step 1: prior-mark 'Berakhot 3' under mishnayos (sentinel row,
+        // stageId=1). This establishes the sentinel timestamp in the DB.
+        await db.into(db.completionEvents).insert(
+          CompletionEventsCompanion.insert(
+            profileId: profileId,
+            curriculumId: 'mishnayos',
+            sefariaRef: 'Berakhot 3',
+            stageId: 1,
+            trackType: 'personal',
+            trackId: Value(trackId),
+            points: const Value(0),
+            eventTimestamp: kBulkPriorSentinelDate,
+          ),
+        );
+
+        // Step 2: attempt a "real learning" INSERT OR IGNORE for the same
+        // 5-tuple (profileId, sefariaRef, stageId=1, trackType=personal,
+        // curriculumId=mishnayos). The v22 5-tuple UNIQUE constraint fires;
+        // the second insert is silently dropped and the sentinel row survives.
+        final realDate = DateTime.utc(2026, 5, 19, 10, 0);
+        await db.into(db.completionEvents).insert(
+          CompletionEventsCompanion.insert(
+            profileId: profileId,
+            curriculumId: 'mishnayos',
+            sefariaRef: 'Berakhot 3',
+            stageId: 1,
+            trackType: 'personal',
+            trackId: Value(trackId),
+            points: const Value(10),
+            eventTimestamp: realDate,
+          ),
+          mode: InsertMode.insertOrIgnore,
+        );
+
+        final rows = await (db.select(db.completionEvents)..where(
+              (t) =>
+                  t.sefariaRef.equals('Berakhot 3') &
+                  t.stageId.equals(1) &
+                  t.curriculumId.equals('mishnayos') &
+                  t.profileId.equals(profileId),
+            ))
+            .get();
+
+        // Exactly 1 row must exist — the second insert was dropped.
+        expect(
+          rows,
+          hasLength(1),
+          reason:
+              'INSERT OR IGNORE edge: second insert must be silently dropped; '
+              'exactly 1 row for this 5-tuple',
+        );
+
+        // The surviving row must have the sentinel timestamp (not realDate),
+        // because INSERT OR IGNORE preserves the existing row untouched.
+        // This documents the known behavior: if a section was prior-marked
+        // and then "learned for real" under the same curriculum + stage, the
+        // prior-mark sentinel timestamp is kept. The real-learning insert is
+        // swallowed. Callers must handle this via a different stageId or a
+        // fresh curriculum track.
+        expect(
+          rows.first.eventTimestamp.millisecondsSinceEpoch,
+          equals(kBulkPriorSentinelDate.millisecondsSinceEpoch),
+          reason:
+              'INSERT OR IGNORE: sentinel timestamp must survive; '
+              'real-learning timestamp must be discarded',
+        );
+      },
+    );
+  });
 }
 
 BookmarkEntity _fakeBookmark() => BookmarkEntity(

@@ -372,8 +372,8 @@ void main() {
       },
     );
 
-    test('caller-supplied stageIds are unioned with configured stages '
-        '— no duplicate stage calls', () async {
+    test('Finding 10: only configured stages are used (caller stageIds ignored) '
+        '— no extra calls when caller mirrors configured set', () async {
       final stageRepo = MockStageDefinitionRepository();
       // Track has 2 stages.
       when(
@@ -408,14 +408,15 @@ void main() {
         ),
       ).thenAnswer((_) async => _fakeBookmarkEntity());
 
-      // Caller passes [1, 2] — same as configured. Should call twice, not 4.
+      // Caller passes [1, 2] — same as configured. Finding 10: only configured
+      // set [1, 2] is used. Should call exactly twice.
       final result = await svc.execute(
         curriculumId: curriculum,
         resolvedItems: items,
         stageIds: [1, 2],
       );
 
-      expect(result.completionCount, 2); // 1 item × 2 stages
+      expect(result.completionCount, 2); // 1 item × 2 configured stages
       verify(() => completionRepo.bulkMarkComplete(any())).called(2);
     });
 
@@ -497,6 +498,65 @@ void main() {
         );
 
         expect(result.completionCount, 2);
+        verify(() => completionRepo.bulkMarkComplete(any())).called(2);
+      },
+    );
+
+    test(
+      'Finding 10: caller-supplied extra stageId is NOT added to configured set '
+      '— superseded-stage bypass is blocked',
+      () async {
+        final stageRepo = MockStageDefinitionRepository();
+        // Track has only 2 active stages; stage 99 is a stale/superseded id
+        // that the caller should not be able to re-admit.
+        when(
+          () => stageRepo.getStagesForCurriculum(curriculum),
+        ).thenAnswer((_) async => [_stageDef(1), _stageDef(2)]);
+
+        final svc = BulkPriorCompletionService(
+          contentRepository: contentRepo,
+          completionRepository: completionRepo,
+          bookmarkRepository: bookmarkRepo,
+          database: memoryDb,
+          syncEngine: null,
+          stageRepository: stageRepo,
+        );
+
+        final items = [_leaf(ref: 'ref_0', sortOrder: 0)];
+
+        when(
+          () => completionRepo.bulkMarkComplete(any()),
+        ).thenAnswer((_) async => [_fakeCompletion('ref_0')]);
+        when(
+          () => completionRepo.getCompletionsByCurriculum(any()),
+        ).thenAnswer((_) async => []);
+        when(() => contentRepo.getContentForCurriculum(curriculum)).thenAnswer(
+          (_) async => [...items, _leaf(ref: 'ref_1', sortOrder: 1)],
+        );
+        when(
+          () => bookmarkRepo.setBookmark(
+            curriculumId: any(named: 'curriculumId'),
+            trackType: any(named: 'trackType'),
+            sefariaRef: any(named: 'sefariaRef'),
+          ),
+        ).thenAnswer((_) async => _fakeBookmarkEntity());
+
+        // Caller attempts to pass stage 99 (a stale/superseded id). Finding 10
+        // must ensure only [1, 2] are used — stage 99 must be discarded.
+        final result = await svc.execute(
+          curriculumId: curriculum,
+          resolvedItems: items,
+          stageIds: [1, 99], // 99 is NOT in the configured set
+        );
+
+        // Only 2 configured stages → 2 calls, not 3.
+        expect(
+          result.completionCount,
+          2,
+          reason:
+              'Finding 10: stale caller stageId 99 must be discarded; '
+              'only configured stages [1, 2] produce completions',
+        );
         verify(() => completionRepo.bulkMarkComplete(any())).called(2);
       },
     );

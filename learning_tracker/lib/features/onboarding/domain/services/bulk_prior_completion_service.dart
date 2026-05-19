@@ -8,6 +8,7 @@ import 'package:learning_tracker/core/database/daos/outbox_dao.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
+import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/sync/outbox/outbox_processor.dart';
 import 'package:learning_tracker/core/sync/sync_write_facade.dart';
@@ -173,7 +174,13 @@ class BulkPriorCompletionService {
   }) async {
     if (_stageRepository == null) return fallback;
     final stages = await _stageRepository.getStagesForCurriculum(curriculumId);
-    if (stages.isEmpty) return fallback;
+    if (stages.isEmpty) {
+      AppLogger.instance.warning(
+        'BulkPriorCompletionService: no stage definitions found for '
+        '$curriculumId — falling back to $fallback',
+      );
+      return fallback;
+    }
     final ordered = [...stages]
       ..sort((a, b) => a.stageOrder.compareTo(b.stageOrder));
     return ordered.map((s) => s.stageOrder).toList();
@@ -204,14 +211,16 @@ class BulkPriorCompletionService {
     var totalCompletions = 0;
 
     // B6: determine the full ordered stage list for this track.
-    // Union the caller-supplied ids with every configured stage so that even
-    // if the UI only sends [1] (learn), all chazara stages are also written.
+    // The configured set (superseded stages filtered at the DAO layer) covers
+    // all active stages regardless of what the caller passes.
     final allConfiguredStageIds = await _allStageIds(
       curriculumId,
       fallback: stageIds,
     );
-    final effectiveStageIds = {...stageIds, ...allConfiguredStageIds}.toList()
-      ..sort();
+    // Finding 10: ignore the caller-supplied stageIds; use only the
+    // superseded-filtered configured set. The parameter is retained for
+    // API compatibility — callers should pass [1] or empty.
+    final effectiveStageIds = [...allConfiguredStageIds]..sort();
 
     // Create completions for each stage
     for (final stageId in effectiveStageIds) {

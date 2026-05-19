@@ -12429,7 +12429,7 @@ abstract class _$UserDatabase extends GeneratedDatabase {
   );
   late final Index completionEventsNaturalKey = Index(
     'completion_events_natural_key',
-    'CREATE UNIQUE INDEX completion_events_natural_key ON completion_events (profile_id, sefaria_ref, stage_id, track_type)',
+    'CREATE UNIQUE INDEX completion_events_natural_key ON completion_events (profile_id, sefaria_ref, stage_id, track_type, curriculum_id)',
   );
   late final Index learningLedgerProfileCreated = Index(
     'learning_ledger_profile_created',
