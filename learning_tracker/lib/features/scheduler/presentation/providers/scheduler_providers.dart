@@ -436,6 +436,15 @@ Future<List<DailyTask>> _buildProjectionTasks({
     // F-H4: filter to first-stage completions only.  A chazara-stage
     // completion for ref X must NOT mask an unlearned ref X in the
     // projection's overdue set; only a first-stage (learn) completion counts.
+    //
+    // The OR accepts both stage-reference formats live in the codebase: the
+    // legacy completion path writes stage_definitions.id (autoincrement FK)
+    // and the newer path writes stageOrder (1, 2, 3…). Completion rows are
+    // already scoped to this curriculum + profile, so cross-curriculum
+    // contamination is excluded. A narrow edge remains within a curriculum
+    // if stage_definitions.id coincidentally equals another stage's
+    // stageOrder — flagged for a future migration to a single canonical
+    // stage reference.
     final allCompletions = await db.completionDao
         .getCompletionsByCurriculumAndProfile(curriculum.storageKey, profileId);
     final completionRefs = allCompletions

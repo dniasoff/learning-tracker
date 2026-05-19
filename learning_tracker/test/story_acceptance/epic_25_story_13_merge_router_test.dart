@@ -338,6 +338,32 @@ void main() {
             );
           }
         });
+
+        test('mergeRouterProvider wires every kind in EntityKind.all '
+            '— a missing entry means the pull pipeline silently halts '
+            'on that kind in production', () {
+          // Structural check: the production provider's map must list
+          // every EntityKind. Wave 6 re-review caught a case where a new
+          // kind (profileProgram) was added to EntityKind.all and the
+          // router switch but NOT to the provider map — the pull halted
+          // silently while a hand-wired test router passed.
+          final providerSrc = File(
+            'lib/core/sync/providers/merge_router_provider.dart',
+          ).readAsStringSync();
+          for (final kind in EntityKind.all) {
+            final member = kind.replaceAllMapped(
+              RegExp('_([a-z])'),
+              (m) => m.group(1)!.toUpperCase(),
+            );
+            expect(
+              providerSrc.contains('EntityKind.$member:'),
+              isTrue,
+              reason:
+                  'merge_router_provider.dart must wire EntityKind.$member '
+                  'to a concrete merger — missing for kind=$kind',
+            );
+          }
+        });
       });
     },
   );

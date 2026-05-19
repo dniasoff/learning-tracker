@@ -178,18 +178,20 @@ class _SelfPacedGoalStepState extends ConsumerState<SelfPacedGoalStep> {
         );
         return;
       }
-      // F-M2: do not proceed while the scope count is still loading — the
-      // derived pace would use the fallback (120) and produce a wildly wrong
-      // result for large or small curricula.
+      // F-M2 + W6 re-review: do not proceed while the scope count is loading
+      // OR in error — the derived pace would otherwise be computed against a
+      // stale or wrong total, saving a wildly wrong pace for large or small
+      // curricula. The button-disable in build() is the primary guard; this
+      // is defence-in-depth.
       final scopeCountAsync = ref.read(
         scopedItemCountProvider(widget.curriculumId),
       );
-      if (scopeCountAsync.isLoading) return;
+      final totalScopeItems = scopeCountAsync.asData?.value;
+      if (totalScopeItems == null) return;
       // Derive an explicit pace from the deadline + scope so that every
       // self-paced GoalEntity carries paceValue+pacePeriod (architecture §10.3).
       // The deadline mode stores BOTH the target date AND an explicit pace;
       // the projection uses the pace; the goal edit screen shows the deadline.
-      final totalScopeItems = scopeCountAsync.asData?.value ?? 120;
       final start = localDateOnlyFromDt(DateTimeFactory.nowLocal());
       final end = localDateOnlyFromDt(_deadline!.toLocal());
       final studyDaysInWindow = countStudyDaysInInclusiveMapRange(
