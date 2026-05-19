@@ -55,8 +55,7 @@ class _DomainTermLabels {
 
   /// "Chazara" (review concept).
   /// ARB en: termChazara  |  he: termChazara
-  String get chazara =>
-      _useHebrew ? HebrewTerms.uiChazara : 'Chazara';
+  String get chazara => _useHebrew ? HebrewTerms.uiChazara : 'Chazara';
 
   /// "CHAZARA" — all-caps bubble label.
   /// ARB en: termBubbleChazara  |  he: termBubbleChazara

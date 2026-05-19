@@ -262,10 +262,7 @@ class _ContentHierarchyScreenState
                 final variant = ref.watch(
                   currentTransliterationVariantProvider,
                 );
-                final groupedItems = _groupItemsByNextLevel(
-                  items,
-                  variant,
-                );
+                final groupedItems = _groupItemsByNextLevel(items, variant);
 
                 return ListView.builder(
                   padding: const EdgeInsets.symmetric(horizontal: 16),

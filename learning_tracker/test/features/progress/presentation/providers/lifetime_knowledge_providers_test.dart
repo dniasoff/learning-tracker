@@ -224,160 +224,154 @@ void main() {
 
     tearDown(() => db.close());
 
-    test(
-      'DAO: same sefariaRef under two curricula produces two completion_events '
-      'rows but deduplicates to ONE distinct ref in a Set-union',
-      () async {
-        const profileId = 1;
-        const sharedRef = 'Berakhot 1a';
-        final ts = DateTime.utc(2026, 5, 19, 10);
+    test('DAO: same sefariaRef under two curricula produces two completion_events '
+        'rows but deduplicates to ONE distinct ref in a Set-union', () async {
+      const profileId = 1;
+      const sharedRef = 'Berakhot 1a';
+      final ts = DateTime.utc(2026, 5, 19, 10);
 
-        // Insert completion for sharedRef under mishnayos.
-        await db.completionEventDao.appendEvent(
-          CompletionEventsCompanion.insert(
-            profileId: profileId,
-            curriculumId: CurriculumId.mishnayos.storageKey,
-            sefariaRef: sharedRef,
-            stageId: 1,
-            trackType: 'personal',
-            eventTimestamp: ts,
-          ),
-        );
+      // Insert completion for sharedRef under mishnayos.
+      await db.completionEventDao.appendEvent(
+        CompletionEventsCompanion.insert(
+          profileId: profileId,
+          curriculumId: CurriculumId.mishnayos.storageKey,
+          sefariaRef: sharedRef,
+          stageId: 1,
+          trackType: 'personal',
+          eventTimestamp: ts,
+        ),
+      );
 
-        // Insert completion for the SAME sharedRef under bavli.
-        // Different curriculumId → different row (unique key includes curriculumId).
-        await db.completionEventDao.appendEvent(
-          CompletionEventsCompanion.insert(
-            profileId: profileId,
-            curriculumId: CurriculumId.bavli.storageKey,
-            sefariaRef: sharedRef,
-            stageId: 1,
-            trackType: 'personal',
-            eventTimestamp: ts,
-            // Use a distinct trackId so the event differs if needed.
-            trackId: const Value<int?>(null),
-          ),
-        );
+      // Insert completion for the SAME sharedRef under bavli.
+      // Different curriculumId → different row (unique key includes curriculumId).
+      await db.completionEventDao.appendEvent(
+        CompletionEventsCompanion.insert(
+          profileId: profileId,
+          curriculumId: CurriculumId.bavli.storageKey,
+          sefariaRef: sharedRef,
+          stageId: 1,
+          trackType: 'personal',
+          eventTimestamp: ts,
+          // Use a distinct trackId so the event differs if needed.
+          trackId: const Value<int?>(null),
+        ),
+      );
 
-        // Two rows exist — one per curriculum.
-        final allRows = await db.select(db.completionEvents).get();
-        expect(
-          allRows,
-          hasLength(2),
-          reason:
-              'Two distinct rows must exist — one per curriculum for the same sefariaRef',
-        );
+      // Two rows exist — one per curriculum.
+      final allRows = await db.select(db.completionEvents).get();
+      expect(
+        allRows,
+        hasLength(2),
+        reason:
+            'Two distinct rows must exist — one per curriculum for the same sefariaRef',
+      );
 
-        // ── Simulate what lifetimeTotalsAcrossAllCurriculaProvider does ────────
-        //   Each curriculum's provider queries per-curriculum, yielding a Set of
-        //   sefariaRefs. The totals provider unions those sets.
-        final mishCompletions = await db.completionDao
-            .getCompletionsByCurriculumAndProfile(
-              CurriculumId.mishnayos.storageKey,
-              profileId,
-            );
-        final bavliCompletions = await db.completionDao
-            .getCompletionsByCurriculumAndProfile(
-              CurriculumId.bavli.storageKey,
-              profileId,
-            );
+      // ── Simulate what lifetimeTotalsAcrossAllCurriculaProvider does ────────
+      //   Each curriculum's provider queries per-curriculum, yielding a Set of
+      //   sefariaRefs. The totals provider unions those sets.
+      final mishCompletions = await db.completionDao
+          .getCompletionsByCurriculumAndProfile(
+            CurriculumId.mishnayos.storageKey,
+            profileId,
+          );
+      final bavliCompletions = await db.completionDao
+          .getCompletionsByCurriculumAndProfile(
+            CurriculumId.bavli.storageKey,
+            profileId,
+          );
 
-        final mishRefs = mishCompletions.map((c) => c.sefariaRef).toSet();
-        final bavliRefs = bavliCompletions.map((c) => c.sefariaRef).toSet();
+      final mishRefs = mishCompletions.map((c) => c.sefariaRef).toSet();
+      final bavliRefs = bavliCompletions.map((c) => c.sefariaRef).toSet();
 
-        // Each per-curriculum set correctly sees exactly one ref.
-        expect(mishRefs, equals({sharedRef}));
-        expect(bavliRefs, equals({sharedRef}));
+      // Each per-curriculum set correctly sees exactly one ref.
+      expect(mishRefs, equals({sharedRef}));
+      expect(bavliRefs, equals({sharedRef}));
 
-        // The union — exactly what lifetimeTotalsAcrossAllCurriculaProvider
-        // produces via Set.addAll — counts the shared ref ONCE, not twice.
-        final unionRefs = <String>{};
-        unionRefs.addAll(mishRefs);
-        unionRefs.addAll(bavliRefs);
+      // The union — exactly what lifetimeTotalsAcrossAllCurriculaProvider
+      // produces via Set.addAll — counts the shared ref ONCE, not twice.
+      final unionRefs = <String>{};
+      unionRefs.addAll(mishRefs);
+      unionRefs.addAll(bavliRefs);
 
-        expect(
-          unionRefs.length,
-          1,
-          reason:
-              'Set-union of per-curriculum learnedLeafRefs must count Berakhot 1a '
-              'exactly once even though it has a completion_events row under each '
-              'curriculum (regression guard for B9 / v22 per-curriculum schema)',
-        );
-      },
-    );
+      expect(
+        unionRefs.length,
+        1,
+        reason:
+            'Set-union of per-curriculum learnedLeafRefs must count Berakhot 1a '
+            'exactly once even though it has a completion_events row under each '
+            'curriculum (regression guard for B9 / v22 per-curriculum schema)',
+      );
+    });
 
     // ── Provider-level: drive lifetimeTotalsAcrossAllCurriculaProvider with
     // two fake summaries whose learnedLeafRefs share the same sefariaRef. ─────
 
-    test(
-      'provider: same sefariaRef in two curriculum summaries counts ONCE in '
-      'lifetimeTotalsAcrossAllCurriculaProvider',
-      () async {
-        // Build two CurriculumLifetimeSummary objects where 'Berakhot 1a'
-        // appears in BOTH learnedLeafRefs — exactly what happens after v22
-        // when the same ref is completed under mishnayos AND bavli.
-        const sharedRef = 'Berakhot 1a';
-        const exclusiveMishRef = 'Berakhot 2a';
-        const exclusiveBavliRef = 'Shabbat 2a';
+    test('provider: same sefariaRef in two curriculum summaries counts ONCE in '
+        'lifetimeTotalsAcrossAllCurriculaProvider', () async {
+      // Build two CurriculumLifetimeSummary objects where 'Berakhot 1a'
+      // appears in BOTH learnedLeafRefs — exactly what happens after v22
+      // when the same ref is completed under mishnayos AND bavli.
+      const sharedRef = 'Berakhot 1a';
+      const exclusiveMishRef = 'Berakhot 2a';
+      const exclusiveBavliRef = 'Shabbat 2a';
 
-        const mishSummary = CurriculumLifetimeSummary(
-          curriculumId: CurriculumId.mishnayos,
-          learnedLeafCount: 2,
-          totalLeafCount: 3,
-          percentage: 2 / 3,
-          tree: [],
-          learnedLeafRefs: {sharedRef, exclusiveMishRef},
-          allLeafRefs: {sharedRef, exclusiveMishRef, 'Berakhot 3a'},
-        );
+      const mishSummary = CurriculumLifetimeSummary(
+        curriculumId: CurriculumId.mishnayos,
+        learnedLeafCount: 2,
+        totalLeafCount: 3,
+        percentage: 2 / 3,
+        tree: [],
+        learnedLeafRefs: {sharedRef, exclusiveMishRef},
+        allLeafRefs: {sharedRef, exclusiveMishRef, 'Berakhot 3a'},
+      );
 
-        const bavliSummary = CurriculumLifetimeSummary(
-          curriculumId: CurriculumId.bavli,
-          learnedLeafCount: 2,
-          totalLeafCount: 3,
-          percentage: 2 / 3,
-          tree: [],
-          learnedLeafRefs: {sharedRef, exclusiveBavliRef},
-          allLeafRefs: {sharedRef, exclusiveBavliRef, 'Shabbat 3a'},
-        );
+      const bavliSummary = CurriculumLifetimeSummary(
+        curriculumId: CurriculumId.bavli,
+        learnedLeafCount: 2,
+        totalLeafCount: 3,
+        percentage: 2 / 3,
+        tree: [],
+        learnedLeafRefs: {sharedRef, exclusiveBavliRef},
+        allLeafRefs: {sharedRef, exclusiveBavliRef, 'Shabbat 3a'},
+      );
 
-        final container = ProviderContainer(
-          overrides: [
-            lifetimeSummariesProvider(10).overrideWith(
-              (ref) => Future.value([mishSummary, bavliSummary]),
-            ),
-          ],
-        );
-        addTearDown(container.dispose);
+      final container = ProviderContainer(
+        overrides: [
+          lifetimeSummariesProvider(
+            10,
+          ).overrideWith((ref) => Future.value([mishSummary, bavliSummary])),
+        ],
+      );
+      addTearDown(container.dispose);
 
-        final totals = await container.read(
-          lifetimeTotalsAcrossAllCurriculaProvider(10).future,
-        );
+      final totals = await container.read(
+        lifetimeTotalsAcrossAllCurriculaProvider(10).future,
+      );
 
-        // Naive (wrong) sum would be 2 + 2 = 4; correct union = 3 distinct refs.
-        expect(
-          totals.learnedSections,
-          3,
-          reason:
-              'learnedSections must be the cardinality of the UNION of all '
-              'learnedLeafRefs ({Berakhot 1a, Berakhot 2a, Shabbat 2a} = 3), '
-              'not the naive sum (4) — regression guard for B9',
-        );
-        expect(
-          totals.learnedSections,
-          isNot(equals(4)),
-          reason: 'Naive per-curriculum sum (4) would indicate double-counting',
-        );
+      // Naive (wrong) sum would be 2 + 2 = 4; correct union = 3 distinct refs.
+      expect(
+        totals.learnedSections,
+        3,
+        reason:
+            'learnedSections must be the cardinality of the UNION of all '
+            'learnedLeafRefs ({Berakhot 1a, Berakhot 2a, Shabbat 2a} = 3), '
+            'not the naive sum (4) — regression guard for B9',
+      );
+      expect(
+        totals.learnedSections,
+        isNot(equals(4)),
+        reason: 'Naive per-curriculum sum (4) would indicate double-counting',
+      );
 
-        // Denominator must also be deduplicated: union of allLeafRefs = 5 distinct.
-        expect(
-          totals.totalSections,
-          5,
-          reason:
-              'totalSections is union of allLeafRefs '
-              '({Berakhot 1a, Berakhot 2a, Berakhot 3a, Shabbat 2a, Shabbat 3a} = 5)',
-        );
-      },
-    );
+      // Denominator must also be deduplicated: union of allLeafRefs = 5 distinct.
+      expect(
+        totals.totalSections,
+        5,
+        reason:
+            'totalSections is union of allLeafRefs '
+            '({Berakhot 1a, Berakhot 2a, Berakhot 3a, Shabbat 2a, Shabbat 3a} = 5)',
+      );
+    });
   });
 
   group('lifetimeTotalsAcrossAllCurriculaProvider — deduplication', () {

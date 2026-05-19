@@ -36,8 +36,7 @@ class ChazaraInlineSetup extends ConsumerStatefulWidget {
   final List<int>? initialDelays;
 
   @override
-  ConsumerState<ChazaraInlineSetup> createState() =>
-      _ChazaraInlineSetupState();
+  ConsumerState<ChazaraInlineSetup> createState() => _ChazaraInlineSetupState();
 }
 
 /// Built-in preset templates expressed as round delays in days.

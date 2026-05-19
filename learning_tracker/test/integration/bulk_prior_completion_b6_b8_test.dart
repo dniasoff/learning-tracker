@@ -178,17 +178,19 @@ Future<void> _seedStagesWithSuperseded(
 }) async {
   await _seedStages(db, profileId: profileId, trackId: trackId, count: count);
   // Insert one superseded stage at stageOrder count+1.
-  await db.into(db.stageDefinitions).insert(
-    StageDefinitionsCompanion.insert(
-      profileId: profileId,
-      curriculumId: 'mishnayos',
-      trackId: trackId,
-      stageOrder: count + 1,
-      stageName: 'Old Chazara (superseded)',
-      delayDays: 0,
-      supersededAt: Value(DateTime.utc(2026, 1, 1)),
-    ),
-  );
+  await db
+      .into(db.stageDefinitions)
+      .insert(
+        StageDefinitionsCompanion.insert(
+          profileId: profileId,
+          curriculumId: 'mishnayos',
+          trackId: trackId,
+          stageOrder: count + 1,
+          stageName: 'Old Chazara (superseded)',
+          delayDays: 0,
+          supersededAt: Value(DateTime.utc(2026, 1, 1)),
+        ),
+      );
 }
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
@@ -338,7 +340,8 @@ void main() {
       expect(
         stageIds,
         equals({1, 2}),
-        reason: 'Only active stageOrders (1, 2) must appear; '
+        reason:
+            'Only active stageOrders (1, 2) must appear; '
             'superseded stageOrder 3 must be absent',
       );
     });
@@ -799,12 +802,9 @@ void main() {
   group('Finding 8 — per-curriculum expunge isolation', () {
     /// Seeds a curriculum track for [curriculumId] on [profileId].
     /// Returns the new trackId.
-    Future<int> seedTrack(
-      UserDatabase db,
-      int pid,
-      String curriculumId,
-    ) =>
-        db.into(db.curriculumTracks).insert(
+    Future<int> seedTrack(UserDatabase db, int pid, String curriculumId) => db
+        .into(db.curriculumTracks)
+        .insert(
           CurriculumTracksCompanion.insert(
             profileId: pid,
             curriculumId: curriculumId,
@@ -838,19 +838,21 @@ void main() {
           String sefariaRef,
           String curriculumId,
           int tid,
-        ) => db.into(db.completionEvents).insert(
-          CompletionEventsCompanion.insert(
-            profileId: profileId,
-            curriculumId: curriculumId,
-            sefariaRef: sefariaRef,
-            stageId: 1,
-            trackType: 'personal',
-            trackId: Value(tid),
-            points: const Value(0),
-            eventTimestamp: kBulkPriorSentinelDate,
-            priorMarkOnly: const Value(true),
-          ),
-        );
+        ) => db
+            .into(db.completionEvents)
+            .insert(
+              CompletionEventsCompanion.insert(
+                profileId: profileId,
+                curriculumId: curriculumId,
+                sefariaRef: sefariaRef,
+                stageId: 1,
+                trackType: 'personal',
+                trackId: Value(tid),
+                points: const Value(0),
+                eventTimestamp: kBulkPriorSentinelDate,
+                priorMarkOnly: const Value(true),
+              ),
+            );
 
         // Prior-mark same sefariaRef under BOTH curricula.
         await insertSentinel('Berakhot 1', 'mishnayos', trackId);
@@ -877,13 +879,14 @@ void main() {
         );
 
         // mishnayos row must be tombstoned.
-        final mishnayosRow = await (db.select(db.completionEvents)..where(
-              (t) =>
-                  t.sefariaRef.equals('Berakhot 1') &
-                  t.curriculumId.equals('mishnayos') &
-                  t.profileId.equals(profileId),
-            ))
-            .getSingle();
+        final mishnayosRow =
+            await (db.select(db.completionEvents)..where(
+                  (t) =>
+                      t.sefariaRef.equals('Berakhot 1') &
+                      t.curriculumId.equals('mishnayos') &
+                      t.profileId.equals(profileId),
+                ))
+                .getSingle();
         expect(
           mishnayosRow.purgedAt,
           isNotNull,
@@ -891,13 +894,14 @@ void main() {
         );
 
         // bavli row must remain active (purgedAt IS NULL).
-        final bavliRow = await (db.select(db.completionEvents)..where(
-              (t) =>
-                  t.sefariaRef.equals('Berakhot 1') &
-                  t.curriculumId.equals('bavli') &
-                  t.profileId.equals(profileId),
-            ))
-            .getSingle();
+        final bavliRow =
+            await (db.select(db.completionEvents)..where(
+                  (t) =>
+                      t.sefariaRef.equals('Berakhot 1') &
+                      t.curriculumId.equals('bavli') &
+                      t.profileId.equals(profileId),
+                ))
+                .getSingle();
         expect(
           bavliRow.purgedAt,
           isNull,
@@ -912,7 +916,9 @@ void main() {
       () async {
         await seedTrack(db, profileId, 'bavli');
 
-        final mishnayosItems = [leafForCurriculum('Berakhot 2', 0, 'mishnayos')];
+        final mishnayosItems = [
+          leafForCurriculum('Berakhot 2', 0, 'mishnayos'),
+        ];
         final bavliItems = [leafForCurriculum('Berakhot 2', 0, 'bavli')];
 
         final bookmarkRepo = MockBookmarkRepository();
@@ -965,10 +971,12 @@ void main() {
         );
 
         // Query all completion_events for 'Berakhot 2'.
-        final rows = await (db.select(db.completionEvents)..where(
-              (t) => t.sefariaRef.equals('Berakhot 2') & t.purgedAt.isNull(),
-            ))
-            .get();
+        final rows =
+            await (db.select(db.completionEvents)..where(
+                  (t) =>
+                      t.sefariaRef.equals('Berakhot 2') & t.purgedAt.isNull(),
+                ))
+                .get();
 
         // Must have 2+ active rows — one per curriculum.
         expect(
@@ -996,35 +1004,39 @@ void main() {
         // Insert a real-learning row FIRST (non-sentinel timestamp, stage 1).
         // Use a distinct trackType combo to avoid 5-tuple UNIQUE collision:
         // we use stageId=1 for live learning and stageId=2 for the sentinel.
-        await db.into(db.completionEvents).insert(
-          CompletionEventsCompanion.insert(
-            profileId: profileId,
-            curriculumId: 'mishnayos',
-            sefariaRef: 'Berakhot 3',
-            stageId: 1,
-            trackType: 'personal',
-            trackId: Value(trackId),
-            points: const Value(10),
-            eventTimestamp: liveDate,
-          ),
-        );
+        await db
+            .into(db.completionEvents)
+            .insert(
+              CompletionEventsCompanion.insert(
+                profileId: profileId,
+                curriculumId: 'mishnayos',
+                sefariaRef: 'Berakhot 3',
+                stageId: 1,
+                trackType: 'personal',
+                trackId: Value(trackId),
+                points: const Value(10),
+                eventTimestamp: liveDate,
+              ),
+            );
 
         // Insert a prior-mark row at stageId=2 for the same item (sentinel
         // timestamp, priorMarkOnly = true). Different stageId avoids the UNIQUE
         // constraint.
-        await db.into(db.completionEvents).insert(
-          CompletionEventsCompanion.insert(
-            profileId: profileId,
-            curriculumId: 'mishnayos',
-            sefariaRef: 'Berakhot 3',
-            stageId: 2,
-            trackType: 'personal',
-            trackId: Value(trackId),
-            points: const Value(0),
-            eventTimestamp: kBulkPriorSentinelDate,
-            priorMarkOnly: const Value(true),
-          ),
-        );
+        await db
+            .into(db.completionEvents)
+            .insert(
+              CompletionEventsCompanion.insert(
+                profileId: profileId,
+                curriculumId: 'mishnayos',
+                sefariaRef: 'Berakhot 3',
+                stageId: 2,
+                trackType: 'personal',
+                trackId: Value(trackId),
+                points: const Value(0),
+                eventTimestamp: kBulkPriorSentinelDate,
+                priorMarkOnly: const Value(true),
+              ),
+            );
 
         final service = BulkPriorCompletionService(
           contentRepository: _StubContentRepository(const []),
@@ -1047,10 +1059,9 @@ void main() {
           curriculumId: CurriculumId.mishnayos,
         );
 
-        final rows = await (db.select(db.completionEvents)..where(
-              (t) => t.sefariaRef.equals('Berakhot 3'),
-            ))
-            .get();
+        final rows = await (db.select(
+          db.completionEvents,
+        )..where((t) => t.sefariaRef.equals('Berakhot 3'))).get();
 
         final liveRow = rows.firstWhere((r) => r.stageId == 1);
         final priorRow = rows.firstWhere((r) => r.stageId == 2);
@@ -1127,14 +1138,14 @@ void main() {
         );
 
         // Verify the prior-mark row has priorMarkOnly = true.
-        final afterPriorMark = await (db.select(db.completionEvents)
-              ..where(
-                (t) =>
-                    t.sefariaRef.equals('Berakhot 4') &
-                    t.stageId.equals(1) &
-                    t.profileId.equals(profileId),
-              ))
-            .getSingle();
+        final afterPriorMark =
+            await (db.select(db.completionEvents)..where(
+                  (t) =>
+                      t.sefariaRef.equals('Berakhot 4') &
+                      t.stageId.equals(1) &
+                      t.profileId.equals(profileId),
+                ))
+                .getSingle();
         expect(
           afterPriorMark.priorMarkOnly,
           isTrue,
@@ -1160,14 +1171,14 @@ void main() {
         );
 
         // Verify the row was upgraded: priorMarkOnly = false.
-        final afterRealLearning = await (db.select(db.completionEvents)
-              ..where(
-                (t) =>
-                    t.sefariaRef.equals('Berakhot 4') &
-                    t.stageId.equals(1) &
-                    t.profileId.equals(profileId),
-              ))
-            .getSingle();
+        final afterRealLearning =
+            await (db.select(db.completionEvents)..where(
+                  (t) =>
+                      t.sefariaRef.equals('Berakhot 4') &
+                      t.stageId.equals(1) &
+                      t.profileId.equals(profileId),
+                ))
+                .getSingle();
         expect(
           afterRealLearning.priorMarkOnly,
           isFalse,
@@ -1190,14 +1201,14 @@ void main() {
           curriculumId: CurriculumId.mishnayos,
         );
 
-        final afterExpunge = await (db.select(db.completionEvents)
-              ..where(
-                (t) =>
-                    t.sefariaRef.equals('Berakhot 4') &
-                    t.stageId.equals(1) &
-                    t.profileId.equals(profileId),
-              ))
-            .getSingle();
+        final afterExpunge =
+            await (db.select(db.completionEvents)..where(
+                  (t) =>
+                      t.sefariaRef.equals('Berakhot 4') &
+                      t.stageId.equals(1) &
+                      t.profileId.equals(profileId),
+                ))
+                .getSingle();
 
         // THE KEY ASSERTION: the row must survive expunge because it was
         // upgraded from a prior-mark to a real-learning row.

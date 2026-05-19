@@ -141,10 +141,7 @@ class _SelfPacedGoalStepState extends ConsumerState<SelfPacedGoalStep> {
     await _pickDeadline();
   }
 
-  String _formatUnitForEstimate(
-    int perStudyDay, {
-    required bool useHebrew,
-  }) {
+  String _formatUnitForEstimate(int perStudyDay, {required bool useHebrew}) {
     final s = perStudyDay == 1
         ? _unitSingular(useHebrew: useHebrew)
         : _unitPlural(useHebrew: useHebrew);

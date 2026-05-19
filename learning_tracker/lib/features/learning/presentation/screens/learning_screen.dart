@@ -334,8 +334,9 @@ class _LearnTaskCard extends ConsumerWidget {
             ?.value ??
         task.contentItemSefariaRef.replaceAll('_', ' ');
     final isOverdue = task.isOverdue;
-    final stageLabel =
-        domainTermLabels(ref).resolveStoredStageName(task.stageName);
+    final stageLabel = domainTermLabels(
+      ref,
+    ).resolveStoredStageName(task.stageName);
     return Material(
       color: Colors.transparent,
       child: InkWell(

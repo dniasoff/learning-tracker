@@ -33,30 +33,34 @@ void main() {
         // Insert directly (bypassing the DAO) so we can control curriculumId
         // independently and avoid the DAO's getSingle() limitation when
         // multiple rows share the same 4-tuple.
-        await db.into(db.completionEvents).insert(
-          CompletionEventsCompanion.insert(
-            profileId: 1,
-            curriculumId: 'mishnayos',
-            sefariaRef: 'Berakhot 1a',
-            stageId: 1,
-            trackType: 'daily',
-            eventTimestamp: DateTime.utc(2026, 1, 1),
-          ),
-          mode: InsertMode.insertOrIgnore,
-        );
+        await db
+            .into(db.completionEvents)
+            .insert(
+              CompletionEventsCompanion.insert(
+                profileId: 1,
+                curriculumId: 'mishnayos',
+                sefariaRef: 'Berakhot 1a',
+                stageId: 1,
+                trackType: 'daily',
+                eventTimestamp: DateTime.utc(2026, 1, 1),
+              ),
+              mode: InsertMode.insertOrIgnore,
+            );
 
         // Same 4-tuple, different curriculumId — must succeed with v22 index.
-        await db.into(db.completionEvents).insert(
-          CompletionEventsCompanion.insert(
-            profileId: 1,
-            curriculumId: 'bavli',
-            sefariaRef: 'Berakhot 1a',
-            stageId: 1,
-            trackType: 'daily',
-            eventTimestamp: DateTime.utc(2026, 1, 2),
-          ),
-          mode: InsertMode.insertOrIgnore,
-        );
+        await db
+            .into(db.completionEvents)
+            .insert(
+              CompletionEventsCompanion.insert(
+                profileId: 1,
+                curriculumId: 'bavli',
+                sefariaRef: 'Berakhot 1a',
+                stageId: 1,
+                trackType: 'daily',
+                eventTimestamp: DateTime.utc(2026, 1, 2),
+              ),
+              mode: InsertMode.insertOrIgnore,
+            );
 
         final rows = await db.completionEventDao.getEventsByProfile(1);
         expect(
@@ -83,30 +87,34 @@ void main() {
         await seedProfile(db);
 
         // First insert.
-        await db.into(db.completionEvents).insert(
-          CompletionEventsCompanion.insert(
-            profileId: 1,
-            curriculumId: 'mishnayos',
-            sefariaRef: 'Berakhot 2a',
-            stageId: 1,
-            trackType: 'daily',
-            eventTimestamp: DateTime.utc(2026, 2, 1),
-          ),
-          mode: InsertMode.insertOrIgnore,
-        );
+        await db
+            .into(db.completionEvents)
+            .insert(
+              CompletionEventsCompanion.insert(
+                profileId: 1,
+                curriculumId: 'mishnayos',
+                sefariaRef: 'Berakhot 2a',
+                stageId: 1,
+                trackType: 'daily',
+                eventTimestamp: DateTime.utc(2026, 2, 1),
+              ),
+              mode: InsertMode.insertOrIgnore,
+            );
 
         // Second insert — identical 5-tuple; must be silently ignored.
-        await db.into(db.completionEvents).insert(
-          CompletionEventsCompanion.insert(
-            profileId: 1,
-            curriculumId: 'mishnayos',
-            sefariaRef: 'Berakhot 2a',
-            stageId: 1,
-            trackType: 'daily',
-            eventTimestamp: DateTime.utc(2026, 2, 2),
-          ),
-          mode: InsertMode.insertOrIgnore,
-        );
+        await db
+            .into(db.completionEvents)
+            .insert(
+              CompletionEventsCompanion.insert(
+                profileId: 1,
+                curriculumId: 'mishnayos',
+                sefariaRef: 'Berakhot 2a',
+                stageId: 1,
+                trackType: 'daily',
+                eventTimestamp: DateTime.utc(2026, 2, 2),
+              ),
+              mode: InsertMode.insertOrIgnore,
+            );
 
         final rows = await db.completionEventDao.getEventsByProfile(1);
         expect(

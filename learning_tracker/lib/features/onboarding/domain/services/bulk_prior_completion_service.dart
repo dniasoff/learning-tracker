@@ -339,17 +339,17 @@ class BulkPriorCompletionService {
       return;
     }
 
-    final tombstonedRows = await (_database.select(_database.completionEvents)
-          ..where(
-            (t) =>
-                t.profileId.equals(profileId) &
-                t.sefariaRef.equals(sefariaRef) &
-                t.curriculumId.equals(curriculumId.storageKey) &
-                t.trackType.equals(TrackType.personal.storageKey) &
-                t.priorMarkOnly.equals(true) &
-                t.purgedAt.isNotNull(),
-          ))
-        .get();
+    final tombstonedRows =
+        await (_database.select(_database.completionEvents)..where(
+              (t) =>
+                  t.profileId.equals(profileId) &
+                  t.sefariaRef.equals(sefariaRef) &
+                  t.curriculumId.equals(curriculumId.storageKey) &
+                  t.trackType.equals(TrackType.personal.storageKey) &
+                  t.priorMarkOnly.equals(true) &
+                  t.purgedAt.isNotNull(),
+            ))
+            .get();
 
     for (final row in tombstonedRows) {
       final entityKey =

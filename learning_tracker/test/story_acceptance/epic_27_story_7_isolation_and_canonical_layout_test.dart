@@ -29,7 +29,6 @@ const _trackType = 'personal';
 
 /// Inserts a [CurriculumTracks] row for [profileId] and returns its id.
 Future<int> _insertTrackFor(UserDatabase db, int profileId) async {
-
   final row = await db
       .into(db.curriculumTracks)
       .insertReturning(

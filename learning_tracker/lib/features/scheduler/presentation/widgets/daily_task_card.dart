@@ -28,8 +28,9 @@ class DailyTaskCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final curriculumColor = AppTheme.getCurriculumColor(task.curriculumId);
-    final stageLabel =
-        domainTermLabels(ref).resolveStoredStageName(task.stageName);
+    final stageLabel = domainTermLabels(
+      ref,
+    ).resolveStoredStageName(task.stageName);
 
     return Dismissible(
       key: ValueKey(

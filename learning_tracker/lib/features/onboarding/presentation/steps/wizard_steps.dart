@@ -503,10 +503,7 @@ class _CustomStep3Widget extends ConsumerWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      terms.stageLearn,
-                      style: theme.textTheme.titleMedium,
-                    ),
+                    Text(terms.stageLearn, style: theme.textTheme.titleMedium),
                     Text(
                       'Daily new material',
                       style: theme.textTheme.bodyMedium?.copyWith(

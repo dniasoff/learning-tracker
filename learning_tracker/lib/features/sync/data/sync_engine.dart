@@ -1196,15 +1196,15 @@ class SyncEngine implements SyncWriteFacade {
           // H2: the row exists locally — but it may be tombstoned (purgedAt IS
           // NOT NULL) while Firestore says it is alive. In that case the remote
           // is "more alive" than local: resurrect the row by clearing purgedAt.
-          final tombstoned =
-              await _database.completionEventDao.findTombstonedEventByNaturalKey(
-            profileId: profileId,
-            curriculumId: curriculumId,
-            sefariaRef: sefariaRef,
-            stageId: stageId,
-            trackType: trackType,
-            eventTimestamp: completedAt,
-          );
+          final tombstoned = await _database.completionEventDao
+              .findTombstonedEventByNaturalKey(
+                profileId: profileId,
+                curriculumId: curriculumId,
+                sefariaRef: sefariaRef,
+                stageId: stageId,
+                trackType: trackType,
+                eventTimestamp: completedAt,
+              );
           if (tombstoned != null) {
             await _database.completionEventDao.clearTombstone(tombstoned.id);
             _logger.debug(

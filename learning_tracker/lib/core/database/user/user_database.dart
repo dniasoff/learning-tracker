@@ -308,10 +308,7 @@ class UserDatabase extends _$UserDatabase {
             'PRAGMA table_info(completion_events)',
           ).get();
           if (!evtCols.any((r) => r.data['name'] == 'prior_mark_only')) {
-            await m.addColumn(
-              completionEvents,
-              completionEvents.priorMarkOnly,
-            );
+            await m.addColumn(completionEvents, completionEvents.priorMarkOnly);
             // Back-fill: all pre-existing rows are real-learning rows.
             await customStatement(
               'UPDATE completion_events SET prior_mark_only = 0',

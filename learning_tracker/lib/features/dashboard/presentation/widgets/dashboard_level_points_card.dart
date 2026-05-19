@@ -33,6 +33,7 @@ class DashboardLevelPointsCard extends ConsumerWidget {
   final String doneDisplay;
   final String lifetimeSectionsDetail;
   final double cumulativeLifetime;
+
   /// Resolved chazara bubble label — Hebrew script or transliteration depending
   /// on the Hebrew Terms setting. Pre-resolved by the parent so this widget
   /// does not need to read [useHebrewTermsProvider] directly.

@@ -245,8 +245,7 @@ class _StageBreakdownSheet extends ConsumerWidget {
                   // toggle changes.
                   final names = {
                     for (final entry in rawNames.entries)
-                      entry.key:
-                          terms.resolveStoredStageName(entry.value),
+                      entry.key: terms.resolveStoredStageName(entry.value),
                   };
                   return ItemReviewBreakdown(
                     stageBreakdown: breakdown,

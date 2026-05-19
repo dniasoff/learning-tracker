@@ -110,7 +110,9 @@ class CompletionWriter {
       // would fall into newCommands and hit INSERT OR IGNORE — which is a no-op
       // because the unique-key row still exists. We must explicitly resurrect
       // these rows instead.
-      final tombstoned = await _selectTombstonedEventsForBatch(distinctCommands);
+      final tombstoned = await _selectTombstonedEventsForBatch(
+        distinctCommands,
+      );
       final tombstoneByKey = <String, CompletionEvent>{
         for (final e in tombstoned) _naturalKeyForEvent(e): e,
       };
@@ -324,7 +326,8 @@ class CompletionWriter {
     int stageId,
     String trackType,
     String curriculumId,
-  ) => [profileId, sefariaRef, stageId, trackType, curriculumId].join(_keyDelim);
+  ) =>
+      [profileId, sefariaRef, stageId, trackType, curriculumId].join(_keyDelim);
 
   /// One bounded SELECT over `completion_events` matching any of [commands]'
   /// natural keys. Only returns **active** (non-tombstoned) rows
@@ -386,14 +389,14 @@ class CompletionWriter {
     CompletionEvent event,
     CompletionCommand cmd,
   ) async {
-    await (_db.update(_db.completionEvents)
-          ..where((t) => t.id.equals(event.id)))
-        .write(
-          CompletionEventsCompanion(
-            purgedAt: const Value(null),
-            eventTimestamp: Value(cmd.completedAt),
-          ),
-        );
+    await (_db.update(
+      _db.completionEvents,
+    )..where((t) => t.id.equals(event.id))).write(
+      CompletionEventsCompanion(
+        purgedAt: const Value(null),
+        eventTimestamp: Value(cmd.completedAt),
+      ),
+    );
     await _db.outboxDao.insertOutboxRow(
       OutboxCompanion.insert(
         profileId: cmd.profileId,
@@ -418,14 +421,14 @@ class CompletionWriter {
     CompletionEvent event,
     CompletionCommand cmd,
   ) async {
-    await (_db.update(_db.completionEvents)
-          ..where((t) => t.id.equals(event.id)))
-        .write(
-          CompletionEventsCompanion(
-            priorMarkOnly: const Value(false),
-            eventTimestamp: Value(cmd.completedAt),
-          ),
-        );
+    await (_db.update(
+      _db.completionEvents,
+    )..where((t) => t.id.equals(event.id))).write(
+      CompletionEventsCompanion(
+        priorMarkOnly: const Value(false),
+        eventTimestamp: Value(cmd.completedAt),
+      ),
+    );
     await _db.outboxDao.insertOutboxRow(
       OutboxCompanion.insert(
         profileId: cmd.profileId,

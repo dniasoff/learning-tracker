@@ -166,18 +166,18 @@ Map<String, dynamic> _payload({
   'points': 5,
 };
 
-Future<int> _seedTrack(
-  UserDatabase db, {
-  String curriculumId = 'mishnayos',
-}) => db.into(db.curriculumTracks).insert(
-  CurriculumTracksCompanion.insert(
-    profileId: _profileId,
-    curriculumId: curriculumId,
-    trackType: 'personal',
-    activatedAt: DateTime.utc(2026, 1, 1),
-    isActive: const Value(true),
-  ),
-);
+Future<int> _seedTrack(UserDatabase db, {String curriculumId = 'mishnayos'}) =>
+    db
+        .into(db.curriculumTracks)
+        .insert(
+          CurriculumTracksCompanion.insert(
+            profileId: _profileId,
+            curriculumId: curriculumId,
+            trackType: 'personal',
+            activatedAt: DateTime.utc(2026, 1, 1),
+            isActive: const Value(true),
+          ),
+        );
 
 // ---------------------------------------------------------------------------
 // Tests
@@ -188,217 +188,193 @@ void main() {
   group(
     'Finding 1 — two curricula for the same section get distinct Firestore docs',
     () {
-      test(
-        'pushCompletion: same (ref, stage, trackType) but different '
-        'curriculumIds → two distinct documents',
-        () async {
-          final fs = createFakeFirestore(authenticatedUid: _uid);
-          final gateway = FirestoreGatewayImpl(
-            firestore: fs,
-            authRepository: const _StubAuthRepository(_uid),
-          );
+      test('pushCompletion: same (ref, stage, trackType) but different '
+          'curriculumIds → two distinct documents', () async {
+        final fs = createFakeFirestore(authenticatedUid: _uid);
+        final gateway = FirestoreGatewayImpl(
+          firestore: fs,
+          authRepository: const _StubAuthRepository(_uid),
+        );
 
-          await gateway.pushCompletion(
-            profileId: _profileId,
-            data: _payload(
-              sefariaRef: 'Berakhot 1:1',
-              curriculumId: 'mishnayos',
-            ),
-          );
-          await gateway.pushCompletion(
-            profileId: _profileId,
-            data: _payload(
-              sefariaRef: 'Berakhot 1:1',
-              curriculumId: 'daf_yomi',
-            ),
-          );
+        await gateway.pushCompletion(
+          profileId: _profileId,
+          data: _payload(sefariaRef: 'Berakhot 1:1', curriculumId: 'mishnayos'),
+        );
+        await gateway.pushCompletion(
+          profileId: _profileId,
+          data: _payload(sefariaRef: 'Berakhot 1:1', curriculumId: 'daf_yomi'),
+        );
 
-          expect(
-            await _completionDocCount(fs),
-            equals(2),
-            reason:
-                'Finding 1: two completions with different curriculumIds for '
-                'the same section MUST produce two distinct Firestore docs',
-          );
+        expect(
+          await _completionDocCount(fs),
+          equals(2),
+          reason:
+              'Finding 1: two completions with different curriculumIds for '
+              'the same section MUST produce two distinct Firestore docs',
+        );
 
-          final ids = await _completionDocIds(fs);
-          expect(
-            ids[0],
-            isNot(equals(ids[1])),
-            reason: 'The two doc IDs must differ',
-          );
-        },
-      );
+        final ids = await _completionDocIds(fs);
+        expect(
+          ids[0],
+          isNot(equals(ids[1])),
+          reason: 'The two doc IDs must differ',
+        );
+      });
 
-      test(
-        'pushCompletionsBatch: same (ref, stage, trackType) but different '
-        'curriculumIds in one batch → two distinct documents',
-        () async {
-          final fs = createFakeFirestore(authenticatedUid: _uid);
-          final gateway = FirestoreGatewayImpl(
-            firestore: fs,
-            authRepository: const _StubAuthRepository(_uid),
-          );
+      test('pushCompletionsBatch: same (ref, stage, trackType) but different '
+          'curriculumIds in one batch → two distinct documents', () async {
+        final fs = createFakeFirestore(authenticatedUid: _uid);
+        final gateway = FirestoreGatewayImpl(
+          firestore: fs,
+          authRepository: const _StubAuthRepository(_uid),
+        );
 
-          await gateway.pushCompletionsBatch(
-            profileId: _profileId,
-            items: [
-              (
-                entityKey:
-                    '$_profileId:Berakhot 1:1:1:personal:mishnayos',
-                payload: _payload(
-                  sefariaRef: 'Berakhot 1:1',
-                  curriculumId: 'mishnayos',
-                ),
+        await gateway.pushCompletionsBatch(
+          profileId: _profileId,
+          items: [
+            (
+              entityKey: '$_profileId:Berakhot 1:1:1:personal:mishnayos',
+              payload: _payload(
+                sefariaRef: 'Berakhot 1:1',
+                curriculumId: 'mishnayos',
               ),
-              (
-                entityKey:
-                    '$_profileId:Berakhot 1:1:1:personal:daf_yomi',
-                payload: _payload(
-                  sefariaRef: 'Berakhot 1:1',
-                  curriculumId: 'daf_yomi',
-                ),
+            ),
+            (
+              entityKey: '$_profileId:Berakhot 1:1:1:personal:daf_yomi',
+              payload: _payload(
+                sefariaRef: 'Berakhot 1:1',
+                curriculumId: 'daf_yomi',
               ),
-            ],
-          );
+            ),
+          ],
+        );
 
-          expect(
-            await _completionDocCount(fs),
-            equals(2),
-            reason:
-                'Finding 1: batch path must also produce distinct docs per curriculum',
-          );
-        },
-      );
+        expect(
+          await _completionDocCount(fs),
+          equals(2),
+          reason:
+              'Finding 1: batch path must also produce distinct docs per curriculum',
+        );
+      });
 
-      test(
-        'same completion pushed twice (same curriculumId) is idempotent — '
-        'still exactly one document',
-        () async {
-          final fs = createFakeFirestore(authenticatedUid: _uid);
-          final gateway = FirestoreGatewayImpl(
-            firestore: fs,
-            authRepository: const _StubAuthRepository(_uid),
-          );
+      test('same completion pushed twice (same curriculumId) is idempotent — '
+          'still exactly one document', () async {
+        final fs = createFakeFirestore(authenticatedUid: _uid);
+        final gateway = FirestoreGatewayImpl(
+          firestore: fs,
+          authRepository: const _StubAuthRepository(_uid),
+        );
 
-          final payload = _payload(
-            sefariaRef: 'Berakhot 2:1',
+        final payload = _payload(
+          sefariaRef: 'Berakhot 2:1',
+          curriculumId: 'mishnayos',
+        );
+        await gateway.pushCompletion(profileId: _profileId, data: payload);
+        await gateway.pushCompletion(profileId: _profileId, data: payload);
+
+        expect(
+          await _completionDocCount(fs),
+          equals(1),
+          reason:
+              'Idempotency must hold: re-pushing the same completion with '
+              'the same curriculumId produces exactly one document',
+        );
+      });
+
+      test('single-push and batch-push paths derive the same doc ID for the '
+          'same completion (consistency across push paths)', () async {
+        final fs = createFakeFirestore(authenticatedUid: _uid);
+        final gateway = FirestoreGatewayImpl(
+          firestore: fs,
+          authRepository: const _StubAuthRepository(_uid),
+        );
+
+        final payload = _payload(
+          sefariaRef: 'Berakhot 3:1',
+          curriculumId: 'mishnayos',
+        );
+        await gateway.pushCompletion(profileId: _profileId, data: payload);
+        await gateway.pushCompletionsBatch(
+          profileId: _profileId,
+          items: [
+            (
+              entityKey: '$_profileId:Berakhot 3:1:1:personal:mishnayos',
+              payload: payload,
+            ),
+          ],
+        );
+
+        // The two paths must derive the same doc ID → still 1 document.
+        expect(
+          await _completionDocCount(fs),
+          equals(1),
+          reason:
+              'pushCompletion and pushCompletionsBatch MUST derive the '
+              'same doc ID for the same payload',
+        );
+      });
+
+      test('via full outbox drain: two curricula for same ref reach two '
+          'distinct Firestore documents', () async {
+        final db = inMemoryDb();
+        await seedProfile(db);
+        await _seedTrack(db, curriculumId: 'mishnayos');
+        await _seedTrack(db, curriculumId: 'daf_yomi');
+
+        final fs = createFakeFirestore(authenticatedUid: _uid);
+        const authRepo = _StubAuthRepository(_uid);
+        final gateway = FirestoreGatewayImpl(
+          firestore: fs,
+          authRepository: authRepo,
+        );
+        final processor = OutboxProcessor(
+          outboxDao: db.outboxDao,
+          pipeline: OutboxPushPipeline(gateway: gateway),
+          clock: FakeLocalDayClock(DateTime.utc(2026, 5, 19)),
+        );
+
+        final writer = CompletionWriter(db);
+        final ts = DateTime.utc(2026, 5, 1);
+
+        // Write the SAME sefariaRef + stageId + trackType but two different
+        // curricula — these must be distinct completions end-to-end.
+        await writer.commit(
+          CompletionCommand(
+            profileId: _profileId,
             curriculumId: 'mishnayos',
-          );
-          await gateway.pushCompletion(profileId: _profileId, data: payload);
-          await gateway.pushCompletion(profileId: _profileId, data: payload);
-
-          expect(
-            await _completionDocCount(fs),
-            equals(1),
-            reason:
-                'Idempotency must hold: re-pushing the same completion with '
-                'the same curriculumId produces exactly one document',
-          );
-        },
-      );
-
-      test(
-        'single-push and batch-push paths derive the same doc ID for the '
-        'same completion (consistency across push paths)',
-        () async {
-          final fs = createFakeFirestore(authenticatedUid: _uid);
-          final gateway = FirestoreGatewayImpl(
-            firestore: fs,
-            authRepository: const _StubAuthRepository(_uid),
-          );
-
-          final payload = _payload(
-            sefariaRef: 'Berakhot 3:1',
-            curriculumId: 'mishnayos',
-          );
-          await gateway.pushCompletion(profileId: _profileId, data: payload);
-          await gateway.pushCompletionsBatch(
+            sefariaRef: 'Berakhot 4:1',
+            stageId: 1,
+            trackType: 'personal',
+            trackId: 1,
+            completedAt: ts,
+            points: 5,
+          ),
+        );
+        await writer.commit(
+          CompletionCommand(
             profileId: _profileId,
-            items: [
-              (
-                entityKey:
-                    '$_profileId:Berakhot 3:1:1:personal:mishnayos',
-                payload: payload,
-              ),
-            ],
-          );
+            curriculumId: 'daf_yomi',
+            sefariaRef: 'Berakhot 4:1',
+            stageId: 1,
+            trackType: 'personal',
+            trackId: 2,
+            completedAt: ts,
+            points: 5,
+          ),
+        );
 
-          // The two paths must derive the same doc ID → still 1 document.
-          expect(
-            await _completionDocCount(fs),
-            equals(1),
-            reason:
-                'pushCompletion and pushCompletionsBatch MUST derive the '
-                'same doc ID for the same payload',
-          );
-        },
-      );
+        await processor.drain(_profileId);
 
-      test(
-        'via full outbox drain: two curricula for same ref reach two '
-        'distinct Firestore documents',
-        () async {
-          final db = inMemoryDb();
-          await seedProfile(db);
-          await _seedTrack(db, curriculumId: 'mishnayos');
-          await _seedTrack(db, curriculumId: 'daf_yomi');
+        expect(
+          await _completionDocCount(fs),
+          equals(2),
+          reason:
+              'End-to-end: two curricula for the same ref must produce '
+              'two distinct Firestore documents after outbox drain',
+        );
 
-          final fs = createFakeFirestore(authenticatedUid: _uid);
-          const authRepo = _StubAuthRepository(_uid);
-          final gateway = FirestoreGatewayImpl(
-            firestore: fs,
-            authRepository: authRepo,
-          );
-          final processor = OutboxProcessor(
-            outboxDao: db.outboxDao,
-            pipeline: OutboxPushPipeline(gateway: gateway),
-            clock: FakeLocalDayClock(DateTime.utc(2026, 5, 19)),
-          );
-
-          final writer = CompletionWriter(db);
-          final ts = DateTime.utc(2026, 5, 1);
-
-          // Write the SAME sefariaRef + stageId + trackType but two different
-          // curricula — these must be distinct completions end-to-end.
-          await writer.commit(
-            CompletionCommand(
-              profileId: _profileId,
-              curriculumId: 'mishnayos',
-              sefariaRef: 'Berakhot 4:1',
-              stageId: 1,
-              trackType: 'personal',
-              trackId: 1,
-              completedAt: ts,
-              points: 5,
-            ),
-          );
-          await writer.commit(
-            CompletionCommand(
-              profileId: _profileId,
-              curriculumId: 'daf_yomi',
-              sefariaRef: 'Berakhot 4:1',
-              stageId: 1,
-              trackType: 'personal',
-              trackId: 2,
-              completedAt: ts,
-              points: 5,
-            ),
-          );
-
-          await processor.drain(_profileId);
-
-          expect(
-            await _completionDocCount(fs),
-            equals(2),
-            reason:
-                'End-to-end: two curricula for the same ref must produce '
-                'two distinct Firestore documents after outbox drain',
-          );
-
-          await db.close();
-        },
-      );
+        await db.close();
+      });
     },
   );
 
@@ -469,13 +445,13 @@ void main() {
           );
 
           // All sentinel rows for this item+curriculum must now be tombstoned.
-          final rows = await (db.select(db.completionEvents)
-                ..where(
-                  (t) =>
-                      t.profileId.equals(_profileId) &
-                      t.sefariaRef.equals('Berakhot 5:1'),
-                ))
-              .get();
+          final rows =
+              await (db.select(db.completionEvents)..where(
+                    (t) =>
+                        t.profileId.equals(_profileId) &
+                        t.sefariaRef.equals('Berakhot 5:1'),
+                  ))
+                  .get();
 
           expect(rows, hasLength(2));
           for (final row in rows) {
@@ -488,176 +464,164 @@ void main() {
         },
       );
 
-      test(
-        'expungePriorCompletions enqueues one outbox row per tombstoned '
-        'completion_event row',
-        () async {
-          final sentinelTs = kBulkPriorSentinelDate;
+      test('expungePriorCompletions enqueues one outbox row per tombstoned '
+          'completion_event row', () async {
+        final sentinelTs = kBulkPriorSentinelDate;
 
-          // Seed three completion_events for different stageIds.
-          for (var stage = 1; stage <= 3; stage++) {
-            await db.completionEventDao.appendEvent(
-              CompletionEventsCompanion.insert(
-                profileId: _profileId,
-                curriculumId: 'mishnayos',
-                sefariaRef: 'Berakhot 6:1',
-                stageId: stage,
-                trackType: 'personal',
-                eventTimestamp: sentinelTs,
-                priorMarkOnly: const Value(true),
-              ),
-            );
-          }
-
-          final service = BulkPriorCompletionService(
-            contentRepository: contentRepo,
-            completionRepository: completionRepo,
-            bookmarkRepository: bookmarkRepo,
-            database: db,
-            outboxDao: db.outboxDao,
-          );
-
-          await service.expungePriorCompletions(
-            profileId: _profileId,
-            sefariaRef: 'Berakhot 6:1',
-            curriculumId: CurriculumId.mishnayos,
-          );
-
-          // One outbox row per tombstoned event.
-          final outboxRows = await db.outboxDao.getPendingByKind(
-            OutboxEntityKind.completion,
-            _profileId,
-            limit: 100,
-          );
-          expect(
-            outboxRows,
-            hasLength(3),
-            reason:
-                'Finding 2: one outbox row must be enqueued per tombstoned '
-                'completion_events row',
-          );
-
-          // Every outbox row must carry purged_at in its payload.
-          for (final row in outboxRows) {
-            final payload = jsonDecode(row.payload) as Map<String, dynamic>;
-            expect(
-              payload.containsKey('purged_at'),
-              isTrue,
-              reason: 'Tombstone outbox payload must include purged_at',
-            );
-            expect(payload['purged_at'], isNotNull);
-            expect(payload['sefaria_ref'], equals('Berakhot 6:1'));
-            expect(payload['curriculum_id'], equals('mishnayos'));
-          }
-        },
-      );
-
-      test(
-        'outbox row entityKey for tombstones includes curriculumId '
-        '(per-curriculum key format)',
-        () async {
-          final sentinelTs = kBulkPriorSentinelDate;
+        // Seed three completion_events for different stageIds.
+        for (var stage = 1; stage <= 3; stage++) {
           await db.completionEventDao.appendEvent(
             CompletionEventsCompanion.insert(
               profileId: _profileId,
               curriculumId: 'mishnayos',
-              sefariaRef: 'Berakhot 7:1',
-              stageId: 1,
+              sefariaRef: 'Berakhot 6:1',
+              stageId: stage,
               trackType: 'personal',
               eventTimestamp: sentinelTs,
               priorMarkOnly: const Value(true),
             ),
           );
+        }
 
-          final service = BulkPriorCompletionService(
-            contentRepository: contentRepo,
-            completionRepository: completionRepo,
-            bookmarkRepository: bookmarkRepo,
-            database: db,
-            outboxDao: db.outboxDao,
+        final service = BulkPriorCompletionService(
+          contentRepository: contentRepo,
+          completionRepository: completionRepo,
+          bookmarkRepository: bookmarkRepo,
+          database: db,
+          outboxDao: db.outboxDao,
+        );
+
+        await service.expungePriorCompletions(
+          profileId: _profileId,
+          sefariaRef: 'Berakhot 6:1',
+          curriculumId: CurriculumId.mishnayos,
+        );
+
+        // One outbox row per tombstoned event.
+        final outboxRows = await db.outboxDao.getPendingByKind(
+          OutboxEntityKind.completion,
+          _profileId,
+          limit: 100,
+        );
+        expect(
+          outboxRows,
+          hasLength(3),
+          reason:
+              'Finding 2: one outbox row must be enqueued per tombstoned '
+              'completion_events row',
+        );
+
+        // Every outbox row must carry purged_at in its payload.
+        for (final row in outboxRows) {
+          final payload = jsonDecode(row.payload) as Map<String, dynamic>;
+          expect(
+            payload.containsKey('purged_at'),
+            isTrue,
+            reason: 'Tombstone outbox payload must include purged_at',
           );
+          expect(payload['purged_at'], isNotNull);
+          expect(payload['sefaria_ref'], equals('Berakhot 6:1'));
+          expect(payload['curriculum_id'], equals('mishnayos'));
+        }
+      });
 
-          await service.expungePriorCompletions(
+      test('outbox row entityKey for tombstones includes curriculumId '
+          '(per-curriculum key format)', () async {
+        final sentinelTs = kBulkPriorSentinelDate;
+        await db.completionEventDao.appendEvent(
+          CompletionEventsCompanion.insert(
             profileId: _profileId,
+            curriculumId: 'mishnayos',
             sefariaRef: 'Berakhot 7:1',
-            curriculumId: CurriculumId.mishnayos,
-          );
+            stageId: 1,
+            trackType: 'personal',
+            eventTimestamp: sentinelTs,
+            priorMarkOnly: const Value(true),
+          ),
+        );
 
-          final outboxRows = await db.outboxDao.getPendingByKind(
-            OutboxEntityKind.completion,
-            _profileId,
-            limit: 10,
-          );
-          expect(outboxRows, hasLength(1));
+        final service = BulkPriorCompletionService(
+          contentRepository: contentRepo,
+          completionRepository: completionRepo,
+          bookmarkRepository: bookmarkRepo,
+          database: db,
+          outboxDao: db.outboxDao,
+        );
 
-          // The entityKey must end with the curriculumId component.
-          final key = outboxRows.first.entityKey;
-          expect(
-            key,
-            contains('mishnayos'),
-            reason:
-                'Tombstone outbox entityKey must include curriculumId so the '
-                'gateway derives the correct per-curriculum Firestore doc ID',
-          );
-          // Format: profileId:sefariaRef:stageId:trackType:curriculumId
-          expect(
-            key,
-            equals('$_profileId:Berakhot 7:1:1:personal:mishnayos'),
-          );
-        },
-      );
+        await service.expungePriorCompletions(
+          profileId: _profileId,
+          sefariaRef: 'Berakhot 7:1',
+          curriculumId: CurriculumId.mishnayos,
+        );
 
-      test(
-        'when outboxDao is null, expungePriorCompletions still tombstones '
-        'rows locally but skips outbox enqueue (graceful no-op)',
-        () async {
-          final sentinelTs = kBulkPriorSentinelDate;
-          await db.completionEventDao.appendEvent(
-            CompletionEventsCompanion.insert(
-              profileId: _profileId,
-              curriculumId: 'mishnayos',
-              sefariaRef: 'Berakhot 8:1',
-              stageId: 1,
-              trackType: 'personal',
-              eventTimestamp: sentinelTs,
-              priorMarkOnly: const Value(true),
-            ),
-          );
+        final outboxRows = await db.outboxDao.getPendingByKind(
+          OutboxEntityKind.completion,
+          _profileId,
+          limit: 10,
+        );
+        expect(outboxRows, hasLength(1));
 
-          // No outboxDao injected — local-only tombstone.
-          final service = BulkPriorCompletionService(
-            contentRepository: contentRepo,
-            completionRepository: completionRepo,
-            bookmarkRepository: bookmarkRepo,
-            database: db,
-          );
+        // The entityKey must end with the curriculumId component.
+        final key = outboxRows.first.entityKey;
+        expect(
+          key,
+          contains('mishnayos'),
+          reason:
+              'Tombstone outbox entityKey must include curriculumId so the '
+              'gateway derives the correct per-curriculum Firestore doc ID',
+        );
+        // Format: profileId:sefariaRef:stageId:trackType:curriculumId
+        expect(key, equals('$_profileId:Berakhot 7:1:1:personal:mishnayos'));
+      });
 
-          // Must not throw.
-          await service.expungePriorCompletions(
+      test('when outboxDao is null, expungePriorCompletions still tombstones '
+          'rows locally but skips outbox enqueue (graceful no-op)', () async {
+        final sentinelTs = kBulkPriorSentinelDate;
+        await db.completionEventDao.appendEvent(
+          CompletionEventsCompanion.insert(
             profileId: _profileId,
+            curriculumId: 'mishnayos',
             sefariaRef: 'Berakhot 8:1',
-            curriculumId: CurriculumId.mishnayos,
-          );
+            stageId: 1,
+            trackType: 'personal',
+            eventTimestamp: sentinelTs,
+            priorMarkOnly: const Value(true),
+          ),
+        );
 
-          // Row is tombstoned locally.
-          final rows = await (db.select(db.completionEvents)
-                ..where(
+        // No outboxDao injected — local-only tombstone.
+        final service = BulkPriorCompletionService(
+          contentRepository: contentRepo,
+          completionRepository: completionRepo,
+          bookmarkRepository: bookmarkRepo,
+          database: db,
+        );
+
+        // Must not throw.
+        await service.expungePriorCompletions(
+          profileId: _profileId,
+          sefariaRef: 'Berakhot 8:1',
+          curriculumId: CurriculumId.mishnayos,
+        );
+
+        // Row is tombstoned locally.
+        final rows =
+            await (db.select(db.completionEvents)..where(
                   (t) =>
                       t.profileId.equals(_profileId) &
                       t.sefariaRef.equals('Berakhot 8:1'),
                 ))
-              .get();
-          expect(rows.first.purgedAt, isNotNull);
+                .get();
+        expect(rows.first.purgedAt, isNotNull);
 
-          // No outbox row was enqueued.
-          final outboxRows = await db.outboxDao.getPendingByKind(
-            OutboxEntityKind.completion,
-            _profileId,
-            limit: 10,
-          );
-          expect(outboxRows, isEmpty);
-        },
-      );
+        // No outbox row was enqueued.
+        final outboxRows = await db.outboxDao.getPendingByKind(
+          OutboxEntityKind.completion,
+          _profileId,
+          limit: 10,
+        );
+        expect(outboxRows, isEmpty);
+      });
     },
   );
 }

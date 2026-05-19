@@ -659,18 +659,18 @@ class CurriculumLabels {
   /// Toggle-aware variant of [primaryUnitLabelPlural].
   static String primaryUnitLabel(CurriculumId id, {required bool useHebrew}) {
     return switch (id) {
-      CurriculumId.bavli => level(id, 3).inLanguage(
-        useHebrew: useHebrew,
-        plural: true,
-      ),
-      CurriculumId.yerushalmi => level(id, 2).inLanguage(
-        useHebrew: useHebrew,
-        plural: true,
-      ),
-      CurriculumId.chumash => level(id, 2).inLanguage(
-        useHebrew: useHebrew,
-        plural: true,
-      ),
+      CurriculumId.bavli => level(
+        id,
+        3,
+      ).inLanguage(useHebrew: useHebrew, plural: true),
+      CurriculumId.yerushalmi => level(
+        id,
+        2,
+      ).inLanguage(useHebrew: useHebrew, plural: true),
+      CurriculumId.chumash => level(
+        id,
+        2,
+      ).inLanguage(useHebrew: useHebrew, plural: true),
       _ => leaf(id).inLanguage(useHebrew: useHebrew, plural: true),
     };
   }
@@ -689,19 +689,21 @@ class CurriculumLabels {
   }
 
   /// Toggle-aware variant of [containerCountLabelPlural].
-  static String containerCountLabel(CurriculumId id, {required bool useHebrew}) {
+  static String containerCountLabel(
+    CurriculumId id, {
+    required bool useHebrew,
+  }) {
     return switch (id) {
       CurriculumId.yerushalmi ||
       CurriculumId.chumash ||
-      CurriculumId.mishnehTorah => level(id, 1).inLanguage(
-        useHebrew: useHebrew,
-        plural: true,
-      ),
-      CurriculumId.mishnayos ||
-      CurriculumId.bavli => level(id, 2).inLanguage(
-        useHebrew: useHebrew,
-        plural: true,
-      ),
+      CurriculumId.mishnehTorah => level(
+        id,
+        1,
+      ).inLanguage(useHebrew: useHebrew, plural: true),
+      CurriculumId.mishnayos || CurriculumId.bavli => level(
+        id,
+        2,
+      ).inLanguage(useHebrew: useHebrew, plural: true),
       _ => useHebrew ? 'חלקים' : 'Sections',
     };
   }

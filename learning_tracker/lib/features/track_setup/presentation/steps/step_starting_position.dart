@@ -150,16 +150,21 @@ class _StartingPositionStepState extends ConsumerState<StartingPositionStep> {
     final useHebrewTerms = domainTermLabels(ref).isHebrew;
 
     // Resolve level labels respecting the Hebrew Terms toggle.
-    final containerLabel = _containerLevelIndex != null &&
-            _containerLevelIndex! <=
-                CurriculumLabels.depth(widget.curriculumId)
-        ? CurriculumLabels.level(widget.curriculumId, _containerLevelIndex!)
-            .inLanguage(useHebrew: useHebrewTerms)
+    final containerLabel =
+        _containerLevelIndex != null &&
+            _containerLevelIndex! <= CurriculumLabels.depth(widget.curriculumId)
+        ? CurriculumLabels.level(
+            widget.curriculumId,
+            _containerLevelIndex!,
+          ).inLanguage(useHebrew: useHebrewTerms)
         : 'Section';
-    final leafLabel = _leafLevelIndex != null &&
+    final leafLabel =
+        _leafLevelIndex != null &&
             _leafLevelIndex! <= CurriculumLabels.depth(widget.curriculumId)
-        ? CurriculumLabels.level(widget.curriculumId, _leafLevelIndex!)
-            .inLanguage(useHebrew: useHebrewTerms)
+        ? CurriculumLabels.level(
+            widget.curriculumId,
+            _leafLevelIndex!,
+          ).inLanguage(useHebrew: useHebrewTerms)
         : 'Item';
 
     if (_loading) {

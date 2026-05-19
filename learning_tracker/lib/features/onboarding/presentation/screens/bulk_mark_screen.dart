@@ -255,8 +255,8 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
             curriculumId: widget.curriculumId,
           )
           .catchError((Object e, StackTrace st) {
-        AppLogger.instance.error('expunge failed', e, st);
-      });
+            AppLogger.instance.error('expunge failed', e, st);
+          });
     }
 
     // Refresh progress surfaces after expunge.
@@ -486,10 +486,7 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
     );
   }
 
-  Widget _buildSearchResults(
-    ThemeData theme,
-    AppLocalizations l10n,
-  ) {
+  Widget _buildSearchResults(ThemeData theme, AppLocalizations l10n) {
     final itemsAsync = ref.watch(
       contentSearchProvider(
         curriculumId: widget.curriculumId,
