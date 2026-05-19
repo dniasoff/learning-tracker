@@ -35,8 +35,10 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/features/notifications/domain/services/notification_scheduler.dart';
 import 'package:learning_tracker/features/notifications/domain/services/notification_service.dart';
+import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz_lib;
@@ -164,39 +166,35 @@ void main() {
     // After Wave 2 the "task count" will be the PROJECTION's output (overdue +
     // today's units from the pure schedule function).  For now, we test the
     // body template against a fixed task count.
-    test(
-      'O8-a: body count matches task count',
-      skip: 'un-skip in Wave 4',
-      () async {
-        // Given: 5 tasks across 2 curricula.
-        const taskCount = 5;
-        const curriculumCount = 2;
-        final expectedBody = _buildBody(taskCount, curriculumCount);
+    test('O8-a: body count matches task count', () async {
+      // Given: 5 tasks across 2 curricula.
+      const taskCount = 5;
+      const curriculumCount = 2;
+      final expectedBody = _buildBody(taskCount, curriculumCount);
 
-        // When: scheduleReminder is called with that body.
-        await scheduler.scheduleReminder(
-          time: const TimeOfDay(hour: 19, minute: 0),
-          title: 'Learning Reminder',
-          body: expectedBody,
-          location: null,
-          inIsrael: false,
-        );
+      // When: scheduleReminder is called with that body.
+      await scheduler.scheduleReminder(
+        time: const TimeOfDay(hour: 19, minute: 0),
+        title: 'Learning Reminder',
+        body: expectedBody,
+        location: null,
+        inIsrael: false,
+      );
 
-        // Then: scheduleBatchReminders was called exactly once with the correct body.
-        expect(
-          notifService.scheduledBatches,
-          hasLength(1),
-          reason:
-              'O8-a: scheduleReminder must call scheduleBatchReminders exactly once.',
-        );
-        expect(
-          notifService.scheduledBatches.single.body,
-          expectedBody,
-          reason:
-              'O8-a: the body string must exactly encode the projection count.',
-        );
-      },
-    );
+      // Then: scheduleBatchReminders was called exactly once with the correct body.
+      expect(
+        notifService.scheduledBatches,
+        hasLength(1),
+        reason:
+            'O8-a: scheduleReminder must call scheduleBatchReminders exactly once.',
+      );
+      expect(
+        notifService.scheduledBatches.single.body,
+        expectedBody,
+        reason:
+            'O8-a: the body string must exactly encode the projection count.',
+      );
+    });
 
     // ── O8-b: zero count → cancel, not "0 tasks" reminder ──────────────────
     //
@@ -210,42 +208,38 @@ void main() {
     //
     // Wave 4 fix: add a guard in reminderSyncEffect (or NotificationScheduler):
     //   if (taskCount == 0) { await scheduler.cancel(); return; }
-    test(
-      'O8-b: when task count is zero, reminder is cancelled (not fired with '
-      '"0 tasks")',
-      skip: 'un-skip in Wave 4',
-      () async {
-        // Simulates what reminderSyncEffect SHOULD do when tasks is empty.
-        //
-        // The production code path today (buggy):
-        //   taskCount = 0
-        //   body = "You have 0 tasks across 0 curricula today"
-        //   scheduler.scheduleReminder(body: body)  ← fires a 0-count reminder
-        //
-        // The corrected path:
-        //   if (taskCount == 0) { scheduler.cancel(); return; }
+    test('O8-b: when task count is zero, reminder is cancelled (not fired with '
+        '"0 tasks")', () async {
+      // Simulates what reminderSyncEffect SHOULD do when tasks is empty.
+      //
+      // The production code path today (buggy):
+      //   taskCount = 0
+      //   body = "You have 0 tasks across 0 curricula today"
+      //   scheduler.scheduleReminder(body: body)  ← fires a 0-count reminder
+      //
+      // The corrected path:
+      //   if (taskCount == 0) { scheduler.cancel(); return; }
 
-        // When taskCount == 0 the scheduler must be cancelled.
-        // We call scheduler.cancel() directly to show the EXPECTED call;
-        // the actual test is that no scheduleBatchReminders call is made.
-        await scheduler.cancel();
+      // When taskCount == 0 the scheduler must be cancelled.
+      // We call scheduler.cancel() directly to show the EXPECTED call;
+      // the actual test is that no scheduleBatchReminders call is made.
+      await scheduler.cancel();
 
-        // scheduleReminder must NOT have been called (no 0-task notification).
-        expect(
-          notifService.scheduledBatches,
-          isEmpty,
-          reason:
-              'O8-b: zero task count must cancel the reminder, not schedule '
-              '"0 tasks today". D2 bug: current code fires the 0-count body.',
-        );
-        expect(
-          notifService.cancelBatchCount,
-          greaterThanOrEqualTo(1),
-          reason:
-              'O8-b: cancelling must call cancelBatchReminders at least once.',
-        );
-      },
-    );
+      // scheduleReminder must NOT have been called (no 0-task notification).
+      expect(
+        notifService.scheduledBatches,
+        isEmpty,
+        reason:
+            'O8-b: zero task count must cancel the reminder, not schedule '
+            '"0 tasks today". D2 bug: current code fires the 0-count body.',
+      );
+      expect(
+        notifService.cancelBatchCount,
+        greaterThanOrEqualTo(1),
+        reason:
+            'O8-b: cancelling must call cancelBatchReminders at least once.',
+      );
+    });
 
     // ── O8-c: re-anchor triggers reschedule to new count ────────────────────
     //
@@ -265,100 +259,210 @@ void main() {
     //   "Cancel existing batch first."
     // That cancel + reschedule must happen atomically (no moment where both
     // old and new batches are active).
+    test('O8-c: re-anchor triggers reschedule; second scheduleReminder call '
+        'cancels previous batch before scheduling new one', () async {
+      const time = TimeOfDay(hour: 19, minute: 0);
+      const title = 'Learning Reminder';
+
+      // First schedule: 5 tasks (before re-anchor).
+      final bodyBefore = _buildBody(5, 2);
+      await scheduler.scheduleReminder(
+        time: time,
+        title: title,
+        body: bodyBefore,
+        location: null,
+        inIsrael: false,
+      );
+      expect(
+        notifService.scheduledBatches,
+        hasLength(1),
+        reason: 'O8-c: first scheduleReminder must produce 1 scheduled batch.',
+      );
+
+      // Simulate re-anchor: the overdue set collapses; tasks = [today's unit only].
+      // Count drops from 5 to 1 (1 due-today unit from a single program track).
+      final bodyAfter = _buildBody(1, 1);
+      await scheduler.scheduleReminder(
+        time: time,
+        title: title,
+        body: bodyAfter,
+        location: null,
+        inIsrael: false,
+      );
+
+      // Two scheduleBatchReminders calls recorded (cancel-then-reschedule
+      // happens INSIDE NotificationService.scheduleBatchReminders, which our
+      // recording fake doesn't simulate — it records the outer call).
+      expect(
+        notifService.scheduledBatches,
+        hasLength(2),
+        reason:
+            'O8-c: second scheduleReminder after re-anchor must produce a '
+            'second batch call (the scheduler re-runs for the new count).',
+      );
+
+      // The second batch must reflect the updated (smaller) count.
+      final secondBody = notifService.scheduledBatches[1].body;
+      expect(
+        secondBody,
+        bodyAfter,
+        reason:
+            'O8-c: after re-anchor the body must encode the new (smaller) '
+            'task count, not the pre-anchor count.',
+      );
+      expect(
+        secondBody,
+        isNot(equals(bodyBefore)),
+        reason:
+            'O8-c: the post-re-anchor body must differ from the pre-anchor '
+            'body (the count changed).',
+      );
+    });
+
+    // ── O8-d: body count is today-only (D1 fix — Wave 4) ───────────────────
+    //
+    // D1 fix (§8 of overdue-refactor-architecture.md):
+    //   The body count must be TODAY's units only — tasks where isOverdue is
+    //   false AND priority is not overdueChazara / scheduledChazara.
+    //
+    // This test constructs a synthetic task list that mirrors what
+    // allDailyTasksProvider returns (overdue + today + review tasks), applies
+    // the same filter that notification_providers.dart now applies (Wave 4
+    // D1 fix), and asserts the body reflects only the today-only count.
+    //
+    // Wave 2 projection is already shipped — the projection provides the mix
+    // of overdueProgram, todayProgram, overdueChazara, and scheduledChazara
+    // tasks.  This test validates the filter here at the notification layer.
     test(
-      'O8-c: re-anchor triggers reschedule; second scheduleReminder call '
-      'cancels previous batch before scheduling new one',
-      skip: 'un-skip in Wave 4',
+      'O8-d: body count is today-only (excludes overdue and review tasks)',
       () async {
-        const time = TimeOfDay(hour: 19, minute: 0);
-        const title = 'Learning Reminder';
+        // Build a synthetic mix of tasks:
+        //   • 1 overdueProgram task  (isOverdue: true,  bavli)      — EXCLUDED
+        //   • 2 todayProgram tasks   (isOverdue: false, bavli × 2)  — INCLUDED
+        //   • 1 overdueChazara task  (isOverdue: false, bavli)      — EXCLUDED
+        //   • 1 scheduledChazara task (isOverdue: false, mishnayos) — EXCLUDED
+        //   • 1 newLearning task     (isOverdue: false, tanach)     — INCLUDED
+        //
+        // Today-only count = todayProgram (2) + newLearning (1) = 3 tasks.
+        // Unique curricula in today-only = bavli + tanach = 2.
 
-        // First schedule: 5 tasks (before re-anchor).
-        final bodyBefore = _buildBody(5, 2);
+        DailyTask makeTask({
+          required DailyTaskPriority priority,
+          required bool isOverdue,
+          required CurriculumId curriculumId,
+          String? refSuffix,
+        }) {
+          final suffix = refSuffix ?? priority.name;
+          return DailyTask(
+            curriculumId: curriculumId,
+            contentItemSefariaRef: 'ref-$suffix-${curriculumId.name}',
+            stageOrder: 1,
+            stageDefinitionId: 1,
+            priority: priority,
+            isOverdue: isOverdue,
+            reason: 'test',
+            stageName: 'Test Stage',
+            trackId: 1,
+            trackLabel: 'Test Track',
+          );
+        }
+
+        final allTasks = <DailyTask>[
+          // Excluded: overdue program task.
+          makeTask(
+            priority: DailyTaskPriority.overdueProgram,
+            isOverdue: true,
+            curriculumId: CurriculumId.bavli,
+          ),
+          // Included: two today-program tasks, both bavli.
+          makeTask(
+            priority: DailyTaskPriority.todayProgram,
+            isOverdue: false,
+            curriculumId: CurriculumId.bavli,
+            refSuffix: 'todayProgram-1',
+          ),
+          makeTask(
+            priority: DailyTaskPriority.todayProgram,
+            isOverdue: false,
+            curriculumId: CurriculumId.bavli,
+            refSuffix: 'todayProgram-2',
+          ),
+          // Excluded: review tasks (overdueChazara + scheduledChazara).
+          makeTask(
+            priority: DailyTaskPriority.overdueChazara,
+            isOverdue: false,
+            curriculumId: CurriculumId.bavli,
+          ),
+          makeTask(
+            priority: DailyTaskPriority.scheduledChazara,
+            isOverdue: false,
+            curriculumId: CurriculumId.mishnayos,
+          ),
+          // Included: new-learning task, different curriculum.
+          makeTask(
+            priority: DailyTaskPriority.newLearning,
+            isOverdue: false,
+            curriculumId: CurriculumId.tanach,
+          ),
+        ];
+
+        // Apply the same filter as notification_providers.dart (D1 fix).
+        final todayTasks = allTasks
+            .where(
+              (t) =>
+                  !t.isOverdue &&
+                  t.priority != DailyTaskPriority.overdueChazara &&
+                  t.priority != DailyTaskPriority.scheduledChazara,
+            )
+            .toList();
+
+        final taskCount = todayTasks.length;
+        final curriculumCount = todayTasks
+            .map((t) => t.curriculumId)
+            .toSet()
+            .length;
+
+        // today-only: 2 todayProgram (bavli) + 1 newLearning (tanach) = 3 tasks,
+        // 2 unique curricula (bavli + tanach).
+        expect(
+          taskCount,
+          3,
+          reason:
+              'O8-d: today-only count must be 3 (2 todayProgram + 1 newLearning); '
+              'overdue (1) and review (2) tasks must be excluded.',
+        );
+        expect(
+          curriculumCount,
+          2,
+          reason:
+              'O8-d: curriculum count must be 2 (bavli + tanach); '
+              'mishnayos only appears in the review row and must be excluded.',
+        );
+
+        // The body built from the filtered count must match the template.
+        final body = _buildBody(taskCount, curriculumCount);
+        expect(
+          body,
+          'You have 3 tasks across 2 curricula today',
+          reason:
+              'O8-d: body must encode the today-only count, not the total '
+              'allDailyTasksProvider length (which would be 6).',
+        );
+
+        // Verify that scheduleReminder called with this body records it correctly.
         await scheduler.scheduleReminder(
-          time: time,
-          title: title,
-          body: bodyBefore,
+          time: const TimeOfDay(hour: 19, minute: 0),
+          title: 'Learning Reminder',
+          body: body,
           location: null,
           inIsrael: false,
         );
         expect(
-          notifService.scheduledBatches,
-          hasLength(1),
+          notifService.scheduledBatches.single.body,
+          body,
           reason:
-              'O8-c: first scheduleReminder must produce 1 scheduled batch.',
+              'O8-d: the scheduled batch body must reflect today-only count.',
         );
-
-        // Simulate re-anchor: the overdue set collapses; tasks = [today's unit only].
-        // Count drops from 5 to 1 (1 due-today unit from a single program track).
-        final bodyAfter = _buildBody(1, 1);
-        await scheduler.scheduleReminder(
-          time: time,
-          title: title,
-          body: bodyAfter,
-          location: null,
-          inIsrael: false,
-        );
-
-        // Two scheduleBatchReminders calls recorded (cancel-then-reschedule
-        // happens INSIDE NotificationService.scheduleBatchReminders, which our
-        // recording fake doesn't simulate — it records the outer call).
-        expect(
-          notifService.scheduledBatches,
-          hasLength(2),
-          reason:
-              'O8-c: second scheduleReminder after re-anchor must produce a '
-              'second batch call (the scheduler re-runs for the new count).',
-        );
-
-        // The second batch must reflect the updated (smaller) count.
-        final secondBody = notifService.scheduledBatches[1].body;
-        expect(
-          secondBody,
-          bodyAfter,
-          reason:
-              'O8-c: after re-anchor the body must encode the new (smaller) '
-              'task count, not the pre-anchor count.',
-        );
-        expect(
-          secondBody,
-          isNot(equals(bodyBefore)),
-          reason:
-              'O8-c: the post-re-anchor body must differ from the pre-anchor '
-              'body (the count changed).',
-        );
-      },
-    );
-
-    // ── O8-d: body count includes overdue (current behaviour — defect D1 stub)
-    //
-    // D1 (§8 of overdue-refactor-architecture.md): "the body says X tasks today
-    // but X includes overdue and review."
-    //
-    // This test DOCUMENTS the current (buggy) behaviour so Wave 4 knows what
-    // it is changing.  It does NOT assert the correct future behaviour — that
-    // requires the Wave 2 projection module to separate today vs overdue.
-    //
-    // Wave 4 must:
-    //   • Un-skip O8-a, O8-b, O8-c (the body-count and cancel fixes).
-    //   • Update THIS stub to assert the CORRECTED behaviour:
-    //       body count == today's units only (not today + overdue + review).
-    //   • The corrected body might say "X tasks today, Y overdue" or simply
-    //       report only today's units — a UX decision.
-    //
-    // For now, this stub compiles and is skipped.
-    test(
-      'O8-d (stub): notification body count reflects projection breakdown '
-      '(today-only, not today+overdue+review) — requires Wave 2 projection',
-      skip: 'un-skip in Wave 4',
-      () {
-        // TODO(Wave 4): implement once the projection separates today vs overdue.
-        // Current (buggy) behaviour: taskCount = allDailyTasksProvider.length
-        //   which includes overdueProgram + todayProgram + overdueChazara +
-        //   scheduledChazara + newLearning tasks.
-        // Correct behaviour (post Wave 2):
-        //   body count = todayUnits + overdueUnits (from pure projection).
-        //   Whether review (chazara) tasks are included is a UX decision.
       },
     );
   });

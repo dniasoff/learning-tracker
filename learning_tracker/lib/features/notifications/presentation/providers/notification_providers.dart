@@ -13,6 +13,7 @@ import 'package:learning_tracker/features/notifications/domain/services/streak_a
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/providers/sacred_location_provider.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/providers/sacred_windows_provider.dart';
+import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dart';
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -302,8 +303,28 @@ Future<void> reminderSyncEffect(Ref ref) async {
 
   // Get daily tasks to determine counts for notification body.
   final tasks = await ref.watch(allDailyTasksProvider.future);
-  final taskCount = tasks.length;
-  final curriculumCount = tasks.map((t) => t.curriculumId).toSet().length;
+
+  // D1 fix: count only today's units (non-overdue, non-review).
+  // Overdue tasks (isOverdue: true) and review/chazara tasks
+  // (overdueChazara, scheduledChazara) are excluded so the body count
+  // honestly represents items the user is scheduled to learn today.
+  final todayTasks = tasks
+      .where(
+        (t) =>
+            !t.isOverdue &&
+            t.priority != DailyTaskPriority.overdueChazara &&
+            t.priority != DailyTaskPriority.scheduledChazara,
+      )
+      .toList();
+  final taskCount = todayTasks.length;
+  final curriculumCount = todayTasks.map((t) => t.curriculumId).toSet().length;
+
+  // D2 fix: when there are no tasks today, cancel any existing reminder
+  // rather than scheduling "0 tasks today".
+  if (taskCount == 0) {
+    await scheduler.cancel();
+    return;
+  }
 
   // Resolve Sacred Location for per-fire-time window filtering (DNI-367).
   final location = ref.read(sacredLocationProvider);
