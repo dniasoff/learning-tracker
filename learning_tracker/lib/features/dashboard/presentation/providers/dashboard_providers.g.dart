@@ -207,21 +207,36 @@ final class DashboardActiveCurriculaStreamProvider
 String _$dashboardActiveCurriculaStreamHash() =>
     r'9689fa138119b78a0b3bf8ad2013549a05ca3d37';
 
-/// Stage-based completion for one track (same denominator as
-/// [dashboardCompletionPercentage] for the curriculum, completions from this track only).
+/// Item-based completion for one track.
+///
+/// An item is "done" when ALL of the track's required stages have a
+/// completion record for it.  Required stages = every non-superseded
+/// stage defined for the track (stageOrder 1 = learn, 2+ = chazara).
+///
+/// Formula: `(items where all required stages are done) / totalItems`.
 
 @ProviderFor(dashboardTrackCompletionPercentage)
 final dashboardTrackCompletionPercentageProvider =
     DashboardTrackCompletionPercentageFamily._();
 
-/// Stage-based completion for one track (same denominator as
-/// [dashboardCompletionPercentage] for the curriculum, completions from this track only).
+/// Item-based completion for one track.
+///
+/// An item is "done" when ALL of the track's required stages have a
+/// completion record for it.  Required stages = every non-superseded
+/// stage defined for the track (stageOrder 1 = learn, 2+ = chazara).
+///
+/// Formula: `(items where all required stages are done) / totalItems`.
 
 final class DashboardTrackCompletionPercentageProvider
     extends $FunctionalProvider<AsyncValue<double>, double, FutureOr<double>>
     with $FutureModifier<double>, $FutureProvider<double> {
-  /// Stage-based completion for one track (same denominator as
-  /// [dashboardCompletionPercentage] for the curriculum, completions from this track only).
+  /// Item-based completion for one track.
+  ///
+  /// An item is "done" when ALL of the track's required stages have a
+  /// completion record for it.  Required stages = every non-superseded
+  /// stage defined for the track (stageOrder 1 = learn, 2+ = chazara).
+  ///
+  /// Formula: `(items where all required stages are done) / totalItems`.
   DashboardTrackCompletionPercentageProvider._({
     required DashboardTrackCompletionPercentageFamily super.from,
     required int super.argument,
@@ -268,10 +283,15 @@ final class DashboardTrackCompletionPercentageProvider
 }
 
 String _$dashboardTrackCompletionPercentageHash() =>
-    r'cd288ac482c6dfcc4dfbb437d6185217ace3d714';
+    r'ffc494633d3d2a6d02800de1c7760ecc8bfc628c';
 
-/// Stage-based completion for one track (same denominator as
-/// [dashboardCompletionPercentage] for the curriculum, completions from this track only).
+/// Item-based completion for one track.
+///
+/// An item is "done" when ALL of the track's required stages have a
+/// completion record for it.  Required stages = every non-superseded
+/// stage defined for the track (stageOrder 1 = learn, 2+ = chazara).
+///
+/// Formula: `(items where all required stages are done) / totalItems`.
 
 final class DashboardTrackCompletionPercentageFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<double>, int> {
@@ -284,8 +304,13 @@ final class DashboardTrackCompletionPercentageFamily extends $Family
         isAutoDispose: true,
       );
 
-  /// Stage-based completion for one track (same denominator as
-  /// [dashboardCompletionPercentage] for the curriculum, completions from this track only).
+  /// Item-based completion for one track.
+  ///
+  /// An item is "done" when ALL of the track's required stages have a
+  /// completion record for it.  Required stages = every non-superseded
+  /// stage defined for the track (stageOrder 1 = learn, 2+ = chazara).
+  ///
+  /// Formula: `(items where all required stages are done) / totalItems`.
 
   DashboardTrackCompletionPercentageProvider call(int trackId) =>
       DashboardTrackCompletionPercentageProvider._(
@@ -297,33 +322,39 @@ final class DashboardTrackCompletionPercentageFamily extends $Family
   String toString() => r'dashboardTrackCompletionPercentageProvider';
 }
 
-/// Per-curriculum completion percentage, scoped to active profile.
+/// Per-curriculum item-based completion percentage, scoped to active profile.
 ///
-/// Formula: `completions.length / (totalLeafItems * totalStages)`.
-/// Every stage completion nudges the bar, and the denominator is the
-/// scoped total leaf items (not items touched) so the bar never regresses
-/// when a new item is started.
+/// An item (sefariaRef) is "done" when every required stage for its track has
+/// a completion record.  Required stages = the non-superseded stages defined
+/// for that track.  An item that is fully done in any of its tracks counts
+/// once toward the numerator.
+///
+/// Formula: `(distinct sefariaRefs fully done in any track) / totalLeafItems`.
 
 @ProviderFor(dashboardCompletionPercentage)
 final dashboardCompletionPercentageProvider =
     DashboardCompletionPercentageFamily._();
 
-/// Per-curriculum completion percentage, scoped to active profile.
+/// Per-curriculum item-based completion percentage, scoped to active profile.
 ///
-/// Formula: `completions.length / (totalLeafItems * totalStages)`.
-/// Every stage completion nudges the bar, and the denominator is the
-/// scoped total leaf items (not items touched) so the bar never regresses
-/// when a new item is started.
+/// An item (sefariaRef) is "done" when every required stage for its track has
+/// a completion record.  Required stages = the non-superseded stages defined
+/// for that track.  An item that is fully done in any of its tracks counts
+/// once toward the numerator.
+///
+/// Formula: `(distinct sefariaRefs fully done in any track) / totalLeafItems`.
 
 final class DashboardCompletionPercentageProvider
     extends $FunctionalProvider<AsyncValue<double>, double, FutureOr<double>>
     with $FutureModifier<double>, $FutureProvider<double> {
-  /// Per-curriculum completion percentage, scoped to active profile.
+  /// Per-curriculum item-based completion percentage, scoped to active profile.
   ///
-  /// Formula: `completions.length / (totalLeafItems * totalStages)`.
-  /// Every stage completion nudges the bar, and the denominator is the
-  /// scoped total leaf items (not items touched) so the bar never regresses
-  /// when a new item is started.
+  /// An item (sefariaRef) is "done" when every required stage for its track has
+  /// a completion record.  Required stages = the non-superseded stages defined
+  /// for that track.  An item that is fully done in any of its tracks counts
+  /// once toward the numerator.
+  ///
+  /// Formula: `(distinct sefariaRefs fully done in any track) / totalLeafItems`.
   DashboardCompletionPercentageProvider._({
     required DashboardCompletionPercentageFamily super.from,
     required CurriculumId super.argument,
@@ -369,14 +400,16 @@ final class DashboardCompletionPercentageProvider
 }
 
 String _$dashboardCompletionPercentageHash() =>
-    r'755a8eaee3b1a30c6d1a0bd6cc3b9d4f0119838f';
+    r'ce0474ab96d79c7ce8a09a56f30306e90c0602c7';
 
-/// Per-curriculum completion percentage, scoped to active profile.
+/// Per-curriculum item-based completion percentage, scoped to active profile.
 ///
-/// Formula: `completions.length / (totalLeafItems * totalStages)`.
-/// Every stage completion nudges the bar, and the denominator is the
-/// scoped total leaf items (not items touched) so the bar never regresses
-/// when a new item is started.
+/// An item (sefariaRef) is "done" when every required stage for its track has
+/// a completion record.  Required stages = the non-superseded stages defined
+/// for that track.  An item that is fully done in any of its tracks counts
+/// once toward the numerator.
+///
+/// Formula: `(distinct sefariaRefs fully done in any track) / totalLeafItems`.
 
 final class DashboardCompletionPercentageFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<double>, CurriculumId> {
@@ -389,12 +422,14 @@ final class DashboardCompletionPercentageFamily extends $Family
         isAutoDispose: true,
       );
 
-  /// Per-curriculum completion percentage, scoped to active profile.
+  /// Per-curriculum item-based completion percentage, scoped to active profile.
   ///
-  /// Formula: `completions.length / (totalLeafItems * totalStages)`.
-  /// Every stage completion nudges the bar, and the denominator is the
-  /// scoped total leaf items (not items touched) so the bar never regresses
-  /// when a new item is started.
+  /// An item (sefariaRef) is "done" when every required stage for its track has
+  /// a completion record.  Required stages = the non-superseded stages defined
+  /// for that track.  An item that is fully done in any of its tracks counts
+  /// once toward the numerator.
+  ///
+  /// Formula: `(distinct sefariaRefs fully done in any track) / totalLeafItems`.
 
   DashboardCompletionPercentageProvider call(CurriculumId curriculum) =>
       DashboardCompletionPercentageProvider._(argument: curriculum, from: this);
