@@ -10,19 +10,16 @@
 /// O8 is a REAL characterisation test — it targets code that EXISTS today
 /// (notification_providers.dart and notification_scheduler.dart).
 ///
-/// Current defects the test documents (§8 of overdue-refactor-architecture.md):
-///   D1 — The reminder body says "$taskCount tasks today" but taskCount INCLUDES
-///        overdue and review tasks — not just today's tasks.
-///   D2 — When taskCount == 0 the reminder fires "0 tasks today" instead of
-///        being cancelled.
+/// Wave 4 fixed the two defects this test documents:
+///   D1 — Fixed: the reminder body count now excludes overdue and review tasks;
+///        only "today's units" (isOverdue: false, not scheduledChazara) are
+///        counted.  overdueChazara tasks are excluded via !isOverdue (they have
+///        isOverdue: true in production; see scheduler_engine.dart:238).
+///   D2 — Fixed: when taskCount == 0, reminderSyncEffect now cancels the
+///        reminder instead of firing "0 tasks today".
 ///
-/// O8 is marked skip: 'un-skip in Wave 4' because:
-///   • D1 is structural — fixing it requires the projection to distinguish
-///     "today's units" from "overdue units", which is Wave 2 work.
-///   • D2 is a logic bug in reminderSyncEffect — fixing it is Wave 4 work.
-///
-/// The test is written against the CORRECT target behaviour.  It will be RED
-/// against the current code.  Wave 4 un-skips it after fixing D1 and D2.
+/// O8 is active (no skip).  All four sub-tests (O8-a through O8-d) assert the
+/// corrected Wave 4 behaviour.
 ///
 /// Architecture note on re-anchor (O8 third bullet):
 ///   reminderSyncEffect watches allDailyTasksProvider.  When tracking_start_date
@@ -388,9 +385,11 @@ void main() {
             refSuffix: 'todayProgram-2',
           ),
           // Excluded: review tasks (overdueChazara + scheduledChazara).
+          // overdueChazara tasks have isOverdue: true in production
+          // (scheduler_engine.dart:238) — mirrored here (F-M4 fix).
           makeTask(
             priority: DailyTaskPriority.overdueChazara,
-            isOverdue: false,
+            isOverdue: true,
             curriculumId: CurriculumId.bavli,
           ),
           makeTask(
@@ -406,12 +405,13 @@ void main() {
           ),
         ];
 
-        // Apply the same filter as notification_providers.dart (D1 fix).
+        // Apply the same filter as notification_providers.dart (D1 fix, F-M4).
+        // overdueChazara is already excluded by !t.isOverdue (isOverdue: true
+        // in production); only scheduledChazara needs an explicit check.
         final todayTasks = allTasks
             .where(
               (t) =>
                   !t.isOverdue &&
-                  t.priority != DailyTaskPriority.overdueChazara &&
                   t.priority != DailyTaskPriority.scheduledChazara,
             )
             .toList();

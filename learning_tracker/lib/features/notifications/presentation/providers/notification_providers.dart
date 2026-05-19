@@ -305,15 +305,14 @@ Future<void> reminderSyncEffect(Ref ref) async {
   final tasks = await ref.watch(allDailyTasksProvider.future);
 
   // D1 fix: count only today's units (non-overdue, non-review).
-  // Overdue tasks (isOverdue: true) and review/chazara tasks
-  // (overdueChazara, scheduledChazara) are excluded so the body count
-  // honestly represents items the user is scheduled to learn today.
+  // Overdue tasks (isOverdue: true) are excluded by the first condition;
+  // scheduledChazara tasks (isOverdue: false) are excluded explicitly.
+  // Note: overdueChazara tasks have isOverdue: true in production
+  // (scheduler_engine.dart:238) so they are already caught by !t.isOverdue —
+  // a redundant overdueChazara priority check is not needed here (F-M4).
   final todayTasks = tasks
       .where(
-        (t) =>
-            !t.isOverdue &&
-            t.priority != DailyTaskPriority.overdueChazara &&
-            t.priority != DailyTaskPriority.scheduledChazara,
+        (t) => !t.isOverdue && t.priority != DailyTaskPriority.scheduledChazara,
       )
       .toList();
   final taskCount = todayTasks.length;

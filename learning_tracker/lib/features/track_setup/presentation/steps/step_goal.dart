@@ -178,13 +178,17 @@ class _SelfPacedGoalStepState extends ConsumerState<SelfPacedGoalStep> {
         );
         return;
       }
+      // F-M2: do not proceed while the scope count is still loading — the
+      // derived pace would use the fallback (120) and produce a wildly wrong
+      // result for large or small curricula.
+      final scopeCountAsync = ref.read(
+        scopedItemCountProvider(widget.curriculumId),
+      );
+      if (scopeCountAsync.isLoading) return;
       // Derive an explicit pace from the deadline + scope so that every
       // self-paced GoalEntity carries paceValue+pacePeriod (architecture §10.3).
       // The deadline mode stores BOTH the target date AND an explicit pace;
       // the projection uses the pace; the goal edit screen shows the deadline.
-      final scopeCountAsync = ref.read(
-        scopedItemCountProvider(widget.curriculumId),
-      );
       final totalScopeItems = scopeCountAsync.asData?.value ?? 120;
       final start = localDateOnlyFromDt(DateTimeFactory.nowLocal());
       final end = localDateOnlyFromDt(_deadline!.toLocal());
@@ -356,7 +360,9 @@ class _SelfPacedGoalStepState extends ConsumerState<SelfPacedGoalStep> {
                 ),
           const SizedBox(height: 24),
           FilledButton(
-            onPressed: _continue,
+            // F-M2: disable Continue while scope is loading in deadline mode so
+            // the user cannot proceed with the fallback (120) pace.
+            onPressed: (_mode == 'deadline' && scopeLoading) ? null : _continue,
             style: FilledButton.styleFrom(
               minimumSize: const Size.fromHeight(54),
               shape: RoundedRectangleBorder(

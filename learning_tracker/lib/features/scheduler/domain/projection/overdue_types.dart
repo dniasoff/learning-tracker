@@ -61,6 +61,19 @@ class StudyDayPattern {
     if (weekdays.isEmpty) return true;
     return weekdays.contains(isoWeekday);
   }
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is StudyDayPattern &&
+          weekdays.length == other.weekdays.length &&
+          weekdays.containsAll(other.weekdays);
+
+  @override
+  int get hashCode => Object.hashAllUnordered(weekdays);
+
+  @override
+  String toString() => 'StudyDayPattern($weekdays)';
 }
 
 // ---------------------------------------------------------------------------

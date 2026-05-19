@@ -99,9 +99,23 @@ DateTime localDateOnlyFromDt(DateTime utc) {
 ///
 /// Parameters:
 ///   [studyDays] — the profile's study-day map (`{weekday: 'study'|'rest'}`).
-///   [totalScopeItems] — total leaf-item count in scope.
+///     Used to derive [studyDaysPerWeek] (S), the density of study days within
+///     any given calendar week.
+///   [totalScopeItems] — total leaf-item count in scope (I).
 ///   [studyDaysInWindow] — number of study days between today and the deadline
-///     (inclusive), computed by [countStudyDaysInInclusiveMapRange].
+///     (inclusive), computed by [countStudyDaysInInclusiveMapRange].  This
+///     already encodes both the calendar span AND the study-day density, so it
+///     is the correct denominator for items-per-study-day.
+///
+/// Math (unit derivation):
+///   itemsPerStudyDay = ceil(I / studyDaysInWindow)   [items / study-day]
+///   itemsPerWeek     = itemsPerStudyDay × S           [items / week]
+///
+/// [studyDays] is NOT redundant: [studyDaysInWindow] gives items/study-day, but
+/// the stored pace must be in items/week so it stays meaningful if the deadline
+/// is later removed.  Multiplying by S (study days per week) converts the unit
+/// from "per study-day" to "per calendar week" correctly — if the user studies
+/// 5 days/week at 10 items/study-day, the weekly target is 50, not 70.
 ({int paceValue, String pacePeriod}) derivePaceFromDeadline({
   required Map<int, String> studyDays,
   required int totalScopeItems,
