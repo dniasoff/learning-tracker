@@ -123,23 +123,6 @@ class DailyPlanDao extends DatabaseAccessor<UserDatabase>
     return (count.read(dailyPlans.id.count()) ?? 0) > 0;
   }
 
-  /// Dismiss all overdue backlog for [trackId] without marking items as done.
-  ///
-  /// Deletes past-day snapshot rows (the source material for overdue generation)
-  /// and today's already-generated overdue rows. Items are not completed;
-  /// future tasks are generated fresh from the stage schedule.
-  Future<void> clearOverdueForTrack({
-    required int trackId,
-    required DateTime today,
-  }) =>
-      (delete(dailyPlans)..where(
-            (t) =>
-                t.trackId.equals(trackId) &
-                (t.planDate.isSmallerThanValue(today) |
-                    t.isOverdue.equals(true)),
-          ))
-          .go();
-
   /// Delete all plan rows for a specific track (used when hard-deleting a track).
   Future<void> deletePlansByTrack(int trackId) =>
       (delete(dailyPlans)..where((t) => t.trackId.equals(trackId))).go();

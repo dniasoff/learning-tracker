@@ -4,7 +4,10 @@ import 'package:intl/intl.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
+import 'package:learning_tracker/core/providers/calendar_providers.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
+import 'package:learning_tracker/core/services/calendar_program_registry.dart';
+import 'package:learning_tracker/core/services/learning_program_service.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/core/utils/text_input_formatters.dart';
@@ -244,15 +247,52 @@ class _EditTrackScreenState extends ConsumerState<EditTrackScreen> {
     );
     if (confirmed != true || !mounted) return;
 
+    final curriculum = _curriculumId;
+    if (curriculum == null) return;
+
     final db = ref.read(userDatabaseProvider);
     final profileId = ref.read(activeProfileIdProvider);
+    final calendarService = ref.read(calendarProgramServiceProvider);
+
     final now = DateTimeFactory.nowLocal();
     final today = DateTime(now.year, now.month, now.day);
+    // Use UTC midnight for the DB column (DateTimeColumn stores UTC).
+    final todayUtc = DateTime.utc(today.year, today.month, today.day);
 
-    await db.dailyPlanDao.clearOverdueForTrack(
-      trackId: widget.track.id,
-      today: today,
+    // Resolve the enrollment and its calendar program key.
+    final enrollment = await db.profileProgramDao
+        .getProgramForProfileAndCurriculum(profileId, curriculum.storageKey);
+    if (enrollment == null) return;
+
+    final program = LearningProgramRepository.instance.getProgramById(
+      enrollment.programId,
     );
+    final apiKey = program?.apiProgramKey;
+
+    String? todayRef;
+    if (program != null && apiKey != null && apiKey.isNotEmpty) {
+      final programKey =
+          CalendarProgramRegistry.byId(apiKey)?.id ??
+          CalendarProgramRegistry.byApiKey(apiKey)?.id ??
+          CalendarProgramRegistry.byHebcalCategory(apiKey)?.id;
+
+      if (programKey != null) {
+        final entry = await calendarService.getEntry(programKey, today);
+        todayRef = entry?.todayRef;
+      }
+    }
+
+    // Re-anchor: move tracking_start_date to today (UTC midnight).
+    // tracking_start_ref is today's calendar unit (or null if the calendar
+    // engine cannot resolve it — the projection uses the date, not the ref).
+    await db.profileProgramDao.setProfileProgram(
+      profileId: profileId,
+      curriculumType: curriculum.storageKey,
+      programId: enrollment.programId,
+      trackingStartDate: todayUtc,
+      trackingStartRef: todayRef,
+    );
+
     await onTrackChanged(ref, profileId);
 
     if (mounted) setState(() => _hasOverdue = false);
