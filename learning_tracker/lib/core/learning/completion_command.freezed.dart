@@ -14,7 +14,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$CompletionCommand {
 
- int get profileId; String get curriculumId; String get sefariaRef; int get stageId; String get trackType; int get trackId; DateTime get completedAt; int get points;
+ int get profileId; String get curriculumId; String get sefariaRef; int get stageId; String get trackType; int get trackId; DateTime get completedAt; int get points; bool get priorMarkOnly;
 /// Create a copy of CompletionCommand
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -25,16 +25,16 @@ $CompletionCommandCopyWith<CompletionCommand> get copyWith => _$CompletionComman
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is CompletionCommand&&(identical(other.profileId, profileId) || other.profileId == profileId)&&(identical(other.curriculumId, curriculumId) || other.curriculumId == curriculumId)&&(identical(other.sefariaRef, sefariaRef) || other.sefariaRef == sefariaRef)&&(identical(other.stageId, stageId) || other.stageId == stageId)&&(identical(other.trackType, trackType) || other.trackType == trackType)&&(identical(other.trackId, trackId) || other.trackId == trackId)&&(identical(other.completedAt, completedAt) || other.completedAt == completedAt)&&(identical(other.points, points) || other.points == points));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is CompletionCommand&&(identical(other.profileId, profileId) || other.profileId == profileId)&&(identical(other.curriculumId, curriculumId) || other.curriculumId == curriculumId)&&(identical(other.sefariaRef, sefariaRef) || other.sefariaRef == sefariaRef)&&(identical(other.stageId, stageId) || other.stageId == stageId)&&(identical(other.trackType, trackType) || other.trackType == trackType)&&(identical(other.trackId, trackId) || other.trackId == trackId)&&(identical(other.completedAt, completedAt) || other.completedAt == completedAt)&&(identical(other.points, points) || other.points == points)&&(identical(other.priorMarkOnly, priorMarkOnly) || other.priorMarkOnly == priorMarkOnly));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,profileId,curriculumId,sefariaRef,stageId,trackType,trackId,completedAt,points);
+int get hashCode => Object.hash(runtimeType,profileId,curriculumId,sefariaRef,stageId,trackType,trackId,completedAt,points,priorMarkOnly);
 
 @override
 String toString() {
-  return 'CompletionCommand(profileId: $profileId, curriculumId: $curriculumId, sefariaRef: $sefariaRef, stageId: $stageId, trackType: $trackType, trackId: $trackId, completedAt: $completedAt, points: $points)';
+  return 'CompletionCommand(profileId: $profileId, curriculumId: $curriculumId, sefariaRef: $sefariaRef, stageId: $stageId, trackType: $trackType, trackId: $trackId, completedAt: $completedAt, points: $points, priorMarkOnly: $priorMarkOnly)';
 }
 
 
@@ -45,7 +45,7 @@ abstract mixin class $CompletionCommandCopyWith<$Res>  {
   factory $CompletionCommandCopyWith(CompletionCommand value, $Res Function(CompletionCommand) _then) = _$CompletionCommandCopyWithImpl;
 @useResult
 $Res call({
- int profileId, String curriculumId, String sefariaRef, int stageId, String trackType, int trackId, DateTime completedAt, int points
+ int profileId, String curriculumId, String sefariaRef, int stageId, String trackType, int trackId, DateTime completedAt, int points, bool priorMarkOnly
 });
 
 
@@ -62,7 +62,7 @@ class _$CompletionCommandCopyWithImpl<$Res>
 
 /// Create a copy of CompletionCommand
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? profileId = null,Object? curriculumId = null,Object? sefariaRef = null,Object? stageId = null,Object? trackType = null,Object? trackId = null,Object? completedAt = null,Object? points = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? profileId = null,Object? curriculumId = null,Object? sefariaRef = null,Object? stageId = null,Object? trackType = null,Object? trackId = null,Object? completedAt = null,Object? points = null,Object? priorMarkOnly = null,}) {
   return _then(_self.copyWith(
 profileId: null == profileId ? _self.profileId : profileId // ignore: cast_nullable_to_non_nullable
 as int,curriculumId: null == curriculumId ? _self.curriculumId : curriculumId // ignore: cast_nullable_to_non_nullable
@@ -72,7 +72,8 @@ as int,trackType: null == trackType ? _self.trackType : trackType // ignore: cas
 as String,trackId: null == trackId ? _self.trackId : trackId // ignore: cast_nullable_to_non_nullable
 as int,completedAt: null == completedAt ? _self.completedAt : completedAt // ignore: cast_nullable_to_non_nullable
 as DateTime,points: null == points ? _self.points : points // ignore: cast_nullable_to_non_nullable
-as int,
+as int,priorMarkOnly: null == priorMarkOnly ? _self.priorMarkOnly : priorMarkOnly // ignore: cast_nullable_to_non_nullable
+as bool,
   ));
 }
 
@@ -157,10 +158,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int profileId,  String curriculumId,  String sefariaRef,  int stageId,  String trackType,  int trackId,  DateTime completedAt,  int points)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int profileId,  String curriculumId,  String sefariaRef,  int stageId,  String trackType,  int trackId,  DateTime completedAt,  int points,  bool priorMarkOnly)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _CompletionCommand() when $default != null:
-return $default(_that.profileId,_that.curriculumId,_that.sefariaRef,_that.stageId,_that.trackType,_that.trackId,_that.completedAt,_that.points);case _:
+return $default(_that.profileId,_that.curriculumId,_that.sefariaRef,_that.stageId,_that.trackType,_that.trackId,_that.completedAt,_that.points,_that.priorMarkOnly);case _:
   return orElse();
 
 }
@@ -178,10 +179,10 @@ return $default(_that.profileId,_that.curriculumId,_that.sefariaRef,_that.stageI
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int profileId,  String curriculumId,  String sefariaRef,  int stageId,  String trackType,  int trackId,  DateTime completedAt,  int points)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int profileId,  String curriculumId,  String sefariaRef,  int stageId,  String trackType,  int trackId,  DateTime completedAt,  int points,  bool priorMarkOnly)  $default,) {final _that = this;
 switch (_that) {
 case _CompletionCommand():
-return $default(_that.profileId,_that.curriculumId,_that.sefariaRef,_that.stageId,_that.trackType,_that.trackId,_that.completedAt,_that.points);case _:
+return $default(_that.profileId,_that.curriculumId,_that.sefariaRef,_that.stageId,_that.trackType,_that.trackId,_that.completedAt,_that.points,_that.priorMarkOnly);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -198,10 +199,10 @@ return $default(_that.profileId,_that.curriculumId,_that.sefariaRef,_that.stageI
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int profileId,  String curriculumId,  String sefariaRef,  int stageId,  String trackType,  int trackId,  DateTime completedAt,  int points)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int profileId,  String curriculumId,  String sefariaRef,  int stageId,  String trackType,  int trackId,  DateTime completedAt,  int points,  bool priorMarkOnly)?  $default,) {final _that = this;
 switch (_that) {
 case _CompletionCommand() when $default != null:
-return $default(_that.profileId,_that.curriculumId,_that.sefariaRef,_that.stageId,_that.trackType,_that.trackId,_that.completedAt,_that.points);case _:
+return $default(_that.profileId,_that.curriculumId,_that.sefariaRef,_that.stageId,_that.trackType,_that.trackId,_that.completedAt,_that.points,_that.priorMarkOnly);case _:
   return null;
 
 }
@@ -213,7 +214,7 @@ return $default(_that.profileId,_that.curriculumId,_that.sefariaRef,_that.stageI
 
 
 class _CompletionCommand implements CompletionCommand {
-  const _CompletionCommand({required this.profileId, required this.curriculumId, required this.sefariaRef, required this.stageId, required this.trackType, required this.trackId, required this.completedAt, required this.points});
+  const _CompletionCommand({required this.profileId, required this.curriculumId, required this.sefariaRef, required this.stageId, required this.trackType, required this.trackId, required this.completedAt, required this.points, this.priorMarkOnly = false});
   
 
 @override final  int profileId;
@@ -224,6 +225,7 @@ class _CompletionCommand implements CompletionCommand {
 @override final  int trackId;
 @override final  DateTime completedAt;
 @override final  int points;
+@override@JsonKey() final  bool priorMarkOnly;
 
 /// Create a copy of CompletionCommand
 /// with the given fields replaced by the non-null parameter values.
@@ -235,16 +237,16 @@ _$CompletionCommandCopyWith<_CompletionCommand> get copyWith => __$CompletionCom
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _CompletionCommand&&(identical(other.profileId, profileId) || other.profileId == profileId)&&(identical(other.curriculumId, curriculumId) || other.curriculumId == curriculumId)&&(identical(other.sefariaRef, sefariaRef) || other.sefariaRef == sefariaRef)&&(identical(other.stageId, stageId) || other.stageId == stageId)&&(identical(other.trackType, trackType) || other.trackType == trackType)&&(identical(other.trackId, trackId) || other.trackId == trackId)&&(identical(other.completedAt, completedAt) || other.completedAt == completedAt)&&(identical(other.points, points) || other.points == points));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _CompletionCommand&&(identical(other.profileId, profileId) || other.profileId == profileId)&&(identical(other.curriculumId, curriculumId) || other.curriculumId == curriculumId)&&(identical(other.sefariaRef, sefariaRef) || other.sefariaRef == sefariaRef)&&(identical(other.stageId, stageId) || other.stageId == stageId)&&(identical(other.trackType, trackType) || other.trackType == trackType)&&(identical(other.trackId, trackId) || other.trackId == trackId)&&(identical(other.completedAt, completedAt) || other.completedAt == completedAt)&&(identical(other.points, points) || other.points == points)&&(identical(other.priorMarkOnly, priorMarkOnly) || other.priorMarkOnly == priorMarkOnly));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,profileId,curriculumId,sefariaRef,stageId,trackType,trackId,completedAt,points);
+int get hashCode => Object.hash(runtimeType,profileId,curriculumId,sefariaRef,stageId,trackType,trackId,completedAt,points,priorMarkOnly);
 
 @override
 String toString() {
-  return 'CompletionCommand(profileId: $profileId, curriculumId: $curriculumId, sefariaRef: $sefariaRef, stageId: $stageId, trackType: $trackType, trackId: $trackId, completedAt: $completedAt, points: $points)';
+  return 'CompletionCommand(profileId: $profileId, curriculumId: $curriculumId, sefariaRef: $sefariaRef, stageId: $stageId, trackType: $trackType, trackId: $trackId, completedAt: $completedAt, points: $points, priorMarkOnly: $priorMarkOnly)';
 }
 
 
@@ -255,7 +257,7 @@ abstract mixin class _$CompletionCommandCopyWith<$Res> implements $CompletionCom
   factory _$CompletionCommandCopyWith(_CompletionCommand value, $Res Function(_CompletionCommand) _then) = __$CompletionCommandCopyWithImpl;
 @override @useResult
 $Res call({
- int profileId, String curriculumId, String sefariaRef, int stageId, String trackType, int trackId, DateTime completedAt, int points
+ int profileId, String curriculumId, String sefariaRef, int stageId, String trackType, int trackId, DateTime completedAt, int points, bool priorMarkOnly
 });
 
 
@@ -272,7 +274,7 @@ class __$CompletionCommandCopyWithImpl<$Res>
 
 /// Create a copy of CompletionCommand
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? profileId = null,Object? curriculumId = null,Object? sefariaRef = null,Object? stageId = null,Object? trackType = null,Object? trackId = null,Object? completedAt = null,Object? points = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? profileId = null,Object? curriculumId = null,Object? sefariaRef = null,Object? stageId = null,Object? trackType = null,Object? trackId = null,Object? completedAt = null,Object? points = null,Object? priorMarkOnly = null,}) {
   return _then(_CompletionCommand(
 profileId: null == profileId ? _self.profileId : profileId // ignore: cast_nullable_to_non_nullable
 as int,curriculumId: null == curriculumId ? _self.curriculumId : curriculumId // ignore: cast_nullable_to_non_nullable
@@ -282,7 +284,8 @@ as int,trackType: null == trackType ? _self.trackType : trackType // ignore: cas
 as String,trackId: null == trackId ? _self.trackId : trackId // ignore: cast_nullable_to_non_nullable
 as int,completedAt: null == completedAt ? _self.completedAt : completedAt // ignore: cast_nullable_to_non_nullable
 as DateTime,points: null == points ? _self.points : points // ignore: cast_nullable_to_non_nullable
-as int,
+as int,priorMarkOnly: null == priorMarkOnly ? _self.priorMarkOnly : priorMarkOnly // ignore: cast_nullable_to_non_nullable
+as bool,
   ));
 }
 

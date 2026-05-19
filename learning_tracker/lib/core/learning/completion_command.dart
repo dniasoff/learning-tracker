@@ -8,6 +8,13 @@ part 'completion_command.freezed.dart';
 /// `(profileId, sefariaRef, stageId, trackType)` is the business key used for
 /// idempotency: re-committing the same command returns the existing row and
 /// does NOT enqueue a duplicate outbox push.
+///
+/// [priorMarkOnly] is `true` when this command originates from the bulk-prior-
+/// marking flow (onboarding "I learned this before"). [CompletionWriter] sets
+/// `prior_mark_only = 1` on the inserted row. When a real-learning [commit]
+/// hits an existing row with `prior_mark_only = 1` it upgrades the row
+/// (clears the flag, updates `eventTimestamp`) so the item survives a
+/// subsequent [BulkPriorCompletionService.expungePriorCompletions] call.
 @freezed
 abstract class CompletionCommand with _$CompletionCommand {
   const factory CompletionCommand({
@@ -19,5 +26,6 @@ abstract class CompletionCommand with _$CompletionCommand {
     required int trackId,
     required DateTime completedAt,
     required int points,
+    @Default(false) bool priorMarkOnly,
   }) = _CompletionCommand;
 }

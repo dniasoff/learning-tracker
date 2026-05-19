@@ -116,7 +116,7 @@ class UserDatabase extends _$UserDatabase {
   UserDatabase(super.e);
 
   @override
-  int get schemaVersion => 22;
+  int get schemaVersion => 23;
 
   // drift_dev cannot express WHERE in a Dart-defined view's `as()` body
   // (cascade `..where()` confuses the generator).  The auto-generated SQL for
@@ -296,6 +296,27 @@ class UserDatabase extends _$UserDatabase {
           // JSON extraction in SQLite (non-trivial). Transitional rows produce a
           // harmless double-push on next drain (both SetOptions(merge:true));
           // they age out naturally as the outbox is drained.
+        }
+
+        // B8 (v22 → v23): add priorMarkOnly column to completion_events.
+        // Existing rows are all treated as real-learning (priorMarkOnly = 0 /
+        // false) because they pre-date the bulk-prior sentinel distinction.
+        // Guard: use PRAGMA table_info to avoid "duplicate column" errors when
+        // the schema was reconstructed via alterTable at an earlier version.
+        if (from < 23) {
+          final evtCols = await customSelect(
+            'PRAGMA table_info(completion_events)',
+          ).get();
+          if (!evtCols.any((r) => r.data['name'] == 'prior_mark_only')) {
+            await m.addColumn(
+              completionEvents,
+              completionEvents.priorMarkOnly,
+            );
+            // Back-fill: all pre-existing rows are real-learning rows.
+            await customStatement(
+              'UPDATE completion_events SET prior_mark_only = 0',
+            );
+          }
         }
       },
     );

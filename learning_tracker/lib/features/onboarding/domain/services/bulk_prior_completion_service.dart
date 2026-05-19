@@ -315,15 +315,17 @@ class BulkPriorCompletionService {
   }) async {
     final purgedAt = DateTimeFactory.nowUtc();
 
-    // Tombstone all prior-mark rows for this item on the personal track.
-    // Prior rows are uniquely identified by the sentinel eventTimestamp.
+    // Tombstone only prior-mark rows for this item on the personal track.
+    // B8 fix: rows where priorMarkOnly = false have been upgraded to real
+    // in-app learning records and MUST be left untouched — unticking a
+    // prior-mark must not delete a genuinely-learned item from Lifetime.
     await (_database.update(_database.completionEvents)..where(
           (t) =>
               t.profileId.equals(profileId) &
               t.sefariaRef.equals(sefariaRef) &
               t.curriculumId.equals(curriculumId.storageKey) &
               t.trackType.equals(TrackType.personal.storageKey) &
-              t.eventTimestamp.equals(kBulkPriorSentinelDate),
+              t.priorMarkOnly.equals(true),
         ))
         .write(CompletionEventsCompanion(purgedAt: Value(purgedAt)));
 
@@ -344,7 +346,7 @@ class BulkPriorCompletionService {
                 t.sefariaRef.equals(sefariaRef) &
                 t.curriculumId.equals(curriculumId.storageKey) &
                 t.trackType.equals(TrackType.personal.storageKey) &
-                t.eventTimestamp.equals(kBulkPriorSentinelDate) &
+                t.priorMarkOnly.equals(true) &
                 t.purgedAt.isNotNull(),
           ))
         .get();

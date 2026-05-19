@@ -20,6 +20,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
+import 'package:learning_tracker/core/learning/completion_command.dart';
+import 'package:learning_tracker/core/learning/completion_writer.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/network/sefaria/models/curriculum_hierarchy_config.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
@@ -409,7 +411,8 @@ void main() {
     test(
       'AC1: sets purgedAt on all sentinel-dated rows for the given sefariaRef',
       () async {
-        // Insert 3 prior-mark rows (sentinel timestamp) for 'ref_target'.
+        // Insert 3 prior-mark rows (sentinel timestamp, priorMarkOnly = true)
+        // for 'ref_target'.
         final sentinel = kBulkPriorSentinelDate;
         for (var stage = 1; stage <= 3; stage++) {
           await db
@@ -424,6 +427,7 @@ void main() {
                   trackId: Value(trackId),
                   points: const Value(0),
                   eventTimestamp: sentinel,
+                  priorMarkOnly: const Value(true),
                 ),
               );
         }
@@ -478,7 +482,7 @@ void main() {
     test('AC2: does NOT touch rows for a different sefariaRef', () async {
       final sentinel = kBulkPriorSentinelDate;
 
-      // Insert prior-mark rows for two different refs.
+      // Insert prior-mark rows (priorMarkOnly = true) for two different refs.
       for (final ref in ['ref_target', 'ref_other']) {
         await db
             .into(db.completionEvents)
@@ -492,6 +496,7 @@ void main() {
                 trackId: Value(trackId),
                 points: const Value(0),
                 eventTimestamp: sentinel,
+                priorMarkOnly: const Value(true),
               ),
             );
       }
@@ -531,7 +536,7 @@ void main() {
       final sentinel = kBulkPriorSentinelDate;
       final liveDate = DateTime.utc(2026, 5, 10, 9, 0); // real study date
 
-      // Prior-mark row (sentinel).
+      // Prior-mark row (sentinel, priorMarkOnly = true).
       await db
           .into(db.completionEvents)
           .insert(
@@ -544,12 +549,13 @@ void main() {
               trackId: Value(trackId),
               points: const Value(0),
               eventTimestamp: sentinel,
+              priorMarkOnly: const Value(true),
             ),
           );
-      // Live-learning row for stage 2 (non-sentinel — must NOT be purged).
-      // Insert directly into completionEvents with a different stageId so
-      // the natural-key UNIQUE constraint (profileId, sefariaRef, stageId,
-      // trackType) is satisfied.
+      // Live-learning row for stage 2 (non-sentinel, priorMarkOnly = false
+      // by default — must NOT be purged). Insert directly into completionEvents
+      // with a different stageId so the natural-key UNIQUE constraint
+      // (profileId, sefariaRef, stageId, trackType) is satisfied.
       await db
           .into(db.completionEvents)
           .insert(
@@ -615,6 +621,7 @@ void main() {
               trackId: Value(trackId),
               points: const Value(0),
               eventTimestamp: sentinel,
+              priorMarkOnly: const Value(true),
             ),
           );
 
@@ -719,7 +726,8 @@ void main() {
               ),
             );
 
-        // Insert a prior-mark row for profile 1 and another for profile 2.
+        // Insert a prior-mark row (priorMarkOnly = true) for profile 1 and
+        // another for profile 2.
         for (final pid in [profileId, otherProfileId]) {
           final tid = pid == profileId ? trackId : otherTrackId;
           await db
@@ -734,6 +742,7 @@ void main() {
                   trackId: Value(tid),
                   points: const Value(0),
                   eventTimestamp: sentinel,
+                  priorMarkOnly: const Value(true),
                 ),
               );
         }
@@ -824,7 +833,7 @@ void main() {
         // Seed tracks for both curricula on the same profile.
         final bavliTrackId = await seedTrack(db, profileId, 'bavli');
 
-        // Helper: insert a sentinel completion row directly.
+        // Helper: insert a sentinel completion row directly (priorMarkOnly = true).
         Future<void> insertSentinel(
           String sefariaRef,
           String curriculumId,
@@ -839,6 +848,7 @@ void main() {
             trackId: Value(tid),
             points: const Value(0),
             eventTimestamp: kBulkPriorSentinelDate,
+            priorMarkOnly: const Value(true),
           ),
         );
 
@@ -1000,7 +1010,8 @@ void main() {
         );
 
         // Insert a prior-mark row at stageId=2 for the same item (sentinel
-        // timestamp). Different stageId avoids the UNIQUE constraint.
+        // timestamp, priorMarkOnly = true). Different stageId avoids the UNIQUE
+        // constraint.
         await db.into(db.completionEvents).insert(
           CompletionEventsCompanion.insert(
             profileId: profileId,
@@ -1011,6 +1022,7 @@ void main() {
             trackId: Value(trackId),
             points: const Value(0),
             eventTimestamp: kBulkPriorSentinelDate,
+            priorMarkOnly: const Value(true),
           ),
         );
 
@@ -1057,74 +1069,144 @@ void main() {
     );
 
     test(
-      'Test 4 (insert-or-ignore edge): prior-mark followed by real-learning '
-      'insert — real-learning is silently dropped by UNIQUE constraint',
+      'Test 4 (live-learning row survival): prior-mark then real-learning '
+      'then expunge — row must survive because priorMarkOnly is upgraded to false',
       () async {
-        // Step 1: prior-mark 'Berakhot 3' under mishnayos (sentinel row,
-        // stageId=1). This establishes the sentinel timestamp in the DB.
-        await db.into(db.completionEvents).insert(
-          CompletionEventsCompanion.insert(
-            profileId: profileId,
-            curriculumId: 'mishnayos',
-            sefariaRef: 'Berakhot 3',
-            stageId: 1,
-            trackType: 'personal',
-            trackId: Value(trackId),
-            points: const Value(0),
-            eventTimestamp: kBulkPriorSentinelDate,
+        // B8 fix: Un-ticking a prior-mark MUST leave the item in Lifetime if
+        // a real in-app learning event exists for it.
+        //
+        // Failure sequence this test guards against:
+        //   1. Prior-mark writes a completion_events row (priorMarkOnly = true).
+        //   2. User genuinely learns the item — CompletionWriter.commit() finds
+        //      the existing row, detects priorMarkOnly = true, upgrades the row
+        //      (sets priorMarkOnly = false, updates eventTimestamp). No new row.
+        //   3. User goes back and un-ticks — expungePriorCompletions() ONLY
+        //      tombstones rows where priorMarkOnly = true. The upgraded row
+        //      (priorMarkOnly = false) survives.
+        //
+        // The old buggy path (no priorMarkOnly column): expunge matched on the
+        // sentinel eventTimestamp; but after the commit() the timestamp was
+        // still sentinel (commit returned isNew: false without changing it), so
+        // expunge wiped the row even though real learning had occurred.
+
+        // Step 1: prior-mark 'Berakhot 4' under mishnayos (stageId=1).
+        // Use the service path so priorMarkOnly = true is stamped on the row.
+        await _seedStages(db, profileId: profileId, trackId: trackId, count: 1);
+        final items = [_leaf('Berakhot 4', 0)];
+        final bookmarkRepo = MockBookmarkRepository();
+        when(
+          () => bookmarkRepo.setBookmark(
+            curriculumId: any(named: 'curriculumId'),
+            trackType: any(named: 'trackType'),
+            sefariaRef: any(named: 'sefariaRef'),
+          ),
+        ).thenAnswer((_) async => _fakeBookmark());
+
+        final priorSvc = BulkPriorCompletionService(
+          contentRepository: _StubContentRepository(items),
+          completionRepository: CompletionRepositoryImpl(
+            database: db,
+            syncEngine: null,
+            contentRepository: _StubContentRepository(items),
+            activeProfileId: profileId,
+          ),
+          bookmarkRepository: bookmarkRepo,
+          database: db,
+          syncEngine: null,
+          stageRepository: StageDefinitionRepositoryImpl(
+            stageDao: db.stageDao,
+            completionDao: db.completionDao,
+            pushSettings: null,
           ),
         );
+        await priorSvc.execute(
+          curriculumId: CurriculumId.mishnayos,
+          resolvedItems: items,
+          stageIds: [1],
+          profileId: profileId,
+        );
 
-        // Step 2: attempt a "real learning" INSERT OR IGNORE for the same
-        // 5-tuple (profileId, sefariaRef, stageId=1, trackType=personal,
-        // curriculumId=mishnayos). The v22 5-tuple UNIQUE constraint fires;
-        // the second insert is silently dropped and the sentinel row survives.
+        // Verify the prior-mark row has priorMarkOnly = true.
+        final afterPriorMark = await (db.select(db.completionEvents)
+              ..where(
+                (t) =>
+                    t.sefariaRef.equals('Berakhot 4') &
+                    t.stageId.equals(1) &
+                    t.profileId.equals(profileId),
+              ))
+            .getSingle();
+        expect(
+          afterPriorMark.priorMarkOnly,
+          isTrue,
+          reason: 'Bulk-prior-mark must set priorMarkOnly = true',
+        );
+
+        // Step 2: genuine in-app learning via CompletionWriter.commit().
+        // This must upgrade the row: clear priorMarkOnly, update eventTimestamp.
         final realDate = DateTime.utc(2026, 5, 19, 10, 0);
-        await db.into(db.completionEvents).insert(
-          CompletionEventsCompanion.insert(
+        final writer = CompletionWriter(db);
+        await writer.commit(
+          CompletionCommand(
             profileId: profileId,
             curriculumId: 'mishnayos',
-            sefariaRef: 'Berakhot 3',
+            sefariaRef: 'Berakhot 4',
             stageId: 1,
-            trackType: 'personal',
-            trackId: Value(trackId),
-            points: const Value(10),
-            eventTimestamp: realDate,
+            trackType: TrackType.personal.storageKey,
+            trackId: trackId,
+            completedAt: realDate,
+            points: 10,
+            priorMarkOnly: false, // real learning
           ),
-          mode: InsertMode.insertOrIgnore,
         );
 
-        final rows = await (db.select(db.completionEvents)..where(
-              (t) =>
-                  t.sefariaRef.equals('Berakhot 3') &
-                  t.stageId.equals(1) &
-                  t.curriculumId.equals('mishnayos') &
-                  t.profileId.equals(profileId),
-            ))
-            .get();
-
-        // Exactly 1 row must exist — the second insert was dropped.
+        // Verify the row was upgraded: priorMarkOnly = false.
+        final afterRealLearning = await (db.select(db.completionEvents)
+              ..where(
+                (t) =>
+                    t.sefariaRef.equals('Berakhot 4') &
+                    t.stageId.equals(1) &
+                    t.profileId.equals(profileId),
+              ))
+            .getSingle();
         expect(
-          rows,
-          hasLength(1),
+          afterRealLearning.priorMarkOnly,
+          isFalse,
           reason:
-              'INSERT OR IGNORE edge: second insert must be silently dropped; '
-              'exactly 1 row for this 5-tuple',
+              'CompletionWriter must clear priorMarkOnly when real learning '
+              'hits an existing prior-mark row',
+        );
+        expect(
+          afterRealLearning.purgedAt,
+          isNull,
+          reason: 'Row must still be active after upgrade',
         );
 
-        // The surviving row must have the sentinel timestamp (not realDate),
-        // because INSERT OR IGNORE preserves the existing row untouched.
-        // This documents the known behavior: if a section was prior-marked
-        // and then "learned for real" under the same curriculum + stage, the
-        // prior-mark sentinel timestamp is kept. The real-learning insert is
-        // swallowed. Callers must handle this via a different stageId or a
-        // fresh curriculum track.
+        // Step 3: expunge (un-tick in bulk-mark screen).
+        // Only rows with priorMarkOnly = true should be tombstoned.
+        // This row has priorMarkOnly = false, so it must survive.
+        await priorSvc.expungePriorCompletions(
+          profileId: profileId,
+          sefariaRef: 'Berakhot 4',
+          curriculumId: CurriculumId.mishnayos,
+        );
+
+        final afterExpunge = await (db.select(db.completionEvents)
+              ..where(
+                (t) =>
+                    t.sefariaRef.equals('Berakhot 4') &
+                    t.stageId.equals(1) &
+                    t.profileId.equals(profileId),
+              ))
+            .getSingle();
+
+        // THE KEY ASSERTION: the row must survive expunge because it was
+        // upgraded from a prior-mark to a real-learning row.
         expect(
-          rows.first.eventTimestamp.millisecondsSinceEpoch,
-          equals(kBulkPriorSentinelDate.millisecondsSinceEpoch),
+          afterExpunge.purgedAt,
+          isNull,
           reason:
-              'INSERT OR IGNORE: sentinel timestamp must survive; '
-              'real-learning timestamp must be discarded',
+              'B8 fix: real-learning row (priorMarkOnly = false) must NOT be '
+              'tombstoned by expungePriorCompletions — item must survive in Lifetime',
         );
       },
     );

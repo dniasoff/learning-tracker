@@ -117,7 +117,8 @@ List<String> v15SchemaForC1() => [
     "stage_id" INTEGER NOT NULL,
     "track_type" TEXT NOT NULL,
     "event_timestamp" INTEGER NOT NULL,
-    "created_at" INTEGER NOT NULL
+    "created_at" INTEGER NOT NULL,
+    "prior_mark_only" INTEGER NOT NULL DEFAULT 0
   )
   ''',
   '''
@@ -215,5 +216,5 @@ List<String> v15SchemaForC1() => [
   // Seed one completion with NO matching event (should stay derived=0).
   'INSERT INTO "completions" VALUES (2, 1, "bavli", "Berakhot 2b", 1, "personal", 1, 1000001, 10)',
   // Seed the event for the first completion only.
-  'INSERT INTO "completion_events" VALUES (1, 1, "bavli", "Berakhot 2a", 1, "personal", 1000000, 1000000)',
+  'INSERT INTO "completion_events" VALUES (1, 1, "bavli", "Berakhot 2a", 1, "personal", 1000000, 1000000, 0)',
 ];

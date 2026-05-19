@@ -98,7 +98,11 @@ class CompletionWriter {
       // Bounded: one SELECT over completion_events filtered to the batch keys.
       // Only active (purgedAt IS NULL) rows count as pre-existing — tombstoned
       // rows must be resurrected, not silently ignored (H1 bug fix).
-      final preExisting = await _existingNaturalKeys(distinctCommands);
+      final activeEvents = await _selectEventsForBatch(distinctCommands);
+      final activeByKey = <String, CompletionEvent>{
+        for (final e in activeEvents) _naturalKeyForEvent(e): e,
+      };
+      final preExisting = activeByKey.keys.toSet();
 
       // ── 1b. Detect tombstoned rows that need resurrection (H1 fix) ───────
       // A command whose natural key matches a tombstoned row is NOT in
@@ -110,13 +114,23 @@ class CompletionWriter {
       final tombstoneByKey = <String, CompletionEvent>{
         for (final e in tombstoned) _naturalKeyForEvent(e): e,
       };
-      // Separate commands into: brand-new inserts vs. resurrections.
+      // Separate commands into: brand-new inserts, resurrections, and B8 upgrades.
       final commandsToResurrect = <CompletionCommand>[];
       final commandsToInsert = <CompletionCommand>[];
+      // B8: real-learning commands that hit an existing prior-mark-only row
+      // must upgrade the row (clear priorMarkOnly, update timestamp).
+      final commandsToUpgrade = <CompletionCommand>[];
       for (final cmd in distinctCommands) {
         final key = _naturalKey(cmd);
         if (preExisting.contains(key)) {
-          // Truly pre-existing active row — no action needed.
+          // Truly pre-existing active row. B8: if the existing row is
+          // priorMarkOnly AND this command is a real-learning write, upgrade
+          // the row so a subsequent expunge does not delete it.
+          final existingRow = activeByKey[key]!;
+          if (existingRow.priorMarkOnly && !cmd.priorMarkOnly) {
+            commandsToUpgrade.add(cmd);
+          }
+          // Otherwise: truly pre-existing real-learning row — no action needed.
         } else if (tombstoneByKey.containsKey(key)) {
           commandsToResurrect.add(cmd);
         } else {
@@ -129,14 +143,19 @@ class CompletionWriter {
         await _resurrectTombstone(tombstoneByKey[_naturalKey(cmd)]!, cmd);
       }
 
+      // B8 upgrade: promote prior-mark-only rows to real-learning rows.
+      for (final cmd in commandsToUpgrade) {
+        await _upgradePriorMarkRow(activeByKey[_naturalKey(cmd)]!, cmd);
+      }
+
       final newCommands = [...commandsToInsert]; // brand-new only
 
       // ── 2. Batch-insert completion_events (INSERT OR IGNORE) ─────────────
       // INSERT OR IGNORE remains correct: the natural-key UNIQUE index makes
       // pre-existing rows no-op, and the de-dup above ensures one row per key.
-      // Resurrected commands are intentionally excluded — they already have a
-      // row (now active again); inserting them would be a no-op anyway, but
-      // excluding them keeps the intent explicit.
+      // Resurrected and upgraded commands are intentionally excluded — they
+      // already have a row (now active again); inserting them would be a no-op
+      // anyway, but excluding them keeps the intent explicit.
       if (commandsToInsert.isNotEmpty) {
         await _db.batch((b) {
           b.insertAll(
@@ -151,6 +170,10 @@ class CompletionWriter {
                 trackId: Value<int?>(cmd.trackId),
                 points: Value(cmd.points),
                 eventTimestamp: cmd.completedAt,
+                // B8: persist the prior-mark flag so expunge can target only
+                // prior-mark rows (priorMarkOnly = true) and leave real-learning
+                // rows (priorMarkOnly = false) untouched.
+                priorMarkOnly: Value(cmd.priorMarkOnly),
               ),
             ),
             mode: InsertMode.insertOrIgnore,
@@ -303,15 +326,6 @@ class CompletionWriter {
     String curriculumId,
   ) => [profileId, sefariaRef, stageId, trackType, curriculumId].join(_keyDelim);
 
-  /// Returns the natural keys (from [_naturalKey]) that already have a row in
-  /// `completion_events`. Bounded: one SELECT filtered to the batch keys.
-  Future<Set<String>> _existingNaturalKeys(
-    List<CompletionCommand> commands,
-  ) async {
-    final events = await _selectEventsForBatch(commands);
-    return {for (final e in events) _naturalKeyForEvent(e)};
-  }
-
   /// One bounded SELECT over `completion_events` matching any of [commands]'
   /// natural keys. Only returns **active** (non-tombstoned) rows
   /// (`purgedAt IS NULL`). Tombstoned rows must not participate in the
@@ -377,6 +391,38 @@ class CompletionWriter {
         .write(
           CompletionEventsCompanion(
             purgedAt: const Value(null),
+            eventTimestamp: Value(cmd.completedAt),
+          ),
+        );
+    await _db.outboxDao.insertOutboxRow(
+      OutboxCompanion.insert(
+        profileId: cmd.profileId,
+        entityKind: OutboxEntityKind.completion,
+        entityKey: _outboxEntityKey(cmd),
+        payload: jsonEncode(_outboxPayload(cmd)),
+        createdAt: cmd.completedAt,
+      ),
+    );
+  }
+
+  /// B8: Upgrades a prior-mark-only [event] to a real-learning row when a
+  /// genuine in-app learning [cmd] hits the same natural key:
+  ///  - Clears `priorMarkOnly` (sets it to `false`).
+  ///  - Updates `eventTimestamp` to the real-learning timestamp.
+  ///  - Enqueues an outbox row so Firestore receives the update.
+  ///
+  /// After this call, [BulkPriorCompletionService.expungePriorCompletions] will
+  /// skip this row (its `priorMarkOnly` is now `false`), so the item correctly
+  /// survives an un-tick in the onboarding bulk-mark screen.
+  Future<void> _upgradePriorMarkRow(
+    CompletionEvent event,
+    CompletionCommand cmd,
+  ) async {
+    await (_db.update(_db.completionEvents)
+          ..where((t) => t.id.equals(event.id)))
+        .write(
+          CompletionEventsCompanion(
+            priorMarkOnly: const Value(false),
             eventTimestamp: Value(cmd.completedAt),
           ),
         );
@@ -465,6 +511,35 @@ class CompletionWriter {
           );
           return CompletionWriteResult(completion: rebuilt, isNew: true);
         }
+        // B8: if the existing active row is a prior-mark-only row AND this
+        // command is a real-learning event, upgrade the row so a later
+        // expungePriorCompletions call will leave it intact.
+        if (existingEvent.priorMarkOnly && !cmd.priorMarkOnly) {
+          await _upgradePriorMarkRow(existingEvent, cmd);
+          final upgraded = await _db.completionDao.getCompletionById(
+            existingEvent.id,
+          );
+          if (upgraded != null) {
+            return CompletionWriteResult(completion: upgraded, isNew: false);
+          }
+          // Fallback — reconstruct from the event row.
+          final upgradedCompletion = Completion(
+            id: existingEvent.id,
+            profileId: existingEvent.profileId,
+            curriculumId: existingEvent.curriculumId,
+            sefariaRef: existingEvent.sefariaRef,
+            stageId: existingEvent.stageId,
+            trackType: existingEvent.trackType,
+            trackId: existingEvent.trackId ?? 0,
+            completedAt: cmd.completedAt,
+            points: existingEvent.points,
+            derivedFromEvents: true,
+          );
+          return CompletionWriteResult(
+            completion: upgradedCompletion,
+            isNew: false,
+          );
+        }
         // Active event already recorded — read from the view (purgedAt IS NULL).
         final existing = await _db.completionDao.getCompletionById(
           existingEvent.id,
@@ -510,6 +585,8 @@ class CompletionWriter {
 
       // Write canonical event (INSERT OR IGNORE — idempotent on natural key).
       // trackId is included so the completions_view can serve track-scoped queries.
+      // B8: persist priorMarkOnly from the command so expunge can target only
+      // prior-mark rows and leave real-learning rows untouched.
       final eventId = await _db.completionEventDao.appendEvent(
         CompletionEventsCompanion.insert(
           profileId: cmd.profileId,
@@ -520,6 +597,7 @@ class CompletionWriter {
           trackId: Value<int?>(cmd.trackId),
           points: Value(cmd.points),
           eventTimestamp: cmd.completedAt,
+          priorMarkOnly: Value(cmd.priorMarkOnly),
         ),
       );
 

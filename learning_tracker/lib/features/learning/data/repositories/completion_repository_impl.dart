@@ -312,6 +312,9 @@ class CompletionRepositoryImpl implements CompletionRepository {
             trackId: trackId,
             completedAt: now,
             points: 0,
+            // B8: flag these rows as prior-marks so expunge can distinguish
+            // them from genuine in-app learning events.
+            priorMarkOnly: true,
           ),
         )
         .toList();

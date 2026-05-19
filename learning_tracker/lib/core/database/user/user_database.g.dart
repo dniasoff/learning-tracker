@@ -4895,6 +4895,21 @@ class $CompletionEventsTable extends CompletionEvents
     type: DriftSqlType.dateTime,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _priorMarkOnlyMeta = const VerificationMeta(
+    'priorMarkOnly',
+  );
+  @override
+  late final GeneratedColumn<bool> priorMarkOnly = GeneratedColumn<bool>(
+    'prior_mark_only',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("prior_mark_only" IN (0, 1))',
+    ),
+    defaultValue: const Constant<bool>(false),
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -4908,6 +4923,7 @@ class $CompletionEventsTable extends CompletionEvents
     eventTimestamp,
     createdAt,
     purgedAt,
+    priorMarkOnly,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -5002,6 +5018,15 @@ class $CompletionEventsTable extends CompletionEvents
         purgedAt.isAcceptableOrUnknown(data['purged_at']!, _purgedAtMeta),
       );
     }
+    if (data.containsKey('prior_mark_only')) {
+      context.handle(
+        _priorMarkOnlyMeta,
+        priorMarkOnly.isAcceptableOrUnknown(
+          data['prior_mark_only']!,
+          _priorMarkOnlyMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -5055,6 +5080,10 @@ class $CompletionEventsTable extends CompletionEvents
         DriftSqlType.dateTime,
         data['${effectivePrefix}purged_at'],
       ),
+      priorMarkOnly: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}prior_mark_only'],
+      )!,
     );
   }
 
@@ -5084,6 +5113,22 @@ class CompletionEvent extends DataClass implements Insertable<CompletionEvent> {
   /// C3: tombstone timestamp set by purgeHistory instead of deleting the row.
   /// null = active; non-null = purged at this UTC timestamp.
   final DateTime? purgedAt;
+
+  /// B8: marks a row as originating from the bulk-prior-mark flow.
+  ///
+  /// `1` = this row was written by [BulkPriorCompletionService.execute] and
+  /// has never been overwritten by a real in-app learning event.
+  /// `0` (default) = this row was written by [CompletionWriter.commit] /
+  /// [CompletionWriter.commitBatch] and represents genuine learning.
+  ///
+  /// When [CompletionWriter] finds an existing row whose `priorMarkOnly = 1`
+  /// it UPDATEs the row: clears `priorMarkOnly`, updates `eventTimestamp`, and
+  /// enqueues an outbox push — so the real-learning event is not silently lost.
+  ///
+  /// [BulkPriorCompletionService.expungePriorCompletions] only tombstones rows
+  /// where `priorMarkOnly = 1`; rows already upgraded to real-learning
+  /// (`priorMarkOnly = 0`) are left untouched.
+  final bool priorMarkOnly;
   const CompletionEvent({
     required this.id,
     required this.profileId,
@@ -5096,6 +5141,7 @@ class CompletionEvent extends DataClass implements Insertable<CompletionEvent> {
     required this.eventTimestamp,
     required this.createdAt,
     this.purgedAt,
+    required this.priorMarkOnly,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -5115,6 +5161,7 @@ class CompletionEvent extends DataClass implements Insertable<CompletionEvent> {
     if (!nullToAbsent || purgedAt != null) {
       map['purged_at'] = Variable<DateTime>(purgedAt);
     }
+    map['prior_mark_only'] = Variable<bool>(priorMarkOnly);
     return map;
   }
 
@@ -5135,6 +5182,7 @@ class CompletionEvent extends DataClass implements Insertable<CompletionEvent> {
       purgedAt: purgedAt == null && nullToAbsent
           ? const Value.absent()
           : Value(purgedAt),
+      priorMarkOnly: Value(priorMarkOnly),
     );
   }
 
@@ -5155,6 +5203,7 @@ class CompletionEvent extends DataClass implements Insertable<CompletionEvent> {
       eventTimestamp: serializer.fromJson<DateTime>(json['eventTimestamp']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       purgedAt: serializer.fromJson<DateTime?>(json['purgedAt']),
+      priorMarkOnly: serializer.fromJson<bool>(json['priorMarkOnly']),
     );
   }
   @override
@@ -5172,6 +5221,7 @@ class CompletionEvent extends DataClass implements Insertable<CompletionEvent> {
       'eventTimestamp': serializer.toJson<DateTime>(eventTimestamp),
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'purgedAt': serializer.toJson<DateTime?>(purgedAt),
+      'priorMarkOnly': serializer.toJson<bool>(priorMarkOnly),
     };
   }
 
@@ -5187,6 +5237,7 @@ class CompletionEvent extends DataClass implements Insertable<CompletionEvent> {
     DateTime? eventTimestamp,
     DateTime? createdAt,
     Value<DateTime?> purgedAt = const Value.absent(),
+    bool? priorMarkOnly,
   }) => CompletionEvent(
     id: id ?? this.id,
     profileId: profileId ?? this.profileId,
@@ -5199,6 +5250,7 @@ class CompletionEvent extends DataClass implements Insertable<CompletionEvent> {
     eventTimestamp: eventTimestamp ?? this.eventTimestamp,
     createdAt: createdAt ?? this.createdAt,
     purgedAt: purgedAt.present ? purgedAt.value : this.purgedAt,
+    priorMarkOnly: priorMarkOnly ?? this.priorMarkOnly,
   );
   CompletionEvent copyWithCompanion(CompletionEventsCompanion data) {
     return CompletionEvent(
@@ -5219,6 +5271,9 @@ class CompletionEvent extends DataClass implements Insertable<CompletionEvent> {
           : this.eventTimestamp,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       purgedAt: data.purgedAt.present ? data.purgedAt.value : this.purgedAt,
+      priorMarkOnly: data.priorMarkOnly.present
+          ? data.priorMarkOnly.value
+          : this.priorMarkOnly,
     );
   }
 
@@ -5235,7 +5290,8 @@ class CompletionEvent extends DataClass implements Insertable<CompletionEvent> {
           ..write('points: $points, ')
           ..write('eventTimestamp: $eventTimestamp, ')
           ..write('createdAt: $createdAt, ')
-          ..write('purgedAt: $purgedAt')
+          ..write('purgedAt: $purgedAt, ')
+          ..write('priorMarkOnly: $priorMarkOnly')
           ..write(')'))
         .toString();
   }
@@ -5253,6 +5309,7 @@ class CompletionEvent extends DataClass implements Insertable<CompletionEvent> {
     eventTimestamp,
     createdAt,
     purgedAt,
+    priorMarkOnly,
   );
   @override
   bool operator ==(Object other) =>
@@ -5268,7 +5325,8 @@ class CompletionEvent extends DataClass implements Insertable<CompletionEvent> {
           other.points == this.points &&
           other.eventTimestamp == this.eventTimestamp &&
           other.createdAt == this.createdAt &&
-          other.purgedAt == this.purgedAt);
+          other.purgedAt == this.purgedAt &&
+          other.priorMarkOnly == this.priorMarkOnly);
 }
 
 class CompletionEventsCompanion extends UpdateCompanion<CompletionEvent> {
@@ -5283,6 +5341,7 @@ class CompletionEventsCompanion extends UpdateCompanion<CompletionEvent> {
   final Value<DateTime> eventTimestamp;
   final Value<DateTime> createdAt;
   final Value<DateTime?> purgedAt;
+  final Value<bool> priorMarkOnly;
   const CompletionEventsCompanion({
     this.id = const Value.absent(),
     this.profileId = const Value.absent(),
@@ -5295,6 +5354,7 @@ class CompletionEventsCompanion extends UpdateCompanion<CompletionEvent> {
     this.eventTimestamp = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.purgedAt = const Value.absent(),
+    this.priorMarkOnly = const Value.absent(),
   });
   CompletionEventsCompanion.insert({
     this.id = const Value.absent(),
@@ -5308,6 +5368,7 @@ class CompletionEventsCompanion extends UpdateCompanion<CompletionEvent> {
     required DateTime eventTimestamp,
     this.createdAt = const Value.absent(),
     this.purgedAt = const Value.absent(),
+    this.priorMarkOnly = const Value.absent(),
   }) : profileId = Value(profileId),
        curriculumId = Value(curriculumId),
        sefariaRef = Value(sefariaRef),
@@ -5326,6 +5387,7 @@ class CompletionEventsCompanion extends UpdateCompanion<CompletionEvent> {
     Expression<DateTime>? eventTimestamp,
     Expression<DateTime>? createdAt,
     Expression<DateTime>? purgedAt,
+    Expression<bool>? priorMarkOnly,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -5339,6 +5401,7 @@ class CompletionEventsCompanion extends UpdateCompanion<CompletionEvent> {
       if (eventTimestamp != null) 'event_timestamp': eventTimestamp,
       if (createdAt != null) 'created_at': createdAt,
       if (purgedAt != null) 'purged_at': purgedAt,
+      if (priorMarkOnly != null) 'prior_mark_only': priorMarkOnly,
     });
   }
 
@@ -5354,6 +5417,7 @@ class CompletionEventsCompanion extends UpdateCompanion<CompletionEvent> {
     Value<DateTime>? eventTimestamp,
     Value<DateTime>? createdAt,
     Value<DateTime?>? purgedAt,
+    Value<bool>? priorMarkOnly,
   }) {
     return CompletionEventsCompanion(
       id: id ?? this.id,
@@ -5367,6 +5431,7 @@ class CompletionEventsCompanion extends UpdateCompanion<CompletionEvent> {
       eventTimestamp: eventTimestamp ?? this.eventTimestamp,
       createdAt: createdAt ?? this.createdAt,
       purgedAt: purgedAt ?? this.purgedAt,
+      priorMarkOnly: priorMarkOnly ?? this.priorMarkOnly,
     );
   }
 
@@ -5406,6 +5471,9 @@ class CompletionEventsCompanion extends UpdateCompanion<CompletionEvent> {
     if (purgedAt.present) {
       map['purged_at'] = Variable<DateTime>(purgedAt.value);
     }
+    if (priorMarkOnly.present) {
+      map['prior_mark_only'] = Variable<bool>(priorMarkOnly.value);
+    }
     return map;
   }
 
@@ -5422,7 +5490,8 @@ class CompletionEventsCompanion extends UpdateCompanion<CompletionEvent> {
           ..write('points: $points, ')
           ..write('eventTimestamp: $eventTimestamp, ')
           ..write('createdAt: $createdAt, ')
-          ..write('purgedAt: $purgedAt')
+          ..write('purgedAt: $purgedAt, ')
+          ..write('priorMarkOnly: $priorMarkOnly')
           ..write(')'))
         .toString();
   }
@@ -17263,6 +17332,7 @@ typedef $$CompletionEventsTableCreateCompanionBuilder =
       required DateTime eventTimestamp,
       Value<DateTime> createdAt,
       Value<DateTime?> purgedAt,
+      Value<bool> priorMarkOnly,
     });
 typedef $$CompletionEventsTableUpdateCompanionBuilder =
     CompletionEventsCompanion Function({
@@ -17277,6 +17347,7 @@ typedef $$CompletionEventsTableUpdateCompanionBuilder =
       Value<DateTime> eventTimestamp,
       Value<DateTime> createdAt,
       Value<DateTime?> purgedAt,
+      Value<bool> priorMarkOnly,
     });
 
 final class $$CompletionEventsTableReferences
@@ -17374,6 +17445,11 @@ class $$CompletionEventsTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
+  ColumnFilters<bool> get priorMarkOnly => $composableBuilder(
+    column: $table.priorMarkOnly,
+    builder: (column) => ColumnFilters(column),
+  );
+
   $$LearnerProfilesTableFilterComposer get profileId {
     final $$LearnerProfilesTableFilterComposer composer = $composerBuilder(
       composer: this,
@@ -17457,6 +17533,11 @@ class $$CompletionEventsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<bool> get priorMarkOnly => $composableBuilder(
+    column: $table.priorMarkOnly,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   $$LearnerProfilesTableOrderingComposer get profileId {
     final $$LearnerProfilesTableOrderingComposer composer = $composerBuilder(
       composer: this,
@@ -17526,6 +17607,11 @@ class $$CompletionEventsTableAnnotationComposer
   GeneratedColumn<DateTime> get purgedAt =>
       $composableBuilder(column: $table.purgedAt, builder: (column) => column);
 
+  GeneratedColumn<bool> get priorMarkOnly => $composableBuilder(
+    column: $table.priorMarkOnly,
+    builder: (column) => column,
+  );
+
   $$LearnerProfilesTableAnnotationComposer get profileId {
     final $$LearnerProfilesTableAnnotationComposer composer = $composerBuilder(
       composer: this,
@@ -17591,6 +17677,7 @@ class $$CompletionEventsTableTableManager
                 Value<DateTime> eventTimestamp = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime?> purgedAt = const Value.absent(),
+                Value<bool> priorMarkOnly = const Value.absent(),
               }) => CompletionEventsCompanion(
                 id: id,
                 profileId: profileId,
@@ -17603,6 +17690,7 @@ class $$CompletionEventsTableTableManager
                 eventTimestamp: eventTimestamp,
                 createdAt: createdAt,
                 purgedAt: purgedAt,
+                priorMarkOnly: priorMarkOnly,
               ),
           createCompanionCallback:
               ({
@@ -17617,6 +17705,7 @@ class $$CompletionEventsTableTableManager
                 required DateTime eventTimestamp,
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime?> purgedAt = const Value.absent(),
+                Value<bool> priorMarkOnly = const Value.absent(),
               }) => CompletionEventsCompanion.insert(
                 id: id,
                 profileId: profileId,
@@ -17629,6 +17718,7 @@ class $$CompletionEventsTableTableManager
                 eventTimestamp: eventTimestamp,
                 createdAt: createdAt,
                 purgedAt: purgedAt,
+                priorMarkOnly: priorMarkOnly,
               ),
           withReferenceMapper: (p0) => p0
               .map(
