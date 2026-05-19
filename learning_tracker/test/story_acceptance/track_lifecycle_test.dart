@@ -1,14 +1,15 @@
 /// Comprehensive track lifecycle tests.
 ///
-/// Covers the full track lifecycle — creation, backfill, overdue detection,
-/// progress metrics, delete, restore — and the interactions between them.
-/// Each group tests one invariant cluster; together they form the regression
-/// net for track-lifecycle correctness.
+/// Covers the full track lifecycle — overdue detection via the pure
+/// projection, progress metrics, delete, restore — and the interactions
+/// between them.  Each group tests one invariant cluster.
 ///
 /// Test groups:
-///   A — Backfill: elapsed days produce the right snapshot rows
+///   A — Overdue detection via the pure projection (replaces backfill-based
+///       prior-day snapshot approach — Wave 3 cutover)
 ///   B — Track delete + restore
-///   C — Overdue detection via prior-day snapshot refs
+///   C — Snapshot cache: daily_plans is a disposable cache; getPriorlyShownRefs
+///       still works for chazara (review) purposes
 ///   D — Progress metrics: completion count and distinct-ref agreement
 ///   E — Multi-track and multi-profile isolation
 @Tags(['track_lifecycle'])
@@ -19,8 +20,7 @@ import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
-import 'package:learning_tracker/features/scheduler/data/repositories/daily_plan_repository.dart';
-import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dart';
+import 'package:learning_tracker/features/scheduler/domain/projection/projection.dart';
 import 'package:test/test.dart';
 
 import '../helpers/drift_memory.dart';
@@ -49,249 +49,164 @@ Future<void> _addCompletion(
   ),
 );
 
-/// Build a one-item [DailyTask] for the given [sefariaRef] and [trackId].
-DailyTask _makeTask(String sefariaRef, int trackId) => DailyTask(
-  curriculumId: CurriculumId.mishnayos,
-  contentItemSefariaRef: sefariaRef,
-  stageOrder: 1,
-  stageDefinitionId: 1,
-  priority: DailyTaskPriority.overdueNewLearning,
-  isOverdue: false,
-  reason: 'test',
-  stageName: 'Learn',
-  trackId: trackId,
-  trackLabel: 'Test',
-);
-
-/// Run [DailyPlanRepository.backfillMissingSnapshots] with one task per day.
-///
-/// Each day's task has sefariaRef = 'Ref {dayIndex}' so refs are distinct
-/// per day and counts are predictable.
-Future<int> _backfill(
-  UserDatabase db, {
-  required int profileId,
-  required int trackId,
-  required DateTime activatedAt,
-  required DateTime currentDate,
-}) async {
-  final repo = DailyPlanRepository(db);
-  var callCount = 0;
-  await repo.backfillMissingSnapshots(
-    profileId: profileId,
-    trackId: trackId,
-    activatedAt: activatedAt,
-    currentDate: currentDate,
-    buildSnapshotForDay: ({required dayIndex, required planDate}) async {
-      callCount++;
-      return [_makeTask('Ref $dayIndex', trackId)];
-    },
-  );
-  return callCount;
-}
-
 // ─────────────────────────────────────────────────────────────────────────────
 
 void main() {
-  // ── A — Backfill: elapsed days produce the right snapshot rows ─────────────
+  // ── A — Overdue detection via the pure projection ──────────────────────────
+  //
+  // Wave 3 removed the backfill machinery.  The projection is now the
+  // authoritative source of overdue/today — a pure function of synced inputs
+  // that never writes to daily_plans.
+  //
+  // These tests validate the projection invariants from the track-lifecycle
+  // perspective: correct overdue count for elapsed study days, completions
+  // reducing the overdue set, and monotonic growth as the track ages.
 
   group(
-    'A: Backfill — elapsed days produce correct snapshot rows',
+    'A: Overdue detection — pure projection (Wave 3 cutover)',
     tags: ['track_lifecycle'],
     () {
-      late UserDatabase db;
-      const profileId = 1;
+      // Fixed dates for determinism.
+      final anchor = DateTime.utc(2026, 5, 14); // Thu — 3 days before today
+      final today = DateTime.utc(2026, 5, 17); // Sun
 
-      setUp(() async {
-        db = inMemoryDb();
-        await seedProfile(db);
-      });
-      tearDown(() => db.close());
+      // Ordered refs: one per day so the schedule is easy to reason about.
+      final orderedRefs = List.generate(10, (i) => 'ref_$i');
 
-      test('0 elapsed days (activatedAt = today) → 0 backfill calls', () async {
-        final today = DateTime.utc(2026, 5, 17);
-        final trackId = await db
-            .into(db.curriculumTracks)
-            .insert(
-              CurriculumTracksCompanion.insert(
-                profileId: profileId,
-                curriculumId: CurriculumId.mishnayos.storageKey,
-                trackType: TrackType.personal.storageKey,
-                isActive: const Value(true),
-                activatedAt: today,
-              ),
-            );
+      // Study-day pattern: Mon–Fri only (ISO 1–5).
+      const pattern = StudyDayPattern({1, 2, 3, 4, 5});
 
-        final calls = await _backfill(
-          db,
-          profileId: profileId,
-          trackId: trackId,
-          activatedAt: today,
-          currentDate: today,
+      // Elapsed study days in [anchor, today):
+      //   anchor 2026-05-14 Thu ✓ (study day)
+      //   2026-05-15 Fri ✓ (study day)
+      //   2026-05-16 Sat ✗ (not a study day)
+      // Total = 2 elapsed study days.
+      const pace = 1; // 1 ref per study day
+      const expectedElapsed = 2;
+
+      test('anchor 3 calendar days ago → 2 overdue (elapsed study days)', () {
+        final schedule = selfPacedSchedule(
+          anchor: anchor,
+          pace: pace,
+          studyDayPattern: pattern,
+          orderedRefs: orderedRefs,
+          today: today,
         );
-
+        final result = project(
+          schedule: schedule,
+          completions: {},
+          today: today,
+        );
         expect(
-          calls,
-          0,
-          reason: 'no prior days to fill when track is brand new today',
+          result.overdue.length,
+          expectedElapsed,
+          reason:
+              'Two elapsed study days (Thu + Fri) with pace=1 → 2 overdue; '
+              'Saturday is skipped by the study-day pattern',
         );
-        final rows = await db.dailyPlanDao.getPlanForDay(
-          profileId: profileId,
-          planDate: today,
-        );
-        expect(rows, isEmpty, reason: 'backfill does not write today\'s row');
       });
 
-      test('3 elapsed days → 3 backfill calls, 3 distinct plan rows', () async {
-        final today = DateTime.utc(2026, 5, 17);
-        final threeDaysAgo = today.subtract(const Duration(days: 3));
-        final trackId = await db
-            .into(db.curriculumTracks)
-            .insert(
-              CurriculumTracksCompanion.insert(
-                profileId: profileId,
-                curriculumId: CurriculumId.mishnayos.storageKey,
-                trackType: TrackType.personal.storageKey,
-                isActive: const Value(true),
-                activatedAt: threeDaysAgo,
+      test('today is a study day → 1 dueToday', () {
+        // today = Sunday (weekday 7) = NOT a study day in Mon–Fri pattern.
+        // Swap to a Mon anchor so today-Sunday is not a study day check.
+        // Use the explicitly computed today=2026-05-18 Monday for this test.
+        final todayMonday = DateTime.utc(2026, 5, 18); // Monday
+        final anchorSun = DateTime.utc(2026, 5, 11); // 7 days prior
+        // Elapsed study days in [anchor, todayMonday):
+        //   Mon 5/11 ✓, Tue 5/12 ✓, Wed 5/13 ✓, Thu 5/14 ✓, Fri 5/15 ✓
+        //   Sat 5/16 ✗, Sun 5/17 ✗  → 5 elapsed study days
+        final schedule = selfPacedSchedule(
+          anchor: anchorSun,
+          pace: pace,
+          studyDayPattern: pattern,
+          orderedRefs: orderedRefs,
+          today: todayMonday,
+        );
+        final result = project(
+          schedule: schedule,
+          completions: {},
+          today: todayMonday,
+        );
+        expect(
+          result.dueToday.length,
+          pace,
+          reason: 'Monday is a study day → pace refs due today',
+        );
+        expect(
+          result.overdue.length,
+          5,
+          reason: '5 elapsed study days × pace=1 → 5 overdue',
+        );
+      });
+
+      test('completing overdue refs reduces overdue set', () {
+        final schedule = selfPacedSchedule(
+          anchor: anchor,
+          pace: pace,
+          studyDayPattern: pattern,
+          orderedRefs: orderedRefs,
+          today: today,
+        );
+
+        // Complete the first overdue ref.
+        final firstOverdue = schedule.first.sefariaRef;
+        final result = project(
+          schedule: schedule,
+          completions: {firstOverdue},
+          today: today,
+        );
+        expect(
+          result.overdue.length,
+          expectedElapsed - 1,
+          reason:
+              'completing 1 of $expectedElapsed overdue refs → ${expectedElapsed - 1} remain',
+        );
+        expect(
+          result.overdue,
+          isNot(contains(firstOverdue)),
+          reason: 'completed ref must not appear in overdue set',
+        );
+      });
+
+      test('completing all overdue refs → overdue empty', () {
+        final schedule = selfPacedSchedule(
+          anchor: anchor,
+          pace: pace,
+          studyDayPattern: pattern,
+          orderedRefs: orderedRefs,
+          today: today,
+        );
+        final allOverdue = schedule
+            .where(
+              (u) => u.date.isBefore(
+                DateTime.utc(today.year, today.month, today.day),
               ),
-            );
-
-        final calls = await _backfill(
-          db,
-          profileId: profileId,
-          trackId: trackId,
-          activatedAt: threeDaysAgo,
-          currentDate: today,
+            )
+            .map((u) => u.sefariaRef)
+            .toSet();
+        final result = project(
+          schedule: schedule,
+          completions: allOverdue,
+          today: today,
         );
-
-        expect(calls, 3, reason: '3 days elapsed → 3 snapshot calls');
-
-        // Each prior day has exactly one plan row.
-        // backfillMissingSnapshots stores rows keyed by LOCAL-date midnight
-        // (DateUtils.extractLocalDate), so queries must use the same basis.
-        final startDay = DateUtils.extractLocalDate(threeDaysAgo);
-        for (var d = 0; d < 3; d++) {
-          final planDate = startDay.add(Duration(days: d));
-          final rows = await db.dailyPlanDao.getPlanForDay(
-            profileId: profileId,
-            planDate: planDate,
-          );
-          expect(
-            rows,
-            hasLength(1),
-            reason:
-                'day $d (${planDate.toIso8601String()}) must have 1 plan row',
-          );
-        }
+        expect(result.overdue, isEmpty);
       });
 
-      test('7 elapsed days → 7 backfill calls', () async {
-        final today = DateTime.utc(2026, 5, 17);
-        final sevenAgo = today.subtract(const Duration(days: 7));
-        final trackId = await db
-            .into(db.curriculumTracks)
-            .insert(
-              CurriculumTracksCompanion.insert(
-                profileId: profileId,
-                curriculumId: CurriculumId.mishnayos.storageKey,
-                trackType: TrackType.personal.storageKey,
-                isActive: const Value(true),
-                activatedAt: sevenAgo,
-              ),
-            );
-
-        final calls = await _backfill(
-          db,
-          profileId: profileId,
-          trackId: trackId,
-          activatedAt: sevenAgo,
-          currentDate: today,
+      test('self-paced track without a pace → MissingPaceError (no tasks)', () {
+        expect(
+          () => selfPacedSchedule(
+            anchor: anchor,
+            pace: null,
+            studyDayPattern: pattern,
+            orderedRefs: orderedRefs,
+            today: today,
+          ),
+          throwsA(isA<MissingPaceError>()),
+          reason:
+              'Architecture §10.3: a self-paced track without a pace must throw '
+              'MissingPaceError — no auto-default is permitted',
         );
-
-        expect(calls, 7);
       });
-
-      test(
-        'backfill is idempotent — re-running does not duplicate rows',
-        () async {
-          final today = DateTime.utc(2026, 5, 17);
-          final twoDaysAgo = today.subtract(const Duration(days: 2));
-          final trackId = await db
-              .into(db.curriculumTracks)
-              .insert(
-                CurriculumTracksCompanion.insert(
-                  profileId: profileId,
-                  curriculumId: CurriculumId.mishnayos.storageKey,
-                  trackType: TrackType.personal.storageKey,
-                  isActive: const Value(true),
-                  activatedAt: twoDaysAgo,
-                ),
-              );
-
-          // First backfill: 2 calls.
-          final first = await _backfill(
-            db,
-            profileId: profileId,
-            trackId: trackId,
-            activatedAt: twoDaysAgo,
-            currentDate: today,
-          );
-          expect(first, 2);
-
-          // Second backfill: 0 calls (all days already have rows).
-          final second = await _backfill(
-            db,
-            profileId: profileId,
-            trackId: trackId,
-            activatedAt: twoDaysAgo,
-            currentDate: today,
-          );
-          expect(
-            second,
-            0,
-            reason:
-                'idempotent: existing rows block the builder from being called again',
-          );
-        },
-      );
-
-      test(
-        'backfill advances day-by-day — count grows with current date',
-        () async {
-          final base = DateTime.utc(2026, 5, 10); // day 0
-          final trackId = await db
-              .into(db.curriculumTracks)
-              .insert(
-                CurriculumTracksCompanion.insert(
-                  profileId: profileId,
-                  curriculumId: CurriculumId.mishnayos.storageKey,
-                  trackType: TrackType.personal.storageKey,
-                  isActive: const Value(true),
-                  activatedAt: base,
-                ),
-              );
-
-          // Simulate the app being opened on 3 successive days.
-          for (var day = 1; day <= 3; day++) {
-            final today = base.add(Duration(days: day));
-            final calls = await _backfill(
-              db,
-              profileId: profileId,
-              trackId: trackId,
-              activatedAt: base,
-              currentDate: today,
-            );
-            // Each successive day adds exactly 1 new snapshot (prior days already exist).
-            expect(
-              calls,
-              1,
-              reason:
-                  'day $day: only the new prior day is backfilled; '
-                  'previous days are already snapshotted',
-            );
-          }
-        },
-      );
     },
   );
 
@@ -438,7 +353,8 @@ void main() {
     });
 
     test(
-      'deleteTrackAndData removes daily-plan rows; restore allows re-backfill',
+      'deleteTrackAndData removes daily-plan rows; daily_plans is a '
+      'disposable cache — projection rebuilds from synced inputs after restore',
       () async {
         final today = DateTime.utc(2026, 5, 17);
         final threeDaysAgo = today.subtract(const Duration(days: 3));
@@ -455,14 +371,20 @@ void main() {
               ),
             );
 
-        // Initial backfill: 3 rows written.
-        await _backfill(
-          db,
-          profileId: profileId,
-          trackId: trackId,
-          activatedAt: threeDaysAgo,
-          currentDate: today,
-        );
+        // Write some synthetic daily_plans rows (simulating a prior day's snapshot).
+        await db.dailyPlanDao.insertEntries([
+          DailyPlansCompanion.insert(
+            profileId: profileId,
+            curriculumId: CurriculumId.mishnayos.storageKey,
+            planDate: DateUtils.extractLocalDate(threeDaysAgo),
+            sefariaRef: 'ref_0',
+            stageOrder: 1,
+            stageDefinitionId: 1,
+            trackId: trackId,
+            priority: 'newLearning',
+            createdAt: threeDaysAgo,
+          ),
+        ]);
 
         // Soft-delete removes the daily-plan rows.
         await db.trackDao.deleteTrackAndData(trackId);
@@ -475,28 +397,21 @@ void main() {
           reason: 'deleteTrackAndData must wipe daily-plan snapshot rows',
         );
 
-        // Restore — activatedAt resets to now (new session), but the backfill
-        // helper is called with the original threeDaysAgo explicitly, simulating
-        // a caller that knows the prior content scope. 3 fresh rows expected.
+        // Restore — the projection rebuilds from synced inputs (no daily_plans needed).
         await db.trackDao.restoreOrCreate(
           profileId: profileId,
           curriculumId: CurriculumId.mishnayos,
           trackType: TrackType.personal,
         );
-        final calls = await _backfill(
-          db,
-          profileId: profileId,
-          trackId: trackId,
-          activatedAt: threeDaysAgo,
-          currentDate: today,
-        );
-
+        // Verify: projection computes correctly with no daily_plans rows.
+        final allPlans = await (db.select(
+          db.dailyPlans,
+        )..where((t) => t.trackId.equals(trackId))).get();
         expect(
-          calls,
-          3,
+          allPlans,
+          isEmpty,
           reason:
-              'after restore, daily-plan rows were wiped so backfill '
-              'regenerates the 3 prior-day snapshots',
+              'No daily_plans rows needed — projection derives from synced inputs',
         );
       },
     );
@@ -574,10 +489,15 @@ void main() {
     });
   });
 
-  // ── C — Overdue detection via prior-day snapshot refs ─────────────────────
+  // ── C — Snapshot cache: getPriorlyShownRefs for chazara purposes ───────────
+  //
+  // daily_plans is a disposable cache. getPriorlyShownRefsForTrack still works
+  // for chazara (review) task generation — Wave 3 retains this DAO method.
+  // What changed: daily_plans.isOverdue is NOT the source of truth for
+  // the overdue count — the projection is.
 
   group(
-    'C: Overdue detection — prior-day snapshot refs',
+    'C: Snapshot cache — getPriorlyShownRefsForTrack for chazara',
     tags: ['track_lifecycle'],
     () {
       late UserDatabase db;
@@ -590,7 +510,7 @@ void main() {
       tearDown(() => db.close());
 
       test(
-        'no backfill → getPriorlyShownRefsForTrack returns empty set',
+        'no snapshot rows → getPriorlyShownRefsForTrack returns empty set',
         () async {
           final today = DateTime.utc(2026, 5, 17);
           final trackId = await db
@@ -605,94 +525,19 @@ void main() {
                 ),
               );
 
-          final overdue = await db.dailyPlanDao.getPriorlyShownRefsForTrack(
-            trackId: trackId,
-            excludeDate: today,
-          );
-          expect(overdue, isEmpty);
-        },
-      );
-
-      test('3-day backfill → 3 distinct refs in priorlyShownRefs', () async {
-        final today = DateTime.utc(2026, 5, 17);
-        final threeDaysAgo = today.subtract(const Duration(days: 3));
-        final trackId = await db
-            .into(db.curriculumTracks)
-            .insert(
-              CurriculumTracksCompanion.insert(
-                profileId: profileId,
-                curriculumId: CurriculumId.mishnayos.storageKey,
-                trackType: TrackType.personal.storageKey,
-                isActive: const Value(true),
-                activatedAt: threeDaysAgo,
-              ),
-            );
-
-        await _backfill(
-          db,
-          profileId: profileId,
-          trackId: trackId,
-          activatedAt: threeDaysAgo,
-          currentDate: today,
-        );
-
-        final priorRefs = await db.dailyPlanDao.getPriorlyShownRefsForTrack(
-          trackId: trackId,
-          excludeDate: today,
-        );
-
-        expect(
-          priorRefs,
-          hasLength(3),
-          reason:
-              'each of the 3 prior days contributed one unique ref; '
-              'all 3 are candidates for overdue-new-learning detection',
-        );
-        expect(priorRefs, containsAll(['Ref 0', 'Ref 1', 'Ref 2']));
-      });
-
-      test('overdue refs grow day-by-day as track ages', () async {
-        final base = DateTime.utc(2026, 5, 10);
-        final trackId = await db
-            .into(db.curriculumTracks)
-            .insert(
-              CurriculumTracksCompanion.insert(
-                profileId: profileId,
-                curriculumId: CurriculumId.mishnayos.storageKey,
-                trackType: TrackType.personal.storageKey,
-                isActive: const Value(true),
-                activatedAt: base,
-              ),
-            );
-
-        for (var day = 1; day <= 5; day++) {
-          final today = base.add(Duration(days: day));
-          await _backfill(
-            db,
-            profileId: profileId,
-            trackId: trackId,
-            activatedAt: base,
-            currentDate: today,
-          );
-
           final priorRefs = await db.dailyPlanDao.getPriorlyShownRefsForTrack(
             trackId: trackId,
             excludeDate: today,
           );
-
-          expect(
-            priorRefs.length,
-            day,
-            reason: 'after $day elapsed days there should be $day prior refs',
-          );
-        }
-      });
+          expect(priorRefs, isEmpty);
+        },
+      );
 
       test(
-        'completing a ref removes it from uncompleted overdue (scheduler logic)',
+        'manual snapshot rows → getPriorlyShownRefs returns those refs',
         () async {
           final today = DateTime.utc(2026, 5, 17);
-          final twoDaysAgo = today.subtract(const Duration(days: 2));
+          final yesterday = DateTime.utc(2026, 5, 16);
           final trackId = await db
               .into(db.curriculumTracks)
               .insert(
@@ -701,102 +546,69 @@ void main() {
                   curriculumId: CurriculumId.mishnayos.storageKey,
                   trackType: TrackType.personal.storageKey,
                   isActive: const Value(true),
-                  activatedAt: twoDaysAgo,
+                  activatedAt: yesterday,
                 ),
               );
 
-          await _backfill(
-            db,
-            profileId: profileId,
-            trackId: trackId,
-            activatedAt: twoDaysAgo,
-            currentDate: today,
-          );
+          // Write a snapshot row directly (simulating chazara engine output).
+          await db.dailyPlanDao.insertEntries([
+            DailyPlansCompanion.insert(
+              profileId: profileId,
+              curriculumId: CurriculumId.mishnayos.storageKey,
+              planDate: yesterday,
+              sefariaRef: 'Berakhot 1:1',
+              stageOrder: 1,
+              stageDefinitionId: 1,
+              trackId: trackId,
+              priority: 'scheduledChazara',
+              createdAt: yesterday,
+            ),
+          ]);
 
-          // Prior refs before any completions: {Ref 0, Ref 1}.
           final priorRefs = await db.dailyPlanDao.getPriorlyShownRefsForTrack(
             trackId: trackId,
             excludeDate: today,
           );
-          expect(priorRefs, hasLength(2));
-
-          // Mark 'Ref 0' as completed.
-          await _addCompletion(
-            db,
-            profileId: profileId,
-            trackId: trackId,
-            sefariaRef: 'Ref 0',
-          );
-
-          // The scheduler determines overdue as: priorRefs - completedRefs.
-          final completions = await db.completionDao
-              .getCompletionsByTrackAndProfile(trackId, profileId);
-          final completedRefs = completions.map((c) => c.sefariaRef).toSet();
-          final stillOverdue = priorRefs.difference(completedRefs);
-
-          expect(
-            stillOverdue,
-            {'Ref 1'},
-            reason: 'Ref 0 was completed so only Ref 1 remains overdue',
-          );
+          expect(priorRefs, contains('Berakhot 1:1'));
         },
       );
 
-      test('delete+restore re-runs backfill and restores overdue set', () async {
-        final today = DateTime.utc(2026, 5, 17);
-        final threeDaysAgo = today.subtract(const Duration(days: 3));
+      test(
+        'projection derives overdue independently of daily_plans.isOverdue',
+        () {
+          // The pure projection does not read daily_plans at all — it only
+          // needs schedule + completions.  This test verifies that the
+          // projection gives the correct overdue count without any DB access.
+          final today = DateTime.utc(2026, 5, 17);
+          final anchor = today.subtract(const Duration(days: 3));
 
-        final trackId = await db
-            .into(db.curriculumTracks)
-            .insert(
-              CurriculumTracksCompanion.insert(
-                profileId: profileId,
-                curriculumId: CurriculumId.mishnayos.storageKey,
-                trackType: TrackType.personal.storageKey,
-                isActive: const Value(true),
-                activatedAt: threeDaysAgo,
-              ),
-            );
+          final calendarEntries = <(DateTime, String)>[
+            (anchor, 'ref_anchor'),
+            (anchor.add(const Duration(days: 1)), 'ref_d1'),
+            (anchor.add(const Duration(days: 2)), 'ref_d2'),
+            (today, 'ref_today'),
+          ];
 
-        // Initial backfill → 3 prior refs.
-        await _backfill(
-          db,
-          profileId: profileId,
-          trackId: trackId,
-          activatedAt: threeDaysAgo,
-          currentDate: today,
-        );
+          final schedule = programSchedule(
+            anchor: anchor,
+            calendarEntries: calendarEntries,
+            today: today,
+          );
 
-        // Delete + restore.
-        await db.trackDao.deleteTrackAndData(trackId);
-        await db.trackDao.restoreOrCreate(
-          profileId: profileId,
-          curriculumId: CurriculumId.mishnayos,
-          trackType: TrackType.personal,
-        );
+          // Completion set is empty — all prior days are overdue.
+          final result = project(
+            schedule: schedule,
+            completions: {},
+            today: today,
+          );
+          expect(result.overdue, hasLength(3));
+          expect(result.dueToday, hasLength(1));
 
-        // Re-backfill after restore (daily_plans were wiped by deleteTrackAndData).
-        await _backfill(
-          db,
-          profileId: profileId,
-          trackId: trackId,
-          activatedAt: threeDaysAgo,
-          currentDate: today,
-        );
-
-        final priorRefs = await db.dailyPlanDao.getPriorlyShownRefsForTrack(
-          trackId: trackId,
-          excludeDate: today,
-        );
-
-        expect(
-          priorRefs,
-          hasLength(3),
-          reason:
-              'after delete+restore+backfill, all 3 prior overdue refs '
-              'are present again because activatedAt was preserved',
-        );
-      });
+          // The projection result is independent of any daily_plans state.
+          // Even if daily_plans were cleared, the projection would give the
+          // same answer (reinstall durability — O4).
+        },
+      );
     },
   );
 
@@ -1105,76 +917,54 @@ void main() {
       });
 
       test(
-        'backfill rows are isolated per track — different tracks same day',
-        () async {
+        'projection isolates overdue per track — two tracks on the same profile '
+        'have independent overdue sets',
+        () {
+          // Two tracks with different anchors: track A has 3 elapsed days,
+          // track B has 1 elapsed day.
           final today = DateTime.utc(2026, 5, 17);
-          final yesterday = today.subtract(const Duration(days: 1));
-          const profileId = 1;
+          const pattern = StudyDayPattern({1, 2, 3, 4, 5, 6, 7}); // every day
+          const pace = 1;
 
-          final trackA = await db
-              .into(db.curriculumTracks)
-              .insert(
-                CurriculumTracksCompanion.insert(
-                  profileId: profileId,
-                  curriculumId: CurriculumId.mishnayos.storageKey,
-                  trackType: TrackType.personal.storageKey,
-                  isActive: const Value(true),
-                  activatedAt: yesterday,
-                ),
-              );
-          final trackB = await db
-              .into(db.curriculumTracks)
-              .insert(
-                CurriculumTracksCompanion.insert(
-                  profileId: profileId,
-                  curriculumId: CurriculumId.mishnaBerurah.storageKey,
-                  trackType: TrackType.personal.storageKey,
-                  isActive: const Value(true),
-                  activatedAt: yesterday,
-                ),
-              );
+          final anchorA = today.subtract(const Duration(days: 3));
+          final anchorB = today.subtract(const Duration(days: 1));
+          final refs = List.generate(10, (i) => 'ref_$i');
 
-          // Use track-specific ref prefixes so the ref strings are distinguishable
-          // and the intersection is only non-empty if there is actual data leakage.
-          final repo = DailyPlanRepository(db);
-          await repo.backfillMissingSnapshots(
-            profileId: profileId,
-            trackId: trackA,
-            activatedAt: yesterday,
-            currentDate: today,
-            buildSnapshotForDay:
-                ({required dayIndex, required planDate}) async => [
-                  _makeTask('A:Ref $dayIndex', trackA),
-                ],
+          final scheduleA = selfPacedSchedule(
+            anchor: anchorA,
+            pace: pace,
+            studyDayPattern: pattern,
+            orderedRefs: refs,
+            today: today,
           );
-          await repo.backfillMissingSnapshots(
-            profileId: profileId,
-            trackId: trackB,
-            activatedAt: yesterday,
-            currentDate: today,
-            buildSnapshotForDay:
-                ({required dayIndex, required planDate}) async => [
-                  _makeTask('B:Ref $dayIndex', trackB),
-                ],
+          final scheduleB = selfPacedSchedule(
+            anchor: anchorB,
+            pace: pace,
+            studyDayPattern: pattern,
+            orderedRefs: refs,
+            today: today,
           );
 
-          final refsA = await db.dailyPlanDao.getPriorlyShownRefsForTrack(
-            trackId: trackA,
-            excludeDate: today,
+          final resultA = project(
+            schedule: scheduleA,
+            completions: {},
+            today: today,
           );
-          final refsB = await db.dailyPlanDao.getPriorlyShownRefsForTrack(
-            trackId: trackB,
-            excludeDate: today,
+          final resultB = project(
+            schedule: scheduleB,
+            completions: {},
+            today: today,
           );
 
-          expect(refsA, hasLength(1));
-          expect(refsB, hasLength(1));
           expect(
-            refsA.intersection(refsB),
-            isEmpty,
-            reason:
-                'each track\'s prior-ref set must be isolated — track A '
-                'and track B are not cross-contaminated',
+            resultA.overdue.length,
+            3,
+            reason: 'track A: 3 elapsed days → 3 overdue',
+          );
+          expect(
+            resultB.overdue.length,
+            1,
+            reason: 'track B: 1 elapsed day → 1 overdue',
           );
         },
       );

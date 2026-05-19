@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
@@ -23,6 +22,7 @@ import 'package:learning_tracker/features/scheduler/data/repositories/scheduler_
 import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/pace_status.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/schedule_config.dart';
+import 'package:learning_tracker/features/scheduler/domain/projection/projection.dart';
 import 'package:learning_tracker/features/scheduler/domain/services/daily_task_generator.dart';
 import 'package:learning_tracker/features/scheduler/domain/services/pace_calculator.dart';
 import 'package:learning_tracker/features/scheduler/domain/services/scheduler_engine.dart';
@@ -36,15 +36,6 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 part 'scheduler_providers.g.dart';
-
-/// True when the goal's [paceGranularity] (e.g. 'perek', 'daf', 'siman')
-/// names a level above the curriculum's leaf, so pace is interpreted in
-/// coarse units. When false (leaf mode or no unit set) pace counts leaves.
-bool _isCoarseLearningUnit(CurriculumId curriculum, String? paceGranularity) {
-  if (paceGranularity == null) return false;
-  final leafEn = CurriculumLabels.leaf(curriculum).en.toLowerCase();
-  return paceGranularity.toLowerCase() != leafEn;
-}
 
 /// Dashboard-driven task section filter for Scheduler screen.
 enum SchedulerTaskSection { all, today, overdue, review }
@@ -252,11 +243,18 @@ DailyPlanRepository dailyPlanRepository(Ref ref) {
 
 /// All daily tasks across active curricula.
 ///
-/// The raw plan is snapshotted to the `daily_plans` table on the first
-/// read of each local day and served back verbatim on subsequent reads.
-/// Completions do **not** regenerate the plan — today's list is a
-/// contract. Skipped-task filtering and previously-skipped priority
-/// boosting are applied at read time.
+/// The projection (pure overdue/today computation from synced inputs) is
+/// authoritative.  Self-paced tracks without an explicit pace emit no tasks
+/// for that track (MissingPaceError is caught and the track is skipped —
+/// the setup UI must prompt the user to set a pace).
+///
+/// daily_plans is used as a write-through cache for chazara tasks produced
+/// by the engine (review items that require stage-completion timing data the
+/// pure projection does not compute).  The overdue/today buckets are NEVER
+/// read from daily_plans.isOverdue — they come solely from the projection.
+///
+/// Skipped-task filtering and previously-skipped priority boosting are
+/// applied at read time.
 @riverpod
 Future<List<DailyTask>> allDailyTasks(Ref ref) async {
   ref.watch<int>(completionCommittedProvider);
@@ -273,6 +271,29 @@ Future<List<DailyTask>> allDailyTasks(Ref ref) async {
 
   final engine = ref.watch(schedulerEngineProvider);
   final stageRepository = ref.watch(globalStageRepositoryProvider);
+
+  // ── Step 1: derive overdue/today via the pure projection ─────────────────
+  //
+  // The projection is the authoritative source of truth for the overdue and
+  // today buckets (architecture §4).  It is re-derived on demand from
+  // synced inputs and is never persisted as a flag.
+  final projectionTasks = await _buildProjectionTasks(
+    db: db,
+    stageRepository: stageRepository,
+    engine: engine,
+    profileId: profileId,
+    now: now,
+    calendarService: calendarService,
+    getScopedContent: (curriculumId) =>
+        ref.read(scopedCurriculumContentProvider(curriculumId).future),
+  );
+
+  // ── Step 2: engine-generated chazara/review tasks ─────────────────────
+  //
+  // The pure projection leaves review empty (it requires stage-completion
+  // timing).  Continue generating those via the engine's snapshot path and
+  // merge them with the projection output.  The snapshot is still used as
+  // a cache so chazara items are not recomputed on every read within a day.
   final planResult = await planRepo.getOrSnapshotPlan(
     profileId: profileId,
     now: now,
@@ -289,61 +310,22 @@ Future<List<DailyTask>> allDailyTasks(Ref ref) async {
           ref.read(scopedCurriculumContentProvider(curriculumId).future),
     ),
   );
-  final tasks = planResult.tasks;
 
-  // Guard against stale/empty daily snapshots:
-  // if active curricula changed after the first snapshot of the day,
-  // today's plan may miss entire curricula until tomorrow.
-  //
-  // Performance: skip this guard when the plan was already snapshotted
-  // before this provider call (e.g. completion-triggered re-evaluations).
-  // The guard is only meaningful immediately after the plan is first built,
-  // not on every subsequent read.
-  final activeCurriculumKeys = await db.activeCurriculumDao
-      .getActiveCurriculaByProfile(profileId);
-  final snapshotCurriculumKeys = tasks
-      .map((t) => t.curriculumId.storageKey)
-      .toSet();
-  final snapshotMissingActiveCurriculum =
-      activeCurriculumKeys.isNotEmpty &&
-      activeCurriculumKeys.any((key) => !snapshotCurriculumKeys.contains(key));
-  final snapshotMissingProgramAssignments = planResult.isNew
-      ? await _snapshotMissingProgramAssignments(
-          db: db,
-          stageRepository: stageRepository,
-          tasks: tasks,
-          profileId: profileId,
-          now: now,
-          activeCurriculumKeys: activeCurriculumKeys,
-          calendarService: calendarService,
-          getScopedContent: (curriculumId) =>
-              ref.read(scopedCurriculumContentProvider(curriculumId).future),
-        )
-      : false;
+  // Extract only the chazara/review tasks from the snapshot — the
+  // overdue/today tasks from the snapshot are discarded; the projection
+  // owns those buckets.
+  final chazaraTasks = planResult.tasks
+      .where(
+        (t) =>
+            t.priority == DailyTaskPriority.overdueChazara ||
+            t.priority == DailyTaskPriority.scheduledChazara,
+      )
+      .toList();
 
-  final effectiveTasks =
-      (snapshotMissingActiveCurriculum || snapshotMissingProgramAssignments)
-      ? await planRepo.rebuildPlan(
-          profileId: profileId,
-          now: now,
-          buildPlan: () => _buildFreshPlan(
-            db: db,
-            stageRepository: stageRepository,
-            generator: generator,
-            engine: engine,
-            planRepo: planRepo,
-            profileId: profileId,
-            now: now,
-            calendarService: calendarService,
-            getScopedContent: (curriculumId) =>
-                ref.read(scopedCurriculumContentProvider(curriculumId).future),
-          ),
-        )
-      : tasks;
+  // Merge: projection tasks (overdue + today) + chazara from engine.
+  final effectiveTasks = [...projectionTasks, ...chazaraTasks];
 
-  // Hide tasks already completed today (or earlier) while preserving the
-  // frozen daily snapshot contract. We do not regenerate rows, we only
-  // filter resolved items at read time.
+  // ── Step 3: completion filtering ─────────────────────────────────────────
   final taskRefs = effectiveTasks.map((t) => t.contentItemSefariaRef).toSet();
   final completions = taskRefs.isEmpty
       ? const <Completion>[]
@@ -391,26 +373,37 @@ Future<List<DailyTask>> allDailyTasks(Ref ref) async {
   }).toList()..sort((a, b) => a.priority.index.compareTo(b.priority.index));
 }
 
-Future<bool> _snapshotMissingProgramAssignments({
+/// Derives the overdue and dueToday task lists from the pure projection.
+///
+/// This is the authoritative source of truth for the overdue/today buckets
+/// (architecture §4).  It reads only synced inputs (profile_programs,
+/// curriculum_tracks, completions, study_day_config) and never persists
+/// any result.
+///
+/// Self-paced tracks without an explicit pace throw [MissingPaceError];
+/// that error is caught here and the track emits NO tasks (the setup UI
+/// must prompt the user to configure a pace — architecture §10.3).
+Future<List<DailyTask>> _buildProjectionTasks({
   required UserDatabase db,
   required StageDefinitionRepository stageRepository,
-  required List<DailyTask> tasks,
+  required SchedulerEngine engine,
   required int profileId,
   required DateTime now,
-  required List<String> activeCurriculumKeys,
   required CalendarProgramService calendarService,
   required Future<List<ContentItem>> Function(CurriculumId) getScopedContent,
 }) async {
-  if (activeCurriculumKeys.isEmpty) return false;
-
+  final activeKeys = await db.activeCurriculumDao.getActiveCurriculaByProfile(
+    profileId,
+  );
   final activeCurricula = <CurriculumId>[
-    for (final key in activeCurriculumKeys)
+    for (final key in activeKeys)
       ...CurriculumId.values.where((c) => c.storageKey == key).take(1),
   ];
-  if (activeCurricula.isEmpty) return false;
 
   final activeTracks = await db.trackDao.getActiveTracksForProfile(profileId);
-  final trackIdsByCurriculum = <CurriculumId, int>{};
+  final trackIds = <CurriculumId, int>{};
+  final trackLabels = <CurriculumId, String>{};
+  final trackStartedAtMap = <CurriculumId, DateTime>{};
   for (final curriculum in activeCurricula) {
     final tracksForCurriculum = activeTracks
         .where((t) => t.curriculumId == curriculum.storageKey)
@@ -420,66 +413,252 @@ Future<bool> _snapshotMissingProgramAssignments({
       (t) => t.trackType == TrackType.personal.storageKey,
       orElse: () => tracksForCurriculum.first,
     );
-    trackIdsByCurriculum[curriculum] = preferred.id;
+    trackIds[curriculum] = preferred.id;
+    trackLabels[curriculum] = preferred.trackType;
+    trackStartedAtMap[curriculum] = preferred.activatedAt;
   }
 
+  final todayDate = DateUtils.extractLocalDate(now);
+  final result = <DailyTask>[];
+
   for (final curriculum in activeCurricula) {
-    final trackId = trackIdsByCurriculum[curriculum];
+    final trackId = trackIds[curriculum];
     if (trackId == null) continue;
 
+    final stages = await stageRepository.getStagesByTrack(trackId);
+    if (stages.isEmpty) continue;
+    final firstStage = stages.reduce(
+      (domain_stage.StageDefinition a, domain_stage.StageDefinition b) =>
+          a.stageOrder < b.stageOrder ? a : b,
+    );
+
+    // ── Fetch all completions for this track ─────────────────────────────
+    final allCompletions = await db.completionDao
+        .getCompletionsByCurriculumAndProfile(curriculum.storageKey, profileId);
+    final completionRefs = allCompletions.map((c) => c.sefariaRef).toSet();
+
+    // ── Program track path ────────────────────────────────────────────────
     final enrollment = await db.profileProgramDao
         .getProgramForProfileAndCurriculum(profileId, curriculum.storageKey);
-    final programId = enrollment?.programId;
-    if (programId == null) continue;
-    final program = LearningProgramRepository.instance.getProgramById(
-      programId,
-    );
-    final apiKey = program?.apiProgramKey;
-    if (program == null || apiKey == null || apiKey.isEmpty) continue;
 
-    final programKey =
-        CalendarProgramRegistry.byId(apiKey)?.id ??
-        CalendarProgramRegistry.byApiKey(apiKey)?.id ??
-        CalendarProgramRegistry.byHebcalCategory(apiKey)?.id;
-    if (programKey == null) continue;
+    if (enrollment != null) {
+      final program = LearningProgramRepository.instance.getProgramById(
+        enrollment.programId,
+      );
+      final apiKey = program?.apiProgramKey;
+      if (program != null && apiKey != null && apiKey.isNotEmpty) {
+        final programKey =
+            CalendarProgramRegistry.byId(apiKey)?.id ??
+            CalendarProgramRegistry.byApiKey(apiKey)?.id ??
+            CalendarProgramRegistry.byHebcalCategory(apiKey)?.id;
 
-    final todayLocal = DateUtils.extractLocalDate(now);
-    final entry = await calendarService.getEntry(programKey, todayLocal);
-    final todayRef = entry?.todayRef.trim();
-    if (todayRef == null || todayRef.isEmpty) continue;
+        if (programKey != null) {
+          // Resolve the anchor date from the enrollment.
+          final DateTime anchor;
+          if (enrollment.trackingStartDate == null) {
+            anchor = todayDate;
+          } else {
+            final anchorUtc = enrollment.trackingStartDate!;
+            if (anchorUtc.isBefore(DateTime.utc(2020, 1, 1))) {
+              anchor = todayDate;
+            } else {
+              anchor = DateUtils.extractLocalDate(anchorUtc);
+            }
+          }
 
-    final contentItems = await getScopedContent(curriculum);
-    final expectedRefs = resolvedOrFallbackProgramRefs(
-      todayRef: todayRef,
-      contentItems: contentItems,
-    );
-    if (expectedRefs.isEmpty) continue;
+          // Future anchors: no tasks yet.
+          if (!anchor.isAfter(todayDate)) {
+            final entries = await programCalendarSchedule(
+              programKey: programKey,
+              anchor: anchor,
+              today: todayDate,
+              calendarService: calendarService,
+            );
 
-    final found = _programAssignmentPresentInTasks(
-      tasks: tasks,
-      trackId: trackId,
-      expectedRefs: expectedRefs,
-    );
-    if (!found) {
-      return true;
+            if (entries.isNotEmpty) {
+              final contentItems = await getScopedContent(curriculum);
+              // Build calendarEntries in the format programSchedule() expects.
+              // getEntriesForRange returns entries in order for [anchor, today];
+              // pair each with its calendar date by walking forward from anchor.
+              final calendarEntries = <(DateTime, String)>[];
+              var cursor = anchor;
+              for (final entry in entries) {
+                calendarEntries.add((cursor, entry.todayRef));
+                cursor = cursor.add(const Duration(days: 1));
+              }
+
+              final schedule = programSchedule(
+                anchor: anchor,
+                calendarEntries: calendarEntries,
+                today: todayDate,
+              );
+
+              final projection = project(
+                schedule: schedule,
+                completions: completionRefs,
+                today: todayDate,
+              );
+
+              // Map projection refs to DailyTask objects.
+              for (final ref in projection.overdue) {
+                final taskRefs = resolvedOrFallbackProgramRefs(
+                  todayRef: ref,
+                  contentItems: contentItems,
+                );
+                for (final taskRef in taskRefs.isEmpty ? [ref] : taskRefs) {
+                  result.add(
+                    DailyTask(
+                      curriculumId: curriculum,
+                      contentItemSefariaRef: taskRef,
+                      stageOrder: firstStage.stageOrder,
+                      stageDefinitionId: firstStage.id,
+                      priority: DailyTaskPriority.overdueProgram,
+                      isOverdue: true,
+                      reason: 'Program day pending from previous days',
+                      stageName: firstStage.stageName,
+                      trackId: trackId,
+                      trackLabel:
+                          trackLabels[curriculum] ??
+                          TrackType.personal.storageKey,
+                      estimatedEffortMinutes: 5,
+                    ),
+                  );
+                }
+              }
+
+              for (final ref in projection.dueToday) {
+                final taskRefs = resolvedOrFallbackProgramRefs(
+                  todayRef: ref,
+                  contentItems: contentItems,
+                );
+                for (final taskRef in taskRefs.isEmpty ? [ref] : taskRefs) {
+                  result.add(
+                    DailyTask(
+                      curriculumId: curriculum,
+                      contentItemSefariaRef: taskRef,
+                      stageOrder: firstStage.stageOrder,
+                      stageDefinitionId: firstStage.id,
+                      priority: DailyTaskPriority.todayProgram,
+                      isOverdue: false,
+                      reason: 'Program assignment for today',
+                      stageName: firstStage.stageName,
+                      trackId: trackId,
+                      trackLabel:
+                          trackLabels[curriculum] ??
+                          TrackType.personal.storageKey,
+                      estimatedEffortMinutes: 5,
+                    ),
+                  );
+                }
+              }
+            }
+          }
+          continue; // program track handled — skip the self-paced path.
+        }
+      }
+    }
+
+    // ── Self-paced track path ─────────────────────────────────────────────
+    final startedAt = trackStartedAtMap[curriculum];
+    if (startedAt == null) continue;
+
+    // Fetch pace from the goal.
+    int? pace;
+    final goal = await db.goalDao.getGoalByTrack(trackId);
+    if (goal != null &&
+        goal.goalType == 'pace' &&
+        goal.paceValue != null &&
+        goal.pacePeriod != null) {
+      pace = PaceCalculator.paceToDaily(
+        goal.paceValue!,
+        goal.pacePeriod!,
+      ).ceil();
+    }
+    // pace == null → MissingPaceError will be thrown below; track is skipped.
+
+    // Fetch study-day pattern.
+    final studyConfigs = await db.studyDayConfigDao.getConfigsByTrack(trackId);
+    final studyWeekdays = studyConfigs.isEmpty
+        ? const <int>{}
+        : {
+            for (final c in studyConfigs)
+              if (c.dayType == 'study') c.dayOfWeek,
+          };
+    final pattern = StudyDayPattern(studyWeekdays);
+
+    // Fetch ordered curriculum refs via the engine (which respects the
+    // content repository and scoped overrides — the same path used by the
+    // snapshot builder).
+    final orderedItems = await engine.getOrderedLeafItems(curriculum);
+    final orderedRefs = orderedItems.map((i) => i.sefariaRef).toList();
+
+    final anchor = DateUtils.extractLocalDate(startedAt);
+
+    try {
+      final schedule = selfPacedSchedule(
+        anchor: anchor,
+        pace: pace, // throws MissingPaceError when null
+        studyDayPattern: pattern,
+        orderedRefs: orderedRefs,
+        today: todayDate,
+      );
+
+      final projection = project(
+        schedule: schedule,
+        completions: completionRefs,
+        today: todayDate,
+      );
+
+      for (final ref in projection.overdue) {
+        result.add(
+          DailyTask(
+            curriculumId: curriculum,
+            contentItemSefariaRef: ref,
+            stageOrder: firstStage.stageOrder,
+            stageDefinitionId: firstStage.id,
+            priority: DailyTaskPriority.overdueProgram,
+            isOverdue: true,
+            reason: 'Behind pace',
+            stageName: firstStage.stageName,
+            trackId: trackId,
+            trackLabel:
+                trackLabels[curriculum] ?? TrackType.personal.storageKey,
+            estimatedEffortMinutes: 5,
+          ),
+        );
+      }
+
+      for (final ref in projection.dueToday) {
+        result.add(
+          DailyTask(
+            curriculumId: curriculum,
+            contentItemSefariaRef: ref,
+            stageOrder: firstStage.stageOrder,
+            stageDefinitionId: firstStage.id,
+            priority: DailyTaskPriority.newLearning,
+            isOverdue: false,
+            reason: 'Due today',
+            stageName: firstStage.stageName,
+            trackId: trackId,
+            trackLabel:
+                trackLabels[curriculum] ?? TrackType.personal.storageKey,
+            estimatedEffortMinutes: 5,
+          ),
+        );
+      }
+    } on MissingPaceError {
+      // Architecture §10.3: a self-paced track without an explicit pace must
+      // NOT default — emit no tasks for this track so the user is prompted
+      // via the setup UI to configure a pace.
+      AppLogger.instance.warning(
+        'Track $trackId (${curriculum.storageKey}) has no pace configured; '
+        'skipping overdue/today projection for this track. '
+        'The setup UI should prompt the user to set a pace.',
+      );
     }
   }
 
-  return false;
-}
-
-bool _programAssignmentPresentInTasks({
-  required List<DailyTask> tasks,
-  required int trackId,
-  required Set<String> expectedRefs,
-}) {
-  if (expectedRefs.isEmpty) return true;
-  final expectedNormalized = expectedRefs.map(normalizeRef).toSet();
-  final actualNormalized = tasks
-      .where((t) => t.trackId == trackId)
-      .map((t) => normalizeRef(t.contentItemSefariaRef))
-      .toSet();
-  return expectedNormalized.every(actualNormalized.contains);
+  return result;
 }
 
 /// Runs the scheduler across all active curricula to produce a fresh plan.
@@ -634,180 +813,23 @@ Future<List<DailyTask>> _buildFreshPlan({
     }
   }
 
-  // For every track with a known activatedAt, back-fill synthetic snapshots
-  // for elapsed *study days* that have no existing snapshot row.  The engine
-  // uses priorlyShownRefs to surface uncompleted prior items as overdue today.
-  //
-  // F6 fix: back-fill now runs for tracks regardless of whether they have a
-  // pace-based goal.  Non-pace tracks use `defaultNewItemsPerDay` (5) as the
-  // effective pace so the snapshot path fires and overdue items appear after
-  // elapsed study days.  Back-fill is restricted to study days only —
-  // non-study elapsed days are skipped.
-  final priorlyShownRefsMap = <CurriculumId, Set<String>>{};
-  // Tracks that don't have a pace goal but have activatedAt: we synthesise
-  // a pacePerDay for the engine snapshot path (overdue computation only).
-  final effectivePaceOverrideMap = <CurriculumId, double>{};
-  final todayLocal = _localDateOnly(now);
-  for (final curriculum in activeCurricula) {
-    final trackId = trackIds[curriculum];
-    final startedAt = trackStartedAtMap[curriculum];
-    if (trackId == null || startedAt == null) continue;
-
-    final orderedItems = await engine.getOrderedLeafItems(curriculum);
-    final stages = await stageRepository.getStagesByTrack(trackId);
-    if (stages.isEmpty || orderedItems.isEmpty) continue;
-    final firstStage = stages.reduce(
-      (domain_stage.StageDefinition a, domain_stage.StageDefinition b) =>
-          a.stageOrder < b.stageOrder ? a : b,
-    );
-
-    final pace = pacePerDayMap[curriculum];
-    final hasPaceGoal = pace != null;
-
-    if (hasPaceGoal) {
-      // Existing pace-goal path: respect coarse-unit grouping and use the
-      // configured pace.  Back-fill is study-day-aware.
-      final paceCeil = pace.ceil();
-      if (paceCeil <= 0) continue;
-
-      // Fetch study day weekdays for this track.
-      final studyConfigs = await db.studyDayConfigDao.getConfigsByTrack(
-        trackId,
-      );
-      final studyWeekdays = studyConfigs.isEmpty
-          ? {1, 2, 3, 4, 5, 6, 7}
-          : {
-              for (final c in studyConfigs)
-                if (c.dayType == 'study') c.dayOfWeek,
-            };
-
-      // Slot a day's worth of refs by either coarse unit (when the goal's
-      // paceGranularity names a level above the leaf, e.g. 'perek' for
-      // Mishnayos or 'daf' for Bavli) or single leaves.
-      final paceGranularity = paceGranularityMap[curriculum];
-      final isCoarse = _isCoarseLearningUnit(curriculum, paceGranularity);
-      final daySlots = <List<String>>[];
-      if (isCoarse) {
-        final byKey = <String, List<String>>{};
-        final keyOrder = <String>[];
-        for (final item in orderedItems) {
-          final key = item.coarseUnitKey ?? item.sefariaRef;
-          final list = byKey.putIfAbsent(key, () {
-            keyOrder.add(key);
-            return <String>[];
-          });
-          list.add(item.sefariaRef);
-        }
-        for (final key in keyOrder) {
-          daySlots.add(byKey[key]!);
-        }
-      } else {
-        for (final item in orderedItems) {
-          daySlots.add([item.sefariaRef]);
-        }
-      }
-
-      // Study-day ordinal counter — incremented only for study days so the
-      // position assignment skips non-study days.
-      var studyDayOrdinal = 0;
-      await planRepo.backfillMissingSnapshots(
-        profileId: profileId,
-        trackId: trackId,
-        activatedAt: startedAt,
-        currentDate: now,
-        buildSnapshotForDay: ({required dayIndex, required planDate}) async {
-          // Skip non-study days.
-          if (!studyWeekdays.contains(planDate.weekday)) {
-            return const <DailyTask>[];
-          }
-
-          final start = studyDayOrdinal * paceCeil;
-          studyDayOrdinal++;
-
-          if (start >= daySlots.length) return const <DailyTask>[];
-          final end = (start + paceCeil).clamp(0, daySlots.length);
-          final refs = daySlots.sublist(start, end).expand((g) => g).toList();
-          return refs
-              .map(
-                (ref) => DailyTask(
-                  curriculumId: curriculum,
-                  contentItemSefariaRef: ref,
-                  stageOrder: firstStage.stageOrder,
-                  stageDefinitionId: firstStage.id,
-                  priority: DailyTaskPriority.newLearning,
-                  isOverdue: true,
-                  reason: 'Backfilled (app not run)',
-                  stageName: firstStage.stageName,
-                  trackId: trackId,
-                  trackLabel: trackLabels[curriculum] ?? '',
-                  estimatedEffortMinutes: 5,
-                ),
-              )
-              .toList();
-        },
-      );
-    } else {
-      // Non-pace-goal path (F6 fix): back-fill elapsed study days using a
-      // default pace so overdue items appear when study days were missed.
-      const kDefaultBackfillPace = 5;
-
-      final studyConfigs = await db.studyDayConfigDao.getConfigsByTrack(
-        trackId,
-      );
-      final studyWeekdays = studyConfigs.isEmpty
-          ? const <int>{1, 2, 3, 4, 5, 6, 7}
-          : {
-              for (final c in studyConfigs)
-                if (c.dayType == 'study') c.dayOfWeek,
-            };
-
-      final orderedRefs = orderedItems.map((i) => i.sefariaRef).toList();
-
-      await planRepo.backfillStudyDaySnapshots(
-        profileId: profileId,
-        trackId: trackId,
-        curriculumId: curriculum,
-        activatedAt: startedAt,
-        currentDate: now,
-        pace: kDefaultBackfillPace,
-        studyWeekdays: studyWeekdays,
-        orderedRefs: orderedRefs,
-        firstStageOrder: firstStage.stageOrder,
-        firstStageDefinitionId: firstStage.id,
-        firstStageName: firstStage.stageName,
-        trackLabel: trackLabels[curriculum] ?? '',
-      );
-
-      // Record the effective pace override so the engine uses the snapshot
-      // path (which handles priorlyShownRefs) for overdue computation.
-      effectivePaceOverrideMap[curriculum] = kDefaultBackfillPace.toDouble();
-    }
-
-    priorlyShownRefsMap[curriculum] = await db.dailyPlanDao
-        .getPriorlyShownRefsForTrack(trackId: trackId, excludeDate: todayLocal);
-  }
-
-  // Merge the explicit pace-goal map with effective-pace overrides for
-  // non-pace tracks that were back-filled (F6 fix).  The engine snapshot
-  // path requires pacePerDay != null to fire; effectivePaceOverrideMap
-  // supplies a default value so overdue items surface for those tracks.
-  final mergedPacePerDayMap = {
-    ...effectivePaceOverrideMap,
-    ...pacePerDayMap, // explicit goals take precedence
-  };
-
+  // _buildFreshPlan now generates chazara/review tasks only — overdue and
+  // today are owned by the pure projection (_buildProjectionTasks / project).
+  // The backfill machinery (backfillMissingSnapshots / backfillStudyDaySnapshots
+  // / kDefaultBackfillPace / effectivePaceOverrideMap) has been deleted:
+  // the schedule function spans missed days intrinsically (architecture §11 step 4).
   final generated = await generator.generateAll(
     activeCurricula,
     now,
     goalDeadlines: goalDeadlines,
-    pacePerDayMap: mergedPacePerDayMap,
+    pacePerDayMap: pacePerDayMap,
     isStudyDayMap: isStudyDayMap,
     studyDaysPerWeekMap: studyDaysPerWeekMap,
     studyDaysInDeadlineWindowMap: studyDaysInDeadlineWindowMap,
     trackIds: trackIds,
     trackLabels: trackLabels,
     trackStartedAtMap: trackStartedAtMap,
-    priorlyShownRefsMap: priorlyShownRefsMap,
+    priorlyShownRefsMap: const {},
     paceGranularityMap: paceGranularityMap,
   );
 

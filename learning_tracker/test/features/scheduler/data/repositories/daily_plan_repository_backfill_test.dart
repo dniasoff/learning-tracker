@@ -1,3 +1,14 @@
+/// Wave 3 replacement for the old backfillMissingSnapshots tests.
+///
+/// backfillMissingSnapshots and backfillStudyDaySnapshots have been deleted
+/// (architecture §11 step 4 — the schedule function spans missed days
+/// intrinsically; backfill is dead).
+///
+/// This file now tests the DailyPlanRepository cache contract that
+/// remains valid after the cutover: getOrSnapshotPlan and rebuildPlan
+/// continue to work correctly for the chazara snapshot cache path.
+library;
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
@@ -7,7 +18,7 @@ import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dar
 import '../../../../helpers/test_database.dart';
 
 void main() {
-  group('DailyPlanRepository.backfillMissingSnapshots', () {
+  group('DailyPlanRepository — cache contract after Wave 3 cutover', () {
     late DailyPlanRepository repo;
     late UserDatabase db;
 
@@ -17,8 +28,8 @@ void main() {
       stageOrder: 1,
       stageDefinitionId: 101,
       priority: DailyTaskPriority.newLearning,
-      isOverdue: true,
-      reason: 'Backfilled',
+      isOverdue: false,
+      reason: 'New learning',
       stageName: 'Learning',
       trackId: 1,
       trackLabel: 'Personal',
@@ -29,130 +40,137 @@ void main() {
       repo = DailyPlanRepository(db);
     });
 
+    tearDown(() => db.close());
+
     test(
-      'activated 3 days ago with no priors writes 3 synthetic snapshots',
+      'getOrSnapshotPlan runs buildPlan once — second read serves cache',
       () async {
-        final activatedAt = DateTime.utc(2026, 4, 16, 8, 0);
-        final now = DateTime.utc(2026, 4, 19, 9, 0);
+        final now = DateTime.utc(2026, 4, 19, 10, 0);
+        var buildCount = 0;
 
-        // Builder returns 5 refs per day, indexed by dayIndex.
-        final builderCalls = <int>[];
-        await repo.backfillMissingSnapshots(
-          profileId: 1,
-          trackId: 1,
-          activatedAt: activatedAt,
-          currentDate: now,
-          buildSnapshotForDay: ({required dayIndex, required planDate}) async {
-            builderCalls.add(dayIndex);
-            return List.generate(5, (i) => mkTask('ref_${dayIndex * 5 + i}'));
-          },
-        );
-
-        // 3 missing days (16, 17, 18 — day 19 is today, not back-filled).
-        expect(builderCalls, [0, 1, 2]);
-
-        // Snapshots exist for each prior day.
-        for (var d = 0; d < 3; d++) {
-          final exists = await db.dailyPlanDao.hasPlanForTrackOnDay(
-            trackId: 1,
-            planDate: DateTime(2026, 4, 16 + d),
-          );
-          expect(exists, isTrue, reason: 'day $d snapshot must exist');
+        Future<List<DailyTask>> build() async {
+          buildCount++;
+          return [mkTask('ref_a'), mkTask('ref_b')];
         }
 
-        // All 15 refs from the back-fill are now in priorlyShownRefs.
-        final priorly = await db.dailyPlanDao.getPriorlyShownRefsForTrack(
-          trackId: 1,
-          excludeDate: DateTime(2026, 4, 19),
+        final first = await repo.getOrSnapshotPlan(
+          profileId: 1,
+          now: now,
+          buildPlan: build,
         );
-        expect(priorly, hasLength(15));
+        expect(buildCount, 1);
+        expect(first.isNew, isTrue);
+
+        final second = await repo.getOrSnapshotPlan(
+          profileId: 1,
+          now: now.add(const Duration(hours: 3)),
+          buildPlan: build,
+        );
+        expect(buildCount, 1, reason: 'second read must serve the cache');
+        expect(second.isNew, isFalse);
+        expect(second.tasks.map((t) => t.contentItemSefariaRef).toList(), [
+          'ref_a',
+          'ref_b',
+        ]);
       },
     );
 
-    test('only fills missing days when a partial gap exists', () async {
-      final activatedAt = DateTime.utc(2026, 4, 16, 8, 0);
-      final now = DateTime.utc(2026, 4, 19, 9, 0);
+    test('rebuildPlan clears the cache and regenerates', () async {
+      final now = DateTime.utc(2026, 4, 19, 10, 0);
 
-      // Pre-populate day 17 (a real snapshot already exists for that day).
+      // Seed the cache.
       await repo.getOrSnapshotPlan(
         profileId: 1,
-        now: DateTime.utc(2026, 4, 17, 8, 0),
-        buildPlan: () async => [mkTask('REAL_DAY1_a'), mkTask('REAL_DAY1_b')],
+        now: now,
+        buildPlan: () async => [mkTask('old_ref')],
       );
 
-      final builderCalls = <int>[];
-      await repo.backfillMissingSnapshots(
+      // Rebuild with a different plan.
+      final rebuilt = await repo.rebuildPlan(
         profileId: 1,
-        trackId: 1,
-        activatedAt: activatedAt,
-        currentDate: now,
-        buildSnapshotForDay: ({required dayIndex, required planDate}) async {
-          builderCalls.add(dayIndex);
-          return [mkTask('SYNTH_d${dayIndex}_a')];
+        now: now,
+        buildPlan: () async => [mkTask('new_ref')],
+      );
+      expect(rebuilt.map((t) => t.contentItemSefariaRef).toList(), ['new_ref']);
+
+      // Subsequent read from cache returns the rebuilt plan.
+      var subsequentBuildCalled = false;
+      final subsequent = await repo.getOrSnapshotPlan(
+        profileId: 1,
+        now: now,
+        buildPlan: () async {
+          subsequentBuildCalled = true;
+          return [mkTask('should_not_appear')];
         },
       );
-
-      // Day 1 (April 17) already has a real snapshot, must be skipped.
-      // Days 0 (April 16) and 2 (April 18) are still missing.
-      expect(builderCalls, [0, 2]);
+      expect(subsequentBuildCalled, isFalse);
+      expect(subsequent.tasks.single.contentItemSefariaRef, 'new_ref');
     });
 
-    test('activated today is a no-op', () async {
-      final now = DateTime.utc(2026, 4, 19, 9, 0);
-      final activatedAt = DateTime.utc(2026, 4, 19, 1, 0);
+    test(
+      'getPriorlyShownRefsForTrack returns refs from prior snapshot rows',
+      () async {
+        // Verify the DAO method still works for chazara — write a snapshot
+        // row directly, then retrieve it as a prior ref.
+        final yesterday = DateTime.utc(2026, 4, 18);
+        final today = DateTime.utc(2026, 4, 19);
 
-      var called = false;
-      await repo.backfillMissingSnapshots(
-        profileId: 1,
-        trackId: 1,
-        activatedAt: activatedAt,
-        currentDate: now,
-        buildSnapshotForDay: ({required dayIndex, required planDate}) async {
-          called = true;
-          return [];
-        },
-      );
-      expect(called, isFalse);
-    });
+        await repo.getOrSnapshotPlan(
+          profileId: 1,
+          now: yesterday,
+          buildPlan: () async => [mkTask('chazara_ref')],
+        );
 
-    test('idempotent: second call writes nothing extra', () async {
-      final activatedAt = DateTime.utc(2026, 4, 17, 8, 0);
-      final now = DateTime.utc(2026, 4, 19, 9, 0);
+        final priorRefs = await db.dailyPlanDao.getPriorlyShownRefsForTrack(
+          trackId: 1,
+          excludeDate: today,
+        );
+        expect(
+          priorRefs,
+          contains('chazara_ref'),
+          reason: 'chazara ref from yesterday appears in prior refs',
+        );
+      },
+    );
 
-      Future<List<DailyTask>> build({
-        required int dayIndex,
-        required DateTime planDate,
-      }) async {
-        return [mkTask('d${dayIndex}_only')];
-      }
+    test(
+      'daily_plans table is a disposable cache — wiping it is safe',
+      () async {
+        // Architecture §6: losing the cache (reinstall, wipe) costs nothing.
+        // The projection rebuilds from synced inputs without daily_plans.
+        final now = DateTime.utc(2026, 4, 19, 10, 0);
 
-      await repo.backfillMissingSnapshots(
-        profileId: 1,
-        trackId: 1,
-        activatedAt: activatedAt,
-        currentDate: now,
-        buildSnapshotForDay: build,
-      );
-      final priorlyAfterFirst = await db.dailyPlanDao
-          .getPriorlyShownRefsForTrack(
-            trackId: 1,
-            excludeDate: DateTime(2026, 4, 19),
-          );
+        await repo.getOrSnapshotPlan(
+          profileId: 1,
+          now: now,
+          buildPlan: () async => [mkTask('ref_a')],
+        );
 
-      await repo.backfillMissingSnapshots(
-        profileId: 1,
-        trackId: 1,
-        activatedAt: activatedAt,
-        currentDate: now,
-        buildSnapshotForDay: build,
-      );
-      final priorlyAfterSecond = await db.dailyPlanDao
-          .getPriorlyShownRefsForTrack(
-            trackId: 1,
-            excludeDate: DateTime(2026, 4, 19),
-          );
+        // Wipe daily_plans (simulating reinstall).
+        await db.delete(db.dailyPlans).go();
 
-      expect(priorlyAfterSecond, priorlyAfterFirst);
-    });
+        // Verify: table is empty after wipe.
+        final rows = await db.select(db.dailyPlans).get();
+        expect(rows, isEmpty, reason: 'daily_plans is fully cleared');
+
+        // The next getOrSnapshotPlan will rebuild from scratch (isNew=true).
+        var buildCalled = false;
+        final result = await repo.getOrSnapshotPlan(
+          profileId: 1,
+          now: now,
+          buildPlan: () async {
+            buildCalled = true;
+            return [mkTask('ref_rebuilt')];
+          },
+        );
+        expect(
+          buildCalled,
+          isTrue,
+          reason: 'cache miss after wipe → buildPlan called',
+        );
+        expect(result.isNew, isTrue);
+        expect(result.tasks.single.contentItemSefariaRef, 'ref_rebuilt');
+      },
+    );
   });
 }
