@@ -4,10 +4,10 @@
 /// Validates:
 ///   AC1 — `MergeRouter` dispatches by entity kind to an `EntityMerger<T>`
 ///         implementation. Unknown kinds fail loudly.
-///   AC2 — Seven sealed mergers exist (one file each):
+///   AC2 — Eight sealed mergers exist (one file each):
 ///         CompletionEventMerger, StreakEventMerger, LearnerProfileMerger,
 ///         TrackConfigMerger, BookmarkMerger, SettingsMerger,
-///         StageDefinitionMerger.
+///         StageDefinitionMerger, ProfileProgramMerger.
 ///   AC3 — `StageDefinitionMerger` merges ALL fields — `scheduleType`,
 ///         `daysOfWeek`, `rollingWindowSize`, `delayDays` (closes T1.9).
 ///   AC4 — `MergeRules` is load-bearing: every LWW merger consults it
@@ -28,6 +28,7 @@ import 'package:learning_tracker/core/sync/merge/completion_event_merger.dart';
 import 'package:learning_tracker/core/sync/merge/entity_merger.dart';
 import 'package:learning_tracker/core/sync/merge/learner_profile_merger.dart';
 import 'package:learning_tracker/core/sync/merge/merge_router.dart';
+import 'package:learning_tracker/core/sync/merge/profile_program_merger.dart';
 import 'package:learning_tracker/core/sync/merge/settings_merger.dart';
 import 'package:learning_tracker/core/sync/merge/stage_definition_merger.dart';
 import 'package:learning_tracker/core/sync/merge/streak_event_merger.dart';
@@ -63,6 +64,10 @@ void main() {
             EntityKind.settings: _RecordingMerger(EntityKind.settings, calls),
             EntityKind.stageDefinition: _RecordingMerger(
               EntityKind.stageDefinition,
+              calls,
+            ),
+            EntityKind.profileProgram: _RecordingMerger(
+              EntityKind.profileProgram,
               calls,
             ),
           };
@@ -120,10 +125,10 @@ void main() {
         });
       });
 
-      // ── AC2 — Seven sealed mergers, each in its own file ─────────────────
+      // ── AC2 — Eight sealed mergers, each in its own file ─────────────────
 
       group('sealed EntityMerger strategies', () {
-        test('seven concrete subclasses exist, one per file', () {
+        test('eight concrete subclasses exist, one per file', () {
           final libDir = Directory('lib/core/sync/merge');
           expect(libDir.existsSync(), isTrue);
 
@@ -135,6 +140,7 @@ void main() {
             'bookmark_merger.dart',
             'settings_merger.dart',
             'stage_definition_merger.dart',
+            'profile_program_merger.dart',
           };
 
           final actual = libDir
@@ -161,6 +167,7 @@ void main() {
           final bookmark = BookmarkMerger(store: _NullMergeStore());
           final settings = SettingsMerger(store: _NullMergeStore());
           final stageDef = StageDefinitionMerger(store: _NullMergeStore());
+          final profileProgram = ProfileProgramMerger(store: _NullMergeStore());
 
           expect(completion, isA<EntityMerger>());
           expect(streak, isA<EntityMerger>());
@@ -169,6 +176,7 @@ void main() {
           expect(bookmark, isA<EntityMerger>());
           expect(settings, isA<EntityMerger>());
           expect(stageDef, isA<EntityMerger>());
+          expect(profileProgram, isA<EntityMerger>());
 
           expect(completion.kind, EntityKind.completion);
           expect(streak.kind, EntityKind.streak);
@@ -177,6 +185,7 @@ void main() {
           expect(bookmark.kind, EntityKind.bookmark);
           expect(settings.kind, EntityKind.settings);
           expect(stageDef.kind, EntityKind.stageDefinition);
+          expect(profileProgram.kind, EntityKind.profileProgram);
         });
       });
 

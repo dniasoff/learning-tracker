@@ -991,8 +991,8 @@ void main() {
 
       /// `fetchPage` calls issued by one full `pullOnLaunch` — one empty page
       /// per pulled collection (completions, bookmarks, settings, tracks,
-      /// learner_profiles, learning_order).
-      const fetchesPerPull = 6;
+      /// learner_profiles, learning_order, profile_programs).
+      const fetchesPerPull = 7;
 
       setUp(() {
         // pullOnLaunch reads/writes SharedPreferences for the resume throttle.

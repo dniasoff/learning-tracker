@@ -17,6 +17,7 @@ class EntityKind {
   static const bookmark = 'bookmark';
   static const settings = 'settings';
   static const stageDefinition = 'stage_definition';
+  static const profileProgram = 'profile_program';
 
   /// Deterministic enumeration order for tests and diagnostics.
   static const List<String> all = [
@@ -27,6 +28,7 @@ class EntityKind {
     bookmark,
     settings,
     stageDefinition,
+    profileProgram,
   ];
 }
 

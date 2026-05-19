@@ -249,6 +249,7 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
       await pullPipeline.pullTracks(profileId: _profileId);
       await pullPipeline.pullLearnerProfiles(profileId: _profileId);
       await pullPipeline.pullLearningOrder(profileId: _profileId);
+      await pullPipeline.pullProfilePrograms(profileId: _profileId);
 
       // Record successful pull timestamp for resume-throttle.
       try {

@@ -125,6 +125,9 @@ class DriftMergeStore implements MergeStore {
       case EntityKind.stageDefinition:
         await _upsertStageDefinition(profileId, fields);
 
+      case EntityKind.profileProgram:
+        await _upsertProfileProgram(profileId, fields);
+
       default:
         // Unknown kind — no-op (the MergeRouter has already validated the kind).
         break;
@@ -446,6 +449,34 @@ class DriftMergeStore implements MergeStore {
         ),
       );
     }
+  }
+
+  Future<void> _upsertProfileProgram(
+    int profileId,
+    Map<String, dynamic> fields,
+  ) async {
+    final curriculumId = fields['curriculum_id'] as String?;
+    final rawProgramId = fields['program_id'];
+    final programId = rawProgramId is int
+        ? rawProgramId
+        : int.tryParse(rawProgramId?.toString() ?? '');
+    if (curriculumId == null || programId == null) return;
+
+    final rawProfileId = fields['profile_id'];
+    final resolvedProfileId = rawProfileId is int
+        ? rawProfileId
+        : int.tryParse(rawProfileId?.toString() ?? '') ?? profileId;
+
+    final trackingStartDate = _parseDateTime(fields['tracking_start_date']);
+    final trackingStartRef = fields['tracking_start_ref'] as String?;
+
+    await _db.profileProgramDao.setProfileProgram(
+      profileId: resolvedProfileId,
+      curriculumType: curriculumId,
+      programId: programId,
+      trackingStartDate: trackingStartDate,
+      trackingStartRef: trackingStartRef,
+    );
   }
 
   // ── Shared parse helpers ────────────────────────────────────────────────────

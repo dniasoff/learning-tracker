@@ -102,6 +102,16 @@ class PullPipeline {
     pageSize: pageSize,
   );
 
+  Future<void> pullProfilePrograms({
+    required int profileId,
+    int pageSize = defaultPageSize,
+  }) => _pullCollection(
+    profileId: profileId,
+    collection: 'profile_programs',
+    kind: EntityKind.profileProgram,
+    pageSize: pageSize,
+  );
+
   Future<void> _pullCollection({
     required int profileId,
     required String collection,
