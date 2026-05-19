@@ -72,7 +72,7 @@ class DashboardTaskItem extends ConsumerWidget {
                     ),
                     const SizedBox(height: 2),
                     // Line 2: stageName [· N day(s) overdue]
-                    _buildSubtitle(context, theme),
+                    _buildSubtitle(context, ref, theme),
                   ],
                 ),
               ),
@@ -92,20 +92,16 @@ class DashboardTaskItem extends ConsumerWidget {
     );
   }
 
-  Widget _buildSubtitle(BuildContext context, ThemeData theme) {
+  Widget _buildSubtitle(BuildContext context, WidgetRef ref, ThemeData theme) {
     final l10n = AppLocalizations.of(context)!;
-    return Consumer(
-      builder: (context, ref, _) {
-        final terms = domainTermLabels(ref);
-        final chazaraReviewLabel = terms.chazara;
-        final resolvedStageName = terms.resolveStoredStageName(task.stageName);
-        return _buildSubtitleInner(
-          theme,
-          l10n,
-          chazaraReviewLabel,
-          resolvedStageName,
-        );
-      },
+    final terms = domainTermLabels(ref);
+    final chazaraReviewLabel = terms.chazara;
+    final resolvedStageName = terms.resolveStoredStageName(task.stageName);
+    return _buildSubtitleInner(
+      theme,
+      l10n,
+      chazaraReviewLabel,
+      resolvedStageName,
     );
   }
 

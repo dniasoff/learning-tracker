@@ -168,7 +168,8 @@ class BulkPriorCompletionService {
   ///
   /// Note: [StageDefinition] (the domain model) intentionally omits
   /// `supersededAt` — the filtering is enforced at the DAO layer.
-  Future<List<int>> _allStageIds(
+  // Returns stageOrder values, not stage_definitions.id PKs.
+  Future<List<int>> _allStageOrders(
     CurriculumId curriculumId, {
     List<int> fallback = const [1],
   }) async {
@@ -213,7 +214,7 @@ class BulkPriorCompletionService {
     // B6: determine the full ordered stage list for this track.
     // The configured set (superseded stages filtered at the DAO layer) covers
     // all active stages regardless of what the caller passes.
-    final allConfiguredStageIds = await _allStageIds(
+    final allConfiguredStageIds = await _allStageOrders(
       curriculumId,
       fallback: stageIds,
     );

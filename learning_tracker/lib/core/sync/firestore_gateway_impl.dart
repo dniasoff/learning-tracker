@@ -141,20 +141,52 @@ class FirestoreGatewayImpl implements FirestoreGateway {
   static Map<String, dynamic> _timestampifyCompletedAt(
     Map<String, dynamic> data,
   ) {
-    final value = data['completed_at'];
-    if (value == null || value is Timestamp) return data;
-    if (value is DateTime) {
-      return {...data, 'completed_at': Timestamp.fromDate(value.toUtc())};
+    var result = data;
+
+    // Normalize completed_at
+    final completedAt = result['completed_at'];
+    if (completedAt != null && completedAt is! Timestamp) {
+      if (completedAt is DateTime) {
+        result = {
+          ...result,
+          'completed_at': Timestamp.fromDate(completedAt.toUtc()),
+        };
+      } else if (completedAt is String) {
+        // A malformed string must not throw out of the whole batch — leave the
+        // value untouched so only this one document is affected (denied by the
+        // completed_at rule) rather than poisoning every sibling in the chunk.
+        final parsed = DateTime.tryParse(completedAt);
+        if (parsed != null) {
+          result = {
+            ...result,
+            'completed_at': Timestamp.fromDate(parsed.toUtc()),
+          };
+        }
+      }
     }
-    if (value is String) {
-      // A malformed string must not throw out of the whole batch — leave the
-      // value untouched so only this one document is affected (denied by the
-      // completed_at rule) rather than poisoning every sibling in the chunk.
-      final parsed = DateTime.tryParse(value);
-      if (parsed == null) return data;
-      return {...data, 'completed_at': Timestamp.fromDate(parsed.toUtc())};
+
+    // Normalize purged_at (present in tombstone outbox payloads).
+    if (result.containsKey('purged_at')) {
+      final purgedAt = result['purged_at'];
+      if (purgedAt != null && purgedAt is! Timestamp) {
+        if (purgedAt is DateTime) {
+          result = {
+            ...result,
+            'purged_at': Timestamp.fromDate(purgedAt.toUtc()),
+          };
+        } else if (purgedAt is String) {
+          final parsed = DateTime.tryParse(purgedAt);
+          if (parsed != null) {
+            result = {
+              ...result,
+              'purged_at': Timestamp.fromDate(parsed.toUtc()),
+            };
+          }
+        }
+      }
     }
-    return data;
+
+    return result;
   }
 
   @override

@@ -290,6 +290,12 @@ class UserDatabase extends _$UserDatabase {
             'ON completion_events '
             '(profile_id, sefaria_ref, stage_id, track_type, curriculum_id)',
           );
+          // NOTE: Pre-v22 outbox rows for completion entity_kind use a 4-component
+          // entityKey ("profileId:sefariaRef:stageId:trackType"). New rows use 5
+          // components with curriculumId. Updating pre-existing rows would require
+          // JSON extraction in SQLite (non-trivial). Transitional rows produce a
+          // harmless double-push on next drain (both SetOptions(merge:true));
+          // they age out naturally as the outbox is drained.
         }
       },
     );
