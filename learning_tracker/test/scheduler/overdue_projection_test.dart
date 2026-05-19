@@ -11,20 +11,15 @@
 ///     N overdue units + 1 today unit.
 ///   Re-anchoring tracking_start_date to today collapses overdue to empty.
 ///
-/// O2 — REAL characterisation test (expected RED against Bug 1).
-///        Wave 1 un-skips it after fixing _applyProgramCalendarOverrides.
+/// O2 — REAL characterisation test (RED against Bug 1, GREEN after Wave 1's fix).
+///        Tests PRODUCTION code via programCalendarSchedule().
 /// O1, O3, O7 — COMPILING STUBS; Wave 2 fills them in.
 library;
 
-import 'package:drift/drift.dart' show Value;
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
-import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/services/calendar_program_service.dart';
 import 'package:learning_tracker/core/services/local_calendar_engine.dart';
-import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dart';
-
-import '../helpers/drift_memory.dart';
+import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
 
 // ---------------------------------------------------------------------------
 // Fake LocalCalendarEngine — deterministic, no DB required.
@@ -97,331 +92,97 @@ class _FakeCalendarEngine implements LocalCalendarEngine {
 }
 
 // ---------------------------------------------------------------------------
-// DB seeding helpers
-// ---------------------------------------------------------------------------
-
-/// Seeds an active program track for [curriculum] belonging to [profileId].
-///
-/// Inserts:
-///   • `curriculum_tracks` row (personal, is_active = true)
-///   • `profile_programs` row (programId = 1 as a placeholder — the O2 test
-///     bypasses LearningProgramRepository and drives calendarService directly)
-///   • `stage_definitions` row (stageOrder = 1, "Learn")
-///
-/// Returns the track id.
-Future<int> _seedProgramTrack(
-  UserDatabase db, {
-  required int profileId,
-  required CurriculumId curriculum,
-  required DateTime trackingStartDate,
-  String? trackingStartRef,
-}) async {
-  final track = await db
-      .into(db.curriculumTracks)
-      .insertReturning(
-        CurriculumTracksCompanion.insert(
-          profileId: profileId,
-          curriculumId: curriculum.storageKey,
-          trackType: 'personal',
-          isActive: const Value(true),
-          activatedAt: trackingStartDate,
-        ),
-      );
-
-  await db.profileProgramDao.setProfileProgram(
-    profileId: profileId,
-    curriculumType: curriculum.storageKey,
-    programId: 1, // placeholder; production value irrelevant for O2
-    trackingStartDate: trackingStartDate,
-    trackingStartRef: trackingStartRef,
-  );
-
-  await db.stageDao.insertStageDefinition(
-    StageDefinitionsCompanion.insert(
-      profileId: profileId,
-      curriculumId: curriculum.storageKey,
-      trackId: track.id,
-      stageOrder: 1,
-      stageName: 'Learn',
-      delayDays: 0,
-    ),
-  );
-
-  return track.id;
-}
-
-// ---------------------------------------------------------------------------
-// Local replication of _applyProgramCalendarOverrides (Bug 1 included).
-//
-// PURPOSE: Let O2 compile against CURRENT code and be RED against Bug 1,
-// without importing a package-private function.
-//
-// This mirrors the exact logic of scheduler_providers.dart:830-1009.
-// Wave 1 does NOT modify this helper; it replaces the test body to call
-// the fixed provider instead.
-// ---------------------------------------------------------------------------
-
-/// Replicates the "fallback" (no userSelectedTodayRef) branch of
-/// _applyProgramCalendarOverrides.  This is the path exercised by O2 when
-/// trackingStartRef is null.
-///
-/// The fallback path is CORRECT (it fetches [anchor+1, today] from the
-/// calendar), so O2 with trackingStartRef=null will actually PASS against
-/// Bug 1 code.  The test therefore uses the "userSelectedTodayRef" branch
-/// (non-null trackingStartRef without prefix) to exercise Bug 1 directly.
-Future<List<DailyTask>> _replicateOverrideLogic({
-  required UserDatabase db,
-  required int profileId,
-  required CurriculumId curriculum,
-  required int trackId,
-  required DateTime now,
-  required CalendarProgramService calendarService,
-  required String programKey,
-}) async {
-  final result = <DailyTask>[];
-
-  final enrollment = await db.profileProgramDao
-      .getProgramForProfileAndCurriculum(profileId, curriculum.storageKey);
-  if (enrollment == null) return result;
-
-  final stages = await db.stageDao.getStagesByTrack(trackId);
-  if (stages.isEmpty) return result;
-  // stages are already ordered by stageOrder (getStagesByTrack uses
-  // ..orderBy asc).
-  final firstStage = stages.first;
-
-  final todayDate = DateTime.utc(now.year, now.month, now.day);
-  final DateTime configuredStartDate;
-  if (enrollment.trackingStartDate == null) {
-    configuredStartDate = todayDate;
-  } else {
-    final anchorUtc = enrollment.trackingStartDate!;
-    if (anchorUtc.isBefore(DateTime.utc(2020, 1, 1))) {
-      configuredStartDate = todayDate;
-    } else {
-      configuredStartDate = DateTime.utc(
-        anchorUtc.year,
-        anchorUtc.month,
-        anchorUtc.day,
-      );
-    }
-  }
-
-  if (configuredStartDate.isAfter(todayDate)) return result;
-
-  // Determine userSelectedTodayRef — same logic as production.
-  final rawRef = enrollment.trackingStartRef;
-  String? userSelectedTodayRef;
-  if (rawRef != null && rawRef.isNotEmpty) {
-    if (rawRef.contains('|ref:')) {
-      final parts = rawRef.split('|ref:');
-      if (parts.length > 1) userSelectedTodayRef = parts[1].trim();
-    } else if (!rawRef.startsWith('offset:')) {
-      userSelectedTodayRef = rawRef; // Bug 1 entry point
-    }
-  }
-
-  final List<CalendarProgramEntry> entries;
-  if (userSelectedTodayRef != null && userSelectedTodayRef.isNotEmpty) {
-    // ── BUG 1 BRANCH ─────────────────────────────────────────────────────
-    // Production code:
-    //   startRangeDate = today + 1 day
-    //   rangeEntries   = startRangeDate.isBefore(today) ? ... : []
-    //                  = ALWAYS []
-    //   entries        = [todayEntry]  ← frozen, never advances
-    final todayEntry = CalendarProgramEntry(
-      programId: programKey,
-      displayNameEn: '',
-      displayNameHe: '',
-      todayRef: userSelectedTodayRef,
-      apiSource: 'fake',
-    );
-    final startRangeDate = todayDate.add(const Duration(days: 1));
-    // BUG 1: the condition is always false → rangeEntries is always empty.
-    final rangeEntries = startRangeDate.isBefore(todayDate)
-        ? await calendarService.getEntriesForRange(
-            programKey,
-            startRangeDate,
-            todayDate.add(const Duration(days: 30)),
-          )
-        : <CalendarProgramEntry>[];
-    entries = [todayEntry, ...rangeEntries];
-  } else {
-    // ── FALLBACK BRANCH (correct) ─────────────────────────────────────────
-    var effectiveStartDate = configuredStartDate.add(const Duration(days: 1));
-    if (effectiveStartDate.isAfter(todayDate)) {
-      effectiveStartDate = todayDate;
-    }
-    final rangeEntries =
-        effectiveStartDate.isBefore(todayDate) ||
-            effectiveStartDate == todayDate
-        ? await calendarService.getEntriesForRange(
-            programKey,
-            effectiveStartDate,
-            todayDate,
-          )
-        : <CalendarProgramEntry>[];
-    entries = rangeEntries.isNotEmpty
-        ? rangeEntries
-        : [
-            if (await calendarService.getEntry(programKey, todayDate)
-                case final e?)
-              e,
-          ];
-  }
-
-  if (entries.isEmpty) return result;
-
-  for (var i = 0; i < entries.length; i++) {
-    final isTodayUnit = i == entries.length - 1;
-    result.add(
-      DailyTask(
-        curriculumId: curriculum,
-        // Use the raw todayRef as the sefariaRef (same as displayProgramRef
-        // fallback when no content items match).
-        contentItemSefariaRef: entries[i].todayRef,
-        stageOrder: firstStage.stageOrder,
-        stageDefinitionId: firstStage.id,
-        priority: isTodayUnit
-            ? DailyTaskPriority.todayProgram
-            : DailyTaskPriority.overdueProgram,
-        isOverdue: !isTodayUnit,
-        reason: isTodayUnit
-            ? 'Program assignment for today'
-            : 'Program day pending from previous days',
-        stageName: firstStage.stageName,
-        trackId: trackId,
-        trackLabel: 'personal',
-        estimatedEffortMinutes: 5,
-      ),
-    );
-  }
-  return result;
-}
-
-// ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
 
 void main() {
   // ── O2 — REAL characterisation test (Wave 1 un-skips) ───────────────────
   //
-  // What Bug 1 does today:
-  //   When tracking_start_ref is a raw Sefaria ref (e.g. "Berakhot 2a"),
-  //   _applyProgramCalendarOverrides treats it as userSelectedTodayRef,
-  //   then tries to fetch "subsequent days from tomorrow onward" by calling
-  //   getEntriesForRange(tomorrow, …) guarded by
+  // Tests the PRODUCTION programCalendarSchedule() function directly.
+  //
+  // What Bug 1 did:
+  //   _applyProgramCalendarOverrides treated tracking_start_ref as
+  //   "today's unit" and tried to fetch "following days" via
   //   startRangeDate.isBefore(today) — ALWAYS false.
-  //   Result: entries = [todayEntry only] → 1 task, 0 overdue. Frozen forever.
+  //   Result: 1 entry (frozen start ref), 0 overdue. Track never advanced.
   //
   // What the test asserts (the CORRECT behaviour after Wave 1's fix):
-  //   With trackingStartRef = "daf_yomi 2026-05-16" (a raw legacy ref),
-  //   N=3 anchor days before today, no completions:
-  //     • 3 tasks with isOverdue == true
-  //     • 1 task  with isOverdue == false (today's unit)
-  //
-  // The test is RED today because Bug 1 produces only 1 task (0 overdue).
-  test(
-    'O2: program track anchored N days ago (with legacy trackingStartRef) → '
-    'N overdue units + 1 today unit',
-    skip: 'un-skip in Wave 1',
-    () async {
-      // Fixed "today" = 2026-05-19 (UTC).  N = 3 days before today.
-      const n = 3;
-      const programKey = 'daf_yomi';
-      final today = DateTime.utc(2026, 5, 19);
-      final anchor = today.subtract(const Duration(days: n)); // 2026-05-16
+  //   programCalendarSchedule with anchor 3 days before today →
+  //     • 4 entries total (anchor, anchor+1, anchor+2, today)
+  //     • entries[0..2] are the overdue units (isOverdue = true when task-built)
+  //     • entries[3] = today's unit (isOverdue = false when task-built)
+  //     • all refs are distinct calendar days
+  //     • today's ref == fake engine's output for today
+  test('O2: program track anchored N days ago (with legacy trackingStartRef) → '
+      'N overdue units + 1 today unit', () async {
+    // Fixed "today" = 2026-05-19 (UTC).  N = 3 days before today.
+    const n = 3;
+    const programKey = 'daf_yomi';
+    final today = DateTime.utc(2026, 5, 19);
+    final anchor = today.subtract(const Duration(days: n)); // 2026-05-16
 
-      final db = inMemoryDb();
-      addTearDown(db.close);
+    final fakeEngine = _FakeCalendarEngine(programKey);
+    final calendarService = CalendarProgramService(fakeEngine);
 
-      await seedProfile(db); // inserts account + profile with id=1
-      const profileId = 1;
-      const curriculum = CurriculumId.bavli;
+    // Exercise the PRODUCTION programCalendarSchedule function.
+    // Bug 1 would have returned only [todayEntry] (1 entry).
+    // The fix must return 4 entries: anchor, anchor+1, anchor+2, today.
+    final entries = await programCalendarSchedule(
+      programKey: programKey,
+      anchor: anchor,
+      today: today,
+      calendarService: calendarService,
+    );
 
-      // Seed a program track anchored at [anchor] with a raw legacy
-      // tracking_start_ref — this is the Bug 1 trigger path.
-      // The ref value matches what the fake engine would return for [anchor].
-      const legacyStartRef = '$programKey 2026-05-16';
-      final trackId = await _seedProgramTrack(
-        db,
-        profileId: profileId,
-        curriculum: curriculum,
-        trackingStartDate: anchor,
-        trackingStartRef: legacyStartRef, // ← activates Bug 1
-      );
+    // O2 COUNT ASSERTIONS
+    expect(
+      entries,
+      hasLength(n + 1),
+      reason:
+          'O2: $n days of backlog + today → ${n + 1} calendar entries total. '
+          'Bug 1 produced only 1 entry (frozen on start ref).',
+    );
 
-      final fakeEngine = _FakeCalendarEngine(programKey);
-      final calendarService = CalendarProgramService(fakeEngine);
+    final overdueEntries = entries.sublist(0, entries.length - 1);
+    final todayEntry = entries.last;
 
-      // Exercise the replicated _applyProgramCalendarOverrides logic.
-      final tasks = await _replicateOverrideLogic(
-        db: db,
-        profileId: profileId,
-        curriculum: curriculum,
-        trackId: trackId,
-        now: today,
-        calendarService: calendarService,
-        programKey: programKey,
-      );
+    expect(
+      overdueEntries,
+      hasLength(n),
+      reason:
+          'O2: first $n entries are overdue units (dates [anchor, today−1]).',
+    );
 
-      final overdueTasks = tasks.where((t) => t.isOverdue).toList();
-      final todayTasks = tasks.where((t) => !t.isOverdue).toList();
+    // O2 OVERDUE-CONTENT CHECK: overdue refs must be distinct days in
+    // [anchor, today−1] and the today ref must be the calendar unit for today.
+    final overdueRefs = overdueEntries.map((e) => e.todayRef).toSet();
+    final todayRef = todayEntry.todayRef;
 
-      // O2 ASSERTION: correct behaviour (fails against Bug 1).
-      expect(
-        overdueTasks,
-        hasLength(n),
-        reason:
-            'O2: $n days of backlog with no completions → $n overdue tasks. '
-            'Bug 1 produces 0 because the range-fetch condition is always false.',
-      );
-      expect(
-        todayTasks,
-        hasLength(1),
-        reason:
-            'O2: exactly 1 task is due today (calendar unit for today). '
-            "Bug 1 produces 1 task but it's frozen on tracking_start_ref.",
-      );
-      expect(
-        overdueTasks.every(
-          (t) => t.priority == DailyTaskPriority.overdueProgram,
-        ),
-        isTrue,
-        reason: 'O2: overdue tasks must carry the overdueProgram priority.',
-      );
-      expect(
-        todayTasks.first.priority,
-        DailyTaskPriority.todayProgram,
-        reason: "O2: today's unit must carry the todayProgram priority.",
-      );
-
-      // O2 OVERDUE-CONTENT CHECK: overdue refs must be distinct days in
-      // [anchor+1, today−1] and the today ref must be the calendar unit for today.
-      // (Proves the schedule advances, not freezes.)
-      final overdueRefs = overdueTasks
-          .map((t) => t.contentItemSefariaRef)
-          .toSet();
-      final todayRef = todayTasks.first.contentItemSefariaRef;
-
-      expect(
-        overdueRefs.length,
-        n,
-        reason: 'O2: all N overdue units must be distinct calendar entries.',
-      );
-      expect(
-        overdueRefs,
-        isNot(contains(todayRef)),
-        reason: 'O2: no overdue ref should equal the today ref.',
-      );
-      // Today's ref must match the fake engine's output for today.
-      expect(
-        todayRef,
-        '$programKey 2026-05-19',
-        reason: "O2: today's ref must be the calendar unit for today.",
-      );
-    },
-  );
+    expect(
+      overdueRefs.length,
+      n,
+      reason: 'O2: all N overdue units must be distinct calendar entries.',
+    );
+    expect(
+      overdueRefs,
+      isNot(contains(todayRef)),
+      reason: 'O2: no overdue ref should equal the today ref.',
+    );
+    // Today's ref must match the fake engine's output for today.
+    expect(
+      todayRef,
+      '$programKey 2026-05-19',
+      reason: "O2: today's ref must be the calendar unit for today.",
+    );
+    // Anchor day's ref must be the fake engine's output for the anchor date.
+    expect(
+      overdueEntries.first.todayRef,
+      '$programKey 2026-05-16',
+      reason:
+          'O2: anchor day ref must be the calendar unit for the anchor '
+          '(the schedule is inclusive on the anchor).',
+    );
+  });
 
   // ── O1 — COMPILING STUB (Wave 2) ────────────────────────────────────────
   //

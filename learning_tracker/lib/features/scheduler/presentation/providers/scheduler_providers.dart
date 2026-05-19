@@ -827,6 +827,40 @@ Future<List<DailyTask>> _buildFreshPlan({
   return overridden;
 }
 
+/// Returns the ordered list of calendar entries spanning [anchor, today]
+/// inclusive for a program-calendar track.
+///
+/// The last entry in the list is today's unit (priority `todayProgram`);
+/// every earlier entry represents an overdue unit (`overdueProgram`).
+///
+/// This is a pure function of its inputs — no DB access — and is the
+/// single source of truth for "which calendar units belong in the
+/// schedule".  It is package-visible so that the characterisation test
+/// (O2 in `test/scheduler/overdue_projection_test.dart`) can exercise it
+/// directly.
+///
+/// Invariant (O2 convention):
+///   A program anchored N days before today with no completions →
+///   N entries before the last one (overdue) + 1 last entry (today).
+Future<List<CalendarProgramEntry>> programCalendarSchedule({
+  required String programKey,
+  required DateTime anchor,
+  required DateTime today,
+  required CalendarProgramService calendarService,
+}) async {
+  // [anchor, today] inclusive — getEntriesForRange is inclusive on both ends.
+  final entries = await calendarService.getEntriesForRange(
+    programKey,
+    anchor,
+    today,
+  );
+  if (entries.isNotEmpty) return entries;
+
+  // Calendar engine returned nothing for the range — fall back to just today.
+  final todayEntry = await calendarService.getEntry(programKey, today);
+  return todayEntry != null ? [todayEntry] : const [];
+}
+
 Future<List<DailyTask>> _applyProgramCalendarOverrides({
   required UserDatabase db,
   required StageDefinitionRepository stageRepository,
@@ -902,71 +936,17 @@ Future<List<DailyTask>> _applyProgramCalendarOverrides({
       continue;
     }
 
-    // Check if user explicitly selected a starting reference in add-track flow.
-    // Format: "offset:N|ref:SEFARIA_REF" or just "SEFARIA_REF" for legacy.
-    // If present, use that exact ref for today instead of calendar-derived.
-    String? userSelectedTodayRef;
-    final rawRef = enrollment.trackingStartRef;
-    if (rawRef != null && rawRef.isNotEmpty) {
-      if (rawRef.contains('|ref:')) {
-        final parts = rawRef.split('|ref:');
-        if (parts.length > 1) {
-          userSelectedTodayRef = parts[1].trim();
-        }
-      } else if (!rawRef.startsWith('offset:')) {
-        // Legacy: raw ref without offset prefix
-        userSelectedTodayRef = rawRef;
-      }
-    }
-
-    // If user selected a specific ref, use it for today and fetch rest from calendar.
-    final List<CalendarProgramEntry> entries;
-    if (userSelectedTodayRef != null && userSelectedTodayRef.isNotEmpty) {
-      // Create synthetic entry for today using user's selected ref
-      final todayEntry = CalendarProgramEntry(
-        programId: programKey,
-        displayNameEn: '',
-        displayNameHe: '',
-        todayRef: userSelectedTodayRef,
-        apiSource: 'local',
-      );
-
-      // Fetch subsequent days from tomorrow onward
-      final startRangeDate = todayDate.add(const Duration(days: 1));
-      final rangeEntries = startRangeDate.isBefore(todayDate)
-          ? await calendarService.getEntriesForRange(
-              programKey,
-              startRangeDate,
-              todayDate.add(const Duration(days: 30)),
-            )
-          : <CalendarProgramEntry>[];
-
-      entries = [todayEntry, ...rangeEntries];
-    } else {
-      // Fallback: use calendar-derived dates as before
-      var effectiveStartDate = configuredStartDate.add(const Duration(days: 1));
-      if (effectiveStartDate.isAfter(todayDate)) {
-        effectiveStartDate = todayDate;
-      }
-
-      final rangeEntries =
-          effectiveStartDate.isBefore(todayDate) ||
-              effectiveStartDate == todayDate
-          ? await calendarService.getEntriesForRange(
-              programKey,
-              effectiveStartDate,
-              todayDate,
-            )
-          : <CalendarProgramEntry>[];
-
-      entries = rangeEntries.isNotEmpty
-          ? rangeEntries
-          : [
-              if (await calendarService.getEntry(programKey, todayDate)
-                  case final todayEntry?)
-                todayEntry,
-            ];
-    }
+    // Walk the calendar from [anchor, today] inclusive.
+    // tracking_start_ref is NOT consulted as "today's unit" — the calendar
+    // engine is the source of truth.  The stored ref may still be written
+    // by other code (e.g. re-anchor / setup flow) and is left intact in the
+    // DB; we simply stop using it here to derive the schedule.
+    final entries = await programCalendarSchedule(
+      programKey: programKey,
+      anchor: configuredStartDate,
+      today: todayDate,
+      calendarService: calendarService,
+    );
 
     if (entries.isEmpty) continue;
 
