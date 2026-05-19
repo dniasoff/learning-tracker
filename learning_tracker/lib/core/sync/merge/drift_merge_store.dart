@@ -170,6 +170,24 @@ class DriftMergeStore implements MergeStore {
       return; // Skip malformed rows.
     }
 
+    // H2: before inserting, check whether a tombstoned row already occupies
+    // this natural key. If so, the remote is "more alive" than local — clear
+    // the tombstone instead of inserting (INSERT OR IGNORE would silently
+    // no-op and leave the tombstone in place).
+    final tombstoned =
+        await _db.completionEventDao.findTombstonedEventByNaturalKey(
+      profileId: profileId,
+      curriculumId: curriculumId,
+      sefariaRef: sefariaRef,
+      stageId: stageId,
+      trackType: trackType,
+      eventTimestamp: eventTs,
+    );
+    if (tombstoned != null) {
+      await _db.completionEventDao.clearTombstone(tombstoned.id);
+      return;
+    }
+
     await _db.completionEventDao.appendEvent(
       CompletionEventsCompanion.insert(
         profileId: profileId,

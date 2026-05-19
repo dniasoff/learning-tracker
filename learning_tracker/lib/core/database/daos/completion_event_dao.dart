@@ -38,4 +38,43 @@ class CompletionEventDao extends DatabaseAccessor<UserDatabase>
             ..where((t) => t.profileId.equals(profileId))
             ..orderBy([(t) => OrderingTerm.asc(t.eventTimestamp)]))
           .get();
+
+  /// Returns the row matching the natural key if it exists AND is tombstoned
+  /// (`purgedAt IS NOT NULL`). Returns `null` when the row does not exist or
+  /// is active (purgedAt IS NULL).
+  ///
+  /// Used by the pull-merge path (H2) to resurrect a row that was tombstoned
+  /// on this device but re-marked as complete on another device.
+  Future<CompletionEvent?> findTombstonedEventByNaturalKey({
+    required int profileId,
+    required String curriculumId,
+    required String sefariaRef,
+    required int stageId,
+    required String trackType,
+    required DateTime eventTimestamp,
+  }) async {
+    final result =
+        await (select(completionEvents)
+              ..where(
+                (t) =>
+                    t.profileId.equals(profileId) &
+                    t.curriculumId.equals(curriculumId) &
+                    t.sefariaRef.equals(sefariaRef) &
+                    t.stageId.equals(stageId) &
+                    t.trackType.equals(trackType) &
+                    t.eventTimestamp.equals(eventTimestamp) &
+                    t.purgedAt.isNotNull(),
+              )
+              ..limit(1))
+            .getSingleOrNull();
+    return result;
+  }
+
+  /// Clears the tombstone on the row with [id] by setting `purgedAt` to null,
+  /// making the completion active again.
+  Future<void> clearTombstone(int id) async {
+    await (update(completionEvents)..where((t) => t.id.equals(id))).write(
+      const CompletionEventsCompanion(purgedAt: Value(null)),
+    );
+  }
 }
