@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/labels/curriculum_label_providers.dart';
+import 'package:learning_tracker/core/labels/domain_term_labels.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dart';
@@ -27,7 +28,8 @@ class DailyTaskCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final curriculumColor = AppTheme.getCurriculumColor(task.curriculumId);
-    final stageLabel = task.stageName;
+    final stageLabel =
+        domainTermLabels(ref).resolveStoredStageName(task.stageName);
 
     return Dismissible(
       key: ValueKey(

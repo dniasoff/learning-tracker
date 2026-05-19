@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dart';
 import 'package:learning_tracker/features/scheduler/presentation/widgets/daily_task_card.dart';
@@ -32,6 +33,11 @@ DailyTask _task({
 
 Widget _wrap(Widget child) {
   return ProviderScope(
+    overrides: [
+      // Force English mode so resolveStoredStageName returns English stage
+      // names (e.g. "Learn", "Chazara 3") regardless of SharedPreferences.
+      useHebrewTermsProvider.overrideWithValue(false),
+    ],
     child: MaterialApp(
       theme: AppTheme.lightTheme(),
       home: Scaffold(body: child),
@@ -40,12 +46,10 @@ Widget _wrap(Widget child) {
 }
 
 void main() {
-  // DNI-328 flipped the Hebrew-terms default to false. These tests assert on
-  // Hebrew labels, so seed the preference to true for the default profile.
+  // useHebrewTermsProvider is overridden to false in _wrap(), so stage names
+  // resolve to English. SharedPreferences mock is kept empty (default).
   setUp(() {
-    SharedPreferences.setMockInitialValues(<String, Object>{
-      'hebrew_terms_script_p0': true,
-    });
+    SharedPreferences.setMockInitialValues(<String, Object>{});
   });
 
   group('DailyTaskCard', () {
@@ -62,8 +66,8 @@ void main() {
 
       // Content ref displayed (underscores replaced with spaces)
       expect(find.text('Mishnah Berakhot 1.1'), findsOneWidget);
-      // Curriculum badge
-      expect(find.text('משניות'), findsOneWidget);
+      // Curriculum badge — English mode (useHebrew=false) renders displayNameEn.
+      expect(find.text('Mishnayos'), findsOneWidget);
       // Stage label: stageOrder 1 shows 'Learn'
       expect(find.text('Learn'), findsOneWidget);
     });

@@ -439,6 +439,7 @@ void main() {
               stageId: 1,
               trackType: 'personal',
               eventTimestamp: sentinelTs,
+              priorMarkOnly: const Value(true),
             ),
           );
           await db.completionEventDao.appendEvent(
@@ -449,6 +450,7 @@ void main() {
               stageId: 2,
               trackType: 'personal',
               eventTimestamp: sentinelTs,
+              priorMarkOnly: const Value(true),
             ),
           );
 
@@ -502,6 +504,7 @@ void main() {
                 stageId: stage,
                 trackType: 'personal',
                 eventTimestamp: sentinelTs,
+                priorMarkOnly: const Value(true),
               ),
             );
           }
@@ -562,6 +565,7 @@ void main() {
               stageId: 1,
               trackType: 'personal',
               eventTimestamp: sentinelTs,
+              priorMarkOnly: const Value(true),
             ),
           );
 
@@ -616,6 +620,7 @@ void main() {
               stageId: 1,
               trackType: 'personal',
               eventTimestamp: sentinelTs,
+              priorMarkOnly: const Value(true),
             ),
           );
 

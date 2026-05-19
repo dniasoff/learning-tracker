@@ -7,7 +7,6 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:learning_tracker/core/labels/domain_term_labels.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
-import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 const kIntroSeen = 'intro_seen';
@@ -245,7 +244,10 @@ class _IntroPage extends ConsumerWidget {
                   const SizedBox(height: 12),
                   _buildTitleBlock(),
                   const SizedBox(height: 10),
-                  _buildSubtitleBlock(useHebrew: terms.isHebrew),
+                  _buildSubtitleBlock(
+                    useHebrew: terms.isHebrew,
+                    talmidChochomLabel: terms.talmidChochom,
+                  ),
                   const SizedBox(height: 12),
                   _buildProgressArea(useHebrew: terms.isHebrew),
                   const SizedBox(height: _kIntroCtaOverlayReserve),
@@ -281,7 +283,10 @@ class _IntroPage extends ConsumerWidget {
                 ],
                 _buildTitleBlock(),
                 const SizedBox(height: 14),
-                _buildSubtitleBlock(useHebrew: terms.isHebrew),
+                _buildSubtitleBlock(
+                  useHebrew: terms.isHebrew,
+                  talmidChochomLabel: terms.talmidChochom,
+                ),
                 const SizedBox(height: 20),
                 _buildProgressArea(useHebrew: terms.isHebrew),
                 const SizedBox(height: 24),
@@ -359,7 +364,10 @@ class _IntroPage extends ConsumerWidget {
     }
   }
 
-  Widget _buildSubtitleBlock({bool useHebrew = false}) {
+  Widget _buildSubtitleBlock({
+    bool useHebrew = false,
+    String talmidChochomLabel = 'Talmid Chochom',
+  }) {
     return AnimatedBuilder(
       animation: iconAnimation,
       builder: (context, _) {
@@ -367,10 +375,6 @@ class _IntroPage extends ConsumerWidget {
           parent: iconAnimation,
           curve: const Interval(0.3, 0.85, curve: Curves.easeOut),
         ).value;
-        // Use domainTermLabels-consistent logic: toggle-resolved, not locale-driven.
-        final talmidChochomLabel = useHebrew
-            ? AppLocalizations.of(context)!.termTalmidChochom
-            : 'Talmid Chochom';
         return Opacity(
           opacity: fade,
           child: _subtitleRich(
