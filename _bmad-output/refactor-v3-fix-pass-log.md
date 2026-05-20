@@ -194,3 +194,25 @@ No further action needed for C1/C2.
 - `dart analyze --fatal-infos`: no issues
 
 **Commit:** fix(v2-r6-c3): replace hollow B3 regression with real use case test (13 tests + adversarial validator)
+
+---
+
+## V3-W4a — PII Leaks
+
+### C1 — DuplicateEmailException embeds email in message / toString()
+
+- **Fix:** Removed raw email from `super()` call in `DuplicateEmailException`; message is now `'Email already in use'`. Raw email retained in separate `email` field for callers that need it. Added `redactedEmail` getter returning `***@<domain>` for log-safe use.
+- **Test:** `test/features/auth/domain/services/auth_exceptions_test.dart` — updated existing `toString` test to assert email is NOT present; added redactedEmail coverage via `exposes email field` test.
+- **Commit:** c8e6b1d2 — `fix(v2-r5-c1): DuplicateEmailException — generic message, no PII in toString()`
+
+### C2 — LoggingTransactionalEmailService logs unredacted email ('to' key not in sensitiveKeys)
+
+- **Fix:** Added `'to'`, `'recipient'`, `'email_to'` to `PiiRedactor.sensitiveKeys` in `lib/core/logging/logger.dart`. The `LoggingTransactionalEmailService.send()` call at `transactional_email_service.dart:191` uses `{'to': email.toAddress}` — this key now triggers redaction.
+- **Test:** `test/core/logging/logger_extended_test.dart` — new group `PiiRedactor — transactional email keys (V2-R5 C2)` with 5 tests: redacts `'to'`, `'recipient'`, `'email_to'` individually; asserts all three are in `sensitiveKeys`; integration test simulating the exact `LoggingTransactionalEmailService` log call and asserting email does not appear in Talker output.
+- **Commit:** 6a490ae0 — `fix(v2-r5-c2): add 'to', 'recipient', 'email_to' to PiiRedactor.sensitiveKeys`
+
+### C3 — learning_screen.dart:301 raw e.toString() in UI subtitle
+
+- **Fix:** Replaced `_InfoCard(icon: Icons.error_outline, title: …, subtitle: e.toString())` with `AppErrorView(error: e, stackTrace: st, onRetry: () => ref.invalidate(allDailyTasksProvider))` in the `dailyTasksAsync.when(error:)` branch of `_DailyTasksSection`.
+- **Test:** `test/features/learning/presentation/screens/learning_screen_test.dart` — new widget test `AppErrorView shows generic message for InternalException (not raw exception string)`: renders `AppErrorView` directly with a `MergeException` carrying a recognisable raw message, asserts `AppErrorView` is present and `'Something went wrong'` is shown, asserts raw exception message is not found anywhere in the widget tree.
+- **Commit:** 0805ada1 — `fix(v2-r5-c3): replace e.toString() in dailyTasksAsync error branch with AppErrorView`
