@@ -8,39 +8,55 @@ import 'package:learning_tracker/features/dashboard/presentation/widgets/task_ca
 import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
-/// Reusable 3-box stat grid for active-track cards. One layout for every
-/// track variant — counts come from [buckets]; tapping a box jumps to the
-/// first task in that category.
+/// Reusable stat grid for active-track cards.
+///
+/// When [chazaraLabel] is non-null the grid shows three columns:
+///   chazara | due today | overdue
+///
+/// When [chazaraLabel] is null (track has no chazara — Rule 8) the grid
+/// shows two columns:
+///   due today | overdue
+///
+/// Counts come from [buckets]; tapping a box jumps to the first task in
+/// that category.
 class TrackStatGrid extends StatelessWidget {
   const TrackStatGrid({
     super.key,
     required this.buckets,
     required this.l10n,
-    required this.chazaraLabel,
+    this.chazaraLabel,
   });
 
   final TrackTaskBuckets buckets;
   final AppLocalizations l10n;
-  final String chazaraLabel;
+
+  /// Resolved label for the chazara column.
+  ///
+  /// Null when the track does not have chazara enabled (Rule 8).  The column
+  /// is omitted entirely — not zeroed-out or greyed-out.
+  final String? chazaraLabel;
 
   @override
   Widget build(BuildContext context) {
+    final showChazara = chazaraLabel != null;
     return Row(
       children: [
-        Expanded(
-          child: TaskCategoryStatBox(
-            count: buckets.review.length,
-            label: chazaraLabel,
-            valueColor: buckets.review.isNotEmpty
-                ? const Color(0xFFB45309)
-                : AppTheme.brandInk,
-            valueBg: const Color(0xFFFFE7D1),
-            onTap: buckets.review.isNotEmpty
-                ? () => _openFirst(context, buckets.review)
-                : null,
+        if (showChazara) ...[
+          Expanded(
+            child: TaskCategoryStatBox(
+              count: buckets.review.length,
+              label: chazaraLabel!,
+              valueColor: buckets.review.isNotEmpty
+                  ? const Color(0xFFB45309)
+                  : AppTheme.brandInk,
+              valueBg: const Color(0xFFFFE7D1),
+              onTap: buckets.review.isNotEmpty
+                  ? () => _openFirst(context, buckets.review)
+                  : null,
+            ),
           ),
-        ),
-        const SizedBox(width: 8),
+          const SizedBox(width: 8),
+        ],
         Expanded(
           child: TaskCategoryStatBox(
             count: buckets.dueTodayLane.length,

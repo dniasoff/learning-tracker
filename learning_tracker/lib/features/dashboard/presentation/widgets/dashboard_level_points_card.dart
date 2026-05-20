@@ -21,7 +21,7 @@ class DashboardLevelPointsCard extends ConsumerWidget {
     required this.doneDisplay,
     required this.lifetimeSectionsDetail,
     required this.cumulativeLifetime,
-    required this.chazaraLabel,
+    this.chazaraLabel,
     this.tasksReady = true,
   });
 
@@ -38,7 +38,10 @@ class DashboardLevelPointsCard extends ConsumerWidget {
   /// Resolved chazara bubble label — Hebrew script or transliteration depending
   /// on the Hebrew Terms setting. Pre-resolved by the parent so this widget
   /// does not need to read [useHebrewTermsProvider] directly.
-  final String chazaraLabel;
+  ///
+  /// Null when no active track has chazara enabled (Rule 8) — the chazara
+  /// bubble is suppressed entirely (not zeroed out).
+  final String? chazaraLabel;
 
   /// Whether the task counts are ready to display.
   ///
@@ -47,12 +50,6 @@ class DashboardLevelPointsCard extends ConsumerWidget {
   /// integer.  The remaining tiles (level, points, lifetime progress) are
   /// unaffected.
   final bool tasksReady;
-
-  static const List<SchedulerTaskSection> _bubbleSections = [
-    SchedulerTaskSection.overdue,
-    SchedulerTaskSection.today,
-    SchedulerTaskSection.review,
-  ];
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -65,17 +62,30 @@ class DashboardLevelPointsCard extends ConsumerWidget {
     final todayDisplay = tasksReady ? '$todayCount' : '…';
     final reviewDisplay = tasksReady ? '$reviewCount' : '…';
 
-    final bubbleData = userMode == UserMode.child
-        ? [
-            (l10n.bubbleOverdue, overdueDisplay, Colors.white),
-            (l10n.bubbleTodayDue, todayDisplay, Colors.white),
-            (chazaraLabel, reviewDisplay, const Color(0xFFFFC107)),
-          ]
-        : [
-            (l10n.bubbleOverdue, overdueDisplay, Colors.white),
-            (l10n.bubbleTodayDue, todayDisplay, Colors.white),
-            (chazaraLabel, reviewDisplay, const Color(0xFFFFC107)),
-          ];
+    // Build bubble entries as (label, value, color, schedulerSection).
+    // The chazara bubble is included only when chazaraLabel is non-null
+    // (Rule 8: suppress entirely for tracks without chazara).
+    final bubbles = [
+      (
+        l10n.bubbleOverdue,
+        overdueDisplay,
+        Colors.white,
+        SchedulerTaskSection.overdue,
+      ),
+      (
+        l10n.bubbleTodayDue,
+        todayDisplay,
+        Colors.white,
+        SchedulerTaskSection.today,
+      ),
+      if (chazaraLabel != null)
+        (
+          chazaraLabel!,
+          reviewDisplay,
+          const Color(0xFFFFC107),
+          SchedulerTaskSection.review,
+        ),
+    ];
 
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
@@ -120,21 +130,21 @@ class DashboardLevelPointsCard extends ConsumerWidget {
           const SizedBox(height: 10),
           Row(
             children: [
-              for (var i = 0; i < bubbleData.length; i++) ...[
+              for (var i = 0; i < bubbles.length; i++) ...[
                 Expanded(
                   child: DashboardStatBubble(
-                    label: bubbleData[i].$1,
-                    value: bubbleData[i].$2,
-                    valueColor: bubbleData[i].$3,
+                    label: bubbles[i].$1,
+                    value: bubbles[i].$2,
+                    valueColor: bubbles[i].$3,
                     onTap: () {
                       ref
                           .read(schedulerTaskSectionProvider.notifier)
-                          .setSection(_bubbleSections[i]);
+                          .setSection(bubbles[i].$4);
                       context.router.push(const SchedulerRoute());
                     },
                   ),
                 ),
-                if (i < bubbleData.length - 1) const SizedBox(width: 10),
+                if (i < bubbles.length - 1) const SizedBox(width: 10),
               ],
             ],
           ),

@@ -197,17 +197,22 @@ class _ProgressSummaryLine extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final pct = formatFractionAsPercent(level.completionPercentage);
     final terms = domainTermLabels(ref);
-    final chazarosCount = level.stageBreakdown.fold<int>(
+    // Chazara entries are those after the first (stageOrder > 0).
+    // For single-stage tracks the breakdown has only one entry (the learn
+    // stage), so the chazaros suffix is omitted entirely (Rule 8).
+    final chazaraEntries = level.stageBreakdown.length > 1
+        ? level.stageBreakdown.skip(1).toList()
+        : const <StageBreakdownEntry>[];
+    final chazarosCount = chazaraEntries.fold<int>(
       0,
       (sum, entry) => sum + entry.count,
     );
-    // W5-A: replaced the legacy raw-completion-count suffix with the new
-    // "N chazaros" vocabulary so the hierarchy subtitle aligns with the
-    // three-tier IA. The number reflects every stage event under this
-    // level — limudim + chazaros.
+    final hasChazara = chazaraEntries.isNotEmpty;
+    final baseText = '${level.completedItems}/${level.totalItems} ($pct)';
     return Text(
-      '${level.completedItems}/${level.totalItems} ($pct) · '
-      '$chazarosCount ${terms.chazaros.toLowerCase()}',
+      hasChazara
+          ? '$baseText · $chazarosCount ${terms.chazaros.toLowerCase()}'
+          : baseText,
       style: Theme.of(context).textTheme.bodySmall?.copyWith(
         color: AppTheme.brandInkMuted,
         fontWeight: FontWeight.w600,

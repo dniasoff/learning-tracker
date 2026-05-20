@@ -39,6 +39,11 @@ class LimudimChazarosBarChart extends ConsumerWidget {
 
     final terms = domainTermLabels(ref);
 
+    // Gate the chazara segment and legend on whether any bucket has chazara
+    // completions (Rule 8).  When no tracks have chazara, chazaraCount is
+    // always 0 so the chart becomes a single-colour limudim-only display.
+    final hasAnyChazara = data.any((d) => d.chazaraCount > 0);
+
     final maxTotal = data.fold<int>(
       0,
       (max, d) => d.total > max ? d.total : max,
@@ -117,19 +122,29 @@ class LimudimChazarosBarChart extends ConsumerWidget {
                             topLeft: Radius.circular(6),
                             topRight: Radius.circular(6),
                           ),
-                          // Stack: limud on the bottom, chazara on the top.
-                          rodStackItems: [
-                            BarChartRodStackItem(
-                              0,
-                              data[i].limudCount.toDouble(),
-                              _kLimudColor,
-                            ),
-                            BarChartRodStackItem(
-                              data[i].limudCount.toDouble(),
-                              data[i].total.toDouble(),
-                              _kChazaraColor,
-                            ),
-                          ],
+                          // When any track has chazara, stack limud (bottom)
+                          // and chazara (top).  For learn-only datasets render
+                          // a single solid limudim bar (Rule 8).
+                          rodStackItems: hasAnyChazara
+                              ? [
+                                  BarChartRodStackItem(
+                                    0,
+                                    data[i].limudCount.toDouble(),
+                                    _kLimudColor,
+                                  ),
+                                  BarChartRodStackItem(
+                                    data[i].limudCount.toDouble(),
+                                    data[i].total.toDouble(),
+                                    _kChazaraColor,
+                                  ),
+                                ]
+                              : [
+                                  BarChartRodStackItem(
+                                    0,
+                                    data[i].total.toDouble(),
+                                    _kLimudColor,
+                                  ),
+                                ],
                         ),
                       ],
                       showingTooltipIndicators: const [],
@@ -139,7 +154,10 @@ class LimudimChazarosBarChart extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: 8),
-          _Legend(limudLabel: terms.limud, chazarosLabel: terms.chazaros),
+          _Legend(
+            limudLabel: terms.limud,
+            chazarosLabel: hasAnyChazara ? terms.chazaros : null,
+          ),
         ],
       ),
     );
@@ -147,10 +165,13 @@ class LimudimChazarosBarChart extends ConsumerWidget {
 }
 
 class _Legend extends StatelessWidget {
-  const _Legend({required this.limudLabel, required this.chazarosLabel});
+  const _Legend({required this.limudLabel, this.chazarosLabel});
 
   final String limudLabel;
-  final String chazarosLabel;
+
+  /// Null when no tracks have chazara enabled (Rule 8) — the chazara dot
+  /// is omitted entirely from the legend.
+  final String? chazarosLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -158,8 +179,10 @@ class _Legend extends StatelessWidget {
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         _LegendDot(color: _kLimudColor, label: limudLabel),
-        const SizedBox(width: 16),
-        _LegendDot(color: _kChazaraColor, label: chazarosLabel),
+        if (chazarosLabel != null) ...[
+          const SizedBox(width: 16),
+          _LegendDot(color: _kChazaraColor, label: chazarosLabel!),
+        ],
       ],
     );
   }

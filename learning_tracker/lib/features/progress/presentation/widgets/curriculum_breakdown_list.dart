@@ -396,7 +396,11 @@ class CurriculumBreakdownTreeNode extends ConsumerWidget {
     switch (p.source) {
       case LifetimeLeafSource.live:
         final n = p.chazarosCount;
-        if (n <= 0) return l10n.provenanceLive;
+        // n counts ALL completion events (limud + chazaros). n == 1 means
+        // only the initial learn — no chazara done yet (or learn-only track).
+        // Only show the "· N chazaros" suffix when n > 1, i.e. at least one
+        // chazara completion exists beyond the initial learn (Rule 8).
+        if (n <= 1) return l10n.provenanceLive;
         // Build the "Live · N chazaros" string with the toggle-aware plural
         // so e.g. EN + Hebrew Terms ON renders "Live · 3 חזרות".
         return '${l10n.provenanceLive} · $n ${terms.chazaros}';
