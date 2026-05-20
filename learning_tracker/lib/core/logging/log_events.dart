@@ -39,6 +39,10 @@ final class _SyncEvents {
   String get pullOnLaunchStarted => 'sync_pull_on_launch_started';
   String get pullOnLaunchCompleted => 'sync_pull_on_launch_completed';
   String get pullOnLaunchFailed => 'sync_pull_on_launch_failed';
+  // W7.9 — analytics events (distinct from the structured-log events above)
+  String get pullStarted => 'sync_pull_started';
+  String get pullCompleted => 'sync_pull_completed';
+  String get pullFailed => 'sync_pull_failed';
   String get listenerAttached => 'sync_listener_attached';
   String get listenerDetached => 'sync_listener_detached';
   String get listenerError => 'sync_listener_error';
@@ -112,6 +116,12 @@ final class _TrackEvents {
   String get completionReverted => 'track_completion_reverted';
   String get bulkMarkStarted => 'track_bulk_mark_started';
   String get bulkMarkCompleted => 'track_bulk_mark_completed';
+
+  // B1 regression telemetry (W7.11):
+  // Fires when a BulkInTrack completion leaks into an engagement-only handler.
+  String get bulkEngagementSkipped => 'bulk_engagement_skipped';
+  // Fires when a LifetimeOnly completion leaks into an achievement-only handler.
+  String get lifetimeAchievementSkipped => 'lifetime_achievement_skipped';
 }
 
 // ─── Tutor ───────────────────────────────────────────────────────────────────

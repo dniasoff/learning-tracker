@@ -6,13 +6,21 @@
 /// the setup / onboarding flow, so the most-recent write is canonical).
 library;
 
+import 'dart:async';
+
+import 'package:learning_tracker/core/analytics/analytics_service.dart';
+import 'package:learning_tracker/core/logging/log_events.dart';
 import 'package:learning_tracker/core/sync/codec/profile_program_codec.dart';
 import 'package:learning_tracker/core/sync/merge/entity_merger.dart';
 
 class ProfileProgramMerger implements EntityMerger {
-  ProfileProgramMerger({required MergeStore store}) : _store = store;
+  ProfileProgramMerger({required MergeStore store, AnalyticsService? analytics})
+    : _store = store,
+      _analytics = analytics;
 
   final MergeStore _store;
+  // W7.5: optional analytics — fires merge_row_skipped for malformed rows.
+  final AnalyticsService? _analytics;
   static const _codec = ProfileProgramCodec();
 
   @override
@@ -26,7 +34,18 @@ class ProfileProgramMerger implements EntityMerger {
     for (final row in rows) {
       final decoded = _codec.decode(row);
       // Skip malformed rows — codec validates curriculum_id + program_id.
-      if (decoded == null) continue;
+      if (decoded == null) {
+        // W7.5: fire telemetry for every silently-skipped row.
+        final future = _analytics?.logEvent(
+          LogEvents.sync.mergeRowSkipped,
+          parameters: {
+            'entity_kind': EntityKind.profileProgram,
+            'reason': 'malformed_fields',
+          },
+        );
+        if (future != null) unawaited(future);
+        continue;
+      }
 
       await _store.upsert(kind: kind, profileId: profileId, fields: row);
     }

@@ -6,6 +6,8 @@
 //   ListIncomingTutorAccessUseCase — tutor lists their own incoming grants
 //   ListOutgoingTutorGrantsUseCase — parent lists grants they have issued
 
+import 'package:learning_tracker/core/analytics/analytics_service.dart';
+import 'package:learning_tracker/core/logging/log_events.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/tutor_grant_aggregate.dart';
 import 'package:learning_tracker/features/tutoring/domain/use_cases/tutor_invite_use_cases.dart';
 
@@ -15,8 +17,10 @@ import 'package:learning_tracker/features/tutoring/domain/use_cases/tutor_invite
 /// This uses Cloud Functions (Admin SDK) to set state = revoked_by_parent
 /// and stamp revoked_at.
 class RevokeTutorGrantUseCase {
-  const RevokeTutorGrantUseCase(this._repository);
+  const RevokeTutorGrantUseCase(this._repository, {AnalyticsService? analytics})
+    : _analytics = analytics;
   final TutorGrantRepository _repository;
+  final AnalyticsService? _analytics;
 
   Future<TutorGrantResult> call({required TutorGrant grant}) async {
     if (!grant.canRevoke) {
@@ -27,14 +31,24 @@ class RevokeTutorGrantUseCase {
             'Only active grants can be revoked by the parent.',
       );
     }
-    return _repository.revokeGrant(grantId: grant.grantId);
+    final result = await _repository.revokeGrant(grantId: grant.grantId);
+    // W7.11: fire tutor_grant_revoked on success.
+    if (result is TutorGrantSuccess) {
+      await _analytics?.logEvent(
+        LogEvents.tutor.grantRevoked,
+        parameters: {'grant_id': grant.grantId},
+      );
+    }
+    return result;
   }
 }
 
 /// Tutor resigns from an active grant (self-initiated revocation).
 class ResignTutorGrantUseCase {
-  const ResignTutorGrantUseCase(this._repository);
+  const ResignTutorGrantUseCase(this._repository, {AnalyticsService? analytics})
+    : _analytics = analytics;
   final TutorGrantRepository _repository;
+  final AnalyticsService? _analytics;
 
   Future<TutorGrantResult> call({required TutorGrant grant}) async {
     if (!grant.canResign) {
@@ -45,7 +59,15 @@ class ResignTutorGrantUseCase {
             'Only active grants can be resigned by the tutor.',
       );
     }
-    return _repository.resignGrant(grantId: grant.grantId);
+    final result = await _repository.resignGrant(grantId: grant.grantId);
+    // W7.11: fire tutor_resigned on success.
+    if (result is TutorGrantSuccess) {
+      await _analytics?.logEvent(
+        LogEvents.tutor.tutorResigned,
+        parameters: {'grant_id': grant.grantId},
+      );
+    }
+    return result;
   }
 }
 

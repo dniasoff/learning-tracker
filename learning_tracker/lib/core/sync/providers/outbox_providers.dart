@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:learning_tracker/core/analytics/analytics_provider.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/sync/firestore_gateway_impl.dart';
 import 'package:learning_tracker/core/sync/outbox/outbox_processor.dart';
@@ -46,9 +47,12 @@ final outboxProcessorProvider = Provider<OutboxProcessor?>((ref) {
   final database = ref.watch(userDatabaseProvider);
 
   final clock = ref.watch(localDayClockProvider);
+  // W7.7: inject analytics so OutboxProcessor fires outbox_dead_lettered.
+  final analytics = ref.watch(analyticsServiceProvider);
   return OutboxProcessor(
     outboxDao: database.outboxDao,
     pipeline: pipeline,
     clock: clock,
+    analytics: analytics,
   );
 });

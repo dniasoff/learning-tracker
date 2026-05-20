@@ -15,6 +15,8 @@
 // per tiny interface. The concrete implementation (data layer) calls Firebase
 // Cloud Functions.
 
+import 'package:learning_tracker/core/analytics/analytics_service.dart';
+import 'package:learning_tracker/core/logging/log_events.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/tutor_grant_aggregate.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/tutor_permissions.dart';
 
@@ -80,8 +82,10 @@ final class TutorGrantPreconditionError extends TutorGrantResult {
 
 /// Parent sends a tutor invite for a child profile.
 class InviteTutorUseCase {
-  const InviteTutorUseCase(this._repository);
+  const InviteTutorUseCase(this._repository, {AnalyticsService? analytics})
+    : _analytics = analytics;
   final TutorGrantRepository _repository;
+  final AnalyticsService? _analytics;
 
   Future<TutorGrantResult> call({
     required String tutorEmail,
@@ -94,18 +98,30 @@ class InviteTutorUseCase {
         message: 'A valid tutor email address is required.',
       );
     }
-    return _repository.inviteTutor(
+    final result = await _repository.inviteTutor(
       tutorEmail: email,
       childProfileId: childProfileId,
       permissions: permissions ?? TutorPermissions.defaults(),
     );
+    // W7.11: fire tutor_invite_sent on success.
+    if (result is TutorGrantSuccess) {
+      await _analytics?.logEvent(
+        LogEvents.tutor.inviteSent,
+        parameters: {'child_profile_id': childProfileId},
+      );
+    }
+    return result;
   }
 }
 
 /// Tutor accepts an incoming invite.
 class AcceptTutorInviteUseCase {
-  const AcceptTutorInviteUseCase(this._repository);
+  const AcceptTutorInviteUseCase(
+    this._repository, {
+    AnalyticsService? analytics,
+  }) : _analytics = analytics;
   final TutorGrantRepository _repository;
+  final AnalyticsService? _analytics;
 
   Future<TutorGrantResult> call({required TutorGrant grant}) async {
     if (!grant.canAccept) {
@@ -115,14 +131,26 @@ class AcceptTutorInviteUseCase {
             '(current state: ${grant.grantState.rawState.toJson()}).',
       );
     }
-    return _repository.acceptInvite(grantId: grant.grantId);
+    final result = await _repository.acceptInvite(grantId: grant.grantId);
+    // W7.11: fire tutor_invite_accepted on success.
+    if (result is TutorGrantSuccess) {
+      await _analytics?.logEvent(
+        LogEvents.tutor.inviteAccepted,
+        parameters: {'grant_id': grant.grantId},
+      );
+    }
+    return result;
   }
 }
 
 /// Tutor declines an incoming invite.
 class DeclineTutorInviteUseCase {
-  const DeclineTutorInviteUseCase(this._repository);
+  const DeclineTutorInviteUseCase(
+    this._repository, {
+    AnalyticsService? analytics,
+  }) : _analytics = analytics;
   final TutorGrantRepository _repository;
+  final AnalyticsService? _analytics;
 
   Future<TutorGrantResult> call({required TutorGrant grant}) async {
     if (!grant.canDecline) {
@@ -132,14 +160,26 @@ class DeclineTutorInviteUseCase {
             '(current state: ${grant.grantState.rawState.toJson()}).',
       );
     }
-    return _repository.declineInvite(grantId: grant.grantId);
+    final result = await _repository.declineInvite(grantId: grant.grantId);
+    // W7.11: fire tutor_invite_declined on success.
+    if (result is TutorGrantSuccess) {
+      await _analytics?.logEvent(
+        LogEvents.tutor.inviteDeclined,
+        parameters: {'grant_id': grant.grantId},
+      );
+    }
+    return result;
   }
 }
 
 /// Parent rescinds an invite before the tutor has accepted.
 class RescindTutorInviteUseCase {
-  const RescindTutorInviteUseCase(this._repository);
+  const RescindTutorInviteUseCase(
+    this._repository, {
+    AnalyticsService? analytics,
+  }) : _analytics = analytics;
   final TutorGrantRepository _repository;
+  final AnalyticsService? _analytics;
 
   Future<TutorGrantResult> call({required TutorGrant grant}) async {
     if (!grant.canRescind) {
@@ -151,6 +191,14 @@ class RescindTutorInviteUseCase {
             'Use revokeGrant for active grants.',
       );
     }
-    return _repository.rescindInvite(grantId: grant.grantId);
+    final result = await _repository.rescindInvite(grantId: grant.grantId);
+    // W7.11: fire tutor_grant_rescinded on success.
+    if (result is TutorGrantSuccess) {
+      await _analytics?.logEvent(
+        LogEvents.tutor.grantRescinded,
+        parameters: {'grant_id': grant.grantId},
+      );
+    }
+    return result;
   }
 }

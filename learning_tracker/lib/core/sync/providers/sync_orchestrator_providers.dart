@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:learning_tracker/core/analytics/analytics_provider.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/providers/crashlytics_provider.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
@@ -64,6 +65,8 @@ final syncOrchestratorProvider = Provider<SyncOrchestrator?>((ref) {
   // W7.16: read (not watch) so Crashlytics upgrades after bootstrap don't
   // rebuild the orchestrator singleton.
   final crashlytics = ref.read(crashlyticsServiceProvider);
+  // W7.8/W7.9: read (not watch) so analytics upgrades don't rebuild singleton.
+  final analytics = ref.read(analyticsServiceProvider);
 
   // W2.32 — build LocalDataUploadService so orchestrator can route
   // pushAllLocalData + backfillGoalsForCloudCutover through the outbox path.
@@ -102,6 +105,8 @@ final syncOrchestratorProvider = Provider<SyncOrchestrator?>((ref) {
     resolveBackfillGoals: uploadService.backfillGoalsForCloudCutover,
     // W7.16: forward listener errors to Crashlytics as non-fatal.
     crashlytics: crashlytics,
+    // W7.8/W7.9: analytics for listener_error + sync_pull_* events.
+    analytics: analytics,
   );
 
   // Idempotent: registers the lifecycle observer + Firestore listeners once.

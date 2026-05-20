@@ -12,7 +12,9 @@
 // identifies whether the caller is an owner or a tutor. Tutors are always
 // rejected; owners are passed through to the delegate.
 
+import 'package:learning_tracker/core/analytics/analytics_service.dart';
 import 'package:learning_tracker/core/exceptions/permission_exception.dart';
+import 'package:learning_tracker/core/logging/log_events.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/session_role.dart';
 
 /// Delegate signature — the actual completion write implementation
@@ -35,9 +37,15 @@ typedef LiveCompletionDelegate<T> = Future<T> Function();
 /// );
 /// ```
 class MarkLiveCompletionUseCase<T> {
-  const MarkLiveCompletionUseCase({required this.session});
+  const MarkLiveCompletionUseCase({
+    required this.session,
+    AnalyticsService? analytics,
+  }) : _analytics = analytics;
 
   final ResolvedSession session;
+  // W7.11: optional analytics — fires tutor_live_mark_blocked when a tutor
+  // session attempts a live completion write.
+  final AnalyticsService? _analytics;
 
   /// Execute the live completion write for the current session.
   ///
@@ -48,6 +56,10 @@ class MarkLiveCompletionUseCase<T> {
       // The permissions VO always has canMarkLiveCompletion == false, but we
       // check the session role directly so the exception is thrown even if a
       // future bug inadvertently flips the permission field.
+      // W7.11: fire analytics so tutor boundary violations are visible in
+      // dashboards (in addition to the TutorWriteForbiddenException that
+      // the UI layer catches for the friendly dialog).
+      await _analytics?.logEvent(LogEvents.tutor.liveMarkBlocked);
       throw const TutorWriteForbiddenException();
     }
     return writeDelegate();

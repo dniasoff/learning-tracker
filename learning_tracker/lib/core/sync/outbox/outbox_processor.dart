@@ -1,7 +1,10 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:math' as math;
 
+import 'package:learning_tracker/core/analytics/analytics_service.dart';
 import 'package:learning_tracker/core/database/daos/outbox_dao.dart';
+import 'package:learning_tracker/core/logging/log_events.dart';
 import 'package:learning_tracker/core/sync/firestore_gateway.dart';
 import 'package:learning_tracker/core/sync/outbox/push_pipeline.dart';
 import 'package:learning_tracker/core/time/local_day_clock.dart';
@@ -65,13 +68,18 @@ class OutboxProcessor {
     required OutboxDao outboxDao,
     required PushPipeline pipeline,
     required LocalDayClock clock,
+    // W7.7: optional analytics — fires outbox_dead_lettered when a row hits
+    // the max-attempts ceiling and is silently skipped forever.
+    AnalyticsService? analytics,
   }) : _dao = outboxDao,
        _pipeline = pipeline,
-       _clock = clock;
+       _clock = clock,
+       _analytics = analytics;
 
   final OutboxDao _dao;
   final PushPipeline _pipeline;
   final LocalDayClock _clock;
+  final AnalyticsService? _analytics;
 
   /// Maximum number of push attempts before a row is dead-lettered.
   static const int _maxAttempts = 10;
@@ -128,7 +136,19 @@ class OutboxProcessor {
 
     // Filter rows that are eligible for a retry attempt.
     final eligibleCompletions = completionRows.where((row) {
-      if (row.attempts >= _maxAttempts) return false; // dead-lettered
+      if (row.attempts >= _maxAttempts) {
+        // W7.7: fire analytics for every dead-lettered completion row.
+        final future = _analytics?.logEvent(
+          LogEvents.sync.outboxDeadLettered,
+          parameters: {
+            'entity_kind': OutboxEntityKind.completion,
+            'entity_key': row.entityKey,
+            'attempts': row.attempts,
+          },
+        );
+        if (future != null) unawaited(future);
+        return false; // dead-lettered
+      }
       return _nextAttemptAt(row.attempts, row.lastAttemptAt).isBefore(now);
     }).toList();
 
@@ -209,7 +229,19 @@ class OutboxProcessor {
       );
 
       for (final row in rows) {
-        if (row.attempts >= _maxAttempts) continue; // dead-lettered
+        if (row.attempts >= _maxAttempts) {
+          // W7.7: fire analytics for every dead-lettered non-completion row.
+          final future = _analytics?.logEvent(
+            LogEvents.sync.outboxDeadLettered,
+            parameters: {
+              'entity_kind': kind,
+              'entity_key': row.entityKey,
+              'attempts': row.attempts,
+            },
+          );
+          if (future != null) unawaited(future);
+          continue; // dead-lettered
+        }
         if (_nextAttemptAt(row.attempts, row.lastAttemptAt).isAfter(now)) {
           continue; // backoff window not yet elapsed
         }

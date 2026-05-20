@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:learning_tracker/core/analytics/analytics_provider.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/sync/merge/bookmark_merger.dart';
 import 'package:learning_tracker/core/sync/merge/completion_event_merger.dart';
@@ -36,7 +37,10 @@ import 'package:learning_tracker/core/sync/merge/ui_preferences_merger.dart';
 /// W2.31 moves this wiring to the features layer.
 final mergeRouterProvider = Provider<MergeRouter>((ref) {
   final database = ref.watch(userDatabaseProvider);
-  final store = DriftMergeStore(database);
+  // W7.5: inject analytics so DriftMergeStore and ProfileProgramMerger can
+  // fire merge_row_skipped events at every silent-skip site.
+  final analytics = ref.watch(analyticsServiceProvider);
+  final store = DriftMergeStore(database, analytics: analytics);
 
   return MergeRouter(
     mergers: <String, EntityMerger>{
@@ -47,7 +51,11 @@ final mergeRouterProvider = Provider<MergeRouter>((ref) {
       EntityKind.bookmark: BookmarkMerger(store: store),
       EntityKind.settings: SettingsMerger(store: store),
       EntityKind.stageDefinition: StageDefinitionMerger(store: store),
-      EntityKind.profileProgram: ProfileProgramMerger(store: store),
+      // W7.5: ProfileProgramMerger also gets analytics for its skip site.
+      EntityKind.profileProgram: ProfileProgramMerger(
+        store: store,
+        analytics: analytics,
+      ),
       EntityKind.learningOrder: LearningOrderMerger(store: store), // W2.26
       // W2.27 — closes M1
       EntityKind.goal: GoalMerger(database),

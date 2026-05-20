@@ -26,6 +26,8 @@
 // implementation (TutorAuditLogFirestoreWriter) lives in the data layer
 // and writes to tutor_grants/{grantId}/audit_log/{entryId}.
 
+import 'package:learning_tracker/core/analytics/analytics_service.dart';
+import 'package:learning_tracker/core/logging/log_events.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/tutor_audit_log_entry.dart';
 
@@ -59,7 +61,8 @@ class TutorAuditLogWriter {
     required this.tutorNameSnapshot,
     required this.grantId,
     required this.repository,
-  });
+    AnalyticsService? analytics,
+  }) : _analytics = analytics;
 
   /// UID of the tutor performing the action.
   final String tutorUid;
@@ -71,6 +74,9 @@ class TutorAuditLogWriter {
   final String grantId;
 
   final TutorAuditLogRepository repository;
+  // W7.11: optional analytics — fires tutor_action_recorded for every audit
+  // log entry written.
+  final AnalyticsService? _analytics;
 
   // ── Per-action write methods (W6.22) ──────────────────────────────────────
 
@@ -204,6 +210,17 @@ class TutorAuditLogWriter {
       beforeValue: beforeValue,
       afterValue: afterValue,
       timestamp: now,
+    );
+
+    // W7.11: fire tutor_action_recorded for every audit log entry so
+    // analytics dashboards can track tutor activity trends.
+    _analytics?.logEvent(
+      LogEvents.tutor.actionRecorded,
+      parameters: {
+        'grant_id': grantId,
+        'action': action.toJson(),
+        'target': target,
+      },
     );
 
     return repository.appendEntry(entry);

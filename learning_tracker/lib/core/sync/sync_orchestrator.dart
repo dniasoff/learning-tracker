@@ -1,8 +1,11 @@
 import 'dart:async';
 
 import 'package:flutter/widgets.dart';
+import 'package:learning_tracker/core/analytics/analytics_service.dart';
 import 'package:learning_tracker/core/logging/crashlytics_service.dart';
+import 'package:learning_tracker/core/logging/log_events.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
+import 'package:learning_tracker/core/sync/exceptions/firestore_permission_denied_exception.dart';
 import 'package:learning_tracker/core/sync/firestore_gateway.dart';
 import 'package:learning_tracker/core/sync/firestore_listener_source.dart';
 import 'package:learning_tracker/core/sync/initial_sync_state.dart';
@@ -134,11 +137,16 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
     /// W7.16: optional Crashlytics service — when provided, listener errors
     /// are forwarded as non-fatal crashes in addition to the structured log.
     CrashlyticsService? crashlytics,
+
+    /// W7.8/W7.9: optional analytics service — fires sync_pull_*/listener_error
+    /// events for dashboards.
+    AnalyticsService? analytics,
   }) : _resolveMergeRouter = resolveMergeRouter,
        _resolveGateway = resolveGateway,
        _resolveProfileId = resolveProfileId,
        _logger = logger,
        _crashlytics = crashlytics,
+       _analytics = analytics,
        _onFirstSyncComplete = onFirstSyncComplete,
        _resolvePushAllLocalData = resolvePushAllLocalData,
        _resolveBackfillGoals = resolveBackfillGoals;
@@ -171,6 +179,8 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
   final AppLogger? _logger;
   // W7.16: forwards listener errors to Crashlytics as non-fatal.
   final CrashlyticsService? _crashlytics;
+  // W7.8/W7.9: analytics for listener_error + sync_pull_* events.
+  final AnalyticsService? _analytics;
 
   int get _profileId => _resolveProfileId();
 
@@ -326,6 +336,11 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
     }
 
     _logger?.info(event: 'sync_orchestrator_pull_on_launch_start');
+    // W7.9: fire analytics pull_started at the orchestrator entry boundary.
+    await _analytics?.logEvent(
+      LogEvents.sync.pullStarted,
+      parameters: {'triggered_from_resume': triggeredFromResume},
+    );
 
     // P5: announce the pull on the shared status stream. The previous
     // orchestrator delegated pulls to PullPipeline but never updated the
@@ -340,9 +355,11 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
       // picked up — the orchestrator never pulls through a stale handle (I5).
       // PullPipeline is a trivial value holder, so per-pull construction is
       // cheap.
+      // W7.6: pass analytics so PullPipeline fires merge_router_halt events.
       final pullPipeline = PullPipeline(
         gateway: _resolveGateway(),
         dispatcher: _resolveMergeRouter(),
+        analytics: _analytics,
       );
 
       Future<void> step(String label, Future<void> Function() op) {
@@ -451,6 +468,11 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
 
       _safeEmitStatus(SyncStatus.synced(lastSyncedAt: syncedAt));
       _logger?.info(event: 'sync_orchestrator_pull_on_launch_complete');
+      // W7.9: fire analytics pull_completed at the exit boundary.
+      await _analytics?.logEvent(
+        LogEvents.sync.pullCompleted,
+        parameters: {'triggered_from_resume': triggeredFromResume},
+      );
 
       // One-time backfill of goals (DNI-334 cutover misrouted them through
       // `pushSettings` so they never reached the cloud — fixed 2026-05-19).
@@ -476,6 +498,26 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
         event: 'sync_orchestrator_pull_on_launch_failed',
         exception: e,
         stackTrace: stackTrace,
+      );
+      // W7.10: fire permission_denied analytics event when the pull fails due
+      // to a Firestore rules rejection (distinct from the general pull_failed
+      // event so dashboards can track auth/rules issues separately).
+      if (e is FirestorePermissionDeniedException) {
+        await _analytics?.logEvent(
+          LogEvents.sync.permissionDenied,
+          parameters: {
+            'collection': e.collection ?? 'unknown',
+            'operation': e.operation ?? 'read',
+          },
+        );
+      }
+      // W7.9: fire analytics pull_failed at the error boundary.
+      await _analytics?.logEvent(
+        LogEvents.sync.pullFailed,
+        parameters: {
+          'triggered_from_resume': triggeredFromResume,
+          'error': e.toString(),
+        },
       );
       final message = e is TimeoutException
           ? 'Sync timed out — tap to retry'
@@ -601,6 +643,14 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
     // W7.16: forward listener errors to Crashlytics as non-fatal so they
     // appear in the crash dashboard without needing a structured log viewer.
     _crashlytics?.recordError(error, stackTrace, fatal: false);
+    // W7.8: fire analytics listener_error event for dashboards (in addition
+    // to the Crashlytics non-fatal above — both are needed: Crashlytics for
+    // developer triage, Analytics for trend detection).
+    final future = _analytics?.logEvent(
+      LogEvents.sync.listenerError,
+      parameters: {'channel': channel, 'error': error.toString()},
+    );
+    if (future != null) unawaited(future);
   }
 
   static String? _channelToKind(String channel) => switch (channel) {

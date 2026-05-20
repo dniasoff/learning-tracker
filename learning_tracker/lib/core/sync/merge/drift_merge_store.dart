@@ -1,7 +1,10 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:drift/drift.dart';
+import 'package:learning_tracker/core/analytics/analytics_service.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
+import 'package:learning_tracker/core/logging/log_events.dart';
 import 'package:learning_tracker/core/sync/codec/firestore_codec.dart';
 import 'package:learning_tracker/core/sync/merge/entity_merger.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
@@ -21,9 +24,29 @@ import 'package:learning_tracker/core/utils/date_utils.dart';
 ///   stage_definition → [StageDao]               (upsert by curriculum_id + track_id + stage_order)
 ///   streak          → not routed here — [StreakEventMerger] uses [StreakEventLog] directly
 class DriftMergeStore implements MergeStore {
-  DriftMergeStore(UserDatabase db) : _db = db;
+  DriftMergeStore(UserDatabase db, {AnalyticsService? analytics})
+    : _db = db,
+      _analytics = analytics;
 
   final UserDatabase _db;
+  // W7.5: optional analytics — fires merge_row_skipped at every silent-skip site.
+  final AnalyticsService? _analytics;
+
+  // ── W7.5 telemetry helper ───────────────────────────────────────────────────
+
+  /// Fire [LogEvents.sync.mergeRowSkipped] on the injected analytics service.
+  ///
+  /// Silent skips occur when a Firestore row arrives malformed (missing
+  /// required fields) or when a dependency is missing (e.g. bookmark arrives
+  /// before its track). Each skip call closes the L2 gap — these were
+  /// previously invisible in dashboards.
+  void _fireSkipped({required String kind, required String reason}) {
+    final future = _analytics?.logEvent(
+      LogEvents.sync.mergeRowSkipped,
+      parameters: {'entity_kind': kind, 'reason': reason},
+    );
+    if (future != null) unawaited(future);
+  }
 
   // ── currentUpdatedAt ────────────────────────────────────────────────────────
 
@@ -186,7 +209,9 @@ class DriftMergeStore implements MergeStore {
         stageId == null ||
         trackType == null ||
         eventTs == null) {
-      return; // Skip malformed rows.
+      // W7.5: fire telemetry for every silently-skipped completion row.
+      _fireSkipped(kind: EntityKind.completion, reason: 'malformed_fields');
+      return;
     }
 
     // H2: before inserting, check whether a tombstoned row already occupies
@@ -272,7 +297,14 @@ class DriftMergeStore implements MergeStore {
 
   Future<void> _upsertTrack(int profileId, Map<String, dynamic> fields) async {
     final curriculumId = fields['curriculum_id'] as String?;
-    if (curriculumId == null) return;
+    if (curriculumId == null) {
+      // W7.5
+      _fireSkipped(
+        kind: EntityKind.trackConfig,
+        reason: 'missing_curriculum_id',
+      );
+      return;
+    }
 
     // W3.22: trackType dropped. W3.28: use state enum.
     final state =
@@ -281,7 +313,14 @@ class DriftMergeStore implements MergeStore {
             ? 'active'
             : 'retired'); // back-compat shim
     final activatedAt = _parseDateTime(fields['activated_at']);
-    if (activatedAt == null) return;
+    if (activatedAt == null) {
+      // W7.5
+      _fireSkipped(
+        kind: EntityKind.trackConfig,
+        reason: 'missing_activated_at',
+      );
+      return;
+    }
     final stateChangedAt =
         _parseDateTime(fields['state_changed_at']) ??
         _parseDateTime(fields['deactivated_at']) ??
@@ -297,16 +336,18 @@ class DriftMergeStore implements MergeStore {
             .getSingleOrNull();
 
     if (existing == null) {
-      await _db.into(_db.curriculumTracks).insert(
-        CurriculumTracksCompanion.insert(
-          profileId: profileId,
-          curriculumId: curriculumId,
-          state: Value(state),
-          stateChangedAt: stateChangedAt,
-          activatedAt: activatedAt,
-          paceResetDate: Value(paceResetDate),
-        ),
-      );
+      await _db
+          .into(_db.curriculumTracks)
+          .insert(
+            CurriculumTracksCompanion.insert(
+              profileId: profileId,
+              curriculumId: curriculumId,
+              state: Value(state),
+              stateChangedAt: stateChangedAt,
+              activatedAt: activatedAt,
+              paceResetDate: Value(paceResetDate),
+            ),
+          );
     } else {
       await (_db.update(
         _db.curriculumTracks,
@@ -334,6 +375,8 @@ class DriftMergeStore implements MergeStore {
         trackType == null ||
         sefariaRef == null ||
         updatedAt == null) {
+      // W7.5
+      _fireSkipped(kind: EntityKind.bookmark, reason: 'malformed_fields');
       return;
     }
 
@@ -351,6 +394,8 @@ class DriftMergeStore implements MergeStore {
     if (track == null) {
       // Track not yet synced — skip the bookmark; it will re-arrive when
       // the listener fires after the track is synced.
+      // W7.5: this is a non-malformed skip (dependency ordering), fire telemetry.
+      _fireSkipped(kind: EntityKind.bookmark, reason: 'track_not_yet_synced');
       return;
     }
 
@@ -369,10 +414,18 @@ class DriftMergeStore implements MergeStore {
   ) async {
     // Settings document shape: { curriculum_id, track_id, stages: [...], updated_at }
     final curriculumId = fields['curriculum_id'] as String?;
-    if (curriculumId == null) return;
+    if (curriculumId == null) {
+      // W7.5
+      _fireSkipped(kind: EntityKind.settings, reason: 'missing_curriculum_id');
+      return;
+    }
 
     final stagesList = fields['stages'] as List<dynamic>?;
-    if (stagesList == null || stagesList.isEmpty) return;
+    if (stagesList == null || stagesList.isEmpty) {
+      // W7.5: no stages to merge — likely a partial settings doc.
+      _fireSkipped(kind: EntityKind.settings, reason: 'empty_stages_list');
+      return;
+    }
 
     final defaultTrackId = fields['track_id'] as int? ?? 0;
 
@@ -414,7 +467,14 @@ class DriftMergeStore implements MergeStore {
         int.tryParse(fields['stage_order']?.toString() ?? '');
     final stageName = fields['stage_name'] as String? ?? '';
 
-    if (curriculumId == null || trackId == null || stageOrder == null) return;
+    if (curriculumId == null || trackId == null || stageOrder == null) {
+      // W7.5
+      _fireSkipped(
+        kind: EntityKind.stageDefinition,
+        reason: 'missing_key_fields',
+      );
+      return;
+    }
 
     final isDefault = fields['is_default'] as bool? ?? false;
     // W3.27: prefer pre-encoded JSON schedule; fall back to quartet fields.
@@ -543,6 +603,11 @@ class DriftMergeStore implements MergeStore {
     final updatedAt = _parseDateTime(fields['updated_at']);
 
     if (curriculumId == null || sefariaRef == null || userSortOrder == null) {
+      // W7.5
+      _fireSkipped(
+        kind: EntityKind.learningOrder,
+        reason: 'missing_key_fields',
+      );
       return;
     }
     final ts = updatedAt ?? DateTimeFactory.nowUtc();

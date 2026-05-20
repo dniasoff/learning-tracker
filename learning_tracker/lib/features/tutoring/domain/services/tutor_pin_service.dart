@@ -11,6 +11,8 @@
 //   2. Returns sealed result types (no thrown exceptions) for UI convenience.
 //   3. Keeps tutoring feature isolated from the profiles feature internals.
 
+import 'package:learning_tracker/core/analytics/analytics_service.dart';
+import 'package:learning_tracker/core/logging/log_events.dart';
 import 'package:learning_tracker/features/profiles/domain/services/pin_service.dart';
 
 // ── TutorPin VO ─────────────────────────────────────────────────────────────
@@ -74,9 +76,12 @@ final class TutorPinValidationError extends TutorPinResult {
 /// from the parent PIN namespace — authenticating as a tutor does not grant
 /// parent access and vice versa.
 class TutorPinService {
-  const TutorPinService(this._pinService);
+  const TutorPinService(this._pinService, {AnalyticsService? analytics})
+    : _analytics = analytics;
 
   final PinService _pinService;
+  // W7.11: optional analytics — fires tutor_pin_set on successful PIN set.
+  final AnalyticsService? _analytics;
 
   /// Set the tutor PIN for [profileId].
   Future<TutorPinResult> setTutorPin({
@@ -90,6 +95,11 @@ class TutorPinService {
       );
     }
     await _pinService.setTutorPin(profileId, pin.rawDigits);
+    // W7.11: fire tutor_pin_set after successful PIN storage.
+    await _analytics?.logEvent(
+      LogEvents.tutor.pinSet,
+      parameters: {'profile_id': profileId},
+    );
     return const TutorPinSuccess();
   }
 
