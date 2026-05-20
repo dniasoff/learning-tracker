@@ -5,7 +5,9 @@ import 'package:flutter/foundation.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/database/views/completions_view.dart';
 import 'package:learning_tracker/core/enums/cross_profile_scope.dart';
+import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
+import 'package:learning_tracker/features/learning/domain/entities/completion_tier_filter.dart';
 
 part 'completion_dao.g.dart';
 
@@ -732,6 +734,106 @@ class CompletionDao extends DatabaseAccessor<UserDatabase>
             .get();
     return result.isNotEmpty;
   }
+
+  // ========== Tier-Filtered Queries (Layer 3 — TrackProgressService) ==========
+
+  /// Returns completions filtered by the three-tier credit policy.
+  ///
+  /// ### SQL strategy
+  ///
+  /// The join table `prior_completion_imports` holds exactly the rows whose
+  /// matching `completion_events` row originated from a bulk import
+  /// (`bulkInTrack` or `lifetimeOnly`). A live completion is ABSENT from that
+  /// table.
+  ///
+  /// | Tier              | Filter applied                                     |
+  /// |───────────────────|────────────────────────────────────────────────────|
+  /// | [liveOnly]        | LEFT JOIN pci ON natural key; WHERE pci.id IS NULL |
+  /// | [trackAchievement]| LEFT JOIN pci; WHERE pci.source IS NULL OR 'bulk…' |
+  /// | [lifetime]        | No filter — all sources included                   |
+  ///
+  /// Optional narrow-down parameters: [trackId], [curriculumId], [since],
+  /// [until].
+  Future<List<Completion>> getCompletionsByTier({
+    required int profileId,
+    required CompletionTierFilter tier,
+    int? trackId,
+    CurriculumId? curriculumId,
+    DateTime? since,
+    DateTime? until,
+  }) async {
+    // Build WHERE clauses incrementally.
+    final whereParts = <String>['cv.profile_id = ?'];
+    final vars = <Variable<Object>>[Variable.withInt(profileId)];
+
+    if (trackId != null) {
+      whereParts.add('cv.track_id = ?');
+      vars.add(Variable.withInt(trackId));
+    }
+    if (curriculumId != null) {
+      whereParts.add('cv.curriculum_id = ?');
+      vars.add(Variable.withString(curriculumId.storageKey));
+    }
+    if (since != null) {
+      whereParts.add('cv.event_timestamp >= ?');
+      vars.add(Variable.withDateTime(since));
+    }
+    if (until != null) {
+      whereParts.add('cv.event_timestamp <= ?');
+      vars.add(Variable.withDateTime(until));
+    }
+
+    // Add tier-specific filter.
+    switch (tier) {
+      case CompletionTierFilter.liveOnly:
+        // Live = not present in prior_completion_imports at all.
+        whereParts.add('pci.id IS NULL');
+      case CompletionTierFilter.trackAchievement:
+        // trackAchievement = live OR bulkInTrack (excludes lifetimeOnly).
+        whereParts.add("(pci.id IS NULL OR pci.source = 'bulkInTrack')");
+      case CompletionTierFilter.lifetime:
+        // Lifetime = all sources; no extra filter needed.
+        break;
+    }
+
+    final joinClause = tier != CompletionTierFilter.lifetime
+        ? '''
+LEFT JOIN prior_completion_imports AS pci
+  ON pci.profile_id = cv.profile_id
+  AND pci.curriculum_id = cv.curriculum_id
+  AND pci.sefaria_ref = cv.sefaria_ref
+  AND pci.stage_id = cv.stage_id
+  AND pci.track_type = cv.track_type'''
+        : '';
+
+    final sql =
+        '''
+SELECT
+  cv.id, cv.profile_id, cv.curriculum_id, cv.sefaria_ref,
+  cv.stage_id, cv.track_type, cv.track_id, cv.points,
+  cv.event_timestamp
+FROM completions_view AS cv
+$joinClause
+WHERE ${whereParts.join(' AND ')}
+''';
+
+    final rows = await customSelect(sql, variables: vars).get();
+    return rows.map(_fromRaw).toList();
+  }
+
+  /// Maps a [QueryRow] from a custom-select result to a [Completion].
+  Completion _fromRaw(QueryRow row) => Completion(
+    id: row.read<int>('id'),
+    profileId: row.read<int>('profile_id'),
+    curriculumId: row.read<String>('curriculum_id'),
+    sefariaRef: row.read<String>('sefaria_ref'),
+    stageId: row.read<int>('stage_id'),
+    trackType: row.read<String>('track_type'),
+    trackId: row.readNullable<int>('track_id') ?? 0,
+    completedAt: row.read<DateTime>('event_timestamp'),
+    points: row.read<int>('points'),
+    derivedFromEvents: true,
+  );
 
   // ========== Cross-Profile Scope Guard (DNI-321) ==========
 
