@@ -1,3 +1,4 @@
+import * as crypto from "crypto";
 import * as admin from "firebase-admin";
 import { auth, logger, pubsub } from "firebase-functions/v1";
 import { onCall, HttpsError } from "firebase-functions/v2/https";
@@ -5,6 +6,17 @@ import { onCall, HttpsError } from "firebase-functions/v2/https";
 admin.initializeApp();
 const db = admin.firestore();
 
+// ── Shared helpers ────────────────────────────────────────────────────────────
+
+/** Encode an email for use in a Firestore doc ID (mirrors Dart TutorGrantDoc.buildGrantId). */
+function encodeEmailForDocId(email: string): string {
+  return email.toLowerCase().replace(/[^a-zA-Z0-9]/g, "_");
+}
+
+/** Build the tutor_active_access doc ID: {tutorUid}_{parentUid}_{profileId}. */
+function buildAccessId(tutorUid: string, parentUid: string, profileId: string): string {
+  return `${tutorUid}_${parentUid}_${profileId}`;
+}
 
 /**
  * Triggered when a Firebase Auth user is deleted.
@@ -73,6 +85,15 @@ export const onUserDeleted = auth.user().onDelete(async (user) => {
       updated_at: now,
       _delete_cascade: true, // sentinel: resigned because tutor account deleted
     });
+    // V2-R3 C2: also delete the tutor_active_access lookup doc so the
+    // tutor immediately loses subcollection read access.
+    const grant = grantDoc.data();
+    const accessId = buildAccessId(
+      uid,
+      String(grant.parent_uid ?? ""),
+      String(grant.child_profile_id ?? "")
+    );
+    tutorGrantBatch.delete(db.collection("tutor_active_access").doc(accessId));
   }
   if (tutorGrantsSnap.size > 0) {
     await tutorGrantBatch.commit();
@@ -498,3 +519,527 @@ export const tutorBulkPriorCompletions = onCall(async (request) => {
 
   return { success: true, written: completions.length };
 });
+
+// ══════════════════════════════════════════════════════════════════════════════
+// V2-R3 C3 — Tutor grant lifecycle Cloud Functions
+// ══════════════════════════════════════════════════════════════════════════════
+//
+// All grant state mutations are server-side (Admin SDK) to prevent clients from
+// forging active grants. The `tutor_active_access` secondary index is maintained
+// alongside grant-state changes to enable O(1) subcollection read checks in
+// Firestore Security Rules (V2-R3 C2).
+//
+// Doc-id formula for tutor_active_access: {tutorUid}_{parentUid}_{profileId}
+// This mirrors the hasActiveTutorAccess() helper in firestore.rules.
+//
+// Grant doc-id formula: {encodedEmail}__{parentUid}__{childProfileId}
+// The encoded email replaces any non-alphanumeric char with '_'.
+
+// ── inviteTutor ───────────────────────────────────────────────────────────────
+//
+// Creates a pending grant document for a tutor invite.
+//
+// Expects:
+//   {
+//     tutorEmail: string,           // tutor's email address (lower-cased by CF)
+//     childProfileId: string,       // profile ID (string) of the tutored child
+//     permissions: object,          // TutorPermissions serialised map (optional)
+//   }
+//
+// Returns: { success: true, grantId: string }
+
+export const inviteTutor = onCall(async (request) => {
+  const callerUid = request.auth?.uid;
+  if (!callerUid) {
+    throw new HttpsError("unauthenticated", "Must be signed in");
+  }
+
+  const { tutorEmail, childProfileId, permissions } = request.data ?? {};
+
+  if (typeof tutorEmail !== "string" || !tutorEmail.includes("@")) {
+    throw new HttpsError("invalid-argument", "tutorEmail must be a valid email address");
+  }
+  if (typeof childProfileId !== "string" || !childProfileId) {
+    throw new HttpsError("invalid-argument", "childProfileId must be a non-empty string");
+  }
+
+  const normalEmail = tutorEmail.trim().toLowerCase();
+  const encodedEmail = encodeEmailForDocId(normalEmail);
+  const grantId = `${encodedEmail}__${callerUid}__${childProfileId}`;
+  const now = admin.firestore.Timestamp.now();
+  const expiresAt = new Date(now.toDate().getTime() + 7 * 24 * 60 * 60 * 1000);
+
+  // Generate a 256-bit random invite token (NFR-3).
+  const inviteToken = crypto.randomBytes(32).toString("hex");
+
+  const defaultPermissions = {
+    can_view_progress: true,
+    can_view_content: true,
+    can_bulk_prior_completion: true,
+    can_reset_completion: false,
+    can_edit_goals: false,
+    can_edit_stages: false,
+    can_edit_rewards: false,
+    can_edit_study_days: false,
+  };
+
+  const grantData = {
+    grant_id: grantId,
+    parent_uid: callerUid,
+    child_profile_id: childProfileId,
+    tutor_email: normalEmail,
+    tutor_uid: null,
+    state: "pending",
+    invite_token: inviteToken,
+    permissions: permissions ?? defaultPermissions,
+    invited_at: now,
+    updated_at: now,
+    expires_at: admin.firestore.Timestamp.fromDate(expiresAt),
+  };
+
+  await db.collection("tutor_grants").doc(grantId).set(grantData, { merge: false });
+
+  logger.info(`inviteTutor: parent=${callerUid} grantId=${grantId} email=${normalEmail}`);
+  return { success: true, grantId };
+});
+
+// ── acceptTutorInvite ─────────────────────────────────────────────────────────
+//
+// Tutor accepts a pending invite. Validates that:
+//   1. The grant exists and is in pending state.
+//   2. The grant has not expired (server-side, not relying on client state).
+//   3. The caller's authenticated email matches grant.tutor_email.
+//      (This is the security check that prevents anyone from claiming an invite
+//       without owning the invited email address.)
+//
+// On success:
+//   - Updates grant state to 'active', sets tutor_uid and accepted_at.
+//   - Writes tutor_active_access/{tutorUid}_{parentUid}_{profileId}.
+//   - Clears the invite_token (single-use, per NFR-3).
+//   - Captures tutor_name_snapshot from Firebase Auth (fixes H3 from V2-R3).
+//
+// Expects: { grantId: string }
+// Returns: { success: true, grantId: string }
+
+export const acceptTutorInvite = onCall(async (request) => {
+  const callerUid = request.auth?.uid;
+  if (!callerUid) {
+    throw new HttpsError("unauthenticated", "Must be signed in");
+  }
+
+  const { grantId } = request.data ?? {};
+  if (typeof grantId !== "string" || !grantId) {
+    throw new HttpsError("invalid-argument", "grantId must be a non-empty string");
+  }
+
+  const grantRef = db.collection("tutor_grants").doc(grantId);
+  const grantSnap = await grantRef.get();
+  if (!grantSnap.exists) {
+    throw new HttpsError("not-found", `Grant not found: ${grantId}`);
+  }
+
+  const grant = grantSnap.data()!;
+
+  if (grant.state !== "pending") {
+    throw new HttpsError(
+      "failed-precondition",
+      `Grant ${grantId} is not in pending state (state=${grant.state})`
+    );
+  }
+
+  // Check expiry — server-side enforcement.
+  if (grant.expires_at && grant.expires_at.toDate() < new Date()) {
+    // Transition to expired while we're here (opportunistic).
+    await grantRef.update({
+      state: "expired",
+      updated_at: admin.firestore.Timestamp.now(),
+    });
+    throw new HttpsError(
+      "failed-precondition",
+      `Grant ${grantId} has expired`
+    );
+  }
+
+  // Security gate: caller's email MUST match the invited email.
+  // This prevents anyone from claiming an invite not addressed to them.
+  const callerRecord = await admin.auth().getUser(callerUid);
+  const callerEmail = (callerRecord.email ?? "").toLowerCase().trim();
+  const grantEmail = (grant.tutor_email ?? "").toLowerCase().trim();
+  if (callerEmail !== grantEmail) {
+    throw new HttpsError(
+      "permission-denied",
+      "Your account email does not match the invited tutor email"
+    );
+  }
+
+  const now = admin.firestore.Timestamp.now();
+  // Capture tutor display name for audit log snapshot (fixes H3).
+  const tutorNameSnapshot = callerRecord.displayName ?? callerEmail;
+  const profileId = String(grant.child_profile_id);
+  const parentUid = String(grant.parent_uid);
+  const accessId = buildAccessId(callerUid, parentUid, profileId);
+
+  await db.runTransaction(async (txn) => {
+    // 1. Update the grant document.
+    txn.update(grantRef, {
+      state: "active",
+      tutor_uid: callerUid,
+      tutor_name_snapshot: tutorNameSnapshot,
+      accepted_at: now,
+      updated_at: now,
+      invite_token: admin.firestore.FieldValue.delete(), // single-use cleared
+    });
+
+    // 2. Write the tutor_active_access lookup document.
+    const accessRef = db.collection("tutor_active_access").doc(accessId);
+    txn.set(accessRef, {
+      tutor_uid: callerUid,
+      parent_uid: parentUid,
+      child_profile_id: profileId,
+      grant_id: grantId,
+      created_at: now,
+    });
+  });
+
+  // Write audit log entry (outside transaction — audit is best-effort).
+  try {
+    await db
+      .collection("tutor_grants")
+      .doc(grantId)
+      .collection("audit_log")
+      .add({
+        tutor_uid: callerUid,
+        tutor_name_snapshot: tutorNameSnapshot,
+        action: "invite_accepted",
+        target: `grant/${grantId}`,
+        after_value: JSON.stringify({ state: "active" }),
+        timestamp: now.toDate().toISOString(),
+      });
+  } catch (e) {
+    logger.warn(`acceptTutorInvite: audit log write failed for grant=${grantId}`, e);
+  }
+
+  logger.info(`acceptTutorInvite: tutor=${callerUid} grantId=${grantId}`);
+  return { success: true, grantId };
+});
+
+// ── declineTutorInvite ────────────────────────────────────────────────────────
+//
+// Tutor declines a pending invite. Validates caller email matches grant email.
+//
+// Expects: { grantId: string }
+// Returns: { success: true }
+
+export const declineTutorInvite = onCall(async (request) => {
+  const callerUid = request.auth?.uid;
+  if (!callerUid) {
+    throw new HttpsError("unauthenticated", "Must be signed in");
+  }
+
+  const { grantId } = request.data ?? {};
+  if (typeof grantId !== "string" || !grantId) {
+    throw new HttpsError("invalid-argument", "grantId must be a non-empty string");
+  }
+
+  const grantRef = db.collection("tutor_grants").doc(grantId);
+  const grantSnap = await grantRef.get();
+  if (!grantSnap.exists) {
+    throw new HttpsError("not-found", `Grant not found: ${grantId}`);
+  }
+
+  const grant = grantSnap.data()!;
+
+  // Allow decline if pending OR if tutor_uid matches (already accepted but wants to resign via this path).
+  // Primary path: caller email matches invited email.
+  const callerRecord = await admin.auth().getUser(callerUid);
+  const callerEmail = (callerRecord.email ?? "").toLowerCase().trim();
+  const grantEmail = (grant.tutor_email ?? "").toLowerCase().trim();
+  const isTutorByEmail = callerEmail === grantEmail;
+  const isTutorByUid = grant.tutor_uid === callerUid;
+
+  if (!isTutorByEmail && !isTutorByUid) {
+    throw new HttpsError("permission-denied", "You are not the invited tutor for this grant");
+  }
+
+  if (grant.state !== "pending") {
+    throw new HttpsError(
+      "failed-precondition",
+      `Grant ${grantId} is not in pending state (state=${grant.state})`
+    );
+  }
+
+  const now = admin.firestore.Timestamp.now();
+  await grantRef.update({
+    state: "declined",
+    declined_at: now,
+    updated_at: now,
+    invite_token: admin.firestore.FieldValue.delete(),
+  });
+
+  logger.info(`declineTutorInvite: tutor=${callerUid} grantId=${grantId}`);
+  return { success: true };
+});
+
+// ── rescindTutorInvite ────────────────────────────────────────────────────────
+//
+// Parent rescinds a pending invite (before tutor has accepted).
+//
+// Expects: { grantId: string }
+// Returns: { success: true }
+
+export const rescindTutorInvite = onCall(async (request) => {
+  const callerUid = request.auth?.uid;
+  if (!callerUid) {
+    throw new HttpsError("unauthenticated", "Must be signed in");
+  }
+
+  const { grantId } = request.data ?? {};
+  if (typeof grantId !== "string" || !grantId) {
+    throw new HttpsError("invalid-argument", "grantId must be a non-empty string");
+  }
+
+  const grantRef = db.collection("tutor_grants").doc(grantId);
+  const grantSnap = await grantRef.get();
+  if (!grantSnap.exists) {
+    throw new HttpsError("not-found", `Grant not found: ${grantId}`);
+  }
+
+  const grant = grantSnap.data()!;
+
+  if (grant.parent_uid !== callerUid) {
+    throw new HttpsError("permission-denied", "Only the parent can rescind an invite");
+  }
+  if (grant.state !== "pending") {
+    throw new HttpsError(
+      "failed-precondition",
+      `Grant ${grantId} is not in pending state (state=${grant.state})`
+    );
+  }
+
+  const now = admin.firestore.Timestamp.now();
+  await grantRef.update({
+    state: "rescinded",
+    revoked_at: now,
+    updated_at: now,
+    invite_token: admin.firestore.FieldValue.delete(),
+  });
+
+  logger.info(`rescindTutorInvite: parent=${callerUid} grantId=${grantId}`);
+  return { success: true };
+});
+
+// ── revokeTutorGrant ──────────────────────────────────────────────────────────
+//
+// Parent revokes an active grant. Deletes tutor_active_access lookup doc.
+//
+// Expects: { grantId: string }
+// Returns: { success: true }
+
+export const revokeTutorGrant = onCall(async (request) => {
+  const callerUid = request.auth?.uid;
+  if (!callerUid) {
+    throw new HttpsError("unauthenticated", "Must be signed in");
+  }
+
+  const { grantId } = request.data ?? {};
+  if (typeof grantId !== "string" || !grantId) {
+    throw new HttpsError("invalid-argument", "grantId must be a non-empty string");
+  }
+
+  const grantRef = db.collection("tutor_grants").doc(grantId);
+  const grantSnap = await grantRef.get();
+  if (!grantSnap.exists) {
+    throw new HttpsError("not-found", `Grant not found: ${grantId}`);
+  }
+
+  const grant = grantSnap.data()!;
+
+  if (grant.parent_uid !== callerUid) {
+    throw new HttpsError("permission-denied", "Only the parent can revoke a grant");
+  }
+  if (grant.state !== "active") {
+    throw new HttpsError(
+      "failed-precondition",
+      `Grant ${grantId} is not active (state=${grant.state})`
+    );
+  }
+
+  const now = admin.firestore.Timestamp.now();
+  const tutorUid = String(grant.tutor_uid ?? "");
+  const profileId = String(grant.child_profile_id);
+  const accessId = buildAccessId(tutorUid, callerUid, profileId);
+
+  await db.runTransaction(async (txn) => {
+    txn.update(grantRef, {
+      state: "revoked_by_parent",
+      revoked_at: now,
+      updated_at: now,
+    });
+    // Remove the access index so the tutor can no longer read subcollections.
+    const accessRef = db.collection("tutor_active_access").doc(accessId);
+    txn.delete(accessRef);
+  });
+
+  logger.info(`revokeTutorGrant: parent=${callerUid} grantId=${grantId} tutor=${tutorUid}`);
+  return { success: true };
+});
+
+// ── resignTutorGrant ──────────────────────────────────────────────────────────
+//
+// Tutor resigns from an active grant. Deletes tutor_active_access lookup doc.
+//
+// Expects: { grantId: string }
+// Returns: { success: true }
+
+export const resignTutorGrant = onCall(async (request) => {
+  const callerUid = request.auth?.uid;
+  if (!callerUid) {
+    throw new HttpsError("unauthenticated", "Must be signed in");
+  }
+
+  const { grantId } = request.data ?? {};
+  if (typeof grantId !== "string" || !grantId) {
+    throw new HttpsError("invalid-argument", "grantId must be a non-empty string");
+  }
+
+  const grantRef = db.collection("tutor_grants").doc(grantId);
+  const grantSnap = await grantRef.get();
+  if (!grantSnap.exists) {
+    throw new HttpsError("not-found", `Grant not found: ${grantId}`);
+  }
+
+  const grant = grantSnap.data()!;
+
+  if (grant.tutor_uid !== callerUid) {
+    throw new HttpsError("permission-denied", "Only the tutor can resign a grant");
+  }
+  if (grant.state !== "active") {
+    throw new HttpsError(
+      "failed-precondition",
+      `Grant ${grantId} is not active (state=${grant.state})`
+    );
+  }
+
+  const now = admin.firestore.Timestamp.now();
+  const parentUid = String(grant.parent_uid);
+  const profileId = String(grant.child_profile_id);
+  const accessId = buildAccessId(callerUid, parentUid, profileId);
+
+  await db.runTransaction(async (txn) => {
+    txn.update(grantRef, {
+      state: "revoked_by_tutor",
+      revoked_at: now,
+      updated_at: now,
+    });
+    const accessRef = db.collection("tutor_active_access").doc(accessId);
+    txn.delete(accessRef);
+  });
+
+  logger.info(`resignTutorGrant: tutor=${callerUid} grantId=${grantId}`);
+  return { success: true };
+});
+
+// ── listTutorGrants ───────────────────────────────────────────────────────────
+//
+// Returns tutor grants for the authenticated user.
+// Mode 'incoming': grants where the caller is the tutor (all non-terminal states).
+// Mode 'outgoing': grants where the caller is the parent, for a specific child.
+//
+// Expects: { mode: 'incoming' | 'outgoing', childProfileId?: string }
+// Returns: { grants: TutorGrantDoc[] }
+
+export const listTutorGrants = onCall(async (request) => {
+  const callerUid = request.auth?.uid;
+  if (!callerUid) {
+    throw new HttpsError("unauthenticated", "Must be signed in");
+  }
+
+  const { mode, childProfileId } = request.data ?? {};
+  if (mode !== "incoming" && mode !== "outgoing") {
+    throw new HttpsError("invalid-argument", "mode must be 'incoming' or 'outgoing'");
+  }
+
+  let query: admin.firestore.Query;
+  if (mode === "incoming") {
+    query = db
+      .collection("tutor_grants")
+      .where("tutor_uid", "==", callerUid)
+      .where("state", "in", ["pending", "active"]);
+  } else {
+    if (typeof childProfileId !== "string" || !childProfileId) {
+      throw new HttpsError("invalid-argument", "childProfileId required for outgoing mode");
+    }
+    query = db
+      .collection("tutor_grants")
+      .where("parent_uid", "==", callerUid)
+      .where("child_profile_id", "==", childProfileId);
+  }
+
+  const snap = await query.get();
+  const grants = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  return { grants };
+});
+
+// ══════════════════════════════════════════════════════════════════════════════
+// V2-R3 C4 — Expire pending invites (scheduled, 7-day TTL)
+// ══════════════════════════════════════════════════════════════════════════════
+//
+// Scheduled: daily at 01:00 UTC (offset from purgeExpiredAuditLogs at 02:00).
+//
+// Queries pending grants where expires_at < now, transitions them to 'expired'.
+// Writes an audit log entry for each expiration.
+
+export const expirePendingInvites = pubsub
+  .schedule("0 1 * * *") // daily at 01:00 UTC
+  .timeZone("UTC")
+  .onRun(async (_context) => {
+    const now = admin.firestore.Timestamp.now();
+    logger.info(`expirePendingInvites: running at ${now.toDate().toISOString()}`);
+
+    const snapshot = await db
+      .collection("tutor_grants")
+      .where("state", "==", "pending")
+      .where("expires_at", "<=", now)
+      .get();
+
+    if (snapshot.empty) {
+      logger.info("expirePendingInvites: no expired pending grants found");
+      return;
+    }
+
+    let expiredCount = 0;
+    for (const grantDoc of snapshot.docs) {
+      const grantId = grantDoc.id;
+      try {
+        await db.runTransaction(async (txn) => {
+          txn.update(grantDoc.ref, {
+            state: "expired",
+            updated_at: now,
+            invite_token: admin.firestore.FieldValue.delete(),
+          });
+
+          // Write audit log entry.
+          const auditRef = db
+            .collection("tutor_grants")
+            .doc(grantId)
+            .collection("audit_log")
+            .doc();
+          txn.set(auditRef, {
+            tutor_uid: null,
+            tutor_name_snapshot: grantDoc.data().tutor_email ?? "",
+            action: "invite_expired",
+            target: `grant/${grantId}`,
+            after_value: JSON.stringify({ state: "expired" }),
+            timestamp: now.toDate().toISOString(),
+          });
+        });
+
+        expiredCount++;
+        logger.info(`expirePendingInvites: expired grant=${grantId}`);
+      } catch (e) {
+        logger.error(`expirePendingInvites: failed to expire grant=${grantId}`, e);
+      }
+    }
+
+    logger.info(`expirePendingInvites: complete — expired=${expiredCount} total=${snapshot.size}`);
+  });

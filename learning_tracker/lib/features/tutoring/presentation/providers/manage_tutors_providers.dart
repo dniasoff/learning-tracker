@@ -1,84 +1,21 @@
-// Providers for tutor management screens (W6.11, W6.12).
+// Providers for tutor management screens (W6.11, W6.12, V2-R3 C3).
 //
-// These are simple Riverpod providers that instantiate the use cases
-// from the domain layer. Since TutorGrantRepository has no concrete
-// implementation yet (gated on data layer work), we provide a
-// stub/in-memory implementation that returns empty lists.
-//
-// When the Firestore data layer lands, replace _StubTutorGrantRepository
-// with the real implementation wired to tutorGrantRepositoryProvider.
+// Uses the real [FirestoreTutorGrantRepository] backed by Cloud Functions
+// callables. All mutations are server-side via Admin SDK (V2-R3 C3).
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:learning_tracker/features/tutoring/data/repositories/firestore_tutor_grant_repository.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/tutor_grant_aggregate.dart';
-import 'package:learning_tracker/features/tutoring/domain/models/tutor_permissions.dart';
 import 'package:learning_tracker/features/tutoring/domain/use_cases/tutor_grant_use_cases.dart';
 import 'package:learning_tracker/features/tutoring/domain/use_cases/tutor_invite_use_cases.dart';
-
-// ── Stub repository ──────────────────────────────────────────────────────────
-
-/// Stub implementation used until the Firestore data layer lands.
-///
-/// TODO(data-layer): Replace with the real Firestore-backed implementation.
-/// The real provider should read from the Firestore `tutor_grants` collection
-/// using the composite indexes added in W3.39.
-class _StubTutorGrantRepository implements TutorGrantRepository {
-  const _StubTutorGrantRepository();
-
-  @override
-  Future<TutorGrantResult> inviteTutor({
-    required String tutorEmail,
-    required String childProfileId,
-    required TutorPermissions permissions,
-  }) async => const TutorGrantFailure(
-    message: 'Not yet implemented — data layer pending',
-  );
-
-  @override
-  Future<TutorGrantResult> acceptInvite({required String grantId}) async =>
-      const TutorGrantFailure(
-        message: 'Not yet implemented — data layer pending',
-      );
-
-  @override
-  Future<TutorGrantResult> declineInvite({required String grantId}) async =>
-      const TutorGrantFailure(
-        message: 'Not yet implemented — data layer pending',
-      );
-
-  @override
-  Future<TutorGrantResult> rescindInvite({required String grantId}) async =>
-      const TutorGrantFailure(
-        message: 'Not yet implemented — data layer pending',
-      );
-
-  @override
-  Future<TutorGrantResult> revokeGrant({required String grantId}) async =>
-      const TutorGrantFailure(
-        message: 'Not yet implemented — data layer pending',
-      );
-
-  @override
-  Future<TutorGrantResult> resignGrant({required String grantId}) async =>
-      const TutorGrantFailure(
-        message: 'Not yet implemented — data layer pending',
-      );
-
-  @override
-  Future<List<TutorGrant>> listIncomingGrants() async => const [];
-
-  @override
-  Future<List<TutorGrant>> listOutgoingGrants({
-    required String childProfileId,
-  }) async => const [];
-}
 
 // ── Repository provider ──────────────────────────────────────────────────────
 
 /// The TutorGrantRepository instance used by all tutor grant use cases.
 ///
-/// Replace the stub with the real implementation when the data layer lands.
+/// Backed by [FirestoreTutorGrantRepository] (V2-R3 C3).
 final tutorGrantRepositoryProvider = Provider<TutorGrantRepository>(
-  (_) => const _StubTutorGrantRepository(),
+  (_) => FirestoreTutorGrantRepository(),
 );
 
 // ── Use case providers ───────────────────────────────────────────────────────
