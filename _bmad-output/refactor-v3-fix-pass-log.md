@@ -216,3 +216,56 @@ No further action needed for C1/C2.
 - **Fix:** Replaced `_InfoCard(icon: Icons.error_outline, title: …, subtitle: e.toString())` with `AppErrorView(error: e, stackTrace: st, onRetry: () => ref.invalidate(allDailyTasksProvider))` in the `dailyTasksAsync.when(error:)` branch of `_DailyTasksSection`.
 - **Test:** `test/features/learning/presentation/screens/learning_screen_test.dart` — new widget test `AppErrorView shows generic message for InternalException (not raw exception string)`: renders `AppErrorView` directly with a `MergeException` carrying a recognisable raw message, asserts `AppErrorView` is present and `'Something went wrong'` is shown, asserts raw exception message is not found anywhere in the widget tree.
 - **Commit:** 0805ada1 — `fix(v2-r5-c3): replace e.toString() in dailyTasksAsync error branch with AppErrorView`
+
+---
+
+## V3-W5 — Duplicate Feature Trees
+
+### CR1a — Delete duplicate `features/track_setup/` (canonical: `features/tracks/setup/`)
+
+**Root cause:** W2.2 MOVE was executed as a copy — `features/track_setup/` was never deleted after its contents were moved to `features/tracks/setup/`. The trees were already diverging: `tracks/setup/step_starting_position_calendar.dart` contained B2 window enforcement logic absent from the stale copy.
+
+**Divergence resolved:** The canonical `tracks/setup/` already had the superior version (with B2 enforcement). No porting needed — only the stale `track_setup/` tree needed deletion.
+
+**Importers updated (lib, 4 files):**
+- `lib/app/router/app_router.dart` — `track_detail_screen`, `track_management_hub_screen`
+- `lib/features/gamification/presentation/screens/point_config_screen.dart` — `track_management_providers`
+- `lib/features/onboarding/presentation/screens/onboarding_screen.dart` — `add_track_flow_screen`
+- `lib/features/profiles/presentation/screens/parent_track_management_screen.dart` — 4 imports
+
+**Test files updated (11 files):**
+- `test/features/track_setup/presentation/controllers/add_track_controller_test.dart`
+- `test/features/track_setup/presentation/widgets/curriculum_picker_step_test.dart`
+- `test/features/track_setup/presentation/widgets/program_selection_step_test.dart`
+- `test/features/track_setup/presentation/widgets/track_label_step_test.dart`
+- `test/features/track_setup/presentation/steps/goal_helpers_test.dart`
+- `test/features/track_setup/domain/entities/add_track_result_test.dart`
+- `test/track_setup/mandatory_pace_test.dart`
+- `test/story_acceptance/epic_18_track_overhaul_test.dart` — also fixed `StageDefinitionRepositoryImpl` import to canonical `tracks/stages/`
+- `test/story_acceptance/epic_25_story_25_9_lints_test.dart` — removed duplicate set entry created by path update
+- `test/story_acceptance/epic_26_story_26_22_track_management_body_test.dart`
+- `test/story_acceptance/epic_26_story_26_7_dashboard_model_provider_test.dart` — updated import + all string path literals in `_src()` calls
+- `test/story_acceptance/epic_26_story_26_31_rtl_audit_test.dart`
+- `test/story_acceptance/epic_27_story_4_widget_golden_test.dart`
+
+**Files deleted:** 34 dart files (`git rm -rf learning_tracker/lib/features/track_setup/`)
+
+### CR1b — Delete duplicate `signup_screen.dart` in `features/onboarding/` (canonical: `features/account/onboarding/`)
+
+**Root cause:** W2.12 MOVE was executed as a copy — `features/onboarding/presentation/screens/signup_screen.dart` was never deleted. Both files were byte-for-byte identical at time of deletion.
+
+**Importers updated (2 files):**
+- `lib/app/router/app_router.dart` — import path updated to `account/onboarding/`
+- `test/features/onboarding/presentation/screens/signup_screen_test.dart` — import path updated
+
+**Files deleted:** 1 dart file (`git rm learning_tracker/lib/features/onboarding/presentation/screens/signup_screen.dart`)
+
+### Summary
+
+| Item | Files deleted | Importers updated | CI status |
+|------|:---:|:---:|:---:|
+| `features/track_setup/` | 34 | 15 | GREEN |
+| `signup_screen.dart` dupe | 1 | 2 | GREEN |
+| **Total** | **35** | **17** | **GREEN (5215 pass, 125 skip)** |
+
+**Commit:** e365a4c8 — `refactor(v2-r4-cr1): delete duplicate features/track_setup/ tree (canonical: features/tracks/setup/)`
