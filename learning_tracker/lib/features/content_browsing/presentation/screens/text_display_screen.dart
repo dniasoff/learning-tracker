@@ -19,11 +19,15 @@ import 'package:learning_tracker/features/content_browsing/presentation/provider
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/gamification/presentation/widgets/achievement_unlock_celebration.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_request.dart';
+import 'package:learning_tracker/features/learning/domain/entities/mark_completion_result.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/completion_providers.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/completion_writer_providers.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dart';
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
+import 'package:learning_tracker/features/tutoring/domain/models/session_role.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/tutor_grant_aggregate.dart';
+import 'package:learning_tracker/features/tutoring/domain/models/tutor_permissions.dart';
+import 'package:learning_tracker/features/tutoring/domain/use_cases/mark_live_completion_use_case.dart';
 import 'package:learning_tracker/features/tutoring/presentation/providers/manage_tutors_providers.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
@@ -618,7 +622,11 @@ class _CompletionSection extends ConsumerStatefulWidget {
 class _CompletionSectionState extends ConsumerState<_CompletionSection> {
   bool _saving = false;
 
-  Future<void> _handleComplete(DailyTask task, String trackType) async {
+  Future<void> _handleComplete(
+    DailyTask task,
+    String trackType, {
+    required ResolvedSession session,
+  }) async {
     if (_saving) return;
     setState(() => _saving = true);
 
@@ -629,13 +637,24 @@ class _CompletionSectionState extends ConsumerState<_CompletionSection> {
         widget.sefariaRef,
       );
 
-      final useCase = ref.read(markCompletionUseCaseProvider);
-      final result = await useCase(
-        CompletionRequest(
-          curriculumId: task.curriculumId.storageKey,
-          sefariaRef: widget.sefariaRef,
-          stageId: task.stageOrder,
-          trackType: trackType,
+      // H1 fix: route the live completion write through MarkLiveCompletionUseCase
+      // so the domain guard (TutorWriteForbiddenException) is enforced at the
+      // application layer — not just by the UI button being disabled.
+      // This ensures any future call site (keyboard shortcut, notification action,
+      // etc.) that bypasses the UI still hits the domain boundary.
+      final markLiveUseCase = MarkLiveCompletionUseCase<MarkCompletionResult>(
+        session: session,
+      );
+      final completionUseCase = ref.read(markCompletionUseCaseProvider);
+
+      final result = await markLiveUseCase.call(
+        () => completionUseCase(
+          CompletionRequest(
+            curriculumId: task.curriculumId.storageKey,
+            sefariaRef: widget.sefariaRef,
+            stageId: task.stageOrder,
+            trackType: trackType,
+          ),
         ),
       );
 
@@ -730,6 +749,29 @@ class _CompletionSectionState extends ConsumerState<_CompletionSection> {
     final grantsAsync = ref.watch(incomingTutorGrantsProvider);
     return grantsAsync.asData?.value.any((g) => g.grantState is ActiveGrant) ??
         false;
+  }
+
+  // H1: Build a ResolvedSession that reflects the current user's role so
+  // _handleComplete can route through MarkLiveCompletionUseCase.
+  // The session only needs to carry the correct isTutorSession flag — the
+  // profile/grant details are not required for the domain guard.
+  ResolvedSession _sessionForCurrentUser(WidgetRef ref, bool isTutor) {
+    if (isTutor) {
+      // Minimal TutoredProfileSelection — grant ID and permissions are not
+      // inspected by MarkLiveCompletionUseCase (it checks isTutorSession only).
+      return ResolvedSession.forTutor(
+        selection: const TutoredProfileSelection(
+          profileId: '',
+          ownerUid: '',
+          grantId: '',
+          permissions: TutorPermissions(),
+        ),
+      );
+    }
+    return ResolvedSession.forOwner(
+      selection: const OwnProfileSelection(profileId: '', ownerUid: ''),
+      isChildMode: false,
+    );
   }
 
   @override
@@ -828,9 +870,15 @@ class _CompletionSectionState extends ConsumerState<_CompletionSection> {
                   message: isTutor ? l10n.tutorCannotMarkLiveCompletion : '',
                   child: FilledButton(
                     // W6.17: Disable for tutors regardless of isDone state.
+                    // H1: session is passed so _handleComplete routes through
+                    // MarkLiveCompletionUseCase for domain-layer enforcement.
                     onPressed: (_saving || isDone || isTutor)
                         ? null
-                        : () => _handleComplete(task, trackType),
+                        : () => _handleComplete(
+                            task,
+                            trackType,
+                            session: _sessionForCurrentUser(ref, isTutor),
+                          ),
                     style: FilledButton.styleFrom(
                       // W6.17: When in tutor mode, show a muted amber
                       // colour to visually communicate the disabled state.
