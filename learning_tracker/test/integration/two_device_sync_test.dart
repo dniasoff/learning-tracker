@@ -213,23 +213,21 @@ void main() {
         await (deviceA.update(deviceA.curriculumTracks)..where(
               (t) =>
                   t.profileId.equals(profileId) &
-                  t.curriculumId.equals('mishnayos') &
-                  t.trackType.equals('personal'),
+                  t.curriculumId.equals('mishnayos'),
             ))
             .write(
               CurriculumTracksCompanion(
-                isActive: const Value(false),
-                deactivatedAt: Value(deactivatedAt),
+                state: const Value('retired'),
+                stateChangedAt: Value(deactivatedAt),
               ),
             );
 
         // Wire-format map representing Device A's deactivated track.
         final wireFromA = {
           'curriculum_id': 'mishnayos',
-          'track_type': 'personal',
-          'is_active': false,
+          'state': 'retired',
+          'state_changed_at': deactivatedAt.toIso8601String(),
           'activated_at': activatedAt.toIso8601String(),
-          'deactivated_at': deactivatedAt.toIso8601String(),
           'updated_at': deactivatedAt.toIso8601String(),
         };
 
@@ -244,22 +242,21 @@ void main() {
             await (deviceB.select(deviceB.curriculumTracks)..where(
                   (t) =>
                       t.profileId.equals(profileId) &
-                      t.curriculumId.equals('mishnayos') &
-                      t.trackType.equals('personal'),
+                      t.curriculumId.equals('mishnayos'),
                 ))
                 .getSingleOrNull();
 
         expect(trackB, isNotNull, reason: 'Device B must still have the track');
         expect(
-          trackB!.isActive,
-          isFalse,
-          reason: 'Track must be marked inactive on Device B after LWW merge',
+          trackB!.state,
+          'retired',
+          reason: 'Track must be marked retired on Device B after LWW merge',
         );
         expect(
-          trackB.deactivatedAt!.millisecondsSinceEpoch,
+          trackB.stateChangedAt.millisecondsSinceEpoch,
           deactivatedAt.millisecondsSinceEpoch,
           reason:
-              'Device B must carry the deactivatedAt timestamp from Device A',
+              'Device B must carry the stateChangedAt timestamp from Device A',
         );
       },
     );
