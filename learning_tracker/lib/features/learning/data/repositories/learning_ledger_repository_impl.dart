@@ -1,5 +1,6 @@
 import 'package:drift/drift.dart' as drift;
 import 'package:learning_tracker/core/database/user/user_database.dart';
+import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/sync/firestore_gateway.dart';
 import 'package:learning_tracker/core/time/ulid.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
@@ -11,7 +12,7 @@ class LearningLedgerRepositoryImpl implements LearningLedgerRepository {
   final UserDatabase _database;
   final FirestoreGateway? _firestoreGateway;
   final int _activeProfileId;
-  final String _activeProfileMode;
+  final ProfileMode _activeProfileMode;
 
   /// When true, parent PIN was verified this session for [_activeProfileId].
   final bool parentPinSessionMatchesActiveProfile;
@@ -20,7 +21,7 @@ class LearningLedgerRepositoryImpl implements LearningLedgerRepository {
     required UserDatabase database,
     required FirestoreGateway? firestoreGateway,
     required int activeProfileId,
-    required String activeProfileMode,
+    required ProfileMode activeProfileMode,
     this.parentPinSessionMatchesActiveProfile = false,
   }) : _database = database,
        _firestoreGateway = firestoreGateway,
@@ -32,7 +33,7 @@ class LearningLedgerRepositoryImpl implements LearningLedgerRepository {
     required bool isManual,
   }) {
     if (isManual &&
-        _activeProfileMode == 'child' &&
+        _activeProfileMode.isChild &&
         markedBy == _activeProfileId &&
         !parentPinSessionMatchesActiveProfile) {
       throw const ChildSelfMarkException();

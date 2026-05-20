@@ -1,24 +1,29 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
+import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/sync/providers/outbox_providers.dart';
 import 'package:learning_tracker/features/learning/data/repositories/learning_ledger_repository_impl.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/learning_ledger_repository.dart';
 import 'package:learning_tracker/features/learning/domain/use_cases/manual_completion_use_case.dart';
-import 'package:learning_tracker/features/profiles/presentation/providers/parent_pin_session_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
+import 'package:learning_tracker/features/profiles/presentation/providers/parent_pin_session_provider.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'learning_ledger_providers.g.dart';
 
-/// Fetches the profile mode ('adult' or 'child') for the active profile.
-final _activeProfileModeProvider = FutureProvider.autoDispose<String>((
+/// Fetches the [ProfileMode] for the active profile.
+///
+/// Uses [ProfileMode.fromStorageKey] to convert the raw storage key to a typed
+/// enum. Falls back to [ProfileMode.adult] for unrecognised values.
+final _activeProfileModeProvider = FutureProvider.autoDispose<ProfileMode>((
   ref,
 ) async {
   final database = ref.watch(userDatabaseProvider);
   final profileId = ref.watch(activeProfileIdProvider);
   final profile = await database.profileDao.getProfileById(profileId);
-  return profile?.mode ?? 'adult';
+  if (profile == null) return ProfileMode.adult;
+  return ProfileMode.fromStorageKey(profile.mode);
 });
 
 /// Provides the learning ledger repository.
@@ -27,7 +32,8 @@ LearningLedgerRepository learningLedgerRepository(Ref ref) {
   final database = ref.watch(userDatabaseProvider);
   final firestoreGateway = ref.watch(firestoreGatewayProvider);
   final profileId = ref.watch(activeProfileIdProvider);
-  final profileMode = ref.watch(_activeProfileModeProvider).value ?? 'adult';
+  final profileMode =
+      ref.watch(_activeProfileModeProvider).value ?? ProfileMode.adult;
   final pinSessionProfileId = ref.watch(
     parentPinAuthenticatedProfileIdProvider,
   );
@@ -48,7 +54,8 @@ LearningLedgerRepository learningLedgerRepository(Ref ref) {
 ManualCompletionUseCase manualCompletionUseCase(Ref ref) {
   final repository = ref.watch(learningLedgerRepositoryProvider);
   final profileId = ref.watch(activeProfileIdProvider);
-  final profileMode = ref.watch(_activeProfileModeProvider).value ?? 'adult';
+  final profileMode =
+      ref.watch(_activeProfileModeProvider).value ?? ProfileMode.adult;
   final pinSessionProfileId = ref.watch(
     parentPinAuthenticatedProfileIdProvider,
   );

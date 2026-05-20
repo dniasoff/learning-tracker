@@ -375,7 +375,7 @@ class _ProfilePickerScreenState extends ConsumerState<ProfilePickerScreen> {
       if (mounted) ref.invalidate(profileListProvider);
       // Child profiles require a parent PIN so the parent can gate access
       // to parental controls. Prompt right after creation.
-      if (created.mode == 'child' && mounted) {
+      if (created.profileMode.isChild && mounted) {
         await showParentPinSetupDialog(
           context,
           ref,
@@ -616,7 +616,7 @@ class _ProfileCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context)!;
-    final isChild = profile.mode == 'child';
+    final isChild = profile.profileMode.isChild;
     const modeColor = AppTheme.brandBlue;
     final trimmedName = profile.displayName.trim();
     final firstLetter = trimmedName.isEmpty

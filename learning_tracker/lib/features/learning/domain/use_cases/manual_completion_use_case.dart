@@ -1,4 +1,5 @@
 import 'package:learning_tracker/core/database/user/user_database.dart';
+import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/learning_ledger_repository.dart';
 
 /// Use case for manually marking a unit complete (siyum override).
@@ -13,13 +14,13 @@ import 'package:learning_tracker/features/learning/domain/repositories/learning_
 class ManualCompletionUseCase {
   final LearningLedgerRepository _repository;
   final int _activeProfileId;
-  final String _activeProfileMode;
+  final ProfileMode _activeProfileMode;
   final bool _parentPinSessionMatchesActiveProfile;
 
   ManualCompletionUseCase({
     required LearningLedgerRepository repository,
     required int activeProfileId,
-    required String activeProfileMode,
+    required ProfileMode activeProfileMode,
     bool parentPinSessionMatchesActiveProfile = false,
   }) : _repository = repository,
        _activeProfileId = activeProfileId,
@@ -45,8 +46,7 @@ class ManualCompletionUseCase {
     final markedBy = _activeProfileId;
 
     // Permission check: child cannot self-mark without parent PIN session
-    if (_activeProfileMode == 'child' &&
-        !_parentPinSessionMatchesActiveProfile) {
+    if (_activeProfileMode.isChild && !_parentPinSessionMatchesActiveProfile) {
       throw const ChildSelfMarkException();
     }
 

@@ -2,16 +2,17 @@ import 'dart:async';
 
 import 'package:drift/drift.dart' as drift;
 import 'package:learning_tracker/core/database/user/user_database.dart';
+import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
-import 'package:learning_tracker/features/learning/domain/entities/completion_command.dart';
-import 'package:learning_tracker/features/learning/data/completion_writer.dart';
 import 'package:learning_tracker/core/sync/sync_write_facade.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 import 'package:learning_tracker/features/gamification/domain/models/reward_milestone.dart';
 import 'package:learning_tracker/features/gamification/domain/services/reward_milestone_service.dart';
+import 'package:learning_tracker/features/learning/data/completion_writer.dart';
 import 'package:learning_tracker/features/learning/data/repositories/bookmark_repository_impl.dart';
+import 'package:learning_tracker/features/learning/domain/entities/completion_command.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_request.dart';
 import 'package:learning_tracker/features/learning/domain/entities/mark_completion_result.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/bookmark_repository.dart';
@@ -606,7 +607,10 @@ class CompletionRepositoryImpl implements CompletionRepository {
 
   Future<bool> _isProfileChild(int profileId) async {
     final profile = await _database.profileDao.getProfileById(profileId);
-    return profile?.mode == 'child';
+    // Serialisation layer (Drift row) — use fromStorageKey so the comparison
+    // is enum-driven rather than a raw string comparison.
+    return profile != null &&
+        ProfileMode.fromStorageKey(profile.mode) == ProfileMode.child;
   }
 
   /// Advance the bookmark to the next item in learning order.
