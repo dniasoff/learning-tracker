@@ -12,6 +12,7 @@ import 'package:learning_tracker/core/utils/text_input_formatters.dart';
 import 'package:learning_tracker/core/widgets/app_bar_title.dart';
 import 'package:learning_tracker/core/widgets/pin_entry_widget.dart';
 import 'package:learning_tracker/features/account/domain/services/pending_local_signup.dart';
+import 'package:learning_tracker/features/account/onboarding/presentation/screens/onboarding_intent_screen.dart'; // W6.1
 import 'package:learning_tracker/features/account/presentation/providers/auth_providers.dart'
     show authRepositoryProvider;
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
@@ -21,8 +22,8 @@ import 'package:learning_tracker/features/profiles/domain/models/profile_model.d
 import 'package:learning_tracker/features/profiles/domain/repositories/profile_repository.dart';
 import 'package:learning_tracker/features/profiles/domain/services/pin_service.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
-import 'package:learning_tracker/features/tracks/setup/domain/entities/add_track_result.dart';
 import 'package:learning_tracker/features/track_setup/presentation/screens/add_track_flow_screen.dart';
+import 'package:learning_tracker/features/tracks/setup/domain/entities/add_track_result.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -54,6 +55,8 @@ class OnboardingScreen extends ConsumerStatefulWidget {
 enum _ScreenPhase {
   profileCreation,
   parentPinSetup,
+  // W6.1: branch chooser — "track my learning" / "join to tutor" / "skip"
+  intentChooser,
   addTrack,
   addAnotherPrompt,
   permissionPrompt,
@@ -85,6 +88,10 @@ const _kOnboardingTransliterationVariant = 'onboarding_transliteration_variant';
 
 /// Persistent flag — once set, onboarding is never shown again on this device.
 const kOnboardingComplete = 'onboarding_complete';
+
+// W6.1/W6.3: persist skip intent for dashboard empty-state CTAs.
+const _kOnboardingSkipped = 'onboarding_skipped';
+const _kOnboardingJoinedToTutor = 'onboarding_joined_to_tutor';
 
 class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   /// `true` = Hebrew calendar; `false` = Gregorian (matches UI labels).
@@ -292,10 +299,12 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
     await PendingLocalSignupStore.finalizeAfterFirstProfile(ref);
 
+    // W6.1: child mode still routes through PIN setup first; then to the
+    // intent chooser. Adult mode goes directly to the intent chooser.
     setState(
       () => _phase = _isChildMode
           ? _ScreenPhase.parentPinSetup
-          : _ScreenPhase.addTrack,
+          : _ScreenPhase.intentChooser,
     );
     await _saveState();
     if (mounted) {
@@ -340,11 +349,12 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     }
 
     if (!mounted) return;
+    // W6.1: after PIN setup, show the intent chooser (not addTrack directly).
     setState(() {
       _firstPin = null;
       _pinStep = _PinStep.enterPin;
       _pinError = null;
-      _phase = _ScreenPhase.addTrack;
+      _phase = _ScreenPhase.intentChooser;
     });
     await _saveState();
   }
@@ -425,6 +435,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     final appBarTitle = switch (_phase) {
       _ScreenPhase.profileCreation => const SizedBox.shrink(),
       _ScreenPhase.parentPinSetup => const AppBarTitle(text: 'Set Parent PIN'),
+      // W6.1: intent chooser — no app-bar title (header is inside the step)
+      _ScreenPhase.intentChooser => const SizedBox.shrink(),
       _ScreenPhase.addTrack => const AppBarTitle(text: 'Set Up a Track'),
       _ScreenPhase.addAnotherPrompt => const AppBarTitle(text: 'Track Ready!'),
       _ScreenPhase.permissionPrompt => const AppBarTitle(text: 'Almost Done!'),
@@ -436,9 +448,11 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     // Combined profile step has no app bar (back lives in the scroll content).
     // Permission prompt pushes its own full-screen route, so we suppress the
     // outer app bar for the single placeholder frame before it appears.
+    // W6.1: intent chooser also hides the app bar (header is in the step body).
     final showAppBar =
         _phase != _ScreenPhase.addTrack &&
         _phase != _ScreenPhase.permissionPrompt &&
+        _phase != _ScreenPhase.intentChooser &&
         !isCombinedProfilePhase;
 
     return Scaffold(
@@ -459,6 +473,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
           child: switch (_phase) {
             _ScreenPhase.profileCreation => _buildProfileCreation(theme),
             _ScreenPhase.parentPinSetup => _buildParentPinSetup(theme),
+            // W6.1: branch chooser
+            _ScreenPhase.intentChooser => _buildIntentChooser(),
             _ScreenPhase.addTrack => _buildAddTrack(),
             _ScreenPhase.addAnotherPrompt => _buildAddAnotherPrompt(theme),
             _ScreenPhase.permissionPrompt => _buildPermissionPrompt(theme),
@@ -897,6 +913,46 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
         ),
       ),
     );
+  }
+
+  // W6.1 — Intent chooser step (FR-8).
+  //
+  // Routes:
+  //  trackMyLearning → addTrack (existing AddTrackFlow path)
+  //  joiningToTutor  → dashboard with Accept Invite CTA (W6.3)
+  //  skipForNow      → dashboard with empty-state CTAs (W6.3)
+  Widget _buildIntentChooser() {
+    return OnboardingIntentStep(
+      onChosen: (intent) {
+        switch (intent) {
+          case OnboardingIntent.trackMyLearning:
+            setState(() => _phase = _ScreenPhase.addTrack);
+            unawaited(_saveState());
+          case OnboardingIntent.joiningToTutor:
+            // Navigate to dashboard; empty-state CTAs shown by W6.3 handling.
+            unawaited(_navigateToDashboardSkipped(joinedToTutor: true));
+          case OnboardingIntent.skipForNow:
+            unawaited(_navigateToDashboardSkipped(joinedToTutor: false));
+        }
+      },
+    );
+  }
+
+  /// Navigates to the dashboard without completing the track-setup flow.
+  ///
+  /// [joinedToTutor] distinguishes the "joining to tutor" vs "skip" paths so
+  /// the dashboard can show appropriate CTAs (W6.3).
+  Future<void> _navigateToDashboardSkipped({
+    required bool joinedToTutor,
+  }) async {
+    await _clearSavedState();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(kOnboardingComplete, true);
+    // W6.3: persist the skip intent so dashboard shows appropriate CTAs.
+    await prefs.setBool(_kOnboardingSkipped, true);
+    await prefs.setBool(_kOnboardingJoinedToTutor, joinedToTutor);
+    if (!mounted) return;
+    unawaited(context.router.replaceAll([const AppShellRoute()]));
   }
 
   Widget _buildAddTrack() {

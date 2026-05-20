@@ -23,6 +23,7 @@ import 'package:learning_tracker/features/dashboard/presentation/widgets/dashboa
 import 'package:learning_tracker/features/dashboard/presentation/widgets/dashboard_level_points_card.dart';
 import 'package:learning_tracker/features/dashboard/presentation/widgets/empty_dashboard.dart';
 import 'package:learning_tracker/features/dashboard/presentation/widgets/main_focus_mission_card.dart';
+import 'package:learning_tracker/features/dashboard/presentation/widgets/skipped_onboarding_cta_banner.dart';
 import 'package:learning_tracker/features/dashboard/presentation/widgets/streak_recovery_banner.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
@@ -170,6 +171,15 @@ class DashboardBody extends ConsumerWidget {
       final isChildMode =
           ref.watch(selectedProfileProvider).asData?.value?.profileMode ==
           ProfileMode.child;
+      // W6.3: if user skipped track setup during onboarding, show CTA banner
+      // instead of the generic empty-dashboard prompt.
+      final skipState = ref
+          .watch(onboardingSkipStateProvider)
+          .asData
+          ?.value;
+      if (skipState != null && skipState.skipped && !isChildMode) {
+        return const SkippedOnboardingCtaBanner();
+      }
       return EmptyDashboard(
         name: name,
         greeting: _greeting(l10n),

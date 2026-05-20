@@ -24,5 +24,15 @@ export 'package:learning_tracker/features/tutoring/domain/use_cases/tutor_invite
 export 'package:learning_tracker/features/tutoring/domain/use_cases/tutor_grant_use_cases.dart';
 export 'package:learning_tracker/features/tutoring/domain/use_cases/mark_live_completion_use_case.dart';
 
-// ── Presentation providers (W4.35) ────────────────────────────────────────
+// ── Presentation providers (W4.35, W6.7, W6.9, W6.10) ────────────────────
 export 'package:learning_tracker/features/tutoring/presentation/providers/permissions_provider.dart';
+export 'package:learning_tracker/features/tutoring/presentation/providers/tutor_grant_providers.dart';
+export 'package:learning_tracker/features/tutoring/presentation/providers/tutor_pin_providers.dart';
+
+// ── Presentation screens (W6.4–W6.10) ────────────────────────────────────
+export 'package:learning_tracker/features/tutoring/presentation/screens/accept_invite_screen.dart';
+export 'package:learning_tracker/features/tutoring/presentation/screens/decline_invite_screen.dart';
+export 'package:learning_tracker/features/tutoring/presentation/screens/invite_tutor_screen.dart';
+export 'package:learning_tracker/features/tutoring/presentation/screens/tutor_pin_entry_gate.dart';
+export 'package:learning_tracker/features/tutoring/presentation/screens/tutor_pin_reset_screen.dart';
+export 'package:learning_tracker/features/tutoring/presentation/screens/tutor_pin_setup_screen.dart';

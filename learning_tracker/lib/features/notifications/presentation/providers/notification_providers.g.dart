@@ -8,22 +8,22 @@ part of 'notification_providers.dart';
 
 // GENERATED CODE - DO NOT MODIFY BY HAND
 // ignore_for_file: type=lint, type=warning
-/// Provides the [NotificationService] singleton.
+/// Provides the [NotificationGateway] singleton.
 
 @ProviderFor(notificationService)
 final notificationServiceProvider = NotificationServiceProvider._();
 
-/// Provides the [NotificationService] singleton.
+/// Provides the [NotificationGateway] singleton.
 
 final class NotificationServiceProvider
     extends
         $FunctionalProvider<
-          NotificationService,
-          NotificationService,
-          NotificationService
+          NotificationGateway,
+          NotificationGateway,
+          NotificationGateway
         >
-    with $Provider<NotificationService> {
-  /// Provides the [NotificationService] singleton.
+    with $Provider<NotificationGateway> {
+  /// Provides the [NotificationGateway] singleton.
   NotificationServiceProvider._()
     : super(
         from: null,
@@ -40,26 +40,26 @@ final class NotificationServiceProvider
 
   @$internal
   @override
-  $ProviderElement<NotificationService> $createElement(
+  $ProviderElement<NotificationGateway> $createElement(
     $ProviderPointer pointer,
   ) => $ProviderElement(pointer);
 
   @override
-  NotificationService create(Ref ref) {
+  NotificationGateway create(Ref ref) {
     return notificationService(ref);
   }
 
   /// {@macro riverpod.override_with_value}
-  Override overrideWithValue(NotificationService value) {
+  Override overrideWithValue(NotificationGateway value) {
     return $ProviderOverride(
       origin: this,
-      providerOverride: $SyncValueProvider<NotificationService>(value),
+      providerOverride: $SyncValueProvider<NotificationGateway>(value),
     );
   }
 }
 
 String _$notificationServiceHash() =>
-    r'58da87941dbfa08925105dcc4d74091ee38c8593';
+    r'80ef32c7c0cd079a947bfaacca19025a6273f7dd';
 
 /// Manages the daily reminder enabled state.
 

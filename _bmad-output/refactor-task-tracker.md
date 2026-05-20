@@ -280,20 +280,20 @@ Sync-point trigger tags: `[P1]` `[P2]` `[P3]` `[P4]` `[P5]` `[P6]` `[P7]`
 ## Wave 6 — Tutor mode feature implementation (S3 · ~25 tasks)
 
 ### Phase 6a · Onboarding fork (FR-8)
-- [ ] W6.1  (M, S3, pending)    Onboarding sign-up flow branches: "track my own learning" / "joining to tutor" / "skip for now"
-- [ ] W6.2  (M, S3, pending)    Refactor AddTrackFlow from mandatory onboarding step → opt-in entry — **B2 picker bounds use ProgramStartingPosition.allowedWindow(today)**
-- [ ] W6.3  (M, S3, pending)    "Skip for now" lands on near-empty dashboard with CTAs
+- [x] W6.1  (M, S3, done)    Onboarding sign-up flow branches: "track my own learning" / "joining to tutor" / "skip for now"
+- [x] W6.2  (M, S3, done)    Refactor AddTrackFlow from mandatory onboarding step → opt-in entry — **B2 picker bounds use ProgramStartingPosition.allowedWindow(today)**
+- [x] W6.3  (M, S3, done)    "Skip for now" lands on near-empty dashboard with CTAs
 
 ### Phase 6b · Tutor PIN setup
-- [ ] W6.4  (M, S3, pending)    Tutor PIN setup screen — triggered at tutor onboarding or first invite acceptance
-- [ ] W6.5  (S, S3, pending)    Tutor PIN entry gate — prompted at every switch into a tutored profile
-- [ ] W6.6  (S, S3, pending)    Tutor PIN reset flow via email verification
+- [x] W6.4  (M, S3, done)    Tutor PIN setup screen — triggered at tutor onboarding or first invite acceptance
+- [x] W6.5  (S, S3, done)    Tutor PIN entry gate — prompted at every switch into a tutored profile
+- [x] W6.6  (S, S3, done)    Tutor PIN reset flow via email verification
 
 ### Phase 6c · Invite flow
-- [ ] W6.7  (M, S3, pending)    Invite tutor screen (parent): email input + copyable share-link + send button
+- [x] W6.7  (M, S3, done)    Invite tutor screen (parent): email input + copyable share-link + send button
 - [x] W6.8  (M, S3, done)    Transactional email integration (Firebase Extension or SendGrid) — abstraction + logging fallback; WAKE-UP notice in source; real provider pending infra provisioning
-- [ ] W6.9  (M, S3, pending)    Accept invite deep-link flow: token validation + sign-up/sign-in if needed + grant activation
-- [ ] W6.10 (S, S3, pending)    Decline pending invite flow
+- [x] W6.9  (M, S3, done)    Accept invite deep-link flow: token validation + sign-up/sign-in if needed + grant activation
+- [x] W6.10 (S, S3, done)    Decline pending invite flow
 
 ### Phase 6d · Management screens
 - [x] W6.11 (M, S3, done)    Manage tutors screen (parent): per-child active list + pending list + revoke action + audit-log link

@@ -307,5 +307,19 @@ class AppRouter extends RootStackRouter {
       page: TutorAuditLogRoute.page,
       guards: [authGuard],
     ),
+
+    // Tutoring invite routes (W6.7, W6.9, W6.10)
+    AutoRoute(
+      path: '/tutor/invite',
+      page: InviteTutorRoute.page,
+      guards: [authGuard],
+    ),
+    // Deep-link entry: /invite?token=<grantId>
+    AutoRoute(path: '/invite', page: AcceptInviteRoute.page),
+    AutoRoute(
+      path: '/tutor/decline',
+      page: DeclineInviteRoute.page,
+      guards: [authGuard],
+    ),
   ];
 }

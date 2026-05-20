@@ -2,12 +2,13 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:learning_tracker/core/domain/value_objects/program_starting_position.dart';
 import 'package:learning_tracker/core/providers/calendar_providers.dart';
+import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/scheduler/domain/services/calendar_program_registry.dart';
 import 'package:learning_tracker/features/scheduler/domain/services/calendar_program_service.dart';
 import 'package:learning_tracker/features/scheduler/domain/services/learning_program_service.dart';
-import 'package:learning_tracker/core/theme/app_theme.dart';
-import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 const _kWeekdayNames = [
@@ -61,12 +62,24 @@ class _StartingPositionCalendarModeState
   String? _calendarProgramKey;
   CalendarProgramEntry? _calendarEntry;
 
+  // B2 enforcement — picker bounds from ProgramStartingPosition.allowedWindow().
+  // Memoised at build time; today's date is the upper bound.
+  late final DateTime _today;
+  late final int _minOffsetDays;
+  // maxOffset is always 0 (no future dates allowed — B2).
+  static const int _maxOffsetDays = 0;
+
   DateTime get _selectedDate =>
       DateTimeFactory.nowLocal().add(Duration(days: _offsetDays));
 
   @override
   void initState() {
     super.initState();
+    // B2: compute the allowed window once and store as offset bounds.
+    _today = DateTimeFactory.nowLocal();
+    final window = ProgramStartingPosition.allowedWindow(_today);
+    // Convert the minimum date to a negative offset from today.
+    _minOffsetDays = -window.minDate.difference(window.maxDate).inDays;
     _calendarProgramKey = _resolveCalendarProgramKey();
     unawaited(_refreshCalendarEntry());
   }
@@ -296,7 +309,8 @@ class _StartingPositionCalendarModeState
           children: [
             _OffsetButton(
               icon: Icons.chevron_left_rounded,
-              enabled: _offsetDays > -30,
+              // B2: min is today − kMaxLookBackDays (no older)
+              enabled: _offsetDays > _minOffsetDays,
               onTap: () {
                 setState(() => _offsetDays -= 1);
                 unawaited(_refreshCalendarEntry());
@@ -328,7 +342,8 @@ class _StartingPositionCalendarModeState
             ),
             _OffsetButton(
               icon: Icons.chevron_right_rounded,
-              enabled: _offsetDays < 30,
+              // B2: max is today (no future dates).
+              enabled: _offsetDays < _maxOffsetDays,
               onTap: () {
                 setState(() => _offsetDays += 1);
                 unawaited(_refreshCalendarEntry());
