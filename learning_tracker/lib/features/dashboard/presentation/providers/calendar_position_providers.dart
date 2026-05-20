@@ -34,9 +34,9 @@ Future<CalendarPosition> programCalendarPosition(Ref ref, int trackId) async {
     throw StateError('Track $trackId has no program enrollment');
   }
 
-  final program = ref.read(learningProgramRepositoryProvider).getProgramById(
-    enrollment.programId,
-  );
+  final program = ref
+      .read(learningProgramRepositoryProvider)
+      .getProgramById(enrollment.programId);
   if (program == null) {
     throw StateError('Program ${enrollment.programId} not found');
   }

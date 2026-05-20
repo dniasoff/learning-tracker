@@ -221,7 +221,7 @@ final _currentProgramProvider =
       final profileProgram = await userDb.profileProgramDao
           .getProgramForProfileAndCurriculum(profileId, curriculum.storageKey);
       if (profileProgram == null) return null;
-      return ref.read(learningProgramRepositoryProvider).getProgramById(
-        profileProgram.programId,
-      );
+      return ref
+          .read(learningProgramRepositoryProvider)
+          .getProgramById(profileProgram.programId);
     });
