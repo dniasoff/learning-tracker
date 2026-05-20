@@ -2,11 +2,11 @@
 // covers userMessage and toString (lines 7-11 and 5-8).
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/features/stages/domain/exceptions/protected_stage_exception.dart';
-import 'package:learning_tracker/features/stages/domain/exceptions/stage_limit_exceeded_exception.dart';
-import 'package:learning_tracker/features/stages/domain/models/schedule_type.dart';
-import 'package:learning_tracker/features/stages/domain/models/stage_definition.dart';
-import 'package:learning_tracker/features/stages/domain/services/stage_validator.dart';
+import 'package:learning_tracker/features/tracks/stages/domain/exceptions/protected_stage_exception.dart';
+import 'package:learning_tracker/features/tracks/stages/domain/exceptions/stage_limit_exceeded_exception.dart';
+import 'package:learning_tracker/features/tracks/stages/domain/models/schedule_type.dart';
+import 'package:learning_tracker/features/tracks/stages/domain/models/stage_definition.dart';
+import 'package:learning_tracker/features/tracks/stages/domain/services/stage_validator.dart';
 
 void main() {
   // =========================================================================
@@ -15,12 +15,12 @@ void main() {
 
   group('StageLimitExceededException', () {
     test('userMessage includes maxStages', () {
-      const ex = StageLimitExceededException(maxStages: 10);
+      final ex = StageLimitExceededException(maxStages: 10);
       expect(ex.userMessage, contains('10'));
     });
 
     test('toString includes StageLimitExceededException prefix', () {
-      const ex = StageLimitExceededException(maxStages: 5);
+      final ex = StageLimitExceededException(maxStages: 5);
       expect(ex.toString(), contains('StageLimitExceededException'));
       expect(ex.toString(), contains('5'));
     });

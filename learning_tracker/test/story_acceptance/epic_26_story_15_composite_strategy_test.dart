@@ -21,9 +21,9 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 import 'package:learning_tracker/features/content_browsing/domain/strategies/composite_curriculum_strategy.dart';
-import 'package:learning_tracker/features/learning_order/data/repositories/learning_order_repository_impl.dart';
-import 'package:learning_tracker/features/learning_order/domain/models/learning_order_item.dart';
-import 'package:learning_tracker/features/learning_order/domain/repositories/learning_order_repository.dart';
+import 'package:learning_tracker/features/tracks/whole_curriculum_order/data/repositories/learning_order_repository_impl.dart';
+import 'package:learning_tracker/features/tracks/whole_curriculum_order/domain/models/learning_order_item.dart';
+import 'package:learning_tracker/features/tracks/whole_curriculum_order/domain/repositories/learning_order_repository.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:test/test.dart';
 

@@ -1,6 +1,6 @@
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
-import 'package:learning_tracker/features/settings/domain/services/curriculum_activation_service.dart';
+import 'package:learning_tracker/features/tracks/domain/services/curriculum_activation_service.dart';
 
 /// Result of importing a single curriculum.
 class CurriculumImportResult {

@@ -311,36 +311,42 @@ class StageDefinitionRepositoryImpl implements StageDefinitionRepository {
 
   /// Decode the JSON `schedule` column into a [ScheduleSpec].
   ///
-  /// Supports both the new JSON format (`{"type":"delay","delay_days":7}`)
-  /// and the old Firestore quartet shape for back-compat during migration.
+  /// Accepts both the canonical long-form keys (`days_of_week`,
+  /// `rolling_window_size`) and the old short-form keys (`days`, `window_size`)
+  /// for backwards-compat with rows written before W3.27 standardised the names.
   static ScheduleSpec _decodeSchedule(String scheduleJson) {
     try {
       final map = jsonDecode(scheduleJson) as Map<String, dynamic>;
       final type = map['type'] as String? ?? 'delay';
       return switch (type) {
         'weekly' => ScheduleSpec.weekly(
-          (map['days'] as List<dynamic>? ?? []).cast<int>(),
+          ((map['days_of_week'] ?? map['days']) as List<dynamic>? ?? [])
+              .cast<int>(),
         ),
         'rolling' => ScheduleSpec.rolling(
-          (map['window_size'] as num? ?? 1).toInt(),
+          ((map['rolling_window_size'] ?? map['window_size']) as num? ?? 1)
+              .toInt(),
         ),
         _ => ScheduleSpec.delay((map['delay_days'] as num? ?? 0).toInt()),
       };
     } catch (_) {
-      // Malformed JSON — fall back to immediate delay.
       return const DelaySchedule(0);
     }
   }
 
-  /// Encode a [ScheduleSpec] as a JSON string for the `schedule` column.
+  /// Encode a [ScheduleSpec] to the JSON string stored in the `schedule` column.
+  ///
+  /// Uses the canonical long-form key names (`days_of_week`,
+  /// `rolling_window_size`) so that tests and Firestore readers see consistent
+  /// field names.
   static String _encodeSchedule(ScheduleSpec spec) => switch (spec) {
     WeeklySchedule(:final daysOfWeek) => jsonEncode({
       'type': 'weekly',
-      'days': daysOfWeek,
+      'days_of_week': daysOfWeek,
     }),
     RollingSchedule(:final windowSize) => jsonEncode({
       'type': 'rolling',
-      'window_size': windowSize,
+      'rolling_window_size': windowSize,
     }),
     DelaySchedule(:final delayDays) => jsonEncode({
       'type': 'delay',

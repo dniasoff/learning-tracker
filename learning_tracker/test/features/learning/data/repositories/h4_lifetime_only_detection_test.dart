@@ -23,7 +23,7 @@ import 'package:learning_tracker/features/learning/data/repositories/completion_
 import 'package:learning_tracker/features/learning/data/repositories/learning_ledger_repository_impl.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_request.dart';
 import 'package:learning_tracker/features/learning/domain/services/completion_detection_service.dart';
-import 'package:learning_tracker/features/stages/data/repositories/stage_definition_repository_impl.dart';
+import 'package:learning_tracker/features/tracks/stages/data/repositories/stage_definition_repository_impl.dart';
 import 'package:mocktail/mocktail.dart';
 
 import '../../../../helpers/test_database.dart';

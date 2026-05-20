@@ -14,9 +14,9 @@ import 'package:drift/drift.dart' show Value;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/features/scheduler/domain/services/learning_program_service.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/learning_process_wizard_service.dart';
-import 'package:learning_tracker/features/stages/domain/models/schedule_type.dart';
+import 'package:learning_tracker/features/scheduler/domain/services/learning_program_service.dart';
+import 'package:learning_tracker/features/tracks/stages/domain/models/schedule_type.dart';
 
 import '../../../../helpers/drift_memory.dart';
 
@@ -159,7 +159,7 @@ void main() {
           trackId: trackId,
           stageOrder: 1,
           stageName: 'Old Stage',
-          schedule: Value('{"type":"delay","delay_days":0}'),
+          schedule: const Value('{"type":"delay","delay_days":0}'),
         ),
       );
 
@@ -187,7 +187,7 @@ void main() {
             trackId: trackId,
             stageOrder: 1,
             stageName: 'old stage A',
-            schedule: Value('{"type":"delay","delay_days":0}'),
+            schedule: const Value('{"type":"delay","delay_days":0}'),
           ),
         );
         await db.stageDao.insertStageDefinition(
@@ -197,7 +197,7 @@ void main() {
             trackId: trackId,
             stageOrder: 2,
             stageName: 'old stage B',
-            schedule: Value('{"type":"delay","delay_days":7}'),
+            schedule: const Value('{"type":"delay","delay_days":7}'),
           ),
         );
         expect(await db.stageDao.getStagesByTrack(trackId), hasLength(2));

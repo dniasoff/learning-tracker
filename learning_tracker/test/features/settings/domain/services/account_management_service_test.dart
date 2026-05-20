@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/features/account/domain/repositories/auth_repository.dart';
-import 'package:learning_tracker/features/settings/domain/services/account_management_service.dart';
+import 'package:learning_tracker/features/account/domain/services/account_management_service.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 

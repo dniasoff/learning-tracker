@@ -19,9 +19,9 @@ import 'package:learning_tracker/features/learning/domain/entities/mark_completi
 import 'package:learning_tracker/features/learning/domain/repositories/bookmark_repository.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/completion_repository.dart';
 import 'package:learning_tracker/features/learning/domain/services/completion_detection_service.dart';
-import 'package:learning_tracker/features/stages/domain/models/stage_definition.dart'
+import 'package:learning_tracker/features/tracks/stages/domain/models/stage_definition.dart'
     as stage_model;
-import 'package:learning_tracker/features/stages/domain/repositories/stage_definition_repository.dart';
+import 'package:learning_tracker/features/tracks/stages/domain/repositories/stage_definition_repository.dart';
 
 /// Implementation of [CompletionRepository] using Drift database and sync engine.
 class CompletionRepositoryImpl implements CompletionRepository {

@@ -1,5 +1,5 @@
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/features/stages/domain/models/schedule_type.dart';
+import 'package:learning_tracker/features/tracks/stages/domain/models/schedule_type.dart';
 
 /// Scheduler-local stage definition representation.
 class SchedulerStage {

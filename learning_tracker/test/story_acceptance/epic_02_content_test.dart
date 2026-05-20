@@ -23,8 +23,9 @@ import 'package:learning_tracker/features/content_browsing/domain/repositories/c
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 // ContentBrowsingScreen is a Flutter widget; widget tests are in
 // test/features/content_browsing/presentation/screens/content_browsing_screen_test.dart
+import 'package:learning_tracker/features/learning/data/repositories/track_repository_impl.dart';
 import 'package:learning_tracker/features/settings/domain/exceptions/last_active_curriculum_exception.dart';
-import 'package:learning_tracker/features/settings/domain/services/curriculum_activation_service.dart';
+import 'package:learning_tracker/features/tracks/domain/services/curriculum_activation_service.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:test/test.dart';
@@ -335,6 +336,7 @@ void main() {
       service = CurriculumActivationService(
         database: db,
         pushCurriculumTrack: (_) async {},
+        trackRepository: TrackRepositoryImpl(database: db),
       );
     });
 

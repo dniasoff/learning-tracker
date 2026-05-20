@@ -30,10 +30,10 @@ import 'package:learning_tracker/features/scheduler/domain/services/pace_calcula
 import 'package:learning_tracker/features/scheduler/domain/services/scheduler_engine.dart';
 import 'package:learning_tracker/features/scheduler/domain/services/sefaria_ref_matcher.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/curriculum_scope_providers.dart';
-import 'package:learning_tracker/features/stages/domain/models/stage_definition.dart'
+import 'package:learning_tracker/features/tracks/stages/domain/models/stage_definition.dart'
     as domain_stage;
-import 'package:learning_tracker/features/stages/domain/repositories/stage_definition_repository.dart';
-import 'package:learning_tracker/features/stages/presentation/providers/stage_providers.dart';
+import 'package:learning_tracker/features/tracks/stages/domain/repositories/stage_definition_repository.dart';
+import 'package:learning_tracker/features/tracks/stages/presentation/providers/stage_providers.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 

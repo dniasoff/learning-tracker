@@ -1,7 +1,7 @@
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/features/dashboard/domain/services/parent_dashboard_aggregator.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
-import 'package:learning_tracker/features/stages/presentation/providers/stage_providers.dart';
+import 'package:learning_tracker/features/tracks/stages/presentation/providers/stage_providers.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'parent_dashboard_providers.g.dart';

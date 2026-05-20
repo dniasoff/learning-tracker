@@ -17,8 +17,8 @@ import 'package:learning_tracker/core/sync/sync_write_facade.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 import 'package:learning_tracker/features/learning/data/repositories/track_repository_impl.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/track_repository.dart';
-import 'package:learning_tracker/features/learning_order/data/repositories/learning_order_repository_impl.dart';
-import 'package:learning_tracker/features/learning_order/domain/models/learning_order_item.dart';
+import 'package:learning_tracker/features/tracks/whole_curriculum_order/data/repositories/learning_order_repository_impl.dart';
+import 'package:learning_tracker/features/tracks/whole_curriculum_order/domain/models/learning_order_item.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:test/test.dart';
 

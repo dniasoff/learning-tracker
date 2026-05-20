@@ -9,15 +9,16 @@ import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/cross_profile_scope.dart';
 import 'package:learning_tracker/core/enums/user_mode.dart';
 import 'package:learning_tracker/features/account/domain/repositories/auth_repository.dart';
+import 'package:learning_tracker/features/account/domain/services/account_management_service.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/user_profile_service.dart';
-import 'package:learning_tracker/features/settings/domain/services/account_management_service.dart';
 import 'package:learning_tracker/features/settings/domain/services/data_export_import_service.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:test/test.dart';
 
 import '../helpers/drift_memory.dart' show seedCompletion;
-import '../helpers/test_database.dart' show createTestDatabase, seedProfile, seedProfileZero;
+import '../helpers/test_database.dart'
+    show createTestDatabase, seedProfile, seedProfileZero;
 
 class MockAuthRepository extends Mock implements AuthRepository {}
 
@@ -305,45 +306,42 @@ void main() {
       );
     }
 
-    test(
-      'export generates valid JSON with all required data sections',
-      () async {
-        await seedTestData(db);
+    test('export generates valid JSON with all required data sections', () async {
+      await seedTestData(db);
 
-        final jsonString = await service.exportData();
-        final data = json.decode(jsonString) as Map<String, dynamic>;
+      final jsonString = await service.exportData();
+      final data = json.decode(jsonString) as Map<String, dynamic>;
 
-        // Check metadata
-        expect(data['formatVersion'], equals('schemaV1'));
-        expect(data['exportedAt'], isNotNull);
-        expect(data['appVersion'], equals('1.0.0'));
+      // Check metadata
+      expect(data['formatVersion'], equals('schemaV1'));
+      expect(data['exportedAt'], isNotNull);
+      expect(data['appVersion'], equals('1.0.0'));
 
-        // Check all required sections present
-        expect(data['completions'], isList);
-        expect(data['goals'], isList);
-        expect(data['stageDefinitions'], isList);
-        expect(data['streaks'], isList);
-        expect(data['pointConfigs'], isList);
-        expect(data['bookmarks'], isList);
-        expect(data['learningOrder'], isList);
-        expect(data['curriculumTracks'], isList);
-        expect(data['userProfiles'], isList);
+      // Check all required sections present
+      expect(data['completions'], isList);
+      expect(data['goals'], isList);
+      expect(data['stageDefinitions'], isList);
+      expect(data['streaks'], isList);
+      expect(data['pointConfigs'], isList);
+      expect(data['bookmarks'], isList);
+      expect(data['learningOrder'], isList);
+      expect(data['curriculumTracks'], isList);
+      expect(data['userProfiles'], isList);
 
-        // Check data counts
-        expect((data['completions'] as List).length, equals(2));
-        expect((data['goals'] as List).length, equals(1));
-        expect((data['stageDefinitions'] as List).length, equals(2));
-        // W3.20/W3.37: `streaks` table dropped; use `streakEvents` instead
-        expect((data['streaks'] as List).length, equals(0));
-        expect((data['streakEvents'] as List).length, equals(5));
-        expect((data['pointConfigs'] as List).length, equals(1));
-        expect((data['bookmarks'] as List).length, equals(1));
-        expect((data['learningOrder'] as List).length, equals(1));
-        expect((data['curriculumTracks'] as List).length, equals(2));
-        // 3 accounts: seedProfileZero + seedProfile's 'Test User' + seedTestData's upsertProfile
-        expect((data['userProfiles'] as List).length, equals(3));
-      },
-    );
+      // Check data counts
+      expect((data['completions'] as List).length, equals(2));
+      expect((data['goals'] as List).length, equals(1));
+      expect((data['stageDefinitions'] as List).length, equals(2));
+      // W3.20/W3.37: `streaks` table dropped; use `streakEvents` instead
+      expect((data['streaks'] as List).length, equals(0));
+      expect((data['streakEvents'] as List).length, equals(5));
+      expect((data['pointConfigs'] as List).length, equals(1));
+      expect((data['bookmarks'] as List).length, equals(1));
+      expect((data['learningOrder'] as List).length, equals(1));
+      expect((data['curriculumTracks'] as List).length, equals(2));
+      // 3 accounts: seedProfileZero + seedProfile's 'Test User' + seedTestData's upsertProfile
+      expect((data['userProfiles'] as List).length, equals(3));
+    });
 
     test(
       'export excludes content items (text cache, download statuses)',

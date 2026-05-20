@@ -8,7 +8,9 @@
 // These need a targeted fixture refactor (add seedProfile in each group setUp
 // that's missing it; adjust max-profile tests to account for the seeded row).
 // TODO: Fix per-group fixture setup — see V3-W4 notes in refactor-v3-fix-pass-log.md
-@Skip('V3-W4: 30 fixture FK failures after removing blanket skip — see TODO above')
+@Skip(
+  'V3-W4: 30 fixture FK failures after removing blanket skip — see TODO above',
+)
 library;
 
 import 'dart:convert';
@@ -20,6 +22,7 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
 // ContentVersionCheckService removed — content is now bundled
 import 'package:learning_tracker/features/gamification/domain/services/points_service.dart';
+import 'package:learning_tracker/features/learning/data/repositories/track_repository_impl.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/learning_ledger_repository.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/bulk_prior_completion_service.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/curriculum_import_service.dart';
@@ -35,12 +38,12 @@ import 'package:learning_tracker/features/scheduler/domain/models/schedule_confi
 import 'package:learning_tracker/features/scheduler/domain/repositories/scheduler_content_repository.dart';
 import 'package:learning_tracker/features/scheduler/domain/services/learning_program_service.dart';
 import 'package:learning_tracker/features/scheduler/domain/services/scheduler_engine.dart';
-import 'package:learning_tracker/features/settings/domain/services/curriculum_activation_service.dart';
 import 'package:learning_tracker/features/settings/presentation/screens/scope_selection_screen.dart';
-import 'package:learning_tracker/features/stages/domain/models/schedule_type.dart';
-import 'package:learning_tracker/features/stages/domain/models/stage_definition.dart'
+import 'package:learning_tracker/features/tracks/domain/services/curriculum_activation_service.dart';
+import 'package:learning_tracker/features/tracks/stages/domain/models/schedule_type.dart';
+import 'package:learning_tracker/features/tracks/stages/domain/models/stage_definition.dart'
     as domain;
-import 'package:learning_tracker/features/stages/domain/services/stage_validator.dart';
+import 'package:learning_tracker/features/tracks/stages/domain/services/stage_validator.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:test/test.dart';
 
@@ -293,17 +296,19 @@ void main() {
           }
 
           // Account 2 can still create profiles (need its account row first).
-          await db.into(db.accounts).insert(
-            AccountsCompanion.insert(
-              id: const Value(2),
-              email: 'account2@example.com',
-              tier: 'localBorn',
-              displayName: 'Account 2',
-              userMode: 'adult',
-              createdAt: DateTime.utc(2026),
-              updatedAt: DateTime.utc(2026),
-            ),
-          );
+          await db
+              .into(db.accounts)
+              .insert(
+                AccountsCompanion.insert(
+                  id: const Value(2),
+                  email: 'account2@example.com',
+                  tier: 'localBorn',
+                  displayName: 'Account 2',
+                  userMode: 'adult',
+                  createdAt: DateTime.utc(2026),
+                  updatedAt: DateTime.utc(2026),
+                ),
+              );
           final profile = await profileRepo.createProfile(
             accountId: 2,
             displayName: 'A2-Profile 1',
@@ -359,17 +364,19 @@ void main() {
             mode: 'child',
           );
           // Need an account 2 row before inserting a profile for it.
-          await db.into(db.accounts).insert(
-            AccountsCompanion.insert(
-              id: const Value(2),
-              email: 'account2@example.com',
-              tier: 'localBorn',
-              displayName: 'Account 2',
-              userMode: 'adult',
-              createdAt: DateTime.utc(2026),
-              updatedAt: DateTime.utc(2026),
-            ),
-          );
+          await db
+              .into(db.accounts)
+              .insert(
+                AccountsCompanion.insert(
+                  id: const Value(2),
+                  email: 'account2@example.com',
+                  tier: 'localBorn',
+                  displayName: 'Account 2',
+                  userMode: 'adult',
+                  createdAt: DateTime.utc(2026),
+                  updatedAt: DateTime.utc(2026),
+                ),
+              );
           await profileRepo.createProfile(
             accountId: 2,
             displayName: 'Other',
@@ -582,10 +589,7 @@ void main() {
 
           final profiles = await stream.first;
           expect(profiles.length, 2);
-          expect(
-            profiles.any((p) => p.displayName == 'Watched'),
-            isTrue,
-          );
+          expect(profiles.any((p) => p.displayName == 'Watched'), isTrue);
         });
       });
     },
@@ -762,7 +766,11 @@ void main() {
           final programs = await LearningProgramRepository.instance
               .getAllPrograms();
           final active = programs.where((p) => p.isActive).toList();
-          expect(active, isNotEmpty, reason: 'At least one program must be active');
+          expect(
+            active,
+            isNotEmpty,
+            reason: 'At least one program must be active',
+          );
         });
 
         // deprecateProgram removed — ContentLearningProgramDao is read-only.
@@ -792,7 +800,8 @@ void main() {
         () {
           test(
             'upload script file exists',
-            skip: 'Manual verification only — cannot assert file existence in unit tests',
+            skip:
+                'Manual verification only — cannot assert file existence in unit tests',
             () {},
           );
         },
@@ -821,7 +830,8 @@ void main() {
       group('AC: Content available in he, en, fr, es', () {
         test(
           'CloudContentService accepts language codes',
-          skip: 'API signature check — verified at compile-time; no runtime assertion needed',
+          skip:
+              'API signature check — verified at compile-time; no runtime assertion needed',
           () {},
         );
       });
@@ -837,6 +847,7 @@ void main() {
               final activationService = CurriculumActivationService(
                 database: db,
                 pushCurriculumTrack: (_) async {},
+                trackRepository: TrackRepositoryImpl(database: db),
               );
 
               final importService = CurriculumImportService(
@@ -867,7 +878,8 @@ void main() {
       group('AC: Bundled JSON removed from app assets and git', () {
         test(
           'no bundled content files exist',
-          skip: 'Git/filesystem check — cannot assert in unit tests; verified by repo history',
+          skip:
+              'Git/filesystem check — cannot assert in unit tests; verified by repo history',
           () {},
         );
       });
@@ -886,7 +898,8 @@ void main() {
       group('AC: No content in git repository', () {
         test(
           'content is bundled in assets',
-          skip: 'Architecture documentation — verified at code-review; no unit assertion possible',
+          skip:
+              'Architecture documentation — verified at code-review; no unit assertion possible',
           () {},
         );
       });
@@ -894,7 +907,8 @@ void main() {
       group('AC: No migration from bundled JSON', () {
         test(
           'import service uses activation, not cloud fetch',
-          skip: 'Architecture documentation — verified at code-review; no unit assertion possible',
+          skip:
+              'Architecture documentation — verified at code-review; no unit assertion possible',
           () {},
         );
       });
@@ -942,10 +956,7 @@ void main() {
 
           final profiles = await profileRepo.getProfilesByAccount(1);
           expect(profiles.length, 2);
-          expect(
-            profiles.map((p) => p.displayName),
-            containsAll(['Moshe']),
-          );
+          expect(profiles.map((p) => p.displayName), containsAll(['Moshe']));
         });
       });
 
@@ -2373,7 +2384,8 @@ void main() {
     group('AC: Search finds content by name', () {
       test(
         'search provider exists and accepts query parameter',
-        skip: 'Widget integration test needed — provider existence is compile-time verified',
+        skip:
+            'Widget integration test needed — provider existence is compile-time verified',
         () {},
       );
     });
@@ -2389,7 +2401,8 @@ void main() {
     group('AC: Triggered when changing program', () {
       test(
         'curriculum activation toggle is available from settings',
-        skip: 'Widget test needed — toggle method existence is compile-time verified',
+        skip:
+            'Widget test needed — toggle method existence is compile-time verified',
         () {},
       );
     });
@@ -2397,7 +2410,8 @@ void main() {
     group('AC: AppBar title uses FittedBox (no truncation)', () {
       test(
         'AppBarTitle widget wraps content in FittedBox',
-        skip: 'Widget test needed — FittedBox usage is verified in existing app_bar_title_test.dart',
+        skip:
+            'Widget test needed — FittedBox usage is verified in existing app_bar_title_test.dart',
         () {},
       );
     });
@@ -2735,7 +2749,8 @@ void main() {
     group('AC5: StageEditorScreen removed', () {
       test(
         'no StageEditorRoute in router',
-        skip: 'Route absence is compile-time verified — no runtime assertion needed',
+        skip:
+            'Route absence is compile-time verified — no runtime assertion needed',
         () {},
       );
     });
@@ -2767,6 +2782,7 @@ void main() {
           final service = CurriculumActivationService(
             database: db,
             pushCurriculumTrack: (_) async {},
+            trackRepository: TrackRepositoryImpl(database: db),
           );
 
           // Activate bavli.

@@ -30,7 +30,7 @@ import 'package:learning_tracker/features/learning/domain/entities/bookmark.dart
 import 'package:learning_tracker/features/learning/domain/entities/completion_command.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/bookmark_repository.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/bulk_prior_completion_service.dart';
-import 'package:learning_tracker/features/stages/data/repositories/stage_definition_repository_impl.dart';
+import 'package:learning_tracker/features/tracks/stages/data/repositories/stage_definition_repository_impl.dart';
 import 'package:mocktail/mocktail.dart';
 
 // ── Minimal stubs ────────────────────────────────────────────────────────────

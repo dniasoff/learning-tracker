@@ -4,7 +4,7 @@ import 'package:learning_tracker/core/database/daos/stage_dao.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart' as db;
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/features/scheduler/domain/repositories/scheduler_stage_repository.dart';
-import 'package:learning_tracker/features/stages/domain/models/schedule_type.dart';
+import 'package:learning_tracker/features/tracks/stages/domain/models/schedule_type.dart';
 
 /// Adapts [StageDao] for scheduler consumption.
 ///

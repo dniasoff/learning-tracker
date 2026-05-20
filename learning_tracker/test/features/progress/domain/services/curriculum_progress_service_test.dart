@@ -6,8 +6,8 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/features/progress/domain/services/curriculum_progress_service.dart';
-import 'package:learning_tracker/features/stages/domain/models/schedule_type.dart';
-import 'package:learning_tracker/features/stages/domain/models/stage_definition.dart'
+import 'package:learning_tracker/features/tracks/stages/domain/models/schedule_type.dart';
+import 'package:learning_tracker/features/tracks/stages/domain/models/stage_definition.dart'
     as domain_stage;
 import 'package:test/test.dart';
 
@@ -94,7 +94,7 @@ void main() {
         trackId: trackId,
         stageOrder: stageOrder,
         stageName: stageName,
-        schedule: Value('{"type":"delay","delay_days":0}'),
+        schedule: const Value('{"type":"delay","delay_days":0}'),
       ),
     );
     final curricEnum = CurriculumId.values.firstWhere(

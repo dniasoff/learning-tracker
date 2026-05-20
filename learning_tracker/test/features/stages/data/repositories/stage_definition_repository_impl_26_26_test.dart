@@ -11,10 +11,10 @@ import 'package:learning_tracker/core/database/daos/stage_dao.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart' as db;
 import 'package:learning_tracker/core/domain/value_objects/schedule_spec.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/features/stages/data/repositories/stage_definition_repository_impl.dart';
-import 'package:learning_tracker/features/stages/domain/exceptions/protected_stage_exception.dart';
-import 'package:learning_tracker/features/stages/domain/models/schedule_type.dart';
-import 'package:learning_tracker/features/stages/domain/models/stage_definition.dart';
+import 'package:learning_tracker/features/tracks/stages/data/repositories/stage_definition_repository_impl.dart';
+import 'package:learning_tracker/features/tracks/stages/domain/exceptions/protected_stage_exception.dart';
+import 'package:learning_tracker/features/tracks/stages/domain/models/schedule_type.dart';
+import 'package:learning_tracker/features/tracks/stages/domain/models/stage_definition.dart';
 import 'package:mocktail/mocktail.dart';
 
 import '../../../../helpers/test_database.dart' show seedProfile;

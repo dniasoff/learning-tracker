@@ -5,9 +5,11 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/network/sefaria/models/curriculum_hierarchy_config.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
-import 'package:learning_tracker/features/learning_order/data/repositories/learning_order_repository_impl.dart';
-import 'package:learning_tracker/features/learning_order/domain/models/learning_order_item.dart';
+import 'package:learning_tracker/features/tracks/whole_curriculum_order/data/repositories/learning_order_repository_impl.dart';
+import 'package:learning_tracker/features/tracks/whole_curriculum_order/domain/models/learning_order_item.dart';
 import 'package:mocktail/mocktail.dart';
+
+import '../../../../helpers/drift_memory.dart' show seedProfile, seedProfileZero;
 
 class MockContentRepository extends Mock implements ContentRepository {}
 
@@ -33,8 +35,10 @@ void main() {
   late MockContentRepository mockContent;
   late LearningOrderRepositoryImpl repo;
 
-  setUp(() {
+  setUp(() async {
     database = UserDatabase(NativeDatabase.memory());
+    await seedProfileZero(database);
+    await seedProfile(database); // seeds account(1)+profile(1) for DAO tests
     mockContent = MockContentRepository();
     repo = LearningOrderRepositoryImpl(
       database: database,

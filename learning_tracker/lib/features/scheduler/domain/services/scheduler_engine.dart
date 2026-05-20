@@ -8,7 +8,7 @@ import 'package:learning_tracker/features/scheduler/domain/repositories/schedule
 import 'package:learning_tracker/features/scheduler/domain/repositories/scheduler_content_repository.dart';
 import 'package:learning_tracker/features/scheduler/domain/repositories/scheduler_learning_order_repository.dart';
 import 'package:learning_tracker/features/scheduler/domain/repositories/scheduler_stage_repository.dart';
-import 'package:learning_tracker/features/stages/domain/models/schedule_type.dart';
+import 'package:learning_tracker/features/tracks/stages/domain/models/schedule_type.dart';
 
 /// Pure computation service that generates daily task recommendations.
 ///

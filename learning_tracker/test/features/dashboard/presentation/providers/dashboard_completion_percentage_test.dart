@@ -20,8 +20,8 @@ import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/curriculum_scope_providers.dart';
-import 'package:learning_tracker/features/stages/presentation/providers/stage_providers.dart';
 import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
+import 'package:learning_tracker/features/tracks/stages/presentation/providers/stage_providers.dart';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -101,7 +101,7 @@ Future<void> _insertStage(
           curriculumId: curriculumId,
           stageOrder: stageOrder,
           stageName: stageName,
-          schedule: Value('{"type":"delay","delay_days":0}'),
+          schedule: const Value('{"type":"delay","delay_days":0}'),
         ),
       );
 }
@@ -153,7 +153,7 @@ ProviderContainer _makeContainer(
     overrides: [
       userDatabaseProvider.overrideWithValue(db),
       activeProfileIdProvider.overrideWithValue(_profileId),
-      syncEngineProvider.overrideWithValue(null),
+      syncWriteFacadeProvider.overrideWithValue(null),
       // Override scopedItemCountProvider for every CurriculumId so tests do
       // not touch the content database.
       for (final curriculum in CurriculumId.values)

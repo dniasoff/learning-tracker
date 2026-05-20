@@ -5,8 +5,9 @@ import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/cross_profile_scope.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
+import 'package:learning_tracker/features/learning/data/repositories/track_repository_impl.dart';
 import 'package:learning_tracker/features/settings/domain/exceptions/last_active_curriculum_exception.dart';
-import 'package:learning_tracker/features/settings/domain/services/curriculum_activation_service.dart';
+import 'package:learning_tracker/features/tracks/domain/services/curriculum_activation_service.dart';
 
 import '../../../../helpers/drift_memory.dart' as drift_helpers;
 
@@ -21,6 +22,7 @@ void main() {
     service = CurriculumActivationService(
       database: database,
       pushCurriculumTrack: _dummyPushCurriculumTrack,
+      trackRepository: TrackRepositoryImpl(database: database),
     );
 
     // Seed parent rows required by FK constraints.

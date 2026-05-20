@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:learning_tracker/core/utils/text_input_formatters.dart';
-import 'package:learning_tracker/features/settings/domain/services/account_management_service.dart';
+import 'package:learning_tracker/features/account/domain/services/account_management_service.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// Shows a dialog that prompts the user to enter their current password

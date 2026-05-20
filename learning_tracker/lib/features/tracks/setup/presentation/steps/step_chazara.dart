@@ -6,8 +6,8 @@ import 'package:learning_tracker/core/theme/app_colors.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/onboarding/domain/models/wizard_result_wrapper.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/learning_process_wizard_service.dart';
-import 'package:learning_tracker/features/stages/domain/models/schedule_type.dart';
 import 'package:learning_tracker/features/tracks/setup/presentation/steps/chazara_widgets.dart';
+import 'package:learning_tracker/features/tracks/stages/domain/models/schedule_type.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 // ── Chazara Inline Setup ───────────────────────────────────────────────────

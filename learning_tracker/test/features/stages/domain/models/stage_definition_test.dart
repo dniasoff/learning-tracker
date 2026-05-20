@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/features/stages/domain/models/stage_definition.dart';
+import 'package:learning_tracker/features/tracks/stages/domain/models/stage_definition.dart';
 
 void main() {
   const mishnayos = CurriculumId.mishnayos;

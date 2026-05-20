@@ -20,7 +20,6 @@ import 'package:learning_tracker/features/gamification/presentation/screens/gami
 import 'package:learning_tracker/features/gamification/presentation/screens/point_config_screen.dart';
 import 'package:learning_tracker/features/gamification/presentation/screens/reward_configuration_screen.dart';
 import 'package:learning_tracker/features/learning/presentation/screens/learning_screen.dart';
-import 'package:learning_tracker/features/learning_order/presentation/screens/learning_order_screen.dart';
 import 'package:learning_tracker/features/notifications/presentation/screens/notifications_screen.dart';
 import 'package:learning_tracker/features/onboarding/presentation/screens/app_intro_screen.dart';
 import 'package:learning_tracker/features/onboarding/presentation/screens/onboarding_screen.dart';
@@ -49,6 +48,7 @@ import 'package:learning_tracker/features/settings/presentation/screens/upgrade_
 import 'package:learning_tracker/features/sync/presentation/screens/sync_screen.dart';
 import 'package:learning_tracker/features/tracks/setup/presentation/screens/track_detail_screen.dart';
 import 'package:learning_tracker/features/tracks/setup/presentation/screens/track_management_hub_screen.dart';
+import 'package:learning_tracker/features/tracks/whole_curriculum_order/presentation/screens/learning_order_screen.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/tutor_grant_aggregate.dart'
     show TutorGrant;
 import 'package:learning_tracker/features/tutoring/presentation/screens/accept_invite_screen.dart';

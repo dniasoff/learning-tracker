@@ -9,7 +9,7 @@ import 'package:learning_tracker/features/scheduler/domain/repositories/schedule
 import 'package:learning_tracker/features/scheduler/domain/repositories/scheduler_learning_order_repository.dart';
 import 'package:learning_tracker/features/scheduler/domain/repositories/scheduler_stage_repository.dart';
 import 'package:learning_tracker/features/scheduler/domain/services/scheduler_engine.dart';
-import 'package:learning_tracker/features/stages/domain/models/schedule_type.dart';
+import 'package:learning_tracker/features/tracks/stages/domain/models/schedule_type.dart';
 
 // ---------------------------------------------------------------------------
 // In-memory test doubles (same pattern as scheduler_engine_test.dart)

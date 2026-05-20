@@ -1,11 +1,13 @@
+import 'package:drift/drift.dart' show Value;
 import 'package:learning_tracker/core/database/user/user_database.dart';
+import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/sync/firestore_gateway.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 import 'package:learning_tracker/features/learning/data/repositories/learning_ledger_repository_impl.dart';
 import 'package:learning_tracker/features/learning/domain/services/completion_detection_service.dart';
-import 'package:learning_tracker/features/stages/data/repositories/stage_definition_repository_impl.dart';
+import 'package:learning_tracker/features/tracks/stages/data/repositories/stage_definition_repository_impl.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:test/test.dart';
 
@@ -78,7 +80,7 @@ void main() {
         trackId: trackId,
         stageOrder: stageOrder,
         stageName: 'Stage $stageOrder',
-        schedule: Value('{"type":"delay","delay_days":0}'),
+        schedule: const Value('{"type":"delay","delay_days":0}'),
       ),
     );
   }
@@ -108,7 +110,7 @@ void main() {
       database: db,
       firestoreGateway: mockGateway,
       activeProfileId: 1,
-      activeProfileMode: 'adult',
+      activeProfileMode: ProfileMode.adult,
     );
     final stageRepo = StageDefinitionRepositoryImpl(
       stageDao: db.stageDao,
