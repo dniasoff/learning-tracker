@@ -67,4 +67,74 @@ abstract class PushPipeline {
     required String entityKey,
     required Map<String, dynamic> payload,
   });
+
+  // W2.29 — stage_definitions/ push (closes H4).
+  Future<void> pushStageDefinition({
+    required int profileId,
+    required String entityKey,
+    required Map<String, dynamic> payload,
+  });
+
+  // W2.31 — outbox-backed SyncWriteFacade kinds ──────────────────────────────
+
+  Future<void> pushGoal({
+    required int profileId,
+    required String entityKey,
+    required Map<String, dynamic> payload,
+  });
+
+  /// Hard-delete a goal. [payload] carries the `firestore_id` key that the
+  /// gateway needs to locate the document.
+  Future<void> deleteGoal({
+    required int profileId,
+    required String entityKey,
+    required Map<String, dynamic> payload,
+  });
+
+  Future<void> pushLearnerProfile({
+    required int profileId,
+    required String entityKey,
+    required Map<String, dynamic> payload,
+  });
+
+  /// Trigger the cloud delete of a learner profile. The payload carries
+  /// `profile_id` so the dispatcher can extract it without a separate
+  /// `profileId` argument.
+  Future<void> deleteLearnerProfile({
+    required int profileId,
+    required String entityKey,
+    required Map<String, dynamic> payload,
+  });
+
+  Future<void> pushGamificationSettings({
+    required int profileId,
+    required String entityKey,
+    required Map<String, dynamic> payload,
+  });
+
+  // W2.32 — pushAllLocalData outbox kinds ────────────────────────────────────
+
+  Future<void> pushNotificationSettings({
+    required int profileId,
+    required String entityKey,
+    required Map<String, dynamic> payload,
+  });
+
+  Future<void> pushUiPreferences({
+    required int profileId,
+    required String entityKey,
+    required Map<String, dynamic> payload,
+  });
+
+  Future<void> pushProfileProgram({
+    required int profileId,
+    required String entityKey,
+    required Map<String, dynamic> payload,
+  });
+
+  Future<void> pushLearningLedgerEntry({
+    required int profileId,
+    required String entityKey,
+    required Map<String, dynamic> payload,
+  });
 }

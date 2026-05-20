@@ -1,13 +1,17 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
+import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/providers/talker_provider.dart';
 import 'package:learning_tracker/core/sync/initial_sync_state.dart';
 import 'package:learning_tracker/core/sync/providers/merge_router_provider.dart';
 import 'package:learning_tracker/core/sync/providers/outbox_providers.dart';
 import 'package:learning_tracker/core/sync/providers/resolve_profile_id_provider.dart';
 import 'package:learning_tracker/core/sync/sync_orchestrator.dart';
+import 'package:learning_tracker/core/time/local_day_clock.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
+import 'package:learning_tracker/features/sync/data/local_data_upload_service.dart';
+import 'package:learning_tracker/features/sync/data/outbox_sync_write_facade.dart';
 import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
 
 /// Provider for [SyncOrchestrator].
@@ -65,6 +69,24 @@ final syncOrchestratorProvider = Provider<SyncOrchestrator?>((ref) {
   final resolveProfileId = ref.read(resolveProfileIdProvider);
   final talker = ref.read(talkerProvider);
 
+  // W2.32 — build LocalDataUploadService so orchestrator can route
+  // pushAllLocalData + backfillGoalsForCloudCutover through the outbox path.
+  final database = ref.read(userDatabaseProvider);
+  final profileId = ref.read(activeProfileIdProvider);
+  final clock = ref.read(localDayClockProvider);
+  final uploadFacade = OutboxSyncWriteFacade(
+    outboxDao: database.outboxDao,
+    database: database,
+    profileId: profileId,
+    clock: clock,
+  );
+  final uploadService = LocalDataUploadService(
+    facade: uploadFacade,
+    database: database,
+    profileId: profileId,
+    logger: AppLogger(talker),
+  );
+
   final orchestrator = SyncOrchestratorImpl(
     // Every collaborator that can itself rebuild is handed in as a lazy
     // resolver, so a later rebuild of any of these providers is picked up
@@ -81,6 +103,9 @@ final syncOrchestratorProvider = Provider<SyncOrchestrator?>((ref) {
     // §10.2: invalidate initialSyncCompleteProvider the first time a full pull
     // completes so the dashboard re-evaluates its readiness check immediately.
     onFirstSyncComplete: () => ref.invalidate(initialSyncCompleteProvider),
+    // W2.32: outbox-backed push path replaces legacy SyncEngine delegation.
+    resolvePushAllLocalData: uploadService.pushAllLocalData,
+    resolveBackfillGoals: uploadService.backfillGoalsForCloudCutover,
   );
 
   // Idempotent: registers the lifecycle observer + Firestore listeners once.

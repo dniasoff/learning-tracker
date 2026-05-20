@@ -890,6 +890,7 @@ class SyncEngine implements SyncWriteFacade {
   }
 
   /// Push locale / calendar / text / learning-order prefs for the active profile.
+  @override
   Future<void> pushUiPreferencesSnapshot() async {
     final profileId = _firestoreDataSource.profileId;
     final prefs = await SharedPreferences.getInstance();

@@ -5,6 +5,8 @@ import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/providers/network_providers.dart';
 import 'package:learning_tracker/core/providers/talker_provider.dart';
 import 'package:learning_tracker/core/sync/providers/outbox_providers.dart';
+import 'package:learning_tracker/core/sync/sync_write_facade.dart';
+import 'package:learning_tracker/core/time/local_day_clock.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_providers.dart'
     show authRepositoryProvider;
@@ -12,6 +14,7 @@ import 'package:learning_tracker/features/account/presentation/providers/auth_st
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/sync/data/firestore_data_source.dart';
 import 'package:learning_tracker/features/sync/data/offline_queue.dart';
+import 'package:learning_tracker/features/sync/data/outbox_sync_write_facade.dart';
 import 'package:learning_tracker/features/sync/data/sync_engine.dart';
 import 'package:learning_tracker/features/sync/domain/models/sync_status.dart';
 
@@ -135,5 +138,33 @@ final syncStatusProvider = Provider<SyncStatus>((ref) {
       message: error.toString(),
       failedAt: DateTimeFactory.nowLocal(),
     ),
+  );
+});
+
+// W2.31 — outbox-backed SyncWriteFacade provider ────────────────────────────
+
+/// Outbox-backed [SyncWriteFacade] provider.
+///
+/// Tier-gated: returns `null` for local-born accounts (same rule as
+/// [syncEngineProvider]).  Cloud-born accounts get an [OutboxSyncWriteFacade]
+/// that enqueues mutations into the outbox table for async push.
+///
+/// **Migration path (W2.34):** call sites that currently do
+/// `ref.watch(syncEngineProvider)?.<method>` should be migrated to
+/// `ref.watch(syncWriteFacadeProvider)?.<method>`.  Once all 21 consumers
+/// have been migrated, [syncEngineProvider] can be deleted (W2.35).
+final syncWriteFacadeProvider = Provider<SyncWriteFacade?>((ref) {
+  final authState = ref.watch(authStateProvider);
+  if (!authState.isCloudBorn) return null;
+
+  final database = ref.watch(userDatabaseProvider);
+  final profileId = ref.watch(activeProfileIdProvider);
+  final clock = ref.watch(localDayClockProvider);
+
+  return OutboxSyncWriteFacade(
+    outboxDao: database.outboxDao,
+    database: database,
+    profileId: profileId,
+    clock: clock,
   );
 });

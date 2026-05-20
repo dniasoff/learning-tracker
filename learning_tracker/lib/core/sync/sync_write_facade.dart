@@ -11,6 +11,12 @@ abstract class SyncWriteFacade {
   /// Rebuild and push the gamification-settings snapshot for the active profile.
   Future<void> pushGamificationSettingsSnapshot();
 
+  /// Rebuild and push the UI-preferences snapshot for the active profile.
+  ///
+  /// Reads locale, Hebrew-calendar, text-display and learning-order preferences
+  /// from [SharedPreferences] and enqueues them for cloud push.
+  Future<void> pushUiPreferencesSnapshot();
+
   /// Push a bookmark to Firestore after a local write.
   Future<void> pushBookmark(Map<String, dynamic> bookmark);
 

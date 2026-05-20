@@ -85,12 +85,29 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
     /// readiness check immediately after the first pull finishes.  Optional so
     /// tests that do not need the Riverpod notification can omit it.
     void Function()? onFirstSyncComplete,
+
+    /// W2.32: Optional outbox-backed replacement for [SyncEngine.pushAllLocalData].
+    ///
+    /// When provided, [pushAllLocalData] routes through this callback instead
+    /// of delegating to the legacy [SyncEngine] path. Once [SyncEngine] is
+    /// deleted (W2.35) this becomes non-optional.
+    Future<void> Function()? resolvePushAllLocalData,
+
+    /// W2.32: Optional outbox-backed replacement for
+    /// [SyncEngine.backfillGoalsForCloudCutover].
+    ///
+    /// When provided, the post-pull backfill routes through this callback
+    /// instead of [SyncEngine.backfillGoalsForCloudCutover]. Once
+    /// [SyncEngine] is deleted (W2.35) this becomes non-optional.
+    Future<int> Function()? resolveBackfillGoals,
   }) : _resolveEngine = resolveEngine,
        _resolveMergeRouter = resolveMergeRouter,
        _resolveGateway = resolveGateway,
        _resolveProfileId = resolveProfileId,
        _logger = logger,
-       _onFirstSyncComplete = onFirstSyncComplete;
+       _onFirstSyncComplete = onFirstSyncComplete,
+       _resolvePushAllLocalData = resolvePushAllLocalData,
+       _resolveBackfillGoals = resolveBackfillGoals;
 
   /// Resolves the current [SyncEngine] on demand.
   ///
@@ -102,6 +119,12 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
   /// Optional callback invoked the first time a full pull completes.  See
   /// constructor doc for [onFirstSyncComplete].
   final void Function()? _onFirstSyncComplete;
+
+  /// W2.32: Optional outbox-backed pushAllLocalData callback.
+  final Future<void> Function()? _resolvePushAllLocalData;
+
+  /// W2.32: Optional outbox-backed backfillGoalsForCloudCutover callback.
+  final Future<int> Function()? _resolveBackfillGoals;
 
   /// Resolves the current [MergeRouter] on demand.
   ///
@@ -220,7 +243,13 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
   Stream<SyncStatus> get statusStream => _engine.statusStream;
 
   @override
-  Future<void> pushAllLocalData() => _engine.pushAllLocalData();
+  Future<void> pushAllLocalData() {
+    // W2.32: prefer the outbox-backed callback when wired; fall back to the
+    // legacy engine path until W2.35 deletes SyncEngine.
+    final cb = _resolvePushAllLocalData;
+    if (cb != null) return cb();
+    return _engine.pushAllLocalData();
+  }
 
   @override
   Future<void> pullOnLaunch({bool triggeredFromResume = false}) async {
@@ -316,6 +345,37 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
           'profile_programs',
           () => pullPipeline.pullProfilePrograms(profileId: _profileId),
         );
+        // W2.29 — stage definitions pull (closes H4).
+        await step(
+          'stage_definitions',
+          () => pullPipeline.pullStageDefinitions(profileId: _profileId),
+        );
+        // W2.28 — streak events pull (closes M4).
+        await step(
+          'streak_events',
+          () => pullPipeline.pullStreak(profileId: _profileId),
+        );
+        // W2.27 — goals + ledger + settings pulls (closes M1).
+        await step(
+          'goals',
+          () => pullPipeline.pullGoals(profileId: _profileId),
+        );
+        await step(
+          'learning_ledger',
+          () => pullPipeline.pullLearningLedger(profileId: _profileId),
+        );
+        await step(
+          'notification_settings',
+          () => pullPipeline.pullNotificationSettings(profileId: _profileId),
+        );
+        await step(
+          'gamification_settings',
+          () => pullPipeline.pullGamificationSettings(profileId: _profileId),
+        );
+        await step(
+          'ui_preferences',
+          () => pullPipeline.pullUiPreferences(profileId: _profileId),
+        );
       }).timeout(
         _overallTimeout,
         onTimeout: () => throw TimeoutException(
@@ -358,7 +418,14 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
       // (some test stubs deliberately throw to enforce the "pull doesn't
       // touch the engine" invariant) must not fail the pull.
       try {
-        await _engine.backfillGoalsForCloudCutover();
+        // W2.32: prefer the outbox-backed callback when wired; fall back to
+        // the legacy engine path until W2.35 deletes SyncEngine.
+        final backfillCb = _resolveBackfillGoals;
+        if (backfillCb != null) {
+          await backfillCb();
+        } else {
+          await _engine.backfillGoalsForCloudCutover();
+        }
       } catch (e, stackTrace) {
         _logger?.warning(
           event: 'sync_goal_backfill_failed',

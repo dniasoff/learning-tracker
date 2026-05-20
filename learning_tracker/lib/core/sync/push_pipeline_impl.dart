@@ -95,6 +95,120 @@ class OutboxPushPipeline implements PushPipeline {
     () => _gateway.pushBookmark(profileId: profileId, data: payload),
   );
 
+  // W2.29 — stage_definitions/ push (closes H4).
+  @override
+  Future<void> pushStageDefinition({
+    required int profileId,
+    required String entityKey,
+    required Map<String, dynamic> payload,
+  }) => _run(
+    OutboxEntityKind.stageDefinition,
+    () => _gateway.pushStageDefinition(profileId: profileId, data: payload),
+  );
+
+  // W2.31 — outbox-backed SyncWriteFacade kinds ──────────────────────────────
+
+  @override
+  Future<void> pushGoal({
+    required int profileId,
+    required String entityKey,
+    required Map<String, dynamic> payload,
+  }) => _run(
+    OutboxEntityKind.goal,
+    () => _gateway.pushGoal(profileId: profileId, data: payload),
+  );
+
+  @override
+  Future<void> deleteGoal({
+    required int profileId,
+    required String entityKey,
+    required Map<String, dynamic> payload,
+  }) => _run(
+    OutboxEntityKind.goalDelete,
+    () => _gateway.deleteGoal(
+      profileId: profileId,
+      firestoreId: payload['firestore_id']?.toString() ?? '',
+    ),
+  );
+
+  @override
+  Future<void> pushLearnerProfile({
+    required int profileId,
+    required String entityKey,
+    required Map<String, dynamic> payload,
+  }) => _run(
+    OutboxEntityKind.learnerProfile,
+    () => _gateway.pushLearnerProfile(profileId: profileId, data: payload),
+  );
+
+  @override
+  Future<void> deleteLearnerProfile({
+    required int profileId,
+    required String entityKey,
+    required Map<String, dynamic> payload,
+  }) => _run(
+    OutboxEntityKind.learnerProfileDelete,
+    () => _gateway.deleteLearnerProfile(
+      payload['profile_id'] as int? ?? profileId,
+    ),
+  );
+
+  @override
+  Future<void> pushGamificationSettings({
+    required int profileId,
+    required String entityKey,
+    required Map<String, dynamic> payload,
+  }) => _run(
+    OutboxEntityKind.gamificationSettings,
+    () =>
+        _gateway.pushGamificationSettings(profileId: profileId, data: payload),
+  );
+
+  // W2.32 — pushAllLocalData outbox kinds ────────────────────────────────────
+
+  @override
+  Future<void> pushNotificationSettings({
+    required int profileId,
+    required String entityKey,
+    required Map<String, dynamic> payload,
+  }) => _run(
+    OutboxEntityKind.notificationSettings,
+    () => _gateway.pushNotificationSettings(
+      profileId: profileId,
+      data: payload,
+    ),
+  );
+
+  @override
+  Future<void> pushUiPreferences({
+    required int profileId,
+    required String entityKey,
+    required Map<String, dynamic> payload,
+  }) => _run(
+    OutboxEntityKind.uiPreferences,
+    () => _gateway.pushUiPreferences(profileId: profileId, data: payload),
+  );
+
+  @override
+  Future<void> pushProfileProgram({
+    required int profileId,
+    required String entityKey,
+    required Map<String, dynamic> payload,
+  }) => _run(
+    OutboxEntityKind.profileProgram,
+    () => _gateway.pushProfileProgram(profileId: profileId, data: payload),
+  );
+
+  @override
+  Future<void> pushLearningLedgerEntry({
+    required int profileId,
+    required String entityKey,
+    required Map<String, dynamic> payload,
+  }) => _run(
+    OutboxEntityKind.learningLedgerEntry,
+    () => _gateway.pushLedgerEntry(profileId: profileId, data: payload),
+  );
+
   /// Serialize calls per [kind]: wait on any prior in-flight future, then
   /// run [action]. The slot is cleared after the action completes so
   /// failures don't deadlock the chain.

@@ -19,6 +19,20 @@ class OutboxEntityKind {
   static const track = 'track';
   static const learningOrder = 'learning_order';
   static const bookmark = 'bookmark';
+  static const stageDefinition = 'stage_definition'; // W2.29
+
+  // W2.31 — outbox-backed SyncWriteFacade kinds ──────────────────────────────
+  static const goal = 'goal';
+  static const goalDelete = 'goal_delete';
+  static const learnerProfile = 'learner_profile';
+  static const learnerProfileDelete = 'learner_profile_delete';
+  static const gamificationSettings = 'gamification_settings';
+
+  // W2.32 — pushAllLocalData outbox kinds ────────────────────────────────────
+  static const notificationSettings = 'notification_settings';
+  static const uiPreferences = 'ui_preferences';
+  static const profileProgram = 'profile_program';
+  static const learningLedgerEntry = 'learning_ledger_entry';
 }
 
 /// Drains pending outbox rows for a given profile, dispatching each mutation
@@ -231,6 +245,18 @@ class OutboxProcessor {
     OutboxEntityKind.learningOrder,
     OutboxEntityKind.bookmark,
     OutboxEntityKind.settings,
+    OutboxEntityKind.stageDefinition, // W2.29
+    // W2.31 — outbox-backed SyncWriteFacade kinds
+    OutboxEntityKind.goal,
+    OutboxEntityKind.goalDelete,
+    OutboxEntityKind.learnerProfile,
+    OutboxEntityKind.learnerProfileDelete,
+    OutboxEntityKind.gamificationSettings,
+    // W2.32 — pushAllLocalData outbox kinds
+    OutboxEntityKind.notificationSettings,
+    OutboxEntityKind.uiPreferences,
+    OutboxEntityKind.profileProgram,
+    OutboxEntityKind.learningLedgerEntry,
   ];
 
   /// Compute the earliest time at which the [attempts]-th row may be retried.
@@ -299,6 +325,68 @@ class OutboxProcessor {
         );
       case OutboxEntityKind.bookmark:
         return _pipeline.pushBookmark(
+          profileId: profileId,
+          entityKey: entityKey,
+          payload: payload,
+        );
+      case OutboxEntityKind.stageDefinition: // W2.29
+        return _pipeline.pushStageDefinition(
+          profileId: profileId,
+          entityKey: entityKey,
+          payload: payload,
+        );
+      // W2.31 — outbox-backed SyncWriteFacade kinds ──────────────────────────
+      case OutboxEntityKind.goal:
+        return _pipeline.pushGoal(
+          profileId: profileId,
+          entityKey: entityKey,
+          payload: payload,
+        );
+      case OutboxEntityKind.goalDelete:
+        return _pipeline.deleteGoal(
+          profileId: profileId,
+          entityKey: entityKey,
+          payload: payload,
+        );
+      case OutboxEntityKind.learnerProfile:
+        return _pipeline.pushLearnerProfile(
+          profileId: profileId,
+          entityKey: entityKey,
+          payload: payload,
+        );
+      case OutboxEntityKind.learnerProfileDelete:
+        return _pipeline.deleteLearnerProfile(
+          profileId: profileId,
+          entityKey: entityKey,
+          payload: payload,
+        );
+      case OutboxEntityKind.gamificationSettings:
+        return _pipeline.pushGamificationSettings(
+          profileId: profileId,
+          entityKey: entityKey,
+          payload: payload,
+        );
+      // W2.32 — pushAllLocalData outbox kinds ──────────────────────────────
+      case OutboxEntityKind.notificationSettings:
+        return _pipeline.pushNotificationSettings(
+          profileId: profileId,
+          entityKey: entityKey,
+          payload: payload,
+        );
+      case OutboxEntityKind.uiPreferences:
+        return _pipeline.pushUiPreferences(
+          profileId: profileId,
+          entityKey: entityKey,
+          payload: payload,
+        );
+      case OutboxEntityKind.profileProgram:
+        return _pipeline.pushProfileProgram(
+          profileId: profileId,
+          entityKey: entityKey,
+          payload: payload,
+        );
+      case OutboxEntityKind.learningLedgerEntry:
+        return _pipeline.pushLearningLedgerEntry(
           profileId: profileId,
           entityKey: entityKey,
           payload: payload,

@@ -55,14 +55,14 @@ Sync-point trigger tags: `[P1]` `[P2]` `[P3]` `[P4]` `[P5]` `[P6]` `[P7]`
 - [x] W1.24 (S, S1, done)    Delete .gitkeep-only dirs (utils/{extensions,formatters,helpers}/, parent_mode/domain/{entities,use_cases,repositories}/, sync/data/data_sources/)
 
 ### Phase 1e · AppLogger foot-gun fix (T18)
-- [ ] W1.25 (M, S1, pending)    Rename AppLogger.instance getter → AppLogger.talker; new AppLogger.instance = singleton AppLogger
-- [ ] W1.26 (M, S1, pending)    Migrate 29 raw AppLogger.instance.error/info/warning sites to structured API
-- [ ] W1.27 (S, S1, pending)    Delete 5 defensive wrappers (`final _log = AppLogger(AppLogger.instance);`)
+- [x] W1.25 (M, S1, done)    Rename AppLogger.instance getter → AppLogger.talker; new AppLogger.instance = singleton AppLogger — static renamed rawTalker (conflict with instance getter)
+- [x] W1.26 (M, S1, done)    Migrate 24 raw AppLogger.instance.error/info/warning sites to structured API (event: named param)
+- [x] W1.27 (S, S1, done)    Delete 5 defensive wrappers (`final _log = AppLogger(AppLogger.instance);`)
 
 ### Phase 1f · Exception/event base scaffolding
-- [ ] W1.28 (S, S1, pending)    Create core/exceptions/app_exception.dart with abstract root + 5 category bases
-- [ ] W1.29 (S, S1, pending)    Create core/logging/log_events.dart constants file
-- [ ] W1.30 (S, S1, pending)    Update CLAUDE.md — remove link to deleted docs/coding-standards.md — closes M9
+- [x] W1.28 (S, S1, done)    Create core/exceptions/app_exception.dart with abstract root + 6 category bases (Validation/Conflict/Permission/NotFound/Network/Internal); reparent existing stubs
+- [x] W1.29 (S, S1, done)    Create core/logging/log_events.dart constants file (8 subsystems: sync/auth/profile/scheduler/track/tutor/content/notification)
+- [x] W1.30 (S, S1, done)    Update CLAUDE.md — remove link to deleted docs/coding-standards.md — closes M9; fix barrel rule description
 
 ---
 
@@ -109,8 +109,8 @@ Sync-point trigger tags: `[P1]` `[P2]` `[P3]` `[P4]` `[P5]` `[P6]` `[P7]`
 - [x] W2.30 (S, S2, done)    Make _pullCollection throw on MergeOutcome.halt (after W2.26 lands)
 
 ### Phase 2f · Single-shot legacy sync deletion (S2)
-- [ ] W2.31 (M, S2, pending)    Add outbox-backed SyncWriteFacade impl + syncWriteFacadeProvider
-- [ ] W2.32 (M, S2, pending)    Move pushAllLocalData + backfillGoalsForCloudCutover to outbox path
+- [x] W2.31 (M, S2, done)    Add outbox-backed SyncWriteFacade impl + syncWriteFacadeProvider
+- [x] W2.32 (M, S2, done)    Move pushAllLocalData + backfillGoalsForCloudCutover to outbox path
 - [ ] W2.33 (M, S2, pending)    Move SyncStatus ownership from SyncEngine to SyncOrchestrator (own StreamController); repoint sync_status_providers
 - [ ] W2.34 (M, S2, pending)    Grep-and-replace 21 syncEngineProvider consumers → syncWriteFacadeProvider — closes H1
 - [ ] W2.35 (S, S2, pending)    Delete features/sync/data/sync_engine.dart
@@ -181,7 +181,7 @@ Sync-point trigger tags: `[P1]` `[P2]` `[P3]` `[P4]` `[P5]` `[P6]` `[P7]`
 - [x] W3.43 (M, S3, done)    Cloud Function: bulk-prior completion write proxy (writes as owner uid after tutor permission check)
 
 ### Phase 3f · Goal model collapse (S4)
-- [ ] W3.44 (M, S4, in-progress)    Collapse goal entity: drop goalType/paceValue/pacePeriod/targetDate → PaceTarget? field only; migrate goal_repository_impl + dashboard_providers
+- [x] W3.44 (M, S4, done)    Collapse goal entity: drop goalType/paceValue/pacePeriod/targetDate → PaceTarget? field only; migrate goal_repository_impl + dashboard_providers
 
 ### Phase 3g · Wipe and verify (S2)
 - [ ] W3.45 (S, S2, pending)    Wipe Firestore (gcloud firestore delete on users/) + delete dev Drift DBs
@@ -215,12 +215,12 @@ Sync-point trigger tags: `[P1]` `[P2]` `[P3]` `[P4]` `[P5]` `[P6]` `[P7]`
 
 ### Phase 4c · Business-logic relocations
 - [ ] W4.18 (M, S4, pending)    completion_repository_impl.markComplete:57-200 → MarkCompletionUseCase — **owns B1 credit policy enforcement**
-- [ ] W4.19 (M, S5, pending)    learning_order_repository_impl.saveOrder:91-129 → SaveLearningOrderUseCase
+- [ ] W4.19 (M, S5, in-progress)    learning_order_repository_impl.saveOrder:91-129 → SaveLearningOrderUseCase
 - [x] W4.20 (S, S5, done)    parent_dashboard_aggregator._computePaceStatus dup → reuse ComputePaceStatusUseCase
 - [ ] W4.21 (M, S5, in-progress)    notification_providers.dart:22-46 → ReminderPreferences + NotificationPreferencesRepository
 - [ ] W4.22 (S, S5, pending)    track_learning_order_repository_impl._buildMasechtosIndex → MasechtaOrderingPolicy (already W4.15)
-- [ ] W4.23 (S, S5, pending)    profile_providers.dart SelectedProfileId → ProfileSession aggregate in profiles/domain/
-- [ ] W4.24 (S, S5, pending)    dashboard_providers.dart side-effect-in-read-provider → write-path repository method
+- [ ] W4.23 (S, S5, in-progress)    profile_providers.dart SelectedProfileId → ProfileSession aggregate in profiles/domain/
+- [ ] W4.24 (S, S5, in-progress)    dashboard_providers.dart side-effect-in-read-provider → write-path repository method
 - [ ] W4.25 (M, S4, pending)    core/learning/completion_writer.commitBatch/commit → sealed BatchPlan + _classifyBatch/_applyBatchPlan/_resolveResults — **B1 credit policy at batch classification**
 - [ ] W4.26 (M, S4, pending)    Split BulkPriorCompletionService.priorMarkOnly off completion_events → separate prior_completion_imports table — **B1 bulkInTrack path**
 
@@ -311,13 +311,13 @@ Sync-point trigger tags: `[P1]` `[P2]` `[P3]` `[P4]` `[P5]` `[P6]` `[P7]`
 - [ ] W6.19 (M, S3, pending)    Wire MarkLiveCompletionUseCase throw → UI catches TutorWriteForbiddenException with friendly dialog
 
 ### Phase 6g · Audit log writing
-- [ ] W6.20 (M, S3, pending)    Audit-log writer middleware: every tutor-originated mutation writes audit entry in same transaction
-- [ ] W6.21 (S, S3, pending)    Capture tutor name snapshot at write-time (survives tutor account deletion)
-- [ ] W6.22 (S, S3, pending)    Per-action audit entries for config_changed, completion_bulk_prior, completion_reset, bookmark_advanced, profile_edited, goal_changed, stage_changed, reward_changed, study_day_changed
+- [x] W6.20 (M, S3, done)    Audit-log writer middleware: every tutor-originated mutation writes audit entry in same transaction
+- [x] W6.21 (S, S3, done)    Capture tutor name snapshot at write-time (survives tutor account deletion)
+- [x] W6.22 (S, S3, done)    Per-action audit entries for config_changed, completion_bulk_prior, completion_reset, bookmark_advanced, profile_edited, goal_changed, stage_changed, reward_changed, study_day_changed
 
 ### Phase 6h · Cascades + notifications
-- [ ] W6.23 (M, S3, pending)    Parent-delete → all grants revoked + child profiles deleted (cascade extension)
-- [ ] W6.24 (M, S3, pending)    Tutor-delete → all grants auto-resign; audit log preserves tutor name snapshot
+- [x] W6.23 (M, S3, done)    Parent-delete → all grants revoked + child profiles deleted (cascade extension)
+- [x] W6.24 (M, S3, done)    Tutor-delete → all grants auto-resign; audit log preserves tutor name snapshot
 - [ ] W6.25 (S, S3, pending)    Notify parent on tutor decline/resign; notify tutor on parent revoke
 
 ---
@@ -325,10 +325,10 @@ Sync-point trigger tags: `[P1]` `[P2]` `[P3]` `[P4]` `[P5]` `[P6]` `[P7]`
 ## Wave 7 — Exceptions + logging + telemetry + polish (~25 tasks)
 
 ### Phase 7a · Exception leaves (S5)
-- [ ] W7.1  (M, S5, pending)    Re-parent all existing exception classes under the 5 category bases
-- [ ] W7.2  (S, S5, pending)    Add new exceptions: MergeException, OutboxDeadLetterException, FirestorePermissionDeniedException
-- [ ] W7.3  (S, S5, pending)    Move BatchPushException → core/sync/exceptions/sync_push_exception.dart under NetworkException
-- [ ] W7.4  (S, S5, pending)    Rename InvalidOperationException → InvalidTrackOperationException; under ValidationException
+- [ ] W7.1  (M, S5, in-progress)    Re-parent all existing exception classes under the 5 category bases
+- [ ] W7.2  (S, S5, in-progress)    Add new exceptions: MergeException, OutboxDeadLetterException, FirestorePermissionDeniedException
+- [ ] W7.3  (S, S5, in-progress)    Move BatchPushException → core/sync/exceptions/sync_push_exception.dart under NetworkException
+- [ ] W7.4  (S, S5, in-progress)    Rename InvalidOperationException → InvalidTrackOperationException; under ValidationException
 
 ### Phase 7b · Crisis-class telemetry (S2)
 - [ ] W7.5  (M, S2, pending)    Wire merge_row_skipped event at silent skip sites in DriftMergeStore + ProfileProgramMerger — closes L2

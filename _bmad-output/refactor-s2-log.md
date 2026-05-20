@@ -49,6 +49,31 @@ Tracker: _bmad-output/refactor-task-tracker.md
   Closes M1.
 - next: W2.28
 
+## [2026-05-20 06:00] task-complete
+- tasks: W2.28 + W2.29 + W2.30
+- detail:
+  W2.28: Added pullStreak to PullPipeline → _pullCollection('streak_events', EntityKind.streak). Wired in SyncOrchestrator.pullOnLaunch. Closes M4. (streak_events subcollection is populated from W3.37; before that this is a safe no-op.)
+  W2.29: Wired stage_definitions/ push+pull end-to-end:
+    - Pull: pullStageDefinitions → _pullCollection('stage_definitions', EntityKind.stageDefinition) in PullPipeline; step wired in SyncOrchestrator.
+    - Push: pushStageDefinition abstract in FirestoreGateway + PushPipeline; implemented in FirestoreGatewayImpl (doc ID = {trackId}_{stageOrder}, merge:true) and OutboxPushPipeline. OutboxEntityKind.stageDefinition constant added; stageDefinition added to OutboxProcessor._nonCompletionKinds + _dispatch switch. firestore.rules: added stage_definitions/{stageId} match block with field allowlist. Closes H4.
+  W2.30: Changed _pullCollection to throw StateError on MergeOutcome.halt instead of silently returning. SyncOrchestrator.step() propagates it to the try/catch in pullOnLaunch which emits SyncStatus.error and logs.
+- `dart analyze lib/core/sync/` clean (no issues).
+- next: check P3 gate (verify S3/S4 scope done), then W2.31
+
+## [2026-05-20 07:00] task-complete
+- tasks: W2.31 + W2.32
+
+W2.31: Created OutboxSyncWriteFacade (features/sync/data/outbox_sync_write_facade.dart) implementing SyncWriteFacade (9 methods incl. pushUiPreferencesSnapshot added to interface). Added 5 new OutboxEntityKind constants (goal, goalDelete, learnerProfile, learnerProfileDelete, gamificationSettings) + 4 more for W2.32 (notificationSettings, uiPreferences, profileProgram, learningLedgerEntry). Added 9 new PushPipeline interface methods + OutboxPushPipeline implementations. Added 9 dispatch cases to OutboxProcessor + _nonCompletionKinds. Added syncWriteFacadeProvider (tier-gated, OutboxSyncWriteFacade for cloud-born). dart analyze clean.
+
+W2.32: Created LocalDataUploadService (features/sync/data/local_data_upload_service.dart) with pushAllLocalData (routes all entity kinds through outbox via OutboxSyncWriteFacade + enqueue helpers) and backfillGoalsForCloudCutover (idempotent, SharedPrefs-guarded). Added resolvePushAllLocalData + resolveBackfillGoals callbacks to SyncOrchestratorImpl constructor (backward-compat: falls back to SyncEngine if null). Wired in sync_orchestrator_providers.dart. dart analyze clean.
+
+- next: W2.33
+
+## [2026-05-20 06:30] task-complete
+- task: W2.31
+- detail: Created OutboxSyncWriteFacade (features/sync/data/outbox_sync_write_facade.dart) implementing SyncWriteFacade. All 8 facade methods enqueue outbox rows via OutboxDao. pushGamificationSettingsSnapshot reads DB+RewardMilestoneService and enqueues a gamification_settings row. pushLearningOrder enqueues one row per item (mirrors SyncEngine). Added 5 new OutboxEntityKind constants (goal, goalDelete, learnerProfile, learnerProfileDelete, gamificationSettings). Added 5 new PushPipeline interface methods + OutboxPushPipeline implementations (dispatching to FirestoreGateway methods already in place). Added 5 cases to OutboxProcessor._dispatch + _nonCompletionKinds. Added syncWriteFacadeProvider to sync_providers.dart (tier-gated, returns OutboxSyncWriteFacade? for cloud-born). dart analyze clean.
+- next: W2.32
+
 ## [2026-05-20 04:30] sync-point-cleared (S2 side only)
 - sync-point: P2 (S2 contribution)
 - detail: S2's W2.21-W2.25 are all done. Per protocol, must verify S3 (W2.10-W2.20) and S4 (W2.1-W2.9) before proceeding past W2.30 to W2.31. S4 W2.1-W2.9 confirmed done in tracker. S3 W2.10-W2.20 still in-progress. Proceeding with W2.26-W2.30 (mergers) which don't require P2 themselves; will check tracker again before W2.31.
