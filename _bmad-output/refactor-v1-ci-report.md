@@ -337,3 +337,51 @@ dart analyze test/core
 cd learning_tracker && flutter test test/integration/
 # → 00:02 +39: All tests passed!
 ```
+
+---
+
+## Runtime-Fix-B Results (2026-05-20)
+
+**Agent:** Runtime-Fix-B
+**Scope:** `test/features/` (all subdirectories)
+**Branch:** dev
+**Commit:** `577a175b`
+
+### Failure count delta
+
+| Metric | Before | After |
+|---|---|---|
+| Feature test failures (`test/features/`) | 19 failing tests across 7 files | **0** — 1670/1670 pass |
+| Tests skipped | 94 (pre-existing `@Skip` annotations) | 94 (unchanged) |
+| Real regressions found | 3 (production code) | Fixed |
+
+### Root causes and fixes
+
+#### Real regressions in lib/ code (3)
+
+| File | Regression | Fix |
+|---|---|---|
+| `lib/features/stages/data/repositories/stage_definition_repository_impl.dart` | `_encodeSchedule` used short JSON keys `'days'`/`'window_size'`; `_decodeSchedule` only read short keys — inconsistent with test expectations and spec | Renamed to canonical long-form keys (`'days_of_week'`, `'rolling_window_size'`); `_decodeSchedule` accepts both forms for backward-compat with existing DB rows |
+| `lib/features/settings/domain/services/data_export_import_service.dart` | `_resolveScheduleJson` fallback path also used short keys when reconstructing from old quartet format | Updated to write canonical keys |
+| `lib/features/onboarding/domain/services/learning_process_wizard_service.dart` | `_applyPreset` and `_applyCustom` used short JSON keys `'days'`/`'window_size'` when writing stage schedule JSON | Updated to canonical keys |
+
+#### Test updates (stale expectations, no production regression)
+
+| Test file | Failure | Fix |
+|---|---|---|
+| `test/features/dashboard/presentation/providers/dashboard_user_mode_test.dart` | Unused `package:drift/drift.dart` import (already fixed by another agent's setUp changes) | Removed unused import |
+| `test/features/settings/domain/services/data_export_roundtrip_test.dart` | Export assertions checked legacy `trackType`/`isActive` fields removed in W3.28 | Updated to check `state` field; added required `learnerProfiles` to import payloads for learning_order and streak_events tests (W3.25 added FKs) |
+
+### Pre-existing notes
+
+- `dashboard_user_mode_test.dart` and `learning_order_repository_impl_test.dart` and `parent_dashboard_aggregator_*_test.dart` had their test-body FK seed issues already fixed by a prior agent (setUp seeds the required account+profile rows). No action needed.
+- All 19 originally reported failures are resolved by this pass.
+
+### Verify
+
+```bash
+cd learning_tracker && flutter test test/features/
+# → 00:42 +1670 ~94: All tests passed!
+dart analyze
+# → 3 pre-existing issues (unchanged from baseline)
+```
