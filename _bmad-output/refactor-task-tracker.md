@@ -41,8 +41,8 @@ Sync-point trigger tags: `[P1]` `[P2]` `[P3]` `[P4]` `[P5]` `[P6]` `[P7]`
 - [x] W1.12 (S, S1, done)    Add make audit grep #14 — no `package:learning_tracker/features/` in lib/core/**
 - [x] W1.13 (S, S1, done)    Add make audit grep #15 — no cross-feature deep imports
 - [ ] W1.14 (S, S1, task-blocked)    Drop `|| echo ::warning::` from CI lint job — hard fail — closes H6 — BLOCKED: custom_lint 0.8.1 crashes with analyzer ^9 (exit 255); making it hard-fail would break CI on every run. Unblocked when custom_lint upgrades to support analyzer ^9.
-- [ ] W1.15 (S, S1, in-progress)    Add unit tests for no_feature_cross_import lint rule — closes H7 partial
-- [ ] W1.16 (S, S1, pending)    Add unit tests for no_curriculum_display_name_bypass lint rule — closes H7 partial
+- [x] W1.15 (S, S1, done)    Add unit tests for no_feature_cross_import lint rule — closes H7 partial
+- [x] W1.16 (S, S1, done)    Add unit tests for no_curriculum_display_name_bypass lint rule — closes H7 partial
 
 ### Phase 1d · Dead code purge
 - [ ] W1.17 (S, S1, pending)    Verify zero refs; delete dashboard_model_provider.dart + .g.dart
@@ -104,7 +104,7 @@ Sync-point trigger tags: `[P1]` `[P2]` `[P3]` `[P4]` `[P5]` `[P6]` `[P7]`
 ### Phase 2e · Missing mergers (S2)
 - [x] W2.26 (M, S2, done)    Add EntityKind.learningOrder + LearningOrderMerger + router case + mergeRouterProvider entry — closes C3/H3
 - [x] W2.27 (M, S2, done)    Add 7 mergers + channels for SyncEngine-only collections (goals, learning_ledger, notif_settings, gamification_settings, ui_preferences, learning_order, profile_programs) — closes M1
-- [ ] W2.28 (M, S2, pending)    Add pullStreak step in pull_pipeline — closes M4
+- [ ] W2.28 (M, S2, in-progress)    Add pullStreak step in pull_pipeline — closes M4
 - [ ] W2.29 (M, S2, pending)    Wire real stage_definitions/ push + pull + listener channel + _channelToKind — closes H4
 - [ ] W2.30 (S, S2, pending)    Make _pullCollection throw on MergeOutcome.halt (after W2.26 lands)
 

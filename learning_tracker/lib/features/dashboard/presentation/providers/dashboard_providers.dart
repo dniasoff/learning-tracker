@@ -3,22 +3,22 @@ import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/core/enums/user_mode.dart';
-import 'package:learning_tracker/features/learning/presentation/providers/completion_writer_providers.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
-import 'package:learning_tracker/features/scheduler/domain/services/cross_curriculum_aggregator.dart';
-import 'package:learning_tracker/features/gamification/streak/streak_state_provider.dart';
 import 'package:learning_tracker/core/time/local_day_clock.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
-import 'package:learning_tracker/core/utils/pace_derivation.dart';
-import 'package:learning_tracker/features/gamification/domain/models/reward_milestone.dart';
+import 'package:learning_tracker/features/dashboard/domain/services/next_reward_selector.dart';
+import 'package:learning_tracker/features/dashboard/domain/services/track_completion_service.dart';
+import 'package:learning_tracker/features/dashboard/domain/use_cases/compute_pace_status_use_case.dart';
 import 'package:learning_tracker/features/gamification/domain/models/streak_recovery_info.dart';
 import 'package:learning_tracker/features/gamification/domain/services/points_service.dart';
 import 'package:learning_tracker/features/gamification/domain/services/reward_milestone_service.dart';
 import 'package:learning_tracker/features/gamification/domain/services/streak_service.dart';
+import 'package:learning_tracker/features/gamification/streak/streak_state_provider.dart';
+import 'package:learning_tracker/features/learning/presentation/providers/completion_writer_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/pace_status.dart';
-import 'package:learning_tracker/features/scheduler/domain/services/pace_calculator.dart';
+import 'package:learning_tracker/features/scheduler/domain/services/cross_curriculum_aggregator.dart';
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/curriculum_scope_providers.dart';
 import 'package:learning_tracker/features/stages/presentation/providers/stage_providers.dart';
@@ -108,6 +108,8 @@ Stream<List<CurriculumId>> dashboardActiveCurriculaStream(Ref ref) {
 /// stage defined for the track (stageOrder 1 = learn, 2+ = chazara).
 ///
 /// Formula: `(items where all required stages are done) / totalItems`.
+///
+/// Delegates computation to [TrackCompletionService].
 @riverpod
 Future<double> dashboardTrackCompletionPercentage(Ref ref, int trackId) async {
   ref.watch<int>(completionCommittedProvider);
@@ -128,31 +130,21 @@ Future<double> dashboardTrackCompletionPercentage(Ref ref, int trackId) async {
   final stageRepository = ref.watch(globalStageRepositoryProvider);
   final stages = await stageRepository.getStagesByTrack(trackId);
   if (stages.isEmpty) return 0.0;
-  // Use stageOrder (1 = learn, 2 = chazara 1, …) — the value stored in
-  // completion_events.stageId — NOT the stage definition's database primary key.
-  final requiredStageIds = stages.map((s) => s.stageOrder).toSet();
 
   final completions = await db.completionDao.getCompletionsByTrackAndProfile(
     trackId,
     profileId,
   );
-
-  // Build a map of sefariaRef → set of completed stageIds for this track.
-  final completedStagesByRef = <String, Set<int>>{};
-  for (final c in completions) {
-    completedStagesByRef.putIfAbsent(c.sefariaRef, () => {}).add(c.stageId);
-  }
-
-  // Count items where every required stage has a completion record.
-  final doneItems = completedStagesByRef.values
-      .where((doneStages) => requiredStageIds.every(doneStages.contains))
-      .length;
-
   final totalItems = await ref.watch(
     scopedItemCountProvider(curriculum).future,
   );
-  if (totalItems == 0) return 0.0;
-  return (doneItems / totalItems).clamp(0.0, 1.0);
+
+  const service = TrackCompletionService();
+  return service.computeTrackPercentage(
+    stages: stages,
+    completions: completions,
+    totalItems: totalItems,
+  );
 }
 
 /// Per-curriculum item-based completion percentage, scoped to active profile.
@@ -163,6 +155,8 @@ Future<double> dashboardTrackCompletionPercentage(Ref ref, int trackId) async {
 /// once toward the numerator.
 ///
 /// Formula: `(distinct sefariaRefs fully done in any track) / totalLeafItems`.
+///
+/// Delegates computation to [TrackCompletionService].
 @riverpod
 Future<double> dashboardCompletionPercentage(
   Ref ref,
@@ -181,21 +175,16 @@ Future<double> dashboardCompletionPercentage(
   if (totalItems == 0) return 0.0;
   if (completions.isEmpty) return 0.0;
 
-  // Group completed stageIds by (trackId → sefariaRef → Set<stageId>).
-  final byTrack = <int, Map<String, Set<int>>>{};
+  // Group completions by trackId.
+  final completionsByTrack = <int, List<Completion>>{};
   for (final c in completions) {
-    byTrack
-        .putIfAbsent(c.trackId, () => {})
-        .putIfAbsent(c.sefariaRef, () => {})
-        .add(c.stageId);
+    completionsByTrack.putIfAbsent(c.trackId, () => []).add(c);
   }
 
-  // Fetch required stages for each track encountered, then count done items.
+  // Fetch required stages for each track encountered.
   final stageRepository = ref.watch(globalStageRepositoryProvider);
-  final doneRefs = <String>{};
-  for (final entry in byTrack.entries) {
-    final trackId = entry.key;
-    final refStages = entry.value;
+  final byTrack = <int, TrackEntry>{};
+  for (final trackId in completionsByTrack.keys) {
     if (trackId == 0) continue; // bulk-mark sentinel — skip
     final stages = await stageRepository.getStagesByTrack(trackId);
     if (stages.isEmpty) {
@@ -205,17 +194,14 @@ Future<double> dashboardCompletionPercentage(
       );
       continue;
     }
-    // Use stageOrder (1 = learn, 2 = chazara 1, …) — the value stored in
-    // completion_events.stageId — NOT the stage definition's database primary key.
-    final requiredStageIds = stages.map((s) => s.stageOrder).toSet();
-    for (final refEntry in refStages.entries) {
-      if (requiredStageIds.every(refEntry.value.contains)) {
-        doneRefs.add(refEntry.key);
-      }
-    }
+    byTrack[trackId] = TrackEntry(
+      stages: stages,
+      completions: completionsByTrack[trackId]!,
+    );
   }
 
-  return (doneRefs.length / totalItems).clamp(0.0, 1.0);
+  const service = TrackCompletionService();
+  return service.computeCurriculumPercentage(byTrack: byTrack, totalItems: totalItems);
 }
 
 /// Per-curriculum last completion timestamp, scoped to active profile.
@@ -285,6 +271,8 @@ Future<int> dashboardGlobalPoints(Ref ref) async {
 }
 
 /// Next reward milestone for the child dashboard (closest threshold not yet met).
+///
+/// Delegates selection to [NextRewardSelector].
 @riverpod
 Future<DashboardChildNextReward?> dashboardChildNextReward(Ref ref) async {
   ref.watch<int>(completionCommittedProvider);
@@ -293,67 +281,48 @@ Future<DashboardChildNextReward?> dashboardChildNextReward(Ref ref) async {
 
   final db = ref.watch(userDatabaseProvider);
   final profileId = ref.watch(activeProfileIdProvider);
-  final service = RewardMilestoneService(db, profileId: profileId);
+  final milestoneService = RewardMilestoneService(db, profileId: profileId);
 
-  if (await service.stripStockTemplateMilestones()) {
+  if (await milestoneService.stripStockTemplateMilestones()) {
     await ref.read(syncEngineProvider)?.pushGamificationSettingsSnapshot();
   }
 
   final tracks = await db.trackDao.getActiveTracksForProfile(profileId);
 
-  DashboardChildNextReward? best;
-  var bestGap = 1 << 30;
-
-  void consider({
-    required int trackId,
-    required int progressPoints,
-    required int threshold,
-    required String title,
-    required bool isGlobal,
-  }) {
-    if (progressPoints >= threshold) return;
-    final gap = threshold - progressPoints;
-    if (gap < bestGap) {
-      bestGap = gap;
-      best = DashboardChildNextReward(
-        trackId: trackId,
-        trackPoints: progressPoints,
-        threshold: threshold,
-        title: title,
-        isGlobal: isGlobal,
-      );
-    }
-  }
-
+  // Build track entries for the selector.
+  final trackEntries = <TrackMilestoneEntry>[];
   for (final track in tracks) {
-    final trackPoints = await service.getTrackPointsTotalForRewards(track.id);
-    final milestones = await service.getMilestonesForTrack(track.id);
-    for (final m in milestones) {
-      if (!m.isEnabled) continue;
-      consider(
+    final points = await milestoneService.getTrackPointsTotalForRewards(
+      track.id,
+    );
+    final milestones = await milestoneService.getMilestonesForTrack(track.id);
+    trackEntries.add(
+      TrackMilestoneEntry(
         trackId: track.id,
-        progressPoints: trackPoints,
-        threshold: m.thresholdPoints,
-        title: m.title,
-        isGlobal: false,
-      );
-    }
-  }
-
-  final globalPoints = await service.getGlobalPointsForRewards();
-  final globalMilestones = await service.getGlobalMilestones();
-  for (final m in globalMilestones) {
-    if (!m.isEnabled) continue;
-    consider(
-      trackId: RewardMilestone.kGlobalTrackSentinel,
-      progressPoints: globalPoints,
-      threshold: m.thresholdPoints,
-      title: m.title,
-      isGlobal: true,
+        points: points,
+        milestones: milestones,
+      ),
     );
   }
 
-  return best;
+  final globalPoints = await milestoneService.getGlobalPointsForRewards();
+  final globalMilestones = await milestoneService.getGlobalMilestones();
+
+  const selector = NextRewardSelector();
+  final result = selector.select(
+    trackEntries: trackEntries,
+    globalPoints: globalPoints,
+    globalMilestones: globalMilestones,
+  );
+  if (result == null) return null;
+
+  return DashboardChildNextReward(
+    trackId: result.trackId,
+    trackPoints: result.trackPoints,
+    threshold: result.threshold,
+    title: result.title,
+    isGlobal: result.isGlobal,
+  );
 }
 
 /// Streak recovery info — whether the streak was just saved by grace period.
@@ -374,6 +343,8 @@ Future<StreakRecoveryInfo> dashboardStreakRecovery(Ref ref) async {
 ///
 /// Fetches goal data and computes pace internally so the dashboard
 /// doesn't need to know goal details.
+///
+/// Delegates computation to [ComputePaceStatusUseCase].
 @riverpod
 Future<PaceStatus?> dashboardPaceStatus(
   Ref ref,
@@ -395,84 +366,52 @@ Future<PaceStatus?> dashboardPaceStatus(
   // the goal the user just set, not whichever row the DB returns first).
   final goal = goals.reduce((a, b) => a.createdAt.isAfter(b.createdAt) ? a : b);
 
-  // Get personal-track completions for daily counts
+  // Get personal-track completions for daily counts.
   final allCompletions = await db.completionDao
       .getCompletionsByCurriculumAndProfile(curriculum.storageKey, profileId);
   final personalCompletions = allCompletions
       .where((c) => c.trackType == TrackType.personal.storageKey)
       .toList();
 
-  final dailyCounts = <DateTime, int>{};
-  for (final c in personalCompletions) {
-    final date = DateTime.utc(
-      c.completedAt.year,
-      c.completedAt.month,
-      c.completedAt.day,
-    );
-    dailyCounts[date] = (dailyCounts[date] ?? 0) + 1;
-  }
+  final dailyCounts = ComputePaceStatusUseCase.buildDailyCounts(
+    personalCompletions.map((c) => c.completedAt),
+  );
 
   // Real total-item count from the scoped content tree (DNI-345).
   final totalItems = await ref.watch(
     scopedItemCountProvider(curriculum).future,
   );
 
-  // Pace-based goal
-  if (goal.goalType == 'pace' &&
-      goal.paceValue != null &&
-      goal.pacePeriod != null) {
-    final dailyRate = PaceCalculator.paceToDaily(
-      goal.paceValue!,
-      goal.pacePeriod!,
-    );
-    return PaceCalculator.calculateForPaceGoal(
-      targetPacePerDay: dailyRate,
-      totalItems: totalItems,
-      completedItems: personalCompletions.length,
-      dailyCompletionCounts: dailyCounts,
-      today: now,
-    );
-  }
-
-  // Deadline-based goal. A deadline goal ALWAYS yields a projection: prefer
-  // the explicit pace the wizard stored, otherwise derive one from the
-  // deadline + scope + study-day density. `calculateForPaceGoal` projects
-  // deterministically from the target pace (no completion history needed),
-  // so "No projection" can never appear for a track that has a deadline —
-  // unlike `PaceCalculator.calculate`, whose rolling-average projection is
-  // null on day one.
-  if (goal.targetDate == null) return null;
-
-  var paceValue = goal.paceValue;
-  var pacePeriod = goal.pacePeriod;
-  if (paceValue == null || pacePeriod == null) {
+  // Resolve study-day counts for deadline goals without a stored pace.
+  int? studyDaysInWindow;
+  int? studyDaysPerWeek;
+  if ((goal.goalType != 'pace' || goal.paceValue == null || goal.pacePeriod == null) &&
+      goal.targetDate != null) {
     final start = DateUtils.extractLocalDate(now);
     final end = DateUtils.extractLocalDate(goal.targetDate!.toLocal());
-    final studyDaysInWindow = end.isBefore(start)
+    studyDaysInWindow = end.isBefore(start)
         ? 0
         : await db.studyDayConfigDao.countStudyDaysInInclusiveDateRangeForTrack(
             trackId: goal.trackId,
             startInclusive: start,
             endInclusive: end,
           );
-    final studyDaysPerWeek = await db.studyDayConfigDao
-        .getStudyDaysPerWeekForTrack(trackId: goal.trackId);
-    final derived = derivePaceFromDeadline(
-      totalScopeItems: totalItems,
-      studyDaysInWindow: studyDaysInWindow,
-      studyDaysPerWeek: studyDaysPerWeek,
+    studyDaysPerWeek = await db.studyDayConfigDao.getStudyDaysPerWeekForTrack(
+      trackId: goal.trackId,
     );
-    paceValue = derived.paceValue;
-    pacePeriod = derived.pacePeriod;
   }
 
-  final dailyRate = PaceCalculator.paceToDaily(paceValue, pacePeriod);
-  return PaceCalculator.calculateForPaceGoal(
-    targetPacePerDay: dailyRate,
-    totalItems: totalItems,
-    completedItems: personalCompletions.length,
-    dailyCompletionCounts: dailyCounts,
-    today: now,
+  const useCase = ComputePaceStatusUseCase();
+  return useCase.execute(
+    PaceStatusInput(
+      goal: goal,
+      completedItems: personalCompletions.length,
+      dailyCompletionCounts: dailyCounts,
+      totalItems: totalItems,
+      today: now,
+      studyDaysInWindow: studyDaysInWindow,
+      studyDaysPerWeek: studyDaysPerWeek,
+    ),
   );
 }
 
