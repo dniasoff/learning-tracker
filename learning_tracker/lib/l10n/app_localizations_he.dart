@@ -983,6 +983,26 @@ class AppLocalizationsHe extends AppLocalizations {
   String get profilePickerSubtitle => 'בחרו פרופיל כדי להמשיך\nאת המסע';
 
   @override
+  String get profilePickerMyChildren => 'הילדים שלי';
+
+  @override
+  String get profilePickerTutoredChildren => 'ילדים מוּדרכים';
+
+  @override
+  String get tutorModeIndicator => 'מצב מדריך';
+
+  @override
+  String get tutorCannotMarkLiveCompletion =>
+      'מדריכים אינם יכולים לסמן השלמות חיות';
+
+  @override
+  String get tutorWriteForbiddenTitle => 'פעולה לא מורשית';
+
+  @override
+  String get tutorWriteForbiddenMessage =>
+      'מדריכים אינם יכולים לסמן השלמות חיות. פעולה זו מזכה את הרצף והפרסים של הילד, ושמורה להורה או לילד.';
+
+  @override
   String get addProfile => 'הוספת פרופיל';
 
   @override

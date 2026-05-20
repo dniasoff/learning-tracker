@@ -1847,6 +1847,42 @@ abstract class AppLocalizations {
   /// **'Choose a profile to continue your\njourney'**
   String get profilePickerSubtitle;
 
+  /// No description provided for @profilePickerMyChildren.
+  ///
+  /// In en, this message translates to:
+  /// **'MY CHILDREN'**
+  String get profilePickerMyChildren;
+
+  /// No description provided for @profilePickerTutoredChildren.
+  ///
+  /// In en, this message translates to:
+  /// **'TUTORED CHILDREN'**
+  String get profilePickerTutoredChildren;
+
+  /// No description provided for @tutorModeIndicator.
+  ///
+  /// In en, this message translates to:
+  /// **'Tutor mode'**
+  String get tutorModeIndicator;
+
+  /// No description provided for @tutorCannotMarkLiveCompletion.
+  ///
+  /// In en, this message translates to:
+  /// **'Tutors cannot mark live completions'**
+  String get tutorCannotMarkLiveCompletion;
+
+  /// No description provided for @tutorWriteForbiddenTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Action not allowed'**
+  String get tutorWriteForbiddenTitle;
+
+  /// No description provided for @tutorWriteForbiddenMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Tutors cannot mark live forward completions. This action would credit the child\'s streak and rewards, which is reserved for the parent or child.'**
+  String get tutorWriteForbiddenMessage;
+
   /// No description provided for @addProfile.
   ///
   /// In en, this message translates to:

@@ -994,6 +994,26 @@ class AppLocalizationsEn extends AppLocalizations {
       'Choose a profile to continue your\njourney';
 
   @override
+  String get profilePickerMyChildren => 'MY CHILDREN';
+
+  @override
+  String get profilePickerTutoredChildren => 'TUTORED CHILDREN';
+
+  @override
+  String get tutorModeIndicator => 'Tutor mode';
+
+  @override
+  String get tutorCannotMarkLiveCompletion =>
+      'Tutors cannot mark live completions';
+
+  @override
+  String get tutorWriteForbiddenTitle => 'Action not allowed';
+
+  @override
+  String get tutorWriteForbiddenMessage =>
+      'Tutors cannot mark live forward completions. This action would credit the child\'s streak and rewards, which is reserved for the parent or child.';
+
+  @override
   String get addProfile => 'Add Profile';
 
   @override

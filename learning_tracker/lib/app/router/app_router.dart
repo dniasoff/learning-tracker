@@ -16,6 +16,8 @@ import 'package:learning_tracker/features/content_browsing/presentation/screens/
 import 'package:learning_tracker/features/content_browsing/presentation/screens/text_display_screen.dart';
 import 'package:learning_tracker/features/dashboard/presentation/screens/dashboard_screen.dart';
 import 'package:learning_tracker/features/gamification/presentation/screens/gamification_screen.dart';
+import 'package:learning_tracker/features/gamification/presentation/screens/point_config_screen.dart';
+import 'package:learning_tracker/features/gamification/presentation/screens/reward_configuration_screen.dart';
 import 'package:learning_tracker/features/learning/presentation/screens/learning_screen.dart';
 import 'package:learning_tracker/features/learning_order/presentation/screens/learning_order_screen.dart';
 import 'package:learning_tracker/features/notifications/presentation/screens/notifications_screen.dart';
@@ -23,12 +25,10 @@ import 'package:learning_tracker/features/onboarding/presentation/screens/app_in
 import 'package:learning_tracker/features/onboarding/presentation/screens/onboarding_screen.dart';
 import 'package:learning_tracker/features/onboarding/presentation/screens/permission_prompt_screen.dart';
 import 'package:learning_tracker/features/onboarding/presentation/screens/signup_screen.dart';
+import 'package:learning_tracker/features/profiles/presentation/screens/manage_learners_screen.dart';
 import 'package:learning_tracker/features/profiles/presentation/screens/parent_settings_screen.dart';
 import 'package:learning_tracker/features/profiles/presentation/screens/parent_track_management_screen.dart';
 import 'package:learning_tracker/features/profiles/presentation/screens/pin_flow_screen.dart';
-import 'package:learning_tracker/features/gamification/presentation/screens/point_config_screen.dart';
-import 'package:learning_tracker/features/gamification/presentation/screens/reward_configuration_screen.dart';
-import 'package:learning_tracker/features/profiles/presentation/screens/manage_learners_screen.dart';
 import 'package:learning_tracker/features/profiles/presentation/screens/profile_picker_screen.dart';
 import 'package:learning_tracker/features/progress/presentation/screens/completion_history_screen.dart';
 import 'package:learning_tracker/features/progress/presentation/screens/curriculum_progress_screen.dart';
@@ -49,6 +49,12 @@ import 'package:learning_tracker/features/settings/presentation/screens/upgrade_
 import 'package:learning_tracker/features/sync/presentation/screens/sync_screen.dart';
 import 'package:learning_tracker/features/track_setup/presentation/screens/track_detail_screen.dart';
 import 'package:learning_tracker/features/track_setup/presentation/screens/track_management_hub_screen.dart';
+import 'package:learning_tracker/features/tutoring/presentation/screens/accept_invite_screen.dart';
+import 'package:learning_tracker/features/tutoring/presentation/screens/decline_invite_screen.dart';
+import 'package:learning_tracker/features/tutoring/presentation/screens/invite_tutor_screen.dart';
+import 'package:learning_tracker/features/tutoring/presentation/screens/manage_grants_screen.dart';
+import 'package:learning_tracker/features/tutoring/presentation/screens/manage_tutors_screen.dart';
+import 'package:learning_tracker/features/tutoring/presentation/screens/tutor_audit_log_screen.dart';
 
 part 'app_router.gr.dart';
 
@@ -282,6 +288,23 @@ class AppRouter extends RootStackRouter {
     AutoRoute(
       path: '/curriculum/:curriculumId/order',
       page: LearningOrderRoute.page,
+      guards: [authGuard],
+    ),
+
+    // Tutoring routes (W6.11-W6.13)
+    AutoRoute(
+      path: '/tutor/manage-tutors',
+      page: ManageTutorsRoute.page,
+      guards: [authGuard],
+    ),
+    AutoRoute(
+      path: '/tutor/my-grants',
+      page: ManageGrantsRoute.page,
+      guards: [authGuard],
+    ),
+    AutoRoute(
+      path: '/tutor/audit-log',
+      page: TutorAuditLogRoute.page,
       guards: [authGuard],
     ),
   ];

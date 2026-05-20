@@ -1,8 +1,8 @@
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
 import 'package:learning_tracker/core/enums/user_mode.dart';
+import 'package:learning_tracker/core/exceptions/permission_exception.dart';
 import 'package:learning_tracker/core/labels/curriculum_label_providers.dart';
 import 'package:learning_tracker/core/labels/domain_term_labels.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
@@ -23,6 +23,8 @@ import 'package:learning_tracker/features/learning/presentation/providers/comple
 import 'package:learning_tracker/features/learning/presentation/providers/completion_writer_providers.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dart';
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
+import 'package:learning_tracker/features/tutoring/domain/models/tutor_grant_aggregate.dart';
+import 'package:learning_tracker/features/tutoring/presentation/providers/manage_tutors_providers.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 @RoutePage()
@@ -674,6 +676,33 @@ class _CompletionSectionState extends ConsumerState<_CompletionSection> {
           ),
         );
       }
+    } on TutorWriteForbiddenException {
+      // W6.19: Catch the domain-layer guard and surface a friendly dialog
+      // explaining the permission boundary (FR-3 / FR-6.2).
+      if (mounted) {
+        setState(() => _saving = false);
+        await showDialog<void>(
+          context: context,
+          builder: (ctx) {
+            final l10n = AppLocalizations.of(ctx)!;
+            return AlertDialog(
+              icon: const Icon(
+                Icons.school_rounded,
+                color: Color(0xFFD97706), // Amber-600 — tutor accent
+                size: 32,
+              ),
+              title: Text(l10n.tutorWriteForbiddenTitle),
+              content: Text(l10n.tutorWriteForbiddenMessage),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(ctx).pop(),
+                  child: const Text('OK'),
+                ),
+              ],
+            );
+          },
+        );
+      }
     } catch (e, st) {
       AppLogger.instance.error(
         event: 'Failed to mark completion',
@@ -692,6 +721,15 @@ class _CompletionSectionState extends ConsumerState<_CompletionSection> {
         );
       }
     }
+  }
+
+  // W6.15/W6.17: Returns true when the current user is in a tutor context
+  // (has any active incoming tutor grant). When true, live-mark actions
+  // are disabled (FR-3, FR-6.2).
+  bool _isTutorSession(WidgetRef ref) {
+    final grantsAsync = ref.watch(incomingTutorGrantsProvider);
+    return grantsAsync.asData?.value.any((g) => g.grantState is ActiveGrant) ??
+        false;
   }
 
   @override
@@ -776,54 +814,80 @@ class _CompletionSectionState extends ConsumerState<_CompletionSection> {
                 AppLocalizations.of(context)?.textReaderNextDailyTask ??
                 'Next daily task';
 
+            // W6.17: Check if we are in a tutor session and disable live mark.
+            final isTutor = _isTutorSession(ref);
+            final l10n = AppLocalizations.of(context)!;
+
             return Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                FilledButton(
-                  onPressed: (_saving || isDone)
-                      ? null
-                      : () => _handleComplete(task, trackType),
-                  style: FilledButton.styleFrom(
-                    backgroundColor: isDone
-                        ? AppTheme.brandGoldDeep
-                        : AppTheme.brandBlue,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(999),
-                    ),
-                    elevation: 2,
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      if (_saving)
-                        const SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: AppTheme.brandCreamCard,
-                          ),
-                        )
-                      else
-                        Icon(
-                          isDone
-                              ? Icons.check_circle
-                              : Icons.check_circle_outline_rounded,
-                          size: 20,
-                        ),
-                      const SizedBox(width: 10),
-                      Text(
-                        isDone
-                            ? 'Completed (${domainTermLabels(ref).resolveStoredStageName(task.stageName)})'
-                            : 'Mark Complete',
-                        style: const TextStyle(
-                          fontSize: 31 / 2,
-                          fontWeight: FontWeight.w700,
-                        ),
+                // W6.17/W6.18: Wrap in Tooltip when disabled due to tutor mode.
+                Tooltip(
+                  // W6.18: Tooltip text — shown only when the button is
+                  // disabled for tutor reasons (not for "already done").
+                  message: isTutor ? l10n.tutorCannotMarkLiveCompletion : '',
+                  child: FilledButton(
+                    // W6.17: Disable for tutors regardless of isDone state.
+                    onPressed: (_saving || isDone || isTutor)
+                        ? null
+                        : () => _handleComplete(task, trackType),
+                    style: FilledButton.styleFrom(
+                      // W6.17: When in tutor mode, show a muted amber
+                      // colour to visually communicate the disabled state.
+                      backgroundColor: isTutor
+                          ? const Color(0xFFD97706).withValues(alpha: 0.3)
+                          : isDone
+                          ? AppTheme.brandGoldDeep
+                          : AppTheme.brandBlue,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(999),
                       ),
-                    ],
+                      elevation: isTutor ? 0 : 2,
+                      disabledBackgroundColor: isTutor
+                          ? const Color(0xFFD97706).withValues(alpha: 0.2)
+                          : null,
+                      disabledForegroundColor: isTutor
+                          ? const Color(0xFFD97706).withValues(alpha: 0.7)
+                          : null,
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (_saving)
+                          const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: AppTheme.brandCreamCard,
+                            ),
+                          )
+                        else
+                          Icon(
+                            // W6.17: When tutor, show a school/lock icon.
+                            isTutor
+                                ? Icons.school_rounded
+                                : isDone
+                                ? Icons.check_circle
+                                : Icons.check_circle_outline_rounded,
+                            size: 20,
+                          ),
+                        const SizedBox(width: 10),
+                        Text(
+                          isTutor
+                              ? 'Not available (tutor mode)'
+                              : isDone
+                              ? 'Completed (${domainTermLabels(ref).resolveStoredStageName(task.stageName)})'
+                              : 'Mark Complete',
+                          style: const TextStyle(
+                            fontSize: 31 / 2,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
                 if (nextTask != null) ...[
