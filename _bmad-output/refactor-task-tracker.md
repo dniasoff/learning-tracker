@@ -163,14 +163,14 @@ Sync-point trigger tags: `[P1]` `[P2]` `[P3]` `[P4]` `[P5]` `[P6]` `[P7]`
 - [x] W3.29 (S, S2, done)    Drop isActive/deletedAt/deactivatedAt/supersededAt ad-hoc tombstone columns
 
 ### Phase 3d · Firestore rebuild (S2)
-- [ ] W3.30 (S, S2, pending)    Delete top-level compat blocks from firestore.rules — closes T11
-- [ ] W3.31 (M, S2, pending)    Rewrite firestore.rules for new snake_case + ULID doc-id shape
-- [ ] W3.32 (S, S2, pending)    Split stage_definitions/{curriculumId} out of settings/{curriculumId} — closes T8 partial
-- [ ] W3.33 (S, S2, pending)    Unify three preference docs into preferences/{scope} collection
-- [ ] W3.34 (S, S2, pending)    Rename curriculum_import_metadata → import_metadata
-- [ ] W3.35 (S, S2, pending)    Change completions/ to ULID doc-ids
-- [ ] W3.36 (S, S2, pending)    Change learning_ledger/ to use existing ULIDs as doc-ids — closes T10
-- [ ] W3.37 (S, S2, pending)    Change streak/ from snapshot doc → streak_events/{ulid} collection
+- [ ] W3.30 (S, S2, in-progress)    Delete top-level compat blocks from firestore.rules — closes T11
+- [ ] W3.31 (M, S2, in-progress)    Rewrite firestore.rules for new snake_case + ULID doc-id shape
+- [ ] W3.32 (S, S2, in-progress)    Split stage_definitions/{curriculumId} out of settings/{curriculumId} — closes T8 partial
+- [ ] W3.33 (S, S2, in-progress)    Unify three preference docs into preferences/{scope} collection
+- [ ] W3.34 (S, S2, in-progress)    Rename curriculum_import_metadata → import_metadata
+- [ ] W3.35 (S, S2, in-progress)    Change completions/ to ULID doc-ids
+- [ ] W3.36 (S, S2, in-progress)    Change learning_ledger/ to use existing ULIDs as doc-ids — closes T10
+- [ ] W3.37 (S, S2, in-progress)    Change streak/ from snapshot doc → streak_events/{ulid} collection
 
 ### Phase 3e · Tutor mode schema (S3)
 - [x] W3.38 (M, S3, done)    Add tutor_grants/{grantId} top-level collection with deterministic doc-id strategy
@@ -218,7 +218,7 @@ Sync-point trigger tags: `[P1]` `[P2]` `[P3]` `[P4]` `[P5]` `[P6]` `[P7]`
 - [ ] W4.19 (M, S5, in-progress)    learning_order_repository_impl.saveOrder:91-129 → SaveLearningOrderUseCase
 - [x] W4.20 (S, S5, done)    parent_dashboard_aggregator._computePaceStatus dup → reuse ComputePaceStatusUseCase
 - [ ] W4.21 (M, S5, in-progress)    notification_providers.dart:22-46 → ReminderPreferences + NotificationPreferencesRepository
-- [ ] W4.22 (S, S5, task-blocked)    track_learning_order_repository_impl._buildMasechtosIndex → MasechtaOrderingPolicy (already W4.15) — BLOCKED: depends on W4.15 (S4 task, not yet done)
+- [ ] W4.22 (S, S5, in-progress)    track_learning_order_repository_impl._buildMasechtosIndex → MasechtaOrderingPolicy (already W4.15)
 - [ ] W4.23 (S, S5, in-progress)    profile_providers.dart SelectedProfileId → ProfileSession aggregate in profiles/domain/
 - [ ] W4.24 (S, S5, in-progress)    dashboard_providers.dart side-effect-in-read-provider → write-path repository method
 - [x] W4.25 (M, S4, done)    core/learning/completion_writer.commitBatch/commit → sealed BatchPlan + _classifyBatch/_applyBatchPlan/_resolveResults — **B1 credit policy at batch classification**
@@ -331,13 +331,13 @@ Sync-point trigger tags: `[P1]` `[P2]` `[P3]` `[P4]` `[P5]` `[P6]` `[P7]`
 - [x] W7.4  (S, S5, done)    Rename InvalidOperationException → InvalidTrackOperationException; under ValidationException
 
 ### Phase 7b · Crisis-class telemetry (S2)
-- [ ] W7.5  (M, S2, pending)    Wire merge_row_skipped event at silent skip sites in DriftMergeStore + ProfileProgramMerger — closes L2
-- [ ] W7.6  (S, S2, pending)    Wire merge_router_halt event at pull_pipeline.dart halt site
-- [ ] W7.7  (S, S2, pending)    Wire outbox_dead_lettered event at outbox_processor max-attempts
-- [ ] W7.8  (S, S2, pending)    Wire listener_error event from ListenerSupervisor._onError callback
-- [ ] W7.9  (S, S2, pending)    Wire sync_pull_started/completed/failed events at orchestrator boundaries
-- [ ] W7.10 (S, S2, pending)    Wire permission_denied event from gateway typed FirestorePermissionDeniedException
-- [ ] W7.11 (S, S2, pending)    Wire tutor-mode events: tutor_invite_*, tutor_grant_*, tutor_action_recorded, tutor_pin_set, tutor_live_mark_blocked; bulk_engagement_skipped, lifetime_achievement_skipped — **B1 regression telemetry**
+- [ ] W7.5  (M, S2, in-progress)    Wire merge_row_skipped event at silent skip sites in DriftMergeStore + ProfileProgramMerger — closes L2
+- [ ] W7.6  (S, S2, in-progress)    Wire merge_router_halt event at pull_pipeline.dart halt site
+- [ ] W7.7  (S, S2, in-progress)    Wire outbox_dead_lettered event at outbox_processor max-attempts
+- [ ] W7.8  (S, S2, in-progress)    Wire listener_error event from ListenerSupervisor._onError callback
+- [ ] W7.9  (S, S2, in-progress)    Wire sync_pull_started/completed/failed events at orchestrator boundaries
+- [ ] W7.10 (S, S2, in-progress)    Wire permission_denied event from gateway typed FirestorePermissionDeniedException
+- [ ] W7.11 (S, S2, in-progress)    Wire tutor-mode events: tutor_invite_*, tutor_grant_*, tutor_action_recorded, tutor_pin_set, tutor_live_mark_blocked; bulk_engagement_skipped, lifetime_achievement_skipped — **B1 regression telemetry**
 
 ### Phase 7c · Firebase Analytics + Crashlytics (S5)
 - [x] W7.12 (M, S5, done)    Add firebase_analytics to pubspec.yaml

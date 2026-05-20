@@ -1,8 +1,9 @@
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
-import 'package:learning_tracker/features/tracks/whole_curriculum_order/domain/models/learning_order_item.dart';
 import 'package:learning_tracker/features/tracks/track_order/domain/repositories/track_learning_order_repository.dart';
+import 'package:learning_tracker/features/tracks/track_order/domain/services/masechta_ordering_policy.dart';
+import 'package:learning_tracker/features/tracks/whole_curriculum_order/domain/models/learning_order_item.dart';
 
 class TrackLearningOrderRepositoryImpl implements TrackLearningOrderRepository {
   TrackLearningOrderRepositoryImpl({
@@ -40,59 +41,21 @@ class TrackLearningOrderRepositoryImpl implements TrackLearningOrderRepository {
     final allItems = await _contentRepository.getContentForCurriculum(
       curriculumId,
     );
-
-    // Look up the user's seder order so we can group masechtos by their
-    // parent seder's position. Without this the masechtos list keeps its
-    // source-data order even after the sedarim above are reordered.
     final sedarimIndex = await _buildSedarimIndex(curriculumId);
+
+    // Convert DAO rows to the savedSederOrder list expected by the policy:
+    // only include rows whose sefariaRef matches a known seder, in row order.
     final daoRows = await _database.trackLearningOrderDao.getByTrack(trackId);
-    final sederUserOrder = <String, int>{};
-    var seen = 0;
-    for (final row in daoRows) {
-      if (sedarimIndex.containsKey(row.sefariaRef)) {
-        sederUserOrder[row.sefariaRef] = seen++;
-      }
-    }
+    final savedSederOrder = daoRows
+        .where((r) => sedarimIndex.containsKey(r.sefariaRef))
+        .map((r) => r.sefariaRef)
+        .toList();
 
-    int parentSederPriority(String level1) {
-      // Match the stored seder ref by its sefariaRef. In Mishnayos/Bavli
-      // data the seder container's sefariaRef equals its level1 value.
-      final userIdx = sederUserOrder[level1];
-      if (userIdx != null) return userIdx;
-      // Fall back to source order so unordered sedarim stay in default place.
-      final src = sedarimIndex[level1]?.sortOrder ?? 1 << 30;
-      return 1000 + src; // bucketed after user-ordered sedarim
-    }
-
-    // Filter to L2-only containers (level2 set, level3 null, level4 null,
-    // not a leaf). This excludes Perakim/Mishnayot that were leaking into
-    // the masechtos list because they also have level2 != null.
-    final masechtos =
-        allItems
-            .where(
-              (i) =>
-                  i.level2 != null &&
-                  i.level3 == null &&
-                  i.level4 == null &&
-                  !i.isLeaf,
-            )
-            .toList()
-          ..sort((a, b) {
-            final pa = parentSederPriority(a.level1);
-            final pb = parentSederPriority(b.level1);
-            if (pa != pb) return pa.compareTo(pb);
-            return a.sortOrder.compareTo(b.sortOrder);
-          });
-
-    final index = <String, ({String he, String en, int sortOrder})>{};
-    for (var i = 0; i < masechtos.length; i++) {
-      final item = masechtos[i];
-      index.putIfAbsent(
-        item.sefariaRef,
-        () => (he: item.displayNameHe, en: item.displayNameEn, sortOrder: i),
-      );
-    }
-    return index;
+    return const MasechtaOrderingPolicy().buildIndex(
+      allItems: allItems,
+      sedarimIndex: sedarimIndex,
+      savedSederOrder: savedSederOrder,
+    );
   }
 
   Future<List<LearningOrderItem>> _getOrderedItems(
