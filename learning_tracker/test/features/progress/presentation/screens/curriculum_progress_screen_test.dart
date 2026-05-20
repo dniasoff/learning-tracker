@@ -428,17 +428,16 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      // Level-1 subtitle: 1/4 unique items touched, 50.00% — wait, no,
-      // the unique-items metric is "items with any completion", which is
-      // 1 (leaves[0]) out of 4 → 25.00%. Two completion events under that
-      // ref → "2 chazaros".
+      // Level-1 subtitle: 1/4 unique items touched at 25.00%.
+      // The hierarchy subtitle now shows ONLY chazara-stage events (stages
+      // after the first learn stage). One chazara event was seeded for
+      // leaves[0] (chazara1StageId) → "1 chazaros".
       expect(
-        find.textContaining('· 2 chazaros'),
+        find.textContaining('· 1 chazaros'),
         findsWidgets,
         reason:
-            'Hierarchy row subtitle must adopt the new "N chazaros" '
-            'vocabulary (W2 chazaros key). Stage events accumulate '
-            'irrespective of which ref they belong to.',
+            'Hierarchy row subtitle shows chazara-only count (stages after '
+            'the first). One chazara event was seeded → "1 chazaros".',
       );
     },
   );
@@ -475,13 +474,16 @@ void main() {
       );
       await tester.pumpAndSettle();
 
+      // Same as the English test but with Hebrew script. One chazara event
+      // seeded → "1 חזרות" (singular-form plural is used in Hebrew for counts
+      // per the terms vocab).
       expect(
-        find.textContaining('· 2 חזרות'),
+        find.textContaining('· 1 חזרות'),
         findsWidgets,
         reason:
             'When the Hebrew Terms toggle is ON, the chazaros suffix must '
             'render with the Hebrew plural ("חזרות") instead of the '
-            'transliteration',
+            'transliteration. One chazara event seeded → "1 חזרות".',
       );
     },
   );

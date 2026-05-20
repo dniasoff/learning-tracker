@@ -2,7 +2,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/database/daos/completion_dao.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
+import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
+import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/completion_writer_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
@@ -10,8 +12,7 @@ import 'package:learning_tracker/features/progress/data/repositories/progress_re
 import 'package:learning_tracker/features/progress/domain/models/curriculum_progress_data.dart';
 import 'package:learning_tracker/features/progress/domain/repositories/progress_repository.dart';
 import 'package:learning_tracker/features/progress/domain/services/curriculum_progress_service.dart';
-import 'package:learning_tracker/features/scheduler/domain/models/pace_status.dart';
-import 'package:learning_tracker/features/scheduler/domain/services/pace_calculator.dart';
+import 'package:learning_tracker/features/progress/domain/services/pace_calculator.dart';
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/curriculum_scope_providers.dart';
 import 'package:learning_tracker/features/tracks/stages/presentation/providers/stage_providers.dart';
@@ -166,57 +167,103 @@ Future<CurriculumProgressData> curriculumProgress(
 /// Pace status for a curriculum (null if no goal exists).
 ///
 /// Family provider keyed by curriculumId per P3.
+///
+/// F2 fix: uses [PaceCalculator.compute] from the progress domain so that
+/// bulk-marked completions (sentinel date 2000-01-01) are excluded from live
+/// velocity via the [trackStartDate] filter. Previously the scheduler's
+/// [PaceCalculator.calculate] received ALL personal completions including
+/// bulk entries, causing phantom "Ahead by 296 days on day 1" results.
 @riverpod
-Future<PaceStatus?> curriculumPaceStatus(Ref ref, String curriculumId) async {
+Future<PaceCalculator?> curriculumPaceStatus(
+  Ref ref,
+  String curriculumId,
+) async {
+  ref.watch<int>(completionCommittedProvider);
   final db = ref.watch(userDatabaseProvider);
   final now = ref.watch(clockProvider);
-
   final profileId = ref.watch(activeProfileIdProvider);
 
-  // Get the most recent goal for this curriculum
+  // Resolve CurriculumId enum for content.
+  final curriculumEnum = CurriculumId.values
+      .where((c) => c.storageKey == curriculumId)
+      .firstOrNull;
+  if (curriculumEnum == null) return null;
+
+  // Get goals for this curriculum.
   final goals = await db.goalDao.getGoalsByCurriculumAndProfile(
     curriculumId,
     profileId,
   );
   if (goals.isEmpty) return null;
 
-  final goal = goals.first;
+  // Pick the most recently created goal — defends against stale rows.
+  final goal = goals.reduce((a, b) => a.createdAt.isAfter(b.createdAt) ? a : b);
   if (goal.targetDate == null) return null;
 
-  // Resolve CurriculumId enum for content
-  final curriculumEnum = CurriculumId.values.firstWhere(
-    (c) => c.storageKey == curriculumId,
-  );
+  // Fetch the track to get activatedAt (= trackStartDate).
+  final track = await db.trackDao.getTrackById(goal.trackId);
+  if (track == null) return null;
 
-  // Use scoped item count for pace calculation
-  final scopedTotal = await ref.watch(
+  // trackStartDate = local-day midnight of the track's activatedAt.
+  final trackStartDate = DateUtils.extractLocalDate(track.activatedAt);
+
+  // Use scoped item count for pace calculation.
+  final totalItems = await ref.watch(
     scopedItemCountProvider(curriculumEnum).future,
   );
 
-  // Get personal-track completions
+  // Get personal-track completions.
   final allCompletions = await db.completionDao
       .getCompletionsByCurriculumAndProfile(curriculumId, profileId);
   final personalCompletions = allCompletions
       .where((c) => c.trackType == TrackType.personal.storageKey)
       .toList();
 
-  // Build daily counts
-  final dailyCounts = <DateTime, int>{};
-  for (final c in personalCompletions) {
-    final date = DateTime.utc(
-      c.completedAt.year,
-      c.completedAt.month,
-      c.completedAt.day,
-    );
-    dailyCounts[date] = (dailyCounts[date] ?? 0) + 1;
+  // Split completions into bulk baseline (before trackStartDate) and live
+  // (on or after trackStartDate). Bulk entries have sentinel date 2000-01-01
+  // which is always before any real trackStartDate.
+  final bulkBaseline = personalCompletions
+      .where((c) {
+        final local = DateUtils.extractLocalDate(c.completedAt);
+        return local.isBefore(trackStartDate);
+      })
+      .length;
+  final liveProgress = personalCompletions
+      .where((c) {
+        final local = DateUtils.extractLocalDate(c.completedAt);
+        return !local.isBefore(trackStartDate);
+      })
+      .length;
+
+  // F5 — telemetry: detect bulk leakage (live completions dated before
+  // trackStartDate slipping through). This should always fire zero; if it
+  // fires, the date filter regressed.
+  if (liveProgress > 0) {
+    final leaked = personalCompletions.where((c) {
+      final local = DateUtils.extractLocalDate(c.completedAt);
+      return !local.isBefore(trackStartDate) &&
+          c.completedAt.isBefore(DateTime(2001));
+    });
+    if (leaked.isNotEmpty) {
+      AppLogger.instance.warning(
+        event: 'pace_bulk_leakage_detected',
+        fields: {
+          'leakedCount': leaked.length,
+          'curriculumId': curriculumId,
+        },
+      );
+    }
   }
 
-  return PaceCalculator.calculate(
-    goalStartDate: goal.createdAt,
-    goalDeadline: goal.targetDate!,
-    totalItems: scopedTotal,
-    completedItems: personalCompletions.length,
-    dailyCompletionCounts: dailyCounts,
-    today: now,
+  final targetDate = DateUtils.extractLocalDate(goal.targetDate!.toLocal());
+  final today = DateUtils.extractLocalDate(now);
+
+  return PaceCalculator.compute(
+    totalItems: totalItems,
+    bulkBaseline: bulkBaseline,
+    liveProgress: liveProgress,
+    trackStartDate: trackStartDate,
+    targetDate: targetDate,
+    today: today,
   );
 }

@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
-import 'package:learning_tracker/features/scheduler/domain/models/delta_value.dart';
-import 'package:learning_tracker/features/scheduler/domain/models/pace_status.dart';
+import 'package:learning_tracker/features/progress/domain/services/pace_calculator.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
 
-/// Shows behind/on-track/ahead status badge for a curriculum goal.
+/// Shows behind/on-track/ahead/graceWindow status badge for a curriculum goal.
+///
+/// Accepts a [PaceCalculator] from the progress domain so that the grace-window
+/// state (day 0 / day 1) can be surfaced correctly without showing a phantom
+/// "Ahead by 0 days" or "Behind by 0 days" on the first day.
 ///
 /// Optional [subtitleCaption] renders a small disambiguating line under the
 /// badge — used by the Curriculum Progress screen to clarify that pace only
@@ -11,40 +15,43 @@ import 'package:learning_tracker/features/scheduler/domain/models/pace_status.da
 class PaceIndicator extends StatelessWidget {
   const PaceIndicator({
     super.key,
-    required this.paceStatus,
+    required this.pace,
     this.subtitleCaption,
   });
 
-  final PaceStatus paceStatus;
+  final PaceCalculator pace;
   final String? subtitleCaption;
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
-    final label = switch (paceStatus.status) {
-      PaceStatusType.ahead => switch (paceStatus.delta) {
-        DateScheduleDelta(:final value) => 'Ahead by ${value.days} days',
-        PaceScheduleDelta(:final value) =>
-          'Ahead by ${value.itemsPerWeek} items/week',
-      },
-      PaceStatusType.onPace => 'On pace',
-      PaceStatusType.behind => switch (paceStatus.delta) {
-        DateScheduleDelta(:final value) => 'Behind by ${value.days.abs()} days',
-        PaceScheduleDelta(:final value) =>
-          'Behind by ${value.itemsPerWeek.abs()} items/week',
-      },
-    };
-    final (color, icon) = switch (paceStatus.status) {
-      PaceStatusType.ahead => (AppTheme.brandGold, Icons.trending_up_rounded),
-      PaceStatusType.onPace => (
-        AppTheme.brandBlue,
-        Icons.check_circle_outline_rounded,
-      ),
-      PaceStatusType.behind => (
-        AppTheme.brandCoralDeep,
-        Icons.trending_down_rounded,
-      ),
-    };
+
+    // Derive label and visual style from the canonical PaceStatus enum.
+    final String label;
+    final Color color;
+    final IconData icon;
+
+    switch (pace.paceStatus) {
+      case PaceStatus.graceWindow:
+        label = l10n.paceOnTrack;
+        color = AppTheme.brandBlue;
+        icon = Icons.check_circle_outline_rounded;
+      case PaceStatus.onTrack:
+        label = l10n.paceOnTrack;
+        color = AppTheme.brandBlue;
+        icon = Icons.check_circle_outline_rounded;
+      case PaceStatus.ahead:
+        final days = pace.paceVarianceInDays.abs().round();
+        label = l10n.paceAheadByDays(days);
+        color = AppTheme.brandGold;
+        icon = Icons.trending_up_rounded;
+      case PaceStatus.behind:
+        final days = pace.paceVarianceInDays.abs().round();
+        label = l10n.paceBehindByDays(days);
+        color = AppTheme.brandCoralDeep;
+        icon = Icons.trending_down_rounded;
+    }
 
     return Container(
       width: double.infinity,

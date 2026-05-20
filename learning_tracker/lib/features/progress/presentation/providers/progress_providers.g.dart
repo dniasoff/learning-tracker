@@ -411,6 +411,12 @@ final class CurriculumProgressFamily extends $Family
 /// Pace status for a curriculum (null if no goal exists).
 ///
 /// Family provider keyed by curriculumId per P3.
+///
+/// F2 fix: uses [PaceCalculator.compute] from the progress domain so that
+/// bulk-marked completions (sentinel date 2000-01-01) are excluded from live
+/// velocity via the [trackStartDate] filter. Previously the scheduler's
+/// [PaceCalculator.calculate] received ALL personal completions including
+/// bulk entries, causing phantom "Ahead by 296 days on day 1" results.
 
 @ProviderFor(curriculumPaceStatus)
 final curriculumPaceStatusProvider = CurriculumPaceStatusFamily._();
@@ -418,18 +424,30 @@ final curriculumPaceStatusProvider = CurriculumPaceStatusFamily._();
 /// Pace status for a curriculum (null if no goal exists).
 ///
 /// Family provider keyed by curriculumId per P3.
+///
+/// F2 fix: uses [PaceCalculator.compute] from the progress domain so that
+/// bulk-marked completions (sentinel date 2000-01-01) are excluded from live
+/// velocity via the [trackStartDate] filter. Previously the scheduler's
+/// [PaceCalculator.calculate] received ALL personal completions including
+/// bulk entries, causing phantom "Ahead by 296 days on day 1" results.
 
 final class CurriculumPaceStatusProvider
     extends
         $FunctionalProvider<
-          AsyncValue<PaceStatus?>,
-          PaceStatus?,
-          FutureOr<PaceStatus?>
+          AsyncValue<PaceCalculator?>,
+          PaceCalculator?,
+          FutureOr<PaceCalculator?>
         >
-    with $FutureModifier<PaceStatus?>, $FutureProvider<PaceStatus?> {
+    with $FutureModifier<PaceCalculator?>, $FutureProvider<PaceCalculator?> {
   /// Pace status for a curriculum (null if no goal exists).
   ///
   /// Family provider keyed by curriculumId per P3.
+  ///
+  /// F2 fix: uses [PaceCalculator.compute] from the progress domain so that
+  /// bulk-marked completions (sentinel date 2000-01-01) are excluded from live
+  /// velocity via the [trackStartDate] filter. Previously the scheduler's
+  /// [PaceCalculator.calculate] received ALL personal completions including
+  /// bulk entries, causing phantom "Ahead by 296 days on day 1" results.
   CurriculumPaceStatusProvider._({
     required CurriculumPaceStatusFamily super.from,
     required String super.argument,
@@ -453,12 +471,12 @@ final class CurriculumPaceStatusProvider
 
   @$internal
   @override
-  $FutureProviderElement<PaceStatus?> $createElement(
+  $FutureProviderElement<PaceCalculator?> $createElement(
     $ProviderPointer pointer,
   ) => $FutureProviderElement(pointer);
 
   @override
-  FutureOr<PaceStatus?> create(Ref ref) {
+  FutureOr<PaceCalculator?> create(Ref ref) {
     final argument = this.argument as String;
     return curriculumPaceStatus(ref, argument);
   }
@@ -475,14 +493,20 @@ final class CurriculumPaceStatusProvider
 }
 
 String _$curriculumPaceStatusHash() =>
-    r'0bb55fe962271104641add8ee3dce467b2668144';
+    r'b929b2b70ac8a5b586b51b5e5ba391f4a6a39190';
 
 /// Pace status for a curriculum (null if no goal exists).
 ///
 /// Family provider keyed by curriculumId per P3.
+///
+/// F2 fix: uses [PaceCalculator.compute] from the progress domain so that
+/// bulk-marked completions (sentinel date 2000-01-01) are excluded from live
+/// velocity via the [trackStartDate] filter. Previously the scheduler's
+/// [PaceCalculator.calculate] received ALL personal completions including
+/// bulk entries, causing phantom "Ahead by 296 days on day 1" results.
 
 final class CurriculumPaceStatusFamily extends $Family
-    with $FunctionalFamilyOverride<FutureOr<PaceStatus?>, String> {
+    with $FunctionalFamilyOverride<FutureOr<PaceCalculator?>, String> {
   CurriculumPaceStatusFamily._()
     : super(
         retry: null,
@@ -495,6 +519,12 @@ final class CurriculumPaceStatusFamily extends $Family
   /// Pace status for a curriculum (null if no goal exists).
   ///
   /// Family provider keyed by curriculumId per P3.
+  ///
+  /// F2 fix: uses [PaceCalculator.compute] from the progress domain so that
+  /// bulk-marked completions (sentinel date 2000-01-01) are excluded from live
+  /// velocity via the [trackStartDate] filter. Previously the scheduler's
+  /// [PaceCalculator.calculate] received ALL personal completions including
+  /// bulk entries, causing phantom "Ahead by 296 days on day 1" results.
 
   CurriculumPaceStatusProvider call(String curriculumId) =>
       CurriculumPaceStatusProvider._(argument: curriculumId, from: this);

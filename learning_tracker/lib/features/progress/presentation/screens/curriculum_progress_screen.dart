@@ -141,7 +141,7 @@ class CurriculumProgressScreen extends ConsumerWidget {
                           ? Padding(
                               padding: const EdgeInsets.only(bottom: 16),
                               child: PaceIndicator(
-                                paceStatus: pace,
+                                pace: pace,
                                 subtitleCaption:
                                     l10n.paceLiveLearningOnlyCaption,
                               ),
