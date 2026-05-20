@@ -11,7 +11,6 @@ import 'package:learning_tracker/features/account/domain/repositories/auth_repos
 import 'package:learning_tracker/features/account/presentation/providers/auth_providers.dart'
     show authRepositoryProvider;
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
-import 'package:learning_tracker/features/learning/data/repositories/track_repository_impl.dart';
 import 'package:learning_tracker/features/settings/domain/services/curriculum_activation_service.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/curriculum_activation_providers.dart';
 import 'package:learning_tracker/features/settings/presentation/screens/settings_screen.dart';
@@ -80,7 +79,6 @@ void main() {
               return CurriculumActivationService(
                 database: database,
                 pushCurriculumTrack: (_) async {},
-                trackRepository: TrackRepositoryImpl(database: database),
               );
             }),
           ],

@@ -55,6 +55,8 @@ class CurriculumActivationService {
       curriculum,
       profileId: _profileId,
     );
+    // Re-activate any retired track so _resolveTrackId finds state='active'.
+    await _database.trackDao.activateTrack(curriculum, profileId: _profileId);
     final trackId = await _resolveTrackId(curriculum, _profileId);
     await _database.studyDayConfigDao.seedDefaults(
       profileId: _profileId,
@@ -77,6 +79,8 @@ class CurriculumActivationService {
       curriculum,
       profileId: profileId,
     );
+    // Re-activate any retired track so _resolveTrackId finds state='active'.
+    await _database.trackDao.activateTrack(curriculum, profileId: profileId);
     final trackId = await _resolveTrackId(curriculum, profileId);
     await _database.studyDayConfigDao.seedDefaults(
       profileId: profileId,
@@ -180,7 +184,7 @@ class CurriculumActivationService {
         'track_id': track.id,
         'curriculum_id': track.curriculumId,
         'state': track.state,
-        'state_changed_at': track.stateChangedAt?.toIso8601String(),
+        'state_changed_at': track.stateChangedAt.toIso8601String(),
         'activated_at': track.activatedAt.toIso8601String(),
         'pace_reset_date': track.paceResetDate?.toIso8601String(),
       });

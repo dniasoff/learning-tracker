@@ -5,53 +5,27 @@ import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/cross_profile_scope.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
-import 'package:learning_tracker/features/learning/domain/repositories/track_repository.dart';
 import 'package:learning_tracker/features/settings/domain/exceptions/last_active_curriculum_exception.dart';
 import 'package:learning_tracker/features/settings/domain/services/curriculum_activation_service.dart';
-import 'package:mocktail/mocktail.dart';
 
 import '../../../../helpers/drift_memory.dart' as drift_helpers;
-
-class MockTrackRepository extends Mock implements TrackRepository {}
 
 Future<void> _dummyPushCurriculumTrack(Map<String, dynamic> data) async {}
 
 void main() {
-  setUpAll(() {
-    registerFallbackValue(CurriculumId.mishnayos);
-  });
   late UserDatabase database;
   late CurriculumActivationService service;
-  late MockTrackRepository mockTrackRepository;
 
   setUp(() async {
     database = UserDatabase(NativeDatabase.memory());
-    mockTrackRepository = MockTrackRepository();
     service = CurriculumActivationService(
       database: database,
       pushCurriculumTrack: _dummyPushCurriculumTrack,
-      trackRepository: mockTrackRepository,
     );
 
     // Seed parent rows required by FK constraints.
     await drift_helpers.seedProfile(database);
     await drift_helpers.seedProfileZero(database);
-
-    // Mock TrackRepository to create the personal track in the test database
-    // (mirrors real impl, skips the cloud push)
-    when(
-      () => mockTrackRepository.initializeDefaultTracks(
-        any(),
-        profileId: any(named: 'profileId'),
-      ),
-    ).thenAnswer((invocation) async {
-      final curriculum = invocation.positionalArguments[0] as CurriculumId;
-      final profileId = (invocation.namedArguments[#profileId] as int?) ?? 0;
-      await database.trackDao.initializeDefaultTracks(
-        curriculum,
-        profileId: profileId,
-      );
-    });
   });
 
   tearDown(() async {

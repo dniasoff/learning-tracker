@@ -35,8 +35,16 @@ class SchedulerStageRepositoryImpl implements SchedulerStageRepository {
 
     final type = sched['type'] as String? ?? 'delay';
     final delayDays = (sched['delay_days'] as num?)?.toInt() ?? 0;
-    final daysOfWeek = (sched['days'] as List?)?.cast<int>();
-    final rollingWindowSize = (sched['window_size'] as num?)?.toInt();
+    // Accept both key variants: 'days_of_week' (wizard-created) and 'days'
+    // (legacy/manual entries and seed data).
+    final daysOfWeek =
+        (sched['days_of_week'] as List?)?.cast<int>() ??
+        (sched['days'] as List?)?.cast<int>();
+    // Accept both key variants: 'rolling_window_size' (wizard-created) and
+    // 'window_size' (legacy/manual entries).
+    final rollingWindowSize =
+        (sched['rolling_window_size'] as num?)?.toInt() ??
+        (sched['window_size'] as num?)?.toInt();
 
     return SchedulerStage(
       id: r.id,

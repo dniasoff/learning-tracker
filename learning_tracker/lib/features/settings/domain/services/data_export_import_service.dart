@@ -479,11 +479,16 @@ class DataExportImportService {
       }
     }
 
+    // W3.37: `streaks` is always empty (table dropped); use `streakEvents`
+    // count as the streakCount so the preview reflects actual streak data.
+    final streakEventCount =
+        (data['streakEvents'] as List? ?? []).length;
+    final legacyStreakCount = (data['streaks'] as List).length;
     return ImportPreview(
       completionCount: (data['completions'] as List).length,
       goalCount: (data['goals'] as List).length,
       stageCount: (data['stageDefinitions'] as List).length,
-      streakCount: (data['streaks'] as List).length,
+      streakCount: streakEventCount + legacyStreakCount,
       pointConfigCount: (data['pointConfigs'] as List).length,
       bookmarkCount: (data['bookmarks'] as List).length,
       learningOrderCount: (data['learningOrder'] as List).length,

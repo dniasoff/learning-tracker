@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
+import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/profiles/data/repositories/profile_repository_impl.dart';
 import 'package:learning_tracker/features/profiles/domain/repositories/profile_repository.dart';
 
@@ -9,9 +10,22 @@ void main() {
   late UserDatabase db;
   late ProfileRepositoryImpl repo;
 
-  setUp(() {
+  setUp(() async {
     db = createTestDatabase();
     repo = ProfileRepositoryImpl(db);
+    // Seed accounts 1 and 2 for FK constraint on learner_profiles.account_id.
+    for (final email in ['account1@test.com', 'account2@test.com']) {
+      await db.into(db.accounts).insert(
+        AccountsCompanion.insert(
+          email: email,
+          tier: 'localBorn',
+          displayName: 'Test Account',
+          userMode: 'adult',
+          createdAt: DateTimeFactory.nowUtc(),
+          updatedAt: DateTimeFactory.nowUtc(),
+        ),
+      );
+    }
   });
 
   tearDown(() async {

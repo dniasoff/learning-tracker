@@ -62,7 +62,7 @@ void main() {
 
   // Helper: 2-leaf masechta so detection can potentially fire.
   List<ContentItem> twoLeaves() => [
-    ContentItem(
+    const ContentItem(
       curriculumId: 'mishnayos',
       level1: 'Zeraim',
       level2: 'Berakhot',
@@ -73,7 +73,7 @@ void main() {
       sortOrder: 0,
       isLeaf: true,
     ),
-    ContentItem(
+    const ContentItem(
       curriculumId: 'mishnayos',
       level1: 'Zeraim',
       level2: 'Berakhot',

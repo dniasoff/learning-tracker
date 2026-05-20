@@ -58,6 +58,37 @@ Future<void> seedProfile(UserDatabase db) async {
       );
 }
 
+/// Seeds a minimal account (no profile) into [db] and returns the account id.
+///
+/// Use when tests need an account row for FK purposes but manage their own
+/// profiles (e.g. multi-profile tests that count profiles from 0).
+Future<int> seedAccount(UserDatabase db) async {
+  return db.into(db.accounts).insert(
+    AccountsCompanion.insert(
+      email: 'test@example.com',
+      tier: 'localBorn',
+      displayName: 'Test User',
+      userMode: 'adult',
+      createdAt: DateTimeFactory.nowUtc(),
+      updatedAt: DateTimeFactory.nowUtc(),
+    ),
+  );
+}
+
+/// Seeds a second account (id auto-assigned) for multi-account tests.
+Future<int> seedAccount2(UserDatabase db) async {
+  return db.into(db.accounts).insert(
+    AccountsCompanion.insert(
+      email: 'test2@example.com',
+      tier: 'localBorn',
+      displayName: 'Test User 2',
+      userMode: 'adult',
+      createdAt: DateTimeFactory.nowUtc(),
+      updatedAt: DateTimeFactory.nowUtc(),
+    ),
+  );
+}
+
 /// Seeds a learner profile with id = 0 into [db].
 ///
 /// Required by code that hardcodes profileId = 0 (e.g.
