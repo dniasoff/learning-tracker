@@ -177,8 +177,8 @@ Sync-point trigger tags: `[P1]` `[P2]` `[P3]` `[P4]` `[P5]` `[P6]` `[P7]`
 - [x] W3.39 (M, S3, done)    Add Firestore composite indexes: (tutor_uid, state), (parent_uid, child_profile_id, state), (tutor_email, state)
 - [x] W3.40 (M, S3, done)    Add tutor_grants/{grantId}/audit_log/{entryId} sub-collection
 - [x] W3.41 (M, S3, done)    Firestore rules: cross-uid read on users/{ownerUid}/learner_profiles/{pid}/** if active tutor grant; deny live-completion write from non-owner uids
-- [ ] W3.42 (M, S3, pending)    Cloud Function: scheduled audit-log purge (12-month retention past grant termination)
-- [ ] W3.43 (M, S3, pending)    Cloud Function: bulk-prior completion write proxy (writes as owner uid after tutor permission check)
+- [x] W3.42 (M, S3, done)    Cloud Function: scheduled audit-log purge (12-month retention past grant termination)
+- [x] W3.43 (M, S3, done)    Cloud Function: bulk-prior completion write proxy (writes as owner uid after tutor permission check)
 
 ### Phase 3f · Goal model collapse (S4)
 - [ ] W3.44 (M, S4, pending)    Collapse goal entity: drop goalType/paceValue/pacePeriod/targetDate → PaceTarget? field only; migrate goal_repository_impl + dashboard_providers

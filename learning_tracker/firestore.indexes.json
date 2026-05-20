@@ -1,4 +1,30 @@
 {
-  "indexes": [],
+  "indexes": [
+    {
+      "collectionGroup": "tutor_grants",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "tutor_uid", "order": "ASCENDING" },
+        { "fieldPath": "state",     "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "tutor_grants",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "parent_uid",       "order": "ASCENDING" },
+        { "fieldPath": "child_profile_id", "order": "ASCENDING" },
+        { "fieldPath": "state",            "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "tutor_grants",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "tutor_email", "order": "ASCENDING" },
+        { "fieldPath": "state",       "order": "ASCENDING" }
+      ]
+    }
+  ],
   "fieldOverrides": []
 }
