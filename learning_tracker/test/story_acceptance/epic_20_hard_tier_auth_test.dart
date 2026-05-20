@@ -4,8 +4,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/daos/user_profile_dao.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart'
     hide StreakEvent;
-import 'package:learning_tracker/core/streak/streak_event.dart';
-import 'package:learning_tracker/core/streak/streak_reducer.dart';
+import 'package:learning_tracker/features/gamification/streak/streak_event.dart';
+import 'package:learning_tracker/features/gamification/streak/streak_reducer.dart';
 import 'package:learning_tracker/features/account/domain/models/auth_state.dart';
 import 'package:learning_tracker/features/account/domain/services/local_auth_service.dart';
 import 'package:learning_tracker/features/account/domain/services/password_hasher.dart';

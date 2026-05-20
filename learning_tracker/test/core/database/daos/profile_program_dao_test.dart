@@ -1,5 +1,5 @@
 import 'package:learning_tracker/core/database/user/user_database.dart';
-import 'package:learning_tracker/core/services/learning_program_service.dart';
+import 'package:learning_tracker/features/scheduler/domain/services/learning_program_service.dart';
 import 'package:test/test.dart';
 
 import '../../../helpers/drift_memory.dart';

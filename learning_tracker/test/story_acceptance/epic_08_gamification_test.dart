@@ -7,9 +7,9 @@ import 'package:learning_tracker/core/database/user/user_database.dart'
     hide StreakEvent;
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/user_mode.dart';
-import 'package:learning_tracker/core/streak/streak_event.dart';
-import 'package:learning_tracker/core/streak/streak_event_log.dart';
-import 'package:learning_tracker/core/streak/streak_state_provider.dart';
+import 'package:learning_tracker/features/gamification/streak/streak_event.dart';
+import 'package:learning_tracker/features/gamification/streak/streak_event_log.dart';
+import 'package:learning_tracker/features/gamification/streak/streak_state_provider.dart';
 import 'package:learning_tracker/core/time/local_day_clock.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/gamification/domain/services/points_service.dart';

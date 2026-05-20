@@ -19,6 +19,12 @@ class EntityKind {
   static const stageDefinition = 'stage_definition';
   static const profileProgram = 'profile_program';
   static const learningOrder = 'learning_order'; // W2.26 — closes C3/H3
+  // W2.27 — closes M1
+  static const goal = 'goal';
+  static const learningLedger = 'learning_ledger';
+  static const notificationSettings = 'notification_settings';
+  static const gamificationSettings = 'gamification_settings';
+  static const uiPreferences = 'ui_preferences';
 
   /// Deterministic enumeration order for tests and diagnostics.
   static const List<String> all = [
@@ -31,6 +37,11 @@ class EntityKind {
     stageDefinition,
     profileProgram,
     learningOrder,
+    goal,
+    learningLedger,
+    notificationSettings,
+    gamificationSettings,
+    uiPreferences,
   ];
 }
 

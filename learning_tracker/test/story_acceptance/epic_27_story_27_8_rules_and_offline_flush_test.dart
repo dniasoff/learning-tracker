@@ -31,8 +31,8 @@ import 'dart:io';
 import 'package:drift/drift.dart' show Value;
 import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
-import 'package:learning_tracker/core/learning/completion_command.dart';
-import 'package:learning_tracker/core/learning/completion_writer.dart';
+import 'package:learning_tracker/features/learning/domain/entities/completion_command.dart';
+import 'package:learning_tracker/features/learning/data/completion_writer.dart';
 import 'package:learning_tracker/core/sync/firestore_gateway.dart';
 import 'package:learning_tracker/core/sync/outbox/outbox_processor.dart';
 import 'package:learning_tracker/core/sync/outbox/push_pipeline.dart';
@@ -156,6 +156,179 @@ void main() {
                   'an undeclared collection inherits the deny default.',
             );
           },
+        );
+      });
+    },
+  );
+
+  // ── Group C — Tutor security boundary (W3.41) ──────────────────────────
+  //
+  // These are static structural assertions on the rules file (same approach
+  // as Group A — the `fake_firebase_security_rules` package cannot evaluate
+  // `request.auth.uid` comparisons dynamically, but string-scanning the rules
+  // proves that the correct guards are present).
+  //
+  // The LOAD-BEARING security invariant tested here:
+  //   • The `completions` rule gate is `isOwner(uid)` — which evaluates to
+  //     `request.auth.uid == uid` where `uid` is the Firestore path segment
+  //     for the profile owner. A tutor has a different uid and cannot satisfy
+  //     this condition, making the create rule always false for non-owners.
+  //   • The `tutor_grants` collection rules deny all client writes (create /
+  //     update / delete: if false), preventing a malicious client from forging
+  //     an active-state grant.
+  //   • Audit log entries inside `tutor_grants/{grantId}/audit_log/{entryId}`
+  //     also deny all client writes.
+
+  group(
+    'W3.41 — Tutor security boundary: completions write-block and grant rules',
+    tags: ['story_w3_41_tutor_security'],
+    () {
+      late String rules;
+      setUpAll(() {
+        rules = _readProjectRules();
+      });
+
+      // ── 1. Completions write-block — non-owner cannot write ─────────────
+      //
+      // The completion create rule is `isOwner(uid)` which expands to
+      // `request.auth.uid == uid`. A tutor (different uid) can never satisfy
+      // this condition. We assert:
+      //   (a) The completions block uses isOwner() — NOT a tutor helper.
+      //   (b) No tutor-bypass path exists in the completions block.
+      //   (c) The block still carries the mandatory `allow update: if false`
+      //       and `allow delete: if false` guards.
+      //   (d) The load-bearing comment keyword is present to aid future audit.
+
+      test(
+        'completions create is gated by isOwner(uid) — non-owner (tutor) is denied',
+        () {
+          final block = _extractRuleBlock(rules, 'completions/{completionId}');
+          expect(
+            block,
+            contains('isOwner(uid)'),
+            reason:
+                'completions create MUST use isOwner(uid); a tutor whose '
+                'request.auth.uid != uid always fails this check',
+          );
+        },
+      );
+
+      test(
+        'completions block contains no tutor-bypass allow clause',
+        () {
+          final block = _extractRuleBlock(rules, 'completions/{completionId}');
+          expect(
+            block,
+            isNot(contains('isTutorOf')),
+            reason:
+                'isTutorOf MUST NOT appear in the completions block — '
+                'tutors may never write live completions directly',
+          );
+          expect(
+            block,
+            isNot(contains('isActiveTutorGrant')),
+            reason:
+                'isActiveTutorGrant MUST NOT appear in the completions block '
+                '— tutor completion writes go through Cloud Functions only',
+          );
+        },
+      );
+
+      test('completions block denies update and delete', () {
+        final block = _extractRuleBlock(rules, 'completions/{completionId}');
+        expect(block, contains('allow update: if false'));
+        expect(block, contains('allow delete: if false'));
+      });
+
+      test('completions block documents the load-bearing security boundary', () {
+        // The keyword comment is a searchable audit trail.
+        expect(
+          rules,
+          contains('TUTOR WRITE BLOCK'),
+          reason:
+              'The rules file must contain the TUTOR WRITE BLOCK comment '
+              'as a searchable security-boundary marker for auditors',
+        );
+      });
+
+      // ── 2. tutor_grants — client writes forbidden ────────────────────────
+      //
+      // If a client could write a grant doc with state='active', it could
+      // bypass the entire permission model. All three write operations must
+      // be denied.
+
+      test(
+        'tutor_grants denies all client writes (create, update, delete)',
+        () {
+          final block = _extractRuleBlock(rules, 'tutor_grants/{grantId}');
+          expect(
+            block,
+            contains('allow create: if false'),
+            reason: 'tutor_grants create must always be denied for clients',
+          );
+          expect(
+            block,
+            contains('allow update: if false'),
+            reason: 'tutor_grants update must always be denied for clients',
+          );
+          expect(
+            block,
+            contains('allow delete: if false'),
+            reason: 'tutor_grants delete must always be denied for clients',
+          );
+        },
+      );
+
+      test('tutor_grants audit_log denies all client writes', () {
+        final block = _extractRuleBlock(rules, 'audit_log/{entryId}');
+        expect(block, contains('allow create: if false'));
+        expect(block, contains('allow update: if false'));
+        expect(block, contains('allow delete: if false'));
+      });
+
+      // ── 3. Rule correctness — owner can create a completion ──────────────
+      //
+      // The positive direction: the owner's path through the rules must
+      // succeed. We verify the rule allows the isOwner() path (structural).
+
+      test(
+        'completions allow create rule has an isOwner path (owner can write)',
+        () {
+          final block = _extractRuleBlock(rules, 'completions/{completionId}');
+          // The rule body must contain `allow create: if isOwner(uid)` — this
+          // is the ONLY branch that permits a completion create. If it is absent
+          // no completion can ever be created, breaking the whole feature.
+          expect(
+            block,
+            contains('allow create: if isOwner(uid)'),
+            reason:
+                'The owner MUST be able to create completions; '
+                'isOwner(uid) is the positive branch',
+          );
+        },
+      );
+
+      // ── 4. tutor_grants read — only tutor or parent can read ────────────
+
+      test('tutor_grants allows reads to tutor_uid or parent_uid', () {
+        final block = _extractRuleBlock(rules, 'tutor_grants/{grantId}');
+        expect(
+          block,
+          contains('tutor_uid'),
+          reason:
+              'tutor_grants read rule must reference tutor_uid for tutor self-read',
+        );
+        expect(
+          block,
+          contains('parent_uid'),
+          reason:
+              'tutor_grants read rule must reference parent_uid for parent read',
+        );
+        expect(
+          block,
+          contains('allow read: if isSignedIn()'),
+          reason:
+              'tutor_grants must require authentication for all reads',
         );
       });
     },

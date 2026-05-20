@@ -33,15 +33,15 @@ Sync-point trigger tags: `[P1]` `[P2]` `[P3]` `[P4]` `[P5]` `[P6]` `[P7]`
 ### Phase 1b · Core relocations
 - [x] W1.7  (S, S1, done)    Move features/sync/domain/merge_rules.dart → core/sync/merge/; update 5 merger imports — closes H2
 - [x] W1.8  (S, S1, done)    Move profile_scoped_preference_keys.dart → core/preferences/; update 8 importers
-- [ ] W1.9  (S, S1, in-progress)    Move language_provider.dart → core/preferences/
+- [x] W1.9  (S, S1, done)    Move language_provider.dart → core/preferences/
 
 ### Phase 1c · Barrel-file convention + lint enforcement
-- [ ] W1.10 (M, S1, pending)    Create empty barrel files features/&lt;feature&gt;.dart for all 18 features `[P1]`
-- [ ] W1.11 (M, S1, pending)    Rewrite no_feature_cross_import lint to require &lt;feature&gt;.dart instead of providers.dart `[P1]`
-- [ ] W1.12 (S, S1, pending)    Add make audit grep #14 — no `package:learning_tracker/features/` in lib/core/**
-- [ ] W1.13 (S, S1, pending)    Add make audit grep #15 — no cross-feature deep imports
-- [ ] W1.14 (S, S1, pending)    Drop `|| echo ::warning::` from CI lint job — hard fail — closes H6
-- [ ] W1.15 (S, S1, pending)    Add unit tests for no_feature_cross_import lint rule — closes H7 partial
+- [x] W1.10 (M, S1, done)    Create empty barrel files features/&lt;feature&gt;.dart for all 18 features `[P1]`
+- [x] W1.11 (M, S1, done)    Rewrite no_feature_cross_import lint to require &lt;feature&gt;.dart instead of providers.dart `[P1]`
+- [x] W1.12 (S, S1, done)    Add make audit grep #14 — no `package:learning_tracker/features/` in lib/core/**
+- [x] W1.13 (S, S1, done)    Add make audit grep #15 — no cross-feature deep imports
+- [ ] W1.14 (S, S1, task-blocked)    Drop `|| echo ::warning::` from CI lint job — hard fail — closes H6 — BLOCKED: custom_lint 0.8.1 crashes with analyzer ^9 (exit 255); making it hard-fail would break CI on every run. Unblocked when custom_lint upgrades to support analyzer ^9.
+- [ ] W1.15 (S, S1, in-progress)    Add unit tests for no_feature_cross_import lint rule — closes H7 partial
 - [ ] W1.16 (S, S1, pending)    Add unit tests for no_curriculum_display_name_bypass lint rule — closes H7 partial
 
 ### Phase 1d · Dead code purge
@@ -103,7 +103,7 @@ Sync-point trigger tags: `[P1]` `[P2]` `[P3]` `[P4]` `[P5]` `[P6]` `[P7]`
 
 ### Phase 2e · Missing mergers (S2)
 - [x] W2.26 (M, S2, done)    Add EntityKind.learningOrder + LearningOrderMerger + router case + mergeRouterProvider entry — closes C3/H3
-- [ ] W2.27 (M, S2, in-progress)    Add 7 mergers + channels for SyncEngine-only collections (goals, learning_ledger, notif_settings, gamification_settings, ui_preferences, learning_order, profile_programs) — closes M1
+- [x] W2.27 (M, S2, done)    Add 7 mergers + channels for SyncEngine-only collections (goals, learning_ledger, notif_settings, gamification_settings, ui_preferences, learning_order, profile_programs) — closes M1
 - [ ] W2.28 (M, S2, pending)    Add pullStreak step in pull_pipeline — closes M4
 - [ ] W2.29 (M, S2, pending)    Wire real stage_definitions/ push + pull + listener channel + _channelToKind — closes H4
 - [ ] W2.30 (S, S2, pending)    Make _pullCollection throw on MergeOutcome.halt (after W2.26 lands)
@@ -173,10 +173,10 @@ Sync-point trigger tags: `[P1]` `[P2]` `[P3]` `[P4]` `[P5]` `[P6]` `[P7]`
 - [ ] W3.37 (S, S2, pending)    Change streak/ from snapshot doc → streak_events/{ulid} collection
 
 ### Phase 3e · Tutor mode schema (S3)
-- [ ] W3.38 (M, S3, in-progress)    Add tutor_grants/{grantId} top-level collection with deterministic doc-id strategy
-- [ ] W3.39 (M, S3, pending)    Add Firestore composite indexes: (tutor_uid, state), (parent_uid, child_profile_id, state), (tutor_email, state)
-- [ ] W3.40 (M, S3, pending)    Add tutor_grants/{grantId}/audit_log/{entryId} sub-collection
-- [ ] W3.41 (M, S3, pending)    Firestore rules: cross-uid read on users/{ownerUid}/learner_profiles/{pid}/** if active tutor grant; deny live-completion write from non-owner uids
+- [x] W3.38 (M, S3, done)    Add tutor_grants/{grantId} top-level collection with deterministic doc-id strategy
+- [x] W3.39 (M, S3, done)    Add Firestore composite indexes: (tutor_uid, state), (parent_uid, child_profile_id, state), (tutor_email, state)
+- [x] W3.40 (M, S3, done)    Add tutor_grants/{grantId}/audit_log/{entryId} sub-collection
+- [x] W3.41 (M, S3, done)    Firestore rules: cross-uid read on users/{ownerUid}/learner_profiles/{pid}/** if active tutor grant; deny live-completion write from non-owner uids
 - [ ] W3.42 (M, S3, pending)    Cloud Function: scheduled audit-log purge (12-month retention past grant termination)
 - [ ] W3.43 (M, S3, pending)    Cloud Function: bulk-prior completion write proxy (writes as owner uid after tutor permission check)
 
@@ -202,7 +202,7 @@ Sync-point trigger tags: `[P1]` `[P2]` `[P3]` `[P4]` `[P5]` `[P6]` `[P7]`
 - [x] W4.7  (M, S4, done)    ProgramStartingPosition VO replacing 'offset:N|ref:&lt;sefariaRef&gt;' grammar — **owns B2 + B3 window enforcement**
 - [x] W4.8  (S, S5, done)    Scope(level: ScopeLevel, value: ScopeValue) typed VO
 - [x] W4.9  (S, S5, done)    ProfileMode { adult, child } + AccountTier { local, cloud } enums; deprecation on string equality
-- [ ] W4.10 (M, S4, pending)    Sealed ScheduleSpec { DelaySchedule, WeeklySchedule, RollingSchedule } replacing nullable quartet
+- [ ] W4.10 (M, S4, in-progress)    Sealed ScheduleSpec { DelaySchedule, WeeklySchedule, RollingSchedule } replacing nullable quartet
 
 ### Phase 4b · Anemic features rebuilt
 - [ ] W4.11 (M, S3, pending)    parent_mode PIN → PinFlowMachine pure domain (~100 LOC) + SetParentPinUseCase + VerifyParentPinUseCase; thin Riverpod adapter
@@ -211,7 +211,7 @@ Sync-point trigger tags: `[P1]` `[P2]` `[P3]` `[P4]` `[P5]` `[P6]` `[P7]`
 - [ ] W4.14 (M, S4, pending)    tracks setup → ProvisionTrackUseCase replacing TrackCreationService.createTrack — **B3 integration check (back-date generates overdue)**
 - [ ] W4.15 (S, S4, pending)    track_learning_order → TrackOrder aggregate, OrderingLevel { sedarim, masechtos } VO, MasechtaOrderingPolicy
 - [x] W4.16 (M, S5, done)    progress → promote inline models to domain/; extract LifetimeTreeBuilder/OverlappingCurriculaDeduplicator/TrackDualProgressCalculator — **B1 lifetime tier subscriber + B3 projection check**
-- [ ] W4.17 (M, S5, pending)    dashboard → extract NextRewardSelector + ComputePaceStatusUseCase + TrackCompletionService — **B3 projection check**
+- [ ] W4.17 (M, S5, in-progress)    dashboard → extract NextRewardSelector + ComputePaceStatusUseCase + TrackCompletionService — **B3 projection check**
 
 ### Phase 4c · Business-logic relocations
 - [ ] W4.18 (M, S4, pending)    completion_repository_impl.markComplete:57-200 → MarkCompletionUseCase — **owns B1 credit policy enforcement**

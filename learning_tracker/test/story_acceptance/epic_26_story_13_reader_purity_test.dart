@@ -7,7 +7,7 @@
 library;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:learning_tracker/core/learning/completion_writer_providers.dart';
+import 'package:learning_tracker/features/learning/presentation/providers/completion_writer_providers.dart';
 import 'package:test/test.dart';
 
 // ── tests ─────────────────────────────────────────────────────────────────────

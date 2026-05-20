@@ -70,10 +70,10 @@ void main() {
       'lib/core/labels/',
       // Data-class declarations and seed/registry files.
       'lib/core/network/sefaria/models/content_item.dart',
-      'lib/core/services/calendar_program_registry.dart',
-      'lib/core/services/calendar_program_service.dart',
-      'lib/core/services/learning_program_service.dart',
-      'lib/core/services/local_calendar_engine.dart',
+      'lib/features/scheduler/domain/services/calendar_program_registry.dart',
+      'lib/features/scheduler/domain/services/calendar_program_service.dart',
+      'lib/features/scheduler/domain/services/learning_program_service.dart',
+      'lib/features/scheduler/domain/services/local_calendar_engine.dart',
       // Enum getters live on these types.
       'lib/core/enums/curriculum_id.dart',
       'lib/core/enums/track_type.dart',
@@ -116,6 +116,12 @@ void main() {
       'lib/features/learning_order/data/repositories/learning_order_repository_impl.dart',
       'lib/features/learning_order/domain/models/learning_order_item.dart',
       'lib/features/track_learning_order/data/repositories/track_learning_order_repository_impl.dart',
+      // S4-refactored equivalents under features/tracks/
+      'lib/features/tracks/whole_curriculum_order/data/repositories/learning_order_repository_impl.dart',
+      'lib/features/tracks/whole_curriculum_order/domain/models/learning_order_item.dart',
+      'lib/features/tracks/track_order/data/repositories/track_learning_order_repository_impl.dart',
+      // Progress domain service — builds bilingual tree nodes.
+      'lib/features/progress/domain/services/lifetime_tree_builder.dart',
       // journey_view_model.dart and journey_providers.dart were removed from
       // this allow-list by DNI-362: UnitCompletion no longer carries
       // displayNameHe/displayNameEn; label resolution is deferred to
@@ -127,6 +133,7 @@ void main() {
       'lib/features/scheduler/domain/services/sefaria_ref_matcher.dart',
       // Doc-comment reference only.
       'lib/features/track_setup/presentation/widgets/curriculum_picker_step.dart',
+      'lib/features/tracks/setup/presentation/widgets/curriculum_picker_step.dart',
       // Composite curriculum strategy — constructs synthetic ContentItem
       // preamble rows (data layer, not a UI surface). DNI-358 / 26.15.
       'lib/features/content_browsing/domain/strategies/composite_curriculum_strategy.dart',

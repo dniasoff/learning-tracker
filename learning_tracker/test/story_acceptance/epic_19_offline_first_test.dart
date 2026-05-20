@@ -10,10 +10,10 @@ import 'package:learning_tracker/core/database/seed/learning_program_seeds.dart'
 import 'package:learning_tracker/core/database/seed_manager.dart';
 import 'package:learning_tracker/core/database/seed_version.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
-import 'package:learning_tracker/core/services/calendar_program_registry.dart';
-import 'package:learning_tracker/core/services/calendar_program_service.dart';
-import 'package:learning_tracker/core/services/learning_program_service.dart';
-import 'package:learning_tracker/core/services/local_calendar_engine.dart';
+import 'package:learning_tracker/features/scheduler/domain/services/calendar_program_registry.dart';
+import 'package:learning_tracker/features/scheduler/domain/services/calendar_program_service.dart';
+import 'package:learning_tracker/features/scheduler/domain/services/learning_program_service.dart';
+import 'package:learning_tracker/features/scheduler/domain/services/local_calendar_engine.dart';
 import 'package:learning_tracker/features/account/domain/models/auth_state.dart';
 import 'package:learning_tracker/features/sync/domain/models/sync_status.dart';
 import 'package:sqlite3/sqlite3.dart' as sqlite;

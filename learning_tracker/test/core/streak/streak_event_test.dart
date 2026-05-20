@@ -1,6 +1,6 @@
 // Tests for StreakEvent.copyWith — covers lines 28-38 which were uncovered.
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/core/streak/streak_event.dart';
+import 'package:learning_tracker/features/gamification/streak/streak_event.dart';
 
 void main() {
   final base = StreakEvent(

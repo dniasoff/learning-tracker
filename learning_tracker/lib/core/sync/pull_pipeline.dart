@@ -112,6 +112,74 @@ class PullPipeline {
     pageSize: pageSize,
   );
 
+  // W2.27 — new collection + document pull methods (closes M1) ─────────────
+
+  Future<void> pullGoals({
+    required int profileId,
+    int pageSize = defaultPageSize,
+  }) => _pullCollection(
+    profileId: profileId,
+    collection: 'goals',
+    kind: EntityKind.goal,
+    pageSize: pageSize,
+  );
+
+  Future<void> pullLearningLedger({
+    required int profileId,
+    int pageSize = defaultPageSize,
+  }) => _pullCollection(
+    profileId: profileId,
+    collection: 'learning_ledger',
+    kind: EntityKind.learningLedger,
+    pageSize: pageSize,
+  );
+
+  /// Pull a single-document Firestore subcollection (notification_settings,
+  /// gamification_settings, ui_preferences). Wraps the document in a
+  /// single-element list so the [MergeDispatcher] receives the standard
+  /// `List<Map<String, dynamic>>` contract.
+  Future<void> pullNotificationSettings({required int profileId}) =>
+      _pullDocument(
+        profileId: profileId,
+        collection: 'notification_settings',
+        docId: 'preferences',
+        kind: EntityKind.notificationSettings,
+      );
+
+  Future<void> pullGamificationSettings({required int profileId}) =>
+      _pullDocument(
+        profileId: profileId,
+        collection: 'gamification_settings',
+        docId: 'config',
+        kind: EntityKind.gamificationSettings,
+      );
+
+  Future<void> pullUiPreferences({required int profileId}) => _pullDocument(
+    profileId: profileId,
+    collection: 'ui_preferences',
+    docId: 'data',
+    kind: EntityKind.uiPreferences,
+  );
+
+  Future<void> _pullDocument({
+    required int profileId,
+    required String collection,
+    required String docId,
+    required String kind,
+  }) async {
+    final doc = await _gateway.fetchDocument(
+      profileId: profileId,
+      collection: collection,
+      docId: docId,
+    );
+    if (doc == null || doc.isEmpty) return;
+    await _dispatcher.dispatch(
+      profileId: profileId,
+      kind: kind,
+      rows: [doc],
+    );
+  }
+
   Future<void> _pullCollection({
     required int profileId,
     required String collection,

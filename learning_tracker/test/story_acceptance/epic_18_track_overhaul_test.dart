@@ -14,7 +14,7 @@ import 'package:learning_tracker/core/constants/hebrew_terms.dart';
 import 'package:learning_tracker/core/database/seed/learning_program_seeds.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/core/services/learning_program_service.dart';
+import 'package:learning_tracker/features/scheduler/domain/services/learning_program_service.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/track_repository.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/learning_process_wizard_service.dart';
 import 'package:learning_tracker/features/scheduler/data/repositories/goal_repository_impl.dart';

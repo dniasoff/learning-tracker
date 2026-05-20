@@ -14,8 +14,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
-import 'package:learning_tracker/core/services/calendar_program_service.dart';
-import 'package:learning_tracker/core/services/learning_program_service.dart';
+import 'package:learning_tracker/features/scheduler/domain/services/calendar_program_service.dart';
+import 'package:learning_tracker/features/scheduler/domain/services/learning_program_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 Widget _wrap(

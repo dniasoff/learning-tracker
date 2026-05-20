@@ -17,7 +17,7 @@ import 'package:learning_tracker/core/constants/curriculum_defaults.dart'
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/core/labels/curriculum_label_providers.dart';
-import 'package:learning_tracker/core/learning/completion_writer_providers.dart';
+import 'package:learning_tracker/features/learning/presentation/providers/completion_writer_providers.dart';
 import 'package:learning_tracker/core/preferences/app_locale_preference.dart';
 import 'package:learning_tracker/core/preferences/hebrew_date_preference.dart';
 import 'package:learning_tracker/core/preferences/hebrew_terms_preference.dart';

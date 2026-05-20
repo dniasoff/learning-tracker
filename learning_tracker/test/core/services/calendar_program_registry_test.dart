@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/core/services/calendar_program_registry.dart';
+import 'package:learning_tracker/features/scheduler/domain/services/calendar_program_registry.dart';
 
 void main() {
   group('CalendarProgramRegistry', () {

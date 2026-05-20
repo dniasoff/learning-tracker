@@ -4,7 +4,7 @@ library;
 import 'package:drift/drift.dart' show Value;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
-import 'package:learning_tracker/core/streak/streak_state_provider.dart';
+import 'package:learning_tracker/features/gamification/streak/streak_state_provider.dart';
 import 'package:learning_tracker/core/time/local_day_clock.dart';
 
 import '../../helpers/drift_memory.dart';

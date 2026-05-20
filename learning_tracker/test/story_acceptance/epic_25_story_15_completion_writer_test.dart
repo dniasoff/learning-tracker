@@ -12,8 +12,8 @@ import 'dart:convert';
 import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
-import 'package:learning_tracker/core/learning/completion_command.dart';
-import 'package:learning_tracker/core/learning/completion_writer.dart';
+import 'package:learning_tracker/features/learning/data/completion_writer.dart';
+import 'package:learning_tracker/features/learning/domain/entities/completion_command.dart';
 import 'package:learning_tracker/core/sync/outbox/outbox_processor.dart';
 import 'package:test/test.dart';
 

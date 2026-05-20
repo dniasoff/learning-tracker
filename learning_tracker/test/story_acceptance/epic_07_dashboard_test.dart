@@ -13,7 +13,7 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/core/enums/user_mode.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
-import 'package:learning_tracker/core/services/cross_curriculum_aggregator.dart';
+import 'package:learning_tracker/features/scheduler/domain/services/cross_curriculum_aggregator.dart';
 import 'package:learning_tracker/features/dashboard/presentation/widgets/curriculum_summary_card.dart';
 import 'package:learning_tracker/features/dashboard/presentation/widgets/points_summary_widget.dart';
 import 'package:learning_tracker/features/dashboard/presentation/widgets/todays_tasks_widget.dart';

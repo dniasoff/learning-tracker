@@ -5,7 +5,7 @@
 library;
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/core/services/learning_program_service.dart';
+import 'package:learning_tracker/features/scheduler/domain/services/learning_program_service.dart';
 
 void main() {
   // LearningProgramRepository is a singleton; use it directly.

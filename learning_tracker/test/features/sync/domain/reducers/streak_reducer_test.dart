@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/core/streak/streak_event.dart';
-import 'package:learning_tracker/core/streak/streak_reducer.dart';
+import 'package:learning_tracker/features/gamification/streak/streak_event.dart';
+import 'package:learning_tracker/features/gamification/streak/streak_reducer.dart';
 
 void main() {
   const reducer = StreakReducer();

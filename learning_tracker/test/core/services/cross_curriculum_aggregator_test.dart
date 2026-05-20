@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/core/services/cross_curriculum_aggregator.dart';
+import 'package:learning_tracker/features/scheduler/domain/services/cross_curriculum_aggregator.dart';
 
 void main() {
   late CrossCurriculumAggregator aggregator;
