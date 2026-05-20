@@ -19,6 +19,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/exceptions/app_exception.dart';
+import 'package:learning_tracker/core/providers/crashlytics_provider.dart';
 
 /// A widget that renders an [AsyncValue.error] as a category-appropriate UI.
 ///
@@ -38,7 +39,7 @@ import 'package:learning_tracker/core/exceptions/app_exception.dart';
 ///   return AppErrorView.fromAsyncValue(snapshot, onRetry: () => ref.refresh(someProvider));
 /// }
 /// ```
-class AppErrorView extends StatelessWidget {
+class AppErrorView extends ConsumerWidget {
   const AppErrorView({
     super.key,
     required this.error,
@@ -75,7 +76,7 @@ class AppErrorView extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final config = _configFor(error);
 
@@ -115,12 +116,25 @@ class AppErrorView extends StatelessWidget {
                 ),
               ),
             ],
-            if (!config.showRetry && config.showBugReport) ...[
+            if (config.showBugReport) ...[
               const SizedBox(height: 12),
               TextButton(
-                onPressed: () {
-                  // Bug-report affordance — no-op placeholder until a real
-                  // reporting flow is wired in a later task.
+                onPressed: () async {
+                  // Record the error via Crashlytics so the dev team can
+                  // investigate. The user tapped "Report this issue" — tag it
+                  // as user-initiated (non-fatal) so it shows up in the
+                  // Crashlytics dashboard separately from automatic crashes.
+                  await ref
+                      .read(crashlyticsServiceProvider)
+                      .recordError(error, stackTrace, fatal: false);
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text("Thanks — we've logged the issue."),
+                        duration: Duration(seconds: 3),
+                      ),
+                    );
+                  }
                 },
                 child: const Text('Report this issue'),
               ),
