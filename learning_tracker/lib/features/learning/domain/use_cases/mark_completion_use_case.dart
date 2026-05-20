@@ -72,21 +72,22 @@ class MarkCompletionUseCase {
       await _analytics?.logEvent(LogEvents.track.lifetimeAchievementSkipped);
     }
 
-    // B1: the repository's awardGamificationPoints flag is the engagement
-    // gate — it suppresses streak events and point awards inside the data layer.
-    // For bulkInTrack / lifetimeOnly callers the flag maps to false so the
-    // existing repository path correctly suppresses streak and points.
+    // B1 three-tier policy: pass the engagement and achievement gates
+    // independently. Previously the repository's completionDetectionService
+    // call was wired to the engagement gate, which meant bulkInTrack (which
+    // suppresses engagement but should credit achievement) wrongly skipped
+    // siyum detection. The achievement gate is now distinct.
     //
-    // Achievement-tier gating (siyumim / report indexing) is performed by
-    // the repository's completionDetectionService path, which is controlled
-    // by the same flag: when awardGamificationPoints is false the detection
-    // service call is skipped (see CompletionRepositoryImpl.markComplete).
+    //   - live          → engagement=true,  achievement=true
+    //   - bulkInTrack   → engagement=false, achievement=true  (earns siyum)
+    //   - lifetimeOnly  → engagement=false, achievement=false
     //
     // Lifetime-tier (coverage counters) is unconditional — every completion
     // enters the DB regardless of source.
     return _repository.markComplete(
       request,
       awardGamificationPoints: source.creditsEngagement,
+      creditsAchievement: source.creditsAchievement,
     );
   }
 }

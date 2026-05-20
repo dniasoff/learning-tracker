@@ -1,14 +1,22 @@
-/// H4 regression test (V3-W1).
+/// H4 regression test (V3-W1) — achievement-tier gate for siyum detection.
 ///
-/// Before the fix, `CompletionRepositoryImpl.markComplete` called
-/// `CompletionDetectionService.checkAndRecordCompletions` unconditionally
-/// even when `awardGamificationPoints = false` (lifetimeOnly source).
-/// Per the B1 completion-credit policy, historical imports MUST NOT generate
-/// siyum ledger entries.
+/// The B1 completion-credit policy says siyum detection is an **achievement**
+/// tier side-effect, controlled by [CompletionSource.creditsAchievement]:
 ///
-/// The fix gates the call on `awardGamificationPoints`. This test asserts:
-///   1. awardGamificationPoints=true  → detection runs   (happy path unchanged)
-///   2. awardGamificationPoints=false → detection is NOT called (lifetimeOnly)
+///   - live          → achievement=true   → siyum
+///   - bulkInTrack   → achievement=true   → siyum  (the original H4 bug
+///                                                   wrongly suppressed this)
+///   - lifetimeOnly  → achievement=false  → no siyum
+///
+/// Originally H4 gated detection on `awardGamificationPoints`, but that flag
+/// is the **engagement** gate (streak + points). Gating both tiers on the same
+/// flag caused `bulkInTrack` (engagement=false, achievement=true) to lose
+/// siyumim. The fix introduces a separate `creditsAchievement` parameter on
+/// the repository so the two tiers can be gated independently.
+///
+/// This test asserts:
+///   1. creditsAchievement=true  → detection runs   (live + bulkInTrack)
+///   2. creditsAchievement=false → detection skipped (lifetimeOnly)
 library;
 
 import 'package:drift/drift.dart' show Value;
@@ -141,9 +149,9 @@ void main() {
     );
   }
 
-  group('H4 — awardGamificationPoints gate on CompletionDetectionService', () {
+  group('H4 — creditsAchievement gate on CompletionDetectionService', () {
     test(
-      'lifetimeOnly (awardGamificationPoints=false): does NOT create siyum',
+      'lifetimeOnly (creditsAchievement=false): does NOT create siyum',
       () async {
         final contentRepo = _MockContentRepository();
         final gateway = _MockFirestoreGateway();
@@ -168,8 +176,9 @@ void main() {
 
         final repo = buildRepo(contentRepo: contentRepo, gateway: gateway);
 
-        // Mark both leaves complete with awardGamificationPoints=false
-        // (lifetimeOnly / historical import).
+        // Mark both leaves complete with the lifetimeOnly profile:
+        // engagement=false (no streak/points) AND achievement=false
+        // (no siyum). Historical import — only lifetime counters credited.
         for (final leaf in leaves) {
           await repo.markComplete(
             CompletionRequest(
@@ -179,6 +188,7 @@ void main() {
               trackType: 'personal',
             ),
             awardGamificationPoints: false,
+            creditsAchievement: false,
           );
         }
 
@@ -198,7 +208,64 @@ void main() {
     );
 
     test(
-      'live completion (awardGamificationPoints=true): DOES create siyum',
+      'bulkInTrack (engagement=false, achievement=true): DOES create siyum',
+      () async {
+        // This is the B1 bug the new gate fixes: a learner who bulk-marks a
+        // complete masechta has not earned streak/points (those rows are
+        // historical), but they HAVE earned the siyum and it must show up in
+        // the ledger.
+        final contentRepo = _MockContentRepository();
+        final gateway = _MockFirestoreGateway();
+        final leaves = twoLeaves();
+
+        when(
+          () => contentRepo.getContentByRef(
+            curriculumId: any(named: 'curriculumId'),
+            sefariaRef: any(named: 'sefariaRef'),
+          ),
+        ).thenAnswer((_) async => leaves.first);
+        when(
+          () => contentRepo.filterByLevel(
+            curriculumId: any(named: 'curriculumId'),
+            level1: any(named: 'level1'),
+            level2: any(named: 'level2'),
+          ),
+        ).thenAnswer((_) async => leaves);
+
+        await seedOneStage();
+
+        final repo = buildRepo(contentRepo: contentRepo, gateway: gateway);
+
+        for (final leaf in leaves) {
+          await repo.markComplete(
+            CompletionRequest(
+              curriculumId: 'mishnayos',
+              sefariaRef: leaf.sefariaRef,
+              stageId: 1,
+              trackType: 'personal',
+            ),
+            awardGamificationPoints: false,
+            creditsAchievement: true,
+          );
+        }
+
+        await Future<void>.delayed(Duration.zero);
+
+        final ledgerEntries =
+            await db.learningLedgerDao.getEntriesByProfile(profileId);
+        expect(
+          ledgerEntries,
+          isNotEmpty,
+          reason:
+              'bulkInTrack completions must generate siyum ledger entries — '
+              'engagement is suppressed but achievement is credited '
+              '(B1 three-tier policy).',
+        );
+      },
+    );
+
+    test(
+      'live (creditsAchievement=true): DOES create siyum',
       () async {
         final contentRepo = _MockContentRepository();
         final gateway = _MockFirestoreGateway();
@@ -222,7 +289,7 @@ void main() {
 
         final repo = buildRepo(contentRepo: contentRepo, gateway: gateway);
 
-        // Mark both leaves complete with default awardGamificationPoints=true.
+        // Defaults: engagement=true, achievement=true (the live profile).
         for (final leaf in leaves) {
           await repo.markComplete(
             CompletionRequest(

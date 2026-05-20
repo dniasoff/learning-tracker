@@ -59,6 +59,7 @@ class CompletionRepositoryImpl implements CompletionRepository {
   Future<MarkCompletionResult> markComplete(
     CompletionRequest request, {
     bool awardGamificationPoints = true,
+    bool creditsAchievement = true,
   }) async {
     final isChildProfile = await _isChildProfile();
 
@@ -170,11 +171,16 @@ class CompletionRepositoryImpl implements CompletionRepository {
       );
 
       // 7. Auto-detect unit completions (fire-and-forget).
-      // H4 fix (V3-W1 / B1): CompletionDetectionService creates siyum ledger
-      // entries — an achievement-tier side-effect. Gate on
-      // awardGamificationPoints so lifetimeOnly historical imports do NOT
-      // generate siyumim (per completion_source.dart creditsAchievement policy).
-      if (_completionDetectionService != null && awardGamificationPoints) {
+      // B1 three-tier policy: CompletionDetectionService creates siyum
+      // ledger entries — an achievement-tier side-effect. Gate on
+      // [creditsAchievement] (NOT on [awardGamificationPoints] — that's the
+      // engagement gate). The two flags are independent:
+      //   - live           → engagement=true,  achievement=true
+      //   - bulkInTrack    → engagement=false, achievement=true  (still earns siyum)
+      //   - lifetimeOnly   → engagement=false, achievement=false
+      // Per completion_source.dart, bulkInTrack credits achievement so a
+      // learner who bulk-marks a complete masechta still earns the siyum.
+      if (_completionDetectionService != null && creditsAchievement) {
         unawaited(
           _completionDetectionService.checkAndRecordCompletions(
             curriculumId: request.curriculumId,

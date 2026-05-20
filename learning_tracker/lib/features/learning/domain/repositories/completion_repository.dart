@@ -23,16 +23,28 @@ abstract class CompletionRepository {
   /// atomicity. If any operation fails, the entire transaction is rolled back.
   ///
   /// ### B1 — Three-tier credit policy
-  /// [awardGamificationPoints] controls the engagement tier (streak events,
-  /// point awards). Pass `false` for [CompletionSource.bulkInTrack] and
-  /// [CompletionSource.lifetimeOnly] sources. [MarkCompletionUseCase] is
-  /// the canonical caller and always passes the correct value.
+  /// [awardGamificationPoints] controls the **engagement** tier (streak events,
+  /// point awards, milestone unlocks). Pass `false` for `bulkInTrack` and
+  /// `lifetimeOnly` sources.
+  ///
+  /// [creditsAchievement] controls the **achievement** tier (siyum detection
+  /// via `CompletionDetectionService`, study-report indexing). Pass `true`
+  /// for `live` and `bulkInTrack`; pass `false` only for `lifetimeOnly`
+  /// historical imports.
+  ///
+  /// The engagement and achievement gates are independent — `bulkInTrack`
+  /// suppresses engagement but credits achievement (so a learner who
+  /// bulk-marks a complete masechta still earns the siyum).
+  ///
+  /// [MarkCompletionUseCase] is the canonical caller and always passes the
+  /// correct values derived from `CompletionSource`.
   ///
   /// Throws [StageProgressionException] if attempting to complete stage N+1
   /// before stage N for the same content item.
   Future<MarkCompletionResult> markComplete(
     CompletionRequest request, {
     bool awardGamificationPoints = true,
+    bool creditsAchievement = true,
   });
 
   /// Mark multiple content items as completed in a single transaction.
