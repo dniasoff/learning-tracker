@@ -99,7 +99,7 @@ void main() {
           trackId: trackId,
           stageOrder: 1,
           stageName: 'Learn',
-          schedule: Value('{"type":"delay","delay_days":0}'),
+          schedule: const Value('{"type":"delay","delay_days":0}'),
         ),
       );
       stageDefinitionId = stageDef;
@@ -276,7 +276,7 @@ void main() {
             trackId: trackId,
             stageOrder: 0,
             stageName: 'Bulk-Prior Sentinel',
-            schedule: Value('{"type":"delay","delay_days":0}'),
+            schedule: const Value('{"type":"delay","delay_days":0}'),
           ),
         );
         await seedCompletion(

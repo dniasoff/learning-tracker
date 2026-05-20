@@ -15,12 +15,12 @@ import 'package:learning_tracker/core/enums/cross_profile_scope.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/user_mode.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
-import 'package:learning_tracker/features/profiles/domain/services/pin_service.dart';
-import 'package:learning_tracker/features/gamification/domain/services/points_service.dart';
 import 'package:learning_tracker/features/dashboard/domain/services/parent_dashboard_aggregator.dart';
-import 'package:learning_tracker/features/profiles/presentation/screens/pin_flow_screen.dart';
+import 'package:learning_tracker/features/gamification/domain/services/points_service.dart';
 import 'package:learning_tracker/features/gamification/presentation/screens/point_config_screen.dart';
+import 'package:learning_tracker/features/profiles/domain/services/pin_service.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
+import 'package:learning_tracker/features/profiles/presentation/screens/pin_flow_screen.dart';
 import 'package:learning_tracker/features/stages/data/repositories/stage_definition_repository_impl.dart';
 import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
@@ -344,7 +344,7 @@ void main() {
             trackId: trackId,
             stageOrder: i,
             stageName: 'Stage $i',
-            schedule: Value('{"type":"delay","delay_days":0}'),
+            schedule: const Value('{"type":"delay","delay_days":0}'),
           ),
         );
       }
@@ -422,7 +422,7 @@ void main() {
             trackId: trackId,
             stageOrder: 1,
             stageName: 'Stage 1',
-            schedule: Value('{"type":"delay","delay_days":0}'),
+            schedule: const Value('{"type":"delay","delay_days":0}'),
           ),
         );
 
@@ -630,7 +630,7 @@ void main() {
             trackId: trackId,
             stageOrder: i,
             stageName: i == 1 ? 'Learning' : 'Chazara ${i - 1}',
-            schedule: Value('{"type":"delay","delay_days":0}'),
+            schedule: const Value('{"type":"delay","delay_days":0}'),
           ),
         );
       }
@@ -788,7 +788,7 @@ void main() {
               trackId: bavliTrackId,
               stageOrder: i,
               stageName: i == 1 ? 'Learning' : 'Chazara 1',
-              schedule: Value('{"type":"delay","delay_days":0}'),
+              schedule: const Value('{"type":"delay","delay_days":0}'),
             ),
           );
         }

@@ -19,8 +19,8 @@ import 'package:flutter_test/flutter_test.dart'
     hide expect, expectLater, group, setUp, tearDown, test;
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
-import 'package:learning_tracker/features/profiles/domain/services/pin_service.dart';
 import 'package:learning_tracker/core/time/local_day_clock.dart';
+import 'package:learning_tracker/features/profiles/domain/services/pin_service.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:talker/talker.dart';
 import 'package:test/test.dart';
@@ -282,7 +282,7 @@ void main() {
                   sefariaRef: 'Mishnah Berakhot 1',
                   stageId: 1,
                   trackType: 'personal',
-                  trackId: Value(1),
+                  trackId: const Value(1),
                   eventTimestamp: DateTime.utc(2026, 5, 13, 12),
                 ),
               );

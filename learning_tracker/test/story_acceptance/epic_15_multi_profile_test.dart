@@ -9,7 +9,6 @@ import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/cross_profile_scope.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
-import 'package:learning_tracker/features/scheduler/domain/services/learning_program_service.dart';
 // ContentVersionCheckService removed — content is now bundled
 import 'package:learning_tracker/features/gamification/domain/services/points_service.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/learning_ledger_repository.dart';
@@ -26,6 +25,7 @@ import 'package:learning_tracker/features/scheduler/data/repositories/scheduler_
 import 'package:learning_tracker/features/scheduler/data/repositories/scheduler_stage_repository_impl.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/schedule_config.dart';
 import 'package:learning_tracker/features/scheduler/domain/repositories/scheduler_content_repository.dart';
+import 'package:learning_tracker/features/scheduler/domain/services/learning_program_service.dart';
 import 'package:learning_tracker/features/scheduler/domain/services/scheduler_engine.dart';
 import 'package:learning_tracker/features/settings/domain/services/curriculum_activation_service.dart';
 import 'package:learning_tracker/features/settings/presentation/screens/scope_selection_screen.dart';
@@ -1564,7 +1564,7 @@ void main() {
             trackId: trackId,
             stageOrder: 1,
             stageName: 'Learn',
-            schedule: Value('{"type":"delay","delay_days":0}'),
+            schedule: const Value('{"type":"delay","delay_days":0}'),
           ),
         );
 
@@ -1583,7 +1583,7 @@ void main() {
             trackId: trackId,
             stageOrder: 2,
             stageName: 'Weekly Review',
-            schedule: Value('{"type":"weekly","days_of_week":[5,6]}'),
+            schedule: const Value('{"type":"weekly","days_of_week":[5,6]}'),
           ),
         );
 
@@ -1603,7 +1603,7 @@ void main() {
             trackId: trackId,
             stageOrder: 3,
             stageName: 'Rolling Back-20',
-            schedule: Value('{"type":"rolling","rolling_window_size":20}'),
+            schedule: const Value('{"type":"rolling","rolling_window_size":20}'),
           ),
         );
 
@@ -1626,7 +1626,7 @@ void main() {
             trackId: trackId,
             stageOrder: 1,
             stageName: 'Learn',
-            schedule: Value('{"type":"delay","delay_days":0}'),
+            schedule: const Value('{"type":"delay","delay_days":0}'),
           ),
         );
         await db.stageDao.insertStageDefinition(
@@ -1636,7 +1636,7 @@ void main() {
             trackId: trackId,
             stageOrder: 2,
             stageName: 'Chazara 1',
-            schedule: Value('{"type":"delay","delay_days":1}'),
+            schedule: const Value('{"type":"delay","delay_days":1}'),
           ),
         );
 
@@ -1662,7 +1662,7 @@ void main() {
             trackId: trackId,
             stageOrder: 1,
             stageName: 'Learn',
-            schedule: Value('{"type":"delay","delay_days":0}'),
+            schedule: const Value('{"type":"delay","delay_days":0}'),
           ),
         );
         // Stage 2: Weekly review on Wednesday (3) and Friday (5)
@@ -1673,7 +1673,7 @@ void main() {
             trackId: trackId,
             stageOrder: 2,
             stageName: 'Weekly Review',
-            schedule: Value('{"type":"delay","delay_days":0}'),
+            schedule: const Value('{"type":"delay","delay_days":0}'),
           ),
         );
 
@@ -1725,7 +1725,7 @@ void main() {
               trackId: trackId,
               stageOrder: 1,
               stageName: 'Learn',
-              schedule: Value('{"type":"delay","delay_days":0}'),
+              schedule: const Value('{"type":"delay","delay_days":0}'),
             ),
           );
           // Only on Friday (5) and Saturday (6)
@@ -1736,7 +1736,7 @@ void main() {
               trackId: trackId,
               stageOrder: 2,
               stageName: 'Weekly Review',
-              schedule: Value('{"type":"delay","delay_days":0}'),
+              schedule: const Value('{"type":"delay","delay_days":0}'),
             ),
           );
 
@@ -1782,7 +1782,7 @@ void main() {
             trackId: trackId,
             stageOrder: 1,
             stageName: 'Learn',
-            schedule: Value('{"type":"delay","delay_days":0}'),
+            schedule: const Value('{"type":"delay","delay_days":0}'),
           ),
         );
         // Rolling window of 5
@@ -1793,7 +1793,7 @@ void main() {
             trackId: trackId,
             stageOrder: 2,
             stageName: 'Rolling Back-5',
-            schedule: Value('{"type":"delay","delay_days":0}'),
+            schedule: const Value('{"type":"delay","delay_days":0}'),
           ),
         );
 
@@ -1847,7 +1847,7 @@ void main() {
               trackId: trackId,
               stageOrder: 1,
               stageName: 'Learn',
-              schedule: Value('{"type":"delay","delay_days":0}'),
+              schedule: const Value('{"type":"delay","delay_days":0}'),
             ),
           );
           await db.stageDao.insertStageDefinition(
@@ -1857,7 +1857,7 @@ void main() {
               trackId: trackId,
               stageOrder: 2,
               stageName: 'Rolling Back-3',
-              schedule: Value('{"type":"delay","delay_days":0}'),
+              schedule: const Value('{"type":"delay","delay_days":0}'),
             ),
           );
 

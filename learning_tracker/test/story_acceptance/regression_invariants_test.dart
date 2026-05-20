@@ -24,9 +24,9 @@ import 'package:drift/drift.dart' show Value;
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
-import 'package:learning_tracker/features/learning/domain/entities/completion_command.dart';
-import 'package:learning_tracker/features/learning/data/completion_writer.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
+import 'package:learning_tracker/features/learning/data/completion_writer.dart';
+import 'package:learning_tracker/features/learning/domain/entities/completion_command.dart';
 import 'package:test/test.dart';
 
 import '../helpers/drift_memory.dart';
@@ -134,7 +134,6 @@ void main() {
         final originalId = await db.trackDao.restoreOrCreate(
           profileId: 1,
           curriculumId: CurriculumId.mishnayos,
-          trackType: TrackType.personal,
         );
 
         // Directly insert 3 completions attached to that track, all in the past.
@@ -165,7 +164,6 @@ void main() {
         final restoredId = await db.trackDao.restoreOrCreate(
           profileId: 1,
           curriculumId: CurriculumId.mishnayos,
-          trackType: TrackType.personal,
         );
 
         expect(
@@ -235,7 +233,6 @@ void main() {
           await db.trackDao.restoreOrCreate(
             profileId: 1,
             curriculumId: CurriculumId.mishnayos,
-            trackType: TrackType.personal,
           );
 
           final restored = await db.trackDao.getTrackById(trackId);
@@ -345,7 +342,6 @@ void main() {
           final trackId = await db.trackDao.restoreOrCreate(
             profileId: 1,
             curriculumId: CurriculumId.mishnayos,
-            trackType: TrackType.personal,
           );
 
           final writer = CompletionWriter(db);

@@ -20,7 +20,6 @@ import 'package:learning_tracker/core/enums/user_mode.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/gamification/presentation/widgets/streak_widget.dart';
-import 'package:learning_tracker/features/learning/presentation/widgets/completion_button.dart';
 import 'package:learning_tracker/features/learning_order/domain/models/learning_order_item.dart';
 import 'package:learning_tracker/features/learning_order/presentation/widgets/draggable_order_item.dart';
 import 'package:learning_tracker/features/onboarding/presentation/screens/bulk_mark_screen.dart';
@@ -77,8 +76,8 @@ CurriculumTrack _track({
     id: id,
     profileId: 1,
     curriculumId: curriculumId,
-    trackType: trackType,
-    isActive: true,
+    state: 'active',
+    stateChangedAt: now,
     activatedAt: now,
   );
 }
@@ -233,14 +232,15 @@ void main() {
   // ── AC: Interaction tests ────────────────────────────────────────────────
 
   group('Story 27.4 — interaction tests', tags: ['story_27_4'], () {
-    test('CompletionButton — constructor surface locks required fields', () {
-      // The full CompletionButton interaction (tap → optimistic update
-      // → background persist) needs MarkCompletionUseCase + DAO stack;
-      // that's exercised in story 27.5 (DNI-381). Here we just confirm
-      // the class type so a rename surfaces at compile time, not at
-      // runtime in downstream features.
-      expect(CompletionButton, isNotNull);
-    });
+    test(
+      'CompletionButton — constructor surface locks required fields',
+      // TODO: CompletionButton was removed in the Wave-3/4 refactor.
+      // Skip until a replacement widget is identified or this test is deleted.
+      skip: 'CompletionButton widget no longer exists (removed in Wave-3/4 refactor)',
+      () {
+        expect(true, isTrue);
+      },
+    );
 
     test(
       'BulkMarkScreen — type is exported and constructable from features',

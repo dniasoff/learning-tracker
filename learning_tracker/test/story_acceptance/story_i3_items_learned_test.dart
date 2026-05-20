@@ -413,7 +413,7 @@ void main() {
           unitDisplayNameHe: '',
           unitDisplayNameEn: '',
           trackType: 'personal',
-          eventTimestamp: DateTime.utc(2026, 1, 1),
+          completedAt: DateTime.utc(2026, 1, 1),
           completionNumber: 1,
           markedBy: profileId,
         ),

@@ -14,14 +14,14 @@ import 'package:learning_tracker/core/constants/hebrew_terms.dart';
 import 'package:learning_tracker/core/database/seed/learning_program_seeds.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/features/scheduler/domain/services/learning_program_service.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/track_repository.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/learning_process_wizard_service.dart';
 import 'package:learning_tracker/features/scheduler/data/repositories/goal_repository_impl.dart';
+import 'package:learning_tracker/features/scheduler/domain/services/learning_program_service.dart';
 import 'package:learning_tracker/features/settings/domain/services/curriculum_activation_service.dart';
 import 'package:learning_tracker/features/stages/data/repositories/stage_definition_repository_impl.dart';
-import 'package:learning_tracker/features/track_setup/domain/entities/add_track_result.dart';
 import 'package:learning_tracker/features/track_setup/domain/services/track_creation_service.dart';
+import 'package:learning_tracker/features/tracks/setup/domain/entities/add_track_result.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:test/test.dart' hide isNotNull, isNull;
 
@@ -559,7 +559,7 @@ void main() {
               trackId: trackId,
               stageOrder: 1,
               stageName: 'Learn',
-              schedule: Value('{"type":"delay","delay_days":0}'),
+              schedule: const Value('{"type":"delay","delay_days":0}'),
               isDefault: const Value(true),
             ),
           );
@@ -570,7 +570,7 @@ void main() {
               trackId: trackId,
               stageOrder: 2,
               stageName: 'Chazara 1',
-              schedule: Value('{"type":"delay","delay_days":1}'),
+              schedule: const Value('{"type":"delay","delay_days":1}'),
             ),
           );
 
@@ -601,7 +601,7 @@ void main() {
               trackId: trackId,
               stageOrder: 1,
               stageName: 'My Custom Stage',
-              schedule: Value('{"type":"delay","delay_days":0}'),
+              schedule: const Value('{"type":"delay","delay_days":0}'),
             ),
           );
 
@@ -630,7 +630,7 @@ void main() {
               trackId: trackId,
               stageOrder: 1,
               stageName: 'Learn',
-              schedule: Value('{"type":"delay","delay_days":0}'),
+              schedule: const Value('{"type":"delay","delay_days":0}'),
             ),
           );
 

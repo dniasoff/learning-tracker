@@ -1932,7 +1932,7 @@ void main() {
             sefariaRef: 'r1',
             stageId: 1,
             trackType: 'forwards',
-            trackId: Value(1),
+            trackId: const Value(1),
             eventTimestamp: DateTime.utc(2026, 5, 13),
           ),
         );
@@ -1944,7 +1944,7 @@ void main() {
             sefariaRef: 'r2',
             stageId: 1,
             trackType: 'forwards',
-            trackId: Value(1),
+            trackId: const Value(1),
             eventTimestamp: DateTime.utc(2026, 5, 13),
           ),
         );

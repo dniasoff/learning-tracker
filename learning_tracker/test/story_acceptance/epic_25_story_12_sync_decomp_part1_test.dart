@@ -394,6 +394,11 @@ class _RecordingGateway implements FirestoreGateway {
     required String collection,
     required String docId,
   }) async => null;
+  @override
+  Future<void> pushStageDefinition({
+    required int profileId,
+    required Map<String, dynamic> data,
+  }) async {}
 }
 
 class _FetchCall {
@@ -554,6 +559,11 @@ class _PagingGateway implements FirestoreGateway {
     required String collection,
     required String docId,
   }) async => null;
+  @override
+  Future<void> pushStageDefinition({
+    required int profileId,
+    required Map<String, dynamic> data,
+  }) async {}
 }
 
 class _DispatchedPage {

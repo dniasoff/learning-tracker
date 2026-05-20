@@ -6,11 +6,11 @@ import 'package:drift/drift.dart' hide isNotNull, isNull;
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/features/scheduler/data/repositories/goal_repository_impl.dart';
-import 'package:learning_tracker/features/scheduler/domain/models/goal_entity.dart';
 import 'package:learning_tracker/features/scheduler/data/repositories/scheduler_completion_repository_impl.dart';
 import 'package:learning_tracker/features/scheduler/data/repositories/scheduler_learning_order_repository_impl.dart';
 import 'package:learning_tracker/features/scheduler/data/repositories/scheduler_stage_repository_impl.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dart';
+import 'package:learning_tracker/features/scheduler/domain/models/goal_entity.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/pace_status.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/schedule_config.dart';
 import 'package:learning_tracker/features/scheduler/domain/repositories/scheduler_content_repository.dart';
@@ -76,7 +76,7 @@ void main() {
           trackId: trackId,
           stageOrder: 1,
           stageName: 'Learn',
-          schedule: Value('{"type":"delay","delay_days":0}'),
+          schedule: const Value('{"type":"delay","delay_days":0}'),
         ),
       );
       await db.stageDao.insertStageDefinition(
@@ -86,7 +86,7 @@ void main() {
           trackId: trackId,
           stageOrder: 2,
           stageName: 'Chazara 1',
-          schedule: Value('{"type":"delay","delay_days":1}'),
+          schedule: const Value('{"type":"delay","delay_days":1}'),
         ),
       );
       await db.stageDao.insertStageDefinition(
@@ -96,7 +96,7 @@ void main() {
           trackId: trackId,
           stageOrder: 3,
           stageName: 'Chazara 2',
-          schedule: Value('{"type":"delay","delay_days":7}'),
+          schedule: const Value('{"type":"delay","delay_days":7}'),
         ),
       );
 
@@ -213,7 +213,7 @@ void main() {
           trackId: trackId,
           stageOrder: 1,
           stageName: 'Learn',
-          schedule: Value('{"type":"delay","delay_days":0}'),
+          schedule: const Value('{"type":"delay","delay_days":0}'),
         ),
       );
       await db.stageDao.insertStageDefinition(
@@ -223,7 +223,7 @@ void main() {
           trackId: trackId,
           stageOrder: 2,
           stageName: 'Chazara 1',
-          schedule: Value('{"type":"delay","delay_days":0}'),
+          schedule: const Value('{"type":"delay","delay_days":0}'),
         ),
       );
       await db.stageDao.insertStageDefinition(
@@ -233,7 +233,7 @@ void main() {
           trackId: trackId,
           stageOrder: 3,
           stageName: 'Chazara 2',
-          schedule: Value('{"type":"delay","delay_days":7}'),
+          schedule: const Value('{"type":"delay","delay_days":7}'),
         ),
       );
 
@@ -789,7 +789,7 @@ void main() {
           trackId: trackId,
           stageOrder: 1,
           stageName: 'Learn',
-          schedule: Value('{"type":"delay","delay_days":0}'),
+          schedule: const Value('{"type":"delay","delay_days":0}'),
         ),
       );
     });
@@ -908,7 +908,7 @@ void main() {
             trackId: trackId,
             stageOrder: 1,
             stageName: 'Learn',
-            schedule: Value('{"type":"delay","delay_days":0}'),
+            schedule: const Value('{"type":"delay","delay_days":0}'),
           ),
         );
 
