@@ -296,19 +296,19 @@ Sync-point trigger tags: `[P1]` `[P2]` `[P3]` `[P4]` `[P5]` `[P6]` `[P7]`
 - [ ] W6.10 (S, S3, pending)    Decline pending invite flow
 
 ### Phase 6d · Management screens
-- [ ] W6.11 (M, S3, pending)    Manage tutors screen (parent): per-child active list + pending list + revoke action + audit-log link
-- [ ] W6.12 (M, S3, pending)    Manage my grants screen (tutor): list of tutored children + parent context + resign action
-- [ ] W6.13 (M, S3, pending)    Audit log viewer (parent): filter by tutor / action / date range
+- [ ] W6.11 (M, S3, in-progress)    Manage tutors screen (parent): per-child active list + pending list + revoke action + audit-log link
+- [ ] W6.12 (M, S3, in-progress)    Manage my grants screen (tutor): list of tutored children + parent context + resign action
+- [ ] W6.13 (M, S3, in-progress)    Audit log viewer (parent): filter by tutor / action / date range
 
 ### Phase 6e · Profile picker + indicators
-- [ ] W6.14 (M, S3, pending)    Profile picker segmented "My children" + "Tutored children" sections from active-grant query
-- [ ] W6.15 (S, S3, pending)    Subtle AppBar indicator (icon + colour accent) when viewing tutored child
-- [ ] W6.16 (S, S3, pending)    Exit-to-my-profiles affordance in app shell
+- [ ] W6.14 (M, S3, in-progress)    Profile picker segmented "My children" + "Tutored children" sections from active-grant query
+- [ ] W6.15 (S, S3, in-progress)    Subtle AppBar indicator (icon + colour accent) when viewing tutored child
+- [ ] W6.16 (S, S3, in-progress)    Exit-to-my-profiles affordance in app shell
 
 ### Phase 6f · Boundary enforcement
-- [ ] W6.17 (M, S3, pending)    Disable/hide "Mark complete" affordance when permissions.canMarkLiveCompletion == false
-- [ ] W6.18 (S, S3, pending)    Tooltip: "Tutors cannot mark live completions" on disabled affordances
-- [ ] W6.19 (M, S3, pending)    Wire MarkLiveCompletionUseCase throw → UI catches TutorWriteForbiddenException with friendly dialog
+- [ ] W6.17 (M, S3, in-progress)    Disable/hide "Mark complete" affordance when permissions.canMarkLiveCompletion == false
+- [ ] W6.18 (S, S3, in-progress)    Tooltip: "Tutors cannot mark live completions" on disabled affordances
+- [ ] W6.19 (M, S3, in-progress)    Wire MarkLiveCompletionUseCase throw → UI catches TutorWriteForbiddenException with friendly dialog
 
 ### Phase 6g · Audit log writing
 - [x] W6.20 (M, S3, done)    Audit-log writer middleware: every tutor-originated mutation writes audit entry in same transaction
