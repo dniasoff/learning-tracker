@@ -210,7 +210,7 @@ Sync-point trigger tags: `[P1]` `[P2]` `[P3]` `[P4]` `[P5]` `[P6]` `[P7]`
 - [ ] W4.13 (M, S4, pending)    tracks setup → TrackBlueprintDraftRepository (SharedPreferences impl) replacing 7 ad-hoc keys
 - [ ] W4.14 (M, S4, pending)    tracks setup → ProvisionTrackUseCase replacing TrackCreationService.createTrack — **B3 integration check (back-date generates overdue)**
 - [ ] W4.15 (S, S4, pending)    track_learning_order → TrackOrder aggregate, OrderingLevel { sedarim, masechtos } VO, MasechtaOrderingPolicy
-- [ ] W4.16 (M, S5, in-progress)    progress → promote inline models to domain/; extract LifetimeTreeBuilder/OverlappingCurriculaDeduplicator/TrackDualProgressCalculator — **B1 lifetime tier subscriber + B3 projection check**
+- [x] W4.16 (M, S5, done)    progress → promote inline models to domain/; extract LifetimeTreeBuilder/OverlappingCurriculaDeduplicator/TrackDualProgressCalculator — **B1 lifetime tier subscriber + B3 projection check**
 - [ ] W4.17 (M, S5, pending)    dashboard → extract NextRewardSelector + ComputePaceStatusUseCase + TrackCompletionService — **B3 projection check**
 
 ### Phase 4c · Business-logic relocations
