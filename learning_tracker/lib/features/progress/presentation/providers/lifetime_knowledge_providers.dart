@@ -9,6 +9,7 @@
 /// consumers, and provides the Riverpod providers that orchestrate data loading.
 library;
 
+import 'package:drift/drift.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
@@ -33,6 +34,8 @@ import 'package:learning_tracker/features/tracks/domain/services/track_progress_
 export 'package:learning_tracker/features/progress/domain/models/lifetime_knowledge.dart'
     show
         CurriculumLifetimeSummary,
+        LifetimeLeafProvenance,
+        LifetimeLeafSource,
         LifetimeNodeState,
         LifetimeTotals,
         LifetimeTreeNode,
@@ -80,13 +83,65 @@ final lifetimeDataProvider = FutureProvider.autoDispose
       // subset set is counted only once.
       final subsets = subsetsOf(curriculum);
       var completedRefs = completions.map((c) => c.sefariaRef).toSet();
+      // Track every event ref (including duplicates) for the chazaros count.
+      final allEventRefs = <String>[...completions.map((c) => c.sefariaRef)];
       for (final subset in subsets) {
         final subsetCompletions = await db.completionDao
             .getCompletionsByCurriculumAndProfile(subset.storageKey, profileId);
         completedRefs = completedRefs.union(
           subsetCompletions.map((c) => c.sefariaRef).toSet(),
         );
+        allEventRefs.addAll(subsetCompletions.map((c) => c.sefariaRef));
       }
+
+      // Per-leaf provenance: query prior_completion_imports directly for the
+      // active curriculum (and its subset curricula so a ref imported under a
+      // Chumash track surfaces correctly when viewing Tanach). We classify
+      // each leaf by the strongest source seen — live wins over bulk, bulk
+      // wins over lifetimeOnly, lifetimeOnly wins over ledger-only.
+      final bulkRefs = <String>{};
+      final lifetimeRefs = <String>{};
+      for (final cur in [curriculum, ...subsets]) {
+        final imports =
+            await (db.select(db.priorCompletionImports)..where(
+                  (t) =>
+                      t.profileId.equals(profileId) &
+                      t.curriculumId.equals(cur.storageKey),
+                ))
+                .get();
+        for (final row in imports) {
+          switch (row.source) {
+            case 'bulkInTrack':
+              bulkRefs.add(row.sefariaRef);
+            case 'lifetimeOnly':
+              lifetimeRefs.add(row.sefariaRef);
+          }
+        }
+      }
+      // A ref present in BOTH the events list AND an import set is a live
+      // upgrade — strip it from the import sets so it's classified as live.
+      // We do this by counting events versus imports per ref: if there are
+      // more events than imports, at least one event is non-imported.
+      // (For the simpler classification in computeLeafProvenance, we just
+      // need to know which set this ref belongs to. Live takes precedence
+      // when an event row exists that is NOT in the imports table —
+      // approximated by counting events outside the union of import refs.)
+      final liveOnlyRefs = <String>{
+        ...completedRefs.where(
+          (r) => !bulkRefs.contains(r) && !lifetimeRefs.contains(r),
+        ),
+      };
+
+      // Per-leaf event count (for the chazaros number on live entries).
+      final leafProvenance = LifetimeTreeBuilder.computeLeafProvenance(
+        // Pass only events whose ref is NOT in imports — that's the live set.
+        // For bulk/lifetime refs we still want a chazaros count (=event count
+        // of the event row that produced the import), so pass everything and
+        // let computeLeafProvenance decide based on the import sets below.
+        completionEventRefs: allEventRefs,
+        bulkImportedRefs: bulkRefs.difference(liveOnlyRefs),
+        lifetimeImportedRefs: lifetimeRefs.difference(liveOnlyRefs),
+      );
 
       final heLookup = await _safeHeLabelLookup(repo, curriculum);
       const builder = LifetimeTreeBuilder();
@@ -97,6 +152,7 @@ final lifetimeDataProvider = FutureProvider.autoDispose
         completedRefs: completedRefs,
         ledgerEntries: ledger,
         heLabelLookup: heLookup,
+        leafProvenance: leafProvenance,
       );
     });
 
@@ -280,6 +336,55 @@ final lifetimeTotalsAcrossAllCurriculaProvider = FutureProvider.autoDispose
         learnedSections: learnedDistinct.length,
         totalSections: allDistinct.length,
         totalCurricula: CurriculumId.values.length,
+      );
+    });
+
+/// Header counters for the Lifetime Knowledge screen.
+///
+/// Two numbers:
+///   * **itemsLearned** — distinct sefariaRefs ever touched by the profile,
+///     across every curriculum and every completion source (live + bulk
+///     + lifetimeOnly + ledger-derived). Mirrors the union semantics of
+///     [lifetimeTotalsAcrossAllCurriculaProvider].
+///   * **totalChazaros** — total count of completion event rows for the
+///     profile. Every event (limud or chazara) increments the counter.
+///     Ledger-only marks contribute zero (no event row exists for them).
+class LifetimeHeaderCounters {
+  const LifetimeHeaderCounters({
+    required this.itemsLearned,
+    required this.totalChazaros,
+  });
+
+  /// Distinct items learned across every source (lifetime-tier union).
+  final int itemsLearned;
+
+  /// Total completion-event rows (every limud + every chazara).
+  final int totalChazaros;
+}
+
+/// Header counters for the Lifetime Knowledge screen.
+///
+/// Reuses [lifetimeSummariesProvider] for the items count (deduplicated
+/// across overlapping curricula) and reads completion events directly to sum
+/// chazaros across all curricula in one query.
+final lifetimeHeaderCountersProvider = FutureProvider.autoDispose
+    .family<LifetimeHeaderCounters, int>((ref, profileId) async {
+      // Items learned — reuse the union logic.
+      final totals = await ref.watch(
+        lifetimeTotalsAcrossAllCurriculaProvider(profileId).future,
+      );
+
+      // Total chazaros — every completion event row counts as one limud or
+      // one chazara. Use the broad profile-scoped query because we want
+      // every event regardless of curriculum.
+      final db = ref.watch(userDatabaseProvider);
+      final completions = await db.completionDao.getCompletionsByProfile(
+        profileId,
+      );
+
+      return LifetimeHeaderCounters(
+        itemsLearned: totals.learnedSections,
+        totalChazaros: completions.length,
       );
     });
 

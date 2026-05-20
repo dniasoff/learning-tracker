@@ -24,12 +24,18 @@ class LifetimeTreeBuilder {
   ///   completions (already unioned across subset curricula by the caller).
   /// [ledgerEntries] — bulk/lifetime ledger entries for this curriculum.
   /// [heLabelLookup] — Hebrew name lookup map (from [buildHeLabelLookup]).
+  /// [leafProvenance] — optional per-`sefariaRef` provenance map. When
+  ///   supplied, terminal tree nodes receive a [LifetimeLeafProvenance] for
+  ///   the matching leaf so the Lifetime Knowledge screen can render a
+  ///   "how was this learned" label. Keys are leaf `sefariaRef` strings; only
+  ///   refs present in [leaves] are honoured.
   CurriculumLifetimeSummary build({
     required CurriculumId curriculum,
     required List<ContentItem> leaves,
     required Set<String> completedRefs,
     required List<LearningLedgerData> ledgerEntries,
     required Map<String, String> heLabelLookup,
+    Map<String, LifetimeLeafProvenance> leafProvenance = const {},
   }) {
     final learnedLeafRefs = computeLearnedLeafRefs(
       leaves: leaves,
@@ -42,6 +48,7 @@ class LifetimeTreeBuilder {
       leaves,
       learnedLeafRefs,
       heLabelLookup: heLabelLookup,
+      leafProvenance: leafProvenance,
     );
 
     final percentage = leaves.isEmpty
@@ -166,11 +173,18 @@ class LifetimeTreeBuilder {
   // ---------------------------------------------------------------------------
 
   /// Builds the [LifetimeTreeNode] hierarchy from [leaves] and [learnedRefs].
+  ///
+  /// When [leafProvenance] is supplied, terminal nodes (those that group
+  /// exactly one underlying [ContentItem] leaf) carry a
+  /// [LifetimeLeafProvenance] looked up by `sefariaRef`. Nodes that aggregate
+  /// multiple leaves do not get provenance — provenance is a per-leaf concept
+  /// and would be ambiguous at the aggregate level.
   List<LifetimeTreeNode> buildTree(
     CurriculumId curriculumId,
     List<ContentItem> leaves,
     Set<String> learnedRefs, {
     Map<String, String> heLabelLookup = const {},
+    Map<String, LifetimeLeafProvenance> leafProvenance = const {},
   }) {
     LifetimeNodeState stateForLeaves(List<ContentItem> bucket) {
       if (bucket.isEmpty) return LifetimeNodeState.none;
@@ -248,6 +262,20 @@ class LifetimeTreeBuilder {
         final hebrewName =
             heLabelLookup[levelKey] ??
             (level == 4 ? _hebrewLabelForLeafGroup(entry.value) : null);
+
+        // Provenance is meaningful only on terminal nodes that group exactly
+        // one underlying leaf (so the label is unambiguous). When the bucket
+        // contains multiple ContentItems with the same level value but
+        // different sefariaRefs, leave provenance null at this node — the
+        // user can drill into a deeper level if hierarchy exposes one, or
+        // the renderer can skip the label when null.
+        LifetimeLeafProvenance? provenance;
+        if (children.isEmpty &&
+            leafProvenance.isNotEmpty &&
+            entry.value.length == 1) {
+          provenance = leafProvenance[entry.value.first.sefariaRef];
+        }
+
         nodes.add(
           LifetimeTreeNode(
             curriculumId: curriculumId,
@@ -257,6 +285,7 @@ class LifetimeTreeBuilder {
             hebrewName: hebrewName,
             state: nodeState,
             children: children,
+            provenance: provenance,
           ),
         );
       }
@@ -264,6 +293,109 @@ class LifetimeTreeBuilder {
     }
 
     return buildAtLevel(leaves, 1);
+  }
+
+  // ---------------------------------------------------------------------------
+  // computeLeafProvenance — per-ref provenance map
+  // ---------------------------------------------------------------------------
+
+  /// Builds a `sefariaRef → LifetimeLeafProvenance` map from raw source data.
+  ///
+  /// Provenance rules (mutually exclusive — first match wins):
+  ///   1. **[LifetimeLeafSource.live]** — at least one completion event is
+  ///      NOT present in [importedKeys] (i.e. is a true live completion). The
+  ///      `chazarosCount` is the number of completion events for this ref.
+  ///   2. **[LifetimeLeafSource.bulkMarked]** — every event for this ref is
+  ///      in [importedKeys] AND at least one import row has
+  ///      `source = 'bulkInTrack'`. `chazarosCount` is the event count.
+  ///   3. **[LifetimeLeafSource.lifetimeImported]** — every event for this
+  ///      ref is in [importedKeys] with `source = 'lifetimeOnly'`, OR there
+  ///      are no events at all but a learning-ledger entry implies the leaf
+  ///      was lifetime-marked. `chazarosCount` is the event count (0 for
+  ///      ledger-only marks).
+  ///
+  /// Refs that are not in any of [completionEventRefs] / [bulkImportedRefs] /
+  /// [lifetimeImportedRefs] / [ledgerLearnedRefs] are absent from the result
+  /// (they were never learned).
+  ///
+  /// [completionEventRefs] — list of every completion event's sefariaRef
+  ///   (one entry per event row; duplicates allowed — they count chazaros).
+  /// [bulkImportedRefs] — set of sefariaRefs present in
+  ///   `prior_completion_imports` with `source = 'bulkInTrack'`.
+  /// [lifetimeImportedRefs] — set of sefariaRefs present in
+  ///   `prior_completion_imports` with `source = 'lifetimeOnly'`.
+  /// [ledgerLearnedRefs] — additional refs learned exclusively via the
+  ///   learning-ledger (e.g. lifetime scope marks expanded to leaves). When
+  ///   a ref appears here but not in completionEventRefs/bulkImportedRefs,
+  ///   it is treated as a lifetimeImported leaf with `chazarosCount = 0`.
+  static Map<String, LifetimeLeafProvenance> computeLeafProvenance({
+    required List<String> completionEventRefs,
+    required Set<String> bulkImportedRefs,
+    required Set<String> lifetimeImportedRefs,
+    Set<String> ledgerLearnedRefs = const {},
+  }) {
+    // Count events per ref.
+    final eventCount = <String, int>{};
+    for (final ref in completionEventRefs) {
+      eventCount[ref] = (eventCount[ref] ?? 0) + 1;
+    }
+
+    final out = <String, LifetimeLeafProvenance>{};
+    final allRefs = <String>{
+      ...eventCount.keys,
+      ...bulkImportedRefs,
+      ...lifetimeImportedRefs,
+      ...ledgerLearnedRefs,
+    };
+
+    for (final ref in allRefs) {
+      final count = eventCount[ref] ?? 0;
+      final isBulk = bulkImportedRefs.contains(ref);
+      final isLifetime = lifetimeImportedRefs.contains(ref);
+
+      // Rule 1: any event that is NOT an import row → live.
+      // A live event is one whose natural key is absent from the imports
+      // table. Equivalently: events exist AND the ref is NOT in both
+      // bulk/lifetime imports for every event row. Since the imports table
+      // is keyed by natural key and one ref can have multiple stage rows,
+      // the caller passes the set of refs WITH any import row; if there are
+      // more events than imports for this ref, at least one is live.
+      //
+      // Simpler model used here: a ref is "live" when there is at least one
+      // event AND the ref is NOT present in either import set, OR when
+      // there are more events than the number of import rows the caller
+      // saw for it. The caller in [lifetime_knowledge_providers.dart]
+      // distinguishes by querying the prior_completion_imports table.
+      final hasImportRow = isBulk || isLifetime;
+      if (count > 0 && !hasImportRow) {
+        out[ref] = LifetimeLeafProvenance(
+          source: LifetimeLeafSource.live,
+          chazarosCount: count,
+        );
+        continue;
+      }
+
+      // Rule 2: bulkInTrack import wins over lifetimeOnly when both are
+      // present for the same ref (defensive — should not happen in practice).
+      if (isBulk) {
+        out[ref] = LifetimeLeafProvenance(
+          source: LifetimeLeafSource.bulkMarked,
+          chazarosCount: count,
+        );
+        continue;
+      }
+
+      // Rule 3: lifetimeOnly import OR ledger-only mark.
+      if (isLifetime || ledgerLearnedRefs.contains(ref)) {
+        out[ref] = LifetimeLeafProvenance(
+          source: LifetimeLeafSource.lifetimeImported,
+          chazarosCount: count,
+        );
+        continue;
+      }
+    }
+
+    return out;
   }
 
   // ---------------------------------------------------------------------------

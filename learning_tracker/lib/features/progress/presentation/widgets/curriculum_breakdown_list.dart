@@ -10,12 +10,33 @@ import 'package:learning_tracker/features/progress/presentation/providers/lifeti
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// Scrollable list of [CurriculumCompletionSummary] rows with expandable
-/// per-curriculum tree views. Shared between [ItemsLearnedScreen] and
-/// [LifetimeViewScreen].
+/// per-curriculum tree views. Shared between [ItemsLearnedScreen],
+/// [LifetimeViewScreen], and [LifetimeKnowledgeScreen].
+///
+/// When [showProvenance] is true (Lifetime Knowledge screen), terminal nodes
+/// render a small "how was this learned" label (e.g. "Live · 3 chazaros").
+/// The label is suppressed on the older screens to preserve their existing
+/// behaviour.
+///
+/// [shrinkWrap] / [physics] are forwarded to the inner [ListView] so callers
+/// that embed the list inside another scroll view (e.g. the Lifetime
+/// Knowledge screen which adds a header card above the list) can render
+/// without nested-scroll friction.
 class CurriculumBreakdownList extends StatefulWidget {
-  const CurriculumBreakdownList({super.key, required this.summaries});
+  const CurriculumBreakdownList({
+    super.key,
+    required this.summaries,
+    this.showProvenance = false,
+    this.shrinkWrap = false,
+    this.physics,
+    this.padding,
+  });
 
   final List<CurriculumCompletionSummary> summaries;
+  final bool showProvenance;
+  final bool shrinkWrap;
+  final ScrollPhysics? physics;
+  final EdgeInsetsGeometry? padding;
 
   @override
   State<CurriculumBreakdownList> createState() =>
@@ -30,7 +51,9 @@ class _CurriculumBreakdownListState extends State<CurriculumBreakdownList> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     return ListView.separated(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
+      padding: widget.padding ?? const EdgeInsets.fromLTRB(16, 8, 16, 32),
+      shrinkWrap: widget.shrinkWrap,
+      physics: widget.physics,
       itemCount: widget.summaries.length,
       separatorBuilder: (_, __) => const SizedBox(height: 10),
       itemBuilder: (context, index) {
@@ -40,6 +63,7 @@ class _CurriculumBreakdownListState extends State<CurriculumBreakdownList> {
           isExpanded: _expanded.contains(summary.curriculumId),
           treeExpanded: _treeExpanded,
           l10n: l10n,
+          showProvenance: widget.showProvenance,
           onExpandToggle: () => setState(() {
             if (_expanded.contains(summary.curriculumId)) {
               _expanded.remove(summary.curriculumId);
@@ -62,6 +86,7 @@ class _CurriculumCard extends ConsumerWidget {
     required this.isExpanded,
     required this.treeExpanded,
     required this.l10n,
+    required this.showProvenance,
     required this.onExpandToggle,
     required this.onTreeExpandToggle,
   });
@@ -70,6 +95,7 @@ class _CurriculumCard extends ConsumerWidget {
   final bool isExpanded;
   final Map<String, bool> treeExpanded;
   final AppLocalizations l10n;
+  final bool showProvenance;
   final VoidCallback onExpandToggle;
   final void Function(String key, bool isExpanded) onTreeExpandToggle;
 
@@ -215,12 +241,19 @@ class _CurriculumCard extends ConsumerWidget {
         nodeKey: key,
         expandedNodes: treeExpanded,
         onExpandToggle: onTreeExpandToggle,
+        showProvenance: showProvenance,
       );
     }).toList();
   }
 }
 
 /// A single expandable tree node inside a curriculum breakdown card.
+///
+/// When [showProvenance] is true and the underlying [LifetimeTreeNode] carries
+/// a [LifetimeLeafProvenance], a small label is rendered next to the leaf row
+/// (e.g. "Live · 3 chazaros" / "Bulk-marked" / "Lifetime · imported"). The
+/// label is suppressed on aggregating nodes — only terminal leaves surface
+/// provenance.
 class CurriculumBreakdownTreeNode extends StatelessWidget {
   const CurriculumBreakdownTreeNode({
     super.key,
@@ -229,6 +262,7 @@ class CurriculumBreakdownTreeNode extends StatelessWidget {
     required this.nodeKey,
     required this.expandedNodes,
     required this.onExpandToggle,
+    this.showProvenance = false,
   });
 
   final LifetimeTreeNode node;
@@ -236,6 +270,11 @@ class CurriculumBreakdownTreeNode extends StatelessWidget {
   final String nodeKey;
   final Map<String, bool> expandedNodes;
   final void Function(String key, bool isExpanded) onExpandToggle;
+
+  /// When true and [node.provenance] is set, renders a per-leaf provenance
+  /// label below the level label. Used by the Lifetime Knowledge screen; not
+  /// used by older screens that only care about the tree state.
+  final bool showProvenance;
 
   @override
   Widget build(BuildContext context) {
@@ -255,6 +294,11 @@ class CurriculumBreakdownTreeNode extends StatelessWidget {
         color: AppTheme.brandInk,
       ),
     );
+
+    final provenanceLabel =
+        showProvenance && !hasChildren && node.provenance != null
+        ? _provenanceText(node.provenance!)
+        : null;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -283,6 +327,17 @@ class CurriculumBreakdownTreeNode extends StatelessWidget {
                 ),
                 const SizedBox(width: 8),
                 Expanded(child: label),
+                if (provenanceLabel != null) ...[
+                  const SizedBox(width: 6),
+                  Text(
+                    provenanceLabel,
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: AppTheme.brandInkMuted,
+                      fontWeight: FontWeight.w500,
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                ],
                 if (hasChildren)
                   Icon(
                     isExpanded
@@ -304,6 +359,7 @@ class CurriculumBreakdownTreeNode extends StatelessWidget {
               nodeKey: childKey,
               expandedNodes: expandedNodes,
               onExpandToggle: onExpandToggle,
+              showProvenance: showProvenance,
             );
           }),
       ],
@@ -318,6 +374,27 @@ class CurriculumBreakdownTreeNode extends StatelessWidget {
         return AppTheme.brandBlue.withValues(alpha: 0.5);
       case LifetimeNodeState.none:
         return AppTheme.brandOutline;
+    }
+  }
+
+  /// Renders a provenance label for the lifetime tier:
+  ///   * live → "Live · N chazaros" (singular: "Live · 1 chazara")
+  ///   * bulkMarked → "Bulk-marked"
+  ///   * lifetimeImported → "Lifetime · imported"
+  ///
+  /// Kept as plain English for now per the brief — l10n keys can be added
+  /// later if needed.
+  static String _provenanceText(LifetimeLeafProvenance p) {
+    switch (p.source) {
+      case LifetimeLeafSource.live:
+        final n = p.chazarosCount;
+        if (n <= 0) return 'Live';
+        if (n == 1) return 'Live · 1 chazara';
+        return 'Live · $n chazaros';
+      case LifetimeLeafSource.bulkMarked:
+        return 'Bulk-marked';
+      case LifetimeLeafSource.lifetimeImported:
+        return 'Lifetime · imported';
     }
   }
 }

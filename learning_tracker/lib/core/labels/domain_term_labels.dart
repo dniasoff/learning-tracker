@@ -22,15 +22,15 @@ import 'package:learning_tracker/features/scheduler/domain/services/learning_pro
 /// `useHebrewTermsProvider` toggle check themselves.
 ///
 /// The function may be called from both [WidgetRef] (widget layer) and
-/// provider-side [Ref] closures; the [_DomainTermLabels] object is cheap to
+/// provider-side [Ref] closures; the [DomainTermLabels] object is cheap to
 /// construct and is not cached across rebuilds.
-_DomainTermLabels domainTermLabels(WidgetRef ref) =>
-    _DomainTermLabels(ref.watch(useHebrewTermsProvider));
+DomainTermLabels domainTermLabels(WidgetRef ref) =>
+    DomainTermLabels(ref.watch(useHebrewTermsProvider));
 
 /// Variant for use from inside provider / notifier closures where the
 /// parameter is a provider-side [Ref].
-_DomainTermLabels domainTermLabelsFromRef(Ref ref) =>
-    _DomainTermLabels(ref.watch(useHebrewTermsProvider));
+DomainTermLabels domainTermLabelsFromRef(Ref ref) =>
+    DomainTermLabels(ref.watch(useHebrewTermsProvider));
 
 /// Resolved domain term strings for the current Hebrew Terms toggle state.
 ///
@@ -42,8 +42,8 @@ _DomainTermLabels domainTermLabelsFromRef(Ref ref) =>
 /// The ARB keys for each term are documented next to the corresponding field
 /// so the connection between this class, the constants file, and the ARBs is
 /// traceable in one place.
-class _DomainTermLabels {
-  const _DomainTermLabels(this._useHebrew);
+class DomainTermLabels {
+  const DomainTermLabels(this._useHebrew);
 
   final bool _useHebrew;
 

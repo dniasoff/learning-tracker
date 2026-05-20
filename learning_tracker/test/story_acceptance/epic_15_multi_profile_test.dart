@@ -2994,6 +2994,9 @@ void main() {
         curricula: [],
         totalCompletions: 0,
         totalUniqueUnits: 0,
+        unitLevelSiyumimCount: 0,
+        aggregateLevelSiyumimCount: 0,
+        curriculumLevelSiyumimCount: 0,
       );
       expect(vm.curricula, isEmpty);
       expect(vm.totalCompletions, 0);
@@ -3058,16 +3061,23 @@ void main() {
     test('MilestoneAchievement represents seder and curriculum completion', () {
       final seder = MilestoneAchievement(
         type: 'seder_complete',
-        displayName: 'Seder Zeraim',
+        level: MilestoneLevel.aggregate,
+        curriculumId: CurriculumId.mishnayos,
+        displayName: 'Zeraim',
+        aggregateKey: 'Zeraim',
         achievedAt: DateTime(2026, 3, 1),
       );
       final curriculum = MilestoneAchievement(
         type: 'curriculum_complete',
+        level: MilestoneLevel.curriculum,
+        curriculumId: CurriculumId.mishnayos,
         displayName: 'Mishnayos',
         achievedAt: DateTime(2026, 12, 1),
       );
       expect(seder.type, 'seder_complete');
+      expect(seder.level, MilestoneLevel.aggregate);
       expect(curriculum.type, 'curriculum_complete');
+      expect(curriculum.level, MilestoneLevel.curriculum);
     });
 
     // AC 7: Track type badge on each entry
@@ -3094,11 +3104,17 @@ void main() {
         curricula: [],
         totalCompletions: 5,
         totalUniqueUnits: 3,
+        unitLevelSiyumimCount: 0,
+        aggregateLevelSiyumimCount: 0,
+        curriculumLevelSiyumimCount: 0,
       );
       const vmParent = JourneyViewModel(
         curricula: [],
         totalCompletions: 10,
         totalUniqueUnits: 7,
+        unitLevelSiyumimCount: 0,
+        aggregateLevelSiyumimCount: 0,
+        curriculumLevelSiyumimCount: 0,
       );
       // Different profile IDs yield different view models
       expect(vmChild.totalCompletions, isNot(vmParent.totalCompletions));
@@ -3110,6 +3126,9 @@ void main() {
         curricula: [],
         totalCompletions: 0,
         totalUniqueUnits: 0,
+        unitLevelSiyumimCount: 0,
+        aggregateLevelSiyumimCount: 0,
+        curriculumLevelSiyumimCount: 0,
       );
       expect(vm.totalCompletions, 0);
       // Screen uses totalCompletions == 0 to show empty state

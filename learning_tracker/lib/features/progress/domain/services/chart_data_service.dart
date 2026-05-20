@@ -71,6 +71,60 @@ class ChartDataService {
     );
   }
 
+  /// Get per-bucket counts split into limudim (stage 1) and chazaros
+  /// (stage > 1) for the Recent Activity screen's two-colour stacked bar
+  /// chart.
+  ///
+  /// Uses [CompletionTierFilter.liveOnly] — the Recent Activity lens is the
+  /// **engagement-tier** view, which the three-tier policy reserves for live
+  /// in-session marks. Bulk-marked items are surfaced on the Lifetime
+  /// Knowledge lens instead, never here.
+  ///
+  /// Bucketing matches [getDailyCompletions]: daily for spans
+  /// ≤ [kChartDailyMaxDays], weekly otherwise. For longer spans the
+  /// effective start is bumped to the user's first live completion so the
+  /// chart never displays thousands of empty leading buckets — same cap
+  /// applied by the other Recent Activity methods.
+  Future<List<DailyLimudChazaraData>> getDailyLimudimAndChazaros({
+    required DateTime startDate,
+    required DateTime endDate,
+    String? curriculumId,
+  }) async {
+    final curriculum = _resolveCurriculum(curriculumId);
+    final effectiveStart = await _effectiveStartDate(
+      requestedStart: startDate,
+      requestedEnd: endDate,
+      curriculumId: curriculum,
+      tier: CompletionTierFilter.liveOnly,
+    );
+
+    final completions = await _db.completionDao.getCompletionsByTier(
+      profileId: _profileId,
+      tier: CompletionTierFilter.liveOnly,
+      curriculumId: curriculum,
+      since: effectiveStart,
+      until: _endOfDay(endDate),
+    );
+
+    final limudByDate = <DateTime, int>{};
+    final chazaraByDate = <DateTime, int>{};
+    for (final c in completions) {
+      final localDate = _extractLocalDate(c.completedAt);
+      if (c.stageId <= 1) {
+        limudByDate[localDate] = (limudByDate[localDate] ?? 0) + 1;
+      } else {
+        chazaraByDate[localDate] = (chazaraByDate[localDate] ?? 0) + 1;
+      }
+    }
+
+    return _bucketizeLimudChazara(
+      limudByDate: limudByDate,
+      chazaraByDate: chazaraByDate,
+      startDate: effectiveStart,
+      endDate: endDate,
+    );
+  }
+
   /// Get cumulative progress over time — bucketed daily or weekly as for
   /// [getDailyCompletions].
   ///
@@ -126,6 +180,121 @@ class ChartDataService {
       endDate: endDate,
       cumulativeBeforeStart: cumulativeBeforeStart,
     );
+  }
+
+  /// Live-only counterpart of [getDailyCompletions] for the Recent Activity
+  /// engagement-tier lens.
+  ///
+  /// The Recent Activity screen renders the engagement tier — only live
+  /// in-session marks count here. The other charts on that screen
+  /// (Limudim & Chazaros, Cumulative live, Points) all share the same tier
+  /// filter; this method gives screens a simple, non-stacked daily count
+  /// when they need it (e.g. tooltips, totals) without re-implementing the
+  /// SQL.
+  ///
+  /// Bucketing matches [getDailyCompletions].
+  Future<List<DailyCompletionData>> getDailyCompletionsLive({
+    required DateTime startDate,
+    required DateTime endDate,
+    String? curriculumId,
+  }) async {
+    final curriculum = _resolveCurriculum(curriculumId);
+    final effectiveStart = await _effectiveStartDate(
+      requestedStart: startDate,
+      requestedEnd: endDate,
+      curriculumId: curriculum,
+      tier: CompletionTierFilter.liveOnly,
+    );
+
+    final completions = await _db.completionDao.getCompletionsByTier(
+      profileId: _profileId,
+      tier: CompletionTierFilter.liveOnly,
+      curriculumId: curriculum,
+      since: effectiveStart,
+      until: _endOfDay(endDate),
+    );
+
+    final counts = <DateTime, int>{};
+    for (final c in completions) {
+      final localDate = _extractLocalDate(c.completedAt);
+      counts[localDate] = (counts[localDate] ?? 0) + 1;
+    }
+
+    return _bucketizeDaily(
+      counts: counts,
+      startDate: effectiveStart,
+      endDate: endDate,
+    );
+  }
+
+  /// Live-only counterpart of [getCumulativeProgress] for the Recent Activity
+  /// engagement-tier lens. Only live in-session marks contribute to the
+  /// running total — bulk-marked items roll up to Lifetime Knowledge
+  /// instead.
+  Future<List<CumulativeProgressPoint>> getCumulativeProgressLive({
+    required DateTime startDate,
+    required DateTime endDate,
+    String? curriculumId,
+  }) async {
+    final curriculum = _resolveCurriculum(curriculumId);
+    final effectiveStart = await _effectiveStartDate(
+      requestedStart: startDate,
+      requestedEnd: endDate,
+      curriculumId: curriculum,
+      tier: CompletionTierFilter.liveOnly,
+    );
+
+    final beforeStartCutoff = effectiveStart.subtract(
+      const Duration(milliseconds: 1),
+    );
+    final priorRows = await _db.completionDao.getCompletionsByTier(
+      profileId: _profileId,
+      tier: CompletionTierFilter.liveOnly,
+      curriculumId: curriculum,
+      until: beforeStartCutoff,
+    );
+    final cumulativeBeforeStart = priorRows.length;
+
+    final completions = await _db.completionDao.getCompletionsByTier(
+      profileId: _profileId,
+      tier: CompletionTierFilter.liveOnly,
+      curriculumId: curriculum,
+      since: effectiveStart,
+      until: _endOfDay(endDate),
+    );
+
+    final dailyCounts = <DateTime, int>{};
+    for (final c in completions) {
+      final localDate = _extractLocalDate(c.completedAt);
+      dailyCounts[localDate] = (dailyCounts[localDate] ?? 0) + 1;
+    }
+
+    return _bucketizeCumulative(
+      counts: dailyCounts,
+      startDate: effectiveStart,
+      endDate: endDate,
+      cumulativeBeforeStart: cumulativeBeforeStart,
+    );
+  }
+
+  /// Live-only counterpart of [getStreakCalendar] for the Recent Activity
+  /// engagement-tier lens. Lights up only days with a live in-session mark —
+  /// consistent with the streak (engagement-tier) policy.
+  Future<Set<DateTime>> getStreakCalendarLive({
+    required DateTime startDate,
+    required DateTime endDate,
+  }) async {
+    final completions = await _db.completionDao.getCompletionsByTier(
+      profileId: _profileId,
+      tier: CompletionTierFilter.liveOnly,
+      since: startDate,
+      until: _endOfDay(endDate),
+    );
+    final activeDates = <DateTime>{};
+    for (final c in completions) {
+      activeDates.add(_extractLocalDate(c.completedAt));
+    }
+    return activeDates;
   }
 
   /// Get target line points for a curriculum's goal.
@@ -329,6 +498,62 @@ class ChartDataService {
       });
       result.add(
         CumulativeProgressPoint(date: bucketStart, total: runningTotal),
+      );
+      bucketStart = bucketEndExclusive;
+    }
+    return result;
+  }
+
+  /// Bucketized per-stage split for the Limudim & Chazaros stacked chart.
+  ///
+  /// Same bucketing rule as [_bucketizeDaily] — daily for short spans, weekly
+  /// otherwise. Each bucket sums [limudByDate] and [chazaraByDate]
+  /// independently so the caller gets both segment heights per bar.
+  static List<DailyLimudChazaraData> _bucketizeLimudChazara({
+    required Map<DateTime, int> limudByDate,
+    required Map<DateTime, int> chazaraByDate,
+    required DateTime startDate,
+    required DateTime endDate,
+  }) {
+    final spanDays = _calendarDaysBetween(startDate, endDate);
+    if (spanDays <= kChartDailyMaxDays) {
+      final result = <DailyLimudChazaraData>[];
+      var current = startDate;
+      while (!current.isAfter(endDate)) {
+        result.add(
+          DailyLimudChazaraData(
+            date: current,
+            limudCount: limudByDate[current] ?? 0,
+            chazaraCount: chazaraByDate[current] ?? 0,
+          ),
+        );
+        current = _addDays(current, 1);
+      }
+      return result;
+    }
+
+    final result = <DailyLimudChazaraData>[];
+    var bucketStart = startDate;
+    while (!bucketStart.isAfter(endDate)) {
+      final bucketEndExclusive = _addDays(bucketStart, 7);
+      var limudSum = 0;
+      var chazaraSum = 0;
+      limudByDate.forEach((date, n) {
+        if (!date.isBefore(bucketStart) && date.isBefore(bucketEndExclusive)) {
+          limudSum += n;
+        }
+      });
+      chazaraByDate.forEach((date, n) {
+        if (!date.isBefore(bucketStart) && date.isBefore(bucketEndExclusive)) {
+          chazaraSum += n;
+        }
+      });
+      result.add(
+        DailyLimudChazaraData(
+          date: bucketStart,
+          limudCount: limudSum,
+          chazaraCount: chazaraSum,
+        ),
       );
       bucketStart = bucketEndExclusive;
     }

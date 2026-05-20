@@ -32,10 +32,12 @@ import 'package:learning_tracker/features/profiles/presentation/screens/profile_
 import 'package:learning_tracker/features/progress/presentation/screens/completion_history_screen.dart';
 import 'package:learning_tracker/features/progress/presentation/screens/curriculum_progress_screen.dart';
 import 'package:learning_tracker/features/progress/presentation/screens/items_learned_screen.dart';
-import 'package:learning_tracker/features/progress/presentation/screens/learning_journey_screen.dart';
+import 'package:learning_tracker/features/progress/presentation/screens/lifetime_knowledge_screen.dart';
 import 'package:learning_tracker/features/progress/presentation/screens/lifetime_view_screen.dart';
 import 'package:learning_tracker/features/progress/presentation/screens/progress_charts_screen.dart';
 import 'package:learning_tracker/features/progress/presentation/screens/progress_screen.dart';
+import 'package:learning_tracker/features/progress/presentation/screens/recent_activity_screen.dart';
+import 'package:learning_tracker/features/progress/presentation/screens/siyumim_milestones_screen.dart';
 import 'package:learning_tracker/features/progress/presentation/screens/streak_history_screen.dart';
 import 'package:learning_tracker/features/progress/presentation/screens/tasks_done_screen.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/screens/city_picker_screen.dart';
@@ -128,10 +130,10 @@ class AppRouter extends RootStackRouter {
       ],
     ),
 
-    // Learning Journey
+    // Siyumim & Milestones (was: Learning Journey)
     AutoRoute(
       path: '/journey',
-      page: LearningJourneyRoute.page,
+      page: SiyumimMilestonesRoute.page,
       guards: [authGuard],
     ),
 

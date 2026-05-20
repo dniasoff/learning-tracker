@@ -284,7 +284,7 @@ class _LearningJourneyTile extends StatelessWidget {
     final l10n = AppLocalizations.of(context)!;
     return InkWell(
       borderRadius: BorderRadius.circular(20),
-      onTap: () => context.router.push(LearningJourneyRoute()),
+      onTap: () => context.router.push(SiyumimMilestonesRoute()),
       child: Ink(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(

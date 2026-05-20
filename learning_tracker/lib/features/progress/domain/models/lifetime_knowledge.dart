@@ -12,6 +12,72 @@ enum LifetimeNodeState {
   full,
 }
 
+/// How a single learned leaf entered the user's knowledge.
+///
+/// Used by the Lifetime Knowledge screen to show a per-leaf provenance label
+/// (e.g. "Live · 3 chazaros" / "Bulk-marked" / "Lifetime · imported").
+///
+/// Mutually exclusive — if a leaf has both a live completion AND an imported
+/// row for the same natural key, the live source wins (the import row gets
+/// deleted on the upgrade path; see [PriorCompletionImports] B8 upgrade).
+enum LifetimeLeafSource {
+  /// At least one [CompletionSource.live] completion exists for this ref.
+  /// The leaf was marked through normal in-app learning.
+  live,
+
+  /// Only [CompletionSource.bulkInTrack] imports exist — the user added the
+  /// leaf via the track wizard "I already learned this" path. Counts toward
+  /// siyumim and lifetime knowledge but NOT toward streak/points.
+  bulkMarked,
+
+  /// Only [CompletionSource.lifetimeOnly] imports exist — the user added the
+  /// leaf via the settings "Mark lifetime knowledge" screen, outside any
+  /// track. Counts toward lifetime knowledge ONLY.
+  lifetimeImported,
+}
+
+/// Per-leaf provenance carried on terminal nodes of the [LifetimeTreeNode]
+/// tree so the Lifetime Knowledge screen can render a "how was this learned"
+/// label next to each leaf.
+///
+/// Only meaningful on terminal nodes (`children.isEmpty`). Higher-level nodes
+/// expose `null` because they aggregate over multiple leaves with potentially
+/// mixed provenance.
+class LifetimeLeafProvenance {
+  const LifetimeLeafProvenance({
+    required this.source,
+    required this.chazarosCount,
+  });
+
+  /// Where the leaf's lifetime credit comes from.
+  final LifetimeLeafSource source;
+
+  /// Number of completion events recorded for this leaf — `limudim + chazaros`,
+  /// i.e. every distinct stage event ever logged.
+  ///
+  /// For [LifetimeLeafSource.lifetimeImported] entries that originated from
+  /// the ledger rather than the completion_events table this is `0` (no event
+  /// rows exist for ledger-only marks). For [LifetimeLeafSource.bulkMarked]
+  /// it counts the bulk-import event rows (typically 1). For
+  /// [LifetimeLeafSource.live] it counts all completion events including the
+  /// upgrades from prior bulk imports.
+  final int chazarosCount;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is LifetimeLeafProvenance &&
+          other.source == source &&
+          other.chazarosCount == chazarosCount);
+
+  @override
+  int get hashCode => Object.hash(source, chazarosCount);
+
+  @override
+  String toString() =>
+      'LifetimeLeafProvenance(source: $source, chazaros: $chazarosCount)';
+}
+
 /// One node in the lifetime knowledge tree.
 ///
 /// Carries the structured metadata the renderer needs to produce a
@@ -27,6 +93,7 @@ class LifetimeTreeNode {
     required this.hebrewName,
     required this.state,
     required this.children,
+    this.provenance,
   });
 
   final CurriculumId curriculumId;
@@ -48,6 +115,13 @@ class LifetimeTreeNode {
 
   final LifetimeNodeState state;
   final List<LifetimeTreeNode> children;
+
+  /// Provenance for terminal (leaf) nodes — `null` on aggregating nodes.
+  ///
+  /// Populated by [LifetimeTreeBuilder.build] when source-data provenance is
+  /// available. Used by the Lifetime Knowledge screen to show how a leaf was
+  /// learned ("Live · N chazaros" / "Bulk-marked" / "Lifetime · imported").
+  final LifetimeLeafProvenance? provenance;
 }
 
 /// Aggregated lifetime progress summary for one curriculum.

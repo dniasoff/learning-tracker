@@ -1,0 +1,197 @@
+import 'package:fl_chart/fl_chart.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:learning_tracker/core/labels/domain_term_labels.dart';
+import 'package:learning_tracker/core/theme/app_colors.dart';
+import 'package:learning_tracker/features/progress/domain/models/chart_data.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
+
+/// Limud (stage-1 / initial learning) segment colour.
+const Color _kLimudColor = AppColors.blueMid;
+
+/// Chazara (stage ≥ 2 / review) segment colour.
+const Color _kChazaraColor = Color(0xFFF2A93B);
+
+/// Two-colour stacked bar chart for the Recent Activity screen.
+///
+/// Each bucket shows two segments:
+///  - **Limud** (bottom segment, deep blue) — stage-1 initial-learning marks.
+///  - **Chazara** (top segment, accent amber) — stage ≥ 2 review marks.
+///
+/// The chart is strictly **live-only** data — provenance of the data comes
+/// from [ChartDataService.getDailyLimudimAndChazaros] which applies
+/// [CompletionTierFilter.liveOnly]. The widget itself does no tier filtering;
+/// it renders whatever it is given.
+///
+/// Differs from [CompletionsBarChart] (single-colour) by displaying the
+/// limud/chazara split per bucket plus a small legend row underneath. Both
+/// widgets coexist during the Phase B handover — the old chart is still
+/// used by the (about-to-be-deleted) progress_charts_screen.
+class LimudimChazarosBarChart extends ConsumerWidget {
+  final List<DailyLimudChazaraData> data;
+
+  const LimudimChazarosBarChart({super.key, required this.data});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
+    if (data.isEmpty) {
+      return Center(child: Text(l10n.noData));
+    }
+
+    final terms = domainTermLabels(ref);
+
+    final maxTotal = data.fold<int>(
+      0,
+      (max, d) => d.total > max ? d.total : max,
+    );
+    final maxY = maxTotal == 0 ? 5.0 : (maxTotal + 1).toDouble();
+
+    final isShortRange = data.length <= 7;
+    const weekdayLabel = <int, String>{
+      DateTime.monday: 'MON',
+      DateTime.tuesday: 'TUE',
+      DateTime.wednesday: 'WED',
+      DateTime.thursday: 'THU',
+      DateTime.friday: 'FRI',
+      DateTime.saturday: 'SAT',
+      DateTime.sunday: 'SUN',
+    };
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: Column(
+        children: [
+          Expanded(
+            child: BarChart(
+              BarChartData(
+                alignment: BarChartAlignment.spaceBetween,
+                maxY: maxY,
+                barTouchData: const BarTouchData(enabled: false),
+                titlesData: FlTitlesData(
+                  show: true,
+                  bottomTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      getTitlesWidget: (value, meta) {
+                        final index = value.toInt();
+                        if (index < 0 || index >= data.length) {
+                          return const SizedBox.shrink();
+                        }
+                        final step = isShortRange ? 1 : 2;
+                        if (index % step != 0) return const SizedBox.shrink();
+                        final d = data[index].date;
+                        return Padding(
+                          padding: const EdgeInsets.only(top: 6),
+                          child: Text(
+                            weekdayLabel[d.weekday] ?? '',
+                            style: const TextStyle(
+                              fontSize: 9,
+                              color: Color(0xFF8A91A5),
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                  leftTitles: const AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
+                  topTitles: const AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
+                  rightTitles: const AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
+                ),
+                gridData: const FlGridData(show: false),
+                borderData: FlBorderData(show: false),
+                barGroups: [
+                  for (var i = 0; i < data.length; i++)
+                    BarChartGroupData(
+                      x: i,
+                      barRods: [
+                        BarChartRodData(
+                          toY: data[i].total.toDouble(),
+                          width: isShortRange ? 18 : 10,
+                          borderRadius: const BorderRadius.only(
+                            topLeft: Radius.circular(6),
+                            topRight: Radius.circular(6),
+                          ),
+                          // Stack: limud on the bottom, chazara on the top.
+                          rodStackItems: [
+                            BarChartRodStackItem(
+                              0,
+                              data[i].limudCount.toDouble(),
+                              _kLimudColor,
+                            ),
+                            BarChartRodStackItem(
+                              data[i].limudCount.toDouble(),
+                              data[i].total.toDouble(),
+                              _kChazaraColor,
+                            ),
+                          ],
+                        ),
+                      ],
+                      showingTooltipIndicators: const [],
+                    ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          _Legend(limudLabel: terms.limud, chazarosLabel: terms.chazaros),
+        ],
+      ),
+    );
+  }
+}
+
+class _Legend extends StatelessWidget {
+  const _Legend({required this.limudLabel, required this.chazarosLabel});
+
+  final String limudLabel;
+  final String chazarosLabel;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        _LegendDot(color: _kLimudColor, label: limudLabel),
+        const SizedBox(width: 16),
+        _LegendDot(color: _kChazaraColor, label: chazarosLabel),
+      ],
+    );
+  }
+}
+
+class _LegendDot extends StatelessWidget {
+  const _LegendDot({required this.color, required this.label});
+
+  final Color color;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 10,
+          height: 10,
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+        ),
+        const SizedBox(width: 6),
+        Text(
+          label,
+          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+            color: const Color(0xFF5E6678),
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      ],
+    );
+  }
+}

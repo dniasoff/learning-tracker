@@ -1,4 +1,6 @@
+import 'package:drift/drift.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:learning_tracker/core/database/daos/completion_dao.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
@@ -6,6 +8,7 @@ import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_tier_filter.dart';
+import 'package:learning_tracker/features/progress/domain/services/lifetime_tree_builder.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/lifetime_knowledge_providers.dart';
 
 /// Summary of per-curriculum completion data for the Items Learned /
@@ -67,12 +70,23 @@ Future<CurriculumCompletionSummary?> computeItemsLearnedSummary({
   final leafRefs = leaves.map((l) => l.sefariaRef).toSet();
   final learnedCount = completedRefs.intersection(leafRefs).length;
 
+  // Per-leaf provenance for the "Track learning only" view. lifetimeOnly is
+  // excluded by the trackAchievement filter so only live and bulkMarked
+  // entries appear here.
+  final leafProvenance = await _trackProvenanceForCurriculum(
+    db,
+    curriculum,
+    profileId,
+    trackCompletions,
+  );
+
   final heLookup = await _heLabelLookupForCurriculum(repo, curriculum);
   final tree = _buildCompletionTree(
     curriculum,
     leaves,
     completedRefs,
     heLabelLookup: heLookup,
+    leafProvenance: leafProvenance,
   );
 
   return CurriculumCompletionSummary(
@@ -120,12 +134,24 @@ Future<CurriculumCompletionSummary?> computeLifetimeViewSummary({
 
   if (learnedRefs.isEmpty) return null;
 
+  // Per-leaf provenance for the "All sources" view — includes lifetimeOnly
+  // imports and ledger-derived lifetime marks.
+  final leafProvenance = await _allSourcesProvenanceForCurriculum(
+    db,
+    curriculum,
+    profileId,
+    completions,
+    ledger,
+    learnedRefs,
+  );
+
   final heLookup = await _heLabelLookupForCurriculum(repo, curriculum);
   final tree = _buildCompletionTree(
     curriculum,
     leaves,
     learnedRefs,
     heLabelLookup: heLookup,
+    leafProvenance: leafProvenance,
   );
 
   return CurriculumCompletionSummary(
@@ -337,11 +363,113 @@ Set<String> _learnedLeafRefs({
   return learnedRefs.where((r) => leaves.any((l) => l.sefariaRef == r)).toSet();
 }
 
+/// Computes per-leaf provenance for the "Track learning only" tier.
+///
+/// Loads `prior_completion_imports` rows for the curriculum (filtered to
+/// `source = 'bulkInTrack'`; lifetimeOnly rows are deliberately ignored
+/// because they're already excluded from the trackAchievement filter). Maps
+/// each [trackCompletions] row to `LifetimeLeafSource.live` unless an import
+/// row with the same `sefariaRef` exists — then it's `bulkMarked`.
+Future<Map<String, LifetimeLeafProvenance>> _trackProvenanceForCurriculum(
+  UserDatabase db,
+  CurriculumId curriculum,
+  int profileId,
+  List<Completion> trackCompletions,
+) async {
+  final imports =
+      await (db.select(db.priorCompletionImports)..where(
+            (t) =>
+                t.profileId.equals(profileId) &
+                t.curriculumId.equals(curriculum.storageKey),
+          ))
+          .get();
+  final bulkRefs = <String>{};
+  for (final row in imports) {
+    if (row.source == 'bulkInTrack') {
+      bulkRefs.add(row.sefariaRef);
+    }
+  }
+
+  // Count events per ref so live entries can show "Live · N chazaros".
+  final eventCount = <String, int>{};
+  for (final c in trackCompletions) {
+    eventCount[c.sefariaRef] = (eventCount[c.sefariaRef] ?? 0) + 1;
+  }
+
+  final out = <String, LifetimeLeafProvenance>{};
+  for (final entry in eventCount.entries) {
+    final ref = entry.key;
+    final count = entry.value;
+    if (bulkRefs.contains(ref)) {
+      // Pure bulkInTrack — no live event upgraded it (upgrade removes the
+      // import row, so its presence here means the row is still imported).
+      out[ref] = LifetimeLeafProvenance(
+        source: LifetimeLeafSource.bulkMarked,
+        chazarosCount: count,
+      );
+    } else {
+      out[ref] = LifetimeLeafProvenance(
+        source: LifetimeLeafSource.live,
+        chazarosCount: count,
+      );
+    }
+  }
+  return out;
+}
+
+/// Computes per-leaf provenance for the "All sources" tier.
+///
+/// Mirrors [LifetimeTreeBuilder.computeLeafProvenance] semantics: queries
+/// the imports table and reconciles event vs import counts so a live upgrade
+/// (event exists but import row was deleted) classifies as `live`. Ledger-
+/// only marks fall back to `lifetimeImported` with `chazarosCount = 0`.
+Future<Map<String, LifetimeLeafProvenance>> _allSourcesProvenanceForCurriculum(
+  UserDatabase db,
+  CurriculumId curriculum,
+  int profileId,
+  List<Completion> completions,
+  List<LearningLedgerData> ledger,
+  Set<String> learnedRefs,
+) async {
+  final imports =
+      await (db.select(db.priorCompletionImports)..where(
+            (t) =>
+                t.profileId.equals(profileId) &
+                t.curriculumId.equals(curriculum.storageKey),
+          ))
+          .get();
+  final bulkRefs = <String>{};
+  final lifetimeRefs = <String>{};
+  for (final row in imports) {
+    switch (row.source) {
+      case 'bulkInTrack':
+        bulkRefs.add(row.sefariaRef);
+      case 'lifetimeOnly':
+        lifetimeRefs.add(row.sefariaRef);
+    }
+  }
+
+  // Ledger-only refs: any ref in [learnedRefs] not covered by completions
+  // or import rows. Treat them as lifetimeImported (chazarosCount = 0).
+  final eventRefs = completions.map((c) => c.sefariaRef).toSet();
+  final ledgerOnly = learnedRefs.difference(
+    eventRefs.union(bulkRefs).union(lifetimeRefs),
+  );
+
+  return LifetimeTreeBuilder.computeLeafProvenance(
+    completionEventRefs: completions.map((c) => c.sefariaRef).toList(),
+    bulkImportedRefs: bulkRefs,
+    lifetimeImportedRefs: lifetimeRefs,
+    ledgerLearnedRefs: ledgerOnly,
+  );
+}
+
 List<LifetimeTreeNode> _buildCompletionTree(
   CurriculumId curriculumId,
   List<ContentItem> leaves,
   Set<String> learnedRefs, {
   Map<String, String> heLabelLookup = const {},
+  Map<String, LifetimeLeafProvenance> leafProvenance = const {},
 }) {
   LifetimeNodeState stateForLeaves(List<ContentItem> bucket) {
     if (bucket.isEmpty) return LifetimeNodeState.none;
@@ -431,6 +559,14 @@ List<LifetimeTreeNode> _buildCompletionTree(
           heLabelLookup[levelKey] ??
           (level == 4 ? _hebrewForLeafGroup(entry.value) : null);
 
+      // Attach provenance to terminal nodes that group exactly one leaf.
+      LifetimeLeafProvenance? provenance;
+      if (children.isEmpty &&
+          leafProvenance.isNotEmpty &&
+          entry.value.length == 1) {
+        provenance = leafProvenance[entry.value.first.sefariaRef];
+      }
+
       nodes.add(
         LifetimeTreeNode(
           curriculumId: curriculumId,
@@ -440,6 +576,7 @@ List<LifetimeTreeNode> _buildCompletionTree(
           hebrewName: hebrewName,
           state: nodeState,
           children: children,
+          provenance: provenance,
         ),
       );
     }

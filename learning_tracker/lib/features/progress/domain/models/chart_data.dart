@@ -9,6 +9,29 @@ class DailyCompletionData {
   const DailyCompletionData({required this.date, required this.count});
 }
 
+/// A single bucket's per-stage breakdown for the two-colour Limudim &
+/// Chazaros stacked bar chart on the Recent Activity screen.
+///
+/// - [limudCount] is the count of stage-1 completions (initial learning).
+/// - [chazaraCount] is the count of stage ≥ 2 completions (review rounds).
+///
+/// [date] is the bucket start (midnight, local), consistent with
+/// [DailyCompletionData.date].
+class DailyLimudChazaraData {
+  final DateTime date;
+  final int limudCount;
+  final int chazaraCount;
+
+  const DailyLimudChazaraData({
+    required this.date,
+    required this.limudCount,
+    required this.chazaraCount,
+  });
+
+  /// Total completions in the bucket (limud + chazara).
+  int get total => limudCount + chazaraCount;
+}
+
 /// Cumulative progress at a point in time.
 class CumulativeProgressPoint {
   final DateTime date;
