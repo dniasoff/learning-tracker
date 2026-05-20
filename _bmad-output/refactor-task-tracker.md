@@ -242,10 +242,10 @@ Sync-point trigger tags: `[P1]` `[P2]` `[P3]` `[P4]` `[P5]` `[P6]` `[P7]`
 ### Phase 5a · God-screen decomposition (S5)
 - [ ] W5.1  (L, S5, in-progress)    app_intro_screen.dart (1370 LOC) → IntroScaffold + IntroPageView + 3 page widgets + IntroPageIndicator + GlowingCtaButton
 - [ ] W5.2  (L, S5, in-progress)    sign_in_screen.dart (1237 LOC) → SignInController:AsyncNotifier&lt;SignInState&gt; + SignInForm + SignInModeCard + SignInActions + EmailVerificationDialog
-- [ ] W5.3  (L, S5, in-progress)    gamification_screen.dart (1127 LOC) → 11 private classes promoted to widgets/gamification/
+- [x] W5.3  (L, S5, done)    gamification_screen.dart (1127 LOC) → 11 private classes promoted to widgets/gamification/
 - [ ] W5.4  (L, S5, pending)    profile_picker_screen.dart (1059 LOC) → ConsumerWidget + ProfileGrid + AddProfileDialog + segmented sections (tutored in W6.14)
 - [ ] W5.5  (L, S5, pending)    onboarding_screen.dart (1030 LOC) → OnboardingPhaseRouter + per-phase step widgets + OnboardingResumeStore
-- [ ] W5.6  (L, S5, pending)    reward_configuration_screen.dart (1004 LOC) → RewardConfigController:Notifier&lt;RewardForm&gt; + RewardCard + sub-widgets
+- [ ] W5.6  (L, S5, in-progress)    reward_configuration_screen.dart (1004 LOC) → RewardConfigController:Notifier&lt;RewardForm&gt; + RewardCard + sub-widgets
 
 ### Phase 5b · Sealed-union state refactors
 - [x] W5.7  (M, S5, done)    Boolean state machines → sealed unions: _AnimState (add_track_flow_screen x2) + _PinStep (onboarding_screen); commit 3b94facc
