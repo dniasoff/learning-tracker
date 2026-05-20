@@ -997,6 +997,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get profilePickerMyChildren => 'MY CHILDREN';
 
   @override
+  String get profilePickerYourProfiles => 'YOUR PROFILES';
+
+  @override
+  String get profilePickerChildProfiles => 'CHILD PROFILES';
+
+  @override
+  String get profilePickerTalmidProfiles => 'TALMID PROFILES';
+
+  @override
   String get profilePickerTutoredChildren => 'TUTORED CHILDREN';
 
   @override

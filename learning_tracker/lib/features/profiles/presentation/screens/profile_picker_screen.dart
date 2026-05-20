@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/providers/network_providers.dart';
@@ -17,6 +18,7 @@ import 'package:learning_tracker/features/profiles/presentation/providers/profil
 import 'package:learning_tracker/features/profiles/presentation/widgets/add_profile_dialog.dart';
 import 'package:learning_tracker/features/profiles/presentation/widgets/my_children_section.dart';
 import 'package:learning_tracker/features/profiles/presentation/widgets/tutored_children_section.dart';
+import 'package:learning_tracker/features/tutoring/presentation/providers/manage_tutors_providers.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 export 'package:learning_tracker/features/profiles/presentation/widgets/add_profile_mode_pick_card.dart'
@@ -73,6 +75,23 @@ class _ProfilePickerScreenState extends ConsumerState<ProfilePickerScreen> {
   Widget _buildBody(BuildContext context, List<ProfileModel> profiles) {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context)!;
+
+    // ── Segmentation counts ───────────────────────────────────────────────
+    final ownChildCount = profiles
+        .where((p) => p.profileMode == ProfileMode.child)
+        .length;
+
+    // Read (not watch) the grants here so we can compute tutoredCount for
+    // header logic without blocking on the async result — TutoredChildrenSection
+    // handles the async display independently.  A null/loading result is
+    // treated as 0 grants for the purpose of header visibility.
+    final grantsAsync = ref.watch(incomingTutorGrantsProvider);
+    final tutoredCount =
+        grantsAsync.asData?.value.where((g) => g.grantState.isActive).length ??
+        0;
+
+    final isSegmented = ownChildCount > 0 || tutoredCount > 0;
+
     return SafeArea(
       top: false,
       child: SingleChildScrollView(
@@ -108,16 +127,20 @@ class _ProfilePickerScreenState extends ConsumerState<ProfilePickerScreen> {
               ),
             ),
             const SizedBox(height: 20),
-            // ── My children section (W6.14) ──────────────────────────────
-            MyChildrenSection(
+            // ── Own profiles section ──────────────────────────────────────
+            OwnProfilesSection(
               profiles: profiles,
+              showHeader: isSegmented,
               isSelectingProfile: _isSelectingProfile,
               onProfileTap: (id) => unawaited(_selectProfile(id)),
               onProfileLongPress: (profile, count) =>
                   unawaited(_showManageSheet(profile, count)),
               onAddProfile: (_) => unawaited(_showAddDialog(profiles.length)),
             ),
-            // ── Tutored children section (W6.14) ────────────────────────
+            // ── "CHILD PROFILES" sub-section header ───────────────────────
+            // Shown after the own-grid when child profiles exist (segmented).
+            if (isSegmented && ownChildCount > 0) const ChildProfilesSection(),
+            // ── Talmid (tutored) section (W6.14) ─────────────────────────
             const TutoredChildrenSection(),
           ],
         ),

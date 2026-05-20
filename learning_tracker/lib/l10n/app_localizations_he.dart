@@ -986,6 +986,15 @@ class AppLocalizationsHe extends AppLocalizations {
   String get profilePickerMyChildren => 'הילדים שלי';
 
   @override
+  String get profilePickerYourProfiles => 'הפרופילים שלך';
+
+  @override
+  String get profilePickerChildProfiles => 'פרופילי ילדים';
+
+  @override
+  String get profilePickerTalmidProfiles => 'פרופילי תלמידים';
+
+  @override
   String get profilePickerTutoredChildren => 'ילדים מוּדרכים';
 
   @override

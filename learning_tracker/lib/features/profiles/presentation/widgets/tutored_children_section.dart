@@ -43,7 +43,7 @@ class TutoredChildrenSection extends ConsumerWidget {
             Align(
               alignment: AlignmentDirectional.centerStart,
               child: Text(
-                l10n.profilePickerTutoredChildren,
+                l10n.profilePickerTalmidProfiles,
                 style: theme.textTheme.labelMedium?.copyWith(
                   color: AppTheme.brandInkMuted,
                   fontWeight: FontWeight.w700,

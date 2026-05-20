@@ -1853,6 +1853,24 @@ abstract class AppLocalizations {
   /// **'MY CHILDREN'**
   String get profilePickerMyChildren;
 
+  /// No description provided for @profilePickerYourProfiles.
+  ///
+  /// In en, this message translates to:
+  /// **'YOUR PROFILES'**
+  String get profilePickerYourProfiles;
+
+  /// No description provided for @profilePickerChildProfiles.
+  ///
+  /// In en, this message translates to:
+  /// **'CHILD PROFILES'**
+  String get profilePickerChildProfiles;
+
+  /// No description provided for @profilePickerTalmidProfiles.
+  ///
+  /// In en, this message translates to:
+  /// **'TALMID PROFILES'**
+  String get profilePickerTalmidProfiles;
+
   /// No description provided for @profilePickerTutoredChildren.
   ///
   /// In en, this message translates to:
