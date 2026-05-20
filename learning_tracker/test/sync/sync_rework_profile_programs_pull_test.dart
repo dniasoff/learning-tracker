@@ -217,6 +217,15 @@ class _ProfileProgramsGateway implements FirestoreGateway {
     required int profileId,
     required Map<String, dynamic> data,
   }) async {}
+
+  // W6.13: fetchAuditLogEntries added to FirestoreGateway interface.
+  @override
+  Future<List<Map<String, dynamic>>> fetchAuditLogEntries({
+    required String grantId,
+    String? startTimestamp,
+    String? endTimestamp,
+    String? actionFilter,
+  }) async => const [];
 }
 
 // ---------------------------------------------------------------------------

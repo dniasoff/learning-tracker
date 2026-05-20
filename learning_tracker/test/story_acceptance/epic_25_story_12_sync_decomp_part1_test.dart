@@ -399,6 +399,15 @@ class _RecordingGateway implements FirestoreGateway {
     required int profileId,
     required Map<String, dynamic> data,
   }) async {}
+
+  // W6.13: fetchAuditLogEntries added to FirestoreGateway interface.
+  @override
+  Future<List<Map<String, dynamic>>> fetchAuditLogEntries({
+    required String grantId,
+    String? startTimestamp,
+    String? endTimestamp,
+    String? actionFilter,
+  }) async => const [];
 }
 
 class _FetchCall {
@@ -564,6 +573,15 @@ class _PagingGateway implements FirestoreGateway {
     required int profileId,
     required Map<String, dynamic> data,
   }) async {}
+
+  // W6.13: fetchAuditLogEntries added to FirestoreGateway interface.
+  @override
+  Future<List<Map<String, dynamic>>> fetchAuditLogEntries({
+    required String grantId,
+    String? startTimestamp,
+    String? endTimestamp,
+    String? actionFilter,
+  }) async => const [];
 }
 
 class _DispatchedPage {

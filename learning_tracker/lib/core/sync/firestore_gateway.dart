@@ -238,6 +238,24 @@ abstract class FirestoreGateway {
     required int profileId,
     required Map<String, dynamic> data,
   });
+
+  // ── Tutor audit log reads (W6.13) ─────────────────────────────────────────
+
+  /// Fetch raw audit log entries from `tutor_grants/{grantId}/audit_log/`,
+  /// ordered by `timestamp` DESC.
+  ///
+  /// Returns the raw Firestore document payloads; callers are responsible
+  /// for deserialising them via `TutorAuditLogEntry.fromFirestore`.
+  ///
+  /// Optional server-side filters:
+  ///   - [startTimestamp] / [endTimestamp]: ISO-8601 UTC strings (inclusive).
+  ///   - [actionFilter]: exact match on the `action` field.
+  Future<List<Map<String, dynamic>>> fetchAuditLogEntries({
+    required String grantId,
+    String? startTimestamp,
+    String? endTimestamp,
+    String? actionFilter,
+  });
 }
 
 /// Result of [FirestoreGateway.fetchPage].

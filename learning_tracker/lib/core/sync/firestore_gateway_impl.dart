@@ -798,6 +798,43 @@ class FirestoreGatewayImpl implements FirestoreGateway {
         .doc(profileId.toString());
   }
 
+  // ── Tutor audit log reads (W6.13) ─────────────────────────────────────────
+
+  @override
+  Future<List<Map<String, dynamic>>> fetchAuditLogEntries({
+    required String grantId,
+    String? startTimestamp,
+    String? endTimestamp,
+    String? actionFilter,
+  }) async {
+    var q = _firestore
+        .collection('tutor_grants')
+        .doc(grantId)
+        .collection('audit_log')
+        .orderBy('timestamp', descending: true);
+
+    if (startTimestamp != null && endTimestamp != null) {
+      q = q.where(
+        'timestamp',
+        isGreaterThanOrEqualTo: startTimestamp,
+        isLessThanOrEqualTo: endTimestamp,
+      );
+    } else if (startTimestamp != null) {
+      q = q.where('timestamp', isGreaterThanOrEqualTo: startTimestamp);
+    } else if (endTimestamp != null) {
+      q = q.where('timestamp', isLessThanOrEqualTo: endTimestamp);
+    }
+
+    if (actionFilter != null) {
+      q = q.where('action', isEqualTo: actionFilter);
+    }
+
+    final snapshot = await q.get();
+    return snapshot.docs.map((doc) => doc.data()).toList();
+  }
+
+  // ── Helpers ───────────────────────────────────────────────────────────────
+
   /// Returns a per-profile subcollection reference, or `null` when the caller
   /// is not authenticated.
   ///
