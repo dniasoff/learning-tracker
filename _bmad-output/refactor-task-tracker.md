@@ -255,8 +255,8 @@ Sync-point trigger tags: `[P1]` `[P2]` `[P3]` `[P4]` `[P5]` `[P6]` `[P7]`
 ### Phase 5c · Primitive obsession sweep
 - [x] W5.10 (M, S5, done)    Profile mode literals (profile.mode == 'child') → ProfileMode enum across 5 sites; commit 102c1914
 - [x] W5.11 (M, S5, done)    Account tier literals (account.tier == 'cloudBorn') → AccountTier/UserTier enums across 6 files; AccountX+UserTierX extensions added; commit b605a5b2
-- [ ] W5.12 (M, S5, in-progress)    Continue SefariaRef VO migration (started W4.1) across remaining sites
-- [ ] W5.13 (S, S5, in-progress)    Ban literal-string mode/tier comparisons via make audit grep
+- [x] W5.12 (M, S5, done)    SefariaRef VO migration at analytics boundary: logCompletionRecorded now takes SefariaRef; 2 callers in CompletionWriter updated; commit 27e72d33
+- [x] W5.13 (S, S5, done)    Ban literal-string mode/tier comparisons via make audit greps 16+17; audit bumped to 17 greps; both pass clean; commit e3e29cfa
 
 ### Phase 5d · Theme / visual cleanup
 - [ ] W5.14 (M, S5, pending)    Move 525 0xFF…… colour literals from features/ → core/theme/app_colors.dart
