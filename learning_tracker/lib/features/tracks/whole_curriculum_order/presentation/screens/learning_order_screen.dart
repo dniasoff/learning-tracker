@@ -132,9 +132,9 @@ class _LearningOrderScreenState extends ConsumerState<LearningOrderScreen> {
       _localOrder = updated;
     });
 
-    // Persist asynchronously
-    final repository = ref.read(learningOrderRepositoryProvider);
-    repository.saveOrder(widget.curriculumId, updated).then((_) {
+    // Persist asynchronously via use case.
+    final useCase = ref.read(saveLearningOrderUseCaseProvider);
+    useCase(widget.curriculumId, updated).then((_) {
       // Invalidate provider so other screens see updated order
       ref.invalidate(learningOrderProvider(widget.curriculumId));
     });

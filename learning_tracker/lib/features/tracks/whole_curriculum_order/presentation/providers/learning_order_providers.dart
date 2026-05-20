@@ -1,15 +1,16 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/user_mode.dart';
+import 'package:learning_tracker/core/preferences/profile_scoped_preference_keys.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_providers.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
+import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
+import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
 import 'package:learning_tracker/features/tracks/whole_curriculum_order/data/repositories/learning_order_repository_impl.dart';
 import 'package:learning_tracker/features/tracks/whole_curriculum_order/domain/models/learning_order_item.dart';
 import 'package:learning_tracker/features/tracks/whole_curriculum_order/domain/repositories/learning_order_repository.dart';
-import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
-import 'package:learning_tracker/core/preferences/profile_scoped_preference_keys.dart';
-import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
+import 'package:learning_tracker/features/tracks/whole_curriculum_order/domain/use_cases/save_learning_order_use_case.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Provides the LearningOrderRepository (stateless — curriculum passed per call).
@@ -24,6 +25,14 @@ final learningOrderRepositoryProvider = Provider<LearningOrderRepository>((
     contentRepository: contentRepository,
     syncEngine: syncEngine,
   );
+});
+
+/// Provides the [SaveLearningOrderUseCase] wired to the repository.
+final saveLearningOrderUseCaseProvider = Provider<SaveLearningOrderUseCase>((
+  ref,
+) {
+  final repository = ref.watch(learningOrderRepositoryProvider);
+  return SaveLearningOrderUseCase(repository: repository);
 });
 
 /// Provides the ordered list of drag-level items for a curriculum.
