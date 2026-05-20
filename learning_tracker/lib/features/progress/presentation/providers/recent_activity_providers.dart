@@ -3,6 +3,7 @@ import 'package:learning_tracker/core/enums/user_mode.dart';
 import 'package:learning_tracker/features/progress/domain/models/chart_data.dart';
 import 'package:learning_tracker/features/progress/domain/services/chart_data_service.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/chart_providers.dart';
+import 'package:learning_tracker/features/progress/presentation/providers/progress_lens_refresh_tick_provider.dart';
 
 /// Provider wiring for the Recent Activity screen (engagement-tier lens).
 ///
@@ -57,6 +58,7 @@ final recentActivityLimudimChazarosProvider = FutureProvider.autoDispose
       ref,
       window,
     ) async {
+      ref.watch(progressLensRefreshTickProvider);
       final service = ref.watch(chartDataServiceProvider);
       return service.getDailyLimudimAndChazaros(
         startDate: window.startDate,
@@ -71,6 +73,7 @@ final recentActivityCumulativeProvider = FutureProvider.autoDispose
       ref,
       window,
     ) async {
+      ref.watch(progressLensRefreshTickProvider);
       final service = ref.watch(chartDataServiceProvider);
       return service.getCumulativeProgressLive(
         startDate: window.startDate,
@@ -87,6 +90,7 @@ final recentActivityCumulativeProvider = FutureProvider.autoDispose
 /// stayed unchanged when the chip changed).
 final recentActivityStreakDatesProvider = FutureProvider.autoDispose
     .family<Set<DateTime>, RecentActivityWindow>((ref, window) async {
+      ref.watch(progressLensRefreshTickProvider);
       final service = ref.watch(chartDataServiceProvider);
       return service.getStreakCalendarLive(
         startDate: window.startDate,
@@ -100,6 +104,7 @@ final recentActivityStreakDatesProvider = FutureProvider.autoDispose
 /// conditionally hide the section.
 final recentActivityPointsProvider = FutureProvider.autoDispose
     .family<List<DailyPointsData>?, RecentActivityWindow>((ref, window) async {
+      ref.watch(progressLensRefreshTickProvider);
       final service = ref.watch(chartDataServiceProvider);
       return service.getDailyPoints(
         startDate: window.startDate,

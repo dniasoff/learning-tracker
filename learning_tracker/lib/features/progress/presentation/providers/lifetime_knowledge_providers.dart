@@ -25,6 +25,7 @@ import 'package:learning_tracker/features/learning/domain/entities/completion_ti
 import 'package:learning_tracker/features/learning/presentation/providers/completion_writer_providers.dart';
 import 'package:learning_tracker/features/progress/domain/models/lifetime_knowledge.dart';
 import 'package:learning_tracker/features/progress/domain/services/lifetime_tree_builder.dart';
+import 'package:learning_tracker/features/progress/presentation/providers/progress_lens_refresh_tick_provider.dart';
 import 'package:learning_tracker/features/tracks/domain/services/track_progress_service.dart';
 
 // ---------------------------------------------------------------------------
@@ -76,6 +77,7 @@ final priorImportsByProfileProvider = FutureProvider.autoDispose
     .family<Map<String, PriorImportsForCurriculum>, int>(
       name: 'priorImportsByProfileProvider',
       (ref, profileId) async {
+        ref.watch(progressLensRefreshTickProvider);
         final db = ref.watch(userDatabaseProvider);
         final rows = await (db.select(db.priorCompletionImports)
               ..where((t) => t.profileId.equals(profileId)))
@@ -114,6 +116,7 @@ final completionsByProfileForLifetimeProvider = FutureProvider.autoDispose
     .family<Map<String, List<Completion>>, int>(
       name: 'completionsByProfileForLifetimeProvider',
       (ref, profileId) async {
+        ref.watch(progressLensRefreshTickProvider);
         final db = ref.watch(userDatabaseProvider);
         final all = await db.completionDao.getCompletionsByProfile(profileId);
         final out = <String, List<Completion>>{};
