@@ -244,6 +244,10 @@ class PiiRedactor {
     // Invite token (sensitive single-use token) (W7.19)
     'invite_token',
     'inviteToken',
+    // Transactional email recipient fields (V2-R5 C2)
+    'to',
+    'recipient',
+    'email_to',
   };
 
   /// Email address pattern for scrubbing bare addresses from strings.

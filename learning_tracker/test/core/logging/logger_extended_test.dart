@@ -265,4 +265,49 @@ void main() {
       expect(PiiRedactor.scrubMessage(message), message);
     });
   });
+
+  // ─── V2-R5 C2 regression: transactional email recipient keys ───────────────
+  group('PiiRedactor — transactional email keys (V2-R5 C2)', () {
+    test("redacts 'to' key (LoggingTransactionalEmailService recipient)", () {
+      final result = PiiRedactor.redactFields({
+        'to': 'alice@example.com',
+        'subject': 'You have a tutor invite',
+      });
+      expect(result['to'], '[REDACTED]');
+      expect(result['subject'], 'You have a tutor invite');
+    });
+
+    test("redacts 'recipient' key", () {
+      final result = PiiRedactor.redactFields({'recipient': 'bob@example.com'});
+      expect(result['recipient'], '[REDACTED]');
+    });
+
+    test("redacts 'email_to' key", () {
+      final result = PiiRedactor.redactFields({'email_to': 'carol@test.org'});
+      expect(result['email_to'], '[REDACTED]');
+    });
+
+    test("'to' key is in PiiRedactor.sensitiveKeys set", () {
+      expect(PiiRedactor.sensitiveKeys.contains('to'), isTrue);
+      expect(PiiRedactor.sensitiveKeys.contains('recipient'), isTrue);
+      expect(PiiRedactor.sensitiveKeys.contains('email_to'), isTrue);
+    });
+
+    test(
+      'LoggingTransactionalEmailService payload does not leak email to log',
+      () {
+        final talker = Talker();
+        final logger = AppLogger(talker);
+        // Simulate the exact call made by LoggingTransactionalEmailService.send()
+        logger.warning(
+          event:
+              '[TransactionalEmail] NO PROVIDER CONFIGURED — email NOT sent.',
+          fields: {'to': 'tutor@example.com', 'subject': 'Tutor invite'},
+        );
+        final logLine = talker.history.last.generateTextMessage();
+        expect(logLine, isNot(contains('tutor@example.com')));
+        expect(logLine, contains('[REDACTED]'));
+      },
+    );
+  });
 }
