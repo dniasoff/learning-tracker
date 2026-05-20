@@ -37,14 +37,14 @@ void main() {
     DateTime? completedAt,
   }) => seedCompletion(
     database,
-    CompletionsCompanion.insert(
+    CompletionEventsCompanion.insert(
       profileId: 1,
       curriculumId: curriculumId,
       sefariaRef: sefariaRef,
       stageId: stageId,
       trackType: trackType,
-      trackId: trackId,
-      completedAt: completedAt ?? DateTime(2024, 6, 15),
+      trackId: Value(trackId),
+      eventTimestamp: completedAt ?? DateTime(2024, 6, 15),
     ),
   );
 

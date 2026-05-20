@@ -131,7 +131,7 @@ void main() {
               sefariaRef: leaves[i].sefariaRef,
               stageId: 1,
               trackType: 'personal',
-              trackId: trackId,
+              trackId: Value(trackId),
               eventTimestamp: _kRealDate,
             ),
           );
@@ -148,7 +148,7 @@ void main() {
               sefariaRef: leaves[i].sefariaRef,
               stageId: 1,
               trackType: 'personal',
-              trackId: trackId,
+              trackId: Value(trackId),
               eventTimestamp: _kSentinel,
             ),
           );
@@ -192,7 +192,7 @@ void main() {
               sefariaRef: leaves[i].sefariaRef,
               stageId: 1,
               trackType: 'personal',
-              trackId: trackId,
+              trackId: Value(trackId),
               eventTimestamp: _kSentinel,
             ),
           );
@@ -269,7 +269,7 @@ void main() {
             sefariaRef: leaves[i].sefariaRef,
             stageId: 1,
             trackType: 'personal',
-            trackId: trackId,
+            trackId: Value(trackId),
             eventTimestamp: _kRealDate,
           ),
         );
@@ -285,7 +285,7 @@ void main() {
             sefariaRef: leaves[i].sefariaRef,
             stageId: 1,
             trackType: 'personal',
-            trackId: trackId,
+            trackId: Value(trackId),
             eventTimestamp: _kSentinel,
           ),
         );
@@ -370,7 +370,7 @@ void main() {
             sefariaRef: leaves[i].sefariaRef,
             stageId: 1,
             trackType: 'personal',
-            trackId: trackId,
+            trackId: Value(trackId),
             eventTimestamp: _kRealDate,
           ),
         );
@@ -385,7 +385,7 @@ void main() {
           sefariaRef: leaves[2].sefariaRef,
           stageId: 1,
           trackType: 'personal',
-          trackId: trackId,
+          trackId: Value(trackId),
           eventTimestamp: _kSentinel,
         ),
       );
@@ -413,7 +413,7 @@ void main() {
           unitDisplayNameHe: '',
           unitDisplayNameEn: '',
           trackType: 'personal',
-          completedAt: DateTime.utc(2026, 1, 1),
+          eventTimestamp: DateTime.utc(2026, 1, 1),
           completionNumber: 1,
           markedBy: profileId,
         ),

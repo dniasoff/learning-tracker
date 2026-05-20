@@ -141,7 +141,10 @@ void main() {
     test('exports streak rows', () async {
       await db.streakEventDao.upsertStreakByProfile(
         1,
-        const StreaksCompanion(currentStreak: Value(5), maxStreak: Value(10)),
+        const StreakEventsCompanion(
+          currentStreak: Value(5),
+          maxStreak: Value(10),
+        ),
       );
 
       final data =

@@ -440,14 +440,14 @@ void main() {
     }) => db
         .into(db.completionEvents)
         .insert(
-          CompletionsCompanion.insert(
+          CompletionEventsCompanion.insert(
             profileId: profileId,
             curriculumId: 'bavli',
             sefariaRef: ref,
             stageId: stageId,
             trackType: 'personal',
-            trackId: trackId,
-            completedAt: now,
+            trackId: Value(trackId),
+            eventTimestamp: now,
             points: const Value(10),
           ),
         );
@@ -507,7 +507,7 @@ void main() {
       expect(companion.sefariaRef.value, 'Berakhot 2a');
 
       final copy = c.copyWithCompanion(
-        const CompletionsCompanion(points: Value(50)),
+        const CompletionEventsCompanion(points: Value(50)),
       );
       expect(copy.points, 50);
 
@@ -515,8 +515,8 @@ void main() {
       expect(cols['sefaria_ref'], isNotNull);
     });
 
-    test('CompletionsCompanion.copyWith', () {
-      const original = CompletionsCompanion(
+    test('CompletionEventsCompanion.copyWith', () {
+      const original = CompletionEventsCompanion(
         sefariaRef: Value('Berakhot 2a'),
         points: Value(10),
       );
@@ -939,7 +939,7 @@ void main() {
       final strId = await db
           .into(db.streakEvents)
           .insert(
-            StreaksCompanion.insert(
+            StreakEventsCompanion.insert(
               profileId: profileId,
               currentStreak: const Value(5),
               maxStreak: const Value(10),
@@ -964,7 +964,7 @@ void main() {
       final strId = await db
           .into(db.streakEvents)
           .insert(
-            StreaksCompanion.insert(
+            StreakEventsCompanion.insert(
               profileId: profileId,
               currentStreak: const Value(3),
               maxStreak: const Value(7),
@@ -992,7 +992,7 @@ void main() {
       final strId = await db
           .into(db.streakEvents)
           .insert(
-            StreaksCompanion.insert(
+            StreakEventsCompanion.insert(
               profileId: profileId,
               currentStreak: const Value(0),
               maxStreak: const Value(0),
@@ -1018,7 +1018,7 @@ void main() {
       final strId = await db
           .into(db.streakEvents)
           .insert(
-            StreaksCompanion.insert(
+            StreakEventsCompanion.insert(
               profileId: profileId,
               currentStreak: const Value(7),
               maxStreak: const Value(14),
@@ -1039,7 +1039,7 @@ void main() {
       final strId = await db
           .into(db.streakEvents)
           .insert(
-            StreaksCompanion.insert(
+            StreakEventsCompanion.insert(
               profileId: profileId,
               currentStreak: const Value(1),
               maxStreak: const Value(5),
@@ -1051,14 +1051,14 @@ void main() {
       expect(companion.currentStreak.value, 1);
 
       final copy = str.copyWithCompanion(
-        const StreaksCompanion(currentStreak: Value(10)),
+        const StreakEventsCompanion(currentStreak: Value(10)),
       );
       expect(copy.currentStreak, 10);
       expect(copy.profileId, str.profileId);
     });
 
-    test('StreaksCompanion.copyWith', () {
-      const original = StreaksCompanion(
+    test('StreakEventsCompanion.copyWith', () {
+      const original = StreakEventsCompanion(
         currentStreak: Value(5),
         maxStreak: Value(10),
       );
@@ -1730,19 +1730,19 @@ void main() {
       await db
           .into(db.completionEvents)
           .insert(
-            CompletionsCompanion.insert(
+            CompletionEventsCompanion.insert(
               profileId: profileId,
               curriculumId: 'bavli',
               sefariaRef: 'Berakhot 2a',
               stageId: 1,
               trackType: 'personal',
-              trackId: trackId,
-              completedAt: now,
+              trackId: Value(trackId),
+              eventTimestamp: now,
               points: const Value(10),
             ),
           );
 
-      final rows = await db.managers.completions
+      final rows = await db.managers.completionEvents
           .filter((f) => f.profileId.id(profileId))
           .get();
       expect(rows, hasLength(1));
@@ -1755,14 +1755,14 @@ void main() {
       await db
           .into(db.streakEvents)
           .insert(
-            StreaksCompanion.insert(
+            StreakEventsCompanion.insert(
               profileId: profileId,
               currentStreak: const Value(5),
               maxStreak: const Value(10),
             ),
           );
 
-      final rows = await db.managers.streaks
+      final rows = await db.managers.streakEvents
           .filter((f) => f.profileId(profileId))
           .get();
       expect(rows, hasLength(1));

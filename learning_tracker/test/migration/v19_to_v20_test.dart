@@ -34,7 +34,7 @@ void main() {
             sefariaRef: 'Berakhot 1a',
             stageId: 1,
             trackType: 'daily',
-            trackId: const Value<int?>(42),
+            trackId: Value(const Value<int?>(42)),
             eventTimestamp: DateTime.utc(2026, 1, 1),
           ),
         );

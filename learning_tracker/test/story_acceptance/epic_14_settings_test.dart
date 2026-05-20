@@ -169,7 +169,7 @@ void main() {
           sefariaRef: 'Mishnah_Berakhot.1.1',
           stageId: 1,
           trackType: 'personal',
-          trackId: trackId,
+          trackId: Value(trackId),
           eventTimestamp: DateTime(2026, 1, 15),
           points: const Value(10),
         ),
@@ -182,7 +182,7 @@ void main() {
           sefariaRef: 'Mishnah_Berakhot.1.2',
           stageId: 2,
           trackType: 'personal',
-          trackId: trackId,
+          trackId: Value(trackId),
           eventTimestamp: DateTime(2026, 1, 16),
         ),
       );

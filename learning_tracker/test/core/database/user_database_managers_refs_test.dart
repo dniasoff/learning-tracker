@@ -68,7 +68,7 @@ void main() {
     (o) => o(
       profileId: profileId,
       curriculumId: 'bavli',
-      trackType: 'personal',
+      stateChangedAt: now,
       activatedAt: now,
     ),
   );
@@ -93,7 +93,7 @@ void main() {
           curriculumId: 'bavli',
           stageName: 'limud',
           stageOrder: 1,
-          delayDays: 0,
+          schedule: const Value('{"type":"delay","delay_days":0}'),
         ),
       );
 
@@ -120,15 +120,15 @@ void main() {
       );
 
   Future<void> makeCompletion(int profileId, int trackId, int stageId) =>
-      db.managers.completions.create(
+      db.managers.completionEvents.create(
         (o) => o(
           profileId: profileId,
-          trackId: trackId,
+          trackId: Value(trackId),
           curriculumId: 'bavli',
           sefariaRef: 'Berakhot 2a',
           stageId: stageId,
           trackType: 'personal',
-          completedAt: now,
+          eventTimestamp: now,
         ),
       );
 
@@ -234,10 +234,10 @@ void main() {
       expect(manager, isNotNull);
     });
 
-    test('completionsRefs getter returns manager', () async {
+    test('stageDefinitionsRefs getter returns manager', () async {
       final rows = await db.managers.curriculumTracks.withReferences().get();
       final refs = rows.first.$2;
-      final manager = refs.completionsRefs;
+      final manager = refs.stageDefinitionsRefs;
       expect(manager, isNotNull);
     });
 
@@ -316,9 +316,9 @@ void main() {
       expect(rows, isNotEmpty);
     });
 
-    test('computedField via completionsRefs annotation', () async {
+    test('computedField via stageDefinitionsRefs annotation', () async {
       final field = db.managers.curriculumTracks.computedField(
-        (a) => a.completionsRefs((s) => s.id),
+        (a) => a.stageDefinitionsRefs((s) => s.id),
       );
       final rows = await db.managers.curriculumTracks.withFields([field]).get();
       expect(rows, isNotEmpty);
@@ -398,9 +398,9 @@ void main() {
       expect(rows, isNotEmpty);
     });
 
-    test('withReferences completionsRefs prefetch', () async {
+    test('withReferences stageDefinitionsRefs prefetch', () async {
       final rows = await db.managers.curriculumTracks
-          .withReferences((p) => p(completionsRefs: true))
+          .withReferences((p) => p(stageDefinitionsRefs: true))
           .get();
       expect(rows, isNotEmpty);
     });
@@ -434,7 +434,6 @@ void main() {
               stageDefinitionsRefs: true,
               pointConfigsRefs: true,
               studyDayConfigsRefs: true,
-              completionsRefs: true,
               learningLedgerRefs: true,
               bookmarksRefs: true,
               goalsRefs: true,
@@ -503,17 +502,17 @@ void main() {
     });
   });
 
-  group('completions References: trackId getter', () {
-    test('withReferences returns trackId manager', () async {
+  group('completions References: profileId getter', () {
+    test('withReferences returns profileId manager', () async {
       final accId = await makeAccount(email: 'cmp-refs@test.local');
       final profId = await makeProfile(accId);
       final trackId = await makeTrack(profId);
       final stageId = await makeStage(profId, trackId);
       await makeCompletion(profId, trackId, stageId);
 
-      final rows = await db.managers.completions.withReferences().get();
+      final rows = await db.managers.completionEvents.withReferences().get();
       expect(rows, isNotEmpty);
-      final manager = rows.first.$2.trackId;
+      final manager = rows.first.$2.profileId;
       expect(manager, isNotNull);
     });
   });
@@ -619,16 +618,16 @@ void main() {
     });
   });
 
-  group('completions withReferences prefetch trackId', () {
-    test('withReferences trackId prefetch', () async {
+  group('completions withReferences prefetch profileId', () {
+    test('withReferences profileId prefetch', () async {
       final accId = await makeAccount(email: 'cm-pf@test.local');
       final profId = await makeProfile(accId);
       final trackId = await makeTrack(profId);
       final stageId = await makeStage(profId, trackId);
       await makeCompletion(profId, trackId, stageId);
 
-      final rows = await db.managers.completions
-          .withReferences((p) => p(trackId: true))
+      final rows = await db.managers.completionEvents
+          .withReferences((p) => p(profileId: true))
           .get();
       expect(rows, isNotEmpty);
     });

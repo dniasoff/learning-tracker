@@ -217,14 +217,14 @@ void main() {
       // Insert a completion referencing the track.
       await seedCompletion(
         database,
-        CompletionsCompanion.insert(
+        CompletionEventsCompanion.insert(
           profileId: 1,
           curriculumId: 'bavli',
           sefariaRef: 'Berakhot.2a',
           stageId: 1,
           trackType: 'personal',
-          trackId: trackId,
-          completedAt: DateTime.now().toUtc(),
+          trackId: Value(trackId),
+          eventTimestamp: DateTime.now().toUtc(),
         ),
       );
 

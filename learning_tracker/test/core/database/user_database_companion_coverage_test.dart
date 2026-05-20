@@ -352,26 +352,26 @@ void main() {
     });
   });
 
-  // ─── CompletionsCompanion ─────────────────────────────────────────────────
+  // ─── CompletionEventsCompanion ─────────────────────────────────────────────────
 
-  group('CompletionsCompanion', () {
+  group('CompletionEventsCompanion', () {
     test('toString covers StringBuffer body', () {
-      const c = CompletionsCompanion();
+      const c = CompletionEventsCompanion();
       final s = c.toString();
-      expect(s, contains('CompletionsCompanion'));
+      expect(s, contains('CompletionEventsCompanion'));
       expect(s, contains('sefariaRef'));
       expect(s, contains('points'));
     });
 
     test('custom() covers RawValuesInsertable body', () {
-      final insertable = CompletionsCompanion.custom(
+      final insertable = CompletionEventsCompanion.custom(
         profileId: const Variable(1),
-        trackId: const Variable(1),
+        trackId: Value(const Variable(1)),
         curriculumId: const Variable('bavli'),
         stageId: const Variable(1),
         trackType: const Variable('personal'),
         sefariaRef: const Variable('Berakhot 2a'),
-        completedAt: Variable(now),
+        eventTimestamp: Variable(now),
         points: const Variable(5),
       );
       final cols = insertable.toColumns(false);
@@ -380,14 +380,14 @@ void main() {
     });
 
     test('toColumns with points present', () {
-      final c = CompletionsCompanion(
+      final c = CompletionEventsCompanion(
         profileId: const Value(1),
         trackId: const Value(1),
         curriculumId: const Value('bavli'),
         stageId: const Value(1),
         trackType: const Value('personal'),
         sefariaRef: const Value('Berakhot 2a'),
-        completedAt: Value(now),
+        eventTimestamp: Value(now),
         points: const Value(5),
       );
       final cols = c.toColumns(false);
@@ -455,7 +455,7 @@ void main() {
         sefariaRef: const Variable('Berakhot 2a'),
         stageOrder: const Variable(1),
         stageDefinitionId: const Variable(1),
-        trackId: const Variable(1),
+        trackId: Value(const Variable(1)),
         trackLabel: const Variable('Daily Study'),
         priority: const Variable('normal'),
         isOverdue: const Variable(false),
@@ -668,18 +668,18 @@ void main() {
     });
   });
 
-  // ─── StreaksCompanion ─────────────────────────────────────────────────────
+  // ─── StreakEventsCompanion ─────────────────────────────────────────────────────
 
-  group('StreaksCompanion', () {
+  group('StreakEventsCompanion', () {
     test('toString covers StringBuffer body', () {
-      const c = StreaksCompanion();
+      const c = StreakEventsCompanion();
       final s = c.toString();
-      expect(s, contains('StreaksCompanion'));
+      expect(s, contains('StreakEventsCompanion'));
       expect(s, contains('currentStreak'));
     });
 
     test('custom() covers RawValuesInsertable body', () {
-      final insertable = StreaksCompanion.custom(
+      final insertable = StreakEventsCompanion.custom(
         profileId: const Variable(1),
         currentStreak: const Variable(5),
         maxStreak: const Variable(10),
@@ -697,7 +697,7 @@ void main() {
     test(
       'toColumns with optional fields (lastCompletionDate, graceUsedDate)',
       () {
-        final c = StreaksCompanion(
+        final c = StreakEventsCompanion(
           profileId: const Value(1),
           currentStreak: const Value(5),
           maxStreak: const Value(10),

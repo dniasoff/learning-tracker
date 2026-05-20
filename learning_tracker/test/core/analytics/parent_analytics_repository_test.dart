@@ -10,7 +10,7 @@ import 'package:test/test.dart';
 
 import '../../helpers/drift_memory.dart' show seedCompletion;
 
-CompletionsCompanion _completion({
+CompletionEventsCompanion _completion({
   required int profileId,
   required String curriculumId,
   String ref = 'ref-1',
@@ -18,14 +18,14 @@ CompletionsCompanion _completion({
   String trackType = 'forwards',
   int trackId = 1,
   DateTime? completedAt,
-}) => CompletionsCompanion.insert(
+}) => CompletionEventsCompanion.insert(
   profileId: profileId,
   curriculumId: curriculumId,
   sefariaRef: ref,
   stageId: stageId,
   trackType: trackType,
-  trackId: trackId,
-  completedAt: completedAt ?? DateTime.utc(2026, 5, 13),
+  trackId: Value(trackId),
+  eventTimestamp: completedAt ?? DateTime.utc(2026, 5, 13),
   points: const Value(10),
 );
 

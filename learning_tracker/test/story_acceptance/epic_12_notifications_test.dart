@@ -194,7 +194,7 @@ void main() {
           sefariaRef: 'test_ref',
           stageId: 1,
           trackType: 'review',
-          trackId: trackId,
+          trackId: Value(trackId),
           eventTimestamp: DateTime.utc(2026, 3, 16, 10, 0, 0),
         ),
       );

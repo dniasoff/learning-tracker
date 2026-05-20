@@ -200,14 +200,14 @@ void main() {
         final bavliTrackId = await getTrackId(CurriculumId.bavli);
         await drift_helpers.seedCompletion(
           database,
-          CompletionsCompanion.insert(
+          CompletionEventsCompanion.insert(
             profileId: 1,
             curriculumId: CurriculumId.bavli.storageKey,
             sefariaRef: 'Berakhot.2a',
             stageId: 1,
             trackType: TrackType.personal.storageKey,
-            trackId: bavliTrackId,
-            completedAt: DateTime.now(),
+            trackId: Value(bavliTrackId),
+            eventTimestamp: DateTime.now(),
             points: const Value(10),
           ),
         );

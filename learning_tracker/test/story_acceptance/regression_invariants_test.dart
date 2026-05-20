@@ -147,7 +147,7 @@ void main() {
               sefariaRef: 'Berakhot 1:${i + 1}',
               stageId: 1,
               trackType: TrackType.personal.storageKey,
-              trackId: originalId,
+              trackId: Value(originalId),
               eventTimestamp: DateTime.utc(2026, 5, 1),
             ),
           );
@@ -294,7 +294,7 @@ void main() {
               sefariaRef: 'Berakhot 1:1',
               stageId: 1,
               trackType: TrackType.personal.storageKey,
-              trackId: trackId,
+              trackId: Value(trackId),
               eventTimestamp: DateTime.utc(2026, 5, 1),
             ),
           );
@@ -306,7 +306,7 @@ void main() {
               sefariaRef: 'Berakhot 1:1',
               stageId: 2,
               trackType: TrackType.personal.storageKey,
-              trackId: trackId,
+              trackId: Value(trackId),
               eventTimestamp: DateTime.utc(2026, 5, 2),
             ),
           );

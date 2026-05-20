@@ -377,27 +377,31 @@ void main() {
       await db
           .into(db.completionEvents)
           .insert(
-            CompletionsCompanion.insert(
+            CompletionEventsCompanion.insert(
               profileId: profId,
               curriculumId: 'bavli',
               sefariaRef: 'Berakhot 2a',
               stageId: stageId,
               trackType: 'personal',
-              trackId: trackId,
-              completedAt: now,
+              trackId: Value(trackId),
+              eventTimestamp: now,
             ),
           );
     });
 
     test('computedField sefariaRef', () async {
-      final field = db.managers.completions.computedField((a) => a.sefariaRef);
-      final rows = await db.managers.completions.withFields([field]).get();
+      final field = db.managers.completionEvents.computedField(
+        (a) => a.sefariaRef,
+      );
+      final rows = await db.managers.completionEvents.withFields([field]).get();
       expect(rows, isNotEmpty);
     });
 
     test('computedField completedAt', () async {
-      final field = db.managers.completions.computedField((a) => a.completedAt);
-      final rows = await db.managers.completions.withFields([field]).get();
+      final field = db.managers.completionEvents.computedField(
+        (a) => a.completedAt,
+      );
+      final rows = await db.managers.completionEvents.withFields([field]).get();
       expect(rows, isNotEmpty);
     });
   });
@@ -701,7 +705,7 @@ void main() {
       await db
           .into(db.streakEvents)
           .insert(
-            StreaksCompanion.insert(
+            StreakEventsCompanion.insert(
               profileId: profId,
               currentStreak: const Value(3),
               maxStreak: const Value(5),
@@ -711,20 +715,24 @@ void main() {
     });
 
     test('computedField currentStreak', () async {
-      final field = db.managers.streaks.computedField((a) => a.currentStreak);
-      final rows = await db.managers.streaks.withFields([field]).get();
+      final field = db.managers.streakEvents.computedField(
+        (a) => a.currentStreak,
+      );
+      final rows = await db.managers.streakEvents.withFields([field]).get();
       expect(rows, isNotEmpty);
     });
 
     test('computedField maxStreak', () async {
-      final field = db.managers.streaks.computedField((a) => a.maxStreak);
-      final rows = await db.managers.streaks.withFields([field]).get();
+      final field = db.managers.streakEvents.computedField((a) => a.maxStreak);
+      final rows = await db.managers.streakEvents.withFields([field]).get();
       expect(rows, isNotEmpty);
     });
 
     test('computedField gracePeriodDays', () async {
-      final field = db.managers.streaks.computedField((a) => a.gracePeriodDays);
-      final rows = await db.managers.streaks.withFields([field]).get();
+      final field = db.managers.streakEvents.computedField(
+        (a) => a.gracePeriodDays,
+      );
+      final rows = await db.managers.streakEvents.withFields([field]).get();
       expect(rows, isNotEmpty);
     });
   });

@@ -42,14 +42,14 @@ void main() {
     int stageId = 1,
   }) => seedCompletion(
     db,
-    CompletionsCompanion.insert(
+    CompletionEventsCompanion.insert(
       profileId: profileId,
       curriculumId: curriculumId,
       sefariaRef: 'Berakhot.${++refCounter}',
       stageId: stageId,
       trackType: 'personal',
-      trackId: trackId,
-      completedAt: completedAt,
+      trackId: Value(trackId),
+      eventTimestamp: completedAt,
       points: Value(points),
     ),
   ).then((_) {});

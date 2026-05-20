@@ -47,14 +47,14 @@ void main() {
         await db
             .into(db.completionEvents)
             .insert(
-              CompletionsCompanion.insert(
+              CompletionEventsCompanion.insert(
                 profileId: 1,
                 curriculumId: CurriculumId.mishnayos.storageKey,
                 sefariaRef: 'Berakhot 1:1',
                 stageId: 1,
                 trackType: TrackType.personal.storageKey,
-                trackId: trackId,
-                completedAt: DateTime.utc(2026, 5, 1),
+                trackId: Value(trackId),
+                eventTimestamp: DateTime.utc(2026, 5, 1),
                 // derivedFromEvents not provided → uses default (false)
               ),
             );

@@ -36,7 +36,7 @@ Future<void> _seedCompletion(
       sefariaRef: sefariaRef,
       stageId: 1,
       trackType: TrackType.personal.storageKey,
-      trackId: Value<int?>(trackId),
+      trackId: Value(Value<int?>(trackId)),
       points: const Value(0),
       eventTimestamp: completedAt,
     ),

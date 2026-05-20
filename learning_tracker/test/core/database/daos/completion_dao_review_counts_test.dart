@@ -53,14 +53,14 @@ void main() {
     DateTime? completedAt,
   }) => seedCompletion(
     db,
-    CompletionsCompanion.insert(
+    CompletionEventsCompanion.insert(
       profileId: profileId,
       curriculumId: curriculumId,
       sefariaRef: sefariaRef,
       stageId: stageIdOverride ?? stageId,
       trackType: 'personal',
-      trackId: trackId,
-      completedAt: completedAt ?? DateTime.utc(2026, 3, 15),
+      trackId: Value(trackId),
+      eventTimestamp: completedAt ?? DateTime.utc(2026, 3, 15),
     ),
   );
 
@@ -138,14 +138,14 @@ void main() {
       // Insert into the other track.
       await seedCompletion(
         db,
-        CompletionsCompanion.insert(
+        CompletionEventsCompanion.insert(
           profileId: profileId,
           curriculumId: 'bavli',
           sefariaRef: 'ref_B',
           stageId: otherStageId,
           trackType: 'personal',
-          trackId: otherTrackId,
-          completedAt: DateTime.utc(2026, 3, 15),
+          trackId: Value(otherTrackId),
+          eventTimestamp: DateTime.utc(2026, 3, 15),
           points: const Value(10),
         ),
       );

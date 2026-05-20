@@ -81,7 +81,7 @@ void main() {
           sefariaRef: sefariaRef,
           stageId: stageId,
           trackType: trackType,
-          trackId: trackId,
+          trackId: Value(trackId),
           eventTimestamp: DateTime.now(),
           points: Value(points),
         ),
@@ -222,7 +222,7 @@ void main() {
           sefariaRef: 'Genesis.1',
           stageId: 1,
           trackType: 'primary',
-          trackId: trackId,
+          trackId: Value(trackId),
           eventTimestamp: DateTimeFactory.utc(2026, 3, 10, 12),
         ),
       );
@@ -234,7 +234,7 @@ void main() {
           sefariaRef: 'Genesis.2',
           stageId: 1,
           trackType: 'primary',
-          trackId: trackId,
+          trackId: Value(trackId),
           eventTimestamp: DateTimeFactory.utc(2026, 3, 12, 12),
         ),
       );

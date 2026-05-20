@@ -67,14 +67,14 @@ void main() {
     Future<void> insertCompletion(int trackId, int profileId, String ref) =>
         seedCompletion(
           db,
-          CompletionsCompanion.insert(
+          CompletionEventsCompanion.insert(
             profileId: profileId,
             curriculumId: 'mishnayos',
             sefariaRef: ref,
             stageId: 1,
             trackType: 'personal',
-            trackId: trackId,
-            completedAt: DateTime.now(),
+            trackId: Value(trackId),
+            eventTimestamp: DateTime.now(),
           ),
         );
 

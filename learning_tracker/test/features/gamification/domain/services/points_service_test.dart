@@ -56,14 +56,14 @@ void main() {
   }) async {
     await seedCompletion(
       db,
-      CompletionsCompanion.insert(
+      CompletionEventsCompanion.insert(
         profileId: 0,
         curriculumId: curriculumId,
         sefariaRef: sefariaRef,
         stageId: stageId,
         trackType: trackType,
-        trackId: completionTrackId ?? trackId,
-        completedAt: completedAt ?? DateTime.now(),
+        trackId: Value(completionTrackId ?? trackId),
+        eventTimestamp: completedAt ?? DateTime.now(),
         points: Value(points),
       ),
     );
@@ -253,14 +253,14 @@ void main() {
         );
         await seedCompletion(
           db,
-          CompletionsCompanion.insert(
+          CompletionEventsCompanion.insert(
             profileId: 0,
             curriculumId: CurriculumId.bavli.storageKey,
             sefariaRef: 'Berakhot 2a',
             stageId: 1,
             trackType: 'personal',
-            trackId: browseTrack.id,
-            completedAt: DateTime.now(),
+            trackId: Value(browseTrack.id),
+            eventTimestamp: DateTime.now(),
             points: const Value(99),
           ),
         );

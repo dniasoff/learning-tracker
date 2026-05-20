@@ -114,7 +114,7 @@ void main() {
           updatedAt: now,
         ),
       );
-      await db.managers.completions.create(
+      await db.managers.completionEvents.create(
         (o) => o(
           profileId: profId,
           trackId: trackId,
@@ -283,8 +283,8 @@ void main() {
       expect(cols.containsKey('id'), isTrue);
     });
 
-    test('CompletionsCompanion id present in toColumns', () {
-      final c = CompletionsCompanion(
+    test('CompletionEventsCompanion id present in toColumns', () {
+      final c = CompletionEventsCompanion(
         id: const Value(9),
         profileId: const Value(1),
         curriculumId: const Value('bavli'),
@@ -292,7 +292,7 @@ void main() {
         sefariaRef: const Value('Berakhot 2a'),
         stageId: const Value(1),
         trackType: const Value('personal'),
-        completedAt: Value(now),
+        eventTimestamp: Value(now),
       );
       final cols = c.toColumns(false);
       expect(cols.containsKey('id'), isTrue);
@@ -361,8 +361,8 @@ void main() {
       expect(cols.containsKey('id'), isTrue);
     });
 
-    test('StreaksCompanion id present in toColumns', () {
-      const c = StreaksCompanion(id: Value(19), profileId: Value(1));
+    test('StreakEventsCompanion id present in toColumns', () {
+      const c = StreakEventsCompanion(id: Value(19), profileId: Value(1));
       final cols = c.toColumns(false);
       expect(cols.containsKey('id'), isTrue);
     });

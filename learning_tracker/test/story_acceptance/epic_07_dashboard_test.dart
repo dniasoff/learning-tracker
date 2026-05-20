@@ -288,7 +288,7 @@ void main() {
           sefariaRef: 'ref1',
           stageId: 1,
           trackType: 'personal',
-          trackId: trackId,
+          trackId: Value(trackId),
           eventTimestamp: DateTime.utc(2026, 3, 16),
           points: const Value(10),
         ),
@@ -301,7 +301,7 @@ void main() {
           sefariaRef: 'ref2',
           stageId: 1,
           trackType: 'personal',
-          trackId: trackId,
+          trackId: Value(trackId),
           eventTimestamp: DateTime.utc(2026, 3, 16),
           points: const Value(5),
         ),
@@ -314,7 +314,7 @@ void main() {
           sefariaRef: 'ref3',
           stageId: 2,
           trackType: 'personal',
-          trackId: trackId,
+          trackId: Value(trackId),
           eventTimestamp: DateTime.utc(2026, 3, 16),
           points: const Value(3),
         ),
@@ -384,7 +384,7 @@ void main() {
             sefariaRef: 'r1',
             stageId: 1,
             trackType: 'personal',
-            trackId: trackId,
+            trackId: Value(trackId),
             eventTimestamp: DateTime.utc(2026, 3, 15, 10, 0),
           ),
         );
@@ -396,7 +396,7 @@ void main() {
             sefariaRef: 'r2',
             stageId: 1,
             trackType: 'personal',
-            trackId: trackId,
+            trackId: Value(trackId),
             eventTimestamp: DateTime.utc(2026, 3, 16, 14, 30),
           ),
         );
@@ -630,7 +630,7 @@ void main() {
           sefariaRef: sefariaRef,
           stageId: stageId,
           trackType: trackType,
-          trackId: trackId,
+          trackId: Value(trackId),
           eventTimestamp: DateTime.utc(2026, 3, 15),
         ),
       );
@@ -875,7 +875,7 @@ void main() {
             sefariaRef: 'ref_$i',
             stageId: 1,
             trackType: 'personal',
-            trackId: trackId,
+            trackId: Value(trackId),
             eventTimestamp: DateTime.utc(2026, 3, 16 - i),
           ),
         );
@@ -951,7 +951,7 @@ void main() {
           sefariaRef: 'ref_${++refCounter}',
           stageId: 1,
           trackType: 'personal',
-          trackId: trackId,
+          trackId: Value(trackId),
           eventTimestamp: completedAt,
           points: Value(points),
         ),
@@ -967,13 +967,13 @@ void main() {
         final baseDate = DateTime(2026, 3, 10);
         await insertCompletionAt(completedAt: baseDate); // Day 1
         await insertCompletionAt(
-          completedAt: baseDate,
+          eventTimestamp: baseDate,
         ); // Day 1 (second completion)
         await insertCompletionAt(
-          completedAt: baseDate.add(const Duration(days: 2)),
+          eventTimestamp: baseDate.add(const Duration(days: 2)),
         ); // Day 3
         await insertCompletionAt(
-          completedAt: baseDate.add(const Duration(days: 4)),
+          eventTimestamp: baseDate.add(const Duration(days: 4)),
         ); // Day 5
 
         final result = await chartService.getDailyCompletions(

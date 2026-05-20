@@ -282,7 +282,7 @@ void main() {
                   sefariaRef: 'Mishnah Berakhot 1',
                   stageId: 1,
                   trackType: 'personal',
-                  trackId: 1,
+                  trackId: Value(1),
                   eventTimestamp: DateTime.utc(2026, 5, 13, 12),
                 ),
               );

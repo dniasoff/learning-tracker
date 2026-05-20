@@ -126,14 +126,14 @@ void main() {
     // Item 0: learned 3 days ago → Chazara 1 overdue (delay=1)
     await seedCompletion(
       db,
-      CompletionsCompanion.insert(
+      CompletionEventsCompanion.insert(
         profileId: 0,
         curriculumId: curriculum.storageKey,
-        trackId: trackId,
+        trackId: Value(trackId),
         sefariaRef: 'Mishnah_Berakhot_1.0',
         stageId: learnId,
         trackType: 'personal',
-        completedAt: now.subtract(const Duration(days: 3)),
+        eventTimestamp: now.subtract(const Duration(days: 3)),
         points: const Value(10),
       ),
     );
@@ -141,14 +141,14 @@ void main() {
     // Item 1: learned yesterday → Chazara 1 due today (delay=1)
     await seedCompletion(
       db,
-      CompletionsCompanion.insert(
+      CompletionEventsCompanion.insert(
         profileId: 0,
         curriculumId: curriculum.storageKey,
-        trackId: trackId,
+        trackId: Value(trackId),
         sefariaRef: 'Mishnah_Berakhot_1.1',
         stageId: learnId,
         trackType: 'personal',
-        completedAt: now.subtract(const Duration(days: 1)),
+        eventTimestamp: now.subtract(const Duration(days: 1)),
         points: const Value(10),
       ),
     );
@@ -200,14 +200,14 @@ void main() {
     // Complete item 0 Learn right now (Chazara 1 delay=1, so not due today)
     await seedCompletion(
       db,
-      CompletionsCompanion.insert(
+      CompletionEventsCompanion.insert(
         profileId: 0,
         curriculumId: curriculum.storageKey,
-        trackId: trackId,
+        trackId: Value(trackId),
         sefariaRef: 'Mishnah_Berakhot_1.0',
         stageId: learnId,
         trackType: 'personal',
-        completedAt: now,
+        eventTimestamp: now,
         points: const Value(10),
       ),
     );
@@ -278,14 +278,14 @@ void main() {
     // Complete Learn for item 0
     await seedCompletion(
       db,
-      CompletionsCompanion.insert(
+      CompletionEventsCompanion.insert(
         profileId: 0,
         curriculumId: curriculum.storageKey,
-        trackId: trackId,
+        trackId: Value(trackId),
         sefariaRef: 'Mishnah_Berakhot_1.0',
         stageId: learnId,
         trackType: 'personal',
-        completedAt: now,
+        eventTimestamp: now,
         points: const Value(10),
       ),
     );

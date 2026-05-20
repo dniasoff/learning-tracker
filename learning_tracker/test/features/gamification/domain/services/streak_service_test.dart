@@ -55,14 +55,14 @@ void main() {
     final ref = 'Genesis.${++refCounter}';
     await seedCompletion(
       db,
-      CompletionsCompanion.insert(
+      CompletionEventsCompanion.insert(
         profileId: 0,
         curriculumId: 'test-curriculum',
         sefariaRef: ref,
         stageId: 1,
         trackType: 'primary',
-        trackId: trackId,
-        completedAt: completedAtUtc,
+        trackId: Value(trackId),
+        eventTimestamp: completedAtUtc,
       ),
     );
   }

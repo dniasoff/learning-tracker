@@ -766,14 +766,14 @@ void main() {
       // Insert completion.
       await seedCompletion(
         db,
-        CompletionsCompanion.insert(
+        CompletionEventsCompanion.insert(
           profileId: profileId,
           curriculumId: 'bavli',
           sefariaRef: 'Berakhot.2a',
           stageId: 1,
           trackType: 'personal',
-          trackId: trackId,
-          completedAt: now,
+          trackId: Value(trackId),
+          eventTimestamp: now,
         ),
       );
 
@@ -791,7 +791,7 @@ void main() {
       // Insert streak.
       await db
           .into(db.streakEvents)
-          .insert(StreaksCompanion.insert(profileId: profileId));
+          .insert(StreakEventsCompanion.insert(profileId: profileId));
 
       // Insert streak event.
       await db

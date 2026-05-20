@@ -47,40 +47,40 @@ void main() {
           // Arrange: Insert completions for different tracks
           await seedCompletion(
             database,
-            CompletionsCompanion.insert(
+            CompletionEventsCompanion.insert(
               profileId: profileId,
               curriculumId: 'bavli',
-              trackId: trackId,
+              trackId: Value(trackId),
               sefariaRef: 'Berakhot.2a',
               stageId: 1,
               trackType: TrackType.personal.storageKey,
-              completedAt: DateTime.now(),
+              eventTimestamp: DateTime.now(),
               points: const drift.Value(10),
             ),
           );
           await seedCompletion(
             database,
-            CompletionsCompanion.insert(
+            CompletionEventsCompanion.insert(
               profileId: profileId,
               curriculumId: 'bavli',
-              trackId: trackId,
+              trackId: Value(trackId),
               sefariaRef: 'Berakhot.2b',
               stageId: 1,
               trackType: TrackType.personal.storageKey,
-              completedAt: DateTime.now(),
+              eventTimestamp: DateTime.now(),
               points: const drift.Value(10),
             ),
           );
           await seedCompletion(
             database,
-            CompletionsCompanion.insert(
+            CompletionEventsCompanion.insert(
               profileId: profileId,
               curriculumId: 'bavli',
-              trackId: trackId,
+              trackId: Value(trackId),
               sefariaRef: 'Berakhot.3a',
               stageId: 1,
               trackType: TrackType.personal.storageKey,
-              completedAt: DateTime.now(),
+              eventTimestamp: DateTime.now(),
               points: const drift.Value(10),
             ),
           );
@@ -99,14 +99,14 @@ void main() {
           // Arrange: Insert only personal track completions
           await seedCompletion(
             database,
-            CompletionsCompanion.insert(
+            CompletionEventsCompanion.insert(
               profileId: profileId,
               curriculumId: 'bavli',
-              trackId: trackId,
+              trackId: Value(trackId),
               sefariaRef: 'Berakhot.2a',
               stageId: 1,
               trackType: TrackType.personal.storageKey,
-              completedAt: DateTime.now(),
+              eventTimestamp: DateTime.now(),
               points: const drift.Value(10),
             ),
           );
@@ -126,27 +126,27 @@ void main() {
           // Note: Track activation state is managed elsewhere; completions are preserved
           await seedCompletion(
             database,
-            CompletionsCompanion.insert(
+            CompletionEventsCompanion.insert(
               profileId: profileId,
               curriculumId: 'bavli',
-              trackId: trackId,
+              trackId: Value(trackId),
               sefariaRef: 'Berakhot.2a',
               stageId: 1,
               trackType: TrackType.personal.storageKey,
-              completedAt: DateTime.now(),
+              eventTimestamp: DateTime.now(),
               points: const drift.Value(10),
             ),
           );
           await seedCompletion(
             database,
-            CompletionsCompanion.insert(
+            CompletionEventsCompanion.insert(
               profileId: profileId,
               curriculumId: 'bavli',
-              trackId: trackId,
+              trackId: Value(trackId),
               sefariaRef: 'Berakhot.2b',
               stageId: 1,
               trackType: TrackType.personal.storageKey,
-              completedAt: DateTime.now(),
+              eventTimestamp: DateTime.now(),
               points: const drift.Value(10),
             ),
           );
@@ -173,27 +173,27 @@ void main() {
         // Arrange: Insert completions for different curricula
         await seedCompletion(
           database,
-          CompletionsCompanion.insert(
+          CompletionEventsCompanion.insert(
             profileId: profileId,
             curriculumId: 'bavli',
-            trackId: trackId,
+            trackId: Value(trackId),
             sefariaRef: 'Berakhot.2a',
             stageId: 1,
             trackType: TrackType.personal.storageKey,
-            completedAt: DateTime.now(),
+            eventTimestamp: DateTime.now(),
             points: const drift.Value(10),
           ),
         );
         await seedCompletion(
           database,
-          CompletionsCompanion.insert(
+          CompletionEventsCompanion.insert(
             profileId: profileId,
             curriculumId: 'mishnayos',
-            trackId: trackId,
+            trackId: Value(trackId),
             sefariaRef: 'Berakhot.1.1',
             stageId: 1,
             trackType: TrackType.personal.storageKey,
-            completedAt: DateTime.now(),
+            eventTimestamp: DateTime.now(),
             points: const drift.Value(10),
           ),
         );
@@ -215,40 +215,40 @@ void main() {
           // Arrange: Insert completions for different tracks
           await seedCompletion(
             database,
-            CompletionsCompanion.insert(
+            CompletionEventsCompanion.insert(
               profileId: profileId,
               curriculumId: 'bavli',
-              trackId: trackId,
+              trackId: Value(trackId),
               sefariaRef: 'Berakhot.2a',
               stageId: 1,
               trackType: TrackType.personal.storageKey,
-              completedAt: DateTime.now(),
+              eventTimestamp: DateTime.now(),
               points: const drift.Value(10),
             ),
           );
           await seedCompletion(
             database,
-            CompletionsCompanion.insert(
+            CompletionEventsCompanion.insert(
               profileId: profileId,
               curriculumId: 'bavli',
-              trackId: trackId,
+              trackId: Value(trackId),
               sefariaRef: 'Berakhot.2b',
               stageId: 1,
               trackType: TrackType.personal.storageKey,
-              completedAt: DateTime.now(),
+              eventTimestamp: DateTime.now(),
               points: const drift.Value(10),
             ),
           );
           await seedCompletion(
             database,
-            CompletionsCompanion.insert(
+            CompletionEventsCompanion.insert(
               profileId: profileId,
               curriculumId: 'bavli',
-              trackId: trackId,
+              trackId: Value(trackId),
               sefariaRef: 'Berakhot.3a',
               stageId: 1,
               trackType: TrackType.personal.storageKey,
-              completedAt: DateTime.now(),
+              eventTimestamp: DateTime.now(),
               points: const drift.Value(10),
             ),
           );
@@ -279,27 +279,27 @@ void main() {
         // Arrange
         await seedCompletion(
           database,
-          CompletionsCompanion.insert(
+          CompletionEventsCompanion.insert(
             profileId: profileId,
             curriculumId: 'bavli',
-            trackId: trackId,
+            trackId: Value(trackId),
             sefariaRef: 'Berakhot.2a',
             stageId: 1,
             trackType: TrackType.personal.storageKey,
-            completedAt: DateTime.now(),
+            eventTimestamp: DateTime.now(),
             points: const drift.Value(10),
           ),
         );
         await seedCompletion(
           database,
-          CompletionsCompanion.insert(
+          CompletionEventsCompanion.insert(
             profileId: profileId,
             curriculumId: 'mishnayos',
-            trackId: trackId,
+            trackId: Value(trackId),
             sefariaRef: 'Berakhot.1.1',
             stageId: 1,
             trackType: TrackType.personal.storageKey,
-            completedAt: DateTime.now(),
+            eventTimestamp: DateTime.now(),
             points: const drift.Value(10),
           ),
         );

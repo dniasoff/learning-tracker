@@ -18,8 +18,8 @@ import 'package:learning_tracker/core/database/user/user_database.dart';
 
 import '../../../helpers/drift_memory.dart';
 
-// Helper to build a minimal CompletionsCompanion (F1 style).
-CompletionsCompanion _completion({
+// Helper to build a minimal CompletionEventsCompanion (F1 style).
+CompletionEventsCompanion _completion({
   int profileId = 1,
   String curriculumId = 'bavli',
   String sefariaRef = 'Berakhot.2a',
@@ -27,14 +27,14 @@ CompletionsCompanion _completion({
   String trackType = 'personal',
   int trackId = 10,
   DateTime? completedAt,
-}) => CompletionsCompanion.insert(
+}) => CompletionEventsCompanion.insert(
   profileId: profileId,
   curriculumId: curriculumId,
   sefariaRef: sefariaRef,
   stageId: stageId,
   trackType: trackType,
-  trackId: trackId,
-  completedAt: completedAt ?? DateTime.utc(2026, 5, 14),
+  trackId: Value(trackId),
+  eventTimestamp: completedAt ?? DateTime.utc(2026, 5, 14),
 );
 
 void main() {
@@ -103,7 +103,7 @@ void main() {
 
   // ─── Helper ───────────────────────────────────────────────────────────────
 
-  CompletionsCompanion makeCompletion({
+  CompletionEventsCompanion makeCompletion({
     required String ref,
     int profileId = 1,
     String curriculumId = 'mishnayos',
@@ -111,14 +111,14 @@ void main() {
     String trackType = 'personal',
     int trackId = 1,
     DateTime? completedAt,
-  }) => CompletionsCompanion.insert(
+  }) => CompletionEventsCompanion.insert(
     profileId: profileId,
     curriculumId: curriculumId,
     sefariaRef: ref,
     stageId: stageId,
     trackType: trackType,
-    trackId: trackId,
-    completedAt: completedAt ?? DateTime.utc(2026, 3, 15),
+    trackId: Value(trackId),
+    eventTimestamp: completedAt ?? DateTime.utc(2026, 3, 15),
     points: const Value(10),
   );
 

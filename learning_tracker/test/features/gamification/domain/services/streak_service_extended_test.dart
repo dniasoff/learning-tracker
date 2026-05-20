@@ -33,7 +33,7 @@ void main() {
   }) async {
     await db.streakEventDao.upsertStreakByProfile(
       profileId,
-      StreaksCompanion(
+      StreakEventsCompanion(
         currentStreak: Value(current),
         maxStreak: Value(max),
         lastCompletionDate: Value(lastCompletion),

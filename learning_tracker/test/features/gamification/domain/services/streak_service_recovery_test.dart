@@ -29,7 +29,7 @@ void main() {
     await db
         .into(db.streakEvents)
         .insert(
-          StreaksCompanion.insert(
+          StreakEventsCompanion.insert(
             profileId: profileId,
             currentStreak: Value(currentStreak),
             maxStreak: Value(maxStreak),

@@ -104,7 +104,7 @@ void main() {
                   sefariaRef: 'Mishnah Berakhot 1',
                   stageId: 1,
                   trackType: trackType.storageKey,
-                  trackId: trackId,
+                  trackId: Value(trackId),
                   eventTimestamp: DateTime.utc(2026, 5, 1),
                 ),
               );

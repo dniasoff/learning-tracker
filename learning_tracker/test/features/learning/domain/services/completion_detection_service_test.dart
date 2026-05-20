@@ -91,14 +91,14 @@ void main() {
   }) async {
     await seedCompletion(
       db,
-      CompletionsCompanion.insert(
+      CompletionEventsCompanion.insert(
         profileId: profileId,
         curriculumId: _currId,
         sefariaRef: sefariaRef,
         stageId: stageId,
         trackType: trackType,
-        trackId: trackId,
-        completedAt: DateTime.utc(2026, 3, 1),
+        trackId: Value(trackId),
+        eventTimestamp: DateTime.utc(2026, 3, 1),
       ),
     );
   }

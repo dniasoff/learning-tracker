@@ -111,14 +111,14 @@ void main() {
         expect(
           () => seedCompletion(
             db,
-            CompletionsCompanion.insert(
+            CompletionEventsCompanion.insert(
               profileId: nonExistentProfileId,
               curriculumId: CurriculumId.mishnayos.storageKey,
               sefariaRef: 'Berakhot 1:1',
               stageId: 1,
               trackType: TrackType.personal.storageKey,
-              trackId: trackId,
-              completedAt: DateTimeFactory.nowUtc(),
+              trackId: Value(trackId),
+              eventTimestamp: DateTimeFactory.nowUtc(),
             ),
           ),
           throwsA(anything),
@@ -138,14 +138,14 @@ void main() {
 
       await seedCompletion(
         db,
-        CompletionsCompanion.insert(
+        CompletionEventsCompanion.insert(
           profileId: seed.profileId,
           curriculumId: CurriculumId.mishnayos.storageKey,
           sefariaRef: 'Berakhot 1:1',
           stageId: 1,
           trackType: TrackType.personal.storageKey,
-          trackId: seed.trackId,
-          completedAt: DateTimeFactory.nowUtc(),
+          trackId: Value(seed.trackId),
+          eventTimestamp: DateTimeFactory.nowUtc(),
           derivedFromEvents: const Value(true),
         ),
       );

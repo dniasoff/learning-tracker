@@ -118,14 +118,14 @@ void main() {
       // Insert with explicit profileId = 1 — should succeed
       final id = await seedCompletion(
         db,
-        CompletionsCompanion.insert(
+        CompletionEventsCompanion.insert(
           profileId: 1,
           curriculumId: 'bavli',
           sefariaRef: 'Berakhot 2a',
           stageId: 1,
           trackType: 'personal',
-          trackId: trackId,
-          completedAt: DateTime.now().toUtc(),
+          trackId: Value(trackId),
+          eventTimestamp: DateTime.now().toUtc(),
         ),
       );
       expect(id, greaterThan(0));
@@ -152,7 +152,7 @@ void main() {
         GoalsCompanion.insert(
           profileId: 1,
           curriculumId: 'bavli',
-          trackId: trackId,
+          trackId: Value(trackId),
           createdAt: now,
           updatedAt: now,
         ),
@@ -252,7 +252,7 @@ void main() {
     test('streaks.profileId is required (no default)', () async {
       await db
           .into(db.streakEvents)
-          .insert(StreaksCompanion.insert(profileId: 5));
+          .insert(StreakEventsCompanion.insert(profileId: 5));
       final row = await (db.select(
         db.streakEvents,
       )..where((t) => t.profileId.equals(5))).getSingleOrNull();

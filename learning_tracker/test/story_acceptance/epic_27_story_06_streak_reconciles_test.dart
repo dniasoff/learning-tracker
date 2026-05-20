@@ -210,7 +210,7 @@ void main() {
                 sefariaRef: data['sefaria_ref'] as String,
                 stageId: data['stage_id'] as int,
                 trackType: data['track_type'] as String,
-                trackId: trackId,
+                trackId: Value(trackId),
                 eventTimestamp: completedAt,
               ),
             );
@@ -275,7 +275,7 @@ void main() {
               sefariaRef: 'Mishnah Berakhot 1',
               stageId: 1,
               trackType: 'programmed',
-              trackId: trackId,
+              trackId: Value(trackId),
               eventTimestamp: DateTime.utc(2026, 5, 9),
             ),
           );

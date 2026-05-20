@@ -124,14 +124,14 @@ void main() {
       for (var i = 0; i < 2; i++) {
         await seedCompletion(
           db,
-          CompletionsCompanion.insert(
+          CompletionEventsCompanion.insert(
             profileId: 1,
             curriculumId: curriculum.storageKey,
-            trackId: trackId,
+            trackId: Value(trackId),
             sefariaRef: 'Mishnah_Berakhot_1.$i',
             stageId: learnStageId,
             trackType: 'personal',
-            completedAt: now,
+            eventTimestamp: now,
             points: const Value(10),
           ),
         );

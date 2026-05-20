@@ -44,7 +44,7 @@ Future<void> _addCompletion(
     sefariaRef: sefariaRef,
     stageId: stageId,
     trackType: TrackType.personal.storageKey,
-    trackId: trackId,
+    trackId: Value(trackId),
     eventTimestamp: completedAt ?? DateTimeFactory.nowUtc(),
   ),
 );

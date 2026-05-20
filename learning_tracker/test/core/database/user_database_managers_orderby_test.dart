@@ -892,123 +892,125 @@ void main() {
       await db
           .into(db.completionEvents)
           .insert(
-            CompletionsCompanion.insert(
+            CompletionEventsCompanion.insert(
               profileId: profId,
               curriculumId: 'bavli',
               sefariaRef: 'Berakhot 2a',
               stageId: stageDefId,
               trackType: 'personal',
-              trackId: trackId,
-              completedAt: now,
+              trackId: Value(trackId),
+              eventTimestamp: now,
             ),
           );
     });
 
     test('orderBy id', () async {
-      final rows = await db.managers.completions
+      final rows = await db.managers.completionEvents
           .orderBy((o) => o.id.asc())
           .get();
       expect(rows, hasLength(1));
     });
 
     test('orderBy profileId', () async {
-      final rows = await db.managers.completions
+      final rows = await db.managers.completionEvents
           .orderBy((o) => o.profileId.id.asc())
           .get();
       expect(rows, hasLength(1));
     });
 
     test('orderBy curriculumId', () async {
-      final rows = await db.managers.completions
+      final rows = await db.managers.completionEvents
           .orderBy((o) => o.curriculumId.asc())
           .get();
       expect(rows, hasLength(1));
     });
 
     test('orderBy sefariaRef', () async {
-      final rows = await db.managers.completions
+      final rows = await db.managers.completionEvents
           .orderBy((o) => o.sefariaRef.asc())
           .get();
       expect(rows, hasLength(1));
     });
 
     test('orderBy stageId', () async {
-      final rows = await db.managers.completions
+      final rows = await db.managers.completionEvents
           .orderBy((o) => o.stageId.asc())
           .get();
       expect(rows, hasLength(1));
     });
 
     test('orderBy trackType', () async {
-      final rows = await db.managers.completions
+      final rows = await db.managers.completionEvents
           .orderBy((o) => o.trackType.asc())
           .get();
       expect(rows, hasLength(1));
     });
 
     test('orderBy completedAt', () async {
-      final rows = await db.managers.completions
+      final rows = await db.managers.completionEvents
           .orderBy((o) => o.completedAt.desc())
           .get();
       expect(rows, hasLength(1));
     });
 
     test('orderBy points', () async {
-      final rows = await db.managers.completions
+      final rows = await db.managers.completionEvents
           .orderBy((o) => o.points.asc())
           .get();
       expect(rows, hasLength(1));
     });
 
     test('filter by id', () async {
-      final rows = await db.managers.completions.filter((f) => f.id(1)).get();
+      final rows = await db.managers.completionEvents
+          .filter((f) => f.id(1))
+          .get();
       expect(rows, hasLength(1));
     });
 
     test('filter by profileId', () async {
-      final rows = await db.managers.completions
+      final rows = await db.managers.completionEvents
           .filter((f) => f.profileId.id(1))
           .get();
       expect(rows, hasLength(1));
     });
 
     test('filter by curriculumId', () async {
-      final rows = await db.managers.completions
+      final rows = await db.managers.completionEvents
           .filter((f) => f.curriculumId('bavli'))
           .get();
       expect(rows, hasLength(1));
     });
 
     test('filter by sefariaRef', () async {
-      final rows = await db.managers.completions
+      final rows = await db.managers.completionEvents
           .filter((f) => f.sefariaRef('Berakhot 2a'))
           .get();
       expect(rows, hasLength(1));
     });
 
     test('filter by stageId', () async {
-      final rows = await db.managers.completions
+      final rows = await db.managers.completionEvents
           .filter((f) => f.stageId(1))
           .get();
       expect(rows, hasLength(1));
     });
 
     test('filter by trackType', () async {
-      final rows = await db.managers.completions
+      final rows = await db.managers.completionEvents
           .filter((f) => f.trackType('personal'))
           .get();
       expect(rows, hasLength(1));
     });
 
     test('filter by completedAt', () async {
-      final rows = await db.managers.completions
+      final rows = await db.managers.completionEvents
           .filter((f) => f.completedAt(now))
           .get();
       expect(rows, hasLength(1));
     });
 
     test('filter by points', () async {
-      final rows = await db.managers.completions
+      final rows = await db.managers.completionEvents
           .filter((f) => f.points(0))
           .get();
       expect(rows, hasLength(1));
@@ -1933,7 +1935,7 @@ void main() {
       await db
           .into(db.streakEvents)
           .insert(
-            StreaksCompanion.insert(
+            StreakEventsCompanion.insert(
               profileId: profId,
               currentStreak: const Value(5),
               maxStreak: const Value(10),
@@ -1943,87 +1945,89 @@ void main() {
     });
 
     test('orderBy id', () async {
-      final rows = await db.managers.streaks.orderBy((o) => o.id.asc()).get();
+      final rows = await db.managers.streakEvents
+          .orderBy((o) => o.id.asc())
+          .get();
       expect(rows, hasLength(1));
     });
 
     test('orderBy profileId', () async {
-      final rows = await db.managers.streaks
+      final rows = await db.managers.streakEvents
           .orderBy((o) => o.profileId.asc())
           .get();
       expect(rows, hasLength(1));
     });
 
     test('orderBy currentStreak', () async {
-      final rows = await db.managers.streaks
+      final rows = await db.managers.streakEvents
           .orderBy((o) => o.currentStreak.desc())
           .get();
       expect(rows, hasLength(1));
     });
 
     test('orderBy maxStreak', () async {
-      final rows = await db.managers.streaks
+      final rows = await db.managers.streakEvents
           .orderBy((o) => o.maxStreak.desc())
           .get();
       expect(rows, hasLength(1));
     });
 
     test('orderBy lastCompletionDate', () async {
-      final rows = await db.managers.streaks
+      final rows = await db.managers.streakEvents
           .orderBy((o) => o.lastCompletionDate.asc())
           .get();
       expect(rows, hasLength(1));
     });
 
     test('orderBy graceUsedDate', () async {
-      final rows = await db.managers.streaks
+      final rows = await db.managers.streakEvents
           .orderBy((o) => o.graceUsedDate.asc())
           .get();
       expect(rows, hasLength(1));
     });
 
     test('orderBy gracePeriodDays', () async {
-      final rows = await db.managers.streaks
+      final rows = await db.managers.streakEvents
           .orderBy((o) => o.gracePeriodDays.asc())
           .get();
       expect(rows, hasLength(1));
     });
 
     test('filter by id', () async {
-      final rows = await db.managers.streaks.filter((f) => f.id(1)).get();
+      final rows = await db.managers.streakEvents.filter((f) => f.id(1)).get();
       expect(rows, hasLength(1));
     });
 
     test('filter by currentStreak', () async {
-      final rows = await db.managers.streaks
+      final rows = await db.managers.streakEvents
           .filter((f) => f.currentStreak(5))
           .get();
       expect(rows, hasLength(1));
     });
 
     test('filter by maxStreak', () async {
-      final rows = await db.managers.streaks
+      final rows = await db.managers.streakEvents
           .filter((f) => f.maxStreak(10))
           .get();
       expect(rows, hasLength(1));
     });
 
     test('filter by lastCompletionDate', () async {
-      final rows = await db.managers.streaks
+      final rows = await db.managers.streakEvents
           .filter((f) => f.lastCompletionDate(null))
           .get();
       expect(rows, hasLength(1));
     });
 
     test('filter by graceUsedDate', () async {
-      final rows = await db.managers.streaks
+      final rows = await db.managers.streakEvents
           .filter((f) => f.graceUsedDate(null))
           .get();
       expect(rows, hasLength(1));
     });
 
     test('filter by gracePeriodDays', () async {
-      final rows = await db.managers.streaks
+      final rows = await db.managers.streakEvents
           .filter((f) => f.gracePeriodDays(1))
           .get();
       expect(rows, hasLength(1));

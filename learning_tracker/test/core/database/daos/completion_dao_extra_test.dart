@@ -60,7 +60,7 @@ void main() {
   // Helper
   // ---------------------------------------------------------------------------
 
-  CompletionsCompanion makeCompletion({
+  CompletionEventsCompanion makeCompletion({
     int profileId = 1,
     String curriculumId = 'bavli',
     String sefariaRef = 'Berakhot.2a',
@@ -69,14 +69,14 @@ void main() {
     DateTime? completedAt,
     int? overrideTrackId,
   }) {
-    return CompletionsCompanion.insert(
+    return CompletionEventsCompanion.insert(
       profileId: profileId,
       curriculumId: curriculumId,
       sefariaRef: sefariaRef,
       stageId: stageId,
       trackType: trackType,
-      trackId: overrideTrackId ?? trackId,
-      completedAt: completedAt ?? DateTime.utc(2026, 1, 1),
+      trackId: Value(overrideTrackId ?? trackId),
+      eventTimestamp: completedAt ?? DateTime.utc(2026, 1, 1),
     );
   }
 
@@ -89,15 +89,15 @@ void main() {
       await seedCompletionsBatch(db, [
         makeCompletion(
           sefariaRef: 'Berakhot.2a',
-          completedAt: DateTime.utc(2026, 1, 1),
+          eventTimestamp: DateTime.utc(2026, 1, 1),
         ),
         makeCompletion(
           sefariaRef: 'Berakhot.2b',
-          completedAt: DateTime.utc(2026, 1, 2),
+          eventTimestamp: DateTime.utc(2026, 1, 2),
         ),
         makeCompletion(
           sefariaRef: 'Berakhot.3a',
-          completedAt: DateTime.utc(2026, 1, 3),
+          eventTimestamp: DateTime.utc(2026, 1, 3),
         ),
       ]);
 

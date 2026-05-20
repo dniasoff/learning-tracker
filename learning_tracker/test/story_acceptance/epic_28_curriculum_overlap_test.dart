@@ -82,7 +82,7 @@ Future<void> _insertCompletion(
       sefariaRef: sefariaRef,
       stageId: stageId,
       trackType: 'personal',
-      trackId: trackId,
+      trackId: Value(trackId),
       eventTimestamp: DateTime.utc(2026, 1, 1),
       points: const Value(0),
     ),

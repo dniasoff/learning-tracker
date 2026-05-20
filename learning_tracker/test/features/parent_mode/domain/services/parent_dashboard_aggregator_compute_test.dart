@@ -59,14 +59,14 @@ void main() {
   }) async {
     await seedCompletion(
       db,
-      CompletionsCompanion.insert(
+      CompletionEventsCompanion.insert(
         profileId: profileId,
         curriculumId: curriculumId,
         sefariaRef: ref,
         stageId: stageId,
         trackType: 'personal',
-        trackId: trackId,
-        completedAt: completedAt ?? DateTime.utc(2026, 3, 15),
+        trackId: Value(trackId),
+        eventTimestamp: completedAt ?? DateTime.utc(2026, 3, 15),
         points: const Value(10),
       ),
     );
@@ -119,7 +119,7 @@ void main() {
       await db
           .into(db.streakEvents)
           .insert(
-            StreaksCompanion.insert(
+            StreakEventsCompanion.insert(
               profileId: profileId,
               currentStreak: const Value(5),
               maxStreak: const Value(10),

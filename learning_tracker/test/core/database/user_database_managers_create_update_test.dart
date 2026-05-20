@@ -367,7 +367,7 @@ void main() {
       final profId = await makeProfile(accId);
       final trackId = await makeTrack(profId);
       final stageId = await makeStage(profId, trackId);
-      completionId = await db.managers.completions.create(
+      completionId = await db.managers.completionEvents.create(
         (o) => o(
           profileId: profId,
           curriculumId: 'bavli',
@@ -385,14 +385,14 @@ void main() {
     });
 
     test('update via manager callback', () async {
-      final count = await db.managers.completions
+      final count = await db.managers.completionEvents
           .filter((f) => f.id(completionId))
           .update((o) => o(sefariaRef: const Value('Berakhot 3a')));
       expect(count, 1);
     });
 
     test('withReferences returns rows', () async {
-      final rows = await db.managers.completions.withReferences().get();
+      final rows = await db.managers.completionEvents.withReferences().get();
       expect(rows, isNotEmpty);
     });
   });
@@ -672,7 +672,7 @@ void main() {
     setUp(() async {
       final accId = await makeAccount(email: 'sk-mgr@test.local');
       final profId = await makeProfile(accId);
-      streakId = await db.managers.streaks.create(
+      streakId = await db.managers.streakEvents.create(
         (o) => o(
           profileId: profId,
           currentStreak: const Value(3),
@@ -687,14 +687,14 @@ void main() {
     });
 
     test('update via manager callback', () async {
-      final count = await db.managers.streaks
+      final count = await db.managers.streakEvents
           .filter((f) => f.id(streakId))
           .update((o) => o(currentStreak: const Value(4)));
       expect(count, 1);
     });
 
     test('withReferences returns rows', () async {
-      final rows = await db.managers.streaks.withReferences().get();
+      final rows = await db.managers.streakEvents.withReferences().get();
       expect(rows, isNotEmpty);
     });
   });

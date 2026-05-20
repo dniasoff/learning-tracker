@@ -62,7 +62,7 @@ Future<void> _seedCompletion(
       sefariaRef: sefariaRef,
       stageId: stageId,
       trackType: 'programmed',
-      trackId: trackId,
+      trackId: Value(trackId),
       eventTimestamp: completedAt,
     ),
   );

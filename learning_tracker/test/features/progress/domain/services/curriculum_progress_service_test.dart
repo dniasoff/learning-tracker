@@ -64,14 +64,14 @@ void main() {
   }) async {
     final id = await seedCompletion(
       db,
-      CompletionsCompanion.insert(
+      CompletionEventsCompanion.insert(
         profileId: 1,
         curriculumId: curriculumId,
         sefariaRef: sefariaRef,
         stageId: stageId,
         trackType: trackType,
-        trackId: trackId,
-        completedAt: DateTime.utc(2026, 3, 15),
+        trackId: Value(trackId),
+        eventTimestamp: DateTime.utc(2026, 3, 15),
       ),
     );
     return (await db.completionDao.getCompletionById(id))!;
@@ -88,7 +88,7 @@ void main() {
       StageDefinitionsCompanion.insert(
         profileId: 1,
         curriculumId: curriculumId,
-        trackId: trackId,
+        trackId: Value(trackId),
         stageOrder: stageOrder,
         stageName: stageName,
         delayDays: 0,

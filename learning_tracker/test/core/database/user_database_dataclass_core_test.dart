@@ -1127,7 +1127,9 @@ void main() {
 
     test('Completions insert without profileId throws', () {
       expect(
-        () => db.into(db.completionEvents).insert(const CompletionsCompanion()),
+        () => db
+            .into(db.completionEvents)
+            .insert(const CompletionEventsCompanion()),
         throwsA(anything),
       );
     });
@@ -1157,7 +1159,7 @@ void main() {
 
     test('Streaks insert without profileId throws', () {
       expect(
-        () => db.into(db.streakEvents).insert(const StreaksCompanion()),
+        () => db.into(db.streakEvents).insert(const StreakEventsCompanion()),
         throwsA(anything),
       );
     });

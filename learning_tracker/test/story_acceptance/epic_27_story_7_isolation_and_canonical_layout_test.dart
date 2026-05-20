@@ -86,7 +86,7 @@ void main() {
             sefariaRef: _refForA,
             stageId: _stageId,
             trackType: _trackType,
-            trackId: trackIdA,
+            trackId: Value(trackIdA),
             eventTimestamp: DateTime.utc(2026, 5, 13, 12),
           ),
         );

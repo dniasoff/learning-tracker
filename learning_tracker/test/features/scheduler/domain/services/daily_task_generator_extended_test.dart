@@ -142,14 +142,14 @@ void main() {
 
       await seedCompletion(
         db,
-        CompletionsCompanion.insert(
+        CompletionEventsCompanion.insert(
           profileId: 0,
           curriculumId: mishnayos.storageKey,
-          trackId: trackIdMishnayos,
+          trackId: Value(trackIdMishnayos),
           sefariaRef: 'M_0',
           stageId: learnId,
           trackType: 'personal',
-          completedAt: now.subtract(const Duration(days: 1)),
+          eventTimestamp: now.subtract(const Duration(days: 1)),
           points: const Value(10),
         ),
       );
