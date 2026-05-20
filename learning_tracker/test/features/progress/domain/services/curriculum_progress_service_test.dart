@@ -1,3 +1,6 @@
+import 'package:drift/drift.dart' show Value;
+import 'package:learning_tracker/core/database/daos/completion_dao.dart'
+    show Completion;
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
@@ -88,7 +91,7 @@ void main() {
       StageDefinitionsCompanion.insert(
         profileId: 1,
         curriculumId: curriculumId,
-        trackId: Value(trackId),
+        trackId: trackId,
         stageOrder: stageOrder,
         stageName: stageName,
         schedule: Value('{"type":"delay","delay_days":0}'),

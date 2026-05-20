@@ -94,7 +94,7 @@ void _pointConfigLargeSurface(WidgetTester tester) {
 Widget _pointConfigTestApp(UserDatabase db, Widget child) => ProviderScope(
   overrides: [
     userDatabaseProvider.overrideWithValue(db),
-    syncEngineProvider.overrideWithValue(null),
+    syncWriteFacadeProvider.overrideWithValue(null),
     activeProfileIdProvider.overrideWithValue(1),
   ],
   child: MaterialApp(
@@ -574,16 +574,18 @@ void main() {
         completionBaseDate: now,
       );
 
-      // Set up streak
-      await db.streakEventDao.upsertStreakByProfile(
-        1,
-        StreakEventsCompanion.insert(
-          profileId: 1,
-          currentStreak: const Value(5),
-          maxStreak: const Value(12),
-          lastCompletionDate: Value(now),
-        ),
-      );
+      // Set up streak — insert 5 consecutive events ending yesterday
+      for (var i = 4; i >= 0; i--) {
+        final day = now.subtract(Duration(days: i + 1));
+        await db.streakEventDao.appendEvent(
+          StreakEventsCompanion.insert(
+            profileId: 1,
+            eventType: 'completion',
+            dayUtc: DateTime.utc(day.year, day.month, day.day),
+            eventTimestamp: day,
+          ),
+        );
+      }
 
       final aggregator = ParentDashboardAggregator(
         db,

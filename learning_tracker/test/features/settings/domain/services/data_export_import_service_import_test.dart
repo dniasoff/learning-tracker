@@ -293,7 +293,7 @@ void main() {
       final tracks = await db.select(db.curriculumTracks).get();
       expect(tracks, hasLength(1));
       expect(tracks.first.curriculumId, 'bavli');
-      expect(tracks.first.isActive, isTrue);
+      expect(tracks.first.state, 'active');
     });
 
     test('handles optional deactivatedAt and paceResetDate fields', () async {
@@ -310,7 +310,7 @@ void main() {
       await service.importData(jsonEncode(payload));
 
       final tracks = await db.select(db.curriculumTracks).get();
-      expect(tracks.first.deactivatedAt, isNotNull);
+      expect(tracks.first.stateChangedAt, isNotNull);
       expect(tracks.first.paceResetDate, isNotNull);
     });
   });
@@ -658,28 +658,17 @@ void main() {
   // importData — streaks
   // =========================================================================
 
-  group('DataExportImportService.importData — streaks', () {
-    test('inserts streak rows', () async {
+  // Legacy `streaks` key is ignored in Wave 3 — import service skips it.
+  // Streak state is derived from streakEvents. Tests moved to streakEvents group.
+  group('DataExportImportService.importData — streaks (legacy)', () {
+    test('legacy streaks key is silently skipped', () async {
       final payload = minimalPayload()..['streaks'] = [streakMap(profileId: 1)];
 
       await service.importData(jsonEncode(payload));
 
-      final streaks = await db.select(db.streakEvents).get();
-      expect(streaks, hasLength(1));
-      expect(streaks.first.currentStreak, 7);
-      expect(streaks.first.maxStreak, 14);
-    });
-
-    test('handles optional lastCompletionDate and graceUsedDate', () async {
-      final payload = minimalPayload()
-        ..['streaks'] = [
-          {...streakMap(), 'graceUsedDate': '2026-05-12T00:00:00.000Z'},
-        ];
-
-      await service.importData(jsonEncode(payload));
-
-      final streaks = await db.select(db.streakEvents).get();
-      expect(streaks.first.graceUsedDate, isNotNull);
+      // The import service ignores the legacy `streaks` key.
+      final streakRows = await db.select(db.streakEvents).get();
+      expect(streakRows, isEmpty);
     });
   });
 
@@ -791,7 +780,14 @@ void main() {
       // Insert streak.
       await db
           .into(db.streakEvents)
-          .insert(StreakEventsCompanion.insert(profileId: profileId));
+          .insert(
+            StreakEventsCompanion.insert(
+              profileId: profileId,
+              eventType: 'completion',
+              dayUtc: now,
+              eventTimestamp: now,
+            ),
+          );
 
       // Insert streak event.
       await db

@@ -277,9 +277,9 @@ void main() {
       final trackId = await insertTrack(db, profileId);
       final track = await getTrack(trackId);
 
-      final copy = track.copyWith(isActive: false);
+      final copy = track.copyWith(state: 'retired');
       expect(copy.curriculumId, track.curriculumId);
-      expect(copy.isActive, isFalse);
+      expect(copy.state, 'retired');
     });
 
     test('toCompanion and copyWithCompanion', () async {
@@ -292,9 +292,9 @@ void main() {
       expect(companion.profileId.value, profileId);
 
       final copy = track.copyWithCompanion(
-        const CurriculumTracksCompanion(isActive: Value(false)),
+        const CurriculumTracksCompanion(state: Value('retired')),
       );
-      expect(copy.isActive, isFalse);
+      expect(copy.state, 'retired');
     });
 
     test('equality, hashCode, toString (with nullable fields)', () async {
@@ -308,28 +308,28 @@ void main() {
       expect(t1.toString(), contains('bavli'));
     });
 
-    test('toColumns with nullable deactivatedAt', () async {
+    test('toColumns includes required fields', () async {
       final accId = await insertAccount(db, email: 'ct5@test.local');
       final profileId = await insertProfile(db, accId);
       final trackId = await insertTrack(db, profileId);
       final track = await getTrack(trackId);
 
-      // deactivatedAt is null — test nullToAbsent path
+      // state is a required field — always present
       final cols = track.toColumns(true);
-      expect(cols.containsKey('deactivated_at'), isFalse);
+      expect(cols.containsKey('state'), isTrue);
 
       final colsAll = track.toColumns(false);
-      expect(colsAll.containsKey('deactivated_at'), isTrue);
+      expect(colsAll.containsKey('state'), isTrue);
     });
 
     test('CurriculumTracksCompanion.copyWith', () {
       const original = CurriculumTracksCompanion(
         curriculumId: Value('bavli'),
-        trackType: Value('personal'),
+        state: Value('active'),
       );
-      final copy = original.copyWith(isActive: const Value(false));
+      final copy = original.copyWith(state: const Value('retired'));
       expect(copy.curriculumId.value, 'bavli');
-      expect(copy.isActive.value, isFalse);
+      expect(copy.state.value, 'retired');
     });
   });
 
@@ -808,7 +808,7 @@ void main() {
       await insertProfile(db, accId, displayName: 'Manager Profile');
 
       final rows = await db.managers.learnerProfiles
-          .filter((f) => f.accountId(accId))
+          .filter((f) => f.accountId.id(accId))
           .get();
       expect(rows, hasLength(1));
       expect(rows.first.displayName, 'Manager Profile');
