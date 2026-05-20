@@ -163,14 +163,14 @@ Sync-point trigger tags: `[P1]` `[P2]` `[P3]` `[P4]` `[P5]` `[P6]` `[P7]`
 - [x] W3.29 (S, S2, done)    Drop isActive/deletedAt/deactivatedAt/supersededAt ad-hoc tombstone columns
 
 ### Phase 3d · Firestore rebuild (S2)
-- [ ] W3.30 (S, S2, in-progress)    Delete top-level compat blocks from firestore.rules — closes T11
-- [ ] W3.31 (M, S2, in-progress)    Rewrite firestore.rules for new snake_case + ULID doc-id shape
-- [ ] W3.32 (S, S2, in-progress)    Split stage_definitions/{curriculumId} out of settings/{curriculumId} — closes T8 partial
-- [ ] W3.33 (S, S2, in-progress)    Unify three preference docs into preferences/{scope} collection
-- [ ] W3.34 (S, S2, in-progress)    Rename curriculum_import_metadata → import_metadata
-- [ ] W3.35 (S, S2, in-progress)    Change completions/ to ULID doc-ids
-- [ ] W3.36 (S, S2, in-progress)    Change learning_ledger/ to use existing ULIDs as doc-ids — closes T10
-- [ ] W3.37 (S, S2, in-progress)    Change streak/ from snapshot doc → streak_events/{ulid} collection
+- [x] W3.30 (S, S2, done)    Delete top-level compat blocks from firestore.rules — closes T11
+- [x] W3.31 (M, S2, done)    Rewrite firestore.rules for new snake_case + ULID doc-id shape
+- [x] W3.32 (S, S2, done)    Split stage_definitions/{curriculumId} out of settings/{curriculumId} — closes T8 partial
+- [x] W3.33 (S, S2, done)    Unify three preference docs into preferences/{scope} collection
+- [x] W3.34 (S, S2, done)    Rename curriculum_import_metadata → import_metadata
+- [x] W3.35 (S, S2, done)    Change completions/ to ULID doc-ids
+- [x] W3.36 (S, S2, done)    Change learning_ledger/ to use existing ULIDs as doc-ids — closes T10
+- [x] W3.37 (S, S2, done)    Change streak/ from snapshot doc → streak_events/{ulid} collection
 
 ### Phase 3e · Tutor mode schema (S3)
 - [x] W3.38 (M, S3, done)    Add tutor_grants/{grantId} top-level collection with deterministic doc-id strategy
@@ -184,9 +184,9 @@ Sync-point trigger tags: `[P1]` `[P2]` `[P3]` `[P4]` `[P5]` `[P6]` `[P7]`
 - [x] W3.44 (M, S4, done)    Collapse goal entity: drop goalType/paceValue/pacePeriod/targetDate → PaceTarget? field only; migrate goal_repository_impl + dashboard_providers
 
 ### Phase 3g · Wipe and verify (S2)
-- [ ] W3.45 (S, S2, pending)    Wipe Firestore (gcloud firestore delete on users/) + delete dev Drift DBs
-- [ ] W3.46 (S, S2, pending)    Deploy new Firestore rules + Cloud Functions `[P5]`
-- [ ] W3.47 (S, S2, pending)    Update or delete Story-27.8 acceptance test against new layout
+- [ ] W3.45 (S, S2, in-progress)    Wipe Firestore (gcloud firestore delete on users/) + delete dev Drift DBs
+- [ ] W3.46 (S, S2, in-progress)    Deploy new Firestore rules + Cloud Functions `[P5]`
+- [x] W3.47 (S, S2, done)    Update or delete Story-27.8 acceptance test against new layout
 
 ---
 
@@ -273,7 +273,7 @@ Sync-point trigger tags: `[P1]` `[P2]` `[P3]` `[P4]` `[P5]` `[P6]` `[P7]`
 - [x] W5.21 (M, S5, done)    Convert ConsumerStatefulWidget → ConsumerWidget: SchedulerScreen (_isGroupedView → SchedulerGroupedView @riverpod Notifier); other candidates assessed — complex state skipped; follow-up logged
 
 ### Phase 5g · Decision-table replacements
-- [ ] W5.22 (M, S5, pending)    Replace any remaining switch-over-strings → Map&lt;EnumKey, Handler&gt; registries
+- [x] W5.22 (M, S5, done)    Replace switch-over-strings: items_learned_providers.dart entryScopeLevel Map registry (14 scopes); other sites assessed and kept
 
 ---
 

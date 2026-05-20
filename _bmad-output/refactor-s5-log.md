@@ -127,6 +127,46 @@ Tracker: _bmad-output/refactor-task-tracker.md
 
 ---
 
+## S5-continuation-E (2026-05-20)
+
+### W4.22 — Move _buildMasechtosIndex → MasechtaOrderingPolicy [DONE]
+- Updated both `track_learning_order_repository_impl.dart` (legacy `track_learning_order/` and canonical `tracks/track_order/`)
+- Both impls now delegate to `const MasechtaOrderingPolicy().buildIndex(allItems:, sedarimIndex:, savedSederOrder:)` — 40-line inline closure removed from each
+- `savedSederOrder` extracted by filtering DAO rows to only seder-matching refs, in row order
+- Commit: `refactor(W4.22): replace _buildMasechtosIndex inline logic with MasechtaOrderingPolicy`
+
+### W5.19 — Replace DateTime.now() calls with DateTimeFactory.nowUtc() [DONE]
+- 6 sites fixed across 5 files:
+  - `core/sync/merge/notification_settings_merger.dart` — LWW fallback timestamp
+  - `core/sync/merge/gamification_settings_merger.dart` — LWW fallback timestamp
+  - `core/sync/merge/ui_preferences_merger.dart` — LWW fallback timestamp
+  - `features/tutoring/domain/services/tutor_audit_log_writer.dart` — audit entry ID generation
+  - `core/domain/value_objects/study_day_pattern.dart` — doc comment example updated
+- Audit grep #6 (No DateTime.now() outside core/time/) now active and passing
+- Note: codebase had already been mostly cleaned up; only 6 real offenders remained (plan said "100+" — earlier streams addressed most)
+- Commit: `refactor(W5.19): replace DateTime.now() calls with DateTimeFactory.nowUtc()`
+
+### W5.20 — Rename *Service → *Gateway for platform-adapter classes [DONE]
+- `ConnectivityService` → `ConnectivityGateway` (core/network/) — wraps InternetAddress.lookup
+- `NotificationService` → `NotificationGateway` (features/notifications/domain/services/) — wraps FlutterLocalNotificationsPlugin
+- 7 importers updated across bootstrap + presentation + domain service files
+- ~30 remaining *Service classes assessed: most are genuine domain-orchestration services (PinService, StreakAlertService, etc.) or already wrapped by a UseCase; renaming would not add clarity
+- Commit: `refactor(W5.20): rename *Service → *Gateway for platform-adapter classes`
+
+### W5.21 — Convert ConsumerStatefulWidget → ConsumerWidget [DONE]
+- Converted `SchedulerScreen`: `_isGroupedView: bool` → `SchedulerGroupedView @riverpod Notifier` (auto-dispose)
+- `skipTask()` became a local function in `build()`; no lifecycle or initState needed
+- Added `schedulerGroupedViewProvider` to `scheduler_providers.dart`; regenerated `.g.dart`
+- Other candidates assessed: TrackLearningOrderScreen (complex state + race seqno), LearningOrderScreen (async seeding), TrackManagementHubScreen (dialog + mounted checks), GoalSetupForm (TextEditingController + 6 fields) — all skipped
+- Commit: `refactor(W5.21): convert SchedulerScreen ConsumerStatefulWidget → ConsumerWidget`
+
+### W5.22 — Replace switch-over-strings with Map registries [DONE]
+- `items_learned_providers.dart._learnedLeafRefs`: 14-case switch over entry-scope strings replaced with `const entryScopeLevel = <String, int>{...}` registry + `switch (entryScopeLevel[resolvedType])` dispatch
+- Other switch-over-string sites assessed: stage_definition_codec.dart (complex per-case logic), sign_in_screen.dart / signup_screen.dart (l10n parameter dependency), manage_learners_screen.dart (2-case too simple), gamification_screen.dart (UI display strings not dispatch) — all kept as-is
+- Commit: `refactor(W5.22): replace switch-over-strings with Map registry in _learnedLeafRefs`
+
+---
+
 ## Cross-stream issues noted
 - Pre-existing errors in `features/tracks/setup/presentation/` (add_track_controller.dart, add_track_flow_screen.dart, track_detail_screen.dart) and `features/stages/data/` (const_with_non_const) — not caused by S5 work
 - `stage_definition_repository_impl.dart:66` uses `const` with a non-const constructor — pre-existing, out of scope

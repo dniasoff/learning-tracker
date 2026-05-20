@@ -232,7 +232,7 @@ class PullPipeline {
       if (outcome == MergeOutcome.halt) {
         // W7.6: fire telemetry so the halt is visible in analytics dashboards
         // (the structured log captures it separately via AppLogger).
-        _analytics?.logEvent(
+        final future = _analytics?.logEvent(
           LogEvents.sync.mergeRouterHalt,
           parameters: {
             'collection': collection,
@@ -240,6 +240,7 @@ class PullPipeline {
             'profile_id': profileId,
           },
         );
+        if (future != null) unawaited(future);
         return;
       }
 
