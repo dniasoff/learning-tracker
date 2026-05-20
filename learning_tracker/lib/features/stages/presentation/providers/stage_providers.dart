@@ -12,11 +12,11 @@ import 'package:learning_tracker/features/sync/presentation/providers/sync_provi
 final stageDefinitionRepositoryProvider =
     Provider.family<StageDefinitionRepository, CurriculumId>((ref, curriculum) {
       final database = ref.watch(userDatabaseProvider);
-      final syncEngine = ref.watch(syncEngineProvider);
+      final syncFacade = ref.watch(syncWriteFacadeProvider);
       return StageDefinitionRepositoryImpl(
         stageDao: database.stageDao,
         completionDao: database.completionDao,
-        pushSettings: syncEngine?.pushSettings,
+        pushSettings: syncFacade?.pushSettings,
       );
     });
 
@@ -28,11 +28,11 @@ final globalStageRepositoryProvider = Provider<StageDefinitionRepository>((
   ref,
 ) {
   final database = ref.watch(userDatabaseProvider);
-  final syncEngine = ref.watch(syncEngineProvider);
+  final syncFacade = ref.watch(syncWriteFacadeProvider);
   return StageDefinitionRepositoryImpl(
     stageDao: database.stageDao,
     completionDao: database.completionDao,
-    pushSettings: syncEngine?.pushSettings,
+    pushSettings: syncFacade?.pushSettings,
   );
 });
 

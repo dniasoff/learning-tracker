@@ -86,7 +86,7 @@ final achievementsOverviewProvider =
       final service = RewardMilestoneService(db, profileId: profileId);
 
       if (await service.stripStockTemplateMilestones()) {
-        await ref.read(syncEngineProvider)?.pushGamificationSettingsSnapshot();
+        await ref.read(syncWriteFacadeProvider)?.pushGamificationSettingsSnapshot();
       }
 
       final tracks = await db.trackDao.getActiveTracksForProfile(profileId);

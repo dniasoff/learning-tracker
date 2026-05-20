@@ -86,7 +86,7 @@ class SacredLocationNotifier extends _$SacredLocationNotifier {
   }
 
   Future<void> _pushSnapshot() async {
-    await ref.read(syncEngineProvider)?.pushUiPreferencesSnapshot();
+    await ref.read(syncWriteFacadeProvider)?.pushUiPreferencesSnapshot();
   }
 }
 
@@ -111,6 +111,6 @@ class InIsraelNotifier extends _$InIsraelNotifier {
     state = value;
     final prefs = await SharedPreferences.getInstance();
     await SacredTimePreferences.writeInIsrael(prefs, value);
-    await ref.read(syncEngineProvider)?.pushUiPreferencesSnapshot();
+    await ref.read(syncWriteFacadeProvider)?.pushUiPreferencesSnapshot();
   }
 }

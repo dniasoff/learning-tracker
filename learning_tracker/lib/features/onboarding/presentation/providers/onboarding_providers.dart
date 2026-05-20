@@ -48,11 +48,11 @@ final curriculumImportServiceProvider = Provider<CurriculumImportService>((
 final goalRepositoryProvider = Provider<GoalRepository>((ref) {
   final db = ref.watch(userDatabaseProvider);
   final profileId = ref.watch(activeProfileIdProvider);
-  final syncEngine = ref.watch(syncEngineProvider);
+  final syncFacade = ref.watch(syncWriteFacadeProvider);
   return GoalRepositoryImpl(
     database: db,
     profileId: profileId,
-    syncEngine: syncEngine,
+    syncEngine: syncFacade,
   );
 });
 
@@ -63,21 +63,21 @@ final bulkPriorCompletionServiceProvider = Provider<BulkPriorCompletionService>(
     final completionRepo = ref.watch(completionRepositoryProvider);
     final bookmarkRepo = ref.watch(bookmarkRepositoryProvider);
     final db = ref.watch(userDatabaseProvider);
-    final syncEngine = ref.watch(syncEngineProvider);
+    final syncFacade = ref.watch(syncWriteFacadeProvider);
     final analytics = ref.watch(analyticsServiceProvider);
     // B6: inject StageDefinitionRepository so execute() can enumerate all
     // configured stages and write completion records for learn + every chazara.
     final stageRepo = StageDefinitionRepositoryImpl(
       stageDao: db.stageDao,
       completionDao: db.completionDao,
-      pushSettings: syncEngine?.pushSettings,
+      pushSettings: syncFacade?.pushSettings,
     );
     return BulkPriorCompletionService(
       contentRepository: contentRepo,
       completionRepository: completionRepo,
       bookmarkRepository: bookmarkRepo,
       database: db,
-      syncEngine: syncEngine,
+      syncEngine: syncFacade,
       analytics: analytics,
       stageRepository: stageRepo,
       outboxDao: db.outboxDao,

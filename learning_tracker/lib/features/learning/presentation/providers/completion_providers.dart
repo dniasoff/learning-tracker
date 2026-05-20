@@ -60,7 +60,7 @@ final isStageCompletedProvider = FutureProvider.autoDispose
 @riverpod
 CompletionRepository completionRepository(Ref ref) {
   final database = ref.watch(userDatabaseProvider);
-  final syncEngine = ref.watch(syncEngineProvider);
+  final syncFacade = ref.watch(syncWriteFacadeProvider);
   final contentRepository = ref.watch(contentRepositoryProvider);
 
   final bookmarkRepository = ref.watch(bookmarkRepositoryProvider);
@@ -83,7 +83,7 @@ CompletionRepository completionRepository(Ref ref) {
 
   return CompletionRepositoryImpl(
     database: database,
-    syncEngine: syncEngine,
+    syncEngine: syncFacade,
     contentRepository: contentRepository,
     bookmarkRepository: bookmarkRepository,
     completionDetectionService: detectionService,

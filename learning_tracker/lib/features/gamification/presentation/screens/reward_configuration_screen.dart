@@ -110,7 +110,7 @@ class _RewardConfigurationScreenState
   }
 
   Future<void> _persistAndSync() async {
-    await ref.read(syncEngineProvider)?.pushGamificationSettingsSnapshot();
+    await ref.read(syncWriteFacadeProvider)?.pushGamificationSettingsSnapshot();
     await _invalidateChildRewardProviders();
   }
 

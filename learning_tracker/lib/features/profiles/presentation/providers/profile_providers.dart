@@ -28,8 +28,8 @@ int currentAccountId(Ref ref) {
 @Riverpod(keepAlive: true)
 ProfileRepository profileRepository(Ref ref) {
   final db = ref.watch(userDatabaseProvider);
-  final syncEngine = ref.watch(syncEngineProvider);
-  return ProfileRepositoryImpl(db, syncEngine: syncEngine);
+  final syncFacade = ref.watch(syncWriteFacadeProvider);
+  return ProfileRepositoryImpl(db, syncEngine: syncFacade);
 }
 
 /// The currently selected profile ID. Null means no profile selected yet.

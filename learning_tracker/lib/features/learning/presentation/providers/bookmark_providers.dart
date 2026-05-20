@@ -17,7 +17,7 @@ import 'package:learning_tracker/features/sync/presentation/providers/sync_provi
 /// [initializeBookmark] use O(1) adjacent-item lookups instead of O(N) scans.
 final bookmarkRepositoryProvider = Provider<BookmarkRepository>((ref) {
   final database = ref.watch(userDatabaseProvider);
-  final syncEngine = ref.watch(syncEngineProvider);
+  final syncFacade = ref.watch(syncWriteFacadeProvider);
   final firestoreGateway = ref.watch(firestoreGatewayProvider);
   final contentRepository = ref.watch(contentRepositoryProvider);
   final profileId = ref.watch(activeProfileIdProvider);
@@ -28,7 +28,7 @@ final bookmarkRepositoryProvider = Provider<BookmarkRepository>((ref) {
 
   return BookmarkRepositoryImpl(
     database: database,
-    syncEngine: syncEngine,
+    syncEngine: syncFacade,
     firestoreGateway: firestoreGateway,
     contentRepository: contentRepository,
     profileId: profileId,

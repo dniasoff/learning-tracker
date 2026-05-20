@@ -112,7 +112,7 @@ Sync-point trigger tags: `[P1]` `[P2]` `[P3]` `[P4]` `[P5]` `[P6]` `[P7]`
 - [x] W2.31 (M, S2, done)    Add outbox-backed SyncWriteFacade impl + syncWriteFacadeProvider
 - [x] W2.32 (M, S2, done)    Move pushAllLocalData + backfillGoalsForCloudCutover to outbox path
 - [x] W2.33 (M, S2, done)    Move SyncStatus ownership from SyncEngine to SyncOrchestrator (own StreamController); repoint sync_status_providers
-- [ ] W2.34 (M, S2, pending)    Grep-and-replace 21 syncEngineProvider consumers → syncWriteFacadeProvider — closes H1
+- [x] W2.34 (M, S2, done)    Grep-and-replace 21 syncEngineProvider consumers → syncWriteFacadeProvider — closes H1
 - [ ] W2.35 (S, S2, pending)    Delete features/sync/data/sync_engine.dart
 - [ ] W2.36 (S, S2, pending)    Delete features/sync/data/firestore_data_source.dart — closes M5
 - [ ] W2.37 (S, S2, pending)    Delete features/sync/data/offline_queue.dart

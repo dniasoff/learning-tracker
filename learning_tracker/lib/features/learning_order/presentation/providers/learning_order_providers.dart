@@ -18,11 +18,11 @@ final learningOrderRepositoryProvider = Provider<LearningOrderRepository>((
 ) {
   final database = ref.watch(userDatabaseProvider);
   final contentRepository = ref.watch(contentRepositoryProvider);
-  final syncEngine = ref.watch(syncEngineProvider);
+  final syncFacade = ref.watch(syncWriteFacadeProvider);
   return LearningOrderRepositoryImpl(
     database: database,
     contentRepository: contentRepository,
-    syncEngine: syncEngine,
+    syncEngine: syncFacade,
   );
 });
 

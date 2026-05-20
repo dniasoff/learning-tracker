@@ -11,13 +11,13 @@ import 'package:learning_tracker/features/sync/presentation/providers/sync_provi
 final curriculumActivationServiceProvider =
     Provider<CurriculumActivationService>((ref) {
       final database = ref.watch(userDatabaseProvider);
-      final syncEngine = ref.watch(syncEngineProvider);
+      final syncFacade = ref.watch(syncWriteFacadeProvider);
       final trackRepository = ref.watch(trackRepositoryProvider);
       final profileId = ref.watch(activeProfileIdProvider);
 
       return CurriculumActivationService(
         database: database,
-        pushCurriculumTrack: syncEngine?.pushCurriculumTrack,
+        pushCurriculumTrack: syncFacade?.pushCurriculumTrack,
         trackRepository: trackRepository,
         profileId: profileId,
       );

@@ -11,7 +11,8 @@ import 'package:learning_tracker/core/preferences/text_display_preference.dart';
 import 'package:learning_tracker/core/preferences/text_display_preferences.dart';
 import 'package:learning_tracker/core/preferences/transliteration_variant_preference.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
-import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
+import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart'
+    show syncWriteFacadeProvider;
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'preference_providers.g.dart';
@@ -78,7 +79,7 @@ Future<void> _writeAndPushSnapshot<T>(
   T value,
 ) async {
   await pref.write(profileId, value);
-  await ref.read(syncEngineProvider)?.pushUiPreferencesSnapshot();
+  await ref.read(syncWriteFacadeProvider)?.pushUiPreferencesSnapshot();
 }
 
 /// Whether to render Jewish learning terms in Hebrew script for the active

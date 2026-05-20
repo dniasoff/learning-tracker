@@ -68,7 +68,7 @@ final _pointConfigDataProvider = FutureProvider.autoDispose<List<_TrackPointData
   (ref) async {
     final db = ref.watch(userDatabaseProvider);
     final profileId = ref.watch(activeProfileIdProvider);
-    final sync = ref.read(syncEngineProvider);
+    final sync = ref.read(syncWriteFacadeProvider);
 
     // Same query as [activeTracksProvider] / dashboard; watch the stream so we
     // rebuild when tracks change, but avoid awaiting another provider's .future
@@ -185,7 +185,7 @@ class _PointConfigScreenState extends ConsumerState<PointConfigScreen> {
     try {
       final db = ref.read(userDatabaseProvider);
       final profileId = ref.read(activeProfileIdProvider);
-      final sync = ref.read(syncEngineProvider);
+      final sync = ref.read(syncWriteFacadeProvider);
 
       for (final track in tracks) {
         final pending = _pendingPrimaryByTrackId[track.trackId];

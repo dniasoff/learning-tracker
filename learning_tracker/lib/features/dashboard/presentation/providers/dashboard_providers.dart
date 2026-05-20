@@ -292,7 +292,7 @@ Future<void> stripStockMilestonesEffect(Ref ref) async {
   final milestoneService = RewardMilestoneService(db, profileId: profileId);
 
   if (await milestoneService.stripStockTemplateMilestones()) {
-    await ref.read(syncEngineProvider)?.pushGamificationSettingsSnapshot();
+    await ref.read(syncWriteFacadeProvider)?.pushGamificationSettingsSnapshot();
   }
 }
 

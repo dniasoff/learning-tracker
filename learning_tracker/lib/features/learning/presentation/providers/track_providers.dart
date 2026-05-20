@@ -13,12 +13,12 @@ part 'track_providers.g.dart';
 @riverpod
 TrackRepository trackRepository(Ref ref) {
   final database = ref.watch(userDatabaseProvider);
-  final syncEngine = ref.watch(syncEngineProvider);
+  final syncFacade = ref.watch(syncWriteFacadeProvider);
   final profileId = ref.watch(activeProfileIdProvider);
 
   return TrackRepositoryImpl(
     database: database,
-    syncEngine: syncEngine,
+    syncEngine: syncFacade,
     activeProfileId: profileId,
   );
 }
