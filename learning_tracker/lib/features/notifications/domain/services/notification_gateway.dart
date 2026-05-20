@@ -33,8 +33,8 @@ const int streakAlertId = 1;
 const String rewardMilestonePayload = 'reward_earned';
 
 /// Service for scheduling and managing local notifications.
-class NotificationService {
-  NotificationService({FlutterLocalNotificationsPlugin? plugin})
+class NotificationGateway {
+  NotificationGateway({FlutterLocalNotificationsPlugin? plugin})
     : _plugin = plugin ?? FlutterLocalNotificationsPlugin();
 
   final FlutterLocalNotificationsPlugin _plugin;

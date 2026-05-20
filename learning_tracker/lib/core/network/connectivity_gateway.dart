@@ -4,7 +4,7 @@ import 'dart:io';
 ///
 /// Uses a lightweight DNS lookup to determine if the device can reach
 /// the internet, avoiding dependency on platform-specific plugins.
-class ConnectivityService {
+class ConnectivityGateway {
   /// Checks if the device currently has internet connectivity.
   ///
   /// Attempts a DNS lookup of a neutral host. Returns `true` if the

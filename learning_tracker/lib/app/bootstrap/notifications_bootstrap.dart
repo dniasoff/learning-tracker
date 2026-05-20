@@ -7,7 +7,7 @@ import 'package:learning_tracker/features/notifications/presentation/providers/n
 /// Initialises the notification system from the provider [container].
 ///
 /// Non-fatal — notification failures must never prevent app startup.
-/// Uses the provider-owned [NotificationService] instance so the plugin
+/// Uses the provider-owned [NotificationGateway] instance so the plugin
 /// initialized here is the same one used for scheduling later.
 Future<void> bootstrapNotifications({
   required ProviderContainer container,

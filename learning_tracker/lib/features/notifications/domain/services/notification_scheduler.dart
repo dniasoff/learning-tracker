@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:learning_tracker/core/analytics/analytics_service.dart';
 import 'package:learning_tracker/features/notifications/data/services/sacred_window_repository.dart';
-import 'package:learning_tracker/features/notifications/domain/services/notification_service.dart';
+import 'package:learning_tracker/features/notifications/domain/services/notification_gateway.dart';
 import 'package:learning_tracker/features/sacred_time/domain/models/sacred_location.dart';
 import 'package:timezone/timezone.dart' as tz;
 
@@ -26,7 +26,7 @@ class NotificationScheduler {
   }) : _sacredWindowRepository = sacredWindowRepository,
        _analytics = analytics ?? const NullAnalyticsService();
 
-  final NotificationService service;
+  final NotificationGateway service;
   final SacredWindowRepository? _sacredWindowRepository;
   final AnalyticsService _analytics;
 

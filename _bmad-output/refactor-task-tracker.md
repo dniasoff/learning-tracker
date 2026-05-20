@@ -266,7 +266,7 @@ Sync-point trigger tags: `[P1]` `[P2]` `[P3]` `[P4]` `[P5]` `[P6]` `[P7]`
 ### Phase 5e · Provider/global cleanup
 - [x] W5.17 (M, S5, done)    Replace String activeDbFileName global → accountDbFileNameProvider Notifier&lt;String&gt;; 8 mutation sites updated to setFileName(); bootstrap seeds value post-container-creation
 - [x] W5.18 (S, S5, done)    Remove LearningProgramRepository.instance singleton; route via learningProgramRepositoryProvider; 10 call-sites migrated; @Deprecated kept on .instance; 2 helper-fn signatures extended with programRepository param; 4 import-order infos fixed
-- [ ] W5.19 (S, S5, pending)    Replace 100+ direct DateTime.now() calls with clockProvider.now(); enable make audit grep #6
+- [x] W5.19 (S, S5, done)    Replace direct DateTime.now() calls with DateTimeFactory.nowUtc(); 6 sites fixed (all non-test, non-core/time/ offenders); audit grep #6 now active and passing
 
 ### Phase 5f · Naming + ConsumerWidget conversions
 - [ ] W5.20 (M, S5, pending)    Rename *Service classes by intent: *Repository, *Gateway, *Notifier, *UseCase, *Renderer

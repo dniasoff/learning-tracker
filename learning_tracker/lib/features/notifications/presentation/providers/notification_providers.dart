@@ -10,8 +10,8 @@ import 'package:learning_tracker/features/notifications/data/services/sacred_win
 import 'package:learning_tracker/features/notifications/domain/models/reminder_preferences.dart';
 import 'package:learning_tracker/features/notifications/domain/repositories/notification_preferences_repository.dart'
     show NotificationPreferencesRepository;
+import 'package:learning_tracker/features/notifications/domain/services/notification_gateway.dart';
 import 'package:learning_tracker/features/notifications/domain/services/notification_scheduler.dart';
-import 'package:learning_tracker/features/notifications/domain/services/notification_service.dart';
 import 'package:learning_tracker/features/notifications/domain/services/streak_alert_service.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/providers/sacred_location_provider.dart';
@@ -36,10 +36,10 @@ const int defaultStreakAlertHour = ReminderPreferences.defaultStreakAlertHour;
 const int defaultStreakAlertMinute =
     ReminderPreferences.defaultStreakAlertMinute;
 
-/// Provides the [NotificationService] singleton.
+/// Provides the [NotificationGateway] singleton.
 @Riverpod(keepAlive: true)
-NotificationService notificationService(Ref ref) {
-  return NotificationService();
+NotificationGateway notificationService(Ref ref) {
+  return NotificationGateway();
 }
 
 /// Manages the daily reminder enabled state.

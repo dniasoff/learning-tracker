@@ -1,6 +1,6 @@
 import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
-import 'package:learning_tracker/features/notifications/domain/services/notification_service.dart';
+import 'package:learning_tracker/features/notifications/domain/services/notification_gateway.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 
@@ -10,7 +10,7 @@ import 'package:timezone/timezone.dart' as tz;
 class NotificationInitializer {
   NotificationInitializer({required this.service, required this.router});
 
-  final NotificationService service;
+  final NotificationGateway service;
   final AppRouter router;
 
   /// Initialize timezone data and notification plugin.

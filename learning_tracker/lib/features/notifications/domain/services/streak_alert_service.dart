@@ -5,7 +5,7 @@ import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/time/local_day_clock.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/gamification/streak/streak_state_provider.dart';
-import 'package:learning_tracker/features/notifications/domain/services/notification_service.dart';
+import 'package:learning_tracker/features/notifications/domain/services/notification_gateway.dart';
 
 /// Service for managing streak protection alert notifications.
 ///
@@ -17,7 +17,7 @@ import 'package:learning_tracker/features/notifications/domain/services/notifica
 class StreakAlertService {
   StreakAlertService({
     required UserDatabase db,
-    required NotificationService notificationService,
+    required NotificationGateway notificationService,
     required int profileId,
     DateTime Function()? clock,
     AnalyticsService? analytics,
@@ -32,7 +32,7 @@ class StreakAlertService {
        );
 
   final UserDatabase _db;
-  final NotificationService _notificationService;
+  final NotificationGateway _notificationService;
   final int _profileId;
   final DateTime Function() _clock;
   final AnalyticsService _analytics;

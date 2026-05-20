@@ -1,4 +1,4 @@
-// TutorNotificationService — W6.25
+// TutorNotificationGateway — W6.25
 //
 // Domain service that sends transactional email notifications for tutor grant
 // lifecycle events. Three scenarios are covered:
@@ -31,8 +31,8 @@ import 'package:learning_tracker/core/email/transactional_email_service.dart';
 /// [TransactionalEmailService.send] and return immediately. The email
 /// service contract guarantees it MUST NOT throw, so errors are absorbed
 /// and logged internally.
-class TutorNotificationService {
-  const TutorNotificationService(this._email);
+class TutorNotificationGateway {
+  const TutorNotificationGateway(this._email);
 
   final TransactionalEmailService _email;
 
