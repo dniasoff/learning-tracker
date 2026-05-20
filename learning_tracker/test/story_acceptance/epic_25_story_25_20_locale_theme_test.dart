@@ -99,17 +99,25 @@ void main() {
       late String mainSource;
 
       setUpAll(() {
+        // MaterialApp config may live in main.dart or learning_tracker_app.dart.
         final candidates = [
+          File('lib/app/learning_tracker_app.dart'),
+          File('learning_tracker/lib/app/learning_tracker_app.dart'),
           File('lib/main.dart'),
           File('learning_tracker/lib/main.dart'),
         ];
         for (final f in candidates) {
           if (f.existsSync()) {
-            mainSource = f.readAsStringSync();
-            return;
+            final content = f.readAsStringSync();
+            if (content.contains('MaterialApp') ||
+                content.contains('locale: null') ||
+                content.contains('themeMode:')) {
+              mainSource = content;
+              return;
+            }
           }
         }
-        throw StateError('main.dart not found');
+        throw StateError('main.dart or learning_tracker_app.dart not found');
       });
 
       test('main.dart sets MaterialApp `locale: null`', () {
@@ -385,14 +393,19 @@ void main() {
     () {
       test('main.dart wires `themeMode: ThemeMode.system`', () {
         final candidates = [
+          File('lib/app/learning_tracker_app.dart'),
+          File('learning_tracker/lib/app/learning_tracker_app.dart'),
           File('lib/main.dart'),
           File('learning_tracker/lib/main.dart'),
         ];
         String? source;
         for (final f in candidates) {
           if (f.existsSync()) {
-            source = f.readAsStringSync();
-            break;
+            final c = f.readAsStringSync();
+            if (c.contains('themeMode:')) {
+              source = c;
+              break;
+            }
           }
         }
         expect(source, isNotNull);
@@ -407,14 +420,19 @@ void main() {
 
       test('main.dart passes `darkTheme: AppTheme.darkTheme()`', () {
         final candidates = [
+          File('lib/app/learning_tracker_app.dart'),
+          File('learning_tracker/lib/app/learning_tracker_app.dart'),
           File('lib/main.dart'),
           File('learning_tracker/lib/main.dart'),
         ];
         String? source;
         for (final f in candidates) {
           if (f.existsSync()) {
-            source = f.readAsStringSync();
-            break;
+            final c = f.readAsStringSync();
+            if (c.contains('darkTheme:')) {
+              source = c;
+              break;
+            }
           }
         }
         expect(source, isNotNull);

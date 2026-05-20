@@ -103,8 +103,8 @@ void main() {
       expect(db, isNotNull);
     });
 
-    test('schema version is at least 3 (post Epic 20.3 migration)', () {
-      expect(db.schemaVersion, greaterThanOrEqualTo(3));
+    test('schema version is at least 1 (W3.19 fresh-install schema reset)', () {
+      expect(db.schemaVersion, greaterThanOrEqualTo(1));
     });
 
     test('all 12 DAOs are accessible', () {

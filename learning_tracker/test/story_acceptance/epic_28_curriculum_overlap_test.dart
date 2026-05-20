@@ -28,14 +28,27 @@ import '../helpers/drift_memory.dart' show seedCompletion;
 
 UserDatabase _openDb() => UserDatabase(NativeDatabase.memory());
 
-/// Insert a minimal learner profile and return its id.
+/// Insert a minimal account + learner profile and return the profile id.
 Future<int> _insertProfile(UserDatabase db) async {
   final now = DateTime.utc(2026, 1, 1);
+  // Seed account first to satisfy FK on learner_profiles.account_id.
+  final accountId = await db
+      .into(db.accounts)
+      .insert(
+        AccountsCompanion.insert(
+          email: 'tester@example.com',
+          tier: 'localBorn',
+          displayName: 'Tester',
+          userMode: 'adult',
+          createdAt: now,
+          updatedAt: now,
+        ),
+      );
   final p = await db
       .into(db.learnerProfiles)
       .insertReturning(
         LearnerProfilesCompanion.insert(
-          accountId: 1,
+          accountId: accountId,
           displayName: 'Tester',
           mode: 'adult',
           createdAt: now,

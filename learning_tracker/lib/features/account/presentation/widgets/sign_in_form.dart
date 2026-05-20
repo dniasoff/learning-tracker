@@ -65,7 +65,7 @@ class SignInForm extends StatelessWidget {
           ),
           if (registrySubtitle != null)
             Padding(
-              padding: const EdgeInsets.only(top: 8, left: 4),
+              padding: const EdgeInsetsDirectional.only(top: 8, start: 4),
               child: Text(
                 registrySubtitle!,
                 style: theme.textTheme.bodySmall?.copyWith(

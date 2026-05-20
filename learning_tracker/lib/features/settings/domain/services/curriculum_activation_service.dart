@@ -1,9 +1,7 @@
-import 'package:drift/drift.dart';
 import 'package:learning_tracker/core/database/daos/track_dao.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
-import 'package:learning_tracker/features/learning/domain/repositories/track_repository.dart';
 import 'package:learning_tracker/features/settings/domain/exceptions/last_active_curriculum_exception.dart';
 
 /// Service for managing curriculum activation/deactivation.
@@ -14,16 +12,13 @@ class CurriculumActivationService {
   CurriculumActivationService({
     required UserDatabase database,
     required Future<void> Function(Map<String, dynamic>)? pushCurriculumTrack,
-    required TrackRepository trackRepository,
     int profileId = 0,
   }) : _database = database,
        _pushCurriculumTrack = pushCurriculumTrack,
-       _trackRepository = trackRepository,
        _profileId = profileId;
 
   final UserDatabase _database;
   final Future<void> Function(Map<String, dynamic>)? _pushCurriculumTrack;
-  final TrackRepository _trackRepository;
   final int _profileId;
 
   /// Initialize default active curricula for this profile if none exist.
@@ -31,11 +26,10 @@ class CurriculumActivationService {
     final activeCurricula = await _database.activeCurriculumDao
         .getActiveCurriculaByProfile(_profileId);
     if (activeCurricula.isEmpty) {
-      await _trackRepository.initializeDefaultTracks(
-        CurriculumId.mishnayos,
+      final trackId = await _database.trackDao.restoreOrCreate(
         profileId: _profileId,
+        curriculumId: CurriculumId.mishnayos,
       );
-      final trackId = await _resolveTrackId(CurriculumId.mishnayos, _profileId);
       await _database.studyDayConfigDao.seedDefaults(
         profileId: _profileId,
         curriculumId: CurriculumId.mishnayos.storageKey,
@@ -46,16 +40,15 @@ class CurriculumActivationService {
   }
 
   /// Activate a curriculum for the active profile.
+  ///
+  /// Uses [TrackDao.restoreOrCreate] so that re-activating a previously
+  /// deactivated (soft-deleted) curriculum reuses the existing track row
+  /// instead of hitting the UNIQUE(profileId, curriculumId) constraint.
   Future<void> activate(CurriculumId curriculum) async {
-    await _database.activeCurriculumDao.activateByProfile(
-      curriculum,
-      _profileId,
-    );
-    await _trackRepository.initializeDefaultTracks(
-      curriculum,
+    final trackId = await _database.trackDao.restoreOrCreate(
       profileId: _profileId,
+      curriculumId: curriculum,
     );
-    final trackId = await _resolveTrackId(curriculum, _profileId);
     await _database.studyDayConfigDao.seedDefaults(
       profileId: _profileId,
       curriculumId: curriculum.storageKey,
@@ -69,15 +62,10 @@ class CurriculumActivationService {
     CurriculumId curriculum,
     int profileId,
   ) async {
-    await _database.activeCurriculumDao.activateByProfile(
-      curriculum,
-      profileId,
-    );
-    await _trackRepository.initializeDefaultTracks(
-      curriculum,
+    final trackId = await _database.trackDao.restoreOrCreate(
       profileId: profileId,
+      curriculumId: curriculum,
     );
-    final trackId = await _resolveTrackId(curriculum, profileId);
     await _database.studyDayConfigDao.seedDefaults(
       profileId: profileId,
       curriculumId: curriculum.storageKey,
@@ -144,20 +132,6 @@ class CurriculumActivationService {
     return _database.activeCurriculumDao.watchActiveCurriculaByProfile(
       _profileId,
     );
-  }
-
-  Future<int> _resolveTrackId(CurriculumId curriculum, int profileId) async {
-    final track =
-        await (_database.select(_database.curriculumTracks)
-              ..where(
-                (t) =>
-                    t.profileId.equals(profileId) &
-                    t.curriculumId.equals(curriculum.storageKey) &
-                    t.state.equals(TrackState.active),
-              )
-              ..limit(1))
-            .getSingleOrNull();
-    return track?.id ?? 0;
   }
 
   /// Sync this profile's tracks to Firestore.

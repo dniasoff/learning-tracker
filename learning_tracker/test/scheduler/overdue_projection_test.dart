@@ -17,9 +17,9 @@
 library;
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:learning_tracker/features/scheduler/domain/projection/projection.dart';
 import 'package:learning_tracker/features/scheduler/domain/services/calendar_program_service.dart';
 import 'package:learning_tracker/features/scheduler/domain/services/local_calendar_engine.dart';
-import 'package:learning_tracker/features/scheduler/domain/projection/projection.dart';
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
 
 // ---------------------------------------------------------------------------

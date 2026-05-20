@@ -99,11 +99,11 @@ void main() {
         test(
           'snapshot collections gate writes through hasOnly() field whitelist',
           () {
+            // Collections with write field whitelist + delete-denied.
             for (final c in [
               'bookmarks/{bookmarkId}',
               'stage_definitions/{stageId}',
               'import_metadata/{docId}', // W3.34: renamed
-              'profile_programs/{curriculumId}',
             ]) {
               final block = _extractRuleBlock(rules, c);
               expect(
@@ -117,6 +117,18 @@ void main() {
                 reason: '$c must deny deletes',
               );
             }
+            // profile_programs: has hasOnly() whitelist, but allows owner-delete
+            // (C4 fix — V3-W1: removeProfileProgramAssignment must hard-delete).
+            final ppBlock = _extractRuleBlock(
+              rules,
+              'profile_programs/{curriculumId}',
+            );
+            expect(
+              ppBlock,
+              contains('.hasOnly('),
+              reason:
+                  'profile_programs must restrict writes to a fixed field list',
+            );
           },
         );
 

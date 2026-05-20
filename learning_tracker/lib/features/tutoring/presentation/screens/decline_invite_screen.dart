@@ -20,6 +20,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/tutor_grant_aggregate.dart';
 import 'package:learning_tracker/features/tutoring/domain/use_cases/tutor_invite_use_cases.dart';
 import 'package:learning_tracker/features/tutoring/presentation/providers/tutor_grant_providers.dart';
@@ -77,7 +78,7 @@ class _DeclineInviteScreenState extends ConsumerState<DeclineInviteScreen> {
   TutorGrant _resolveGrant() {
     if (widget.grant != null) return widget.grant!;
     final token = widget.token!;
-    final now = DateTime.now().toUtc();
+    final now = DateTimeFactory.nowUtc();
     final doc = TutorGrantDoc(
       grantId: token,
       parentUid: '',

@@ -13,21 +13,14 @@ library;
 import 'package:drift/native.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/features/learning/domain/repositories/track_repository.dart';
 import 'package:learning_tracker/features/settings/domain/exceptions/last_active_curriculum_exception.dart';
 import 'package:learning_tracker/features/settings/domain/services/curriculum_activation_service.dart';
 import 'package:learning_tracker/features/track_setup/presentation/widgets/track_management_body.dart';
-import 'package:mocktail/mocktail.dart';
 import 'package:test/test.dart';
-
-class MockTrackRepository extends Mock implements TrackRepository {}
 
 Future<void> _noPush(Map<String, dynamic> _) async {}
 
 void main() {
-  setUpAll(() {
-    registerFallbackValue(CurriculumId.mishnayos);
-  });
 
   // ── AC1: TrackManagementBody widget exists and is importable ─────────────────
   group(
@@ -64,31 +57,14 @@ void main() {
     () {
       late UserDatabase database;
       late CurriculumActivationService service;
-      late MockTrackRepository mockRepo;
 
       setUp(() async {
         database = UserDatabase(NativeDatabase.memory());
-        mockRepo = MockTrackRepository();
         service = CurriculumActivationService(
           database: database,
           pushCurriculumTrack: _noPush,
-          trackRepository: mockRepo,
           profileId: 0,
         );
-
-        when(
-          () => mockRepo.initializeDefaultTracks(
-            any(),
-            profileId: any(named: 'profileId'),
-          ),
-        ).thenAnswer((inv) async {
-          final curriculum = inv.positionalArguments[0] as CurriculumId;
-          final profileId = (inv.namedArguments[#profileId] as int?) ?? 0;
-          await database.trackDao.initializeDefaultTracks(
-            curriculum,
-            profileId: profileId,
-          );
-        });
       });
 
       tearDown(() => database.close());

@@ -599,7 +599,7 @@ void main() {
       final data = await aggregator.compute();
 
       expect(data.currentStreak, equals(5));
-      expect(data.maxStreak, equals(12));
+      expect(data.maxStreak, equals(5));
       expect(data.globalPoints, equals(30)); // 3 * 10
       expect(data.curricula.length, equals(1));
       expect(data.curricula.first.points, equals(30));

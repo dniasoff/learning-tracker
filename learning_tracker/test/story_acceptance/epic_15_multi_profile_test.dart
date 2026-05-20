@@ -12,7 +12,6 @@ import 'package:learning_tracker/core/enums/track_type.dart';
 // ContentVersionCheckService removed — content is now bundled
 import 'package:learning_tracker/features/gamification/domain/services/points_service.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/learning_ledger_repository.dart';
-import 'package:learning_tracker/features/learning/domain/repositories/track_repository.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/bulk_prior_completion_service.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/curriculum_import_service.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/learning_process_wizard_service.dart';
@@ -46,8 +45,6 @@ class _InMemoryContentRepo implements SchedulerContentRepository {
   Future<List<SchedulerContentItem>> getLeafItems(CurriculumId id) async =>
       items;
 }
-
-class _MockTrackRepository extends Mock implements TrackRepository {}
 
 /// Creates a default curriculum track and returns its ID.
 Future<int> _insertTrack(UserDatabase db) async {
@@ -786,18 +783,11 @@ void main() {
           test(
             'CurriculumImportService activates curriculum during import',
             () async {
-              final mockTrackRepo = _MockTrackRepository();
-
               registerFallbackValue(CurriculumId.mishnayos);
-
-              when(
-                () => mockTrackRepo.initializeDefaultTracks(any()),
-              ).thenAnswer((_) async {});
 
               final activationService = CurriculumActivationService(
                 database: db,
                 pushCurriculumTrack: (_) async {},
-                trackRepository: mockTrackRepo,
               );
 
               final importService = CurriculumImportService(
@@ -1603,7 +1593,9 @@ void main() {
             trackId: trackId,
             stageOrder: 3,
             stageName: 'Rolling Back-20',
-            schedule: const Value('{"type":"rolling","rolling_window_size":20}'),
+            schedule: const Value(
+              '{"type":"rolling","rolling_window_size":20}',
+            ),
           ),
         );
 
@@ -2729,15 +2721,10 @@ void main() {
         'CurriculumActivationService.activate creates tracks for new curriculum',
         () async {
           registerFallbackValue(CurriculumId.mishnayos);
-          final mockTrackRepo = _MockTrackRepository();
-          when(
-            () => mockTrackRepo.initializeDefaultTracks(any()),
-          ).thenAnswer((_) async {});
 
           final service = CurriculumActivationService(
             database: db,
             pushCurriculumTrack: (_) async {},
-            trackRepository: mockTrackRepo,
           );
 
           // Activate bavli.
@@ -2746,11 +2733,6 @@ void main() {
           // Verify it's now active.
           final active = await service.getActiveCurricula();
           expect(active, contains(CurriculumId.bavli));
-
-          // Verify tracks were initialized.
-          verify(
-            () => mockTrackRepo.initializeDefaultTracks(CurriculumId.bavli),
-          ).called(1);
         },
       );
 

@@ -22,6 +22,8 @@ import 'package:learning_tracker/features/learning_order/domain/models/learning_
 import 'package:mocktail/mocktail.dart';
 import 'package:test/test.dart';
 
+import '../helpers/test_database.dart' show seedProfile;
+
 class MockSyncWriteFacade extends Mock implements SyncWriteFacade {}
 
 class MockContentRepository extends Mock implements ContentRepository {}
@@ -104,8 +106,8 @@ void main() {
 
           expect(capturedPayload, isNotNull);
           expect(capturedPayload!['curriculum_id'], isNotNull);
-          expect(capturedPayload!['track_type'], isNotNull);
-          expect(capturedPayload!['is_active'], isNotNull);
+          // W3.22/W3.28: track_type/is_active replaced by state + state_changed_at
+          expect(capturedPayload!['state'], isNotNull);
           expect(capturedPayload!['activated_at'], isNotNull);
         });
 
@@ -127,8 +129,9 @@ void main() {
         late MockSyncWriteFacade mockFacade;
         late LearningOrderRepositoryImpl repo;
 
-        setUp(() {
+        setUp(() async {
           db = _createDb();
+          await seedProfile(db);
           mockFacade = MockSyncWriteFacade();
           when(
             () => mockFacade.pushLearningOrder(

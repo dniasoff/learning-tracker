@@ -14,7 +14,6 @@ import 'package:learning_tracker/core/constants/hebrew_terms.dart';
 import 'package:learning_tracker/core/database/seed/learning_program_seeds.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/features/learning/domain/repositories/track_repository.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/learning_process_wizard_service.dart';
 import 'package:learning_tracker/features/scheduler/data/repositories/goal_repository_impl.dart';
 import 'package:learning_tracker/features/scheduler/domain/services/learning_program_service.dart';
@@ -26,8 +25,6 @@ import 'package:mocktail/mocktail.dart';
 import 'package:test/test.dart' hide isNotNull, isNull;
 
 import '../helpers/test_database.dart' show seedProfile;
-
-class _MockTrackRepository extends Mock implements TrackRepository {}
 
 /// Creates a default curriculum track and returns its ID.
 Future<int> _insertTrack(UserDatabase db) async {
@@ -124,39 +121,14 @@ void main() {
       group('AC-6: Points initialization per track', () {
         late UserDatabase db;
         late TrackCreationService service;
-        late _MockTrackRepository mockTrackRepo;
 
         setUp(() async {
           db = UserDatabase(NativeDatabase.memory());
           await _insertTrack(db);
-          mockTrackRepo = _MockTrackRepository();
-
-          when(
-            () => mockTrackRepo.initializeDefaultTracks(
-              any(),
-              profileId: any(named: 'profileId'),
-            ),
-          ).thenAnswer((invocation) async {
-            final curriculum =
-                invocation.positionalArguments[0] as CurriculumId;
-            final pId = invocation.namedArguments[#profileId] as int? ?? 0;
-            // Actually create the track so downstream lookups succeed
-            await db
-                .into(db.curriculumTracks)
-                .insert(
-                  CurriculumTracksCompanion.insert(
-                    profileId: pId,
-                    curriculumId: curriculum.storageKey,
-                    stateChangedAt: DateTime.now(),
-                    activatedAt: DateTime.now(),
-                  ),
-                );
-          });
 
           final activationService = CurriculumActivationService(
             database: db,
             pushCurriculumTrack: (_) async {},
-            trackRepository: mockTrackRepo,
           );
 
           final wizardService = LearningProcessWizardService(

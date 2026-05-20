@@ -146,7 +146,7 @@ void main() {
           trackType: TrackType.personal.storageKey,
           trackId: Value(seed.trackId),
           eventTimestamp: DateTimeFactory.nowUtc(),
-          derivedFromEvents: const Value(true),
+          // W3.22: derivedFromEvents removed from schema
         ),
       );
 

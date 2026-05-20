@@ -7,7 +7,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart'
     hide expect, group, setUp, setUpAll, tearDown, tearDownAll, test;
-import 'package:learning_tracker/core/database/daos/completion_dao.dart' show Completion;
+import 'package:learning_tracker/core/database/daos/completion_dao.dart'
+    show Completion;
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
@@ -19,7 +20,6 @@ import 'package:learning_tracker/features/learning/domain/entities/bookmark.dart
 import 'package:learning_tracker/features/learning/domain/entities/completion_request.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/bookmark_repository.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/completion_repository.dart';
-import 'package:learning_tracker/features/learning/domain/repositories/track_repository.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/bulk_prior_completion_service.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/curriculum_import_service.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/user_profile_service.dart';
@@ -35,8 +35,6 @@ import 'package:test/test.dart' hide isNotNull, isNull;
 import '../helpers/drift_memory.dart' show seedProfile;
 
 class _MockContentRepository extends Mock implements ContentRepository {}
-
-class _MockTrackRepository extends Mock implements TrackRepository {}
 
 class _MockCompletionRepository extends Mock implements CompletionRepository {}
 
@@ -218,16 +216,9 @@ void main() {
     test(
       'import service selects 2 curricula, imports, and activates them',
       () async {
-        final mockTrackRepo = _MockTrackRepository();
-
-        when(
-          () => mockTrackRepo.initializeDefaultTracks(any()),
-        ).thenAnswer((_) async {});
-
         final activationService = CurriculumActivationService(
           database: db,
           pushCurriculumTrack: (_) async {},
-          trackRepository: mockTrackRepo,
         );
         final importService = CurriculumImportService(
           activationService: activationService,

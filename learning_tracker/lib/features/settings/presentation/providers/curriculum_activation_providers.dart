@@ -2,7 +2,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
-import 'package:learning_tracker/features/learning/presentation/providers/track_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/settings/domain/services/curriculum_activation_service.dart';
 import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
@@ -12,13 +11,11 @@ final curriculumActivationServiceProvider =
     Provider<CurriculumActivationService>((ref) {
       final database = ref.watch(userDatabaseProvider);
       final syncFacade = ref.watch(syncWriteFacadeProvider);
-      final trackRepository = ref.watch(trackRepositoryProvider);
       final profileId = ref.watch(activeProfileIdProvider);
 
       return CurriculumActivationService(
         database: database,
         pushCurriculumTrack: syncFacade?.pushCurriculumTrack,
-        trackRepository: trackRepository,
         profileId: profileId,
       );
     });

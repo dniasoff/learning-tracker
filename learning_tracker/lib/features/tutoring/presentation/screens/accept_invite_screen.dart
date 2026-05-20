@@ -27,6 +27,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/tutor_grant_aggregate.dart';
 import 'package:learning_tracker/features/tutoring/domain/use_cases/tutor_invite_use_cases.dart';
@@ -150,7 +151,7 @@ class _AcceptInviteScreenState extends ConsumerState<AcceptInviteScreen> {
   /// The real implementation loads the grant from Firestore so the aggregate
   /// has accurate state + expiry data for the precondition check.
   TutorGrant _buildStubGrant(String grantId) {
-    final now = DateTime.now().toUtc();
+    final now = DateTimeFactory.nowUtc();
     final doc = TutorGrantDoc(
       grantId: grantId,
       parentUid: '',

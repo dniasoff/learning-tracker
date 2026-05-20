@@ -178,6 +178,28 @@ Future<int> _seedTrack(UserDatabase db, {String curriculumId = 'mishnayos'}) =>
           ),
         );
 
+/// Seeds a prior_completion_imports row for the given natural key.
+/// Required by [expungePriorCompletions] which looks up import rows
+/// to identify which stageIds to tombstone.
+Future<void> _seedImport(
+  UserDatabase db, {
+  required String sefariaRef,
+  required int stageId,
+  String curriculumId = 'mishnayos',
+  String trackType = 'personal',
+}) async {
+  await db.into(db.priorCompletionImports).insert(
+    PriorCompletionImportsCompanion.insert(
+      profileId: _profileId,
+      curriculumId: curriculumId,
+      sefariaRef: sefariaRef,
+      stageId: stageId,
+      trackType: trackType,
+      source: 'bulkInTrack',
+    ),
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
@@ -428,6 +450,10 @@ void main() {
               // W4.26: priorMarkOnly removed from schema
             ),
           );
+          // expungePriorCompletions requires import rows to identify which
+          // stageIds were bulk-imported. Seed one row per stage.
+          await _seedImport(db, sefariaRef: 'Berakhot 5:1', stageId: 1);
+          await _seedImport(db, sefariaRef: 'Berakhot 5:1', stageId: 2);
 
           final service = BulkPriorCompletionService(
             contentRepository: contentRepo,
@@ -480,6 +506,8 @@ void main() {
               // W4.26: priorMarkOnly removed from schema
             ),
           );
+          // Seed the matching import row for each stage.
+          await _seedImport(db, sefariaRef: 'Berakhot 6:1', stageId: stage);
         }
 
         final service = BulkPriorCompletionService(
@@ -538,6 +566,8 @@ void main() {
             // W4.26: priorMarkOnly removed from completion_events schema
           ),
         );
+        // Seed the import row so expungePriorCompletions can find the stageId.
+        await _seedImport(db, sefariaRef: 'Berakhot 7:1', stageId: 1);
 
         final service = BulkPriorCompletionService(
           contentRepository: contentRepo,
@@ -587,6 +617,8 @@ void main() {
             // W4.26: priorMarkOnly removed from completion_events schema
           ),
         );
+        // Seed the import row so expungePriorCompletions can find the stageId.
+        await _seedImport(db, sefariaRef: 'Berakhot 8:1', stageId: 1);
 
         // No outboxDao injected — local-only tombstone.
         final service = BulkPriorCompletionService(

@@ -17,6 +17,7 @@ import 'package:learning_tracker/core/sync/merge/settings_merger.dart';
 import 'package:learning_tracker/core/sync/merge/stage_definition_merger.dart';
 import 'package:learning_tracker/core/sync/merge/streak_event_merger.dart';
 import 'package:learning_tracker/core/sync/merge/track_config_merger.dart';
+import 'package:learning_tracker/core/sync/merge/tutor_grant_merger.dart';
 import 'package:learning_tracker/core/sync/merge/ui_preferences_merger.dart';
 
 /// Provider for [MergeRouter] — wires all [EntityMerger] implementations
@@ -67,6 +68,7 @@ final mergeRouterProvider = Provider<MergeRouter>((ref) {
         onRewardSettings: null,
       ),
       EntityKind.uiPreferences: const UiPreferencesMerger(),
+      EntityKind.tutorGrant: const TutorGrantMerger(), // W3.17 / W3.38
     },
   );
 });

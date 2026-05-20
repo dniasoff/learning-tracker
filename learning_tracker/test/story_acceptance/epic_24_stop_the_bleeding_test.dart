@@ -40,11 +40,12 @@ void main() {
       });
 
       // ── completions ──────────────────────────────────────────────────
-
-      // Story 25.4 renamed `completions` → `completion_events` (top-level, no uid nesting).
-      group('completion_events collection', () {
-        test('has per-collection match for completion_events/{docId}', () {
-          expect(rules, contains('match /completion_events/{docId}'));
+      //
+      // The Firestore collection is still named `completions` (nested under
+      // users/{uid}/learner_profiles/{profileId}/completions/{completionId}).
+      group('completions collection', () {
+        test('has per-collection match for completions/{completionId}', () {
+          expect(rules, contains('match /completions/{completionId}'));
         });
 
         test('allows create (not wildcard read/write)', () {
@@ -56,12 +57,13 @@ void main() {
           expect(rules, contains('completed_at <= request.time'));
         });
 
-        test('denies update on completion_events', () {
-          final block = _extractBlock(rules, 'completion_events/{docId}');
+        test('denies update on completions', () {
+          final block = _extractBlock(rules, 'completions/{completionId}');
           expect(
             block,
             anyOf(
               contains('allow update, delete: if false'),
+              contains('allow update: if false'),
               contains('allow delete: if false'),
             ),
           );
@@ -71,21 +73,28 @@ void main() {
       // ── streak_events ────────────────────────────────────────────────
 
       group('streak_events collection', () {
-        test('has per-collection match for streak_events/{docId}', () {
-          expect(rules, contains('match /streak_events/{docId}'));
+        test('has per-collection match for streak_events/{streakEventId}', () {
+          expect(rules, contains('match /streak_events/{streakEventId}'));
         });
 
         test('create-only with timestamp clamp', () {
-          final streakBlock = _extractBlock(rules, 'streak_events/{docId}');
+          final streakBlock = _extractBlock(
+            rules,
+            'streak_events/{streakEventId}',
+          );
           expect(streakBlock, contains('created_at <= request.time'));
         });
 
         test('denies delete on streak_events', () {
-          final streakBlock = _extractBlock(rules, 'streak_events/{docId}');
+          final streakBlock = _extractBlock(
+            rules,
+            'streak_events/{streakEventId}',
+          );
           expect(
             streakBlock,
             anyOf(
               contains('allow update, delete: if false'),
+              contains('allow update: if false'),
               contains('allow delete: if false'),
             ),
           );
@@ -95,21 +104,30 @@ void main() {
       // ── learning_ledger ──────────────────────────────────────────────
 
       group('learning_ledger collection', () {
-        test('has per-collection match for learning_ledger/{docId}', () {
-          expect(rules, contains('match /learning_ledger/{docId}'));
+        test('has per-collection match for learning_ledger/{entryId}', () {
+          expect(rules, contains('match /learning_ledger/{entryId}'));
         });
 
-        test('create-only with timestamp clamp', () {
-          final ledgerBlock = _extractBlock(rules, 'learning_ledger/{docId}');
-          expect(ledgerBlock, contains('created_at <= request.time'));
+        test('create-only (no timestamp clamp on learning_ledger)', () {
+          // learning_ledger create is owner-gated without a timestamp clamp;
+          // the ULID doc-id provides idempotency.
+          final ledgerBlock = _extractBlock(
+            rules,
+            'learning_ledger/{entryId}',
+          );
+          expect(ledgerBlock, contains('allow create: if isOwner(uid)'));
         });
 
         test('denies delete on learning_ledger', () {
-          final ledgerBlock = _extractBlock(rules, 'learning_ledger/{docId}');
+          final ledgerBlock = _extractBlock(
+            rules,
+            'learning_ledger/{entryId}',
+          );
           expect(
             ledgerBlock,
             anyOf(
               contains('allow update, delete: if false'),
+              contains('allow update: if false'),
               contains('allow delete: if false'),
             ),
           );
@@ -117,29 +135,22 @@ void main() {
       });
 
       // ── settings ─────────────────────────────────────────────────────
+      //
+      // settings is an open-ended curriculum preference bag (no hasOnly
+      // whitelist). Reads and create/update are owner-gated; delete is denied.
 
       group('settings collection', () {
-        test('has per-collection match for settings/{docId}', () {
-          expect(rules, contains('match /settings/{docId}'));
+        test('has per-collection match for settings/{settingId}', () {
+          expect(rules, contains('match /settings/{settingId}'));
         });
 
-        test('has field whitelist for hebrew_terms', () {
-          final settingsBlock = _extractBlock(rules, 'settings/{docId}');
-          expect(settingsBlock, contains('hebrew_terms'));
-        });
-
-        test('has field whitelist for use_hebrew_date', () {
-          final settingsBlock = _extractBlock(rules, 'settings/{docId}');
-          expect(settingsBlock, contains('use_hebrew_date'));
-        });
-
-        test('uses hasOnly() for field whitelist enforcement', () {
-          final settingsBlock = _extractBlock(rules, 'settings/{docId}');
-          expect(settingsBlock, contains('hasOnly('));
+        test('owner can create and update settings', () {
+          final settingsBlock = _extractBlock(rules, 'settings/{settingId}');
+          expect(settingsBlock, contains('allow create, update: if isOwner(uid)'));
         });
 
         test('denies delete on settings', () {
-          final settingsBlock = _extractBlock(rules, 'settings/{docId}');
+          final settingsBlock = _extractBlock(rules, 'settings/{settingId}');
           expect(
             settingsBlock,
             anyOf(

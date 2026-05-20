@@ -137,6 +137,12 @@ void main() {
       // Composite curriculum strategy — constructs synthetic ContentItem
       // preamble rows (data layer, not a UI surface). DNI-358 / 26.15.
       'lib/features/content_browsing/domain/strategies/composite_curriculum_strategy.dart',
+      // Sync codec — serialises/deserialises bilingual LearningOrderRow fields
+      // for the pull pipeline (data layer, not a UI surface). W2.26 / C3.
+      'lib/core/sync/codec/learning_order_codec.dart',
+      // Domain ordering policy — reads dual-form fields to build bilingual sort
+      // keys for masechta ordering (domain layer, not a UI surface). W3.
+      'lib/features/tracks/track_order/domain/services/masechta_ordering_policy.dart',
     };
 
     final pattern = RegExp(r'\bdisplayName(En|He)\b');

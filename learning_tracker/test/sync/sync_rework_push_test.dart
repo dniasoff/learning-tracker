@@ -15,17 +15,16 @@
 library;
 
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:drift/drift.dart' show Value;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
-import 'package:learning_tracker/features/learning/domain/entities/completion_command.dart';
-import 'package:learning_tracker/features/learning/data/completion_writer.dart';
 import 'package:learning_tracker/core/sync/firestore_gateway_impl.dart';
 import 'package:learning_tracker/core/sync/outbox/outbox_processor.dart';
 import 'package:learning_tracker/core/sync/push_pipeline_impl.dart';
 import 'package:learning_tracker/core/time/local_day_clock.dart';
 import 'package:learning_tracker/features/account/domain/models/app_user.dart';
 import 'package:learning_tracker/features/account/domain/repositories/auth_repository.dart';
+import 'package:learning_tracker/features/learning/data/completion_writer.dart';
+import 'package:learning_tracker/features/learning/domain/entities/completion_command.dart';
 
 import '../helpers/drift_memory.dart';
 import '../helpers/firestore_fake.dart';

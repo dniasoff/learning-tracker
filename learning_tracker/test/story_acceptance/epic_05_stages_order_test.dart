@@ -15,7 +15,7 @@ import 'package:learning_tracker/features/stages/data/repositories/stage_definit
 import 'package:mocktail/mocktail.dart';
 import 'package:test/test.dart';
 
-import '../helpers/drift_memory.dart' show seedProfile;
+import '../helpers/drift_memory.dart' show seedProfile, seedProfileZero;
 
 class _MockContentRepository extends Mock implements ContentRepository {}
 
@@ -151,6 +151,7 @@ void main() {
     setUp(() async {
       database = UserDatabase(NativeDatabase.memory());
       await seedProfile(database);
+      await seedProfileZero(database);
       await _insertTrack(database);
       mockContent = _MockContentRepository();
       repo = LearningOrderRepositoryImpl(

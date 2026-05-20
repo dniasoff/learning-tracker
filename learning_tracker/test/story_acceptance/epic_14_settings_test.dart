@@ -17,7 +17,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:test/test.dart';
 
 import '../helpers/drift_memory.dart' show seedCompletion;
-import '../helpers/test_database.dart';
+import '../helpers/test_database.dart' show createTestDatabase, seedProfile, seedProfileZero;
 
 class MockAuthRepository extends Mock implements AuthRepository {}
 
@@ -148,6 +148,7 @@ void main() {
     setUp(() async {
       db = createTestDatabase();
       await seedProfile(db);
+      await seedProfileZero(db);
       trackId = await _insertTrack(db);
       service = DataExportImportService(
         database: db,
@@ -233,14 +234,16 @@ void main() {
       // Streaks — insert 5 consecutive events ending 2026-03-16 (yesterday of 3/17)
       for (var i = 4; i >= 0; i--) {
         final day = DateTime.utc(2026, 3, 16).subtract(Duration(days: i));
-        await db.into(db.streakEvents).insert(
-          StreakEventsCompanion.insert(
-            profileId: 0,
-            eventType: 'completion',
-            dayUtc: day,
-            eventTimestamp: day.copyWith(hour: 18),
-          ),
-        );
+        await db
+            .into(db.streakEvents)
+            .insert(
+              StreakEventsCompanion.insert(
+                profileId: 0,
+                eventType: 'completion',
+                dayUtc: day,
+                eventTimestamp: day.copyWith(hour: 18),
+              ),
+            );
       }
 
       // Point configs
@@ -330,13 +333,15 @@ void main() {
         expect((data['completions'] as List).length, equals(2));
         expect((data['goals'] as List).length, equals(1));
         expect((data['stageDefinitions'] as List).length, equals(2));
-        expect((data['streaks'] as List).length, equals(1));
+        // W3.20/W3.37: `streaks` table dropped; use `streakEvents` instead
+        expect((data['streaks'] as List).length, equals(0));
+        expect((data['streakEvents'] as List).length, equals(5));
         expect((data['pointConfigs'] as List).length, equals(1));
         expect((data['bookmarks'] as List).length, equals(1));
         expect((data['learningOrder'] as List).length, equals(1));
         expect((data['curriculumTracks'] as List).length, equals(2));
-        // 2 accounts: seedProfile's 'Test User' + seedTestData's upsertProfile
-        expect((data['userProfiles'] as List).length, equals(2));
+        // 3 accounts: seedProfileZero + seedProfile's 'Test User' + seedTestData's upsertProfile
+        expect((data['userProfiles'] as List).length, equals(3));
       },
     );
 
@@ -420,14 +425,16 @@ void main() {
       expect(preview.completionCount, equals(2));
       expect(preview.goalCount, equals(1));
       expect(preview.stageCount, equals(2));
-      expect(preview.streakCount, equals(1));
+      // W3.37: streaks table dropped; streakCount reflects streakEvents count (5)
+      expect(preview.streakCount, equals(5));
       expect(preview.pointConfigCount, equals(1));
       expect(preview.bookmarkCount, equals(1));
       expect(preview.learningOrderCount, equals(1));
       expect(preview.curriculumTrackCount, equals(2));
-      // 2 accounts: seedProfile's 'Test User' + seedTestData's upsertProfile
-      expect(preview.userProfileCount, equals(2));
-      expect(preview.totalRecords, equals(13));
+      // 3 accounts: seedProfileZero + seedProfile's 'Test User' + seedTestData's upsertProfile
+      expect(preview.userProfileCount, equals(3));
+      // totalRecords = 2+1+2+5+1+1+1+2+3 = 18
+      expect(preview.totalRecords, equals(18));
       expect(preview.exportedAt, isNot('unknown'));
       expect(preview.appVersion, equals('1.0.0'));
     });
@@ -490,8 +497,8 @@ void main() {
         expect(bookmarks.length, equals(1));
 
         final profiles = await db.userProfileDao.getAllUserProfiles();
-        // 2 accounts: seedProfile's 'Test User' + seedTestData's upsertProfile
-        expect(profiles.length, equals(2));
+        // 3 accounts: seedProfileZero + seedProfile's 'Test User' + seedTestData's upsertProfile
+        expect(profiles.length, equals(3));
         expect(profiles.any((p) => p.displayName == 'Test User'), isTrue);
       },
     );
@@ -598,10 +605,7 @@ void main() {
       );
       expect((await db.goalDao.getAllGoals()).length, equals(1));
       expect((await db.stageDao.getAllStageDefinitions()).length, equals(2));
-      expect(
-        (await db.streakEventDao.getEventsByProfile(0)).length,
-        equals(5),
-      );
+      expect((await db.streakEventDao.getEventsByProfile(0)).length, equals(5));
       expect((await db.select(db.pointConfigs).get()).length, equals(1));
       expect((await db.bookmarkDao.getAllBookmarks()).length, equals(1));
       expect(
@@ -616,8 +620,8 @@ void main() {
         equals(2),
       );
       expect((await db.select(db.curriculumTracks).get()).length, equals(2));
-      // 2 accounts: seedProfile's 'Test User' + seedTestData's upsertProfile
-      expect((await db.userProfileDao.getAllUserProfiles()).length, equals(2));
+      // 3 accounts: seedProfileZero + seedProfile's 'Test User' + seedTestData's upsertProfile
+      expect((await db.userProfileDao.getAllUserProfiles()).length, equals(3));
     });
   });
 

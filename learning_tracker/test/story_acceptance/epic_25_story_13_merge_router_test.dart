@@ -46,30 +46,12 @@ void main() {
       group('MergeRouter dispatch', () {
         test('dispatches each known kind to the matching merger', () async {
           final calls = <String>[];
-          final mergers = <String, EntityMerger>{
-            EntityKind.completion: _RecordingMerger(
-              EntityKind.completion,
-              calls,
-            ),
-            EntityKind.streak: _RecordingMerger(EntityKind.streak, calls),
-            EntityKind.learnerProfile: _RecordingMerger(
-              EntityKind.learnerProfile,
-              calls,
-            ),
-            EntityKind.trackConfig: _RecordingMerger(
-              EntityKind.trackConfig,
-              calls,
-            ),
-            EntityKind.bookmark: _RecordingMerger(EntityKind.bookmark, calls),
-            EntityKind.settings: _RecordingMerger(EntityKind.settings, calls),
-            EntityKind.stageDefinition: _RecordingMerger(
-              EntityKind.stageDefinition,
-              calls,
-            ),
-            EntityKind.profileProgram: _RecordingMerger(
-              EntityKind.profileProgram,
-              calls,
-            ),
+          // All kinds in EntityKind.all must be wired so the router
+          // returns continueNext rather than halt. Add new entries here
+          // whenever EntityKind.all grows.
+          final mergers = {
+            for (final kind in EntityKind.all)
+              kind: _RecordingMerger(kind, calls),
           };
           final router = MergeRouter(mergers: mergers);
 

@@ -13,6 +13,7 @@ import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/core/widgets/app_error_view.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/tutor_audit_log_entry.dart';
 import 'package:learning_tracker/features/tutoring/presentation/providers/audit_log_providers.dart';
@@ -76,9 +77,9 @@ class _TutorAuditLogScreenState extends ConsumerState<TutorAuditLogScreen> {
   Future<void> _pickFromDate() async {
     final picked = await showDatePicker(
       context: context,
-      initialDate: _filterFrom ?? DateTime.now(),
+      initialDate: _filterFrom ?? DateTimeFactory.nowLocal(),
       firstDate: DateTime(2020),
-      lastDate: _filterTo ?? DateTime.now(),
+      lastDate: _filterTo ?? DateTimeFactory.nowLocal(),
       helpText: 'Filter from date',
     );
     if (picked != null) setState(() => _filterFrom = picked);
@@ -87,9 +88,9 @@ class _TutorAuditLogScreenState extends ConsumerState<TutorAuditLogScreen> {
   Future<void> _pickToDate() async {
     final picked = await showDatePicker(
       context: context,
-      initialDate: _filterTo ?? DateTime.now(),
+      initialDate: _filterTo ?? DateTimeFactory.nowLocal(),
       firstDate: _filterFrom ?? DateTime(2020),
-      lastDate: DateTime.now(),
+      lastDate: DateTimeFactory.nowLocal(),
       helpText: 'Filter to date',
     );
     if (picked != null) setState(() => _filterTo = picked);
@@ -210,7 +211,7 @@ class _FilterBar extends StatelessWidget {
           // Action filter chips
           for (final action in TutorAuditAction.values) ...[
             Padding(
-              padding: const EdgeInsets.only(right: 6),
+              padding: const EdgeInsetsDirectional.only(end: 6),
               child: FilterChip(
                 label: Text(
                   _actionLabel(action),
@@ -470,7 +471,7 @@ class _AuditEntryTile extends StatelessWidget {
   };
 
   String _formatTimestamp(DateTime dt) {
-    final now = DateTime.now();
+    final now = DateTimeFactory.nowLocal();
     final today = DateTime(now.year, now.month, now.day);
     final entryDate = DateTime(dt.year, dt.month, dt.day);
     final pad2 = (int v) => v.toString().padLeft(2, '0');

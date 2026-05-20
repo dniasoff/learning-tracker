@@ -15,9 +15,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
-import 'package:learning_tracker/features/learning/domain/entities/completion_command.dart';
-import 'package:learning_tracker/features/learning/data/completion_writer.dart';
 import 'package:learning_tracker/core/sync/outbox/outbox_processor.dart';
+import 'package:learning_tracker/features/learning/data/completion_writer.dart';
+import 'package:learning_tracker/features/learning/domain/entities/completion_command.dart';
 
 import '../helpers/drift_memory.dart' show inMemoryDb, seedProfile;
 
@@ -46,12 +46,10 @@ void main() {
         final trackIdA = await deviceA.trackDao.restoreOrCreate(
           profileId: 1,
           curriculumId: CurriculumId.mishnayos,
-          trackType: TrackType.personal,
         );
         await deviceB.trackDao.restoreOrCreate(
           profileId: 1,
           curriculumId: CurriculumId.mishnayos,
-          trackType: TrackType.personal,
         );
 
         // Device A marks a completion — outbox row written atomically.
@@ -105,7 +103,6 @@ void main() {
       final trackId = await deviceA.trackDao.restoreOrCreate(
         profileId: 1,
         curriculumId: CurriculumId.mishnayos,
-        trackType: TrackType.personal,
       );
 
       await deviceA.trackDao.deleteTrackAndData(trackId);
@@ -127,7 +124,6 @@ void main() {
         final trackIdB = await deviceB.trackDao.restoreOrCreate(
           profileId: 1,
           curriculumId: CurriculumId.mishnayos,
-          trackType: TrackType.personal,
         );
 
         final ts = DateTime.utc(2026, 5, 10);

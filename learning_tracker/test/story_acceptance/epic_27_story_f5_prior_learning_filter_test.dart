@@ -66,6 +66,7 @@ void main() {
 
     setUp(() async {
       db = createTestDatabase();
+      await seedProfile(db);
 
       final profile = await db
           .into(db.learnerProfiles)

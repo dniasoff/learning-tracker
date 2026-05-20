@@ -80,6 +80,7 @@ void main() {
     setUp(() async {
       db = _db();
       await seedProfile(db);
+      await seedProfileZero(db);
       await _insertTrack(db);
       syncEngine = _MockSyncEngine();
       contentRepo = _MockContentRepository();

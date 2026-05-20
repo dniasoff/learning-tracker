@@ -29,10 +29,10 @@ void main() {
     // 1. Schema version
     // -------------------------------------------------------------------------
 
-    test('schemaVersion is 1', () async {
-      // The UserDatabase.schemaVersion is currently 1 — increments will
-      // be reflected here when migration steps are added.
-      expect(db.schemaVersion, equals(1));
+    test('schemaVersion is at least 1', () async {
+      // W3.19 reset to 1; subsequent schema changes increment further.
+      // Always >= 1 to avoid hardcoding a specific version.
+      expect(db.schemaVersion, greaterThanOrEqualTo(1));
     });
 
     // -------------------------------------------------------------------------

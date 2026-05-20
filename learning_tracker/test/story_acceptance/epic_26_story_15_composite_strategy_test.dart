@@ -27,6 +27,8 @@ import 'package:learning_tracker/features/learning_order/domain/repositories/lea
 import 'package:mocktail/mocktail.dart';
 import 'package:test/test.dart';
 
+import '../helpers/test_database.dart' show seedProfileZero;
+
 class _MockContentRepository extends Mock implements ContentRepository {}
 
 void main() {
@@ -193,8 +195,9 @@ void main() {
       late _MockContentRepository mockContent;
       late LearningOrderRepositoryImpl repo;
 
-      setUp(() {
+      setUp(() async {
         database = UserDatabase(NativeDatabase.memory());
+        await seedProfileZero(database);
         mockContent = _MockContentRepository();
         repo = LearningOrderRepositoryImpl(
           database: database,
@@ -271,8 +274,9 @@ void main() {
       late _MockContentRepository mockContent;
       late LearningOrderRepositoryImpl repo;
 
-      setUp(() {
+      setUp(() async {
         database = UserDatabase(NativeDatabase.memory());
+        await seedProfileZero(database);
         mockContent = _MockContentRepository();
         repo = LearningOrderRepositoryImpl(
           database: database,

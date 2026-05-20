@@ -211,7 +211,7 @@ void main() {
         'account_picker_screen.dart uses EdgeInsetsDirectional.only(end: 20)',
         () {
           final src = readFeatureFile(
-            'auth/presentation/screens/account_picker_screen.dart',
+            'account/presentation/screens/account_picker_screen.dart',
           );
           expect(
             src,

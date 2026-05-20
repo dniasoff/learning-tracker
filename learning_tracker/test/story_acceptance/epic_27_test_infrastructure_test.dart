@@ -141,10 +141,10 @@ void main() {
           expect(profiles, isEmpty);
 
           // Schema version reflects the project's current Drift
-          // schema. DNI-326 set this to 13; the helper must not
+          // schema. W3.19 reset this to 1; the helper must not
           // pin a stale number.
           expect(db.schemaVersion, db.schemaVersion);
-          expect(db.schemaVersion, greaterThanOrEqualTo(13));
+          expect(db.schemaVersion, greaterThanOrEqualTo(1));
         } finally {
           await db.close();
         }
@@ -156,6 +156,8 @@ void main() {
         try {
           // Writing to A must not be visible from B — proves no shared
           // backing store leaks between tests.
+          // Seed account first — W3.25 added FK learner_profiles→accounts.
+          await seedProfile(a);
           final now = DateTime.utc(2026, 5, 13);
           await a
               .into(a.learnerProfiles)

@@ -109,10 +109,9 @@ void main() {
           // Purge history
           await db.trackDao.purgeHistory(trackId);
 
-          // Completions must be gone
-          final after = await (db.select(
-            db.completionEvents,
-          )..where((t) => t.trackId.equals(trackId))).get();
+          // Completions are tombstoned (purgedAt set), not deleted.
+          // The completions_view (purgedAt IS NULL filter) must be empty.
+          final after = await db.completionDao.getCompletionsByTrack(trackId);
           expect(after, isEmpty);
 
           // Track row is physically deleted — no tombstone left behind.

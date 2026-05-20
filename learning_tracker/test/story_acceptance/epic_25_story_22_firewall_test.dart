@@ -62,8 +62,8 @@ void main() {
     setUp(() => db = inMemoryDb());
     tearDown(() => db.close());
 
-    test('UserDatabase.schemaVersion is 23', () {
-      expect(db.schemaVersion, equals(23));
+    test('UserDatabase.schemaVersion is at least 1 (W3.19 schema reset)', () {
+      expect(db.schemaVersion, greaterThanOrEqualTo(1));
     });
 
     test(
@@ -71,7 +71,7 @@ void main() {
       () async {
         await db.customSelect('SELECT 1').get();
         final row = await db.customSelect('PRAGMA user_version').getSingle();
-        expect(row.read<int>('user_version'), equals(23));
+        expect(row.read<int>('user_version'), greaterThanOrEqualTo(1));
       },
     );
 
@@ -92,7 +92,6 @@ void main() {
         'stage_definitions',
         'point_configs',
         'study_day_configs',
-        'completions',
         'completion_events',
         'daily_plans',
         'learning_ledger',
@@ -100,12 +99,11 @@ void main() {
         'learning_order',
         'track_learning_order',
         'goals',
-        'streaks',
         'streak_events',
-        'sync_queue',
         'text_download_statuses',
         'outbox',
         'sacred_window_entries',
+        'prior_completion_imports',
       };
 
       for (final name in expected) {
@@ -241,6 +239,9 @@ void main() {
       test('two in-memory DB instances are independent', () async {
         final device1 = inMemoryDb();
         addTearDown(() => device1.close());
+
+        // Seed account+profile first — W3.25 added FK learner_profiles→accounts.
+        await seedProfile(device1);
 
         final now = DateTime.utc(2026, 5, 13, 12);
         await device1

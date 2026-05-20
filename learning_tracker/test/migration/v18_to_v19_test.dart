@@ -11,8 +11,10 @@ void main() {
     skip: 'sync_queue table removed in Wave 3 schema rebuild',
     () {
       test('enqueue without entityKey produces null entityKey row', () {});
-      test('enqueueWithKey replaces the existing row for the same entityKey',
-          () {});
+      test(
+        'enqueueWithKey replaces the existing row for the same entityKey',
+        () {},
+      );
       test('enqueueWithKey keeps both rows for different entityKeys', () {});
       test('null-key and keyed rows coexist without conflict', () {});
     },
