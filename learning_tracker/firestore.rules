@@ -672,6 +672,19 @@ service cloud.firestore {
             ]);
           allow delete: if isOwner(uid);
         }
+
+        // stage_definitions — per-track stage configuration (W2.29 / closes H4).
+        // Doc ID: "{trackId}_{stageOrder}". Stable, fully-enumerable payload.
+        match /stage_definitions/{stageId} {
+          allow read: if isOwner(uid);
+          allow create, update: if isOwner(uid)
+            && request.resource.data.keys().hasOnly([
+              'profile_id', 'curriculum_id', 'track_id', 'stage_order',
+              'stage_name', 'delay_days', 'is_default', 'schedule_type',
+              'days_of_week', 'rolling_window_size', 'updated_at', 'synced_at'
+            ]);
+          allow delete: if false;
+        }
       }
     }
   }

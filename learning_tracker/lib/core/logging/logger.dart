@@ -35,9 +35,26 @@ class AppLogger {
   final Talker _talker;
 
   static Talker? _talkerInstance;
+  static AppLogger? _appLoggerInstance;
 
-  /// The singleton [Talker] instance used by the static helpers.
-  static Talker get instance {
+  /// The singleton [AppLogger] instance for use in production code.
+  ///
+  /// Wraps [talker] with the structured, PII-redacting named-parameter API.
+  /// Prefer this over accessing [talker] directly in application code.
+  ///
+  /// In unit tests, inject a specific [AppLogger] via the constructor instead
+  /// of relying on this singleton.
+  static AppLogger get instance {
+    _appLoggerInstance ??= AppLogger(talker);
+    return _appLoggerInstance!;
+  }
+
+  /// The singleton [Talker] instance used for low-level log routing.
+  ///
+  /// Use [instance] for structured logging. Use [talker] only when the raw
+  /// [Talker] type is required (e.g. third-party integrations, provider
+  /// wiring with [TalkerRiverpodObserver]).
+  static Talker get talker {
     _talkerInstance ??= _createTalker();
     return _talkerInstance!;
   }
@@ -45,8 +62,10 @@ class AppLogger {
   /// Initialises the singleton [Talker] instance with application settings.
   ///
   /// Call once during app startup before any logging occurs.
+  /// Returns the underlying [Talker] for wiring into [TalkerRiverpodObserver].
   static Talker init() {
     _talkerInstance = _createTalker();
+    _appLoggerInstance = null; // reset so instance re-wraps the new talker
     return _talkerInstance!;
   }
 
@@ -178,7 +197,11 @@ class PiiRedactor {
   PiiRedactor._();
 
   /// Keys whose *values* must be redacted from log output.
+  ///
+  /// Extended in W7.19 to cover tutor PII fields and additional personal
+  /// data fields that may appear in structured log entries.
   static const sensitiveKeys = <String>{
+    // Account / auth
     'userEmail',
     'email',
     'pinHash',
@@ -194,6 +217,33 @@ class PiiRedactor {
     'password',
     'secret',
     'token',
+    // Personal identification (W7.19)
+    'displayName',
+    'display_name',
+    'firstName',
+    'first_name',
+    'lastName',
+    'last_name',
+    // Location data (W7.19)
+    'city',
+    'lat',
+    'lon',
+    'latitude',
+    'longitude',
+    // Device / session identifiers (W7.19)
+    'deviceId',
+    'device_id',
+    // Auth code / magic link (W7.19)
+    'oauthCode',
+    'oauth_code',
+    'magicLinkUrl',
+    'magic_link_url',
+    // Tutor PII — tutor_email stored in tutor_grants (W7.19)
+    'tutor_email',
+    'tutorEmail',
+    // Invite token (sensitive single-use token) (W7.19)
+    'invite_token',
+    'inviteToken',
   };
 
   /// Email address pattern for scrubbing bare addresses from strings.

@@ -1,0 +1,124 @@
+// TutorPinService — W4.30
+//
+// Thin domain wrapper around [PinService]'s tutor-PIN methods.
+//
+// The PinService (features/profiles/domain/services/pin_service.dart) already
+// implements tutor-PIN storage under an independent namespace
+// (`profile_{id}_tutor_pin_hash`) that is separate from the parent PIN
+// namespace (`profile_{id}_parent_pin_hash`). This service is a domain-layer
+// facade that:
+//   1. Exposes a typed API specific to tutor auth (no parent PIN methods).
+//   2. Returns sealed result types (no thrown exceptions) for UI convenience.
+//   3. Keeps tutoring feature isolated from the profiles feature internals.
+
+import 'package:learning_tracker/features/profiles/domain/services/pin_service.dart';
+
+// ── TutorPin VO ─────────────────────────────────────────────────────────────
+
+/// Value object representing a valid (4-digit numeric) tutor PIN.
+///
+/// Construction validates the format. To attempt comparison against a stored
+/// hash, use [TutorPinService] — this VO does not expose the raw digits
+/// outside of construction to avoid accidental logging of PINs.
+class TutorPin {
+  TutorPin._(this._pin);
+
+  final String _pin;
+
+  /// Creates a [TutorPin] from [raw].
+  ///
+  /// Returns `null` if [raw] is not exactly 4 numeric digits.
+  static TutorPin? tryCreate(String raw) {
+    if (raw.length != 4 || !RegExp(r'^\d{4}$').hasMatch(raw)) return null;
+    return TutorPin._(raw);
+  }
+
+  /// The raw 4-digit string. Only call this to pass to a storage service —
+  /// do NOT log this value.
+  String get rawDigits => _pin;
+
+  @override
+  String toString() => 'TutorPin(****)';
+}
+
+// ── Sealed results ──────────────────────────────────────────────────────────
+
+sealed class TutorPinResult {
+  const TutorPinResult();
+}
+
+final class TutorPinSuccess extends TutorPinResult {
+  const TutorPinSuccess();
+}
+
+final class TutorPinIncorrect extends TutorPinResult {
+  const TutorPinIncorrect();
+}
+
+final class TutorPinLockedOut extends TutorPinResult {
+  const TutorPinLockedOut({required this.remainingMinutes});
+  final int remainingMinutes;
+}
+
+final class TutorPinValidationError extends TutorPinResult {
+  const TutorPinValidationError({required this.message});
+  final String message;
+}
+
+// ── TutorPinService ─────────────────────────────────────────────────────────
+
+/// Domain service for tutor PIN operations.
+///
+/// Delegates to [PinService] using the tutor-specific storage namespace.
+/// The tutor PIN namespace (`profile_{id}_tutor_pin_hash`) is INDEPENDENT
+/// from the parent PIN namespace — authenticating as a tutor does not grant
+/// parent access and vice versa.
+class TutorPinService {
+  const TutorPinService(this._pinService);
+
+  final PinService _pinService;
+
+  /// Set the tutor PIN for [profileId].
+  Future<TutorPinResult> setTutorPin({
+    required int profileId,
+    required String rawPin,
+  }) async {
+    final pin = TutorPin.tryCreate(rawPin);
+    if (pin == null) {
+      return const TutorPinValidationError(
+        message: 'Tutor PIN must be exactly 4 numeric digits.',
+      );
+    }
+    await _pinService.setTutorPin(profileId, pin.rawDigits);
+    return const TutorPinSuccess();
+  }
+
+  /// Verify the tutor PIN for [profileId].
+  Future<TutorPinResult> verifyTutorPin({
+    required int profileId,
+    required String rawPin,
+  }) async {
+    final pin = TutorPin.tryCreate(rawPin);
+    if (pin == null) {
+      return const TutorPinValidationError(
+        message: 'Tutor PIN must be exactly 4 numeric digits.',
+      );
+    }
+    try {
+      final ok = await _pinService.verifyTutorPin(profileId, pin.rawDigits);
+      return ok ? const TutorPinSuccess() : const TutorPinIncorrect();
+    } on PinLockoutException catch (e) {
+      return TutorPinLockedOut(remainingMinutes: e.remainingMinutes);
+    }
+  }
+
+  /// Returns true if a tutor PIN is set for [profileId].
+  Future<bool> hasTutorPin(int profileId) => _pinService.hasTutorPin(profileId);
+
+  /// Remove the tutor PIN and lockout state for [profileId].
+  Future<void> clearTutorPin(int profileId) => _pinService.clearTutorPin(profileId);
+
+  /// Remaining lockout in minutes (0 if not locked).
+  Future<int> lockoutRemainingMinutes(int profileId) =>
+      _pinService.getTutorLockoutRemainingMinutes(profileId);
+}

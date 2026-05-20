@@ -45,14 +45,14 @@ Sync-point trigger tags: `[P1]` `[P2]` `[P3]` `[P4]` `[P5]` `[P6]` `[P7]`
 - [x] W1.16 (S, S1, done)    Add unit tests for no_curriculum_display_name_bypass lint rule — closes H7 partial
 
 ### Phase 1d · Dead code purge
-- [ ] W1.17 (S, S1, pending)    Verify zero refs; delete dashboard_model_provider.dart + .g.dart
-- [ ] W1.18 (S, S1, pending)    Confirm-not-parked-epic; delete data_export_import_service.dart (946 LOC)
-- [ ] W1.19 (S, S1, pending)    Delete core/constants/app_assets.dart (0 refs)
-- [ ] W1.20 (S, S1, pending)    Delete core/database/seed/test_date_seeds.dart (0 refs)
-- [ ] W1.21 (S, S1, pending)    Delete H8 remainder (bulk_completion_dialog, completion_button, todays_tasks_widget, key_stats_row, content_browser_tree, content_version_check_service, link_provider_dialog, language_provider Riverpod, add_track_controller)
-- [ ] W1.22 (M, S1, pending)    Verify-then-delete M8 single-ref files (text_content_config, program_ref_resolver, content_db_health_checker, content_result, curriculum_content_fetcher, profile_creation_use_case, duplicate_completion_exception)
-- [ ] W1.23 (S, S1, pending)    Confirm zombie @RoutePage screens dead; delete GoalSetupScreen, LearningOrderScreen, ScopeSelectionScreen
-- [ ] W1.24 (S, S1, pending)    Delete .gitkeep-only dirs (utils/{extensions,formatters,helpers}/, parent_mode/domain/{entities,use_cases,repositories}/, sync/data/data_sources/)
+- [x] W1.17 (S, S1, done) — SKIPPED: test refs exist; not deleted    Verify zero refs; delete dashboard_model_provider.dart + .g.dart
+- [x] W1.18 (S, S1, done) — SKIPPED: test refs exist; not deleted    Confirm-not-parked-epic; delete data_export_import_service.dart (946 LOC)
+- [x] W1.19 (S, S1, done)    Delete core/constants/app_assets.dart (0 refs)
+- [x] W1.20 (S, S1, done)    Delete core/database/seed/test_date_seeds.dart (0 refs)
+- [x] W1.21 (S, S1, done) — partial: 6 deleted, 3 skipped (test refs)    Delete H8 remainder (bulk_completion_dialog, completion_button, todays_tasks_widget, key_stats_row, content_browser_tree, content_version_check_service, link_provider_dialog, language_provider Riverpod, add_track_controller)
+- [x] W1.22 (S, S1, done) — partial: text_content_config deleted, 6 skipped (test refs)    Verify-then-delete M8 single-ref files (text_content_config, program_ref_resolver, content_db_health_checker, content_result, curriculum_content_fetcher, profile_creation_use_case, duplicate_completion_exception)
+- [x] W1.23 (S, S1, done) — SKIPPED: all 3 screens have test refs    Confirm zombie @RoutePage screens dead; delete GoalSetupScreen, LearningOrderScreen, ScopeSelectionScreen
+- [x] W1.24 (S, S1, done)    Delete .gitkeep-only dirs (utils/{extensions,formatters,helpers}/, parent_mode/domain/{entities,use_cases,repositories}/, sync/data/data_sources/)
 
 ### Phase 1e · AppLogger foot-gun fix (T18)
 - [ ] W1.25 (M, S1, pending)    Rename AppLogger.instance getter → AppLogger.talker; new AppLogger.instance = singleton AppLogger
@@ -104,9 +104,9 @@ Sync-point trigger tags: `[P1]` `[P2]` `[P3]` `[P4]` `[P5]` `[P6]` `[P7]`
 ### Phase 2e · Missing mergers (S2)
 - [x] W2.26 (M, S2, done)    Add EntityKind.learningOrder + LearningOrderMerger + router case + mergeRouterProvider entry — closes C3/H3
 - [x] W2.27 (M, S2, done)    Add 7 mergers + channels for SyncEngine-only collections (goals, learning_ledger, notif_settings, gamification_settings, ui_preferences, learning_order, profile_programs) — closes M1
-- [ ] W2.28 (M, S2, in-progress)    Add pullStreak step in pull_pipeline — closes M4
-- [ ] W2.29 (M, S2, pending)    Wire real stage_definitions/ push + pull + listener channel + _channelToKind — closes H4
-- [ ] W2.30 (S, S2, pending)    Make _pullCollection throw on MergeOutcome.halt (after W2.26 lands)
+- [x] W2.28 (M, S2, done)    Add pullStreak step in pull_pipeline — closes M4
+- [x] W2.29 (M, S2, done)    Wire real stage_definitions/ push + pull + listener channel + _channelToKind — closes H4
+- [x] W2.30 (S, S2, done)    Make _pullCollection throw on MergeOutcome.halt (after W2.26 lands)
 
 ### Phase 2f · Single-shot legacy sync deletion (S2)
 - [ ] W2.31 (M, S2, pending)    Add outbox-backed SyncWriteFacade impl + syncWriteFacadeProvider
@@ -181,7 +181,7 @@ Sync-point trigger tags: `[P1]` `[P2]` `[P3]` `[P4]` `[P5]` `[P6]` `[P7]`
 - [x] W3.43 (M, S3, done)    Cloud Function: bulk-prior completion write proxy (writes as owner uid after tutor permission check)
 
 ### Phase 3f · Goal model collapse (S4)
-- [ ] W3.44 (M, S4, pending)    Collapse goal entity: drop goalType/paceValue/pacePeriod/targetDate → PaceTarget? field only; migrate goal_repository_impl + dashboard_providers
+- [ ] W3.44 (M, S4, in-progress)    Collapse goal entity: drop goalType/paceValue/pacePeriod/targetDate → PaceTarget? field only; migrate goal_repository_impl + dashboard_providers
 
 ### Phase 3g · Wipe and verify (S2)
 - [ ] W3.45 (S, S2, pending)    Wipe Firestore (gcloud firestore delete on users/) + delete dev Drift DBs
@@ -205,7 +205,7 @@ Sync-point trigger tags: `[P1]` `[P2]` `[P3]` `[P4]` `[P5]` `[P6]` `[P7]`
 - [x] W4.10 (M, S4, done)    Sealed ScheduleSpec { DelaySchedule, WeeklySchedule, RollingSchedule } replacing nullable quartet
 
 ### Phase 4b · Anemic features rebuilt
-- [ ] W4.11 (M, S3, pending)    parent_mode PIN → PinFlowMachine pure domain (~100 LOC) + SetParentPinUseCase + VerifyParentPinUseCase; thin Riverpod adapter
+- [x] W4.11 (M, S3, done)    parent_mode PIN → PinFlowMachine pure domain (~100 LOC) + SetParentPinUseCase + VerifyParentPinUseCase; thin Riverpod adapter
 - [ ] W4.12 (M, S4, pending)    tracks setup → typed TrackBlueprint aggregate; sealed GoalIntent, StageConfiguration, BulkMarkIntent, ProgramSelection
 - [ ] W4.13 (M, S4, pending)    tracks setup → TrackBlueprintDraftRepository (SharedPreferences impl) replacing 7 ad-hoc keys
 - [ ] W4.14 (M, S4, pending)    tracks setup → ProvisionTrackUseCase replacing TrackCreationService.createTrack — **B3 integration check (back-date generates overdue)**
@@ -216,8 +216,8 @@ Sync-point trigger tags: `[P1]` `[P2]` `[P3]` `[P4]` `[P5]` `[P6]` `[P7]`
 ### Phase 4c · Business-logic relocations
 - [ ] W4.18 (M, S4, pending)    completion_repository_impl.markComplete:57-200 → MarkCompletionUseCase — **owns B1 credit policy enforcement**
 - [ ] W4.19 (M, S5, pending)    learning_order_repository_impl.saveOrder:91-129 → SaveLearningOrderUseCase
-- [ ] W4.20 (S, S5, in-progress)    parent_dashboard_aggregator._computePaceStatus dup → reuse ComputePaceStatusUseCase
-- [ ] W4.21 (M, S5, pending)    notification_providers.dart:22-46 → ReminderPreferences + NotificationPreferencesRepository
+- [x] W4.20 (S, S5, done)    parent_dashboard_aggregator._computePaceStatus dup → reuse ComputePaceStatusUseCase
+- [ ] W4.21 (M, S5, in-progress)    notification_providers.dart:22-46 → ReminderPreferences + NotificationPreferencesRepository
 - [ ] W4.22 (S, S5, pending)    track_learning_order_repository_impl._buildMasechtosIndex → MasechtaOrderingPolicy (already W4.15)
 - [ ] W4.23 (S, S5, pending)    profile_providers.dart SelectedProfileId → ProfileSession aggregate in profiles/domain/
 - [ ] W4.24 (S, S5, pending)    dashboard_providers.dart side-effect-in-read-provider → write-path repository method
@@ -225,15 +225,15 @@ Sync-point trigger tags: `[P1]` `[P2]` `[P3]` `[P4]` `[P5]` `[P6]` `[P7]`
 - [ ] W4.26 (M, S4, pending)    Split BulkPriorCompletionService.priorMarkOnly off completion_events → separate prior_completion_imports table — **B1 bulkInTrack path**
 
 ### Phase 4d · Tutor mode domain (S3)
-- [ ] W4.27 (M, S3, pending)    TutorGrant aggregate root with sealed GrantState (pending/active/declined/rescinded/revokedByParent/revokedByTutor/expired)
-- [ ] W4.28 (S, S3, pending)    TutorPermissions VO — 8 boolean policy fields, single source of truth
-- [ ] W4.29 (M, S3, pending)    ProfileSelection { own | tutored } sealed union; SessionRole { parentOfOwn | childSelf | tutor } discriminator
-- [ ] W4.30 (S, S3, pending)    TutorPin VO + TutorPinService (distinct from Parent PIN)
-- [ ] W4.31 (M, S3, pending)    InviteTutorUseCase, AcceptTutorInviteUseCase, DeclineTutorInviteUseCase, RescindTutorInviteUseCase
-- [ ] W4.32 (M, S3, pending)    RevokeTutorGrantUseCase, ResignTutorGrantUseCase, ListIncomingTutorAccessUseCase, ListOutgoingTutorGrantsUseCase
-- [ ] W4.33 (S, S3, pending)    TutorWriteForbiddenException extends PermissionException
-- [ ] W4.34 (M, S3, pending)    MarkLiveCompletionUseCase — enforces canMarkLiveCompletion; throws TutorWriteForbiddenException on tutor session
-- [ ] W4.35 (S, S3, pending)    permissionsProvider(session) Riverpod provider as single source of truth for UI affordances `[P6]`
+- [x] W4.27 (M, S3, done)    TutorGrant aggregate root with sealed GrantState (pending/active/declined/rescinded/revokedByParent/revokedByTutor/expired)
+- [x] W4.28 (S, S3, done)    TutorPermissions VO — 8 boolean policy fields, single source of truth
+- [x] W4.29 (M, S3, done)    ProfileSelection { own | tutored } sealed union; SessionRole { parentOfOwn | childSelf | tutor } discriminator
+- [x] W4.30 (S, S3, done)    TutorPin VO + TutorPinService (distinct from Parent PIN)
+- [x] W4.31 (M, S3, done)    InviteTutorUseCase, AcceptTutorInviteUseCase, DeclineTutorInviteUseCase, RescindTutorInviteUseCase
+- [x] W4.32 (M, S3, done)    RevokeTutorGrantUseCase, ResignTutorGrantUseCase, ListIncomingTutorAccessUseCase, ListOutgoingTutorGrantsUseCase
+- [x] W4.33 (S, S3, done)    TutorWriteForbiddenException extends PermissionException
+- [x] W4.34 (M, S3, done)    MarkLiveCompletionUseCase — enforces canMarkLiveCompletion; throws TutorWriteForbiddenException on tutor session
+- [x] W4.35 (S, S3, done)    permissionsProvider(session) Riverpod provider as single source of truth for UI affordances `[P6]`
 
 ---
 
@@ -349,7 +349,7 @@ Sync-point trigger tags: `[P1]` `[P2]` `[P3]` `[P4]` `[P5]` `[P6]` `[P7]`
 ### Phase 7d · Error UX (S5/S3/S1)
 - [ ] W7.17 (M, S5, pending)    Create AppErrorView widget in core/widgets/ consuming AsyncValue.error → category-mapped UI
 - [ ] W7.18 (M, S5, pending)    Migrate 20+ screens from errorWithMessage(e.toString()) to AppErrorView
-- [ ] W7.19 (S, S3, pending)    Extend PiiRedactor.sensitiveKeys with displayName, firstName, lastName, city, lat, lon, deviceId, oauthCode, magicLinkUrl, tutor_email
+- [x] W7.19 (S, S3, done)    Extend PiiRedactor.sensitiveKeys with displayName, firstName, lastName, city, lat, lon, deviceId, oauthCode, magicLinkUrl, tutor_email
 - [ ] W7.20 (S, S1, pending)    Add lint no_e_to_string_in_ui (forbids e.toString() inside presentation/)
 - [ ] W7.21 (S, S1, pending)    Add lint no_raw_logevent (forbids logEvent(name, …) outside analytics_service.dart)
 

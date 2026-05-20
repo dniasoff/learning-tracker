@@ -127,10 +127,13 @@ class TutorGrantDoc {
   }) {
     // Simple concatenation with separator (colons are not valid in doc IDs;
     // underscores are safe). Email special chars are URL-encoded.
+    // ignore: unnecessary_raw_strings — using raw string for readability
     final encodedEmail = tutorEmail.toLowerCase().replaceAll(
       RegExp(r'[^a-zA-Z0-9]'),
       '_',
     );
+    // Braces required: `$encodedEmail__` would parse as identifier `encodedEmail__`.
+    // ignore: unnecessary_brace_in_string_interps
     return '${encodedEmail}__${parentUid}__${childProfileId}';
   }
 
@@ -151,11 +154,23 @@ class TutorGrantDoc {
       };
 
   factory TutorGrantDoc.fromFirestore(Map<String, dynamic> data) {
-    DateTime? _parseTs(dynamic v) => v == null
-        ? null
-        : v is String
-            ? DateTime.parse(v).toLocal()
-            : (v as dynamic).toDate?.()?.toLocal() as DateTime?;
+    DateTime? parseTs(dynamic v) {
+      if (v == null) return null;
+      if (v is String) return DateTime.parse(v).toLocal();
+      // Firestore Timestamp from the SDK has a toDate() method.
+      // Cast through dynamic to avoid importing firebase packages outside core/.
+      try {
+        // ignore: avoid_dynamic_calls — Firebase Timestamp.toDate() is not
+        // importable outside core/sync/ per layering rules. We use dynamic
+        // to bridge the gap without a firebase import in domain code.
+        final ts = v as dynamic;
+        // ignore: avoid_dynamic_calls
+        final dt = ts.toDate() as DateTime?;
+        return dt?.toLocal();
+      } catch (_) {
+        return null;
+      }
+    }
 
     return TutorGrantDoc(
       grantId: data['grant_id'] as String,
@@ -166,10 +181,10 @@ class TutorGrantDoc {
       state: TutorGrantState.fromJson(data['state'] as String),
       inviteToken: data['invite_token'] as String?,
       invitedAt: DateTime.parse(data['invited_at'] as String).toLocal(),
-      acceptedAt: _parseTs(data['accepted_at']),
-      declinedAt: _parseTs(data['declined_at']),
-      revokedAt: _parseTs(data['revoked_at']),
-      expiresAt: _parseTs(data['expires_at']),
+      acceptedAt: parseTs(data['accepted_at']),
+      declinedAt: parseTs(data['declined_at']),
+      revokedAt: parseTs(data['revoked_at']),
+      expiresAt: parseTs(data['expires_at']),
       updatedAt: DateTime.parse(data['updated_at'] as String).toLocal(),
     );
   }
