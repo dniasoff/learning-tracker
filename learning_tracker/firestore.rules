@@ -30,6 +30,9 @@ rules_version = '2';
 // Top-level:
 //   tutor_grants/{grantId}         — M:N tutor permission graph (W3.38)
 //   tutor_grants/{grantId}/audit_log/{entryId}
+//   tutor_active_access/{accessId} — O(1) lookup maintained by Cloud Functions (V2-R3 C2)
+//                                    doc-id: {tutorUid}_{parentUid}_{profileId}
+//                                    Written by acceptInvite CF; deleted by revoke/resign CFs.
 //
 // Append-only collections (`completions`, `streak_events`, `learning_ledger`)
 // deny `update` and `delete`. Snapshot collections deny `delete` and gate
@@ -50,12 +53,19 @@ service cloud.firestore {
       return isSignedIn() && request.auth.uid == uid;
     }
 
-    // ── Tutor grant helpers (W3.41) ────────────────────────────────────────
+    // ── Tutor grant helpers (W3.41, V2-R3 C2) ────────────────────────────────
     //
     // isActiveTutorGrant — O(1) lookup via known grantId (stored client-side
     // after acceptance). The client cannot forge a tutor_grants doc because
     // all write operations on that collection are denied (see rules below);
     // only Cloud Functions (Admin SDK) can create or mutate grant docs.
+    //
+    // hasActiveTutorAccess — O(1) lookup via `tutor_active_access` secondary
+    // index. Maintained by Cloud Functions: acceptInvite writes the doc,
+    // revokeGrant/resignGrant/expirePendingInvites delete it. The doc-id is
+    // {tutorUid}_{parentUid}_{profileId} — deterministic from path context so
+    // no grantId is needed in the rules. This enables tutor subcollection reads
+    // without requiring the client to pass the grantId through the path.
 
     function isActiveTutorGrant(ownerUid, profileId, grantId) {
       let grant = get(/databases/$(database)/documents/tutor_grants/$(grantId)).data;
@@ -66,11 +76,40 @@ service cloud.firestore {
           && grant.child_profile_id == profileId;
     }
 
+    // V2-R3 C2: O(1) subcollection read check — does not require grantId in
+    // the request. Cloud Functions maintain tutor_active_access as a
+    // denormalised index of active grants.
+    function hasActiveTutorAccess(ownerUid, profileId) {
+      let accessId = request.auth.uid + '_' + ownerUid + '_' + profileId;
+      return isSignedIn()
+          && exists(/databases/$(database)/documents/tutor_active_access/$(accessId));
+    }
+
     // ── Global default-deny ────────────────────────────────────────────────
     // MUST precede every per-collection allow rule so any collection not
     // explicitly listed inherits a hard deny.
     match /{document=**} {
       allow read, write: if false;
+    }
+
+    // ── tutor_active_access (top-level) ───────────────────────────────────────
+    //
+    // Collection: tutor_active_access/{accessId}
+    // Doc-id: {tutorUid}_{parentUid}_{profileId}
+    //
+    // Secondary index maintained by Cloud Functions (Admin SDK).
+    // Written by acceptInvite; deleted by revokeGrant/resignGrant/expirePendingInvites.
+    // Used by hasActiveTutorAccess() to allow tutor subcollection reads without
+    // requiring grantId in the rules context (V2-R3 C2).
+    //
+    // Clients NEVER write this collection — all mutations are Admin SDK only.
+    match /tutor_active_access/{accessId} {
+      // Tutors may read their own access entries (accessId starts with their uid).
+      allow read: if isSignedIn()
+          && resource.data.tutor_uid == request.auth.uid;
+      allow create: if false;
+      allow update: if false;
+      allow delete: if false;
     }
 
     // ── tutor_grants (top-level) ───────────────────────────────────────────
@@ -85,7 +124,9 @@ service cloud.firestore {
     //     - Client may NEVER create, update or delete a grant doc.
     //
     //   READS — tutors may read their own active grants; parents may read
-    //     grants that reference their uid as parent_uid.
+    //     grants that reference their uid as parent_uid. Pending grants are
+    //     also readable by the tutor (for the accept-invite flow) where the
+    //     tutor_email matches (verified by the Cloud Function).
     //
     // Audit log sub-collection:
     //   tutor_grants/{grantId}/audit_log/{entryId}
@@ -150,13 +191,14 @@ service cloud.firestore {
       // Client deletes are denied — server Cloud Function performs recursive
       // delete via the deleteLearnerProfile callable.
       //
-      // TUTOR READ ACCESS (W3.41): an active tutor who knows the grantId may
-      // read the learner profile document. Subcollection reads are owner-only
-      // by default; tutor reads on subcollections flow through Cloud Functions
-      // in V1 (W3.43). Direct subcollection reads for tutors require the
-      // grantId path — not yet wired at the subcollection level.
+      // TUTOR READ ACCESS (V2-R3 C2): an active tutor may read the learner
+      // profile document AND all subcollections via hasActiveTutorAccess().
+      // The tutor_active_access secondary index (maintained by Cloud Functions)
+      // enables O(1) lookups without requiring the grantId in the path.
+      // Tutor WRITE access is intentionally denied on all subcollections except
+      // via the tutorBulkPriorCompletions Cloud Function proxy (W3.43).
       match /learner_profiles/{profileId} {
-        allow read: if isOwner(uid);
+        allow read: if isOwner(uid) || hasActiveTutorAccess(uid, profileId);
         allow create, update: if isOwner(uid);
         allow delete: if false;
 
@@ -179,8 +221,10 @@ service cloud.firestore {
         //   with an active grant. Tutor bulk-prior completions go through the
         //   Cloud Function proxy (W3.43) which writes as the owner uid via
         //   Admin SDK and enforces the canMarkLiveCompletion=false policy.
+        //
+        // TUTOR READ (V2-R3 C2): tutors may read completions to view progress.
         match /completions/{completionId} {
-          allow read: if isOwner(uid);
+          allow read: if isOwner(uid) || hasActiveTutorAccess(uid, profileId);
           // SECURITY: isOwner(uid) ensures request.auth.uid == uid.
           // A tutor (different uid) is rejected here. This is the primary
           // defence — no tutor can write a live completion from the client.
@@ -204,7 +248,7 @@ service cloud.firestore {
         // Each streak event gets its own document keyed by a ULID.
         // Replaces the previous streak/data snapshot document.
         match /streak_events/{streakEventId} {
-          allow read: if isOwner(uid);
+          allow read: if isOwner(uid) || hasActiveTutorAccess(uid, profileId);
           allow create: if isOwner(uid)
             && (
               !('created_at' in request.resource.data)
@@ -217,7 +261,7 @@ service cloud.firestore {
         // learning_ledger — append-only daily ledger entries.
         // Doc-id: ULID from the payload (W3.36 — idempotent retries).
         match /learning_ledger/{entryId} {
-          allow read: if isOwner(uid);
+          allow read: if isOwner(uid) || hasActiveTutorAccess(uid, profileId);
           allow create: if isOwner(uid);
           allow update: if false;
           allow delete: if false;
@@ -238,7 +282,7 @@ service cloud.firestore {
 
         // settings — curriculum preference snapshots (open-ended bag).
         match /settings/{settingId} {
-          allow read: if isOwner(uid);
+          allow read: if isOwner(uid) || hasActiveTutorAccess(uid, profileId);
           allow create, update: if isOwner(uid);
           allow delete: if false;
         }
@@ -246,7 +290,7 @@ service cloud.firestore {
         // stage_definitions — per-track stage configuration (W3.32 / closes T8).
         // Doc-id: "{trackId}_{stageOrder}". Stable, fully-enumerable payload.
         match /stage_definitions/{stageId} {
-          allow read: if isOwner(uid);
+          allow read: if isOwner(uid) || hasActiveTutorAccess(uid, profileId);
           allow create, update: if isOwner(uid)
             && request.resource.data.keys().hasOnly([
               'profile_id', 'curriculum_id', 'track_id', 'stage_order',
@@ -257,7 +301,7 @@ service cloud.firestore {
         }
 
         match /curriculum_tracks/{trackId} {
-          allow read: if isOwner(uid);
+          allow read: if isOwner(uid) || hasActiveTutorAccess(uid, profileId);
           allow create, update: if isOwner(uid)
             && request.resource.data.keys().hasOnly([
               'profile_id', 'track_id', 'curriculum_id', 'state',
@@ -270,7 +314,7 @@ service cloud.firestore {
         }
 
         match /bookmarks/{bookmarkId} {
-          allow read: if isOwner(uid);
+          allow read: if isOwner(uid) || hasActiveTutorAccess(uid, profileId);
           allow create, update: if isOwner(uid)
             && request.resource.data.keys().hasOnly([
               'profile_id', 'curriculum_id', 'track_type',
@@ -281,7 +325,7 @@ service cloud.firestore {
         }
 
         match /learning_order/{orderId} {
-          allow read: if isOwner(uid);
+          allow read: if isOwner(uid) || hasActiveTutorAccess(uid, profileId);
           allow create, update: if isOwner(uid)
             && request.resource.data.keys().hasOnly([
               'curriculum_id', 'sefaria_ref', 'ref', 'user_sort_order',
@@ -294,13 +338,13 @@ service cloud.firestore {
         // Scopes: notification_settings, gamification_settings, ui_preferences.
         // Open-ended payload — intentionally NOT whitelisted.
         match /preferences/{scope} {
-          allow read: if isOwner(uid);
+          allow read: if isOwner(uid) || hasActiveTutorAccess(uid, profileId);
           allow create, update: if isOwner(uid);
           allow delete: if false;
         }
 
         match /goals/{goalId} {
-          allow read: if isOwner(uid);
+          allow read: if isOwner(uid) || hasActiveTutorAccess(uid, profileId);
           allow create, update: if isOwner(uid)
             && request.resource.data.keys().hasOnly([
               'id', 'goal_id', 'profile_id', 'track_id', 'curriculum_id',
@@ -316,7 +360,7 @@ service cloud.firestore {
         // import_metadata — curriculum import tracking (W3.34: renamed from
         // curriculum_import_metadata).
         match /import_metadata/{docId} {
-          allow read: if isOwner(uid);
+          allow read: if isOwner(uid) || hasActiveTutorAccess(uid, profileId);
           allow create, update: if isOwner(uid)
             && request.resource.data.keys().hasOnly([
               'profile_id', 'curriculum_id', 'item_count', 'imported_at',
@@ -333,7 +377,7 @@ service cloud.firestore {
         // PERMISSION_DENIED and the deleted program resurfaces on next sync
         // (C4 fix — V3-W1).
         match /profile_programs/{curriculumId} {
-          allow read: if isOwner(uid);
+          allow read: if isOwner(uid) || hasActiveTutorAccess(uid, profileId);
           allow create, update: if isOwner(uid)
             && request.resource.data.keys().hasOnly([
               'profile_id', 'curriculum_id', 'program_id',

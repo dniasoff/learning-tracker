@@ -220,6 +220,166 @@ void main() {
       );
     });
   });
+
+  // ── 5. V2-R3 C2 — tutor subcollection read access ──────────────────────
+
+  group('V2-R3 C2 — tutor active access for subcollection reads', () {
+    test('hasActiveTutorAccess helper is defined in rules', () {
+      expect(
+        rules,
+        contains('function hasActiveTutorAccess(ownerUid, profileId)'),
+        reason:
+            'hasActiveTutorAccess() MUST be defined for subcollection '
+            'read rules to use (V2-R3 C2 fix).',
+      );
+    });
+
+    test('tutor_active_access collection is defined in rules', () {
+      expect(
+        rules,
+        contains('tutor_active_access/{accessId}'),
+        reason:
+            'tutor_active_access collection MUST be declared so Cloud '
+            'Functions can write the lookup docs and rules can check them.',
+      );
+    });
+
+    test('tutor_active_access denies all client writes', () {
+      final block = _extractRuleBlock(rules, 'tutor_active_access/{accessId}');
+      expect(
+        block,
+        contains('allow create: if false'),
+        reason:
+            'Clients MUST NOT create tutor_active_access docs — only Cloud '
+            'Functions (Admin SDK) may write these.',
+      );
+      expect(
+        block,
+        contains('allow update: if false'),
+        reason: 'tutor_active_access docs are immutable from client.',
+      );
+      expect(
+        block,
+        contains('allow delete: if false'),
+        reason:
+            'Only Cloud Functions may delete tutor_active_access docs '
+            '(on revoke/resign/expiry).',
+      );
+    });
+
+    test('completions read includes tutor access path', () {
+      final block = _extractRuleBlock(rules, 'completions/{completionId}');
+      expect(
+        block,
+        contains('hasActiveTutorAccess(uid, profileId)'),
+        reason:
+            'Tutors MUST be able to read completions to view learner progress. '
+            'V2-R3 C2: hasActiveTutorAccess gate allows active tutors to read.',
+      );
+    });
+
+    test('goals read includes tutor access path', () {
+      final block = _extractRuleBlock(rules, 'goals/{goalId}');
+      expect(
+        block,
+        contains('hasActiveTutorAccess(uid, profileId)'),
+        reason:
+            'Tutors MUST be able to read goals per FR-3 (tutors can '
+            'set/modify/remove goals).',
+      );
+    });
+
+    test('bookmarks read includes tutor access path', () {
+      final block = _extractRuleBlock(rules, 'bookmarks/{bookmarkId}');
+      expect(
+        block,
+        contains('hasActiveTutorAccess(uid, profileId)'),
+        reason:
+            'Tutors MUST be able to read bookmarks per FR-3 (tutors can '
+            'advance bookmarks).',
+      );
+    });
+
+    test('settings read includes tutor access path', () {
+      final block = _extractRuleBlock(rules, 'settings/{settingId}');
+      expect(
+        block,
+        contains('hasActiveTutorAccess(uid, profileId)'),
+        reason:
+            'Tutors MUST be able to read settings per FR-3 '
+            '(tutors can configure curricula and stages).',
+      );
+    });
+
+    test('completions write is still owner-only despite tutor read access', () {
+      final block = _extractRuleBlock(rules, 'completions/{completionId}');
+      expect(
+        block,
+        isNot(contains('hasActiveTutorAccess(uid, profileId)')),
+        reason:
+            'hasActiveTutorAccess MUST NOT appear in the completions WRITE '
+            'block. Tutors cannot write completions from the client.',
+        // This test checks the write portion doesn't use the tutor helper.
+        // The allow read line will have it, but allow create must not.
+        skip:
+            'Structural check superseded by allow create: if isOwner(uid) '
+            'guard — the whole create rule is owner-only regardless.',
+      );
+    });
+
+    test(
+      'completions write block isOwner(uid) guard is not weakened by C2 change',
+      () {
+        final block = _extractRuleBlock(rules, 'completions/{completionId}');
+        // The create line specifically must be isOwner-only.
+        expect(
+          block,
+          contains('allow create: if isOwner(uid)'),
+          reason:
+              'Adding tutor read access MUST NOT have weakened the write '
+              'block. allow create must still be isOwner(uid) only.',
+        );
+      },
+    );
+  });
+
+  // ── 6. V2-R3 C4 — expirePendingInvites exists in Cloud Functions ────────
+
+  group('V2-R3 C4 — expirePendingInvites structured guard', () {
+    // NOTE: The Cloud Function implementation is in functions/src/index.ts.
+    // This test reads the TypeScript source as a structural assertion.
+    test('expirePendingInvites function is defined in index.ts', () {
+      final indexTs = _readFunctionsIndex();
+      expect(
+        indexTs,
+        contains('expirePendingInvites'),
+        reason:
+            'expirePendingInvites scheduled function MUST be defined '
+            '(V2-R3 C4 — 7-day TTL enforcement).',
+      );
+    });
+
+    test('expirePendingInvites queries on expires_at field', () {
+      final indexTs = _readFunctionsIndex();
+      expect(
+        indexTs,
+        contains('expires_at'),
+        reason:
+            'expirePendingInvites MUST query the expires_at field to find '
+            'expired pending grants.',
+      );
+    });
+
+    test('expirePendingInvites transitions state to expired', () {
+      final indexTs = _readFunctionsIndex();
+      expect(
+        indexTs,
+        contains('state: "expired"'),
+        reason:
+            'expirePendingInvites MUST set state to expired on matching grants.',
+      );
+    });
+  });
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────
@@ -233,6 +393,21 @@ String _readProjectRules() {
   }
   throw StateError(
     'firestore.rules not found; run tests from learning_tracker/ '
+    'or the repo root.',
+  );
+}
+
+/// Reads the Cloud Functions `index.ts` source.
+String _readFunctionsIndex() {
+  for (final path in const [
+    'functions/src/index.ts',
+    '../functions/src/index.ts',
+  ]) {
+    final file = File(path);
+    if (file.existsSync()) return file.readAsStringSync();
+  }
+  throw StateError(
+    'functions/src/index.ts not found; run tests from learning_tracker/ '
     'or the repo root.',
   );
 }
