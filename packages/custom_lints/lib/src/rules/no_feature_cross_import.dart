@@ -5,7 +5,11 @@ import 'package:custom_lint_builder/custom_lint_builder.dart';
 
 /// Prevents a feature from importing another feature's internals directly.
 ///
-/// Features must only communicate via their `providers.dart` public surface.
+/// Features must only communicate via their barrel file (`<feature>.dart`),
+/// which is the single public-surface export for each feature directory.
+///
+/// Allowed:  `package:learning_tracker/features/tracks/tracks.dart`
+/// Disallowed: `package:learning_tracker/features/tracks/domain/models/foo.dart`
 ///
 /// See `packages/custom_lints/README.md` for rule rationale and remediation.
 class NoFeatureCrossImport extends DartLintRule {
@@ -15,7 +19,7 @@ class NoFeatureCrossImport extends DartLintRule {
     name: 'no_feature_cross_import',
     problemMessage:
         "Cross-feature import detected: 'features/X/…' imported from 'features/Y/…'. "
-        "Only imports ending in 'providers.dart' are allowed across feature boundaries.",
+        "Only the barrel 'features/X/X.dart' is allowed across feature boundaries.",
     errorSeverity: ErrorSeverity.ERROR,
   );
 
@@ -33,6 +37,14 @@ class NoFeatureCrossImport extends DartLintRule {
   static String? _featureOf(String filePath) {
     final match = _featureFilePattern.firstMatch(filePath);
     return match?.group(1);
+  }
+
+  /// Returns true iff [importedPath] is the barrel file for [importedFeature].
+  ///
+  /// The barrel is exactly `<feature>.dart` (no sub-directory). For example,
+  /// feature `tracks` → barrel is `tracks.dart`.
+  static bool _isBarrel(String importedFeature, String importedPath) {
+    return importedPath == '$importedFeature.dart';
   }
 
   @override
@@ -56,11 +68,8 @@ class NoFeatureCrossImport extends DartLintRule {
       // Same-feature imports are always fine.
       if (importedFeature == hostFeature) return;
 
-      // Crossing at providers.dart is the allowed surface.
-      if (importedPath == 'providers.dart' ||
-          importedPath.endsWith('/providers.dart')) {
-        return;
-      }
+      // Crossing at the feature barrel is the allowed surface.
+      if (_isBarrel(importedFeature, importedPath)) return;
 
       reporter.atNode(node, _code);
     });
