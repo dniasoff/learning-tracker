@@ -322,3 +322,64 @@ final class SelectedProfileProvider
 }
 
 String _$selectedProfileHash() => r'b66d723d4e6e5829b73400bb6febf572535e6e4f';
+
+/// The active profile session as a typed domain aggregate.
+///
+/// Wraps [selectedProfileIdProvider] into a [ProfileSession] so callers
+/// talk about "a session" rather than a nullable integer. This is the
+/// canonical read path for profile-selection state; write path stays on
+/// `selectedProfileIdProvider.notifier` (select / clear).
+
+@ProviderFor(profileSession)
+final profileSessionProvider = ProfileSessionProvider._();
+
+/// The active profile session as a typed domain aggregate.
+///
+/// Wraps [selectedProfileIdProvider] into a [ProfileSession] so callers
+/// talk about "a session" rather than a nullable integer. This is the
+/// canonical read path for profile-selection state; write path stays on
+/// `selectedProfileIdProvider.notifier` (select / clear).
+
+final class ProfileSessionProvider
+    extends $FunctionalProvider<ProfileSession, ProfileSession, ProfileSession>
+    with $Provider<ProfileSession> {
+  /// The active profile session as a typed domain aggregate.
+  ///
+  /// Wraps [selectedProfileIdProvider] into a [ProfileSession] so callers
+  /// talk about "a session" rather than a nullable integer. This is the
+  /// canonical read path for profile-selection state; write path stays on
+  /// `selectedProfileIdProvider.notifier` (select / clear).
+  ProfileSessionProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'profileSessionProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$profileSessionHash();
+
+  @$internal
+  @override
+  $ProviderElement<ProfileSession> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  ProfileSession create(Ref ref) {
+    return profileSession(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(ProfileSession value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<ProfileSession>(value),
+    );
+  }
+}
+
+String _$profileSessionHash() => r'da5f63dda22c5030184d117a52ae744f61055dba';

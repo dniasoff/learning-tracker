@@ -2,6 +2,7 @@ import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
 import 'package:learning_tracker/features/profiles/data/repositories/profile_repository_impl.dart';
 import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
+import 'package:learning_tracker/features/profiles/domain/models/profile_session.dart';
 import 'package:learning_tracker/features/profiles/domain/repositories/profile_repository.dart';
 import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -71,4 +72,18 @@ Future<ProfileModel?> selectedProfile(Ref ref) async {
   if (id == null) return null;
   final repo = ref.watch(profileRepositoryProvider);
   return repo.getProfileById(id);
+}
+
+/// The active profile session as a typed domain aggregate.
+///
+/// Wraps [selectedProfileIdProvider] into a [ProfileSession] so callers
+/// talk about "a session" rather than a nullable integer. This is the
+/// canonical read path for profile-selection state; write path stays on
+/// `selectedProfileIdProvider.notifier` (select / clear).
+@Riverpod(keepAlive: true)
+ProfileSession profileSession(Ref ref) {
+  final id = ref.watch(selectedProfileIdProvider);
+  return id != null
+      ? ProfileSession(profileId: id)
+      : const ProfileSession.none();
 }
