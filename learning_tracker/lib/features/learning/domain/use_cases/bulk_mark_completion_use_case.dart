@@ -48,6 +48,19 @@ class BulkMarkCompletionUseCase {
     //
     // The achievement gate is independent — bulkInTrack credits achievement
     // (the user earns the siyum) while lifetimeOnly does not.
+    // B1 sentinel: for any non-live source (bulkInTrack / lifetimeOnly),
+    // completedAt MUST be the sentinel date DateTime.utc(2000, 1, 1) so the
+    // stored rows fall below any "completedAt >= trackStartDate" threshold used
+    // by streak math and pace calculations. The caller may pass the sentinel
+    // explicitly; when they don't (completedAt == null), we enforce it here so
+    // no caller can accidentally write DateTime.now() for a prior-mark row.
+    //
+    // For live source, pass the caller's value through (null → nowUtc() inside
+    // the repository, explicit value for test injection).
+    final effectiveCompletedAt = source.creditsEngagement
+        ? request.completedAt
+        : DateTime.utc(2000, 1, 1);
+
     final gatedRequest = BulkCompletionRequest(
       curriculumId: request.curriculumId,
       sefariaRefs: request.sefariaRefs,
@@ -56,7 +69,7 @@ class BulkMarkCompletionUseCase {
       profileId: request.profileId,
       awardGamificationPoints: source.creditsEngagement,
       creditsAchievement: source.creditsAchievement,
-      completedAt: request.completedAt,
+      completedAt: effectiveCompletedAt,
     );
     return await _repository.bulkMarkComplete(gatedRequest);
   }

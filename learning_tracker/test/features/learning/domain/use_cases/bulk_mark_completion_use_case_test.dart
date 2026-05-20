@@ -176,4 +176,137 @@ void main() {
       );
     });
   });
+
+  // ── C3: Sentinel date enforcement for non-live sources ───────────────────────
+  //
+  // For bulkInTrack and lifetimeOnly, completedAt MUST be the sentinel
+  // DateTime.utc(2000, 1, 1) so stored rows fall below any streak/pace
+  // filter threshold. The use case is the enforcement point — no caller
+  // can accidentally write DateTime.now() for a prior-mark row.
+
+  group('C3 — sentinel date enforcement', () {
+    final sentinel = DateTime.utc(2000, 1, 1);
+
+    BulkCompletionRequest requestWithoutDate() => const BulkCompletionRequest(
+      curriculumId: 'mishna',
+      sefariaRefs: ['Berakhot.1.1'],
+      stageId: 1,
+      trackType: 'personal',
+      // completedAt intentionally omitted — use case must supply sentinel
+    );
+
+    test(
+      'bulkInTrack (default) enforces sentinel date when completedAt is null',
+      () async {
+        await useCase(requestWithoutDate());
+
+        final captured =
+            verify(
+                  () => repository.bulkMarkComplete(captureAny()),
+                ).captured.single
+                as BulkCompletionRequest;
+
+        expect(
+          captured.completedAt,
+          equals(sentinel),
+          reason:
+              'bulkInTrack completions must store DateTime.utc(2000,1,1) '
+              'so they fall below streak/pace filter thresholds',
+        );
+      },
+    );
+
+    test(
+      'explicit bulkInTrack source enforces sentinel date',
+      () async {
+        await useCase(
+          requestWithoutDate(),
+          source: CompletionSource.bulkInTrack,
+        );
+
+        final captured =
+            verify(
+                  () => repository.bulkMarkComplete(captureAny()),
+                ).captured.single
+                as BulkCompletionRequest;
+
+        expect(captured.completedAt, equals(sentinel));
+      },
+    );
+
+    test(
+      'lifetimeOnly source enforces sentinel date',
+      () async {
+        await useCase(
+          requestWithoutDate(),
+          source: CompletionSource.lifetimeOnly,
+        );
+
+        final captured =
+            verify(
+                  () => repository.bulkMarkComplete(captureAny()),
+                ).captured.single
+                as BulkCompletionRequest;
+
+        expect(
+          captured.completedAt,
+          equals(sentinel),
+          reason:
+              'lifetimeOnly also suppresses engagement — '
+              'must use sentinel to avoid contaminating streak math',
+        );
+      },
+    );
+
+    test(
+      'live source passes completedAt through as null (repo uses nowUtc)',
+      () async {
+        await useCase(requestWithoutDate(), source: CompletionSource.live);
+
+        final captured =
+            verify(
+                  () => repository.bulkMarkComplete(captureAny()),
+                ).captured.single
+                as BulkCompletionRequest;
+
+        // For live source the use case does NOT override completedAt —
+        // the repository defaults null → DateTime.now() at write time.
+        expect(
+          captured.completedAt,
+          isNull,
+          reason:
+              'live source must not force the sentinel — '
+              'it should write a real timestamp',
+        );
+      },
+    );
+
+    test(
+      'live source with explicit completedAt preserves caller value',
+      () async {
+        final explicitDate = DateTime.utc(2026, 5, 20, 10, 0, 0);
+        final requestWithDate = BulkCompletionRequest(
+          curriculumId: 'mishna',
+          sefariaRefs: const ['Berakhot.1.1'],
+          stageId: 1,
+          trackType: 'personal',
+          completedAt: explicitDate,
+        );
+
+        await useCase(requestWithDate, source: CompletionSource.live);
+
+        final captured =
+            verify(
+                  () => repository.bulkMarkComplete(captureAny()),
+                ).captured.single
+                as BulkCompletionRequest;
+
+        expect(
+          captured.completedAt,
+          equals(explicitDate),
+          reason: 'live source must not override explicit completedAt',
+        );
+      },
+    );
+  });
 }
