@@ -6,7 +6,7 @@ import 'package:drift/drift.dart' hide isNotNull, isNull;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/features/parent_mode/domain/services/parent_dashboard_aggregator.dart';
+import 'package:learning_tracker/features/dashboard/domain/services/parent_dashboard_aggregator.dart';
 
 import '../../../../helpers/drift_memory.dart';
 

@@ -23,11 +23,11 @@ import 'package:learning_tracker/features/onboarding/presentation/screens/app_in
 import 'package:learning_tracker/features/onboarding/presentation/screens/onboarding_screen.dart';
 import 'package:learning_tracker/features/onboarding/presentation/screens/permission_prompt_screen.dart';
 import 'package:learning_tracker/features/onboarding/presentation/screens/signup_screen.dart';
-import 'package:learning_tracker/features/parent_mode/presentation/screens/parent_settings_screen.dart';
-import 'package:learning_tracker/features/parent_mode/presentation/screens/parent_track_management_screen.dart';
-import 'package:learning_tracker/features/parent_mode/presentation/screens/pin_flow_screen.dart';
-import 'package:learning_tracker/features/parent_mode/presentation/screens/point_config_screen.dart';
-import 'package:learning_tracker/features/parent_mode/presentation/screens/reward_configuration_screen.dart';
+import 'package:learning_tracker/features/profiles/presentation/screens/parent_settings_screen.dart';
+import 'package:learning_tracker/features/profiles/presentation/screens/parent_track_management_screen.dart';
+import 'package:learning_tracker/features/profiles/presentation/screens/pin_flow_screen.dart';
+import 'package:learning_tracker/features/gamification/presentation/screens/point_config_screen.dart';
+import 'package:learning_tracker/features/gamification/presentation/screens/reward_configuration_screen.dart';
 import 'package:learning_tracker/features/profiles/presentation/screens/manage_learners_screen.dart';
 import 'package:learning_tracker/features/profiles/presentation/screens/profile_picker_screen.dart';
 import 'package:learning_tracker/features/progress/presentation/screens/completion_history_screen.dart';

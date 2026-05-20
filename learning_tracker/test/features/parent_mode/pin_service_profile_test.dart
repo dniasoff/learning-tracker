@@ -2,7 +2,7 @@
 // were not exercised by the baseline pin_service_test.
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/core/services/pin_service.dart';
+import 'package:learning_tracker/features/profiles/domain/services/pin_service.dart';
 import 'package:mocktail/mocktail.dart';
 
 class MockFlutterSecureStorage extends Mock implements FlutterSecureStorage {}

@@ -19,7 +19,7 @@ import 'package:flutter_test/flutter_test.dart'
     hide expect, expectLater, group, setUp, tearDown, test;
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
-import 'package:learning_tracker/core/services/pin_service.dart';
+import 'package:learning_tracker/features/profiles/domain/services/pin_service.dart';
 import 'package:learning_tracker/core/time/local_day_clock.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:talker/talker.dart';

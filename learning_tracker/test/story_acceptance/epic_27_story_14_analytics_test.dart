@@ -14,7 +14,7 @@ import 'package:learning_tracker/core/analytics/analytics_service.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/learning/completion_command.dart';
 import 'package:learning_tracker/core/learning/completion_writer.dart';
-import 'package:learning_tracker/core/services/pin_service.dart';
+import 'package:learning_tracker/features/profiles/domain/services/pin_service.dart';
 import 'package:learning_tracker/features/notifications/domain/services/notification_scheduler.dart';
 import 'package:learning_tracker/features/notifications/domain/services/notification_service.dart';
 import 'package:learning_tracker/features/notifications/domain/services/streak_alert_service.dart';

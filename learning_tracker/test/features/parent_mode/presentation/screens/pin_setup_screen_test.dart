@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/features/parent_mode/presentation/screens/pin_flow_screen.dart';
+import 'package:learning_tracker/features/profiles/presentation/screens/pin_flow_screen.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 void main() {

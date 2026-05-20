@@ -5,7 +5,7 @@ import 'package:learning_tracker/core/sync/providers/outbox_providers.dart';
 import 'package:learning_tracker/features/learning/data/repositories/learning_ledger_repository_impl.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/learning_ledger_repository.dart';
 import 'package:learning_tracker/features/learning/domain/use_cases/manual_completion_use_case.dart';
-import 'package:learning_tracker/features/parent_mode/presentation/providers/parent_pin_session_provider.dart';
+import 'package:learning_tracker/features/profiles/presentation/providers/parent_pin_session_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
