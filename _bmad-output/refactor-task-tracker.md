@@ -211,12 +211,12 @@ Sync-point trigger tags: `[P1]` `[P2]` `[P3]` `[P4]` `[P5]` `[P6]` `[P7]`
 - [ ] W4.14 (M, S4, pending)    tracks setup → ProvisionTrackUseCase replacing TrackCreationService.createTrack — **B3 integration check (back-date generates overdue)**
 - [ ] W4.15 (S, S4, pending)    track_learning_order → TrackOrder aggregate, OrderingLevel { sedarim, masechtos } VO, MasechtaOrderingPolicy
 - [x] W4.16 (M, S5, done)    progress → promote inline models to domain/; extract LifetimeTreeBuilder/OverlappingCurriculaDeduplicator/TrackDualProgressCalculator — **B1 lifetime tier subscriber + B3 projection check**
-- [ ] W4.17 (M, S5, in-progress)    dashboard → extract NextRewardSelector + ComputePaceStatusUseCase + TrackCompletionService — **B3 projection check**
+- [x] W4.17 (M, S5, done)    dashboard → extract NextRewardSelector + ComputePaceStatusUseCase + TrackCompletionService — **B3 projection check**
 
 ### Phase 4c · Business-logic relocations
 - [ ] W4.18 (M, S4, pending)    completion_repository_impl.markComplete:57-200 → MarkCompletionUseCase — **owns B1 credit policy enforcement**
 - [ ] W4.19 (M, S5, pending)    learning_order_repository_impl.saveOrder:91-129 → SaveLearningOrderUseCase
-- [ ] W4.20 (S, S5, pending)    parent_dashboard_aggregator._computePaceStatus dup → reuse ComputePaceStatusUseCase
+- [ ] W4.20 (S, S5, in-progress)    parent_dashboard_aggregator._computePaceStatus dup → reuse ComputePaceStatusUseCase
 - [ ] W4.21 (M, S5, pending)    notification_providers.dart:22-46 → ReminderPreferences + NotificationPreferencesRepository
 - [ ] W4.22 (S, S5, pending)    track_learning_order_repository_impl._buildMasechtosIndex → MasechtaOrderingPolicy (already W4.15)
 - [ ] W4.23 (S, S5, pending)    profile_providers.dart SelectedProfileId → ProfileSession aggregate in profiles/domain/

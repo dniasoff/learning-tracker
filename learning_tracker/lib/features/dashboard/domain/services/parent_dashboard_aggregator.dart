@@ -1,8 +1,8 @@
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/core/utils/date_utils.dart';
+import 'package:learning_tracker/core/utils/date_utils.dart' show DateTimeFactory;
+import 'package:learning_tracker/features/dashboard/domain/use_cases/compute_pace_status_use_case.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/pace_status.dart';
-import 'package:learning_tracker/features/scheduler/domain/services/pace_calculator.dart';
 import 'package:learning_tracker/features/stages/domain/models/stage_definition.dart'
     as domain_stage;
 import 'package:learning_tracker/features/stages/domain/repositories/stage_definition_repository.dart';
@@ -213,40 +213,33 @@ class ParentDashboardAggregator {
     if (goals.isEmpty) return PaceStatusType.onPace;
 
     final goal = goals.first;
-    // targetDate is nullable — cannot compute pace without a deadline
-    if (goal.targetDate == null) return PaceStatusType.onPace;
 
-    // Build daily completion counts
-    final dailyCounts = <DateTime, int>{};
-    for (final c in completions) {
-      final localDate = DateUtils.extractLocalDate(c.completedAt);
-      final normalized = DateTime.utc(
-        localDate.year,
-        localDate.month,
-        localDate.day,
-      );
-      dailyCounts[normalized] = (dailyCounts[normalized] ?? 0) + 1;
-    }
+    // Daily counts via shared helper (eliminates duplicate normalisation logic).
+    final dailyCounts = ComputePaceStatusUseCase.buildDailyCounts(
+      completions.map((c) => c.completedAt),
+    );
 
-    // Count unique content items completed
+    // Count unique content items completed.
     final uniqueRefs = completions.map((c) => c.sefariaRef).toSet();
 
-    // Use actual total from curriculum content
+    // Use actual total from curriculum content.
     final totalItems = await _db.learningOrderDao.countByCurriculum(
       curriculum.storageKey,
     );
     final totalEstimate = totalItems > 0 ? totalItems : 100;
 
-    final pace = PaceCalculator.calculate(
-      goalStartDate: goal.createdAt,
-      goalDeadline: goal.targetDate!,
-      totalItems: totalEstimate,
-      completedItems: uniqueRefs.length,
-      dailyCompletionCounts: dailyCounts,
-      today: now,
+    // Delegate to the shared use-case (same algorithm as dashboardPaceStatus).
+    const useCase = ComputePaceStatusUseCase();
+    final paceStatus = useCase.execute(
+      PaceStatusInput(
+        goal: goal,
+        completedItems: uniqueRefs.length,
+        dailyCompletionCounts: dailyCounts,
+        totalItems: totalEstimate,
+        today: now,
+      ),
     );
-
-    return pace.status;
+    return paceStatus?.status ?? PaceStatusType.onPace;
   }
 
   /// Compute engagement metrics from all completions.
