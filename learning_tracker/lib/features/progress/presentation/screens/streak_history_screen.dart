@@ -37,7 +37,9 @@ class _StreakHistoryScreenState extends ConsumerState<StreakHistoryScreen> {
         start: today.subtract(const Duration(days: 28)),
         end: today,
       ),
-      _StreakRange.allTime => (start: DateTime(2024, 1, 1), end: today),
+      // DateTime(2000, 1, 1) matches the bulk-prior sentinel epoch, consistent
+      // with how ProgressChartsScreen handles the "All time" floor (Fix M1).
+      _StreakRange.allTime => (start: DateTime(2000, 1, 1), end: today),
     };
   }
 
