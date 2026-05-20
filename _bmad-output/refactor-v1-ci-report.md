@@ -184,3 +184,55 @@ Pursue **Option B** (or a combination of A + B) in the next sprint. Option A alo
 | Commit | Description |
 |---|---|
 | `016dc2dd` | fix(tests): clear all story_acceptance analyze errors — Test-Fix-A |
+
+---
+
+## Test-Fix-C Results (2026-05-20)
+
+**Agent:** Test-Fix-C
+**Scope:** `test/features/`, `test/sync/`, `test/migration/`, `test/scheduler/`, `test/track_setup/`, `test/widget/`, `test/integration/`
+**Branch:** dev
+
+### Error count delta
+
+| Metric | Before | After |
+|---|---|---|
+| `dart analyze` issues in scope | 26+ errors (compilation failures) | 0 issues |
+| Runtime test failures introduced | 0 | 0 |
+
+### Files fixed (20 files, 1 stale path corrected)
+
+| File | Fix applied |
+|---|---|
+| `test/features/gamification/domain/services/streak_service_recovery_test.dart` | Rewrote streak seeding: replaced `upsertStreakByProfile`/old `StreakEventsCompanion` fields with `appendEvent()` seeding consecutive completion events; fixed `getStreak()` non-nullable return assertions |
+| `test/features/parent_mode/domain/services/parent_dashboard_aggregator_compute_test.dart` | Replaced `StreakEventsCompanion.insert(currentStreak:, maxStreak:)` with loop seeding 5 consecutive completion events |
+| `test/features/settings/domain/services/data_export_roundtrip_test.dart` | Fixed streak export/import: replaced `upsertStreakByProfile` with `appendEvent()`, updated export assertions (`streaks` empty, `streakEvents` has 1 row), fixed import test to check `getEventsByProfile` |
+| `test/features/progress/domain/services/chart_data_service_test.dart` | Fixed 3 `insertCompletion()` call sites: `eventTimestamp:` → `completedAt:` (local function param name) |
+| `test/features/progress/presentation/providers/lifetime_knowledge_providers_test.dart` | Fixed double-wrapped Value: `Value(const Value<int?>(null))` → `const Value<int?>(null)` |
+| `test/features/settings/domain/services/curriculum_activation_service_test.dart` | Fixed `allTracks.first.deletedAt` → `allTracks.first.state == 'deleted'` (W3.28/W3.29 unified state column) |
+| `test/features/settings/domain/services/data_export_import_service_extra_test.dart` | Fixed `DailyPlansCompanion.insert(trackId: Value(trackId))` → `trackId: trackId` (takes raw int) |
+| `test/features/stages/data/repositories/stage_definition_repository_impl_test.dart` | Rewrote `makeRow()` helper: removed `delayDays`/`scheduleType`/`daysOfWeek`/`rollingWindowSize`, added `schedule` JSON + `updatedAt`; fixed assertion to check `schedule` JSON string |
+| `test/sync/sync_rework_curriculum_completion_doc_id_test.dart` | Removed final 2 occurrences of `priorMarkOnly: const Value(true)` (W4.26: field deleted) |
+| `test/sync/sync_rework_orchestrator_test.dart` | Replaced S7.4 test using deleted `syncEngineProvider` with keepAlive singleton test; removed unused import; fixed stale `features/auth/` path → `features/account/` for `sign_in_screen.dart` |
+| `test/sync/sync_rework_writepath_test.dart` | Removed `db.select(db.syncQueue).get()` assertion (table deleted W3.20+); deleted G6 test group for `syncQueueDao.purgeCompletionRows()` (DAO deleted); removed unused imports |
+| `test/sync/sync_rework_profile_programs_pull_test.dart` | Added `pushStageDefinition()` stub to `_ProfileProgramsGateway`; fixed `_buildOrchestrator()`: removed `resolveEngine:`, added `resolvePushAllLocalData` + `resolveBackfillGoals` (W2.35) |
+| `test/migration/v17_to_v18_test.dart` | Removed `trackType: TrackType.personal` from two `restoreOrCreate()` calls (W3.22: param removed) |
+| `test/features/dashboard/domain/services/track_completion_service_test.dart` | Removed unused `user_database.dart` import |
+| `test/features/onboarding/presentation/screens/bulk_mark_screen_test.dart` | Removed unused `user_database.dart` import |
+| `test/features/parent_mode/domain/services/parent_dashboard_aggregator_test.dart` | Removed unused `user_database.dart` import |
+| `test/features/settings/domain/services/data_export_import_service_extra_test.dart` | Removed unused `drift/drift.dart show Value` import |
+| `test/features/settings/domain/services/data_export_roundtrip_test.dart` | Removed unused `drift/drift.dart show Value` import |
+| `test/track_setup/clear_overdue_button_test.dart` | Removed unused `drift/drift.dart` and `track_type.dart` imports |
+| `test/features/learning/domain/entities/batch_plan_test.dart` | Removed unreferenced `_kEmptyCommands` constant |
+| `test/features/progress/domain/services/lifetime_tree_builder_test.dart` | Removed unreferenced `_LedgerEntry` helper class |
+| `test/features/dashboard/presentation/screens/dashboard_screen_test.dart` | Removed leftover `track_type.dart` import |
+
+### Files explicitly skipped (with reasons)
+
+None — all in-scope files either had no errors or were fixed in this run.
+
+### Commits
+
+| Commit | Description |
+|---|---|
+| `b7a24e0d` | fix(tests): migrate Wave 3 schema test errors — Test-Fix-C scope |
