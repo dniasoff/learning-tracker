@@ -1,5 +1,6 @@
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
+import 'package:learning_tracker/app/restore/device_restore_screen.dart';
 import 'package:learning_tracker/app/router/app_shell.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
@@ -45,7 +46,6 @@ import 'package:learning_tracker/features/settings/presentation/screens/curricul
 import 'package:learning_tracker/features/settings/presentation/screens/lifetime_marking_screen.dart';
 import 'package:learning_tracker/features/settings/presentation/screens/settings_screen.dart';
 import 'package:learning_tracker/features/settings/presentation/screens/upgrade_to_cloud_screen.dart';
-import 'package:learning_tracker/features/sync/presentation/screens/device_restore_screen.dart';
 import 'package:learning_tracker/features/sync/presentation/screens/sync_screen.dart';
 import 'package:learning_tracker/features/track_setup/presentation/screens/track_detail_screen.dart';
 import 'package:learning_tracker/features/track_setup/presentation/screens/track_management_hub_screen.dart';
