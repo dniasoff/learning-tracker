@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/widgets/app_bar_title.dart';
+import 'package:learning_tracker/core/widgets/app_error_view.dart';
 import 'package:learning_tracker/features/tracks/whole_curriculum_order/domain/models/learning_order_item.dart';
 import 'package:learning_tracker/features/tracks/whole_curriculum_order/presentation/providers/learning_order_providers.dart';
 import 'package:learning_tracker/features/tracks/whole_curriculum_order/presentation/widgets/draggable_order_item.dart';
@@ -57,10 +58,11 @@ class _LearningOrderScreenState extends ConsumerState<LearningOrderScreen> {
       ),
       body: orderAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(
-          child: Text(
-            AppLocalizations.of(context)!.errorLoadingOrder(e.toString()),
-          ),
+        error: (e, st) => AppErrorView(
+          error: e,
+          stackTrace: st,
+          onRetry: () =>
+              ref.refresh(learningOrderProvider(widget.curriculumId)),
         ),
         data: (_) {
           final items = _localOrder;

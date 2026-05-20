@@ -2,12 +2,14 @@ import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/labels/curriculum_label_providers.dart';
 import 'package:learning_tracker/core/labels/domain_term_labels.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/widgets/app_error_view.dart';
 import 'package:learning_tracker/core/widgets/empty_state.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
@@ -32,7 +34,8 @@ class LearningScreen extends ConsumerWidget {
     final dailyTasksAsync = ref.watch(allDailyTasksProvider);
     final streakAsync = ref.watch(dashboardStreakProvider);
     final isChildMode =
-        ref.watch(selectedProfileProvider).asData?.value?.mode == 'child';
+        ref.watch(selectedProfileProvider).asData?.value?.profileMode ==
+        ProfileMode.child;
     final currentStreak = streakAsync.asData?.value.currentStreak ?? 0;
     final maxStreak = streakAsync.asData?.value.maxStreak ?? 0;
 
@@ -43,8 +46,12 @@ class LearningScreen extends ConsumerWidget {
         child: SafeArea(
           child: activeCurriculaAsync.when(
             loading: () => const Center(child: CircularProgressIndicator()),
-            error: (e, _) =>
-                Center(child: Text(l10n.errorWithMessage(e.toString()))),
+            error: (e, st) => AppErrorView(
+              error: e,
+              stackTrace: st,
+              onRetry: () =>
+                  ref.refresh(dashboardActiveCurriculaStreamProvider),
+            ),
             data: (activeCurricula) {
               if (activeCurricula.isEmpty) {
                 return EmptyState(

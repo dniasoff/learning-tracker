@@ -9,8 +9,9 @@ import 'package:learning_tracker/core/labels/curriculum_label_renderer.dart';
 import 'package:learning_tracker/core/labels/domain_term_labels.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
+import 'package:learning_tracker/core/widgets/app_error_view.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
-import 'package:learning_tracker/features/track_setup/domain/entities/add_track_result.dart';
+import 'package:learning_tracker/features/tracks/setup/domain/entities/add_track_result.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// A self-contained widget that loads curriculum content, shows a breadcrumb
@@ -238,8 +239,12 @@ class HierarchySelectionPanelState
         Expanded(
           child: contentAsync.when(
             loading: () => const Center(child: CircularProgressIndicator()),
-            error: (e, _) =>
-                Center(child: Text(l10n.errorGeneric(e.toString()))),
+            error: (e, st) => AppErrorView(
+              error: e,
+              stackTrace: st,
+              onRetry: () =>
+                  ref.refresh(curriculumContentProvider(widget.curriculumId)),
+            ),
             data: (allItems) => HierarchyBrowser(
               key: _browserKey,
               items: allItems,

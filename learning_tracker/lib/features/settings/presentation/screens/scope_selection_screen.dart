@@ -7,6 +7,7 @@ import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/widgets/app_bar_title.dart';
+import 'package:learning_tracker/core/widgets/app_error_view.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/curriculum_scope_providers.dart';
@@ -97,10 +98,11 @@ class _ScopeSelectionScreenState extends ConsumerState<ScopeSelectionScreen> {
         child: contentAsync.when(
           data: (items) => _buildBody(items),
           loading: () => const Center(child: CircularProgressIndicator()),
-          error: (e, _) => Center(
-            child: Text(
-              AppLocalizations.of(context)!.errorGeneric(e.toString()),
-            ),
+          error: (e, st) => AppErrorView(
+            error: e,
+            stackTrace: st,
+            onRetry: () =>
+                ref.refresh(curriculumContentProvider(widget.curriculumId)),
           ),
         ),
       ),

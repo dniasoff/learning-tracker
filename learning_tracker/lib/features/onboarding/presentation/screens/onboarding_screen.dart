@@ -60,6 +60,18 @@ enum _ScreenPhase {
   done,
 }
 
+/// Sub-steps within [_ScreenPhase.parentPinSetup].
+///
+/// Replaces the `_isPinConfirmStep` boolean so the two sub-states are named
+/// and exhaustively handled.
+enum _PinStep {
+  /// User is entering the PIN for the first time.
+  enterPin,
+
+  /// User is re-entering the PIN to confirm it matches.
+  confirmPin,
+}
+
 // SharedPreferences keys for onboarding state persistence
 const _kOnboardingPhase = 'onboarding_phase';
 const _kOnboardingProfileId = 'onboarding_profile_id';
@@ -293,12 +305,12 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   // Parent PIN setup state (child mode only).
   String? _firstPin;
   String? _pinError;
-  bool _isPinConfirmStep = false;
+  _PinStep _pinStep = _PinStep.enterPin;
 
   void _onFirstPinEntered(String pin) {
     setState(() {
       _firstPin = pin;
-      _isPinConfirmStep = true;
+      _pinStep = _PinStep.confirmPin;
       _pinError = null;
     });
   }
@@ -307,7 +319,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     if (pin != _firstPin) {
       setState(() {
         _pinError = 'PINs do not match';
-        _isPinConfirmStep = false;
+        _pinStep = _PinStep.enterPin;
         _firstPin = null;
       });
       return;
@@ -320,7 +332,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     } on ArgumentError catch (e) {
       setState(() {
         _pinError = e.message as String?;
-        _isPinConfirmStep = false;
+        _pinStep = _PinStep.enterPin;
         _firstPin = null;
       });
       return;
@@ -329,7 +341,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     if (!mounted) return;
     setState(() {
       _firstPin = null;
-      _isPinConfirmStep = false;
+      _pinStep = _PinStep.enterPin;
       _pinError = null;
       _phase = _ScreenPhase.addTrack;
     });
@@ -837,10 +849,12 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
   Widget _buildParentPinSetup(ThemeData theme) {
     final childName = _profileName ?? 'your child';
-    final subtitle = _isPinConfirmStep
-        ? 'Re-enter the PIN to confirm'
-        : 'Set a 4-digit PIN to access parent controls for $childName. '
-              'The PIN is stored only on this device.';
+    final subtitle = switch (_pinStep) {
+      _PinStep.confirmPin => 'Re-enter the PIN to confirm',
+      _PinStep.enterPin =>
+        'Set a 4-digit PIN to access parent controls for $childName. '
+            'The PIN is stored only on this device.',
+    };
 
     return SafeArea(
       top: false,
@@ -866,11 +880,15 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                 ),
                 const SizedBox(height: 32),
                 PinEntryWidget(
-                  title: _isPinConfirmStep ? 'Confirm PIN' : 'Enter New PIN',
+                  title: switch (_pinStep) {
+                    _PinStep.confirmPin => 'Confirm PIN',
+                    _PinStep.enterPin => 'Enter New PIN',
+                  },
                   errorMessage: _pinError,
-                  onPinComplete: _isPinConfirmStep
-                      ? _onConfirmPinEntered
-                      : _onFirstPinEntered,
+                  onPinComplete: switch (_pinStep) {
+                    _PinStep.confirmPin => _onConfirmPinEntered,
+                    _PinStep.enterPin => _onFirstPinEntered,
+                  },
                 ),
               ],
             ),

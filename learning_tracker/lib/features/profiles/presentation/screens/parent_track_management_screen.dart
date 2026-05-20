@@ -5,6 +5,7 @@ import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/widgets/app_error_view.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/track_setup/domain/entities/add_track_result.dart';
 import 'package:learning_tracker/features/track_setup/presentation/providers/after_track_change_invalidation.dart';
@@ -94,8 +95,11 @@ class _ParentTrackManagementScreenState
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       body: activeAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) =>
-            Center(child: Text(l10n.errorWithMessage(e.toString()))),
+        error: (e, st) => AppErrorView(
+          error: e,
+          stackTrace: st,
+          onRetry: () => ref.refresh(tm.activeTracksProvider),
+        ),
         data: (activeTracks) {
           if (activeTracks.isEmpty) {
             return _buildEmptyState(l10n);

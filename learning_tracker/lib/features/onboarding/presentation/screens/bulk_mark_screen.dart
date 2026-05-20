@@ -7,6 +7,7 @@ import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/utils/text_input_formatters.dart';
 import 'package:learning_tracker/core/widgets/app_bar_title.dart';
+import 'package:learning_tracker/core/widgets/app_error_view.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/widgets/hierarchy_selection_panel.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
@@ -16,7 +17,7 @@ import 'package:learning_tracker/features/onboarding/presentation/providers/onbo
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/progress_providers.dart';
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
-import 'package:learning_tracker/features/track_setup/domain/entities/add_track_result.dart';
+import 'package:learning_tracker/features/tracks/setup/domain/entities/add_track_result.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// Result returned from the bulk mark screen.
@@ -310,7 +311,11 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
             curriculumId: widget.curriculumId,
           )
           .catchError((Object e, StackTrace st) {
-            AppLogger.instance.error(event: 'expunge failed', exception: e, stackTrace: st);
+            AppLogger.instance.error(
+              event: 'expunge failed',
+              exception: e,
+              stackTrace: st,
+            );
           });
     }
 
@@ -552,7 +557,16 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
     );
     return itemsAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (e, _) => Center(child: Text(l10n.errorGeneric(e.toString()))),
+      error: (e, st) => AppErrorView(
+        error: e,
+        stackTrace: st,
+        onRetry: () => ref.refresh(
+          contentSearchProvider(
+            curriculumId: widget.curriculumId,
+            query: _searchQuery,
+          ),
+        ),
+      ),
       data: (rawItems) {
         final items = _applyScope(rawItems);
         if (items.isEmpty) {

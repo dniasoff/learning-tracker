@@ -60,11 +60,38 @@ class AddTrackFlow extends ConsumerStatefulWidget {
   ConsumerState<AddTrackFlow> createState() => _AddTrackFlowState();
 }
 
+// ---------------------------------------------------------------------------
+// Sealed animation-state machine.
+//
+// Replaces two booleans (_isAnimating + _pendingAdvance) that formed an
+// implicit tri-state:
+//   idle                  — no page animation in flight
+//   animating             — page slide in progress, no queued advance
+//   animatingWithPending  — page slide in progress AND another advance
+//                           was requested mid-animation; run it on settle
+// ---------------------------------------------------------------------------
+sealed class _AnimState {
+  const _AnimState();
+}
+
+final class _AnimIdle extends _AnimState {
+  const _AnimIdle();
+}
+
+final class _Animating extends _AnimState {
+  const _Animating();
+}
+
+final class _AnimatingWithPending extends _AnimState {
+  const _AnimatingWithPending();
+}
+
+// ---------------------------------------------------------------------------
+
 class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
   AddTrackState _state = const AddTrackState();
   late final PageController _pageController;
-  bool _isAnimating = false;
-  bool _pendingAdvance = false;
+  _AnimState _animState = const _AnimIdle();
   bool _isFinishing = false;
 
   /// Whether a program was selected (vs self-paced).
@@ -73,7 +100,7 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
   /// Whether the selected program defines review/chazara stages.
   bool get _programHasChazara {
     final program = _state.selectedProgram;
-    if (program is! LearningProgramData) return false;
+    if (program == null) return false;
     try {
       final stages = jsonDecode(program.stagesConfig) as List<dynamic>;
       return stages.any(
@@ -283,8 +310,12 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
     // the curriculum→program transition), queue the advance and run it after
     // the current animation completes. Otherwise the call would be dropped
     // and the user would be stuck on the auto-skipped (blank) step.
-    if (_isAnimating) {
-      _pendingAdvance = true;
+    if (_animState is _Animating) {
+      _animState = const _AnimatingWithPending();
+      return;
+    }
+    if (_animState is _AnimatingWithPending) {
+      // Already queued — no-op; the pending flag is already set.
       return;
     }
     final currentIndex = _currentIndex;
@@ -292,17 +323,17 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
       final nextStep = _activeSteps[currentIndex + 1];
       setState(() {
         _state = _state.copyWith(currentStep: nextStep);
+        _animState = const _Animating();
       });
-      _isAnimating = true;
       _pageController
           .nextPage(
             duration: const Duration(milliseconds: 300),
             curve: Curves.easeInOut,
           )
           .then((_) {
-            _isAnimating = false;
-            if (_pendingAdvance && mounted) {
-              _pendingAdvance = false;
+            final hadPending = _animState is _AnimatingWithPending;
+            _animState = const _AnimIdle();
+            if (hadPending && mounted) {
               _goToNextStep();
             }
           });
@@ -822,7 +853,7 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
 
     // Program with DEFINED chazara → show read-only
     if (_isProgramTrack && _programHasChazara) {
-      final program = _state.selectedProgram as LearningProgramData;
+      final program = _state.selectedProgram!;
       List<dynamic> stages;
       try {
         stages = jsonDecode(program.stagesConfig) as List<dynamic>;
@@ -887,7 +918,7 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
     return StartingPositionStep(
       programName: _state.programName ?? '',
       curriculumId: _state.curriculumId!,
-      selectedProgram: _state.selectedProgram as LearningProgramData?,
+      selectedProgram: _state.selectedProgram,
       onComplete: _onStartingPositionComplete,
     );
   }

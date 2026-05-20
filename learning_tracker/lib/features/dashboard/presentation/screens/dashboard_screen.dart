@@ -4,13 +4,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/user_mode.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/widgets/app_error_view.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/dashboard/presentation/widgets/dashboard_body.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/lifetime_knowledge_providers.dart';
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
-import 'package:learning_tracker/l10n/app_localizations.dart';
 
 @RoutePage()
 class DashboardScreen extends ConsumerWidget {
@@ -23,8 +23,6 @@ class DashboardScreen extends ConsumerWidget {
     final streakAsync = ref.watch(dashboardStreakProvider);
     final selectedProfileAsync = ref.watch(selectedProfileProvider);
     final profileName = selectedProfileAsync.asData?.value?.displayName;
-    final l10n = AppLocalizations.of(context)!;
-
     return Scaffold(
       body: DecoratedBox(
         decoration: BoxDecoration(
@@ -46,8 +44,11 @@ class DashboardScreen extends ConsumerWidget {
             // spinner — then DashboardBody — on every reload.
             skipLoadingOnReload: true,
             loading: () => const Center(child: CircularProgressIndicator()),
-            error: (e, s) =>
-                Center(child: Text(l10n.errorWithMessage(e.toString()))),
+            error: (e, s) => AppErrorView(
+              error: e,
+              stackTrace: s,
+              onRetry: () => ref.refresh(dashboardActiveTracksStreamProvider),
+            ),
             data: (activeTracks) {
               final userMode = userModeAsync.asData?.value ?? UserMode.adult;
               final streakData = streakAsync.asData?.value;

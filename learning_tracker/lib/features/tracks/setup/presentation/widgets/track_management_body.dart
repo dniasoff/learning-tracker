@@ -6,6 +6,7 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/widgets/app_error_view.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/settings/domain/exceptions/last_active_curriculum_exception.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/curriculum_activation_providers.dart';
@@ -86,8 +87,11 @@ class _TrackManagementBodyState extends ConsumerState<TrackManagementBody> {
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       body: activeAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) =>
-            Center(child: Text(l10n.errorWithMessage(e.toString()))),
+        error: (e, st) => AppErrorView(
+          error: e,
+          stackTrace: st,
+          onRetry: () => ref.refresh(activeTracksProvider),
+        ),
         data: (activeTracks) {
           if (activeTracks.isEmpty) {
             return _buildEmptyState(l10n);

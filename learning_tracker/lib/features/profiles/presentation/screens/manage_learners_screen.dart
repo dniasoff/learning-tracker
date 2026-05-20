@@ -1,14 +1,16 @@
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/providers/network_providers.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/utils/text_input_formatters.dart';
 import 'package:learning_tracker/core/widgets/app_bar_title.dart';
+import 'package:learning_tracker/core/widgets/app_error_view.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
-import 'package:learning_tracker/features/profiles/presentation/widgets/parent_pin_setup_dialog.dart';
 import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
+import 'package:learning_tracker/features/profiles/presentation/widgets/parent_pin_setup_dialog.dart';
 import 'package:learning_tracker/features/profiles/presentation/widgets/profile_avatar.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
@@ -33,8 +35,10 @@ class ManageLearnersScreen extends ConsumerWidget {
       ),
       body: profilesAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, s) => Center(
-          child: Text(AppLocalizations.of(context)!.errorGeneric(e.toString())),
+        error: (e, s) => AppErrorView(
+          error: e,
+          stackTrace: s,
+          onRetry: () => ref.refresh(profileListStreamProvider),
         ),
         data: (profiles) {
           if (profiles.isEmpty) {
@@ -80,7 +84,7 @@ class ManageLearnersScreen extends ConsumerWidget {
 
     // Child profiles require a parent PIN so the parent can gate access
     // to parental controls. Prompt right after creation.
-    if (created.mode == 'child' && context.mounted) {
+    if (created.profileMode == ProfileMode.child && context.mounted) {
       await showParentPinSetupDialog(
         context,
         ref,
@@ -102,7 +106,11 @@ class _ProfileListTile extends ConsumerWidget {
       child: ListTile(
         leading: ProfileAvatar(avatarIndex: profile.avatarIndex),
         title: Text(profile.displayName),
-        subtitle: Text(profile.mode == 'child' ? 'Child mode' : 'Adult mode'),
+        subtitle: Text(
+          profile.profileMode == ProfileMode.child
+              ? 'Child mode'
+              : 'Adult mode',
+        ),
         trailing: PopupMenuButton<String>(
           onSelected: (value) async {
             switch (value) {

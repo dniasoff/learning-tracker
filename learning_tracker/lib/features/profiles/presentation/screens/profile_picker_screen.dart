@@ -8,13 +8,14 @@ import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/providers/network_providers.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/utils/text_input_formatters.dart';
+import 'package:learning_tracker/core/widgets/app_error_view.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
 import 'package:learning_tracker/features/account/presentation/widgets/no_backup_badge.dart';
-import 'package:learning_tracker/features/profiles/presentation/widgets/parent_mode_dialog_frame.dart';
-import 'package:learning_tracker/features/profiles/presentation/widgets/parent_pin_setup_dialog.dart';
 import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
 import 'package:learning_tracker/features/profiles/domain/repositories/profile_repository.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
+import 'package:learning_tracker/features/profiles/presentation/widgets/parent_mode_dialog_frame.dart';
+import 'package:learning_tracker/features/profiles/presentation/widgets/parent_pin_setup_dialog.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 @RoutePage()
@@ -31,7 +32,6 @@ class _ProfilePickerScreenState extends ConsumerState<ProfilePickerScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
     // Use future provider instead of stream provider to avoid the
     // InheritedElement '_dependents.isEmpty' assertion that fires when
     // a stream-triggered rebuild races with dialog/overlay dismissal.
@@ -54,8 +54,11 @@ class _ProfilePickerScreenState extends ConsumerState<ProfilePickerScreen> {
           top: false,
           child: profilesAsync.when(
             loading: () => const Center(child: CircularProgressIndicator()),
-            error: (e, s) =>
-                Center(child: Text(l10n.errorWithMessage(e.toString()))),
+            error: (e, s) => AppErrorView(
+              error: e,
+              stackTrace: s,
+              onRetry: () => ref.refresh(profileListProvider),
+            ),
             data: (profiles) => _buildBody(context, profiles),
           ),
         ),
