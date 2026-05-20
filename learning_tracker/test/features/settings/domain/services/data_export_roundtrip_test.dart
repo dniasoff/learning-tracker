@@ -50,8 +50,8 @@ void main() {
 
       expect(tracks, hasLength(1));
       expect(tracks.first['curriculumId'], 'mishnayos');
-      expect(tracks.first['trackType'], 'personal');
-      expect(tracks.first['isActive'], isTrue);
+      // W3.28: trackType removed; state replaces isActive+deactivatedAt.
+      expect(tracks.first['state'], 'active');
     });
 
     test('exports goal with all fields serialized', () async {
@@ -370,7 +370,31 @@ void main() {
     });
 
     test('importData imports learning order', () async {
+      // W3.25: learning_order.profileId has FK → learner_profiles(id).
+      // Payload must include a learnerProfile so the FK is satisfied after
+      // the import clears all existing rows.
       final payload = buildImportJson(
+        userProfiles: [
+          {
+            'id': 1,
+            'displayName': 'Test',
+            'tier': 'localBorn',
+            'userMode': 'adult',
+            'createdAt': '2026-01-01T00:00:00.000Z',
+            'updatedAt': '2026-01-01T00:00:00.000Z',
+          },
+        ],
+        learnerProfiles: [
+          {
+            'id': 1,
+            'accountId': 1,
+            'displayName': 'Test',
+            'mode': 'adult',
+            'avatarIndex': 0,
+            'createdAt': '2026-01-01T00:00:00.000Z',
+            'updatedAt': '2026-01-01T00:00:00.000Z',
+          },
+        ],
         learningOrder: [
           {
             'id': 1,
@@ -394,8 +418,31 @@ void main() {
       'importData imports streak_events (streaks key ignored in W3.20+)',
       () async {
         // W3.20: `streaks` key is legacy — import reads from `streakEvents`.
+        // W3.25: streak_events.profileId has FK → learner_profiles(id).
+        // Payload must include a learnerProfile so the FK is satisfied.
         const ts = '2026-03-20T00:00:00.000Z';
         final payload = buildImportJson(
+          userProfiles: [
+            {
+              'id': 1,
+              'displayName': 'Test',
+              'tier': 'localBorn',
+              'userMode': 'adult',
+              'createdAt': '2026-01-01T00:00:00.000Z',
+              'updatedAt': '2026-01-01T00:00:00.000Z',
+            },
+          ],
+          learnerProfiles: [
+            {
+              'id': 1,
+              'accountId': 1,
+              'displayName': 'Test',
+              'mode': 'adult',
+              'avatarIndex': 0,
+              'createdAt': '2026-01-01T00:00:00.000Z',
+              'updatedAt': '2026-01-01T00:00:00.000Z',
+            },
+          ],
           streaks: [
             // Legacy format — should be silently ignored.
             {'id': 1, 'profileId': 1, 'currentStreak': 7, 'maxStreak': 14},

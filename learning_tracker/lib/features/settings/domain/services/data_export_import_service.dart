@@ -216,7 +216,7 @@ class DataExportImportService {
               'profileId': t.profileId,
               'curriculumId': t.curriculumId,
               'state': t.state,
-              'stateChangedAt': t.stateChangedAt?.toIso8601String(),
+              'stateChangedAt': t.stateChangedAt.toIso8601String(),
               'activatedAt': t.activatedAt.toIso8601String(),
               'paceResetDate': t.paceResetDate?.toIso8601String(),
             },
@@ -922,10 +922,10 @@ class DataExportImportService {
         final daysList = days is String
             ? (jsonDecode(days) as List).cast<int>()
             : (days as List?)?.cast<int>() ?? <int>[];
-        return jsonEncode({'type': 'weekly', 'days': daysList});
+        return jsonEncode({'type': 'weekly', 'days_of_week': daysList});
       case 'rolling':
         final windowSize = map['rollingWindowSize'] as int? ?? 7;
-        return jsonEncode({'type': 'rolling', 'window_size': windowSize});
+        return jsonEncode({'type': 'rolling', 'rolling_window_size': windowSize});
       default:
         return jsonEncode({'type': 'delay', 'delay_days': delayDays});
     }

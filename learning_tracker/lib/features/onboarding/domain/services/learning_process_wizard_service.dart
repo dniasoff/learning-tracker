@@ -36,12 +36,14 @@ class CustomRound {
     required this.scheduleType,
     this.delayDays,
     this.daysOfWeek,
+    this.rollingWindowSize,
   });
 
   final String label;
   final ScheduleType scheduleType;
   final int? delayDays;
   final List<int>? daysOfWeek;
+  final int? rollingWindowSize;
 }
 
 /// Orchestrates stage creation based on wizard selections.
@@ -128,11 +130,11 @@ class LearningProcessWizardService {
       final scheduleJson = switch (scheduleType) {
         ScheduleType.weekly => jsonEncode({
           'type': 'weekly',
-          'days': daysOfWeek ?? [],
+          'days_of_week': daysOfWeek ?? [],
         }),
         ScheduleType.rolling => jsonEncode({
           'type': 'rolling',
-          'window_size': (stage['window'] as int?) ?? 7,
+          'rolling_window_size': (stage['window'] as int?) ?? 7,
         }),
         _ => jsonEncode({
           'type': 'delay',
@@ -178,7 +180,11 @@ class LearningProcessWizardService {
       final roundScheduleJson = switch (round.scheduleType) {
         ScheduleType.weekly => jsonEncode({
           'type': 'weekly',
-          'days': round.daysOfWeek ?? [],
+          'days_of_week': round.daysOfWeek ?? [],
+        }),
+        ScheduleType.rolling => jsonEncode({
+          'type': 'rolling',
+          'rolling_window_size': round.rollingWindowSize ?? 7,
         }),
         _ => jsonEncode({'type': 'delay', 'delay_days': round.delayDays ?? 0}),
       };

@@ -5,6 +5,7 @@ import 'package:learning_tracker/core/database/daos/profile_dao.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/user_mode.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
+import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 
@@ -37,8 +38,19 @@ void main() {
   group('dashboardUserModeProvider', () {
     late UserDatabase db;
 
-    setUp(() {
+    setUp(() async {
       db = UserDatabase(NativeDatabase.memory());
+      // Seed account row for FK on learner_profiles.account_id.
+      await db.into(db.accounts).insert(
+        AccountsCompanion.insert(
+          email: 'test@example.com',
+          tier: 'localBorn',
+          displayName: 'Test Account',
+          userMode: 'adult',
+          createdAt: DateTimeFactory.nowUtc(),
+          updatedAt: DateTimeFactory.nowUtc(),
+        ),
+      );
     });
 
     tearDown(() async {
