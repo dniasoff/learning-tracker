@@ -1,5 +1,52 @@
 import 'dart:async';
 
+// ---------------------------------------------------------------------------
+// Sealed restart-cycle state machine (W5.9).
+//
+// Replaces _restartInFlight: Future<void>? + _rerunRequested: bool — two
+// independent fields that together encode three states:
+//
+//   idle              — no restart cycle is running; all callers get a fresh
+//                       cycle when they call restart()
+//   restarting        — one stop()+start() cycle is in flight; additional
+//                       restart() calls coalesce and wait for it
+//   restartingPending — cycle in flight AND ≥1 restart() arrived mid-cycle;
+//                       the cycle runs one more iteration on completion so the
+//                       final subscription set targets the latest profile
+//
+// The [future] field on the non-idle states carries the Future returned to
+// coalesced callers so they can await the actual completion of their request.
+// ---------------------------------------------------------------------------
+sealed class _RestartCycle {
+  const _RestartCycle();
+}
+
+/// No restart is currently in progress.
+final class _RestartIdle extends _RestartCycle {
+  const _RestartIdle();
+}
+
+/// A restart cycle is in flight; no additional restart is queued.
+final class _Restarting extends _RestartCycle {
+  const _Restarting({required this.future});
+
+  /// The in-flight Future — returned to coalesced restart() callers so they
+  /// await the same cycle rather than starting a second one.
+  final Future<void> future;
+}
+
+/// A restart cycle is in flight AND at least one more restart() arrived
+/// mid-cycle. The running cycle will perform an extra iteration on completion
+/// to rebind to the latest profile.
+final class _RestartingPending extends _RestartCycle {
+  const _RestartingPending({required this.future});
+
+  /// Same as [_Restarting.future] — the in-flight cycle's Future.
+  final Future<void> future;
+}
+
+// ---------------------------------------------------------------------------
+
 /// Source of named real-time streams that [ListenerSupervisor] supervises.
 ///
 /// A concrete implementation wraps the legacy `FirestoreDataSource.listenTo*`
@@ -67,16 +114,12 @@ class ListenerSupervisor {
   final List<StreamSubscription<Object?>> _subscriptions = [];
   bool _attached = false;
 
-  /// The in-flight [restart] cycle, or null when no restart is running.
+  /// Current restart-cycle state — idle, restarting, or restarting-with-pending.
   ///
-  /// Used to serialize restarts: a [restart] call that arrives while this is
-  /// non-null does not start its own cycle — it sets [_rerunRequested] instead.
-  Future<void>? _restartInFlight;
-
-  /// Set by a [restart] call that arrives while a cycle is already running.
-  /// The running cycle, on completion, consumes this flag and runs exactly one
-  /// more cycle so the latest profile is picked up.
-  bool _rerunRequested = false;
+  /// See [_RestartCycle] for the full state diagram. The sealed union replaces
+  /// the two-field pattern (_restartInFlight: Future? + _rerunRequested: bool)
+  /// that previously encoded the same three states as two independent booleans.
+  _RestartCycle _restartCycle = const _RestartIdle();
 
   /// Whether the supervisor currently holds active subscriptions.
   bool get isAttached => _attached;
@@ -114,34 +157,48 @@ class ListenerSupervisor {
   /// running, this call is coalesced into the running cycle's mandatory rerun,
   /// so the returned future completes once that rerun has finished.
   Future<void> restart() {
-    final inFlight = _restartInFlight;
-    if (inFlight != null) {
-      // A cycle is already running. Do not start a second, overlapping
-      // stop()/start() — request exactly one rerun after the current cycle.
-      // openChannels() resolves the profile lazily, so the rerun rebinds to the
-      // latest profile regardless of how many restart() calls were coalesced.
-      _rerunRequested = true;
-      return inFlight;
+    final cycle = _restartCycle;
+    switch (cycle) {
+      case _Restarting(:final future):
+        // A cycle is already running. Do not start a second, overlapping
+        // stop()/start() — upgrade the state to signal that an extra iteration
+        // is needed. openChannels() resolves the profile lazily, so the extra
+        // iteration rebinds to the latest profile regardless of how many
+        // restart() calls were coalesced.
+        _restartCycle = _RestartingPending(future: future);
+        return future;
+      case _RestartingPending(:final future):
+        // Already queued for a rerun — no further action needed; coalesce.
+        return future;
+      case _RestartIdle():
+        // No cycle running — start one now and record the Future so concurrent
+        // calls coalesce onto it.
+        final newFuture = _runRestartCycle();
+        _restartCycle = _Restarting(future: newFuture);
+        return newFuture;
     }
-    final cycle = _runRestartCycle();
-    _restartInFlight = cycle;
-    return cycle;
   }
 
-  /// Runs `stop()`+`start()` cycles back-to-back until no rerun is pending,
-  /// then clears [_restartInFlight]. Exactly one cycle is ever live at a time,
-  /// so no two subscription sets coexist.
+  /// Runs `stop()`+`start()` cycles back-to-back until no extra rerun is
+  /// pending, then transitions [_restartCycle] back to [_RestartIdle]. Exactly
+  /// one cycle is ever live at a time, so no two subscription sets coexist.
   Future<void> _runRestartCycle() async {
     try {
       do {
-        _rerunRequested = false;
+        // Demote from _RestartingPending → _Restarting (with same future) to
+        // consume the pending flag. Any restart() that arrives during this
+        // stop()+start() will re-upgrade to _RestartingPending, causing the
+        // loop to run one more iteration.
+        if (_restartCycle case _RestartingPending(:final future)) {
+          _restartCycle = _Restarting(future: future);
+        }
         await stop();
         await start();
-        // A restart() that arrived during stop()/start() set _rerunRequested;
-        // loop once more so the final cycle targets the latest profile.
-      } while (_rerunRequested);
+        // If another restart() arrived during stop()/start() the state is now
+        // _RestartingPending — loop once more to serve the latest profile.
+      } while (_restartCycle is _RestartingPending);
     } finally {
-      _restartInFlight = null;
+      _restartCycle = const _RestartIdle();
     }
   }
 }

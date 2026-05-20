@@ -63,6 +63,39 @@ abstract class SyncOrchestrator {
   Stream<SyncStatus> get statusStream;
 }
 
+// ---------------------------------------------------------------------------
+// Sealed pull-guard state machine (W5.8).
+//
+// Replaces the `_pullOnLaunchExecuted: bool` flag that encoded three semantic
+// states as two boolean values, making the `neverRun` and `failed` states
+// indistinguishable at a glance.
+//
+//   neverRun  — initial state; cold-start pull has not run yet this session
+//   completed — a cold-start pull finished successfully; further non-resume
+//               calls are skipped (once-per-launch guard S8)
+//   failed    — the last cold-start pull threw; retry is allowed
+// ---------------------------------------------------------------------------
+sealed class _PullGuard {
+  const _PullGuard();
+}
+
+/// Cold-start pull has not been attempted yet this session.
+final class _PullNeverRun extends _PullGuard {
+  const _PullNeverRun();
+}
+
+/// Cold-start pull completed successfully — guard is up; skip further calls.
+final class _PullCompleted extends _PullGuard {
+  const _PullCompleted();
+}
+
+/// Cold-start pull failed — guard is down; a retry is permitted.
+final class _PullFailed extends _PullGuard {
+  const _PullFailed();
+}
+
+// ---------------------------------------------------------------------------
+
 /// Concrete implementation that drives [PullPipeline] + [MergeRouter] directly
 /// for the 7 known entity kinds (DNI-334 AC2) and delegates to [SyncEngine]
 /// for push operations and status tracking until full decomposition is done.
@@ -170,9 +203,11 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
   /// `DeviceRestoreService` — goes through this class, not through
   /// `SyncEngine.pullOnLaunch` directly.
   ///
-  /// Reset to false when a non-resume pull fails, so `DeviceRestoreService`'s
-  /// retry path can genuinely re-pull after a failed restore (I4).
-  bool _pullOnLaunchExecuted = false;
+  /// Transitions to [_PullFailed] when a non-resume pull throws so that
+  /// `DeviceRestoreService.retry()` can genuinely re-pull after a failed
+  /// restore (I4).  [retryPull] resets it to [_PullNeverRun] before calling
+  /// [pullOnLaunch] again.
+  _PullGuard _pullGuard = const _PullNeverRun();
 
   /// Begin lifecycle observation and open Firestore real-time listeners.
   ///
@@ -273,17 +308,21 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
       } catch (_) {
         // Swallow SharedPreferences errors — fall through to pull.
       }
-    } else if (_pullOnLaunchExecuted) {
-      // Once-per-launch guard (S8): a cold-start pull has already run. Any
-      // additional non-resume call — e.g. the sign-in screen and the lifecycle
-      // observer both firing on the same launch — is a no-op. The guard is
-      // reset on failure below so DeviceRestoreService.retry() can re-pull.
+    } else if (_pullGuard is _PullCompleted) {
+      // Once-per-launch guard (S8): a cold-start pull has already completed
+      // successfully. Any additional non-resume call — e.g. the sign-in screen
+      // and the lifecycle observer both firing on the same launch — is a no-op.
+      // A failed pull transitions the guard to [_PullFailed], which allows
+      // DeviceRestoreService.retry() to re-pull after a failed restore (I4).
       _logger?.info(event: 'sync_orchestrator_pull_skipped_already_executed');
       return;
     }
 
     if (!triggeredFromResume) {
-      _pullOnLaunchExecuted = true;
+      // Mark as completed optimistically so that concurrent non-resume callers
+      // are skipped. The guard is reset to [_PullFailed] in the catch block if
+      // this attempt throws.
+      _pullGuard = const _PullCompleted();
     }
 
     _logger?.info(event: 'sync_orchestrator_pull_on_launch_start');
@@ -428,10 +467,11 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
         );
       }
     } catch (e, stackTrace) {
-      // Reset the once-per-launch guard so DeviceRestoreService.retry() (or
-      // any other external retry) can re-run a cold-start pull after a
-      // failed attempt (I4 / S8).
-      if (!triggeredFromResume) _pullOnLaunchExecuted = false;
+      // Reset the pull guard so DeviceRestoreService.retry() (or any other
+      // external retry) can re-run a cold-start pull after a failed attempt
+      // (I4 / S8). Transitions to [_PullFailed] (not [_PullNeverRun]) so the
+      // code path is distinguishable in telemetry / tests.
+      if (!triggeredFromResume) _pullGuard = const _PullFailed();
       _logger?.error(
         event: 'sync_orchestrator_pull_on_launch_failed',
         exception: e,
@@ -449,7 +489,7 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
 
   @override
   Future<void> retryPull() async {
-    _pullOnLaunchExecuted = false;
+    _pullGuard = const _PullNeverRun();
     return pullOnLaunch();
   }
 
