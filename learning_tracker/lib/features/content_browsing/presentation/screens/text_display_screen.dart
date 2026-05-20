@@ -673,7 +673,7 @@ class _CompletionSectionState extends ConsumerState<_CompletionSection> {
         );
       }
     } catch (e, st) {
-      AppLogger.instance.error('Failed to mark completion', e, st);
+      AppLogger.instance.error(event: 'Failed to mark completion', exception: e, stackTrace: st);
       if (mounted) {
         setState(() => _saving = false);
         ScaffoldMessenger.of(context).showSnackBar(

@@ -5,7 +5,7 @@ import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 
-final _log = AppLogger(AppLogger.instance);
+final _log = AppLogger.instance;
 
 /// Route guard that redirects to the profile picker when 2+ profiles exist
 /// and no profile has been selected yet.

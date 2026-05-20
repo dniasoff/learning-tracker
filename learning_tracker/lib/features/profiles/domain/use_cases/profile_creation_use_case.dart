@@ -8,7 +8,7 @@ import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
 import 'package:learning_tracker/features/profiles/domain/repositories/profile_repository.dart';
 
-final _log = AppLogger(AppLogger.instance);
+final _log = AppLogger.instance;
 
 /// Maximum number of profiles allowed per account (matches the repository guard).
 const _maxProfilesPerAccount = 10;

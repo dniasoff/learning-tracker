@@ -67,13 +67,13 @@ class MagicLinkService {
   Future<void> initialize() async {
     if (_initialized) return;
     _initialized = true;
-    AppLogger.instance.info('MagicLinkService initialized');
+    AppLogger.instance.info(event: 'MagicLinkService initialized');
 
     // Cold-start link: app was launched by tapping the email link.
     try {
       final initial = await _appLinks.getInitialLink();
       if (initial != null) {
-        AppLogger.instance.info('MagicLinkService received initial link');
+        AppLogger.instance.info(event: 'MagicLinkService received initial link');
         await _handleIncomingLink(initial);
       }
     } catch (e, stack) {
@@ -97,11 +97,11 @@ class MagicLinkService {
   }
 
   Future<void> _handleIncomingLink(Uri uri) async {
-    AppLogger.instance.info('MagicLinkService handling incoming link');
+    AppLogger.instance.info(event: 'MagicLinkService handling incoming link');
     final authUri = _extractActionUri(uri);
     final link = authUri.toString();
     final mode = authUri.queryParameters['mode'];
-    AppLogger.instance.info('MagicLinkService parsed mode: ${mode ?? 'none'}');
+    AppLogger.instance.info(event: 'MagicLinkService parsed mode: ${mode ?? 'none'}');
     if (mode == 'verifyEmail') {
       await _handleVerifyEmailLink(authUri);
       return;
@@ -195,19 +195,19 @@ class MagicLinkService {
     }
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(kPendingVerifyEmailOobCode, oobCode);
-    AppLogger.instance.info('Stored pending verify-email action code');
+    AppLogger.instance.info(event: 'Stored pending verify-email action code');
     try {
       await _authRepository.checkActionCode(oobCode);
       await _authRepository.applyActionCode(oobCode);
       await prefs.remove(kPendingVerifyEmailOobCode);
-      AppLogger.instance.info('Applied verify-email action code successfully');
+      AppLogger.instance.info(event: 'Applied verify-email action code successfully');
       await _authRepository.reloadCurrentUser();
     } catch (e, stack) {
       final code = _extractFirebaseCode(e);
       if (code == 'invalid-action-code' || code == 'expired-action-code') {
         // Code may already be consumed if another handler/browser applied it.
         await prefs.remove(kPendingVerifyEmailOobCode);
-        AppLogger.instance.info('Verify-email action code already consumed');
+        AppLogger.instance.info(event: 'Verify-email action code already consumed');
       }
       AppLogger.instance.handle(e, stack);
     }

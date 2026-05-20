@@ -711,7 +711,7 @@ class CompletionDao extends DatabaseAccessor<UserDatabase>
   void _assertCrossProfileScope(CrossProfileScope scope, String method) {
     // ignore: unnecessary_null_comparison — future-proofs against nullable callers
     assert(scope != null, 'CrossProfileScope must be provided for $method');
-    final log = AppLogger(AppLogger.instance);
+    final log = AppLogger.instance;
     if (kDebugMode) {
       final callerHash = method.hashCode & 0xFFFF;
       log.debug(

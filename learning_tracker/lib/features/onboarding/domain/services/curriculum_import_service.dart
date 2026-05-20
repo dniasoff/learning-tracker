@@ -59,14 +59,14 @@ class CurriculumImportService {
       await _activationService.activate(curriculum);
 
       AppLogger.instance.info(
-        'CurriculumImportService: activated ${curriculum.displayNameEn}',
+        event: 'CurriculumImportService: activated ${curriculum.displayNameEn}',
       );
 
       return CurriculumImportResult(curriculumId: curriculum, success: true);
     } catch (e) {
       AppLogger.instance.error(
-        'CurriculumImportService: failed to activate ${curriculum.displayNameEn}',
-        e,
+        event: 'CurriculumImportService: failed to activate ${curriculum.displayNameEn}',
+        exception: e,
       );
       return CurriculumImportResult(
         curriculumId: curriculum,

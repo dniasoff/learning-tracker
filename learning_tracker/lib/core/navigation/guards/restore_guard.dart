@@ -7,7 +7,7 @@ import 'package:learning_tracker/core/enums/cross_profile_scope.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 
-final _log = AppLogger(AppLogger.instance);
+final _log = AppLogger.instance;
 
 /// Route guard that redirects to the restore screen on new-device sign-in.
 ///

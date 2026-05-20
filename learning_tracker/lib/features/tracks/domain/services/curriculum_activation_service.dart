@@ -129,7 +129,7 @@ class CurriculumActivationService {
             return matches.first;
           }
           AppLogger.instance.warning(
-            'CurriculumActivationService.getActiveCurricula: '
+            event: 'CurriculumActivationService.getActiveCurricula: '
             'unknown curriculum key: $key',
           );
           return null;

@@ -17,6 +17,7 @@ import 'package:learning_tracker/features/gamification/domain/services/streak_se
 import 'package:learning_tracker/features/gamification/streak/streak_state_provider.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/completion_writer_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
+import 'package:learning_tracker/features/scheduler/domain/models/goal_entity.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/pace_status.dart';
 import 'package:learning_tracker/features/scheduler/domain/services/cross_curriculum_aggregator.dart';
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
@@ -122,7 +123,7 @@ Future<double> dashboardTrackCompletionPercentage(Ref ref, int trackId) async {
       .firstOrNull;
   if (curriculum == null) {
     AppLogger.instance.warning(
-      'dashboardTrackCompletionPercentage: unknown curriculumId '
+      event: 'dashboardTrackCompletionPercentage: unknown curriculumId '
       '"${track.curriculumId}" for track $trackId — skipping',
     );
     return 0.0;
@@ -189,7 +190,7 @@ Future<double> dashboardCompletionPercentage(
     final stages = await stageRepository.getStagesByTrack(trackId);
     if (stages.isEmpty) {
       AppLogger.instance.warning(
-        'dashboardCompletionPercentage: no stages for curriculum '
+        event: 'dashboardCompletionPercentage: no stages for curriculum '
         '${curriculum.storageKey}, skipping — track may be misconfigured',
       );
       continue;
@@ -382,13 +383,25 @@ Future<PaceStatus?> dashboardPaceStatus(
     scopedItemCountProvider(curriculum).future,
   );
 
-  // Resolve study-day counts for deadline goals without a stored pace.
+  // Reconstruct PaceTarget from the raw Drift Goal row.
+  final PaceTarget? paceTarget;
+  if (goal.goalType == 'deadline' && goal.targetDate != null) {
+    paceTarget = DeadlineTarget(goal.targetDate!.toUtc());
+  } else if (goal.goalType == 'pace' &&
+      goal.paceValue != null &&
+      goal.pacePeriod != null) {
+    paceTarget = PacePeriodTarget(rate: goal.paceValue!, period: goal.pacePeriod!);
+  } else {
+    paceTarget = null;
+  }
+
+  // Resolve study-day counts for deadline goals (pace always derived from
+  // scope + study-day density — see ComputePaceStatusUseCase).
   int? studyDaysInWindow;
   int? studyDaysPerWeek;
-  if ((goal.goalType != 'pace' || goal.paceValue == null || goal.pacePeriod == null) &&
-      goal.targetDate != null) {
+  if (paceTarget is DeadlineTarget) {
     final start = DateUtils.extractLocalDate(now);
-    final end = DateUtils.extractLocalDate(goal.targetDate!.toLocal());
+    final end = DateUtils.extractLocalDate(paceTarget.dueDate.toLocal());
     studyDaysInWindow = end.isBefore(start)
         ? 0
         : await db.studyDayConfigDao.countStudyDaysInInclusiveDateRangeForTrack(
@@ -404,7 +417,7 @@ Future<PaceStatus?> dashboardPaceStatus(
   const useCase = ComputePaceStatusUseCase();
   return useCase.execute(
     PaceStatusInput(
-      goal: goal,
+      paceTarget: paceTarget,
       completedItems: personalCompletions.length,
       dailyCompletionCounts: dailyCounts,
       totalItems: totalItems,

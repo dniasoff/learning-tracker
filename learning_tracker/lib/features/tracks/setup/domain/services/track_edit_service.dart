@@ -36,11 +36,12 @@ class TrackEditService {
     String? label,
     Map<int, String>? studyDays,
     WizardResult? chazarahWizard,
-    int? paceValue,
-    String? pacePeriod,
+    /// Sealed goal-mode discriminant. Pass [DeadlineTarget] or
+    /// [PacePeriodTarget] to update; `null` keeps the existing goal mode.
+    /// Pass `null` with [clearPaceTarget] = `true` to remove the goal.
+    PaceTarget? paceTarget,
+    bool clearPaceTarget = false,
     String? paceGranularity,
-    DateTime? targetDate,
-    bool clearTargetDate = false,
   }) async {
     await _database.transaction(() async {
       // 1. Study days — delete-and-replace (same pattern as track creation).
@@ -69,28 +70,24 @@ class TrackEditService {
     // Goal updates run outside the core transaction (they sync to Firestore).
     final hasGoalChange =
         label != null ||
-        paceValue != null ||
-        pacePeriod != null ||
-        paceGranularity != null ||
-        targetDate != null ||
-        clearTargetDate;
+        paceTarget != null ||
+        clearPaceTarget ||
+        paceGranularity != null;
 
     if (hasGoalChange) {
       await _goalRepository.updateGoal(
         goalId: goalId,
         description: label,
-        paceValue: paceValue,
-        pacePeriod: pacePeriod,
+        paceTarget: paceTarget,
+        clearPaceTarget: clearPaceTarget,
         paceGranularity: paceGranularity != null
             ? PaceGranularity.fromStorageKey(paceGranularity)
             : null,
-        targetDate: targetDate,
-        clearTargetDate: clearTargetDate,
       );
     }
 
     AppLogger.instance.info(
-      'TrackEditService: track $trackId edited for ${curriculum.storageKey} '
+      event: 'TrackEditService: track $trackId edited for ${curriculum.storageKey} '
       '(profile=$profileId)',
     );
   }

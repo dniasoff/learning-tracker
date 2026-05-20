@@ -205,8 +205,8 @@ class CloudContentService {
       return _cachedManifest!;
     } catch (e) {
       AppLogger.instance.error(
-        'CloudContentService: failed to fetch manifest',
-        e,
+        event: 'CloudContentService: failed to fetch manifest',
+        exception: e,
       );
       rethrow;
     }
@@ -223,7 +223,7 @@ class CloudContentService {
     final path =
         '$_contentPrefix/${curriculum.storageKey}/hierarchy/$languageCode.json.gz';
 
-    AppLogger.instance.info('CloudContentService: downloading hierarchy $path');
+    AppLogger.instance.info(event: 'CloudContentService: downloading hierarchy $path');
 
     final data = await fetchBlob(path);
 
@@ -252,7 +252,7 @@ class CloudContentService {
         '$_contentPrefix/${curriculum.storageKey}/text/$languageCode/$chunkKey.json.gz';
 
     AppLogger.instance.info(
-      'CloudContentService: downloading text chunk $path',
+      event: 'CloudContentService: downloading text chunk $path',
     );
 
     final data = await fetchBlob(path);
@@ -300,8 +300,8 @@ class CloudContentService {
       return updates;
     } catch (e) {
       AppLogger.instance.error(
-        'CloudContentService: failed to check for updates',
-        e,
+        event: 'CloudContentService: failed to check for updates',
+        exception: e,
       );
       return [];
     }

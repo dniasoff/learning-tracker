@@ -18,6 +18,7 @@ import 'package:learning_tracker/features/dashboard/presentation/providers/dashb
 import 'package:learning_tracker/features/onboarding/domain/services/learning_process_wizard_service.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dart';
+import 'package:learning_tracker/features/scheduler/domain/models/goal_entity.dart';
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
 import 'package:learning_tracker/features/track_setup/domain/services/track_creation_service.dart';
 import 'package:learning_tracker/features/track_setup/presentation/providers/after_track_change_invalidation.dart';
@@ -183,16 +184,22 @@ class _EditTrackScreenState extends ConsumerState<EditTrackScreen> {
       final newLabel = _nameController.text.trim() != goal.description
           ? _nameController.text.trim()
           : null;
-      int? newPaceValue;
-      String? newPacePeriod;
+      PaceTarget? newPaceTarget;
       String? newPaceGranularity;
-      DateTime? newTargetDate;
-      var clearTargetDate = false;
+      var clearPaceTarget = false;
 
       if (goal.goalType == 'pace') {
-        if (_paceValue != (goal.paceValue ?? 1)) newPaceValue = _paceValue;
-        if (_pacePeriod != (goal.pacePeriod ?? 'per_week')) {
-          newPacePeriod = _pacePeriod;
+        // Always send a complete PacePeriodTarget when any pace field changed.
+        final currentPaceValue = _paceValue;
+        final currentPacePeriod = _pacePeriod;
+        final existingPaceValue = goal.paceValue ?? 1;
+        final existingPacePeriod = goal.pacePeriod ?? 'per_week';
+        if (currentPaceValue != existingPaceValue ||
+            currentPacePeriod != existingPacePeriod) {
+          newPaceTarget = PacePeriodTarget(
+            rate: currentPaceValue,
+            period: currentPacePeriod,
+          );
         }
         if (_paceGranularity != goal.paceGranularity) {
           newPaceGranularity = _paceGranularity;
@@ -208,9 +215,9 @@ class _EditTrackScreenState extends ConsumerState<EditTrackScreen> {
             : null;
         if (origDay != editedDay) {
           if (edited == null) {
-            clearTargetDate = true;
+            clearPaceTarget = true;
           } else {
-            newTargetDate = edited.toUtc();
+            newPaceTarget = DeadlineTarget(edited.toUtc());
           }
         }
       }
@@ -223,11 +230,9 @@ class _EditTrackScreenState extends ConsumerState<EditTrackScreen> {
         label: newLabel,
         studyDays: _isProgramTrack ? null : _editedStudyDays,
         chazarahWizard: _isProgramTrack ? null : _pendingChazarah,
-        paceValue: newPaceValue,
-        pacePeriod: newPacePeriod,
+        paceTarget: newPaceTarget,
         paceGranularity: newPaceGranularity,
-        targetDate: newTargetDate,
-        clearTargetDate: clearTargetDate,
+        clearPaceTarget: clearPaceTarget,
       );
 
       await onTrackChanged(ref, profileId);
@@ -321,9 +326,9 @@ class _EditTrackScreenState extends ConsumerState<EditTrackScreen> {
       );
     } catch (e, st) {
       AppLogger.instance.warning(
-        'clear_overdue_push_failed: curriculum=${curriculum.storageKey}',
-        e,
-        st,
+        event: 'clear_overdue_push_failed: curriculum=${curriculum.storageKey}',
+        exception: e,
+        stackTrace: st,
       );
     }
 

@@ -15,7 +15,7 @@ import 'package:talker_flutter/talker_flutter.dart';
 /// ]);
 /// ```
 final talkerProvider = Provider<Talker>((ref) {
-  return AppLogger.instance;
+  return AppLogger.rawTalker;
 });
 
 /// Provides the application-wide [AppLogger] singleton.

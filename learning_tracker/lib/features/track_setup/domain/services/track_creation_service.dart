@@ -104,7 +104,7 @@ class TrackCreationService {
     }
 
     AppLogger.instance.info(
-      'TrackCreationService: track "${result.label}" created for '
+      event: 'TrackCreationService: track "${result.label}" created for '
       '${curriculum.storageKey} (profile=$profileId)',
     );
 
@@ -133,7 +133,7 @@ class TrackCreationService {
       await _activationService.activateForProfile(curriculum, profileId);
     } catch (_) {
       AppLogger.instance.debug(
-        'TrackCreationService: curriculum ${curriculum.storageKey} '
+        event: 'TrackCreationService: curriculum ${curriculum.storageKey} '
         'activation skipped (likely already active)',
       );
     }
@@ -219,12 +219,9 @@ class TrackCreationService {
       curriculumId: curriculum,
       trackId: trackId,
       targetPercent: goal.targetPercent,
-      targetDate: goal.targetDate,
+      paceTarget: goal.paceTarget,
       description: description,
       dateType: goal.dateType,
-      goalType: goal.goalType,
-      paceValue: goal.paceValue,
-      pacePeriod: goal.pacePeriod,
       paceGranularity: goal.paceGranularityKey,
     );
   }

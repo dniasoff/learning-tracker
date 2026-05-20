@@ -188,8 +188,8 @@ class BulkPriorCompletionService {
     final stages = await _stageRepository.getStagesForCurriculum(curriculumId);
     if (stages.isEmpty) {
       AppLogger.instance.warning(
-        'BulkPriorCompletionService: no stage definitions found for '
-        '$curriculumId — falling back to $fallback',
+        event: 'BulkPriorCompletionService: no stage definitions found for '
+            '$curriculumId — falling back to $fallback',
       );
       return fallback;
     }

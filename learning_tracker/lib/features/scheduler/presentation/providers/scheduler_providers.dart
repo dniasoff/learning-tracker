@@ -149,7 +149,7 @@ class SkippedTasks extends _$SkippedTasks {
         state = {};
       }
     } catch (e, st) {
-      AppLogger.instance.error('Failed to load skipped tasks', e, st);
+      AppLogger.instance.error(event: 'Failed to load skipped tasks', exception: e, stackTrace: st);
     }
   }
 

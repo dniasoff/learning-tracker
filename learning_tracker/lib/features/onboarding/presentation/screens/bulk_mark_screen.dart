@@ -310,7 +310,7 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
             curriculumId: widget.curriculumId,
           )
           .catchError((Object e, StackTrace st) {
-            AppLogger.instance.error('expunge failed', e, st);
+            AppLogger.instance.error(event: 'expunge failed', exception: e, stackTrace: st);
           });
     }
 
