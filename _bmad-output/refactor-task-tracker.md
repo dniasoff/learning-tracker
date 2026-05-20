@@ -28,7 +28,7 @@ Sync-point trigger tags: `[P1]` `[P2]` `[P3]` `[P4]` `[P5]` `[P6]` `[P7]`
 - [x] W1.3  (M, S1, done)    Split main.dart bootstrap into lib/app/bootstrap/{firebase, crashlytics, logger, analytics, seed, account, notifications}_bootstrap.dart
 - [x] W1.4  (S, S1, done)    Move device_restore_screen.dart + restore service + restore_providers → lib/app/restore/
 - [x] W1.5  (S, S1, done)    Move SyncLifecycleObserver orchestrator-path → lib/app/sync_runtime/ (legacy stays until Wave 2)
-- [ ] W1.6  (S, S1, pending)    Shrink main.dart to ~30 lines (bootstrap() then runApp(App())) — V5-A: main.dart is 102 lines/80 substantive; bootstrap orchestration still inline
+- [x] W1.6  (S, S1, done)    Shrink main.dart to ~30 lines (bootstrap() then runApp(App())) — V3-W6: main.dart now 35 lines; bootstrap() extracted to lib/app/bootstrap/bootstrap.dart (commit 6c9c0c0b)
 
 ### Phase 1b · Core relocations
 - [x] W1.7  (S, S1, done)    Move features/sync/domain/merge_rules.dart → core/sync/merge/; update 5 merger imports — closes H2
@@ -71,19 +71,19 @@ Sync-point trigger tags: `[P1]` `[P2]` `[P3]` `[P4]` `[P5]` `[P6]` `[P7]`
 ### Phase 2a · Tracks cluster merge (S4)
 - [x] W2.1  (M, S4, done)    Create features/tracks/ skeleton (data/, domain/, presentation/)
 - [x] W2.2  (M, S4, done)    Move features/track_setup/** → features/tracks/setup/
-- [ ] W2.3  (M, S4, pending)    Move features/learning_order/** → features/tracks/whole_curriculum_order/ — V5-A: new path exists but features/learning_order/ not deleted (8 source files remain)
-- [ ] W2.4  (M, S4, pending)    Move features/track_learning_order/** → features/tracks/track_order/ — V5-A: new path exists but features/track_learning_order/ not deleted (5 source files remain)
-- [ ] W2.5  (M, S4, pending)    Move features/stages/** → features/tracks/stages/ — V5-A: new path exists but features/stages/ not deleted (9 source files remain; 42 external imports still use old path)
+- [x] W2.3  (M, S4, done)    Move features/learning_order/** → features/tracks/whole_curriculum_order/ — V3-W6: old tree deleted + all importers updated (commit 43b6de92 + 688fa74c)
+- [x] W2.4  (M, S4, done)    Move features/track_learning_order/** → features/tracks/track_order/ — V3-W6: old tree deleted + all importers updated (commit 43b6de92 + 688fa74c)
+- [x] W2.5  (M, S4, done)    Move features/stages/** → features/tracks/stages/ — V3-W6: old tree deleted + all 42 importers updated; backward-compat decode improvements ported to canonical impl (commit 43b6de92 + 688fa74c)
 - [x] W2.6  (S, S4, done)    Add tracks/data/ layer placeholder — closes M6
-- [ ] W2.7  (S, S4, pending)    Pull curriculum_activation_service from settings → tracks — V5-A: tracks version exists (193 LOC) but settings/curriculum_activation_service.dart not deleted (161 LOC original remains)
+- [x] W2.7  (S, S4, done)    Pull curriculum_activation_service from settings → tracks — V3-W6: settings copy deleted; importers + providers updated to add required trackRepository arg (commit 43b6de92 + 688fa74c)
 - [x] W2.8  (M, S4, done)    Fill features/tracks/tracks.dart barrel with public surface
-- [ ] W2.9  (M, S4, pending)    Migrate all importers from deep paths → tracks.dart barrel `[P2]` — V5-A: 42 files still import features/stages/ deep paths, 16 import features/learning_order/, 4 import features/track_learning_order/ (old dirs not deleted so migration blocked)
+- [x] W2.9  (M, S4, done)    Migrate all importers from deep paths → tracks.dart barrel `[P2]` — V3-W6: all 62 stale imports updated to canonical paths; auto-resolved with W2.3/2.4/2.5 (commit 688fa74c)
 
 ### Phase 2b · Account cluster merge (S3)
 - [x] W2.10 (M, S3, done)    Create features/account/ skeleton
 - [x] W2.11 (M, S3, done)    Move features/auth/** → features/account/
 - [x] W2.12 (M, S3, done)    Move sign-up/magic-link/upgrade halves of onboarding/** → account/onboarding/ (track-setup half stays for W6)
-- [ ] W2.13 (M, S3, pending)    Move account_management_service from settings → account — V5-A: account version exists but settings/domain/services/account_management_service.dart not deleted (byte-identical duplicate, 144 lines)
+- [x] W2.13 (M, S3, done)    Move account_management_service from settings → account — V3-W6: settings copy deleted; all importers updated to features/account/ path (commit 43b6de92 + 688fa74c)
 - [x] W2.14 (S, S3, done)    Fill features/account/account.dart barrel
 - [x] W2.15 (M, S3, done)    Migrate importers `[P2]`
 
@@ -99,13 +99,13 @@ Sync-point trigger tags: `[P1]` `[P2]` `[P3]` `[P4]` `[P5]` `[P6]` `[P7]`
 - [x] W2.22 (S, S2, done)    Move core/streak/ → features/gamification/streak/
 - [x] W2.23 (S, S2, done)    Move core/services/{calendar_program_*, local_calendar_engine, daily_schedule_composer, cross_curriculum_aggregator} → sacred_calendar/ + scheduling/
 - [x] W2.24 (S, S2, done)    Move core/services/pin_service → features/profiles/
-- [ ] W2.25 (S, S2, pending)    Delete core/services/ (now empty) `[P2]` — V5-A: core/services/ still exists containing orphaned pin_service.g.dart artifact
+- [x] W2.25 (S, S2, done)    Delete core/services/ (now empty) `[P2]` — V3-W6: orphaned pin_service.g.dart deleted; core/services/ directory removed (commit 43b6de92)
 
 ### Phase 2e · Missing mergers (S2)
 - [x] W2.26 (M, S2, done)    Add EntityKind.learningOrder + LearningOrderMerger + router case + mergeRouterProvider entry — closes C3/H3
 - [x] W2.27 (M, S2, done)    Add 7 mergers + channels for SyncEngine-only collections (goals, learning_ledger, notif_settings, gamification_settings, ui_preferences, learning_order, profile_programs) — closes M1
 - [x] W2.28 (M, S2, done)    Add pullStreak step in pull_pipeline — closes M4
-- [ ] W2.29 (M, S2, pending)    Wire real stage_definitions/ push + pull + listener channel + _channelToKind — closes H4 — V5-A: push (push_pipeline_impl:98) + pull (pull_pipeline:146) wired; listener channel absent from FirestoreListenerSource.openChannels() and _channelToKind switch
+- [x] W2.29 (M, S2, done)    Wire real stage_definitions/ push + pull + listener channel + _channelToKind — closes H4 — V3-W6: listener channel added to FirestoreListenerSource + _channelToKind; regression tests added (commit 9513ac5b)
 - [x] W2.30 (S, S2, done)    Make _pullCollection throw on MergeOutcome.halt (after W2.26 lands)
 
 ### Phase 2f · Single-shot legacy sync deletion (S2)

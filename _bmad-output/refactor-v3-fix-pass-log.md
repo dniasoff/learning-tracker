@@ -269,3 +269,64 @@ No further action needed for C1/C2.
 | **Total** | **35** | **17** | **GREEN (5215 pass, 125 skip)** |
 
 **Commit:** e365a4c8 — `refactor(v2-r4-cr1): delete duplicate features/track_setup/ tree (canonical: features/tracks/setup/)`
+
+---
+
+## V3-W6 — V5 Demotion Cleanup
+
+**Date:** 2026-05-20
+**Agent:** V3-W6
+
+Resolved 9 V5 demotions (tasks incorrectly marked done in the refactor tracker because code was copied to canonical paths but originals were never deleted, leaving importers pointing at the old locations).
+
+### Tier 1 — copy-without-delete cleanup (W2.3, W2.4, W2.5, W2.7, W2.9, W2.13, W2.25)
+
+**Root cause:** Five feature trees and two service files were moved as copy+create, never deleted. After the deletions were committed in a prior pass (commits `6c9c0c0b` + `43b6de92`), ~60 lib/test files still imported from the old paths.
+
+**Old paths deleted (prior commits):**
+- `lib/features/learning_order/` (10 files) → canonical `features/tracks/whole_curriculum_order/`
+- `lib/features/track_learning_order/` (5 files) → canonical `features/tracks/track_order/`
+- `lib/features/stages/` (10 files) → canonical `features/tracks/stages/`
+- `lib/features/settings/domain/services/curriculum_activation_service.dart` → canonical `features/tracks/domain/services/`
+- `lib/features/settings/domain/services/account_management_service.dart` → canonical `features/account/domain/services/`
+- `lib/core/services/pin_service.g.dart`
+
+**Import fixes (this pass — commit 688fa74c):**
+- 33 lib files updated with corrected import paths
+- 26 test files updated with corrected import paths
+- `CurriculumActivationService` callers updated to pass required `trackRepository:` argument (canonical ctor has extra param the settings copy lacked)
+- `directives_ordering` violations fixed in all affected files
+- Backward-compat decode improvements ported to canonical `StageDefinitionRepositoryImpl` before deletion (accepts both `days_of_week`/`days` and `rolling_window_size`/`window_size`)
+
+### W1.6 — Slim main.dart to ~30 lines
+
+**Root cause:** main.dart was 102 lines; bootstrap logic was inline.
+
+**Fix (prior commit 6c9c0c0b):**
+- Extracted all bootstrap orchestration to `lib/app/bootstrap/bootstrap.dart`
+- `main.dart` reduced to 35 lines (WidgetsFlutterBinding + bootstrap() call + zone error handler)
+- Returns named record `BootstrapResult = ({ProviderContainer container, CrashlyticsService crashlytics})`
+
+### W2.29 — stage_definitions real-time listener
+
+**Root cause:** `FirestoreListenerSource.openChannels()` was missing the `stage_definitions` channel, so real-time changes pushed from another device only reached the local DB after a cold-start pull.
+
+**Fix (commit 9513ac5b):**
+- Added `'stage_definitions'` channel to `FirestoreListenerSource.openChannels()`
+- Added `'stage_definitions' => EntityKind.stageDefinition` to `SyncOrchestratorImpl._channelToKind`
+- Added regression tests in `test/core/sync/firestore_listener_source_test.dart` (3 tests)
+- Updated `epic_26_story_15_composite_strategy_test.dart` source-path assertion to use canonical `tracks/whole_curriculum_order/` path
+
+### Summary
+
+| Item | Description | CI status |
+|------|-------------|:---:|
+| W1.6 | main.dart slimmed to 35 lines | GREEN |
+| W2.3/2.4/2.5/2.7/2.13/2.25 | Deleted duplicate trees + import fixes | GREEN |
+| W2.9 | Auto-resolved by W2.3/2.4/2.5 (no importers file needed) | GREEN |
+| W2.29 | stage_definitions listener wired + regression tests | GREEN |
+| **Total** | **9 demotions resolved** | **GREEN (5218 pass, 125 skip)** |
+
+**Commits:**
+- `688fa74c` — `refactor(v5-w2-w9): fix all stale imports after duplicate-tree deletion`
+- `9513ac5b` — `feat(v5-w2.29): wire stage_definitions real-time listener channel`
