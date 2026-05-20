@@ -8,7 +8,7 @@
 // enforcement greps catch pre-existing violations from earlier stories
 // (e.g. EdgeInsets.only, firebase_storage outside core/sync — those
 // stories land in Epics 26–27). The test therefore validates that the
-// target *runs all 12 greps and prints file:line hits* rather than
+// target *runs all 17 greps and prints file:line hits* rather than
 // asserting a clean exit code. A separate live-clean assertion is
 // guarded with a skip note so it can be re-enabled once all
 // violations are resolved.
@@ -19,23 +19,34 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   // `flutter test` runs with cwd = the package dir (`learning_tracker/`).
-  // The repo root is one level up.
+  // The repo root is one level up; the Makefile lives in the package dir.
+  final packageDir = Directory.current.path;
   final repoRoot = Directory.current.parent.path;
 
   group('make audit (DNI-389 — Story 27.13 AC1)', () {
-    test('prints [N/12] headers for all 12 greps', () async {
+    test('prints N/total headers for all 17 greps', () async {
       final result = await Process.run('make', [
         'audit',
-      ], workingDirectory: repoRoot);
+      ], workingDirectory: packageDir);
       final stdout = result.stdout.toString();
-      // The target must attempt all 12 greps regardless of whether
-      // earlier ones fail, so every [N/12] header must appear.
-      for (var i = 1; i <= 12; i++) {
+      // The target must attempt all 17 greps regardless of whether
+      // earlier ones fail, so every N/total header must appear.
+      // Greps 1-15 are labelled N/15; greps 16-17 are labelled N/17.
+      for (var i = 1; i <= 15; i++) {
         expect(
           stdout,
-          contains('[$i/12]'),
+          contains('$i/15'),
           reason:
-              'make audit must run grep $i of 12.\n'
+              'make audit must run grep $i of 15.\n'
+              'stdout=$stdout\nstderr=${result.stderr}',
+        );
+      }
+      for (var i = 16; i <= 17; i++) {
+        expect(
+          stdout,
+          contains('$i/17'),
+          reason:
+              'make audit must run grep $i of 17.\n'
               'stdout=$stdout\nstderr=${result.stderr}',
         );
       }
@@ -44,7 +55,7 @@ void main() {
     test('prints file:line paths for violations', () async {
       final result = await Process.run('make', [
         'audit',
-      ], workingDirectory: repoRoot);
+      ], workingDirectory: packageDir);
       final stdout = result.stdout.toString();
       // When there are violations, each hit must contain a colon
       // indicating file:line format. We verify this if any violation
