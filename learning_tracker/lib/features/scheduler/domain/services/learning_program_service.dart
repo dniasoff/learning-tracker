@@ -1,7 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/database/seed/learning_program_seeds.dart';
-import 'package:learning_tracker/core/preferences/preference_providers.dart';
-import 'package:learning_tracker/features/scheduler/domain/services/calendar_program_registry.dart';
+import 'package:learning_tracker/core/labels/domain_term_labels.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'learning_program_service.g.dart';
@@ -41,18 +40,13 @@ class LearningProgramData {
 }
 
 /// Pure-string label for a [LearningProgramData] respecting the Hebrew Terms
-/// toggle. When Hebrew Terms is on, returns the Hebrew name from
-/// [CalendarProgramRegistry]; otherwise returns the program's English
-/// [LearningProgramData.displayName].
+/// toggle. Routes through [domainTermLabels] (the single point of access for
+/// the toggle in `lib/core/labels/`) so this scheduler service does not read
+/// `useHebrewTermsProvider` directly — see audit rule 7/15.
 String learningProgramLabelText(
   WidgetRef ref, {
   required LearningProgramData program,
-}) {
-  final useHebrew = ref.watch(useHebrewTermsProvider);
-  if (!useHebrew) return program.displayName;
-  final reg = CalendarProgramRegistry.byId(program.name);
-  return reg?.displayNameHe ?? program.displayName;
-}
+}) => domainTermLabels(ref).learningProgramLabel(program);
 
 /// Riverpod provider for [LearningProgramRepository].
 ///

@@ -272,13 +272,17 @@ audit: ## Run all 17 enforcement greps (NFR19) — exits non-zero on any violati
 	  FAIL=1; \
 	fi; \
 	echo "7/15 — No useHebrewTermsProvider read outside core/labels, core/preferences, or settings/onboarding screens"; \
+	# onboarding_profile_creation_step.dart is a writer (toggle persistence \
+	# during initial profile setup), not a reader — explicitly whitelisted. \
 	if grep -rn "useHebrewTermsProvider" lib/ --include="*.dart" \
 	    | grep -v "lib/core/" | grep -v "lib/features/settings/.*_screen\.dart" \
 	    | grep -v "lib/features/onboarding/presentation/screens/onboarding_screen\.dart" \
+	    | grep -v "lib/features/onboarding/presentation/steps/onboarding_profile_creation_step\.dart" \
 	    | grep -v "\.g\.dart" | grep -v ":[[:space:]]*//" | grep -q .; then \
 	  grep -rn "useHebrewTermsProvider" lib/ --include="*.dart" \
 	    | grep -v "lib/core/" | grep -v "lib/features/settings/.*_screen\.dart" \
 	    | grep -v "lib/features/onboarding/presentation/screens/onboarding_screen\.dart" \
+	    | grep -v "lib/features/onboarding/presentation/steps/onboarding_profile_creation_step\.dart" \
 	    | grep -v "\.g\.dart" | grep -v ":[[:space:]]*//"; \
 	  FAIL=1; \
 	fi; \

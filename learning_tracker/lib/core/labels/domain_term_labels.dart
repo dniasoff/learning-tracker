@@ -1,6 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/constants/hebrew_terms.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
+import 'package:learning_tracker/features/scheduler/domain/services/calendar_program_registry.dart';
+import 'package:learning_tracker/features/scheduler/domain/services/calendar_program_service.dart';
+import 'package:learning_tracker/features/scheduler/domain/services/learning_program_service.dart';
 
 /// Toggle-aware accessors for every Torah domain term controlled by the
 /// "Hebrew Terms" setting.
@@ -174,6 +177,44 @@ class _DomainTermLabels {
       if (HebrewTerms.stageNameMap.containsKey(storedName)) return storedName;
       return storedName; // Custom name — keep as-is.
     }
+  }
+
+  // ── Program labels (live, toggle-aware) ──────────────────────────────────
+  //
+  // The scheduler exposes two flavours of program objects:
+  //   - [LearningProgramData] — every learning program in the seed list.
+  //   - [CalendarProgramEntry] — today's entry from a calendar source.
+  //
+  // Both carry their own English/Hebrew display names; the toggle picks one.
+  // Reading the toggle directly from scheduler service code is forbidden by
+  // audit rule 7/15, so any feature reading a program label MUST route
+  // through here.
+
+  /// Returns the display name for a [LearningProgramData] respecting the
+  /// Hebrew Terms toggle.
+  ///
+  /// Hebrew ON → looks up the Hebrew name via
+  ///   [CalendarProgramRegistry.byId] using the program's `name` as id and
+  ///   falls back to [LearningProgramData.displayName] when the program
+  ///   isn't a registered calendar program (so a Hebrew form doesn't exist).
+  /// Hebrew OFF → returns the program's English [LearningProgramData.displayName].
+  String learningProgramLabel(LearningProgramData program) {
+    if (!_useHebrew) return program.displayName;
+    return CalendarProgramRegistry.byId(program.name)?.displayNameHe ??
+        program.displayName;
+  }
+
+  /// Returns the display name for a [CalendarProgramEntry] respecting the
+  /// Hebrew Terms toggle. Mirrors [learningProgramLabel] for entries.
+  String calendarEntryLabel(CalendarProgramEntry entry) =>
+      _useHebrew ? entry.displayNameHe : entry.displayNameEn;
+
+  /// Returns the today's-ref label for a [CalendarProgramEntry] respecting
+  /// the Hebrew Terms toggle. Falls back to the English
+  /// [CalendarProgramEntry.todayRef] when the Hebrew form is unavailable.
+  String calendarEntryTodayRef(CalendarProgramEntry entry) {
+    if (_useHebrew && entry.todayRefHe.isNotEmpty) return entry.todayRefHe;
+    return entry.todayRef;
   }
 
   /// Reverse of [HebrewTerms.stageNameMap]: Hebrew → English.
