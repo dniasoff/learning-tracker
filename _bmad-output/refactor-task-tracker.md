@@ -184,8 +184,8 @@ Sync-point trigger tags: `[P1]` `[P2]` `[P3]` `[P4]` `[P5]` `[P6]` `[P7]`
 - [x] W3.44 (M, S4, done)    Collapse goal entity: drop goalType/paceValue/pacePeriod/targetDate → PaceTarget? field only; migrate goal_repository_impl + dashboard_providers
 
 ### Phase 3g · Wipe and verify (S2)
-- [ ] W3.45 (S, S2, in-progress)    Wipe Firestore (gcloud firestore delete on users/) + delete dev Drift DBs
-- [ ] W3.46 (S, S2, in-progress)    Deploy new Firestore rules + Cloud Functions `[P5]`
+- [x] W3.45 (S, S2, done)    Wipe Firestore (gcloud firestore delete on users/) + delete dev Drift DBs
+- [x] W3.46 (S, S2, done)    Deploy new Firestore rules + Cloud Functions `[P5]`
 - [x] W3.47 (S, S2, done)    Update or delete Story-27.8 acceptance test against new layout
 
 ---

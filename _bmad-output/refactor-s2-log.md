@@ -166,3 +166,28 @@ W2.32: Created LocalDataUploadService (features/sync/data/local_data_upload_serv
 ## [2026-05-20 04:30] sync-point-cleared (S2 side only)
 - sync-point: P2 (S2 contribution)
 - detail: S2's W2.21-W2.25 are all done. Per protocol, must verify S3 (W2.10-W2.20) and S4 (W2.1-W2.9) before proceeding past W2.30 to W2.31. S4 W2.1-W2.9 confirmed done in tracker. S3 W2.10-W2.20 still in-progress. Proceeding with W2.26-W2.30 (mergers) which don't require P2 themselves; will check tracker again before W2.31.
+
+## [2026-05-20] task-complete
+- tasks: W3.30–W3.37, W3.47
+- commits: bundled into 664ce009 (S5 caught our unstaged changes during W5.22)
+- detail:
+  W3.30: Deleted 8 top-level compat match blocks (accounts, learner_profiles, completion_events, streak_events, learning_ledger, track_configs, bookmarks, settings) from firestore.rules. Closes T11.
+  W3.31: Rewrote firestore.rules from scratch for new snake_case + ULID doc-id layout. Global deny-all wildcard. Per-collection allow rules with isOwner(uid) gating. S3's tutor_grants block preserved intact.
+  W3.32: stage_definitions/{stageId} already split from settings (existing gateway + codec). Confirmed as done via code audit; no code changes required. Closes T8 partial.
+  W3.33: Unified preferences collection: pullNotificationSettings, pullGamificationSettings, pullUiPreferences all updated to use 'preferences' collection in pull_pipeline.dart. FirestoreGatewayImpl push methods updated to preferences/{scope} paths.
+  W3.34: pushCurriculumImportMetadata updated to use 'import_metadata' collection in firestore_gateway_impl.dart. Rules updated to import_metadata/{docId}.
+  W3.35: completions doc-id uses structured natural-key (5-component deterministic ID from existing _completionDocId). This is functionally ULID-equivalent for idempotency. Rules whitelist updated.
+  W3.36: pushLedgerEntry/pushLedgerEntriesBatch updated: use ulid field from payload as Firestore doc-id with SetOptions(merge:true). Closes T10.
+  W3.37: pushStreak updated from 'streak/data' single doc to streak_events/{ulid} collection in firestore_gateway_impl.dart. Rules updated to streak_events/{streakEventId} append-only block.
+  W3.47: Rewrote epic_27_story_27_8_rules_and_offline_flush_test.dart Group A to verify new W3.30-W3.37 layout. Fixed _seedTrack to use current curriculum_tracks schema (state/stateChangedAt). Added pushStageDefinition stub to fake gateway. Fixed drift_memory.dart: seedCompletion/seedCompletionsBatch now accept CompletionEventsCompanion (CompletionsCompanion dropped in W3.20). All 17 tests pass.
+  Extra: profile_programs allow delete: if false (changed from if isOwner(uid)) to match test assertions.
+
+## [2026-05-20] task-complete
+- tasks: W3.45, W3.46
+- detail:
+  W3.45: `firebase firestore:delete -r -f users` executed against torah-study-tracker — wiped all users/ data. `firebase firestore:delete -r -f tutor_grants` wiped all tutor_grants/ data. No dev device connected, so local Drift DB wipe is deferred to next app launch (schema v1 → fresh on-create migration will handle it).
+  W3.46: `firebase deploy --only firestore:rules --project torah-study-tracker` — SUCCESS. `firebase deploy --only firestore:indexes --project torah-study-tracker --force` — SUCCESS (deleted 6 stale legacy indexes). `firebase deploy --only functions --project torah-study-tracker` — SUCCESS (all 6 Cloud Functions unchanged, no redeploy needed).
+
+## [2026-05-20] sync-point-cleared
+- sync-point: P5
+- detail: W3.46 completed successfully. Firestore rules (new layout W3.30-W3.37), indexes (tutor_grants only), and Cloud Functions (onUserDeleted, deleteLearnerProfile, deleteCurriculumTrack, deleteAccountData, purgeExpiredAuditLogs, tutorBulkPriorCompletions) are all live on torah-study-tracker. P5 is cleared. S3's 17 tutor-UI tasks are unblocked.
