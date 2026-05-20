@@ -10,10 +10,12 @@ void main() {
   // =========================================================================
 
   group('DuplicateEmailException', () {
-    test('toString contains email', () {
+    test('toString contains class name but NOT raw email (log-safe)', () {
+      // The raw email is intentionally excluded from toString() for logger
+      // safety — callers that need it read ex.email directly.
       const ex = DuplicateEmailException('alice@example.com');
-      expect(ex.toString(), contains('alice@example.com'));
       expect(ex.toString(), contains('DuplicateEmailException'));
+      expect(ex.toString(), isNot(contains('alice@example.com')));
     });
 
     test('is an Exception', () {

@@ -7,10 +7,24 @@ import 'package:learning_tracker/features/account/domain/services/password_hashe
 /// Thrown when a local-born signup is attempted with an email that
 /// already has a local-born row. Distinct from a Firebase-level
 /// collision (handled by the upgrade flow in 20.9).
+///
+/// The raw email is stored in [email] for callers that need it (e.g. to
+/// pre-fill a sign-in form), but it is NOT included in [message] or
+/// [toString] — those paths are safe to pass to loggers.
 class DuplicateEmailException extends ConflictException {
-  const DuplicateEmailException(this.email)
-    : super('$email is already registered');
+  const DuplicateEmailException(this.email) : super('Email already in use');
+
+  /// The conflicting email address.
+  ///
+  /// Do NOT log this field directly. Use [redactedEmail] for log contexts.
   final String email;
+
+  /// A log-safe representation of the email: "***@<domain>".
+  String get redactedEmail {
+    final atIndex = email.indexOf('@');
+    if (atIndex < 0) return '***';
+    return '***${email.substring(atIndex)}';
+  }
 }
 
 /// Thrown when sign-in fails because the email is unknown *or* the
