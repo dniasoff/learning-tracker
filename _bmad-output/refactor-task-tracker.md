@@ -218,7 +218,7 @@ Sync-point trigger tags: `[P1]` `[P2]` `[P3]` `[P4]` `[P5]` `[P6]` `[P7]`
 - [ ] W4.19 (M, S5, in-progress)    learning_order_repository_impl.saveOrder:91-129 → SaveLearningOrderUseCase
 - [x] W4.20 (S, S5, done)    parent_dashboard_aggregator._computePaceStatus dup → reuse ComputePaceStatusUseCase
 - [ ] W4.21 (M, S5, in-progress)    notification_providers.dart:22-46 → ReminderPreferences + NotificationPreferencesRepository
-- [ ] W4.22 (S, S5, in-progress)    track_learning_order_repository_impl._buildMasechtosIndex → MasechtaOrderingPolicy (already W4.15)
+- [x] W4.22 (S, S5, done)    track_learning_order_repository_impl._buildMasechtosIndex → MasechtaOrderingPolicy (already W4.15)
 - [ ] W4.23 (S, S5, in-progress)    profile_providers.dart SelectedProfileId → ProfileSession aggregate in profiles/domain/
 - [ ] W4.24 (S, S5, in-progress)    dashboard_providers.dart side-effect-in-read-provider → write-path repository method
 - [x] W4.25 (M, S4, done)    core/learning/completion_writer.commitBatch/commit → sealed BatchPlan + _classifyBatch/_applyBatchPlan/_resolveResults — **B1 credit policy at batch classification**

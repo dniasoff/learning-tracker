@@ -1,6 +1,7 @@
 import 'package:learning_tracker/core/sync/codec/firestore_codec.dart';
 import 'package:learning_tracker/core/sync/merge/entity_merger.dart';
 import 'package:learning_tracker/core/sync/merge/merge_rules.dart';
+import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// LWW merger for the `notification_settings/preferences` Firestore document
@@ -90,7 +91,7 @@ class NotificationSettingsMerger implements EntityMerger {
 
     final stamp =
         remoteUpdatedAt?.millisecondsSinceEpoch ??
-        DateTime.now().toUtc().millisecondsSinceEpoch;
+        DateTimeFactory.nowUtc().millisecondsSinceEpoch;
     await prefs.setInt(_updatedAtMsKey, stamp);
   }
 

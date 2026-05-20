@@ -26,6 +26,7 @@
 // implementation (TutorAuditLogFirestoreWriter) lives in the data layer
 // and writes to tutor_grants/{grantId}/audit_log/{entryId}.
 
+import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/tutor_audit_log_entry.dart';
 
 /// Repository interface for writing audit log entries.
@@ -189,8 +190,7 @@ class TutorAuditLogWriter {
     // ULID: use timestamp + random suffix. In production, replace this with
     // a proper ULID library (e.g. package:ulid). The format is:
     //   yyyyMMddHHmmssSSS + 10 random hex chars (26 chars total)
-    // For now, use DateTime.now() as a sortable key — close enough for v1.
-    final now = DateTime.now().toUtc();
+    final now = DateTimeFactory.nowUtc();
     final entryId =
         '${now.millisecondsSinceEpoch.toRadixString(16).padLeft(16, '0')}'
         '_${action.toJson()}';

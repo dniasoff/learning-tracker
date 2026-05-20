@@ -2,6 +2,7 @@ import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/sync/codec/firestore_codec.dart';
 import 'package:learning_tracker/core/sync/merge/entity_merger.dart';
 import 'package:learning_tracker/core/sync/merge/merge_rules.dart';
+import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Callback used by [GamificationSettingsMerger] to merge the
@@ -9,10 +10,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// `features/gamification/` to avoid a core→features import violation.
 ///
 /// Receives the raw JSON sub-map and the active [profileId].
-typedef RewardSettingsMergeDelegate = Future<void> Function(
-  Map<String, dynamic>? remote,
-  int profileId,
-);
+typedef RewardSettingsMergeDelegate =
+    Future<void> Function(Map<String, dynamic>? remote, int profileId);
 
 /// LWW merger for the `gamification_settings/config` Firestore document
 /// (W2.27 / closes M1).
@@ -109,7 +108,7 @@ class GamificationSettingsMerger implements EntityMerger {
 
     final stamp =
         remoteUpdatedAt?.millisecondsSinceEpoch ??
-        DateTime.now().toUtc().millisecondsSinceEpoch;
+        DateTimeFactory.nowUtc().millisecondsSinceEpoch;
     await prefs.setInt(_timestampKey(profileId), stamp);
   }
 

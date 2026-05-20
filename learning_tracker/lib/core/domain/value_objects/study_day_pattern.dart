@@ -19,11 +19,8 @@ enum DayKind {
   static DayKind fromStorageKey(String key) {
     return DayKind.values.firstWhere(
       (e) => e.storageKey == key,
-      orElse: () => throw ArgumentError.value(
-        key,
-        'key',
-        'Unknown DayKind storage key.',
-      ),
+      orElse: () =>
+          throw ArgumentError.value(key, 'key', 'Unknown DayKind storage key.'),
     );
   }
 }
@@ -52,14 +49,15 @@ enum DayKind {
 ///   7: DayKind.review,  // Sunday
 /// });
 ///
-/// final kind = pattern.dayKindFor(DateTime.now().weekday);
+/// final kind = pattern.dayKindFor(clock.today().weekday);
 /// ```
 class StudyDayPattern {
   /// Creates a [StudyDayPattern] from [entries] (weekday 1..7 → [DayKind]).
   ///
   /// All entries must use weekday values 1..7; at least one must be
   /// [DayKind.study]. Throws [ArgumentError] on violation.
-  StudyDayPattern(Map<int, DayKind> entries) : _entries = Map.unmodifiable(entries) {
+  StudyDayPattern(Map<int, DayKind> entries)
+    : _entries = Map.unmodifiable(entries) {
     for (final key in entries.keys) {
       if (key < 1 || key > 7) {
         throw ArgumentError.value(
@@ -83,9 +81,8 @@ class StudyDayPattern {
   // ---------------------------------------------------------------------------
 
   /// The default pattern: all 7 days are study days.
-  factory StudyDayPattern.allStudy() => StudyDayPattern({
-    for (var i = 1; i <= 7; i++) i: DayKind.study,
-  });
+  factory StudyDayPattern.allStudy() =>
+      StudyDayPattern({for (var i = 1; i <= 7; i++) i: DayKind.study});
 
   /// Convenience pattern: Mon–Fri study, Sat–Sun review.
   factory StudyDayPattern.weekdaysStudy() => StudyDayPattern({
@@ -142,12 +139,9 @@ class StudyDayPattern {
 
   @override
   String toString() {
-    final days = _entries.entries
-        .toList()
+    final days = _entries.entries.toList()
       ..sort((a, b) => a.key.compareTo(b.key));
-    final repr = days
-        .map((e) => '${e.key}:${e.value.name}')
-        .join(', ');
+    final repr = days.map((e) => '${e.key}:${e.value.name}').join(', ');
     return 'StudyDayPattern{$repr}';
   }
 }
