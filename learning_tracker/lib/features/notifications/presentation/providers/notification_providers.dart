@@ -7,6 +7,9 @@ import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/sync/providers/outbox_providers.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/notifications/data/services/sacred_window_repository.dart';
+import 'package:learning_tracker/features/notifications/domain/models/reminder_preferences.dart';
+import 'package:learning_tracker/features/notifications/domain/repositories/notification_preferences_repository.dart'
+    show NotificationPreferencesRepository;
 import 'package:learning_tracker/features/notifications/domain/services/notification_scheduler.dart';
 import 'package:learning_tracker/features/notifications/domain/services/notification_service.dart';
 import 'package:learning_tracker/features/notifications/domain/services/streak_alert_service.dart';
@@ -20,29 +23,18 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 part 'notification_providers.g.dart';
 
-/// SharedPreferences keys for reminder settings.
-const String _reminderEnabledKey = 'daily_reminder_enabled';
-const String _reminderHourKey = 'daily_reminder_hour';
-const String _reminderMinuteKey = 'daily_reminder_minute';
-
-/// SharedPreferences keys for streak alert settings.
-const String _streakAlertEnabledKey = 'streak_alert_enabled';
-const String _streakAlertHourKey = 'streak_alert_hour';
-const String _streakAlertMinuteKey = 'streak_alert_minute';
-
-/// SharedPreferences keys for reward notification settings.
-const String _rewardNotificationEnabledKey = 'reward_notification_enabled';
-
-const String _notificationSettingsUpdatedAtMsKey =
-    'notification_settings_updated_at_ms';
+// ---------------------------------------------------------------------------
+// Defaults — re-exported from [ReminderPreferences] for backward compat.
+// ---------------------------------------------------------------------------
 
 /// Default reminder time: 7:00 PM.
-const int defaultReminderHour = 19;
-const int defaultReminderMinute = 0;
+const int defaultReminderHour = ReminderPreferences.defaultReminderHour;
+const int defaultReminderMinute = ReminderPreferences.defaultReminderMinute;
 
 /// Default streak alert time: 9:00 PM.
-const int defaultStreakAlertHour = 21;
-const int defaultStreakAlertMinute = 0;
+const int defaultStreakAlertHour = ReminderPreferences.defaultStreakAlertHour;
+const int defaultStreakAlertMinute =
+    ReminderPreferences.defaultStreakAlertMinute;
 
 /// Provides the [NotificationService] singleton.
 @Riverpod(keepAlive: true)
@@ -62,13 +54,18 @@ class ReminderEnabled extends _$ReminderEnabled {
   Future<void> _loadFromPrefs() async {
     final prefs = await SharedPreferences.getInstance();
     if (!ref.mounted) return;
-    state = prefs.getBool(_reminderEnabledKey) ?? true;
+    state =
+        prefs.getBool(NotificationPreferencesRepository.reminderEnabledKey) ??
+        true;
   }
 
   Future<void> toggle() async {
     state = !state;
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(_reminderEnabledKey, state);
+    await prefs.setBool(
+      NotificationPreferencesRepository.reminderEnabledKey,
+      state,
+    );
   }
 }
 
@@ -87,16 +84,26 @@ class ReminderTime extends _$ReminderTime {
   Future<void> _loadFromPrefs() async {
     final prefs = await SharedPreferences.getInstance();
     if (!ref.mounted) return;
-    final hour = prefs.getInt(_reminderHourKey) ?? defaultReminderHour;
-    final minute = prefs.getInt(_reminderMinuteKey) ?? defaultReminderMinute;
+    final hour =
+        prefs.getInt(NotificationPreferencesRepository.reminderHourKey) ??
+        defaultReminderHour;
+    final minute =
+        prefs.getInt(NotificationPreferencesRepository.reminderMinuteKey) ??
+        defaultReminderMinute;
     state = TimeOfDay(hour: hour, minute: minute);
   }
 
   Future<void> setTime(TimeOfDay time) async {
     state = time;
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setInt(_reminderHourKey, time.hour);
-    await prefs.setInt(_reminderMinuteKey, time.minute);
+    await prefs.setInt(
+      NotificationPreferencesRepository.reminderHourKey,
+      time.hour,
+    );
+    await prefs.setInt(
+      NotificationPreferencesRepository.reminderMinuteKey,
+      time.minute,
+    );
   }
 }
 
@@ -112,13 +119,20 @@ class StreakAlertEnabled extends _$StreakAlertEnabled {
   Future<void> _loadFromPrefs() async {
     final prefs = await SharedPreferences.getInstance();
     if (!ref.mounted) return;
-    state = prefs.getBool(_streakAlertEnabledKey) ?? true;
+    state =
+        prefs.getBool(
+          NotificationPreferencesRepository.streakAlertEnabledKey,
+        ) ??
+        true;
   }
 
   Future<void> toggle() async {
     state = !state;
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(_streakAlertEnabledKey, state);
+    await prefs.setBool(
+      NotificationPreferencesRepository.streakAlertEnabledKey,
+      state,
+    );
   }
 }
 
@@ -137,17 +151,26 @@ class StreakAlertTime extends _$StreakAlertTime {
   Future<void> _loadFromPrefs() async {
     final prefs = await SharedPreferences.getInstance();
     if (!ref.mounted) return;
-    final hour = prefs.getInt(_streakAlertHourKey) ?? defaultStreakAlertHour;
+    final hour =
+        prefs.getInt(NotificationPreferencesRepository.streakAlertHourKey) ??
+        defaultStreakAlertHour;
     final minute =
-        prefs.getInt(_streakAlertMinuteKey) ?? defaultStreakAlertMinute;
+        prefs.getInt(NotificationPreferencesRepository.streakAlertMinuteKey) ??
+        defaultStreakAlertMinute;
     state = TimeOfDay(hour: hour, minute: minute);
   }
 
   Future<void> setTime(TimeOfDay time) async {
     state = time;
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setInt(_streakAlertHourKey, time.hour);
-    await prefs.setInt(_streakAlertMinuteKey, time.minute);
+    await prefs.setInt(
+      NotificationPreferencesRepository.streakAlertHourKey,
+      time.hour,
+    );
+    await prefs.setInt(
+      NotificationPreferencesRepository.streakAlertMinuteKey,
+      time.minute,
+    );
   }
 }
 
@@ -163,13 +186,20 @@ class RewardNotificationEnabled extends _$RewardNotificationEnabled {
   Future<void> _loadFromPrefs() async {
     final prefs = await SharedPreferences.getInstance();
     if (!ref.mounted) return;
-    state = prefs.getBool(_rewardNotificationEnabledKey) ?? true;
+    state =
+        prefs.getBool(
+          NotificationPreferencesRepository.rewardNotificationEnabledKey,
+        ) ??
+        true;
   }
 
   Future<void> toggle() async {
     state = !state;
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(_rewardNotificationEnabledKey, state);
+    await prefs.setBool(
+      NotificationPreferencesRepository.rewardNotificationEnabledKey,
+      state,
+    );
   }
 }
 
@@ -192,25 +222,51 @@ Future<void> _persistNotificationSettingsToCloud(
 
   final profileId = ref.read(activeProfileIdProvider);
   final updatedAtMs = DateTimeFactory.nowUtc().millisecondsSinceEpoch;
-  await prefs.setInt(_notificationSettingsUpdatedAtMsKey, updatedAtMs);
+  await prefs.setInt(
+    NotificationPreferencesRepository.notificationSettingsUpdatedAtMsKey,
+    updatedAtMs,
+  );
 
   await gateway.pushNotificationSettings(
     profileId: profileId,
     data: {
       'schema_version': 1,
       'daily_reminder': {
-        'enabled': prefs.getBool(_reminderEnabledKey) ?? true,
-        'hour': prefs.getInt(_reminderHourKey) ?? defaultReminderHour,
-        'minute': prefs.getInt(_reminderMinuteKey) ?? defaultReminderMinute,
+        'enabled':
+            prefs.getBool(
+              NotificationPreferencesRepository.reminderEnabledKey,
+            ) ??
+            true,
+        'hour':
+            prefs.getInt(NotificationPreferencesRepository.reminderHourKey) ??
+            defaultReminderHour,
+        'minute':
+            prefs.getInt(NotificationPreferencesRepository.reminderMinuteKey) ??
+            defaultReminderMinute,
       },
       'streak_alert': {
-        'enabled': prefs.getBool(_streakAlertEnabledKey) ?? true,
-        'hour': prefs.getInt(_streakAlertHourKey) ?? defaultStreakAlertHour,
+        'enabled':
+            prefs.getBool(
+              NotificationPreferencesRepository.streakAlertEnabledKey,
+            ) ??
+            true,
+        'hour':
+            prefs.getInt(
+              NotificationPreferencesRepository.streakAlertHourKey,
+            ) ??
+            defaultStreakAlertHour,
         'minute':
-            prefs.getInt(_streakAlertMinuteKey) ?? defaultStreakAlertMinute,
+            prefs.getInt(
+              NotificationPreferencesRepository.streakAlertMinuteKey,
+            ) ??
+            defaultStreakAlertMinute,
       },
       'reward_notifications': {
-        'enabled': prefs.getBool(_rewardNotificationEnabledKey) ?? true,
+        'enabled':
+            prefs.getBool(
+              NotificationPreferencesRepository.rewardNotificationEnabledKey,
+            ) ??
+            true,
       },
       'updated_at': DateTime.fromMillisecondsSinceEpoch(
         updatedAtMs,
