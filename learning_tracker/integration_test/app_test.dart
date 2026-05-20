@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
+import 'package:learning_tracker/app/learning_tracker_app.dart';
 import 'package:learning_tracker/main.dart' as app;
 
 /// Integration test suite for Torah Learning Tracker app
@@ -17,7 +18,7 @@ void main() {
 
       // Verify app loaded successfully
       // Note: This will evolve as we implement the actual UI
-      expect(find.byType(app.LearningTrackerApp), findsOneWidget);
+      expect(find.byType(LearningTrackerApp), findsOneWidget);
     });
   });
 

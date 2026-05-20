@@ -76,7 +76,7 @@ Future<void> _insertCompletion(
 }) async {
   await seedCompletion(
     db,
-    CompletionsCompanion.insert(
+    CompletionEventsCompanion.insert(
       profileId: profileId,
       curriculumId: curriculumId,
       sefariaRef: sefariaRef,

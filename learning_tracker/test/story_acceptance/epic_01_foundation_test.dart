@@ -56,7 +56,7 @@ Future<int> _insertTrack(UserDatabase db) async {
         CurriculumTracksCompanion.insert(
           profileId: 1,
           curriculumId: 'mishnayos',
-          trackType: 'personal',
+          stateChangedAt: DateTime.now(),
           activatedAt: DateTime.now(),
         ),
       );
@@ -115,10 +115,10 @@ void main() {
       expect(db.stageDao, isNotNull);
       expect(db.bookmarkDao, isNotNull);
       expect(db.learningOrderDao, isNotNull);
-      expect(db.streakDao, isNotNull);
+      expect(db.streakEventDao, isNotNull);
       expect(db.trackDao, isNotNull);
       expect(db.userProfileDao, isNotNull);
-      expect(db.syncQueueDao, isNotNull);
+      // syncQueueDao removed in W2.37 (offline_queue deleted)
       expect(db.textDownloadStatusDao, isNotNull);
       expect(db.learningLedgerDao, isNotNull);
     });
@@ -126,14 +126,14 @@ void main() {
     test('basic CRUD round-trip on completions', () async {
       final id = await seedCompletion(
         db,
-        CompletionsCompanion.insert(
+        CompletionEventsCompanion.insert(
           profileId: 1,
           curriculumId: CurriculumId.mishnayos.storageKey,
           sefariaRef: 'Mishnah Berachos 1.1',
           stageId: 1,
           trackType: TrackType.personal.storageKey,
-          trackId: trackId,
-          completedAt: DateTime.now(),
+          trackId: Value(trackId),
+          eventTimestamp: DateTime.now(),
           points: const Value(10),
         ),
       );

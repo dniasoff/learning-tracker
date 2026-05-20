@@ -75,6 +75,29 @@ Future<void> seedProfile(UserDatabase db) async {
       );
 }
 
+/// Seeds a minimal curriculum track row for [profileId] + [curriculumId].
+///
+/// Replaces the old pattern of constructing [CurriculumTracksCompanion.insert]
+/// inline in each test. W3.22/W3.28 removed `trackType` and replaced
+/// `isActive`/`deletedAt` with `state`+`stateChangedAt`.
+///
+/// Returns the newly inserted track id.
+Future<int> seedTrack(
+  UserDatabase db, {
+  required int profileId,
+  String curriculumId = 'mishnayos',
+  DateTime? activatedAt,
+}) async {
+  return db.into(db.curriculumTracks).insert(
+    CurriculumTracksCompanion.insert(
+      profileId: profileId,
+      curriculumId: curriculumId,
+      stateChangedAt: activatedAt ?? DateTimeFactory.nowUtc(),
+      activatedAt: activatedAt ?? DateTimeFactory.nowUtc(),
+    ),
+  );
+}
+
 /// Seeds a learner profile with id = 0 into [db].
 ///
 /// Required by code that hardcodes profileId = 0 (e.g.

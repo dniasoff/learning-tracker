@@ -75,7 +75,7 @@ void main() {
     }) async {
       await seedCompletion(
         db,
-        CompletionsCompanion.insert(
+        CompletionEventsCompanion.insert(
           profileId: 1,
           curriculumId: curriculumId,
           sefariaRef: sefariaRef,
@@ -216,7 +216,7 @@ void main() {
     test('streak calendar returns active dates for range', () async {
       await seedCompletion(
         db,
-        CompletionsCompanion.insert(
+        CompletionEventsCompanion.insert(
           profileId: 1,
           curriculumId: 'test',
           sefariaRef: 'Genesis.1',
@@ -228,7 +228,7 @@ void main() {
       );
       await seedCompletion(
         db,
-        CompletionsCompanion.insert(
+        CompletionEventsCompanion.insert(
           profileId: 1,
           curriculumId: 'test',
           sefariaRef: 'Genesis.2',

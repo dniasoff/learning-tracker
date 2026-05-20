@@ -469,7 +469,7 @@ void main() {
               await db.outboxDao.insertOutboxRow(_completionRow());
               await db
                   .into(db.streaks)
-                  .insert(StreaksCompanion.insert(profileId: 1));
+                  .insert(StreakEventsCompanion.insert(profileId: 1));
             });
 
             final outboxRows = await db.select(db.outbox).get();
@@ -1810,31 +1810,31 @@ void main() {
       test(
         'BaseDao<T> mixin provides count/exists/getById/getByProfile',
         () async {
-          await db.streakDao.upsertStreakByProfile(
+          await db.streakEventDao.upsertStreakByProfile(
             1,
-            StreaksCompanion.insert(
+            StreakEventsCompanion.insert(
               profileId: 1,
               currentStreak: const Value(5),
             ),
           );
-          await db.streakDao.upsertStreakByProfile(
+          await db.streakEventDao.upsertStreakByProfile(
             2,
-            StreaksCompanion.insert(
+            StreakEventsCompanion.insert(
               profileId: 2,
               currentStreak: const Value(3),
             ),
           );
 
-          expect(await db.streakDao.count(profileId: 1), 1);
-          expect(await db.streakDao.exists(profileId: 1), isTrue);
-          expect(await db.streakDao.count(profileId: 99), 0);
-          expect(await db.streakDao.exists(profileId: 99), isFalse);
+          expect(await db.streakEventDao.count(profileId: 1), 1);
+          expect(await db.streakEventDao.exists(profileId: 1), isTrue);
+          expect(await db.streakEventDao.count(profileId: 99), 0);
+          expect(await db.streakEventDao.exists(profileId: 99), isFalse);
 
-          final byProfile = await db.streakDao.getByProfile(1);
+          final byProfile = await db.streakEventDao.getByProfile(1);
           expect(byProfile, hasLength(1));
           expect(byProfile.first.profileId, 1);
 
-          final byId = await db.streakDao.getById(byProfile.first.id);
+          final byId = await db.streakEventDao.getById(byProfile.first.id);
           expect(byId, isNotNull);
           expect(byId!.profileId, 1);
         },
@@ -1914,7 +1914,7 @@ void main() {
             );
         await seedCompletion(
           db,
-          CompletionsCompanion.insert(
+          CompletionEventsCompanion.insert(
             profileId: 1,
             curriculumId: 'mishnayos',
             sefariaRef: 'r1',
@@ -1926,7 +1926,7 @@ void main() {
         );
         await seedCompletion(
           db,
-          CompletionsCompanion.insert(
+          CompletionEventsCompanion.insert(
             profileId: 2,
             curriculumId: 'mishnayos',
             sefariaRef: 'r2',

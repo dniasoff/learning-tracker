@@ -16,13 +16,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/features/notifications/data/services/sacred_window_repository.dart';
 import 'package:learning_tracker/features/notifications/domain/services/notification_scheduler.dart';
-import 'package:learning_tracker/features/notifications/domain/services/notification_service.dart';
+import 'package:learning_tracker/features/notifications/domain/services/notification_gateway.dart';
 import 'package:learning_tracker/features/sacred_time/domain/models/sacred_location.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz_lib;
 
-class MockNotificationService extends Mock implements NotificationService {}
+class MockNotificationGateway extends Mock implements NotificationGateway {}
 
 void main() {
   // Lakewood, NJ: 40.0959° N, 74.2222° W — a common reference location.
@@ -45,12 +45,12 @@ void main() {
   });
 
   group('Story 26.24 — Sacred Time Shabbos suppression', () {
-    late MockNotificationService mockService;
+    late MockNotificationGateway mockService;
     late SacredWindowRepository repository;
     late NotificationScheduler scheduler;
 
     setUp(() {
-      mockService = MockNotificationService();
+      mockService = MockNotificationGateway();
       repository = SacredWindowRepository();
       scheduler = NotificationScheduler(
         service: mockService,

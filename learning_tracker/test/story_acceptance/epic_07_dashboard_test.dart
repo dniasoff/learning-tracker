@@ -260,12 +260,12 @@ void main() {
 
     test('streak data is accessible from database for dashboard', () async {
       // Initially no streak
-      final initial = await db.streakDao.getStreak();
+      final initial = await db.streakEventDao.getStreak();
       expect(initial, isNull);
 
       // Insert a streak record
-      await db.streakDao.upsertStreak(
-        StreaksCompanion.insert(
+      await db.streakEventDao.upsertStreak(
+        StreakEventsCompanion.insert(
           profileId: 1,
           currentStreak: const Value(5),
           maxStreak: const Value(12),
@@ -273,7 +273,7 @@ void main() {
         ),
       );
 
-      final streak = await db.streakDao.getStreak();
+      final streak = await db.streakEventDao.getStreak();
       expect(streak, isNotNull);
       expect(streak!.currentStreak, equals(5));
       expect(streak.maxStreak, equals(12));
@@ -282,7 +282,7 @@ void main() {
     test('global points total sums across all completions', () async {
       await seedCompletion(
         db,
-        CompletionsCompanion.insert(
+        CompletionEventsCompanion.insert(
           profileId: 1,
           curriculumId: 'mishnayos',
           sefariaRef: 'ref1',
@@ -295,7 +295,7 @@ void main() {
       );
       await seedCompletion(
         db,
-        CompletionsCompanion.insert(
+        CompletionEventsCompanion.insert(
           profileId: 1,
           curriculumId: 'bavli',
           sefariaRef: 'ref2',
@@ -308,7 +308,7 @@ void main() {
       );
       await seedCompletion(
         db,
-        CompletionsCompanion.insert(
+        CompletionEventsCompanion.insert(
           profileId: 1,
           curriculumId: 'mishnayos',
           sefariaRef: 'ref3',
@@ -378,7 +378,7 @@ void main() {
         // Insert completions for two curricula at different times
         await seedCompletion(
           db,
-          CompletionsCompanion.insert(
+          CompletionEventsCompanion.insert(
             profileId: 1,
             curriculumId: 'mishnayos',
             sefariaRef: 'r1',
@@ -390,7 +390,7 @@ void main() {
         );
         await seedCompletion(
           db,
-          CompletionsCompanion.insert(
+          CompletionEventsCompanion.insert(
             profileId: 1,
             curriculumId: 'bavli',
             sefariaRef: 'r2',
@@ -624,7 +624,7 @@ void main() {
     }) async {
       final id = await seedCompletion(
         db,
-        CompletionsCompanion.insert(
+        CompletionEventsCompanion.insert(
           profileId: 1,
           curriculumId: 'mishnayos',
           sefariaRef: sefariaRef,
@@ -869,7 +869,7 @@ void main() {
       for (var i = 1; i <= 7; i++) {
         await seedCompletion(
           db,
-          CompletionsCompanion.insert(
+          CompletionEventsCompanion.insert(
             profileId: 1,
             curriculumId: 'mishnayos',
             sefariaRef: 'ref_$i',
@@ -945,7 +945,7 @@ void main() {
     }) async {
       await seedCompletion(
         db,
-        CompletionsCompanion.insert(
+        CompletionEventsCompanion.insert(
           profileId: 1,
           curriculumId: curriculumId,
           sefariaRef: 'ref_${++refCounter}',

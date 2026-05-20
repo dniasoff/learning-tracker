@@ -1,10 +1,10 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/core/network/connectivity_service.dart';
+import 'package:learning_tracker/core/network/connectivity_gateway.dart';
 
 void main() {
-  group('ConnectivityService', () {
+  group('ConnectivityGateway', () {
     test('isOnline and isOffline return opposite values', () async {
-      final service = ConnectivityService();
+      final service = ConnectivityGateway();
 
       // We can't guarantee network in test, but we can verify
       // that isOnline and isOffline are consistent.

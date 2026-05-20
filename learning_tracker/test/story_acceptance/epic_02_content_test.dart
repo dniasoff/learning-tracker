@@ -402,7 +402,7 @@ void main() {
         // Add completion and bookmark for Bavli
         await seedCompletion(
           db,
-          CompletionsCompanion.insert(
+          CompletionEventsCompanion.insert(
             profileId: 1,
             curriculumId: CurriculumId.bavli.storageKey,
             sefariaRef: 'Berakhot.2a',
@@ -449,7 +449,7 @@ void main() {
         // Add data
         await seedCompletion(
           db,
-          CompletionsCompanion.insert(
+          CompletionEventsCompanion.insert(
             profileId: 1,
             curriculumId: CurriculumId.bavli.storageKey,
             sefariaRef: 'Berakhot.2a',
@@ -784,7 +784,7 @@ void main() {
 
       await seedCompletion(
         db,
-        CompletionsCompanion.insert(
+        CompletionEventsCompanion.insert(
           profileId: 1,
           curriculumId: CurriculumId.mishnayos.storageKey,
           sefariaRef: 'Mishnah Berakhot 1.1',

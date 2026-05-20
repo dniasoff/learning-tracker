@@ -204,7 +204,7 @@ void main() {
             final completedAt = DateTime.parse(data['completed_at'] as String);
             await seedCompletion(
               db,
-              CompletionsCompanion.insert(
+              CompletionEventsCompanion.insert(
                 profileId: _profileId,
                 curriculumId: data['curriculum_id'] as String,
                 sefariaRef: data['sefaria_ref'] as String,
@@ -269,7 +269,7 @@ void main() {
           final trackId = await _seedTrack(db);
           await seedCompletion(
             db,
-            CompletionsCompanion.insert(
+            CompletionEventsCompanion.insert(
               profileId: _profileId,
               curriculumId: _curriculumId,
               sefariaRef: 'Mishnah Berakhot 1',

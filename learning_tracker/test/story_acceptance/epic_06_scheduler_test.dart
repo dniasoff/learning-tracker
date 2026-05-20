@@ -149,7 +149,7 @@ void main() {
 
       await seedCompletion(
         db,
-        CompletionsCompanion.insert(
+        CompletionEventsCompanion.insert(
           profileId: 1,
           curriculumId: curriculum.storageKey,
           sefariaRef: 'Mishnah_Berakhot_1.0',
@@ -288,7 +288,7 @@ void main() {
         // Actually with delay=0, it's due same day, so 10 days overdue
         await seedCompletion(
           db,
-          CompletionsCompanion.insert(
+          CompletionEventsCompanion.insert(
             profileId: 1,
             curriculumId: curriculum.storageKey,
             sefariaRef: 'Mishnah_Berakhot_1.0',
@@ -303,7 +303,7 @@ void main() {
         // Item 1: learned today → Chazara 1 due today (delay=0)
         await seedCompletion(
           db,
-          CompletionsCompanion.insert(
+          CompletionEventsCompanion.insert(
             profileId: 1,
             curriculumId: curriculum.storageKey,
             sefariaRef: 'Mishnah_Berakhot_1.1',
@@ -365,7 +365,7 @@ void main() {
 
         await seedCompletion(
           db,
-          CompletionsCompanion.insert(
+          CompletionEventsCompanion.insert(
             profileId: 1,
             curriculumId: curriculum.storageKey,
             sefariaRef: 'Mishnah_Berakhot_1.0',
@@ -407,7 +407,7 @@ void main() {
         for (var i = 0; i < 2; i++) {
           await seedCompletion(
             db,
-            CompletionsCompanion.insert(
+            CompletionEventsCompanion.insert(
               profileId: 1,
               curriculumId: curriculum.storageKey,
               sefariaRef: 'Mishnah_Berakhot_1.$i',
@@ -816,7 +816,7 @@ void main() {
           for (var j = 0; j < 2; j++) {
             await seedCompletion(
               db,
-              CompletionsCompanion.insert(
+              CompletionEventsCompanion.insert(
                 profileId: 1,
                 curriculumId: curriculum.storageKey,
                 sefariaRef: 'Mishnah_Berakhot_${dayOffset}_$j',
@@ -839,7 +839,7 @@ void main() {
         for (var i = 0; i < 79; i++) {
           await seedCompletion(
             db,
-            CompletionsCompanion.insert(
+            CompletionEventsCompanion.insert(
               profileId: 1,
               curriculumId: curriculum.storageKey,
               sefariaRef: 'Mishnah_Berakhot_early_$i',
@@ -942,7 +942,7 @@ void main() {
           for (final item in contentItems) {
             await seedCompletion(
               db,
-              CompletionsCompanion.insert(
+              CompletionEventsCompanion.insert(
                 profileId: 1,
                 curriculumId: curriculum.storageKey,
                 sefariaRef: item.sefariaRef,
@@ -993,7 +993,7 @@ void main() {
           for (var i = 0; i < 3; i++) {
             await seedCompletion(
               db,
-              CompletionsCompanion.insert(
+              CompletionEventsCompanion.insert(
                 profileId: 1,
                 curriculumId: curriculum.storageKey,
                 sefariaRef: contentItems[i].sefariaRef,

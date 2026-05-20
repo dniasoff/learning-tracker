@@ -756,7 +756,7 @@ Future<void> _validateExisting(String dbPath, _Args args) async {
     if (metaCount != 1) {
       failures.add('SeedMetadata expected 1, got $metaCount');
     }
-    if (meta.contentHash.isEmpty) {
+    if (meta.contentHash == null || meta.contentHash!.isEmpty) {
       failures.add('SeedMetadata.contentHash is empty');
     }
     if (textCount > 0 && textCount < 50000) {

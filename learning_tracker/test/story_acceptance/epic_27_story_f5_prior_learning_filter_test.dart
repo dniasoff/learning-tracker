@@ -116,7 +116,7 @@ void main() {
       () async {
         await seedCompletion(
           db,
-          CompletionsCompanion.insert(
+          CompletionEventsCompanion.insert(
             profileId: profileId,
             curriculumId: curriculum.storageKey,
             sefariaRef: sefariaRef,
@@ -172,7 +172,7 @@ void main() {
     test('AC1: sentinel completion does not hide a task (F5 fix)', () async {
       await seedCompletion(
         db,
-        CompletionsCompanion.insert(
+        CompletionEventsCompanion.insert(
           profileId: profileId,
           curriculumId: curriculum.storageKey,
           sefariaRef: sefariaRef,
@@ -218,7 +218,7 @@ void main() {
 
         await seedCompletion(
           db,
-          CompletionsCompanion.insert(
+          CompletionEventsCompanion.insert(
             profileId: profileId,
             curriculumId: curriculum.storageKey,
             sefariaRef: sefariaRef,
@@ -279,7 +279,7 @@ void main() {
         );
         await seedCompletion(
           db,
-          CompletionsCompanion.insert(
+          CompletionEventsCompanion.insert(
             profileId: profileId,
             curriculumId: curriculum.storageKey,
             sefariaRef: sefariaRef,
@@ -292,7 +292,7 @@ void main() {
         );
         await seedCompletion(
           db,
-          CompletionsCompanion.insert(
+          CompletionEventsCompanion.insert(
             profileId: profileId,
             curriculumId: curriculum.storageKey,
             sefariaRef: sefariaRef,

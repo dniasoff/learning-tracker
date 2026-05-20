@@ -113,7 +113,7 @@ void main() {
       // Insert one row per profileId-bearing table
       await seedCompletion(
         db,
-        CompletionsCompanion.insert(
+        CompletionEventsCompanion.insert(
           profileId: pid,
           curriculumId: 'mishnayos',
           sefariaRef: 'Mishnah_Berakhot.1.1',
@@ -139,7 +139,7 @@ void main() {
       await db
           .into(db.streaks)
           .insert(
-            StreaksCompanion.insert(
+            StreakEventsCompanion.insert(
               profileId: pid,
               currentStreak: const Value(3),
             ),
@@ -321,7 +321,7 @@ void main() {
         // Completions for profile 1
         await seedCompletion(
           db,
-          CompletionsCompanion.insert(
+          CompletionEventsCompanion.insert(
             profileId: acct1Id,
             curriculumId: 'mishnayos',
             sefariaRef: 'Mishnah_Berakhot.1.1',
@@ -336,7 +336,7 @@ void main() {
         // Completions for profile 2
         await seedCompletion(
           db,
-          CompletionsCompanion.insert(
+          CompletionEventsCompanion.insert(
             profileId: acct2Id,
             curriculumId: 'bavli',
             sefariaRef: 'Berakhot.2a',
@@ -352,7 +352,7 @@ void main() {
         await db
             .into(db.streaks)
             .insert(
-              StreaksCompanion.insert(
+              StreakEventsCompanion.insert(
                 profileId: acct1Id,
                 currentStreak: const Value(7),
                 maxStreak: const Value(12),
@@ -363,7 +363,7 @@ void main() {
         await db
             .into(db.streaks)
             .insert(
-              StreaksCompanion.insert(
+              StreakEventsCompanion.insert(
                 profileId: acct2Id,
                 currentStreak: const Value(3),
                 maxStreak: const Value(5),

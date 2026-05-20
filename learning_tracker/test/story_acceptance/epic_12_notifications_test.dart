@@ -7,7 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/features/notifications/domain/services/notification_scheduler.dart';
-import 'package:learning_tracker/features/notifications/domain/services/notification_service.dart';
+import 'package:learning_tracker/features/notifications/domain/services/notification_gateway.dart';
 import 'package:learning_tracker/features/notifications/domain/services/streak_alert_service.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:test/test.dart';
@@ -17,7 +17,7 @@ import 'package:timezone/timezone.dart' as tz_lib;
 import '../helpers/drift_memory.dart' show seedCompletion;
 import '../helpers/test_database.dart';
 
-class MockNotificationService extends Mock implements NotificationService {}
+class MockNotificationGateway extends Mock implements NotificationGateway {}
 
 class MockAppRouter extends Mock implements AppRouter {}
 
@@ -47,11 +47,11 @@ void main() {
   // ── Story 12.1: Local notifications ───────────────────────────
 
   group('Story 12.1 -- Local notifications', tags: ['story_12_1'], () {
-    late MockNotificationService mockService;
+    late MockNotificationGateway mockService;
     late NotificationScheduler scheduler;
 
     setUp(() {
-      mockService = MockNotificationService();
+      mockService = MockNotificationGateway();
       scheduler = NotificationScheduler(service: mockService);
       when(
         () => mockService.scheduleBatchReminders(
@@ -124,14 +124,14 @@ void main() {
   group('Story 12.2 -- Streak Protection Alerts', tags: ['story_12_2'], () {
     late UserDatabase db;
     late int trackId;
-    late MockNotificationService mockService;
+    late MockNotificationGateway mockService;
     late StreakAlertService alertService;
 
     setUp(() async {
       db = createTestDatabase();
       await seedProfile(db);
       trackId = await _insertTrack(db);
-      mockService = MockNotificationService();
+      mockService = MockNotificationGateway();
       alertService = StreakAlertService(
         db: db,
         notificationService: mockService,
@@ -154,9 +154,9 @@ void main() {
     });
 
     test('alert fires when streak > 0 and no completions today', () async {
-      await db.streakDao.upsertStreakByProfile(
+      await db.streakEventDao.upsertStreakByProfile(
         1,
-        StreaksCompanion.insert(
+        StreakEventsCompanion.insert(
           profileId: 1,
           currentStreak: const Value(5),
           maxStreak: const Value(5),
@@ -176,9 +176,9 @@ void main() {
     });
 
     test('alert does NOT fire when completions exist today', () async {
-      await db.streakDao.upsertStreakByProfile(
+      await db.streakEventDao.upsertStreakByProfile(
         1,
-        StreaksCompanion.insert(
+        StreakEventsCompanion.insert(
           profileId: 1,
           currentStreak: const Value(3),
           maxStreak: const Value(3),
@@ -188,7 +188,7 @@ void main() {
 
       await seedCompletion(
         db,
-        CompletionsCompanion.insert(
+        CompletionEventsCompanion.insert(
           profileId: 1,
           curriculumId: 'test',
           sefariaRef: 'test_ref',
@@ -212,9 +212,9 @@ void main() {
     });
 
     test('alert does NOT fire when streak is 0', () async {
-      await db.streakDao.upsertStreakByProfile(
+      await db.streakEventDao.upsertStreakByProfile(
         1,
-        StreaksCompanion.insert(
+        StreakEventsCompanion.insert(
           profileId: 1,
           currentStreak: const Value(0),
           maxStreak: const Value(5),
@@ -239,9 +239,9 @@ void main() {
 
     test('integration: 5-day streak with no learning triggers alert', () async {
       // Build a 5-day streak via streak record
-      await db.streakDao.upsertStreakByProfile(
+      await db.streakEventDao.upsertStreakByProfile(
         1,
-        StreaksCompanion.insert(
+        StreakEventsCompanion.insert(
           profileId: 1,
           currentStreak: const Value(5),
           maxStreak: const Value(5),
@@ -268,11 +268,11 @@ void main() {
     'Story 12.4 -- Notification Preferences & Shabbos Mode',
     tags: ['story_12_4'],
     () {
-      late MockNotificationService mockService;
+      late MockNotificationGateway mockService;
       late NotificationScheduler scheduler;
 
       setUp(() {
-        mockService = MockNotificationService();
+        mockService = MockNotificationGateway();
         scheduler = NotificationScheduler(service: mockService);
 
         when(

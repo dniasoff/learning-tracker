@@ -80,7 +80,7 @@ void main() {
         trackIdA = await _insertTrackFor(db, profileA.id);
         completionIdA = await seedCompletion(
           db,
-          CompletionsCompanion.insert(
+          CompletionEventsCompanion.insert(
             profileId: profileA.id,
             curriculumId: _curriculumId,
             sefariaRef: _refForA,

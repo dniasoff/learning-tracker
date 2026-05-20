@@ -125,7 +125,7 @@ void main() {
         for (var i = 0; i < 4; i++) {
           await seedCompletion(
             db,
-            CompletionsCompanion.insert(
+            CompletionEventsCompanion.insert(
               profileId: profileId,
               curriculumId: CurriculumId.mishnayos.storageKey,
               sefariaRef: leaves[i].sefariaRef,
@@ -142,7 +142,7 @@ void main() {
         for (var i = 5; i < 8; i++) {
           await seedCompletion(
             db,
-            CompletionsCompanion.insert(
+            CompletionEventsCompanion.insert(
               profileId: profileId,
               curriculumId: CurriculumId.mishnayos.storageKey,
               sefariaRef: leaves[i].sefariaRef,
@@ -186,7 +186,7 @@ void main() {
         for (var i = 0; i < 3; i++) {
           await seedCompletion(
             db,
-            CompletionsCompanion.insert(
+            CompletionEventsCompanion.insert(
               profileId: profileId,
               curriculumId: CurriculumId.mishnayos.storageKey,
               sefariaRef: leaves[i].sefariaRef,
@@ -263,7 +263,7 @@ void main() {
       for (var i = 0; i < 3; i++) {
         await seedCompletion(
           db,
-          CompletionsCompanion.insert(
+          CompletionEventsCompanion.insert(
             profileId: profileId,
             curriculumId: CurriculumId.mishnayos.storageKey,
             sefariaRef: leaves[i].sefariaRef,
@@ -279,7 +279,7 @@ void main() {
       for (var i = 3; i < 7; i++) {
         await seedCompletion(
           db,
-          CompletionsCompanion.insert(
+          CompletionEventsCompanion.insert(
             profileId: profileId,
             curriculumId: CurriculumId.mishnayos.storageKey,
             sefariaRef: leaves[i].sefariaRef,
@@ -364,7 +364,7 @@ void main() {
       for (var i = 0; i < 2; i++) {
         await seedCompletion(
           db,
-          CompletionsCompanion.insert(
+          CompletionEventsCompanion.insert(
             profileId: profileId,
             curriculumId: CurriculumId.mishnayos.storageKey,
             sefariaRef: leaves[i].sefariaRef,
@@ -379,7 +379,7 @@ void main() {
       // 1 sentinel completion (leaves[2]) — bulk-prior mark.
       await seedCompletion(
         db,
-        CompletionsCompanion.insert(
+        CompletionEventsCompanion.insert(
           profileId: profileId,
           curriculumId: CurriculumId.mishnayos.storageKey,
           sefariaRef: leaves[2].sefariaRef,

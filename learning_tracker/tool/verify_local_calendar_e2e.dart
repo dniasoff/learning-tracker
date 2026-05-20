@@ -24,9 +24,9 @@ library;
 import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
 import 'package:learning_tracker/core/database/content/content_database.dart';
-import 'package:learning_tracker/core/services/calendar_program_registry.dart';
-import 'package:learning_tracker/core/services/calendar_program_service.dart';
-import 'package:learning_tracker/core/services/local_calendar_engine.dart';
+import 'package:learning_tracker/features/scheduler/domain/services/calendar_program_registry.dart';
+import 'package:learning_tracker/features/scheduler/domain/services/calendar_program_service.dart';
+import 'package:learning_tracker/features/scheduler/domain/services/local_calendar_engine.dart';
 
 /// Program key → (sefariaRef, humanLabel) fixture, covering every
 /// registry ID. These are the keys the build tool inserts into

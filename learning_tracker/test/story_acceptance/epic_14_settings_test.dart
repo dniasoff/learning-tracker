@@ -163,7 +163,7 @@ void main() {
       // Completions
       await seedCompletion(
         db,
-        CompletionsCompanion.insert(
+        CompletionEventsCompanion.insert(
           profileId: 1,
           curriculumId: 'mishna',
           sefariaRef: 'Mishnah_Berakhot.1.1',
@@ -176,7 +176,7 @@ void main() {
       );
       await seedCompletion(
         db,
-        CompletionsCompanion.insert(
+        CompletionEventsCompanion.insert(
           profileId: 1,
           curriculumId: 'mishna',
           sefariaRef: 'Mishnah_Berakhot.1.2',
@@ -234,7 +234,7 @@ void main() {
       await db
           .into(db.streaks)
           .insert(
-            StreaksCompanion.insert(
+            StreakEventsCompanion.insert(
               profileId: 0,
               currentStreak: const Value(5),
               maxStreak: const Value(12),
@@ -481,7 +481,7 @@ void main() {
         final stages = await db.stageDao.getAllStageDefinitions();
         expect(stages.length, equals(2));
 
-        final streak = await db.streakDao.getStreak();
+        final streak = await db.streakEventDao.getStreak();
         expect(streak, isNotNull);
         expect(streak!.currentStreak, equals(5));
         expect(streak.maxStreak, equals(12));
@@ -584,7 +584,7 @@ void main() {
         isEmpty,
       );
       expect(await db.goalDao.getAllGoals(), isEmpty);
-      expect(await db.streakDao.getStreak(), isNull);
+      expect(await db.streakEventDao.getStreak(), isNull);
 
       // Import
       await service.importData(exported);
@@ -598,7 +598,7 @@ void main() {
       );
       expect((await db.goalDao.getAllGoals()).length, equals(1));
       expect((await db.stageDao.getAllStageDefinitions()).length, equals(2));
-      expect((await db.streakDao.getStreak())?.currentStreak, equals(5));
+      expect((await db.streakEventDao.getStreak())?.currentStreak, equals(5));
       expect((await db.select(db.pointConfigs).get()).length, equals(1));
       expect((await db.bookmarkDao.getAllBookmarks()).length, equals(1));
       expect(

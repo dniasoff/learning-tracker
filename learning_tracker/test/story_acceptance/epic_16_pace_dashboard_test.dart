@@ -775,7 +775,7 @@ void main() {
       for (final stageId in [1, 2, 3]) {
         await seedCompletion(
           db,
-          CompletionsCompanion.insert(
+          CompletionEventsCompanion.insert(
             profileId: 1,
             curriculumId: 'mishnayos',
             sefariaRef: 'Berakhot.1.1',
@@ -813,7 +813,7 @@ void main() {
         for (var i = 1; i <= 5; i++) {
           await seedCompletion(
             db,
-            CompletionsCompanion.insert(
+            CompletionEventsCompanion.insert(
               profileId: 1,
               curriculumId: 'mishnayos',
               sefariaRef: 'Berakhot.1.1',
@@ -827,7 +827,7 @@ void main() {
         }
         await seedCompletion(
           db,
-          CompletionsCompanion.insert(
+          CompletionEventsCompanion.insert(
             profileId: 1,
             curriculumId: 'mishnayos',
             sefariaRef: 'Berakhot.1.2',
@@ -860,7 +860,7 @@ void main() {
         final now = DateTime.now().toUtc();
         await seedCompletion(
           db,
-          CompletionsCompanion.insert(
+          CompletionEventsCompanion.insert(
             profileId: 1,
             curriculumId: 'mishnayos',
             sefariaRef: 'Berakhot.1.1',
@@ -873,7 +873,7 @@ void main() {
         );
         await seedCompletion(
           db,
-          CompletionsCompanion.insert(
+          CompletionEventsCompanion.insert(
             profileId: 1,
             curriculumId: 'mishnayos',
             sefariaRef: 'Berakhot.1.2',
@@ -886,7 +886,7 @@ void main() {
         );
         await seedCompletion(
           db,
-          CompletionsCompanion.insert(
+          CompletionEventsCompanion.insert(
             profileId: 1,
             curriculumId: 'mishnayos',
             sefariaRef: 'Berakhot.1.2',
@@ -932,7 +932,7 @@ void main() {
       // Profile 1
       await seedCompletion(
         db,
-        CompletionsCompanion.insert(
+        CompletionEventsCompanion.insert(
           profileId: 1,
           curriculumId: 'mishnayos',
           sefariaRef: 'Berakhot.1.1',
@@ -946,7 +946,7 @@ void main() {
       // Profile 2
       await seedCompletion(
         db,
-        CompletionsCompanion.insert(
+        CompletionEventsCompanion.insert(
           profileId: 2,
           curriculumId: 'mishnayos',
           sefariaRef: 'Berakhot.1.1',

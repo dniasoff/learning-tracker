@@ -1,7 +1,7 @@
 import 'package:drift/drift.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
-import 'package:learning_tracker/features/notifications/domain/services/notification_service.dart';
+import 'package:learning_tracker/features/notifications/domain/services/notification_gateway.dart';
 import 'package:learning_tracker/features/notifications/domain/services/streak_alert_service.dart';
 import 'package:mocktail/mocktail.dart';
 
@@ -9,11 +9,11 @@ import '../../../../helpers/drift_memory.dart' show seedCompletion;
 import '../../../../helpers/test_database.dart'
     show createTestDatabase, seedProfileZero;
 
-class MockNotificationService extends Mock implements NotificationService {}
+class MockNotificationGateway extends Mock implements NotificationGateway {}
 
 void main() {
   late UserDatabase db;
-  late MockNotificationService mockNotificationService;
+  late MockNotificationGateway mockNotificationGateway;
   late StreakAlertService service;
   late DateTime Function() clock;
   late int trackId;
@@ -21,7 +21,7 @@ void main() {
   setUp(() async {
     db = createTestDatabase();
     await seedProfileZero(db);
-    mockNotificationService = MockNotificationService();
+    mockNotificationGateway = MockNotificationGateway();
 
     // Default clock: noon UTC
     clock = () => DateTime.utc(2026, 3, 16, 12, 0, 0);
@@ -40,21 +40,21 @@ void main() {
 
     service = StreakAlertService(
       db: db,
-      notificationService: mockNotificationService,
+      notificationService: mockNotificationGateway,
       profileId: 0,
       clock: clock,
     );
 
     // Stub notification service methods
     when(
-      () => mockNotificationService.scheduleStreakAlert(
+      () => mockNotificationGateway.scheduleStreakAlert(
         hour: any(named: 'hour'),
         minute: any(named: 'minute'),
         body: any(named: 'body'),
       ),
     ).thenAnswer((_) async {});
     when(
-      () => mockNotificationService.cancelStreakAlert(),
+      () => mockNotificationGateway.cancelStreakAlert(),
     ).thenAnswer((_) async {});
   });
 
@@ -77,13 +77,13 @@ void main() {
       await service.evaluate(hour: 21, minute: 0);
 
       verify(
-        () => mockNotificationService.scheduleStreakAlert(
+        () => mockNotificationGateway.scheduleStreakAlert(
           hour: 21,
           minute: 0,
           body: 'Your 5-day streak is at risk!',
         ),
       ).called(1);
-      verifyNever(() => mockNotificationService.cancelStreakAlert());
+      verifyNever(() => mockNotificationGateway.cancelStreakAlert());
     });
 
     test('alert does NOT fire when completions exist today', () async {
@@ -113,9 +113,9 @@ void main() {
 
       await service.evaluate(hour: 21, minute: 0);
 
-      verify(() => mockNotificationService.cancelStreakAlert()).called(1);
+      verify(() => mockNotificationGateway.cancelStreakAlert()).called(1);
       verifyNever(
-        () => mockNotificationService.scheduleStreakAlert(
+        () => mockNotificationGateway.scheduleStreakAlert(
           hour: any(named: 'hour'),
           minute: any(named: 'minute'),
           body: any(named: 'body'),
@@ -136,9 +136,9 @@ void main() {
 
       await service.evaluate(hour: 21, minute: 0);
 
-      verify(() => mockNotificationService.cancelStreakAlert()).called(1);
+      verify(() => mockNotificationGateway.cancelStreakAlert()).called(1);
       verifyNever(
-        () => mockNotificationService.scheduleStreakAlert(
+        () => mockNotificationGateway.scheduleStreakAlert(
           hour: any(named: 'hour'),
           minute: any(named: 'minute'),
           body: any(named: 'body'),
@@ -149,9 +149,9 @@ void main() {
     test('alert does NOT fire when no streak record exists', () async {
       await service.evaluate(hour: 21, minute: 0);
 
-      verify(() => mockNotificationService.cancelStreakAlert()).called(1);
+      verify(() => mockNotificationGateway.cancelStreakAlert()).called(1);
       verifyNever(
-        () => mockNotificationService.scheduleStreakAlert(
+        () => mockNotificationGateway.scheduleStreakAlert(
           hour: any(named: 'hour'),
           minute: any(named: 'minute'),
           body: any(named: 'body'),
@@ -171,14 +171,14 @@ void main() {
     test('onCompletionRecorded cancels the alert', () async {
       await service.onCompletionRecorded();
 
-      verify(() => mockNotificationService.cancelStreakAlert()).called(1);
+      verify(() => mockNotificationGateway.cancelStreakAlert()).called(1);
     });
 
     test('scheduleAlert schedules with correct parameters', () async {
       await service.scheduleAlert(hour: 21, minute: 0, currentStreak: 7);
 
       verify(
-        () => mockNotificationService.scheduleStreakAlert(
+        () => mockNotificationGateway.scheduleStreakAlert(
           hour: 21,
           minute: 0,
           body: 'Your 7-day streak is at risk!',

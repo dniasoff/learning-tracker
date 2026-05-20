@@ -2,8 +2,8 @@
 /// Uses mocktail (no codegen) as per project standards
 library;
 
-import 'package:learning_tracker/core/network/connectivity_service.dart';
+import 'package:learning_tracker/core/network/connectivity_gateway.dart';
 import 'package:mocktail/mocktail.dart';
 
-// Connectivity Service
-class MockConnectivityService extends Mock implements ConnectivityService {}
+// Connectivity Gateway (formerly ConnectivityService — renamed W5.20)
+class MockConnectivityService extends Mock implements ConnectivityGateway {}

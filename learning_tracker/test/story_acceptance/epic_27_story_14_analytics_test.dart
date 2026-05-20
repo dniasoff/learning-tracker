@@ -16,7 +16,7 @@ import 'package:learning_tracker/features/learning/domain/entities/completion_co
 import 'package:learning_tracker/features/learning/data/completion_writer.dart';
 import 'package:learning_tracker/features/profiles/domain/services/pin_service.dart';
 import 'package:learning_tracker/features/notifications/domain/services/notification_scheduler.dart';
-import 'package:learning_tracker/features/notifications/domain/services/notification_service.dart';
+import 'package:learning_tracker/features/notifications/domain/services/notification_gateway.dart';
 import 'package:learning_tracker/features/notifications/domain/services/streak_alert_service.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
@@ -30,7 +30,7 @@ import '../helpers/test_database.dart';
 
 class _MockSecureStorage extends Mock implements FlutterSecureStorage {}
 
-class _MockNotificationService extends Mock implements NotificationService {}
+class _MockNotificationGateway extends Mock implements NotificationGateway {}
 
 // ---------------------------------------------------------------------------
 // Utility: in-memory FlutterSecureStorage backed by a Map
@@ -311,7 +311,7 @@ void main() {
   group('27.14 — notification_fired / daily_reminder', () {
     test('NotificationScheduler.schedule fires notification_fired', () async {
       final analytics = FakeAnalyticsService();
-      final notifSvc = _MockNotificationService();
+      final notifSvc = _MockNotificationGateway();
 
       when(
         () => notifSvc.scheduleBatchReminders(
@@ -357,7 +357,7 @@ void main() {
 
     test('StreakAlertService.scheduleAlert fires notification_fired', () async {
       final analytics = FakeAnalyticsService();
-      final notifSvc = _MockNotificationService();
+      final notifSvc = _MockNotificationGateway();
 
       when(
         () => notifSvc.scheduleStreakAlert(
@@ -391,7 +391,7 @@ void main() {
       'NotificationScheduler.cancelForSacredTime fires suppression event',
       () async {
         final analytics = FakeAnalyticsService();
-        final notifSvc = _MockNotificationService();
+        final notifSvc = _MockNotificationGateway();
 
         when(() => notifSvc.cancelDailyReminder()).thenAnswer((_) async {});
         when(() => notifSvc.cancelBatchReminders()).thenAnswer((_) async {});

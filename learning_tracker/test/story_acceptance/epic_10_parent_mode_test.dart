@@ -354,7 +354,7 @@ void main() {
       for (var i = 0; i < completionCount; i++) {
         await seedCompletion(
           db,
-          CompletionsCompanion.insert(
+          CompletionEventsCompanion.insert(
             profileId: 1,
             curriculumId: curriculumId,
             sefariaRef: 'ref-$curriculumId-$i',
@@ -430,7 +430,7 @@ void main() {
         for (var i = 0; i < 2; i++) {
           await seedCompletion(
             db,
-            CompletionsCompanion.insert(
+            CompletionEventsCompanion.insert(
               profileId: 1,
               curriculumId: 'mishnayos',
               sefariaRef: 'ref-mishnayos-$i',
@@ -527,7 +527,7 @@ void main() {
       for (var i = 0; i < 2; i++) {
         await seedCompletion(
           db,
-          CompletionsCompanion.insert(
+          CompletionEventsCompanion.insert(
             profileId: 1,
             curriculumId: 'mishnayos',
             sefariaRef: 'old-ref-$i',
@@ -575,9 +575,9 @@ void main() {
       );
 
       // Set up streak
-      await db.streakDao.upsertStreakByProfile(
+      await db.streakEventDao.upsertStreakByProfile(
         1,
-        StreaksCompanion.insert(
+        StreakEventsCompanion.insert(
           profileId: 1,
           currentStreak: const Value(5),
           maxStreak: const Value(12),
@@ -719,7 +719,7 @@ void main() {
       // Record a completion with current config (10 points for stage 1)
       await seedCompletion(
         db,
-        CompletionsCompanion.insert(
+        CompletionEventsCompanion.insert(
           profileId: 1,
           curriculumId: CurriculumId.mishnayos.storageKey,
           sefariaRef: 'test-ref-1',
@@ -888,7 +888,7 @@ void main() {
         // Record a completion with the new point value
         await seedCompletion(
           db,
-          CompletionsCompanion.insert(
+          CompletionEventsCompanion.insert(
             profileId: testProfileId,
             curriculumId: CurriculumId.mishnayos.storageKey,
             sefariaRef: 'new-completion-ref',

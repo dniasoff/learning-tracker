@@ -34,7 +34,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/features/notifications/domain/services/notification_scheduler.dart';
-import 'package:learning_tracker/features/notifications/domain/services/notification_service.dart';
+import 'package:learning_tracker/features/notifications/domain/services/notification_gateway.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
@@ -44,11 +44,11 @@ import 'package:timezone/timezone.dart' as tz_lib;
 // Fakes and mocks
 // ---------------------------------------------------------------------------
 
-class MockNotificationService extends Mock implements NotificationService {}
+class MockNotificationGateway extends Mock implements NotificationGateway {}
 
 /// Records all `scheduleBatchReminders` calls so tests can assert on the body
 /// string passed without touching the OS notification stack.
-class _RecordingNotificationService implements NotificationService {
+class _RecordingNotificationGateway implements NotificationGateway {
   final List<({List<tz_lib.TZDateTime> fireTimes, String title, String body})>
   scheduledBatches = [];
 
@@ -146,11 +146,11 @@ void main() {
   // O8 tests D1 as a comment/stub — fixing D1 requires the Wave 2 projection.
 
   group('O8 — notifications track the projection', () {
-    late _RecordingNotificationService notifService;
+    late _RecordingNotificationGateway notifService;
     late NotificationScheduler scheduler;
 
     setUp(() {
-      notifService = _RecordingNotificationService();
+      notifService = _RecordingNotificationGateway();
       scheduler = NotificationScheduler(service: notifService);
     });
 
@@ -252,7 +252,7 @@ void main() {
     // level: calling scheduleReminder a SECOND time (with new count) must
     // cancel the previous batch before scheduling the new one.
     //
-    // See NotificationService.scheduleBatchReminders (~line 153):
+    // See NotificationGateway.scheduleBatchReminders (~line 153):
     //   "Cancel existing batch first."
     // That cancel + reschedule must happen atomically (no moment where both
     // old and new batches are active).
@@ -288,7 +288,7 @@ void main() {
       );
 
       // Two scheduleBatchReminders calls recorded (cancel-then-reschedule
-      // happens INSIDE NotificationService.scheduleBatchReminders, which our
+      // happens INSIDE NotificationGateway.scheduleBatchReminders, which our
       // recording fake doesn't simulate — it records the outer call).
       expect(
         notifService.scheduledBatches,

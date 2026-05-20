@@ -1,6 +1,6 @@
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/features/notifications/domain/services/notification_service.dart';
+import 'package:learning_tracker/features/notifications/domain/services/notification_gateway.dart';
 import 'package:mocktail/mocktail.dart';
 
 class MockFlutterLocalNotificationsPlugin extends Mock
@@ -8,7 +8,7 @@ class MockFlutterLocalNotificationsPlugin extends Mock
 
 void main() {
   late MockFlutterLocalNotificationsPlugin mockPlugin;
-  late NotificationService service;
+  late NotificationGateway service;
 
   setUpAll(() {
     registerFallbackValue(const InitializationSettings());
@@ -17,10 +17,10 @@ void main() {
 
   setUp(() {
     mockPlugin = MockFlutterLocalNotificationsPlugin();
-    service = NotificationService(plugin: mockPlugin);
+    service = NotificationGateway(plugin: mockPlugin);
   });
 
-  group('NotificationService', () {
+  group('NotificationGateway', () {
     group('initialize', () {
       test('returns true when plugin initializes successfully', () async {
         when(

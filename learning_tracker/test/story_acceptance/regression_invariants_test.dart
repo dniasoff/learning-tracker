@@ -140,7 +140,7 @@ void main() {
         for (var i = 0; i < 3; i++) {
           await seedCompletion(
             db,
-            CompletionsCompanion.insert(
+            CompletionEventsCompanion.insert(
               profileId: 1,
               curriculumId: CurriculumId.mishnayos.storageKey,
               sefariaRef: 'Berakhot 1:${i + 1}',
@@ -289,7 +289,7 @@ void main() {
           // By the "distinct refs" definition, 1 ref is done — not 2.
           await seedCompletion(
             db,
-            CompletionsCompanion.insert(
+            CompletionEventsCompanion.insert(
               profileId: 1,
               curriculumId: CurriculumId.mishnayos.storageKey,
               sefariaRef: 'Berakhot 1:1',
@@ -301,7 +301,7 @@ void main() {
           );
           await seedCompletion(
             db,
-            CompletionsCompanion.insert(
+            CompletionEventsCompanion.insert(
               profileId: 1,
               curriculumId: CurriculumId.mishnayos.storageKey,
               sefariaRef: 'Berakhot 1:1',

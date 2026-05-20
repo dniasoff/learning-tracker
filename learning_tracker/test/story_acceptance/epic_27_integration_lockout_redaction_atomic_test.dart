@@ -277,7 +277,7 @@ void main() {
           await db
               .into(db.completions)
               .insert(
-                CompletionsCompanion.insert(
+                CompletionEventsCompanion.insert(
                   profileId: 1,
                   curriculumId: 'mishnah_yomit',
                   sefariaRef: 'Mishnah Berakhot 1',

@@ -38,7 +38,7 @@ Future<void> _addCompletion(
   DateTime? completedAt,
 }) => seedCompletion(
   db,
-  CompletionsCompanion.insert(
+  CompletionEventsCompanion.insert(
     profileId: profileId,
     curriculumId: curriculum.storageKey,
     sefariaRef: sefariaRef,
