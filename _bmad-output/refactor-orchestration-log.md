@@ -78,6 +78,14 @@ Tracker: `_bmad-output/refactor-task-tracker.md`
 
 ---
 
+## [2026-05-20] V5-A task-truth verification — W1 + W2
+
+- stream: V5-A | sync-point: — | review: W1+W2 truth | task: V5-A
+- detail: Verified 71 tasks across W1.1–W1.30, W7.20–W7.23, W2.1–W2.41. 62 VERIFIED, 9 DEMOTED. Report: `_bmad-output/refactor-v5-a-truth-report.md`. All 9 mismatches share same pattern: copy-without-delete — new canonical paths exist but old paths never removed. Demoted: W1.6 (main.dart 102 lines not ~30), W2.3/W2.4/W2.5 (old feature dirs not deleted), W2.7 (settings/curriculum_activation_service not deleted), W2.9 (importer migration incomplete — 42+16+4 deep imports remain in old paths), W2.13 (settings/account_management_service identical duplicate not deleted), W2.25 (core/services/ not deleted — contains orphaned pin_service.g.dart), W2.29 (push+pull wired, listener channel + _channelToKind missing for stage_definitions). Key risk: W2.3/W2.4/W2.5 + W2.9 leave duplicate live code for learning_order, track_learning_order, stages — highest-priority follow-up. Tracker updated with `[ ] pending` demotions + inline evidence. Commit: chore(v5-a): demote unverified tasks.
+- next: Dispatch follow-up to delete old feature dirs + migrate importers (W2.3/W2.4/W2.5/W2.9); then fix remaining W2.7/W2.13/W2.25/W2.29/W1.6.
+
+---
+
 ## [2026-05-20] V5-B — W3+W4 task-truth verification complete
 
 - stream: V5-B | sync-point: — | review: V5-B | task: W3.1-W3.47, W4.1-W4.35
