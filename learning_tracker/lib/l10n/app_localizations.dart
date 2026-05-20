@@ -263,7 +263,7 @@ abstract class AppLocalizations {
   /// No description provided for @trackCurrentCycle.
   ///
   /// In en, this message translates to:
-  /// **'This cycle'**
+  /// **'Since reactivation'**
   String get trackCurrentCycle;
 
   /// No description provided for @continueLearning.
@@ -2654,7 +2654,7 @@ abstract class AppLocalizations {
   /// No description provided for @chartCumulativeProgressSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'+12% vs last week'**
+  /// **'Total completions over time'**
   String get chartCumulativeProgressSubtitle;
 
   /// No description provided for @chartPointsEarned.

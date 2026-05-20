@@ -1,17 +1,16 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/core/learning/completion_constants.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/lifetime_knowledge_providers.dart';
 
-/// The sentinel [DateTime] used by [BulkPriorCompletionService] to mark
-/// items learned in the past ("before this app"). Matches
-/// `DateTime.utc(2000, 1, 1)` — compared by millisecondsSinceEpoch so
-/// timezone normalization does not cause false positives.
-final kBulkPriorSentinelMs = DateTime.utc(2000, 1, 1).millisecondsSinceEpoch;
+// Re-export so existing importers of this symbol continue to compile.
+export 'package:learning_tracker/core/learning/completion_constants.dart'
+    show kBulkPriorSentinelMs;
 
 /// Summary of per-curriculum completion data for the Items Learned /
 /// Lifetime View screens.

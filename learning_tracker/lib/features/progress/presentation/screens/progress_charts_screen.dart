@@ -42,7 +42,10 @@ class _ProgressChartsScreenState extends ConsumerState<ProgressChartsScreen> {
         start: today.subtract(const Duration(days: 29)),
         end: today,
       ),
-      ChartTimeRange.allTime => (start: DateTime(2024, 1, 1), end: today),
+      // DateTime(2000, 1, 1) matches the bulk-prior sentinel epoch so
+      // cumulativeBeforeStart = 0 for all users and the cumulative line
+      // starts at zero on the left. Fix 4 — Progress Aggregator L1+L2.
+      ChartTimeRange.allTime => (start: DateTime(2000, 1, 1), end: today),
     };
   }
 

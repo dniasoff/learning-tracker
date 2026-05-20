@@ -106,7 +106,9 @@ Stream<List<CurriculumId>> dashboardActiveCurriculaStream(Ref ref) {
   });
 }
 
-/// Item-based completion for one track.
+/// Returns the lifetime "all stages done per item" completion percentage for
+/// one track, across ALL completion sources (live + bulk-prior + lifetime
+/// imports).
 ///
 /// An item is "done" when ALL of the track's required stages have a
 /// completion record for it.  Required stages = every non-superseded
@@ -115,6 +117,24 @@ Stream<List<CurriculumId>> dashboardActiveCurriculaStream(Ref ref) {
 /// Formula: `(items where all required stages are done) / totalItems`.
 ///
 /// Delegates computation to [TrackCompletionService].
+///
+/// **Why this differs from [trackDualProgressMetricsProvider].currentCyclePercentage:**
+///
+/// This provider answers "how complete is this track overall, across all
+/// time and all completion sources?" — a multi-stage gate, all-time calculation.
+///
+/// [trackDualProgressMetricsProvider].currentCyclePercentage answers "how many
+/// distinct items has the user touched since the track was last activated
+/// (`track.activatedAt`)?" — a time-gated, single-ref-presence check that
+/// resets on track re-activation.
+///
+/// The two percentages intentionally diverge:
+/// - Users with bulk-prior imports see a high value here (31%+) but 0% in the
+///   cycle metric, because bulk-prior completions pre-date `activatedAt`.
+/// - The cycle metric is labelled "Since reactivation" in the UI to make this
+///   distinction visible.
+///
+/// See also: [trackDualProgressMetricsProvider] (lifetime_knowledge_providers.dart).
 @riverpod
 Future<double> dashboardTrackCompletionPercentage(Ref ref, int trackId) async {
   ref.watch<int>(completionCommittedProvider);

@@ -99,7 +99,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get activeTrackMetricOverdue => 'OVERDUE';
 
   @override
-  String get trackCurrentCycle => 'This cycle';
+  String get trackCurrentCycle => 'Since reactivation';
 
   @override
   String get continueLearning => 'Continue Learning';
@@ -1435,7 +1435,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chartCumulativeProgress => 'Cumulative Progress';
 
   @override
-  String get chartCumulativeProgressSubtitle => '+12% vs last week';
+  String get chartCumulativeProgressSubtitle => 'Total completions over time';
 
   @override
   String get chartPointsEarned => 'Points Earned';

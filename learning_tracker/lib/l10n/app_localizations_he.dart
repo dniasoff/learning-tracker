@@ -98,7 +98,7 @@ class AppLocalizationsHe extends AppLocalizations {
   String get activeTrackMetricOverdue => 'באיחור';
 
   @override
-  String get trackCurrentCycle => 'מחזור נוכחי';
+  String get trackCurrentCycle => 'מאז ההפעלה מחדש';
 
   @override
   String get continueLearning => 'המשך לימוד';
@@ -1421,7 +1421,7 @@ class AppLocalizationsHe extends AppLocalizations {
   String get chartCumulativeProgress => 'התקדמות מצטברת';
 
   @override
-  String get chartCumulativeProgressSubtitle => '+12% לעומת השבוע שעבר';
+  String get chartCumulativeProgressSubtitle => 'סה״כ השלמות לאורך זמן';
 
   @override
   String get chartPointsEarned => 'נקודות שהורו';

@@ -1,6 +1,7 @@
 import 'package:learning_tracker/core/database/daos/completion_dao.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/user_mode.dart';
+import 'package:learning_tracker/core/learning/completion_constants.dart';
 import 'package:learning_tracker/features/progress/domain/models/chart_data.dart';
 
 /// Service for aggregating completion data into chart-ready structures.
@@ -24,12 +25,20 @@ class ChartDataService {
   }
 
   /// Get daily completion counts within a date range.
+  ///
+  /// Bulk-prior sentinel rows (timestamp == [kBulkPriorSentinelMs]) are
+  /// excluded so the chart only reflects live in-session activity.
   Future<List<DailyCompletionData>> getDailyCompletions({
     required DateTime startDate,
     required DateTime endDate,
     String? curriculumId,
   }) async {
-    final completions = await _loadCompletions(curriculumId);
+    final allCompletions = await _loadCompletions(curriculumId);
+    final completions = allCompletions
+        .where(
+          (c) => c.completedAt.millisecondsSinceEpoch != kBulkPriorSentinelMs,
+        )
+        .toList();
 
     final counts = <DateTime, int>{};
     for (final c in completions) {
@@ -52,12 +61,21 @@ class ChartDataService {
   }
 
   /// Get cumulative progress over time.
+  ///
+  /// Bulk-prior sentinel rows (timestamp == [kBulkPriorSentinelMs]) are
+  /// excluded so the chart plots only live activity; bulk imports are not
+  /// treated as historical data points on the timeline.
   Future<List<CumulativeProgressPoint>> getCumulativeProgress({
     required DateTime startDate,
     required DateTime endDate,
     String? curriculumId,
   }) async {
-    final completions = await _loadCompletions(curriculumId);
+    final allCompletions = await _loadCompletions(curriculumId);
+    final completions = allCompletions
+        .where(
+          (c) => c.completedAt.millisecondsSinceEpoch != kBulkPriorSentinelMs,
+        )
+        .toList();
 
     final dailyCounts = <DateTime, int>{};
     for (final c in completions) {

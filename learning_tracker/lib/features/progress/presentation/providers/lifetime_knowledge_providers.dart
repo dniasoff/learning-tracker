@@ -20,6 +20,7 @@ import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/calendar_position_providers.dart';
+import 'package:learning_tracker/features/learning/presentation/providers/completion_writer_providers.dart';
 import 'package:learning_tracker/features/progress/domain/models/lifetime_knowledge.dart';
 import 'package:learning_tracker/features/progress/domain/services/lifetime_tree_builder.dart';
 
@@ -127,8 +128,40 @@ final lifetimeSummariesProvider = FutureProvider.autoDispose
 @Deprecated('Use lifetimeSummariesProvider or lifetimeDataProvider instead')
 final globalLifetimeCurriculaProvider = lifetimeSummariesProvider;
 
+/// Per-track dual-progress metrics for the active-track dashboard card.
+///
+/// Returns a list of [TrackDualProgressMetric], one per active track, each
+/// containing two progress percentages:
+///
+/// **[TrackDualProgressMetric.currentCyclePercentage]** — the time-gated
+/// single-ref percentage: fraction of items with any completion since
+/// `track.activatedAt` (resets on track re-activation). Labelled
+/// "Since reactivation" in the UI.
+///
+/// **[TrackDualProgressMetric.lifetimePercentage]** — the fraction of items
+/// the user has ever encountered, computed by [LifetimeTreeBuilder] across
+/// all completion sources (live + bulk-prior + lifetime imports).
+///
+/// **Why these differ from [dashboardTrackCompletionPercentageProvider]:**
+///
+/// [dashboardTrackCompletionPercentageProvider] answers "how complete is this
+/// track overall, across all time and all completion sources?" — a multi-stage
+/// gate, all-time calculation.
+///
+/// [currentCyclePercentage] here answers "how many distinct items has the user
+/// touched since the track was last activated?" — a time-gated, single-ref
+/// presence check. It intentionally reads zero for users who completed items
+/// before the current `activatedAt` (e.g. after re-importing a track).
+///
+/// See also: [dashboardTrackCompletionPercentageProvider]
+/// (dashboard_providers.dart).
 final trackDualProgressMetricsProvider = FutureProvider.autoDispose
     .family<List<TrackDualProgressMetric>, int>((ref, profileId) async {
+      // Rebuild when a live completion is committed so the dashboard card
+      // reflects new activity immediately (mirrors the watch in
+      // dashboardTrackCompletionPercentageProvider). Fix 3 — DNI L1+L2.
+      ref.watch<int>(completionCommittedProvider);
+
       final db = ref.watch(userDatabaseProvider);
       final repo = ref.watch(contentRepositoryProvider);
       final tracks = await db.trackDao.getAllForProfile(profileId);
