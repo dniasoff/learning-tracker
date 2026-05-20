@@ -74,6 +74,12 @@ void main() {
       'lib/features/scheduler/domain/services/calendar_program_service.dart',
       'lib/features/scheduler/domain/services/learning_program_service.dart',
       'lib/features/scheduler/domain/services/local_calendar_engine.dart',
+      // Scheduler-side label resolver shim — bridges DomainTermLabels (core)
+      // to scheduler types. Lives in features/scheduler to avoid the
+      // core → features import that would otherwise violate Rule 1. The
+      // displayNameEn/He reads here are inside a labels-layer file, not
+      // arbitrary UI code. Introduced by W7-D / F4 of the Progress IA review.
+      'lib/features/scheduler/domain/labels/program_label_resolver.dart',
       // Enum getters live on these types.
       'lib/core/enums/curriculum_id.dart',
       'lib/core/enums/track_type.dart',

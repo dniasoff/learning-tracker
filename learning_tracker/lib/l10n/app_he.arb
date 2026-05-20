@@ -1542,6 +1542,44 @@
     }
   },
 
+  "siyumimLevelCurriculum": "{count} סיומים ברמת מסלול",
+  "@siyumimLevelCurriculum": {
+    "description": "Top-counter row on the Siyumim & Milestones screen for the curriculum-complete tier.",
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "siyumimLevelAggregate": "{count} סיומים ברמת אגד",
+  "@siyumimLevelAggregate": {
+    "description": "Top-counter row on the Siyumim & Milestones screen for the aggregate tier.",
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "siyumimLevelUnit": "{count} סיומים ברמת יחידה",
+  "@siyumimLevelUnit": {
+    "description": "Top-counter row on the Siyumim & Milestones screen for the unit tier.",
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "siyumimEmptyState": "אין סיומים עדיין — המשיכו ללמוד!",
+  "@siyumimEmptyState": {
+    "description": "Empty-state message rendered by SiyumimGroupedView when the user has no milestones to show."
+  },
+  "siyumimAggregateSubtitle": "כל {count} הושלמו · {date}",
+  "@siyumimAggregateSubtitle": {
+    "description": "Subtitle on an aggregate-level milestone row when every contained unit is complete. `{date}` is a locale-formatted achievement date.",
+    "placeholders": {
+      "count": { "type": "int" },
+      "date": { "type": "String" }
+    }
+  },
+  "paceLiveLearningOnlyCaption": "הקצב עוקב אחר למידה חיה בלבד.",
+  "@paceLiveLearningOnlyCaption": {
+    "description": "Caption shown under the PaceIndicator on the Curriculum Progress screen — disambiguates pace (live-only) from the lifetime tier."
+  },
+
   "bulkMarkWizardSubtitle": "פריטים אלו נספרים לסיומים ולידע הכולל — אך לא לרצף או לנקודות שלך.",
   "@bulkMarkWizardSubtitle": {
     "description": "Subtitle/explainer for the Bulk Mark wizard."
@@ -1562,5 +1600,63 @@
   "recentActivityLiveOnlyDisclaimer": "לימוד חי בלבד — פריטים שסומנו בכמות מופיעים תחת הידע הכולל.",
   "@recentActivityLiveOnlyDisclaimer": {
     "description": "Disclaimer shown on Recent Activity charts."
+  },
+
+  "lifetimeKnowledgeLoading": "טוען ידע כולל…",
+  "@lifetimeKnowledgeLoading": {
+    "description": "Loading indicator message on the Lifetime Knowledge screen body."
+  },
+  "lifetimeKnowledgeLoadError": "נכשל בטעינה: {error}",
+  "@lifetimeKnowledgeLoadError": {
+    "description": "Body error message when the Lifetime Knowledge per-curriculum tree fails to load.",
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "lifetimeKnowledgeCounterError": "נכשל בטעינת מונים: {error}",
+  "@lifetimeKnowledgeCounterError": {
+    "description": "Header error message when the Lifetime Knowledge header counters fail to load.",
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "lifetimeKnowledgeRetry": "נסה שוב",
+  "@lifetimeKnowledgeRetry": {
+    "description": "Retry action label on the Lifetime Knowledge error states."
+  },
+  "lifetimeKnowledgeToggleAllSources": "כל המקורות",
+  "@lifetimeKnowledgeToggleAllSources": {
+    "description": "Source-toggle label on the Lifetime Knowledge screen — includes lifetimeOnly imports."
+  },
+  "lifetimeKnowledgeToggleTrackOnly": "למידה במסלולים בלבד",
+  "@lifetimeKnowledgeToggleTrackOnly": {
+    "description": "Source-toggle label on the Lifetime Knowledge screen — restricts to live + bulkInTrack rows."
+  },
+  "lifetimeKnowledgeAddCta": "הוסף פריטים שלמדתי בעבר",
+  "@lifetimeKnowledgeAddCta": {
+    "description": "Bottom CTA on the Lifetime Knowledge screen — links to the Lifetime Marking flow."
+  },
+  "lifetimeKnowledgeAddCtaSubtitle": "סימון לידע כולל — נספר לידע הכולל.",
+  "@lifetimeKnowledgeAddCtaSubtitle": {
+    "description": "Subtitle for the Lifetime Knowledge CTA card — clarifies the tier credit."
+  },
+  "provenanceLive": "בלמידה",
+  "@provenanceLive": {
+    "description": "Per-leaf provenance label when the leaf was completed live with zero chazaros (rare — usually has a count)."
+  },
+  "provenanceLiveChazaros": "בלמידה · {count} חזרות",
+  "@provenanceLiveChazaros": {
+    "description": "Per-leaf provenance label for a live-completed leaf with its event count.",
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "provenanceBulkMarked": "מסומן בקבוצה",
+  "@provenanceBulkMarked": {
+    "description": "Per-leaf provenance label when the leaf entered via a bulk-in-track import."
+  },
+  "provenanceLifetimeImported": "ייבוא לכל החיים",
+  "@provenanceLifetimeImported": {
+    "description": "Per-leaf provenance label when the leaf entered via a lifetime-only import."
   }
 }

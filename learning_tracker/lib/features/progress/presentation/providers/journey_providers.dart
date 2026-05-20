@@ -195,17 +195,26 @@ Future<JourneyViewModel> journeyViewModel(Ref ref, int profileId) async {
 
 /// Count total available units for a curriculum.
 ///
-/// For most curricula, units are level2 (masechtos).
-/// For mussar, units are level1 (sefarim).
+/// For most curricula, units are level2 (masechtos / simanim / hilchos).
+/// For curricula with no level2 in their content data (Mussar / Chumash /
+/// Nach / Tanach), the unit IS the level-1 sefer.
+///
+/// F22 (W7-A): the previous implementation only special-cased Mussar and
+/// otherwise counted distinct level2 values. Chumash / Nach / Tanach all
+/// have `level2 == null` everywhere, so the count was 0 and the
+/// curriculum-level siyum was unreachable.
 int _countTotalUnits(List<ContentItem> content, CurriculumId curriculum) {
   if (curriculum == CurriculumId.mussar) {
     return content.map((c) => c.level1).toSet().length;
   }
-  return content
+  final level2Count = content
       .where((c) => c.level2 != null)
       .map((c) => c.level2!)
       .toSet()
       .length;
+  if (level2Count > 0) return level2Count;
+  // Level-1-only curriculum (Chumash / Nach / Tanach) — count sefarim.
+  return content.map((c) => c.level1).toSet().length;
 }
 
 /// Detect milestone achievements from ledger entries.
@@ -240,9 +249,22 @@ List<MilestoneAchievement> _detectMilestones(
   // must not artificially complete a curriculum milestone.
   // For mussar the unit IS a sefer (level-1), so accept level-1 scopes there.
   const unitScopes = {'masechta', 'sefer', 'siman', 'hilchos'};
-  final unitLevelEntries = entries
+  // F24 (W7-A): dedupe by [unitIdentifier], keeping the LATEST entry per unit.
+  // Without this, completing a unit, untick it, then re-complete it adds two
+  // ledger rows for the same unit identifier — the counter would advertise 2
+  // unit-level siyumim for ONE masechta. Latest-wins is chosen for consistency
+  // with the existing seder-level latest-selection.
+  final unitLevelEntriesAll = entries
       .where((e) => unitScopes.contains(e.entryScope))
       .toList();
+  final byUnit = <String, LearningLedgerData>{};
+  for (final e in unitLevelEntriesAll) {
+    final existing = byUnit[e.unitIdentifier];
+    if (existing == null || e.completedAt.isAfter(existing.completedAt)) {
+      byUnit[e.unitIdentifier] = e;
+    }
+  }
+  final unitLevelEntries = byUnit.values.toList();
   final completedUnits = unitLevelEntries.map((e) => e.unitIdentifier).toSet();
 
   // ── Build parent → child map from content data ─────────────────────────

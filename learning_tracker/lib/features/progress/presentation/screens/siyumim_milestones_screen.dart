@@ -137,9 +137,15 @@ class SiyumimMilestonesScreen extends ConsumerWidget {
 
 /// Three-row card at the top of the screen — one row per celebration level.
 ///
-/// The labels come from `domainTermLabels(ref)` so the Hebrew Terms toggle
-/// flips them appropriately. The order mirrors the design brief:
-/// curriculum → aggregate → unit (most prestigious first).
+/// The labels come from `AppLocalizations` (with the noun pluralisation
+/// captured inside the ARB template) so the Hebrew Terms toggle flips them
+/// appropriately. The order mirrors the design brief: curriculum →
+/// aggregate → unit (most prestigious first).
+///
+/// Zero-valued rows render dimmed (reduced opacity) instead of being
+/// hidden — this preserves the spatial three-row layout, which keeps the
+/// hierarchy legible and avoids the layout jump when a user earns their
+/// first unit-level siyum (F15).
 class _LevelCountersCard extends ConsumerWidget {
   const _LevelCountersCard({required this.viewModel});
 
@@ -148,6 +154,7 @@ class _LevelCountersCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
       child: Card(
@@ -158,7 +165,9 @@ class _LevelCountersCard extends ConsumerWidget {
             children: [
               _CounterRow(
                 count: viewModel.curriculumLevelSiyumimCount,
-                label: 'curriculum-level siyumim',
+                label: l10n.siyumimLevelCurriculum(
+                  viewModel.curriculumLevelSiyumimCount,
+                ),
                 emphasis: true,
                 color: theme.colorScheme.primary,
                 icon: Icons.emoji_events,
@@ -166,14 +175,16 @@ class _LevelCountersCard extends ConsumerWidget {
               const SizedBox(height: 6),
               _CounterRow(
                 count: viewModel.aggregateLevelSiyumimCount,
-                label: 'aggregate-level siyumim',
+                label: l10n.siyumimLevelAggregate(
+                  viewModel.aggregateLevelSiyumimCount,
+                ),
                 color: theme.colorScheme.secondary,
                 icon: Icons.workspace_premium,
               ),
               const SizedBox(height: 6),
               _CounterRow(
                 count: viewModel.unitLevelSiyumimCount,
-                label: 'unit-level siyumim',
+                label: l10n.siyumimLevelUnit(viewModel.unitLevelSiyumimCount),
                 color: theme.colorScheme.tertiary,
                 icon: Icons.star,
               ),
@@ -185,6 +196,10 @@ class _LevelCountersCard extends ConsumerWidget {
   }
 }
 
+/// Visual treatment of a single counter row. When the [count] is zero the
+/// entire row is wrapped in an [Opacity] so the spatial slot is preserved
+/// but the row reads as "not yet earned" — matches the F15 fix that wanted
+/// the three rows to feel less noisy when the lower tiers are still empty.
 class _CounterRow extends StatelessWidget {
   const _CounterRow({
     required this.count,
@@ -202,11 +217,12 @@ class _CounterRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final textStyle = (emphasis
-            ? Theme.of(context).textTheme.titleLarge
-            : Theme.of(context).textTheme.titleMedium)
-        ?.copyWith(color: color, fontWeight: FontWeight.w600);
-    return Row(
+    final textStyle =
+        (emphasis
+                ? Theme.of(context).textTheme.titleLarge
+                : Theme.of(context).textTheme.titleMedium)
+            ?.copyWith(color: color, fontWeight: FontWeight.w600);
+    final row = Row(
       children: [
         Icon(icon, color: color, size: emphasis ? 24 : 20),
         const SizedBox(width: 10),
@@ -223,6 +239,10 @@ class _CounterRow extends StatelessWidget {
         ),
       ],
     );
+    if (count == 0) {
+      return Opacity(opacity: 0.38, child: row);
+    }
+    return row;
   }
 }
 

@@ -399,4 +399,293 @@ void main() {
       expect(entries, isEmpty);
     });
   });
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // F2 (W7-A) — Per-curriculum entry-scope strings
+  //
+  // The detection service must emit curriculum-specific scope strings:
+  //   level 2 → 'masechta' (Mishnayos/Bavli/Yerushalmi)
+  //          → 'siman'    (Mishna Berurah)
+  //          → 'hilchos'  (Mishneh Torah)
+  //   level 1 → 'seder'   (Mishnayos/Bavli/Yerushalmi)
+  //          → 'chelek'   (Mishna Berurah)
+  //          → 'sefer'    (Chumash/Nach/Tanach/Mussar/Mishneh Torah books)
+  //
+  // The whitelist in journey_providers.dart:_detectMilestones treats the
+  // level-2 scopes as unit-level. Without curriculum-aware strings, Chumash
+  // (which only has level-1 leaves) and Mishna Berurah (which uses 'siman'
+  // not 'masechta') silently never produce unit-level siyumim.
+  // ──────────────────────────────────────────────────────────────────────────
+
+  group('F2 — per-curriculum entry-scope strings', () {
+    test(
+      'Chumash level-1-only curriculum writes scope=sefer at level 1',
+      () async {
+        // Override setUp scaffolding: the global setUp seeded a Mishnayos
+        // track row; for Chumash we need the track row to point at
+        // 'chumash'. Replace the track id with a fresh Chumash track.
+        await db
+            .into(db.curriculumTracks)
+            .insert(
+              CurriculumTracksCompanion.insert(
+                profileId: 1,
+                curriculumId: CurriculumId.chumash.storageKey,
+                stateChangedAt: DateTime.now(),
+                activatedAt: DateTime.now(),
+              ),
+            );
+
+        // Chumash content: one sefer, two leaves. Crucially, level2 is null
+        // — only level-1 detection fires.
+        final leaves = <ContentItem>[
+          const ContentItem(
+            curriculumId: 'chumash',
+            level1: 'Bereshit',
+            displayNameHe: 'בראשית',
+            displayNameEn: 'Bereshit',
+            sefariaRef: 'Genesis_1_1',
+            sortOrder: 0,
+            isLeaf: true,
+          ),
+          const ContentItem(
+            curriculumId: 'chumash',
+            level1: 'Bereshit',
+            displayNameHe: 'בראשית',
+            displayNameEn: 'Bereshit',
+            sefariaRef: 'Genesis_1_2',
+            sortOrder: 1,
+            isLeaf: true,
+          ),
+        ];
+
+        when(
+          () => mockContentRepo.getContentByRef(
+            curriculumId: CurriculumId.chumash,
+            sefariaRef: any(named: 'sefariaRef'),
+          ),
+        ).thenAnswer((_) async => leaves.first);
+
+        when(
+          () => mockContentRepo.filterByLevel(
+            curriculumId: CurriculumId.chumash,
+            level1: 'Bereshit',
+            level2: null,
+          ),
+        ).thenAnswer((_) async => leaves);
+
+        // Seed stage definition for Chumash so the service finds it.
+        await db.stageDao.insertStageDefinition(
+          StageDefinitionsCompanion.insert(
+            profileId: 1,
+            curriculumId: CurriculumId.chumash.storageKey,
+            trackId: trackId,
+            stageOrder: 1,
+            stageName: 'Learn',
+            schedule: const Value('{"type":"delay","delay_days":0}'),
+          ),
+        );
+
+        for (final leaf in leaves) {
+          await seedCompletion(
+            db,
+            CompletionEventsCompanion.insert(
+              profileId: 1,
+              curriculumId: CurriculumId.chumash.storageKey,
+              sefariaRef: leaf.sefariaRef,
+              stageId: 1,
+              trackType: 'personal',
+              trackId: Value(trackId),
+              eventTimestamp: DateTime.utc(2026, 3, 1),
+            ),
+          );
+        }
+
+        final service = createService();
+        await service.checkAndRecordCompletions(
+          curriculumId: CurriculumId.chumash.storageKey,
+          sefariaRef: leaves.first.sefariaRef,
+          trackType: 'personal',
+          profileId: 1,
+          markedBy: 1,
+        );
+
+        final entries = await db.learningLedgerDao.getEntriesByProfile(1);
+        expect(
+          entries
+              .where(
+                (e) =>
+                    e.curriculumId == 'chumash' &&
+                    e.entryScope == 'sefer' &&
+                    e.unitIdentifier == 'Bereshit',
+              )
+              .toList(),
+          hasLength(1),
+          reason:
+              'F2: Chumash level-1 detection must write entryScope=sefer so '
+              'the journey provider whitelist recognises it as a unit siyum. '
+              'Pre-fix, this row had entryScope=seder and was silently ignored.',
+        );
+      },
+    );
+
+    test(
+      'Mishna Berurah level-2 detection writes scope=siman',
+      () async {
+        // Track row for mishna_berurah.
+        final mbTrack = await db
+            .into(db.curriculumTracks)
+            .insertReturning(
+              CurriculumTracksCompanion.insert(
+                profileId: 1,
+                curriculumId: CurriculumId.mishnaBerurah.storageKey,
+                stateChangedAt: DateTime.now(),
+                activatedAt: DateTime.now(),
+              ),
+            );
+
+        // Mishna Berurah content: chelek 1 → siman 1 → 2 leaves.
+        final leaves = <ContentItem>[
+          const ContentItem(
+            curriculumId: 'mishna_berurah',
+            level1: 'Chelek 1',
+            level2: 'Siman 1',
+            displayNameHe: 'סעיף א',
+            displayNameEn: 'Seif 1',
+            sefariaRef: 'MB_1_1_1',
+            sortOrder: 0,
+            isLeaf: true,
+          ),
+          const ContentItem(
+            curriculumId: 'mishna_berurah',
+            level1: 'Chelek 1',
+            level2: 'Siman 1',
+            displayNameHe: 'סעיף ב',
+            displayNameEn: 'Seif 2',
+            sefariaRef: 'MB_1_1_2',
+            sortOrder: 1,
+            isLeaf: true,
+          ),
+        ];
+
+        when(
+          () => mockContentRepo.getContentByRef(
+            curriculumId: CurriculumId.mishnaBerurah,
+            sefariaRef: any(named: 'sefariaRef'),
+          ),
+        ).thenAnswer((_) async => leaves.first);
+
+        when(
+          () => mockContentRepo.filterByLevel(
+            curriculumId: CurriculumId.mishnaBerurah,
+            level1: 'Chelek 1',
+            level2: 'Siman 1',
+          ),
+        ).thenAnswer((_) async => leaves);
+
+        when(
+          () => mockContentRepo.filterByLevel(
+            curriculumId: CurriculumId.mishnaBerurah,
+            level1: 'Chelek 1',
+            level2: null,
+          ),
+        ).thenAnswer((_) async => leaves);
+
+        await db.stageDao.insertStageDefinition(
+          StageDefinitionsCompanion.insert(
+            profileId: 1,
+            curriculumId: CurriculumId.mishnaBerurah.storageKey,
+            trackId: mbTrack.id,
+            stageOrder: 1,
+            stageName: 'Learn',
+            schedule: const Value('{"type":"delay","delay_days":0}'),
+          ),
+        );
+
+        for (final leaf in leaves) {
+          await seedCompletion(
+            db,
+            CompletionEventsCompanion.insert(
+              profileId: 1,
+              curriculumId: CurriculumId.mishnaBerurah.storageKey,
+              sefariaRef: leaf.sefariaRef,
+              stageId: 1,
+              trackType: 'personal',
+              trackId: Value(mbTrack.id),
+              eventTimestamp: DateTime.utc(2026, 3, 1),
+            ),
+          );
+        }
+
+        final service = createService();
+        await service.checkAndRecordCompletions(
+          curriculumId: CurriculumId.mishnaBerurah.storageKey,
+          sefariaRef: leaves.first.sefariaRef,
+          trackType: 'personal',
+          profileId: 1,
+          markedBy: 1,
+        );
+
+        final entries = await db.learningLedgerDao.getEntriesByProfile(1);
+        // Level-2 row: scope=siman (NOT 'masechta', which would silently fall
+        // outside the journey whitelist).
+        expect(
+          entries
+              .where(
+                (e) =>
+                    e.curriculumId == 'mishna_berurah' &&
+                    e.entryScope == 'siman' &&
+                    e.unitIdentifier == 'Siman 1',
+              )
+              .toList(),
+          hasLength(1),
+          reason:
+              'F2: Mishna Berurah level-2 must write entryScope=siman, not '
+              '"masechta". Pre-fix this row used the hardcoded "masechta" '
+              "string and the journey provider's siman whitelist still "
+              'matched it by accident — but the curriculum-level scope was '
+              'wrong, breaking the redesign brief.',
+        );
+        // Level-1 row: scope=chelek (NOT 'seder' — that was the hardcoded
+        // bug).
+        expect(
+          entries
+              .where(
+                (e) =>
+                    e.curriculumId == 'mishna_berurah' &&
+                    e.entryScope == 'chelek' &&
+                    e.unitIdentifier == 'Chelek 1',
+              )
+              .toList(),
+          hasLength(1),
+          reason:
+              'F2: Mishna Berurah level-1 must write entryScope=chelek, not '
+              'seder. A chelek covers all simanim within it (in this test '
+              'the only siman is complete, so the chelek also fires).',
+        );
+      },
+    );
+
+    // Pure unit tests on the helper — no DB needed.
+    group('unitScopeFor helper', () {
+      test('level 2', () {
+        expect(unitScopeFor(CurriculumId.mishnayos, level: 2), 'masechta');
+        expect(unitScopeFor(CurriculumId.bavli, level: 2), 'masechta');
+        expect(unitScopeFor(CurriculumId.yerushalmi, level: 2), 'masechta');
+        expect(unitScopeFor(CurriculumId.mishnaBerurah, level: 2), 'siman');
+        expect(unitScopeFor(CurriculumId.mishnehTorah, level: 2), 'hilchos');
+      });
+
+      test('level 1', () {
+        expect(unitScopeFor(CurriculumId.mishnayos, level: 1), 'seder');
+        expect(unitScopeFor(CurriculumId.bavli, level: 1), 'seder');
+        expect(unitScopeFor(CurriculumId.yerushalmi, level: 1), 'seder');
+        expect(unitScopeFor(CurriculumId.mishnaBerurah, level: 1), 'chelek');
+        expect(unitScopeFor(CurriculumId.chumash, level: 1), 'sefer');
+        expect(unitScopeFor(CurriculumId.nach, level: 1), 'sefer');
+        expect(unitScopeFor(CurriculumId.tanach, level: 1), 'sefer');
+        expect(unitScopeFor(CurriculumId.mussar, level: 1), 'sefer');
+        expect(unitScopeFor(CurriculumId.mishnehTorah, level: 1), 'sefer');
+      });
+    });
+  });
 }

@@ -35,6 +35,12 @@ class ProgressTierCounterRow extends ConsumerWidget {
   /// When true, renders the fourth ⭐ points counter (child mode).
   final bool showPoints;
 
+  /// Placeholder rendered in place of a number while any underlying provider
+  /// is still loading (or has errored). Avoids the "0-day streak · 0 siyumim
+  /// · 0 items in lifetime" flash during first paint that the IA redesign
+  /// was explicitly meant to eliminate.
+  static const String _loadingPlaceholder = '…';
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final profileId = ref.watch(activeProfileIdProvider);
@@ -45,6 +51,18 @@ class ProgressTierCounterRow extends ConsumerWidget {
     );
     final pointsAsync = ref.watch(dashboardGlobalPointsProvider);
     final terms = domainTermLabels(ref);
+
+    // Gate the numeric render on every dependency having resolved data. The
+    // counters are visually homogeneous so showing real numbers for some
+    // while the rest still read "0" produces the "1336 vs 0" confusion the
+    // redesign was meant to eliminate — see docs/planning/progress-ia-
+    // redesign.md §2. We use `hasValue` (not `!hasError`) so an errored
+    // provider keeps the placeholder rather than rendering a misleading 0.
+    final pointsReady = !showPoints || pointsAsync.hasValue;
+    final allReady = streakAsync.hasValue &&
+        journeyAsync.hasValue &&
+        lifetimeTotalsAsync.hasValue &&
+        pointsReady;
 
     final currentStreak = streakAsync.asData?.value.currentStreak ?? 0;
     final journey = journeyAsync.asData?.value;
@@ -57,29 +75,34 @@ class ProgressTierCounterRow extends ConsumerWidget {
         lifetimeTotalsAsync.asData?.value.learnedSections ?? 0;
     final points = pointsAsync.asData?.value ?? 0;
 
+    final streakValue = allReady ? '$currentStreak' : _loadingPlaceholder;
+    final siyumimValue = allReady ? '$totalSiyumim' : _loadingPlaceholder;
+    final lifetimeValue = allReady ? '$lifetimeItems' : _loadingPlaceholder;
+    final pointsValue = allReady ? '$points' : _loadingPlaceholder;
+
     final counters = <Widget>[
       _Counter(
         emoji: '🔥',
-        value: '$currentStreak',
+        value: streakValue,
         label: terms.tierCounterStreakDays(currentStreak),
         accent: const Color(0xFFFF6F77),
       ),
       _Counter(
         emoji: '🏆',
-        value: '$totalSiyumim',
+        value: siyumimValue,
         label: terms.tierCounterSiyumimEarned(totalSiyumim),
         accent: AppColors.chartAmber,
       ),
       _Counter(
         emoji: '📚',
-        value: '$lifetimeItems',
+        value: lifetimeValue,
         label: terms.tierCounterLifetimeItems(lifetimeItems),
         accent: AppTheme.brandBlue,
       ),
       if (showPoints)
         _Counter(
           emoji: '⭐',
-          value: '$points',
+          value: pointsValue,
           label: terms.tierCounterPoints(points),
           accent: const Color(0xFFE4A100),
         ),

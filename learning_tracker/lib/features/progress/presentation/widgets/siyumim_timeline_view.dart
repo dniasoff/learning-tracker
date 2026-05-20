@@ -6,6 +6,8 @@ import 'package:learning_tracker/core/labels/domain_term_labels.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/progress/domain/models/journey_view_model.dart';
 import 'package:learning_tracker/features/progress/presentation/widgets/siyum_milestone_label.dart';
+import 'package:learning_tracker/features/progress/presentation/widgets/siyumim_grouped_view.dart'
+    show formatMilestoneDate;
 
 /// Chronological view of all siyumim (unit + aggregate + curriculum) across
 /// every curriculum, newest first, grouped by month.
@@ -167,7 +169,7 @@ class _TimelineCard extends ConsumerWidget {
               ),
             ),
             Text(
-              ' · ${_formatDate(m.achievedAt)}',
+              ' · ${formatMilestoneDate(context, m.achievedAt)}',
               style: TextStyle(
                 fontSize: 12,
                 color: Theme.of(context).colorScheme.onSurfaceVariant,
@@ -177,10 +179,5 @@ class _TimelineCard extends ConsumerWidget {
         ),
       ),
     );
-  }
-
-  String _formatDate(DateTime date) {
-    final local = date.toLocal();
-    return '${local.day}/${local.month}/${local.year}';
   }
 }

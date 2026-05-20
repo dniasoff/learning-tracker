@@ -1,10 +1,15 @@
+import 'package:auto_route/auto_route.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:learning_tracker/core/database/registry/device_registry_database.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
+import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/features/account/domain/models/app_user.dart';
 import 'package:learning_tracker/features/account/domain/repositories/auth_repository.dart';
 import 'package:learning_tracker/features/account/presentation/notifiers/sign_in_controller.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_providers.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// Throwing fake [AuthRepository] used to drive the failure path of
 /// `onSendAgain` inside `SignInController.buildVerificationCallback`.
@@ -110,15 +115,48 @@ class _ThrowingAuthRepository implements AuthRepository {
       throw UnimplementedError();
 }
 
-void main() {
-  group('SignInController.resendVerificationEmail', () {
-    setUp(() {
-      // Reset the AppLogger singleton so each test starts with an empty Talker
-      // history. AppLogger.init() returns a fresh Talker and clears the cached
-      // AppLogger.instance.
-      AppLogger.init();
-    });
+/// Sentinel exception that the catch path must observe and log. We use a
+/// custom type so the assertion can be precise: "the catch saw OUR exception"
+/// is stronger than "the catch saw SOME exception".
+class _StubDatabaseFailure implements Exception {
+  const _StubDatabaseFailure(this.message);
+  final String message;
 
+  @override
+  String toString() => '_StubDatabaseFailure: $message';
+}
+
+/// Returns the rendered log messages for any entry that mentions [event].
+Iterable<String> _entriesMentioning(String event) {
+  return AppLogger.instance.talker.history
+      .map((entry) => entry.generateTextMessage())
+      .where((m) => m.contains(event));
+}
+
+/// Builds a DeviceAccount fixture for the offline-cloud-restore catch test.
+/// Tier is `cloudBorn` so the catch triggers via the cloud-restore branch
+/// rather than getting routed to the local fallback.
+DeviceAccount _cloudAccount() => DeviceAccount(
+      accountId: 'acc-cloud-1',
+      email: 'cloud@example.com',
+      displayName: 'Cloud User',
+      tier: 'cloudBorn',
+      firebaseUid: 'fb-uid-1',
+      avatarIndex: 0,
+      createdAt: DateTime.utc(2026, 1, 1),
+      lastUsedAt: DateTime.utc(2026, 1, 1),
+      dbFileName: 'user_acc_cloud_1.db',
+    );
+
+void main() {
+  setUp(() {
+    // Reset the AppLogger singleton so each test starts with an empty Talker
+    // history. AppLogger.init() returns a fresh Talker and clears the cached
+    // AppLogger.instance.
+    AppLogger.init();
+  });
+
+  group('SignInController.resendVerificationEmail', () {
     test(
       'logs a warning via AppLogger when sendEmailVerification throws '
       '(replaces the previously swallowed empty catch)',
@@ -171,4 +209,153 @@ void main() {
       },
     );
   });
+
+  // ── F19: empty-catch logging in offline / local-fallback paths ─────────────
+  //
+  // Both `_tryLocalFallbackSignIn` and `_tryOfflineCloudRestore` used to
+  // swallow EVERY exception with an empty `catch (_)`. A broken DB, a prefs
+  // corruption, a navigation crash — all manifested as an "incorrect
+  // password" toast with zero operator trace. The fix replaces each empty
+  // catch with `AppLogger.warning(event: …, exception: e, stackTrace: st)`.
+  //
+  // Both helpers are now exposed via `@visibleForTesting` shims so the
+  // catch path runs the EXACT production lines (no copy of the logic in
+  // the test). We override `userDatabaseProvider` to throw a sentinel
+  // exception — that throw propagates through `_ref.read(...)` inside the
+  // `try` block and lands in the `catch`, exercising the AppLogger call.
+
+  group('SignInController.tryLocalFallbackSignInForTest — F19 logging', () {
+    test(
+      'logs a warning via AppLogger when an unexpected exception is thrown '
+      '(replaces the previously swallowed empty catch)',
+      () async {
+        // Force `userDatabaseProvider` to throw on first read. This throw
+        // propagates out of `final dao = _ref.read(userDatabaseProvider)
+        // .userProfileDao` inside `_tryLocalFallbackSignIn` and lands in the
+        // catch — which is the line the F19 fix added the AppLogger.warning
+        // call to.
+        final container = ProviderContainer(
+          overrides: [
+            userDatabaseProvider.overrideWith(
+              (ref) => throw const _StubDatabaseFailure('user db unavailable'),
+            ),
+          ],
+        );
+        addTearDown(container.dispose);
+
+        final controller = container.read(signInControllerProvider.notifier);
+
+        // Drive the production code through the visible-for-tests shim. The
+        // method must return false (catch path) and the AppLogger must
+        // observe the exception.
+        final result = await controller.tryLocalFallbackSignInForTest(
+          email: 'test@example.com',
+          password: 'whatever',
+          router: _StubRouter(),
+          // The catch path doesn't reference l10n, so any non-null instance
+          // would do — but the helper signature demands it.
+          l10n: await _stubL10n(),
+        );
+
+        expect(
+          result,
+          isFalse,
+          reason:
+              'helper must return false when an unexpected exception is '
+              'caught (matches the legacy contract — the only change is the '
+              'log emission).',
+        );
+
+        final entries = _entriesMentioning('try_local_fallback_sign_in_failed')
+            .toList();
+        expect(
+          entries,
+          isNotEmpty,
+          reason:
+              'Expected AppLogger.warning(event: "try_local_fallback_sign_in_failed") '
+              'to be emitted. Talker history: '
+              '${AppLogger.instance.talker.history.map((e) => e.generateTextMessage()).toList()}',
+        );
+        expect(
+          entries.any((m) => m.contains('user db unavailable')),
+          isTrue,
+          reason:
+              'Expected the underlying exception message to be attached. '
+              'Captured entries: $entries',
+        );
+      },
+    );
+  });
+
+  group('SignInController.tryOfflineCloudRestoreForTest — F19 logging', () {
+    test(
+      'logs a warning via AppLogger when an unexpected exception is thrown '
+      '(replaces the previously swallowed empty catch)',
+      () async {
+        // Same trick — `userDatabaseProvider` throws so the read inside
+        // `_tryOfflineCloudRestore` (right after the file-name swap)
+        // immediately propagates into the catch block.
+        final container = ProviderContainer(
+          overrides: [
+            userDatabaseProvider.overrideWith(
+              (ref) => throw const _StubDatabaseFailure(
+                'offline db swap failed',
+              ),
+            ),
+          ],
+        );
+        addTearDown(container.dispose);
+
+        final controller = container.read(signInControllerProvider.notifier);
+
+        final result = await controller.tryOfflineCloudRestoreForTest(
+          _cloudAccount(),
+          _StubRouter(),
+        );
+
+        expect(
+          result,
+          isFalse,
+          reason:
+              'helper must return false when an unexpected exception is '
+              'caught.',
+        );
+
+        final entries = _entriesMentioning('try_offline_cloud_restore_failed')
+            .toList();
+        expect(
+          entries,
+          isNotEmpty,
+          reason:
+              'Expected AppLogger.warning(event: "try_offline_cloud_restore_failed") '
+              'to be emitted. Talker history: '
+              '${AppLogger.instance.talker.history.map((e) => e.generateTextMessage()).toList()}',
+        );
+        expect(
+          entries.any((m) => m.contains('offline db swap failed')),
+          isTrue,
+          reason:
+              'Expected the underlying exception message to be attached. '
+              'Captured entries: $entries',
+        );
+      },
+    );
+  });
+}
+
+/// Minimal StackRouter stub — the catch path returns BEFORE any navigation
+/// is attempted, so we never actually call any of its methods.
+class _StubRouter implements StackRouter {
+  @override
+  dynamic noSuchMethod(Invocation invocation) =>
+      throw UnsupportedError(
+        'StubRouter received an unexpected call: ${invocation.memberName}',
+      );
+}
+
+/// Lazily realise the AppLocalizations instance the controller expects. The
+/// catch path never references l10n so this can be any non-null instance.
+Future<AppLocalizations> _stubL10n() async {
+  // The `enUs` locale is supported and matches the default ARB.
+  return AppLocalizations.delegate.load(const Locale('en'));
 }

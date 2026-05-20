@@ -81,13 +81,17 @@ final recentActivityCumulativeProvider = FutureProvider.autoDispose
 
 /// Live streak calendar for the given window. The set contains every local
 /// date in [window.startDate]..[window.endDate] that has at least one live
-/// completion.
+/// completion — scoped to [window.curriculumId] when the user picks a
+/// specific curriculum chip (F11 — W7-D fix wave: previously the provider
+/// key encoded curriculum but the call ignored it, so the calendar dots
+/// stayed unchanged when the chip changed).
 final recentActivityStreakDatesProvider = FutureProvider.autoDispose
     .family<Set<DateTime>, RecentActivityWindow>((ref, window) async {
       final service = ref.watch(chartDataServiceProvider);
       return service.getStreakCalendarLive(
         startDate: window.startDate,
         endDate: window.endDate,
+        curriculumId: window.curriculumId,
       );
     });
 

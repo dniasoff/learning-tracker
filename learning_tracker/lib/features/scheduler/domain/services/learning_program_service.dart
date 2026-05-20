@@ -1,6 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/database/seed/learning_program_seeds.dart';
-import 'package:learning_tracker/core/labels/domain_term_labels.dart';
+import 'package:learning_tracker/features/scheduler/domain/labels/program_label_resolver.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'learning_program_service.g.dart';
@@ -40,13 +40,15 @@ class LearningProgramData {
 }
 
 /// Pure-string label for a [LearningProgramData] respecting the Hebrew Terms
-/// toggle. Routes through [domainTermLabels] (the single point of access for
-/// the toggle in `lib/core/labels/`) so this scheduler service does not read
-/// `useHebrewTermsProvider` directly — see audit rule 7/15.
+/// toggle. Routes through [ProgramLabelResolver] (the scheduler-side shim
+/// that reads the toggle source-of-truth in `lib/core/labels/`) so this
+/// scheduler service does not read `useHebrewTermsProvider` directly — see
+/// audit rule 7/15 — and so `lib/core/` does not import scheduler types
+/// (Rule 1).
 String learningProgramLabelText(
   WidgetRef ref, {
   required LearningProgramData program,
-}) => domainTermLabels(ref).learningProgramLabel(program);
+}) => ProgramLabelResolver.of(ref).learningProgramLabel(program);
 
 /// Riverpod provider for [LearningProgramRepository].
 ///

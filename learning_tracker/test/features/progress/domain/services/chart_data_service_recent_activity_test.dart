@@ -317,5 +317,77 @@ void main() {
       expect(dates.contains(DateTime(2026, 5, 5)), isTrue);
       expect(dates.contains(DateTime(2026, 5, 10)), isFalse);
     });
+
+    // F11 (W7-D fix wave): the curriculum filter pill must scope the
+    // calendar dot pattern — previously the method ignored curriculumId
+    // and the dots stayed unchanged when the chip changed.
+    test(
+      'curriculum filter scopes the streak calendar to the selected curriculum',
+      () async {
+        // Live mark on May 5 in mishnayos; live mark on May 10 in bavli.
+        // Each curriculum needs its own track (the schema FK).
+        final bavliTrack = await seedTrack(
+          db,
+          profileId: _profileId,
+          curriculumId: 'bavli',
+        );
+        await db.completionEventDao.appendEvent(
+          CompletionEventsCompanion.insert(
+            profileId: _profileId,
+            curriculumId: _curriculumId,
+            sefariaRef: 'mish_may5',
+            stageId: 1,
+            trackType: 'personal',
+            trackId: Value(trackId),
+            eventTimestamp: DateTime(2026, 5, 5, 9),
+          ),
+        );
+        await db.completionEventDao.appendEvent(
+          CompletionEventsCompanion.insert(
+            profileId: _profileId,
+            curriculumId: 'bavli',
+            sefariaRef: 'bav_may10',
+            stageId: 1,
+            trackType: 'personal',
+            trackId: Value(bavliTrack),
+            eventTimestamp: DateTime(2026, 5, 10, 10),
+          ),
+        );
+
+        // No filter → both dates light up.
+        final allDates = await service.getStreakCalendarLive(
+          startDate: _startDate,
+          endDate: _endDate,
+        );
+        expect(allDates.contains(DateTime(2026, 5, 5)), isTrue);
+        expect(allDates.contains(DateTime(2026, 5, 10)), isTrue);
+
+        // Mishnayos filter → only the May 5 dot remains.
+        final mishOnly = await service.getStreakCalendarLive(
+          startDate: _startDate,
+          endDate: _endDate,
+          curriculumId: 'mishnayos',
+        );
+        expect(mishOnly.contains(DateTime(2026, 5, 5)), isTrue);
+        expect(
+          mishOnly.contains(DateTime(2026, 5, 10)),
+          isFalse,
+          reason: 'May 10 bavli mark must be dropped under the mishnayos chip',
+        );
+
+        // Bavli filter → only the May 10 dot remains.
+        final bavOnly = await service.getStreakCalendarLive(
+          startDate: _startDate,
+          endDate: _endDate,
+          curriculumId: 'bavli',
+        );
+        expect(bavOnly.contains(DateTime(2026, 5, 10)), isTrue);
+        expect(
+          bavOnly.contains(DateTime(2026, 5, 5)),
+          isFalse,
+          reason: 'May 5 mishnayos mark must be dropped under the bavli chip',
+        );
+      },
+    );
   });
 }

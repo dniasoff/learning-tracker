@@ -244,6 +244,11 @@ class BulkPriorCompletionService {
         trackType: TrackType.personal.storageKey,
         profileId: profileId,
         awardGamificationPoints: awardGamificationPoints,
+        // F1 (W7-A): bulk-mark-prior represents the `bulkInTrack` source —
+        // engagement is suppressed, but achievement (siyum detection) must
+        // fire so a learner who bulk-marks an entire masechta still earns
+        // the corresponding unit/aggregate siyum ledger entry.
+        creditsAchievement: true,
         completedAt: kBulkPriorSentinelDate, // sentinel: "learned in the past"
       );
       final completions = await _completionRepository.bulkMarkComplete(request);

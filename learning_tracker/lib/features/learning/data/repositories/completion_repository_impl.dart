@@ -292,6 +292,19 @@ class CompletionRepositoryImpl implements CompletionRepository {
       }
     }
 
+    // F1 (W7-A): dispatch siyum detection after the bulk insert. The slow
+    // path doesn't gate on `awardGamificationPoints` (engagement) — it gates
+    // on `creditsAchievement` so bulkInTrack still earns siyumim even
+    // though engagement is suppressed.
+    if (request.creditsAchievement && completions.isNotEmpty) {
+      await _dispatchSiyumDetectionForRefs(
+        curriculumId: request.curriculumId,
+        sefariaRefs: completions.map((c) => c.sefariaRef).toList(),
+        trackType: request.trackType,
+        profileId: effectiveProfileId,
+      );
+    }
+
     return completions;
   }
 
@@ -380,7 +393,74 @@ class CompletionRepositoryImpl implements CompletionRepository {
       );
     }
 
+    // F1 (W7-A): dispatch siyum detection after the optimised bulk-prior
+    // path completes. bulkInTrack credits achievement — without this call,
+    // a learner who bulk-marks an entire masechta during onboarding would
+    // see zero siyum entries in their journey ledger.
+    if (request.creditsAchievement && ordered.isNotEmpty) {
+      await _dispatchSiyumDetectionForRefs(
+        curriculumId: request.curriculumId,
+        sefariaRefs: ordered.map((c) => c.sefariaRef).toList(),
+        trackType: request.trackType,
+        profileId: effectiveProfileId,
+      );
+    }
+
     return ordered;
+  }
+
+  /// F1 (W7-A) — Dispatch [CompletionDetectionService.checkAndRecordCompletions]
+  /// for the distinct parent units (level1 + level2) reached by [sefariaRefs].
+  ///
+  /// The detection service exits early when a parent unit has any leaves that
+  /// are not yet fully completed — so it's safe to fire for every parent
+  /// touched by a bulk insert. We dedupe by parent so the service runs at most
+  /// once per `(curriculumId, level1)` and once per `(curriculumId, level2)`,
+  /// not once per leaf.
+  ///
+  /// Each call is awaited so test code (and the live UI's invalidation) sees
+  /// a synchronous "bulk insert + siyum ledger update" boundary.
+  Future<void> _dispatchSiyumDetectionForRefs({
+    required String curriculumId,
+    required List<String> sefariaRefs,
+    required String trackType,
+    required int profileId,
+  }) async {
+    final svc = _completionDetectionService;
+    if (svc == null) return;
+
+    final curriculum = CurriculumId.values.firstWhere(
+      (c) => c.storageKey == curriculumId,
+      orElse: () => throw ArgumentError('Unknown curriculumId: $curriculumId'),
+    );
+
+    // Resolve each ref into its content item and dedupe by parent unit so we
+    // call the detection service once per distinct (level1, level2) pair.
+    final seenUnitKeys = <String>{};
+    final representativeRefs = <String>[];
+    for (final ref in sefariaRefs) {
+      final item = await _contentRepository.getContentByRef(
+        curriculumId: curriculum,
+        sefariaRef: ref,
+      );
+      if (item == null) continue;
+      // The detection service inspects both level1 and level2 — using
+      // (level1, level2) as the dedupe key covers both checks at once.
+      final unitKey = '${item.level1}::${item.level2 ?? ''}';
+      if (seenUnitKeys.add(unitKey)) {
+        representativeRefs.add(ref);
+      }
+    }
+
+    for (final ref in representativeRefs) {
+      await svc.checkAndRecordCompletions(
+        curriculumId: curriculumId,
+        sefariaRef: ref,
+        trackType: trackType,
+        profileId: profileId,
+        markedBy: profileId,
+      );
+    }
   }
 
   /// Internal method used by the slow [bulkMarkComplete] path only.

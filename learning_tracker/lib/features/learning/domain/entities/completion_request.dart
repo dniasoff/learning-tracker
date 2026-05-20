@@ -31,6 +31,17 @@ class BulkCompletionRequest {
   /// track study only.
   final bool awardGamificationPoints;
 
+  /// When true, after the bulk insert completes, [CompletionDetectionService]
+  /// is dispatched for the parent units of every inserted completion so unit-
+  /// and aggregate-level siyumim land in the `learning_ledger`. This is the
+  /// achievement-tier gate for the bulk path — independent of
+  /// [awardGamificationPoints], which is the engagement-tier gate.
+  ///
+  /// Per the B1 three-tier credit policy:
+  ///   - `bulkInTrack`  → engagement=false, achievement=true
+  ///   - `lifetimeOnly` → engagement=false, achievement=false
+  final bool creditsAchievement;
+
   /// When set, overrides the timestamp written to each completion row.
   /// Pass [DateTime.utc(2000, 1, 1)] for bulk-mark-prior so the completions
   /// are recorded in the distant past and do not inflate the current streak.
@@ -44,6 +55,7 @@ class BulkCompletionRequest {
     required this.trackType,
     this.profileId,
     this.awardGamificationPoints = true,
+    this.creditsAchievement = false,
     this.completedAt,
   });
 }

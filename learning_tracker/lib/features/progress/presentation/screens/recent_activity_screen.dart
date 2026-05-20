@@ -11,6 +11,7 @@ import 'package:learning_tracker/core/widgets/error_display.dart';
 import 'package:learning_tracker/core/widgets/loading_indicator.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/progress/domain/models/chart_data.dart';
+import 'package:learning_tracker/features/progress/domain/services/chart_data_service.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/recent_activity_providers.dart';
 import 'package:learning_tracker/features/progress/presentation/widgets/cumulative_line_chart.dart';
 import 'package:learning_tracker/features/progress/presentation/widgets/limudim_chazaros_bar_chart.dart';
@@ -61,11 +62,12 @@ class _RecentActivityScreenState extends ConsumerState<RecentActivityScreen> {
         start: today.subtract(const Duration(days: 29)),
         end: today,
       ),
-      // DateTime(2000, 1, 1) matches the bulk-prior sentinel epoch.
+      // Use [kChartAllTimeFloor] instead of an inline literal so the
+      // "All time" floor is named and traceable (F18 — W7-D fix wave).
       // ChartDataService caps this internally to the first live completion
       // (and bucketises to weekly) so the chart never receives ~9,600
       // leading empty days. See [kChartDailyMaxDays].
-      ChartTimeRange.allTime => (start: DateTime(2000, 1, 1), end: today),
+      ChartTimeRange.allTime => (start: kChartAllTimeFloor, end: today),
     };
   }
 
@@ -319,6 +321,23 @@ class _StreakHeaderCard extends ConsumerWidget {
             loading: () => LoadingIndicator(message: l10n.loading),
             error: (e, _) => Text(l10n.chartFailedToLoad),
           ),
+          // When a curriculum chip is active, clarify the scope mismatch:
+          // the headline streak number is profile-global (sourced from
+          // `dashboardStreakProvider` — the user's overall live streak,
+          // same as the Dashboard pill), but the calendar dots below are
+          // scoped to the active curriculum filter. F11 (W7-D fix wave)
+          // chose Path A: thread `curriculumId` end-to-end into the
+          // calendar, document the global streak number here.
+          if (window.curriculumId != null) ...[
+            const SizedBox(height: 4),
+            Text(
+              terms.streakAcrossAllCurricula,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: const Color(0xFF778099),
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
           const SizedBox(height: 10),
           activeDatesAsync.when(
             data: (activeDates) => StreakCalendar(

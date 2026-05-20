@@ -15,6 +15,7 @@ import 'package:learning_tracker/features/progress/presentation/providers/progre
 import 'package:learning_tracker/features/progress/presentation/widgets/hierarchy_progress_card.dart';
 import 'package:learning_tracker/features/progress/presentation/widgets/overall_stats_card.dart';
 import 'package:learning_tracker/features/progress/presentation/widgets/pace_indicator.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
 
 @RoutePage()
 class CurriculumProgressScreen extends ConsumerWidget {
@@ -36,6 +37,7 @@ class CurriculumProgressScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final curriculum = _curriculumEnum();
     final terms = domainTermLabels(ref);
+    final l10n = AppLocalizations.of(context)!;
     final progressAsync = ref.watch(curriculumProgressProvider(curriculumId));
     final paceAsync = ref.watch(curriculumPaceStatusProvider(curriculumId));
     final profileId = ref.watch(activeProfileIdProvider);
@@ -138,14 +140,10 @@ class CurriculumProgressScreen extends ConsumerWidget {
                       data: (pace) => pace != null
                           ? Padding(
                               padding: const EdgeInsets.only(bottom: 16),
-                              // English string inlined per W5-A brief
-                              // (vocabulary table in
-                              // docs/planning/progress-ia-redesign.md).
-                              // TODO(l10n): extract to ARB on next sweep.
                               child: PaceIndicator(
                                 paceStatus: pace,
                                 subtitleCaption:
-                                    'Pace tracks live learning only.',
+                                    l10n.paceLiveLearningOnlyCaption,
                               ),
                             )
                           : const SizedBox.shrink(),

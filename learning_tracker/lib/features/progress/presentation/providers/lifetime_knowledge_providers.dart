@@ -9,8 +9,8 @@
 /// consumers, and provides the Riverpod providers that orchestrate data loading.
 library;
 
-import 'package:drift/drift.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:learning_tracker/core/database/daos/completion_dao.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/curriculum_overlap_registry.dart';
@@ -45,6 +45,85 @@ export 'package:learning_tracker/features/progress/domain/models/lifetime_knowle
 // Providers
 // ---------------------------------------------------------------------------
 
+/// Partitioned view of `prior_completion_imports` for one curriculum: bulk
+/// refs and lifetime refs as separate sets.
+///
+/// Built by [priorImportsByProfileProvider] in one go for the whole profile,
+/// then handed out per-curriculum to provenance computations.
+class PriorImportsForCurriculum {
+  const PriorImportsForCurriculum({
+    required this.bulkRefs,
+    required this.lifetimeRefs,
+  });
+
+  /// Sefaria refs with `source = 'bulkInTrack'`.
+  final Set<String> bulkRefs;
+
+  /// Sefaria refs with `source = 'lifetimeOnly'`.
+  final Set<String> lifetimeRefs;
+}
+
+/// Profile-wide prior-completion-imports load, partitioned by curriculum.
+///
+/// Performs **one** SQL query against `prior_completion_imports` for the
+/// entire profile and returns a `{curriculumId → PriorImportsForCurriculum}`
+/// map. Replaces the per-curriculum + per-subset queries that previously ran
+/// inside [lifetimeDataProvider] (F13 — N+1 fix).
+///
+/// Empty entries (a curriculum with no imports) are omitted from the map so
+/// callers can use `map[cur]` directly and fall back to empty sets.
+final priorImportsByProfileProvider = FutureProvider.autoDispose
+    .family<Map<String, PriorImportsForCurriculum>, int>(
+      name: 'priorImportsByProfileProvider',
+      (ref, profileId) async {
+        final db = ref.watch(userDatabaseProvider);
+        final rows = await (db.select(db.priorCompletionImports)
+              ..where((t) => t.profileId.equals(profileId)))
+            .get();
+
+        // Partition by (curriculumId, source) in memory.
+        final bulk = <String, Set<String>>{};
+        final lifetime = <String, Set<String>>{};
+        for (final row in rows) {
+          switch (row.source) {
+            case 'bulkInTrack':
+              (bulk[row.curriculumId] ??= <String>{}).add(row.sefariaRef);
+            case 'lifetimeOnly':
+              (lifetime[row.curriculumId] ??= <String>{}).add(row.sefariaRef);
+          }
+        }
+
+        final out = <String, PriorImportsForCurriculum>{};
+        final cKeys = {...bulk.keys, ...lifetime.keys};
+        for (final c in cKeys) {
+          out[c] = PriorImportsForCurriculum(
+            bulkRefs: bulk[c] ?? const <String>{},
+            lifetimeRefs: lifetime[c] ?? const <String>{},
+          );
+        }
+        return out;
+      },
+    );
+
+/// Profile-wide completions load for the Lifetime Knowledge feature.
+///
+/// One query per profile (vs one query per curriculum + one per subset under
+/// the legacy code path). Results are partitioned in-memory by curriculumId.
+/// F13 — N+1 fix.
+final completionsByProfileForLifetimeProvider = FutureProvider.autoDispose
+    .family<Map<String, List<Completion>>, int>(
+      name: 'completionsByProfileForLifetimeProvider',
+      (ref, profileId) async {
+        final db = ref.watch(userDatabaseProvider);
+        final all = await db.completionDao.getCompletionsByProfile(profileId);
+        final out = <String, List<Completion>>{};
+        for (final c in all) {
+          (out[c.curriculumId] ??= <Completion>[]).add(c);
+        }
+        return out;
+      },
+    );
+
 /// Per-curriculum lazy lifetime data provider.
 ///
 /// Loads lifetime completion data for a single [CurriculumId]. Returns `null`
@@ -67,11 +146,13 @@ final lifetimeDataProvider = FutureProvider.autoDispose
       if (leaves == null) return null;
       if (leaves.isEmpty) return null;
 
-      final completions = await db.completionDao
-          .getCompletionsByCurriculumAndProfile(
-            curriculum.storageKey,
-            profileId,
-          );
+      // F13: one profile-wide completions read, partitioned in memory by
+      // curriculumId. Replaces the per-curriculum + per-subset SELECTs.
+      final completionsByCurriculum = await ref.watch(
+        completionsByProfileForLifetimeProvider(profileId).future,
+      );
+      final completions =
+          completionsByCurriculum[curriculum.storageKey] ?? const <Completion>[];
       final ledger = await db.learningLedgerDao.getEntriesByCurriculum(
         profileId,
         curriculum.storageKey,
@@ -86,61 +167,46 @@ final lifetimeDataProvider = FutureProvider.autoDispose
       // Track every event ref (including duplicates) for the chazaros count.
       final allEventRefs = <String>[...completions.map((c) => c.sefariaRef)];
       for (final subset in subsets) {
-        final subsetCompletions = await db.completionDao
-            .getCompletionsByCurriculumAndProfile(subset.storageKey, profileId);
+        final subsetCompletions =
+            completionsByCurriculum[subset.storageKey] ?? const <Completion>[];
         completedRefs = completedRefs.union(
           subsetCompletions.map((c) => c.sefariaRef).toSet(),
         );
         allEventRefs.addAll(subsetCompletions.map((c) => c.sefariaRef));
       }
 
-      // Per-leaf provenance: query prior_completion_imports directly for the
-      // active curriculum (and its subset curricula so a ref imported under a
-      // Chumash track surfaces correctly when viewing Tanach). We classify
-      // each leaf by the strongest source seen — live wins over bulk, bulk
-      // wins over lifetimeOnly, lifetimeOnly wins over ledger-only.
+      // Per-leaf provenance: read all imports for this profile in one query
+      // (coalesced via [priorImportsByProfileProvider]) and partition by
+      // (curriculumId, source). We classify each leaf by the strongest source
+      // seen — live wins over bulk, bulk wins over lifetimeOnly, lifetimeOnly
+      // wins over ledger-only.
+      //
+      // **Contract relied on for the upgrade case (live event for an existing
+      // bulk row):** when a live completion event commits against a natural
+      // key already present in `prior_completion_imports`, the writer DELETES
+      // the import row (see `CompletionWriter._upgradePriorMarkRow` →
+      // `PriorCompletionImportDao.deleteImport`). After the delete, the ref
+      // is no longer in [bulkRefs]/[lifetimeRefs], so `computeLeafProvenance`
+      // correctly returns `LifetimeLeafSource.live` for that ref.
+      final imports = await ref.watch(
+        priorImportsByProfileProvider(profileId).future,
+      );
       final bulkRefs = <String>{};
       final lifetimeRefs = <String>{};
       for (final cur in [curriculum, ...subsets]) {
-        final imports =
-            await (db.select(db.priorCompletionImports)..where(
-                  (t) =>
-                      t.profileId.equals(profileId) &
-                      t.curriculumId.equals(cur.storageKey),
-                ))
-                .get();
-        for (final row in imports) {
-          switch (row.source) {
-            case 'bulkInTrack':
-              bulkRefs.add(row.sefariaRef);
-            case 'lifetimeOnly':
-              lifetimeRefs.add(row.sefariaRef);
-          }
-        }
+        final perCur = imports[cur.storageKey];
+        if (perCur == null) continue;
+        bulkRefs.addAll(perCur.bulkRefs);
+        lifetimeRefs.addAll(perCur.lifetimeRefs);
       }
-      // A ref present in BOTH the events list AND an import set is a live
-      // upgrade — strip it from the import sets so it's classified as live.
-      // We do this by counting events versus imports per ref: if there are
-      // more events than imports, at least one event is non-imported.
-      // (For the simpler classification in computeLeafProvenance, we just
-      // need to know which set this ref belongs to. Live takes precedence
-      // when an event row exists that is NOT in the imports table —
-      // approximated by counting events outside the union of import refs.)
-      final liveOnlyRefs = <String>{
-        ...completedRefs.where(
-          (r) => !bulkRefs.contains(r) && !lifetimeRefs.contains(r),
-        ),
-      };
 
-      // Per-leaf event count (for the chazaros number on live entries).
+      // Per-leaf event count (for the chazaros number on live entries). The
+      // (bulkRefs, lifetimeRefs) sets passed here already reflect upgrades —
+      // see contract comment above. No further reconciliation is needed.
       final leafProvenance = LifetimeTreeBuilder.computeLeafProvenance(
-        // Pass only events whose ref is NOT in imports — that's the live set.
-        // For bulk/lifetime refs we still want a chazaros count (=event count
-        // of the event row that produced the import), so pass everything and
-        // let computeLeafProvenance decide based on the import sets below.
         completionEventRefs: allEventRefs,
-        bulkImportedRefs: bulkRefs.difference(liveOnlyRefs),
-        lifetimeImportedRefs: lifetimeRefs.difference(liveOnlyRefs),
+        bulkImportedRefs: bulkRefs,
+        lifetimeImportedRefs: lifetimeRefs,
       );
 
       final heLookup = await _safeHeLabelLookup(repo, curriculum);
@@ -362,7 +428,7 @@ class LifetimeHeaderCounters {
   final int totalChazaros;
 }
 
-/// Header counters for the Lifetime Knowledge screen.
+/// Header counters for the Lifetime Knowledge screen — "All sources" branch.
 ///
 /// Reuses [lifetimeSummariesProvider] for the items count (deduplicated
 /// across overlapping curricula) and reads completion events directly to sum
@@ -388,6 +454,35 @@ final lifetimeHeaderCountersProvider = FutureProvider.autoDispose
       );
     });
 
+/// Header counters for the Lifetime Knowledge screen — "Track learning only"
+/// branch (F3).
+///
+/// Mirrors [lifetimeHeaderCountersProvider] but applies the
+/// [CompletionTierFilter.trackAchievement] filter so the counts exclude
+/// lifetimeOnly imports. The toggle on the screen switches between the two
+/// providers so the displayed numbers stay consistent with the body
+/// (per-curriculum tree).
+///
+/// `itemsLearned` is the cardinality of distinct sefariaRefs in the filtered
+/// set (the SAME data surface the body's `itemsLearnedSummariesProvider`
+/// uses); `totalChazaros` counts every event row in the filtered set.
+final trackOnlyHeaderCountersProvider = FutureProvider.autoDispose
+    .family<LifetimeHeaderCounters, int>((ref, profileId) async {
+      final db = ref.watch(userDatabaseProvider);
+      // Track-achievement = live + bulkInTrack; lifetimeOnly is excluded at
+      // the SQL layer via NOT EXISTS / EXISTS predicates on
+      // prior_completion_imports. See [CompletionDao.getCompletionsByTier].
+      final completions = await db.completionDao.getCompletionsByTier(
+        profileId: profileId,
+        tier: CompletionTierFilter.trackAchievement,
+      );
+      final distinctRefs = completions.map((c) => c.sefariaRef).toSet();
+      return LifetimeHeaderCounters(
+        itemsLearned: distinctRefs.length,
+        totalChazaros: completions.length,
+      );
+    });
+
 // ---------------------------------------------------------------------------
 // Private helpers
 // ---------------------------------------------------------------------------
@@ -399,7 +494,16 @@ Future<List<ContentItem>?> _safeLoadLeaves(
   try {
     final content = await repo.getContentForCurriculum(curriculum);
     return content.where((item) => item.isLeaf).toList();
-  } catch (_) {
+  } catch (e, st) {
+    // F20: surface content-asset load failures so a missing/corrupt asset is
+    // diagnosable instead of silently producing an empty Lifetime Knowledge
+    // tree. Return null on the cold path so callers skip the curriculum.
+    AppLogger.instance.warning(
+      event: 'lifetime_safe_load_failed',
+      fields: {'curriculum': curriculum.storageKey, 'phase': 'leaves'},
+      exception: e,
+      stackTrace: st,
+    );
     return null;
   }
 }
@@ -411,7 +515,15 @@ Future<Map<String, String>> _safeHeLabelLookup(
   try {
     final content = await repo.getContentForCurriculum(curriculum);
     return LifetimeTreeBuilder.buildHeLabelLookup(content);
-  } catch (_) {
+  } catch (e, st) {
+    // F20: as above — log the failure but keep the cold-path empty map so
+    // the screen renders without Hebrew labels rather than crashing.
+    AppLogger.instance.warning(
+      event: 'lifetime_safe_load_failed',
+      fields: {'curriculum': curriculum.storageKey, 'phase': 'he_labels'},
+      exception: e,
+      stackTrace: st,
+    );
     return const {};
   }
 }

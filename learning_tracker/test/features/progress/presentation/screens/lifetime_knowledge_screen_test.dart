@@ -488,6 +488,164 @@ void main() {
     });
   });
 
+  // ─── F3 — Toggle-aware header counters ─────────────────────────────────
+  //
+  // The header counters must follow the source toggle: "All sources" uses
+  // `lifetimeHeaderCountersProvider` (lifetimeOnly imports included);
+  // "Track only" uses the new `trackOnlyHeaderCountersProvider`
+  // (CompletionTierFilter.trackAchievement — lifetimeOnly excluded).
+  // Without this fix the header would always show lifetime totals even
+  // when the user flips the toggle to Track-only.
+
+  group('F3 — header counters branch on source toggle', () {
+    test('trackOnlyHeaderCountersProvider excludes lifetimeOnly imports '
+        'while lifetimeHeaderCountersProvider keeps them', () async {
+      // Seed: 1 live ref (2 events) + 1 bulkInTrack + 1 lifetimeOnly.
+      // All-sources expected: 3 items, 4 chazaros.
+      // Track-only expected:  2 items, 3 chazaros (lifetimeOnly dropped).
+      await _seedLive(
+        db,
+        trackId: trackId,
+        ref: leaves[0].sefariaRef,
+        stageId: 1,
+        at: DateTime.utc(2026, 5, 1, 10),
+      );
+      await _seedLive(
+        db,
+        trackId: trackId,
+        ref: leaves[0].sefariaRef,
+        stageId: 2,
+        at: DateTime.utc(2026, 5, 2, 10),
+      );
+      await _seedBulkInTrack(
+        db,
+        trackId: trackId,
+        ref: leaves[1].sefariaRef,
+        stageId: 1,
+        at: DateTime.utc(2026, 5, 3, 10),
+      );
+      await _seedLifetimeOnly(
+        db,
+        trackId: trackId,
+        ref: leaves[2].sefariaRef,
+        stageId: 1,
+        at: DateTime.utc(2026, 5, 4, 10),
+      );
+
+      final container = buildContainer();
+
+      // All-sources counters: includes lifetimeOnly leaf.
+      final all = await container.read(
+        lifetimeHeaderCountersProvider(_profileId).future,
+      );
+      expect(
+        all.itemsLearned,
+        3,
+        reason: '1 live + 1 bulk + 1 lifetimeOnly = 3 distinct items',
+      );
+      expect(
+        all.totalChazaros,
+        4,
+        reason: '2 live events + 1 bulk + 1 lifetimeOnly = 4 events',
+      );
+
+      // Track-only counters: lifetimeOnly excluded at the SQL layer via
+      // CompletionTierFilter.trackAchievement.
+      final track = await container.read(
+        trackOnlyHeaderCountersProvider(_profileId).future,
+      );
+      expect(
+        track.itemsLearned,
+        2,
+        reason:
+            'Track-only must drop the lifetimeOnly ref — 1 live + 1 bulk = 2',
+      );
+      expect(
+        track.totalChazaros,
+        3,
+        reason:
+            'Track-only chazaros = 2 live events + 1 bulk event = 3 '
+            '(lifetimeOnly event filtered out)',
+      );
+
+      // Strict delta — flipping the toggle MUST move the displayed numbers.
+      expect(
+        track.itemsLearned,
+        lessThan(all.itemsLearned),
+        reason:
+            'Regression guard: with a lifetimeOnly seed present, the '
+            'Track-only items count must be strictly smaller than the '
+            'All-sources count',
+      );
+      expect(track.totalChazaros, lessThan(all.totalChazaros));
+    });
+  });
+
+  // ─── F13 — N+1 perf assertion ──────────────────────────────────────────
+  //
+  // Loading all 9 curricula in parallel via lifetimeSummariesProvider must
+  // share the new batched providers — completionsByProfileForLifetimeProvider
+  // and priorImportsByProfileProvider — exactly ONCE each, not per
+  // curriculum. We assert that via a ProviderObserver that counts
+  // `didAddProvider` events for those provider IDs across the 9-curriculum
+  // resolution.
+
+  group('F13 — N+1 perf assertion', () {
+    test('opening all 9 curricula in parallel resolves the batched providers '
+        'exactly once each (shared across consumers)', () async {
+      // Make leaves available for every curriculum so the data path runs
+      // end-to-end (the legacy fixture only covered mishnayos).
+      final allCurriculumRepo = _AllCurriculumFakeRepo(leaves);
+
+      // Seed minimal data so the provider returns non-null summaries.
+      await _seedLive(
+        db,
+        trackId: trackId,
+        ref: leaves[0].sefariaRef,
+        stageId: 1,
+        at: DateTime.utc(2026, 5, 1, 10),
+      );
+
+      final observer = _CountingObserver();
+      final container = ProviderContainer(
+        observers: [observer],
+        overrides: [
+          userDatabaseProvider.overrideWith((ref) => db),
+          contentRepositoryProvider.overrideWithValue(allCurriculumRepo),
+          activeProfileIdProvider.overrideWith(() => _ProfileIdOverride(1)),
+          useHebrewTermsProvider.overrideWith(
+            () => _UseHebrewTermsOverride(useHebrew: false),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      // Drive the aggregated provider — it expands to all 9 curricula and
+      // each one calls lifetimeDataProvider which (post-fix) reads the
+      // batched providers.
+      await container.read(lifetimeSummariesProvider(_profileId).future);
+
+      // Each batched provider must have been built EXACTLY ONCE across
+      // all 9 curriculum resolutions. Before the fix, completions would
+      // be queried once per (curriculum + subset) and imports once per
+      // curriculum — both well above 1.
+      expect(
+        observer.batchedCompletionsBuilds,
+        1,
+        reason:
+            'completionsByProfileForLifetimeProvider must be shared across '
+            'the 9 lifetimeDataProvider consumers — N+1 fix',
+      );
+      expect(
+        observer.batchedImportsBuilds,
+        1,
+        reason:
+            'priorImportsByProfileProvider must be shared across the 9 '
+            'lifetimeDataProvider consumers — N+1 fix',
+      );
+    });
+  });
+
   // ─── Test 4 — CTA navigates to LifetimeMarkingRoute ───────────────────
 
   group('CTA navigates to LifetimeMarkingRoute', () {
@@ -584,5 +742,71 @@ class _RecordingRouter extends Fake implements StackRouter {
   }) async {
     pushed.add(route.routeName);
     return null;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// All-curriculum fake repo — F13 perf assertion needs every curriculum to
+// return non-empty content so each `lifetimeDataProvider` instance actually
+// runs the data path. The single-curriculum [_FakeContentRepository] returns
+// `const []` for non-mishnayos curricula, which short-circuits the data path
+// and bypasses the batched-provider reads we want to assert on.
+// ---------------------------------------------------------------------------
+
+class _AllCurriculumFakeRepo extends Fake implements ContentRepository {
+  _AllCurriculumFakeRepo(this._leaves);
+
+  final List<ContentItem> _leaves;
+
+  @override
+  Future<List<ContentItem>> getContentForCurriculum(
+    CurriculumId curriculumId,
+  ) async {
+    // Same leaves for every curriculum — the assertions don't depend on
+    // per-curriculum content, only on provider call-count behaviour.
+    return _leaves
+        .map(
+          (l) => ContentItem(
+            curriculumId: curriculumId.storageKey,
+            sefariaRef: l.sefariaRef,
+            displayNameEn: l.displayNameEn,
+            displayNameHe: l.displayNameHe,
+            level1: l.level1,
+            level2: l.level2,
+            level3: l.level3,
+            level4: l.level4,
+            isLeaf: l.isLeaf,
+            sortOrder: l.sortOrder,
+          ),
+        )
+        .toList();
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Counting observer — F13 perf assertion. Counts `didAddProvider` events for
+// the two new batched providers introduced by the N+1 fix.
+// ---------------------------------------------------------------------------
+
+final class _CountingObserver extends ProviderObserver {
+  int batchedCompletionsBuilds = 0;
+  int batchedImportsBuilds = 0;
+
+  @override
+  void didAddProvider(ProviderObserverContext context, Object? value) {
+    // Match by the family's debug `name` (set explicitly on the provider
+    // declaration). Falls back to the provider's own toString in case the
+    // provider is non-family (defensive — we declare both targets with
+    // explicit names, so this is the expected hit path).
+    final familyName = context.provider.from?.name;
+    final providerName = context.provider.name;
+    final id = familyName ?? providerName ?? context.provider.toString();
+    if (id == 'completionsByProfileForLifetimeProvider' ||
+        id.contains('completionsByProfileForLifetimeProvider')) {
+      batchedCompletionsBuilds++;
+    } else if (id == 'priorImportsByProfileProvider' ||
+        id.contains('priorImportsByProfileProvider')) {
+      batchedImportsBuilds++;
+    }
   }
 }

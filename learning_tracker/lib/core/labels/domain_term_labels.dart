@@ -1,9 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/constants/hebrew_terms.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
-import 'package:learning_tracker/features/scheduler/domain/services/calendar_program_registry.dart';
-import 'package:learning_tracker/features/scheduler/domain/services/calendar_program_service.dart';
-import 'package:learning_tracker/features/scheduler/domain/services/learning_program_service.dart';
 
 /// Toggle-aware accessors for every Torah domain term controlled by the
 /// "Hebrew Terms" setting.
@@ -179,43 +176,12 @@ class DomainTermLabels {
     }
   }
 
-  // ── Program labels (live, toggle-aware) ──────────────────────────────────
-  //
-  // The scheduler exposes two flavours of program objects:
-  //   - [LearningProgramData] — every learning program in the seed list.
-  //   - [CalendarProgramEntry] — today's entry from a calendar source.
-  //
-  // Both carry their own English/Hebrew display names; the toggle picks one.
-  // Reading the toggle directly from scheduler service code is forbidden by
-  // audit rule 7/15, so any feature reading a program label MUST route
-  // through here.
-
-  /// Returns the display name for a [LearningProgramData] respecting the
-  /// Hebrew Terms toggle.
-  ///
-  /// Hebrew ON → looks up the Hebrew name via
-  ///   [CalendarProgramRegistry.byId] using the program's `name` as id and
-  ///   falls back to [LearningProgramData.displayName] when the program
-  ///   isn't a registered calendar program (so a Hebrew form doesn't exist).
-  /// Hebrew OFF → returns the program's English [LearningProgramData.displayName].
-  String learningProgramLabel(LearningProgramData program) {
-    if (!_useHebrew) return program.displayName;
-    return CalendarProgramRegistry.byId(program.name)?.displayNameHe ??
-        program.displayName;
-  }
-
-  /// Returns the display name for a [CalendarProgramEntry] respecting the
-  /// Hebrew Terms toggle. Mirrors [learningProgramLabel] for entries.
-  String calendarEntryLabel(CalendarProgramEntry entry) =>
-      _useHebrew ? entry.displayNameHe : entry.displayNameEn;
-
-  /// Returns the today's-ref label for a [CalendarProgramEntry] respecting
-  /// the Hebrew Terms toggle. Falls back to the English
-  /// [CalendarProgramEntry.todayRef] when the Hebrew form is unavailable.
-  String calendarEntryTodayRef(CalendarProgramEntry entry) {
-    if (_useHebrew && entry.todayRefHe.isNotEmpty) return entry.todayRefHe;
-    return entry.todayRef;
-  }
+  // Program-label resolution (per-LearningProgramData / per-CalendarProgramEntry)
+  // lives in `features/scheduler/domain/labels/program_label_resolver.dart`.
+  // `lib/core/` MUST NOT import `lib/features/` (Rule 1 / DNI-386), so
+  // scheduler types stay on the feature side; the toggle source-of-truth
+  // remains here via [isHebrew]. Scheduler callers read this boolean through
+  // [ProgramLabelResolver] and apply it to their own types.
 
   // ── B1 three-tier vocabulary (canonical, toggle-aware) ───────────────────
   //
@@ -289,6 +255,18 @@ class DomainTermLabels {
   /// ARB en: tierLensRecentActivity  |  he: tierLensRecentActivity
   String get tierLensRecentActivity =>
       _useHebrew ? 'פעילות אחרונה' : 'Recent Activity';
+
+  /// Subtitle shown under the streak number on the Recent Activity screen
+  /// when a curriculum chip is active. Clarifies that the headline streak
+  /// count is profile-global (across every curriculum) while the calendar
+  /// dot pattern follows the active curriculum filter.
+  ///
+  /// Added in F11 (W7-D fix wave). The streak number itself is sourced
+  /// from `dashboardStreakProvider`, which is profile-scoped by design —
+  /// the user's overall live streak across every active curriculum and
+  /// the same number rendered as the Dashboard hero pill.
+  String get streakAcrossAllCurricula =>
+      _useHebrew ? 'רצף בכל המסלולים' : 'Streak across all curricula';
 
   /// "Siyumim & Milestones" / "סיומים והישגים" — achievement-tier lens label.
   /// ARB en: tierLensSiyumimMilestones  |  he: tierLensSiyumimMilestones

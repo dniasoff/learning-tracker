@@ -213,6 +213,101 @@ Future<int> _seedMasechtaLedger(
   );
 }
 
+/// Seed a ledger entry with an arbitrary [entryScope] and [unitIdentifier].
+///
+/// Required for F22 tests covering Chumash (scope='sefer') and
+/// Mishna Berurah (scope='siman' / 'chelek').
+Future<int> _seedLedgerEntry(
+  UserDatabase db, {
+  required CurriculumId curriculum,
+  required String entryScope,
+  required String unitIdentifier,
+  required DateTime at,
+}) {
+  return db.learningLedgerDao.insertEntry(
+    LearningLedgerCompanion.insert(
+      profileId: _profileId,
+      curriculumId: curriculum.storageKey,
+      entryScope: entryScope,
+      unitIdentifier: unitIdentifier,
+      unitDisplayNameHe: unitIdentifier,
+      unitDisplayNameEn: unitIdentifier,
+      trackType: 'personal',
+      completedAt: at,
+      completionNumber: 1,
+      markedBy: _profileId,
+      isManual: const Value(false),
+    ),
+  );
+}
+
+/// Build a minimal Chumash content list — three sefarim (Bereshit, Shemot,
+/// Vayikra), level-1-only (no level2). This matches the actual Chumash
+/// hierarchy where the sefer IS the unit and there is no aggregate tier.
+List<ContentItem> _chumashContent() {
+  const sefarim = ['Bereshit', 'Shemot', 'Vayikra'];
+  return [
+    for (var i = 0; i < sefarim.length; i++)
+      ContentItem(
+        curriculumId: CurriculumId.chumash.storageKey,
+        level1: sefarim[i],
+        displayNameHe: sefarim[i],
+        displayNameEn: sefarim[i],
+        sefariaRef: '${sefarim[i]} 1.1',
+        sortOrder: i,
+        isLeaf: true,
+      ),
+  ];
+}
+
+/// Build a minimal Mishna Berurah content list — chelek 1 (Orach Chaim)
+/// with three simanim, plus chelek 2 with one siman. Sufficient to test
+/// both `'siman'` (unit) and `'chelek'` (aggregate) scopes.
+List<ContentItem> _mishnaBerurahContent() {
+  return const [
+    ContentItem(
+      curriculumId: 'mishna_berurah',
+      level1: 'Chelek 1',
+      level2: 'Siman 1',
+      displayNameHe: 'סימן א',
+      displayNameEn: 'Siman 1',
+      sefariaRef: 'MB 1.1',
+      sortOrder: 0,
+      isLeaf: true,
+    ),
+    ContentItem(
+      curriculumId: 'mishna_berurah',
+      level1: 'Chelek 1',
+      level2: 'Siman 2',
+      displayNameHe: 'סימן ב',
+      displayNameEn: 'Siman 2',
+      sefariaRef: 'MB 1.2',
+      sortOrder: 1,
+      isLeaf: true,
+    ),
+    ContentItem(
+      curriculumId: 'mishna_berurah',
+      level1: 'Chelek 1',
+      level2: 'Siman 3',
+      displayNameHe: 'סימן ג',
+      displayNameEn: 'Siman 3',
+      sefariaRef: 'MB 1.3',
+      sortOrder: 2,
+      isLeaf: true,
+    ),
+    ContentItem(
+      curriculumId: 'mishna_berurah',
+      level1: 'Chelek 2',
+      level2: 'Siman 4',
+      displayNameHe: 'סימן ד',
+      displayNameEn: 'Siman 4',
+      sefariaRef: 'MB 2.4',
+      sortOrder: 3,
+      isLeaf: true,
+    ),
+  ];
+}
+
 /// Build a [ProviderContainer] with overrides that pin the in-memory DB,
 /// the active curricula list, and curriculum-specific content.
 ///
@@ -461,6 +556,275 @@ void main() {
         expect(vm.unitLevelSiyumimCount, 0);
         expect(vm.aggregateLevelSiyumimCount, 0);
         expect(vm.curriculumLevelSiyumimCount, 0);
+      },
+    );
+  });
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // F22 (W7-A) — Coverage for non-Mishnayos/non-Bavli curricula.
+  //
+  // The original journey-provider tests only exercised Mishnayos / Bavli, both
+  // of which use 'masechta' as the unit-level scope. The redesign brief
+  // additionally covers Chumash (sefer-only) and Mishna Berurah (siman + chelek).
+  // These tests would FAIL today before the F2 fix landed because the
+  // hardcoded 'masechta'/'seder' scope strings never matched the journey
+  // whitelist for these curricula.
+  // ─────────────────────────────────────────────────────────────────────────
+
+  group('F22 — non-Mishnayos curricula end-to-end', () {
+    late UserDatabase db;
+
+    setUp(() async {
+      db = inMemoryDb();
+      await seedProfile(db);
+    });
+
+    tearDown(() async => db.close());
+
+    test(
+      'Chumash: one sefer in ledger → 1 unit · 0 aggregate · 0 curriculum',
+      () async {
+        // Seed Bereshit as scope='sefer' (the F2 fix outputs this for Chumash).
+        await _seedLedgerEntry(
+          db,
+          curriculum: CurriculumId.chumash,
+          entryScope: 'sefer',
+          unitIdentifier: 'Bereshit',
+          at: DateTime(2026, 5, 1),
+        );
+
+        final container = _container(
+          db: db,
+          activeCurricula: const [CurriculumId.chumash],
+          content: {CurriculumId.chumash: _chumashContent()},
+        );
+        addTearDown(container.dispose);
+
+        final vm = await container.read(
+          journeyViewModelProvider(_profileId).future,
+        );
+
+        expect(
+          vm.unitLevelSiyumimCount,
+          1,
+          reason:
+              'Chumash sefer ledger entry (scope=sefer) counts as a '
+              'unit-level siyum per the whitelist.',
+        );
+        expect(
+          vm.aggregateLevelSiyumimCount,
+          0,
+          reason:
+              'Chumash has no aggregate tier — content has no level2 so '
+              '_hasAggregateLevel returns false.',
+        );
+        expect(
+          vm.curriculumLevelSiyumimCount,
+          0,
+          reason: 'only 1 of 3 Chumash sefarim is complete',
+        );
+
+        final chumashJourney = vm.curricula.firstWhere(
+          (c) => c.curriculumId == CurriculumId.chumash,
+        );
+        final unit = chumashJourney.milestones.single;
+        expect(unit.level, MilestoneLevel.unit);
+        expect(unit.unitKey, 'Bereshit');
+        expect(unit.unitScope, 'sefer');
+      },
+    );
+
+    test(
+      'Chumash: all 3 sefarim → 3 unit · 0 aggregate · 1 curriculum',
+      () async {
+        const sefarim = ['Bereshit', 'Shemot', 'Vayikra'];
+        final base = DateTime(2026, 5, 1);
+        for (var i = 0; i < sefarim.length; i++) {
+          await _seedLedgerEntry(
+            db,
+            curriculum: CurriculumId.chumash,
+            entryScope: 'sefer',
+            unitIdentifier: sefarim[i],
+            at: base.add(Duration(days: i)),
+          );
+        }
+
+        final container = _container(
+          db: db,
+          activeCurricula: const [CurriculumId.chumash],
+          content: {CurriculumId.chumash: _chumashContent()},
+        );
+        addTearDown(container.dispose);
+
+        final vm = await container.read(
+          journeyViewModelProvider(_profileId).future,
+        );
+
+        expect(vm.unitLevelSiyumimCount, 3);
+        expect(vm.aggregateLevelSiyumimCount, 0);
+        expect(
+          vm.curriculumLevelSiyumimCount,
+          1,
+          reason:
+              'all sefarim complete → Siyum Chumash curriculum-level '
+              'milestone fires',
+        );
+      },
+    );
+
+    test(
+      'Mishna Berurah: siman + chelek scopes in ledger',
+      () async {
+        // Seed all 3 simanim within Chelek 1 plus the chelek-level entry.
+        // The provider's milestone detection should:
+        //   - emit 3 unit-level siyumim (one per siman)
+        //   - emit 1 aggregate-level siyum (Chelek 1 — all simanim complete)
+        //   - emit 0 curriculum-level (Chelek 2's siman 4 is missing)
+        final base = DateTime(2026, 5, 1);
+        for (var i = 1; i <= 3; i++) {
+          await _seedLedgerEntry(
+            db,
+            curriculum: CurriculumId.mishnaBerurah,
+            entryScope: 'siman',
+            unitIdentifier: 'Siman $i',
+            at: base.add(Duration(days: i)),
+          );
+        }
+
+        final container = _container(
+          db: db,
+          activeCurricula: const [CurriculumId.mishnaBerurah],
+          content: {CurriculumId.mishnaBerurah: _mishnaBerurahContent()},
+        );
+        addTearDown(container.dispose);
+
+        final vm = await container.read(
+          journeyViewModelProvider(_profileId).future,
+        );
+
+        expect(
+          vm.unitLevelSiyumimCount,
+          3,
+          reason:
+              'three simanim in the ledger → three unit-level siyumim. '
+              "Pre-F2 fix, the scope was hardcoded to 'masechta' but the "
+              "whitelist accepts 'siman' too — counter still correct, but "
+              "the scope on the row was wrong (broke the screen's label "
+              'lookup).',
+        );
+        expect(
+          vm.aggregateLevelSiyumimCount,
+          1,
+          reason:
+              'Chelek 1 contains simanim 1, 2, 3 — all complete, so the '
+              'aggregate siyum fires for Chelek 1.',
+        );
+        expect(
+          vm.curriculumLevelSiyumimCount,
+          0,
+          reason: "Chelek 2's Siman 4 is missing",
+        );
+      },
+    );
+
+    test(
+      'Mishna Berurah: only 1 siman complete → 1 unit · 0 aggregate',
+      () async {
+        await _seedLedgerEntry(
+          db,
+          curriculum: CurriculumId.mishnaBerurah,
+          entryScope: 'siman',
+          unitIdentifier: 'Siman 1',
+          at: DateTime(2026, 5, 1),
+        );
+
+        final container = _container(
+          db: db,
+          activeCurricula: const [CurriculumId.mishnaBerurah],
+          content: {CurriculumId.mishnaBerurah: _mishnaBerurahContent()},
+        );
+        addTearDown(container.dispose);
+
+        final vm = await container.read(
+          journeyViewModelProvider(_profileId).future,
+        );
+
+        expect(vm.unitLevelSiyumimCount, 1);
+        expect(
+          vm.aggregateLevelSiyumimCount,
+          0,
+          reason:
+              'Chelek 1 contains 3 simanim but only 1 is complete → no '
+              'aggregate siyum',
+        );
+      },
+    );
+  });
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // F24 (W7-A) — Dedupe unit-level entries by [unitIdentifier].
+  //
+  // If a user completes a masechta, unticks it, then re-completes, the ledger
+  // ends up with two entries for the same `unitIdentifier`. Pre-fix, the
+  // milestone detector emitted two rows → the counter advertised 2 unit-level
+  // siyumim for ONE masechta. The fix dedupes by unitIdentifier (latest wins).
+  // ─────────────────────────────────────────────────────────────────────────
+
+  group('F24 — unit-level dedup by unitIdentifier', () {
+    late UserDatabase db;
+
+    setUp(() async {
+      db = inMemoryDb();
+      await seedProfile(db);
+    });
+
+    tearDown(() async => db.close());
+
+    test(
+      'two ledger entries for the same masechta yield exactly one unit milestone',
+      () async {
+        // Two entries — different timestamps, same unitIdentifier.
+        await _seedMasechtaLedger(
+          db,
+          curriculum: CurriculumId.bavli,
+          masechta: 'Berakhot',
+          at: DateTime(2026, 5, 1),
+        );
+        await _seedMasechtaLedger(
+          db,
+          curriculum: CurriculumId.bavli,
+          masechta: 'Berakhot',
+          at: DateTime(2026, 5, 10),
+        );
+
+        final container = _container(
+          db: db,
+          activeCurricula: const [CurriculumId.bavli],
+          content: {CurriculumId.bavli: _bavliMinimalContent()},
+        );
+        addTearDown(container.dispose);
+
+        final vm = await container.read(
+          journeyViewModelProvider(_profileId).future,
+        );
+
+        expect(
+          vm.unitLevelSiyumimCount,
+          1,
+          reason:
+              'F24: two ledger rows for the same masechta must collapse to '
+              'one unit-level siyum. Pre-fix this read as 2.',
+        );
+
+        final bavliJourney = vm.curricula.firstWhere(
+          (c) => c.curriculumId == CurriculumId.bavli,
+        );
+        final unitMilestones = bavliJourney.milestones
+            .where((m) => m.level == MilestoneLevel.unit)
+            .toList();
+        expect(unitMilestones, hasLength(1));
+        // Latest-wins: the milestone's date matches the later entry.
+        expect(unitMilestones.single.achievedAt, DateTime(2026, 5, 10));
       },
     );
   });

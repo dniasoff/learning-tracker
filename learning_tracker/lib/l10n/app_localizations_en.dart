@@ -2914,6 +2914,32 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String siyumimLevelCurriculum(int count) {
+    return '$count curriculum-level siyumim';
+  }
+
+  @override
+  String siyumimLevelAggregate(int count) {
+    return '$count aggregate-level siyumim';
+  }
+
+  @override
+  String siyumimLevelUnit(int count) {
+    return '$count unit-level siyumim';
+  }
+
+  @override
+  String get siyumimEmptyState => 'No siyumim yet — keep learning!';
+
+  @override
+  String siyumimAggregateSubtitle(int count, String date) {
+    return 'All $count complete · $date';
+  }
+
+  @override
+  String get paceLiveLearningOnlyCaption => 'Pace tracks live learning only.';
+
+  @override
   String get bulkMarkWizardSubtitle =>
       'These count toward siyumim and lifetime knowledge — but not toward your streak or points.';
 
@@ -2929,4 +2955,47 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get recentActivityLiveOnlyDisclaimer =>
       'Live learning only — bulk-marked items appear under Lifetime Knowledge.';
+
+  @override
+  String get lifetimeKnowledgeLoading => 'Loading lifetime knowledge…';
+
+  @override
+  String lifetimeKnowledgeLoadError(String error) {
+    return 'Failed to load: $error';
+  }
+
+  @override
+  String lifetimeKnowledgeCounterError(String error) {
+    return 'Failed to load counters: $error';
+  }
+
+  @override
+  String get lifetimeKnowledgeRetry => 'Retry';
+
+  @override
+  String get lifetimeKnowledgeToggleAllSources => 'All sources';
+
+  @override
+  String get lifetimeKnowledgeToggleTrackOnly => 'Track learning only';
+
+  @override
+  String get lifetimeKnowledgeAddCta => 'Add items I learned previously';
+
+  @override
+  String get lifetimeKnowledgeAddCtaSubtitle =>
+      'Lifetime Marking — counts toward Lifetime Knowledge.';
+
+  @override
+  String get provenanceLive => 'Live';
+
+  @override
+  String provenanceLiveChazaros(int count) {
+    return 'Live · $count chazaros';
+  }
+
+  @override
+  String get provenanceBulkMarked => 'Bulk-marked';
+
+  @override
+  String get provenanceLifetimeImported => 'Lifetime · imported';
 }

@@ -251,7 +251,7 @@ class _CurriculumCard extends ConsumerWidget {
 /// (e.g. "Live · 3 chazaros" / "Bulk-marked" / "Lifetime · imported"). The
 /// label is suppressed on aggregating nodes — only terminal leaves surface
 /// provenance.
-class CurriculumBreakdownTreeNode extends StatelessWidget {
+class CurriculumBreakdownTreeNode extends ConsumerWidget {
   const CurriculumBreakdownTreeNode({
     super.key,
     required this.node,
@@ -274,11 +274,13 @@ class CurriculumBreakdownTreeNode extends StatelessWidget {
   final bool showProvenance;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final isExpanded = expandedNodes[nodeKey] ?? false;
     final hasChildren = node.children.isNotEmpty;
     final stateColor = _stateColor(node.state);
+    final l10n = AppLocalizations.of(context)!;
+    final terms = domainTermLabels(ref);
 
     final label = CurriculumLabel.level(
       curriculumId: node.curriculumId,
@@ -294,7 +296,7 @@ class CurriculumBreakdownTreeNode extends StatelessWidget {
 
     final provenanceLabel =
         showProvenance && !hasChildren && node.provenance != null
-        ? _provenanceText(node.provenance!)
+        ? provenanceText(node.provenance!, l10n: l10n, terms: terms)
         : null;
 
     return Column(
@@ -375,23 +377,33 @@ class CurriculumBreakdownTreeNode extends StatelessWidget {
   }
 
   /// Renders a provenance label for the lifetime tier:
-  ///   * live → "Live · N chazaros" (singular: "Live · 1 chazara")
-  ///   * bulkMarked → "Bulk-marked"
-  ///   * lifetimeImported → "Lifetime · imported"
+  ///   * live (chazaros = 0) → "Live" / "בלמידה"
+  ///   * live (chazaros ≥ 1) → "Live · N chazaros" (the plural uses the
+  ///     [DomainTermLabels.chazaros] term so the Hebrew Terms toggle swaps
+  ///     the script: e.g. "Live · 3 חזרות" when the toggle is on)
+  ///   * bulkMarked → "Bulk-marked" / "מסומן בקבוצה"
+  ///   * lifetimeImported → "Lifetime · imported" / "ייבוא לכל החיים"
   ///
-  /// Kept as plain English for now per the brief — l10n keys can be added
-  /// later if needed.
-  static String _provenanceText(LifetimeLeafProvenance p) {
+  /// Exposed (non-private) so widget tests can drive it through the same
+  /// l10n + domain-term resolution the production widget uses without
+  /// pumping the full ConsumerWidget. F9.
+  @visibleForTesting
+  static String provenanceText(
+    LifetimeLeafProvenance p, {
+    required AppLocalizations l10n,
+    required DomainTermLabels terms,
+  }) {
     switch (p.source) {
       case LifetimeLeafSource.live:
         final n = p.chazarosCount;
-        if (n <= 0) return 'Live';
-        if (n == 1) return 'Live · 1 chazara';
-        return 'Live · $n chazaros';
+        if (n <= 0) return l10n.provenanceLive;
+        // Build the "Live · N chazaros" string with the toggle-aware plural
+        // so e.g. EN + Hebrew Terms ON renders "Live · 3 חזרות".
+        return '${l10n.provenanceLive} · $n ${terms.chazaros}';
       case LifetimeLeafSource.bulkMarked:
-        return 'Bulk-marked';
+        return l10n.provenanceBulkMarked;
       case LifetimeLeafSource.lifetimeImported:
-        return 'Lifetime · imported';
+        return l10n.provenanceLifetimeImported;
     }
   }
 }

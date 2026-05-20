@@ -28,7 +28,11 @@ import 'package:learning_tracker/features/dashboard/presentation/widgets/streak_
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/lifetime_knowledge_providers.dart';
-import 'package:learning_tracker/features/progress/presentation/widgets/progress_tier_counter_row.dart';
+// Cross-feature import via the progress barrel (Rule 2 / DNI-386). The
+// barrel re-exports `ProgressTierCounterRow`; deep importing
+// `lib/features/progress/presentation/widgets/...` would violate the
+// layering rule.
+import 'package:learning_tracker/features/progress/progress.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dart';
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';

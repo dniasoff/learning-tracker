@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/labels/domain_term_labels.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/progress/domain/models/journey_view_model.dart';
 import 'package:learning_tracker/features/progress/presentation/widgets/siyum_milestone_label.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// Hierarchy-aware grouped view of milestones, by curriculum.
 ///
@@ -35,11 +37,12 @@ class SiyumimGroupedView extends ConsumerWidget {
         .where((c) => c.milestones.isNotEmpty)
         .toList();
     if (visible.isEmpty) {
+      final l10n = AppLocalizations.of(context)!;
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(32),
           child: Text(
-            'No siyumim yet — keep learning!',
+            l10n.siyumimEmptyState,
             style: TextStyle(
               color: Theme.of(context).colorScheme.onSurfaceVariant,
               fontSize: 15,
@@ -89,10 +92,9 @@ class _CurriculumSection extends ConsumerWidget {
     for (final agg in aggregates) {
       absorbedUnitKeys.addAll(agg.containedUnitKeys);
     }
-    final standaloneUnits = units
-        .where((m) => !absorbedUnitKeys.contains(m.unitKey))
-        .toList()
-      ..sort((a, b) => b.achievedAt.compareTo(a.achievedAt));
+    final standaloneUnits =
+        units.where((m) => !absorbedUnitKeys.contains(m.unitKey)).toList()
+          ..sort((a, b) => b.achievedAt.compareTo(a.achievedAt));
 
     // Aggregates sorted newest first.
     final aggregatesSorted = [...aggregates]
@@ -137,11 +139,7 @@ class _CurriculumSection extends ConsumerWidget {
 
           // ── 3. Standalone unit rows ──────────────────────────────────────
           for (final m in standaloneUnits)
-            _UnitMilestoneTile(
-              milestone: m,
-              accentColor: color,
-              terms: terms,
-            ),
+            _UnitMilestoneTile(milestone: m, accentColor: color, terms: terms),
         ],
       ),
     );
@@ -152,10 +150,7 @@ class _CurriculumSection extends ConsumerWidget {
 ///
 /// Uses a gold border + larger badge per the IA brief's display rules.
 class _CurriculumCompleteHero extends StatelessWidget {
-  const _CurriculumCompleteHero({
-    required this.milestone,
-    required this.terms,
-  });
+  const _CurriculumCompleteHero({required this.milestone, required this.terms});
 
   final MilestoneAchievement milestone;
   final DomainTermLabels terms;
@@ -173,7 +168,10 @@ class _CurriculumCompleteHero extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           gradient: LinearGradient(
-            colors: [gold.withValues(alpha: 0.18), gold.withValues(alpha: 0.05)],
+            colors: [
+              gold.withValues(alpha: 0.18),
+              gold.withValues(alpha: 0.05),
+            ],
           ),
           border: Border.all(color: gold, width: 2),
           borderRadius: BorderRadius.circular(12),
@@ -196,7 +194,7 @@ class _CurriculumCompleteHero extends StatelessWidget {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    _formatDate(milestone.achievedAt),
+                    formatMilestoneDate(context, milestone.achievedAt),
                     style: TextStyle(
                       fontSize: 12,
                       color: Theme.of(context).colorScheme.onSurfaceVariant,
@@ -232,12 +230,14 @@ class _AggregateMilestoneTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final label = aggregateSiyumLabel(
       curriculumId: curriculumId,
       aggregateName: milestone.aggregateKey ?? milestone.displayName,
       terms: terms,
     );
     final containedCount = milestone.containedUnitKeys.length;
+    final dateText = formatMilestoneDate(context, milestone.achievedAt);
     return ExpansionTile(
       tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       childrenPadding: const EdgeInsets.fromLTRB(48, 0, 16, 12),
@@ -248,8 +248,8 @@ class _AggregateMilestoneTile extends StatelessWidget {
       ),
       subtitle: Text(
         containedCount > 0
-            ? 'All $containedCount complete · ${_formatDate(milestone.achievedAt)}'
-            : _formatDate(milestone.achievedAt),
+            ? l10n.siyumimAggregateSubtitle(containedCount, dateText)
+            : dateText,
         style: TextStyle(
           fontSize: 12,
           color: Theme.of(context).colorScheme.onSurfaceVariant,
@@ -309,7 +309,7 @@ class _UnitMilestoneTile extends StatelessWidget {
         style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
       ),
       subtitle: Text(
-        _formatDate(milestone.achievedAt),
+        formatMilestoneDate(context, milestone.achievedAt),
         style: TextStyle(
           fontSize: 12,
           color: Theme.of(context).colorScheme.onSurfaceVariant,
@@ -319,10 +319,14 @@ class _UnitMilestoneTile extends StatelessWidget {
   }
 }
 
-/// Format a [DateTime] in the local timezone as `d/M/yyyy`. Centralised so
-/// the screen renders dates consistently across hero card, aggregate
-/// subtitle, and unit subtitle.
-String _formatDate(DateTime date) {
-  final local = date.toLocal();
-  return '${local.day}/${local.month}/${local.year}';
+/// Format a milestone [date] using [DateFormat.yMMMd] for the active locale —
+/// US English renders "May 11, 2026" while UK/IL and Hebrew render
+/// "11 May 2026" (or the Hebrew equivalent). The bare `d/M/yyyy` numeric
+/// form used previously ignored locale conventions, which violated the
+/// project's standing date-format rule. Exposed (not `_`-prefixed) so the
+/// chronological timeline view can share the same formatter and the two
+/// surfaces stay visually consistent.
+String formatMilestoneDate(BuildContext context, DateTime date) {
+  final locale = Localizations.localeOf(context).toString();
+  return DateFormat.yMMMd(locale).format(date.toLocal());
 }

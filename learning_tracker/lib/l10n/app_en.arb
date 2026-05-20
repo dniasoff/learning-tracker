@@ -1547,6 +1547,44 @@
     }
   },
 
+  "siyumimLevelCurriculum": "{count} curriculum-level siyumim",
+  "@siyumimLevelCurriculum": {
+    "description": "Top-counter row on the Siyumim & Milestones screen for the curriculum-complete tier (Siyum HaShas, Siyum HaTorah, …). `{count}` is the number of curriculum-complete siyumim across all the user's curricula.",
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "siyumimLevelAggregate": "{count} aggregate-level siyumim",
+  "@siyumimLevelAggregate": {
+    "description": "Top-counter row on the Siyumim & Milestones screen for the aggregate tier (Siyum Seder / Siyum Chelek). `{count}` is the number of aggregate-level siyumim earned.",
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "siyumimLevelUnit": "{count} unit-level siyumim",
+  "@siyumimLevelUnit": {
+    "description": "Top-counter row on the Siyumim & Milestones screen for the unit tier (Siyum Masechta / Sefer / Siman / Hilchos). `{count}` is the number of unit-level siyumim earned.",
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "siyumimEmptyState": "No siyumim yet — keep learning!",
+  "@siyumimEmptyState": {
+    "description": "Empty-state message rendered by SiyumimGroupedView when the user has no milestones to show."
+  },
+  "siyumimAggregateSubtitle": "All {count} complete · {date}",
+  "@siyumimAggregateSubtitle": {
+    "description": "Subtitle on an aggregate-level milestone row (Siyum Seder / Siyum Chelek) when every contained unit is complete. `{count}` is the number of contained units; `{date}` is a locale-formatted achievement date — pre-formatted via DateFormat.yMMMd(locale) by the caller.",
+    "placeholders": {
+      "count": { "type": "int" },
+      "date": { "type": "String" }
+    }
+  },
+  "paceLiveLearningOnlyCaption": "Pace tracks live learning only.",
+  "@paceLiveLearningOnlyCaption": {
+    "description": "Caption shown under the PaceIndicator on the Curriculum Progress screen — disambiguates pace (live-only) from the lifetime tier so users don't conflate the two."
+  },
+
   "bulkMarkWizardSubtitle": "These count toward siyumim and lifetime knowledge — but not toward your streak or points.",
   "@bulkMarkWizardSubtitle": {
     "description": "Subtitle/explainer for the Bulk Mark wizard (Wave 5 Task #17) — clarifies tier credit so the user understands why streak/points are not impacted."
@@ -1567,5 +1605,63 @@
   "recentActivityLiveOnlyDisclaimer": "Live learning only — bulk-marked items appear under Lifetime Knowledge.",
   "@recentActivityLiveOnlyDisclaimer": {
     "description": "Disclaimer shown on Recent Activity charts to make the live-only scope explicit and point at where bulk-marked items appear instead."
+  },
+
+  "lifetimeKnowledgeLoading": "Loading lifetime knowledge…",
+  "@lifetimeKnowledgeLoading": {
+    "description": "Loading indicator message on the Lifetime Knowledge screen body."
+  },
+  "lifetimeKnowledgeLoadError": "Failed to load: {error}",
+  "@lifetimeKnowledgeLoadError": {
+    "description": "Body error message when the Lifetime Knowledge per-curriculum tree fails to load.",
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "lifetimeKnowledgeCounterError": "Failed to load counters: {error}",
+  "@lifetimeKnowledgeCounterError": {
+    "description": "Header error message when the Lifetime Knowledge header counters fail to load.",
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "lifetimeKnowledgeRetry": "Retry",
+  "@lifetimeKnowledgeRetry": {
+    "description": "Retry action label on the Lifetime Knowledge error states."
+  },
+  "lifetimeKnowledgeToggleAllSources": "All sources",
+  "@lifetimeKnowledgeToggleAllSources": {
+    "description": "Source-toggle label on the Lifetime Knowledge screen — includes lifetimeOnly imports."
+  },
+  "lifetimeKnowledgeToggleTrackOnly": "Track learning only",
+  "@lifetimeKnowledgeToggleTrackOnly": {
+    "description": "Source-toggle label on the Lifetime Knowledge screen — restricts to live + bulkInTrack rows."
+  },
+  "lifetimeKnowledgeAddCta": "Add items I learned previously",
+  "@lifetimeKnowledgeAddCta": {
+    "description": "Bottom CTA on the Lifetime Knowledge screen — links to the Lifetime Marking flow."
+  },
+  "lifetimeKnowledgeAddCtaSubtitle": "Lifetime Marking — counts toward Lifetime Knowledge.",
+  "@lifetimeKnowledgeAddCtaSubtitle": {
+    "description": "Subtitle for the Lifetime Knowledge CTA card — clarifies the tier credit."
+  },
+  "provenanceLive": "Live",
+  "@provenanceLive": {
+    "description": "Per-leaf provenance label when the leaf was completed live with zero chazaros (rare — usually has a count)."
+  },
+  "provenanceLiveChazaros": "Live · {count} chazaros",
+  "@provenanceLiveChazaros": {
+    "description": "Per-leaf provenance label for a live-completed leaf with its event count. {count} is the chazaros count (limud + chazaros).",
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "provenanceBulkMarked": "Bulk-marked",
+  "@provenanceBulkMarked": {
+    "description": "Per-leaf provenance label when the leaf entered via a bulk-in-track import (onboarding mark wizard)."
+  },
+  "provenanceLifetimeImported": "Lifetime · imported",
+  "@provenanceLifetimeImported": {
+    "description": "Per-leaf provenance label when the leaf entered via a lifetime-only import (outside any track)."
   }
 }

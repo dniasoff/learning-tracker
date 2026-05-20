@@ -80,6 +80,92 @@ void main() {
       expect(vm.aggregateLevelSiyumimCount, 1);
       expect(vm.curriculumLevelSiyumimCount, 0);
     });
+
+    // F21 — defense in depth for the freezed-generated `copyWith`. A bug in
+    // the generated code (or a hand-written override) would silently drop
+    // the new three-level counter fields on a copy and the rest of the test
+    // suite wouldn't notice because every other test constructs the VM
+    // directly via the factory. Roundtrip each new field individually so a
+    // future copyWith regression surfaces here with a precise failure.
+    group('copyWith — three-level counter roundtrip', () {
+      const baseline = JourneyViewModel(
+        curricula: [],
+        totalCompletions: 5,
+        totalUniqueUnits: 3,
+        unitLevelSiyumimCount: 7,
+        aggregateLevelSiyumimCount: 2,
+        curriculumLevelSiyumimCount: 1,
+      );
+
+      test('copyWith(unitLevelSiyumimCount: 99) materialises the new value '
+          'and preserves the other counters', () {
+        final updated = baseline.copyWith(unitLevelSiyumimCount: 99);
+
+        // The new value is reflected.
+        expect(updated.unitLevelSiyumimCount, 99);
+
+        // Every other field carries through untouched. The non-counter
+        // fields are also checked so a copyWith bug that swapped fields
+        // (e.g. assigned the unit count to the aggregate count) surfaces
+        // here, not just in a unit-level regression.
+        expect(updated.aggregateLevelSiyumimCount, 2);
+        expect(updated.curriculumLevelSiyumimCount, 1);
+        expect(updated.totalCompletions, 5);
+        expect(updated.totalUniqueUnits, 3);
+        expect(updated.curricula, isEmpty);
+      });
+
+      test('copyWith(aggregateLevelSiyumimCount: 99) materialises the new '
+          'value and preserves the other counters', () {
+        final updated = baseline.copyWith(aggregateLevelSiyumimCount: 99);
+
+        expect(updated.aggregateLevelSiyumimCount, 99);
+        expect(updated.unitLevelSiyumimCount, 7);
+        expect(updated.curriculumLevelSiyumimCount, 1);
+        expect(updated.totalCompletions, 5);
+        expect(updated.totalUniqueUnits, 3);
+      });
+
+      test('copyWith(curriculumLevelSiyumimCount: 99) materialises the new '
+          'value and preserves the other counters', () {
+        final updated = baseline.copyWith(curriculumLevelSiyumimCount: 99);
+
+        expect(updated.curriculumLevelSiyumimCount, 99);
+        expect(updated.unitLevelSiyumimCount, 7);
+        expect(updated.aggregateLevelSiyumimCount, 2);
+        expect(updated.totalCompletions, 5);
+        expect(updated.totalUniqueUnits, 3);
+      });
+
+      test(
+        'all three counters can be updated in a single copyWith call',
+        () {
+          final updated = baseline.copyWith(
+            unitLevelSiyumimCount: 10,
+            aggregateLevelSiyumimCount: 20,
+            curriculumLevelSiyumimCount: 30,
+          );
+          expect(updated.unitLevelSiyumimCount, 10);
+          expect(updated.aggregateLevelSiyumimCount, 20);
+          expect(updated.curriculumLevelSiyumimCount, 30);
+          // Equality with the freezed-generated == catches any silent field
+          // mix-up that the individual getters might miss.
+          expect(
+            updated,
+            equals(
+              const JourneyViewModel(
+                curricula: [],
+                totalCompletions: 5,
+                totalUniqueUnits: 3,
+                unitLevelSiyumimCount: 10,
+                aggregateLevelSiyumimCount: 20,
+                curriculumLevelSiyumimCount: 30,
+              ),
+            ),
+          );
+        },
+      );
+    });
   });
 
   group('UnitCompletion', () {

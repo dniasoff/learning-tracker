@@ -20,6 +20,7 @@ import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/user_mode.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
+import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/progress/domain/models/chart_data.dart';
@@ -229,7 +230,13 @@ void main() {
       //   - 1 live (stage 1) on today @ 10:00.
       //   - 1 bulkInTrack on today @ 11:00 (must NOT show on bar chart).
       //   - 1 lifetimeOnly on today @ 12:00 (must NOT show on bar chart).
-      final today = DateTime.now();
+      //
+      // F16: Route through `DateTimeFactory.nowLocal()` so the seed clock
+      // matches the production screen's clock when a future test pumps a
+      // frozen clock via `useLocalDayClock`. The previous `DateTime.now()`
+      // call read the system clock directly, leaving open the possibility
+      // of seed/production divergence in a clock-injected test.
+      final today = DateTimeFactory.nowLocal();
       final liveAt = DateTime(today.year, today.month, today.day, 10);
       final bulkAt = DateTime(today.year, today.month, today.day, 11);
       final lifetimeAt = DateTime(today.year, today.month, today.day, 12);

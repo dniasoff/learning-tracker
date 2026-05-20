@@ -2881,6 +2881,32 @@ class AppLocalizationsHe extends AppLocalizations {
   }
 
   @override
+  String siyumimLevelCurriculum(int count) {
+    return '$count סיומים ברמת מסלול';
+  }
+
+  @override
+  String siyumimLevelAggregate(int count) {
+    return '$count סיומים ברמת אגד';
+  }
+
+  @override
+  String siyumimLevelUnit(int count) {
+    return '$count סיומים ברמת יחידה';
+  }
+
+  @override
+  String get siyumimEmptyState => 'אין סיומים עדיין — המשיכו ללמוד!';
+
+  @override
+  String siyumimAggregateSubtitle(int count, String date) {
+    return 'כל $count הושלמו · $date';
+  }
+
+  @override
+  String get paceLiveLearningOnlyCaption => 'הקצב עוקב אחר למידה חיה בלבד.';
+
+  @override
   String get bulkMarkWizardSubtitle =>
       'פריטים אלו נספרים לסיומים ולידע הכולל — אך לא לרצף או לנקודות שלך.';
 
@@ -2896,4 +2922,47 @@ class AppLocalizationsHe extends AppLocalizations {
   @override
   String get recentActivityLiveOnlyDisclaimer =>
       'לימוד חי בלבד — פריטים שסומנו בכמות מופיעים תחת הידע הכולל.';
+
+  @override
+  String get lifetimeKnowledgeLoading => 'טוען ידע כולל…';
+
+  @override
+  String lifetimeKnowledgeLoadError(String error) {
+    return 'נכשל בטעינה: $error';
+  }
+
+  @override
+  String lifetimeKnowledgeCounterError(String error) {
+    return 'נכשל בטעינת מונים: $error';
+  }
+
+  @override
+  String get lifetimeKnowledgeRetry => 'נסה שוב';
+
+  @override
+  String get lifetimeKnowledgeToggleAllSources => 'כל המקורות';
+
+  @override
+  String get lifetimeKnowledgeToggleTrackOnly => 'למידה במסלולים בלבד';
+
+  @override
+  String get lifetimeKnowledgeAddCta => 'הוסף פריטים שלמדתי בעבר';
+
+  @override
+  String get lifetimeKnowledgeAddCtaSubtitle =>
+      'סימון לידע כולל — נספר לידע הכולל.';
+
+  @override
+  String get provenanceLive => 'בלמידה';
+
+  @override
+  String provenanceLiveChazaros(int count) {
+    return 'בלמידה · $count חזרות';
+  }
+
+  @override
+  String get provenanceBulkMarked => 'מסומן בקבוצה';
+
+  @override
+  String get provenanceLifetimeImported => 'ייבוא לכל החיים';
 }

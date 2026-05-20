@@ -5153,6 +5153,42 @@ abstract class AppLocalizations {
   /// **'Siyum Hilchos {name}'**
   String siyumHilchos(String name);
 
+  /// Top-counter row on the Siyumim & Milestones screen for the curriculum-complete tier (Siyum HaShas, Siyum HaTorah, …). `{count}` is the number of curriculum-complete siyumim across all the user's curricula.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} curriculum-level siyumim'**
+  String siyumimLevelCurriculum(int count);
+
+  /// Top-counter row on the Siyumim & Milestones screen for the aggregate tier (Siyum Seder / Siyum Chelek). `{count}` is the number of aggregate-level siyumim earned.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} aggregate-level siyumim'**
+  String siyumimLevelAggregate(int count);
+
+  /// Top-counter row on the Siyumim & Milestones screen for the unit tier (Siyum Masechta / Sefer / Siman / Hilchos). `{count}` is the number of unit-level siyumim earned.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} unit-level siyumim'**
+  String siyumimLevelUnit(int count);
+
+  /// Empty-state message rendered by SiyumimGroupedView when the user has no milestones to show.
+  ///
+  /// In en, this message translates to:
+  /// **'No siyumim yet — keep learning!'**
+  String get siyumimEmptyState;
+
+  /// Subtitle on an aggregate-level milestone row (Siyum Seder / Siyum Chelek) when every contained unit is complete. `{count}` is the number of contained units; `{date}` is a locale-formatted achievement date — pre-formatted via DateFormat.yMMMd(locale) by the caller.
+  ///
+  /// In en, this message translates to:
+  /// **'All {count} complete · {date}'**
+  String siyumimAggregateSubtitle(int count, String date);
+
+  /// Caption shown under the PaceIndicator on the Curriculum Progress screen — disambiguates pace (live-only) from the lifetime tier so users don't conflate the two.
+  ///
+  /// In en, this message translates to:
+  /// **'Pace tracks live learning only.'**
+  String get paceLiveLearningOnlyCaption;
+
   /// Subtitle/explainer for the Bulk Mark wizard (Wave 5 Task #17) — clarifies tier credit so the user understands why streak/points are not impacted.
   ///
   /// In en, this message translates to:
@@ -5176,6 +5212,78 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Live learning only — bulk-marked items appear under Lifetime Knowledge.'**
   String get recentActivityLiveOnlyDisclaimer;
+
+  /// Loading indicator message on the Lifetime Knowledge screen body.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading lifetime knowledge…'**
+  String get lifetimeKnowledgeLoading;
+
+  /// Body error message when the Lifetime Knowledge per-curriculum tree fails to load.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to load: {error}'**
+  String lifetimeKnowledgeLoadError(String error);
+
+  /// Header error message when the Lifetime Knowledge header counters fail to load.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to load counters: {error}'**
+  String lifetimeKnowledgeCounterError(String error);
+
+  /// Retry action label on the Lifetime Knowledge error states.
+  ///
+  /// In en, this message translates to:
+  /// **'Retry'**
+  String get lifetimeKnowledgeRetry;
+
+  /// Source-toggle label on the Lifetime Knowledge screen — includes lifetimeOnly imports.
+  ///
+  /// In en, this message translates to:
+  /// **'All sources'**
+  String get lifetimeKnowledgeToggleAllSources;
+
+  /// Source-toggle label on the Lifetime Knowledge screen — restricts to live + bulkInTrack rows.
+  ///
+  /// In en, this message translates to:
+  /// **'Track learning only'**
+  String get lifetimeKnowledgeToggleTrackOnly;
+
+  /// Bottom CTA on the Lifetime Knowledge screen — links to the Lifetime Marking flow.
+  ///
+  /// In en, this message translates to:
+  /// **'Add items I learned previously'**
+  String get lifetimeKnowledgeAddCta;
+
+  /// Subtitle for the Lifetime Knowledge CTA card — clarifies the tier credit.
+  ///
+  /// In en, this message translates to:
+  /// **'Lifetime Marking — counts toward Lifetime Knowledge.'**
+  String get lifetimeKnowledgeAddCtaSubtitle;
+
+  /// Per-leaf provenance label when the leaf was completed live with zero chazaros (rare — usually has a count).
+  ///
+  /// In en, this message translates to:
+  /// **'Live'**
+  String get provenanceLive;
+
+  /// Per-leaf provenance label for a live-completed leaf with its event count. {count} is the chazaros count (limud + chazaros).
+  ///
+  /// In en, this message translates to:
+  /// **'Live · {count} chazaros'**
+  String provenanceLiveChazaros(int count);
+
+  /// Per-leaf provenance label when the leaf entered via a bulk-in-track import (onboarding mark wizard).
+  ///
+  /// In en, this message translates to:
+  /// **'Bulk-marked'**
+  String get provenanceBulkMarked;
+
+  /// Per-leaf provenance label when the leaf entered via a lifetime-only import (outside any track).
+  ///
+  /// In en, this message translates to:
+  /// **'Lifetime · imported'**
+  String get provenanceLifetimeImported;
 }
 
 class _AppLocalizationsDelegate

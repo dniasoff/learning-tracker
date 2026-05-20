@@ -13,6 +13,21 @@ import 'package:learning_tracker/features/progress/domain/models/chart_data.dart
 /// fl_chart series never exceeds ~520 points for a decade of data.
 const int kChartDailyMaxDays = 60;
 
+/// Floor date for chart "All time" ranges.
+///
+/// The Recent Activity / Progress charts represent "All time" as a date
+/// range whose start is well before any plausible completion. We use
+/// 2000-01-01 in UTC; it matches the legacy bulk-prior sentinel epoch
+/// (so chart ranges and bulk-prior queries share one anchor) and is far
+/// enough in the past that no real completion predates it.
+///
+/// The chart service caps this internally to the user's first matching
+/// completion via [_effectiveStartDate], so the picker can pass this
+/// constant without the chart loop ever iterating ~9,600 leading empty
+/// days. See also F18 in `docs/_archive/` for the rationale on retiring
+/// the literal `DateTime(2000, 1, 1)` use at call sites.
+final DateTime kChartAllTimeFloor = DateTime.utc(2000, 1, 1);
+
 /// Service for aggregating completion data into chart-ready structures.
 ///
 /// All reads are scoped to a single profile so charts never mix data
@@ -280,13 +295,28 @@ class ChartDataService {
   /// Live-only counterpart of [getStreakCalendar] for the Recent Activity
   /// engagement-tier lens. Lights up only days with a live in-session mark —
   /// consistent with the streak (engagement-tier) policy.
+  ///
+  /// When [curriculumId] is supplied the active-dates set is scoped to that
+  /// curriculum, so the calendar dot pattern follows the screen's curriculum
+  /// filter pill (F11 — W7-D fix wave: previously the parameter was missing
+  /// and the calendar ignored the chip selection while every other chart
+  /// re-fetched).
+  ///
+  /// The headline streak number on the screen (`dashboardStreakProvider`)
+  /// stays profile-global by design — that is the user's overall live
+  /// streak across every active curriculum and is the source for the
+  /// Dashboard hero pill too. The screen's chart subtitle clarifies that
+  /// scope to the user; see `recent_activity_screen.dart`.
   Future<Set<DateTime>> getStreakCalendarLive({
     required DateTime startDate,
     required DateTime endDate,
+    String? curriculumId,
   }) async {
+    final curriculum = _resolveCurriculum(curriculumId);
     final completions = await _db.completionDao.getCompletionsByTier(
       profileId: _profileId,
       tier: CompletionTierFilter.liveOnly,
+      curriculumId: curriculum,
       since: startDate,
       until: _endOfDay(endDate),
     );

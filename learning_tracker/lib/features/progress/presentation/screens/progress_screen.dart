@@ -14,6 +14,7 @@ import 'package:learning_tracker/features/dashboard/presentation/providers/dashb
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/journey_providers.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/lifetime_knowledge_providers.dart';
+import 'package:learning_tracker/features/progress/presentation/providers/progress_lens_refresh_tick_provider.dart';
 import 'package:learning_tracker/features/progress/presentation/widgets/progress_tier_counter_row.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
@@ -77,6 +78,20 @@ class ProgressScreen extends ConsumerWidget {
 
               return RefreshIndicator(
                 onRefresh: () async {
+                  // F25: Bump the lens refresh tick so lens-screen providers
+                  // (Recent Activity / Siyumim & Milestones / Lifetime
+                  // Knowledge) — which live in trees the hub doesn't directly
+                  // compose — also re-fetch on pull-to-refresh. Lens
+                  // providers participate by `ref.watch`ing the tick (see
+                  // progress_lens_refresh_tick_provider.dart).
+                  ref
+                      .read(progressLensRefreshTickProvider.notifier)
+                      .bump();
+
+                  // Direct invalidation of hub-owned providers — kept as a
+                  // safety net so the refresh remains effective even before
+                  // the lens providers wire the tick (sibling W7-B / W7-D
+                  // follow-up).
                   ref.invalidate(dashboardActiveCurriculaStreamProvider);
                   ref.invalidate(dashboardStreakProvider);
                   ref.invalidate(dashboardGlobalPointsProvider);

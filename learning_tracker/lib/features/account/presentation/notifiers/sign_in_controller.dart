@@ -195,6 +195,23 @@ class SignInController extends Notifier<SignInState> {
 
   // ── Offline restore ─────────────────────────────────────────────────────────
 
+  /// Exposed for regression tests covering the catch-path logging (F19).
+  /// Production callers use [signInWithEmail], which invokes this helper
+  /// when the email is not registered on this device.
+  @visibleForTesting
+  Future<bool> tryLocalFallbackSignInForTest({
+    required String email,
+    required String password,
+    required StackRouter router,
+    required AppLocalizations l10n,
+  }) =>
+      _tryLocalFallbackSignIn(
+        email: email,
+        password: password,
+        router: router,
+        l10n: l10n,
+      );
+
   Future<bool> _tryLocalFallbackSignIn({
     required String email,
     required String password,
@@ -228,11 +245,34 @@ class SignInController extends Notifier<SignInState> {
       }
       return true;
     } on InvalidCredentialsException {
+      // Expected outcome — user has no local account or the password didn't
+      // match. Caller (signInWithEmail) falls through to the next strategy
+      // (Firebase). No log: a wrong-password attempt is not a system failure.
       return false;
-    } catch (_) {
+    } catch (e, stackTrace) {
+      // Any other failure (DB read error, prefs corruption, navigation
+      // crash) is a real problem — the previous empty catch silently
+      // swallowed these so a broken local-DB schema would manifest as an
+      // unexplained "wrong password" UX. Replace with a structured warning
+      // so operators inspecting logs can trace the failure.
+      AppLogger.instance.warning(
+        event: 'try_local_fallback_sign_in_failed',
+        exception: e,
+        stackTrace: stackTrace,
+      );
       return false;
     }
   }
+
+  /// Exposed for regression tests covering the catch-path logging (F19).
+  /// Production callers use [signInWithEmail], which invokes this helper
+  /// when the registered account is cloud-born but the device is offline.
+  @visibleForTesting
+  Future<bool> tryOfflineCloudRestoreForTest(
+    DeviceAccount account,
+    StackRouter router,
+  ) =>
+      _tryOfflineCloudRestore(account, router);
 
   Future<bool> _tryOfflineCloudRestore(
     DeviceAccount account,
@@ -275,7 +315,17 @@ class SignInController extends Notifier<SignInState> {
       _ref.read(selectedProfileIdProvider.notifier).clear();
       unawaited(router.replaceAll([const AppShellRoute()]));
       return true;
-    } catch (_) {
+    } catch (e, stackTrace) {
+      // Any failure here (DB swap, profile DAO read, prefs write, navigation)
+      // is a real problem — the offline restore path is the user's only way
+      // back into their data when network is down. Silently returning false
+      // (the previous empty-catch behavior) leaves the user staring at an
+      // "incorrect password" toast with no operator breadcrumb.
+      AppLogger.instance.warning(
+        event: 'try_offline_cloud_restore_failed',
+        exception: e,
+        stackTrace: stackTrace,
+      );
       return false;
     }
   }

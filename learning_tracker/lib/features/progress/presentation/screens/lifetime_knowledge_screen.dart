@@ -60,7 +60,13 @@ class _LifetimeKnowledgeScreenState
         ? ref.watch(lifetimeViewSummariesProvider(profileId))
         : ref.watch(itemsLearnedSummariesProvider(profileId));
 
-    final headerAsync = ref.watch(lifetimeHeaderCountersProvider(profileId));
+    // F3: header counters must follow the source toggle. The "All sources"
+    // branch reads the lifetime-tier union; the "Track only" branch reads
+    // the same trackAchievement-filtered surface the body uses, so the
+    // numbers on top match the per-curriculum tree below.
+    final headerAsync = _filter == _LifetimeSourceFilter.allSources
+        ? ref.watch(lifetimeHeaderCountersProvider(profileId))
+        : ref.watch(trackOnlyHeaderCountersProvider(profileId));
 
     return Scaffold(
       backgroundColor: AppTheme.brandCream,
@@ -87,8 +93,13 @@ class _LifetimeKnowledgeScreenState
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
               child: _LifetimeHeaderCard(
                 headerAsync: headerAsync,
-                onRetry: () =>
-                    ref.invalidate(lifetimeHeaderCountersProvider(profileId)),
+                onRetry: () {
+                  if (_filter == _LifetimeSourceFilter.allSources) {
+                    ref.invalidate(lifetimeHeaderCountersProvider(profileId));
+                  } else {
+                    ref.invalidate(trackOnlyHeaderCountersProvider(profileId));
+                  }
+                },
               ),
             ),
             // Source toggle.
@@ -123,16 +134,16 @@ class _LifetimeKnowledgeScreenState
                     showProvenance: true,
                   );
                 },
-                loading: () => const Center(
+                loading: () => Center(
                   child: Padding(
-                    padding: EdgeInsets.only(top: 48),
-                    child: LoadingIndicator(message: 'Loading…'),
+                    padding: const EdgeInsets.only(top: 48),
+                    child: LoadingIndicator(message: l10n.lifetimeKnowledgeLoading),
                   ),
                 ),
                 error: (error, _) => Padding(
                   padding: const EdgeInsets.all(24),
                   child: ErrorDisplay(
-                    message: 'Failed to load: $error',
+                    message: l10n.lifetimeKnowledgeLoadError(error.toString()),
                     onRetry: () {
                       if (_filter == _LifetimeSourceFilter.allSources) {
                         ref.invalidate(
@@ -177,6 +188,7 @@ class _LifetimeHeaderCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final terms = domainTermLabels(ref);
+    final l10n = AppLocalizations.of(context)!;
 
     return DecoratedBox(
       decoration: BoxDecoration(
@@ -236,11 +248,14 @@ class _LifetimeHeaderCard extends ConsumerWidget {
             children: [
               Expanded(
                 child: Text(
-                  'Failed to load counters: $error',
+                  l10n.lifetimeKnowledgeCounterError(error.toString()),
                   style: theme.textTheme.bodySmall,
                 ),
               ),
-              TextButton(onPressed: onRetry, child: const Text('Retry')),
+              TextButton(
+                onPressed: onRetry,
+                child: Text(l10n.lifetimeKnowledgeRetry),
+              ),
             ],
           ),
         ),
@@ -258,17 +273,18 @@ class _LifetimeSourceToggle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return SegmentedButton<_LifetimeSourceFilter>(
-      segments: const [
+      segments: [
         ButtonSegment(
           value: _LifetimeSourceFilter.allSources,
-          label: Text('All sources'),
-          icon: Icon(Icons.public_outlined),
+          label: Text(l10n.lifetimeKnowledgeToggleAllSources),
+          icon: const Icon(Icons.public_outlined),
         ),
         ButtonSegment(
           value: _LifetimeSourceFilter.trackOnly,
-          label: Text('Track learning only'),
-          icon: Icon(Icons.school_outlined),
+          label: Text(l10n.lifetimeKnowledgeToggleTrackOnly),
+          icon: const Icon(Icons.school_outlined),
         ),
       ],
       selected: {filter},
@@ -288,6 +304,7 @@ class _LifetimeMarkingCta extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
     return Material(
       color: AppTheme.brandCreamCard,
       borderRadius: BorderRadius.circular(14),
@@ -309,7 +326,7 @@ class _LifetimeMarkingCta extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Add items I learned previously',
+                      l10n.lifetimeKnowledgeAddCta,
                       style: theme.textTheme.titleSmall?.copyWith(
                         fontWeight: FontWeight.w700,
                         color: AppTheme.brandInk,
@@ -317,7 +334,7 @@ class _LifetimeMarkingCta extends StatelessWidget {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      'Lifetime Marking — counts toward Lifetime Knowledge.',
+                      l10n.lifetimeKnowledgeAddCtaSubtitle,
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: AppTheme.brandInkMuted,
                       ),

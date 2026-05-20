@@ -301,6 +301,17 @@ class LifetimeTreeBuilder {
 
   /// Builds a `sefariaRef → LifetimeLeafProvenance` map from raw source data.
   ///
+  /// **Upgrade-path contract (relied on by Rule 1 below):** when a genuine
+  /// live completion commits for a natural key that ALREADY has a row in
+  /// `prior_completion_imports`, `CompletionWriter._upgradePriorMarkRow`
+  /// DELETES the import row (via `PriorCompletionImportDao.deleteImport`). As
+  /// a result, a ref that has been "upgraded" from bulk to live is absent
+  /// from [bulkImportedRefs] / [lifetimeImportedRefs] when this function is
+  /// called, and correctly returns [LifetimeLeafSource.live]. If that delete
+  /// is ever removed, the classification here must be revisited to prefer
+  /// `live` when `count > 0` regardless of whether the ref also has an
+  /// import row.
+  ///
   /// Provenance rules (mutually exclusive — first match wins):
   ///   1. **[LifetimeLeafSource.live]** — at least one completion event is
   ///      NOT present in [importedKeys] (i.e. is a true live completion). The

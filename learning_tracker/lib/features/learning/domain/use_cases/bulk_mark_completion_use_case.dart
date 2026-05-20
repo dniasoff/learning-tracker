@@ -45,6 +45,9 @@ class BulkMarkCompletionUseCase {
     // B1: derive the engagement gate from the source discriminator.
     // For bulkInTrack / lifetimeOnly the flag maps to false so the repository
     // correctly suppresses streak events and point awards.
+    //
+    // The achievement gate is independent — bulkInTrack credits achievement
+    // (the user earns the siyum) while lifetimeOnly does not.
     final gatedRequest = BulkCompletionRequest(
       curriculumId: request.curriculumId,
       sefariaRefs: request.sefariaRefs,
@@ -52,6 +55,7 @@ class BulkMarkCompletionUseCase {
       trackType: request.trackType,
       profileId: request.profileId,
       awardGamificationPoints: source.creditsEngagement,
+      creditsAchievement: source.creditsAchievement,
       completedAt: request.completedAt,
     );
     return await _repository.bulkMarkComplete(gatedRequest);

@@ -1,19 +1,25 @@
-// Regression test for the program-label methods added to
-// `lib/core/labels/domain_term_labels.dart`.
+// Regression test for `ProgramLabelResolver`
+// (`lib/features/scheduler/domain/labels/program_label_resolver.dart`).
 //
-// W0.5-B refactor: scheduler service code (`learning_program_service.dart`,
-// `calendar_program_service.dart`) no longer reads `useHebrewTermsProvider`
-// directly. All program-label resolution must go through
-// `domainTermLabels(ref).learningProgramLabel` /
-// `.calendarEntryLabel` / `.calendarEntryTodayRef`. This test exercises
-// those methods with the Hebrew Terms toggle both ON and OFF, through real
-// `ProviderContainer` and `Consumer` wiring (no mirror — runs production
-// code).
+// F4 (W7-D adversarial fix wave): the program-label resolver methods were
+// moved out of `core/labels/DomainTermLabels` into a thin scheduler-side
+// shim so `lib/core/` no longer imports `features/scheduler/` (Rule 1 /
+// DNI-386). The toggle source-of-truth stays in `core/labels/` via
+// `DomainTermLabels.isHebrew`; this shim only does feature-side
+// type-aware field picking.
+//
+// The test exercises the resolver with the Hebrew Terms toggle both ON and
+// OFF, through real `ProviderContainer` / `Consumer` wiring (no mirror —
+// runs production code). The bottom group also covers the scheduler
+// service wrapper functions (`learningProgramLabelText` /
+// `calendarEntryLabelText` / `calendarEntryTodayRefText`) so a future
+// regression that re-introduces a direct `useHebrewTermsProvider.watch`
+// in scheduler service code would be caught.
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/core/labels/domain_term_labels.dart';
+import 'package:learning_tracker/features/scheduler/domain/labels/program_label_resolver.dart';
 import 'package:learning_tracker/features/scheduler/domain/services/calendar_program_service.dart';
 import 'package:learning_tracker/features/scheduler/domain/services/learning_program_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -24,9 +30,9 @@ void main() {
   // The seed list and CalendarProgramRegistry both contain a "daf_yomi"
   // program with English "Daf Yomi" / Hebrew "דף יומי". The repo's
   // `getProgramByName` lookup is the production path that gives the
-  // `LearningProgramData` instance we pass to the label method.
+  // `LearningProgramData` instance we pass to the resolver method.
 
-  group('domainTermLabels.learningProgramLabel — Hebrew toggle wiring', () {
+  group('ProgramLabelResolver.learningProgramLabel — toggle wiring', () {
     testWidgets('Hebrew ON → Hebrew name from CalendarProgramRegistry', (
       tester,
     ) async {
@@ -40,9 +46,8 @@ void main() {
                 builder: (context, ref, _) {
                   final program = LearningProgramRepository.instance
                       .getProgramByName('daf_yomi')!;
-                  rendered = domainTermLabels(ref).learningProgramLabel(
-                    program,
-                  );
+                  rendered =
+                      ProgramLabelResolver.of(ref).learningProgramLabel(program);
                   return Text(rendered!);
                 },
               ),
@@ -69,9 +74,9 @@ void main() {
                   builder: (context, ref, _) {
                     final program = LearningProgramRepository.instance
                         .getProgramByName('daf_yomi')!;
-                    rendered = domainTermLabels(ref).learningProgramLabel(
-                      program,
-                    );
+                    rendered = ProgramLabelResolver.of(
+                      ref,
+                    ).learningProgramLabel(program);
                     return Text(rendered!);
                   },
                 ),
@@ -93,7 +98,7 @@ void main() {
         String? rendered;
         // Build a LearningProgramData whose `name` is NOT in
         // CalendarProgramRegistry — the registry lookup must return null
-        // and the method must fall back to the program's English
+        // and the resolver must fall back to the program's English
         // displayName.
         const program = LearningProgramData(
           id: 999,
@@ -115,9 +120,9 @@ void main() {
               home: Scaffold(
                 body: Consumer(
                   builder: (context, ref, _) {
-                    rendered = domainTermLabels(ref).learningProgramLabel(
-                      program,
-                    );
+                    rendered = ProgramLabelResolver.of(
+                      ref,
+                    ).learningProgramLabel(program);
                     return Text(rendered!);
                   },
                 ),
@@ -133,7 +138,7 @@ void main() {
 
   // ── calendarEntryLabel ──────────────────────────────────────────────────
 
-  group('domainTermLabels.calendarEntryLabel — Hebrew toggle wiring', () {
+  group('ProgramLabelResolver.calendarEntryLabel — toggle wiring', () {
     const entry = CalendarProgramEntry(
       programId: 'daf_yomi',
       displayNameEn: 'Daf Yomi',
@@ -152,7 +157,8 @@ void main() {
             home: Scaffold(
               body: Consumer(
                 builder: (context, ref, _) {
-                  rendered = domainTermLabels(ref).calendarEntryLabel(entry);
+                  rendered =
+                      ProgramLabelResolver.of(ref).calendarEntryLabel(entry);
                   return Text(rendered!);
                 },
               ),
@@ -165,7 +171,9 @@ void main() {
     });
 
     testWidgets('Hebrew OFF → entry.displayNameEn', (tester) async {
-      SharedPreferences.setMockInitialValues({'hebrew_terms_script_p0': false});
+      SharedPreferences.setMockInitialValues({
+        'hebrew_terms_script_p0': false,
+      });
       String? rendered;
       await tester.pumpWidget(
         ProviderScope(
@@ -173,7 +181,8 @@ void main() {
             home: Scaffold(
               body: Consumer(
                 builder: (context, ref, _) {
-                  rendered = domainTermLabels(ref).calendarEntryLabel(entry);
+                  rendered =
+                      ProgramLabelResolver.of(ref).calendarEntryLabel(entry);
                   return Text(rendered!);
                 },
               ),
@@ -188,7 +197,7 @@ void main() {
 
   // ── calendarEntryTodayRef ───────────────────────────────────────────────
 
-  group('domainTermLabels.calendarEntryTodayRef — Hebrew toggle wiring', () {
+  group('ProgramLabelResolver.calendarEntryTodayRef — toggle wiring', () {
     testWidgets('Hebrew ON + non-empty todayRefHe → entry.todayRefHe', (
       tester,
     ) async {
@@ -208,7 +217,8 @@ void main() {
             home: Scaffold(
               body: Consumer(
                 builder: (context, ref, _) {
-                  rendered = domainTermLabels(ref).calendarEntryTodayRef(entry);
+                  rendered =
+                      ProgramLabelResolver.of(ref).calendarEntryTodayRef(entry);
                   return Text(rendered!);
                 },
               ),
@@ -231,7 +241,7 @@ void main() {
           displayNameEn: 'Daf Yomi',
           displayNameHe: 'דף יומי',
           todayRef: 'Hullin 7',
-          // Empty by default — represents the case where the API didn't
+          // Empty by default — represents the case where the source didn't
           // supply a Hebrew ref form.
           apiSource: 'local',
         );
@@ -242,9 +252,9 @@ void main() {
               home: Scaffold(
                 body: Consumer(
                   builder: (context, ref, _) {
-                    rendered = domainTermLabels(ref).calendarEntryTodayRef(
-                      entry,
-                    );
+                    rendered = ProgramLabelResolver.of(
+                      ref,
+                    ).calendarEntryTodayRef(entry);
                     return Text(rendered!);
                   },
                 ),
@@ -258,7 +268,9 @@ void main() {
     );
 
     testWidgets('Hebrew OFF → entry.todayRef (English)', (tester) async {
-      SharedPreferences.setMockInitialValues({'hebrew_terms_script_p0': false});
+      SharedPreferences.setMockInitialValues({
+        'hebrew_terms_script_p0': false,
+      });
       const entry = CalendarProgramEntry(
         programId: 'daf_yomi',
         displayNameEn: 'Daf Yomi',
@@ -274,7 +286,8 @@ void main() {
             home: Scaffold(
               body: Consumer(
                 builder: (context, ref, _) {
-                  rendered = domainTermLabels(ref).calendarEntryTodayRef(entry);
+                  rendered =
+                      ProgramLabelResolver.of(ref).calendarEntryTodayRef(entry);
                   return Text(rendered!);
                 },
               ),
@@ -289,15 +302,15 @@ void main() {
 
   // ── End-to-end through the scheduler service wrapper functions ──────────
   //
-  // The scheduler exports `learningProgramLabelText` /
-  // `calendarEntryLabelText` / `calendarEntryTodayRefText` as the public
-  // call sites. After the W0.5-B refactor these are thin wrappers around
-  // the DomainTermLabels methods above. The wrapper-level coverage here
-  // guards against regression — a future change that re-introduces a
-  // direct `useHebrewTermsProvider.watch` here would silently keep the
-  // tests above passing.
+  // `learningProgramLabelText` / `calendarEntryLabelText` /
+  // `calendarEntryTodayRefText` are the public call sites in scheduler
+  // service code. Post-F4 these are thin wrappers around
+  // [ProgramLabelResolver]. The wrapper-level coverage here guards against
+  // regression — a future change that re-introduces a direct
+  // `useHebrewTermsProvider.watch` in those services would silently keep
+  // the resolver tests above passing but would fail here.
 
-  group('scheduler service wrappers route through domainTermLabels', () {
+  group('scheduler service wrappers route through ProgramLabelResolver', () {
     testWidgets('learningProgramLabelText Hebrew ON → Hebrew', (tester) async {
       SharedPreferences.setMockInitialValues({'hebrew_terms_script_p0': true});
       String? rendered;
@@ -322,7 +335,9 @@ void main() {
     });
 
     testWidgets('calendarEntryLabelText Hebrew OFF → English', (tester) async {
-      SharedPreferences.setMockInitialValues({'hebrew_terms_script_p0': false});
+      SharedPreferences.setMockInitialValues({
+        'hebrew_terms_script_p0': false,
+      });
       const entry = CalendarProgramEntry(
         programId: 'daf_yomi',
         displayNameEn: 'Daf Yomi',

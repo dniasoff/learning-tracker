@@ -1,5 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:learning_tracker/core/labels/domain_term_labels.dart';
+import 'package:learning_tracker/features/scheduler/domain/labels/program_label_resolver.dart';
 import 'package:learning_tracker/features/scheduler/domain/services/local_calendar_engine.dart';
 
 /// Unified calendar entry combining data from any source.
@@ -43,13 +43,15 @@ class CalendarProgramEntry {
 }
 
 /// Pure-string label for a [CalendarProgramEntry] respecting the Hebrew
-/// Terms toggle. Routes through [domainTermLabels] (the single point of
-/// access for the toggle in `lib/core/labels/`) so this scheduler service
-/// does not read `useHebrewTermsProvider` directly — see audit rule 7/15.
+/// Terms toggle. Routes through [ProgramLabelResolver] (the scheduler-side
+/// shim that reads the toggle source-of-truth in `lib/core/labels/`) so
+/// this scheduler service does not read `useHebrewTermsProvider` directly
+/// — see audit rule 7/15 — and so `lib/core/` does not import scheduler
+/// types (Rule 1).
 String calendarEntryLabelText(
   WidgetRef ref, {
   required CalendarProgramEntry entry,
-}) => domainTermLabels(ref).calendarEntryLabel(entry);
+}) => ProgramLabelResolver.of(ref).calendarEntryLabel(entry);
 
 /// Today's-ref label for a [CalendarProgramEntry] respecting the Hebrew
 /// Terms toggle. Falls back to the English [CalendarProgramEntry.todayRef]
@@ -57,7 +59,7 @@ String calendarEntryLabelText(
 String calendarEntryTodayRefText(
   WidgetRef ref, {
   required CalendarProgramEntry entry,
-}) => domainTermLabels(ref).calendarEntryTodayRef(entry);
+}) => ProgramLabelResolver.of(ref).calendarEntryTodayRef(entry);
 
 /// Calendar program service.
 ///

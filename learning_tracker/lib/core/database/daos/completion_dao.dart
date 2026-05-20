@@ -783,28 +783,45 @@ class CompletionDao extends DatabaseAccessor<UserDatabase>
       vars.add(Variable.withDateTime(until));
     }
 
-    // Add tier-specific filter.
+    // Add tier-specific filter via correlated EXISTS subqueries.
+    //
+    // The previous implementation used `LEFT JOIN prior_completion_imports`
+    // plus a `pci.id IS NULL` / `pci.source = 'bulkInTrack'` predicate. The
+    // schema has a UNIQUE index on the 5-tuple natural key, so duplicate
+    // matches are rare today — but a LEFT JOIN that becomes 1-to-many for
+    // any reason (legacy data, sync race, future migration that relaxes the
+    // index) would produce duplicate `Completion` rows with the same `cv.id`
+    // and silently double-count downstream aggregates.
+    //
+    // EXISTS / NOT EXISTS is set-membership: it returns at most one logical
+    // match per parent row, so the projection cardinality is exactly the
+    // count of distinct `cv.id` rows. The intent ("completion exists AND no
+    // matching import" / "completion exists AND import has source =
+    // bulkInTrack") is also more direct than the LEFT JOIN encoding.
+    const importsMatchPredicate = '''
+SELECT 1 FROM prior_completion_imports AS pci
+WHERE pci.profile_id = cv.profile_id
+  AND pci.curriculum_id = cv.curriculum_id
+  AND pci.sefaria_ref = cv.sefaria_ref
+  AND pci.stage_id = cv.stage_id
+  AND pci.track_type = cv.track_type''';
+
     switch (tier) {
       case CompletionTierFilter.liveOnly:
-        // Live = not present in prior_completion_imports at all.
-        whereParts.add('pci.id IS NULL');
+        // Live = no matching prior_completion_imports row at all.
+        whereParts.add('NOT EXISTS ($importsMatchPredicate)');
       case CompletionTierFilter.trackAchievement:
         // trackAchievement = live OR bulkInTrack (excludes lifetimeOnly).
-        whereParts.add("(pci.id IS NULL OR pci.source = 'bulkInTrack')");
+        // Expressed as: either no matching import row, or a matching row
+        // exists whose source is bulkInTrack.
+        whereParts.add(
+          '(NOT EXISTS ($importsMatchPredicate) '
+          "OR EXISTS ($importsMatchPredicate AND pci.source = 'bulkInTrack'))",
+        );
       case CompletionTierFilter.lifetime:
         // Lifetime = all sources; no extra filter needed.
         break;
     }
-
-    final joinClause = tier != CompletionTierFilter.lifetime
-        ? '''
-LEFT JOIN prior_completion_imports AS pci
-  ON pci.profile_id = cv.profile_id
-  AND pci.curriculum_id = cv.curriculum_id
-  AND pci.sefaria_ref = cv.sefaria_ref
-  AND pci.stage_id = cv.stage_id
-  AND pci.track_type = cv.track_type'''
-        : '';
 
     final sql =
         '''
@@ -813,7 +830,6 @@ SELECT
   cv.stage_id, cv.track_type, cv.track_id, cv.points,
   cv.event_timestamp
 FROM completions_view AS cv
-$joinClause
 WHERE ${whereParts.join(' AND ')}
 ''';
 

@@ -214,7 +214,9 @@ Widget _pump({
     overrides: [
       userDatabaseProvider.overrideWith((ref) => db),
       contentRepositoryProvider.overrideWithValue(repo),
-      activeProfileIdProvider.overrideWith(() => _ProfileIdOverride(_profileId)),
+      activeProfileIdProvider.overrideWith(
+        () => _ProfileIdOverride(_profileId),
+      ),
       useHebrewTermsProvider.overrideWith(
         () => _UseHebrewTermsOverride(useHebrew: useHebrew),
       ),
@@ -383,6 +385,11 @@ void main() {
       );
       await tester.pumpAndSettle();
 
+      // The caption now comes from the l10n key `paceLiveLearningOnlyCaption`
+      // (F10 fix — the inline English literal + TODO(l10n) comment was
+      // replaced by a real ARB-driven string). The default English template
+      // is unchanged, so we still assert against the same text — but the
+      // test now exercises the AppLocalizations resolution path.
       expect(
         find.text('Pace tracks live learning only.'),
         findsOneWidget,

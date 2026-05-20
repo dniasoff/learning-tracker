@@ -8,6 +8,8 @@
 @Tags(['progress', 'tier_counter'])
 library;
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -188,6 +190,142 @@ void main() {
         expect(find.text('0 siyumim earned'), findsOneWidget);
         expect(find.text('0 items in lifetime'), findsOneWidget);
         expect(find.text('0 pts'), findsOneWidget);
+      },
+    );
+
+    // F17 regression — during the first paint while the dependent providers
+    // are still loading, the row must render the "…" placeholder NOT zeros.
+    // The legacy fallback `streakAsync.asData?.value.currentStreak ?? 0`
+    // produced "0-day streak · 0 siyumim earned · 0 items in lifetime" for
+    // the brief async window — exactly the "1336 vs 0" confusion the IA
+    // redesign was meant to eliminate.
+    testWidgets(
+      'placeholder ("…") shown while every provider is loading',
+      (tester) async {
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              activeProfileIdProvider.overrideWith(
+                () => _ProfileIdOverride(_profileId),
+              ),
+              useHebrewTermsProvider.overrideWith(
+                () => _UseHebrewTermsOverride(useHebrew: false),
+              ),
+              // Hold every provider in the loading state by returning futures
+              // and streams that never complete. The widget should NOT fall
+              // back to zeros — it should render the "…" placeholder until
+              // every dependency resolves.
+              dashboardStreakProvider.overrideWith(
+                (ref) => const Stream.empty(),
+              ),
+              journeyViewModelProvider(_profileId).overrideWith(
+                (ref) => Completer<JourneyViewModel>().future,
+              ),
+              lifetimeTotalsAcrossAllCurriculaProvider(_profileId)
+                  .overrideWith(
+                (ref) => Completer<LifetimeTotals>().future,
+              ),
+              dashboardGlobalPointsProvider.overrideWith(
+                (ref) => Completer<int>().future,
+              ),
+            ],
+            child: const MaterialApp(
+              localizationsDelegates: [
+                AppLocalizations.delegate,
+                GlobalMaterialLocalizations.delegate,
+                GlobalWidgetsLocalizations.delegate,
+                GlobalCupertinoLocalizations.delegate,
+              ],
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: Scaffold(
+                body: Padding(
+                  padding: EdgeInsets.all(16),
+                  child: ProgressTierCounterRow(showPoints: true),
+                ),
+              ),
+            ),
+          ),
+        );
+        // Single pump — DO NOT pumpAndSettle because the providers are
+        // intentionally never-completing futures.
+        await tester.pump();
+
+        // Each counter must show the placeholder, NOT a zero — three "…"
+        // for adult (streak/siyumim/lifetime) + one more for points = 4.
+        expect(
+          find.text('…'),
+          findsNWidgets(4),
+          reason:
+              'loading state must render the placeholder for all four '
+              'counter values, not fall back to misleading zeros',
+        );
+      },
+    );
+
+    // F17 partial-loading — when one provider has resolved but others are
+    // still loading, every counter VALUE must stay on the placeholder. The
+    // visual sin we're guarding against: a flashy big "7" rendered next to
+    // two stale zeros, suggesting "7 streak · 0 siyumim · 0 items" while
+    // the real data is still en route.
+    testWidgets(
+      'placeholder is shown even when only ONE provider is still loading',
+      (tester) async {
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              activeProfileIdProvider.overrideWith(
+                () => _ProfileIdOverride(_profileId),
+              ),
+              useHebrewTermsProvider.overrideWith(
+                () => _UseHebrewTermsOverride(useHebrew: false),
+              ),
+              // Three providers ready, one still loading. The row must
+              // remain in loading mode rather than rendering "7 · 0 · 0".
+              dashboardStreakProvider.overrideWith(
+                (ref) => Stream.value(
+                  (currentStreak: 7, maxStreak: 7),
+                ),
+              ),
+              journeyViewModelProvider(_profileId).overrideWith(
+                (ref) => Future.value(_journey(unit: 3)),
+              ),
+              lifetimeTotalsAcrossAllCurriculaProvider(_profileId)
+                  .overrideWith(
+                (ref) => Completer<LifetimeTotals>().future,
+              ),
+              dashboardGlobalPointsProvider.overrideWith(
+                (ref) => Future.value(42),
+              ),
+            ],
+            child: const MaterialApp(
+              localizationsDelegates: [
+                AppLocalizations.delegate,
+                GlobalMaterialLocalizations.delegate,
+                GlobalWidgetsLocalizations.delegate,
+                GlobalCupertinoLocalizations.delegate,
+              ],
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: Scaffold(
+                body: Padding(
+                  padding: EdgeInsets.all(16),
+                  child: ProgressTierCounterRow(showPoints: true),
+                ),
+              ),
+            ),
+          ),
+        );
+        // Pump once to let the stream + ready futures emit their values
+        // without waiting on the still-pending lifetime totals future.
+        await tester.pump();
+        await tester.pump();
+
+        // No counter VALUE should render as a real number yet — the lifetime
+        // provider is still loading, so the gate stays closed for all four
+        // slots. All four numeric slots show the placeholder. The descriptive
+        // labels (e.g. "7-day streak") may still embed the resolved count
+        // for plural-form purposes; that's tiny text, the visual gate is on
+        // the big value.
+        expect(find.text('…'), findsNWidgets(4));
       },
     );
   });
