@@ -128,9 +128,9 @@ Sync-point trigger tags: `[P1]` `[P2]` `[P3]` `[P4]` `[P5]` `[P6]` `[P7]`
 ## Wave 3 — Data model rebuild + tutor schema (~47 tasks)
 
 ### Phase 3a · Typed IDs (S2)
-- [ ] W3.1  (S, S2, pending)    Create lib/core/ids/ directory
-- [ ] W3.2  (S, S2, pending)    Add extension types: ProfileId, TrackId, StageId, SefariaRef, UserId, TutorGrantId
-- [ ] W3.3  (M, S2, pending)    Add NaturalKey VO with per-entity constructors
+- [x] W3.1  (S, S2, done)    Create lib/core/ids/ directory
+- [x] W3.2  (S, S2, done)    Add extension types: ProfileId, TrackId, StageId, SefariaRef, UserId, TutorGrantId
+- [x] W3.3  (M, S2, done)    Add NaturalKey VO with per-entity constructors
 
 ### Phase 3b · Codecs (S2)
 - [ ] W3.4  (S, S2, pending)    Create lib/core/sync/codec/ + EntityCodec&lt;E&gt; abstract base
