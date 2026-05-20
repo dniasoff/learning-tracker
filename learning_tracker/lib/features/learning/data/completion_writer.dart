@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:drift/drift.dart';
 import 'package:learning_tracker/core/analytics/analytics_service.dart';
+import 'package:learning_tracker/core/database/daos/completion_dao.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/domain/value_objects/sefaria_ref.dart';
 import 'package:learning_tracker/core/sync/outbox/outbox_processor.dart';
@@ -120,17 +121,23 @@ class CompletionWriter {
       // Separate commands into: brand-new inserts, resurrections, and B8 upgrades.
       final commandsToResurrect = <CompletionCommand>[];
       final commandsToInsert = <CompletionCommand>[];
-      // B8: real-learning commands that hit an existing prior-mark-only row
-      // must upgrade the row (clear priorMarkOnly, update timestamp).
+      // B8: real-learning commands that hit a row recorded in prior_completion_imports
+      // must upgrade by deleting the import record so expunge will leave the row.
       final commandsToUpgrade = <CompletionCommand>[];
+
+      // Snapshot which of the pre-existing active commands are also in the
+      // prior_completion_imports table (one bounded query per batch).
+      final priorImportKeys = preExisting.isEmpty
+          ? <String>{}
+          : await _fetchPriorImportKeys(activeByKey.values.toList());
+
       for (final cmd in distinctCommands) {
         final key = _naturalKey(cmd);
         if (preExisting.contains(key)) {
-          // Truly pre-existing active row. B8: if the existing row is
-          // priorMarkOnly AND this command is a real-learning write, upgrade
-          // the row so a subsequent expunge does not delete it.
-          final existingRow = activeByKey[key]!;
-          if (existingRow.priorMarkOnly && !cmd.priorMarkOnly) {
+          // Truly pre-existing active row. B8: if the row is in
+          // prior_completion_imports AND this command is a real-learning write,
+          // delete the import record so a subsequent expunge skips this row.
+          if (priorImportKeys.contains(key) && !cmd.priorMarkOnly) {
             commandsToUpgrade.add(cmd);
           }
           // Otherwise: truly pre-existing real-learning row — no action needed.
@@ -146,7 +153,8 @@ class CompletionWriter {
         await _resurrectTombstone(tombstoneByKey[_naturalKey(cmd)]!, cmd);
       }
 
-      // B8 upgrade: promote prior-mark-only rows to real-learning rows.
+      // B8 upgrade: remove the prior_completion_imports record so the row
+      // survives a future expungePriorCompletions call.
       for (final cmd in commandsToUpgrade) {
         await _upgradePriorMarkRow(activeByKey[_naturalKey(cmd)]!, cmd);
       }
@@ -173,15 +181,33 @@ class CompletionWriter {
                 trackId: Value<int?>(cmd.trackId),
                 points: Value(cmd.points),
                 eventTimestamp: cmd.completedAt,
-                // B8: persist the prior-mark flag so expunge can target only
-                // prior-mark rows (priorMarkOnly = true) and leave real-learning
-                // rows (priorMarkOnly = false) untouched.
-                priorMarkOnly: Value(cmd.priorMarkOnly),
               ),
             ),
             mode: InsertMode.insertOrIgnore,
           );
         });
+        // B8: record prior-import entries for bulk-import commands so
+        // expungePriorCompletions can target them via prior_completion_imports.
+        final priorImportEntries = commandsToInsert
+            .where((cmd) => cmd.priorMarkOnly)
+            .map(
+              (cmd) => PriorCompletionImportsCompanion.insert(
+                profileId: cmd.profileId,
+                curriculumId: cmd.curriculumId,
+                sefariaRef: cmd.sefariaRef,
+                stageId: cmd.stageId,
+                trackType: cmd.trackType,
+                source: cmd.priorMarkOnly
+                    ? 'bulkInTrack'
+                    : 'live', // only priorMarkOnly=true reaches here
+              ),
+            )
+            .toList();
+        if (priorImportEntries.isNotEmpty) {
+          await _db.priorCompletionImportDao.batchInsertImports(
+            priorImportEntries,
+          );
+        }
       }
 
       // ── 3. Batch-insert outbox rows for GENUINELY-NEW completions only ───
@@ -382,6 +408,43 @@ class CompletionWriter {
         .get();
   }
 
+  /// Returns the set of natural keys from [events] that are also recorded in
+  /// [_db.priorCompletionImports].
+  ///
+  /// One bounded query over [_db.priorCompletionImports] filtered to the five-
+  /// column IN-lists derived from [events]. Used by [commitBatch] to detect
+  /// which pre-existing active completions originated from a bulk import (B8).
+  Future<Set<String>> _fetchPriorImportKeys(
+    List<CompletionEvent> events,
+  ) async {
+    if (events.isEmpty) return {};
+    final profileIds = {for (final e in events) e.profileId}.toList();
+    final sefariaRefs = {for (final e in events) e.sefariaRef}.toList();
+    final stageIds = {for (final e in events) e.stageId}.toList();
+    final trackTypes = {for (final e in events) e.trackType}.toList();
+    final curriculumIds = {for (final e in events) e.curriculumId}.toList();
+    final imports =
+        await (_db.select(_db.priorCompletionImports)..where(
+              (t) =>
+                  t.profileId.isIn(profileIds) &
+                  t.sefariaRef.isIn(sefariaRefs) &
+                  t.stageId.isIn(stageIds) &
+                  t.trackType.isIn(trackTypes) &
+                  t.curriculumId.isIn(curriculumIds),
+            ))
+            .get();
+    return {
+      for (final imp in imports)
+        _composeKey(
+          imp.profileId,
+          imp.sefariaRef,
+          imp.stageId,
+          imp.trackType,
+          imp.curriculumId,
+        ),
+    };
+  }
+
   /// Resurrects a tombstoned [event] for the given [cmd]:
   ///  - Clears `purgedAt` and updates `eventTimestamp` to the new command's
   ///    timestamp (so the re-mark reflects the current instant).
@@ -409,26 +472,36 @@ class CompletionWriter {
     );
   }
 
-  /// B8: Upgrades a prior-mark-only [event] to a real-learning row when a
+  /// B8: Upgrades a prior-import [event] to a real-learning row when a
   /// genuine in-app learning [cmd] hits the same natural key:
-  ///  - Clears `priorMarkOnly` (sets it to `false`).
+  ///  - Removes the row from `prior_completion_imports` so expunge skips it.
   ///  - Updates `eventTimestamp` to the real-learning timestamp.
   ///  - Enqueues an outbox row so Firestore receives the update.
   ///
   /// After this call, [BulkPriorCompletionService.expungePriorCompletions] will
-  /// skip this row (its `priorMarkOnly` is now `false`), so the item correctly
-  /// survives an un-tick in the onboarding bulk-mark screen.
+  /// not find a matching row in `prior_completion_imports`, so the item
+  /// correctly survives an un-tick in the onboarding bulk-mark screen.
   Future<void> _upgradePriorMarkRow(
     CompletionEvent event,
     CompletionCommand cmd,
   ) async {
+    // Delete the import record — this is the "upgrade" from prior-import to
+    // real learning. The completion_events row itself stays; only the import
+    // provenance tracking is removed.
+    await _db.priorCompletionImportDao.deleteImport(
+      profileId: cmd.profileId,
+      curriculumId: cmd.curriculumId,
+      sefariaRef: cmd.sefariaRef,
+      stageId: cmd.stageId,
+      trackType: cmd.trackType,
+    );
+    // Also update the timestamp on the completion_events row so Firestore
+    // receives the real-learning timestamp (the original sentinel date gets
+    // overwritten on re-mark).
     await (_db.update(
       _db.completionEvents,
     )..where((t) => t.id.equals(event.id))).write(
-      CompletionEventsCompanion(
-        priorMarkOnly: const Value(false),
-        eventTimestamp: Value(cmd.completedAt),
-      ),
+      CompletionEventsCompanion(eventTimestamp: Value(cmd.completedAt)),
     );
     await _db.outboxDao.insertOutboxRow(
       OutboxCompanion.insert(
@@ -515,10 +588,19 @@ class CompletionWriter {
           );
           return CompletionWriteResult(completion: rebuilt, isNew: true);
         }
-        // B8: if the existing active row is a prior-mark-only row AND this
-        // command is a real-learning event, upgrade the row so a later
+        // B8: if the existing active row is in prior_completion_imports AND this
+        // command is a real-learning event, delete the import record so a later
         // expungePriorCompletions call will leave it intact.
-        if (existingEvent.priorMarkOnly && !cmd.priorMarkOnly) {
+        final isExistingImport =
+            !cmd.priorMarkOnly &&
+            await _db.priorCompletionImportDao.isImported(
+              profileId: cmd.profileId,
+              curriculumId: cmd.curriculumId,
+              sefariaRef: cmd.sefariaRef,
+              stageId: cmd.stageId,
+              trackType: cmd.trackType,
+            );
+        if (isExistingImport) {
           await _upgradePriorMarkRow(existingEvent, cmd);
           final upgraded = await _db.completionDao.getCompletionById(
             existingEvent.id,
@@ -569,28 +651,11 @@ class CompletionWriter {
           completion: activeCompletion,
           isNew: false,
         );
-      } else {
-        // No event yet — also guard against legacy completions rows that
-        // predate v20 (derivedFromEvents = false) so we don't double-count.
-        final legacy =
-            await (_db.select(_db.completions)..where(
-                  (t) =>
-                      t.profileId.equals(cmd.profileId) &
-                      t.sefariaRef.equals(cmd.sefariaRef) &
-                      t.stageId.equals(cmd.stageId) &
-                      t.trackType.equals(cmd.trackType) &
-                      t.derivedFromEvents.equals(false),
-                ))
-                .getSingleOrNull();
-        if (legacy != null) {
-          return CompletionWriteResult(completion: legacy, isNew: false);
-        }
       }
+      // No event yet — fall through to write the new completion below.
 
       // Write canonical event (INSERT OR IGNORE — idempotent on natural key).
       // trackId is included so the completions_view can serve track-scoped queries.
-      // B8: persist priorMarkOnly from the command so expunge can target only
-      // prior-mark rows and leave real-learning rows untouched.
       final eventId = await _db.completionEventDao.appendEvent(
         CompletionEventsCompanion.insert(
           profileId: cmd.profileId,
@@ -601,9 +666,23 @@ class CompletionWriter {
           trackId: Value<int?>(cmd.trackId),
           points: Value(cmd.points),
           eventTimestamp: cmd.completedAt,
-          priorMarkOnly: Value(cmd.priorMarkOnly),
         ),
       );
+
+      // B8: for bulk-prior import commands, record in prior_completion_imports
+      // so expungePriorCompletions can target only import rows.
+      if (cmd.priorMarkOnly) {
+        await _db.priorCompletionImportDao.batchInsertImports([
+          PriorCompletionImportsCompanion.insert(
+            profileId: cmd.profileId,
+            curriculumId: cmd.curriculumId,
+            sefariaRef: cmd.sefariaRef,
+            stageId: cmd.stageId,
+            trackType: cmd.trackType,
+            source: 'bulkInTrack',
+          ),
+        ]);
+      }
 
       await _db.outboxDao.insertOutboxRow(
         OutboxCompanion.insert(

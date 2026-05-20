@@ -1,4 +1,4 @@
-import 'package:learning_tracker/core/database/user/user_database.dart';
+import 'package:learning_tracker/core/database/daos/completion_dao.dart';
 import 'package:learning_tracker/core/exceptions/app_exception.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_request.dart';
 import 'package:learning_tracker/features/learning/domain/entities/mark_completion_result.dart';

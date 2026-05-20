@@ -222,7 +222,7 @@ Sync-point trigger tags: `[P1]` `[P2]` `[P3]` `[P4]` `[P5]` `[P6]` `[P7]`
 - [ ] W4.23 (S, S5, in-progress)    profile_providers.dart SelectedProfileId → ProfileSession aggregate in profiles/domain/
 - [ ] W4.24 (S, S5, in-progress)    dashboard_providers.dart side-effect-in-read-provider → write-path repository method
 - [x] W4.25 (M, S4, done)    core/learning/completion_writer.commitBatch/commit → sealed BatchPlan + _classifyBatch/_applyBatchPlan/_resolveResults — **B1 credit policy at batch classification**
-- [ ] W4.26 (M, S4, pending)    Split BulkPriorCompletionService.priorMarkOnly off completion_events → separate prior_completion_imports table — **B1 bulkInTrack path**
+- [x] W4.26 (M, S4, done)    Split BulkPriorCompletionService.priorMarkOnly off completion_events → separate prior_completion_imports table — **B1 bulkInTrack path**
 
 ### Phase 4d · Tutor mode domain (S3)
 - [x] W4.27 (M, S3, done)    TutorGrant aggregate root with sealed GrantState (pending/active/declined/rescinded/revokedByParent/revokedByTutor/expired)

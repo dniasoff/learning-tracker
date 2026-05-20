@@ -605,6 +605,9 @@ class $LearnerProfilesTable extends LearnerProfiles
     false,
     type: DriftSqlType.int,
     requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES accounts (id) ON DELETE CASCADE',
+    ),
   );
   static const VerificationMeta _displayNameMeta = const VerificationMeta(
     'displayName',
@@ -785,6 +788,8 @@ class $LearnerProfilesTable extends LearnerProfiles
 
 class LearnerProfile extends DataClass implements Insertable<LearnerProfile> {
   final int id;
+
+  /// W3.25: FK → accounts(id) CASCADE DELETE.
   final int accountId;
   final String displayName;
   final String mode;
@@ -1077,32 +1082,28 @@ class $CurriculumTracksTable extends CurriculumTracks
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
-  static const VerificationMeta _trackTypeMeta = const VerificationMeta(
-    'trackType',
-  );
+  static const VerificationMeta _stateMeta = const VerificationMeta('state');
   @override
-  late final GeneratedColumn<String> trackType = GeneratedColumn<String>(
-    'track_type',
+  late final GeneratedColumn<String> state = GeneratedColumn<String>(
+    'state',
     aliasedName,
     false,
     type: DriftSqlType.string,
-    requiredDuringInsert: true,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('active'),
   );
-  static const VerificationMeta _isActiveMeta = const VerificationMeta(
-    'isActive',
+  static const VerificationMeta _stateChangedAtMeta = const VerificationMeta(
+    'stateChangedAt',
   );
   @override
-  late final GeneratedColumn<bool> isActive = GeneratedColumn<bool>(
-    'is_active',
-    aliasedName,
-    false,
-    type: DriftSqlType.bool,
-    requiredDuringInsert: false,
-    defaultConstraints: GeneratedColumn.constraintIsAlways(
-      'CHECK ("is_active" IN (0, 1))',
-    ),
-    defaultValue: const Constant(true),
-  );
+  late final GeneratedColumn<DateTime> stateChangedAt =
+      GeneratedColumn<DateTime>(
+        'state_changed_at',
+        aliasedName,
+        false,
+        type: DriftSqlType.dateTime,
+        requiredDuringInsert: true,
+      );
   static const VerificationMeta _activatedAtMeta = const VerificationMeta(
     'activatedAt',
   );
@@ -1114,18 +1115,6 @@ class $CurriculumTracksTable extends CurriculumTracks
     type: DriftSqlType.dateTime,
     requiredDuringInsert: true,
   );
-  static const VerificationMeta _deactivatedAtMeta = const VerificationMeta(
-    'deactivatedAt',
-  );
-  @override
-  late final GeneratedColumn<DateTime> deactivatedAt =
-      GeneratedColumn<DateTime>(
-        'deactivated_at',
-        aliasedName,
-        true,
-        type: DriftSqlType.dateTime,
-        requiredDuringInsert: false,
-      );
   static const VerificationMeta _paceResetDateMeta = const VerificationMeta(
     'paceResetDate',
   );
@@ -1138,28 +1127,15 @@ class $CurriculumTracksTable extends CurriculumTracks
         type: DriftSqlType.dateTime,
         requiredDuringInsert: false,
       );
-  static const VerificationMeta _deletedAtMeta = const VerificationMeta(
-    'deletedAt',
-  );
-  @override
-  late final GeneratedColumn<DateTime> deletedAt = GeneratedColumn<DateTime>(
-    'deleted_at',
-    aliasedName,
-    true,
-    type: DriftSqlType.dateTime,
-    requiredDuringInsert: false,
-  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
     profileId,
     curriculumId,
-    trackType,
-    isActive,
+    state,
+    stateChangedAt,
     activatedAt,
-    deactivatedAt,
     paceResetDate,
-    deletedAt,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -1195,19 +1171,22 @@ class $CurriculumTracksTable extends CurriculumTracks
     } else if (isInserting) {
       context.missing(_curriculumIdMeta);
     }
-    if (data.containsKey('track_type')) {
+    if (data.containsKey('state')) {
       context.handle(
-        _trackTypeMeta,
-        trackType.isAcceptableOrUnknown(data['track_type']!, _trackTypeMeta),
+        _stateMeta,
+        state.isAcceptableOrUnknown(data['state']!, _stateMeta),
+      );
+    }
+    if (data.containsKey('state_changed_at')) {
+      context.handle(
+        _stateChangedAtMeta,
+        stateChangedAt.isAcceptableOrUnknown(
+          data['state_changed_at']!,
+          _stateChangedAtMeta,
+        ),
       );
     } else if (isInserting) {
-      context.missing(_trackTypeMeta);
-    }
-    if (data.containsKey('is_active')) {
-      context.handle(
-        _isActiveMeta,
-        isActive.isAcceptableOrUnknown(data['is_active']!, _isActiveMeta),
-      );
+      context.missing(_stateChangedAtMeta);
     }
     if (data.containsKey('activated_at')) {
       context.handle(
@@ -1220,15 +1199,6 @@ class $CurriculumTracksTable extends CurriculumTracks
     } else if (isInserting) {
       context.missing(_activatedAtMeta);
     }
-    if (data.containsKey('deactivated_at')) {
-      context.handle(
-        _deactivatedAtMeta,
-        deactivatedAt.isAcceptableOrUnknown(
-          data['deactivated_at']!,
-          _deactivatedAtMeta,
-        ),
-      );
-    }
     if (data.containsKey('pace_reset_date')) {
       context.handle(
         _paceResetDateMeta,
@@ -1238,12 +1208,6 @@ class $CurriculumTracksTable extends CurriculumTracks
         ),
       );
     }
-    if (data.containsKey('deleted_at')) {
-      context.handle(
-        _deletedAtMeta,
-        deletedAt.isAcceptableOrUnknown(data['deleted_at']!, _deletedAtMeta),
-      );
-    }
     return context;
   }
 
@@ -1251,7 +1215,7 @@ class $CurriculumTracksTable extends CurriculumTracks
   Set<GeneratedColumn> get $primaryKey => {id};
   @override
   List<Set<GeneratedColumn>> get uniqueKeys => [
-    {profileId, curriculumId, trackType},
+    {profileId, curriculumId},
   ];
   @override
   CurriculumTrack map(Map<String, dynamic> data, {String? tablePrefix}) {
@@ -1269,29 +1233,21 @@ class $CurriculumTracksTable extends CurriculumTracks
         DriftSqlType.string,
         data['${effectivePrefix}curriculum_id'],
       )!,
-      trackType: attachedDatabase.typeMapping.read(
+      state: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
-        data['${effectivePrefix}track_type'],
+        data['${effectivePrefix}state'],
       )!,
-      isActive: attachedDatabase.typeMapping.read(
-        DriftSqlType.bool,
-        data['${effectivePrefix}is_active'],
+      stateChangedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}state_changed_at'],
       )!,
       activatedAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}activated_at'],
       )!,
-      deactivatedAt: attachedDatabase.typeMapping.read(
-        DriftSqlType.dateTime,
-        data['${effectivePrefix}deactivated_at'],
-      ),
       paceResetDate: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}pace_reset_date'],
-      ),
-      deletedAt: attachedDatabase.typeMapping.read(
-        DriftSqlType.dateTime,
-        data['${effectivePrefix}deleted_at'],
       ),
     );
   }
@@ -1310,37 +1266,31 @@ class CurriculumTrack extends DataClass implements Insertable<CurriculumTrack> {
   /// curriculum_id from CurriculumId enum storageKey
   final String curriculumId;
 
-  /// track_type from TrackType enum storageKey
-  final String trackType;
+  /// Unified lifecycle state. One of: 'active', 'retired', 'archived', 'deleted'.
+  ///
+  /// active  — track is in use; displayed in the UI.
+  /// retired — track was deactivated by the user; hidden but not purged.
+  /// archived — track reached a natural completion milestone.
+  /// deleted — track was soft-deleted (deleteTrackAndData); awaits purge.
+  final String state;
 
-  /// Whether this track is currently active for this curriculum
-  final bool isActive;
+  /// When [state] was last changed (UTC). Acts as the LWW timestamp for sync.
+  final DateTime stateChangedAt;
 
-  /// When this track was activated (or reactivated) for this curriculum
+  /// When this track was activated (or reactivated) for this curriculum.
   final DateTime activatedAt;
-
-  /// When this track was last deactivated (null if currently active)
-  final DateTime? deactivatedAt;
 
   /// Date when pace was last reset (for Reset Pace recovery action).
   /// Null if pace has never been reset.
   final DateTime? paceResetDate;
-
-  /// When this track was soft-deleted (null if not deleted).
-  ///
-  /// Tracks are never hard-deleted; setting this field is the only allowed
-  /// delete operation. Any non-null value means the track is logically deleted.
-  final DateTime? deletedAt;
   const CurriculumTrack({
     required this.id,
     required this.profileId,
     required this.curriculumId,
-    required this.trackType,
-    required this.isActive,
+    required this.state,
+    required this.stateChangedAt,
     required this.activatedAt,
-    this.deactivatedAt,
     this.paceResetDate,
-    this.deletedAt,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -1348,17 +1298,11 @@ class CurriculumTrack extends DataClass implements Insertable<CurriculumTrack> {
     map['id'] = Variable<int>(id);
     map['profile_id'] = Variable<int>(profileId);
     map['curriculum_id'] = Variable<String>(curriculumId);
-    map['track_type'] = Variable<String>(trackType);
-    map['is_active'] = Variable<bool>(isActive);
+    map['state'] = Variable<String>(state);
+    map['state_changed_at'] = Variable<DateTime>(stateChangedAt);
     map['activated_at'] = Variable<DateTime>(activatedAt);
-    if (!nullToAbsent || deactivatedAt != null) {
-      map['deactivated_at'] = Variable<DateTime>(deactivatedAt);
-    }
     if (!nullToAbsent || paceResetDate != null) {
       map['pace_reset_date'] = Variable<DateTime>(paceResetDate);
-    }
-    if (!nullToAbsent || deletedAt != null) {
-      map['deleted_at'] = Variable<DateTime>(deletedAt);
     }
     return map;
   }
@@ -1368,18 +1312,12 @@ class CurriculumTrack extends DataClass implements Insertable<CurriculumTrack> {
       id: Value(id),
       profileId: Value(profileId),
       curriculumId: Value(curriculumId),
-      trackType: Value(trackType),
-      isActive: Value(isActive),
+      state: Value(state),
+      stateChangedAt: Value(stateChangedAt),
       activatedAt: Value(activatedAt),
-      deactivatedAt: deactivatedAt == null && nullToAbsent
-          ? const Value.absent()
-          : Value(deactivatedAt),
       paceResetDate: paceResetDate == null && nullToAbsent
           ? const Value.absent()
           : Value(paceResetDate),
-      deletedAt: deletedAt == null && nullToAbsent
-          ? const Value.absent()
-          : Value(deletedAt),
     );
   }
 
@@ -1392,12 +1330,10 @@ class CurriculumTrack extends DataClass implements Insertable<CurriculumTrack> {
       id: serializer.fromJson<int>(json['id']),
       profileId: serializer.fromJson<int>(json['profileId']),
       curriculumId: serializer.fromJson<String>(json['curriculumId']),
-      trackType: serializer.fromJson<String>(json['trackType']),
-      isActive: serializer.fromJson<bool>(json['isActive']),
+      state: serializer.fromJson<String>(json['state']),
+      stateChangedAt: serializer.fromJson<DateTime>(json['stateChangedAt']),
       activatedAt: serializer.fromJson<DateTime>(json['activatedAt']),
-      deactivatedAt: serializer.fromJson<DateTime?>(json['deactivatedAt']),
       paceResetDate: serializer.fromJson<DateTime?>(json['paceResetDate']),
-      deletedAt: serializer.fromJson<DateTime?>(json['deletedAt']),
     );
   }
   @override
@@ -1407,12 +1343,10 @@ class CurriculumTrack extends DataClass implements Insertable<CurriculumTrack> {
       'id': serializer.toJson<int>(id),
       'profileId': serializer.toJson<int>(profileId),
       'curriculumId': serializer.toJson<String>(curriculumId),
-      'trackType': serializer.toJson<String>(trackType),
-      'isActive': serializer.toJson<bool>(isActive),
+      'state': serializer.toJson<String>(state),
+      'stateChangedAt': serializer.toJson<DateTime>(stateChangedAt),
       'activatedAt': serializer.toJson<DateTime>(activatedAt),
-      'deactivatedAt': serializer.toJson<DateTime?>(deactivatedAt),
       'paceResetDate': serializer.toJson<DateTime?>(paceResetDate),
-      'deletedAt': serializer.toJson<DateTime?>(deletedAt),
     };
   }
 
@@ -1420,26 +1354,20 @@ class CurriculumTrack extends DataClass implements Insertable<CurriculumTrack> {
     int? id,
     int? profileId,
     String? curriculumId,
-    String? trackType,
-    bool? isActive,
+    String? state,
+    DateTime? stateChangedAt,
     DateTime? activatedAt,
-    Value<DateTime?> deactivatedAt = const Value.absent(),
     Value<DateTime?> paceResetDate = const Value.absent(),
-    Value<DateTime?> deletedAt = const Value.absent(),
   }) => CurriculumTrack(
     id: id ?? this.id,
     profileId: profileId ?? this.profileId,
     curriculumId: curriculumId ?? this.curriculumId,
-    trackType: trackType ?? this.trackType,
-    isActive: isActive ?? this.isActive,
+    state: state ?? this.state,
+    stateChangedAt: stateChangedAt ?? this.stateChangedAt,
     activatedAt: activatedAt ?? this.activatedAt,
-    deactivatedAt: deactivatedAt.present
-        ? deactivatedAt.value
-        : this.deactivatedAt,
     paceResetDate: paceResetDate.present
         ? paceResetDate.value
         : this.paceResetDate,
-    deletedAt: deletedAt.present ? deletedAt.value : this.deletedAt,
   );
   CurriculumTrack copyWithCompanion(CurriculumTracksCompanion data) {
     return CurriculumTrack(
@@ -1448,18 +1376,16 @@ class CurriculumTrack extends DataClass implements Insertable<CurriculumTrack> {
       curriculumId: data.curriculumId.present
           ? data.curriculumId.value
           : this.curriculumId,
-      trackType: data.trackType.present ? data.trackType.value : this.trackType,
-      isActive: data.isActive.present ? data.isActive.value : this.isActive,
+      state: data.state.present ? data.state.value : this.state,
+      stateChangedAt: data.stateChangedAt.present
+          ? data.stateChangedAt.value
+          : this.stateChangedAt,
       activatedAt: data.activatedAt.present
           ? data.activatedAt.value
           : this.activatedAt,
-      deactivatedAt: data.deactivatedAt.present
-          ? data.deactivatedAt.value
-          : this.deactivatedAt,
       paceResetDate: data.paceResetDate.present
           ? data.paceResetDate.value
           : this.paceResetDate,
-      deletedAt: data.deletedAt.present ? data.deletedAt.value : this.deletedAt,
     );
   }
 
@@ -1469,12 +1395,10 @@ class CurriculumTrack extends DataClass implements Insertable<CurriculumTrack> {
           ..write('id: $id, ')
           ..write('profileId: $profileId, ')
           ..write('curriculumId: $curriculumId, ')
-          ..write('trackType: $trackType, ')
-          ..write('isActive: $isActive, ')
+          ..write('state: $state, ')
+          ..write('stateChangedAt: $stateChangedAt, ')
           ..write('activatedAt: $activatedAt, ')
-          ..write('deactivatedAt: $deactivatedAt, ')
-          ..write('paceResetDate: $paceResetDate, ')
-          ..write('deletedAt: $deletedAt')
+          ..write('paceResetDate: $paceResetDate')
           ..write(')'))
         .toString();
   }
@@ -1484,12 +1408,10 @@ class CurriculumTrack extends DataClass implements Insertable<CurriculumTrack> {
     id,
     profileId,
     curriculumId,
-    trackType,
-    isActive,
+    state,
+    stateChangedAt,
     activatedAt,
-    deactivatedAt,
     paceResetDate,
-    deletedAt,
   );
   @override
   bool operator ==(Object other) =>
@@ -1498,70 +1420,58 @@ class CurriculumTrack extends DataClass implements Insertable<CurriculumTrack> {
           other.id == this.id &&
           other.profileId == this.profileId &&
           other.curriculumId == this.curriculumId &&
-          other.trackType == this.trackType &&
-          other.isActive == this.isActive &&
+          other.state == this.state &&
+          other.stateChangedAt == this.stateChangedAt &&
           other.activatedAt == this.activatedAt &&
-          other.deactivatedAt == this.deactivatedAt &&
-          other.paceResetDate == this.paceResetDate &&
-          other.deletedAt == this.deletedAt);
+          other.paceResetDate == this.paceResetDate);
 }
 
 class CurriculumTracksCompanion extends UpdateCompanion<CurriculumTrack> {
   final Value<int> id;
   final Value<int> profileId;
   final Value<String> curriculumId;
-  final Value<String> trackType;
-  final Value<bool> isActive;
+  final Value<String> state;
+  final Value<DateTime> stateChangedAt;
   final Value<DateTime> activatedAt;
-  final Value<DateTime?> deactivatedAt;
   final Value<DateTime?> paceResetDate;
-  final Value<DateTime?> deletedAt;
   const CurriculumTracksCompanion({
     this.id = const Value.absent(),
     this.profileId = const Value.absent(),
     this.curriculumId = const Value.absent(),
-    this.trackType = const Value.absent(),
-    this.isActive = const Value.absent(),
+    this.state = const Value.absent(),
+    this.stateChangedAt = const Value.absent(),
     this.activatedAt = const Value.absent(),
-    this.deactivatedAt = const Value.absent(),
     this.paceResetDate = const Value.absent(),
-    this.deletedAt = const Value.absent(),
   });
   CurriculumTracksCompanion.insert({
     this.id = const Value.absent(),
     required int profileId,
     required String curriculumId,
-    required String trackType,
-    this.isActive = const Value.absent(),
+    this.state = const Value.absent(),
+    required DateTime stateChangedAt,
     required DateTime activatedAt,
-    this.deactivatedAt = const Value.absent(),
     this.paceResetDate = const Value.absent(),
-    this.deletedAt = const Value.absent(),
   }) : profileId = Value(profileId),
        curriculumId = Value(curriculumId),
-       trackType = Value(trackType),
+       stateChangedAt = Value(stateChangedAt),
        activatedAt = Value(activatedAt);
   static Insertable<CurriculumTrack> custom({
     Expression<int>? id,
     Expression<int>? profileId,
     Expression<String>? curriculumId,
-    Expression<String>? trackType,
-    Expression<bool>? isActive,
+    Expression<String>? state,
+    Expression<DateTime>? stateChangedAt,
     Expression<DateTime>? activatedAt,
-    Expression<DateTime>? deactivatedAt,
     Expression<DateTime>? paceResetDate,
-    Expression<DateTime>? deletedAt,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
       if (profileId != null) 'profile_id': profileId,
       if (curriculumId != null) 'curriculum_id': curriculumId,
-      if (trackType != null) 'track_type': trackType,
-      if (isActive != null) 'is_active': isActive,
+      if (state != null) 'state': state,
+      if (stateChangedAt != null) 'state_changed_at': stateChangedAt,
       if (activatedAt != null) 'activated_at': activatedAt,
-      if (deactivatedAt != null) 'deactivated_at': deactivatedAt,
       if (paceResetDate != null) 'pace_reset_date': paceResetDate,
-      if (deletedAt != null) 'deleted_at': deletedAt,
     });
   }
 
@@ -1569,23 +1479,19 @@ class CurriculumTracksCompanion extends UpdateCompanion<CurriculumTrack> {
     Value<int>? id,
     Value<int>? profileId,
     Value<String>? curriculumId,
-    Value<String>? trackType,
-    Value<bool>? isActive,
+    Value<String>? state,
+    Value<DateTime>? stateChangedAt,
     Value<DateTime>? activatedAt,
-    Value<DateTime?>? deactivatedAt,
     Value<DateTime?>? paceResetDate,
-    Value<DateTime?>? deletedAt,
   }) {
     return CurriculumTracksCompanion(
       id: id ?? this.id,
       profileId: profileId ?? this.profileId,
       curriculumId: curriculumId ?? this.curriculumId,
-      trackType: trackType ?? this.trackType,
-      isActive: isActive ?? this.isActive,
+      state: state ?? this.state,
+      stateChangedAt: stateChangedAt ?? this.stateChangedAt,
       activatedAt: activatedAt ?? this.activatedAt,
-      deactivatedAt: deactivatedAt ?? this.deactivatedAt,
       paceResetDate: paceResetDate ?? this.paceResetDate,
-      deletedAt: deletedAt ?? this.deletedAt,
     );
   }
 
@@ -1601,23 +1507,17 @@ class CurriculumTracksCompanion extends UpdateCompanion<CurriculumTrack> {
     if (curriculumId.present) {
       map['curriculum_id'] = Variable<String>(curriculumId.value);
     }
-    if (trackType.present) {
-      map['track_type'] = Variable<String>(trackType.value);
+    if (state.present) {
+      map['state'] = Variable<String>(state.value);
     }
-    if (isActive.present) {
-      map['is_active'] = Variable<bool>(isActive.value);
+    if (stateChangedAt.present) {
+      map['state_changed_at'] = Variable<DateTime>(stateChangedAt.value);
     }
     if (activatedAt.present) {
       map['activated_at'] = Variable<DateTime>(activatedAt.value);
     }
-    if (deactivatedAt.present) {
-      map['deactivated_at'] = Variable<DateTime>(deactivatedAt.value);
-    }
     if (paceResetDate.present) {
       map['pace_reset_date'] = Variable<DateTime>(paceResetDate.value);
-    }
-    if (deletedAt.present) {
-      map['deleted_at'] = Variable<DateTime>(deletedAt.value);
     }
     return map;
   }
@@ -1628,12 +1528,10 @@ class CurriculumTracksCompanion extends UpdateCompanion<CurriculumTrack> {
           ..write('id: $id, ')
           ..write('profileId: $profileId, ')
           ..write('curriculumId: $curriculumId, ')
-          ..write('trackType: $trackType, ')
-          ..write('isActive: $isActive, ')
+          ..write('state: $state, ')
+          ..write('stateChangedAt: $stateChangedAt, ')
           ..write('activatedAt: $activatedAt, ')
-          ..write('deactivatedAt: $deactivatedAt, ')
-          ..write('paceResetDate: $paceResetDate, ')
-          ..write('deletedAt: $deletedAt')
+          ..write('paceResetDate: $paceResetDate')
           ..write(')'))
         .toString();
   }
@@ -1668,6 +1566,9 @@ class $CurriculumScopesTable extends CurriculumScopes
     false,
     type: DriftSqlType.int,
     requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES learner_profiles (id) ON DELETE CASCADE',
+    ),
   );
   static const VerificationMeta _curriculumIdMeta = const VerificationMeta(
     'curriculumId',
@@ -1727,6 +1628,18 @@ class $CurriculumScopesTable extends CurriculumScopes
     type: DriftSqlType.dateTime,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+    'updated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    defaultValue: currentDateAndTime,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -1736,6 +1649,7 @@ class $CurriculumScopesTable extends CurriculumScopes
     scopeLevel,
     scopeValue,
     createdAt,
+    updatedAt,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -1803,6 +1717,12 @@ class $CurriculumScopesTable extends CurriculumScopes
     } else if (isInserting) {
       context.missing(_createdAtMeta);
     }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    }
     return context;
   }
 
@@ -1844,6 +1764,10 @@ class $CurriculumScopesTable extends CurriculumScopes
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
       )!,
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}updated_at'],
+      )!,
     );
   }
 
@@ -1855,6 +1779,8 @@ class $CurriculumScopesTable extends CurriculumScopes
 
 class CurriculumScope extends DataClass implements Insertable<CurriculumScope> {
   final int id;
+
+  /// W3.25: FK → learner_profiles(id) CASCADE DELETE.
   final int profileId;
   final String curriculumId;
   final int trackId;
@@ -1865,6 +1791,9 @@ class CurriculumScope extends DataClass implements Insertable<CurriculumScope> {
   /// The value at that level (e.g., "Seder Zeraim", "Berachos").
   final String scopeValue;
   final DateTime createdAt;
+
+  /// W3.23: LWW timestamp for sync.
+  final DateTime updatedAt;
   const CurriculumScope({
     required this.id,
     required this.profileId,
@@ -1873,6 +1802,7 @@ class CurriculumScope extends DataClass implements Insertable<CurriculumScope> {
     required this.scopeLevel,
     required this.scopeValue,
     required this.createdAt,
+    required this.updatedAt,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -1884,6 +1814,7 @@ class CurriculumScope extends DataClass implements Insertable<CurriculumScope> {
     map['scope_level'] = Variable<int>(scopeLevel);
     map['scope_value'] = Variable<String>(scopeValue);
     map['created_at'] = Variable<DateTime>(createdAt);
+    map['updated_at'] = Variable<DateTime>(updatedAt);
     return map;
   }
 
@@ -1896,6 +1827,7 @@ class CurriculumScope extends DataClass implements Insertable<CurriculumScope> {
       scopeLevel: Value(scopeLevel),
       scopeValue: Value(scopeValue),
       createdAt: Value(createdAt),
+      updatedAt: Value(updatedAt),
     );
   }
 
@@ -1912,6 +1844,7 @@ class CurriculumScope extends DataClass implements Insertable<CurriculumScope> {
       scopeLevel: serializer.fromJson<int>(json['scopeLevel']),
       scopeValue: serializer.fromJson<String>(json['scopeValue']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
     );
   }
   @override
@@ -1925,6 +1858,7 @@ class CurriculumScope extends DataClass implements Insertable<CurriculumScope> {
       'scopeLevel': serializer.toJson<int>(scopeLevel),
       'scopeValue': serializer.toJson<String>(scopeValue),
       'createdAt': serializer.toJson<DateTime>(createdAt),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
     };
   }
 
@@ -1936,6 +1870,7 @@ class CurriculumScope extends DataClass implements Insertable<CurriculumScope> {
     int? scopeLevel,
     String? scopeValue,
     DateTime? createdAt,
+    DateTime? updatedAt,
   }) => CurriculumScope(
     id: id ?? this.id,
     profileId: profileId ?? this.profileId,
@@ -1944,6 +1879,7 @@ class CurriculumScope extends DataClass implements Insertable<CurriculumScope> {
     scopeLevel: scopeLevel ?? this.scopeLevel,
     scopeValue: scopeValue ?? this.scopeValue,
     createdAt: createdAt ?? this.createdAt,
+    updatedAt: updatedAt ?? this.updatedAt,
   );
   CurriculumScope copyWithCompanion(CurriculumScopesCompanion data) {
     return CurriculumScope(
@@ -1960,6 +1896,7 @@ class CurriculumScope extends DataClass implements Insertable<CurriculumScope> {
           ? data.scopeValue.value
           : this.scopeValue,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
     );
   }
 
@@ -1972,7 +1909,8 @@ class CurriculumScope extends DataClass implements Insertable<CurriculumScope> {
           ..write('trackId: $trackId, ')
           ..write('scopeLevel: $scopeLevel, ')
           ..write('scopeValue: $scopeValue, ')
-          ..write('createdAt: $createdAt')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt')
           ..write(')'))
         .toString();
   }
@@ -1986,6 +1924,7 @@ class CurriculumScope extends DataClass implements Insertable<CurriculumScope> {
     scopeLevel,
     scopeValue,
     createdAt,
+    updatedAt,
   );
   @override
   bool operator ==(Object other) =>
@@ -1997,7 +1936,8 @@ class CurriculumScope extends DataClass implements Insertable<CurriculumScope> {
           other.trackId == this.trackId &&
           other.scopeLevel == this.scopeLevel &&
           other.scopeValue == this.scopeValue &&
-          other.createdAt == this.createdAt);
+          other.createdAt == this.createdAt &&
+          other.updatedAt == this.updatedAt);
 }
 
 class CurriculumScopesCompanion extends UpdateCompanion<CurriculumScope> {
@@ -2008,6 +1948,7 @@ class CurriculumScopesCompanion extends UpdateCompanion<CurriculumScope> {
   final Value<int> scopeLevel;
   final Value<String> scopeValue;
   final Value<DateTime> createdAt;
+  final Value<DateTime> updatedAt;
   const CurriculumScopesCompanion({
     this.id = const Value.absent(),
     this.profileId = const Value.absent(),
@@ -2016,6 +1957,7 @@ class CurriculumScopesCompanion extends UpdateCompanion<CurriculumScope> {
     this.scopeLevel = const Value.absent(),
     this.scopeValue = const Value.absent(),
     this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
   });
   CurriculumScopesCompanion.insert({
     this.id = const Value.absent(),
@@ -2025,6 +1967,7 @@ class CurriculumScopesCompanion extends UpdateCompanion<CurriculumScope> {
     required int scopeLevel,
     required String scopeValue,
     required DateTime createdAt,
+    this.updatedAt = const Value.absent(),
   }) : profileId = Value(profileId),
        curriculumId = Value(curriculumId),
        trackId = Value(trackId),
@@ -2039,6 +1982,7 @@ class CurriculumScopesCompanion extends UpdateCompanion<CurriculumScope> {
     Expression<int>? scopeLevel,
     Expression<String>? scopeValue,
     Expression<DateTime>? createdAt,
+    Expression<DateTime>? updatedAt,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -2048,6 +1992,7 @@ class CurriculumScopesCompanion extends UpdateCompanion<CurriculumScope> {
       if (scopeLevel != null) 'scope_level': scopeLevel,
       if (scopeValue != null) 'scope_value': scopeValue,
       if (createdAt != null) 'created_at': createdAt,
+      if (updatedAt != null) 'updated_at': updatedAt,
     });
   }
 
@@ -2059,6 +2004,7 @@ class CurriculumScopesCompanion extends UpdateCompanion<CurriculumScope> {
     Value<int>? scopeLevel,
     Value<String>? scopeValue,
     Value<DateTime>? createdAt,
+    Value<DateTime>? updatedAt,
   }) {
     return CurriculumScopesCompanion(
       id: id ?? this.id,
@@ -2068,6 +2014,7 @@ class CurriculumScopesCompanion extends UpdateCompanion<CurriculumScope> {
       scopeLevel: scopeLevel ?? this.scopeLevel,
       scopeValue: scopeValue ?? this.scopeValue,
       createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
     );
   }
 
@@ -2095,6 +2042,9 @@ class CurriculumScopesCompanion extends UpdateCompanion<CurriculumScope> {
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
     return map;
   }
 
@@ -2107,7 +2057,8 @@ class CurriculumScopesCompanion extends UpdateCompanion<CurriculumScope> {
           ..write('trackId: $trackId, ')
           ..write('scopeLevel: $scopeLevel, ')
           ..write('scopeValue: $scopeValue, ')
-          ..write('createdAt: $createdAt')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt')
           ..write(')'))
         .toString();
   }
@@ -2631,17 +2582,6 @@ class $StageDefinitionsTable extends StageDefinitions
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
-  static const VerificationMeta _delayDaysMeta = const VerificationMeta(
-    'delayDays',
-  );
-  @override
-  late final GeneratedColumn<int> delayDays = GeneratedColumn<int>(
-    'delay_days',
-    aliasedName,
-    false,
-    type: DriftSqlType.int,
-    requiredDuringInsert: true,
-  );
   static const VerificationMeta _isDefaultMeta = const VerificationMeta(
     'isDefault',
   );
@@ -2657,50 +2597,29 @@ class $StageDefinitionsTable extends StageDefinitions
     ),
     defaultValue: const Constant(false),
   );
-  static const VerificationMeta _scheduleTypeMeta = const VerificationMeta(
-    'scheduleType',
+  static const VerificationMeta _scheduleMeta = const VerificationMeta(
+    'schedule',
   );
   @override
-  late final GeneratedColumn<String> scheduleType = GeneratedColumn<String>(
-    'schedule_type',
+  late final GeneratedColumn<String> schedule = GeneratedColumn<String>(
+    'schedule',
     aliasedName,
     false,
     type: DriftSqlType.string,
     requiredDuringInsert: false,
-    defaultValue: const Constant('delay'),
+    defaultValue: const Constant('{"type":"delay","delay_days":0}'),
   );
-  static const VerificationMeta _daysOfWeekMeta = const VerificationMeta(
-    'daysOfWeek',
-  );
-  @override
-  late final GeneratedColumn<String> daysOfWeek = GeneratedColumn<String>(
-    'days_of_week',
-    aliasedName,
-    true,
-    type: DriftSqlType.string,
-    requiredDuringInsert: false,
-  );
-  static const VerificationMeta _rollingWindowSizeMeta = const VerificationMeta(
-    'rollingWindowSize',
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
   );
   @override
-  late final GeneratedColumn<int> rollingWindowSize = GeneratedColumn<int>(
-    'rolling_window_size',
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+    'updated_at',
     aliasedName,
-    true,
-    type: DriftSqlType.int,
-    requiredDuringInsert: false,
-  );
-  static const VerificationMeta _supersededAtMeta = const VerificationMeta(
-    'supersededAt',
-  );
-  @override
-  late final GeneratedColumn<DateTime> supersededAt = GeneratedColumn<DateTime>(
-    'superseded_at',
-    aliasedName,
-    true,
+    false,
     type: DriftSqlType.dateTime,
     requiredDuringInsert: false,
+    defaultValue: currentDateAndTime,
   );
   @override
   List<GeneratedColumn> get $columns => [
@@ -2710,12 +2629,9 @@ class $StageDefinitionsTable extends StageDefinitions
     trackId,
     stageOrder,
     stageName,
-    delayDays,
     isDefault,
-    scheduleType,
-    daysOfWeek,
-    rollingWindowSize,
-    supersededAt,
+    schedule,
+    updatedAt,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -2775,54 +2691,22 @@ class $StageDefinitionsTable extends StageDefinitions
     } else if (isInserting) {
       context.missing(_stageNameMeta);
     }
-    if (data.containsKey('delay_days')) {
-      context.handle(
-        _delayDaysMeta,
-        delayDays.isAcceptableOrUnknown(data['delay_days']!, _delayDaysMeta),
-      );
-    } else if (isInserting) {
-      context.missing(_delayDaysMeta);
-    }
     if (data.containsKey('is_default')) {
       context.handle(
         _isDefaultMeta,
         isDefault.isAcceptableOrUnknown(data['is_default']!, _isDefaultMeta),
       );
     }
-    if (data.containsKey('schedule_type')) {
+    if (data.containsKey('schedule')) {
       context.handle(
-        _scheduleTypeMeta,
-        scheduleType.isAcceptableOrUnknown(
-          data['schedule_type']!,
-          _scheduleTypeMeta,
-        ),
+        _scheduleMeta,
+        schedule.isAcceptableOrUnknown(data['schedule']!, _scheduleMeta),
       );
     }
-    if (data.containsKey('days_of_week')) {
+    if (data.containsKey('updated_at')) {
       context.handle(
-        _daysOfWeekMeta,
-        daysOfWeek.isAcceptableOrUnknown(
-          data['days_of_week']!,
-          _daysOfWeekMeta,
-        ),
-      );
-    }
-    if (data.containsKey('rolling_window_size')) {
-      context.handle(
-        _rollingWindowSizeMeta,
-        rollingWindowSize.isAcceptableOrUnknown(
-          data['rolling_window_size']!,
-          _rollingWindowSizeMeta,
-        ),
-      );
-    }
-    if (data.containsKey('superseded_at')) {
-      context.handle(
-        _supersededAtMeta,
-        supersededAt.isAcceptableOrUnknown(
-          data['superseded_at']!,
-          _supersededAtMeta,
-        ),
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
       );
     }
     return context;
@@ -2862,30 +2746,18 @@ class $StageDefinitionsTable extends StageDefinitions
         DriftSqlType.string,
         data['${effectivePrefix}stage_name'],
       )!,
-      delayDays: attachedDatabase.typeMapping.read(
-        DriftSqlType.int,
-        data['${effectivePrefix}delay_days'],
-      )!,
       isDefault: attachedDatabase.typeMapping.read(
         DriftSqlType.bool,
         data['${effectivePrefix}is_default'],
       )!,
-      scheduleType: attachedDatabase.typeMapping.read(
+      schedule: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
-        data['${effectivePrefix}schedule_type'],
+        data['${effectivePrefix}schedule'],
       )!,
-      daysOfWeek: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}days_of_week'],
-      ),
-      rollingWindowSize: attachedDatabase.typeMapping.read(
-        DriftSqlType.int,
-        data['${effectivePrefix}rolling_window_size'],
-      ),
-      supersededAt: attachedDatabase.typeMapping.read(
+      updatedAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
-        data['${effectivePrefix}superseded_at'],
-      ),
+        data['${effectivePrefix}updated_at'],
+      )!,
     );
   }
 
@@ -2904,18 +2776,15 @@ class StageDefinition extends DataClass implements Insertable<StageDefinition> {
   final int trackId;
   final int stageOrder;
   final String stageName;
-  final int delayDays;
   final bool isDefault;
-  final String scheduleType;
-  final String? daysOfWeek;
-  final int? rollingWindowSize;
 
-  /// Set when a stage row is superseded by an edit-track operation.
-  ///
-  /// Completions already recorded keep their stageId FK pointing at the old
-  /// row. The scheduler only uses rows where supersededAt IS NULL when
-  /// assigning stages to newly-learned items.
-  final DateTime? supersededAt;
+  /// JSON-encoded ScheduleSpec, e.g. {"type":"delay","delay_days":7}.
+  /// Replaces the former quartet: scheduleType / daysOfWeek /
+  /// rollingWindowSize / delayDays.
+  final String schedule;
+
+  /// W3.23: last-write-wins timestamp for sync.
+  final DateTime updatedAt;
   const StageDefinition({
     required this.id,
     required this.profileId,
@@ -2923,12 +2792,9 @@ class StageDefinition extends DataClass implements Insertable<StageDefinition> {
     required this.trackId,
     required this.stageOrder,
     required this.stageName,
-    required this.delayDays,
     required this.isDefault,
-    required this.scheduleType,
-    this.daysOfWeek,
-    this.rollingWindowSize,
-    this.supersededAt,
+    required this.schedule,
+    required this.updatedAt,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -2939,18 +2805,9 @@ class StageDefinition extends DataClass implements Insertable<StageDefinition> {
     map['track_id'] = Variable<int>(trackId);
     map['stage_order'] = Variable<int>(stageOrder);
     map['stage_name'] = Variable<String>(stageName);
-    map['delay_days'] = Variable<int>(delayDays);
     map['is_default'] = Variable<bool>(isDefault);
-    map['schedule_type'] = Variable<String>(scheduleType);
-    if (!nullToAbsent || daysOfWeek != null) {
-      map['days_of_week'] = Variable<String>(daysOfWeek);
-    }
-    if (!nullToAbsent || rollingWindowSize != null) {
-      map['rolling_window_size'] = Variable<int>(rollingWindowSize);
-    }
-    if (!nullToAbsent || supersededAt != null) {
-      map['superseded_at'] = Variable<DateTime>(supersededAt);
-    }
+    map['schedule'] = Variable<String>(schedule);
+    map['updated_at'] = Variable<DateTime>(updatedAt);
     return map;
   }
 
@@ -2962,18 +2819,9 @@ class StageDefinition extends DataClass implements Insertable<StageDefinition> {
       trackId: Value(trackId),
       stageOrder: Value(stageOrder),
       stageName: Value(stageName),
-      delayDays: Value(delayDays),
       isDefault: Value(isDefault),
-      scheduleType: Value(scheduleType),
-      daysOfWeek: daysOfWeek == null && nullToAbsent
-          ? const Value.absent()
-          : Value(daysOfWeek),
-      rollingWindowSize: rollingWindowSize == null && nullToAbsent
-          ? const Value.absent()
-          : Value(rollingWindowSize),
-      supersededAt: supersededAt == null && nullToAbsent
-          ? const Value.absent()
-          : Value(supersededAt),
+      schedule: Value(schedule),
+      updatedAt: Value(updatedAt),
     );
   }
 
@@ -2989,12 +2837,9 @@ class StageDefinition extends DataClass implements Insertable<StageDefinition> {
       trackId: serializer.fromJson<int>(json['trackId']),
       stageOrder: serializer.fromJson<int>(json['stageOrder']),
       stageName: serializer.fromJson<String>(json['stageName']),
-      delayDays: serializer.fromJson<int>(json['delayDays']),
       isDefault: serializer.fromJson<bool>(json['isDefault']),
-      scheduleType: serializer.fromJson<String>(json['scheduleType']),
-      daysOfWeek: serializer.fromJson<String?>(json['daysOfWeek']),
-      rollingWindowSize: serializer.fromJson<int?>(json['rollingWindowSize']),
-      supersededAt: serializer.fromJson<DateTime?>(json['supersededAt']),
+      schedule: serializer.fromJson<String>(json['schedule']),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
     );
   }
   @override
@@ -3007,12 +2852,9 @@ class StageDefinition extends DataClass implements Insertable<StageDefinition> {
       'trackId': serializer.toJson<int>(trackId),
       'stageOrder': serializer.toJson<int>(stageOrder),
       'stageName': serializer.toJson<String>(stageName),
-      'delayDays': serializer.toJson<int>(delayDays),
       'isDefault': serializer.toJson<bool>(isDefault),
-      'scheduleType': serializer.toJson<String>(scheduleType),
-      'daysOfWeek': serializer.toJson<String?>(daysOfWeek),
-      'rollingWindowSize': serializer.toJson<int?>(rollingWindowSize),
-      'supersededAt': serializer.toJson<DateTime?>(supersededAt),
+      'schedule': serializer.toJson<String>(schedule),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
     };
   }
 
@@ -3023,12 +2865,9 @@ class StageDefinition extends DataClass implements Insertable<StageDefinition> {
     int? trackId,
     int? stageOrder,
     String? stageName,
-    int? delayDays,
     bool? isDefault,
-    String? scheduleType,
-    Value<String?> daysOfWeek = const Value.absent(),
-    Value<int?> rollingWindowSize = const Value.absent(),
-    Value<DateTime?> supersededAt = const Value.absent(),
+    String? schedule,
+    DateTime? updatedAt,
   }) => StageDefinition(
     id: id ?? this.id,
     profileId: profileId ?? this.profileId,
@@ -3036,14 +2875,9 @@ class StageDefinition extends DataClass implements Insertable<StageDefinition> {
     trackId: trackId ?? this.trackId,
     stageOrder: stageOrder ?? this.stageOrder,
     stageName: stageName ?? this.stageName,
-    delayDays: delayDays ?? this.delayDays,
     isDefault: isDefault ?? this.isDefault,
-    scheduleType: scheduleType ?? this.scheduleType,
-    daysOfWeek: daysOfWeek.present ? daysOfWeek.value : this.daysOfWeek,
-    rollingWindowSize: rollingWindowSize.present
-        ? rollingWindowSize.value
-        : this.rollingWindowSize,
-    supersededAt: supersededAt.present ? supersededAt.value : this.supersededAt,
+    schedule: schedule ?? this.schedule,
+    updatedAt: updatedAt ?? this.updatedAt,
   );
   StageDefinition copyWithCompanion(StageDefinitionsCompanion data) {
     return StageDefinition(
@@ -3057,20 +2891,9 @@ class StageDefinition extends DataClass implements Insertable<StageDefinition> {
           ? data.stageOrder.value
           : this.stageOrder,
       stageName: data.stageName.present ? data.stageName.value : this.stageName,
-      delayDays: data.delayDays.present ? data.delayDays.value : this.delayDays,
       isDefault: data.isDefault.present ? data.isDefault.value : this.isDefault,
-      scheduleType: data.scheduleType.present
-          ? data.scheduleType.value
-          : this.scheduleType,
-      daysOfWeek: data.daysOfWeek.present
-          ? data.daysOfWeek.value
-          : this.daysOfWeek,
-      rollingWindowSize: data.rollingWindowSize.present
-          ? data.rollingWindowSize.value
-          : this.rollingWindowSize,
-      supersededAt: data.supersededAt.present
-          ? data.supersededAt.value
-          : this.supersededAt,
+      schedule: data.schedule.present ? data.schedule.value : this.schedule,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
     );
   }
 
@@ -3083,12 +2906,9 @@ class StageDefinition extends DataClass implements Insertable<StageDefinition> {
           ..write('trackId: $trackId, ')
           ..write('stageOrder: $stageOrder, ')
           ..write('stageName: $stageName, ')
-          ..write('delayDays: $delayDays, ')
           ..write('isDefault: $isDefault, ')
-          ..write('scheduleType: $scheduleType, ')
-          ..write('daysOfWeek: $daysOfWeek, ')
-          ..write('rollingWindowSize: $rollingWindowSize, ')
-          ..write('supersededAt: $supersededAt')
+          ..write('schedule: $schedule, ')
+          ..write('updatedAt: $updatedAt')
           ..write(')'))
         .toString();
   }
@@ -3101,12 +2921,9 @@ class StageDefinition extends DataClass implements Insertable<StageDefinition> {
     trackId,
     stageOrder,
     stageName,
-    delayDays,
     isDefault,
-    scheduleType,
-    daysOfWeek,
-    rollingWindowSize,
-    supersededAt,
+    schedule,
+    updatedAt,
   );
   @override
   bool operator ==(Object other) =>
@@ -3118,12 +2935,9 @@ class StageDefinition extends DataClass implements Insertable<StageDefinition> {
           other.trackId == this.trackId &&
           other.stageOrder == this.stageOrder &&
           other.stageName == this.stageName &&
-          other.delayDays == this.delayDays &&
           other.isDefault == this.isDefault &&
-          other.scheduleType == this.scheduleType &&
-          other.daysOfWeek == this.daysOfWeek &&
-          other.rollingWindowSize == this.rollingWindowSize &&
-          other.supersededAt == this.supersededAt);
+          other.schedule == this.schedule &&
+          other.updatedAt == this.updatedAt);
 }
 
 class StageDefinitionsCompanion extends UpdateCompanion<StageDefinition> {
@@ -3133,12 +2947,9 @@ class StageDefinitionsCompanion extends UpdateCompanion<StageDefinition> {
   final Value<int> trackId;
   final Value<int> stageOrder;
   final Value<String> stageName;
-  final Value<int> delayDays;
   final Value<bool> isDefault;
-  final Value<String> scheduleType;
-  final Value<String?> daysOfWeek;
-  final Value<int?> rollingWindowSize;
-  final Value<DateTime?> supersededAt;
+  final Value<String> schedule;
+  final Value<DateTime> updatedAt;
   const StageDefinitionsCompanion({
     this.id = const Value.absent(),
     this.profileId = const Value.absent(),
@@ -3146,12 +2957,9 @@ class StageDefinitionsCompanion extends UpdateCompanion<StageDefinition> {
     this.trackId = const Value.absent(),
     this.stageOrder = const Value.absent(),
     this.stageName = const Value.absent(),
-    this.delayDays = const Value.absent(),
     this.isDefault = const Value.absent(),
-    this.scheduleType = const Value.absent(),
-    this.daysOfWeek = const Value.absent(),
-    this.rollingWindowSize = const Value.absent(),
-    this.supersededAt = const Value.absent(),
+    this.schedule = const Value.absent(),
+    this.updatedAt = const Value.absent(),
   });
   StageDefinitionsCompanion.insert({
     this.id = const Value.absent(),
@@ -3160,18 +2968,14 @@ class StageDefinitionsCompanion extends UpdateCompanion<StageDefinition> {
     required int trackId,
     required int stageOrder,
     required String stageName,
-    required int delayDays,
     this.isDefault = const Value.absent(),
-    this.scheduleType = const Value.absent(),
-    this.daysOfWeek = const Value.absent(),
-    this.rollingWindowSize = const Value.absent(),
-    this.supersededAt = const Value.absent(),
+    this.schedule = const Value.absent(),
+    this.updatedAt = const Value.absent(),
   }) : profileId = Value(profileId),
        curriculumId = Value(curriculumId),
        trackId = Value(trackId),
        stageOrder = Value(stageOrder),
-       stageName = Value(stageName),
-       delayDays = Value(delayDays);
+       stageName = Value(stageName);
   static Insertable<StageDefinition> custom({
     Expression<int>? id,
     Expression<int>? profileId,
@@ -3179,12 +2983,9 @@ class StageDefinitionsCompanion extends UpdateCompanion<StageDefinition> {
     Expression<int>? trackId,
     Expression<int>? stageOrder,
     Expression<String>? stageName,
-    Expression<int>? delayDays,
     Expression<bool>? isDefault,
-    Expression<String>? scheduleType,
-    Expression<String>? daysOfWeek,
-    Expression<int>? rollingWindowSize,
-    Expression<DateTime>? supersededAt,
+    Expression<String>? schedule,
+    Expression<DateTime>? updatedAt,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -3193,12 +2994,9 @@ class StageDefinitionsCompanion extends UpdateCompanion<StageDefinition> {
       if (trackId != null) 'track_id': trackId,
       if (stageOrder != null) 'stage_order': stageOrder,
       if (stageName != null) 'stage_name': stageName,
-      if (delayDays != null) 'delay_days': delayDays,
       if (isDefault != null) 'is_default': isDefault,
-      if (scheduleType != null) 'schedule_type': scheduleType,
-      if (daysOfWeek != null) 'days_of_week': daysOfWeek,
-      if (rollingWindowSize != null) 'rolling_window_size': rollingWindowSize,
-      if (supersededAt != null) 'superseded_at': supersededAt,
+      if (schedule != null) 'schedule': schedule,
+      if (updatedAt != null) 'updated_at': updatedAt,
     });
   }
 
@@ -3209,12 +3007,9 @@ class StageDefinitionsCompanion extends UpdateCompanion<StageDefinition> {
     Value<int>? trackId,
     Value<int>? stageOrder,
     Value<String>? stageName,
-    Value<int>? delayDays,
     Value<bool>? isDefault,
-    Value<String>? scheduleType,
-    Value<String?>? daysOfWeek,
-    Value<int?>? rollingWindowSize,
-    Value<DateTime?>? supersededAt,
+    Value<String>? schedule,
+    Value<DateTime>? updatedAt,
   }) {
     return StageDefinitionsCompanion(
       id: id ?? this.id,
@@ -3223,12 +3018,9 @@ class StageDefinitionsCompanion extends UpdateCompanion<StageDefinition> {
       trackId: trackId ?? this.trackId,
       stageOrder: stageOrder ?? this.stageOrder,
       stageName: stageName ?? this.stageName,
-      delayDays: delayDays ?? this.delayDays,
       isDefault: isDefault ?? this.isDefault,
-      scheduleType: scheduleType ?? this.scheduleType,
-      daysOfWeek: daysOfWeek ?? this.daysOfWeek,
-      rollingWindowSize: rollingWindowSize ?? this.rollingWindowSize,
-      supersededAt: supersededAt ?? this.supersededAt,
+      schedule: schedule ?? this.schedule,
+      updatedAt: updatedAt ?? this.updatedAt,
     );
   }
 
@@ -3253,23 +3045,14 @@ class StageDefinitionsCompanion extends UpdateCompanion<StageDefinition> {
     if (stageName.present) {
       map['stage_name'] = Variable<String>(stageName.value);
     }
-    if (delayDays.present) {
-      map['delay_days'] = Variable<int>(delayDays.value);
-    }
     if (isDefault.present) {
       map['is_default'] = Variable<bool>(isDefault.value);
     }
-    if (scheduleType.present) {
-      map['schedule_type'] = Variable<String>(scheduleType.value);
+    if (schedule.present) {
+      map['schedule'] = Variable<String>(schedule.value);
     }
-    if (daysOfWeek.present) {
-      map['days_of_week'] = Variable<String>(daysOfWeek.value);
-    }
-    if (rollingWindowSize.present) {
-      map['rolling_window_size'] = Variable<int>(rollingWindowSize.value);
-    }
-    if (supersededAt.present) {
-      map['superseded_at'] = Variable<DateTime>(supersededAt.value);
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
     }
     return map;
   }
@@ -3283,12 +3066,9 @@ class StageDefinitionsCompanion extends UpdateCompanion<StageDefinition> {
           ..write('trackId: $trackId, ')
           ..write('stageOrder: $stageOrder, ')
           ..write('stageName: $stageName, ')
-          ..write('delayDays: $delayDays, ')
           ..write('isDefault: $isDefault, ')
-          ..write('scheduleType: $scheduleType, ')
-          ..write('daysOfWeek: $daysOfWeek, ')
-          ..write('rollingWindowSize: $rollingWindowSize, ')
-          ..write('supersededAt: $supersededAt')
+          ..write('schedule: $schedule, ')
+          ..write('updatedAt: $updatedAt')
           ..write(')'))
         .toString();
   }
@@ -4139,629 +3919,6 @@ class StudyDayConfigsCompanion extends UpdateCompanion<StudyDayConfig> {
   }
 }
 
-class $CompletionsTable extends Completions
-    with TableInfo<$CompletionsTable, Completion> {
-  @override
-  final GeneratedDatabase attachedDatabase;
-  final String? _alias;
-  $CompletionsTable(this.attachedDatabase, [this._alias]);
-  static const VerificationMeta _idMeta = const VerificationMeta('id');
-  @override
-  late final GeneratedColumn<int> id = GeneratedColumn<int>(
-    'id',
-    aliasedName,
-    false,
-    hasAutoIncrement: true,
-    type: DriftSqlType.int,
-    requiredDuringInsert: false,
-    defaultConstraints: GeneratedColumn.constraintIsAlways(
-      'PRIMARY KEY AUTOINCREMENT',
-    ),
-  );
-  static const VerificationMeta _profileIdMeta = const VerificationMeta(
-    'profileId',
-  );
-  @override
-  late final GeneratedColumn<int> profileId = GeneratedColumn<int>(
-    'profile_id',
-    aliasedName,
-    false,
-    type: DriftSqlType.int,
-    requiredDuringInsert: true,
-    defaultConstraints: GeneratedColumn.constraintIsAlways(
-      'REFERENCES learner_profiles (id) ON DELETE CASCADE',
-    ),
-  );
-  static const VerificationMeta _curriculumIdMeta = const VerificationMeta(
-    'curriculumId',
-  );
-  @override
-  late final GeneratedColumn<String> curriculumId = GeneratedColumn<String>(
-    'curriculum_id',
-    aliasedName,
-    false,
-    type: DriftSqlType.string,
-    requiredDuringInsert: true,
-  );
-  static const VerificationMeta _sefariaRefMeta = const VerificationMeta(
-    'sefariaRef',
-  );
-  @override
-  late final GeneratedColumn<String> sefariaRef = GeneratedColumn<String>(
-    'sefaria_ref',
-    aliasedName,
-    false,
-    type: DriftSqlType.string,
-    requiredDuringInsert: true,
-  );
-  static const VerificationMeta _stageIdMeta = const VerificationMeta(
-    'stageId',
-  );
-  @override
-  late final GeneratedColumn<int> stageId = GeneratedColumn<int>(
-    'stage_id',
-    aliasedName,
-    false,
-    type: DriftSqlType.int,
-    requiredDuringInsert: true,
-  );
-  static const VerificationMeta _trackTypeMeta = const VerificationMeta(
-    'trackType',
-  );
-  @override
-  late final GeneratedColumn<String> trackType = GeneratedColumn<String>(
-    'track_type',
-    aliasedName,
-    false,
-    type: DriftSqlType.string,
-    requiredDuringInsert: true,
-  );
-  static const VerificationMeta _trackIdMeta = const VerificationMeta(
-    'trackId',
-  );
-  @override
-  late final GeneratedColumn<int> trackId = GeneratedColumn<int>(
-    'track_id',
-    aliasedName,
-    false,
-    type: DriftSqlType.int,
-    requiredDuringInsert: true,
-    defaultConstraints: GeneratedColumn.constraintIsAlways(
-      'REFERENCES curriculum_tracks (id)',
-    ),
-  );
-  static const VerificationMeta _completedAtMeta = const VerificationMeta(
-    'completedAt',
-  );
-  @override
-  late final GeneratedColumn<DateTime> completedAt = GeneratedColumn<DateTime>(
-    'completed_at',
-    aliasedName,
-    false,
-    type: DriftSqlType.dateTime,
-    requiredDuringInsert: true,
-  );
-  static const VerificationMeta _pointsMeta = const VerificationMeta('points');
-  @override
-  late final GeneratedColumn<int> points = GeneratedColumn<int>(
-    'points',
-    aliasedName,
-    false,
-    type: DriftSqlType.int,
-    requiredDuringInsert: false,
-    defaultValue: const Constant<int>(0),
-  );
-  static const VerificationMeta _derivedFromEventsMeta = const VerificationMeta(
-    'derivedFromEvents',
-  );
-  @override
-  late final GeneratedColumn<bool> derivedFromEvents = GeneratedColumn<bool>(
-    'derived_from_events',
-    aliasedName,
-    false,
-    type: DriftSqlType.bool,
-    requiredDuringInsert: false,
-    defaultConstraints: GeneratedColumn.constraintIsAlways(
-      'CHECK ("derived_from_events" IN (0, 1))',
-    ),
-    defaultValue: const Constant(false),
-  );
-  @override
-  List<GeneratedColumn> get $columns => [
-    id,
-    profileId,
-    curriculumId,
-    sefariaRef,
-    stageId,
-    trackType,
-    trackId,
-    completedAt,
-    points,
-    derivedFromEvents,
-  ];
-  @override
-  String get aliasedName => _alias ?? actualTableName;
-  @override
-  String get actualTableName => $name;
-  static const String $name = 'completions';
-  @override
-  VerificationContext validateIntegrity(
-    Insertable<Completion> instance, {
-    bool isInserting = false,
-  }) {
-    final context = VerificationContext();
-    final data = instance.toColumns(true);
-    if (data.containsKey('id')) {
-      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
-    }
-    if (data.containsKey('profile_id')) {
-      context.handle(
-        _profileIdMeta,
-        profileId.isAcceptableOrUnknown(data['profile_id']!, _profileIdMeta),
-      );
-    } else if (isInserting) {
-      context.missing(_profileIdMeta);
-    }
-    if (data.containsKey('curriculum_id')) {
-      context.handle(
-        _curriculumIdMeta,
-        curriculumId.isAcceptableOrUnknown(
-          data['curriculum_id']!,
-          _curriculumIdMeta,
-        ),
-      );
-    } else if (isInserting) {
-      context.missing(_curriculumIdMeta);
-    }
-    if (data.containsKey('sefaria_ref')) {
-      context.handle(
-        _sefariaRefMeta,
-        sefariaRef.isAcceptableOrUnknown(data['sefaria_ref']!, _sefariaRefMeta),
-      );
-    } else if (isInserting) {
-      context.missing(_sefariaRefMeta);
-    }
-    if (data.containsKey('stage_id')) {
-      context.handle(
-        _stageIdMeta,
-        stageId.isAcceptableOrUnknown(data['stage_id']!, _stageIdMeta),
-      );
-    } else if (isInserting) {
-      context.missing(_stageIdMeta);
-    }
-    if (data.containsKey('track_type')) {
-      context.handle(
-        _trackTypeMeta,
-        trackType.isAcceptableOrUnknown(data['track_type']!, _trackTypeMeta),
-      );
-    } else if (isInserting) {
-      context.missing(_trackTypeMeta);
-    }
-    if (data.containsKey('track_id')) {
-      context.handle(
-        _trackIdMeta,
-        trackId.isAcceptableOrUnknown(data['track_id']!, _trackIdMeta),
-      );
-    } else if (isInserting) {
-      context.missing(_trackIdMeta);
-    }
-    if (data.containsKey('completed_at')) {
-      context.handle(
-        _completedAtMeta,
-        completedAt.isAcceptableOrUnknown(
-          data['completed_at']!,
-          _completedAtMeta,
-        ),
-      );
-    } else if (isInserting) {
-      context.missing(_completedAtMeta);
-    }
-    if (data.containsKey('points')) {
-      context.handle(
-        _pointsMeta,
-        points.isAcceptableOrUnknown(data['points']!, _pointsMeta),
-      );
-    }
-    if (data.containsKey('derived_from_events')) {
-      context.handle(
-        _derivedFromEventsMeta,
-        derivedFromEvents.isAcceptableOrUnknown(
-          data['derived_from_events']!,
-          _derivedFromEventsMeta,
-        ),
-      );
-    }
-    return context;
-  }
-
-  @override
-  Set<GeneratedColumn> get $primaryKey => {id};
-  @override
-  Completion map(Map<String, dynamic> data, {String? tablePrefix}) {
-    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
-    return Completion(
-      id: attachedDatabase.typeMapping.read(
-        DriftSqlType.int,
-        data['${effectivePrefix}id'],
-      )!,
-      profileId: attachedDatabase.typeMapping.read(
-        DriftSqlType.int,
-        data['${effectivePrefix}profile_id'],
-      )!,
-      curriculumId: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}curriculum_id'],
-      )!,
-      sefariaRef: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}sefaria_ref'],
-      )!,
-      stageId: attachedDatabase.typeMapping.read(
-        DriftSqlType.int,
-        data['${effectivePrefix}stage_id'],
-      )!,
-      trackType: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}track_type'],
-      )!,
-      trackId: attachedDatabase.typeMapping.read(
-        DriftSqlType.int,
-        data['${effectivePrefix}track_id'],
-      )!,
-      completedAt: attachedDatabase.typeMapping.read(
-        DriftSqlType.dateTime,
-        data['${effectivePrefix}completed_at'],
-      )!,
-      points: attachedDatabase.typeMapping.read(
-        DriftSqlType.int,
-        data['${effectivePrefix}points'],
-      )!,
-      derivedFromEvents: attachedDatabase.typeMapping.read(
-        DriftSqlType.bool,
-        data['${effectivePrefix}derived_from_events'],
-      )!,
-    );
-  }
-
-  @override
-  $CompletionsTable createAlias(String alias) {
-    return $CompletionsTable(attachedDatabase, alias);
-  }
-}
-
-class Completion extends DataClass implements Insertable<Completion> {
-  final int id;
-
-  /// C2: FK → learner_profiles(id) CASCADE DELETE.
-  final int profileId;
-  final String curriculumId;
-  final String sefariaRef;
-  final int stageId;
-  final String trackType;
-  final int trackId;
-  final DateTime completedAt;
-  final int points;
-
-  /// C1: true when this row was derived from a completion_events write.
-  /// false for legacy rows written before C1 was deployed.
-  final bool derivedFromEvents;
-  const Completion({
-    required this.id,
-    required this.profileId,
-    required this.curriculumId,
-    required this.sefariaRef,
-    required this.stageId,
-    required this.trackType,
-    required this.trackId,
-    required this.completedAt,
-    required this.points,
-    required this.derivedFromEvents,
-  });
-  @override
-  Map<String, Expression> toColumns(bool nullToAbsent) {
-    final map = <String, Expression>{};
-    map['id'] = Variable<int>(id);
-    map['profile_id'] = Variable<int>(profileId);
-    map['curriculum_id'] = Variable<String>(curriculumId);
-    map['sefaria_ref'] = Variable<String>(sefariaRef);
-    map['stage_id'] = Variable<int>(stageId);
-    map['track_type'] = Variable<String>(trackType);
-    map['track_id'] = Variable<int>(trackId);
-    map['completed_at'] = Variable<DateTime>(completedAt);
-    map['points'] = Variable<int>(points);
-    map['derived_from_events'] = Variable<bool>(derivedFromEvents);
-    return map;
-  }
-
-  CompletionsCompanion toCompanion(bool nullToAbsent) {
-    return CompletionsCompanion(
-      id: Value(id),
-      profileId: Value(profileId),
-      curriculumId: Value(curriculumId),
-      sefariaRef: Value(sefariaRef),
-      stageId: Value(stageId),
-      trackType: Value(trackType),
-      trackId: Value(trackId),
-      completedAt: Value(completedAt),
-      points: Value(points),
-      derivedFromEvents: Value(derivedFromEvents),
-    );
-  }
-
-  factory Completion.fromJson(
-    Map<String, dynamic> json, {
-    ValueSerializer? serializer,
-  }) {
-    serializer ??= driftRuntimeOptions.defaultSerializer;
-    return Completion(
-      id: serializer.fromJson<int>(json['id']),
-      profileId: serializer.fromJson<int>(json['profileId']),
-      curriculumId: serializer.fromJson<String>(json['curriculumId']),
-      sefariaRef: serializer.fromJson<String>(json['sefariaRef']),
-      stageId: serializer.fromJson<int>(json['stageId']),
-      trackType: serializer.fromJson<String>(json['trackType']),
-      trackId: serializer.fromJson<int>(json['trackId']),
-      completedAt: serializer.fromJson<DateTime>(json['completedAt']),
-      points: serializer.fromJson<int>(json['points']),
-      derivedFromEvents: serializer.fromJson<bool>(json['derivedFromEvents']),
-    );
-  }
-  @override
-  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
-    serializer ??= driftRuntimeOptions.defaultSerializer;
-    return <String, dynamic>{
-      'id': serializer.toJson<int>(id),
-      'profileId': serializer.toJson<int>(profileId),
-      'curriculumId': serializer.toJson<String>(curriculumId),
-      'sefariaRef': serializer.toJson<String>(sefariaRef),
-      'stageId': serializer.toJson<int>(stageId),
-      'trackType': serializer.toJson<String>(trackType),
-      'trackId': serializer.toJson<int>(trackId),
-      'completedAt': serializer.toJson<DateTime>(completedAt),
-      'points': serializer.toJson<int>(points),
-      'derivedFromEvents': serializer.toJson<bool>(derivedFromEvents),
-    };
-  }
-
-  Completion copyWith({
-    int? id,
-    int? profileId,
-    String? curriculumId,
-    String? sefariaRef,
-    int? stageId,
-    String? trackType,
-    int? trackId,
-    DateTime? completedAt,
-    int? points,
-    bool? derivedFromEvents,
-  }) => Completion(
-    id: id ?? this.id,
-    profileId: profileId ?? this.profileId,
-    curriculumId: curriculumId ?? this.curriculumId,
-    sefariaRef: sefariaRef ?? this.sefariaRef,
-    stageId: stageId ?? this.stageId,
-    trackType: trackType ?? this.trackType,
-    trackId: trackId ?? this.trackId,
-    completedAt: completedAt ?? this.completedAt,
-    points: points ?? this.points,
-    derivedFromEvents: derivedFromEvents ?? this.derivedFromEvents,
-  );
-  Completion copyWithCompanion(CompletionsCompanion data) {
-    return Completion(
-      id: data.id.present ? data.id.value : this.id,
-      profileId: data.profileId.present ? data.profileId.value : this.profileId,
-      curriculumId: data.curriculumId.present
-          ? data.curriculumId.value
-          : this.curriculumId,
-      sefariaRef: data.sefariaRef.present
-          ? data.sefariaRef.value
-          : this.sefariaRef,
-      stageId: data.stageId.present ? data.stageId.value : this.stageId,
-      trackType: data.trackType.present ? data.trackType.value : this.trackType,
-      trackId: data.trackId.present ? data.trackId.value : this.trackId,
-      completedAt: data.completedAt.present
-          ? data.completedAt.value
-          : this.completedAt,
-      points: data.points.present ? data.points.value : this.points,
-      derivedFromEvents: data.derivedFromEvents.present
-          ? data.derivedFromEvents.value
-          : this.derivedFromEvents,
-    );
-  }
-
-  @override
-  String toString() {
-    return (StringBuffer('Completion(')
-          ..write('id: $id, ')
-          ..write('profileId: $profileId, ')
-          ..write('curriculumId: $curriculumId, ')
-          ..write('sefariaRef: $sefariaRef, ')
-          ..write('stageId: $stageId, ')
-          ..write('trackType: $trackType, ')
-          ..write('trackId: $trackId, ')
-          ..write('completedAt: $completedAt, ')
-          ..write('points: $points, ')
-          ..write('derivedFromEvents: $derivedFromEvents')
-          ..write(')'))
-        .toString();
-  }
-
-  @override
-  int get hashCode => Object.hash(
-    id,
-    profileId,
-    curriculumId,
-    sefariaRef,
-    stageId,
-    trackType,
-    trackId,
-    completedAt,
-    points,
-    derivedFromEvents,
-  );
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      (other is Completion &&
-          other.id == this.id &&
-          other.profileId == this.profileId &&
-          other.curriculumId == this.curriculumId &&
-          other.sefariaRef == this.sefariaRef &&
-          other.stageId == this.stageId &&
-          other.trackType == this.trackType &&
-          other.trackId == this.trackId &&
-          other.completedAt == this.completedAt &&
-          other.points == this.points &&
-          other.derivedFromEvents == this.derivedFromEvents);
-}
-
-class CompletionsCompanion extends UpdateCompanion<Completion> {
-  final Value<int> id;
-  final Value<int> profileId;
-  final Value<String> curriculumId;
-  final Value<String> sefariaRef;
-  final Value<int> stageId;
-  final Value<String> trackType;
-  final Value<int> trackId;
-  final Value<DateTime> completedAt;
-  final Value<int> points;
-  final Value<bool> derivedFromEvents;
-  const CompletionsCompanion({
-    this.id = const Value.absent(),
-    this.profileId = const Value.absent(),
-    this.curriculumId = const Value.absent(),
-    this.sefariaRef = const Value.absent(),
-    this.stageId = const Value.absent(),
-    this.trackType = const Value.absent(),
-    this.trackId = const Value.absent(),
-    this.completedAt = const Value.absent(),
-    this.points = const Value.absent(),
-    this.derivedFromEvents = const Value.absent(),
-  });
-  CompletionsCompanion.insert({
-    this.id = const Value.absent(),
-    required int profileId,
-    required String curriculumId,
-    required String sefariaRef,
-    required int stageId,
-    required String trackType,
-    required int trackId,
-    required DateTime completedAt,
-    this.points = const Value.absent(),
-    this.derivedFromEvents = const Value.absent(),
-  }) : profileId = Value(profileId),
-       curriculumId = Value(curriculumId),
-       sefariaRef = Value(sefariaRef),
-       stageId = Value(stageId),
-       trackType = Value(trackType),
-       trackId = Value(trackId),
-       completedAt = Value(completedAt);
-  static Insertable<Completion> custom({
-    Expression<int>? id,
-    Expression<int>? profileId,
-    Expression<String>? curriculumId,
-    Expression<String>? sefariaRef,
-    Expression<int>? stageId,
-    Expression<String>? trackType,
-    Expression<int>? trackId,
-    Expression<DateTime>? completedAt,
-    Expression<int>? points,
-    Expression<bool>? derivedFromEvents,
-  }) {
-    return RawValuesInsertable({
-      if (id != null) 'id': id,
-      if (profileId != null) 'profile_id': profileId,
-      if (curriculumId != null) 'curriculum_id': curriculumId,
-      if (sefariaRef != null) 'sefaria_ref': sefariaRef,
-      if (stageId != null) 'stage_id': stageId,
-      if (trackType != null) 'track_type': trackType,
-      if (trackId != null) 'track_id': trackId,
-      if (completedAt != null) 'completed_at': completedAt,
-      if (points != null) 'points': points,
-      if (derivedFromEvents != null) 'derived_from_events': derivedFromEvents,
-    });
-  }
-
-  CompletionsCompanion copyWith({
-    Value<int>? id,
-    Value<int>? profileId,
-    Value<String>? curriculumId,
-    Value<String>? sefariaRef,
-    Value<int>? stageId,
-    Value<String>? trackType,
-    Value<int>? trackId,
-    Value<DateTime>? completedAt,
-    Value<int>? points,
-    Value<bool>? derivedFromEvents,
-  }) {
-    return CompletionsCompanion(
-      id: id ?? this.id,
-      profileId: profileId ?? this.profileId,
-      curriculumId: curriculumId ?? this.curriculumId,
-      sefariaRef: sefariaRef ?? this.sefariaRef,
-      stageId: stageId ?? this.stageId,
-      trackType: trackType ?? this.trackType,
-      trackId: trackId ?? this.trackId,
-      completedAt: completedAt ?? this.completedAt,
-      points: points ?? this.points,
-      derivedFromEvents: derivedFromEvents ?? this.derivedFromEvents,
-    );
-  }
-
-  @override
-  Map<String, Expression> toColumns(bool nullToAbsent) {
-    final map = <String, Expression>{};
-    if (id.present) {
-      map['id'] = Variable<int>(id.value);
-    }
-    if (profileId.present) {
-      map['profile_id'] = Variable<int>(profileId.value);
-    }
-    if (curriculumId.present) {
-      map['curriculum_id'] = Variable<String>(curriculumId.value);
-    }
-    if (sefariaRef.present) {
-      map['sefaria_ref'] = Variable<String>(sefariaRef.value);
-    }
-    if (stageId.present) {
-      map['stage_id'] = Variable<int>(stageId.value);
-    }
-    if (trackType.present) {
-      map['track_type'] = Variable<String>(trackType.value);
-    }
-    if (trackId.present) {
-      map['track_id'] = Variable<int>(trackId.value);
-    }
-    if (completedAt.present) {
-      map['completed_at'] = Variable<DateTime>(completedAt.value);
-    }
-    if (points.present) {
-      map['points'] = Variable<int>(points.value);
-    }
-    if (derivedFromEvents.present) {
-      map['derived_from_events'] = Variable<bool>(derivedFromEvents.value);
-    }
-    return map;
-  }
-
-  @override
-  String toString() {
-    return (StringBuffer('CompletionsCompanion(')
-          ..write('id: $id, ')
-          ..write('profileId: $profileId, ')
-          ..write('curriculumId: $curriculumId, ')
-          ..write('sefariaRef: $sefariaRef, ')
-          ..write('stageId: $stageId, ')
-          ..write('trackType: $trackType, ')
-          ..write('trackId: $trackId, ')
-          ..write('completedAt: $completedAt, ')
-          ..write('points: $points, ')
-          ..write('derivedFromEvents: $derivedFromEvents')
-          ..write(')'))
-        .toString();
-  }
-}
-
 class $CompletionEventsTable extends CompletionEvents
     with TableInfo<$CompletionEventsTable, CompletionEvent> {
   @override
@@ -4895,21 +4052,6 @@ class $CompletionEventsTable extends CompletionEvents
     type: DriftSqlType.dateTime,
     requiredDuringInsert: false,
   );
-  static const VerificationMeta _priorMarkOnlyMeta = const VerificationMeta(
-    'priorMarkOnly',
-  );
-  @override
-  late final GeneratedColumn<bool> priorMarkOnly = GeneratedColumn<bool>(
-    'prior_mark_only',
-    aliasedName,
-    false,
-    type: DriftSqlType.bool,
-    requiredDuringInsert: false,
-    defaultConstraints: GeneratedColumn.constraintIsAlways(
-      'CHECK ("prior_mark_only" IN (0, 1))',
-    ),
-    defaultValue: const Constant<bool>(false),
-  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -4923,7 +4065,6 @@ class $CompletionEventsTable extends CompletionEvents
     eventTimestamp,
     createdAt,
     purgedAt,
-    priorMarkOnly,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -5018,15 +4159,6 @@ class $CompletionEventsTable extends CompletionEvents
         purgedAt.isAcceptableOrUnknown(data['purged_at']!, _purgedAtMeta),
       );
     }
-    if (data.containsKey('prior_mark_only')) {
-      context.handle(
-        _priorMarkOnlyMeta,
-        priorMarkOnly.isAcceptableOrUnknown(
-          data['prior_mark_only']!,
-          _priorMarkOnlyMeta,
-        ),
-      );
-    }
     return context;
   }
 
@@ -5080,10 +4212,6 @@ class $CompletionEventsTable extends CompletionEvents
         DriftSqlType.dateTime,
         data['${effectivePrefix}purged_at'],
       ),
-      priorMarkOnly: attachedDatabase.typeMapping.read(
-        DriftSqlType.bool,
-        data['${effectivePrefix}prior_mark_only'],
-      )!,
     );
   }
 
@@ -5113,22 +4241,6 @@ class CompletionEvent extends DataClass implements Insertable<CompletionEvent> {
   /// C3: tombstone timestamp set by purgeHistory instead of deleting the row.
   /// null = active; non-null = purged at this UTC timestamp.
   final DateTime? purgedAt;
-
-  /// B8: marks a row as originating from the bulk-prior-mark flow.
-  ///
-  /// `1` = this row was written by [BulkPriorCompletionService.execute] and
-  /// has never been overwritten by a real in-app learning event.
-  /// `0` (default) = this row was written by [CompletionWriter.commit] /
-  /// [CompletionWriter.commitBatch] and represents genuine learning.
-  ///
-  /// When [CompletionWriter] finds an existing row whose `priorMarkOnly = 1`
-  /// it UPDATEs the row: clears `priorMarkOnly`, updates `eventTimestamp`, and
-  /// enqueues an outbox push — so the real-learning event is not silently lost.
-  ///
-  /// [BulkPriorCompletionService.expungePriorCompletions] only tombstones rows
-  /// where `priorMarkOnly = 1`; rows already upgraded to real-learning
-  /// (`priorMarkOnly = 0`) are left untouched.
-  final bool priorMarkOnly;
   const CompletionEvent({
     required this.id,
     required this.profileId,
@@ -5141,7 +4253,6 @@ class CompletionEvent extends DataClass implements Insertable<CompletionEvent> {
     required this.eventTimestamp,
     required this.createdAt,
     this.purgedAt,
-    required this.priorMarkOnly,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -5161,7 +4272,6 @@ class CompletionEvent extends DataClass implements Insertable<CompletionEvent> {
     if (!nullToAbsent || purgedAt != null) {
       map['purged_at'] = Variable<DateTime>(purgedAt);
     }
-    map['prior_mark_only'] = Variable<bool>(priorMarkOnly);
     return map;
   }
 
@@ -5182,7 +4292,6 @@ class CompletionEvent extends DataClass implements Insertable<CompletionEvent> {
       purgedAt: purgedAt == null && nullToAbsent
           ? const Value.absent()
           : Value(purgedAt),
-      priorMarkOnly: Value(priorMarkOnly),
     );
   }
 
@@ -5203,7 +4312,6 @@ class CompletionEvent extends DataClass implements Insertable<CompletionEvent> {
       eventTimestamp: serializer.fromJson<DateTime>(json['eventTimestamp']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       purgedAt: serializer.fromJson<DateTime?>(json['purgedAt']),
-      priorMarkOnly: serializer.fromJson<bool>(json['priorMarkOnly']),
     );
   }
   @override
@@ -5221,7 +4329,6 @@ class CompletionEvent extends DataClass implements Insertable<CompletionEvent> {
       'eventTimestamp': serializer.toJson<DateTime>(eventTimestamp),
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'purgedAt': serializer.toJson<DateTime?>(purgedAt),
-      'priorMarkOnly': serializer.toJson<bool>(priorMarkOnly),
     };
   }
 
@@ -5237,7 +4344,6 @@ class CompletionEvent extends DataClass implements Insertable<CompletionEvent> {
     DateTime? eventTimestamp,
     DateTime? createdAt,
     Value<DateTime?> purgedAt = const Value.absent(),
-    bool? priorMarkOnly,
   }) => CompletionEvent(
     id: id ?? this.id,
     profileId: profileId ?? this.profileId,
@@ -5250,7 +4356,6 @@ class CompletionEvent extends DataClass implements Insertable<CompletionEvent> {
     eventTimestamp: eventTimestamp ?? this.eventTimestamp,
     createdAt: createdAt ?? this.createdAt,
     purgedAt: purgedAt.present ? purgedAt.value : this.purgedAt,
-    priorMarkOnly: priorMarkOnly ?? this.priorMarkOnly,
   );
   CompletionEvent copyWithCompanion(CompletionEventsCompanion data) {
     return CompletionEvent(
@@ -5271,9 +4376,6 @@ class CompletionEvent extends DataClass implements Insertable<CompletionEvent> {
           : this.eventTimestamp,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       purgedAt: data.purgedAt.present ? data.purgedAt.value : this.purgedAt,
-      priorMarkOnly: data.priorMarkOnly.present
-          ? data.priorMarkOnly.value
-          : this.priorMarkOnly,
     );
   }
 
@@ -5290,8 +4392,7 @@ class CompletionEvent extends DataClass implements Insertable<CompletionEvent> {
           ..write('points: $points, ')
           ..write('eventTimestamp: $eventTimestamp, ')
           ..write('createdAt: $createdAt, ')
-          ..write('purgedAt: $purgedAt, ')
-          ..write('priorMarkOnly: $priorMarkOnly')
+          ..write('purgedAt: $purgedAt')
           ..write(')'))
         .toString();
   }
@@ -5309,7 +4410,6 @@ class CompletionEvent extends DataClass implements Insertable<CompletionEvent> {
     eventTimestamp,
     createdAt,
     purgedAt,
-    priorMarkOnly,
   );
   @override
   bool operator ==(Object other) =>
@@ -5325,8 +4425,7 @@ class CompletionEvent extends DataClass implements Insertable<CompletionEvent> {
           other.points == this.points &&
           other.eventTimestamp == this.eventTimestamp &&
           other.createdAt == this.createdAt &&
-          other.purgedAt == this.purgedAt &&
-          other.priorMarkOnly == this.priorMarkOnly);
+          other.purgedAt == this.purgedAt);
 }
 
 class CompletionEventsCompanion extends UpdateCompanion<CompletionEvent> {
@@ -5341,7 +4440,6 @@ class CompletionEventsCompanion extends UpdateCompanion<CompletionEvent> {
   final Value<DateTime> eventTimestamp;
   final Value<DateTime> createdAt;
   final Value<DateTime?> purgedAt;
-  final Value<bool> priorMarkOnly;
   const CompletionEventsCompanion({
     this.id = const Value.absent(),
     this.profileId = const Value.absent(),
@@ -5354,7 +4452,6 @@ class CompletionEventsCompanion extends UpdateCompanion<CompletionEvent> {
     this.eventTimestamp = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.purgedAt = const Value.absent(),
-    this.priorMarkOnly = const Value.absent(),
   });
   CompletionEventsCompanion.insert({
     this.id = const Value.absent(),
@@ -5368,7 +4465,6 @@ class CompletionEventsCompanion extends UpdateCompanion<CompletionEvent> {
     required DateTime eventTimestamp,
     this.createdAt = const Value.absent(),
     this.purgedAt = const Value.absent(),
-    this.priorMarkOnly = const Value.absent(),
   }) : profileId = Value(profileId),
        curriculumId = Value(curriculumId),
        sefariaRef = Value(sefariaRef),
@@ -5387,7 +4483,6 @@ class CompletionEventsCompanion extends UpdateCompanion<CompletionEvent> {
     Expression<DateTime>? eventTimestamp,
     Expression<DateTime>? createdAt,
     Expression<DateTime>? purgedAt,
-    Expression<bool>? priorMarkOnly,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -5401,7 +4496,6 @@ class CompletionEventsCompanion extends UpdateCompanion<CompletionEvent> {
       if (eventTimestamp != null) 'event_timestamp': eventTimestamp,
       if (createdAt != null) 'created_at': createdAt,
       if (purgedAt != null) 'purged_at': purgedAt,
-      if (priorMarkOnly != null) 'prior_mark_only': priorMarkOnly,
     });
   }
 
@@ -5417,7 +4511,6 @@ class CompletionEventsCompanion extends UpdateCompanion<CompletionEvent> {
     Value<DateTime>? eventTimestamp,
     Value<DateTime>? createdAt,
     Value<DateTime?>? purgedAt,
-    Value<bool>? priorMarkOnly,
   }) {
     return CompletionEventsCompanion(
       id: id ?? this.id,
@@ -5431,7 +4524,6 @@ class CompletionEventsCompanion extends UpdateCompanion<CompletionEvent> {
       eventTimestamp: eventTimestamp ?? this.eventTimestamp,
       createdAt: createdAt ?? this.createdAt,
       purgedAt: purgedAt ?? this.purgedAt,
-      priorMarkOnly: priorMarkOnly ?? this.priorMarkOnly,
     );
   }
 
@@ -5471,9 +4563,6 @@ class CompletionEventsCompanion extends UpdateCompanion<CompletionEvent> {
     if (purgedAt.present) {
       map['purged_at'] = Variable<DateTime>(purgedAt.value);
     }
-    if (priorMarkOnly.present) {
-      map['prior_mark_only'] = Variable<bool>(priorMarkOnly.value);
-    }
     return map;
   }
 
@@ -5490,8 +4579,7 @@ class CompletionEventsCompanion extends UpdateCompanion<CompletionEvent> {
           ..write('points: $points, ')
           ..write('eventTimestamp: $eventTimestamp, ')
           ..write('createdAt: $createdAt, ')
-          ..write('purgedAt: $purgedAt, ')
-          ..write('priorMarkOnly: $priorMarkOnly')
+          ..write('purgedAt: $purgedAt')
           ..write(')'))
         .toString();
   }
@@ -6469,7 +5557,7 @@ class $LearningLedgerTable extends LearningLedger
   );
   @override
   late final GeneratedColumn<String> entryScope = GeneratedColumn<String>(
-    'unit_type',
+    'entry_scope',
     aliasedName,
     false,
     type: DriftSqlType.string,
@@ -6653,10 +5741,10 @@ class $LearningLedgerTable extends LearningLedger
     } else if (isInserting) {
       context.missing(_curriculumIdMeta);
     }
-    if (data.containsKey('unit_type')) {
+    if (data.containsKey('entry_scope')) {
       context.handle(
         _entryScopeMeta,
-        entryScope.isAcceptableOrUnknown(data['unit_type']!, _entryScopeMeta),
+        entryScope.isAcceptableOrUnknown(data['entry_scope']!, _entryScopeMeta),
       );
     } else if (isInserting) {
       context.missing(_entryScopeMeta);
@@ -6777,7 +5865,7 @@ class $LearningLedgerTable extends LearningLedger
       )!,
       entryScope: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
-        data['${effectivePrefix}unit_type'],
+        data['${effectivePrefix}entry_scope'],
       )!,
       unitIdentifier: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
@@ -6841,6 +5929,8 @@ class LearningLedgerData extends DataClass
   /// when omitted on insert.
   final String ulid;
   final String curriculumId;
+
+  /// Scope of the learning ledger entry: 'seder', 'masechta', 'sefer'.
   final String entryScope;
   final String unitIdentifier;
   final String unitDisplayNameHe;
@@ -6879,7 +5969,7 @@ class LearningLedgerData extends DataClass
     map['profile_id'] = Variable<int>(profileId);
     map['ulid'] = Variable<String>(ulid);
     map['curriculum_id'] = Variable<String>(curriculumId);
-    map['unit_type'] = Variable<String>(entryScope);
+    map['entry_scope'] = Variable<String>(entryScope);
     map['unit_identifier'] = Variable<String>(unitIdentifier);
     map['unit_display_name_he'] = Variable<String>(unitDisplayNameHe);
     map['unit_display_name_en'] = Variable<String>(unitDisplayNameEn);
@@ -7171,7 +6261,7 @@ class LearningLedgerCompanion extends UpdateCompanion<LearningLedgerData> {
       if (profileId != null) 'profile_id': profileId,
       if (ulid != null) 'ulid': ulid,
       if (curriculumId != null) 'curriculum_id': curriculumId,
-      if (entryScope != null) 'unit_type': entryScope,
+      if (entryScope != null) 'entry_scope': entryScope,
       if (unitIdentifier != null) 'unit_identifier': unitIdentifier,
       if (unitDisplayNameHe != null) 'unit_display_name_he': unitDisplayNameHe,
       if (unitDisplayNameEn != null) 'unit_display_name_en': unitDisplayNameEn,
@@ -7237,7 +6327,7 @@ class LearningLedgerCompanion extends UpdateCompanion<LearningLedgerData> {
       map['curriculum_id'] = Variable<String>(curriculumId.value);
     }
     if (entryScope.present) {
-      map['unit_type'] = Variable<String>(entryScope.value);
+      map['entry_scope'] = Variable<String>(entryScope.value);
     }
     if (unitIdentifier.present) {
       map['unit_identifier'] = Variable<String>(unitIdentifier.value);
@@ -7747,6 +6837,9 @@ class $LearningOrderTable extends LearningOrder
     false,
     type: DriftSqlType.int,
     requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES learner_profiles (id) ON DELETE CASCADE',
+    ),
   );
   static const VerificationMeta _curriculumIdMeta = const VerificationMeta(
     'curriculumId',
@@ -7910,6 +7003,8 @@ class $LearningOrderTable extends LearningOrder
 class LearningOrderData extends DataClass
     implements Insertable<LearningOrderData> {
   final int id;
+
+  /// W3.25: FK → learner_profiles(id) CASCADE DELETE.
   final int profileId;
   final String curriculumId;
   final String sefariaRef;
@@ -8579,7 +7674,7 @@ class $GoalsTable extends Goals with TableInfo<$GoalsTable, Goal> {
   );
   @override
   late final GeneratedColumn<String> pacePeriod = GeneratedColumn<String>(
-    'pace_unit',
+    'pace_period',
     aliasedName,
     true,
     type: DriftSqlType.string,
@@ -8590,7 +7685,7 @@ class $GoalsTable extends Goals with TableInfo<$GoalsTable, Goal> {
   );
   @override
   late final GeneratedColumn<String> paceGranularity = GeneratedColumn<String>(
-    'learning_unit',
+    'pace_granularity',
     aliasedName,
     true,
     type: DriftSqlType.string,
@@ -8719,17 +7814,17 @@ class $GoalsTable extends Goals with TableInfo<$GoalsTable, Goal> {
         paceValue.isAcceptableOrUnknown(data['pace_value']!, _paceValueMeta),
       );
     }
-    if (data.containsKey('pace_unit')) {
+    if (data.containsKey('pace_period')) {
       context.handle(
         _pacePeriodMeta,
-        pacePeriod.isAcceptableOrUnknown(data['pace_unit']!, _pacePeriodMeta),
+        pacePeriod.isAcceptableOrUnknown(data['pace_period']!, _pacePeriodMeta),
       );
     }
-    if (data.containsKey('learning_unit')) {
+    if (data.containsKey('pace_granularity')) {
       context.handle(
         _paceGranularityMeta,
         paceGranularity.isAcceptableOrUnknown(
-          data['learning_unit']!,
+          data['pace_granularity']!,
           _paceGranularityMeta,
         ),
       );
@@ -8801,11 +7896,11 @@ class $GoalsTable extends Goals with TableInfo<$GoalsTable, Goal> {
       ),
       pacePeriod: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
-        data['${effectivePrefix}pace_unit'],
+        data['${effectivePrefix}pace_period'],
       ),
       paceGranularity: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
-        data['${effectivePrefix}learning_unit'],
+        data['${effectivePrefix}pace_granularity'],
       ),
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
@@ -8837,6 +7932,8 @@ class Goal extends DataClass implements Insertable<Goal> {
   final String dateType;
   final String goalType;
   final int? paceValue;
+
+  /// Pace period unit: 'day', 'week', 'month', or null.
   final String? pacePeriod;
 
   /// Learning unit: 'amud', 'daf', or null. Used for Bavli/Yerushalmi curricula.
@@ -8877,10 +7974,10 @@ class Goal extends DataClass implements Insertable<Goal> {
       map['pace_value'] = Variable<int>(paceValue);
     }
     if (!nullToAbsent || pacePeriod != null) {
-      map['pace_unit'] = Variable<String>(pacePeriod);
+      map['pace_period'] = Variable<String>(pacePeriod);
     }
     if (!nullToAbsent || paceGranularity != null) {
-      map['learning_unit'] = Variable<String>(paceGranularity);
+      map['pace_granularity'] = Variable<String>(paceGranularity);
     }
     map['created_at'] = Variable<DateTime>(createdAt);
     map['updated_at'] = Variable<DateTime>(updatedAt);
@@ -9157,8 +8254,8 @@ class GoalsCompanion extends UpdateCompanion<Goal> {
       if (dateType != null) 'date_type': dateType,
       if (goalType != null) 'goal_type': goalType,
       if (paceValue != null) 'pace_value': paceValue,
-      if (pacePeriod != null) 'pace_unit': pacePeriod,
-      if (paceGranularity != null) 'learning_unit': paceGranularity,
+      if (pacePeriod != null) 'pace_period': pacePeriod,
+      if (paceGranularity != null) 'pace_granularity': paceGranularity,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
     });
@@ -9232,10 +8329,10 @@ class GoalsCompanion extends UpdateCompanion<Goal> {
       map['pace_value'] = Variable<int>(paceValue.value);
     }
     if (pacePeriod.present) {
-      map['pace_unit'] = Variable<String>(pacePeriod.value);
+      map['pace_period'] = Variable<String>(pacePeriod.value);
     }
     if (paceGranularity.present) {
-      map['learning_unit'] = Variable<String>(paceGranularity.value);
+      map['pace_granularity'] = Variable<String>(paceGranularity.value);
     }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
@@ -9263,485 +8360,6 @@ class GoalsCompanion extends UpdateCompanion<Goal> {
           ..write('paceGranularity: $paceGranularity, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt')
-          ..write(')'))
-        .toString();
-  }
-}
-
-class $StreaksTable extends Streaks with TableInfo<$StreaksTable, Streak> {
-  @override
-  final GeneratedDatabase attachedDatabase;
-  final String? _alias;
-  $StreaksTable(this.attachedDatabase, [this._alias]);
-  static const VerificationMeta _idMeta = const VerificationMeta('id');
-  @override
-  late final GeneratedColumn<int> id = GeneratedColumn<int>(
-    'id',
-    aliasedName,
-    false,
-    hasAutoIncrement: true,
-    type: DriftSqlType.int,
-    requiredDuringInsert: false,
-    defaultConstraints: GeneratedColumn.constraintIsAlways(
-      'PRIMARY KEY AUTOINCREMENT',
-    ),
-  );
-  static const VerificationMeta _profileIdMeta = const VerificationMeta(
-    'profileId',
-  );
-  @override
-  late final GeneratedColumn<int> profileId = GeneratedColumn<int>(
-    'profile_id',
-    aliasedName,
-    false,
-    type: DriftSqlType.int,
-    requiredDuringInsert: true,
-  );
-  static const VerificationMeta _currentStreakMeta = const VerificationMeta(
-    'currentStreak',
-  );
-  @override
-  late final GeneratedColumn<int> currentStreak = GeneratedColumn<int>(
-    'current_streak',
-    aliasedName,
-    false,
-    type: DriftSqlType.int,
-    requiredDuringInsert: false,
-    defaultValue: const Constant<int>(0),
-  );
-  static const VerificationMeta _maxStreakMeta = const VerificationMeta(
-    'maxStreak',
-  );
-  @override
-  late final GeneratedColumn<int> maxStreak = GeneratedColumn<int>(
-    'max_streak',
-    aliasedName,
-    false,
-    type: DriftSqlType.int,
-    requiredDuringInsert: false,
-    defaultValue: const Constant<int>(0),
-  );
-  static const VerificationMeta _lastCompletionDateMeta =
-      const VerificationMeta('lastCompletionDate');
-  @override
-  late final GeneratedColumn<DateTime> lastCompletionDate =
-      GeneratedColumn<DateTime>(
-        'last_completion_date',
-        aliasedName,
-        true,
-        type: DriftSqlType.dateTime,
-        requiredDuringInsert: false,
-      );
-  static const VerificationMeta _graceUsedDateMeta = const VerificationMeta(
-    'graceUsedDate',
-  );
-  @override
-  late final GeneratedColumn<DateTime> graceUsedDate =
-      GeneratedColumn<DateTime>(
-        'grace_used_date',
-        aliasedName,
-        true,
-        type: DriftSqlType.dateTime,
-        requiredDuringInsert: false,
-      );
-  static const VerificationMeta _gracePeriodDaysMeta = const VerificationMeta(
-    'gracePeriodDays',
-  );
-  @override
-  late final GeneratedColumn<int> gracePeriodDays = GeneratedColumn<int>(
-    'grace_period_days',
-    aliasedName,
-    false,
-    type: DriftSqlType.int,
-    requiredDuringInsert: false,
-    defaultValue: const Constant(1),
-  );
-  @override
-  List<GeneratedColumn> get $columns => [
-    id,
-    profileId,
-    currentStreak,
-    maxStreak,
-    lastCompletionDate,
-    graceUsedDate,
-    gracePeriodDays,
-  ];
-  @override
-  String get aliasedName => _alias ?? actualTableName;
-  @override
-  String get actualTableName => $name;
-  static const String $name = 'streaks';
-  @override
-  VerificationContext validateIntegrity(
-    Insertable<Streak> instance, {
-    bool isInserting = false,
-  }) {
-    final context = VerificationContext();
-    final data = instance.toColumns(true);
-    if (data.containsKey('id')) {
-      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
-    }
-    if (data.containsKey('profile_id')) {
-      context.handle(
-        _profileIdMeta,
-        profileId.isAcceptableOrUnknown(data['profile_id']!, _profileIdMeta),
-      );
-    } else if (isInserting) {
-      context.missing(_profileIdMeta);
-    }
-    if (data.containsKey('current_streak')) {
-      context.handle(
-        _currentStreakMeta,
-        currentStreak.isAcceptableOrUnknown(
-          data['current_streak']!,
-          _currentStreakMeta,
-        ),
-      );
-    }
-    if (data.containsKey('max_streak')) {
-      context.handle(
-        _maxStreakMeta,
-        maxStreak.isAcceptableOrUnknown(data['max_streak']!, _maxStreakMeta),
-      );
-    }
-    if (data.containsKey('last_completion_date')) {
-      context.handle(
-        _lastCompletionDateMeta,
-        lastCompletionDate.isAcceptableOrUnknown(
-          data['last_completion_date']!,
-          _lastCompletionDateMeta,
-        ),
-      );
-    }
-    if (data.containsKey('grace_used_date')) {
-      context.handle(
-        _graceUsedDateMeta,
-        graceUsedDate.isAcceptableOrUnknown(
-          data['grace_used_date']!,
-          _graceUsedDateMeta,
-        ),
-      );
-    }
-    if (data.containsKey('grace_period_days')) {
-      context.handle(
-        _gracePeriodDaysMeta,
-        gracePeriodDays.isAcceptableOrUnknown(
-          data['grace_period_days']!,
-          _gracePeriodDaysMeta,
-        ),
-      );
-    }
-    return context;
-  }
-
-  @override
-  Set<GeneratedColumn> get $primaryKey => {id};
-  @override
-  Streak map(Map<String, dynamic> data, {String? tablePrefix}) {
-    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
-    return Streak(
-      id: attachedDatabase.typeMapping.read(
-        DriftSqlType.int,
-        data['${effectivePrefix}id'],
-      )!,
-      profileId: attachedDatabase.typeMapping.read(
-        DriftSqlType.int,
-        data['${effectivePrefix}profile_id'],
-      )!,
-      currentStreak: attachedDatabase.typeMapping.read(
-        DriftSqlType.int,
-        data['${effectivePrefix}current_streak'],
-      )!,
-      maxStreak: attachedDatabase.typeMapping.read(
-        DriftSqlType.int,
-        data['${effectivePrefix}max_streak'],
-      )!,
-      lastCompletionDate: attachedDatabase.typeMapping.read(
-        DriftSqlType.dateTime,
-        data['${effectivePrefix}last_completion_date'],
-      ),
-      graceUsedDate: attachedDatabase.typeMapping.read(
-        DriftSqlType.dateTime,
-        data['${effectivePrefix}grace_used_date'],
-      ),
-      gracePeriodDays: attachedDatabase.typeMapping.read(
-        DriftSqlType.int,
-        data['${effectivePrefix}grace_period_days'],
-      )!,
-    );
-  }
-
-  @override
-  $StreaksTable createAlias(String alias) {
-    return $StreaksTable(attachedDatabase, alias);
-  }
-}
-
-class Streak extends DataClass implements Insertable<Streak> {
-  final int id;
-  final int profileId;
-  final int currentStreak;
-  final int maxStreak;
-  final DateTime? lastCompletionDate;
-  final DateTime? graceUsedDate;
-  final int gracePeriodDays;
-  const Streak({
-    required this.id,
-    required this.profileId,
-    required this.currentStreak,
-    required this.maxStreak,
-    this.lastCompletionDate,
-    this.graceUsedDate,
-    required this.gracePeriodDays,
-  });
-  @override
-  Map<String, Expression> toColumns(bool nullToAbsent) {
-    final map = <String, Expression>{};
-    map['id'] = Variable<int>(id);
-    map['profile_id'] = Variable<int>(profileId);
-    map['current_streak'] = Variable<int>(currentStreak);
-    map['max_streak'] = Variable<int>(maxStreak);
-    if (!nullToAbsent || lastCompletionDate != null) {
-      map['last_completion_date'] = Variable<DateTime>(lastCompletionDate);
-    }
-    if (!nullToAbsent || graceUsedDate != null) {
-      map['grace_used_date'] = Variable<DateTime>(graceUsedDate);
-    }
-    map['grace_period_days'] = Variable<int>(gracePeriodDays);
-    return map;
-  }
-
-  StreaksCompanion toCompanion(bool nullToAbsent) {
-    return StreaksCompanion(
-      id: Value(id),
-      profileId: Value(profileId),
-      currentStreak: Value(currentStreak),
-      maxStreak: Value(maxStreak),
-      lastCompletionDate: lastCompletionDate == null && nullToAbsent
-          ? const Value.absent()
-          : Value(lastCompletionDate),
-      graceUsedDate: graceUsedDate == null && nullToAbsent
-          ? const Value.absent()
-          : Value(graceUsedDate),
-      gracePeriodDays: Value(gracePeriodDays),
-    );
-  }
-
-  factory Streak.fromJson(
-    Map<String, dynamic> json, {
-    ValueSerializer? serializer,
-  }) {
-    serializer ??= driftRuntimeOptions.defaultSerializer;
-    return Streak(
-      id: serializer.fromJson<int>(json['id']),
-      profileId: serializer.fromJson<int>(json['profileId']),
-      currentStreak: serializer.fromJson<int>(json['currentStreak']),
-      maxStreak: serializer.fromJson<int>(json['maxStreak']),
-      lastCompletionDate: serializer.fromJson<DateTime?>(
-        json['lastCompletionDate'],
-      ),
-      graceUsedDate: serializer.fromJson<DateTime?>(json['graceUsedDate']),
-      gracePeriodDays: serializer.fromJson<int>(json['gracePeriodDays']),
-    );
-  }
-  @override
-  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
-    serializer ??= driftRuntimeOptions.defaultSerializer;
-    return <String, dynamic>{
-      'id': serializer.toJson<int>(id),
-      'profileId': serializer.toJson<int>(profileId),
-      'currentStreak': serializer.toJson<int>(currentStreak),
-      'maxStreak': serializer.toJson<int>(maxStreak),
-      'lastCompletionDate': serializer.toJson<DateTime?>(lastCompletionDate),
-      'graceUsedDate': serializer.toJson<DateTime?>(graceUsedDate),
-      'gracePeriodDays': serializer.toJson<int>(gracePeriodDays),
-    };
-  }
-
-  Streak copyWith({
-    int? id,
-    int? profileId,
-    int? currentStreak,
-    int? maxStreak,
-    Value<DateTime?> lastCompletionDate = const Value.absent(),
-    Value<DateTime?> graceUsedDate = const Value.absent(),
-    int? gracePeriodDays,
-  }) => Streak(
-    id: id ?? this.id,
-    profileId: profileId ?? this.profileId,
-    currentStreak: currentStreak ?? this.currentStreak,
-    maxStreak: maxStreak ?? this.maxStreak,
-    lastCompletionDate: lastCompletionDate.present
-        ? lastCompletionDate.value
-        : this.lastCompletionDate,
-    graceUsedDate: graceUsedDate.present
-        ? graceUsedDate.value
-        : this.graceUsedDate,
-    gracePeriodDays: gracePeriodDays ?? this.gracePeriodDays,
-  );
-  Streak copyWithCompanion(StreaksCompanion data) {
-    return Streak(
-      id: data.id.present ? data.id.value : this.id,
-      profileId: data.profileId.present ? data.profileId.value : this.profileId,
-      currentStreak: data.currentStreak.present
-          ? data.currentStreak.value
-          : this.currentStreak,
-      maxStreak: data.maxStreak.present ? data.maxStreak.value : this.maxStreak,
-      lastCompletionDate: data.lastCompletionDate.present
-          ? data.lastCompletionDate.value
-          : this.lastCompletionDate,
-      graceUsedDate: data.graceUsedDate.present
-          ? data.graceUsedDate.value
-          : this.graceUsedDate,
-      gracePeriodDays: data.gracePeriodDays.present
-          ? data.gracePeriodDays.value
-          : this.gracePeriodDays,
-    );
-  }
-
-  @override
-  String toString() {
-    return (StringBuffer('Streak(')
-          ..write('id: $id, ')
-          ..write('profileId: $profileId, ')
-          ..write('currentStreak: $currentStreak, ')
-          ..write('maxStreak: $maxStreak, ')
-          ..write('lastCompletionDate: $lastCompletionDate, ')
-          ..write('graceUsedDate: $graceUsedDate, ')
-          ..write('gracePeriodDays: $gracePeriodDays')
-          ..write(')'))
-        .toString();
-  }
-
-  @override
-  int get hashCode => Object.hash(
-    id,
-    profileId,
-    currentStreak,
-    maxStreak,
-    lastCompletionDate,
-    graceUsedDate,
-    gracePeriodDays,
-  );
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      (other is Streak &&
-          other.id == this.id &&
-          other.profileId == this.profileId &&
-          other.currentStreak == this.currentStreak &&
-          other.maxStreak == this.maxStreak &&
-          other.lastCompletionDate == this.lastCompletionDate &&
-          other.graceUsedDate == this.graceUsedDate &&
-          other.gracePeriodDays == this.gracePeriodDays);
-}
-
-class StreaksCompanion extends UpdateCompanion<Streak> {
-  final Value<int> id;
-  final Value<int> profileId;
-  final Value<int> currentStreak;
-  final Value<int> maxStreak;
-  final Value<DateTime?> lastCompletionDate;
-  final Value<DateTime?> graceUsedDate;
-  final Value<int> gracePeriodDays;
-  const StreaksCompanion({
-    this.id = const Value.absent(),
-    this.profileId = const Value.absent(),
-    this.currentStreak = const Value.absent(),
-    this.maxStreak = const Value.absent(),
-    this.lastCompletionDate = const Value.absent(),
-    this.graceUsedDate = const Value.absent(),
-    this.gracePeriodDays = const Value.absent(),
-  });
-  StreaksCompanion.insert({
-    this.id = const Value.absent(),
-    required int profileId,
-    this.currentStreak = const Value.absent(),
-    this.maxStreak = const Value.absent(),
-    this.lastCompletionDate = const Value.absent(),
-    this.graceUsedDate = const Value.absent(),
-    this.gracePeriodDays = const Value.absent(),
-  }) : profileId = Value(profileId);
-  static Insertable<Streak> custom({
-    Expression<int>? id,
-    Expression<int>? profileId,
-    Expression<int>? currentStreak,
-    Expression<int>? maxStreak,
-    Expression<DateTime>? lastCompletionDate,
-    Expression<DateTime>? graceUsedDate,
-    Expression<int>? gracePeriodDays,
-  }) {
-    return RawValuesInsertable({
-      if (id != null) 'id': id,
-      if (profileId != null) 'profile_id': profileId,
-      if (currentStreak != null) 'current_streak': currentStreak,
-      if (maxStreak != null) 'max_streak': maxStreak,
-      if (lastCompletionDate != null)
-        'last_completion_date': lastCompletionDate,
-      if (graceUsedDate != null) 'grace_used_date': graceUsedDate,
-      if (gracePeriodDays != null) 'grace_period_days': gracePeriodDays,
-    });
-  }
-
-  StreaksCompanion copyWith({
-    Value<int>? id,
-    Value<int>? profileId,
-    Value<int>? currentStreak,
-    Value<int>? maxStreak,
-    Value<DateTime?>? lastCompletionDate,
-    Value<DateTime?>? graceUsedDate,
-    Value<int>? gracePeriodDays,
-  }) {
-    return StreaksCompanion(
-      id: id ?? this.id,
-      profileId: profileId ?? this.profileId,
-      currentStreak: currentStreak ?? this.currentStreak,
-      maxStreak: maxStreak ?? this.maxStreak,
-      lastCompletionDate: lastCompletionDate ?? this.lastCompletionDate,
-      graceUsedDate: graceUsedDate ?? this.graceUsedDate,
-      gracePeriodDays: gracePeriodDays ?? this.gracePeriodDays,
-    );
-  }
-
-  @override
-  Map<String, Expression> toColumns(bool nullToAbsent) {
-    final map = <String, Expression>{};
-    if (id.present) {
-      map['id'] = Variable<int>(id.value);
-    }
-    if (profileId.present) {
-      map['profile_id'] = Variable<int>(profileId.value);
-    }
-    if (currentStreak.present) {
-      map['current_streak'] = Variable<int>(currentStreak.value);
-    }
-    if (maxStreak.present) {
-      map['max_streak'] = Variable<int>(maxStreak.value);
-    }
-    if (lastCompletionDate.present) {
-      map['last_completion_date'] = Variable<DateTime>(
-        lastCompletionDate.value,
-      );
-    }
-    if (graceUsedDate.present) {
-      map['grace_used_date'] = Variable<DateTime>(graceUsedDate.value);
-    }
-    if (gracePeriodDays.present) {
-      map['grace_period_days'] = Variable<int>(gracePeriodDays.value);
-    }
-    return map;
-  }
-
-  @override
-  String toString() {
-    return (StringBuffer('StreaksCompanion(')
-          ..write('id: $id, ')
-          ..write('profileId: $profileId, ')
-          ..write('currentStreak: $currentStreak, ')
-          ..write('maxStreak: $maxStreak, ')
-          ..write('lastCompletionDate: $lastCompletionDate, ')
-          ..write('graceUsedDate: $graceUsedDate, ')
-          ..write('gracePeriodDays: $gracePeriodDays')
           ..write(')'))
         .toString();
   }
@@ -10222,481 +8840,6 @@ class StreakEventsCompanion extends UpdateCompanion<StreakEvent> {
           ..write('eventTimestamp: $eventTimestamp, ')
           ..write('clientDeviceId: $clientDeviceId, ')
           ..write('createdAt: $createdAt')
-          ..write(')'))
-        .toString();
-  }
-}
-
-class $SyncQueueTable extends SyncQueue
-    with TableInfo<$SyncQueueTable, SyncQueueData> {
-  @override
-  final GeneratedDatabase attachedDatabase;
-  final String? _alias;
-  $SyncQueueTable(this.attachedDatabase, [this._alias]);
-  static const VerificationMeta _idMeta = const VerificationMeta('id');
-  @override
-  late final GeneratedColumn<int> id = GeneratedColumn<int>(
-    'id',
-    aliasedName,
-    false,
-    hasAutoIncrement: true,
-    type: DriftSqlType.int,
-    requiredDuringInsert: false,
-    defaultConstraints: GeneratedColumn.constraintIsAlways(
-      'PRIMARY KEY AUTOINCREMENT',
-    ),
-  );
-  static const VerificationMeta _operationTypeMeta = const VerificationMeta(
-    'operationType',
-  );
-  @override
-  late final GeneratedColumn<String> operationType = GeneratedColumn<String>(
-    'operation_type',
-    aliasedName,
-    false,
-    type: DriftSqlType.string,
-    requiredDuringInsert: true,
-  );
-  static const VerificationMeta _payloadMeta = const VerificationMeta(
-    'payload',
-  );
-  @override
-  late final GeneratedColumn<String> payload = GeneratedColumn<String>(
-    'payload',
-    aliasedName,
-    false,
-    type: DriftSqlType.string,
-    requiredDuringInsert: true,
-  );
-  static const VerificationMeta _queuedAtMeta = const VerificationMeta(
-    'queuedAt',
-  );
-  @override
-  late final GeneratedColumn<DateTime> queuedAt = GeneratedColumn<DateTime>(
-    'queued_at',
-    aliasedName,
-    false,
-    type: DriftSqlType.dateTime,
-    requiredDuringInsert: true,
-  );
-  static const VerificationMeta _retryCountMeta = const VerificationMeta(
-    'retryCount',
-  );
-  @override
-  late final GeneratedColumn<int> retryCount = GeneratedColumn<int>(
-    'retry_count',
-    aliasedName,
-    false,
-    type: DriftSqlType.int,
-    requiredDuringInsert: false,
-    defaultValue: const Constant<int>(0),
-  );
-  static const VerificationMeta _lastErrorMeta = const VerificationMeta(
-    'lastError',
-  );
-  @override
-  late final GeneratedColumn<String> lastError = GeneratedColumn<String>(
-    'last_error',
-    aliasedName,
-    true,
-    type: DriftSqlType.string,
-    requiredDuringInsert: false,
-  );
-  static const VerificationMeta _entityKeyMeta = const VerificationMeta(
-    'entityKey',
-  );
-  @override
-  late final GeneratedColumn<String> entityKey = GeneratedColumn<String>(
-    'entity_key',
-    aliasedName,
-    true,
-    type: DriftSqlType.string,
-    requiredDuringInsert: false,
-  );
-  @override
-  List<GeneratedColumn> get $columns => [
-    id,
-    operationType,
-    payload,
-    queuedAt,
-    retryCount,
-    lastError,
-    entityKey,
-  ];
-  @override
-  String get aliasedName => _alias ?? actualTableName;
-  @override
-  String get actualTableName => $name;
-  static const String $name = 'sync_queue';
-  @override
-  VerificationContext validateIntegrity(
-    Insertable<SyncQueueData> instance, {
-    bool isInserting = false,
-  }) {
-    final context = VerificationContext();
-    final data = instance.toColumns(true);
-    if (data.containsKey('id')) {
-      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
-    }
-    if (data.containsKey('operation_type')) {
-      context.handle(
-        _operationTypeMeta,
-        operationType.isAcceptableOrUnknown(
-          data['operation_type']!,
-          _operationTypeMeta,
-        ),
-      );
-    } else if (isInserting) {
-      context.missing(_operationTypeMeta);
-    }
-    if (data.containsKey('payload')) {
-      context.handle(
-        _payloadMeta,
-        payload.isAcceptableOrUnknown(data['payload']!, _payloadMeta),
-      );
-    } else if (isInserting) {
-      context.missing(_payloadMeta);
-    }
-    if (data.containsKey('queued_at')) {
-      context.handle(
-        _queuedAtMeta,
-        queuedAt.isAcceptableOrUnknown(data['queued_at']!, _queuedAtMeta),
-      );
-    } else if (isInserting) {
-      context.missing(_queuedAtMeta);
-    }
-    if (data.containsKey('retry_count')) {
-      context.handle(
-        _retryCountMeta,
-        retryCount.isAcceptableOrUnknown(data['retry_count']!, _retryCountMeta),
-      );
-    }
-    if (data.containsKey('last_error')) {
-      context.handle(
-        _lastErrorMeta,
-        lastError.isAcceptableOrUnknown(data['last_error']!, _lastErrorMeta),
-      );
-    }
-    if (data.containsKey('entity_key')) {
-      context.handle(
-        _entityKeyMeta,
-        entityKey.isAcceptableOrUnknown(data['entity_key']!, _entityKeyMeta),
-      );
-    }
-    return context;
-  }
-
-  @override
-  Set<GeneratedColumn> get $primaryKey => {id};
-  @override
-  SyncQueueData map(Map<String, dynamic> data, {String? tablePrefix}) {
-    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
-    return SyncQueueData(
-      id: attachedDatabase.typeMapping.read(
-        DriftSqlType.int,
-        data['${effectivePrefix}id'],
-      )!,
-      operationType: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}operation_type'],
-      )!,
-      payload: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}payload'],
-      )!,
-      queuedAt: attachedDatabase.typeMapping.read(
-        DriftSqlType.dateTime,
-        data['${effectivePrefix}queued_at'],
-      )!,
-      retryCount: attachedDatabase.typeMapping.read(
-        DriftSqlType.int,
-        data['${effectivePrefix}retry_count'],
-      )!,
-      lastError: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}last_error'],
-      ),
-      entityKey: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}entity_key'],
-      ),
-    );
-  }
-
-  @override
-  $SyncQueueTable createAlias(String alias) {
-    return $SyncQueueTable(attachedDatabase, alias);
-  }
-}
-
-class SyncQueueData extends DataClass implements Insertable<SyncQueueData> {
-  final int id;
-
-  /// Type of operation: 'completion', 'bookmark', 'settings', 'streak', 'profile'
-  final String operationType;
-
-  /// JSON-encoded payload of the operation
-  final String payload;
-
-  /// When the operation was queued (UTC)
-  final DateTime queuedAt;
-
-  /// Number of retry attempts
-  final int retryCount;
-
-  /// Last error message (if any)
-  final String? lastError;
-
-  /// I-5: Stable entity key for dedup (e.g. "track_config:42", "profile:1").
-  /// Null for operations that do not require dedup (legacy callers, one-off events).
-  /// UNIQUE — INSERT OR REPLACE on this key keeps only the latest payload.
-  final String? entityKey;
-  const SyncQueueData({
-    required this.id,
-    required this.operationType,
-    required this.payload,
-    required this.queuedAt,
-    required this.retryCount,
-    this.lastError,
-    this.entityKey,
-  });
-  @override
-  Map<String, Expression> toColumns(bool nullToAbsent) {
-    final map = <String, Expression>{};
-    map['id'] = Variable<int>(id);
-    map['operation_type'] = Variable<String>(operationType);
-    map['payload'] = Variable<String>(payload);
-    map['queued_at'] = Variable<DateTime>(queuedAt);
-    map['retry_count'] = Variable<int>(retryCount);
-    if (!nullToAbsent || lastError != null) {
-      map['last_error'] = Variable<String>(lastError);
-    }
-    if (!nullToAbsent || entityKey != null) {
-      map['entity_key'] = Variable<String>(entityKey);
-    }
-    return map;
-  }
-
-  SyncQueueCompanion toCompanion(bool nullToAbsent) {
-    return SyncQueueCompanion(
-      id: Value(id),
-      operationType: Value(operationType),
-      payload: Value(payload),
-      queuedAt: Value(queuedAt),
-      retryCount: Value(retryCount),
-      lastError: lastError == null && nullToAbsent
-          ? const Value.absent()
-          : Value(lastError),
-      entityKey: entityKey == null && nullToAbsent
-          ? const Value.absent()
-          : Value(entityKey),
-    );
-  }
-
-  factory SyncQueueData.fromJson(
-    Map<String, dynamic> json, {
-    ValueSerializer? serializer,
-  }) {
-    serializer ??= driftRuntimeOptions.defaultSerializer;
-    return SyncQueueData(
-      id: serializer.fromJson<int>(json['id']),
-      operationType: serializer.fromJson<String>(json['operationType']),
-      payload: serializer.fromJson<String>(json['payload']),
-      queuedAt: serializer.fromJson<DateTime>(json['queuedAt']),
-      retryCount: serializer.fromJson<int>(json['retryCount']),
-      lastError: serializer.fromJson<String?>(json['lastError']),
-      entityKey: serializer.fromJson<String?>(json['entityKey']),
-    );
-  }
-  @override
-  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
-    serializer ??= driftRuntimeOptions.defaultSerializer;
-    return <String, dynamic>{
-      'id': serializer.toJson<int>(id),
-      'operationType': serializer.toJson<String>(operationType),
-      'payload': serializer.toJson<String>(payload),
-      'queuedAt': serializer.toJson<DateTime>(queuedAt),
-      'retryCount': serializer.toJson<int>(retryCount),
-      'lastError': serializer.toJson<String?>(lastError),
-      'entityKey': serializer.toJson<String?>(entityKey),
-    };
-  }
-
-  SyncQueueData copyWith({
-    int? id,
-    String? operationType,
-    String? payload,
-    DateTime? queuedAt,
-    int? retryCount,
-    Value<String?> lastError = const Value.absent(),
-    Value<String?> entityKey = const Value.absent(),
-  }) => SyncQueueData(
-    id: id ?? this.id,
-    operationType: operationType ?? this.operationType,
-    payload: payload ?? this.payload,
-    queuedAt: queuedAt ?? this.queuedAt,
-    retryCount: retryCount ?? this.retryCount,
-    lastError: lastError.present ? lastError.value : this.lastError,
-    entityKey: entityKey.present ? entityKey.value : this.entityKey,
-  );
-  SyncQueueData copyWithCompanion(SyncQueueCompanion data) {
-    return SyncQueueData(
-      id: data.id.present ? data.id.value : this.id,
-      operationType: data.operationType.present
-          ? data.operationType.value
-          : this.operationType,
-      payload: data.payload.present ? data.payload.value : this.payload,
-      queuedAt: data.queuedAt.present ? data.queuedAt.value : this.queuedAt,
-      retryCount: data.retryCount.present
-          ? data.retryCount.value
-          : this.retryCount,
-      lastError: data.lastError.present ? data.lastError.value : this.lastError,
-      entityKey: data.entityKey.present ? data.entityKey.value : this.entityKey,
-    );
-  }
-
-  @override
-  String toString() {
-    return (StringBuffer('SyncQueueData(')
-          ..write('id: $id, ')
-          ..write('operationType: $operationType, ')
-          ..write('payload: $payload, ')
-          ..write('queuedAt: $queuedAt, ')
-          ..write('retryCount: $retryCount, ')
-          ..write('lastError: $lastError, ')
-          ..write('entityKey: $entityKey')
-          ..write(')'))
-        .toString();
-  }
-
-  @override
-  int get hashCode => Object.hash(
-    id,
-    operationType,
-    payload,
-    queuedAt,
-    retryCount,
-    lastError,
-    entityKey,
-  );
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      (other is SyncQueueData &&
-          other.id == this.id &&
-          other.operationType == this.operationType &&
-          other.payload == this.payload &&
-          other.queuedAt == this.queuedAt &&
-          other.retryCount == this.retryCount &&
-          other.lastError == this.lastError &&
-          other.entityKey == this.entityKey);
-}
-
-class SyncQueueCompanion extends UpdateCompanion<SyncQueueData> {
-  final Value<int> id;
-  final Value<String> operationType;
-  final Value<String> payload;
-  final Value<DateTime> queuedAt;
-  final Value<int> retryCount;
-  final Value<String?> lastError;
-  final Value<String?> entityKey;
-  const SyncQueueCompanion({
-    this.id = const Value.absent(),
-    this.operationType = const Value.absent(),
-    this.payload = const Value.absent(),
-    this.queuedAt = const Value.absent(),
-    this.retryCount = const Value.absent(),
-    this.lastError = const Value.absent(),
-    this.entityKey = const Value.absent(),
-  });
-  SyncQueueCompanion.insert({
-    this.id = const Value.absent(),
-    required String operationType,
-    required String payload,
-    required DateTime queuedAt,
-    this.retryCount = const Value.absent(),
-    this.lastError = const Value.absent(),
-    this.entityKey = const Value.absent(),
-  }) : operationType = Value(operationType),
-       payload = Value(payload),
-       queuedAt = Value(queuedAt);
-  static Insertable<SyncQueueData> custom({
-    Expression<int>? id,
-    Expression<String>? operationType,
-    Expression<String>? payload,
-    Expression<DateTime>? queuedAt,
-    Expression<int>? retryCount,
-    Expression<String>? lastError,
-    Expression<String>? entityKey,
-  }) {
-    return RawValuesInsertable({
-      if (id != null) 'id': id,
-      if (operationType != null) 'operation_type': operationType,
-      if (payload != null) 'payload': payload,
-      if (queuedAt != null) 'queued_at': queuedAt,
-      if (retryCount != null) 'retry_count': retryCount,
-      if (lastError != null) 'last_error': lastError,
-      if (entityKey != null) 'entity_key': entityKey,
-    });
-  }
-
-  SyncQueueCompanion copyWith({
-    Value<int>? id,
-    Value<String>? operationType,
-    Value<String>? payload,
-    Value<DateTime>? queuedAt,
-    Value<int>? retryCount,
-    Value<String?>? lastError,
-    Value<String?>? entityKey,
-  }) {
-    return SyncQueueCompanion(
-      id: id ?? this.id,
-      operationType: operationType ?? this.operationType,
-      payload: payload ?? this.payload,
-      queuedAt: queuedAt ?? this.queuedAt,
-      retryCount: retryCount ?? this.retryCount,
-      lastError: lastError ?? this.lastError,
-      entityKey: entityKey ?? this.entityKey,
-    );
-  }
-
-  @override
-  Map<String, Expression> toColumns(bool nullToAbsent) {
-    final map = <String, Expression>{};
-    if (id.present) {
-      map['id'] = Variable<int>(id.value);
-    }
-    if (operationType.present) {
-      map['operation_type'] = Variable<String>(operationType.value);
-    }
-    if (payload.present) {
-      map['payload'] = Variable<String>(payload.value);
-    }
-    if (queuedAt.present) {
-      map['queued_at'] = Variable<DateTime>(queuedAt.value);
-    }
-    if (retryCount.present) {
-      map['retry_count'] = Variable<int>(retryCount.value);
-    }
-    if (lastError.present) {
-      map['last_error'] = Variable<String>(lastError.value);
-    }
-    if (entityKey.present) {
-      map['entity_key'] = Variable<String>(entityKey.value);
-    }
-    return map;
-  }
-
-  @override
-  String toString() {
-    return (StringBuffer('SyncQueueCompanion(')
-          ..write('id: $id, ')
-          ..write('operationType: $operationType, ')
-          ..write('payload: $payload, ')
-          ..write('queuedAt: $queuedAt, ')
-          ..write('retryCount: $retryCount, ')
-          ..write('lastError: $lastError, ')
-          ..write('entityKey: $entityKey')
           ..write(')'))
         .toString();
   }
@@ -12179,6 +10322,530 @@ class SacredWindowEntriesCompanion extends UpdateCompanion<SacredWindowEntry> {
   }
 }
 
+class $PriorCompletionImportsTable extends PriorCompletionImports
+    with TableInfo<$PriorCompletionImportsTable, PriorCompletionImport> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $PriorCompletionImportsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _profileIdMeta = const VerificationMeta(
+    'profileId',
+  );
+  @override
+  late final GeneratedColumn<int> profileId = GeneratedColumn<int>(
+    'profile_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES learner_profiles (id) ON DELETE CASCADE',
+    ),
+  );
+  static const VerificationMeta _curriculumIdMeta = const VerificationMeta(
+    'curriculumId',
+  );
+  @override
+  late final GeneratedColumn<String> curriculumId = GeneratedColumn<String>(
+    'curriculum_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _sefariaRefMeta = const VerificationMeta(
+    'sefariaRef',
+  );
+  @override
+  late final GeneratedColumn<String> sefariaRef = GeneratedColumn<String>(
+    'sefaria_ref',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _stageIdMeta = const VerificationMeta(
+    'stageId',
+  );
+  @override
+  late final GeneratedColumn<int> stageId = GeneratedColumn<int>(
+    'stage_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _trackTypeMeta = const VerificationMeta(
+    'trackType',
+  );
+  @override
+  late final GeneratedColumn<String> trackType = GeneratedColumn<String>(
+    'track_type',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _sourceMeta = const VerificationMeta('source');
+  @override
+  late final GeneratedColumn<String> source = GeneratedColumn<String>(
+    'source',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _importedAtMeta = const VerificationMeta(
+    'importedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> importedAt = GeneratedColumn<DateTime>(
+    'imported_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    defaultValue: currentDateAndTime,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    profileId,
+    curriculumId,
+    sefariaRef,
+    stageId,
+    trackType,
+    source,
+    importedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'prior_completion_imports';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<PriorCompletionImport> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('profile_id')) {
+      context.handle(
+        _profileIdMeta,
+        profileId.isAcceptableOrUnknown(data['profile_id']!, _profileIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_profileIdMeta);
+    }
+    if (data.containsKey('curriculum_id')) {
+      context.handle(
+        _curriculumIdMeta,
+        curriculumId.isAcceptableOrUnknown(
+          data['curriculum_id']!,
+          _curriculumIdMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_curriculumIdMeta);
+    }
+    if (data.containsKey('sefaria_ref')) {
+      context.handle(
+        _sefariaRefMeta,
+        sefariaRef.isAcceptableOrUnknown(data['sefaria_ref']!, _sefariaRefMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_sefariaRefMeta);
+    }
+    if (data.containsKey('stage_id')) {
+      context.handle(
+        _stageIdMeta,
+        stageId.isAcceptableOrUnknown(data['stage_id']!, _stageIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_stageIdMeta);
+    }
+    if (data.containsKey('track_type')) {
+      context.handle(
+        _trackTypeMeta,
+        trackType.isAcceptableOrUnknown(data['track_type']!, _trackTypeMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_trackTypeMeta);
+    }
+    if (data.containsKey('source')) {
+      context.handle(
+        _sourceMeta,
+        source.isAcceptableOrUnknown(data['source']!, _sourceMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_sourceMeta);
+    }
+    if (data.containsKey('imported_at')) {
+      context.handle(
+        _importedAtMeta,
+        importedAt.isAcceptableOrUnknown(data['imported_at']!, _importedAtMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  PriorCompletionImport map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return PriorCompletionImport(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      profileId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}profile_id'],
+      )!,
+      curriculumId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}curriculum_id'],
+      )!,
+      sefariaRef: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}sefaria_ref'],
+      )!,
+      stageId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}stage_id'],
+      )!,
+      trackType: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}track_type'],
+      )!,
+      source: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}source'],
+      )!,
+      importedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}imported_at'],
+      )!,
+    );
+  }
+
+  @override
+  $PriorCompletionImportsTable createAlias(String alias) {
+    return $PriorCompletionImportsTable(attachedDatabase, alias);
+  }
+}
+
+class PriorCompletionImport extends DataClass
+    implements Insertable<PriorCompletionImport> {
+  final int id;
+
+  /// FK → learner_profiles(id) CASCADE DELETE — mirrors the FK on
+  /// completion_events so profile deletion cascades cleanly.
+  final int profileId;
+  final String curriculumId;
+  final String sefariaRef;
+  final int stageId;
+  final String trackType;
+
+  /// The [CompletionSource] that produced this import row.
+  ///
+  /// Stored as the enum name string so SQL queries can distinguish
+  /// [CompletionSource.bulkInTrack] from [CompletionSource.lifetimeOnly]
+  /// without an extra join.  Only `bulkInTrack` and `lifetimeOnly` are valid
+  /// values; [CompletionSource.live] completions never enter this table.
+  final String source;
+  final DateTime importedAt;
+  const PriorCompletionImport({
+    required this.id,
+    required this.profileId,
+    required this.curriculumId,
+    required this.sefariaRef,
+    required this.stageId,
+    required this.trackType,
+    required this.source,
+    required this.importedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['profile_id'] = Variable<int>(profileId);
+    map['curriculum_id'] = Variable<String>(curriculumId);
+    map['sefaria_ref'] = Variable<String>(sefariaRef);
+    map['stage_id'] = Variable<int>(stageId);
+    map['track_type'] = Variable<String>(trackType);
+    map['source'] = Variable<String>(source);
+    map['imported_at'] = Variable<DateTime>(importedAt);
+    return map;
+  }
+
+  PriorCompletionImportsCompanion toCompanion(bool nullToAbsent) {
+    return PriorCompletionImportsCompanion(
+      id: Value(id),
+      profileId: Value(profileId),
+      curriculumId: Value(curriculumId),
+      sefariaRef: Value(sefariaRef),
+      stageId: Value(stageId),
+      trackType: Value(trackType),
+      source: Value(source),
+      importedAt: Value(importedAt),
+    );
+  }
+
+  factory PriorCompletionImport.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return PriorCompletionImport(
+      id: serializer.fromJson<int>(json['id']),
+      profileId: serializer.fromJson<int>(json['profileId']),
+      curriculumId: serializer.fromJson<String>(json['curriculumId']),
+      sefariaRef: serializer.fromJson<String>(json['sefariaRef']),
+      stageId: serializer.fromJson<int>(json['stageId']),
+      trackType: serializer.fromJson<String>(json['trackType']),
+      source: serializer.fromJson<String>(json['source']),
+      importedAt: serializer.fromJson<DateTime>(json['importedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'profileId': serializer.toJson<int>(profileId),
+      'curriculumId': serializer.toJson<String>(curriculumId),
+      'sefariaRef': serializer.toJson<String>(sefariaRef),
+      'stageId': serializer.toJson<int>(stageId),
+      'trackType': serializer.toJson<String>(trackType),
+      'source': serializer.toJson<String>(source),
+      'importedAt': serializer.toJson<DateTime>(importedAt),
+    };
+  }
+
+  PriorCompletionImport copyWith({
+    int? id,
+    int? profileId,
+    String? curriculumId,
+    String? sefariaRef,
+    int? stageId,
+    String? trackType,
+    String? source,
+    DateTime? importedAt,
+  }) => PriorCompletionImport(
+    id: id ?? this.id,
+    profileId: profileId ?? this.profileId,
+    curriculumId: curriculumId ?? this.curriculumId,
+    sefariaRef: sefariaRef ?? this.sefariaRef,
+    stageId: stageId ?? this.stageId,
+    trackType: trackType ?? this.trackType,
+    source: source ?? this.source,
+    importedAt: importedAt ?? this.importedAt,
+  );
+  PriorCompletionImport copyWithCompanion(
+    PriorCompletionImportsCompanion data,
+  ) {
+    return PriorCompletionImport(
+      id: data.id.present ? data.id.value : this.id,
+      profileId: data.profileId.present ? data.profileId.value : this.profileId,
+      curriculumId: data.curriculumId.present
+          ? data.curriculumId.value
+          : this.curriculumId,
+      sefariaRef: data.sefariaRef.present
+          ? data.sefariaRef.value
+          : this.sefariaRef,
+      stageId: data.stageId.present ? data.stageId.value : this.stageId,
+      trackType: data.trackType.present ? data.trackType.value : this.trackType,
+      source: data.source.present ? data.source.value : this.source,
+      importedAt: data.importedAt.present
+          ? data.importedAt.value
+          : this.importedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('PriorCompletionImport(')
+          ..write('id: $id, ')
+          ..write('profileId: $profileId, ')
+          ..write('curriculumId: $curriculumId, ')
+          ..write('sefariaRef: $sefariaRef, ')
+          ..write('stageId: $stageId, ')
+          ..write('trackType: $trackType, ')
+          ..write('source: $source, ')
+          ..write('importedAt: $importedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    profileId,
+    curriculumId,
+    sefariaRef,
+    stageId,
+    trackType,
+    source,
+    importedAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is PriorCompletionImport &&
+          other.id == this.id &&
+          other.profileId == this.profileId &&
+          other.curriculumId == this.curriculumId &&
+          other.sefariaRef == this.sefariaRef &&
+          other.stageId == this.stageId &&
+          other.trackType == this.trackType &&
+          other.source == this.source &&
+          other.importedAt == this.importedAt);
+}
+
+class PriorCompletionImportsCompanion
+    extends UpdateCompanion<PriorCompletionImport> {
+  final Value<int> id;
+  final Value<int> profileId;
+  final Value<String> curriculumId;
+  final Value<String> sefariaRef;
+  final Value<int> stageId;
+  final Value<String> trackType;
+  final Value<String> source;
+  final Value<DateTime> importedAt;
+  const PriorCompletionImportsCompanion({
+    this.id = const Value.absent(),
+    this.profileId = const Value.absent(),
+    this.curriculumId = const Value.absent(),
+    this.sefariaRef = const Value.absent(),
+    this.stageId = const Value.absent(),
+    this.trackType = const Value.absent(),
+    this.source = const Value.absent(),
+    this.importedAt = const Value.absent(),
+  });
+  PriorCompletionImportsCompanion.insert({
+    this.id = const Value.absent(),
+    required int profileId,
+    required String curriculumId,
+    required String sefariaRef,
+    required int stageId,
+    required String trackType,
+    required String source,
+    this.importedAt = const Value.absent(),
+  }) : profileId = Value(profileId),
+       curriculumId = Value(curriculumId),
+       sefariaRef = Value(sefariaRef),
+       stageId = Value(stageId),
+       trackType = Value(trackType),
+       source = Value(source);
+  static Insertable<PriorCompletionImport> custom({
+    Expression<int>? id,
+    Expression<int>? profileId,
+    Expression<String>? curriculumId,
+    Expression<String>? sefariaRef,
+    Expression<int>? stageId,
+    Expression<String>? trackType,
+    Expression<String>? source,
+    Expression<DateTime>? importedAt,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (profileId != null) 'profile_id': profileId,
+      if (curriculumId != null) 'curriculum_id': curriculumId,
+      if (sefariaRef != null) 'sefaria_ref': sefariaRef,
+      if (stageId != null) 'stage_id': stageId,
+      if (trackType != null) 'track_type': trackType,
+      if (source != null) 'source': source,
+      if (importedAt != null) 'imported_at': importedAt,
+    });
+  }
+
+  PriorCompletionImportsCompanion copyWith({
+    Value<int>? id,
+    Value<int>? profileId,
+    Value<String>? curriculumId,
+    Value<String>? sefariaRef,
+    Value<int>? stageId,
+    Value<String>? trackType,
+    Value<String>? source,
+    Value<DateTime>? importedAt,
+  }) {
+    return PriorCompletionImportsCompanion(
+      id: id ?? this.id,
+      profileId: profileId ?? this.profileId,
+      curriculumId: curriculumId ?? this.curriculumId,
+      sefariaRef: sefariaRef ?? this.sefariaRef,
+      stageId: stageId ?? this.stageId,
+      trackType: trackType ?? this.trackType,
+      source: source ?? this.source,
+      importedAt: importedAt ?? this.importedAt,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (profileId.present) {
+      map['profile_id'] = Variable<int>(profileId.value);
+    }
+    if (curriculumId.present) {
+      map['curriculum_id'] = Variable<String>(curriculumId.value);
+    }
+    if (sefariaRef.present) {
+      map['sefaria_ref'] = Variable<String>(sefariaRef.value);
+    }
+    if (stageId.present) {
+      map['stage_id'] = Variable<int>(stageId.value);
+    }
+    if (trackType.present) {
+      map['track_type'] = Variable<String>(trackType.value);
+    }
+    if (source.present) {
+      map['source'] = Variable<String>(source.value);
+    }
+    if (importedAt.present) {
+      map['imported_at'] = Variable<DateTime>(importedAt.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('PriorCompletionImportsCompanion(')
+          ..write('id: $id, ')
+          ..write('profileId: $profileId, ')
+          ..write('curriculumId: $curriculumId, ')
+          ..write('sefariaRef: $sefariaRef, ')
+          ..write('stageId: $stageId, ')
+          ..write('trackType: $trackType, ')
+          ..write('source: $source, ')
+          ..write('importedAt: $importedAt')
+          ..write(')'))
+        .toString();
+  }
+}
+
 class CompletionsViewData extends DataClass {
   final int id;
   final int profileId;
@@ -12468,7 +11135,6 @@ abstract class _$UserDatabase extends GeneratedDatabase {
   late final $StudyDayConfigsTable studyDayConfigs = $StudyDayConfigsTable(
     this,
   );
-  late final $CompletionsTable completions = $CompletionsTable(this);
   late final $CompletionEventsTable completionEvents = $CompletionEventsTable(
     this,
   );
@@ -12479,23 +11145,15 @@ abstract class _$UserDatabase extends GeneratedDatabase {
   late final $TrackLearningOrderTable trackLearningOrder =
       $TrackLearningOrderTable(this);
   late final $GoalsTable goals = $GoalsTable(this);
-  late final $StreaksTable streaks = $StreaksTable(this);
   late final $StreakEventsTable streakEvents = $StreakEventsTable(this);
-  late final $SyncQueueTable syncQueue = $SyncQueueTable(this);
   late final $TextDownloadStatusesTable textDownloadStatuses =
       $TextDownloadStatusesTable(this);
   late final $OutboxTable outbox = $OutboxTable(this);
   late final $SacredWindowEntriesTable sacredWindowEntries =
       $SacredWindowEntriesTable(this);
+  late final $PriorCompletionImportsTable priorCompletionImports =
+      $PriorCompletionImportsTable(this);
   late final $CompletionsViewView completionsView = $CompletionsViewView(this);
-  late final Index completionsPidxPidCurCompleted = Index(
-    'completions_pidx_pid_cur_completed',
-    'CREATE INDEX completions_pidx_pid_cur_completed ON completions (profile_id, curriculum_id, completed_at DESC)',
-  );
-  late final Index completionsNaturalKey = Index(
-    'completions_natural_key',
-    'CREATE INDEX completions_natural_key ON completions (profile_id, sefaria_ref, stage_id, track_type)',
-  );
   late final Index completionEventsNaturalKey = Index(
     'completion_events_natural_key',
     'CREATE UNIQUE INDEX completion_events_natural_key ON completion_events (profile_id, sefaria_ref, stage_id, track_type, curriculum_id)',
@@ -12511,10 +11169,6 @@ abstract class _$UserDatabase extends GeneratedDatabase {
   late final Index streakEventsNaturalKey = Index(
     'streak_events_natural_key',
     'CREATE UNIQUE INDEX streak_events_natural_key ON streak_events (profile_id, day_utc, event_type)',
-  );
-  late final Index syncQueueEntityKey = Index(
-    'sync_queue_entity_key',
-    'CREATE UNIQUE INDEX sync_queue_entity_key ON sync_queue (entity_key)',
   );
   late final Index outboxProfileKind = Index(
     'outbox_profile_kind',
@@ -12550,11 +11204,9 @@ abstract class _$UserDatabase extends GeneratedDatabase {
   late final UserProfileDao userProfileDao = UserProfileDao(
     this as UserDatabase,
   );
-  late final StreakDao streakDao = StreakDao(this as UserDatabase);
   late final StreakEventDao streakEventDao = StreakEventDao(
     this as UserDatabase,
   );
-  late final SyncQueueDao syncQueueDao = SyncQueueDao(this as UserDatabase);
   late final TextDownloadStatusDao textDownloadStatusDao =
       TextDownloadStatusDao(this as UserDatabase);
   late final StudyDayConfigDao studyDayConfigDao = StudyDayConfigDao(
@@ -12567,6 +11219,8 @@ abstract class _$UserDatabase extends GeneratedDatabase {
   late final SacredWindowDao sacredWindowDao = SacredWindowDao(
     this as UserDatabase,
   );
+  late final PriorCompletionImportDao priorCompletionImportDao =
+      PriorCompletionImportDao(this as UserDatabase);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -12580,7 +11234,6 @@ abstract class _$UserDatabase extends GeneratedDatabase {
     stageDefinitions,
     pointConfigs,
     studyDayConfigs,
-    completions,
     completionEvents,
     dailyPlans,
     learningLedger,
@@ -12588,37 +11241,40 @@ abstract class _$UserDatabase extends GeneratedDatabase {
     learningOrder,
     trackLearningOrder,
     goals,
-    streaks,
     streakEvents,
-    syncQueue,
     textDownloadStatuses,
     outbox,
     sacredWindowEntries,
+    priorCompletionImports,
     completionsView,
-    completionsPidxPidCurCompleted,
-    completionsNaturalKey,
     completionEventsNaturalKey,
     learningLedgerProfileCreated,
     learningLedgerProfileUlid,
     streakEventsNaturalKey,
-    syncQueueEntityKey,
     outboxProfileKind,
   ];
   @override
   StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules([
     WritePropagation(
       on: TableUpdateQuery.onTableName(
-        'learner_profiles',
+        'accounts',
         limitUpdateKind: UpdateKind.delete,
       ),
-      result: [TableUpdate('stage_definitions', kind: UpdateKind.delete)],
+      result: [TableUpdate('learner_profiles', kind: UpdateKind.delete)],
     ),
     WritePropagation(
       on: TableUpdateQuery.onTableName(
         'learner_profiles',
         limitUpdateKind: UpdateKind.delete,
       ),
-      result: [TableUpdate('completions', kind: UpdateKind.delete)],
+      result: [TableUpdate('curriculum_scopes', kind: UpdateKind.delete)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'learner_profiles',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('stage_definitions', kind: UpdateKind.delete)],
     ),
     WritePropagation(
       on: TableUpdateQuery.onTableName(
@@ -12660,6 +11316,13 @@ abstract class _$UserDatabase extends GeneratedDatabase {
         'learner_profiles',
         limitUpdateKind: UpdateKind.delete,
       ),
+      result: [TableUpdate('learning_order', kind: UpdateKind.delete)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'learner_profiles',
+        limitUpdateKind: UpdateKind.delete,
+      ),
       result: [TableUpdate('goals', kind: UpdateKind.delete)],
     ),
     WritePropagation(
@@ -12668,6 +11331,15 @@ abstract class _$UserDatabase extends GeneratedDatabase {
         limitUpdateKind: UpdateKind.delete,
       ),
       result: [TableUpdate('streak_events', kind: UpdateKind.delete)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'learner_profiles',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [
+        TableUpdate('prior_completion_imports', kind: UpdateKind.delete),
+      ],
     ),
   ]);
 }
@@ -12696,6 +11368,34 @@ typedef $$AccountsTableUpdateCompanionBuilder =
       Value<DateTime> createdAt,
       Value<DateTime> updatedAt,
     });
+
+final class $$AccountsTableReferences
+    extends BaseReferences<_$UserDatabase, $AccountsTable, Account> {
+  $$AccountsTableReferences(super.$_db, super.$_table, super.$_typedResult);
+
+  static MultiTypedResultKey<$LearnerProfilesTable, List<LearnerProfile>>
+  _learnerProfilesRefsTable(_$UserDatabase db) => MultiTypedResultKey.fromTable(
+    db.learnerProfiles,
+    aliasName: $_aliasNameGenerator(
+      db.accounts.id,
+      db.learnerProfiles.accountId,
+    ),
+  );
+
+  $$LearnerProfilesTableProcessedTableManager get learnerProfilesRefs {
+    final manager = $$LearnerProfilesTableTableManager(
+      $_db,
+      $_db.learnerProfiles,
+    ).filter((f) => f.accountId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _learnerProfilesRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+}
 
 class $$AccountsTableFilterComposer
     extends Composer<_$UserDatabase, $AccountsTable> {
@@ -12750,6 +11450,31 @@ class $$AccountsTableFilterComposer
     column: $table.updatedAt,
     builder: (column) => ColumnFilters(column),
   );
+
+  Expression<bool> learnerProfilesRefs(
+    Expression<bool> Function($$LearnerProfilesTableFilterComposer f) f,
+  ) {
+    final $$LearnerProfilesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.learnerProfiles,
+      getReferencedColumn: (t) => t.accountId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$LearnerProfilesTableFilterComposer(
+            $db: $db,
+            $table: $db.learnerProfiles,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
 }
 
 class $$AccountsTableOrderingComposer
@@ -12848,6 +11573,31 @@ class $$AccountsTableAnnotationComposer
 
   GeneratedColumn<DateTime> get updatedAt =>
       $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  Expression<T> learnerProfilesRefs<T extends Object>(
+    Expression<T> Function($$LearnerProfilesTableAnnotationComposer a) f,
+  ) {
+    final $$LearnerProfilesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.learnerProfiles,
+      getReferencedColumn: (t) => t.accountId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$LearnerProfilesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.learnerProfiles,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
 }
 
 class $$AccountsTableTableManager
@@ -12861,9 +11611,9 @@ class $$AccountsTableTableManager
           $$AccountsTableAnnotationComposer,
           $$AccountsTableCreateCompanionBuilder,
           $$AccountsTableUpdateCompanionBuilder,
-          (Account, BaseReferences<_$UserDatabase, $AccountsTable, Account>),
+          (Account, $$AccountsTableReferences),
           Account,
-          PrefetchHooks Function()
+          PrefetchHooks Function({bool learnerProfilesRefs})
         > {
   $$AccountsTableTableManager(_$UserDatabase db, $AccountsTable table)
     : super(
@@ -12921,9 +11671,44 @@ class $$AccountsTableTableManager
                 updatedAt: updatedAt,
               ),
           withReferenceMapper: (p0) => p0
-              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$AccountsTableReferences(db, table, e),
+                ),
+              )
               .toList(),
-          prefetchHooksCallback: null,
+          prefetchHooksCallback: ({learnerProfilesRefs = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [
+                if (learnerProfilesRefs) db.learnerProfiles,
+              ],
+              addJoins: null,
+              getPrefetchedDataCallback: (items) async {
+                return [
+                  if (learnerProfilesRefs)
+                    await $_getPrefetchedData<
+                      Account,
+                      $AccountsTable,
+                      LearnerProfile
+                    >(
+                      currentTable: table,
+                      referencedTable: $$AccountsTableReferences
+                          ._learnerProfilesRefsTable(db),
+                      managerFromTypedResult: (p0) => $$AccountsTableReferences(
+                        db,
+                        table,
+                        p0,
+                      ).learnerProfilesRefs,
+                      referencedItemsForCurrentItem: (item, referencedItems) =>
+                          referencedItems.where((e) => e.accountId == item.id),
+                      typedResults: items,
+                    ),
+                ];
+              },
+            );
+          },
         ),
       );
 }
@@ -12938,9 +11723,9 @@ typedef $$AccountsTableProcessedTableManager =
       $$AccountsTableAnnotationComposer,
       $$AccountsTableCreateCompanionBuilder,
       $$AccountsTableUpdateCompanionBuilder,
-      (Account, BaseReferences<_$UserDatabase, $AccountsTable, Account>),
+      (Account, $$AccountsTableReferences),
       Account,
-      PrefetchHooks Function()
+      PrefetchHooks Function({bool learnerProfilesRefs})
     >;
 typedef $$LearnerProfilesTableCreateCompanionBuilder =
     LearnerProfilesCompanion Function({
@@ -12972,6 +11757,49 @@ final class $$LearnerProfilesTableReferences
     super.$_typedResult,
   );
 
+  static $AccountsTable _accountIdTable(_$UserDatabase db) =>
+      db.accounts.createAlias(
+        $_aliasNameGenerator(db.learnerProfiles.accountId, db.accounts.id),
+      );
+
+  $$AccountsTableProcessedTableManager get accountId {
+    final $_column = $_itemColumn<int>('account_id')!;
+
+    final manager = $$AccountsTableTableManager(
+      $_db,
+      $_db.accounts,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_accountIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static MultiTypedResultKey<$CurriculumScopesTable, List<CurriculumScope>>
+  _curriculumScopesRefsTable(_$UserDatabase db) =>
+      MultiTypedResultKey.fromTable(
+        db.curriculumScopes,
+        aliasName: $_aliasNameGenerator(
+          db.learnerProfiles.id,
+          db.curriculumScopes.profileId,
+        ),
+      );
+
+  $$CurriculumScopesTableProcessedTableManager get curriculumScopesRefs {
+    final manager = $$CurriculumScopesTableTableManager(
+      $_db,
+      $_db.curriculumScopes,
+    ).filter((f) => f.profileId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _curriculumScopesRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
   static MultiTypedResultKey<$StageDefinitionsTable, List<StageDefinition>>
   _stageDefinitionsRefsTable(_$UserDatabase db) =>
       MultiTypedResultKey.fromTable(
@@ -12991,27 +11819,6 @@ final class $$LearnerProfilesTableReferences
     final cache = $_typedResult.readTableOrNull(
       _stageDefinitionsRefsTable($_db),
     );
-    return ProcessedTableManager(
-      manager.$state.copyWith(prefetchedData: cache),
-    );
-  }
-
-  static MultiTypedResultKey<$CompletionsTable, List<Completion>>
-  _completionsRefsTable(_$UserDatabase db) => MultiTypedResultKey.fromTable(
-    db.completions,
-    aliasName: $_aliasNameGenerator(
-      db.learnerProfiles.id,
-      db.completions.profileId,
-    ),
-  );
-
-  $$CompletionsTableProcessedTableManager get completionsRefs {
-    final manager = $$CompletionsTableTableManager(
-      $_db,
-      $_db.completions,
-    ).filter((f) => f.profileId.id.sqlEquals($_itemColumn<int>('id')!));
-
-    final cache = $_typedResult.readTableOrNull(_completionsRefsTable($_db));
     return ProcessedTableManager(
       manager.$state.copyWith(prefetchedData: cache),
     );
@@ -13083,6 +11890,27 @@ final class $$LearnerProfilesTableReferences
     );
   }
 
+  static MultiTypedResultKey<$LearningOrderTable, List<LearningOrderData>>
+  _learningOrderRefsTable(_$UserDatabase db) => MultiTypedResultKey.fromTable(
+    db.learningOrder,
+    aliasName: $_aliasNameGenerator(
+      db.learnerProfiles.id,
+      db.learningOrder.profileId,
+    ),
+  );
+
+  $$LearningOrderTableProcessedTableManager get learningOrderRefs {
+    final manager = $$LearningOrderTableTableManager(
+      $_db,
+      $_db.learningOrder,
+    ).filter((f) => f.profileId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_learningOrderRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
   static MultiTypedResultKey<$GoalsTable, List<Goal>> _goalsRefsTable(
     _$UserDatabase db,
   ) => MultiTypedResultKey.fromTable(
@@ -13122,6 +11950,34 @@ final class $$LearnerProfilesTableReferences
       manager.$state.copyWith(prefetchedData: cache),
     );
   }
+
+  static MultiTypedResultKey<
+    $PriorCompletionImportsTable,
+    List<PriorCompletionImport>
+  >
+  _priorCompletionImportsRefsTable(_$UserDatabase db) =>
+      MultiTypedResultKey.fromTable(
+        db.priorCompletionImports,
+        aliasName: $_aliasNameGenerator(
+          db.learnerProfiles.id,
+          db.priorCompletionImports.profileId,
+        ),
+      );
+
+  $$PriorCompletionImportsTableProcessedTableManager
+  get priorCompletionImportsRefs {
+    final manager = $$PriorCompletionImportsTableTableManager(
+      $_db,
+      $_db.priorCompletionImports,
+    ).filter((f) => f.profileId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _priorCompletionImportsRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
 }
 
 class $$LearnerProfilesTableFilterComposer
@@ -13135,11 +11991,6 @@ class $$LearnerProfilesTableFilterComposer
   });
   ColumnFilters<int> get id => $composableBuilder(
     column: $table.id,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<int> get accountId => $composableBuilder(
-    column: $table.accountId,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -13168,6 +12019,54 @@ class $$LearnerProfilesTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
+  $$AccountsTableFilterComposer get accountId {
+    final $$AccountsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.accountId,
+      referencedTable: $db.accounts,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$AccountsTableFilterComposer(
+            $db: $db,
+            $table: $db.accounts,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  Expression<bool> curriculumScopesRefs(
+    Expression<bool> Function($$CurriculumScopesTableFilterComposer f) f,
+  ) {
+    final $$CurriculumScopesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.curriculumScopes,
+      getReferencedColumn: (t) => t.profileId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$CurriculumScopesTableFilterComposer(
+            $db: $db,
+            $table: $db.curriculumScopes,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
   Expression<bool> stageDefinitionsRefs(
     Expression<bool> Function($$StageDefinitionsTableFilterComposer f) f,
   ) {
@@ -13184,31 +12083,6 @@ class $$LearnerProfilesTableFilterComposer
           }) => $$StageDefinitionsTableFilterComposer(
             $db: $db,
             $table: $db.stageDefinitions,
-            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-            joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
-          ),
-    );
-    return f(composer);
-  }
-
-  Expression<bool> completionsRefs(
-    Expression<bool> Function($$CompletionsTableFilterComposer f) f,
-  ) {
-    final $$CompletionsTableFilterComposer composer = $composerBuilder(
-      composer: this,
-      getCurrentColumn: (t) => t.id,
-      referencedTable: $db.completions,
-      getReferencedColumn: (t) => t.profileId,
-      builder:
-          (
-            joinBuilder, {
-            $addJoinBuilderToRootComposer,
-            $removeJoinBuilderFromRootComposer,
-          }) => $$CompletionsTableFilterComposer(
-            $db: $db,
-            $table: $db.completions,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
@@ -13293,6 +12167,31 @@ class $$LearnerProfilesTableFilterComposer
     return f(composer);
   }
 
+  Expression<bool> learningOrderRefs(
+    Expression<bool> Function($$LearningOrderTableFilterComposer f) f,
+  ) {
+    final $$LearningOrderTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.learningOrder,
+      getReferencedColumn: (t) => t.profileId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$LearningOrderTableFilterComposer(
+            $db: $db,
+            $table: $db.learningOrder,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
   Expression<bool> goalsRefs(
     Expression<bool> Function($$GoalsTableFilterComposer f) f,
   ) {
@@ -13342,6 +12241,32 @@ class $$LearnerProfilesTableFilterComposer
     );
     return f(composer);
   }
+
+  Expression<bool> priorCompletionImportsRefs(
+    Expression<bool> Function($$PriorCompletionImportsTableFilterComposer f) f,
+  ) {
+    final $$PriorCompletionImportsTableFilterComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.priorCompletionImports,
+          getReferencedColumn: (t) => t.profileId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$PriorCompletionImportsTableFilterComposer(
+                $db: $db,
+                $table: $db.priorCompletionImports,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
 }
 
 class $$LearnerProfilesTableOrderingComposer
@@ -13355,11 +12280,6 @@ class $$LearnerProfilesTableOrderingComposer
   });
   ColumnOrderings<int> get id => $composableBuilder(
     column: $table.id,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<int> get accountId => $composableBuilder(
-    column: $table.accountId,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -13387,6 +12307,29 @@ class $$LearnerProfilesTableOrderingComposer
     column: $table.updatedAt,
     builder: (column) => ColumnOrderings(column),
   );
+
+  $$AccountsTableOrderingComposer get accountId {
+    final $$AccountsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.accountId,
+      referencedTable: $db.accounts,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$AccountsTableOrderingComposer(
+            $db: $db,
+            $table: $db.accounts,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
 }
 
 class $$LearnerProfilesTableAnnotationComposer
@@ -13400,9 +12343,6 @@ class $$LearnerProfilesTableAnnotationComposer
   });
   GeneratedColumn<int> get id =>
       $composableBuilder(column: $table.id, builder: (column) => column);
-
-  GeneratedColumn<int> get accountId =>
-      $composableBuilder(column: $table.accountId, builder: (column) => column);
 
   GeneratedColumn<String> get displayName => $composableBuilder(
     column: $table.displayName,
@@ -13423,6 +12363,54 @@ class $$LearnerProfilesTableAnnotationComposer
   GeneratedColumn<DateTime> get updatedAt =>
       $composableBuilder(column: $table.updatedAt, builder: (column) => column);
 
+  $$AccountsTableAnnotationComposer get accountId {
+    final $$AccountsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.accountId,
+      referencedTable: $db.accounts,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$AccountsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.accounts,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  Expression<T> curriculumScopesRefs<T extends Object>(
+    Expression<T> Function($$CurriculumScopesTableAnnotationComposer a) f,
+  ) {
+    final $$CurriculumScopesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.curriculumScopes,
+      getReferencedColumn: (t) => t.profileId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$CurriculumScopesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.curriculumScopes,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
   Expression<T> stageDefinitionsRefs<T extends Object>(
     Expression<T> Function($$StageDefinitionsTableAnnotationComposer a) f,
   ) {
@@ -13439,31 +12427,6 @@ class $$LearnerProfilesTableAnnotationComposer
           }) => $$StageDefinitionsTableAnnotationComposer(
             $db: $db,
             $table: $db.stageDefinitions,
-            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-            joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
-          ),
-    );
-    return f(composer);
-  }
-
-  Expression<T> completionsRefs<T extends Object>(
-    Expression<T> Function($$CompletionsTableAnnotationComposer a) f,
-  ) {
-    final $$CompletionsTableAnnotationComposer composer = $composerBuilder(
-      composer: this,
-      getCurrentColumn: (t) => t.id,
-      referencedTable: $db.completions,
-      getReferencedColumn: (t) => t.profileId,
-      builder:
-          (
-            joinBuilder, {
-            $addJoinBuilderToRootComposer,
-            $removeJoinBuilderFromRootComposer,
-          }) => $$CompletionsTableAnnotationComposer(
-            $db: $db,
-            $table: $db.completions,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
@@ -13548,6 +12511,31 @@ class $$LearnerProfilesTableAnnotationComposer
     return f(composer);
   }
 
+  Expression<T> learningOrderRefs<T extends Object>(
+    Expression<T> Function($$LearningOrderTableAnnotationComposer a) f,
+  ) {
+    final $$LearningOrderTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.learningOrder,
+      getReferencedColumn: (t) => t.profileId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$LearningOrderTableAnnotationComposer(
+            $db: $db,
+            $table: $db.learningOrder,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
   Expression<T> goalsRefs<T extends Object>(
     Expression<T> Function($$GoalsTableAnnotationComposer a) f,
   ) {
@@ -13597,6 +12585,32 @@ class $$LearnerProfilesTableAnnotationComposer
     );
     return f(composer);
   }
+
+  Expression<T> priorCompletionImportsRefs<T extends Object>(
+    Expression<T> Function($$PriorCompletionImportsTableAnnotationComposer a) f,
+  ) {
+    final $$PriorCompletionImportsTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.priorCompletionImports,
+          getReferencedColumn: (t) => t.profileId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$PriorCompletionImportsTableAnnotationComposer(
+                $db: $db,
+                $table: $db.priorCompletionImports,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
 }
 
 class $$LearnerProfilesTableTableManager
@@ -13613,13 +12627,16 @@ class $$LearnerProfilesTableTableManager
           (LearnerProfile, $$LearnerProfilesTableReferences),
           LearnerProfile,
           PrefetchHooks Function({
+            bool accountId,
+            bool curriculumScopesRefs,
             bool stageDefinitionsRefs,
-            bool completionsRefs,
             bool completionEventsRefs,
             bool learningLedgerRefs,
             bool bookmarksRefs,
+            bool learningOrderRefs,
             bool goalsRefs,
             bool streakEventsRefs,
+            bool priorCompletionImportsRefs,
           })
         > {
   $$LearnerProfilesTableTableManager(
@@ -13681,28 +12698,87 @@ class $$LearnerProfilesTableTableManager
               .toList(),
           prefetchHooksCallback:
               ({
+                accountId = false,
+                curriculumScopesRefs = false,
                 stageDefinitionsRefs = false,
-                completionsRefs = false,
                 completionEventsRefs = false,
                 learningLedgerRefs = false,
                 bookmarksRefs = false,
+                learningOrderRefs = false,
                 goalsRefs = false,
                 streakEventsRefs = false,
+                priorCompletionImportsRefs = false,
               }) {
                 return PrefetchHooks(
                   db: db,
                   explicitlyWatchedTables: [
+                    if (curriculumScopesRefs) db.curriculumScopes,
                     if (stageDefinitionsRefs) db.stageDefinitions,
-                    if (completionsRefs) db.completions,
                     if (completionEventsRefs) db.completionEvents,
                     if (learningLedgerRefs) db.learningLedger,
                     if (bookmarksRefs) db.bookmarks,
+                    if (learningOrderRefs) db.learningOrder,
                     if (goalsRefs) db.goals,
                     if (streakEventsRefs) db.streakEvents,
+                    if (priorCompletionImportsRefs) db.priorCompletionImports,
                   ],
-                  addJoins: null,
+                  addJoins:
+                      <
+                        T extends TableManagerState<
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic
+                        >
+                      >(state) {
+                        if (accountId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.accountId,
+                                    referencedTable:
+                                        $$LearnerProfilesTableReferences
+                                            ._accountIdTable(db),
+                                    referencedColumn:
+                                        $$LearnerProfilesTableReferences
+                                            ._accountIdTable(db)
+                                            .id,
+                                  )
+                                  as T;
+                        }
+
+                        return state;
+                      },
                   getPrefetchedDataCallback: (items) async {
                     return [
+                      if (curriculumScopesRefs)
+                        await $_getPrefetchedData<
+                          LearnerProfile,
+                          $LearnerProfilesTable,
+                          CurriculumScope
+                        >(
+                          currentTable: table,
+                          referencedTable: $$LearnerProfilesTableReferences
+                              ._curriculumScopesRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$LearnerProfilesTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).curriculumScopesRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.profileId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
                       if (stageDefinitionsRefs)
                         await $_getPrefetchedData<
                           LearnerProfile,
@@ -13718,27 +12794,6 @@ class $$LearnerProfilesTableTableManager
                                 table,
                                 p0,
                               ).stageDefinitionsRefs,
-                          referencedItemsForCurrentItem:
-                              (item, referencedItems) => referencedItems.where(
-                                (e) => e.profileId == item.id,
-                              ),
-                          typedResults: items,
-                        ),
-                      if (completionsRefs)
-                        await $_getPrefetchedData<
-                          LearnerProfile,
-                          $LearnerProfilesTable,
-                          Completion
-                        >(
-                          currentTable: table,
-                          referencedTable: $$LearnerProfilesTableReferences
-                              ._completionsRefsTable(db),
-                          managerFromTypedResult: (p0) =>
-                              $$LearnerProfilesTableReferences(
-                                db,
-                                table,
-                                p0,
-                              ).completionsRefs,
                           referencedItemsForCurrentItem:
                               (item, referencedItems) => referencedItems.where(
                                 (e) => e.profileId == item.id,
@@ -13808,6 +12863,27 @@ class $$LearnerProfilesTableTableManager
                               ),
                           typedResults: items,
                         ),
+                      if (learningOrderRefs)
+                        await $_getPrefetchedData<
+                          LearnerProfile,
+                          $LearnerProfilesTable,
+                          LearningOrderData
+                        >(
+                          currentTable: table,
+                          referencedTable: $$LearnerProfilesTableReferences
+                              ._learningOrderRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$LearnerProfilesTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).learningOrderRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.profileId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
                       if (goalsRefs)
                         await $_getPrefetchedData<
                           LearnerProfile,
@@ -13850,6 +12926,27 @@ class $$LearnerProfilesTableTableManager
                               ),
                           typedResults: items,
                         ),
+                      if (priorCompletionImportsRefs)
+                        await $_getPrefetchedData<
+                          LearnerProfile,
+                          $LearnerProfilesTable,
+                          PriorCompletionImport
+                        >(
+                          currentTable: table,
+                          referencedTable: $$LearnerProfilesTableReferences
+                              ._priorCompletionImportsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$LearnerProfilesTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).priorCompletionImportsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.profileId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
                     ];
                   },
                 );
@@ -13871,13 +12968,16 @@ typedef $$LearnerProfilesTableProcessedTableManager =
       (LearnerProfile, $$LearnerProfilesTableReferences),
       LearnerProfile,
       PrefetchHooks Function({
+        bool accountId,
+        bool curriculumScopesRefs,
         bool stageDefinitionsRefs,
-        bool completionsRefs,
         bool completionEventsRefs,
         bool learningLedgerRefs,
         bool bookmarksRefs,
+        bool learningOrderRefs,
         bool goalsRefs,
         bool streakEventsRefs,
+        bool priorCompletionImportsRefs,
       })
     >;
 typedef $$CurriculumTracksTableCreateCompanionBuilder =
@@ -13885,24 +12985,20 @@ typedef $$CurriculumTracksTableCreateCompanionBuilder =
       Value<int> id,
       required int profileId,
       required String curriculumId,
-      required String trackType,
-      Value<bool> isActive,
+      Value<String> state,
+      required DateTime stateChangedAt,
       required DateTime activatedAt,
-      Value<DateTime?> deactivatedAt,
       Value<DateTime?> paceResetDate,
-      Value<DateTime?> deletedAt,
     });
 typedef $$CurriculumTracksTableUpdateCompanionBuilder =
     CurriculumTracksCompanion Function({
       Value<int> id,
       Value<int> profileId,
       Value<String> curriculumId,
-      Value<String> trackType,
-      Value<bool> isActive,
+      Value<String> state,
+      Value<DateTime> stateChangedAt,
       Value<DateTime> activatedAt,
-      Value<DateTime?> deactivatedAt,
       Value<DateTime?> paceResetDate,
-      Value<DateTime?> deletedAt,
     });
 
 final class $$CurriculumTracksTableReferences
@@ -14010,27 +13106,6 @@ final class $$CurriculumTracksTableReferences
     );
   }
 
-  static MultiTypedResultKey<$CompletionsTable, List<Completion>>
-  _completionsRefsTable(_$UserDatabase db) => MultiTypedResultKey.fromTable(
-    db.completions,
-    aliasName: $_aliasNameGenerator(
-      db.curriculumTracks.id,
-      db.completions.trackId,
-    ),
-  );
-
-  $$CompletionsTableProcessedTableManager get completionsRefs {
-    final manager = $$CompletionsTableTableManager(
-      $_db,
-      $_db.completions,
-    ).filter((f) => f.trackId.id.sqlEquals($_itemColumn<int>('id')!));
-
-    final cache = $_typedResult.readTableOrNull(_completionsRefsTable($_db));
-    return ProcessedTableManager(
-      manager.$state.copyWith(prefetchedData: cache),
-    );
-  }
-
   static MultiTypedResultKey<$LearningLedgerTable, List<LearningLedgerData>>
   _learningLedgerRefsTable(_$UserDatabase db) => MultiTypedResultKey.fromTable(
     db.learningLedger,
@@ -14117,13 +13192,13 @@ class $$CurriculumTracksTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<String> get trackType => $composableBuilder(
-    column: $table.trackType,
+  ColumnFilters<String> get state => $composableBuilder(
+    column: $table.state,
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<bool> get isActive => $composableBuilder(
-    column: $table.isActive,
+  ColumnFilters<DateTime> get stateChangedAt => $composableBuilder(
+    column: $table.stateChangedAt,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -14132,18 +13207,8 @@ class $$CurriculumTracksTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<DateTime> get deactivatedAt => $composableBuilder(
-    column: $table.deactivatedAt,
-    builder: (column) => ColumnFilters(column),
-  );
-
   ColumnFilters<DateTime> get paceResetDate => $composableBuilder(
     column: $table.paceResetDate,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<DateTime> get deletedAt => $composableBuilder(
-    column: $table.deletedAt,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -14238,31 +13303,6 @@ class $$CurriculumTracksTableFilterComposer
           }) => $$StudyDayConfigsTableFilterComposer(
             $db: $db,
             $table: $db.studyDayConfigs,
-            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-            joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
-          ),
-    );
-    return f(composer);
-  }
-
-  Expression<bool> completionsRefs(
-    Expression<bool> Function($$CompletionsTableFilterComposer f) f,
-  ) {
-    final $$CompletionsTableFilterComposer composer = $composerBuilder(
-      composer: this,
-      getCurrentColumn: (t) => t.id,
-      referencedTable: $db.completions,
-      getReferencedColumn: (t) => t.trackId,
-      builder:
-          (
-            joinBuilder, {
-            $addJoinBuilderToRootComposer,
-            $removeJoinBuilderFromRootComposer,
-          }) => $$CompletionsTableFilterComposer(
-            $db: $db,
-            $table: $db.completions,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
@@ -14372,13 +13412,13 @@ class $$CurriculumTracksTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<String> get trackType => $composableBuilder(
-    column: $table.trackType,
+  ColumnOrderings<String> get state => $composableBuilder(
+    column: $table.state,
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<bool> get isActive => $composableBuilder(
-    column: $table.isActive,
+  ColumnOrderings<DateTime> get stateChangedAt => $composableBuilder(
+    column: $table.stateChangedAt,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -14387,18 +13427,8 @@ class $$CurriculumTracksTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<DateTime> get deactivatedAt => $composableBuilder(
-    column: $table.deactivatedAt,
-    builder: (column) => ColumnOrderings(column),
-  );
-
   ColumnOrderings<DateTime> get paceResetDate => $composableBuilder(
     column: $table.paceResetDate,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<DateTime> get deletedAt => $composableBuilder(
-    column: $table.deletedAt,
     builder: (column) => ColumnOrderings(column),
   );
 }
@@ -14423,19 +13453,16 @@ class $$CurriculumTracksTableAnnotationComposer
     builder: (column) => column,
   );
 
-  GeneratedColumn<String> get trackType =>
-      $composableBuilder(column: $table.trackType, builder: (column) => column);
+  GeneratedColumn<String> get state =>
+      $composableBuilder(column: $table.state, builder: (column) => column);
 
-  GeneratedColumn<bool> get isActive =>
-      $composableBuilder(column: $table.isActive, builder: (column) => column);
-
-  GeneratedColumn<DateTime> get activatedAt => $composableBuilder(
-    column: $table.activatedAt,
+  GeneratedColumn<DateTime> get stateChangedAt => $composableBuilder(
+    column: $table.stateChangedAt,
     builder: (column) => column,
   );
 
-  GeneratedColumn<DateTime> get deactivatedAt => $composableBuilder(
-    column: $table.deactivatedAt,
+  GeneratedColumn<DateTime> get activatedAt => $composableBuilder(
+    column: $table.activatedAt,
     builder: (column) => column,
   );
 
@@ -14443,9 +13470,6 @@ class $$CurriculumTracksTableAnnotationComposer
     column: $table.paceResetDate,
     builder: (column) => column,
   );
-
-  GeneratedColumn<DateTime> get deletedAt =>
-      $composableBuilder(column: $table.deletedAt, builder: (column) => column);
 
   Expression<T> curriculumScopesRefs<T extends Object>(
     Expression<T> Function($$CurriculumScopesTableAnnotationComposer a) f,
@@ -14538,31 +13562,6 @@ class $$CurriculumTracksTableAnnotationComposer
           }) => $$StudyDayConfigsTableAnnotationComposer(
             $db: $db,
             $table: $db.studyDayConfigs,
-            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-            joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
-          ),
-    );
-    return f(composer);
-  }
-
-  Expression<T> completionsRefs<T extends Object>(
-    Expression<T> Function($$CompletionsTableAnnotationComposer a) f,
-  ) {
-    final $$CompletionsTableAnnotationComposer composer = $composerBuilder(
-      composer: this,
-      getCurrentColumn: (t) => t.id,
-      referencedTable: $db.completions,
-      getReferencedColumn: (t) => t.trackId,
-      builder:
-          (
-            joinBuilder, {
-            $addJoinBuilderToRootComposer,
-            $removeJoinBuilderFromRootComposer,
-          }) => $$CompletionsTableAnnotationComposer(
-            $db: $db,
-            $table: $db.completions,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
@@ -14666,7 +13665,6 @@ class $$CurriculumTracksTableTableManager
             bool stageDefinitionsRefs,
             bool pointConfigsRefs,
             bool studyDayConfigsRefs,
-            bool completionsRefs,
             bool learningLedgerRefs,
             bool bookmarksRefs,
             bool goalsRefs,
@@ -14690,44 +13688,36 @@ class $$CurriculumTracksTableTableManager
                 Value<int> id = const Value.absent(),
                 Value<int> profileId = const Value.absent(),
                 Value<String> curriculumId = const Value.absent(),
-                Value<String> trackType = const Value.absent(),
-                Value<bool> isActive = const Value.absent(),
+                Value<String> state = const Value.absent(),
+                Value<DateTime> stateChangedAt = const Value.absent(),
                 Value<DateTime> activatedAt = const Value.absent(),
-                Value<DateTime?> deactivatedAt = const Value.absent(),
                 Value<DateTime?> paceResetDate = const Value.absent(),
-                Value<DateTime?> deletedAt = const Value.absent(),
               }) => CurriculumTracksCompanion(
                 id: id,
                 profileId: profileId,
                 curriculumId: curriculumId,
-                trackType: trackType,
-                isActive: isActive,
+                state: state,
+                stateChangedAt: stateChangedAt,
                 activatedAt: activatedAt,
-                deactivatedAt: deactivatedAt,
                 paceResetDate: paceResetDate,
-                deletedAt: deletedAt,
               ),
           createCompanionCallback:
               ({
                 Value<int> id = const Value.absent(),
                 required int profileId,
                 required String curriculumId,
-                required String trackType,
-                Value<bool> isActive = const Value.absent(),
+                Value<String> state = const Value.absent(),
+                required DateTime stateChangedAt,
                 required DateTime activatedAt,
-                Value<DateTime?> deactivatedAt = const Value.absent(),
                 Value<DateTime?> paceResetDate = const Value.absent(),
-                Value<DateTime?> deletedAt = const Value.absent(),
               }) => CurriculumTracksCompanion.insert(
                 id: id,
                 profileId: profileId,
                 curriculumId: curriculumId,
-                trackType: trackType,
-                isActive: isActive,
+                state: state,
+                stateChangedAt: stateChangedAt,
                 activatedAt: activatedAt,
-                deactivatedAt: deactivatedAt,
                 paceResetDate: paceResetDate,
-                deletedAt: deletedAt,
               ),
           withReferenceMapper: (p0) => p0
               .map(
@@ -14743,7 +13733,6 @@ class $$CurriculumTracksTableTableManager
                 stageDefinitionsRefs = false,
                 pointConfigsRefs = false,
                 studyDayConfigsRefs = false,
-                completionsRefs = false,
                 learningLedgerRefs = false,
                 bookmarksRefs = false,
                 goalsRefs = false,
@@ -14755,7 +13744,6 @@ class $$CurriculumTracksTableTableManager
                     if (stageDefinitionsRefs) db.stageDefinitions,
                     if (pointConfigsRefs) db.pointConfigs,
                     if (studyDayConfigsRefs) db.studyDayConfigs,
-                    if (completionsRefs) db.completions,
                     if (learningLedgerRefs) db.learningLedger,
                     if (bookmarksRefs) db.bookmarks,
                     if (goalsRefs) db.goals,
@@ -14841,27 +13829,6 @@ class $$CurriculumTracksTableTableManager
                                 table,
                                 p0,
                               ).studyDayConfigsRefs,
-                          referencedItemsForCurrentItem:
-                              (item, referencedItems) => referencedItems.where(
-                                (e) => e.trackId == item.id,
-                              ),
-                          typedResults: items,
-                        ),
-                      if (completionsRefs)
-                        await $_getPrefetchedData<
-                          CurriculumTrack,
-                          $CurriculumTracksTable,
-                          Completion
-                        >(
-                          currentTable: table,
-                          referencedTable: $$CurriculumTracksTableReferences
-                              ._completionsRefsTable(db),
-                          managerFromTypedResult: (p0) =>
-                              $$CurriculumTracksTableReferences(
-                                db,
-                                table,
-                                p0,
-                              ).completionsRefs,
                           referencedItemsForCurrentItem:
                               (item, referencedItems) => referencedItems.where(
                                 (e) => e.trackId == item.id,
@@ -14956,7 +13923,6 @@ typedef $$CurriculumTracksTableProcessedTableManager =
         bool stageDefinitionsRefs,
         bool pointConfigsRefs,
         bool studyDayConfigsRefs,
-        bool completionsRefs,
         bool learningLedgerRefs,
         bool bookmarksRefs,
         bool goalsRefs,
@@ -14971,6 +13937,7 @@ typedef $$CurriculumScopesTableCreateCompanionBuilder =
       required int scopeLevel,
       required String scopeValue,
       required DateTime createdAt,
+      Value<DateTime> updatedAt,
     });
 typedef $$CurriculumScopesTableUpdateCompanionBuilder =
     CurriculumScopesCompanion Function({
@@ -14981,6 +13948,7 @@ typedef $$CurriculumScopesTableUpdateCompanionBuilder =
       Value<int> scopeLevel,
       Value<String> scopeValue,
       Value<DateTime> createdAt,
+      Value<DateTime> updatedAt,
     });
 
 final class $$CurriculumScopesTableReferences
@@ -14995,6 +13963,28 @@ final class $$CurriculumScopesTableReferences
     super.$_table,
     super.$_typedResult,
   );
+
+  static $LearnerProfilesTable _profileIdTable(_$UserDatabase db) =>
+      db.learnerProfiles.createAlias(
+        $_aliasNameGenerator(
+          db.curriculumScopes.profileId,
+          db.learnerProfiles.id,
+        ),
+      );
+
+  $$LearnerProfilesTableProcessedTableManager get profileId {
+    final $_column = $_itemColumn<int>('profile_id')!;
+
+    final manager = $$LearnerProfilesTableTableManager(
+      $_db,
+      $_db.learnerProfiles,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_profileIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
 
   static $CurriculumTracksTable _trackIdTable(_$UserDatabase db) =>
       db.curriculumTracks.createAlias(
@@ -15033,11 +14023,6 @@ class $$CurriculumScopesTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<int> get profileId => $composableBuilder(
-    column: $table.profileId,
-    builder: (column) => ColumnFilters(column),
-  );
-
   ColumnFilters<String> get curriculumId => $composableBuilder(
     column: $table.curriculumId,
     builder: (column) => ColumnFilters(column),
@@ -15057,6 +14042,34 @@ class $$CurriculumScopesTableFilterComposer
     column: $table.createdAt,
     builder: (column) => ColumnFilters(column),
   );
+
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$LearnerProfilesTableFilterComposer get profileId {
+    final $$LearnerProfilesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.profileId,
+      referencedTable: $db.learnerProfiles,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$LearnerProfilesTableFilterComposer(
+            $db: $db,
+            $table: $db.learnerProfiles,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
 
   $$CurriculumTracksTableFilterComposer get trackId {
     final $$CurriculumTracksTableFilterComposer composer = $composerBuilder(
@@ -15096,11 +14109,6 @@ class $$CurriculumScopesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<int> get profileId => $composableBuilder(
-    column: $table.profileId,
-    builder: (column) => ColumnOrderings(column),
-  );
-
   ColumnOrderings<String> get curriculumId => $composableBuilder(
     column: $table.curriculumId,
     builder: (column) => ColumnOrderings(column),
@@ -15120,6 +14128,34 @@ class $$CurriculumScopesTableOrderingComposer
     column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$LearnerProfilesTableOrderingComposer get profileId {
+    final $$LearnerProfilesTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.profileId,
+      referencedTable: $db.learnerProfiles,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$LearnerProfilesTableOrderingComposer(
+            $db: $db,
+            $table: $db.learnerProfiles,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
 
   $$CurriculumTracksTableOrderingComposer get trackId {
     final $$CurriculumTracksTableOrderingComposer composer = $composerBuilder(
@@ -15157,9 +14193,6 @@ class $$CurriculumScopesTableAnnotationComposer
   GeneratedColumn<int> get id =>
       $composableBuilder(column: $table.id, builder: (column) => column);
 
-  GeneratedColumn<int> get profileId =>
-      $composableBuilder(column: $table.profileId, builder: (column) => column);
-
   GeneratedColumn<String> get curriculumId => $composableBuilder(
     column: $table.curriculumId,
     builder: (column) => column,
@@ -15177,6 +14210,32 @@ class $$CurriculumScopesTableAnnotationComposer
 
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  $$LearnerProfilesTableAnnotationComposer get profileId {
+    final $$LearnerProfilesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.profileId,
+      referencedTable: $db.learnerProfiles,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$LearnerProfilesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.learnerProfiles,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
 
   $$CurriculumTracksTableAnnotationComposer get trackId {
     final $$CurriculumTracksTableAnnotationComposer composer = $composerBuilder(
@@ -15215,7 +14274,7 @@ class $$CurriculumScopesTableTableManager
           $$CurriculumScopesTableUpdateCompanionBuilder,
           (CurriculumScope, $$CurriculumScopesTableReferences),
           CurriculumScope,
-          PrefetchHooks Function({bool trackId})
+          PrefetchHooks Function({bool profileId, bool trackId})
         > {
   $$CurriculumScopesTableTableManager(
     _$UserDatabase db,
@@ -15239,6 +14298,7 @@ class $$CurriculumScopesTableTableManager
                 Value<int> scopeLevel = const Value.absent(),
                 Value<String> scopeValue = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
               }) => CurriculumScopesCompanion(
                 id: id,
                 profileId: profileId,
@@ -15247,6 +14307,7 @@ class $$CurriculumScopesTableTableManager
                 scopeLevel: scopeLevel,
                 scopeValue: scopeValue,
                 createdAt: createdAt,
+                updatedAt: updatedAt,
               ),
           createCompanionCallback:
               ({
@@ -15257,6 +14318,7 @@ class $$CurriculumScopesTableTableManager
                 required int scopeLevel,
                 required String scopeValue,
                 required DateTime createdAt,
+                Value<DateTime> updatedAt = const Value.absent(),
               }) => CurriculumScopesCompanion.insert(
                 id: id,
                 profileId: profileId,
@@ -15265,6 +14327,7 @@ class $$CurriculumScopesTableTableManager
                 scopeLevel: scopeLevel,
                 scopeValue: scopeValue,
                 createdAt: createdAt,
+                updatedAt: updatedAt,
               ),
           withReferenceMapper: (p0) => p0
               .map(
@@ -15274,7 +14337,7 @@ class $$CurriculumScopesTableTableManager
                 ),
               )
               .toList(),
-          prefetchHooksCallback: ({trackId = false}) {
+          prefetchHooksCallback: ({profileId = false, trackId = false}) {
             return PrefetchHooks(
               db: db,
               explicitlyWatchedTables: [],
@@ -15294,6 +14357,21 @@ class $$CurriculumScopesTableTableManager
                       dynamic
                     >
                   >(state) {
+                    if (profileId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.profileId,
+                                referencedTable:
+                                    $$CurriculumScopesTableReferences
+                                        ._profileIdTable(db),
+                                referencedColumn:
+                                    $$CurriculumScopesTableReferences
+                                        ._profileIdTable(db)
+                                        .id,
+                              )
+                              as T;
+                    }
                     if (trackId) {
                       state =
                           state.withJoin(
@@ -15333,7 +14411,7 @@ typedef $$CurriculumScopesTableProcessedTableManager =
       $$CurriculumScopesTableUpdateCompanionBuilder,
       (CurriculumScope, $$CurriculumScopesTableReferences),
       CurriculumScope,
-      PrefetchHooks Function({bool trackId})
+      PrefetchHooks Function({bool profileId, bool trackId})
     >;
 typedef $$ProfileProgramsTableCreateCompanionBuilder =
     ProfileProgramsCompanion Function({
@@ -15568,12 +14646,9 @@ typedef $$StageDefinitionsTableCreateCompanionBuilder =
       required int trackId,
       required int stageOrder,
       required String stageName,
-      required int delayDays,
       Value<bool> isDefault,
-      Value<String> scheduleType,
-      Value<String?> daysOfWeek,
-      Value<int?> rollingWindowSize,
-      Value<DateTime?> supersededAt,
+      Value<String> schedule,
+      Value<DateTime> updatedAt,
     });
 typedef $$StageDefinitionsTableUpdateCompanionBuilder =
     StageDefinitionsCompanion Function({
@@ -15583,12 +14658,9 @@ typedef $$StageDefinitionsTableUpdateCompanionBuilder =
       Value<int> trackId,
       Value<int> stageOrder,
       Value<String> stageName,
-      Value<int> delayDays,
       Value<bool> isDefault,
-      Value<String> scheduleType,
-      Value<String?> daysOfWeek,
-      Value<int?> rollingWindowSize,
-      Value<DateTime?> supersededAt,
+      Value<String> schedule,
+      Value<DateTime> updatedAt,
     });
 
 final class $$StageDefinitionsTableReferences
@@ -15678,33 +14750,18 @@ class $$StageDefinitionsTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<int> get delayDays => $composableBuilder(
-    column: $table.delayDays,
-    builder: (column) => ColumnFilters(column),
-  );
-
   ColumnFilters<bool> get isDefault => $composableBuilder(
     column: $table.isDefault,
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<String> get scheduleType => $composableBuilder(
-    column: $table.scheduleType,
+  ColumnFilters<String> get schedule => $composableBuilder(
+    column: $table.schedule,
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<String> get daysOfWeek => $composableBuilder(
-    column: $table.daysOfWeek,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<int> get rollingWindowSize => $composableBuilder(
-    column: $table.rollingWindowSize,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<DateTime> get supersededAt => $composableBuilder(
-    column: $table.supersededAt,
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -15784,33 +14841,18 @@ class $$StageDefinitionsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<int> get delayDays => $composableBuilder(
-    column: $table.delayDays,
-    builder: (column) => ColumnOrderings(column),
-  );
-
   ColumnOrderings<bool> get isDefault => $composableBuilder(
     column: $table.isDefault,
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<String> get scheduleType => $composableBuilder(
-    column: $table.scheduleType,
+  ColumnOrderings<String> get schedule => $composableBuilder(
+    column: $table.schedule,
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<String> get daysOfWeek => $composableBuilder(
-    column: $table.daysOfWeek,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<int> get rollingWindowSize => $composableBuilder(
-    column: $table.rollingWindowSize,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<DateTime> get supersededAt => $composableBuilder(
-    column: $table.supersededAt,
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -15886,31 +14928,14 @@ class $$StageDefinitionsTableAnnotationComposer
   GeneratedColumn<String> get stageName =>
       $composableBuilder(column: $table.stageName, builder: (column) => column);
 
-  GeneratedColumn<int> get delayDays =>
-      $composableBuilder(column: $table.delayDays, builder: (column) => column);
-
   GeneratedColumn<bool> get isDefault =>
       $composableBuilder(column: $table.isDefault, builder: (column) => column);
 
-  GeneratedColumn<String> get scheduleType => $composableBuilder(
-    column: $table.scheduleType,
-    builder: (column) => column,
-  );
+  GeneratedColumn<String> get schedule =>
+      $composableBuilder(column: $table.schedule, builder: (column) => column);
 
-  GeneratedColumn<String> get daysOfWeek => $composableBuilder(
-    column: $table.daysOfWeek,
-    builder: (column) => column,
-  );
-
-  GeneratedColumn<int> get rollingWindowSize => $composableBuilder(
-    column: $table.rollingWindowSize,
-    builder: (column) => column,
-  );
-
-  GeneratedColumn<DateTime> get supersededAt => $composableBuilder(
-    column: $table.supersededAt,
-    builder: (column) => column,
-  );
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
 
   $$LearnerProfilesTableAnnotationComposer get profileId {
     final $$LearnerProfilesTableAnnotationComposer composer = $composerBuilder(
@@ -15995,12 +15020,9 @@ class $$StageDefinitionsTableTableManager
                 Value<int> trackId = const Value.absent(),
                 Value<int> stageOrder = const Value.absent(),
                 Value<String> stageName = const Value.absent(),
-                Value<int> delayDays = const Value.absent(),
                 Value<bool> isDefault = const Value.absent(),
-                Value<String> scheduleType = const Value.absent(),
-                Value<String?> daysOfWeek = const Value.absent(),
-                Value<int?> rollingWindowSize = const Value.absent(),
-                Value<DateTime?> supersededAt = const Value.absent(),
+                Value<String> schedule = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
               }) => StageDefinitionsCompanion(
                 id: id,
                 profileId: profileId,
@@ -16008,12 +15030,9 @@ class $$StageDefinitionsTableTableManager
                 trackId: trackId,
                 stageOrder: stageOrder,
                 stageName: stageName,
-                delayDays: delayDays,
                 isDefault: isDefault,
-                scheduleType: scheduleType,
-                daysOfWeek: daysOfWeek,
-                rollingWindowSize: rollingWindowSize,
-                supersededAt: supersededAt,
+                schedule: schedule,
+                updatedAt: updatedAt,
               ),
           createCompanionCallback:
               ({
@@ -16023,12 +15042,9 @@ class $$StageDefinitionsTableTableManager
                 required int trackId,
                 required int stageOrder,
                 required String stageName,
-                required int delayDays,
                 Value<bool> isDefault = const Value.absent(),
-                Value<String> scheduleType = const Value.absent(),
-                Value<String?> daysOfWeek = const Value.absent(),
-                Value<int?> rollingWindowSize = const Value.absent(),
-                Value<DateTime?> supersededAt = const Value.absent(),
+                Value<String> schedule = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
               }) => StageDefinitionsCompanion.insert(
                 id: id,
                 profileId: profileId,
@@ -16036,12 +15052,9 @@ class $$StageDefinitionsTableTableManager
                 trackId: trackId,
                 stageOrder: stageOrder,
                 stageName: stageName,
-                delayDays: delayDays,
                 isDefault: isDefault,
-                scheduleType: scheduleType,
-                daysOfWeek: daysOfWeek,
-                rollingWindowSize: rollingWindowSize,
-                supersededAt: supersededAt,
+                schedule: schedule,
+                updatedAt: updatedAt,
               ),
           withReferenceMapper: (p0) => p0
               .map(
@@ -16815,510 +15828,6 @@ typedef $$StudyDayConfigsTableProcessedTableManager =
       StudyDayConfig,
       PrefetchHooks Function({bool trackId})
     >;
-typedef $$CompletionsTableCreateCompanionBuilder =
-    CompletionsCompanion Function({
-      Value<int> id,
-      required int profileId,
-      required String curriculumId,
-      required String sefariaRef,
-      required int stageId,
-      required String trackType,
-      required int trackId,
-      required DateTime completedAt,
-      Value<int> points,
-      Value<bool> derivedFromEvents,
-    });
-typedef $$CompletionsTableUpdateCompanionBuilder =
-    CompletionsCompanion Function({
-      Value<int> id,
-      Value<int> profileId,
-      Value<String> curriculumId,
-      Value<String> sefariaRef,
-      Value<int> stageId,
-      Value<String> trackType,
-      Value<int> trackId,
-      Value<DateTime> completedAt,
-      Value<int> points,
-      Value<bool> derivedFromEvents,
-    });
-
-final class $$CompletionsTableReferences
-    extends BaseReferences<_$UserDatabase, $CompletionsTable, Completion> {
-  $$CompletionsTableReferences(super.$_db, super.$_table, super.$_typedResult);
-
-  static $LearnerProfilesTable _profileIdTable(_$UserDatabase db) =>
-      db.learnerProfiles.createAlias(
-        $_aliasNameGenerator(db.completions.profileId, db.learnerProfiles.id),
-      );
-
-  $$LearnerProfilesTableProcessedTableManager get profileId {
-    final $_column = $_itemColumn<int>('profile_id')!;
-
-    final manager = $$LearnerProfilesTableTableManager(
-      $_db,
-      $_db.learnerProfiles,
-    ).filter((f) => f.id.sqlEquals($_column));
-    final item = $_typedResult.readTableOrNull(_profileIdTable($_db));
-    if (item == null) return manager;
-    return ProcessedTableManager(
-      manager.$state.copyWith(prefetchedData: [item]),
-    );
-  }
-
-  static $CurriculumTracksTable _trackIdTable(_$UserDatabase db) =>
-      db.curriculumTracks.createAlias(
-        $_aliasNameGenerator(db.completions.trackId, db.curriculumTracks.id),
-      );
-
-  $$CurriculumTracksTableProcessedTableManager get trackId {
-    final $_column = $_itemColumn<int>('track_id')!;
-
-    final manager = $$CurriculumTracksTableTableManager(
-      $_db,
-      $_db.curriculumTracks,
-    ).filter((f) => f.id.sqlEquals($_column));
-    final item = $_typedResult.readTableOrNull(_trackIdTable($_db));
-    if (item == null) return manager;
-    return ProcessedTableManager(
-      manager.$state.copyWith(prefetchedData: [item]),
-    );
-  }
-}
-
-class $$CompletionsTableFilterComposer
-    extends Composer<_$UserDatabase, $CompletionsTable> {
-  $$CompletionsTableFilterComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  ColumnFilters<int> get id => $composableBuilder(
-    column: $table.id,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<String> get curriculumId => $composableBuilder(
-    column: $table.curriculumId,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<String> get sefariaRef => $composableBuilder(
-    column: $table.sefariaRef,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<int> get stageId => $composableBuilder(
-    column: $table.stageId,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<String> get trackType => $composableBuilder(
-    column: $table.trackType,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<DateTime> get completedAt => $composableBuilder(
-    column: $table.completedAt,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<int> get points => $composableBuilder(
-    column: $table.points,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<bool> get derivedFromEvents => $composableBuilder(
-    column: $table.derivedFromEvents,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  $$LearnerProfilesTableFilterComposer get profileId {
-    final $$LearnerProfilesTableFilterComposer composer = $composerBuilder(
-      composer: this,
-      getCurrentColumn: (t) => t.profileId,
-      referencedTable: $db.learnerProfiles,
-      getReferencedColumn: (t) => t.id,
-      builder:
-          (
-            joinBuilder, {
-            $addJoinBuilderToRootComposer,
-            $removeJoinBuilderFromRootComposer,
-          }) => $$LearnerProfilesTableFilterComposer(
-            $db: $db,
-            $table: $db.learnerProfiles,
-            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-            joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
-          ),
-    );
-    return composer;
-  }
-
-  $$CurriculumTracksTableFilterComposer get trackId {
-    final $$CurriculumTracksTableFilterComposer composer = $composerBuilder(
-      composer: this,
-      getCurrentColumn: (t) => t.trackId,
-      referencedTable: $db.curriculumTracks,
-      getReferencedColumn: (t) => t.id,
-      builder:
-          (
-            joinBuilder, {
-            $addJoinBuilderToRootComposer,
-            $removeJoinBuilderFromRootComposer,
-          }) => $$CurriculumTracksTableFilterComposer(
-            $db: $db,
-            $table: $db.curriculumTracks,
-            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-            joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
-          ),
-    );
-    return composer;
-  }
-}
-
-class $$CompletionsTableOrderingComposer
-    extends Composer<_$UserDatabase, $CompletionsTable> {
-  $$CompletionsTableOrderingComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  ColumnOrderings<int> get id => $composableBuilder(
-    column: $table.id,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<String> get curriculumId => $composableBuilder(
-    column: $table.curriculumId,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<String> get sefariaRef => $composableBuilder(
-    column: $table.sefariaRef,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<int> get stageId => $composableBuilder(
-    column: $table.stageId,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<String> get trackType => $composableBuilder(
-    column: $table.trackType,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<DateTime> get completedAt => $composableBuilder(
-    column: $table.completedAt,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<int> get points => $composableBuilder(
-    column: $table.points,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<bool> get derivedFromEvents => $composableBuilder(
-    column: $table.derivedFromEvents,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  $$LearnerProfilesTableOrderingComposer get profileId {
-    final $$LearnerProfilesTableOrderingComposer composer = $composerBuilder(
-      composer: this,
-      getCurrentColumn: (t) => t.profileId,
-      referencedTable: $db.learnerProfiles,
-      getReferencedColumn: (t) => t.id,
-      builder:
-          (
-            joinBuilder, {
-            $addJoinBuilderToRootComposer,
-            $removeJoinBuilderFromRootComposer,
-          }) => $$LearnerProfilesTableOrderingComposer(
-            $db: $db,
-            $table: $db.learnerProfiles,
-            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-            joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
-          ),
-    );
-    return composer;
-  }
-
-  $$CurriculumTracksTableOrderingComposer get trackId {
-    final $$CurriculumTracksTableOrderingComposer composer = $composerBuilder(
-      composer: this,
-      getCurrentColumn: (t) => t.trackId,
-      referencedTable: $db.curriculumTracks,
-      getReferencedColumn: (t) => t.id,
-      builder:
-          (
-            joinBuilder, {
-            $addJoinBuilderToRootComposer,
-            $removeJoinBuilderFromRootComposer,
-          }) => $$CurriculumTracksTableOrderingComposer(
-            $db: $db,
-            $table: $db.curriculumTracks,
-            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-            joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
-          ),
-    );
-    return composer;
-  }
-}
-
-class $$CompletionsTableAnnotationComposer
-    extends Composer<_$UserDatabase, $CompletionsTable> {
-  $$CompletionsTableAnnotationComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  GeneratedColumn<int> get id =>
-      $composableBuilder(column: $table.id, builder: (column) => column);
-
-  GeneratedColumn<String> get curriculumId => $composableBuilder(
-    column: $table.curriculumId,
-    builder: (column) => column,
-  );
-
-  GeneratedColumn<String> get sefariaRef => $composableBuilder(
-    column: $table.sefariaRef,
-    builder: (column) => column,
-  );
-
-  GeneratedColumn<int> get stageId =>
-      $composableBuilder(column: $table.stageId, builder: (column) => column);
-
-  GeneratedColumn<String> get trackType =>
-      $composableBuilder(column: $table.trackType, builder: (column) => column);
-
-  GeneratedColumn<DateTime> get completedAt => $composableBuilder(
-    column: $table.completedAt,
-    builder: (column) => column,
-  );
-
-  GeneratedColumn<int> get points =>
-      $composableBuilder(column: $table.points, builder: (column) => column);
-
-  GeneratedColumn<bool> get derivedFromEvents => $composableBuilder(
-    column: $table.derivedFromEvents,
-    builder: (column) => column,
-  );
-
-  $$LearnerProfilesTableAnnotationComposer get profileId {
-    final $$LearnerProfilesTableAnnotationComposer composer = $composerBuilder(
-      composer: this,
-      getCurrentColumn: (t) => t.profileId,
-      referencedTable: $db.learnerProfiles,
-      getReferencedColumn: (t) => t.id,
-      builder:
-          (
-            joinBuilder, {
-            $addJoinBuilderToRootComposer,
-            $removeJoinBuilderFromRootComposer,
-          }) => $$LearnerProfilesTableAnnotationComposer(
-            $db: $db,
-            $table: $db.learnerProfiles,
-            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-            joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
-          ),
-    );
-    return composer;
-  }
-
-  $$CurriculumTracksTableAnnotationComposer get trackId {
-    final $$CurriculumTracksTableAnnotationComposer composer = $composerBuilder(
-      composer: this,
-      getCurrentColumn: (t) => t.trackId,
-      referencedTable: $db.curriculumTracks,
-      getReferencedColumn: (t) => t.id,
-      builder:
-          (
-            joinBuilder, {
-            $addJoinBuilderToRootComposer,
-            $removeJoinBuilderFromRootComposer,
-          }) => $$CurriculumTracksTableAnnotationComposer(
-            $db: $db,
-            $table: $db.curriculumTracks,
-            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-            joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
-          ),
-    );
-    return composer;
-  }
-}
-
-class $$CompletionsTableTableManager
-    extends
-        RootTableManager<
-          _$UserDatabase,
-          $CompletionsTable,
-          Completion,
-          $$CompletionsTableFilterComposer,
-          $$CompletionsTableOrderingComposer,
-          $$CompletionsTableAnnotationComposer,
-          $$CompletionsTableCreateCompanionBuilder,
-          $$CompletionsTableUpdateCompanionBuilder,
-          (Completion, $$CompletionsTableReferences),
-          Completion,
-          PrefetchHooks Function({bool profileId, bool trackId})
-        > {
-  $$CompletionsTableTableManager(_$UserDatabase db, $CompletionsTable table)
-    : super(
-        TableManagerState(
-          db: db,
-          table: table,
-          createFilteringComposer: () =>
-              $$CompletionsTableFilterComposer($db: db, $table: table),
-          createOrderingComposer: () =>
-              $$CompletionsTableOrderingComposer($db: db, $table: table),
-          createComputedFieldComposer: () =>
-              $$CompletionsTableAnnotationComposer($db: db, $table: table),
-          updateCompanionCallback:
-              ({
-                Value<int> id = const Value.absent(),
-                Value<int> profileId = const Value.absent(),
-                Value<String> curriculumId = const Value.absent(),
-                Value<String> sefariaRef = const Value.absent(),
-                Value<int> stageId = const Value.absent(),
-                Value<String> trackType = const Value.absent(),
-                Value<int> trackId = const Value.absent(),
-                Value<DateTime> completedAt = const Value.absent(),
-                Value<int> points = const Value.absent(),
-                Value<bool> derivedFromEvents = const Value.absent(),
-              }) => CompletionsCompanion(
-                id: id,
-                profileId: profileId,
-                curriculumId: curriculumId,
-                sefariaRef: sefariaRef,
-                stageId: stageId,
-                trackType: trackType,
-                trackId: trackId,
-                completedAt: completedAt,
-                points: points,
-                derivedFromEvents: derivedFromEvents,
-              ),
-          createCompanionCallback:
-              ({
-                Value<int> id = const Value.absent(),
-                required int profileId,
-                required String curriculumId,
-                required String sefariaRef,
-                required int stageId,
-                required String trackType,
-                required int trackId,
-                required DateTime completedAt,
-                Value<int> points = const Value.absent(),
-                Value<bool> derivedFromEvents = const Value.absent(),
-              }) => CompletionsCompanion.insert(
-                id: id,
-                profileId: profileId,
-                curriculumId: curriculumId,
-                sefariaRef: sefariaRef,
-                stageId: stageId,
-                trackType: trackType,
-                trackId: trackId,
-                completedAt: completedAt,
-                points: points,
-                derivedFromEvents: derivedFromEvents,
-              ),
-          withReferenceMapper: (p0) => p0
-              .map(
-                (e) => (
-                  e.readTable(table),
-                  $$CompletionsTableReferences(db, table, e),
-                ),
-              )
-              .toList(),
-          prefetchHooksCallback: ({profileId = false, trackId = false}) {
-            return PrefetchHooks(
-              db: db,
-              explicitlyWatchedTables: [],
-              addJoins:
-                  <
-                    T extends TableManagerState<
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic
-                    >
-                  >(state) {
-                    if (profileId) {
-                      state =
-                          state.withJoin(
-                                currentTable: table,
-                                currentColumn: table.profileId,
-                                referencedTable: $$CompletionsTableReferences
-                                    ._profileIdTable(db),
-                                referencedColumn: $$CompletionsTableReferences
-                                    ._profileIdTable(db)
-                                    .id,
-                              )
-                              as T;
-                    }
-                    if (trackId) {
-                      state =
-                          state.withJoin(
-                                currentTable: table,
-                                currentColumn: table.trackId,
-                                referencedTable: $$CompletionsTableReferences
-                                    ._trackIdTable(db),
-                                referencedColumn: $$CompletionsTableReferences
-                                    ._trackIdTable(db)
-                                    .id,
-                              )
-                              as T;
-                    }
-
-                    return state;
-                  },
-              getPrefetchedDataCallback: (items) async {
-                return [];
-              },
-            );
-          },
-        ),
-      );
-}
-
-typedef $$CompletionsTableProcessedTableManager =
-    ProcessedTableManager<
-      _$UserDatabase,
-      $CompletionsTable,
-      Completion,
-      $$CompletionsTableFilterComposer,
-      $$CompletionsTableOrderingComposer,
-      $$CompletionsTableAnnotationComposer,
-      $$CompletionsTableCreateCompanionBuilder,
-      $$CompletionsTableUpdateCompanionBuilder,
-      (Completion, $$CompletionsTableReferences),
-      Completion,
-      PrefetchHooks Function({bool profileId, bool trackId})
-    >;
 typedef $$CompletionEventsTableCreateCompanionBuilder =
     CompletionEventsCompanion Function({
       Value<int> id,
@@ -17332,7 +15841,6 @@ typedef $$CompletionEventsTableCreateCompanionBuilder =
       required DateTime eventTimestamp,
       Value<DateTime> createdAt,
       Value<DateTime?> purgedAt,
-      Value<bool> priorMarkOnly,
     });
 typedef $$CompletionEventsTableUpdateCompanionBuilder =
     CompletionEventsCompanion Function({
@@ -17347,7 +15855,6 @@ typedef $$CompletionEventsTableUpdateCompanionBuilder =
       Value<DateTime> eventTimestamp,
       Value<DateTime> createdAt,
       Value<DateTime?> purgedAt,
-      Value<bool> priorMarkOnly,
     });
 
 final class $$CompletionEventsTableReferences
@@ -17445,11 +15952,6 @@ class $$CompletionEventsTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<bool> get priorMarkOnly => $composableBuilder(
-    column: $table.priorMarkOnly,
-    builder: (column) => ColumnFilters(column),
-  );
-
   $$LearnerProfilesTableFilterComposer get profileId {
     final $$LearnerProfilesTableFilterComposer composer = $composerBuilder(
       composer: this,
@@ -17533,11 +16035,6 @@ class $$CompletionEventsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<bool> get priorMarkOnly => $composableBuilder(
-    column: $table.priorMarkOnly,
-    builder: (column) => ColumnOrderings(column),
-  );
-
   $$LearnerProfilesTableOrderingComposer get profileId {
     final $$LearnerProfilesTableOrderingComposer composer = $composerBuilder(
       composer: this,
@@ -17607,11 +16104,6 @@ class $$CompletionEventsTableAnnotationComposer
   GeneratedColumn<DateTime> get purgedAt =>
       $composableBuilder(column: $table.purgedAt, builder: (column) => column);
 
-  GeneratedColumn<bool> get priorMarkOnly => $composableBuilder(
-    column: $table.priorMarkOnly,
-    builder: (column) => column,
-  );
-
   $$LearnerProfilesTableAnnotationComposer get profileId {
     final $$LearnerProfilesTableAnnotationComposer composer = $composerBuilder(
       composer: this,
@@ -17677,7 +16169,6 @@ class $$CompletionEventsTableTableManager
                 Value<DateTime> eventTimestamp = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime?> purgedAt = const Value.absent(),
-                Value<bool> priorMarkOnly = const Value.absent(),
               }) => CompletionEventsCompanion(
                 id: id,
                 profileId: profileId,
@@ -17690,7 +16181,6 @@ class $$CompletionEventsTableTableManager
                 eventTimestamp: eventTimestamp,
                 createdAt: createdAt,
                 purgedAt: purgedAt,
-                priorMarkOnly: priorMarkOnly,
               ),
           createCompanionCallback:
               ({
@@ -17705,7 +16195,6 @@ class $$CompletionEventsTableTableManager
                 required DateTime eventTimestamp,
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime?> purgedAt = const Value.absent(),
-                Value<bool> priorMarkOnly = const Value.absent(),
               }) => CompletionEventsCompanion.insert(
                 id: id,
                 profileId: profileId,
@@ -17718,7 +16207,6 @@ class $$CompletionEventsTableTableManager
                 eventTimestamp: eventTimestamp,
                 createdAt: createdAt,
                 purgedAt: purgedAt,
-                priorMarkOnly: priorMarkOnly,
               ),
           withReferenceMapper: (p0) => p0
               .map(
@@ -19265,6 +17753,35 @@ typedef $$LearningOrderTableUpdateCompanionBuilder =
       Value<DateTime> updatedAt,
     });
 
+final class $$LearningOrderTableReferences
+    extends
+        BaseReferences<_$UserDatabase, $LearningOrderTable, LearningOrderData> {
+  $$LearningOrderTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static $LearnerProfilesTable _profileIdTable(_$UserDatabase db) =>
+      db.learnerProfiles.createAlias(
+        $_aliasNameGenerator(db.learningOrder.profileId, db.learnerProfiles.id),
+      );
+
+  $$LearnerProfilesTableProcessedTableManager get profileId {
+    final $_column = $_itemColumn<int>('profile_id')!;
+
+    final manager = $$LearnerProfilesTableTableManager(
+      $_db,
+      $_db.learnerProfiles,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_profileIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
 class $$LearningOrderTableFilterComposer
     extends Composer<_$UserDatabase, $LearningOrderTable> {
   $$LearningOrderTableFilterComposer({
@@ -19276,11 +17793,6 @@ class $$LearningOrderTableFilterComposer
   });
   ColumnFilters<int> get id => $composableBuilder(
     column: $table.id,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<int> get profileId => $composableBuilder(
-    column: $table.profileId,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -19303,6 +17815,29 @@ class $$LearningOrderTableFilterComposer
     column: $table.updatedAt,
     builder: (column) => ColumnFilters(column),
   );
+
+  $$LearnerProfilesTableFilterComposer get profileId {
+    final $$LearnerProfilesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.profileId,
+      referencedTable: $db.learnerProfiles,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$LearnerProfilesTableFilterComposer(
+            $db: $db,
+            $table: $db.learnerProfiles,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
 }
 
 class $$LearningOrderTableOrderingComposer
@@ -19316,11 +17851,6 @@ class $$LearningOrderTableOrderingComposer
   });
   ColumnOrderings<int> get id => $composableBuilder(
     column: $table.id,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<int> get profileId => $composableBuilder(
-    column: $table.profileId,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -19343,6 +17873,29 @@ class $$LearningOrderTableOrderingComposer
     column: $table.updatedAt,
     builder: (column) => ColumnOrderings(column),
   );
+
+  $$LearnerProfilesTableOrderingComposer get profileId {
+    final $$LearnerProfilesTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.profileId,
+      referencedTable: $db.learnerProfiles,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$LearnerProfilesTableOrderingComposer(
+            $db: $db,
+            $table: $db.learnerProfiles,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
 }
 
 class $$LearningOrderTableAnnotationComposer
@@ -19356,9 +17909,6 @@ class $$LearningOrderTableAnnotationComposer
   });
   GeneratedColumn<int> get id =>
       $composableBuilder(column: $table.id, builder: (column) => column);
-
-  GeneratedColumn<int> get profileId =>
-      $composableBuilder(column: $table.profileId, builder: (column) => column);
 
   GeneratedColumn<String> get curriculumId => $composableBuilder(
     column: $table.curriculumId,
@@ -19377,6 +17927,29 @@ class $$LearningOrderTableAnnotationComposer
 
   GeneratedColumn<DateTime> get updatedAt =>
       $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  $$LearnerProfilesTableAnnotationComposer get profileId {
+    final $$LearnerProfilesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.profileId,
+      referencedTable: $db.learnerProfiles,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$LearnerProfilesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.learnerProfiles,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
 }
 
 class $$LearningOrderTableTableManager
@@ -19390,16 +17963,9 @@ class $$LearningOrderTableTableManager
           $$LearningOrderTableAnnotationComposer,
           $$LearningOrderTableCreateCompanionBuilder,
           $$LearningOrderTableUpdateCompanionBuilder,
-          (
-            LearningOrderData,
-            BaseReferences<
-              _$UserDatabase,
-              $LearningOrderTable,
-              LearningOrderData
-            >,
-          ),
+          (LearningOrderData, $$LearningOrderTableReferences),
           LearningOrderData,
-          PrefetchHooks Function()
+          PrefetchHooks Function({bool profileId})
         > {
   $$LearningOrderTableTableManager(_$UserDatabase db, $LearningOrderTable table)
     : super(
@@ -19445,9 +18011,54 @@ class $$LearningOrderTableTableManager
                 updatedAt: updatedAt,
               ),
           withReferenceMapper: (p0) => p0
-              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$LearningOrderTableReferences(db, table, e),
+                ),
+              )
               .toList(),
-          prefetchHooksCallback: null,
+          prefetchHooksCallback: ({profileId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (profileId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.profileId,
+                                referencedTable: $$LearningOrderTableReferences
+                                    ._profileIdTable(db),
+                                referencedColumn: $$LearningOrderTableReferences
+                                    ._profileIdTable(db)
+                                    .id,
+                              )
+                              as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
         ),
       );
 }
@@ -19462,12 +18073,9 @@ typedef $$LearningOrderTableProcessedTableManager =
       $$LearningOrderTableAnnotationComposer,
       $$LearningOrderTableCreateCompanionBuilder,
       $$LearningOrderTableUpdateCompanionBuilder,
-      (
-        LearningOrderData,
-        BaseReferences<_$UserDatabase, $LearningOrderTable, LearningOrderData>,
-      ),
+      (LearningOrderData, $$LearningOrderTableReferences),
       LearningOrderData,
-      PrefetchHooks Function()
+      PrefetchHooks Function({bool profileId})
     >;
 typedef $$TrackLearningOrderTableCreateCompanionBuilder =
     TrackLearningOrderCompanion Function({
@@ -20240,240 +18848,6 @@ typedef $$GoalsTableProcessedTableManager =
       Goal,
       PrefetchHooks Function({bool profileId, bool trackId})
     >;
-typedef $$StreaksTableCreateCompanionBuilder =
-    StreaksCompanion Function({
-      Value<int> id,
-      required int profileId,
-      Value<int> currentStreak,
-      Value<int> maxStreak,
-      Value<DateTime?> lastCompletionDate,
-      Value<DateTime?> graceUsedDate,
-      Value<int> gracePeriodDays,
-    });
-typedef $$StreaksTableUpdateCompanionBuilder =
-    StreaksCompanion Function({
-      Value<int> id,
-      Value<int> profileId,
-      Value<int> currentStreak,
-      Value<int> maxStreak,
-      Value<DateTime?> lastCompletionDate,
-      Value<DateTime?> graceUsedDate,
-      Value<int> gracePeriodDays,
-    });
-
-class $$StreaksTableFilterComposer
-    extends Composer<_$UserDatabase, $StreaksTable> {
-  $$StreaksTableFilterComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  ColumnFilters<int> get id => $composableBuilder(
-    column: $table.id,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<int> get profileId => $composableBuilder(
-    column: $table.profileId,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<int> get currentStreak => $composableBuilder(
-    column: $table.currentStreak,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<int> get maxStreak => $composableBuilder(
-    column: $table.maxStreak,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<DateTime> get lastCompletionDate => $composableBuilder(
-    column: $table.lastCompletionDate,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<DateTime> get graceUsedDate => $composableBuilder(
-    column: $table.graceUsedDate,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<int> get gracePeriodDays => $composableBuilder(
-    column: $table.gracePeriodDays,
-    builder: (column) => ColumnFilters(column),
-  );
-}
-
-class $$StreaksTableOrderingComposer
-    extends Composer<_$UserDatabase, $StreaksTable> {
-  $$StreaksTableOrderingComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  ColumnOrderings<int> get id => $composableBuilder(
-    column: $table.id,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<int> get profileId => $composableBuilder(
-    column: $table.profileId,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<int> get currentStreak => $composableBuilder(
-    column: $table.currentStreak,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<int> get maxStreak => $composableBuilder(
-    column: $table.maxStreak,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<DateTime> get lastCompletionDate => $composableBuilder(
-    column: $table.lastCompletionDate,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<DateTime> get graceUsedDate => $composableBuilder(
-    column: $table.graceUsedDate,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<int> get gracePeriodDays => $composableBuilder(
-    column: $table.gracePeriodDays,
-    builder: (column) => ColumnOrderings(column),
-  );
-}
-
-class $$StreaksTableAnnotationComposer
-    extends Composer<_$UserDatabase, $StreaksTable> {
-  $$StreaksTableAnnotationComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  GeneratedColumn<int> get id =>
-      $composableBuilder(column: $table.id, builder: (column) => column);
-
-  GeneratedColumn<int> get profileId =>
-      $composableBuilder(column: $table.profileId, builder: (column) => column);
-
-  GeneratedColumn<int> get currentStreak => $composableBuilder(
-    column: $table.currentStreak,
-    builder: (column) => column,
-  );
-
-  GeneratedColumn<int> get maxStreak =>
-      $composableBuilder(column: $table.maxStreak, builder: (column) => column);
-
-  GeneratedColumn<DateTime> get lastCompletionDate => $composableBuilder(
-    column: $table.lastCompletionDate,
-    builder: (column) => column,
-  );
-
-  GeneratedColumn<DateTime> get graceUsedDate => $composableBuilder(
-    column: $table.graceUsedDate,
-    builder: (column) => column,
-  );
-
-  GeneratedColumn<int> get gracePeriodDays => $composableBuilder(
-    column: $table.gracePeriodDays,
-    builder: (column) => column,
-  );
-}
-
-class $$StreaksTableTableManager
-    extends
-        RootTableManager<
-          _$UserDatabase,
-          $StreaksTable,
-          Streak,
-          $$StreaksTableFilterComposer,
-          $$StreaksTableOrderingComposer,
-          $$StreaksTableAnnotationComposer,
-          $$StreaksTableCreateCompanionBuilder,
-          $$StreaksTableUpdateCompanionBuilder,
-          (Streak, BaseReferences<_$UserDatabase, $StreaksTable, Streak>),
-          Streak,
-          PrefetchHooks Function()
-        > {
-  $$StreaksTableTableManager(_$UserDatabase db, $StreaksTable table)
-    : super(
-        TableManagerState(
-          db: db,
-          table: table,
-          createFilteringComposer: () =>
-              $$StreaksTableFilterComposer($db: db, $table: table),
-          createOrderingComposer: () =>
-              $$StreaksTableOrderingComposer($db: db, $table: table),
-          createComputedFieldComposer: () =>
-              $$StreaksTableAnnotationComposer($db: db, $table: table),
-          updateCompanionCallback:
-              ({
-                Value<int> id = const Value.absent(),
-                Value<int> profileId = const Value.absent(),
-                Value<int> currentStreak = const Value.absent(),
-                Value<int> maxStreak = const Value.absent(),
-                Value<DateTime?> lastCompletionDate = const Value.absent(),
-                Value<DateTime?> graceUsedDate = const Value.absent(),
-                Value<int> gracePeriodDays = const Value.absent(),
-              }) => StreaksCompanion(
-                id: id,
-                profileId: profileId,
-                currentStreak: currentStreak,
-                maxStreak: maxStreak,
-                lastCompletionDate: lastCompletionDate,
-                graceUsedDate: graceUsedDate,
-                gracePeriodDays: gracePeriodDays,
-              ),
-          createCompanionCallback:
-              ({
-                Value<int> id = const Value.absent(),
-                required int profileId,
-                Value<int> currentStreak = const Value.absent(),
-                Value<int> maxStreak = const Value.absent(),
-                Value<DateTime?> lastCompletionDate = const Value.absent(),
-                Value<DateTime?> graceUsedDate = const Value.absent(),
-                Value<int> gracePeriodDays = const Value.absent(),
-              }) => StreaksCompanion.insert(
-                id: id,
-                profileId: profileId,
-                currentStreak: currentStreak,
-                maxStreak: maxStreak,
-                lastCompletionDate: lastCompletionDate,
-                graceUsedDate: graceUsedDate,
-                gracePeriodDays: gracePeriodDays,
-              ),
-          withReferenceMapper: (p0) => p0
-              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
-              .toList(),
-          prefetchHooksCallback: null,
-        ),
-      );
-}
-
-typedef $$StreaksTableProcessedTableManager =
-    ProcessedTableManager<
-      _$UserDatabase,
-      $StreaksTable,
-      Streak,
-      $$StreaksTableFilterComposer,
-      $$StreaksTableOrderingComposer,
-      $$StreaksTableAnnotationComposer,
-      $$StreaksTableCreateCompanionBuilder,
-      $$StreaksTableUpdateCompanionBuilder,
-      (Streak, BaseReferences<_$UserDatabase, $StreaksTable, Streak>),
-      Streak,
-      PrefetchHooks Function()
-    >;
 typedef $$StreakEventsTableCreateCompanionBuilder =
     StreakEventsCompanion Function({
       Value<int> id,
@@ -20828,242 +19202,6 @@ typedef $$StreakEventsTableProcessedTableManager =
       (StreakEvent, $$StreakEventsTableReferences),
       StreakEvent,
       PrefetchHooks Function({bool profileId})
-    >;
-typedef $$SyncQueueTableCreateCompanionBuilder =
-    SyncQueueCompanion Function({
-      Value<int> id,
-      required String operationType,
-      required String payload,
-      required DateTime queuedAt,
-      Value<int> retryCount,
-      Value<String?> lastError,
-      Value<String?> entityKey,
-    });
-typedef $$SyncQueueTableUpdateCompanionBuilder =
-    SyncQueueCompanion Function({
-      Value<int> id,
-      Value<String> operationType,
-      Value<String> payload,
-      Value<DateTime> queuedAt,
-      Value<int> retryCount,
-      Value<String?> lastError,
-      Value<String?> entityKey,
-    });
-
-class $$SyncQueueTableFilterComposer
-    extends Composer<_$UserDatabase, $SyncQueueTable> {
-  $$SyncQueueTableFilterComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  ColumnFilters<int> get id => $composableBuilder(
-    column: $table.id,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<String> get operationType => $composableBuilder(
-    column: $table.operationType,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<String> get payload => $composableBuilder(
-    column: $table.payload,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<DateTime> get queuedAt => $composableBuilder(
-    column: $table.queuedAt,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<int> get retryCount => $composableBuilder(
-    column: $table.retryCount,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<String> get lastError => $composableBuilder(
-    column: $table.lastError,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<String> get entityKey => $composableBuilder(
-    column: $table.entityKey,
-    builder: (column) => ColumnFilters(column),
-  );
-}
-
-class $$SyncQueueTableOrderingComposer
-    extends Composer<_$UserDatabase, $SyncQueueTable> {
-  $$SyncQueueTableOrderingComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  ColumnOrderings<int> get id => $composableBuilder(
-    column: $table.id,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<String> get operationType => $composableBuilder(
-    column: $table.operationType,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<String> get payload => $composableBuilder(
-    column: $table.payload,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<DateTime> get queuedAt => $composableBuilder(
-    column: $table.queuedAt,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<int> get retryCount => $composableBuilder(
-    column: $table.retryCount,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<String> get lastError => $composableBuilder(
-    column: $table.lastError,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<String> get entityKey => $composableBuilder(
-    column: $table.entityKey,
-    builder: (column) => ColumnOrderings(column),
-  );
-}
-
-class $$SyncQueueTableAnnotationComposer
-    extends Composer<_$UserDatabase, $SyncQueueTable> {
-  $$SyncQueueTableAnnotationComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  GeneratedColumn<int> get id =>
-      $composableBuilder(column: $table.id, builder: (column) => column);
-
-  GeneratedColumn<String> get operationType => $composableBuilder(
-    column: $table.operationType,
-    builder: (column) => column,
-  );
-
-  GeneratedColumn<String> get payload =>
-      $composableBuilder(column: $table.payload, builder: (column) => column);
-
-  GeneratedColumn<DateTime> get queuedAt =>
-      $composableBuilder(column: $table.queuedAt, builder: (column) => column);
-
-  GeneratedColumn<int> get retryCount => $composableBuilder(
-    column: $table.retryCount,
-    builder: (column) => column,
-  );
-
-  GeneratedColumn<String> get lastError =>
-      $composableBuilder(column: $table.lastError, builder: (column) => column);
-
-  GeneratedColumn<String> get entityKey =>
-      $composableBuilder(column: $table.entityKey, builder: (column) => column);
-}
-
-class $$SyncQueueTableTableManager
-    extends
-        RootTableManager<
-          _$UserDatabase,
-          $SyncQueueTable,
-          SyncQueueData,
-          $$SyncQueueTableFilterComposer,
-          $$SyncQueueTableOrderingComposer,
-          $$SyncQueueTableAnnotationComposer,
-          $$SyncQueueTableCreateCompanionBuilder,
-          $$SyncQueueTableUpdateCompanionBuilder,
-          (
-            SyncQueueData,
-            BaseReferences<_$UserDatabase, $SyncQueueTable, SyncQueueData>,
-          ),
-          SyncQueueData,
-          PrefetchHooks Function()
-        > {
-  $$SyncQueueTableTableManager(_$UserDatabase db, $SyncQueueTable table)
-    : super(
-        TableManagerState(
-          db: db,
-          table: table,
-          createFilteringComposer: () =>
-              $$SyncQueueTableFilterComposer($db: db, $table: table),
-          createOrderingComposer: () =>
-              $$SyncQueueTableOrderingComposer($db: db, $table: table),
-          createComputedFieldComposer: () =>
-              $$SyncQueueTableAnnotationComposer($db: db, $table: table),
-          updateCompanionCallback:
-              ({
-                Value<int> id = const Value.absent(),
-                Value<String> operationType = const Value.absent(),
-                Value<String> payload = const Value.absent(),
-                Value<DateTime> queuedAt = const Value.absent(),
-                Value<int> retryCount = const Value.absent(),
-                Value<String?> lastError = const Value.absent(),
-                Value<String?> entityKey = const Value.absent(),
-              }) => SyncQueueCompanion(
-                id: id,
-                operationType: operationType,
-                payload: payload,
-                queuedAt: queuedAt,
-                retryCount: retryCount,
-                lastError: lastError,
-                entityKey: entityKey,
-              ),
-          createCompanionCallback:
-              ({
-                Value<int> id = const Value.absent(),
-                required String operationType,
-                required String payload,
-                required DateTime queuedAt,
-                Value<int> retryCount = const Value.absent(),
-                Value<String?> lastError = const Value.absent(),
-                Value<String?> entityKey = const Value.absent(),
-              }) => SyncQueueCompanion.insert(
-                id: id,
-                operationType: operationType,
-                payload: payload,
-                queuedAt: queuedAt,
-                retryCount: retryCount,
-                lastError: lastError,
-                entityKey: entityKey,
-              ),
-          withReferenceMapper: (p0) => p0
-              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
-              .toList(),
-          prefetchHooksCallback: null,
-        ),
-      );
-}
-
-typedef $$SyncQueueTableProcessedTableManager =
-    ProcessedTableManager<
-      _$UserDatabase,
-      $SyncQueueTable,
-      SyncQueueData,
-      $$SyncQueueTableFilterComposer,
-      $$SyncQueueTableOrderingComposer,
-      $$SyncQueueTableAnnotationComposer,
-      $$SyncQueueTableCreateCompanionBuilder,
-      $$SyncQueueTableUpdateCompanionBuilder,
-      (
-        SyncQueueData,
-        BaseReferences<_$UserDatabase, $SyncQueueTable, SyncQueueData>,
-      ),
-      SyncQueueData,
-      PrefetchHooks Function()
     >;
 typedef $$TextDownloadStatusesTableCreateCompanionBuilder =
     TextDownloadStatusesCompanion Function({
@@ -21827,6 +19965,407 @@ typedef $$SacredWindowEntriesTableProcessedTableManager =
       SacredWindowEntry,
       PrefetchHooks Function()
     >;
+typedef $$PriorCompletionImportsTableCreateCompanionBuilder =
+    PriorCompletionImportsCompanion Function({
+      Value<int> id,
+      required int profileId,
+      required String curriculumId,
+      required String sefariaRef,
+      required int stageId,
+      required String trackType,
+      required String source,
+      Value<DateTime> importedAt,
+    });
+typedef $$PriorCompletionImportsTableUpdateCompanionBuilder =
+    PriorCompletionImportsCompanion Function({
+      Value<int> id,
+      Value<int> profileId,
+      Value<String> curriculumId,
+      Value<String> sefariaRef,
+      Value<int> stageId,
+      Value<String> trackType,
+      Value<String> source,
+      Value<DateTime> importedAt,
+    });
+
+final class $$PriorCompletionImportsTableReferences
+    extends
+        BaseReferences<
+          _$UserDatabase,
+          $PriorCompletionImportsTable,
+          PriorCompletionImport
+        > {
+  $$PriorCompletionImportsTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static $LearnerProfilesTable _profileIdTable(_$UserDatabase db) =>
+      db.learnerProfiles.createAlias(
+        $_aliasNameGenerator(
+          db.priorCompletionImports.profileId,
+          db.learnerProfiles.id,
+        ),
+      );
+
+  $$LearnerProfilesTableProcessedTableManager get profileId {
+    final $_column = $_itemColumn<int>('profile_id')!;
+
+    final manager = $$LearnerProfilesTableTableManager(
+      $_db,
+      $_db.learnerProfiles,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_profileIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$PriorCompletionImportsTableFilterComposer
+    extends Composer<_$UserDatabase, $PriorCompletionImportsTable> {
+  $$PriorCompletionImportsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get curriculumId => $composableBuilder(
+    column: $table.curriculumId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get sefariaRef => $composableBuilder(
+    column: $table.sefariaRef,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get stageId => $composableBuilder(
+    column: $table.stageId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get trackType => $composableBuilder(
+    column: $table.trackType,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get source => $composableBuilder(
+    column: $table.source,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get importedAt => $composableBuilder(
+    column: $table.importedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$LearnerProfilesTableFilterComposer get profileId {
+    final $$LearnerProfilesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.profileId,
+      referencedTable: $db.learnerProfiles,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$LearnerProfilesTableFilterComposer(
+            $db: $db,
+            $table: $db.learnerProfiles,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$PriorCompletionImportsTableOrderingComposer
+    extends Composer<_$UserDatabase, $PriorCompletionImportsTable> {
+  $$PriorCompletionImportsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get curriculumId => $composableBuilder(
+    column: $table.curriculumId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get sefariaRef => $composableBuilder(
+    column: $table.sefariaRef,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get stageId => $composableBuilder(
+    column: $table.stageId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get trackType => $composableBuilder(
+    column: $table.trackType,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get source => $composableBuilder(
+    column: $table.source,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get importedAt => $composableBuilder(
+    column: $table.importedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$LearnerProfilesTableOrderingComposer get profileId {
+    final $$LearnerProfilesTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.profileId,
+      referencedTable: $db.learnerProfiles,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$LearnerProfilesTableOrderingComposer(
+            $db: $db,
+            $table: $db.learnerProfiles,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$PriorCompletionImportsTableAnnotationComposer
+    extends Composer<_$UserDatabase, $PriorCompletionImportsTable> {
+  $$PriorCompletionImportsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get curriculumId => $composableBuilder(
+    column: $table.curriculumId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get sefariaRef => $composableBuilder(
+    column: $table.sefariaRef,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get stageId =>
+      $composableBuilder(column: $table.stageId, builder: (column) => column);
+
+  GeneratedColumn<String> get trackType =>
+      $composableBuilder(column: $table.trackType, builder: (column) => column);
+
+  GeneratedColumn<String> get source =>
+      $composableBuilder(column: $table.source, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get importedAt => $composableBuilder(
+    column: $table.importedAt,
+    builder: (column) => column,
+  );
+
+  $$LearnerProfilesTableAnnotationComposer get profileId {
+    final $$LearnerProfilesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.profileId,
+      referencedTable: $db.learnerProfiles,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$LearnerProfilesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.learnerProfiles,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$PriorCompletionImportsTableTableManager
+    extends
+        RootTableManager<
+          _$UserDatabase,
+          $PriorCompletionImportsTable,
+          PriorCompletionImport,
+          $$PriorCompletionImportsTableFilterComposer,
+          $$PriorCompletionImportsTableOrderingComposer,
+          $$PriorCompletionImportsTableAnnotationComposer,
+          $$PriorCompletionImportsTableCreateCompanionBuilder,
+          $$PriorCompletionImportsTableUpdateCompanionBuilder,
+          (PriorCompletionImport, $$PriorCompletionImportsTableReferences),
+          PriorCompletionImport,
+          PrefetchHooks Function({bool profileId})
+        > {
+  $$PriorCompletionImportsTableTableManager(
+    _$UserDatabase db,
+    $PriorCompletionImportsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$PriorCompletionImportsTableFilterComposer(
+                $db: db,
+                $table: table,
+              ),
+          createOrderingComposer: () =>
+              $$PriorCompletionImportsTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$PriorCompletionImportsTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<int> profileId = const Value.absent(),
+                Value<String> curriculumId = const Value.absent(),
+                Value<String> sefariaRef = const Value.absent(),
+                Value<int> stageId = const Value.absent(),
+                Value<String> trackType = const Value.absent(),
+                Value<String> source = const Value.absent(),
+                Value<DateTime> importedAt = const Value.absent(),
+              }) => PriorCompletionImportsCompanion(
+                id: id,
+                profileId: profileId,
+                curriculumId: curriculumId,
+                sefariaRef: sefariaRef,
+                stageId: stageId,
+                trackType: trackType,
+                source: source,
+                importedAt: importedAt,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required int profileId,
+                required String curriculumId,
+                required String sefariaRef,
+                required int stageId,
+                required String trackType,
+                required String source,
+                Value<DateTime> importedAt = const Value.absent(),
+              }) => PriorCompletionImportsCompanion.insert(
+                id: id,
+                profileId: profileId,
+                curriculumId: curriculumId,
+                sefariaRef: sefariaRef,
+                stageId: stageId,
+                trackType: trackType,
+                source: source,
+                importedAt: importedAt,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$PriorCompletionImportsTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({profileId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (profileId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.profileId,
+                                referencedTable:
+                                    $$PriorCompletionImportsTableReferences
+                                        ._profileIdTable(db),
+                                referencedColumn:
+                                    $$PriorCompletionImportsTableReferences
+                                        ._profileIdTable(db)
+                                        .id,
+                              )
+                              as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$PriorCompletionImportsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$UserDatabase,
+      $PriorCompletionImportsTable,
+      PriorCompletionImport,
+      $$PriorCompletionImportsTableFilterComposer,
+      $$PriorCompletionImportsTableOrderingComposer,
+      $$PriorCompletionImportsTableAnnotationComposer,
+      $$PriorCompletionImportsTableCreateCompanionBuilder,
+      $$PriorCompletionImportsTableUpdateCompanionBuilder,
+      (PriorCompletionImport, $$PriorCompletionImportsTableReferences),
+      PriorCompletionImport,
+      PrefetchHooks Function({bool profileId})
+    >;
 
 class $UserDatabaseManager {
   final _$UserDatabase _db;
@@ -21847,8 +20386,6 @@ class $UserDatabaseManager {
       $$PointConfigsTableTableManager(_db, _db.pointConfigs);
   $$StudyDayConfigsTableTableManager get studyDayConfigs =>
       $$StudyDayConfigsTableTableManager(_db, _db.studyDayConfigs);
-  $$CompletionsTableTableManager get completions =>
-      $$CompletionsTableTableManager(_db, _db.completions);
   $$CompletionEventsTableTableManager get completionEvents =>
       $$CompletionEventsTableTableManager(_db, _db.completionEvents);
   $$DailyPlansTableTableManager get dailyPlans =>
@@ -21863,16 +20400,17 @@ class $UserDatabaseManager {
       $$TrackLearningOrderTableTableManager(_db, _db.trackLearningOrder);
   $$GoalsTableTableManager get goals =>
       $$GoalsTableTableManager(_db, _db.goals);
-  $$StreaksTableTableManager get streaks =>
-      $$StreaksTableTableManager(_db, _db.streaks);
   $$StreakEventsTableTableManager get streakEvents =>
       $$StreakEventsTableTableManager(_db, _db.streakEvents);
-  $$SyncQueueTableTableManager get syncQueue =>
-      $$SyncQueueTableTableManager(_db, _db.syncQueue);
   $$TextDownloadStatusesTableTableManager get textDownloadStatuses =>
       $$TextDownloadStatusesTableTableManager(_db, _db.textDownloadStatuses);
   $$OutboxTableTableManager get outbox =>
       $$OutboxTableTableManager(_db, _db.outbox);
   $$SacredWindowEntriesTableTableManager get sacredWindowEntries =>
       $$SacredWindowEntriesTableTableManager(_db, _db.sacredWindowEntries);
+  $$PriorCompletionImportsTableTableManager get priorCompletionImports =>
+      $$PriorCompletionImportsTableTableManager(
+        _db,
+        _db.priorCompletionImports,
+      );
 }

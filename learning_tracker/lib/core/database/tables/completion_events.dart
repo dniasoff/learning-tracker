@@ -44,20 +44,7 @@ class CompletionEvents extends Table {
   /// null = active; non-null = purged at this UTC timestamp.
   DateTimeColumn get purgedAt => dateTime().nullable()();
 
-  /// B8: marks a row as originating from the bulk-prior-mark flow.
-  ///
-  /// `1` = this row was written by [BulkPriorCompletionService.execute] and
-  /// has never been overwritten by a real in-app learning event.
-  /// `0` (default) = this row was written by [CompletionWriter.commit] /
-  /// [CompletionWriter.commitBatch] and represents genuine learning.
-  ///
-  /// When [CompletionWriter] finds an existing row whose `priorMarkOnly = 1`
-  /// it UPDATEs the row: clears `priorMarkOnly`, updates `eventTimestamp`, and
-  /// enqueues an outbox push — so the real-learning event is not silently lost.
-  ///
-  /// [BulkPriorCompletionService.expungePriorCompletions] only tombstones rows
-  /// where `priorMarkOnly = 1`; rows already upgraded to real-learning
-  /// (`priorMarkOnly = 0`) are left untouched.
-  BoolColumn get priorMarkOnly =>
-      boolean().withDefault(const Constant<bool>(false))();
+  // NOTE: The `priorMarkOnly` column was removed in W4.26.
+  // Import provenance is tracked in [PriorCompletionImports] table.
+  // See BulkPriorCompletionService + CompletionWriter for the B8 upgrade path.
 }

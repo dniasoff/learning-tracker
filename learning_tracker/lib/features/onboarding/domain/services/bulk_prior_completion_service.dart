@@ -334,16 +334,15 @@ class BulkPriorCompletionService {
     // row in prior_completion_imports. Rows promoted to real-learning by
     // CompletionWriter (B8 upgrade) will have had their import record deleted,
     // so they will be invisible here and left untouched.
-    final importRows = await (_database.select(
-      _database.priorCompletionImports,
-    )..where(
-          (t) =>
-              t.profileId.equals(profileId) &
-              t.sefariaRef.equals(sefariaRef) &
-              t.curriculumId.equals(curriculumKey) &
-              t.trackType.equals(trackType),
-        ))
-        .get();
+    final importRows =
+        await (_database.select(_database.priorCompletionImports)..where(
+              (t) =>
+                  t.profileId.equals(profileId) &
+                  t.sefariaRef.equals(sefariaRef) &
+                  t.curriculumId.equals(curriculumKey) &
+                  t.trackType.equals(trackType),
+            ))
+            .get();
 
     if (importRows.isEmpty) return; // Nothing to expunge.
 
