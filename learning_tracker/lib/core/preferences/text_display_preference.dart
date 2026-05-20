@@ -1,6 +1,6 @@
 import 'package:learning_tracker/core/preferences/profile_scoped_preference.dart';
+import 'package:learning_tracker/core/preferences/profile_scoped_preference_keys.dart';
 import 'package:learning_tracker/core/preferences/text_display_preferences.dart';
-import 'package:learning_tracker/features/sync/domain/profile_scoped_preference_keys.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Per-profile text-display font size. Persisted as an int (the [FontSize]

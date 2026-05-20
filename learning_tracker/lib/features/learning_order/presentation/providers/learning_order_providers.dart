@@ -8,7 +8,7 @@ import 'package:learning_tracker/features/learning_order/data/repositories/learn
 import 'package:learning_tracker/features/learning_order/domain/models/learning_order_item.dart';
 import 'package:learning_tracker/features/learning_order/domain/repositories/learning_order_repository.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
-import 'package:learning_tracker/features/sync/domain/profile_scoped_preference_keys.dart';
+import 'package:learning_tracker/core/preferences/profile_scoped_preference_keys.dart';
 import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 

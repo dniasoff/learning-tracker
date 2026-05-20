@@ -1,5 +1,5 @@
 import 'package:learning_tracker/core/preferences/profile_scoped_preference.dart';
-import 'package:learning_tracker/features/sync/domain/profile_scoped_preference_keys.dart';
+import 'package:learning_tracker/core/preferences/profile_scoped_preference_keys.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Per-profile toggle controlling whether Jewish learning terms (chazara,
