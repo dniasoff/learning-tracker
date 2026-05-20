@@ -283,3 +283,57 @@ cd learning_tracker && flutter test test/core/ --no-pub
 dart analyze test/core
 # → No issues found!
 ```
+
+---
+
+## Runtime-Fix-A Results (2026-05-20)
+
+**Agent:** Runtime-Fix-A
+**Scope:** `test/integration/` (all 8 files)
+**Branch:** dev
+
+### Failure count delta
+
+| Metric | Before | After |
+|---|---|---|
+| Integration test failures | 15 failing tests across 4 files | **0** — 39/39 pass |
+| Tests skipped | 0 | 0 |
+| Real regressions found | 0 | 0 (see classification below) |
+
+### Root causes and fixes
+
+| Failure pattern | Root cause | Classification | Fix |
+|---|---|---|---|
+| `_LockScreen` Null check error (`AppLocalizations.of(context)!`) | `MaterialApp` in test didn't set up `localizationsDelegates` | **Test outdated** (test never had localizations setup) | Added `AppLocalizations.localizationsDelegates` + `supportedLocales` to `_pump()` and the `UncontrolledProviderScope` `MaterialApp` |
+| `FOREIGN KEY constraint failed` on `learner_profiles` insert | W3 schema added FK `learner_profiles.accountId → accounts.id`; test seeded profile without seeding account first | **Test outdated** (schema changed post-test-creation) | Inserted `accounts` row before `learnerProfiles` in both `bulk_mark_prior_streak_suppression_test` and `firestore_wipe_install_test` |
+| `Unknown ProfileMode storage key: "parent"` | `ProfileMode` enum renamed 'parent' → 'adult'/'child' (W5.x primitive-obsession sweep) | **Test outdated** | Changed `mode: 'parent'` → `mode: 'adult'` in seed helpers |
+| `expungePriorCompletions` no-op — `purgedAt` never set | W4.26 moved expunge identification from sentinel-timestamp scan to `prior_completion_imports` table query; tests seeded only `completion_events`, not the import table | **Test outdated** (production behaviour improved) | Added `_insertPriorMark()` helper that atomically seeds both `completion_events` + `prior_completion_imports`; updated all 7 direct-insert test sites in B8/Finding-8 group |
+| `B6/AC3` expected 2 completions, got 3 | W3.29 dropped `supersededAt` column; there is no longer a DB-level concept of a "superseded" stage | **Test expectation outdated** | Updated assertion from 2→3 with explanatory comment; updated test name to remove "superseded stages excluded" claim |
+| `Test4` sentinel DateTime comparison fail (`2000-01-01 00:00:00Z` ≠ `2000-01-01 01:00:00`) | `DateTime.utc(2000,1,1)` round-trips through SQLite and back as local time in UTC+1 environments | **Test fragile** (not a production regression) | Changed to `millisecondsSinceEpoch` comparison (same technique used in B6/AC2) |
+
+### Real regressions found
+
+**None.** All failures were test-expectation or test-setup issues introduced by the W3/W4 schema refactor — the production code was correct in every case.
+
+### Files touched (test/ only — no production code changed)
+
+| File | Changes |
+|---|---|
+| `test/integration/sacred_time_overlay_scope_test.dart` | Added `AppLocalizations` import + delegates to `_pump()` and `UncontrolledProviderScope` wrapper |
+| `test/integration/bulk_mark_prior_streak_suppression_test.dart` | Seeded `accounts` row before `learnerProfiles`; fixed `mode` from `'parent'` to `'adult'` |
+| `test/integration/bulk_prior_completion_b6_b8_test.dart` | Added `_insertPriorMark()` helper; updated B6/AC3 expectation + name; fixed B8/AC1,AC3,AC4,AC6 + Finding-8 Test-1,3 to use `_insertPriorMark`; fixed Test-4 UTC comparison |
+| `test/integration/firestore_wipe_install_test.dart` | Seeded `accounts` row before `learnerProfiles` in Phase 4 restore |
+
+### Commits
+
+| Commit | Description |
+|---|---|
+| `da805bd2` | fix(tests): repair all integration test failures — Runtime-Fix-A scope |
+| `b94a3a95` | fix(tests): cosmetic fixes in integration tests — import ordering + const |
+
+### Verify
+
+```bash
+cd learning_tracker && flutter test test/integration/
+# → 00:02 +39: All tests passed!
+```
