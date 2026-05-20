@@ -171,7 +171,9 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
       await PendingLocalSignupStore.clearPayload(prefs);
       if (switchedDb) {
         PendingLocalSignupStore.deleteOrphanDbFile(databasesPath, dbFileName);
-        activeDbFileName = 'learning_tracker';
+        ref
+            .read(accountDbFileNameProvider.notifier)
+            .setFileName('learning_tracker');
         ref.invalidate(userDatabaseProvider);
       }
     }
@@ -204,7 +206,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
       }
       reservedEmail = true;
 
-      activeDbFileName = dbFileName;
+      ref.read(accountDbFileNameProvider.notifier).setFileName(dbFileName);
       ref.invalidate(userDatabaseProvider);
       switchedDb = true;
 
@@ -351,7 +353,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
       if (existingEntry == null) {
         final accountId = const Uuid().v4();
         final dbFileName = 'user_acc_$accountId.db';
-        activeDbFileName = dbFileName;
+        ref.read(accountDbFileNameProvider.notifier).setFileName(dbFileName);
         ref.invalidate(userDatabaseProvider);
 
         await ref
@@ -374,7 +376,9 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
       } else {
         // Existing account on this device — swap to its DB and
         // refresh lastUsedAt so session persistence stays coherent.
-        activeDbFileName = existingEntry.dbFileName;
+        ref
+            .read(accountDbFileNameProvider.notifier)
+            .setFileName(existingEntry.dbFileName);
         ref.invalidate(userDatabaseProvider);
         await ref
             .read(auth_state.authStateProvider.notifier)

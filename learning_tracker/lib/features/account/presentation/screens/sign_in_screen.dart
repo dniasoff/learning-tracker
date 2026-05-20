@@ -167,7 +167,9 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
   Future<bool> _tryOfflineCloudRestore(DeviceAccount account) async {
     try {
       // Switch to the account-scoped DB before resolving profile rows.
-      activeDbFileName = account.dbFileName;
+      ref
+          .read(accountDbFileNameProvider.notifier)
+          .setFileName(account.dbFileName);
       ref.invalidate(userDatabaseProvider);
 
       final dao = ref.read(userDatabaseProvider).userProfileDao;
@@ -241,7 +243,9 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
         // Swap to this account's DB first so the argon2 hash is read
         // from the correct file — otherwise we verify against whatever
         // DB was previously active and cross-account data leaks in.
-        activeDbFileName = account.dbFileName;
+        ref
+            .read(accountDbFileNameProvider.notifier)
+            .setFileName(account.dbFileName);
         ref.invalidate(userDatabaseProvider);
 
         final dao = ref.read(userDatabaseProvider).userProfileDao;
@@ -575,8 +579,10 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
 
     if (existingEntry != null) {
       // Returning account on this device — swap to its DB file.
-      if (activeDbFileName != existingEntry.dbFileName) {
-        activeDbFileName = existingEntry.dbFileName;
+      if (ref.read(accountDbFileNameProvider) != existingEntry.dbFileName) {
+        ref
+            .read(accountDbFileNameProvider.notifier)
+            .setFileName(existingEntry.dbFileName);
         ref.invalidate(userDatabaseProvider);
       }
       await ref
@@ -591,7 +597,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
       // after pulling from Firestore and seeing whether profiles exist.
       final accountId = const Uuid().v4();
       final dbFileName = 'user_acc_$accountId.db';
-      activeDbFileName = dbFileName;
+      ref.read(accountDbFileNameProvider.notifier).setFileName(dbFileName);
       ref.invalidate(userDatabaseProvider);
 
       await ref

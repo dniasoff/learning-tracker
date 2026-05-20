@@ -45,7 +45,10 @@ void main() {
         dbDirectory: docsDir.path,
         log: log,
       );
-      await bootstrapAccount(databasesPath: docsDir.path, log: log);
+      final resolvedDbFileName = await bootstrapAccount(
+        databasesPath: docsDir.path,
+        log: log,
+      );
 
       unawaited(analytics.logAppLaunch());
 
@@ -66,6 +69,15 @@ void main() {
           ),
         ],
       );
+
+      // Seed the resolved account DB file name into the provider.
+      // bootstrapAccount completed before runApp so this is effectively
+      // synchronous from the provider tree's perspective.
+      if (resolvedDbFileName != 'learning_tracker') {
+        container
+            .read(accountDbFileNameProvider.notifier)
+            .setFileName(resolvedDbFileName);
+      }
 
       container.listen<int?>(selectedProfileIdProvider, (_, id) {
         crashlytics.setUserIdentifier(id);

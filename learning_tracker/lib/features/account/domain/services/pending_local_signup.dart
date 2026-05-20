@@ -176,7 +176,9 @@ class PendingLocalSignupStore {
     await clearPayload(prefs);
     await releaseEmail(prefs, pending.email);
 
-    activeDbFileName = 'learning_tracker';
+    ref
+        .read(accountDbFileNameProvider.notifier)
+        .setFileName('learning_tracker');
     ref.invalidate(userDatabaseProvider);
     ref.read(authStateProvider.notifier).signOut();
   }

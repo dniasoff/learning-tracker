@@ -1,18 +1,16 @@
 import 'package:drift_flutter/drift_flutter.dart';
 import 'package:learning_tracker/core/database/registry/device_registry_database.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
-import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/features/account/domain/services/pending_local_signup.dart';
 import 'package:learning_tracker/features/account/domain/services/session_persistence_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-/// Resolves the active account and sets [activeDbFileName] before the
-/// provider tree is built.
+/// Resolves the active account at startup and returns the DB file name to
+/// be passed to [ProviderScope] as an override for [accountDbFileNameProvider].
 ///
-/// Epic 21: [userDatabaseProvider] reads [activeDbFileName] synchronously,
-/// so it must be set here. Non-fatal on error — app starts without an
-/// active account.
-Future<void> bootstrapAccount({
+/// Returns `'learning_tracker'` (the legacy single-file default) when no
+/// account is found or on error so the app starts in a usable state.
+Future<String> bootstrapAccount({
   required String databasesPath,
   required AppLogger log,
 }) async {
@@ -30,10 +28,11 @@ Future<void> bootstrapAccount({
       registry: registry,
     );
     final accountId = await sessionService.resolveActiveAccountId();
+    var resolvedName = 'learning_tracker';
     if (accountId != null) {
       final account = await registry.findById(accountId);
       if (account != null) {
-        activeDbFileName = account.dbFileName;
+        resolvedName = account.dbFileName;
         log.info(
           event: 'active_account_resolved',
           fields: {
@@ -48,11 +47,13 @@ Future<void> bootstrapAccount({
       log.info(event: 'active_account_none');
     }
     await registry.close();
+    return resolvedName;
   } catch (e, stack) {
     log.error(
       event: 'active_account_resolution_failed',
       exception: e,
       stackTrace: stack,
     );
+    return 'learning_tracker';
   }
 }

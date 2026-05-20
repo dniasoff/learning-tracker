@@ -8,32 +8,116 @@ part of 'database_provider.dart';
 
 // GENERATED CODE - DO NOT MODIFY BY HAND
 // ignore_for_file: type=lint, type=warning
+/// Active account's DB file name — a mutable notifier so sign-in/signup
+/// flows can swap accounts without a global side-effect.
+///
+/// Bootstrapped in `main.dart` via a [ProviderScope] override with the
+/// value resolved by [bootstrapAccount]. Defaults to `'learning_tracker'`
+/// so tests and fresh installs work without an override.
+///
+/// When the notifier's state changes, [userDatabaseProvider] rebuilds
+/// automatically and opens the new database file.
+
+@ProviderFor(AccountDbFileName)
+final accountDbFileNameProvider = AccountDbFileNameProvider._();
+
+/// Active account's DB file name — a mutable notifier so sign-in/signup
+/// flows can swap accounts without a global side-effect.
+///
+/// Bootstrapped in `main.dart` via a [ProviderScope] override with the
+/// value resolved by [bootstrapAccount]. Defaults to `'learning_tracker'`
+/// so tests and fresh installs work without an override.
+///
+/// When the notifier's state changes, [userDatabaseProvider] rebuilds
+/// automatically and opens the new database file.
+final class AccountDbFileNameProvider
+    extends $NotifierProvider<AccountDbFileName, String> {
+  /// Active account's DB file name — a mutable notifier so sign-in/signup
+  /// flows can swap accounts without a global side-effect.
+  ///
+  /// Bootstrapped in `main.dart` via a [ProviderScope] override with the
+  /// value resolved by [bootstrapAccount]. Defaults to `'learning_tracker'`
+  /// so tests and fresh installs work without an override.
+  ///
+  /// When the notifier's state changes, [userDatabaseProvider] rebuilds
+  /// automatically and opens the new database file.
+  AccountDbFileNameProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'accountDbFileNameProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$accountDbFileNameHash();
+
+  @$internal
+  @override
+  AccountDbFileName create() => AccountDbFileName();
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(String value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<String>(value),
+    );
+  }
+}
+
+String _$accountDbFileNameHash() => r'4033a3f9624cdea5594a62be6a8bb0ba60d715ba';
+
+/// Active account's DB file name — a mutable notifier so sign-in/signup
+/// flows can swap accounts without a global side-effect.
+///
+/// Bootstrapped in `main.dart` via a [ProviderScope] override with the
+/// value resolved by [bootstrapAccount]. Defaults to `'learning_tracker'`
+/// so tests and fresh installs work without an override.
+///
+/// When the notifier's state changes, [userDatabaseProvider] rebuilds
+/// automatically and opens the new database file.
+
+abstract class _$AccountDbFileName extends $Notifier<String> {
+  String build();
+  @$mustCallSuper
+  @override
+  void runBuild() {
+    final ref = this.ref as $Ref<String, String>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<String, String>,
+              String,
+              Object?,
+              Object?
+            >;
+    element.handleCreate(ref, build);
+  }
+}
+
 /// User database — read-write, scoped to the active account.
 ///
-/// Epic 21: [activeDbFileName] is resolved at startup by
-/// [SessionPersistenceService] and set before the provider tree
-/// builds. Defaults to the legacy `learning_tracker` name so
-/// tests and fresh installs work without a registry.
+/// Watches [accountDbFileNameProvider] so the database is automatically
+/// swapped when a new account is selected during sign-in or sign-up.
 
 @ProviderFor(userDatabase)
 final userDatabaseProvider = UserDatabaseProvider._();
 
 /// User database — read-write, scoped to the active account.
 ///
-/// Epic 21: [activeDbFileName] is resolved at startup by
-/// [SessionPersistenceService] and set before the provider tree
-/// builds. Defaults to the legacy `learning_tracker` name so
-/// tests and fresh installs work without a registry.
+/// Watches [accountDbFileNameProvider] so the database is automatically
+/// swapped when a new account is selected during sign-in or sign-up.
 
 final class UserDatabaseProvider
     extends $FunctionalProvider<UserDatabase, UserDatabase, UserDatabase>
     with $Provider<UserDatabase> {
   /// User database — read-write, scoped to the active account.
   ///
-  /// Epic 21: [activeDbFileName] is resolved at startup by
-  /// [SessionPersistenceService] and set before the provider tree
-  /// builds. Defaults to the legacy `learning_tracker` name so
-  /// tests and fresh installs work without a registry.
+  /// Watches [accountDbFileNameProvider] so the database is automatically
+  /// swapped when a new account is selected during sign-in or sign-up.
   UserDatabaseProvider._()
     : super(
         from: null,
@@ -67,7 +151,7 @@ final class UserDatabaseProvider
   }
 }
 
-String _$userDatabaseHash() => r'1df0cea1851023cf26abc0a4ebda0663cb9c7931';
+String _$userDatabaseHash() => r'32a85d2484055a69ae0da3df23730d020ea762dd';
 
 /// Filesystem path for the bundled content database.
 ///

@@ -388,7 +388,9 @@ class _AccountTile extends ConsumerWidget {
       // Swap the active DB to this account's file BEFORE reading the
       // profile — the cached userDatabaseProvider still points at the
       // previous account otherwise (keepAlive).
-      activeDbFileName = account.dbFileName;
+      ref
+          .read(accountDbFileNameProvider.notifier)
+          .setFileName(account.dbFileName);
       ref.invalidate(userDatabaseProvider);
 
       await _activateCloudAccountFromLocalData(context, ref);
@@ -415,7 +417,9 @@ class _AccountTile extends ConsumerWidget {
     WidgetRef ref,
   ) async {
     // Always swap DB first, so profile reads are scoped to this account.
-    activeDbFileName = account.dbFileName;
+    ref
+        .read(accountDbFileNameProvider.notifier)
+        .setFileName(account.dbFileName);
     ref.invalidate(userDatabaseProvider);
 
     final dao = ref.read(userDatabaseProvider).userProfileDao;
@@ -458,7 +462,9 @@ class _AccountTile extends ConsumerWidget {
     BuildContext context,
     WidgetRef ref,
   ) async {
-    activeDbFileName = account.dbFileName;
+    ref
+        .read(accountDbFileNameProvider.notifier)
+        .setFileName(account.dbFileName);
     ref.invalidate(userDatabaseProvider);
 
     final dao = ref.read(userDatabaseProvider).userProfileDao;

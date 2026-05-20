@@ -33,7 +33,7 @@ class SessionPersistenceService {
   /// mark it active. Call this right after a successful sign-up
   /// (cloud-born or local-born) once the per-account DB file has
   /// been written. The caller is responsible for generating the
-  /// [accountId] and [dbFileName] and for swapping `activeDbFileName`
+  /// [accountId] and [dbFileName] and for updating [accountDbFileNameProvider]
   /// to point at the new file before any profile rows are written.
   Future<void> registerAccount({
     required String accountId,

@@ -264,7 +264,7 @@ Sync-point trigger tags: `[P1]` `[P2]` `[P3]` `[P4]` `[P5]` `[P6]` `[P7]`
 - [x] W5.16 (S, S5, done)    Move hard-coded English strings in features/ to l10n/ (24 strings across 9 files: hubs, onboarding, dashboard, bulk_mark, sacred_time_lock, track_order)
 
 ### Phase 5e · Provider/global cleanup
-- [ ] W5.17 (M, S5, pending)    Replace String activeDbFileName global → accountDbFileNameProvider:AsyncNotifier&lt;String&gt;; gate router on .when
+- [x] W5.17 (M, S5, done)    Replace String activeDbFileName global → accountDbFileNameProvider Notifier&lt;String&gt;; 8 mutation sites updated to setFileName(); bootstrap seeds value post-container-creation
 - [ ] W5.18 (S, S5, pending)    Remove LearningProgramRepository.instance singleton; route via Riverpod
 - [ ] W5.19 (S, S5, pending)    Replace 100+ direct DateTime.now() calls with clockProvider.now(); enable make audit grep #6
 

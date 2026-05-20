@@ -7,29 +7,35 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'database_provider.g.dart';
 
+/// Active account's DB file name — a mutable notifier so sign-in/signup
+/// flows can swap accounts without a global side-effect.
+///
+/// Bootstrapped in `main.dart` via a [ProviderScope] override with the
+/// value resolved by [bootstrapAccount]. Defaults to `'learning_tracker'`
+/// so tests and fresh installs work without an override.
+///
+/// When the notifier's state changes, [userDatabaseProvider] rebuilds
+/// automatically and opens the new database file.
+@Riverpod(keepAlive: true)
+class AccountDbFileName extends _$AccountDbFileName {
+  @override
+  String build() => 'learning_tracker';
+
+  /// Swap to a different account's database file.
+  void setFileName(String name) => state = name;
+}
+
 /// User database — read-write, scoped to the active account.
 ///
-/// Epic 21: [activeDbFileName] is resolved at startup by
-/// [SessionPersistenceService] and set before the provider tree
-/// builds. Defaults to the legacy `learning_tracker` name so
-/// tests and fresh installs work without a registry.
+/// Watches [accountDbFileNameProvider] so the database is automatically
+/// swapped when a new account is selected during sign-in or sign-up.
 @Riverpod(keepAlive: true)
 UserDatabase userDatabase(Ref ref) {
-  final database = UserDatabase(driftDatabase(name: activeDbFileName));
+  final dbName = ref.watch(accountDbFileNameProvider);
+  final database = UserDatabase(driftDatabase(name: dbName));
   ref.onDispose(database.close);
   return database;
 }
-
-/// The active account's DB file name, set by
-/// [SessionPersistenceService] or [AuthStateNotifier] before the
-/// provider tree builds. Defaults to the legacy single-file name
-/// so tests and fresh installs work without a registry.
-///
-/// This is a simple global because the provider must resolve
-/// synchronously — Drift's `driftDatabase(name:)` doesn't accept
-/// a Future. The async resolution happens in `main.dart` at
-/// startup (or in tests via provider overrides).
-String activeDbFileName = 'learning_tracker';
 
 /// Filesystem path for the bundled content database.
 ///

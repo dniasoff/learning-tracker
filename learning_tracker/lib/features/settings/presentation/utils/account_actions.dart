@@ -484,8 +484,10 @@ Future<void> showDeleteLocalAccountFlow(
       return;
     }
 
-    if (activeDbFileName == account.dbFileName) {
-      activeDbFileName = 'learning_tracker';
+    if (ref.read(accountDbFileNameProvider) == account.dbFileName) {
+      ref
+          .read(accountDbFileNameProvider.notifier)
+          .setFileName('learning_tracker');
       ref.invalidate(userDatabaseProvider);
     }
 
