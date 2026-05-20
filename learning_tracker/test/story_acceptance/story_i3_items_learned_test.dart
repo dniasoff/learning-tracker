@@ -45,41 +45,6 @@ final _kRealDate = DateTime.utc(2026, 5, 1, 10);
 /// bulk rows a plausible historical timestamp).
 final _kBulkDate = DateTime.utc(2000, 1, 1);
 
-/// Seeds a bulkInTrack completion: event row + prior_completion_imports record.
-///
-/// This is the Layer 3 canonical way to represent a bulk-prior import.
-/// The row will be included in [CompletionTierFilter.trackAchievement] but
-/// excluded from [CompletionTierFilter.liveOnly].
-Future<void> _seedBulkInTrack(
-  UserDatabase db, {
-  required int profileId,
-  required int trackId,
-  required String sefariaRef,
-}) async {
-  await seedCompletion(
-    db,
-    CompletionEventsCompanion.insert(
-      profileId: profileId,
-      curriculumId: CurriculumId.mishnayos.storageKey,
-      sefariaRef: sefariaRef,
-      stageId: 1,
-      trackType: 'personal',
-      trackId: Value(trackId),
-      eventTimestamp: _kBulkDate,
-    ),
-  );
-  await db.priorCompletionImportDao.batchInsertImports([
-    PriorCompletionImportsCompanion.insert(
-      profileId: profileId,
-      curriculumId: CurriculumId.mishnayos.storageKey,
-      sefariaRef: sefariaRef,
-      stageId: 1,
-      trackType: 'personal',
-      source: 'bulkInTrack',
-    ),
-  ]);
-}
-
 /// Seeds a lifetimeOnly completion: event row + prior_completion_imports record.
 ///
 /// This will be excluded from [CompletionTierFilter.trackAchievement] but

@@ -10,7 +10,7 @@
 /// timestamp to trigger exclusion.
 library;
 
-import 'package:drift/drift.dart' show InsertMode, Value;
+import 'package:drift/drift.dart' show Value;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/features/progress/domain/services/chart_data_service.dart';
