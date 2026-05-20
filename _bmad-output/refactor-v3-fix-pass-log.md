@@ -428,3 +428,51 @@ Resolved 9 V5 demotions (tasks incorrectly marked done in the refactor tracker b
 ### make ci status
 
 GREEN — 5242 pass, 125 skip (same skip count as pre-patch)
+
+---
+
+## Layer 3 — TrackProgressService + Aggregator Unification
+
+**Date:** 2026-05-20
+**Agent:** Layer 3 migration agent
+
+### Part 1 — Infrastructure
+
+| Component | File | Notes |
+|---|---|---|
+| `CompletionTierFilter` | `lib/features/learning/domain/entities/completion_tier_filter.dart` | Three tiers: `liveOnly`, `trackAchievement`, `lifetime` |
+| `CompletionDao.getCompletionsByTier()` | `lib/core/database/daos/completion_dao.dart` | LEFT JOIN on `prior_completion_imports`; replaces sentinel filter |
+| `TrackProgressService` | `lib/features/tracks/domain/services/track_progress_service.dart` | `completionPercent`, `dailyCounts`, `cumulativeProgress`; Riverpod provider |
+
+18 unit tests in `test/features/tracks/domain/services/track_progress_service_test.dart`.
+
+### Part 2 — Migrations (5 aggregators)
+
+| Migration | Tier | Commit |
+|---|---|---|
+| `dashboardTrackCompletionPercentageProvider` | `trackAchievement` | Migration 1 |
+| `trackDualProgressMetricsProvider.currentCyclePercentage` | `trackAchievement, since: activatedAt` | Migration 2 |
+| `CurriculumProgressService.computeCompletionPercentage` | caller-supplied (doc note) | Migration 3 |
+| `ParentDashboardAggregator.computeCompletionPercentage` | `trackAchievement` + formula fix | Migration 4 |
+| `ChartDataService` (3 methods) | `liveOnly` | Migration 5 |
+
+Regression tests added per migration:
+- `test/features/dashboard/domain/services/dashboard_track_completion_migration_test.dart` — 3
+- `test/features/progress/domain/services/track_dual_progress_migration_test.dart` — 3
+- `test/features/parent_mode/domain/services/parent_dashboard_aggregator_migration_test.dart` — 4
+- `test/features/progress/domain/services/chart_data_service_migration_test.dart` — 7
+
+### Part 3 — Sentinel retirement
+
+`kBulkPriorSentinelMs` filter removed from `computeItemsLearnedSummary` in `items_learned_providers.dart`.
+`chart_data_service_sentinel_test.dart` and `story_i3_items_learned_test.dart` updated to seed bulk rows
+via `prior_completion_imports` rather than relying on magic timestamps.
+
+### Commits (6 total, all on dev)
+
+1. `feat(progress)`: CompletionTierFilter + getCompletionsByTier DAO + TrackProgressService
+2. `refactor(dashboard)`: dashboardTrackCompletionPercentageProvider → TrackProgressService (M1)
+3. `refactor(progress)`: trackDualProgressMetricsProvider.currentCyclePercentage → TrackProgressService (M2)
+4. `refactor(progress)`: CurriculumProgressService doc + ParentDashboardAggregator trackAchievement (M3+M4)
+5. `refactor(charts)`: ChartDataService → CompletionTierFilter.liveOnly (M5)
+6. `refactor(items-learned)`: retire kBulkPriorSentinelMs sentinel (Part 3)
