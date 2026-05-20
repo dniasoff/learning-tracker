@@ -206,8 +206,8 @@ Sync-point trigger tags: `[P1]` `[P2]` `[P3]` `[P4]` `[P5]` `[P6]` `[P7]`
 
 ### Phase 4b · Anemic features rebuilt
 - [x] W4.11 (M, S3, done)    parent_mode PIN → PinFlowMachine pure domain (~100 LOC) + SetParentPinUseCase + VerifyParentPinUseCase; thin Riverpod adapter
-- [ ] W4.12 (M, S4, in-progress)    tracks setup → typed TrackBlueprint aggregate; sealed GoalIntent, StageConfiguration, BulkMarkIntent, ProgramSelection
-- [ ] W4.13 (M, S4, pending)    tracks setup → TrackBlueprintDraftRepository (SharedPreferences impl) replacing 7 ad-hoc keys
+- [x] W4.12 (M, S4, done)    tracks setup → typed TrackBlueprint aggregate; sealed GoalIntent, StageConfiguration, BulkMarkIntent, ProgramSelection
+- [ ] W4.13 (M, S4, in-progress)    tracks setup → TrackBlueprintDraftRepository (SharedPreferences impl) replacing 7 ad-hoc keys
 - [ ] W4.14 (M, S4, pending)    tracks setup → ProvisionTrackUseCase replacing TrackCreationService.createTrack — **B3 integration check (back-date generates overdue)**
 - [ ] W4.15 (S, S4, pending)    track_learning_order → TrackOrder aggregate, OrderingLevel { sedarim, masechtos } VO, MasechtaOrderingPolicy
 - [x] W4.16 (M, S5, done)    progress → promote inline models to domain/; extract LifetimeTreeBuilder/OverlappingCurriculaDeduplicator/TrackDualProgressCalculator — **B1 lifetime tier subscriber + B3 projection check**
@@ -248,9 +248,9 @@ Sync-point trigger tags: `[P1]` `[P2]` `[P3]` `[P4]` `[P5]` `[P6]` `[P7]`
 - [ ] W5.6  (L, S5, pending)    reward_configuration_screen.dart (1004 LOC) → RewardConfigController:Notifier&lt;RewardForm&gt; + RewardCard + sub-widgets
 
 ### Phase 5b · Sealed-union state refactors
-- [ ] W5.7  (M, S5, in-progress)    Replace 3-8 boolean state machines across feature screens → sealed unions
-- [ ] W5.8  (M, S5, in-progress)    SyncOrchestrator state machine → sealed
-- [ ] W5.9  (M, S5, in-progress)    OutboxProcessor _flushInProgress/_rerunRequested → sealed FlushState
+- [x] W5.7  (M, S5, done)    Boolean state machines → sealed unions: _AnimState (add_track_flow_screen x2) + _PinStep (onboarding_screen); commit 3b94facc
+- [x] W5.8  (M, S5, done)    SyncOrchestrator: _pullOnLaunchExecuted → sealed _PullGuard { _PullNeverRun, _PullCompleted, _PullFailed }; commit 3b94facc
+- [x] W5.9  (M, S5, done)    ListenerSupervisor: _restartInFlight+_rerunRequested → sealed _RestartCycle; commit 3b94facc
 
 ### Phase 5c · Primitive obsession sweep
 - [ ] W5.10 (M, S5, in-progress)    Profile mode literals (profile.mode == 'child') → ProfileMode enum across 20+ sites
