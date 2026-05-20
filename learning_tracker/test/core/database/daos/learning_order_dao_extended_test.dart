@@ -17,8 +17,10 @@ import '../../../helpers/drift_memory.dart';
 void main() {
   late UserDatabase db;
 
-  setUp(() {
+  setUp(() async {
     db = inMemoryDb();
+    // W3.25: learning_orders.profileId has a FK to learner_profiles(id).
+    await seedProfile(db);
   });
 
   tearDown(() async {

@@ -12,6 +12,8 @@ library;
 
 import 'package:drift/drift.dart' hide isNotNull, isNull;
 import 'package:flutter_test/flutter_test.dart';
+import 'package:learning_tracker/core/database/daos/track_dao.dart'
+    show TrackState;
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
@@ -56,14 +58,16 @@ void main() {
     bool isActive = true,
     DateTime? activatedAt,
   }) {
+    // W3.28: isActive maps to state='active'; false maps to state='retired'.
     return db
         .into(db.curriculumTracks)
         .insert(
-          CurriculumTracksCompanion.insert(
-            profileId: profileId,
-            curriculumId: curriculumId,
-            stateChangedAt: activatedAt ?? DateTime.utc(2026, 1, 1),
-            activatedAt: activatedAt ?? DateTime.utc(2026, 1, 1),
+          CurriculumTracksCompanion(
+            profileId: Value(profileId),
+            curriculumId: Value(curriculumId),
+            state: Value(isActive ? TrackState.active : TrackState.retired),
+            stateChangedAt: Value(activatedAt ?? DateTime.utc(2026, 1, 1)),
+            activatedAt: Value(activatedAt ?? DateTime.utc(2026, 1, 1)),
           ),
         );
   }

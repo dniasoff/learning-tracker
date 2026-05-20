@@ -265,7 +265,9 @@ void main() {
 
       final json = track.toJson();
       expect(json['curriculumId'], 'mishnah');
-      expect(json['trackType'], 'personal');
+      // W3.22: trackType column removed; state replaces isActive/trackType.
+      expect(json.containsKey('trackType'), isFalse);
+      expect(json['state'], isNotNull);
 
       final restored = CurriculumTrack.fromJson(json);
       expect(restored.curriculumId, track.curriculumId);
@@ -346,7 +348,7 @@ void main() {
                 curriculumId: 'bavli',
                 stageName: 'limud',
                 stageOrder: 1,
-                schedule: Value('{"type":"delay","delay_days":0}'),
+                schedule: const Value('{"type":"delay","delay_days":0}'),
               ),
             );
 

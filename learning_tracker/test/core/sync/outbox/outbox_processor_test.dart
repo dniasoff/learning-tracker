@@ -56,7 +56,7 @@ class _FakePipeline extends Fake implements PushPipeline {
       failTotalNextBatch = false;
       throw BatchPushException(
         committed: const [],
-        cause: Exception('total failure — first chunk threw'),
+        pushCause: Exception('total failure — first chunk threw'),
       );
     }
     final partial = partialFailureCommitted;
@@ -67,7 +67,7 @@ class _FakePipeline extends Fake implements PushPipeline {
       }
       throw BatchPushException(
         committed: List.of(partial),
-        cause: Exception('partial failure — a later chunk threw'),
+        pushCause: Exception('partial failure — a later chunk threw'),
       );
     }
     for (final entry in entries) {

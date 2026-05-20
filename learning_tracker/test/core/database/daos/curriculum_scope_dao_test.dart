@@ -10,7 +10,12 @@ void main() {
 
   setUp(() async {
     database = inMemoryDb();
-    // Insert a track first to satisfy FK constraint on curriculum_scopes.trackId
+    // Seed profiles: profileId=0 (used by most setScopes calls) and
+    // profileId=1 (used by the scopes-isolated-by-profileId test).
+    await seedProfileZero(database);
+    await seedProfile(database);
+    // Insert a track first to satisfy FK constraint on curriculum_scopes.trackId.
+    // W3.22: UNIQUE constraint is (profileId, curriculumId); no trackType.
     trackId = await database
         .into(database.curriculumTracks)
         .insert(

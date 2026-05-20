@@ -79,7 +79,7 @@ void main() {
           curriculumId: 'bavli',
           stageName: stageName,
           stageOrder: stageOrder,
-          schedule: Value('{"type":"delay","delay_days":0}'),
+          schedule: const Value('{"type":"delay","delay_days":0}'),
         ),
       );
 
@@ -103,7 +103,8 @@ void main() {
       final json = sd.toJson();
       expect(json['stageName'], 'limud');
       expect(json['stageOrder'], 1);
-      expect(json['delayDays'], 0);
+      // W3.27: delayDays/daysOfWeek/rollingWindowSize replaced by JSON schedule
+      expect(json['schedule'], contains('delay_days'));
 
       final restored = StageDefinition.fromJson(json);
       expect(restored.stageName, sd.stageName);
@@ -123,7 +124,7 @@ void main() {
               curriculumId: 'bavli',
               stageName: 'chazara',
               stageOrder: 2,
-              schedule: Value('{"type":"delay","delay_days":3}'),
+              schedule: const Value('{"type":"delay","delay_days":3}'),
             ),
           );
       final sd = await getStageDef(sdId);

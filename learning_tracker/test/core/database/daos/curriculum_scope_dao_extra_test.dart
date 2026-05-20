@@ -21,6 +21,8 @@ void main() {
 
   setUp(() async {
     db = inMemoryDb();
+    // Seed profile so learner_profiles FK on curriculum_scopes is satisfied.
+    await seedProfile(db);
     trackId = await db
         .into(db.curriculumTracks)
         .insert(

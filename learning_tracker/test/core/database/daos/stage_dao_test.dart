@@ -41,7 +41,7 @@ void main() {
       trackId: trackId,
       stageOrder: stageOrder,
       stageName: stageName,
-      schedule: Value('{"type":"delay","delay_days":${delayDays}}'),
+      schedule: Value('{"type":"delay","delay_days":$delayDays}'),
       isDefault: Value(isDefault),
     ),
   );
@@ -124,7 +124,7 @@ void main() {
           trackId: bavliTrackId,
           stageOrder: 1,
           stageName: 'Learn',
-          schedule: Value('{"type":"delay","delay_days":0}'),
+          schedule: const Value('{"type":"delay","delay_days":0}'),
         ),
       );
 
@@ -167,7 +167,7 @@ void main() {
             trackId: bavliTrackId,
             stageOrder: 1,
             stageName: 'Learn',
-            schedule: Value('{"type":"delay","delay_days":0}'),
+            schedule: const Value('{"type":"delay","delay_days":0}'),
           ),
         );
 
@@ -194,7 +194,7 @@ void main() {
           trackId: trackId,
           stageOrder: 1,
           stageName: 'Learn',
-          schedule: Value('{"type":"delay","delay_days":0}'),
+          schedule: const Value('{"type":"delay","delay_days":0}'),
         ),
         StageDefinitionsCompanion.insert(
           profileId: 1,
@@ -202,7 +202,7 @@ void main() {
           trackId: trackId,
           stageOrder: 2,
           stageName: 'New Stage',
-          schedule: Value('{"type":"delay","delay_days":3}'),
+          schedule: const Value('{"type":"delay","delay_days":3}'),
         ),
         StageDefinitionsCompanion.insert(
           profileId: 1,
@@ -210,7 +210,7 @@ void main() {
           trackId: trackId,
           stageOrder: 3,
           stageName: 'Another',
-          schedule: Value('{"type":"delay","delay_days":14}'),
+          schedule: const Value('{"type":"delay","delay_days":14}'),
         ),
       ]);
 

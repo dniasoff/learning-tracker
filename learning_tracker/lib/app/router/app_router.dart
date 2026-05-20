@@ -49,6 +49,8 @@ import 'package:learning_tracker/features/settings/presentation/screens/upgrade_
 import 'package:learning_tracker/features/sync/presentation/screens/sync_screen.dart';
 import 'package:learning_tracker/features/track_setup/presentation/screens/track_detail_screen.dart';
 import 'package:learning_tracker/features/track_setup/presentation/screens/track_management_hub_screen.dart';
+import 'package:learning_tracker/features/tutoring/domain/models/tutor_grant_aggregate.dart'
+    show TutorGrant;
 import 'package:learning_tracker/features/tutoring/presentation/screens/accept_invite_screen.dart';
 import 'package:learning_tracker/features/tutoring/presentation/screens/decline_invite_screen.dart';
 import 'package:learning_tracker/features/tutoring/presentation/screens/invite_tutor_screen.dart';

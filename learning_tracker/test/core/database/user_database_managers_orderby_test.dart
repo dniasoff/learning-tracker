@@ -75,7 +75,7 @@ void main() {
           curriculumId: 'bavli',
           stageName: 'limud',
           stageOrder: 1,
-          schedule: Value('{"type":"delay","delay_days":0}'),
+          schedule: const Value('{"type":"delay","delay_days":0}'),
         ),
       );
 
@@ -2249,9 +2249,7 @@ void main() {
     });
 
     test('orderBy profileId', () async {
-      final rows = await db.managers.outbox
-          .orderBy((o) => o.id.asc())
-          .get();
+      final rows = await db.managers.outbox.orderBy((o) => o.id.asc()).get();
       expect(rows, hasLength(1));
     });
 

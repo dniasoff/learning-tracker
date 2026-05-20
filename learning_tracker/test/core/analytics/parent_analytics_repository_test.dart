@@ -36,14 +36,27 @@ void main() {
 
     setUp(() async {
       db = UserDatabase(NativeDatabase.memory());
-      // Seed learner_profiles(1,2) and curriculum_tracks(1) for FK constraints.
+      // Seed accounts + learner_profiles(1,2) and curriculum_tracks(1) for FK.
       final now = DateTime.utc(2026, 1, 1);
+      // accounts row is required before learner_profiles (FK constraint).
+      final accountId = await db
+          .into(db.accounts)
+          .insert(
+            AccountsCompanion.insert(
+              email: 'test@example.com',
+              tier: 'localBorn',
+              displayName: 'Test Account',
+              userMode: 'adult',
+              createdAt: now,
+              updatedAt: now,
+            ),
+          );
       for (var i = 0; i < 2; i++) {
         await db
             .into(db.learnerProfiles)
             .insert(
               LearnerProfilesCompanion.insert(
-                accountId: 1,
+                accountId: accountId,
                 displayName: 'Profile ${i + 1}',
                 mode: 'adult',
                 createdAt: now,

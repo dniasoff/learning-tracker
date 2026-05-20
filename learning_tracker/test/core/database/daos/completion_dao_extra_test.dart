@@ -67,6 +67,7 @@ void main() {
     int stageId = 1,
     String trackType = 'personal',
     DateTime? completedAt,
+    DateTime? eventTimestamp,
     int? overrideTrackId,
   }) {
     return CompletionEventsCompanion.insert(
@@ -76,7 +77,7 @@ void main() {
       stageId: stageId,
       trackType: trackType,
       trackId: Value(overrideTrackId ?? trackId),
-      eventTimestamp: completedAt ?? DateTime.utc(2026, 1, 1),
+      eventTimestamp: eventTimestamp ?? completedAt ?? DateTime.utc(2026, 1, 1),
     );
   }
 
@@ -331,12 +332,14 @@ void main() {
     });
 
     test('is scoped to the given track', () async {
+      // Use a different curriculumId to avoid the (profileId, curriculumId)
+      // unique constraint — the setUp already created (1, 'bavli').
       final other = await db
           .into(db.curriculumTracks)
           .insert(
             CurriculumTracksCompanion.insert(
               profileId: 1,
-              curriculumId: 'bavli',
+              curriculumId: 'mishnayos',
               stateChangedAt: DateTime.utc(2026, 1, 1),
               activatedAt: DateTime.utc(2026, 1, 1),
             ),

@@ -1,10 +1,7 @@
 import 'package:drift/drift.dart' hide isNotNull, isNull;
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/core/database/daos/track_dao.dart';
-import 'package:learning_tracker/core/exceptions/invalid_track_operation_exception.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/core/enums/track_type.dart';
 
 import '../../../helpers/drift_memory.dart'
     show inMemoryDb, seedCompletion, seedProfile;
@@ -48,17 +45,22 @@ void main() {
       expect(tracks, hasLength(1));
     });
 
-    test('deactivateTrack throws for personal track', () async {
+    test('deactivateTrack retires (no longer throws) — W3.22', () async {
+      // W3.22: deactivateTrack now delegates to retireTrack; it no longer
+      // throws InvalidTrackOperationException. Verify it completes.
       await database.trackDao.activateTrack(CurriculumId.bavli);
 
-      expect(
-        () => database.trackDao.deactivateTrack(CurriculumId.bavli),
-        throwsA(isA<InvalidTrackOperationException>()),
+      await expectLater(
+        database.trackDao.deactivateTrack(CurriculumId.bavli),
+        completes,
       );
     });
 
     test('isTrackActive returns false for non-existent track', () async {
-      final isActive = await database.trackDao.isTrackActive(CurriculumId.bavli, 0);
+      final isActive = await database.trackDao.isTrackActive(
+        CurriculumId.bavli,
+        0,
+      );
       expect(isActive, isFalse);
     });
 

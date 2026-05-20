@@ -1,11 +1,9 @@
 // Extra coverage for TrackDao — upsertFromSync, getAllForProfile,
 // activateTrack reactivation path, and resetPace were not fully exercised by
 // the baseline test.
-import 'package:drift/drift.dart' show Value;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/core/enums/track_type.dart';
 
 import '../../../helpers/drift_memory.dart';
 
@@ -53,10 +51,7 @@ void main() {
         // Insert an inactive personal track directly.
         await insertTrack(isActive: false);
 
-        await db.trackDao.activateTrack(
-          CurriculumId.bavli,
-          profileId: 1,
-        );
+        await db.trackDao.activateTrack(CurriculumId.bavli, profileId: 1);
 
         final tracks = await db.trackDao.getAllTracks(CurriculumId.bavli);
         // Only one row should exist (no duplicate inserted).
@@ -68,10 +63,7 @@ void main() {
     test('activateTrack on an already-active track is idempotent', () async {
       await insertTrack(isActive: true);
 
-      await db.trackDao.activateTrack(
-        CurriculumId.bavli,
-        profileId: 1,
-      );
+      await db.trackDao.activateTrack(CurriculumId.bavli, profileId: 1);
 
       final tracks = await db.trackDao.getAllTracks(CurriculumId.bavli);
       expect(tracks, hasLength(1));
@@ -126,7 +118,8 @@ void main() {
       final tracks = await db.trackDao.getAllForProfile(5);
       expect(tracks, hasLength(1)); // no duplicate
       expect(tracks.first.state, 'retired');
-      expect(tracks.first.stateChangedAt, t2);
+      // Compare as UTC to avoid local-timezone offset in the in-memory DB.
+      expect(tracks.first.stateChangedAt.toUtc(), t2);
     });
 
     test('stores paceResetDate when provided', () async {

@@ -10,6 +10,8 @@
 /// - runTransaction
 library;
 
+import 'dart:convert';
+
 import 'package:drift/drift.dart' show Value;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
@@ -53,7 +55,7 @@ void main() {
       trackId: tid ?? trackId,
       stageOrder: stageOrder,
       stageName: stageName,
-      schedule: Value('{"type":"delay","delay_days":${delayDays}}'),
+      schedule: Value('{"type":"delay","delay_days":$delayDays}'),
     ),
   );
 
@@ -91,14 +93,15 @@ void main() {
           trackId: Value(trackId),
           stageOrder: const Value(1),
           stageName: const Value('Updated Name'),
-          schedule: Value('{"type":"delay","delay_days":${const Value(3)}}'),
+          schedule: const Value('{"type":"delay","delay_days":3}'),
         ),
       );
       expect(updated, isTrue);
 
       final after = await db.stageDao.getStageDefinitionById(id);
       expect(after!.stageName, 'Updated Name');
-      expect(after.delayDays, 3);
+      final scheduleJson = jsonDecode(after.schedule) as Map<String, dynamic>;
+      expect(scheduleJson['delay_days'], 3);
     });
   });
 
@@ -204,7 +207,7 @@ void main() {
           trackId: trackId,
           stageOrder: 1,
           stageName: 'New Learn',
-          schedule: Value('{"type":"delay","delay_days":0}'),
+          schedule: const Value('{"type":"delay","delay_days":0}'),
         ),
       ];
 

@@ -178,18 +178,22 @@ void main() {
     );
 
     test('is scoped to the correct track', () async {
+      // W3.22: UNIQUE on (profileId, curriculumId); use a different curriculum
+      // for the second track so it doesn't collide with the setUp track.
       final otherTrackId = await db
           .into(db.curriculumTracks)
           .insert(
             CurriculumTracksCompanion.insert(
               profileId: 1,
-              curriculumId: 'bavli',
+              curriculumId: 'mishnayos',
               stateChangedAt: DateTime.utc(2026, 1, 1),
               activatedAt: DateTime.utc(2026, 1, 1),
             ),
           );
 
-      await db.learningLedgerDao.insertEntry(makeEntry(trackId: otherTrackId));
+      await db.learningLedgerDao.insertEntry(
+        makeEntry(trackId: otherTrackId, curriculumId: 'mishnayos'),
+      );
 
       final count = await db.learningLedgerDao.getCompletionCountByTrack(
         trackId, // different track

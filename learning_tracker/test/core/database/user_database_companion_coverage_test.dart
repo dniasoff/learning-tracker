@@ -631,8 +631,9 @@ void main() {
       final cols = insertable.toColumns(false);
       expect(cols.containsKey('target_percent'), isTrue);
       expect(cols.containsKey('pace_value'), isTrue);
-      expect(cols.containsKey('pace_unit'), isTrue);
-      expect(cols.containsKey('learning_unit'), isTrue);
+      // W3: renamed pace_unit → pace_period, learning_unit → pace_granularity
+      expect(cols.containsKey('pace_period'), isTrue);
+      expect(cols.containsKey('pace_granularity'), isTrue);
     });
 
     test('toColumns with all optional fields present', () {
@@ -655,8 +656,9 @@ void main() {
       expect(cols.containsKey('target_percent'), isTrue);
       expect(cols.containsKey('target_date'), isTrue);
       expect(cols.containsKey('pace_value'), isTrue);
-      expect(cols.containsKey('pace_unit'), isTrue);
-      expect(cols.containsKey('learning_unit'), isTrue);
+      // W3: renamed pace_unit → pace_period, learning_unit → pace_granularity
+      expect(cols.containsKey('pace_period'), isTrue);
+      expect(cols.containsKey('pace_granularity'), isTrue);
     });
   });
 
@@ -685,21 +687,18 @@ void main() {
       expect(cols.containsKey('client_device_id'), isTrue);
     });
 
-    test(
-      'toColumns with optional fields (clientDeviceId)',
-      () {
-        final c = StreakEventsCompanion(
-          profileId: const Value(1),
-          eventType: const Value('study'),
-          dayUtc: Value(now),
-          eventTimestamp: Value(now),
-          clientDeviceId: const Value('device-x'),
-        );
-        final cols = c.toColumns(false);
-        expect(cols.containsKey('client_device_id'), isTrue);
-        expect(cols.containsKey('event_type'), isTrue);
-      },
-    );
+    test('toColumns with optional fields (clientDeviceId)', () {
+      final c = StreakEventsCompanion(
+        profileId: const Value(1),
+        eventType: const Value('study'),
+        dayUtc: Value(now),
+        eventTimestamp: Value(now),
+        clientDeviceId: const Value('device-x'),
+      );
+      final cols = c.toColumns(false);
+      expect(cols.containsKey('client_device_id'), isTrue);
+      expect(cols.containsKey('event_type'), isTrue);
+    });
   });
 
   // ─── StreakEventsCompanion ────────────────────────────────────────────────

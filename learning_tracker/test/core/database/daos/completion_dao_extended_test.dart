@@ -89,7 +89,7 @@ void main() {
               id: Value(seed.id),
               profileId: const Value(1),
               curriculumId: Value(seed.curriculum),
-              trackType: const Value('personal'),
+              stateChangedAt: Value(DateTime.utc(2026, 1, 1)),
               activatedAt: Value(DateTime.utc(2026, 1, 1)),
             ),
             mode: InsertMode.insertOrIgnore,

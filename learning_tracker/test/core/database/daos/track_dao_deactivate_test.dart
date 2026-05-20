@@ -1,11 +1,9 @@
 // Extra coverage for TrackDao — deactivateTrack personal track guard,
 // InvalidTrackOperationException.toString, and BaseDao accessor methods.
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/core/database/daos/track_dao.dart';
-import 'package:learning_tracker/core/exceptions/invalid_track_operation_exception.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/core/enums/track_type.dart';
+import 'package:learning_tracker/core/exceptions/invalid_track_operation_exception.dart';
 
 import '../../../helpers/drift_memory.dart';
 
@@ -25,12 +23,15 @@ void main() {
   // =========================================================================
 
   group('TrackDao.deactivateTrack', () {
+    // W3.22/W3.28: deactivateTrack is now an alias for retireTrack.
+    // It no longer throws InvalidTrackOperationException — if no matching
+    // track is found it is a no-op; if found it sets state=retired.
     test(
-      'deactivating personal track throws InvalidTrackOperationException',
+      'deactivateTrack on a non-existent track is a no-op (no throw)',
       () async {
         await expectLater(
           db.trackDao.deactivateTrack(CurriculumId.mishnayos),
-          throwsA(isA<InvalidTrackOperationException>()),
+          completes,
         );
       },
     );

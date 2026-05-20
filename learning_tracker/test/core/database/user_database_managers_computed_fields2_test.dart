@@ -69,7 +69,7 @@ void main() {
           curriculumId: 'bavli',
           stageName: 'limud',
           stageOrder: 1,
-          schedule: Value('{"type":"delay","delay_days":0}'),
+          schedule: const Value('{"type":"delay","delay_days":0}'),
         ),
       );
 
@@ -171,9 +171,7 @@ void main() {
     });
 
     test('computedField state', () async {
-      final field = db.managers.curriculumTracks.computedField(
-        (a) => a.state,
-      );
+      final field = db.managers.curriculumTracks.computedField((a) => a.state);
       expect(
         await db.managers.curriculumTracks.withFields([field]).get(),
         isNotEmpty,
@@ -954,7 +952,9 @@ void main() {
     });
 
     test('computedField sefariaRef', () async {
-      final field = db.managers.learningOrder.computedField((a) => a.sefariaRef);
+      final field = db.managers.learningOrder.computedField(
+        (a) => a.sefariaRef,
+      );
       expect(
         await db.managers.learningOrder.withFields([field]).get(),
         isNotEmpty,
@@ -1128,9 +1128,7 @@ void main() {
     });
 
     test('computedField dayUtc', () async {
-      final field = db.managers.streakEvents.computedField(
-        (a) => a.dayUtc,
-      );
+      final field = db.managers.streakEvents.computedField((a) => a.dayUtc);
       expect(
         await db.managers.streakEvents.withFields([field]).get(),
         isNotEmpty,

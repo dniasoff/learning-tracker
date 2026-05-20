@@ -197,7 +197,7 @@ void main() {
             curriculumId: 'bavli',
             stageName: stageName,
             stageOrder: stageOrder,
-            schedule: Value('{"type":"delay","delay_days":0}'),
+            schedule: const Value('{"type":"delay","delay_days":0}'),
           ),
         );
 
@@ -260,7 +260,9 @@ void main() {
       expect(companion.profileId.value, profileId);
 
       final copy = sd.copyWithCompanion(
-        const StageDefinitionsCompanion(schedule: Value('{"type":"delay","delay_days":7}')),
+        const StageDefinitionsCompanion(
+          schedule: Value('{"type":"delay","delay_days":7}'),
+        ),
       );
       expect(copy.schedule, '{"type":"delay","delay_days":7}');
     });
@@ -831,7 +833,7 @@ void main() {
               curriculumId: 'bavli',
               stageName: 'limud',
               stageOrder: 1,
-              schedule: Value('{"type":"delay","delay_days":0}'),
+              schedule: const Value('{"type":"delay","delay_days":0}'),
             ),
           );
 

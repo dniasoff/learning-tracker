@@ -15,8 +15,8 @@ void main() {
     db = inMemoryDb();
     await seedProfile(db);
     // Seed curriculum tracks so that trackId FK constraints are satisfied.
-    // The helper entries use trackId 1 and 2, so insert both with distinct
-    // track_type values to avoid the unique(profile_id, curriculum_id, track_type) constraint.
+    // W3.22: UNIQUE constraint is (profileId, curriculumId); use different
+    // curriculumId values to get two distinct track rows (ids 1 and 2).
     await db
         .into(db.curriculumTracks)
         .insert(
@@ -32,7 +32,7 @@ void main() {
         .insert(
           CurriculumTracksCompanion.insert(
             profileId: 1,
-            curriculumId: 'mishnayos',
+            curriculumId: 'bavli',
             stateChangedAt: DateTime.utc(2026, 1, 1),
             activatedAt: DateTime.utc(2026, 1, 1),
           ),

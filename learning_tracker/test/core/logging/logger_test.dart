@@ -10,8 +10,13 @@ void main() {
       AppLogger.init();
     });
 
-    test('instance returns a Talker instance', () {
-      final talker = AppLogger.instance;
+    test('instance returns an AppLogger instance', () {
+      final logger = AppLogger.instance;
+      expect(logger, isA<AppLogger>());
+    });
+
+    test('instance.talker returns a Talker instance', () {
+      final talker = AppLogger.instance.talker;
       expect(talker, isA<Talker>());
     });
 
@@ -24,7 +29,8 @@ void main() {
     test('init creates and returns a Talker instance', () {
       final talker = AppLogger.init();
       expect(talker, isA<Talker>());
-      expect(identical(talker, AppLogger.instance), isTrue);
+      // After init(), rawTalker is the returned Talker.
+      expect(identical(talker, AppLogger.rawTalker), isTrue);
     });
   });
 
@@ -51,7 +57,7 @@ void main() {
 
     test('FlutterError.onError routes errors to Talker', () {
       AppLogger.setupFlutterErrorHandlers();
-      final talker = AppLogger.instance;
+      final talker = AppLogger.instance.talker;
       final historyBefore = talker.history.length;
 
       FlutterError.onError!(
@@ -70,7 +76,7 @@ void main() {
 
     test('PlatformDispatcher.instance.onError routes errors to Talker', () {
       AppLogger.setupFlutterErrorHandlers();
-      final talker = AppLogger.instance;
+      final talker = AppLogger.instance.talker;
       final historyBefore = talker.history.length;
 
       final result = PlatformDispatcher.instance.onError!(

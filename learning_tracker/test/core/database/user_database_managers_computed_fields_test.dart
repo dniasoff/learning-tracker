@@ -75,7 +75,7 @@ void main() {
           curriculumId: 'bavli',
           stageName: 'limud',
           stageOrder: 1,
-          schedule: Value('{"type":"delay","delay_days":0}'),
+          schedule: const Value('{"type":"delay","delay_days":0}'),
         ),
       );
 

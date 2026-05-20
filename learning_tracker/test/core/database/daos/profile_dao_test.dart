@@ -8,8 +8,35 @@ import '../../../helpers/drift_memory.dart';
 void main() {
   late UserDatabase database;
 
-  setUp(() {
+  setUp(() async {
     database = inMemoryDb();
+    // Seed accounts id=1 and id=2 — learner_profiles.account_id FK requires them.
+    // Some tests insert profiles for accountId=2 (e.g. getProfilesByAccount,
+    // countProfilesForAccount), so both accounts must exist.
+    await database
+        .into(database.accounts)
+        .insert(
+          AccountsCompanion.insert(
+            email: 'test@example.com',
+            tier: 'localBorn',
+            displayName: 'Test Account',
+            userMode: 'adult',
+            createdAt: DateTime.now(),
+            updatedAt: DateTime.now(),
+          ),
+        );
+    await database
+        .into(database.accounts)
+        .insert(
+          AccountsCompanion.insert(
+            email: 'test2@example.com',
+            tier: 'localBorn',
+            displayName: 'Test Account 2',
+            userMode: 'adult',
+            createdAt: DateTime.now(),
+            updatedAt: DateTime.now(),
+          ),
+        );
   });
 
   tearDown(() async {

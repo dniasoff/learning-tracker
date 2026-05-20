@@ -85,38 +85,43 @@ void main() {
       expect(merger.kind, EntityKind.trackConfig);
     });
 
+    // W3.22: trackType removed; natural key is now just curriculum_id.
+    // W3.28: state_changed_at is the LWW timestamp; activated_at is required.
+
+    /// Minimal valid row for TrackCodec.decode: curriculum_id + activated_at
+    /// required; state_changed_at used as LWW key (falls back to activated_at).
+    Map<String, dynamic> trackRow({
+      String curriculumId = 'bavli',
+      required DateTime activatedAt,
+      DateTime? stateChangedAt,
+    }) => {
+      'curriculum_id': curriculumId,
+      'activated_at': activatedAt.toIso8601String(),
+      if (stateChangedAt != null)
+        'state_changed_at': stateChangedAt.toIso8601String(),
+    };
+
     test('upserts row when no local timestamp (remote always wins)', () async {
       await merger.merge(
         profileId: 1,
-        rows: [
-          {
-            'curriculum_id': 'bavli',
-            'track_type': 'personal',
-            'updated_at': _dt(2026).toIso8601String(),
-          },
-        ],
+        rows: [trackRow(activatedAt: _dt(2025), stateChangedAt: _dt(2026))],
       );
 
       expect(store.upserted, hasLength(1));
     });
 
     test('upserts row when remote is newer than local', () async {
+      // W3.22: natural key is just 'bavli' (no trackType component).
       store.seedTimestamp(
         kind: EntityKind.trackConfig,
         profileId: 1,
-        naturalKey: 'bavli|personal',
+        naturalKey: 'bavli',
         at: _dt(2025),
       );
 
       await merger.merge(
         profileId: 1,
-        rows: [
-          {
-            'curriculum_id': 'bavli',
-            'track_type': 'personal',
-            'updated_at': _dt(2026).toIso8601String(),
-          },
-        ],
+        rows: [trackRow(activatedAt: _dt(2025), stateChangedAt: _dt(2026))],
       );
 
       expect(store.upserted, hasLength(1));
@@ -126,47 +131,48 @@ void main() {
       store.seedTimestamp(
         kind: EntityKind.trackConfig,
         profileId: 1,
-        naturalKey: 'bavli|personal',
+        naturalKey: 'bavli',
         at: _dt(2026),
       );
 
       await merger.merge(
         profileId: 1,
         rows: [
-          {
-            'curriculum_id': 'bavli',
-            'track_type': 'personal',
-            'updated_at': _dt(2025).toIso8601String(), // older
-          },
+          trackRow(
+            activatedAt: _dt(2024),
+            stateChangedAt: _dt(2025), // older than local 2026
+          ),
         ],
       );
 
       expect(store.upserted, isEmpty);
     });
 
-    test('skips row when remote updated_at is null', () async {
+    test(
+      'skips row when required fields are missing (no activated_at)',
+      () async {
+        await merger.merge(
+          profileId: 1,
+          rows: [
+            {
+              'curriculum_id': 'bavli',
+              // no activated_at — TrackCodec.decode returns null → skip
+            },
+          ],
+        );
+
+        expect(store.upserted, isEmpty);
+      },
+    );
+
+    test('accepts DateTime object as state_changed_at', () async {
       await merger.merge(
         profileId: 1,
         rows: [
           {
             'curriculum_id': 'bavli',
-            'track_type': 'personal',
-            // no updated_at
-          },
-        ],
-      );
-
-      expect(store.upserted, isEmpty);
-    });
-
-    test('accepts DateTime object as updated_at', () async {
-      await merger.merge(
-        profileId: 1,
-        rows: [
-          {
-            'curriculum_id': 'bavli',
-            'track_type': 'personal',
-            'updated_at': _dt(2026), // DateTime, not String
+            'activated_at': _dt(2025), // DateTime object (not String)
+            'state_changed_at': _dt(2026), // DateTime object
           },
         ],
       );
@@ -178,23 +184,23 @@ void main() {
       store.seedTimestamp(
         kind: EntityKind.trackConfig,
         profileId: 1,
-        naturalKey: 'bavli|personal',
+        naturalKey: 'bavli',
         at: _dt(2026),
       );
 
       await merger.merge(
         profileId: 1,
         rows: [
-          {
-            'curriculum_id': 'bavli',
-            'track_type': 'personal',
-            'updated_at': _dt(2025).toIso8601String(), // skip — older
-          },
-          {
-            'curriculum_id': 'mishnayos',
-            'track_type': 'personal',
-            'updated_at': _dt(2026).toIso8601String(), // upsert — no local
-          },
+          trackRow(
+            curriculumId: 'bavli',
+            activatedAt: _dt(2024),
+            stateChangedAt: _dt(2025), // skip — older than local 2026
+          ),
+          trackRow(
+            curriculumId: 'mishnayos',
+            activatedAt: _dt(2025),
+            stateChangedAt: _dt(2026), // upsert — no local for mishnayos
+          ),
         ],
       );
 
@@ -252,18 +258,19 @@ void main() {
       expect(store.upserted, isEmpty);
     });
 
-    test('handles null curriculum_id by using empty string key', () async {
+    test('skips row when curriculum_id is missing', () async {
+      // SettingsCodec.decode returns null when curriculum_id is absent.
+      // The merger skips null-decode rows; no upsert occurs.
       await merger.merge(
         profileId: 1,
         rows: [
           {
-            // No curriculum_id
+            // No curriculum_id — codec returns null → skip
             'updated_at': _dt(2026).toIso8601String(),
           },
         ],
       );
-      // Should upsert with naturalKey=''
-      expect(store.upserted, hasLength(1));
+      expect(store.upserted, isEmpty);
     });
 
     test('accepts DateTime object as updated_at', () async {
@@ -295,16 +302,30 @@ void main() {
       expect(merger.kind, EntityKind.learnerProfile);
     });
 
+    // LearnerProfileCodec.decode requires: profile_id, account_id,
+    // display_name, mode, updated_at, created_at. All must be present.
+
+    /// Minimal valid row for LearnerProfileCodec.decode.
+    Map<String, dynamic> profileRow({
+      int profileId = 1,
+      int accountId = 1,
+      String displayName = 'Alice',
+      String mode = 'adult',
+      required DateTime updatedAt,
+      DateTime? createdAt,
+    }) => {
+      'profile_id': profileId,
+      'account_id': accountId,
+      'display_name': displayName,
+      'mode': mode,
+      'updated_at': updatedAt.toIso8601String(),
+      'created_at': (createdAt ?? _dt(2025)).toIso8601String(),
+    };
+
     test('upserts when no local row exists', () async {
       await merger.merge(
         profileId: 1,
-        rows: [
-          {
-            'profile_id': 1,
-            'display_name': 'Alice',
-            'updated_at': _dt(2026).toIso8601String(),
-          },
-        ],
+        rows: [profileRow(updatedAt: _dt(2026))],
       );
       expect(store.upserted, hasLength(1));
     });
@@ -319,29 +340,27 @@ void main() {
 
       await merger.merge(
         profileId: 1,
-        rows: [
-          {
-            'profile_id': 1,
-            'display_name': 'Bob',
-            'updated_at': _dt(2026).toIso8601String(),
-          },
-        ],
+        rows: [profileRow(displayName: 'Bob', updatedAt: _dt(2026))],
       );
       expect(store.upserted, isEmpty);
     });
 
-    test('falls back to profileId when row has no profile_id', () async {
-      // profile_id absent in row → uses profileId=1 as natural key
+    test('falls back to profileId when row decode returns null', () async {
+      // When the row is missing required fields (e.g. no account_id), decode
+      // returns null. The merger uses the caller profileId as natural key and
+      // treats remoteUpdatedAt as null → remoteIsNewer returns false → skipped.
       await merger.merge(
         profileId: 1,
         rows: [
           {
+            // Missing account_id, mode, created_at → decode returns null
             'display_name': 'Fallback',
             'updated_at': _dt(2026).toIso8601String(),
           },
         ],
       );
-      expect(store.upserted, hasLength(1));
+      // When decode fails, remoteUpdatedAt is null → remoteIsNewer=false → skip
+      expect(store.upserted, isEmpty);
     });
 
     test('accepts DateTime object as updated_at', () async {
@@ -350,7 +369,11 @@ void main() {
         rows: [
           {
             'profile_id': 1,
+            'account_id': 1,
+            'display_name': 'Alice',
+            'mode': 'adult',
             'updated_at': _dt(2026), // DateTime, not String
+            'created_at': _dt(2025).toIso8601String(),
           },
         ],
       );
@@ -361,7 +384,14 @@ void main() {
       await merger.merge(
         profileId: 1,
         rows: [
-          {'profile_id': 1},
+          {
+            'profile_id': 1,
+            'account_id': 1,
+            'display_name': 'Alice',
+            'mode': 'adult',
+            'created_at': _dt(2025).toIso8601String(),
+            // no updated_at → decode returns null → remoteIsNewer=false → skip
+          },
         ],
       );
       expect(store.upserted, isEmpty);

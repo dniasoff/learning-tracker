@@ -59,7 +59,7 @@ void main() {
           trackId: bavliTrackId,
           stageOrder: 1,
           stageName: 'לימוד',
-          schedule: Value('{"type":"delay","delay_days":0}'),
+          schedule: const Value('{"type":"delay","delay_days":0}'),
           isDefault: const Value(true),
         ),
       );
@@ -78,7 +78,7 @@ void main() {
           trackId: bavliTrackId,
           stageOrder: 1,
           stageName: 'Learn',
-          schedule: Value('{"type":"delay","delay_days":0}'),
+          schedule: const Value('{"type":"delay","delay_days":0}'),
           isDefault: const Value(true),
         ),
       );
@@ -98,7 +98,7 @@ void main() {
           trackId: bavliTrackId,
           stageOrder: 1,
           stageName: 'Chazara 1',
-          schedule: Value('{"type":"delay","delay_days":1}'),
+          schedule: const Value('{"type":"delay","delay_days":1}'),
         ),
       );
       await db.stageDao.insertStageDefinition(
@@ -108,7 +108,7 @@ void main() {
           trackId: bavliTrackId,
           stageOrder: 2,
           stageName: 'Chazara 2',
-          schedule: Value('{"type":"delay","delay_days":7}'),
+          schedule: const Value('{"type":"delay","delay_days":7}'),
         ),
       );
 
@@ -127,7 +127,7 @@ void main() {
           trackId: mbTrackId,
           stageOrder: 1,
           stageName: 'Review',
-          schedule: Value('{"type":"delay","delay_days":7}'),
+          schedule: const Value('{"type":"delay","delay_days":7}'),
         ),
       );
 
@@ -147,7 +147,7 @@ void main() {
           trackId: bavliTrackId,
           stageOrder: 1,
           stageName: 'Next-Day Review',
-          schedule: Value('{"type":"delay","delay_days":1}'),
+          schedule: const Value('{"type":"delay","delay_days":1}'),
         ),
       );
       await db.stageDao.insertStageDefinition(
@@ -157,7 +157,7 @@ void main() {
           trackId: bavliTrackId,
           stageOrder: 2,
           stageName: 'Weekly Review',
-          schedule: Value('{"type":"delay","delay_days":7}'),
+          schedule: const Value('{"type":"delay","delay_days":7}'),
         ),
       );
       await db.stageDao.insertStageDefinition(
@@ -167,7 +167,7 @@ void main() {
           trackId: bavliTrackId,
           stageOrder: 3,
           stageName: 'Rolling Back-20',
-          schedule: Value('{"type":"delay","delay_days":20}'),
+          schedule: const Value('{"type":"delay","delay_days":20}'),
         ),
       );
 
@@ -187,7 +187,7 @@ void main() {
           trackId: mishnayosTrackId,
           stageOrder: 1,
           stageName: 'My Morning Study',
-          schedule: Value('{"type":"delay","delay_days":0}'),
+          schedule: const Value('{"type":"delay","delay_days":0}'),
         ),
       );
       await db.stageDao.insertStageDefinition(
@@ -197,7 +197,7 @@ void main() {
           trackId: mishnayosTrackId,
           stageOrder: 2,
           stageName: 'Evening Review Session',
-          schedule: Value('{"type":"delay","delay_days":1}'),
+          schedule: const Value('{"type":"delay","delay_days":1}'),
         ),
       );
 
@@ -218,7 +218,7 @@ void main() {
           trackId: bavliTrackId,
           stageOrder: 1,
           stageName: 'Learn',
-          schedule: Value('{"type":"delay","delay_days":0}'),
+          schedule: const Value('{"type":"delay","delay_days":0}'),
         ),
       );
 
@@ -241,7 +241,7 @@ void main() {
             trackId: bavliTrackId,
             stageOrder: 1,
             stageName: 'Learn',
-            schedule: Value('{"type":"delay","delay_days":0}'),
+            schedule: const Value('{"type":"delay","delay_days":0}'),
           ),
         );
         // Custom name
@@ -252,7 +252,7 @@ void main() {
             trackId: bavliTrackId,
             stageOrder: 2,
             stageName: 'Quick Review',
-            schedule: Value('{"type":"delay","delay_days":1}'),
+            schedule: const Value('{"type":"delay","delay_days":1}'),
           ),
         );
         // English default
@@ -263,7 +263,7 @@ void main() {
             trackId: bavliTrackId,
             stageOrder: 3,
             stageName: 'Chazara 2',
-            schedule: Value('{"type":"delay","delay_days":7}'),
+            schedule: const Value('{"type":"delay","delay_days":7}'),
           ),
         );
 

@@ -264,6 +264,9 @@ void main() {
       )..where((t) => t.id.equals(id))).getSingleOrNull())!;
     }
 
+    // W3.22/W3.28/W3.29: trackType + isActive + deactivatedAt + deletedAt
+    // replaced by unified state + stateChangedAt columns.
+
     test('toColumns with null nullable fields and nullToAbsent=true', () async {
       final accId = await insertAccount(email: 'ct1@test.local');
       final profId = await insertProfile(accId);
@@ -273,13 +276,12 @@ void main() {
       expect(cols.containsKey('id'), isTrue);
       expect(cols.containsKey('profile_id'), isTrue);
       expect(cols.containsKey('curriculum_id'), isTrue);
-      expect(cols.containsKey('track_type'), isTrue);
-      expect(cols.containsKey('is_active'), isTrue);
+      // W3.22: track_type removed; W3.28: is_active → state + state_changed_at
+      expect(cols.containsKey('state'), isTrue);
+      expect(cols.containsKey('state_changed_at'), isTrue);
       expect(cols.containsKey('activated_at'), isTrue);
-      // nullable fields are null → absent with nullToAbsent=true
-      expect(cols.containsKey('deactivated_at'), isFalse);
+      // nullable field (paceResetDate) is null → absent with nullToAbsent=true
       expect(cols.containsKey('pace_reset_date'), isFalse);
-      expect(cols.containsKey('deleted_at'), isFalse);
     });
 
     test(
@@ -290,9 +292,8 @@ void main() {
         final trackId = await insertTrack(profId);
         final track = await getTrack(trackId);
         final cols = track.toColumns(false);
-        expect(cols.containsKey('deactivated_at'), isTrue);
+        // W3.29: only remaining nullable column is pace_reset_date
         expect(cols.containsKey('pace_reset_date'), isTrue);
-        expect(cols.containsKey('deleted_at'), isTrue);
       },
     );
 
@@ -607,7 +608,7 @@ void main() {
             curriculumId: 'bavli',
             stageName: 'limud',
             stageOrder: 1,
-            schedule: Value('{"type":"delay","delay_days":0}'),
+            schedule: const Value('{"type":"delay","delay_days":0}'),
           ),
         );
 
@@ -765,7 +766,8 @@ void main() {
       expect(cols.containsKey('id'), isTrue);
       expect(cols.containsKey('profile_id'), isTrue);
       expect(cols.containsKey('curriculum_id'), isTrue);
-      expect(cols.containsKey('unit_type'), isTrue);
+      // column is 'entry_scope' (not 'unit_type')
+      expect(cols.containsKey('entry_scope'), isTrue);
       expect(cols.containsKey('unit_identifier'), isTrue);
       expect(cols.containsKey('track_type'), isTrue);
       expect(cols.containsKey('completed_at'), isTrue);
@@ -914,8 +916,9 @@ void main() {
       final cols = goal.toColumns(true);
       expect(cols.containsKey('target_date'), isTrue);
       expect(cols.containsKey('pace_value'), isTrue);
-      expect(cols.containsKey('pace_unit'), isTrue);
-      expect(cols.containsKey('learning_unit'), isTrue);
+      // pace_period replaces old pace_unit; pace_granularity replaces learning_unit
+      expect(cols.containsKey('pace_period'), isTrue);
+      expect(cols.containsKey('pace_granularity'), isTrue);
     });
 
     test('toColumns with nullToAbsent=false includes all fields', () async {
@@ -926,8 +929,9 @@ void main() {
       final cols = goal.toColumns(false);
       expect(cols.containsKey('target_date'), isTrue);
       expect(cols.containsKey('pace_value'), isTrue);
-      expect(cols.containsKey('pace_unit'), isTrue);
-      expect(cols.containsKey('learning_unit'), isTrue);
+      // pace_period replaces old pace_unit; pace_granularity replaces learning_unit
+      expect(cols.containsKey('pace_period'), isTrue);
+      expect(cols.containsKey('pace_granularity'), isTrue);
     });
 
     test('toCompanion with nullToAbsent=true omits null fields', () async {

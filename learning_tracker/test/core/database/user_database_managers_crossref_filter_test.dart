@@ -182,7 +182,9 @@ void main() {
 
     test('filter by learningLedgerRefs sefariaRef', () async {
       final rows = await db.managers.curriculumTracks
-          .filter((f) => f.learningLedgerRefs((s) => s.unitIdentifier('Berakhot 2a')))
+          .filter(
+            (f) => f.learningLedgerRefs((s) => s.unitIdentifier('Berakhot 2a')),
+          )
           .get();
       expect(rows, isNotEmpty);
     });

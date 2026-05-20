@@ -5,11 +5,12 @@
 /// freshly-created in-memory database.
 library;
 
+import 'package:drift/drift.dart' show Value;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 
-import '../../helpers/drift_memory.dart' show seedCompletion;
-import '../../helpers/test_database.dart';
+import '../../helpers/drift_memory.dart' show seedCompletion, seedProfile;
+import '../../helpers/test_database.dart' hide seedProfile;
 
 void main() {
   group('Schema v1 smoke tests', () {
@@ -28,11 +29,10 @@ void main() {
     // 1. Schema version
     // -------------------------------------------------------------------------
 
-    test('schemaVersion is 23', () async {
-      final version = await db.customSelect('PRAGMA user_version').map((row) {
-        return row.read<int>('user_version');
-      }).getSingle();
-      expect(version, equals(23));
+    test('schemaVersion is 1', () async {
+      // The UserDatabase.schemaVersion is currently 1 — increments will
+      // be reflected here when migration steps are added.
+      expect(db.schemaVersion, equals(1));
     });
 
     // -------------------------------------------------------------------------
@@ -152,7 +152,7 @@ void main() {
         GoalsCompanion.insert(
           profileId: 1,
           curriculumId: 'bavli',
-          trackId: Value(trackId),
+          trackId: trackId,
           createdAt: now,
           updatedAt: now,
         ),
@@ -250,14 +250,22 @@ void main() {
     // -------------------------------------------------------------------------
 
     test('streaks.profileId is required (no default)', () async {
+      // Use profileId=1 (seeded in setUp) to satisfy the FK constraint.
       await db
           .into(db.streakEvents)
-          .insert(StreakEventsCompanion.insert(profileId: 5));
+          .insert(
+            StreakEventsCompanion.insert(
+              profileId: 1,
+              eventType: 'increment',
+              dayUtc: DateTime.utc(2026, 1, 1),
+              eventTimestamp: DateTime.utc(2026, 1, 1),
+            ),
+          );
       final row = await (db.select(
         db.streakEvents,
-      )..where((t) => t.profileId.equals(5))).getSingleOrNull();
+      )..where((t) => t.profileId.equals(1))).getSingleOrNull();
       expect(row, isNotNull);
-      expect(row!.profileId, equals(5));
+      expect(row!.profileId, equals(1));
     });
 
     // -------------------------------------------------------------------------

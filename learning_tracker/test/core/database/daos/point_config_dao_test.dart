@@ -1,3 +1,4 @@
+import 'package:drift/drift.dart' show Value;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 
@@ -281,7 +282,7 @@ void main() {
             trackId: tid,
             stageOrder: 1,
             stageName: 'Learn',
-            schedule: Value('{"type":"delay","delay_days":0}'),
+            schedule: const Value('{"type":"delay","delay_days":0}'),
           ),
         );
         await database.stageDao.insertStageDefinition(
@@ -291,7 +292,7 @@ void main() {
             trackId: tid,
             stageOrder: 2,
             stageName: 'Review',
-            schedule: Value('{"type":"delay","delay_days":1}'),
+            schedule: const Value('{"type":"delay","delay_days":1}'),
           ),
         );
       }

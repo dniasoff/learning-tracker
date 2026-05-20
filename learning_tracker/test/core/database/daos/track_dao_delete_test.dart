@@ -4,11 +4,9 @@ library;
 
 import 'package:drift/drift.dart' hide isNotNull, isNull;
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/core/database/daos/track_dao.dart';
-import 'package:learning_tracker/core/exceptions/invalid_track_operation_exception.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/core/enums/track_type.dart';
+import 'package:learning_tracker/core/exceptions/invalid_track_operation_exception.dart';
 
 import '../../../helpers/drift_memory.dart' show inMemoryDb, seedProfile;
 
@@ -61,7 +59,7 @@ void main() {
           trackId: trackId,
           stageOrder: 1,
           stageName: 'Learn',
-          schedule: Value('{"type":"delay","delay_days":0}'),
+          schedule: const Value('{"type":"delay","delay_days":0}'),
         ),
       );
 
@@ -196,15 +194,15 @@ void main() {
 
   group('TrackDao.deactivateTrack', () {
     test(
-      'throws InvalidTrackOperationException when deactivating personal track',
+      'retires (no longer throws) — W3.22',
       () async {
-        await db.trackDao.activateTrack(
-          CurriculumId.mishnayos);
+        // W3.22: deactivateTrack now delegates to retireTrack instead of
+        // throwing InvalidTrackOperationException. Verify it completes cleanly.
+        await db.trackDao.activateTrack(CurriculumId.mishnayos);
 
-        expect(
-          () => db.trackDao.deactivateTrack(
-            CurriculumId.mishnayos),
-          throwsA(isA<InvalidTrackOperationException>()),
+        await expectLater(
+          db.trackDao.deactivateTrack(CurriculumId.mishnayos),
+          completes,
         );
       },
     );

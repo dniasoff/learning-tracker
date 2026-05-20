@@ -133,7 +133,7 @@ void main() {
           trackId: trackId,
           stageOrder: order,
           stageName: name,
-          schedule: Value('{"type":"delay","delay_days":0}'),
+          schedule: const Value('{"type":"delay","delay_days":0}'),
         ),
       );
     }
