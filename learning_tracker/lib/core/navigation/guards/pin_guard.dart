@@ -1,7 +1,7 @@
 import 'package:auto_route/auto_route.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/navigation/pin_scope.dart';
-import 'package:learning_tracker/core/services/pin_service.dart';
+import 'package:learning_tracker/features/profiles/domain/services/pin_service.dart';
 
 /// Route guard that protects PIN-gated routes for any [PinScope].
 ///
