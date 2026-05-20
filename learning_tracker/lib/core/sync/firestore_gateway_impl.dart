@@ -294,9 +294,14 @@ class FirestoreGatewayImpl implements FirestoreGateway {
   }) async {
     final collection = _collection(profileId, 'curriculum_tracks');
     if (collection == null) throw _notAuthenticated;
+    // H1 fix (V3-W1): W3.22 removed trackType from curriculum_tracks; one track
+    // per (profileId, curriculumId) is now the invariant. Use curriculumId alone
+    // as the document ID so every track lands at a stable, unique path.
+    // The old pattern `${curriculumId}_${trackType}` would degenerate to
+    // `${curriculumId}_` (empty trackType) causing all curricula to overwrite
+    // the same document on multi-curriculum accounts.
     final curriculumId = data['curriculum_id']?.toString() ?? '';
-    final trackType = data['track_type']?.toString() ?? '';
-    final docId = '${curriculumId}_$trackType';
+    final docId = curriculumId;
     await collection.doc(docId).set({
       ..._stripInternalKeys(data),
       'synced_at': FieldValue.serverTimestamp(),

@@ -7,15 +7,18 @@
 /// the composite-UNIQUE `(profileId, eventTimestamp, eventType)` from
 /// Story 25.2 (DNI-323).
 ///
-/// NOTE (W3.37): The current Firestore shape uses `event_type` /
-/// `event_timestamp`. After W3.37 migrates streak to `streak_events/{ulid}`
-/// with `study_date` / `created_at`, this merger will consume
-/// [StreakEventCodec] directly.
+/// W3.37: Streak Firestore schema changed from a single snapshot document
+/// `streak/{profileId}` to a per-event collection `streak_events/{ulid}`.
+/// Each document now carries `study_date` (the canonical event date) and
+/// `created_at` (write timestamp) instead of `event_timestamp`. This merger
+/// consumes [StreakEventCodec] for decoding, with a fallback to the legacy
+/// `event_timestamp` field so pre-migration docs (if any) are still ingested.
 library;
 
 import 'package:learning_tracker/core/database/user/user_database.dart'
     hide StreakEvent;
 import 'package:learning_tracker/core/sync/codec/firestore_codec.dart';
+import 'package:learning_tracker/core/sync/codec/streak_event_codec.dart';
 import 'package:learning_tracker/core/sync/merge/entity_merger.dart';
 import 'package:learning_tracker/features/gamification/streak/streak_event.dart';
 import 'package:learning_tracker/features/gamification/streak/streak_event_log.dart';
@@ -28,15 +31,34 @@ class StreakEventMerger implements EntityMerger {
 
   final StreakEventLog _log;
 
-  /// Insert any unseen pulled rows. Each [rows] entry follows the
-  /// Firestore shape (`event_type`, `event_timestamp` ISO-8601 string,
-  /// optional `client_device_id`). UNIQUE silently collapses dupes.
+  static const _codec = StreakEventCodec();
+
+  /// Insert any unseen pulled rows.
+  ///
+  /// W3.37 shape: `event_type`, `study_date`, `created_at`, `profile_id`.
+  /// Legacy fallback: `event_timestamp` is accepted so any pre-migration docs
+  /// still in Firestore are ingested rather than silently discarded.
   @override
   Future<void> merge({
     required int profileId,
     required List<Map<String, dynamic>> rows,
   }) async {
     for (final row in rows) {
+      // Try the W3.37 codec path first.
+      final decoded = _codec.decode(row);
+      if (decoded != null) {
+        await _log.append(
+          StreakEvent(
+            profileId: decoded.profileId == 0 ? profileId : decoded.profileId,
+            eventType: decoded.eventType,
+            eventTimestamp: decoded.studyDate,
+            clientDeviceId: row['client_device_id'] as String?,
+          ),
+        );
+        continue;
+      }
+
+      // Legacy fallback: `event_timestamp` field (pre-W3.37 shape).
       final eventType = row['event_type'] as String?;
       final ts = FirestoreCodec.parseDateTime(row['event_timestamp']);
       if (eventType == null || ts == null) continue;

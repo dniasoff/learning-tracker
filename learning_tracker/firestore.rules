@@ -326,8 +326,12 @@ service cloud.firestore {
         }
 
         // profile_programs — curriculum assignments. Stable, fully-enumerable
-        // payload. Client deletes are denied — unenrolment flows through a
-        // state field update (not a document deletion).
+        // payload. Client deletes are permitted for the owner so that
+        // `removeProfileProgramAssignment` (track-removal / unenrolment) can
+        // hard-delete the document. Without this, the delete call issued by
+        // FirestoreGatewayImpl.removeProfileProgramAssignment receives
+        // PERMISSION_DENIED and the deleted program resurfaces on next sync
+        // (C4 fix — V3-W1).
         match /profile_programs/{curriculumId} {
           allow read: if isOwner(uid);
           allow create, update: if isOwner(uid)
@@ -335,7 +339,7 @@ service cloud.firestore {
               'profile_id', 'curriculum_id', 'program_id',
               'tracking_start_date', 'tracking_start_ref', 'synced_at'
             ]);
-          allow delete: if false;
+          allow delete: if isOwner(uid);
         }
       }
     }

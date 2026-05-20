@@ -41,17 +41,17 @@ class LearningLedgerRepositoryImpl implements LearningLedgerRepository {
   }
 
   Map<String, dynamic> _ledgerDataToSyncMap(LearningLedgerData entry) => {
-    'curriculumId': entry.curriculumId,
-    'entryScope': entry.entryScope,
-    'unitIdentifier': entry.unitIdentifier,
-    'unitDisplayNameHe': entry.unitDisplayNameHe,
-    'unitDisplayNameEn': entry.unitDisplayNameEn,
-    'trackType': entry.trackType,
-    'trackId': entry.trackId,
-    'completedAt': entry.completedAt.toIso8601String(),
-    'completionNumber': entry.completionNumber,
-    'markedBy': entry.markedBy,
-    'isManual': entry.isManual,
+    'curriculum_id': entry.curriculumId,
+    'entry_scope': entry.entryScope,
+    'unit_identifier': entry.unitIdentifier,
+    'unit_display_name_he': entry.unitDisplayNameHe,
+    'unit_display_name_en': entry.unitDisplayNameEn,
+    'track_type': entry.trackType,
+    'track_id': entry.trackId,
+    'completed_at': entry.completedAt.toIso8601String(),
+    'completion_number': entry.completionNumber,
+    'marked_by': entry.markedBy,
+    'is_manual': entry.isManual,
   };
 
   Future<void> _syncLedgerEntry(LearningLedgerData entry) async {

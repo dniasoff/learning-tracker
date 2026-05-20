@@ -5,10 +5,10 @@
 /// UNIQUE `(profileId, ulid)` index (Story 25.2 / DNI-323) via
 /// `INSERT OR IGNORE`.
 ///
-/// NOTE: Field names are camelCase matching the legacy SyncEngine shape.
-/// W3 schema work (W3.19+) will migrate these to snake_case; at that point
-/// the LearningLedgerCodec decode path will be wired in place of the inline
-/// extraction below.
+/// Field names: W3.18/W3.19 migrated the Firestore schema to snake_case
+/// (`curriculum_id`, `unit_identifier`, `track_type`, `completed_at`).
+/// Legacy camelCase keys are accepted as a defensive fallback so that any
+/// pre-migration docs already in Firestore are still ingested.
 library;
 
 import 'package:drift/drift.dart';
@@ -37,11 +37,16 @@ class LearningLedgerMerger implements EntityMerger {
         .toSet();
 
     for (final row in rows) {
-      // Legacy camelCase field names — will become snake_case after W3.19.
-      final curriculumId = row['curriculumId'] as String?;
-      final unitIdentifier = row['unitIdentifier'] as String?;
-      final trackType = row['trackType'] as String?;
-      final completedAt = FirestoreCodec.parseDateTime(row['completedAt']);
+      // W3.18/W3.19: snake_case is the canonical schema; accept camelCase as
+      // a fallback for any legacy docs already written to Firestore.
+      final curriculumId =
+          (row['curriculum_id'] ?? row['curriculumId']) as String?;
+      final unitIdentifier =
+          (row['unit_identifier'] ?? row['unitIdentifier']) as String?;
+      final trackType = (row['track_type'] ?? row['trackType']) as String?;
+      final completedAt = FirestoreCodec.parseDateTime(
+        row['completed_at'] ?? row['completedAt'],
+      );
 
       if (curriculumId == null ||
           unitIdentifier == null ||
@@ -50,7 +55,7 @@ class LearningLedgerMerger implements EntityMerger {
         continue;
       }
 
-      final rawPid = row['profileId'] ?? row['profile_id'];
+      final rawPid = row['profile_id'] ?? row['profileId'];
       var rowProfileId = FirestoreCodec.parseInt(rawPid) ?? 0;
       if (rowProfileId == 0) rowProfileId = profileId;
 
@@ -66,17 +71,34 @@ class LearningLedgerMerger implements EntityMerger {
                 : _makeUlid(completedAt),
           ),
           curriculumId: curriculumId,
-          entryScope: row['entryScope'] as String? ?? 'masechta',
+          entryScope:
+              (row['entry_scope'] ?? row['entryScope'] as Object? ?? 'masechta')
+                  as String,
           unitIdentifier: unitIdentifier,
-          unitDisplayNameHe: row['unitDisplayNameHe'] as String? ?? '',
-          unitDisplayNameEn: row['unitDisplayNameEn'] as String? ?? '',
+          unitDisplayNameHe:
+              ((row['unit_display_name_he'] ?? row['unitDisplayNameHe'])
+                  as String?) ??
+              '',
+          unitDisplayNameEn:
+              ((row['unit_display_name_en'] ?? row['unitDisplayNameEn'])
+                  as String?) ??
+              '',
           trackType: trackType,
-          trackId: Value(FirestoreCodec.parseInt(row['trackId'])),
+          trackId: Value(
+            FirestoreCodec.parseInt(row['track_id'] ?? row['trackId']),
+          ),
           completedAt: completedAt,
           completionNumber:
-              FirestoreCodec.parseInt(row['completionNumber']) ?? 1,
-          markedBy: FirestoreCodec.parseInt(row['markedBy']) ?? 0,
-          isManual: Value(FirestoreCodec.parseBool(row['isManual']) ?? false),
+              FirestoreCodec.parseInt(
+                row['completion_number'] ?? row['completionNumber'],
+              ) ??
+              1,
+          markedBy:
+              FirestoreCodec.parseInt(row['marked_by'] ?? row['markedBy']) ?? 0,
+          isManual: Value(
+            FirestoreCodec.parseBool(row['is_manual'] ?? row['isManual']) ??
+                false,
+          ),
         ),
       );
     }

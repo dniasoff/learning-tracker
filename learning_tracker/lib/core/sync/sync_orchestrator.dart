@@ -657,7 +657,11 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
     'completions' => EntityKind.completion,
     'bookmarks' => EntityKind.bookmark,
     'settings' => EntityKind.settings,
-    'streak' => EntityKind.streak,
+    // W3.37: streak channel renamed from 'streak' to 'streak_events' to match
+    // the new per-event collection. Keep 'streak' as a no-op fallback so that
+    // any in-flight listener restart during upgrade doesn't crash on an unknown
+    // channel.
+    'streak_events' => EntityKind.streak,
     'curriculum_tracks' => EntityKind.trackConfig,
     _ => null,
   };

@@ -169,8 +169,12 @@ class CompletionRepositoryImpl implements CompletionRepository {
         completedSefariaRef: request.sefariaRef,
       );
 
-      // 7. Auto-detect unit completions (fire-and-forget)
-      if (_completionDetectionService != null) {
+      // 7. Auto-detect unit completions (fire-and-forget).
+      // H4 fix (V3-W1 / B1): CompletionDetectionService creates siyum ledger
+      // entries — an achievement-tier side-effect. Gate on
+      // awardGamificationPoints so lifetimeOnly historical imports do NOT
+      // generate siyumim (per completion_source.dart creditsAchievement policy).
+      if (_completionDetectionService != null && awardGamificationPoints) {
         unawaited(
           _completionDetectionService.checkAndRecordCompletions(
             curriculumId: request.curriculumId,

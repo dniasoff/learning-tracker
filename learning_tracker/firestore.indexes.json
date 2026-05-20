@@ -24,6 +24,14 @@
         { "fieldPath": "tutor_email", "order": "ASCENDING" },
         { "fieldPath": "state",       "order": "ASCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "tutor_grants",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "state",      "order": "ASCENDING" },
+        { "fieldPath": "updated_at", "order": "ASCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []

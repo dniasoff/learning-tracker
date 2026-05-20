@@ -1,11 +1,9 @@
 import 'package:learning_tracker/core/analytics/parent_analytics_repository.dart';
-import 'package:learning_tracker/core/database/daos/track_dao.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/cross_profile_scope.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
-import 'package:learning_tracker/core/time/local_day_clock.dart';
+import 'package:learning_tracker/core/time/ulid.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
-import 'package:learning_tracker/features/gamification/streak/streak_state_provider.dart';
 import 'package:learning_tracker/features/learning/data/completion_writer.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_command.dart';
 import 'package:learning_tracker/features/sync/data/outbox_sync_write_facade.dart';
@@ -30,17 +28,12 @@ class LocalDataUploadService {
   }) : _facade = facade,
        _database = database,
        _profileId = profileId,
-       _logger = logger,
-       _streakStateProvider = StreakStateProvider(
-         db: database,
-         clock: const SystemLocalDayClock(),
-       );
+       _logger = logger;
 
   final OutboxSyncWriteFacade _facade;
   final UserDatabase _database;
   final int _profileId;
   final AppLogger? _logger;
-  final StreakStateProvider _streakStateProvider;
 
   static const _goalsBackfilledKey = 'sync_goals_backfilled_v1';
 
@@ -154,37 +147,50 @@ class LocalDataUploadService {
     );
 
     // ── Streak ────────────────────────────────────────────────────────────
-    // W3.20: streaks table dropped; derive from streak_events via
-    // StreakStateProvider rather than reading the cached snapshot row.
-    final streakState = await _streakStateProvider.read(profileId: _profileId);
-    if (streakState.currentStreak > 0 ||
-        streakState.lastCompletionDayUtc != null) {
+    // H7 fix (V3-W1 / W3.37): streak_events is a per-event collection.
+    // Enqueue each local streak event as a separate outbox row with the
+    // correct per-event fields (event_type, study_date, created_at, profile_id,
+    // ulid). The old snapshot format (current_count, max_count,
+    // last_completion_date) is garbage in this collection schema.
+    final streakEvents = await _database.streakEventDao.getEventsByProfile(
+      _profileId,
+    );
+    for (final e in streakEvents) {
+      final ulid = newUlid(e.eventTimestamp);
       await _facade.enqueueStreakPayload({
-        'current_count': streakState.currentStreak,
-        'max_count': streakState.maxStreak,
-        'last_completion_date': streakState.lastCompletionDayUtc
-            ?.toIso8601String(),
+        'ulid': ulid,
+        'profile_id': _profileId,
+        'event_type': e.eventType,
+        'study_date': e.eventTimestamp.toIso8601String(),
+        'created_at': e.createdAt.toIso8601String(),
       });
-      _logger?.debug(event: 'local_data_upload_streak_queued');
     }
+    _logger?.debug(
+      event: 'local_data_upload_streak_queued',
+      fields: {'count': streakEvents.length},
+    );
 
     // ── Learning-ledger entries ───────────────────────────────────────────
+    // W3.18/W3.19: push with snake_case field names so the pull-side
+    // LearningLedgerMerger can decode them correctly.
     final ledgerEntries = await _database
         .select(_database.learningLedger)
         .get();
     for (final e in ledgerEntries) {
       await _facade.enqueueLedgerEntry({
-        'curriculumId': e.curriculumId,
-        'entryScope': e.entryScope,
-        'unitIdentifier': e.unitIdentifier,
-        'unitDisplayNameHe': e.unitDisplayNameHe,
-        'unitDisplayNameEn': e.unitDisplayNameEn,
-        'trackType': e.trackType,
-        'trackId': e.trackId,
-        'completedAt': e.completedAt.toIso8601String(),
-        'completionNumber': e.completionNumber,
-        'markedBy': e.markedBy,
-        'isManual': e.isManual,
+        'ulid': e.ulid,
+        'profile_id': e.profileId,
+        'curriculum_id': e.curriculumId,
+        'entry_scope': e.entryScope,
+        'unit_identifier': e.unitIdentifier,
+        'unit_display_name_he': e.unitDisplayNameHe,
+        'unit_display_name_en': e.unitDisplayNameEn,
+        'track_type': e.trackType,
+        'track_id': e.trackId,
+        'completed_at': e.completedAt.toIso8601String(),
+        'completion_number': e.completionNumber,
+        'marked_by': e.markedBy,
+        'is_manual': e.isManual,
       });
     }
     _logger?.debug(

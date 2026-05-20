@@ -120,25 +120,27 @@ export const deleteLearnerProfile = onCall(async (request) => {
 /**
  * Callable: delete a single curriculum track document from Firestore.
  *
- * Expects: { profileId: number, curriculumId: string, trackType: string }
+ * H2 fix (V3-W1): W3.22 removed trackType from curriculum_tracks; the doc-id
+ * is now just curriculumId (matching the client pushTrack fix in H1).
+ * The trackType parameter is no longer required or accepted.
+ *
+ * Expects: { profileId: number, curriculumId: string }
  * Returns: { success: true }
  */
 export const deleteCurriculumTrack = onCall(async (request) => {
   const uid = request.auth?.uid;
   if (!uid) throw new HttpsError("unauthenticated", "Must be signed in");
 
-  const { profileId, curriculumId, trackType } = request.data ?? {};
+  const { profileId, curriculumId } = request.data ?? {};
   if (typeof profileId !== "number" || !Number.isInteger(profileId) || profileId <= 0) {
     throw new HttpsError("invalid-argument", "profileId must be a positive integer");
   }
   if (typeof curriculumId !== "string" || !curriculumId) {
     throw new HttpsError("invalid-argument", "curriculumId must be a non-empty string");
   }
-  if (typeof trackType !== "string" || !trackType) {
-    throw new HttpsError("invalid-argument", "trackType must be a non-empty string");
-  }
 
-  const docId = `${curriculumId}_${trackType}`;
+  // H1/H2 fix: doc-id = curriculumId only (W3.22 removed trackType).
+  const docId = curriculumId;
   const trackRef = db
     .collection("users").doc(uid)
     .collection("learner_profiles").doc(String(profileId))

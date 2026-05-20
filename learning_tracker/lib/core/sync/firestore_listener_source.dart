@@ -20,7 +20,7 @@ import 'package:learning_tracker/core/sync/listener_supervisor.dart';
 ///   completions       — profile subcollection
 ///   bookmarks         — profile subcollection
 ///   settings          — profile subcollection
-///   streak            — single-document stream
+///   streak_events     — per-event collection (W3.37: replaces streak/data doc)
 ///   curriculum_tracks — profile subcollection
 ///
 /// `learning_order` is intentionally absent — it has no [EntityMerger] yet
@@ -54,10 +54,13 @@ class FirestoreListenerSource implements ListenerSource {
         profileId: profileId,
         collection: 'settings',
       ),
-      'streak': gateway.listenToDocument(
+      // W3.37: streak migrated from a single snapshot doc (streak/{id}/data)
+      // to an append-only per-event collection (streak_events/{ulid}).
+      // The old `streak/data` document no longer exists; subscribing to it
+      // would emit null immediately and then never fire again.
+      'streak_events': gateway.listenToCollection(
         profileId: profileId,
-        collection: 'streak',
-        docId: 'data',
+        collection: 'streak_events',
       ),
       'curriculum_tracks': gateway.listenToCollection(
         profileId: profileId,

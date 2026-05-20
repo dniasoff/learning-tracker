@@ -313,7 +313,10 @@ class OutboxSyncWriteFacade implements SyncWriteFacade {
 
   Future<void> enqueueLedgerEntry(Map<String, dynamic> payload) => _enqueue(
     OutboxEntityKind.learningLedgerEntry,
-    payload['unitIdentifier']?.toString() ??
+    // W3.18/W3.19: entity key uses snake_case field; accept camelCase as
+    // a fallback for any legacy calls that have not yet been updated.
+    payload['unit_identifier']?.toString() ??
+        payload['unitIdentifier']?.toString() ??
         DateTimeFactory.nowUtc().millisecondsSinceEpoch.toString(),
     payload,
   );
