@@ -1,6 +1,8 @@
 /// Custom lint rules for the Learning Tracker project.
 ///
-/// Provides seven rules:
+/// Provides eight rules:
+///   - [NoColorLiteralOutsideTheme]: warns on direct `Color(0x…)` hex-literal
+///     constructor calls outside `lib/core/theme/`; use AppColors/AppTheme constants.
 ///   - [NoCurriculumDisplayNameBypass]: prevents access to `.displayNameEn` /
 ///     `.displayNameHe` outside the canonical `core/labels/` whitelist.
 ///   - [NoEToStringInUi]: warns on `e.toString()` calls inside presentation/
@@ -20,6 +22,7 @@ library learning_tracker_lints;
 
 import 'package:custom_lint_builder/custom_lint_builder.dart';
 
+import 'src/rules/no_color_literal_outside_theme.dart';
 import 'src/rules/no_curriculum_display_name_bypass.dart';
 import 'src/rules/no_e_to_string_in_ui.dart';
 import 'src/rules/no_feature_cross_import.dart';
@@ -34,6 +37,7 @@ PluginBase createPlugin() => _LearningTrackerLintPlugin();
 class _LearningTrackerLintPlugin extends PluginBase {
   @override
   List<LintRule> getLintRules(CustomLintConfigs configs) => const [
+        NoColorLiteralOutsideTheme(),
         NoCurriculumDisplayNameBypass(),
         NoEToStringInUi(),
         NoFeatureCrossImport(),
