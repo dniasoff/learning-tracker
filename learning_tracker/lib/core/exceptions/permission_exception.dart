@@ -1,22 +1,12 @@
-// PermissionException hierarchy — W4.33
+// PermissionException hierarchy — W4.33 / W1.28
 //
-// Base class for permission-related errors. Subclasses are thrown when a
-// caller attempts an operation they are not authorised to perform.
+// [PermissionException] base is defined in app_exception.dart (W1.28).
+// This file re-exports it and adds [TutorWriteForbiddenException].
 
-/// Base exception for permission violations.
-///
-/// Callers should catch [PermissionException] when they want to handle all
-/// permission errors uniformly, or catch specific subclasses to handle
-/// individual cases.
-abstract class PermissionException implements Exception {
-  const PermissionException(this.message);
+import 'package:learning_tracker/core/exceptions/app_exception.dart';
 
-  /// Human-readable description of the permission violation.
-  final String message;
-
-  @override
-  String toString() => '$runtimeType: $message';
-}
+export 'package:learning_tracker/core/exceptions/app_exception.dart'
+    show PermissionException;
 
 /// Thrown when a tutor attempts an operation that requires owner-level access.
 ///
