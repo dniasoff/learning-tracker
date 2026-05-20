@@ -40,10 +40,7 @@ class SefariaRef {
   factory SefariaRef.parse(String raw) {
     final trimmed = _normalise(raw);
     if (trimmed.isEmpty) {
-      throw FormatException(
-        'SefariaRef cannot be empty.',
-        raw,
-      );
+      throw FormatException('SefariaRef cannot be empty.', raw);
     }
     return SefariaRef._(trimmed);
   }
@@ -101,12 +98,10 @@ class SefariaRef {
   }
 
   /// Whether this reference's title part begins with `"Mishnah "`.
-  bool get isMishnah =>
-      value.toLowerCase().startsWith('mishnah ');
+  bool get isMishnah => value.toLowerCase().startsWith('mishnah ');
 
   /// Whether this reference's title part begins with `"Jerusalem Talmud "`.
-  bool get isYerushalmi =>
-      value.toLowerCase().startsWith('jerusalem talmud ');
+  bool get isYerushalmi => value.toLowerCase().startsWith('jerusalem talmud ');
 
   // ---------------------------------------------------------------------------
   // Equality + hash
@@ -116,8 +111,7 @@ class SefariaRef {
   /// (exact, case-sensitive — Sefaria refs are case-sensitive).
   @override
   bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is SefariaRef && other.value == value;
+      identical(this, other) || other is SefariaRef && other.value == value;
 
   @override
   int get hashCode => value.hashCode;
@@ -135,13 +129,10 @@ class SefariaRef {
   /// Splits [ref] into `(title, address)` by peeling the trailing numeric
   /// token (optionally followed by a single letter) from the end.
   static (String, String)? _splitTail(String ref) {
-    final match = RegExp(r'^(.*?)(\d+[a-z]?)$').firstMatch(
-      ref.replaceAll('_', ' ').trim(),
-    );
+    final match = RegExp(
+      r'^(.*?)(\d+[a-z]?)$',
+    ).firstMatch(ref.replaceAll('_', ' ').trim());
     if (match == null) return null;
-    return (
-      (match.group(1) ?? '').trim(),
-      (match.group(2) ?? '').trim(),
-    );
+    return ((match.group(1) ?? '').trim(), (match.group(2) ?? '').trim());
   }
 }

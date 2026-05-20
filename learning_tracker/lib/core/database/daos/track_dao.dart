@@ -97,16 +97,15 @@ class TrackDao extends DatabaseAccessor<UserDatabase>
         ),
       );
     } else if (existing.state != TrackState.active) {
-      await (update(curriculumTracks)..where(
-            (t) => t.id.equals(existing.id),
-          ))
-          .write(
-            CurriculumTracksCompanion(
-              state: const Value(TrackState.active),
-              stateChangedAt: Value(now),
-              activatedAt: Value(now),
-            ),
-          );
+      await (update(
+        curriculumTracks,
+      )..where((t) => t.id.equals(existing.id))).write(
+        CurriculumTracksCompanion(
+          state: const Value(TrackState.active),
+          stateChangedAt: Value(now),
+          activatedAt: Value(now),
+        ),
+      );
     }
     // If already active, do nothing.
   }
@@ -114,7 +113,10 @@ class TrackDao extends DatabaseAccessor<UserDatabase>
   /// Retire a track for a curriculum (soft-deactivation, reversible).
   ///
   /// Sets state = 'retired'. The track can be reactivated via [activateTrack].
-  Future<void> retireTrack(CurriculumId curriculumId, {int profileId = 0}) async {
+  Future<void> retireTrack(
+    CurriculumId curriculumId, {
+    int profileId = 0,
+  }) async {
     final now = DateTimeFactory.nowUtc();
     final existing =
         await (select(curriculumTracks)..where(
@@ -125,15 +127,14 @@ class TrackDao extends DatabaseAccessor<UserDatabase>
             .getSingleOrNull();
 
     if (existing != null && existing.state == TrackState.active) {
-      await (update(curriculumTracks)..where(
-            (t) => t.id.equals(existing.id),
-          ))
-          .write(
-            CurriculumTracksCompanion(
-              state: const Value(TrackState.retired),
-              stateChangedAt: Value(now),
-            ),
-          );
+      await (update(
+        curriculumTracks,
+      )..where((t) => t.id.equals(existing.id))).write(
+        CurriculumTracksCompanion(
+          state: const Value(TrackState.retired),
+          stateChangedAt: Value(now),
+        ),
+      );
     }
   }
 

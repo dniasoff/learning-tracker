@@ -173,10 +173,7 @@ class DashboardBody extends ConsumerWidget {
           ProfileMode.child;
       // W6.3: if user skipped track setup during onboarding, show CTA banner
       // instead of the generic empty-dashboard prompt.
-      final skipState = ref
-          .watch(onboardingSkipStateProvider)
-          .asData
-          ?.value;
+      final skipState = ref.watch(onboardingSkipStateProvider).asData?.value;
       if (skipState != null && skipState.skipped && !isChildMode) {
         return const SkippedOnboardingCtaBanner();
       }

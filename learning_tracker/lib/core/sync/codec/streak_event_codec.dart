@@ -61,10 +61,10 @@ class StreakEventCodec extends EntityCodec<StreakEventRow> {
 
   @override
   Map<String, dynamic> encode(StreakEventRow model) => {
-        'profile_id': model.profileId,
-        'event_type': model.eventType,
-        'study_date': FirestoreCodec.encodeDateTime(model.studyDate),
-        'created_at': FirestoreCodec.encodeDateTime(model.createdAt),
-        if (model.firestoreId != null) 'firestore_id': model.firestoreId,
-      };
+    'profile_id': model.profileId,
+    'event_type': model.eventType,
+    'study_date': FirestoreCodec.encodeDateTime(model.studyDate),
+    'created_at': FirestoreCodec.encodeDateTime(model.createdAt),
+    if (model.firestoreId != null) 'firestore_id': model.firestoreId,
+  };
 }

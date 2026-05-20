@@ -19,17 +19,11 @@ void main() {
       });
 
       test('throws FormatException for empty string', () {
-        expect(
-          () => SefariaRef.parse(''),
-          throwsA(isA<FormatException>()),
-        );
+        expect(() => SefariaRef.parse(''), throwsA(isA<FormatException>()));
       });
 
       test('throws FormatException for whitespace-only string', () {
-        expect(
-          () => SefariaRef.parse('   '),
-          throwsA(isA<FormatException>()),
-        );
+        expect(() => SefariaRef.parse('   '), throwsA(isA<FormatException>()));
       });
 
       test('valid ref stores value unchanged (after trim)', () {

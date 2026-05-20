@@ -37,10 +37,7 @@ class ProgramStartingPosition {
   /// `null` when the position is purely date-based (offset from today).
   final String? sefariaRef;
 
-  const ProgramStartingPosition._({
-    required this.startDate,
-    this.sefariaRef,
-  });
+  const ProgramStartingPosition._({required this.startDate, this.sefariaRef});
 
   /// Factory that validates the date window.
   ///
@@ -134,10 +131,7 @@ class ProgramStartingPosition {
         }
       }
     } else if (rawStartingRef.startsWith('offset:')) {
-      offset = int.tryParse(
-            rawStartingRef.substring('offset:'.length),
-          ) ??
-          0;
+      offset = int.tryParse(rawStartingRef.substring('offset:'.length)) ?? 0;
     } else {
       // Bare sefariaRef string, no offset.
       sefariaRef = rawStartingRef;
@@ -180,8 +174,7 @@ class ProgramStartingPosition {
       'ProgramStartingPosition(startDate: $startDate, sefariaRef: $sefariaRef)';
 
   /// Trim a [DateTime] to local-day midnight (year/month/day only).
-  static DateTime _dayOnly(DateTime dt) =>
-      DateTime(dt.year, dt.month, dt.day);
+  static DateTime _dayOnly(DateTime dt) => DateTime(dt.year, dt.month, dt.day);
 }
 
 /// Thrown when a [ProgramStartingPosition] date falls outside

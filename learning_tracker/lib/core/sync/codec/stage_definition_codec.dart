@@ -67,8 +67,9 @@ class StageDefinitionCodec extends EntityCodec<StageDefinitionRow> {
       final scheduleType = raw['schedule_type'] as String? ?? 'delay';
       final delayDays = FirestoreCodec.parseInt(raw['delay_days']) ?? 0;
       final daysOfWeek = raw['days_of_week'];
-      final rollingWindowSize =
-          FirestoreCodec.parseInt(raw['rolling_window_size']);
+      final rollingWindowSize = FirestoreCodec.parseInt(
+        raw['rolling_window_size'],
+      );
 
       switch (scheduleType) {
         case 'days_of_week':
@@ -108,13 +109,13 @@ class StageDefinitionCodec extends EntityCodec<StageDefinitionRow> {
 
   @override
   Map<String, dynamic> encode(StageDefinitionRow model) => {
-        'curriculum_id': model.curriculumId,
-        'track_id': model.trackId,
-        'stage_order': model.stageOrder,
-        'stage_name': model.stageName,
-        'schedule': model.schedule,
-        'is_default': model.isDefault,
-        if (model.updatedAt != null)
-          'updated_at': FirestoreCodec.encodeDateTime(model.updatedAt),
-      };
+    'curriculum_id': model.curriculumId,
+    'track_id': model.trackId,
+    'stage_order': model.stageOrder,
+    'stage_name': model.stageName,
+    'schedule': model.schedule,
+    'is_default': model.isDefault,
+    if (model.updatedAt != null)
+      'updated_at': FirestoreCodec.encodeDateTime(model.updatedAt),
+  };
 }

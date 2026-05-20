@@ -24,8 +24,7 @@ class ScopeLevel {
 
   @override
   bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is ScopeLevel && other.value == value;
+      identical(this, other) || other is ScopeLevel && other.value == value;
 
   @override
   int get hashCode => value.hashCode;
@@ -46,11 +45,7 @@ class ScopeValue {
   /// Throws [ArgumentError] when [raw] is empty after trimming.
   ScopeValue(String raw) : value = raw.trim() {
     if (value.isEmpty) {
-      throw ArgumentError.value(
-        raw,
-        'raw',
-        'ScopeValue cannot be empty.',
-      );
+      throw ArgumentError.value(raw, 'raw', 'ScopeValue cannot be empty.');
     }
   }
 
@@ -59,8 +54,7 @@ class ScopeValue {
 
   @override
   bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is ScopeValue && other.value == value;
+      identical(this, other) || other is ScopeValue && other.value == value;
 
   @override
   int get hashCode => value.hashCode;
@@ -93,11 +87,10 @@ class CurriculumScope {
   factory CurriculumScope.fromRaw({
     required int rawLevel,
     required String rawValue,
-  }) =>
-      CurriculumScope(
-        level: ScopeLevel(rawLevel),
-        scopeValue: ScopeValue(rawValue),
-      );
+  }) => CurriculumScope(
+    level: ScopeLevel(rawLevel),
+    scopeValue: ScopeValue(rawValue),
+  );
 
   /// The hierarchy level being filtered.
   final ScopeLevel level;

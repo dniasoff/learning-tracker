@@ -108,18 +108,14 @@ class _EditTrackScreenState extends ConsumerState<EditTrackScreen> {
 
     // Chazarah delays = delayDays of stages with stageOrder > 1 (skip learn).
     // W3.27: schedule quartet replaced by JSON column; decode delay_days here.
-    final delays = stages
-        .where((s) => s.stageOrder > 1)
-        .map((s) {
-          try {
-            final sched =
-                jsonDecode(s.schedule) as Map<String, dynamic>;
-            return (sched['delay_days'] as num?)?.toInt() ?? 0;
-          } catch (_) {
-            return 0;
-          }
-        })
-        .toList();
+    final delays = stages.where((s) => s.stageOrder > 1).map((s) {
+      try {
+        final sched = jsonDecode(s.schedule) as Map<String, dynamic>;
+        return (sched['delay_days'] as num?)?.toInt() ?? 0;
+      } catch (_) {
+        return 0;
+      }
+    }).toList();
 
     if (!mounted) return;
     // Fallback: when the stored goal has no description (tracks created before
@@ -294,9 +290,9 @@ class _EditTrackScreenState extends ConsumerState<EditTrackScreen> {
         .getProgramForProfileAndCurriculum(profileId, curriculum.storageKey);
     if (enrollment == null) return;
 
-    final program = ref.read(learningProgramRepositoryProvider).getProgramById(
-      enrollment.programId,
-    );
+    final program = ref
+        .read(learningProgramRepositoryProvider)
+        .getProgramById(enrollment.programId);
     final apiKey = program?.apiProgramKey;
 
     String? todayRef;

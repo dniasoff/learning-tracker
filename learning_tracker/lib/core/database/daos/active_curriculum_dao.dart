@@ -51,8 +51,7 @@ class ActiveCurriculumDao extends DatabaseAccessor<UserDatabase>
   Stream<List<String>> watchActiveCurriculaByProfile(int profileId) {
     return (select(curriculumTracks)..where(
           (t) =>
-              t.profileId.equals(profileId) &
-              t.state.equals(TrackState.active),
+              t.profileId.equals(profileId) & t.state.equals(TrackState.active),
         ))
         .watch()
         .map((rows) => rows.map((r) => r.curriculumId).toSet().toList());

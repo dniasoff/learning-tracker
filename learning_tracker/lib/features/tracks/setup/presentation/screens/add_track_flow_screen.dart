@@ -116,7 +116,8 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
   bool get _hasProgramStepForCurriculum {
     final id = _state.curriculumId;
     if (id == null) return false;
-    return ref.read(learningProgramRepositoryProvider)
+    return ref
+        .read(learningProgramRepositoryProvider)
         .getActiveProgramsByCurriculumType(id.storageKey)
         .isNotEmpty;
   }
@@ -212,14 +213,15 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
     // Reload program from DB if we had one
     LearningProgramData? selectedProgram;
     if (programId != null) {
-      selectedProgram = ref.read(learningProgramRepositoryProvider).getProgramById(
-        programId,
-      );
+      selectedProgram = ref
+          .read(learningProgramRepositoryProvider)
+          .getProgramById(programId);
     }
 
     final programsExistForResume =
         curriculum != null &&
-        ref.read(learningProgramRepositoryProvider)
+        ref
+            .read(learningProgramRepositoryProvider)
             .getActiveProgramsByCurriculumType(curriculum.storageKey)
             .isNotEmpty;
 

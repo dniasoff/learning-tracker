@@ -188,19 +188,22 @@ void main() {
           );
         });
 
-        test('resetToDefault calls pushLearningOrder with empty items', () async {
-          await repo.resetToDefault(CurriculumId.mishnayos);
+        test(
+          'resetToDefault calls pushLearningOrder with empty items',
+          () async {
+            await repo.resetToDefault(CurriculumId.mishnayos);
 
-          final captured = verify(
-            () => mockFacade.pushLearningOrder(
-              profileId: 1,
-              curriculumId: CurriculumId.mishnayos.storageKey,
-              items: captureAny(named: 'items'),
-              updatedAt: any(named: 'updatedAt'),
-            ),
-          ).captured;
-          expect(captured.first as List, isEmpty);
-        });
+            final captured = verify(
+              () => mockFacade.pushLearningOrder(
+                profileId: 1,
+                curriculumId: CurriculumId.mishnayos.storageKey,
+                items: captureAny(named: 'items'),
+                updatedAt: any(named: 'updatedAt'),
+              ),
+            ).captured;
+            expect(captured.first as List, isEmpty);
+          },
+        );
       });
     },
   );

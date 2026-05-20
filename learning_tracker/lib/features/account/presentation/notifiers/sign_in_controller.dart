@@ -183,11 +183,9 @@ class SignInController extends Notifier<SignInState> {
     if (reloadedUser == null) return false;
 
     final resolvedEmail = reloadedUser.email ?? email;
-    final verifiedAfterPrompt = await (_showVerification?.call(
-          resolvedEmail,
-          l10n,
-        ) ??
-        Future.value(false));
+    final verifiedAfterPrompt =
+        await (_showVerification?.call(resolvedEmail, l10n) ??
+            Future.value(false));
     if (verifiedAfterPrompt) return true;
 
     await authRepo.signOut();
@@ -240,9 +238,9 @@ class SignInController extends Notifier<SignInState> {
     StackRouter router,
   ) async {
     try {
-      _ref.read(accountDbFileNameProvider.notifier).setFileName(
-        account.dbFileName,
-      );
+      _ref
+          .read(accountDbFileNameProvider.notifier)
+          .setFileName(account.dbFileName);
       _ref.invalidate(userDatabaseProvider);
 
       final dao = _ref.read(userDatabaseProvider).userProfileDao;
@@ -254,8 +252,7 @@ class SignInController extends Notifier<SignInState> {
         final allProfiles = await dao.getAllUserProfiles();
         for (final candidate in allProfiles) {
           if (candidate.accountTier.isCloud &&
-              candidate.email.toLowerCase() ==
-                  account.email.toLowerCase()) {
+              candidate.email.toLowerCase() == account.email.toLowerCase()) {
             profile = candidate;
             break;
           }
@@ -295,9 +292,9 @@ class SignInController extends Notifier<SignInState> {
 
     if (existingEntry != null) {
       if (_ref.read(accountDbFileNameProvider) != existingEntry.dbFileName) {
-        _ref.read(accountDbFileNameProvider.notifier).setFileName(
-          existingEntry.dbFileName,
-        );
+        _ref
+            .read(accountDbFileNameProvider.notifier)
+            .setFileName(existingEntry.dbFileName);
         _ref.invalidate(userDatabaseProvider);
       }
       await _ref
@@ -414,15 +411,14 @@ class SignInController extends Notifier<SignInState> {
       final account = await registry.findByEmail(email);
 
       if (account != null && account.accountTier.isLocal) {
-        _ref.read(accountDbFileNameProvider.notifier).setFileName(
-          account.dbFileName,
-        );
+        _ref
+            .read(accountDbFileNameProvider.notifier)
+            .setFileName(account.dbFileName);
         _ref.invalidate(userDatabaseProvider);
 
         final dao = _ref.read(userDatabaseProvider).userProfileDao;
         final service = LocalAuthService(dao: dao);
-        final profile =
-            await service.signIn(email: email, password: password);
+        final profile = await service.signIn(email: email, password: password);
 
         final prefs = await SharedPreferences.getInstance();
         final session = SessionPersistenceService(
@@ -431,8 +427,7 @@ class SignInController extends Notifier<SignInState> {
         );
         await session.setActiveAccount(account.accountId);
 
-        final isOnline =
-            await InternetConnectionChecker.instance.hasConnection;
+        final isOnline = await InternetConnectionChecker.instance.hasConnection;
         if (isOnline) {
           final upgradeSvc = UpgradeToCloudService(
             dao: dao,
@@ -477,8 +472,7 @@ class SignInController extends Notifier<SignInState> {
           unawaited(router.replaceAll([const ProfilePickerRoute()]));
         }
       } else if (account != null && account.accountTier.isCloud) {
-        final isOnline =
-            await InternetConnectionChecker.instance.hasConnection;
+        final isOnline = await InternetConnectionChecker.instance.hasConnection;
         if (isOnline) {
           final authRepo = _ref.read(authRepositoryProvider);
           await authRepo
@@ -512,8 +506,7 @@ class SignInController extends Notifier<SignInState> {
           return;
         }
 
-        final isOnline =
-            await InternetConnectionChecker.instance.hasConnection;
+        final isOnline = await InternetConnectionChecker.instance.hasConnection;
         if (isOnline) {
           final authRepo = _ref.read(authRepositoryProvider);
           await authRepo
@@ -584,8 +577,7 @@ class SignInController extends Notifier<SignInState> {
         }
       }
 
-      final localMatch =
-          await registry.findByEmail(googleUser.email ?? '');
+      final localMatch = await registry.findByEmail(googleUser.email ?? '');
       if (localMatch != null && localMatch.accountTier.isLocal) {
         final msg = l10n.authOfflineUseUpgrade;
         _showError?.call(msg);
@@ -639,5 +631,5 @@ class SignInController extends Notifier<SignInState> {
 /// Riverpod provider — auto-dispose so the controller is recreated on re-entry.
 final signInControllerProvider =
     NotifierProvider.autoDispose<SignInController, SignInState>(
-  SignInController.new,
-);
+      SignInController.new,
+    );

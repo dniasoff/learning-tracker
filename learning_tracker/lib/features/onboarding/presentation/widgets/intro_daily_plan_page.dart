@@ -180,11 +180,7 @@ Widget _dailyListRow2Highlight() {
             color: AppTheme.brandCreamCard,
             shape: BoxShape.circle,
           ),
-          child: const Icon(
-            Icons.play_arrow_rounded,
-            color: _kNavy,
-            size: 16,
-          ),
+          child: const Icon(Icons.play_arrow_rounded, color: _kNavy, size: 16),
         ),
         const SizedBox(width: 10),
         Expanded(
@@ -223,9 +219,7 @@ Widget _dailyListRowEmpty({required bool filled}) {
           child: Container(
             height: 7,
             decoration: BoxDecoration(
-              color: filled
-                  ? const Color(0xFFDCDFE5)
-                  : const Color(0xFFE5E7EC),
+              color: filled ? const Color(0xFFDCDFE5) : const Color(0xFFE5E7EC),
               borderRadius: BorderRadius.circular(3),
             ),
           ),

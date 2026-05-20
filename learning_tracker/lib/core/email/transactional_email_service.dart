@@ -64,7 +64,8 @@ final class TutorInviteEmail extends TransactionalEmail {
   final DateTime expiresAt;
 
   @override
-  String get subject => '$parentName invited you to tutor $childName on Learning Tracker';
+  String get subject =>
+      '$parentName invited you to tutor $childName on Learning Tracker';
 
   @override
   String get plaintextBody =>

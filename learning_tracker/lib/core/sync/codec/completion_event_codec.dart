@@ -46,7 +46,8 @@ class CompletionEventCodec extends EntityCodec<CompletionEventRow> {
     final sefariaRef = raw['sefaria_ref'] as String?;
     final stageId = FirestoreCodec.parseInt(raw['stage_id']);
     final trackType = raw['track_type'] as String?;
-    final eventTs = FirestoreCodec.parseDateTime(
+    final eventTs =
+        FirestoreCodec.parseDateTime(
           raw['completed_at'] ?? raw['event_timestamp'],
         ) ??
         FirestoreCodec.parseDateTime(raw['completedAt']);
@@ -73,13 +74,13 @@ class CompletionEventCodec extends EntityCodec<CompletionEventRow> {
 
   @override
   Map<String, dynamic> encode(CompletionEventRow model) => {
-        'curriculum_id': model.curriculumId,
-        'sefaria_ref': model.sefariaRef,
-        'stage_id': model.stageId,
-        'track_type': model.trackType,
-        'completed_at': FirestoreCodec.encodeDateTime(model.eventTimestamp),
-        'points': model.points,
-        if (model.priorMarkOnly) 'prior_mark_only': true,
-        if (model.firestoreId != null) 'firestore_id': model.firestoreId,
-      };
+    'curriculum_id': model.curriculumId,
+    'sefaria_ref': model.sefariaRef,
+    'stage_id': model.stageId,
+    'track_type': model.trackType,
+    'completed_at': FirestoreCodec.encodeDateTime(model.eventTimestamp),
+    'points': model.points,
+    if (model.priorMarkOnly) 'prior_mark_only': true,
+    if (model.firestoreId != null) 'firestore_id': model.firestoreId,
+  };
 }

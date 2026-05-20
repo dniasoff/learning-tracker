@@ -30,9 +30,7 @@ class IntroPageIndicator extends StatelessWidget {
           width: isActive ? 20 : 8,
           height: 8,
           decoration: BoxDecoration(
-            color: isActive
-                ? _kNavy
-                : const Color(0xFFDCE0EA),
+            color: isActive ? _kNavy : const Color(0xFFDCE0EA),
             borderRadius: BorderRadius.circular(4),
           ),
         );

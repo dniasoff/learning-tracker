@@ -28,11 +28,7 @@ class StageOrder {
   /// Throws [ArgumentError] when [value] is less than 1.
   StageOrder(this.value) {
     if (value < 1) {
-      throw ArgumentError.value(
-        value,
-        'value',
-        'StageOrder must be ≥ 1.',
-      );
+      throw ArgumentError.value(value, 'value', 'StageOrder must be ≥ 1.');
     }
   }
 
@@ -79,8 +75,7 @@ class StageOrder {
 
   @override
   bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is StageOrder && other.value == value;
+      identical(this, other) || other is StageOrder && other.value == value;
 
   @override
   int get hashCode => value.hashCode;

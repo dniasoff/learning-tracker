@@ -173,10 +173,8 @@ class OutboxPushPipeline implements PushPipeline {
     required Map<String, dynamic> payload,
   }) => _run(
     OutboxEntityKind.notificationSettings,
-    () => _gateway.pushNotificationSettings(
-      profileId: profileId,
-      data: payload,
-    ),
+    () =>
+        _gateway.pushNotificationSettings(profileId: profileId, data: payload),
   );
 
   @override

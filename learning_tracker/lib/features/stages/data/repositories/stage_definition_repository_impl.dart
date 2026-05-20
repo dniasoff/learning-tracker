@@ -328,12 +328,18 @@ class StageDefinitionRepositoryImpl implements StageDefinitionRepository {
 
   /// Encode a [ScheduleSpec] to the JSON string stored in the `schedule` column.
   static String _encodeSchedule(ScheduleSpec spec) => switch (spec) {
-    WeeklySchedule(:final daysOfWeek) =>
-      jsonEncode({'type': 'weekly', 'days': daysOfWeek}),
-    RollingSchedule(:final windowSize) =>
-      jsonEncode({'type': 'rolling', 'window_size': windowSize}),
-    DelaySchedule(:final delayDays) =>
-      jsonEncode({'type': 'delay', 'delay_days': delayDays}),
+    WeeklySchedule(:final daysOfWeek) => jsonEncode({
+      'type': 'weekly',
+      'days': daysOfWeek,
+    }),
+    RollingSchedule(:final windowSize) => jsonEncode({
+      'type': 'rolling',
+      'window_size': windowSize,
+    }),
+    DelaySchedule(:final delayDays) => jsonEncode({
+      'type': 'delay',
+      'delay_days': delayDays,
+    }),
   };
 
   StageDefinition _rowToModel(db.StageDefinition row) {
@@ -361,23 +367,21 @@ class StageDefinitionRepositoryImpl implements StageDefinitionRepository {
     await _pushSettings?.call({
       'curriculum_id': curriculumId.storageKey,
       'updated_at': DateTimeFactory.nowUtc().toIso8601String(),
-      'stages': stages
-          .map((s) {
-            final spec = _decodeSchedule(s.schedule);
-            return {
-              'stage_order': s.stageOrder,
-              'stage_name': s.stageName,
-              'is_default': s.isDefault,
-              'schedule': jsonDecode(s.schedule),
-              // Legacy fields for back-compat with older Firestore readers.
-              'delay_days': spec.delayDays,
-              'schedule_type': spec.storageKey,
-              if (spec.daysOfWeek != null) 'days_of_week': spec.daysOfWeek,
-              if (spec.rollingWindowSize != null)
-                'rolling_window_size': spec.rollingWindowSize,
-            };
-          })
-          .toList(),
+      'stages': stages.map((s) {
+        final spec = _decodeSchedule(s.schedule);
+        return {
+          'stage_order': s.stageOrder,
+          'stage_name': s.stageName,
+          'is_default': s.isDefault,
+          'schedule': jsonDecode(s.schedule),
+          // Legacy fields for back-compat with older Firestore readers.
+          'delay_days': spec.delayDays,
+          'schedule_type': spec.storageKey,
+          if (spec.daysOfWeek != null) 'days_of_week': spec.daysOfWeek,
+          if (spec.rollingWindowSize != null)
+            'rolling_window_size': spec.rollingWindowSize,
+        };
+      }).toList(),
     });
   }
 }

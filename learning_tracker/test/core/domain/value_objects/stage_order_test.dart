@@ -101,10 +101,7 @@ void main() {
 
       test('sequence starting at 2 is not monotonic from 1', () {
         expect(
-          StageOrder.isMonotonicFrom([
-            StageOrder(2),
-            StageOrder(3),
-          ]),
+          StageOrder.isMonotonicFrom([StageOrder(2), StageOrder(3)]),
           isFalse,
         );
       });

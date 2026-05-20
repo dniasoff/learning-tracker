@@ -18,7 +18,12 @@ import 'package:learning_tracker/features/onboarding/domain/validators/auth_vali
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 export 'package:learning_tracker/features/account/presentation/notifiers/sign_in_controller.dart'
-    show SignInController, SignInError, SignInIdle, SignInState, SignInSubmitting,
+    show
+        SignInController,
+        SignInError,
+        SignInIdle,
+        SignInState,
+        SignInSubmitting,
         signInControllerProvider;
 export 'package:learning_tracker/features/account/presentation/widgets/email_verification_dialog.dart'
     show showEmailVerificationDialog;
@@ -56,12 +61,14 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
     // navigation + dialog flows without holding a BuildContext reference.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      ref.read(signInControllerProvider.notifier).setCallbacks(
-        showVerificationDialog: ref
-            .read(signInControllerProvider.notifier)
-            .buildVerificationCallback(context),
-        showError: _showError,
-      );
+      ref
+          .read(signInControllerProvider.notifier)
+          .setCallbacks(
+            showVerificationDialog: ref
+                .read(signInControllerProvider.notifier)
+                .buildVerificationCallback(context),
+            showError: _showError,
+          );
     });
   }
 
@@ -168,20 +175,21 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
   // ── Sign-in dispatch ─────────────────────────────────────────────────────────
 
   Future<void> _handleSignInWithEmail(AppLocalizations l10n) async {
-    await ref.read(signInControllerProvider.notifier).signInWithEmail(
-      email: _emailController.text.trim().toLowerCase(),
-      password: _passwordController.text,
-      router: context.router,
-      l10n: l10n,
-      formKey: _formKey,
-    );
+    await ref
+        .read(signInControllerProvider.notifier)
+        .signInWithEmail(
+          email: _emailController.text.trim().toLowerCase(),
+          password: _passwordController.text,
+          router: context.router,
+          l10n: l10n,
+          formKey: _formKey,
+        );
   }
 
   Future<void> _handleSignInWithGoogle(AppLocalizations l10n) async {
-    await ref.read(signInControllerProvider.notifier).signInWithGoogle(
-      router: context.router,
-      l10n: l10n,
-    );
+    await ref
+        .read(signInControllerProvider.notifier)
+        .signInWithGoogle(router: context.router, l10n: l10n);
   }
 
   // ── Build ────────────────────────────────────────────────────────────────────
@@ -190,10 +198,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final connectivity = ref.watch(connectivityStreamProvider);
-    final isOnline = connectivity.maybeWhen(
-      data: (v) => v,
-      orElse: () => true,
-    );
+    final isOnline = connectivity.maybeWhen(data: (v) => v, orElse: () => true);
     final signInState = ref.watch(signInControllerProvider);
     final isLoading = signInState is SignInSubmitting;
     final signInMode = _effectiveSignInMode(isOnline: isOnline);
@@ -249,9 +254,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                               const SizedBox(height: 4),
                               Text(
                                 l10n.signInReady,
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .bodyLarge
+                                style: Theme.of(context).textTheme.bodyLarge
                                     ?.copyWith(
                                       color: AppTheme.brandInkMuted,
                                       height: 1.4,
@@ -272,8 +275,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                                 l10n: l10n,
                                 onEmailChanged: _onEmailChanged,
                                 onPasswordToggle: () => setState(
-                                  () =>
-                                      _obscurePassword = !_obscurePassword,
+                                  () => _obscurePassword = !_obscurePassword,
                                 ),
                                 onKeepSignedInChanged: (value) => setState(
                                   () => _keepSignedIn = value ?? false,
@@ -295,9 +297,8 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                                 onSignIn: () => _handleSignInWithEmail(l10n),
                                 onGoogleSignIn: () =>
                                     _handleSignInWithGoogle(l10n),
-                                onRegister: () => context.router.replace(
-                                  SignupRoute(),
-                                ),
+                                onRegister: () =>
+                                    context.router.replace(SignupRoute()),
                               ),
                             ],
                           ),

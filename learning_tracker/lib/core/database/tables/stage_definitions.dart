@@ -29,9 +29,8 @@ class StageDefinitions extends Table {
   /// JSON-encoded ScheduleSpec, e.g. {"type":"delay","delay_days":7}.
   /// Replaces the former quartet: scheduleType / daysOfWeek /
   /// rollingWindowSize / delayDays.
-  TextColumn get schedule => text().withDefault(
-    const Constant('{"type":"delay","delay_days":0}'),
-  )();
+  TextColumn get schedule =>
+      text().withDefault(const Constant('{"type":"delay","delay_days":0}'))();
 
   /// W3.23: last-write-wins timestamp for sync.
   DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime)();

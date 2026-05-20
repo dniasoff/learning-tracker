@@ -87,9 +87,11 @@ extension type NaturalKey(String value) implements String {
   factory NaturalKey.forLearnerProfile({
     required Object profileIdOrRow,
     required int fallbackProfileId,
-  }) => NaturalKey(profileIdOrRow.toString().isNotEmpty
-      ? profileIdOrRow.toString()
-      : fallbackProfileId.toString());
+  }) => NaturalKey(
+    profileIdOrRow.toString().isNotEmpty
+        ? profileIdOrRow.toString()
+        : fallbackProfileId.toString(),
+  );
 
   // ── Learning order ──────────────────────────────────────────────────────────
 

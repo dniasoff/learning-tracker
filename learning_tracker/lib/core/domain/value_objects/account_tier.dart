@@ -44,10 +44,10 @@ enum AccountTier {
       'cloudBorn' => AccountTier.cloud,
       'localBorn' => AccountTier.local,
       _ => throw ArgumentError.value(
-          key,
-          'key',
-          'Unknown AccountTier storage key. Expected "cloudBorn" or "localBorn".',
-        ),
+        key,
+        'key',
+        'Unknown AccountTier storage key. Expected "cloudBorn" or "localBorn".',
+      ),
     };
   }
 

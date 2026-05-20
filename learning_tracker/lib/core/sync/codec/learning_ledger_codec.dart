@@ -68,12 +68,12 @@ class LearningLedgerCodec extends EntityCodec<LearningLedgerRow> {
 
   @override
   Map<String, dynamic> encode(LearningLedgerRow model) => {
-        'ulid': model.ulid,
-        'profile_id': model.profileId,
-        'curriculum_id': model.curriculumId,
-        'sefaria_ref': model.sefariaRef,
-        'entry_type': model.entryType,
-        'points': model.points,
-        'created_at': FirestoreCodec.encodeDateTime(model.createdAt),
-      };
+    'ulid': model.ulid,
+    'profile_id': model.profileId,
+    'curriculum_id': model.curriculumId,
+    'sefaria_ref': model.sefariaRef,
+    'entry_type': model.entryType,
+    'points': model.points,
+    'created_at': FirestoreCodec.encodeDateTime(model.createdAt),
+  };
 }

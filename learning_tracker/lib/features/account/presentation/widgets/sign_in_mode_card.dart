@@ -10,11 +10,7 @@ import 'package:learning_tracker/l10n/app_localizations.dart';
 /// - [SignInModeHint.local]        — device-only or offline + unknown account
 /// - [SignInModeHint.unknown]      — renders nothing (SizedBox.shrink)
 class SignInModeCard extends StatelessWidget {
-  const SignInModeCard({
-    super.key,
-    required this.mode,
-    required this.l10n,
-  });
+  const SignInModeCard({super.key, required this.mode, required this.l10n});
 
   final SignInModeHint mode;
   final AppLocalizations l10n;

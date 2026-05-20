@@ -18,19 +18,18 @@ Completion _completion({
   required String sefariaRef,
   int stageId = 1,
   int trackId = 1,
-}) =>
-    Completion(
-      id: 1,
-      profileId: 1,
-      curriculumId: 'mishnayos',
-      sefariaRef: sefariaRef,
-      stageId: stageId,
-      trackType: 'personal',
-      trackId: trackId,
-      completedAt: DateTime(2026, 5, 1),
-      points: 10,
-      derivedFromEvents: true,
-    );
+}) => Completion(
+  id: 1,
+  profileId: 1,
+  curriculumId: 'mishnayos',
+  sefariaRef: sefariaRef,
+  stageId: stageId,
+  trackType: 'personal',
+  trackId: trackId,
+  completedAt: DateTime(2026, 5, 1),
+  points: 10,
+  derivedFromEvents: true,
+);
 
 void main() {
   const service = TrackCompletionService();
@@ -193,9 +192,7 @@ void main() {
         byTrack: {
           1: TrackEntry(
             stages: [_stageDefinition],
-            completions: [
-              _completion(sefariaRef: 'Berakhot 1:1', stageId: 1),
-            ],
+            completions: [_completion(sefariaRef: 'Berakhot 1:1', stageId: 1)],
           ),
         },
         totalItems: 2,
@@ -232,9 +229,7 @@ void main() {
         byTrack: {
           1: TrackEntry(
             stages: [], // no stages → skip
-            completions: [
-              _completion(sefariaRef: 'Berakhot 1:1', stageId: 1),
-            ],
+            completions: [_completion(sefariaRef: 'Berakhot 1:1', stageId: 1)],
           ),
         },
         totalItems: 5,

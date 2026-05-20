@@ -22,7 +22,10 @@ export 'package:learning_tracker/features/onboarding/presentation/widgets/intro_
 export 'package:learning_tracker/features/onboarding/presentation/widgets/intro_page_indicator.dart'
     show IntroPageIndicator;
 export 'package:learning_tracker/features/onboarding/presentation/widgets/intro_rewards_page.dart'
-    show IntroChildModeTag, IntroFeatureCardsRow, IntroRewardsHeroIllustration,
+    show
+        IntroChildModeTag,
+        IntroFeatureCardsRow,
+        IntroRewardsHeroIllustration,
         IntroScholarLevelCard;
 
 const kIntroSeen = 'intro_seen';
@@ -346,10 +349,7 @@ class _IntroPage extends ConsumerWidget {
               TextSpan(text: 'Your Daily\n'),
               TextSpan(
                 text: 'Torah Plan',
-                style: TextStyle(
-                  color: _kNavy,
-                  fontStyle: FontStyle.italic,
-                ),
+                style: TextStyle(color: _kNavy, fontStyle: FontStyle.italic),
               ),
             ],
           ),
@@ -363,10 +363,7 @@ class _IntroPage extends ConsumerWidget {
               TextSpan(text: 'Never Forget\na '),
               TextSpan(
                 text: 'Mishna',
-                style: TextStyle(
-                  color: _kNavy,
-                  fontStyle: FontStyle.italic,
-                ),
+                style: TextStyle(color: _kNavy, fontStyle: FontStyle.italic),
               ),
             ],
           ),

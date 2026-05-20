@@ -114,18 +114,20 @@ void main() {
   // ── 2. Owner positive path (regression guard) ───────────────────────────
 
   group('W3.41 completions — owner positive path', () {
-    test('completions block allows owner create (isOwner(uid) positive path)',
-        () {
-      final block = _extractRuleBlock(rules, 'completions/{completionId}');
-      expect(
-        block,
-        contains('allow create: if isOwner(uid)'),
-        reason:
-            'The owner MUST be able to create completions. '
-            'isOwner(uid) is the ONLY allow path. Removing it would silently '
-            'break all completion recording.',
-      );
-    });
+    test(
+      'completions block allows owner create (isOwner(uid) positive path)',
+      () {
+        final block = _extractRuleBlock(rules, 'completions/{completionId}');
+        expect(
+          block,
+          contains('allow create: if isOwner(uid)'),
+          reason:
+              'The owner MUST be able to create completions. '
+              'isOwner(uid) is the ONLY allow path. Removing it would silently '
+              'break all completion recording.',
+        );
+      },
+    );
   });
 
   // ── 3. tutor_grants — client write lock ────────────────────────────────

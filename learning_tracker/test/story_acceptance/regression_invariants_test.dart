@@ -37,7 +37,8 @@ void main() {
 
     group(
       'N1: offline-queue drains to 0 after online flush',
-      skip: 'Retired W2.35 — OfflineQueue deleted; equivalent invariant '
+      skip:
+          'Retired W2.35 — OfflineQueue deleted; equivalent invariant '
           'covered by OutboxProcessor tests (outbox drains to 0 after flush)',
       () {
         test('placeholder', () {});

@@ -245,10 +245,7 @@ void main() {
       'WeeklySchedule() with empty daysOfWeek throws AssertionError',
       () async {
         // Validation now happens at ScheduleSpec construction time
-        expect(
-          () => WeeklySchedule([]),
-          throwsA(isA<AssertionError>()),
-        );
+        expect(() => WeeklySchedule([]), throwsA(isA<AssertionError>()));
 
         verifyNever(() => mockStageDao.insertStageDefinition(any()));
       },
@@ -266,17 +263,11 @@ void main() {
       },
     );
 
-    test(
-      'RollingSchedule() with windowSize=0 throws AssertionError',
-      () async {
-        expect(
-          () => RollingSchedule(0),
-          throwsA(isA<AssertionError>()),
-        );
+    test('RollingSchedule() with windowSize=0 throws AssertionError', () async {
+      expect(() => RollingSchedule(0), throwsA(isA<AssertionError>()));
 
-        verifyNever(() => mockStageDao.insertStageDefinition(any()));
-      },
-    );
+      verifyNever(() => mockStageDao.insertStageDefinition(any()));
+    });
   });
 
   // =========================================================================
@@ -315,38 +306,35 @@ void main() {
       expect(persisted.schedule, WeeklySchedule([2, 4]));
     });
 
-    test(
-      'RollingSchedule round-trips for rolling stage',
-      () async {
-        final ctx = await _makeRealRepo();
-        addTearDown(() => ctx.database.close());
+    test('RollingSchedule round-trips for rolling stage', () async {
+      final ctx = await _makeRealRepo();
+      addTearDown(() => ctx.database.close());
 
-        await ctx.repository.initializeDefaults(
-          curriculum,
-          profileId: 1,
-          trackId: ctx.trackId,
-        );
+      await ctx.repository.initializeDefaults(
+        curriculum,
+        profileId: 1,
+        trackId: ctx.trackId,
+      );
 
-        final stage = await ctx.repository.addStage(
-          curriculum,
-          'Rolling',
-          profileId: 1,
-          trackId: ctx.trackId,
-          schedule: RollingSchedule(7),
-        );
+      final stage = await ctx.repository.addStage(
+        curriculum,
+        'Rolling',
+        profileId: 1,
+        trackId: ctx.trackId,
+        schedule: RollingSchedule(7),
+      );
 
-        expect(stage.scheduleType, ScheduleType.rolling);
-        expect(stage.rollingWindowSize, 7);
-        expect(stage.daysOfWeek, isNull);
-        expect(stage.schedule, RollingSchedule(7));
+      expect(stage.scheduleType, ScheduleType.rolling);
+      expect(stage.rollingWindowSize, 7);
+      expect(stage.daysOfWeek, isNull);
+      expect(stage.schedule, RollingSchedule(7));
 
-        final stages = await ctx.repository.getStagesForCurriculum(curriculum);
-        final persisted = stages.firstWhere((s) => s.id == stage.id);
-        expect(persisted.scheduleType, ScheduleType.rolling);
-        expect(persisted.rollingWindowSize, 7);
-        expect(persisted.schedule, RollingSchedule(7));
-      },
-    );
+      final stages = await ctx.repository.getStagesForCurriculum(curriculum);
+      final persisted = stages.firstWhere((s) => s.id == stage.id);
+      expect(persisted.scheduleType, ScheduleType.rolling);
+      expect(persisted.rollingWindowSize, 7);
+      expect(persisted.schedule, RollingSchedule(7));
+    });
   });
 
   // =========================================================================

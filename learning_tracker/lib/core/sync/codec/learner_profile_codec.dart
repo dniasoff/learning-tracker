@@ -67,12 +67,12 @@ class LearnerProfileCodec extends EntityCodec<LearnerProfileRow> {
 
   @override
   Map<String, dynamic> encode(LearnerProfileRow model) => {
-        'profile_id': model.profileId,
-        'account_id': model.accountId,
-        'display_name': model.displayName,
-        'mode': model.mode,
-        'avatar_index': model.avatarIndex,
-        'updated_at': FirestoreCodec.encodeDateTime(model.updatedAt),
-        'created_at': FirestoreCodec.encodeDateTime(model.createdAt),
-      };
+    'profile_id': model.profileId,
+    'account_id': model.accountId,
+    'display_name': model.displayName,
+    'mode': model.mode,
+    'avatar_index': model.avatarIndex,
+    'updated_at': FirestoreCodec.encodeDateTime(model.updatedAt),
+    'created_at': FirestoreCodec.encodeDateTime(model.createdAt),
+  };
 }

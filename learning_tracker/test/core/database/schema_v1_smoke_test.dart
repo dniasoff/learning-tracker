@@ -250,7 +250,9 @@ void main() {
     // -------------------------------------------------------------------------
 
     test('streaks.profileId is required (no default)', () async {
-      await db.into(db.streakEvents).insert(StreaksCompanion.insert(profileId: 5));
+      await db
+          .into(db.streakEvents)
+          .insert(StreaksCompanion.insert(profileId: 5));
       final row = await (db.select(
         db.streakEvents,
       )..where((t) => t.profileId.equals(5))).getSingleOrNull();

@@ -15,10 +15,7 @@ void main() {
 
     group('fromStorageKey', () {
       test('parses "hebrew"', () {
-        expect(
-          CalendarSystem.fromStorageKey('hebrew'),
-          CalendarSystem.hebrew,
-        );
+        expect(CalendarSystem.fromStorageKey('hebrew'), CalendarSystem.hebrew);
       });
 
       test('parses "english"', () {

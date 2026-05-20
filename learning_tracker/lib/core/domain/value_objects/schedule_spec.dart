@@ -134,8 +134,7 @@ final class WeeklySchedule extends ScheduleSpec {
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      (other is WeeklySchedule &&
-          _listEquals(other.daysOfWeek, daysOfWeek));
+      (other is WeeklySchedule && _listEquals(other.daysOfWeek, daysOfWeek));
 
   @override
   int get hashCode => Object.hashAll([runtimeType, ...daysOfWeek]);

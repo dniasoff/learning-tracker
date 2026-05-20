@@ -26,26 +26,29 @@ void main() {
         expect(result, isA<PaceStatus>());
       });
 
-      test('returns PaceStatus with non-null status when user has completions', () {
-        // 7 items/week = 1 item/day. User did 30 items, rolling avg 3/day.
-        final now = DateTime(2026, 5, 20);
-        final counts = <DateTime, int>{};
-        for (var i = 0; i < 7; i++) {
-          counts[now.subtract(Duration(days: i))] = 3;
-        }
-        final result = useCase.execute(
-          PaceStatusInput(
-            paceTarget: PacePeriodTarget(rate: 7, period: 'per_week'),
-            completedItems: 30,
-            dailyCompletionCounts: counts,
-            totalItems: 100,
-            today: now,
-          ),
-        );
-        expect(result, isNotNull);
-        // Status is determined by PaceCalculator; we verify it is a valid value.
-        expect(PaceStatusType.values.contains(result!.status), isTrue);
-      });
+      test(
+        'returns PaceStatus with non-null status when user has completions',
+        () {
+          // 7 items/week = 1 item/day. User did 30 items, rolling avg 3/day.
+          final now = DateTime(2026, 5, 20);
+          final counts = <DateTime, int>{};
+          for (var i = 0; i < 7; i++) {
+            counts[now.subtract(Duration(days: i))] = 3;
+          }
+          final result = useCase.execute(
+            PaceStatusInput(
+              paceTarget: PacePeriodTarget(rate: 7, period: 'per_week'),
+              completedItems: 30,
+              dailyCompletionCounts: counts,
+              totalItems: 100,
+              today: now,
+            ),
+          );
+          expect(result, isNotNull);
+          // Status is determined by PaceCalculator; we verify it is a valid value.
+          expect(PaceStatusType.values.contains(result!.status), isTrue);
+        },
+      );
     });
 
     // ------------------------------------------------------------------
@@ -80,25 +83,28 @@ void main() {
         expect(result, isNotNull);
       });
 
-      test('uses derived pace when studyDaysInWindow is non-zero — B3 verified', () {
-        // B3 NOTE: deadline goal ALWAYS yields a projection — even on day one
-        // with 0 completions — via calculateForPaceGoal. Back-dated enrolments
-        // generate overdue tasks in the scheduler; here we verify the pace
-        // projection is also non-null for such a goal.
-        final result = useCase.execute(
-          PaceStatusInput(
-            paceTarget: DeadlineTarget(DateTime(2026, 12, 31)),
-            completedItems: 0,
-            dailyCompletionCounts: {},
-            totalItems: 100,
-            today: today,
-            studyDaysInWindow: 200,
-            studyDaysPerWeek: 5,
-          ),
-        );
-        // B3 verified: projection is non-null despite 0 completions.
-        expect(result, isNotNull);
-      });
+      test(
+        'uses derived pace when studyDaysInWindow is non-zero — B3 verified',
+        () {
+          // B3 NOTE: deadline goal ALWAYS yields a projection — even on day one
+          // with 0 completions — via calculateForPaceGoal. Back-dated enrolments
+          // generate overdue tasks in the scheduler; here we verify the pace
+          // projection is also non-null for such a goal.
+          final result = useCase.execute(
+            PaceStatusInput(
+              paceTarget: DeadlineTarget(DateTime(2026, 12, 31)),
+              completedItems: 0,
+              dailyCompletionCounts: {},
+              totalItems: 100,
+              today: today,
+              studyDaysInWindow: 200,
+              studyDaysPerWeek: 5,
+            ),
+          );
+          // B3 verified: projection is non-null despite 0 completions.
+          expect(result, isNotNull);
+        },
+      );
 
       test('falls back to 1/week when studyDaysInWindow is zero', () {
         final result = useCase.execute(

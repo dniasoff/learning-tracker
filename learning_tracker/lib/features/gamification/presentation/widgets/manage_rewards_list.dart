@@ -120,10 +120,7 @@ class RewardCard extends StatelessWidget {
             value: milestone.isEnabled,
             onChanged: (_) => onToggle(),
           ),
-          IconButton(
-            icon: const Icon(Icons.edit_outlined),
-            onPressed: onEdit,
-          ),
+          IconButton(icon: const Icon(Icons.edit_outlined), onPressed: onEdit),
           IconButton(
             icon: Icon(
               Icons.delete_outline,

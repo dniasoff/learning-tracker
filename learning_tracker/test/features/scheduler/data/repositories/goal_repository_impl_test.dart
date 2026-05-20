@@ -164,19 +164,22 @@ void main() {
         expect(goal.paceTarget, isA<DeadlineTarget>());
       });
 
-      test('createGoal with null paceTarget defaults to goalType=none', () async {
-        final goal = await repo.createGoal(
-          profileId: 0,
-          curriculumId: CurriculumId.bavli,
-          trackId: bavliTrackId,
-          targetPercent: 100.0,
-        );
+      test(
+        'createGoal with null paceTarget defaults to goalType=none',
+        () async {
+          final goal = await repo.createGoal(
+            profileId: 0,
+            curriculumId: CurriculumId.bavli,
+            trackId: bavliTrackId,
+            targetPercent: 100.0,
+          );
 
-        expect(goal.goalType, 'none');
-        expect(goal.paceValue, isNull);
-        expect(goal.pacePeriod, isNull);
-        expect(goal.paceTarget, isNull);
-      });
+          expect(goal.goalType, 'none');
+          expect(goal.paceValue, isNull);
+          expect(goal.pacePeriod, isNull);
+          expect(goal.paceTarget, isNull);
+        },
+      );
 
       test('updateGoal with PacePeriodTarget changes pace fields', () async {
         final goal = await repo.createGoal(
@@ -217,25 +220,28 @@ void main() {
         expect(updated.paceTarget, isNull);
       });
 
-      test('updateGoal preserves pace fields when paceTarget not provided', () async {
-        final goal = await repo.createGoal(
-          profileId: 0,
-          curriculumId: CurriculumId.bavli,
-          trackId: bavliTrackId,
-          targetPercent: 100.0,
-          paceTarget: PacePeriodTarget(rate: 3, period: 'per_week'),
-        );
+      test(
+        'updateGoal preserves pace fields when paceTarget not provided',
+        () async {
+          final goal = await repo.createGoal(
+            profileId: 0,
+            curriculumId: CurriculumId.bavli,
+            trackId: bavliTrackId,
+            targetPercent: 100.0,
+            paceTarget: PacePeriodTarget(rate: 3, period: 'per_week'),
+          );
 
-        final updated = await repo.updateGoal(
-          goalId: goal.id!,
-          description: 'Updated description',
-        );
+          final updated = await repo.updateGoal(
+            goalId: goal.id!,
+            description: 'Updated description',
+          );
 
-        expect(updated.goalType, 'pace');
-        expect(updated.paceValue, 3);
-        expect(updated.pacePeriod, 'per_week');
-        expect(updated.description, 'Updated description');
-      });
+          expect(updated.goalType, 'pace');
+          expect(updated.paceValue, 3);
+          expect(updated.pacePeriod, 'per_week');
+          expect(updated.description, 'Updated description');
+        },
+      );
 
       test('paceTarget getter returns null for goalType=none', () async {
         final goal = await repo.createGoal(

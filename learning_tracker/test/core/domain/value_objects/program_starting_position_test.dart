@@ -52,10 +52,7 @@ void main() {
     test('tomorrow is rejected (future date)', () {
       final tomorrow = today.add(const Duration(days: 1));
       expect(
-        () => ProgramStartingPosition.create(
-          startDate: tomorrow,
-          today: today,
-        ),
+        () => ProgramStartingPosition.create(startDate: tomorrow, today: today),
         throwsA(isA<StartDateWindowException>()),
       );
     });
@@ -63,10 +60,7 @@ void main() {
     test('one year in future is rejected', () {
       final future = today.add(const Duration(days: 365));
       expect(
-        () => ProgramStartingPosition.create(
-          startDate: future,
-          today: today,
-        ),
+        () => ProgramStartingPosition.create(startDate: future, today: today),
         throwsA(isA<StartDateWindowException>()),
       );
     });
@@ -98,8 +92,9 @@ void main() {
 
     test('window from different reference date', () {
       final refDate = DateTime(2026, 1, 1);
-      final (:minDate, :maxDate) =
-          ProgramStartingPosition.allowedWindow(refDate);
+      final (:minDate, :maxDate) = ProgramStartingPosition.allowedWindow(
+        refDate,
+      );
       expect(maxDate, equals(refDate));
       expect(minDate, equals(DateTime(2025, 12, 2)));
     });
@@ -199,10 +194,7 @@ void main() {
 
     test('different dates are not equal', () {
       final fiveDaysAgo = today.subtract(const Duration(days: 5));
-      final a = ProgramStartingPosition.create(
-        startDate: today,
-        today: today,
-      );
+      final a = ProgramStartingPosition.create(startDate: today, today: today);
       final b = ProgramStartingPosition.create(
         startDate: fiveDaysAgo,
         today: today,

@@ -7,17 +7,16 @@ RewardMilestone _milestone({
   required String title,
   bool isEnabled = true,
   int trackId = 1,
-}) =>
-    RewardMilestone(
-      id: 'm_$title',
-      profileId: 1,
-      trackId: trackId,
-      title: title,
-      thresholdPoints: threshold,
-      isEnabled: isEnabled,
-      createdAt: DateTime(2026, 1, 1),
-      updatedAt: DateTime(2026, 1, 1),
-    );
+}) => RewardMilestone(
+  id: 'm_$title',
+  profileId: 1,
+  trackId: trackId,
+  title: title,
+  thresholdPoints: threshold,
+  isEnabled: isEnabled,
+  createdAt: DateTime(2026, 1, 1),
+  updatedAt: DateTime(2026, 1, 1),
+);
 
 void main() {
   const selector = NextRewardSelector();

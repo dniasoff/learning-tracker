@@ -80,15 +80,15 @@ class TutorGrantCodec extends EntityCodec<TutorGrantRow> {
 
   @override
   Map<String, dynamic> encode(TutorGrantRow model) => {
-        'grant_id': model.grantId,
-        'tutor_uid': model.tutorUid,
-        'parent_uid': model.parentUid,
-        'child_profile_id': model.childProfileId,
-        'state': model.state,
-        'created_at': FirestoreCodec.encodeDateTime(model.createdAt),
-        'updated_at': FirestoreCodec.encodeDateTime(model.updatedAt),
-        if (model.tutorEmail != null) 'tutor_email': model.tutorEmail,
-        if (model.revokedAt != null)
-          'revoked_at': FirestoreCodec.encodeDateTime(model.revokedAt),
-      };
+    'grant_id': model.grantId,
+    'tutor_uid': model.tutorUid,
+    'parent_uid': model.parentUid,
+    'child_profile_id': model.childProfileId,
+    'state': model.state,
+    'created_at': FirestoreCodec.encodeDateTime(model.createdAt),
+    'updated_at': FirestoreCodec.encodeDateTime(model.updatedAt),
+    if (model.tutorEmail != null) 'tutor_email': model.tutorEmail,
+    if (model.revokedAt != null)
+      'revoked_at': FirestoreCodec.encodeDateTime(model.revokedAt),
+  };
 }

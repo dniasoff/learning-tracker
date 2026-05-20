@@ -75,18 +75,11 @@ void main() {
       });
 
       test('hashCode consistent with equality', () {
-        expect(
-          Pin.parse('5678').hashCode,
-          equals(Pin.parse('5678').hashCode),
-        );
+        expect(Pin.parse('5678').hashCode, equals(Pin.parse('5678').hashCode));
       });
 
       test('usable in Set', () {
-        final set = {
-          Pin.parse('1111'),
-          Pin.parse('1111'),
-          Pin.parse('2222'),
-        };
+        final set = {Pin.parse('1111'), Pin.parse('1111'), Pin.parse('2222')};
         expect(set.length, 2);
       });
     });

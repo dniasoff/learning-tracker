@@ -16,11 +16,8 @@ class LearningOrder extends Table {
   IntColumn get id => integer().autoIncrement()();
 
   /// W3.25: FK → learner_profiles(id) CASCADE DELETE.
-  IntColumn get profileId => integer().references(
-    LearnerProfiles,
-    #id,
-    onDelete: KeyAction.cascade,
-  )();
+  IntColumn get profileId =>
+      integer().references(LearnerProfiles, #id, onDelete: KeyAction.cascade)();
   TextColumn get curriculumId => text()();
   TextColumn get sefariaRef => text()();
   IntColumn get userSortOrder => integer()();

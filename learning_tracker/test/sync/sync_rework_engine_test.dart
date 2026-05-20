@@ -17,30 +17,41 @@ void main() {
   group(
     'S5 — concurrent background flush drains exactly once',
     skip: 'Retired W2.35 — covered by OutboxProcessor tests',
-    () { test('placeholder', () {}); },
+    () {
+      test('placeholder', () {});
+    },
   );
 
   group(
     'S6 — completions merge dedups already-present completions',
     skip: 'Retired W2.35 — covered by CompletionMerger tests',
-    () { test('placeholder', () {}); },
+    () {
+      test('placeholder', () {});
+    },
   );
 
   group(
     'I1 — debounced completions snapshot survives an in-flight merge',
     skip: 'Retired W2.35 — covered by outbox pipeline tests',
-    () { test('placeholder', () {}); },
+    () {
+      test('placeholder', () {});
+    },
   );
 
   group(
     'I6 — snake_case remote completion merges',
     skip: 'Retired W2.35 — covered by CompletionMerger tests',
-    () { test('placeholder', () {}); },
+    () {
+      test('placeholder', () {});
+    },
   );
 
   group(
     'S8 — pullOnLaunch once-per-launch guard',
-    skip: 'Retired W2.35 — S8 guard in SyncOrchestratorImpl; see orchestrator tests',
-    () { test('placeholder', () {}); },
+    skip:
+        'Retired W2.35 — S8 guard in SyncOrchestratorImpl; see orchestrator tests',
+    () {
+      test('placeholder', () {});
+    },
   );
 }

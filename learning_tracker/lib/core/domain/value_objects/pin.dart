@@ -38,10 +38,7 @@ class Pin {
   /// Throws [FormatException] when [raw] is not exactly 4 ASCII decimal digits.
   factory Pin.parse(String raw) {
     if (!_digitRegex.hasMatch(raw)) {
-      throw FormatException(
-        'Pin must be exactly 4 ASCII decimal digits.',
-        raw,
-      );
+      throw FormatException('Pin must be exactly 4 ASCII decimal digits.', raw);
     }
     return Pin._(raw);
   }
@@ -59,8 +56,7 @@ class Pin {
   /// Two [Pin]s are equal when their digit strings are identical.
   @override
   bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is Pin && other.value == value;
+      identical(this, other) || other is Pin && other.value == value;
 
   @override
   int get hashCode => value.hashCode;

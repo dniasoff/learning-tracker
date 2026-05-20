@@ -84,10 +84,7 @@ void main() {
       });
 
       test('throws ArgumentError for "cloud" (not the storage key)', () {
-        expect(
-          () => AccountTier.fromStorageKey('cloud'),
-          throwsArgumentError,
-        );
+        expect(() => AccountTier.fromStorageKey('cloud'), throwsArgumentError);
       });
     });
 

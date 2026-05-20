@@ -74,11 +74,11 @@ class TrackCodec extends EntityCodec<TrackRow> {
 
   @override
   Map<String, dynamic> encode(TrackRow model) => {
-        'curriculum_id': model.curriculumId,
-        'state': model.state,
-        'activated_at': FirestoreCodec.encodeDateTime(model.activatedAt),
-        'state_changed_at': FirestoreCodec.encodeDateTime(model.stateChangedAt),
-        if (model.paceResetDate != null)
-          'pace_reset_date': FirestoreCodec.encodeDateTime(model.paceResetDate),
-      };
+    'curriculum_id': model.curriculumId,
+    'state': model.state,
+    'activated_at': FirestoreCodec.encodeDateTime(model.activatedAt),
+    'state_changed_at': FirestoreCodec.encodeDateTime(model.stateChangedAt),
+    if (model.paceResetDate != null)
+      'pace_reset_date': FirestoreCodec.encodeDateTime(model.paceResetDate),
+  };
 }

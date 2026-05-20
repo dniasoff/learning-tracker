@@ -19,10 +19,7 @@ class IntroMishnaIllustration extends StatelessWidget {
       animation: animation,
       builder: (context, child) {
         final t = animation.value;
-        return Transform.rotate(
-          angle: -0.04 + (0.01 * (1 - t)),
-          child: child,
-        );
+        return Transform.rotate(angle: -0.04 + (0.01 * (1 - t)), child: child);
       },
       child: SizedBox(
         height: 250,

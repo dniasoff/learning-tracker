@@ -13,11 +13,8 @@ class LearnerProfiles extends Table {
   IntColumn get id => integer().autoIncrement()();
 
   /// W3.25: FK → accounts(id) CASCADE DELETE.
-  IntColumn get accountId => integer().references(
-    Accounts,
-    #id,
-    onDelete: KeyAction.cascade,
-  )();
+  IntColumn get accountId =>
+      integer().references(Accounts, #id, onDelete: KeyAction.cascade)();
   TextColumn get displayName => text()();
   TextColumn get mode => text()(); // 'child' or 'adult'
   IntColumn get avatarIndex => integer().withDefault(const Constant<int>(0))();

@@ -4,11 +4,7 @@ import 'package:learning_tracker/features/gamification/presentation/widgets/tier
 /// Small label chip showing which track a milestone belongs to.
 /// Placed in the top-right corner of an [AchievementTierCard].
 class TrackTagChip extends StatelessWidget {
-  const TrackTagChip({
-    super.key,
-    required this.label,
-    required this.scheme,
-  });
+  const TrackTagChip({super.key, required this.label, required this.scheme});
 
   final String label;
   final TierStyle scheme;

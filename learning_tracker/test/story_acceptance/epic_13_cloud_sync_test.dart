@@ -26,7 +26,8 @@ void main() {
   group(
     'Story 13.2 -- Pull-on-Launch Merge',
     tags: ['story_13_2'],
-    skip: 'Retired W2.35 — covered by SyncOrchestratorImpl + PullPipeline tests',
+    skip:
+        'Retired W2.35 — covered by SyncOrchestratorImpl + PullPipeline tests',
     () {
       test('placeholder', () {});
     },

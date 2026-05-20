@@ -20,6 +20,7 @@ class Goals extends Table {
   TextColumn get dateType => text().withDefault(const Constant('gregorian'))();
   TextColumn get goalType => text().withDefault(const Constant('deadline'))();
   IntColumn get paceValue => integer().nullable()();
+
   /// Pace period unit: 'day', 'week', 'month', or null.
   TextColumn get pacePeriod => text().nullable()();
 

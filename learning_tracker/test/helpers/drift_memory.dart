@@ -20,10 +20,8 @@ import 'package:learning_tracker/core/utils/date_utils.dart';
 ///
 /// NOTE (W3.20): The `completions` legacy table was dropped. This helper
 /// now works directly with [CompletionEventsCompanion].
-Future<int> seedCompletion(
-  UserDatabase db,
-  CompletionEventsCompanion c,
-) => db.completionEventDao.appendEvent(c);
+Future<int> seedCompletion(UserDatabase db, CompletionEventsCompanion c) =>
+    db.completionEventDao.appendEvent(c);
 
 /// Inserts multiple test completions via the canonical event log.
 Future<void> seedCompletionsBatch(
@@ -88,14 +86,16 @@ Future<int> seedTrack(
   String curriculumId = 'mishnayos',
   DateTime? activatedAt,
 }) async {
-  return db.into(db.curriculumTracks).insert(
-    CurriculumTracksCompanion.insert(
-      profileId: profileId,
-      curriculumId: curriculumId,
-      stateChangedAt: activatedAt ?? DateTimeFactory.nowUtc(),
-      activatedAt: activatedAt ?? DateTimeFactory.nowUtc(),
-    ),
-  );
+  return db
+      .into(db.curriculumTracks)
+      .insert(
+        CurriculumTracksCompanion.insert(
+          profileId: profileId,
+          curriculumId: curriculumId,
+          stateChangedAt: activatedAt ?? DateTimeFactory.nowUtc(),
+          activatedAt: activatedAt ?? DateTimeFactory.nowUtc(),
+        ),
+      );
 }
 
 /// Seeds a learner profile with id = 0 into [db].

@@ -54,9 +54,9 @@ class BookmarkCodec extends EntityCodec<BookmarkRow> {
 
   @override
   Map<String, dynamic> encode(BookmarkRow model) => {
-        'curriculum_id': model.curriculumId,
-        'track_type': model.trackType,
-        'sefaria_ref': model.sefariaRef,
-        'updated_at': FirestoreCodec.encodeDateTime(model.updatedAt),
-      };
+    'curriculum_id': model.curriculumId,
+    'track_type': model.trackType,
+    'sefaria_ref': model.sefariaRef,
+    'updated_at': FirestoreCodec.encodeDateTime(model.updatedAt),
+  };
 }

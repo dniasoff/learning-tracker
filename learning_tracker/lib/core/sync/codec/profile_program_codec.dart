@@ -46,21 +46,23 @@ class ProfileProgramCodec extends EntityCodec<ProfileProgramRow> {
       profileId: profileId,
       curriculumId: curriculumId,
       programId: programId,
-      trackingStartDate:
-          FirestoreCodec.parseDateTime(raw['tracking_start_date']),
+      trackingStartDate: FirestoreCodec.parseDateTime(
+        raw['tracking_start_date'],
+      ),
       trackingStartRef: raw['tracking_start_ref'] as String?,
     );
   }
 
   @override
   Map<String, dynamic> encode(ProfileProgramRow model) => {
-        'profile_id': model.profileId,
-        'curriculum_id': model.curriculumId,
-        'program_id': model.programId,
-        if (model.trackingStartDate != null)
-          'tracking_start_date':
-              FirestoreCodec.encodeDateTime(model.trackingStartDate),
-        if (model.trackingStartRef != null)
-          'tracking_start_ref': model.trackingStartRef,
-      };
+    'profile_id': model.profileId,
+    'curriculum_id': model.curriculumId,
+    'program_id': model.programId,
+    if (model.trackingStartDate != null)
+      'tracking_start_date': FirestoreCodec.encodeDateTime(
+        model.trackingStartDate,
+      ),
+    if (model.trackingStartRef != null)
+      'tracking_start_ref': model.trackingStartRef,
+  };
 }

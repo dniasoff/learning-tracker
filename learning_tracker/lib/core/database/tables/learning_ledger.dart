@@ -35,6 +35,7 @@ class LearningLedger extends Table {
   TextColumn get ulid => text().clientDefault(newUlid)();
 
   TextColumn get curriculumId => text()();
+
   /// Scope of the learning ledger entry: 'seder', 'masechta', 'sefer'.
   TextColumn get entryScope => text()();
   TextColumn get unitIdentifier => text()(); // level1 or level2 value

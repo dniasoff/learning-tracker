@@ -104,7 +104,8 @@ class RewardConfigController extends _$RewardConfigController {
   }
 
   void applyMilestoneToForm(RewardMilestone m) {
-    final isGlobal = state.tracks.isEmpty ||
+    final isGlobal =
+        state.tracks.isEmpty ||
         m.trackId == RewardMilestone.kGlobalTrackSentinel;
     state = state.copyWith(
       editingMilestoneId: m.id,
@@ -143,9 +144,7 @@ class RewardConfigController extends _$RewardConfigController {
   }
 
   Future<void> _persistAndSync() async {
-    await ref
-        .read(syncWriteFacadeProvider)
-        ?.pushGamificationSettingsSnapshot();
+    await ref.read(syncWriteFacadeProvider)?.pushGamificationSettingsSnapshot();
     ref.invalidate(achievementsOverviewProvider);
     ref.invalidate(dashboardChildNextRewardProvider);
   }

@@ -51,9 +51,7 @@ class _RewardConfigurationScreenState
     super.initState();
     _nameController.addListener(_onNameChanged);
     _pointsController.addListener(_onPointsChanged);
-    unawaited(
-      ref.read(rewardConfigControllerProvider.notifier).bootstrap(),
-    );
+    unawaited(ref.read(rewardConfigControllerProvider.notifier).bootstrap());
   }
 
   @override

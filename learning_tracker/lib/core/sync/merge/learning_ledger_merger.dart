@@ -32,8 +32,9 @@ class LearningLedgerMerger implements EntityMerger {
     // FK guard: learning_ledger.profileId references learner_profiles.
     // Skip rows whose profileId has no local counterpart to avoid
     // SqliteException 787 (FOREIGN KEY constraint failed).
-    final existingProfileIds =
-        (await _db.select(_db.learnerProfiles).get()).map((p) => p.id).toSet();
+    final existingProfileIds = (await _db.select(_db.learnerProfiles).get())
+        .map((p) => p.id)
+        .toSet();
 
     for (final row in rows) {
       // Legacy camelCase field names — will become snake_case after W3.19.
@@ -72,7 +73,8 @@ class LearningLedgerMerger implements EntityMerger {
           trackType: trackType,
           trackId: Value(FirestoreCodec.parseInt(row['trackId'])),
           completedAt: completedAt,
-          completionNumber: FirestoreCodec.parseInt(row['completionNumber']) ?? 1,
+          completionNumber:
+              FirestoreCodec.parseInt(row['completionNumber']) ?? 1,
           markedBy: FirestoreCodec.parseInt(row['markedBy']) ?? 0,
           isManual: Value(FirestoreCodec.parseBool(row['isManual']) ?? false),
         ),

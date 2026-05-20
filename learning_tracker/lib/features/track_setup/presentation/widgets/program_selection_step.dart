@@ -39,7 +39,8 @@ class _ProgramSelectionStepState extends ConsumerState<ProgramSelectionStep> {
   @override
   void initState() {
     super.initState();
-    _programs = ref.read(learningProgramRepositoryProvider)
+    _programs = ref
+        .read(learningProgramRepositoryProvider)
         .getActiveProgramsByCurriculumType(widget.curriculumId.storageKey);
   }
 

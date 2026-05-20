@@ -17,19 +17,18 @@ ContentItem leaf(
   String? level3,
   String? level4,
   int sortOrder = 0,
-}) =>
-    ContentItem(
-      curriculumId: 'mishnayos',
-      level1: level1,
-      level2: level2,
-      level3: level3,
-      level4: level4,
-      displayNameHe: '',
-      displayNameEn: '',
-      sefariaRef: sefariaRef,
-      sortOrder: sortOrder,
-      isLeaf: true,
-    );
+}) => ContentItem(
+  curriculumId: 'mishnayos',
+  level1: level1,
+  level2: level2,
+  level3: level3,
+  level4: level4,
+  displayNameHe: '',
+  displayNameEn: '',
+  sefariaRef: sefariaRef,
+  sortOrder: sortOrder,
+  isLeaf: true,
+);
 
 // Helper to create a LearningLedgerData-like object for testing.
 // Since we can't easily construct Drift row types in isolation, we test via
@@ -60,10 +59,7 @@ void main() {
     // -------------------------------------------------------------------------
     group('computeLearnedLeafRefs', () {
       test('returns empty set when no completions and no ledger', () {
-        final leaves = [
-          leaf('Berakhot 1:1'),
-          leaf('Berakhot 1:2'),
-        ];
+        final leaves = [leaf('Berakhot 1:1'), leaf('Berakhot 1:2')];
         final result = builder.computeLearnedLeafRefs(
           leaves: leaves,
           completedRefs: {},
@@ -73,10 +69,7 @@ void main() {
       });
 
       test('includes directly completed refs', () {
-        final leaves = [
-          leaf('Berakhot 1:1'),
-          leaf('Berakhot 1:2'),
-        ];
+        final leaves = [leaf('Berakhot 1:1'), leaf('Berakhot 1:2')];
         final result = builder.computeLearnedLeafRefs(
           leaves: leaves,
           completedRefs: {'Berakhot 1:1'},
@@ -86,12 +79,13 @@ void main() {
       });
 
       test('does not include refs not in leaf set', () {
-        final leaves = [
-          leaf('Berakhot 1:1'),
-        ];
+        final leaves = [leaf('Berakhot 1:1')];
         final result = builder.computeLearnedLeafRefs(
           leaves: leaves,
-          completedRefs: {'Berakhot 1:1', 'Shabbat 2a'}, // Shabbat not in leaves
+          completedRefs: {
+            'Berakhot 1:1',
+            'Shabbat 2a',
+          }, // Shabbat not in leaves
           ledgerEntries: [],
         );
         expect(result, {'Berakhot 1:1'});
@@ -113,23 +107,13 @@ void main() {
     // -------------------------------------------------------------------------
     group('buildTree', () {
       test('returns empty list for empty leaves', () {
-        final tree = builder.buildTree(
-          CurriculumId.mishnayos,
-          [],
-          {},
-        );
+        final tree = builder.buildTree(CurriculumId.mishnayos, [], {});
         expect(tree, isEmpty);
       });
 
       test('single leaf creates single root node', () {
-        final leaves = [
-          leaf('Berakhot 1:1', level1: 'Zeraim'),
-        ];
-        final tree = builder.buildTree(
-          CurriculumId.mishnayos,
-          leaves,
-          {},
-        );
+        final leaves = [leaf('Berakhot 1:1', level1: 'Zeraim')];
+        final tree = builder.buildTree(CurriculumId.mishnayos, leaves, {});
         expect(tree.length, 1);
         expect(tree.first.rawValue, 'Zeraim');
         expect(tree.first.level, 1);
@@ -137,14 +121,10 @@ void main() {
       });
 
       test('learned leaf sets node state to full', () {
-        final leaves = [
-          leaf('Berakhot 1:1', level1: 'Zeraim'),
-        ];
-        final tree = builder.buildTree(
-          CurriculumId.mishnayos,
-          leaves,
-          {'Berakhot 1:1'},
-        );
+        final leaves = [leaf('Berakhot 1:1', level1: 'Zeraim')];
+        final tree = builder.buildTree(CurriculumId.mishnayos, leaves, {
+          'Berakhot 1:1',
+        });
         expect(tree.first.state, LifetimeNodeState.full);
       });
 
@@ -166,11 +146,7 @@ void main() {
           leaf('Berakhot 1:1', level1: 'Zeraim', sortOrder: 1),
           leaf('Shabbat 1:1', level1: 'Moed', sortOrder: 10),
         ];
-        final tree = builder.buildTree(
-          CurriculumId.mishnayos,
-          leaves,
-          {},
-        );
+        final tree = builder.buildTree(CurriculumId.mishnayos, leaves, {});
         expect(tree.length, 2);
         expect(tree.map((n) => n.rawValue).toSet(), {'Zeraim', 'Moed'});
       });
@@ -180,11 +156,7 @@ void main() {
           leaf('Shabbat 1:1', level1: 'Moed', sortOrder: 10),
           leaf('Berakhot 1:1', level1: 'Zeraim', sortOrder: 1),
         ];
-        final tree = builder.buildTree(
-          CurriculumId.mishnayos,
-          leaves,
-          {},
-        );
+        final tree = builder.buildTree(CurriculumId.mishnayos, leaves, {});
         expect(tree.first.rawValue, 'Zeraim'); // lower sortOrder first
       });
     });
@@ -198,9 +170,7 @@ void main() {
       });
 
       test('skips leaf items', () {
-        final items = [
-          leaf('Berakhot 1:1'),
-        ];
+        final items = [leaf('Berakhot 1:1')];
         expect(LifetimeTreeBuilder.buildHeLabelLookup(items), isEmpty);
       });
 

@@ -61,7 +61,9 @@ void main() {
       });
 
       test('allows a map with only study days', () {
-        final p = StudyDayPattern({for (var i = 1; i <= 7; i++) i: DayKind.study});
+        final p = StudyDayPattern({
+          for (var i = 1; i <= 7; i++) i: DayKind.study,
+        });
         expect(p.studyDaysPerWeek, 7);
       });
     });
@@ -107,10 +109,7 @@ void main() {
       late StudyDayPattern pattern;
 
       setUp(() {
-        pattern = StudyDayPattern({
-          1: DayKind.study,
-          2: DayKind.review,
-        });
+        pattern = StudyDayPattern({1: DayKind.study, 2: DayKind.review});
       });
 
       test('returns mapped value', () {

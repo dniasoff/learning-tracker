@@ -66,11 +66,14 @@ void main() {
       expect(db.schemaVersion, equals(23));
     });
 
-    test('PRAGMA user_version matches schemaVersion after first query', () async {
-      await db.customSelect('SELECT 1').get();
-      final row = await db.customSelect('PRAGMA user_version').getSingle();
-      expect(row.read<int>('user_version'), equals(23));
-    });
+    test(
+      'PRAGMA user_version matches schemaVersion after first query',
+      () async {
+        await db.customSelect('SELECT 1').get();
+        final row = await db.customSelect('PRAGMA user_version').getSingle();
+        expect(row.read<int>('user_version'), equals(23));
+      },
+    );
 
     test('all expected tables exist in sqlite_master', () async {
       final rows = await db
@@ -199,7 +202,10 @@ void main() {
 
         final tracks = await db.select(db.curriculumTracks).get();
         expect(tracks, hasLength(1));
-        expect(tracks.first.curriculumId, equals(CurriculumId.mishnayos.storageKey));
+        expect(
+          tracks.first.curriculumId,
+          equals(CurriculumId.mishnayos.storageKey),
+        );
       });
 
       test('DeviceRestoreService with unauthenticated Firestore skips '
@@ -228,29 +234,34 @@ void main() {
     },
   );
 
-  group('Story 25.22 — AC3: Second-device DB isolation', tags: ['story_25_22'],
-      () {
-    test('two in-memory DB instances are independent', () async {
-      final device1 = inMemoryDb();
-      addTearDown(() => device1.close());
+  group(
+    'Story 25.22 — AC3: Second-device DB isolation',
+    tags: ['story_25_22'],
+    () {
+      test('two in-memory DB instances are independent', () async {
+        final device1 = inMemoryDb();
+        addTearDown(() => device1.close());
 
-      final now = DateTime.utc(2026, 5, 13, 12);
-      await device1
-          .into(device1.curriculumTracks)
-          .insert(
-            CurriculumTracksCompanion.insert(
-              profileId: 1,
-              curriculumId: CurriculumId.bavli.storageKey,
-              stateChangedAt: now,
-              activatedAt: now,
-            ),
-          );
+        final now = DateTime.utc(2026, 5, 13, 12);
+        await device1
+            .into(device1.curriculumTracks)
+            .insert(
+              CurriculumTracksCompanion.insert(
+                profileId: 1,
+                curriculumId: CurriculumId.bavli.storageKey,
+                stateChangedAt: now,
+                activatedAt: now,
+              ),
+            );
 
-      final device2 = inMemoryDb();
-      addTearDown(() => device2.close());
+        final device2 = inMemoryDb();
+        addTearDown(() => device2.close());
 
-      final device2Tracks = await device2.select(device2.curriculumTracks).get();
-      expect(device2Tracks, isEmpty);
-    });
-  });
+        final device2Tracks = await device2
+            .select(device2.curriculumTracks)
+            .get();
+        expect(device2Tracks, isEmpty);
+      });
+    },
+  );
 }

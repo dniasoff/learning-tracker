@@ -48,7 +48,8 @@ class SettingsCodec extends EntityCodec<SettingsRow> {
 
     final stagesList = raw['stages'] as List<dynamic>?;
     const stageCodec = StageDefinitionCodec();
-    final stages = stagesList
+    final stages =
+        stagesList
             ?.cast<Map<String, dynamic>>()
             .map(stageCodec.decode)
             .whereType<StageDefinitionRow>()
@@ -65,13 +66,11 @@ class SettingsCodec extends EntityCodec<SettingsRow> {
 
   @override
   Map<String, dynamic> encode(SettingsRow model) => {
-        'curriculum_id': model.curriculumId,
-        if (model.trackId != null) 'track_id': model.trackId,
-        if (model.updatedAt != null)
-          'updated_at': FirestoreCodec.encodeDateTime(model.updatedAt),
-        if (model.stages.isNotEmpty)
-          'stages': model.stages
-              .map(const StageDefinitionCodec().encode)
-              .toList(),
-      };
+    'curriculum_id': model.curriculumId,
+    if (model.trackId != null) 'track_id': model.trackId,
+    if (model.updatedAt != null)
+      'updated_at': FirestoreCodec.encodeDateTime(model.updatedAt),
+    if (model.stages.isNotEmpty)
+      'stages': model.stages.map(const StageDefinitionCodec().encode).toList(),
+  };
 }

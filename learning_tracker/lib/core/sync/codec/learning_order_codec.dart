@@ -42,9 +42,7 @@ class LearningOrderCodec extends EntityCodec<LearningOrderRow> {
     final sefariaRef = raw['sefaria_ref'] as String?;
     final userSortOrder = FirestoreCodec.parseInt(raw['user_sort_order']);
 
-    if (curriculumId == null ||
-        sefariaRef == null ||
-        userSortOrder == null) {
+    if (curriculumId == null || sefariaRef == null || userSortOrder == null) {
       return null;
     }
 
@@ -62,13 +60,13 @@ class LearningOrderCodec extends EntityCodec<LearningOrderRow> {
 
   @override
   Map<String, dynamic> encode(LearningOrderRow model) => {
-        'curriculum_id': model.curriculumId,
-        'sefaria_ref': model.sefariaRef,
-        'user_sort_order': model.userSortOrder,
-        'is_custom_ordered': model.isCustomOrdered,
-        if (model.updatedAt != null)
-          'updated_at': FirestoreCodec.encodeDateTime(model.updatedAt),
-        if (model.displayNameHe != null) 'display_name_he': model.displayNameHe,
-        if (model.displayNameEn != null) 'display_name_en': model.displayNameEn,
-      };
+    'curriculum_id': model.curriculumId,
+    'sefaria_ref': model.sefariaRef,
+    'user_sort_order': model.userSortOrder,
+    'is_custom_ordered': model.isCustomOrdered,
+    if (model.updatedAt != null)
+      'updated_at': FirestoreCodec.encodeDateTime(model.updatedAt),
+    if (model.displayNameHe != null) 'display_name_he': model.displayNameHe,
+    if (model.displayNameEn != null) 'display_name_en': model.displayNameEn,
+  };
 }
