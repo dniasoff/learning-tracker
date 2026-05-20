@@ -84,6 +84,14 @@ W2.32: Created LocalDataUploadService (features/sync/data/local_data_upload_serv
 - detail: Migrated all syncEngineProvider consumer call-sites in presentation/provider layers to syncWriteFacadeProvider. Files migrated: preference_providers.dart, sacred_location_provider.dart, dashboard_providers.dart, achievements_overview_provider.dart, reward_configuration_screen.dart, point_config_screen.dart, learning_order_providers.dart (both tracks/whole_curriculum_order and features/learning_order paths), stage_providers.dart (both features/stages and features/tracks/stages paths — including globalStageRepositoryProvider), track_providers.dart, bookmark_providers.dart, completion_providers.dart, profile_providers.dart, curriculum_activation_providers.dart, onboarding_providers.dart (goalRepositoryProvider + bulkPriorCompletionServiceProvider + StageDefinitionRepositoryImpl inline). Skipped: sync_lifecycle_observer.dart (uses setOnlineState + attachListeners not on SyncWriteFacade). Verified zero remaining ref.watch/ref.read(syncEngineProvider) outside of definition files and lifecycle observer. dart analyze shows no new errors (pre-existing errors from other streams' in-progress work only). Closes H1.
 - next: W2.35
 
+## [2026-05-20 09:30] task-complete
+- task: W2.40
+- detail:
+  H5 confirmed gone — the `curriculum_imports` typo was in SyncEngine (deleted W2.35). Remaining code uses `curriculum_import_metadata` correctly (firestore_gateway_impl.dart:560).
+  M2 fixed — `CompletionEventDao.appendEvent` WHERE clause had 4 cols `(profileId, sefariaRef, stageId, trackType)` but the UNIQUE index has 5 cols including `curriculumId`. Added `curriculumId` to the WHERE so the SELECT-after-INSERT-OR-IGNORE always returns the correct row.
+  Trivia: removed unnecessary import of `sync_push_exception.dart` from `firestore_gateway_impl.dart` (re-exported by `firestore_gateway.dart`). dart analyze lib/core/sync/ clean.
+- next: check P3 gate (all Wave 2 done?), then W3.1
+
 ## [2026-05-20 09:00] task-complete
 - tasks: W2.35 + W2.36 + W2.37 + W2.38 + W2.39
 - detail:

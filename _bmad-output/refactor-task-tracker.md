@@ -118,7 +118,7 @@ Sync-point trigger tags: `[P1]` `[P2]` `[P3]` `[P4]` `[P5]` `[P6]` `[P7]`
 - [x] W2.37 (S, S2, done)    Delete features/sync/data/offline_queue.dart
 - [x] W2.38 (S, S2, done)    Delete legacy sync_lifecycle_observer.dart (orchestrator wiring stays)
 - [x] W2.39 (S, S2, done)    Delete legacy features/sync/presentation/providers/sync_providers.dart — stripped legacy providers; kept syncWriteFacadeProvider + status providers
-- [ ] W2.40 (S, S2, pending)    Confirm H5 + M2 gone with deleted files; cleanup trivia in core/sync/ `[P3]`
+- [x] W2.40 (S, S2, done)    Confirm H5 + M2 gone with deleted files; cleanup trivia in core/sync/ `[P3]`
 
 ### Phase 2g · Tutoring feature skeleton (S3)
 - [x] W2.41 (S, S3, done)    Create features/tutoring/ skeleton (data/, domain/, presentation/) + empty tutoring.dart barrel — populated W3/W4/W6

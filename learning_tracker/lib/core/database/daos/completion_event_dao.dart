@@ -16,6 +16,12 @@ class CompletionEventDao extends DatabaseAccessor<UserDatabase>
 
   /// Append a completion event. Idempotent on the natural key — returns
   /// the existing row id when the natural-key composite already exists.
+  ///
+  /// M2 fix: the UNIQUE index on completion_events uses 5 columns
+  /// `(profileId, sefariaRef, stageId, trackType, curriculumId)`.
+  /// The WHERE clause here must match all 5 so the SELECT-after-insert
+  /// returns the correct row, not an arbitrary row from a different curriculum
+  /// that shares the same sefariaRef + stageId + trackType.
   Future<int> appendEvent(CompletionEventsCompanion entry) async {
     await into(completionEvents).insert(entry, mode: InsertMode.insertOrIgnore);
     final row =
@@ -23,6 +29,7 @@ class CompletionEventDao extends DatabaseAccessor<UserDatabase>
               ..where(
                 (t) =>
                     t.profileId.equals(entry.profileId.value) &
+                    t.curriculumId.equals(entry.curriculumId.value) &
                     t.sefariaRef.equals(entry.sefariaRef.value) &
                     t.stageId.equals(entry.stageId.value) &
                     t.trackType.equals(entry.trackType.value),
