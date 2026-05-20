@@ -66,7 +66,7 @@ The dependency direction is: `app → features → core`. These five invariants 
 
 ### Rule 3 — Firebase symbols confined to `core/` Firebase modules
 
-`FirebaseAuth`, `FirebaseFirestore`, and `FirebaseStorage` MUST only appear inside `lib/core/sync/` and `lib/features/auth/`. All other code receives Firebase objects through injected providers — never by importing Firebase packages directly.
+`FirebaseAuth`, `FirebaseFirestore`, and `FirebaseStorage` MUST only appear inside `lib/core/sync/` and `lib/core/auth/`. All other code receives Firebase objects through injected providers — never by importing Firebase packages directly.
 
 **Enforced by:** `no-firebase-outside-core` custom lint (DNI-387).
 
