@@ -15,7 +15,7 @@ import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/features/settings/domain/exceptions/last_active_curriculum_exception.dart';
 import 'package:learning_tracker/features/settings/domain/services/curriculum_activation_service.dart';
-import 'package:learning_tracker/features/track_setup/presentation/widgets/track_management_body.dart';
+import 'package:learning_tracker/features/tracks/setup/presentation/widgets/track_management_body.dart';
 import 'package:test/test.dart';
 
 Future<void> _noPush(Map<String, dynamic> _) async {}

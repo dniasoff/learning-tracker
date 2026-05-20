@@ -17,9 +17,9 @@ import 'package:learning_tracker/features/onboarding/domain/services/learning_pr
 import 'package:learning_tracker/features/scheduler/data/repositories/goal_repository_impl.dart';
 import 'package:learning_tracker/features/scheduler/domain/services/learning_program_service.dart';
 import 'package:learning_tracker/features/settings/domain/services/curriculum_activation_service.dart';
-import 'package:learning_tracker/features/stages/data/repositories/stage_definition_repository_impl.dart';
-import 'package:learning_tracker/features/track_setup/domain/services/track_creation_service.dart';
 import 'package:learning_tracker/features/tracks/setup/domain/entities/add_track_result.dart';
+import 'package:learning_tracker/features/tracks/setup/domain/services/track_creation_service.dart';
+import 'package:learning_tracker/features/tracks/stages/data/repositories/stage_definition_repository_impl.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:test/test.dart' hide isNotNull, isNull;
 

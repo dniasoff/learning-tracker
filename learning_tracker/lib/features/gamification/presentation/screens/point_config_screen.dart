@@ -15,7 +15,7 @@ import 'package:learning_tracker/features/stages/domain/models/stage_definition.
     as domain_stage;
 import 'package:learning_tracker/features/stages/presentation/providers/stage_providers.dart';
 import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
-import 'package:learning_tracker/features/track_setup/presentation/providers/track_management_providers.dart';
+import 'package:learning_tracker/features/tracks/setup/presentation/providers/track_management_providers.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 // Design tokens aligned with Point Settings mock (deep blue + orange accents).

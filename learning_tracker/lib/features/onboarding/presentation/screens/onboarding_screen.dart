@@ -17,8 +17,8 @@ import 'package:learning_tracker/features/onboarding/presentation/steps/onboardi
 import 'package:learning_tracker/features/onboarding/presentation/steps/onboarding_profile_creation_step.dart';
 import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
-import 'package:learning_tracker/features/track_setup/presentation/screens/add_track_flow_screen.dart';
 import 'package:learning_tracker/features/tracks/setup/domain/entities/add_track_result.dart';
+import 'package:learning_tracker/features/tracks/setup/presentation/screens/add_track_flow_screen.dart';
 
 // Re-export the completion constant so existing callers don't break.
 export 'package:learning_tracker/features/onboarding/presentation/providers/onboarding_resume_store.dart'

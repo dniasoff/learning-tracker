@@ -26,8 +26,8 @@ import 'package:learning_tracker/features/onboarding/presentation/screens/bulk_m
 import 'package:learning_tracker/features/progress/domain/models/curriculum_progress_data.dart';
 import 'package:learning_tracker/features/progress/presentation/widgets/hierarchy_progress_card.dart';
 import 'package:learning_tracker/features/progress/presentation/widgets/overall_stats_card.dart';
-import 'package:learning_tracker/features/track_setup/presentation/widgets/curriculum_picker_step.dart';
-import 'package:learning_tracker/features/track_setup/presentation/widgets/learning_track_card.dart';
+import 'package:learning_tracker/features/tracks/setup/presentation/widgets/curriculum_picker_step.dart';
+import 'package:learning_tracker/features/tracks/setup/presentation/widgets/learning_track_card.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:test/test.dart';

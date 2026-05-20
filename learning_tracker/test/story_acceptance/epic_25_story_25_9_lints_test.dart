@@ -132,7 +132,6 @@ void main() {
       // instances (required constructor fields, not UI label reads). C5 extraction.
       'lib/features/scheduler/domain/services/sefaria_ref_matcher.dart',
       // Doc-comment reference only.
-      'lib/features/track_setup/presentation/widgets/curriculum_picker_step.dart',
       'lib/features/tracks/setup/presentation/widgets/curriculum_picker_step.dart',
       // Composite curriculum strategy — constructs synthetic ContentItem
       // preamble rows (data layer, not a UI surface). DNI-358 / 26.15.

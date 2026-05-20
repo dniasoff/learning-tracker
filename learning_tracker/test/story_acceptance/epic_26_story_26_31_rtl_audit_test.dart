@@ -230,10 +230,10 @@ void main() {
         final root = _projectRoot();
         final candidates = [
           File(
-            '${root.path}/lib/features/track_setup/presentation/screens/add_track_flow.dart',
+            '${root.path}/lib/features/tracks/setup/presentation/screens/add_track_flow.dart',
           ),
           File(
-            'lib/features/track_setup/presentation/screens/add_track_flow.dart',
+            'lib/features/tracks/setup/presentation/screens/add_track_flow.dart',
           ),
         ];
         final exists = candidates.any((f) => f.existsSync());

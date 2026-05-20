@@ -9,7 +9,7 @@ library;
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/features/track_setup/presentation/steps/goal_helpers.dart';
+import 'package:learning_tracker/features/tracks/setup/presentation/steps/goal_helpers.dart';
 
 void main() {
   // ─── countStudyDaysInInclusiveMapRange ────────────────────────────────────

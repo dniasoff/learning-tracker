@@ -17,7 +17,7 @@ library;
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/features/scheduler/domain/projection/projection.dart';
-import 'package:learning_tracker/features/track_setup/presentation/steps/goal_helpers.dart';
+import 'package:learning_tracker/features/tracks/setup/presentation/steps/goal_helpers.dart';
 
 /// Builds a simple study-day map with [n] study days per week (Mon–Sun order).
 Map<int, String> _studyDays(int n) {

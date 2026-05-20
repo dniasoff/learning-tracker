@@ -8,6 +8,7 @@ import 'package:learning_tracker/core/navigation/guards/child_mode_guard.dart';
 import 'package:learning_tracker/core/navigation/guards/pin_guard.dart';
 import 'package:learning_tracker/core/navigation/guards/profile_guard.dart';
 import 'package:learning_tracker/core/navigation/guards/restore_guard.dart';
+import 'package:learning_tracker/features/account/onboarding/presentation/screens/signup_screen.dart';
 import 'package:learning_tracker/features/account/presentation/screens/account_picker_screen.dart';
 import 'package:learning_tracker/features/account/presentation/screens/sign_in_screen.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/screens/content_hierarchy_screen.dart';
@@ -24,7 +25,6 @@ import 'package:learning_tracker/features/notifications/presentation/screens/not
 import 'package:learning_tracker/features/onboarding/presentation/screens/app_intro_screen.dart';
 import 'package:learning_tracker/features/onboarding/presentation/screens/onboarding_screen.dart';
 import 'package:learning_tracker/features/onboarding/presentation/screens/permission_prompt_screen.dart';
-import 'package:learning_tracker/features/onboarding/presentation/screens/signup_screen.dart';
 import 'package:learning_tracker/features/profiles/presentation/screens/manage_learners_screen.dart';
 import 'package:learning_tracker/features/profiles/presentation/screens/parent_settings_screen.dart';
 import 'package:learning_tracker/features/profiles/presentation/screens/parent_track_management_screen.dart';
@@ -47,8 +47,8 @@ import 'package:learning_tracker/features/settings/presentation/screens/lifetime
 import 'package:learning_tracker/features/settings/presentation/screens/settings_screen.dart';
 import 'package:learning_tracker/features/settings/presentation/screens/upgrade_to_cloud_screen.dart';
 import 'package:learning_tracker/features/sync/presentation/screens/sync_screen.dart';
-import 'package:learning_tracker/features/track_setup/presentation/screens/track_detail_screen.dart';
-import 'package:learning_tracker/features/track_setup/presentation/screens/track_management_hub_screen.dart';
+import 'package:learning_tracker/features/tracks/setup/presentation/screens/track_detail_screen.dart';
+import 'package:learning_tracker/features/tracks/setup/presentation/screens/track_management_hub_screen.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/tutor_grant_aggregate.dart'
     show TutorGrant;
 import 'package:learning_tracker/features/tutoring/presentation/screens/accept_invite_screen.dart';

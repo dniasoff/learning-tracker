@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/features/track_setup/presentation/widgets/track_label_step.dart';
+import 'package:learning_tracker/features/tracks/setup/presentation/widgets/track_label_step.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 void main() {
