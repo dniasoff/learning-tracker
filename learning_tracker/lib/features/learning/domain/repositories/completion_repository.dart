@@ -15,15 +15,25 @@ abstract class CompletionRepository {
   /// - Validates stage progression (must complete stage N before N+1)
   /// - Checks for duplicates (idempotent - returns existing if already complete)
   /// - Calculates and awards points based on curriculum configuration
+  ///   (only when [awardGamificationPoints] is true — B1 policy)
   /// - Advances bookmark to next item in learning order
   /// - Triggers Firestore sync
   ///
   /// All operations are performed in a single database transaction for
   /// atomicity. If any operation fails, the entire transaction is rolled back.
   ///
+  /// ### B1 — Three-tier credit policy
+  /// [awardGamificationPoints] controls the engagement tier (streak events,
+  /// point awards). Pass `false` for [CompletionSource.bulkInTrack] and
+  /// [CompletionSource.lifetimeOnly] sources. [MarkCompletionUseCase] is
+  /// the canonical caller and always passes the correct value.
+  ///
   /// Throws [StageProgressionException] if attempting to complete stage N+1
   /// before stage N for the same content item.
-  Future<MarkCompletionResult> markComplete(CompletionRequest request);
+  Future<MarkCompletionResult> markComplete(
+    CompletionRequest request, {
+    bool awardGamificationPoints = true,
+  });
 
   /// Mark multiple content items as completed in a single transaction.
   ///

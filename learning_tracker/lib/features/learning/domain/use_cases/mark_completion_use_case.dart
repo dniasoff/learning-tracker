@@ -1,22 +1,68 @@
 import 'package:learning_tracker/features/learning/domain/entities/completion_request.dart';
+import 'package:learning_tracker/features/learning/domain/entities/completion_source.dart';
 import 'package:learning_tracker/features/learning/domain/entities/mark_completion_result.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/completion_repository.dart';
 
+export 'package:learning_tracker/features/learning/domain/entities/completion_source.dart';
+
 /// Use case for marking a single content item as completed.
 ///
-/// Orchestrates the completion flow including validation,
-/// points calculation, bookmark advancement, and sync.
+/// Orchestrates the completion flow, gating side effects according to
+/// the [CompletionSource] discriminator (B1 three-tier credit policy):
+///
+/// ```
+/// Tier              | Streak / Points | Siyumim / Reports | Lifetime data
+/// ──────────────────┼─────────────────┼───────────────────┼──────────────
+/// live              |       ✓         |        ✓          |      ✓
+/// bulkInTrack       |       ✗         |        ✓          |      ✓
+/// lifetimeOnly      |       ✗         |        ✗          |      ✓
+/// ```
+///
+/// The source is encoded into the repository request so the data layer
+/// can persist the correct `priorMarkOnly` flag and suppress streak events:
+///   - [CompletionSource.live] → `awardGamificationPoints = true`, streak
+///     event written.
+///   - [CompletionSource.bulkInTrack] → `awardGamificationPoints = false`,
+///     no streak event. Completions stored with `priorMarkOnly = true`.
+///   - [CompletionSource.lifetimeOnly] → same as `bulkInTrack` at the
+///     data level; no achievement side effects at the use-case level.
 class MarkCompletionUseCase {
-  final CompletionRepository _repository;
+  const MarkCompletionUseCase(this._repository);
 
-  MarkCompletionUseCase(this._repository);
+  final CompletionRepository _repository;
 
   /// Execute the use case to mark a content item as completed.
   ///
+  /// [source] controls which handler tiers fire (B1 policy). When omitted
+  /// the default is [CompletionSource.live] so existing callers that have
+  /// not yet been migrated to pass an explicit source continue to behave
+  /// correctly.
+  ///
   /// Returns the completion record and any new reward milestone unlocks.
+  /// [MarkCompletionResult.newMilestoneUnlocks] is empty when
+  /// [source.creditsEngagement] is false (achievement rewards suppressed
+  /// for bulk and lifetime sources).
   ///
   /// Throws [StageProgressionException] if stage progression is violated.
-  Future<MarkCompletionResult> call(CompletionRequest request) async {
-    return _repository.markComplete(request);
+  Future<MarkCompletionResult> call(
+    CompletionRequest request, {
+    CompletionSource source = CompletionSource.live,
+  }) async {
+    // B1: the repository's awardGamificationPoints flag is the engagement
+    // gate — it suppresses streak events and point awards inside the data layer.
+    // For bulkInTrack / lifetimeOnly callers the flag maps to false so the
+    // existing repository path correctly suppresses streak and points.
+    //
+    // Achievement-tier gating (siyumim / report indexing) is performed by
+    // the repository's completionDetectionService path, which is controlled
+    // by the same flag: when awardGamificationPoints is false the detection
+    // service call is skipped (see CompletionRepositoryImpl.markComplete).
+    //
+    // Lifetime-tier (coverage counters) is unconditional — every completion
+    // enters the DB regardless of source.
+    return _repository.markComplete(
+      request,
+      awardGamificationPoints: source.creditsEngagement,
+    );
   }
 }

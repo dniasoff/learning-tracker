@@ -214,7 +214,7 @@ Sync-point trigger tags: `[P1]` `[P2]` `[P3]` `[P4]` `[P5]` `[P6]` `[P7]`
 - [x] W4.17 (M, S5, done)    dashboard → extract NextRewardSelector + ComputePaceStatusUseCase + TrackCompletionService — **B3 projection check**
 
 ### Phase 4c · Business-logic relocations
-- [ ] W4.18 (M, S4, pending)    completion_repository_impl.markComplete:57-200 → MarkCompletionUseCase — **owns B1 credit policy enforcement**
+- [x] W4.18 (M, S4, done)    completion_repository_impl.markComplete:57-200 → MarkCompletionUseCase — **owns B1 credit policy enforcement**
 - [ ] W4.19 (M, S5, in-progress)    learning_order_repository_impl.saveOrder:91-129 → SaveLearningOrderUseCase
 - [x] W4.20 (S, S5, done)    parent_dashboard_aggregator._computePaceStatus dup → reuse ComputePaceStatusUseCase
 - [ ] W4.21 (M, S5, in-progress)    notification_providers.dart:22-46 → ReminderPreferences + NotificationPreferencesRepository

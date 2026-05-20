@@ -55,7 +55,10 @@ class CompletionRepositoryImpl implements CompletionRepository {
        _stageRepository = stageRepository;
 
   @override
-  Future<MarkCompletionResult> markComplete(CompletionRequest request) async {
+  Future<MarkCompletionResult> markComplete(
+    CompletionRequest request, {
+    bool awardGamificationPoints = true,
+  }) async {
     final isChildProfile = await _isChildProfile();
 
     // Perform DB operations in a single transaction for atomicity.
@@ -115,31 +118,40 @@ class CompletionRepositoryImpl implements CompletionRepository {
 
       // 4. Calculate points for this stage (child only; programmed or self-paced
       //    tracks with a goal — not momentum-only / browse tracks.)
-      final rewardService = RewardMilestoneService(
-        _database,
-        profileId: _activeProfileId,
-      );
-      final eligibleForRewards = await rewardService
-          .trackCountsTowardRewardPoints(trackId);
-      final points = isChildProfile && eligibleForRewards
-          ? await _calculatePoints(
-              curriculumId: request.curriculumId,
-              stageOrder: request.stageId,
-              trackId: trackId,
-              profileId: _activeProfileId,
-            )
-          : 0;
+      //    B1: skip point calculation when awardGamificationPoints is false
+      //    (bulkInTrack / lifetimeOnly sources — engagement tier suppressed).
+      var points = 0;
+      if (awardGamificationPoints) {
+        final rewardService = RewardMilestoneService(
+          _database,
+          profileId: _activeProfileId,
+        );
+        final eligible = await rewardService.trackCountsTowardRewardPoints(
+          trackId,
+        );
+        if (isChildProfile && eligible) {
+          points = await _calculatePoints(
+            curriculumId: request.curriculumId,
+            stageOrder: request.stageId,
+            trackId: trackId,
+            profileId: _activeProfileId,
+          );
+        }
+      }
 
       // 5. Create completion record. `_createCompletion` tees the
       //    write into `streak_events` (the append-only log) so the
       //    streak reducer in `core/streak/` derives state on read.
       //    No `StreakService.recordCompletion` call — DNI-337 removed
       //    the synchronous cached-table write path.
+      //    B1: pass priorMarkOnly = !awardGamificationPoints so expunge
+      //    can distinguish bulk-prior rows from live-learning rows.
       final created = await _createCompletion(
         request: request,
         trackId: trackId,
         points: points,
         profileId: _activeProfileId,
+        priorMarkOnly: !awardGamificationPoints,
       );
 
       return (completion: created, isNew: true);
@@ -169,7 +181,9 @@ class CompletionRepositoryImpl implements CompletionRepository {
         );
       }
 
-      if (isChildProfile) {
+      // B1: milestone unlocks are engagement-tier — skip for bulkInTrack /
+      // lifetimeOnly sources (awardGamificationPoints = false).
+      if (isChildProfile && awardGamificationPoints) {
         final trackUnlocks =
             await _rewardMilestoneService?.evaluateUnlocksForTrack(
               completion.trackId,
@@ -544,12 +558,17 @@ class CompletionRepositoryImpl implements CompletionRepository {
   ///
   /// Delegates to [CompletionWriter] (FR15) so the completion row + outbox
   /// row are written in one transaction.
+  ///
+  /// [priorMarkOnly] — set to true for bulkInTrack / lifetimeOnly sources
+  /// so the `completion_events` row is flagged and expunge can target only
+  /// prior-mark rows. When true, [appendStreakEvent] is implicitly false.
   Future<Completion> _createCompletion({
     required CompletionRequest request,
     required int trackId,
     required int points,
     required int profileId,
     bool appendStreakEvent = true,
+    bool priorMarkOnly = false,
   }) async {
     final now = DateTimeFactory.nowUtc(); // P5: Store as UTC
 
@@ -563,6 +582,9 @@ class CompletionRepositoryImpl implements CompletionRepository {
         trackId: trackId,
         completedAt: now,
         points: points,
+        // B1: flag prior-mark rows so expunge (and the credit policy) can
+        // distinguish them from live-learning rows.
+        priorMarkOnly: priorMarkOnly,
       ),
     );
 
@@ -570,8 +592,10 @@ class CompletionRepositoryImpl implements CompletionRepository {
     // so the streak reducer can derive state independent of the
     // cached Streaks table. Unique keys swallow duplicates silently.
     // Skipped for prior-learning bulk marks (NFR13 / DNI-381).
+    // B1: also skip for any source where priorMarkOnly = true (engagement
+    // tier suppressed).
     // (Moves into CompletionWriter in DNI-337 / Story 25.16.)
-    if (appendStreakEvent) {
+    if (appendStreakEvent && !priorMarkOnly) {
       await _appendStreakEvent(profileId: profileId, at: now);
     }
 
