@@ -1,10 +1,9 @@
 /// Grace window in calendar days from track start during which pace status is
 /// always [PaceStatus.graceWindow] regardless of actual progress.
 ///
-/// During the grace window, the learner has just begun and no meaningful
-/// velocity signal is available yet. Default is 3 days; the owner may tune
-/// this constant once real usage data informs the right threshold.
-const int kPaceGraceWindowDays = 3;
+/// Day 1 only (the creation day). From day 2 onward the actual vs required
+/// velocity comparison kicks in. Decided by owner 2026-05-20.
+const int kPaceGraceWindowDays = 1;
 
 /// Canonical pace status for a track.
 ///

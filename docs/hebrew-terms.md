@@ -76,6 +76,10 @@ The Hebrew Terms setting is authoritative for **all** of the following. None of
 them may be hardcoded at a call site.
 
 - **Learning terms** — chazara, the review concept.
+- **Achievement milestones** — siyum / siyumim (completing a unit of learning).
+  Hebrew: סיום / סיומים. Proper-name siyumim (Siyum HaShas, Siyum HaTorah,
+  Siyum HaMishnayos, etc.) are also domain terms — they follow the same binary
+  pattern as masechta proper names. Decided as domain term 2026-05-20.
 - **Structural Torah units** — daf, amud, perek, mishnah, seder, masechta.
 - **Curriculum names** — mishnayos, bavli, yerushalmi, chumash, nach, tanach,
   mishna berurah, mussar, mishneh torah.

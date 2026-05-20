@@ -31,24 +31,24 @@ void main() {
     });
 
     // -------------------------------------------------------------------------
-    // Test 2 — Day 3 still in grace window (kPaceGraceWindowDays == 3)
+    // Test 2 — Day 1 (elapsed == kPaceGraceWindowDays) still in grace window
     // -------------------------------------------------------------------------
-    test('day 3 (elapsed == kPaceGraceWindowDays): still graceWindow', () {
-      // trackStart = 3 days ago → elapsed = 3 = kPaceGraceWindowDays
-      final trackStart = today.subtract(const Duration(days: 3));
+    test('day 1 (elapsed == kPaceGraceWindowDays): still graceWindow', () {
+      // trackStart = 1 day ago → elapsed = 1 = kPaceGraceWindowDays
+      final trackStart = today.subtract(const Duration(days: 1));
 
       final calc = PaceCalculator.compute(
         totalItems: 200,
         bulkBaseline: 0,
         liveProgress: 0,
         trackStartDate: trackStart,
-        targetDate: today.add(const Duration(days: 97)), // 100 day track total
+        targetDate: today.add(const Duration(days: 99)), // 100 day track total
         today: today,
       );
 
       expect(calc.isInGraceWindow, isTrue,
           reason:
-              'elapsed ($kPaceGraceWindowDays) == kPaceGraceWindowDays, '
+              'elapsed (1) == kPaceGraceWindowDays ($kPaceGraceWindowDays), '
               'should still be in grace window');
       expect(calc.paceStatus, PaceStatus.graceWindow);
     });
