@@ -671,11 +671,36 @@
   "chartTotalTorahPoints": "נק׳ תורה סה״כ",
   "chartLearningJourney": "מסע הלמידה",
   "chartJourneyMotivation": "שמרו על הלהבה בוערת מדי יום!",
-  "chartSevenDayStreak": "רצף 7 ימים!",
+  "chartSevenDayStreak": "{count, plural, =0{לוח רצף} =1{רצף יום 1!} other{רצף {count} ימים!}}",
+  "@chartSevenDayStreak": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
   "chartLast7Days": "7 ימים",
   "chartLast30Days": "30\nימים",
   "chartAllTime": "הכול",
   "chartFilterAll": "הכול",
+  "streakHistoryTitle": "רצף",
+  "streakHistoryCurrent": "נוכחי",
+  "streakHistoryLongest": "הכי ארוך",
+  "streakHistoryLast7Days": "7 ימים אחרונים",
+  "streakHistoryLast29Days": "29 ימים אחרונים",
+  "streakHistoryAllTime": "כל הזמן",
+  "learnStreakCurrentAchievement": "הישג נוכחי",
+  "learnStreakDayStreak": "{count, plural, =1{רצף יום 1} other{רצף {count} ימים}}",
+  "@learnStreakDayStreak": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "learnStreakPersonalBest": "שיא אישי: {count}",
+  "@learnStreakPersonalBest": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "learnStreakKeepItUp": "כל הכבוד!",
   "notifAppBarNotifications": "התראות",
   "notifDailyReminder": "תזכורת יומית",
   "notifDailyReminderSubtitle": "אל תשכחו ללמוד היום!",

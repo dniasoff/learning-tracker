@@ -10,6 +10,7 @@ import 'package:learning_tracker/features/dashboard/presentation/providers/dashb
 import 'package:learning_tracker/features/gamification/domain/services/streak_service.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/progress/presentation/widgets/streak_calendar.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// The three calendar views available on the streak history screen.
 enum _StreakRange { sevenDays, twentyNineDays, allTime }
@@ -43,14 +44,15 @@ class _StreakHistoryScreenState extends ConsumerState<StreakHistoryScreen> {
     };
   }
 
-  String get _rangeLabel => switch (_range) {
-    _StreakRange.sevenDays => 'Last 7 days',
-    _StreakRange.twentyNineDays => 'Last 29 days',
-    _StreakRange.allTime => 'All time',
+  String _rangeLabel(AppLocalizations l10n) => switch (_range) {
+    _StreakRange.sevenDays => l10n.streakHistoryLast7Days,
+    _StreakRange.twentyNineDays => l10n.streakHistoryLast29Days,
+    _StreakRange.allTime => l10n.streakHistoryAllTime,
   };
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final streakAsync = ref.watch(dashboardStreakProvider);
     final profileId = ref.watch(activeProfileIdProvider);
     final db = ref.watch(userDatabaseProvider);
@@ -62,7 +64,7 @@ class _StreakHistoryScreenState extends ConsumerState<StreakHistoryScreen> {
     return Scaffold(
       backgroundColor: AppColors.surfaceF4b,
       appBar: AppBar(
-        title: const AppBarTitle(text: 'Streak'),
+        title: AppBarTitle(text: l10n.streakHistoryTitle),
         backgroundColor: AppColors.surfaceF4b,
         foregroundColor: AppTheme.brandInk,
         surfaceTintColor: Colors.transparent,
@@ -79,7 +81,7 @@ class _StreakHistoryScreenState extends ConsumerState<StreakHistoryScreen> {
                     icon: Icons.local_fire_department_rounded,
                     iconColor: const Color(0xFFFF6E76),
                     value: '$current',
-                    label: 'CURRENT',
+                    label: l10n.streakHistoryCurrent,
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -88,7 +90,7 @@ class _StreakHistoryScreenState extends ConsumerState<StreakHistoryScreen> {
                     icon: Icons.workspace_premium_rounded,
                     iconColor: AppColors.chartAmber,
                     value: '$longest',
-                    label: 'LONGEST',
+                    label: l10n.streakHistoryLongest,
                   ),
                 ),
               ],
@@ -100,21 +102,21 @@ class _StreakHistoryScreenState extends ConsumerState<StreakHistoryScreen> {
               child: Row(
                 children: [
                   _RangeChip(
-                    label: 'Last 7 days',
+                    label: l10n.streakHistoryLast7Days,
                     selected: _range == _StreakRange.sevenDays,
                     onTap: () =>
                         setState(() => _range = _StreakRange.sevenDays),
                   ),
                   const SizedBox(width: 8),
                   _RangeChip(
-                    label: 'Last 29 days',
+                    label: l10n.streakHistoryLast29Days,
                     selected: _range == _StreakRange.twentyNineDays,
                     onTap: () =>
                         setState(() => _range = _StreakRange.twentyNineDays),
                   ),
                   const SizedBox(width: 8),
                   _RangeChip(
-                    label: 'All time',
+                    label: l10n.streakHistoryAllTime,
                     selected: _range == _StreakRange.allTime,
                     onTap: () => setState(() => _range = _StreakRange.allTime),
                   ),
@@ -148,7 +150,7 @@ class _StreakHistoryScreenState extends ConsumerState<StreakHistoryScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        _rangeLabel,
+                        _rangeLabel(l10n),
                         style: Theme.of(context).textTheme.titleSmall?.copyWith(
                           fontWeight: FontWeight.w800,
                           color: AppTheme.brandInk,

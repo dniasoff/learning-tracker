@@ -114,6 +114,7 @@ class _StreakHeroCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
     return GestureDetector(
       onTap: () => context.router.push(const StreakHistoryRoute()),
@@ -148,7 +149,7 @@ class _StreakHeroCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'CURRENT ACHIEVEMENT',
+                        l10n.learnStreakCurrentAchievement,
                         style: theme.textTheme.labelSmall?.copyWith(
                           color: Colors.white.withValues(alpha: 0.78),
                           letterSpacing: 1,
@@ -157,7 +158,7 @@ class _StreakHeroCard extends StatelessWidget {
                       ),
                       const SizedBox(height: 6),
                       Text(
-                        '$currentStreak Day Streak',
+                        l10n.learnStreakDayStreak(currentStreak),
                         style: theme.textTheme.titleLarge?.copyWith(
                           color: Colors.white,
                           fontWeight: FontWeight.w800,
@@ -185,7 +186,7 @@ class _StreakHeroCard extends StatelessWidget {
                             ),
                             const SizedBox(width: 4),
                             Text(
-                              'Personal Best: $maxStreak',
+                              l10n.learnStreakPersonalBest(maxStreak),
                               style: theme.textTheme.labelSmall?.copyWith(
                                 color: Colors.white,
                                 fontWeight: FontWeight.w700,
@@ -228,7 +229,8 @@ class _StreakHeroCard extends StatelessWidget {
                   ],
                 ),
                 child: Text(
-                  'Keep it up! 🚀',
+                  // RTL-safe: no emoji; localised via ARB.
+                  l10n.learnStreakKeepItUp,
                   style: theme.textTheme.labelMedium?.copyWith(
                     color: const Color(0xFF5A3E22),
                     fontWeight: FontWeight.w700,

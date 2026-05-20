@@ -1436,7 +1436,16 @@ class AppLocalizationsHe extends AppLocalizations {
   String get chartJourneyMotivation => 'שמרו על הלהבה בוערת מדי יום!';
 
   @override
-  String get chartSevenDayStreak => 'רצף 7 ימים!';
+  String chartSevenDayStreak(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'רצף $count ימים!',
+      one: 'רצף יום 1!',
+      zero: 'לוח רצף',
+    );
+    return '$_temp0';
+  }
 
   @override
   String get chartLast7Days => '7 ימים';
@@ -1449,6 +1458,46 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String get chartFilterAll => 'הכול';
+
+  @override
+  String get streakHistoryTitle => 'רצף';
+
+  @override
+  String get streakHistoryCurrent => 'נוכחי';
+
+  @override
+  String get streakHistoryLongest => 'הכי ארוך';
+
+  @override
+  String get streakHistoryLast7Days => '7 ימים אחרונים';
+
+  @override
+  String get streakHistoryLast29Days => '29 ימים אחרונים';
+
+  @override
+  String get streakHistoryAllTime => 'כל הזמן';
+
+  @override
+  String get learnStreakCurrentAchievement => 'הישג נוכחי';
+
+  @override
+  String learnStreakDayStreak(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'רצף $count ימים',
+      one: 'רצף יום 1',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String learnStreakPersonalBest(int count) {
+    return 'שיא אישי: $count';
+  }
+
+  @override
+  String get learnStreakKeepItUp => 'כל הכבוד!';
 
   @override
   String get notifAppBarNotifications => 'התראות';

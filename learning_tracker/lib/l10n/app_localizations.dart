@@ -2684,8 +2684,8 @@ abstract class AppLocalizations {
   /// No description provided for @chartSevenDayStreak.
   ///
   /// In en, this message translates to:
-  /// **'7 DAY STREAK!'**
-  String get chartSevenDayStreak;
+  /// **'{count, plural, =0{STREAK CALENDAR} =1{1 DAY STREAK!} other{{count} DAY STREAK!}}'**
+  String chartSevenDayStreak(int count);
 
   /// No description provided for @chartLast7Days.
   ///
@@ -2710,6 +2710,66 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'All'**
   String get chartFilterAll;
+
+  /// No description provided for @streakHistoryTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Streak'**
+  String get streakHistoryTitle;
+
+  /// No description provided for @streakHistoryCurrent.
+  ///
+  /// In en, this message translates to:
+  /// **'CURRENT'**
+  String get streakHistoryCurrent;
+
+  /// No description provided for @streakHistoryLongest.
+  ///
+  /// In en, this message translates to:
+  /// **'LONGEST'**
+  String get streakHistoryLongest;
+
+  /// No description provided for @streakHistoryLast7Days.
+  ///
+  /// In en, this message translates to:
+  /// **'Last 7 days'**
+  String get streakHistoryLast7Days;
+
+  /// No description provided for @streakHistoryLast29Days.
+  ///
+  /// In en, this message translates to:
+  /// **'Last 29 days'**
+  String get streakHistoryLast29Days;
+
+  /// No description provided for @streakHistoryAllTime.
+  ///
+  /// In en, this message translates to:
+  /// **'All time'**
+  String get streakHistoryAllTime;
+
+  /// No description provided for @learnStreakCurrentAchievement.
+  ///
+  /// In en, this message translates to:
+  /// **'CURRENT ACHIEVEMENT'**
+  String get learnStreakCurrentAchievement;
+
+  /// No description provided for @learnStreakDayStreak.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 Day Streak} other{{count} Day Streak}}'**
+  String learnStreakDayStreak(int count);
+
+  /// No description provided for @learnStreakPersonalBest.
+  ///
+  /// In en, this message translates to:
+  /// **'Personal Best: {count}'**
+  String learnStreakPersonalBest(int count);
+
+  /// No description provided for @learnStreakKeepItUp.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep it up!'**
+  String get learnStreakKeepItUp;
 
   /// No description provided for @notifAppBarNotifications.
   ///

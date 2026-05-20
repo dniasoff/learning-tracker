@@ -54,6 +54,8 @@ class _ProgressChartsScreenState extends ConsumerState<ProgressChartsScreen> {
     final l10n = AppLocalizations.of(context)!;
     final userMode = ref.watch(dashboardUserModeProvider).asData?.value;
     final resolvedUserMode = userMode ?? UserMode.adult;
+    final currentStreak =
+        ref.watch(dashboardStreakProvider).asData?.value.currentStreak ?? 0;
     final theme = Theme.of(context);
 
     return Scaffold(
@@ -139,7 +141,7 @@ class _ProgressChartsScreenState extends ConsumerState<ProgressChartsScreen> {
                   borderRadius: BorderRadius.circular(999),
                 ),
                 child: Text(
-                  l10n.chartSevenDayStreak,
+                  l10n.chartSevenDayStreak(currentStreak),
                   style: theme.textTheme.labelSmall?.copyWith(
                     color: Colors.white,
                     letterSpacing: 0.4,

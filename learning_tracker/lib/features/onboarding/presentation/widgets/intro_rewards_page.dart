@@ -95,6 +95,8 @@ class IntroRewardsHeroIllustration extends StatelessWidget {
                       ),
                     ],
                   ),
+                  // Decorative illustration badge — shows a streak badge
+                  // concept without claiming a specific number.
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -105,7 +107,7 @@ class IntroRewardsHeroIllustration extends StatelessWidget {
                       ),
                       const SizedBox(width: 4),
                       Text(
-                        '7 DAY STREAK',
+                        'STREAK',
                         style: GoogleFonts.plusJakartaSans(
                           color: AppTheme.brandCreamCard,
                           fontSize: 9,
@@ -287,6 +289,11 @@ class IntroChildModeTag extends StatelessWidget {
 }
 
 /// Scholar-level progress card shown at the bottom of the rewards intro page.
+///
+/// This card is purely decorative — it illustrates what the scholar-level
+/// progress bar looks like when a user earns levels. It intentionally does not
+/// show a specific level number so it cannot be mistaken for the user's
+/// actual progress on their first encounter with the app (H-2 fix).
 class IntroScholarLevelCard extends ConsumerWidget {
   const IntroScholarLevelCard({super.key});
 
@@ -315,19 +322,30 @@ class IntroScholarLevelCard extends ConsumerWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'Scholar Level',
+                // Generic label — avoids implying the user is at "Level 4".
+                'Scholar Progress',
                 style: GoogleFonts.plusJakartaSans(
                   color: AppTheme.brandInk,
                   fontSize: 15,
                   fontWeight: FontWeight.w800,
                 ),
               ),
-              Text(
-                'Level 4',
-                style: GoogleFonts.plusJakartaSans(
-                  color: _kNavy,
-                  fontSize: 15,
-                  fontWeight: FontWeight.w800,
+              // EXAMPLE badge — makes it visually obvious this is an
+              // illustrative preview, not the user's actual level.
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                decoration: BoxDecoration(
+                  color: _kNavy.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(
+                  'EXAMPLE',
+                  style: GoogleFonts.plusJakartaSans(
+                    color: _kNavy,
+                    fontSize: 9,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0.4,
+                  ),
                 ),
               ),
             ],
@@ -348,6 +366,7 @@ class IntroScholarLevelCard extends ConsumerWidget {
                   Align(
                     alignment: AlignmentDirectional.centerStart,
                     child: Container(
+                      // Decorative fill — not tied to any real value.
                       width: c.maxWidth * 0.6,
                       height: 8,
                       decoration: const BoxDecoration(

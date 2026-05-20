@@ -1450,7 +1450,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chartJourneyMotivation => 'Keep the flame alive every day!';
 
   @override
-  String get chartSevenDayStreak => '7 DAY STREAK!';
+  String chartSevenDayStreak(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count DAY STREAK!',
+      one: '1 DAY STREAK!',
+      zero: 'STREAK CALENDAR',
+    );
+    return '$_temp0';
+  }
 
   @override
   String get chartLast7Days => 'Last 7 Days';
@@ -1463,6 +1472,46 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get chartFilterAll => 'All';
+
+  @override
+  String get streakHistoryTitle => 'Streak';
+
+  @override
+  String get streakHistoryCurrent => 'CURRENT';
+
+  @override
+  String get streakHistoryLongest => 'LONGEST';
+
+  @override
+  String get streakHistoryLast7Days => 'Last 7 days';
+
+  @override
+  String get streakHistoryLast29Days => 'Last 29 days';
+
+  @override
+  String get streakHistoryAllTime => 'All time';
+
+  @override
+  String get learnStreakCurrentAchievement => 'CURRENT ACHIEVEMENT';
+
+  @override
+  String learnStreakDayStreak(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count Day Streak',
+      one: '1 Day Streak',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String learnStreakPersonalBest(int count) {
+    return 'Personal Best: $count';
+  }
+
+  @override
+  String get learnStreakKeepItUp => 'Keep it up!';
 
   @override
   String get notifAppBarNotifications => 'Notifications';

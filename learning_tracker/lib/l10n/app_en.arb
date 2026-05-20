@@ -676,11 +676,36 @@
   "chartTotalTorahPoints": "TOTAL TORAH POINTS",
   "chartLearningJourney": "Learning Journey",
   "chartJourneyMotivation": "Keep the flame alive every day!",
-  "chartSevenDayStreak": "7 DAY STREAK!",
+  "chartSevenDayStreak": "{count, plural, =0{STREAK CALENDAR} =1{1 DAY STREAK!} other{{count} DAY STREAK!}}",
+  "@chartSevenDayStreak": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
   "chartLast7Days": "Last 7 Days",
   "chartLast30Days": "Last 30\nDays",
   "chartAllTime": "All Time",
   "chartFilterAll": "All",
+  "streakHistoryTitle": "Streak",
+  "streakHistoryCurrent": "CURRENT",
+  "streakHistoryLongest": "LONGEST",
+  "streakHistoryLast7Days": "Last 7 days",
+  "streakHistoryLast29Days": "Last 29 days",
+  "streakHistoryAllTime": "All time",
+  "learnStreakCurrentAchievement": "CURRENT ACHIEVEMENT",
+  "learnStreakDayStreak": "{count, plural, =1{1 Day Streak} other{{count} Day Streak}}",
+  "@learnStreakDayStreak": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "learnStreakPersonalBest": "Personal Best: {count}",
+  "@learnStreakPersonalBest": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "learnStreakKeepItUp": "Keep it up!",
   "notifAppBarNotifications": "Notifications",
   "notifDailyReminder": "Daily Reminder",
   "notifDailyReminderSubtitle": "Don't forget to learn today!",
