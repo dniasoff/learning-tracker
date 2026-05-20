@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/widgets.dart';
+import 'package:learning_tracker/core/logging/crashlytics_service.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/sync/firestore_gateway.dart';
 import 'package:learning_tracker/core/sync/firestore_listener_source.dart';
@@ -11,7 +12,6 @@ import 'package:learning_tracker/core/sync/merge/entity_merger.dart';
 import 'package:learning_tracker/core/sync/merge/merge_router.dart';
 import 'package:learning_tracker/core/sync/pull_pipeline.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
-import 'package:learning_tracker/features/sync/data/sync_engine.dart';
 import 'package:learning_tracker/features/sync/domain/models/sync_status.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -72,7 +72,6 @@ abstract class SyncOrchestrator {
 /// [WidgetsBinding] so resume-time pulls are triggered automatically.
 class SyncOrchestratorImpl implements SyncOrchestrator {
   SyncOrchestratorImpl({
-    required SyncEngine Function() resolveEngine,
     required MergeRouter Function() resolveMergeRouter,
     required FirestoreGateway Function() resolveGateway,
     required int Function() resolveProfileId,
@@ -86,45 +85,40 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
     /// tests that do not need the Riverpod notification can omit it.
     void Function()? onFirstSyncComplete,
 
-    /// W2.32: Optional outbox-backed replacement for [SyncEngine.pushAllLocalData].
+    /// Outbox-backed replacement for the legacy push-all-local-data path.
     ///
-    /// When provided, [pushAllLocalData] routes through this callback instead
-    /// of delegating to the legacy [SyncEngine] path. Once [SyncEngine] is
-    /// deleted (W2.35) this becomes non-optional.
-    Future<void> Function()? resolvePushAllLocalData,
+    /// Routes all locally-stored data through the outbox so it is flushed to
+    /// Firestore on the next outbox-processor cycle.
+    required Future<void> Function() resolvePushAllLocalData,
 
-    /// W2.32: Optional outbox-backed replacement for
-    /// [SyncEngine.backfillGoalsForCloudCutover].
+    /// Outbox-backed replacement for the legacy goals-backfill path.
     ///
-    /// When provided, the post-pull backfill routes through this callback
-    /// instead of [SyncEngine.backfillGoalsForCloudCutover]. Once
-    /// [SyncEngine] is deleted (W2.35) this becomes non-optional.
-    Future<int> Function()? resolveBackfillGoals,
-  }) : _resolveEngine = resolveEngine,
-       _resolveMergeRouter = resolveMergeRouter,
+    /// Idempotent, guarded by a SharedPreferences flag.  Called once after the
+    /// first successful pull to catch up goals that were created before the
+    /// outbox path was wired (DNI-334 cutover).
+    required Future<int> Function() resolveBackfillGoals,
+
+    /// W7.16: optional Crashlytics service — when provided, listener errors
+    /// are forwarded as non-fatal crashes in addition to the structured log.
+    CrashlyticsService? crashlytics,
+  }) : _resolveMergeRouter = resolveMergeRouter,
        _resolveGateway = resolveGateway,
        _resolveProfileId = resolveProfileId,
        _logger = logger,
+       _crashlytics = crashlytics,
        _onFirstSyncComplete = onFirstSyncComplete,
        _resolvePushAllLocalData = resolvePushAllLocalData,
        _resolveBackfillGoals = resolveBackfillGoals;
-
-  /// Resolves the current [SyncEngine] on demand.
-  ///
-  /// The orchestrator is a per-session singleton (S7); the [SyncEngine] it
-  /// delegates push/status to may itself be rebuilt (e.g. after a DB swap),
-  /// so the engine is resolved lazily rather than captured at construction.
-  final SyncEngine Function() _resolveEngine;
 
   /// Optional callback invoked the first time a full pull completes.  See
   /// constructor doc for [onFirstSyncComplete].
   final void Function()? _onFirstSyncComplete;
 
-  /// W2.32: Optional outbox-backed pushAllLocalData callback.
-  final Future<void> Function()? _resolvePushAllLocalData;
+  /// Outbox-backed pushAllLocalData callback.
+  final Future<void> Function() _resolvePushAllLocalData;
 
-  /// W2.32: Optional outbox-backed backfillGoalsForCloudCutover callback.
-  final Future<int> Function()? _resolveBackfillGoals;
+  /// Outbox-backed backfillGoalsForCloudCutover callback.
+  final Future<int> Function() _resolveBackfillGoals;
 
   /// Resolves the current [MergeRouter] on demand.
   ///
@@ -142,8 +136,8 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
 
   final int Function() _resolveProfileId;
   final AppLogger? _logger;
-
-  SyncEngine get _engine => _resolveEngine();
+  // W7.16: forwards listener errors to Crashlytics as non-fatal.
+  final CrashlyticsService? _crashlytics;
 
   int get _profileId => _resolveProfileId();
 
@@ -257,13 +251,7 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
   Stream<SyncStatus> get statusStream => _statusController.stream;
 
   @override
-  Future<void> pushAllLocalData() {
-    // W2.32: prefer the outbox-backed callback when wired; fall back to the
-    // legacy engine path until W2.35 deletes SyncEngine.
-    final cb = _resolvePushAllLocalData;
-    if (cb != null) return cb();
-    return _engine.pushAllLocalData();
-  }
+  Future<void> pushAllLocalData() => _resolvePushAllLocalData();
 
   @override
   Future<void> pullOnLaunch({bool triggeredFromResume = false}) async {
@@ -428,18 +416,10 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
       // One-time backfill of goals (DNI-334 cutover misrouted them through
       // `pushSettings` so they never reached the cloud — fixed 2026-05-19).
       // Idempotent + guarded by SharedPreferences flag; logs a no-op count
-      // on every subsequent launch.  Best-effort: a missing/throwing engine
-      // (some test stubs deliberately throw to enforce the "pull doesn't
-      // touch the engine" invariant) must not fail the pull.
+      // on every subsequent launch.  Best-effort: a throwing callback must not
+      // fail the pull.
       try {
-        // W2.32: prefer the outbox-backed callback when wired; fall back to
-        // the legacy engine path until W2.35 deletes SyncEngine.
-        final backfillCb = _resolveBackfillGoals;
-        if (backfillCb != null) {
-          await backfillCb();
-        } else {
-          await _engine.backfillGoalsForCloudCutover();
-        }
+        await _resolveBackfillGoals();
       } catch (e, stackTrace) {
         _logger?.warning(
           event: 'sync_goal_backfill_failed',
@@ -578,6 +558,9 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
       exception: error,
       stackTrace: stackTrace,
     );
+    // W7.16: forward listener errors to Crashlytics as non-fatal so they
+    // appear in the crash dashboard without needing a structured log viewer.
+    _crashlytics?.recordError(error, stackTrace, fatal: false);
   }
 
   static String? _channelToKind(String channel) => switch (channel) {

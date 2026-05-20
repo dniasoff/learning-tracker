@@ -45,8 +45,12 @@ class FirebaseCrashlyticsService implements CrashlyticsService {
       _crashlytics.setCrashlyticsCollectionEnabled(enabled);
 
   @override
-  Future<void> recordFlutterFatalError(FlutterErrorDetails details) =>
-      _crashlytics.recordFlutterFatalError(details);
+  Future<void> recordFlutterFatalError(FlutterErrorDetails details) {
+    // W7.15: fire crash_reported alongside the Crashlytics upload so every
+    // fatal crash is also reflected in Firebase Analytics.
+    unawaited(_analytics.logCrashReported(fatal: true));
+    return _crashlytics.recordFlutterFatalError(details);
+  }
 
   @override
   Future<void> recordError(

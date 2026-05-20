@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
+import 'package:learning_tracker/core/providers/crashlytics_provider.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/providers/talker_provider.dart';
 import 'package:learning_tracker/core/sync/initial_sync_state.dart';
@@ -12,13 +13,11 @@ import 'package:learning_tracker/features/account/presentation/providers/auth_st
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/sync/data/local_data_upload_service.dart';
 import 'package:learning_tracker/features/sync/data/outbox_sync_write_facade.dart';
-import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
 
 /// Provider for [SyncOrchestrator].
 ///
-/// Returns null when the user is not cloud-born — matches the tier-gate used
-/// by [syncEngineProvider]. Callers treat null as "sync not available" (same
-/// semantics as a null [SyncEngine]).
+/// Returns null when the user is not cloud-born (or gateway not yet available).
+/// Callers treat null as "sync not available".
 ///
 /// DNI-334 AC4 + DNI-335 AC6: [PullPipeline] is wired with [MergeRouter] as
 /// its [MergeDispatcher]; [ListenerSupervisor] and [LifecycleObserver] are
@@ -28,8 +27,8 @@ import 'package:learning_tracker/features/sync/presentation/providers/sync_provi
 /// S7 (singleton invariant): this provider is a `keepAlive` singleton — at
 /// most one [SyncOrchestrator] exists per app session.
 ///
-///   * It does NOT watch [syncEngineProvider] / [firestoreGatewayProvider] /
-///     [mergeRouterProvider] etc. Invalidating any of those — as the sign-in
+///   * It does NOT watch [firestoreGatewayProvider] / [mergeRouterProvider]
+///     etc. Invalidating any of those — as the sign-in
 ///     and upgrade-to-cloud flows used to do — must NOT tear down and rebuild
 ///     the orchestrator, since a rebuild transiently produced duplicate
 ///     [LifecycleObserver]s and listener sets (Bug #1, quality crisis
@@ -42,9 +41,6 @@ import 'package:learning_tracker/features/sync/presentation/providers/sync_provi
 ///   * R1 fix: it does NOT watch the active-profile provider directly. The
 ///     active profile is resolved lazily via [resolveProfileIdProvider].
 ///
-/// The [SyncEngine] is handed to the orchestrator as a lazy resolver so a
-/// later engine rebuild (e.g. after a DB swap) is picked up without recreating
-/// the orchestrator.
 final syncOrchestratorProvider = Provider<SyncOrchestrator?>((ref) {
   // keepAlive: the orchestrator owns a WidgetsBinding observer and a set of
   // Firestore listeners — it must survive transient unmounts of any widget
@@ -56,9 +52,6 @@ final syncOrchestratorProvider = Provider<SyncOrchestrator?>((ref) {
   final authState = ref.watch(authStateProvider);
   if (!authState.isCloudBorn) return null;
 
-  final engine = ref.read(syncEngineProvider);
-  if (engine == null) return null;
-
   // Gate on the gateway being available at build time, but do NOT capture it:
   // firestoreGatewayProvider watches the auth/Firestore providers and can
   // rebuild (e.g. across upgrade-to-cloud), so the orchestrator resolves it
@@ -68,6 +61,9 @@ final syncOrchestratorProvider = Provider<SyncOrchestrator?>((ref) {
 
   final resolveProfileId = ref.read(resolveProfileIdProvider);
   final talker = ref.read(talkerProvider);
+  // W7.16: read (not watch) so Crashlytics upgrades after bootstrap don't
+  // rebuild the orchestrator singleton.
+  final crashlytics = ref.read(crashlyticsServiceProvider);
 
   // W2.32 — build LocalDataUploadService so orchestrator can route
   // pushAllLocalData + backfillGoalsForCloudCutover through the outbox path.
@@ -92,10 +88,8 @@ final syncOrchestratorProvider = Provider<SyncOrchestrator?>((ref) {
     // resolver, so a later rebuild of any of these providers is picked up
     // without recreating the orchestrator (which would duplicate the
     // LifecycleObserver — Bug #1):
-    //   * syncEngineProvider     — rebuilds on a DB swap
     //   * mergeRouterProvider    — watches userDatabaseProvider (DB swap)
     //   * firestoreGatewayProvider — watches the auth/Firestore providers
-    resolveEngine: () => ref.read(syncEngineProvider)!,
     resolveMergeRouter: () => ref.read(mergeRouterProvider),
     resolveGateway: () => ref.read(firestoreGatewayProvider)!,
     resolveProfileId: resolveProfileId,
@@ -106,6 +100,8 @@ final syncOrchestratorProvider = Provider<SyncOrchestrator?>((ref) {
     // W2.32: outbox-backed push path replaces legacy SyncEngine delegation.
     resolvePushAllLocalData: uploadService.pushAllLocalData,
     resolveBackfillGoals: uploadService.backfillGoalsForCloudCutover,
+    // W7.16: forward listener errors to Crashlytics as non-fatal.
+    crashlytics: crashlytics,
   );
 
   // Idempotent: registers the lifecycle observer + Firestore listeners once.
