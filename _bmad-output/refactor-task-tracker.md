@@ -218,7 +218,7 @@ Sync-point trigger tags: `[P1]` `[P2]` `[P3]` `[P4]` `[P5]` `[P6]` `[P7]`
 - [ ] W4.19 (M, S5, in-progress)    learning_order_repository_impl.saveOrder:91-129 → SaveLearningOrderUseCase
 - [x] W4.20 (S, S5, done)    parent_dashboard_aggregator._computePaceStatus dup → reuse ComputePaceStatusUseCase
 - [ ] W4.21 (M, S5, in-progress)    notification_providers.dart:22-46 → ReminderPreferences + NotificationPreferencesRepository
-- [ ] W4.22 (S, S5, pending)    track_learning_order_repository_impl._buildMasechtosIndex → MasechtaOrderingPolicy (already W4.15)
+- [ ] W4.22 (S, S5, task-blocked)    track_learning_order_repository_impl._buildMasechtosIndex → MasechtaOrderingPolicy (already W4.15) — BLOCKED: depends on W4.15 (S4 task, not yet done)
 - [ ] W4.23 (S, S5, in-progress)    profile_providers.dart SelectedProfileId → ProfileSession aggregate in profiles/domain/
 - [ ] W4.24 (S, S5, in-progress)    dashboard_providers.dart side-effect-in-read-provider → write-path repository method
 - [ ] W4.25 (M, S4, pending)    core/learning/completion_writer.commitBatch/commit → sealed BatchPlan + _classifyBatch/_applyBatchPlan/_resolveResults — **B1 credit policy at batch classification**
@@ -325,10 +325,10 @@ Sync-point trigger tags: `[P1]` `[P2]` `[P3]` `[P4]` `[P5]` `[P6]` `[P7]`
 ## Wave 7 — Exceptions + logging + telemetry + polish (~25 tasks)
 
 ### Phase 7a · Exception leaves (S5)
-- [ ] W7.1  (M, S5, in-progress)    Re-parent all existing exception classes under the 5 category bases
-- [ ] W7.2  (S, S5, in-progress)    Add new exceptions: MergeException, OutboxDeadLetterException, FirestorePermissionDeniedException
-- [ ] W7.3  (S, S5, in-progress)    Move BatchPushException → core/sync/exceptions/sync_push_exception.dart under NetworkException
-- [ ] W7.4  (S, S5, in-progress)    Rename InvalidOperationException → InvalidTrackOperationException; under ValidationException
+- [x] W7.1  (M, S5, done)    Re-parent all existing exception classes under the 5 category bases
+- [x] W7.2  (S, S5, done)    Add new exceptions: MergeException, OutboxDeadLetterException, FirestorePermissionDeniedException
+- [x] W7.3  (S, S5, done)    Move BatchPushException → core/sync/exceptions/sync_push_exception.dart under NetworkException
+- [x] W7.4  (S, S5, done)    Rename InvalidOperationException → InvalidTrackOperationException; under ValidationException
 
 ### Phase 7b · Crisis-class telemetry (S2)
 - [ ] W7.5  (M, S2, pending)    Wire merge_row_skipped event at silent skip sites in DriftMergeStore + ProfileProgramMerger — closes L2
