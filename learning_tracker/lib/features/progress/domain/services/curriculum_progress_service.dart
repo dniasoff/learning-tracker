@@ -76,6 +76,15 @@ class CurriculumProgressService {
   /// Compute completion percentage for a set of items based on completions.
   ///
   /// An item is "completed" if it has at least one completion record.
+  ///
+  /// ### Layer 3 migration note
+  ///
+  /// Callers MUST pass tier-filtered completions. For Manage Tracks / achievement
+  /// displays pass [CompletionTierFilter.trackAchievement] rows (live +
+  /// bulkInTrack); for lifetime views pass [CompletionTierFilter.lifetime].
+  /// Passing unfiltered all-tiers completions violates the B1 credit policy.
+  ///
+  /// See [TrackProgressService.completionPercent] for the canonical aggregator.
   static double computeCompletionPercentage({
     required List<ContentItem> leafItems,
     required List<Completion> completions,

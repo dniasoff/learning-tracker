@@ -6,6 +6,7 @@ import 'package:learning_tracker/core/utils/date_utils.dart'
     show DateTimeFactory;
 import 'package:learning_tracker/features/dashboard/domain/use_cases/compute_pace_status_use_case.dart';
 import 'package:learning_tracker/features/gamification/streak/streak_state_provider.dart';
+import 'package:learning_tracker/features/learning/domain/entities/completion_tier_filter.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/goal_entity.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/pace_status.dart';
 import 'package:learning_tracker/features/tracks/stages/domain/models/stage_definition.dart'
@@ -165,34 +166,50 @@ class ParentDashboardAggregator {
   }
 
   /// Compute completion percentage for a curriculum.
+  ///
+  /// ### Layer 3 migration (trackAchievement tier)
+  ///
+  /// Uses [CompletionTierFilter.trackAchievement] (live + bulkInTrack) via the
+  /// tier-filtered DAO so that lifetimeOnly imports are excluded from the
+  /// parent dashboard metric.
+  ///
+  /// Also aligns with the canonical `every(requiredStageOrder in doneStages)`
+  /// formula from [TrackCompletionService], replacing the old
+  /// `stageSet.length >= totalStages` check which incorrectly matched items
+  /// with completions spread across different stages rather than the required set.
   Future<double> computeCompletionPercentage(CurriculumId curriculum) async {
-    final completions = await _db.completionDao
-        .getCompletionsByCurriculumAndProfile(
-          curriculum.storageKey,
-          _profileId,
-        );
     final stages = _stageRepository != null
         ? await _stageRepository.getStagesForCurriculum(curriculum)
         : const <domain_stage.StageDefinition>[];
-    if (stages.isEmpty || completions.isEmpty) return 0.0;
+    if (stages.isEmpty) return 0.0;
 
-    final totalStages = stages.length;
-    final completionsByRef = <String, Set<int>>{};
-    for (final c in completions) {
-      completionsByRef.putIfAbsent(c.sefariaRef, () => {}).add(c.stageId);
-    }
+    // Layer 3: use trackAchievement tier (excludes lifetimeOnly).
+    final completions = await _db.completionDao.getCompletionsByTier(
+      profileId: _profileId,
+      tier: CompletionTierFilter.trackAchievement,
+      curriculumId: curriculum,
+    );
+    if (completions.isEmpty) return 0.0;
 
     final totalItems = await _db.learningOrderDao.countByCurriculum(
       curriculum.storageKey,
     );
     if (totalItems == 0) return 0.0;
 
-    var fullyCompleted = 0;
-    for (final stageSet in completionsByRef.values) {
-      if (stageSet.length >= totalStages) fullyCompleted++;
+    // Canonical formula: item is "done" when every required stageOrder has
+    // a completion. Uses stageOrder values (same as stageId in completion_events).
+    final requiredStageOrders = stages.map((s) => s.stageOrder).toSet();
+    final completedStagesByRef = <String, Set<int>>{};
+    for (final c in completions) {
+      completedStagesByRef.putIfAbsent(c.sefariaRef, () => {}).add(c.stageId);
     }
 
-    return fullyCompleted / totalItems;
+    var fullyCompleted = 0;
+    for (final doneStages in completedStagesByRef.values) {
+      if (requiredStageOrders.every(doneStages.contains)) fullyCompleted++;
+    }
+
+    return (fullyCompleted / totalItems).clamp(0.0, 1.0);
   }
 
   Future<CurriculumSummary> _computeCurriculumSummary(
