@@ -489,6 +489,7 @@ Future<int> _seedTrack(UserDatabase db) => db
       CurriculumTracksCompanion.insert(
         profileId: 1,
         curriculumId: 'mishnah_yomit',
+        stateChangedAt: DateTime.utc(2026, 5, 1),
         activatedAt: DateTime.utc(2026, 5, 1),
         stateChangedAt: DateTime.utc(2026, 5, 1),
       ),

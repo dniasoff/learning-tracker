@@ -28,7 +28,7 @@ Future<int> _insertTrack(UserDatabase db) async {
         CurriculumTracksCompanion.insert(
           profileId: 0,
           curriculumId: 'mishnayos',
-          trackType: 'personal',
+          stateChangedAt: DateTime.now(),
           activatedAt: DateTime.now(),
         ),
       );
@@ -82,7 +82,7 @@ void main() {
           stageId: stageId,
           trackType: trackType,
           trackId: trackId,
-          completedAt: DateTime.now(),
+          eventTimestamp: DateTime.now(),
           points: Value(points),
         ),
       );
@@ -223,7 +223,7 @@ void main() {
           stageId: 1,
           trackType: 'primary',
           trackId: trackId,
-          completedAt: DateTimeFactory.utc(2026, 3, 10, 12),
+          eventTimestamp: DateTimeFactory.utc(2026, 3, 10, 12),
         ),
       );
       await seedCompletion(
@@ -235,7 +235,7 @@ void main() {
           stageId: 1,
           trackType: 'primary',
           trackId: trackId,
-          completedAt: DateTimeFactory.utc(2026, 3, 12, 12),
+          eventTimestamp: DateTimeFactory.utc(2026, 3, 12, 12),
         ),
       );
 

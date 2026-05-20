@@ -36,9 +36,8 @@ Future<int> _insertTrack(
         CurriculumTracksCompanion.insert(
           profileId: profileId,
           curriculumId: curriculumId,
-          trackType: trackType,
+          stateChangedAt: DateTime.utc(2026, 5, 1),
           activatedAt: DateTime.utc(2026, 5, 1),
-          isActive: const Value(true),
         ),
       );
 }

@@ -64,7 +64,7 @@ void main() {
         CurriculumTracksCompanion.insert(
           profileId: profileId,
           curriculumId: 'bavli',
-          trackType: 'personal',
+          stateChangedAt: now,
           activatedAt: now,
         ),
       );
@@ -1127,7 +1127,7 @@ void main() {
 
     test('Completions insert without profileId throws', () {
       expect(
-        () => db.into(db.completions).insert(const CompletionsCompanion()),
+        () => db.into(db.completionEvents).insert(const CompletionsCompanion()),
         throwsA(anything),
       );
     });
@@ -1157,7 +1157,7 @@ void main() {
 
     test('Streaks insert without profileId throws', () {
       expect(
-        () => db.into(db.streaks).insert(const StreaksCompanion()),
+        () => db.into(db.streakEvents).insert(const StreaksCompanion()),
         throwsA(anything),
       );
     });

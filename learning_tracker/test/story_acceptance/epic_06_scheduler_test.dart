@@ -38,7 +38,7 @@ Future<int> _insertTrack(UserDatabase db) async {
         CurriculumTracksCompanion.insert(
           profileId: 1,
           curriculumId: 'mishnayos',
-          trackType: 'personal',
+          stateChangedAt: DateTime.now(),
           activatedAt: DateTime.now(),
         ),
       );
@@ -156,7 +156,7 @@ void main() {
           stageId: learnId,
           trackType: 'personal',
           trackId: trackId,
-          completedAt: now.subtract(const Duration(days: 1)),
+          eventTimestamp: now.subtract(const Duration(days: 1)),
           points: const Value(10),
         ),
       );
@@ -295,7 +295,7 @@ void main() {
             stageId: learnId,
             trackType: 'personal',
             trackId: trackId,
-            completedAt: now.subtract(const Duration(days: 10)),
+            eventTimestamp: now.subtract(const Duration(days: 10)),
             points: const Value(10),
           ),
         );
@@ -310,7 +310,7 @@ void main() {
             stageId: learnId,
             trackType: 'personal',
             trackId: trackId,
-            completedAt: now,
+            eventTimestamp: now,
             points: const Value(10),
           ),
         );
@@ -372,7 +372,7 @@ void main() {
             stageId: learnId,
             trackType: 'personal',
             trackId: trackId,
-            completedAt: now,
+            eventTimestamp: now,
             points: const Value(10),
           ),
         );
@@ -414,7 +414,7 @@ void main() {
               stageId: learnId,
               trackType: 'personal',
               trackId: trackId,
-              completedAt: now,
+              eventTimestamp: now,
               points: const Value(10),
             ),
           );
@@ -823,7 +823,7 @@ void main() {
                 stageId: learnId,
                 trackType: 'personal',
                 trackId: trackId,
-                completedAt: date,
+                eventTimestamp: date,
                 points: const Value(10),
               ),
             );
@@ -846,7 +846,7 @@ void main() {
               stageId: learnId,
               trackType: 'personal',
               trackId: trackId,
-              completedAt: DateTime.utc(2026, 2, 1),
+              eventTimestamp: DateTime.utc(2026, 2, 1),
               points: const Value(10),
             ),
           );
@@ -949,7 +949,7 @@ void main() {
                 stageId: learnId,
                 trackType: 'personal',
                 trackId: trackId,
-                completedAt: sentinel, // bulk-prior sentinel
+                eventTimestamp: sentinel, // bulk-prior sentinel
                 points: const Value(10),
               ),
             );
@@ -1000,7 +1000,7 @@ void main() {
                 stageId: learnId,
                 trackType: 'personal',
                 trackId: trackId,
-                completedAt: sentinel,
+                eventTimestamp: sentinel,
                 points: const Value(10),
               ),
             );

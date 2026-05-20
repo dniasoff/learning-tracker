@@ -57,7 +57,7 @@ void main() {
             CurriculumTracksCompanion.insert(
               profileId: 1,
               curriculumId: 'mishnayos',
-              trackType: 'forwards',
+              stateChangedAt: now,
               activatedAt: now,
             ),
           );

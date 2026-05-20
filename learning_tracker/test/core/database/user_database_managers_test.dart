@@ -60,7 +60,7 @@ void main() {
         CurriculumTracksCompanion.insert(
           profileId: profileId,
           curriculumId: curriculum,
-          trackType: 'personal',
+          stateChangedAt: now,
           activatedAt: now,
         ),
       );
@@ -437,7 +437,7 @@ void main() {
       final trackId = await makeTrack(profileId);
 
       await db
-          .into(db.completions)
+          .into(db.completionEvents)
           .insert(
             CompletionsCompanion.insert(
               profileId: profileId,
@@ -736,7 +736,7 @@ void main() {
       final profileId = await makeProfile(accId);
 
       await db
-          .into(db.streaks)
+          .into(db.streakEvents)
           .insert(
             StreaksCompanion.insert(
               profileId: profileId,
@@ -781,7 +781,7 @@ void main() {
       final profileId = await makeProfile(accId);
 
       await db
-          .into(db.streaks)
+          .into(db.streakEvents)
           .insert(StreaksCompanion.insert(profileId: profileId));
 
       final rows = await db.managers.streaks

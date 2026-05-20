@@ -39,8 +39,7 @@ void main() {
             CurriculumTracksCompanion.insert(
               profileId: 1,
               curriculumId: 'mishnayos',
-              trackType: 'personal',
-              isActive: const Value(true),
+              stateChangedAt: DateTime.utc(2026, 1, 1),
               activatedAt: DateTime.utc(2026, 1, 1),
             ),
           );
@@ -64,8 +63,7 @@ void main() {
             CurriculumTracksCompanion.insert(
               profileId: 1,
               curriculumId: 'mishnayos',
-              trackType: 'personal',
-              isActive: const Value(true),
+              stateChangedAt: DateTime.utc(2026, 1, 1),
               activatedAt: DateTime.utc(2026, 1, 1),
             ),
           );
@@ -97,8 +95,7 @@ void main() {
             CurriculumTracksCompanion.insert(
               profileId: 1,
               curriculumId: 'mishnayos',
-              trackType: 'personal',
-              isActive: const Value(true),
+              stateChangedAt: DateTime.utc(2026, 1, 1),
               activatedAt: DateTime.utc(2026, 1, 1),
             ),
           );
@@ -142,7 +139,7 @@ void main() {
     });
 
     test('exports streak rows', () async {
-      await db.streakDao.upsertStreakByProfile(
+      await db.streakEventDao.upsertStreakByProfile(
         1,
         const StreaksCompanion(currentStreak: Value(5), maxStreak: Value(10)),
       );
@@ -206,8 +203,7 @@ void main() {
             CurriculumTracksCompanion.insert(
               profileId: 1,
               curriculumId: 'mishnayos',
-              trackType: 'personal',
-              isActive: const Value(true),
+              stateChangedAt: DateTime.utc(2026, 1, 1),
               activatedAt: DateTime.utc(2026, 1, 1),
             ),
           );
@@ -400,7 +396,7 @@ void main() {
 
       await service.importData(payload);
 
-      final streak = await db.streakDao.getStreakByProfile(1);
+      final streak = await db.streakEventDao.getStreakByProfile(1);
       expect(streak, isNotNull);
       expect(streak!.currentStreak, 7);
       expect(streak.maxStreak, 14);
@@ -421,8 +417,7 @@ void main() {
             CurriculumTracksCompanion.insert(
               profileId: 1,
               curriculumId: 'mishnayos',
-              trackType: 'personal',
-              isActive: const Value(true),
+              stateChangedAt: DateTime.utc(2026, 1, 1),
               activatedAt: DateTime.utc(2026, 1, 1),
             ),
           );

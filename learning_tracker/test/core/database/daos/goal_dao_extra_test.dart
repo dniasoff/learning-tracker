@@ -49,7 +49,7 @@ void main() {
           CurriculumTracksCompanion.insert(
             profileId: profileId,
             curriculumId: 'mishnayos',
-            trackType: 'personal',
+            stateChangedAt: DateTime.utc(2026, 1, 1),
             activatedAt: DateTime.utc(2026, 1, 1),
           ),
         );
@@ -107,7 +107,7 @@ void main() {
             CurriculumTracksCompanion.insert(
               profileId: 2,
               curriculumId: 'bavli',
-              trackType: 'personal',
+              stateChangedAt: DateTime.utc(2026, 1, 1),
               activatedAt: DateTime.utc(2026, 1, 1),
             ),
           );
@@ -155,7 +155,7 @@ void main() {
             CurriculumTracksCompanion.insert(
               profileId: profileId,
               curriculumId: 'bavli',
-              trackType: 'personal',
+              stateChangedAt: DateTime.utc(2026, 1, 1),
               activatedAt: DateTime.utc(2026, 1, 1),
             ),
           );
@@ -195,7 +195,7 @@ void main() {
             CurriculumTracksCompanion.insert(
               profileId: profileId,
               curriculumId: 'bavli',
-              trackType: 'personal',
+              stateChangedAt: DateTime.utc(2026, 1, 1),
               activatedAt: DateTime.utc(2026, 1, 1),
             ),
           );

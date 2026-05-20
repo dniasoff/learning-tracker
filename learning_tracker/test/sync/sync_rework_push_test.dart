@@ -119,9 +119,8 @@ Future<int> _seedTrack(UserDatabase db, {String curriculumId = 'mishnayos'}) =>
           CurriculumTracksCompanion.insert(
             profileId: 1,
             curriculumId: curriculumId,
-            trackType: 'personal',
+            stateChangedAt: DateTime.utc(2026, 1, 1),
             activatedAt: DateTime.utc(2026, 1, 1),
-            isActive: const Value(true),
           ),
         );
 

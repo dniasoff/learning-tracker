@@ -42,7 +42,7 @@ void main() {
           CurriculumTracksCompanion.insert(
             profileId: 1,
             curriculumId: _currId,
-            trackType: 'personal',
+            stateChangedAt: DateTime.now(),
             activatedAt: DateTime.now(),
           ),
         );

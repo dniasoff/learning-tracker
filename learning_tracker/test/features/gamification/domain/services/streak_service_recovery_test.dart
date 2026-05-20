@@ -27,7 +27,7 @@ void main() {
     int maxStreak = 10,
   }) async {
     await db
-        .into(db.streaks)
+        .into(db.streakEvents)
         .insert(
           StreaksCompanion.insert(
             profileId: profileId,

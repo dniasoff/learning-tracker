@@ -17,7 +17,7 @@ void main() {
           CurriculumTracksCompanion.insert(
             profileId: profileId,
             curriculumId: curriculumId,
-            trackType: 'personal',
+            stateChangedAt: DateTime.utc(2026, 1, 1),
             activatedAt: DateTime.utc(2026, 1, 1),
           ),
         );

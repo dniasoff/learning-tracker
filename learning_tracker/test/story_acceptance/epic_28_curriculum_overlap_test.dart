@@ -58,7 +58,7 @@ Future<int> _insertTrack(
         CurriculumTracksCompanion.insert(
           profileId: profileId,
           curriculumId: curriculumId,
-          trackType: 'personal',
+          stateChangedAt: now,
           activatedAt: now,
         ),
       );
@@ -83,7 +83,7 @@ Future<void> _insertCompletion(
       stageId: stageId,
       trackType: 'personal',
       trackId: trackId,
-      completedAt: DateTime.utc(2026, 1, 1),
+      eventTimestamp: DateTime.utc(2026, 1, 1),
       points: const Value(0),
     ),
   );

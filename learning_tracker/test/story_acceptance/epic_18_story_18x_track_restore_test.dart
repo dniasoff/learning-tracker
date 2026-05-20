@@ -96,7 +96,7 @@ void main() {
             trackType: trackType,
           );
           await db
-              .into(db.completions)
+              .into(db.completionEvents)
               .insert(
                 CompletionEventsCompanion.insert(
                   profileId: profileId,
@@ -105,13 +105,13 @@ void main() {
                   stageId: 1,
                   trackType: trackType.storageKey,
                   trackId: trackId,
-                  completedAt: DateTime.utc(2026, 5, 1),
+                  eventTimestamp: DateTime.utc(2026, 5, 1),
                 ),
               );
 
           // Verify completion exists
           final before = await (db.select(
-            db.completions,
+            db.completionEvents,
           )..where((t) => t.trackId.equals(trackId))).get();
           expect(before, hasLength(1));
 
@@ -120,7 +120,7 @@ void main() {
 
           // Completions must be gone
           final after = await (db.select(
-            db.completions,
+            db.completionEvents,
           )..where((t) => t.trackId.equals(trackId))).get();
           expect(after, isEmpty);
 

@@ -42,7 +42,7 @@ void main() {
           CurriculumTracksCompanion.insert(
             profileId: profileId,
             curriculumId: curriculum.storageKey,
-            trackType: type.storageKey,
+            stateChangedAt: DateTime.utc(2026, 1, 1),
             activatedAt: DateTime.utc(2026, 1, 1),
           ),
         );
@@ -62,8 +62,7 @@ void main() {
           CurriculumTracksCompanion.insert(
             profileId: profileId,
             curriculumId: curriculumId,
-            trackType: trackType,
-            isActive: Value(isActive),
+            stateChangedAt: activatedAt ?? DateTime.utc(2026, 1, 1),
             activatedAt: activatedAt ?? DateTime.utc(2026, 1, 1),
           ),
         );
@@ -80,9 +79,8 @@ void main() {
             CurriculumTracksCompanion.insert(
               profileId: 0,
               curriculumId: CurriculumId.bavli.storageKey,
-              trackType: 'weekend',
+              stateChangedAt: DateTime.utc(2026, 1, 1),
               activatedAt: DateTime.utc(2026, 1, 1),
-              isActive: const Value(true),
             ),
           );
 

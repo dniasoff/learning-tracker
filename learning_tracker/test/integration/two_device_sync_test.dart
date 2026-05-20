@@ -92,7 +92,7 @@ Future<Map<String, dynamic>> _insertTrack(
         CurriculumTracksCompanion.insert(
           profileId: profileId,
           curriculumId: curriculumId,
-          trackType: trackType,
+          stateChangedAt: activatedAt,
           activatedAt: activatedAt,
         ),
       );

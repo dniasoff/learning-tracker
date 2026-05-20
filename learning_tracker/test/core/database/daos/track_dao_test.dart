@@ -134,8 +134,7 @@ void main() {
             CurriculumTracksCompanion.insert(
               profileId: profileId,
               curriculumId: curriculumId,
-              trackType: trackType,
-              isActive: const Value(true),
+              stateChangedAt: DateTime.now().toUtc(),
               activatedAt: DateTime.now().toUtc(),
             ),
           );

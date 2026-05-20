@@ -37,7 +37,7 @@ void main() {
               CurriculumTracksCompanion.insert(
                 profileId: 1,
                 curriculumId: CurriculumId.mishnayos.storageKey,
-                trackType: TrackType.personal.storageKey,
+                stateChangedAt: DateTimeFactory.nowUtc(),
                 activatedAt: DateTimeFactory.nowUtc(),
               ),
             );
@@ -45,7 +45,7 @@ void main() {
         // Insert directly into the completions table (bypasses CompletionWriter
         // and completion_events) to simulate a legacy row that predates C1.
         await db
-            .into(db.completions)
+            .into(db.completionEvents)
             .insert(
               CompletionsCompanion.insert(
                 profileId: 1,
@@ -59,7 +59,7 @@ void main() {
               ),
             );
 
-        final rows = await db.select(db.completions).get();
+        final rows = await db.select(db.completionEvents).get();
         expect(rows, hasLength(1));
         expect(
           rows.first.derivedFromEvents,
@@ -84,7 +84,7 @@ void main() {
               CurriculumTracksCompanion.insert(
                 profileId: 1,
                 curriculumId: CurriculumId.mishnayos.storageKey,
-                trackType: TrackType.personal.storageKey,
+                stateChangedAt: DateTimeFactory.nowUtc(),
                 activatedAt: DateTimeFactory.nowUtc(),
               ),
             );
@@ -127,7 +127,7 @@ void main() {
               CurriculumTracksCompanion.insert(
                 profileId: 1,
                 curriculumId: CurriculumId.mishnayos.storageKey,
-                trackType: TrackType.personal.storageKey,
+                stateChangedAt: DateTimeFactory.nowUtc(),
                 activatedAt: DateTimeFactory.nowUtc(),
               ),
             );
@@ -173,7 +173,7 @@ void main() {
         addTearDown(db.close);
 
         // Trigger the first open (which runs migrations).
-        final rows = await db.select(db.completions).get();
+        final rows = await db.select(db.completionEvents).get();
         expect(rows, hasLength(2));
 
         final berakhot2a = rows.firstWhere(

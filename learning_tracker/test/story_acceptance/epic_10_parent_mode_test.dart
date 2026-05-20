@@ -74,7 +74,7 @@ Future<int> _insertTrack(UserDatabase db) async {
         CurriculumTracksCompanion.insert(
           profileId: 1,
           curriculumId: 'mishnayos',
-          trackType: 'personal',
+          stateChangedAt: DateTime.now(),
           activatedAt: DateTime.now(),
         ),
       );
@@ -361,7 +361,7 @@ void main() {
             stageId: (i % stageCount) + 1,
             trackType: 'personal',
             trackId: trackId,
-            completedAt: base.subtract(Duration(hours: i * 12)),
+            eventTimestamp: base.subtract(Duration(hours: i * 12)),
             points: Value(pointsPerCompletion),
           ),
         );
@@ -437,7 +437,7 @@ void main() {
               stageId: 1,
               trackType: 'personal',
               trackId: trackId,
-              completedAt: DateTime.now().toUtc(),
+              eventTimestamp: DateTime.now().toUtc(),
               points: const Value(10),
             ),
           );
@@ -534,7 +534,7 @@ void main() {
             stageId: 1,
             trackType: 'personal',
             trackId: trackId,
-            completedAt: now.subtract(const Duration(days: 10)),
+            eventTimestamp: now.subtract(const Duration(days: 10)),
             points: const Value(5),
           ),
         );
@@ -726,7 +726,7 @@ void main() {
           stageId: 1,
           trackType: 'personal',
           trackId: trackId,
-          completedAt: DateTime.now().toUtc(),
+          eventTimestamp: DateTime.now().toUtc(),
           points: const Value(10),
         ),
       );
@@ -773,7 +773,7 @@ void main() {
               CurriculumTracksCompanion.insert(
                 profileId: testProfileId,
                 curriculumId: CurriculumId.bavli.storageKey,
-                trackType: 'personal',
+                stateChangedAt: DateTime.now(),
                 activatedAt: DateTime.now(),
               ),
             );
@@ -895,7 +895,7 @@ void main() {
             stageId: 1,
             trackType: 'personal',
             trackId: trackId,
-            completedAt: DateTime.now().toUtc(),
+            eventTimestamp: DateTime.now().toUtc(),
             points: Value(points),
           ),
         );

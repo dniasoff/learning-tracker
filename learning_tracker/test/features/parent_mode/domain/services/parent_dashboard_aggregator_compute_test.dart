@@ -26,7 +26,7 @@ void main() {
           CurriculumTracksCompanion.insert(
             profileId: profileId,
             curriculumId: curriculumId,
-            trackType: 'personal',
+            stateChangedAt: DateTime.utc(2026, 1, 1),
             activatedAt: DateTime.utc(2026, 1, 1),
           ),
         );
@@ -117,7 +117,7 @@ void main() {
 
     test('returns streak from db', () async {
       await db
-          .into(db.streaks)
+          .into(db.streakEvents)
           .insert(
             StreaksCompanion.insert(
               profileId: profileId,

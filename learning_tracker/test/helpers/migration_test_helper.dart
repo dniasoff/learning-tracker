@@ -11,7 +11,7 @@
 /// addTearDown(db.close);
 /// // DB is now at v19 (all migrations ran).
 /// // Verify post-migration state:
-/// final completions = await db.select(db.completions).get();
+/// final completions = await db.select(db.completionEvents).get();
 /// ```
 library;
 

@@ -29,7 +29,7 @@ Future<int> _insertTrack(UserDatabase db) async {
         CurriculumTracksCompanion.insert(
           profileId: 1,
           curriculumId: 'mishnayos',
-          trackType: 'personal',
+          stateChangedAt: DateTime.now(),
           activatedAt: DateTime.now(),
         ),
       );
@@ -195,7 +195,7 @@ void main() {
           stageId: 1,
           trackType: 'review',
           trackId: trackId,
-          completedAt: DateTime.utc(2026, 3, 16, 10, 0, 0),
+          eventTimestamp: DateTime.utc(2026, 3, 16, 10, 0, 0),
         ),
       );
 

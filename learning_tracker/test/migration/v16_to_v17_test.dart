@@ -55,7 +55,7 @@ void main() {
             CurriculumTracksCompanion.insert(
               profileId: profileId,
               curriculumId: CurriculumId.mishnayos.storageKey,
-              trackType: TrackType.personal.storageKey,
+              stateChangedAt: DateTimeFactory.nowUtc(),
               activatedAt: DateTimeFactory.nowUtc(),
             ),
           );
@@ -101,7 +101,7 @@ void main() {
               CurriculumTracksCompanion.insert(
                 profileId: profileId,
                 curriculumId: CurriculumId.mishnayos.storageKey,
-                trackType: TrackType.personal.storageKey,
+                stateChangedAt: DateTimeFactory.nowUtc(),
                 activatedAt: DateTimeFactory.nowUtc(),
               ),
             );

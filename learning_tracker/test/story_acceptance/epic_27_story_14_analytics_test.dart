@@ -96,7 +96,7 @@ Future<int> _insertTrack(UserDatabase db, int profileId) async {
         CurriculumTracksCompanion.insert(
           profileId: profileId,
           curriculumId: 'mishnayos',
-          trackType: 'personal',
+          stateChangedAt: now,
           activatedAt: now,
         ),
       );

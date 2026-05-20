@@ -32,7 +32,7 @@ void main() {
           CurriculumTracksCompanion.insert(
             profileId: 0,
             curriculumId: 'test',
-            trackType: 'review',
+            stateChangedAt: DateTime.now(),
             activatedAt: DateTime.now(),
           ),
         );
@@ -65,7 +65,7 @@ void main() {
   group('StreakAlertService', () {
     test('alert fires when streak > 0 and no completions today', () async {
       // Set up a streak of 5
-      await db.streakDao.upsertStreak(
+      await db.streakEventDao.upsertStreak(
         StreaksCompanion.insert(
           profileId: 1,
           currentStreak: const Value(5),
@@ -88,7 +88,7 @@ void main() {
 
     test('alert does NOT fire when completions exist today', () async {
       // Set up a streak of 3
-      await db.streakDao.upsertStreak(
+      await db.streakEventDao.upsertStreak(
         StreaksCompanion.insert(
           profileId: 1,
           currentStreak: const Value(3),
@@ -125,7 +125,7 @@ void main() {
 
     test('alert does NOT fire when streak is 0', () async {
       // Set up a streak of 0
-      await db.streakDao.upsertStreak(
+      await db.streakEventDao.upsertStreak(
         StreaksCompanion.insert(
           profileId: 1,
           currentStreak: const Value(0),

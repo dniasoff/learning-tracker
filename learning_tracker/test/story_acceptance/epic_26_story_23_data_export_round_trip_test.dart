@@ -104,7 +104,7 @@ void main() {
             CurriculumTracksCompanion.insert(
               profileId: pid,
               curriculumId: 'mishnayos',
-              trackType: 'personal',
+              stateChangedAt: DateTime(2026, 1, 1),
               activatedAt: DateTime(2026, 1, 1),
             ),
           )
@@ -120,7 +120,7 @@ void main() {
           stageId: 1,
           trackType: 'personal',
           trackId: trackId,
-          completedAt: DateTime(2026, 3, 1),
+          eventTimestamp: DateTime(2026, 3, 1),
         ),
       );
 
@@ -137,7 +137,7 @@ void main() {
           );
 
       await db
-          .into(db.streaks)
+          .into(db.streakEvents)
           .insert(
             StreakEventsCompanion.insert(
               profileId: pid,
@@ -299,7 +299,7 @@ void main() {
               CurriculumTracksCompanion.insert(
                 profileId: acct1Id,
                 curriculumId: 'mishnayos',
-                trackType: 'personal',
+                stateChangedAt: DateTime(2026, 1, 5),
                 activatedAt: DateTime(2026, 1, 5),
               ),
             )
@@ -312,7 +312,7 @@ void main() {
               CurriculumTracksCompanion.insert(
                 profileId: acct2Id,
                 curriculumId: 'bavli',
-                trackType: 'personal',
+                stateChangedAt: DateTime(2026, 2, 10),
                 activatedAt: DateTime(2026, 2, 10),
               ),
             )
@@ -328,7 +328,7 @@ void main() {
             stageId: 1,
             trackType: 'personal',
             trackId: track1Id,
-            completedAt: DateTime(2026, 1, 10),
+            eventTimestamp: DateTime(2026, 1, 10),
             points: const Value(10),
           ),
         );
@@ -343,14 +343,14 @@ void main() {
             stageId: 1,
             trackType: 'personal',
             trackId: track2Id,
-            completedAt: DateTime(2026, 2, 15),
+            eventTimestamp: DateTime(2026, 2, 15),
             points: const Value(5),
           ),
         );
 
         // Streaks for both profiles
         await db
-            .into(db.streaks)
+            .into(db.streakEvents)
             .insert(
               StreakEventsCompanion.insert(
                 profileId: acct1Id,
@@ -361,7 +361,7 @@ void main() {
             );
 
         await db
-            .into(db.streaks)
+            .into(db.streakEvents)
             .insert(
               StreakEventsCompanion.insert(
                 profileId: acct2Id,
@@ -410,7 +410,7 @@ void main() {
               (await db.completionDao.internalGetAllCompletionsCrossProfile(
                 scope: CrossProfileScope.dataExport,
               )).length,
-          'streaks': (await db.select(db.streaks).get()).length,
+          'streaks': (await db.select(db.streakEvents).get()).length,
           'goals': (await db.goalDao.getAllGoals()).length,
           'bookmarks': (await db.bookmarkDao.getAllBookmarks()).length,
         };
@@ -443,9 +443,9 @@ void main() {
         // ── Wipe the DB ───────────────────────────────────────────
         await db.transaction(() async {
           await db.delete(db.streakEvents).go();
-          await db.delete(db.streaks).go();
+          await db.delete(db.streakEvents).go();
           await db.delete(db.completionEvents).go();
-          await db.delete(db.completions).go();
+          await db.delete(db.completionEvents).go();
           await db.delete(db.learningLedger).go();
           await db.delete(db.dailyPlans).go();
           await db.delete(db.trackLearningOrder).go();
@@ -499,7 +499,7 @@ void main() {
           reason: 'completions count must survive round-trip',
         );
         expect(
-          (await db.select(db.streaks).get()).length,
+          (await db.select(db.streakEvents).get()).length,
           equals(preCounts['streaks']),
           reason: 'streaks count must survive round-trip',
         );
@@ -516,7 +516,7 @@ void main() {
 
         // ── Verify profile isolation: each profile's data is scoped ──
         // Streaks: one per profile, with correct counts
-        final streakRows = await db.select(db.streaks).get();
+        final streakRows = await db.select(db.streakEvents).get();
         final streaksByProfile = {for (final s in streakRows) s.profileId: s};
 
         // Profile IDs are re-inserted with auto-increment from 1
@@ -610,7 +610,7 @@ void main() {
               CurriculumTracksCompanion.insert(
                 profileId: 1,
                 curriculumId: 'bavli',
-                trackType: 'programmed',
+                stateChangedAt: DateTime.utc(2026, 1, 1),
                 activatedAt: DateTime.utc(2026, 1, 1),
               ),
             );
@@ -682,9 +682,9 @@ void main() {
 
         await db.transaction(() async {
           await db.delete(db.completionEvents).go();
-          await db.delete(db.completions).go();
+          await db.delete(db.completionEvents).go();
           await db.delete(db.streakEvents).go();
-          await db.delete(db.streaks).go();
+          await db.delete(db.streakEvents).go();
           await db.delete(db.learningLedger).go();
           await db.delete(db.dailyPlans).go();
           await db.delete(db.trackLearningOrder).go();

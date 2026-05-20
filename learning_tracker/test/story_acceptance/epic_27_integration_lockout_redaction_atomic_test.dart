@@ -260,9 +260,8 @@ void main() {
               CurriculumTracksCompanion.insert(
                 profileId: 1,
                 curriculumId: 'mishnah_yomit',
-                trackType: 'personal',
+                stateChangedAt: DateTime.utc(2026, 5, 1),
                 activatedAt: DateTime.utc(2026, 5, 1),
-                isActive: const Value(true),
               ),
             );
       });
@@ -275,7 +274,7 @@ void main() {
         // advance — the contract that production code must mirror.
         return db.transaction(() async {
           await db
-              .into(db.completions)
+              .into(db.completionEvents)
               .insert(
                 CompletionEventsCompanion.insert(
                   profileId: 1,
@@ -284,7 +283,7 @@ void main() {
                   stageId: 1,
                   trackType: 'personal',
                   trackId: 1,
-                  completedAt: DateTime.utc(2026, 5, 13, 12),
+                  eventTimestamp: DateTime.utc(2026, 5, 13, 12),
                 ),
               );
           if (bookmarkAdvanceThrows) {
@@ -295,7 +294,7 @@ void main() {
       }
 
       Future<int> countCompletions() async {
-        final rows = await db.select(db.completions).get();
+        final rows = await db.select(db.completionEvents).get();
         return rows.length;
       }
 

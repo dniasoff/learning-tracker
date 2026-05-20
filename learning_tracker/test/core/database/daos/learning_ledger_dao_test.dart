@@ -29,7 +29,7 @@ void main() {
           CurriculumTracksCompanion.insert(
             profileId: 1,
             curriculumId: 'mishna',
-            trackType: 'personal',
+            stateChangedAt: now,
             activatedAt: now,
           ),
         );

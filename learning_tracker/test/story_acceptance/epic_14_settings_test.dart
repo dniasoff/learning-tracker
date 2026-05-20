@@ -36,7 +36,7 @@ Future<int> _insertTrack(UserDatabase db) async {
         CurriculumTracksCompanion.insert(
           profileId: 1,
           curriculumId: 'mishnayos',
-          trackType: 'personal',
+          stateChangedAt: DateTime.now(),
           activatedAt: DateTime.now(),
         ),
       );
@@ -170,7 +170,7 @@ void main() {
           stageId: 1,
           trackType: 'personal',
           trackId: trackId,
-          completedAt: DateTime(2026, 1, 15),
+          eventTimestamp: DateTime(2026, 1, 15),
           points: const Value(10),
         ),
       );
@@ -183,7 +183,7 @@ void main() {
           stageId: 2,
           trackType: 'personal',
           trackId: trackId,
-          completedAt: DateTime(2026, 1, 16),
+          eventTimestamp: DateTime(2026, 1, 16),
         ),
       );
 
@@ -232,7 +232,7 @@ void main() {
 
       // Streaks
       await db
-          .into(db.streaks)
+          .into(db.streakEvents)
           .insert(
             StreakEventsCompanion.insert(
               profileId: 0,
@@ -287,7 +287,7 @@ void main() {
             CurriculumTracksCompanion.insert(
               profileId: 1,
               curriculumId: 'mishna',
-              trackType: 'personal',
+              stateChangedAt: DateTime(2026, 1, 1),
               activatedAt: DateTime(2026, 1, 1),
             ),
           );
@@ -440,10 +440,10 @@ void main() {
         // Clear the database
         await db.transaction(() async {
           await db.delete(db.completionEvents).go(); // C1: canonical table
-          await db.delete(db.completions).go();
+          await db.delete(db.completionEvents).go();
           await db.delete(db.goals).go();
           await db.delete(db.stageDefinitions).go();
-          await db.delete(db.streaks).go();
+          await db.delete(db.streakEvents).go();
           await db.delete(db.pointConfigs).go();
           await db.delete(db.bookmarks).go();
           await db.delete(db.learningOrder).go();
@@ -565,10 +565,10 @@ void main() {
       // Clear all tables
       await db.transaction(() async {
         await db.delete(db.completionEvents).go(); // C1: canonical table
-        await db.delete(db.completions).go();
+        await db.delete(db.completionEvents).go();
         await db.delete(db.goals).go();
         await db.delete(db.stageDefinitions).go();
-        await db.delete(db.streaks).go();
+        await db.delete(db.streakEvents).go();
         await db.delete(db.pointConfigs).go();
         await db.delete(db.bookmarks).go();
         await db.delete(db.learningOrder).go();

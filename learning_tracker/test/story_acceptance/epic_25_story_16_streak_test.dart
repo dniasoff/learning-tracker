@@ -36,7 +36,7 @@ Future<int> _seedTrack(UserDatabase db, {int profileId = 1}) async {
         CurriculumTracksCompanion.insert(
           profileId: profileId,
           curriculumId: 'shas-bavli',
-          trackType: 'programmed',
+          stateChangedAt: DateTime.utc(2026, 5, 1),
           activatedAt: DateTime.utc(2026, 5, 1),
         ),
       );
@@ -63,7 +63,7 @@ Future<void> _seedCompletion(
       stageId: stageId,
       trackType: 'programmed',
       trackId: trackId,
-      completedAt: completedAt,
+      eventTimestamp: completedAt,
     ),
   );
 }

@@ -57,7 +57,7 @@ Future<int> _insertTrack(UserDatabase db) async {
         CurriculumTracksCompanion.insert(
           profileId: 1,
           curriculumId: 'mishnayos',
-          trackType: 'personal',
+          stateChangedAt: DateTime.now(),
           activatedAt: DateTime.now(),
         ),
       );
@@ -138,7 +138,7 @@ void main() {
               stageId: 1,
               trackType: 'personal',
               trackId: trackId,
-              completedAt: DateTime.now().toUtc(),
+              eventTimestamp: DateTime.now().toUtc(),
             ),
           );
           await seedCompletion(
@@ -150,7 +150,7 @@ void main() {
               stageId: 1,
               trackType: 'personal',
               trackId: trackId,
-              completedAt: DateTime.now().toUtc(),
+              eventTimestamp: DateTime.now().toUtc(),
             ),
           );
 
@@ -163,13 +163,13 @@ void main() {
 
           // Query by profile — each profile sees only its own
           final p1Completions = await (db.select(
-            db.completions,
+            db.completionEvents,
           )..where((t) => t.profileId.equals(p1.id))).get();
           expect(p1Completions.length, 1);
           expect(p1Completions.first.sefariaRef, 'Mishnah_Berakhot.1.1');
 
           final p2Completions = await (db.select(
-            db.completions,
+            db.completionEvents,
           )..where((t) => t.profileId.equals(p2.id))).get();
           expect(p2Completions.length, 1);
           expect(p2Completions.first.sefariaRef, 'Mishnah_Berakhot.1.2');
@@ -393,7 +393,7 @@ void main() {
                 stageId: 1,
                 trackType: 'personal',
                 trackId: trackId,
-                completedAt: DateTime.now().toUtc(),
+                eventTimestamp: DateTime.now().toUtc(),
               ),
             );
             await db.bookmarkDao.insertBookmark(
@@ -417,7 +417,7 @@ void main() {
             // Verify data exists
             expect(
               (await (db.select(
-                db.completions,
+                db.completionEvents,
               )..where((t) => t.profileId.equals(pid))).get()).length,
               1,
             );
@@ -434,7 +434,7 @@ void main() {
             // Verify all data deleted
             expect(
               (await (db.select(
-                db.completions,
+                db.completionEvents,
               )..where((t) => t.profileId.equals(pid))).get()).length,
               0,
             );
@@ -475,7 +475,7 @@ void main() {
               stageId: 1,
               trackType: 'personal',
               trackId: trackId,
-              completedAt: DateTime.now().toUtc(),
+              eventTimestamp: DateTime.now().toUtc(),
             ),
           );
           await seedCompletion(
@@ -487,7 +487,7 @@ void main() {
               stageId: 1,
               trackType: 'personal',
               trackId: trackId,
-              completedAt: DateTime.now().toUtc(),
+              eventTimestamp: DateTime.now().toUtc(),
             ),
           );
 
@@ -496,7 +496,7 @@ void main() {
 
           // p2 data survives
           final p2Completions = await (db.select(
-            db.completions,
+            db.completionEvents,
           )..where((t) => t.profileId.equals(p2.id))).get();
           expect(p2Completions.length, 1);
           expect(p2Completions.first.sefariaRef, 'Mishnah_Berakhot.1.2');
@@ -1016,7 +1016,7 @@ void main() {
               stageId: 1,
               trackType: 'personal',
               trackId: trackId,
-              completedAt: DateTime.now().toUtc(),
+              eventTimestamp: DateTime.now().toUtc(),
             ),
           );
 
@@ -1026,7 +1026,7 @@ void main() {
           expect(fetched, isNull);
 
           final completions = await (db.select(
-            db.completions,
+            db.completionEvents,
           )..where((t) => t.profileId.equals(profile.id))).get();
           expect(completions, isEmpty);
         });
@@ -1118,7 +1118,7 @@ void main() {
                 stageId: 1,
                 trackType: 'personal',
                 trackId: trackId,
-                completedAt: DateTime.now().toUtc(),
+                eventTimestamp: DateTime.now().toUtc(),
               ),
             );
             await seedCompletion(
@@ -1130,7 +1130,7 @@ void main() {
                 stageId: 1,
                 trackType: 'personal',
                 trackId: trackId,
-                completedAt: DateTime.now().toUtc(),
+                eventTimestamp: DateTime.now().toUtc(),
               ),
             );
 
@@ -1168,7 +1168,7 @@ void main() {
               stageId: 1,
               trackType: 'personal',
               trackId: trackId,
-              completedAt: DateTime.now().toUtc(),
+              eventTimestamp: DateTime.now().toUtc(),
             ),
           );
           await seedCompletion(
@@ -1180,7 +1180,7 @@ void main() {
               stageId: 1,
               trackType: 'personal',
               trackId: trackId,
-              completedAt: DateTime.now().toUtc(),
+              eventTimestamp: DateTime.now().toUtc(),
             ),
           );
 
@@ -1366,7 +1366,7 @@ void main() {
                 stageId: 1,
                 trackType: 'personal',
                 trackId: trackId,
-                completedAt: DateTime.now().toUtc(),
+                eventTimestamp: DateTime.now().toUtc(),
               ),
             );
             await seedCompletion(
@@ -1378,7 +1378,7 @@ void main() {
                 stageId: 1,
                 trackType: 'personal',
                 trackId: trackId,
-                completedAt: DateTime.now().toUtc(),
+                eventTimestamp: DateTime.now().toUtc(),
               ),
             );
 
@@ -1421,7 +1421,7 @@ void main() {
                 stageId: 1,
                 trackType: 'personal',
                 trackId: trackId,
-                completedAt: DateTime.now().toUtc(),
+                eventTimestamp: DateTime.now().toUtc(),
               ),
             );
           }
@@ -1436,7 +1436,7 @@ void main() {
               stageId: 1,
               trackType: 'personal',
               trackId: trackId,
-              completedAt: DateTime.now().toUtc(),
+              eventTimestamp: DateTime.now().toUtc(),
             ),
           );
 
@@ -1499,7 +1499,7 @@ void main() {
               stageId: 1,
               trackType: 'personal',
               trackId: trackId,
-              completedAt: DateTime.now().toUtc(),
+              eventTimestamp: DateTime.now().toUtc(),
               points: const Value(10),
             ),
           );
@@ -1514,7 +1514,7 @@ void main() {
               stageId: 1,
               trackType: 'personal',
               trackId: trackId,
-              completedAt: DateTime.now().toUtc(),
+              eventTimestamp: DateTime.now().toUtc(),
               points: const Value(5),
             ),
           );
@@ -1710,7 +1710,7 @@ void main() {
               stageId: 1,
               trackType: 'personal',
               trackId: trackId,
-              completedAt: now.subtract(const Duration(days: 3)),
+              eventTimestamp: now.subtract(const Duration(days: 3)),
               points: const Value(10),
             ),
           );
@@ -1773,7 +1773,7 @@ void main() {
               stageId: 1,
               trackType: 'personal',
               trackId: trackId,
-              completedAt: now.subtract(const Duration(days: 3)),
+              eventTimestamp: now.subtract(const Duration(days: 3)),
               points: const Value(10),
             ),
           );
@@ -1834,7 +1834,7 @@ void main() {
               stageId: 1,
               trackType: 'personal',
               trackId: trackId,
-              completedAt: now.subtract(Duration(days: 10 - i)),
+              eventTimestamp: now.subtract(Duration(days: 10 - i)),
               points: const Value(10),
             ),
           );
@@ -1900,7 +1900,7 @@ void main() {
                 stageId: 1,
                 trackType: 'personal',
                 trackId: trackId,
-                completedAt: now.subtract(Duration(days: 5 - i)),
+                eventTimestamp: now.subtract(Duration(days: 5 - i)),
                 points: const Value(10),
               ),
             );
@@ -1915,7 +1915,7 @@ void main() {
               stageId: 2,
               trackType: 'personal',
               trackId: trackId,
-              completedAt: now.subtract(const Duration(days: 1)),
+              eventTimestamp: now.subtract(const Duration(days: 1)),
               points: const Value(5),
             ),
           );
@@ -2683,7 +2683,7 @@ void main() {
               stageId: stagesBefore.first.id,
               trackType: 'default',
               trackId: trackId,
-              completedAt: DateTime.now(),
+              eventTimestamp: DateTime.now(),
             ),
           );
 

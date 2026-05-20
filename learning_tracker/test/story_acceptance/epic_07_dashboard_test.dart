@@ -58,7 +58,7 @@ Future<int> _insertTrack(UserDatabase db) async {
         CurriculumTracksCompanion.insert(
           profileId: 1,
           curriculumId: 'mishnayos',
-          trackType: 'personal',
+          stateChangedAt: DateTime.now(),
           activatedAt: DateTime.now(),
         ),
       );
@@ -289,7 +289,7 @@ void main() {
           stageId: 1,
           trackType: 'personal',
           trackId: trackId,
-          completedAt: DateTime.utc(2026, 3, 16),
+          eventTimestamp: DateTime.utc(2026, 3, 16),
           points: const Value(10),
         ),
       );
@@ -302,7 +302,7 @@ void main() {
           stageId: 1,
           trackType: 'personal',
           trackId: trackId,
-          completedAt: DateTime.utc(2026, 3, 16),
+          eventTimestamp: DateTime.utc(2026, 3, 16),
           points: const Value(5),
         ),
       );
@@ -315,7 +315,7 @@ void main() {
           stageId: 2,
           trackType: 'personal',
           trackId: trackId,
-          completedAt: DateTime.utc(2026, 3, 16),
+          eventTimestamp: DateTime.utc(2026, 3, 16),
           points: const Value(3),
         ),
       );
@@ -385,7 +385,7 @@ void main() {
             stageId: 1,
             trackType: 'personal',
             trackId: trackId,
-            completedAt: DateTime.utc(2026, 3, 15, 10, 0),
+            eventTimestamp: DateTime.utc(2026, 3, 15, 10, 0),
           ),
         );
         await seedCompletion(
@@ -397,7 +397,7 @@ void main() {
             stageId: 1,
             trackType: 'personal',
             trackId: trackId,
-            completedAt: DateTime.utc(2026, 3, 16, 14, 30),
+            eventTimestamp: DateTime.utc(2026, 3, 16, 14, 30),
           ),
         );
 
@@ -631,7 +631,7 @@ void main() {
           stageId: stageId,
           trackType: trackType,
           trackId: trackId,
-          completedAt: DateTime.utc(2026, 3, 15),
+          eventTimestamp: DateTime.utc(2026, 3, 15),
         ),
       );
       return (await db.completionDao.getCompletionById(id))!;
@@ -876,7 +876,7 @@ void main() {
             stageId: 1,
             trackType: 'personal',
             trackId: trackId,
-            completedAt: DateTime.utc(2026, 3, 16 - i),
+            eventTimestamp: DateTime.utc(2026, 3, 16 - i),
           ),
         );
       }
@@ -952,7 +952,7 @@ void main() {
           stageId: 1,
           trackType: 'personal',
           trackId: trackId,
-          completedAt: completedAt,
+          eventTimestamp: completedAt,
           points: Value(points),
         ),
       );

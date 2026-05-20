@@ -106,7 +106,7 @@ void main() {
         addTearDown(db.close);
 
         final row = await (db.select(
-          db.streaks,
+          db.streakEvents,
         )..where((t) => t.profileId.equals(1))).getSingleOrNull();
 
         expect(
@@ -147,7 +147,7 @@ void main() {
               stageId: 1,
               trackType: TrackType.personal.storageKey,
               trackId: originalId,
-              completedAt: DateTime.utc(2026, 5, 1),
+              eventTimestamp: DateTime.utc(2026, 5, 1),
             ),
           );
         }
@@ -220,8 +220,7 @@ void main() {
                 CurriculumTracksCompanion.insert(
                   profileId: 1,
                   curriculumId: CurriculumId.mishnayos.storageKey,
-                  trackType: TrackType.personal.storageKey,
-                  isActive: const Value(true),
+                  stateChangedAt: originalActivatedAt,
                   activatedAt: originalActivatedAt,
                 ),
               );
@@ -279,8 +278,7 @@ void main() {
                 CurriculumTracksCompanion.insert(
                   profileId: 1,
                   curriculumId: CurriculumId.mishnayos.storageKey,
-                  trackType: TrackType.personal.storageKey,
-                  isActive: const Value(true),
+                  stateChangedAt: DateTimeFactory.nowUtc(),
                   activatedAt: DateTimeFactory.nowUtc(),
                 ),
               );
@@ -296,7 +294,7 @@ void main() {
               stageId: 1,
               trackType: TrackType.personal.storageKey,
               trackId: trackId,
-              completedAt: DateTime.utc(2026, 5, 1),
+              eventTimestamp: DateTime.utc(2026, 5, 1),
             ),
           );
           await seedCompletion(
@@ -308,7 +306,7 @@ void main() {
               stageId: 2,
               trackType: TrackType.personal.storageKey,
               trackId: trackId,
-              completedAt: DateTime.utc(2026, 5, 2),
+              eventTimestamp: DateTime.utc(2026, 5, 2),
             ),
           );
 

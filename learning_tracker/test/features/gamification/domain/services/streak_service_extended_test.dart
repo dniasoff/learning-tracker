@@ -31,7 +31,7 @@ void main() {
     DateTime? lastCompletion,
     DateTime? graceUsedDate,
   }) async {
-    await db.streakDao.upsertStreakByProfile(
+    await db.streakEventDao.upsertStreakByProfile(
       profileId,
       StreaksCompanion(
         currentStreak: Value(current),

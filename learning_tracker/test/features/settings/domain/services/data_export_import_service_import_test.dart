@@ -198,7 +198,7 @@ void main() {
             CurriculumTracksCompanion.insert(
               profileId: 1,
               curriculumId: 'bavli',
-              trackType: 'personal',
+              stateChangedAt: DateTime.utc(2026, 1, 1),
               activatedAt: DateTime.utc(2026, 1, 1),
             ),
           );
@@ -450,7 +450,7 @@ void main() {
 
       await service.importData(jsonEncode(payload));
 
-      final completions = await db.select(db.completions).get();
+      final completions = await db.select(db.completionEvents).get();
       expect(completions, hasLength(1));
       expect(completions.first.sefariaRef, 'Berakhot.2a');
       expect(completions.first.points, 5);
@@ -664,7 +664,7 @@ void main() {
 
       await service.importData(jsonEncode(payload));
 
-      final streaks = await db.select(db.streaks).get();
+      final streaks = await db.select(db.streakEvents).get();
       expect(streaks, hasLength(1));
       expect(streaks.first.currentStreak, 7);
       expect(streaks.first.maxStreak, 14);
@@ -678,7 +678,7 @@ void main() {
 
       await service.importData(jsonEncode(payload));
 
-      final streaks = await db.select(db.streaks).get();
+      final streaks = await db.select(db.streakEvents).get();
       expect(streaks.first.graceUsedDate, isNotNull);
     });
   });
@@ -731,7 +731,7 @@ void main() {
             CurriculumTracksCompanion.insert(
               profileId: profileId,
               curriculumId: 'bavli',
-              trackType: 'personal',
+              stateChangedAt: now,
               activatedAt: now,
             ),
           );
@@ -790,7 +790,7 @@ void main() {
 
       // Insert streak.
       await db
-          .into(db.streaks)
+          .into(db.streakEvents)
           .insert(StreaksCompanion.insert(profileId: profileId));
 
       // Insert streak event.
@@ -853,7 +853,7 @@ void main() {
       expect(await db.select(db.stageDefinitions).get(), hasLength(1));
       expect(await db.select(db.pointConfigs).get(), hasLength(1));
       expect(await db.select(db.completionEvents).get(), hasLength(1));
-      expect(await db.select(db.streaks).get(), hasLength(1));
+      expect(await db.select(db.streakEvents).get(), hasLength(1));
       expect(await db.select(db.streakEvents).get(), hasLength(1));
       expect(await db.select(db.bookmarks).get(), hasLength(1));
       expect(await db.select(db.learningOrder).get(), hasLength(1));
@@ -872,7 +872,7 @@ void main() {
 
       expect(await db.select(db.accounts).get(), hasLength(1));
       expect(await db.select(db.curriculumTracks).get(), hasLength(1));
-      expect(await db.select(db.streaks).get(), hasLength(1));
+      expect(await db.select(db.streakEvents).get(), hasLength(1));
     });
   });
 
@@ -924,7 +924,7 @@ void main() {
             CurriculumTracksCompanion.insert(
               profileId: 1,
               curriculumId: 'bavli',
-              trackType: 'personal',
+              stateChangedAt: DateTime.utc(2026, 1, 1),
               activatedAt: DateTime.utc(2026, 1, 1),
             ),
           );

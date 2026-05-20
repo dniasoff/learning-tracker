@@ -40,8 +40,7 @@ void main() {
         CurriculumTracksCompanion.insert(
           profileId: profileId,
           curriculumId: curriculumId,
-          trackType: 'personal',
-          isActive: const Value(true),
+          stateChangedAt: DateTime.utc(2026, 1, 1),
           activatedAt: DateTime.utc(2026, 1, 1),
         ),
       );

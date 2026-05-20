@@ -60,7 +60,7 @@ void main() {
         CurriculumTracksCompanion.insert(
           profileId: profileId,
           curriculumId: curriculumId,
-          trackType: 'personal',
+          stateChangedAt: now,
           activatedAt: now,
         ),
       );
@@ -427,7 +427,7 @@ void main() {
   group('Completion DataClass', () {
     Future<Completion> getCompletion(int id) async {
       final rows = await (db.select(
-        db.completions,
+        db.completionEvents,
       )..where((t) => t.id.equals(id))).get();
       return rows.first;
     }
@@ -438,7 +438,7 @@ void main() {
       String ref = 'Berakhot 2a',
       int stageId = 1,
     }) => db
-        .into(db.completions)
+        .into(db.completionEvents)
         .insert(
           CompletionsCompanion.insert(
             profileId: profileId,
@@ -927,7 +927,7 @@ void main() {
   group('Streak DataClass', () {
     Future<Streak> getStreak(int id) async {
       final rows = await (db.select(
-        db.streaks,
+        db.streakEvents,
       )..where((t) => t.id.equals(id))).get();
       return rows.first;
     }
@@ -937,7 +937,7 @@ void main() {
       final profileId = await insertProfile(accId);
 
       final strId = await db
-          .into(db.streaks)
+          .into(db.streakEvents)
           .insert(
             StreaksCompanion.insert(
               profileId: profileId,
@@ -962,7 +962,7 @@ void main() {
       final profileId = await insertProfile(accId);
 
       final strId = await db
-          .into(db.streaks)
+          .into(db.streakEvents)
           .insert(
             StreaksCompanion.insert(
               profileId: profileId,
@@ -990,7 +990,7 @@ void main() {
       final profileId = await insertProfile(accId);
 
       final strId = await db
-          .into(db.streaks)
+          .into(db.streakEvents)
           .insert(
             StreaksCompanion.insert(
               profileId: profileId,
@@ -1016,7 +1016,7 @@ void main() {
       final profileId = await insertProfile(accId);
 
       final strId = await db
-          .into(db.streaks)
+          .into(db.streakEvents)
           .insert(
             StreaksCompanion.insert(
               profileId: profileId,
@@ -1037,7 +1037,7 @@ void main() {
       final profileId = await insertProfile(accId);
 
       final strId = await db
-          .into(db.streaks)
+          .into(db.streakEvents)
           .insert(
             StreaksCompanion.insert(
               profileId: profileId,
@@ -1728,7 +1728,7 @@ void main() {
       final trackId = await insertTrack(profileId);
 
       await db
-          .into(db.completions)
+          .into(db.completionEvents)
           .insert(
             CompletionsCompanion.insert(
               profileId: profileId,
@@ -1753,7 +1753,7 @@ void main() {
       final profileId = await insertProfile(accId);
 
       await db
-          .into(db.streaks)
+          .into(db.streakEvents)
           .insert(
             StreaksCompanion.insert(
               profileId: profileId,

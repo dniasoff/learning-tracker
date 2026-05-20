@@ -100,7 +100,7 @@ void main() {
             CurriculumTracksCompanion.insert(
               profileId: profileId,
               curriculumId: CurriculumId.mishnayos.storageKey,
-              trackType: 'personal',
+              stateChangedAt: now,
               activatedAt: now,
             ),
           );
@@ -132,7 +132,7 @@ void main() {
               stageId: 1,
               trackType: 'personal',
               trackId: trackId,
-              completedAt: _kRealDate,
+              eventTimestamp: _kRealDate,
             ),
           );
         }
@@ -149,7 +149,7 @@ void main() {
               stageId: 1,
               trackType: 'personal',
               trackId: trackId,
-              completedAt: _kSentinel,
+              eventTimestamp: _kSentinel,
             ),
           );
         }
@@ -193,7 +193,7 @@ void main() {
               stageId: 1,
               trackType: 'personal',
               trackId: trackId,
-              completedAt: _kSentinel,
+              eventTimestamp: _kSentinel,
             ),
           );
         }
@@ -241,7 +241,7 @@ void main() {
             CurriculumTracksCompanion.insert(
               profileId: profileId,
               curriculumId: CurriculumId.mishnayos.storageKey,
-              trackType: 'personal',
+              stateChangedAt: now,
               activatedAt: now,
             ),
           );
@@ -270,7 +270,7 @@ void main() {
             stageId: 1,
             trackType: 'personal',
             trackId: trackId,
-            completedAt: _kRealDate,
+            eventTimestamp: _kRealDate,
           ),
         );
       }
@@ -286,7 +286,7 @@ void main() {
             stageId: 1,
             trackType: 'personal',
             trackId: trackId,
-            completedAt: _kSentinel,
+            eventTimestamp: _kSentinel,
           ),
         );
       }
@@ -340,7 +340,7 @@ void main() {
             CurriculumTracksCompanion.insert(
               profileId: profileId,
               curriculumId: CurriculumId.mishnayos.storageKey,
-              trackType: 'personal',
+              stateChangedAt: now,
               activatedAt: now,
             ),
           );
@@ -371,7 +371,7 @@ void main() {
             stageId: 1,
             trackType: 'personal',
             trackId: trackId,
-            completedAt: _kRealDate,
+            eventTimestamp: _kRealDate,
           ),
         );
       }
@@ -386,7 +386,7 @@ void main() {
           stageId: 1,
           trackType: 'personal',
           trackId: trackId,
-          completedAt: _kSentinel,
+          eventTimestamp: _kSentinel,
         ),
       );
 

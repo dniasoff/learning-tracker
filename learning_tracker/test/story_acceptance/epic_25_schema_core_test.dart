@@ -468,12 +468,12 @@ void main() {
             await db.transaction(() async {
               await db.outboxDao.insertOutboxRow(_completionRow());
               await db
-                  .into(db.streaks)
+                  .into(db.streakEvents)
                   .insert(StreakEventsCompanion.insert(profileId: 1));
             });
 
             final outboxRows = await db.select(db.outbox).get();
-            final streakRows = await db.select(db.streaks).get();
+            final streakRows = await db.select(db.streakEvents).get();
             expect(outboxRows, hasLength(1));
             expect(streakRows, hasLength(1));
           },
@@ -1897,7 +1897,7 @@ void main() {
               CurriculumTracksCompanion.insert(
                 profileId: 1,
                 curriculumId: 'mishnayos',
-                trackType: 'personal',
+                stateChangedAt: DateTime.utc(2026, 1, 1),
                 activatedAt: DateTime.utc(2026, 1, 1),
               ),
             );
@@ -1921,7 +1921,7 @@ void main() {
             stageId: 1,
             trackType: 'forwards',
             trackId: 1,
-            completedAt: DateTime.utc(2026, 5, 13),
+            eventTimestamp: DateTime.utc(2026, 5, 13),
           ),
         );
         await seedCompletion(
@@ -1933,7 +1933,7 @@ void main() {
             stageId: 1,
             trackType: 'forwards',
             trackId: 1,
-            completedAt: DateTime.utc(2026, 5, 13),
+            eventTimestamp: DateTime.utc(2026, 5, 13),
           ),
         );
 

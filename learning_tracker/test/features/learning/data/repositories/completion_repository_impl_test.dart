@@ -54,7 +54,7 @@ void main() {
           CurriculumTracksCompanion.insert(
             profileId: learnerId,
             curriculumId: 'mishnayos',
-            trackType: 'personal',
+            stateChangedAt: now,
             activatedAt: now,
           ),
         );

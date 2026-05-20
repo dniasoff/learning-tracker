@@ -135,7 +135,7 @@ Future<({int profileId, int trackId})> _seedProfileAndTrack(
         CurriculumTracksCompanion.insert(
           profileId: profileId,
           curriculumId: 'mishnayos',
-          trackType: 'personal',
+          stateChangedAt: now,
           activatedAt: now,
         ),
       );
@@ -724,7 +724,7 @@ void main() {
               CurriculumTracksCompanion.insert(
                 profileId: otherProfileId,
                 curriculumId: 'mishnayos',
-                trackType: 'personal',
+                stateChangedAt: now,
                 activatedAt: now,
               ),
             );
@@ -808,7 +808,7 @@ void main() {
           CurriculumTracksCompanion.insert(
             profileId: pid,
             curriculumId: curriculumId,
-            trackType: 'personal',
+            stateChangedAt: DateTimeFactory.nowUtc(),
             activatedAt: DateTimeFactory.nowUtc(),
           ),
         );

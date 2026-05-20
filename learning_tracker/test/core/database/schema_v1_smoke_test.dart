@@ -110,7 +110,7 @@ void main() {
             CurriculumTracksCompanion.insert(
               profileId: 1,
               curriculumId: 'bavli',
-              trackType: 'personal',
+              stateChangedAt: DateTime.now().toUtc(),
               activatedAt: DateTime.now().toUtc(),
             ),
           );
@@ -142,7 +142,7 @@ void main() {
             CurriculumTracksCompanion.insert(
               profileId: 1,
               curriculumId: 'bavli',
-              trackType: 'personal',
+              stateChangedAt: DateTime.now().toUtc(),
               activatedAt: DateTime.now().toUtc(),
             ),
           );
@@ -176,7 +176,7 @@ void main() {
             CurriculumTracksCompanion.insert(
               profileId: 1,
               curriculumId: 'bavli',
-              trackType: 'personal',
+              stateChangedAt: DateTime.now().toUtc(),
               activatedAt: DateTime.now().toUtc(),
             ),
           );
@@ -204,7 +204,7 @@ void main() {
             CurriculumTracksCompanion.insert(
               profileId: 1,
               curriculumId: 'bavli',
-              trackType: 'personal',
+              stateChangedAt: DateTime.now().toUtc(),
               activatedAt: DateTime.now().toUtc(),
             ),
           );
@@ -234,7 +234,7 @@ void main() {
             CurriculumTracksCompanion.insert(
               profileId: 7,
               curriculumId: 'mishnayos',
-              trackType: 'personal',
+              stateChangedAt: DateTime.now().toUtc(),
               activatedAt: DateTime.now().toUtc(),
             ),
           );
@@ -250,9 +250,9 @@ void main() {
     // -------------------------------------------------------------------------
 
     test('streaks.profileId is required (no default)', () async {
-      await db.into(db.streaks).insert(StreaksCompanion.insert(profileId: 5));
+      await db.into(db.streakEvents).insert(StreaksCompanion.insert(profileId: 5));
       final row = await (db.select(
-        db.streaks,
+        db.streakEvents,
       )..where((t) => t.profileId.equals(5))).getSingleOrNull();
       expect(row, isNotNull);
       expect(row!.profileId, equals(5));

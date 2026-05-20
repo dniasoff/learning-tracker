@@ -163,8 +163,7 @@ void main() {
               CurriculumTracksCompanion.insert(
                 profileId: 1,
                 curriculumId: CurriculumId.bavli.storageKey,
-                trackType: TrackType.personal.storageKey,
-                isActive: const Value(true),
+                stateChangedAt: anchor,
                 activatedAt: anchor,
               ),
             );

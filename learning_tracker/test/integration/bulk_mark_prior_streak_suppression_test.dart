@@ -42,7 +42,7 @@ Future<int> _seedProfileAndTrack(UserDatabase db) async {
         CurriculumTracksCompanion.insert(
           profileId: profileRow.id,
           curriculumId: 'mishnayos',
-          trackType: 'personal',
+          stateChangedAt: now,
           activatedAt: now,
         ),
       );

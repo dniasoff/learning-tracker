@@ -84,7 +84,7 @@ void main() {
             CurriculumTracksCompanion.insert(
               profileId: profileId,
               curriculumId: curriculum.storageKey,
-              trackType: 'personal',
+              stateChangedAt: DateTime.utc(2026, 5, 17),
               activatedAt: DateTime.utc(2026, 5, 17),
             ),
           );
@@ -123,7 +123,7 @@ void main() {
             stageId: stageDefinitionId,
             trackType: 'personal',
             trackId: trackId,
-            completedAt: sentinel,
+            eventTimestamp: sentinel,
             points: const Value(0),
           ),
         );
@@ -179,7 +179,7 @@ void main() {
           stageId: stageDefinitionId,
           trackType: 'personal',
           trackId: trackId,
-          completedAt: sentinel,
+          eventTimestamp: sentinel,
           points: const Value(0),
         ),
       );
@@ -225,7 +225,7 @@ void main() {
             stageId: stageDefinitionId,
             trackType: 'personal',
             trackId: trackId,
-            completedAt: genuineDate,
+            eventTimestamp: genuineDate,
             points: const Value(10),
           ),
         );
@@ -286,7 +286,7 @@ void main() {
             stageId: sentinelStageId,
             trackType: 'personal',
             trackId: trackId,
-            completedAt: sentinel,
+            eventTimestamp: sentinel,
             points: const Value(0),
           ),
         );
@@ -299,7 +299,7 @@ void main() {
             stageId: stageDefinitionId,
             trackType: 'personal',
             trackId: trackId,
-            completedAt: genuineDate,
+            eventTimestamp: genuineDate,
             points: const Value(10),
           ),
         );

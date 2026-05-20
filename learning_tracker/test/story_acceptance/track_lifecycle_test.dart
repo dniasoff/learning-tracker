@@ -45,7 +45,7 @@ Future<void> _addCompletion(
     stageId: stageId,
     trackType: TrackType.personal.storageKey,
     trackId: trackId,
-    completedAt: completedAt ?? DateTimeFactory.nowUtc(),
+    eventTimestamp: completedAt ?? DateTimeFactory.nowUtc(),
   ),
 );
 
@@ -268,8 +268,7 @@ void main() {
               CurriculumTracksCompanion.insert(
                 profileId: profileId,
                 curriculumId: CurriculumId.mishnayos.storageKey,
-                trackType: TrackType.personal.storageKey,
-                isActive: const Value(true),
+                stateChangedAt: originalActivatedAt,
                 activatedAt: originalActivatedAt,
               ),
             );
@@ -365,8 +364,7 @@ void main() {
               CurriculumTracksCompanion.insert(
                 profileId: profileId,
                 curriculumId: CurriculumId.mishnayos.storageKey,
-                trackType: TrackType.personal.storageKey,
-                isActive: const Value(true),
+                stateChangedAt: threeDaysAgo,
                 activatedAt: threeDaysAgo,
               ),
             );
@@ -519,8 +517,7 @@ void main() {
                 CurriculumTracksCompanion.insert(
                   profileId: profileId,
                   curriculumId: CurriculumId.mishnayos.storageKey,
-                  trackType: TrackType.personal.storageKey,
-                  isActive: const Value(true),
+                  stateChangedAt: today,
                   activatedAt: today,
                 ),
               );
@@ -544,8 +541,7 @@ void main() {
                 CurriculumTracksCompanion.insert(
                   profileId: profileId,
                   curriculumId: CurriculumId.mishnayos.storageKey,
-                  trackType: TrackType.personal.storageKey,
-                  isActive: const Value(true),
+                  stateChangedAt: yesterday,
                   activatedAt: yesterday,
                 ),
               );
