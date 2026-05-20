@@ -462,7 +462,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get addAnotherLearner => 'Add Another Learner';
 
   @override
+  String get addAnotherTrack => 'Add Another Track';
+
+  @override
   String get startLearning => 'Start Learning';
+
+  @override
+  String get allSet => 'All set!';
+
+  @override
+  String get addYourFirstTrack => 'Add Your First Track';
+
+  @override
+  String get addTrackButton => 'ADD TRACK';
 
   @override
   String get language => 'Language';
@@ -1957,6 +1969,34 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get controlledByParent => 'Controlled by parent';
+
+  @override
+  String get sacredTimeLockGoodShabbos => 'Good Shabbos';
+
+  @override
+  String get sacredTimeLockShabbosSubtitle => 'The app is closed for Shabbos.';
+
+  @override
+  String get sacredTimeLockGoodYomTov => 'Good Yom Tov';
+
+  @override
+  String get sacredTimeLockYomTovSubtitle => 'The app is closed for Yom Tov.';
+
+  @override
+  String get sacredTimeLockShabbosYomTovGreeting =>
+      'Good Shabbos & Good Yom Tov';
+
+  @override
+  String get sacredTimeLockShabbosYomTovSubtitle =>
+      'The app is closed for Shabbos and Yom Tov.';
+
+  @override
+  String get sacredTimeLockYomKippurGreeting =>
+      'Have an easy and meaningful fast';
+
+  @override
+  String get sacredTimeLockYomKippurSubtitle =>
+      'The app is closed for Yom Kippur.';
 
   @override
   String get sacredTimeDetect => 'Detect';

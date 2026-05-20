@@ -56,7 +56,7 @@ class _TrackManagementHubScreenState
         centerTitle: false,
         automaticallyImplyLeading: false,
         title: Text(
-          'Manage Tracks',
+          AppLocalizations.of(context)!.manageTracks,
           style: Theme.of(context).textTheme.headlineSmall?.copyWith(
             fontWeight: FontWeight.w800,
             color: AppTheme.brandBlueDeep,
@@ -75,7 +75,7 @@ class _TrackManagementHubScreenState
                 ),
                 child: const Icon(Icons.add, color: Colors.white),
               ),
-              label: const Text('ADD TRACK'),
+              label: Text(AppLocalizations.of(context)!.addTrackButton),
               backgroundColor: AppTheme.brandBlue,
               foregroundColor: Colors.white,
               extendedPadding: const EdgeInsets.symmetric(
@@ -131,7 +131,7 @@ class _TrackManagementHubScreenState
         children: [
           Expanded(
             child: Text(
-              'Active Tracks',
+              AppLocalizations.of(context)!.activeTracksLabel,
               style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                 fontWeight: FontWeight.w800,
                 color: AppTheme.brandInk,
@@ -145,7 +145,7 @@ class _TrackManagementHubScreenState
               borderRadius: BorderRadius.circular(999),
             ),
             child: Text(
-              '$activeCount RUNNING',
+              AppLocalizations.of(context)!.activeTracksRunning(activeCount),
               style: Theme.of(context).textTheme.labelSmall?.copyWith(
                 color: AppColors.goldAmber,
                 fontWeight: FontWeight.w800,
@@ -172,10 +172,13 @@ class _TrackManagementHubScreenState
               color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
             ),
             const SizedBox(height: 16),
-            Text('No tracks yet', style: theme.textTheme.headlineSmall),
+            Text(
+              AppLocalizations.of(context)!.noTracksYet,
+              style: theme.textTheme.headlineSmall,
+            ),
             const SizedBox(height: 8),
             Text(
-              'Add your first learning track to get started.',
+              AppLocalizations.of(context)!.firstTrackPrompt,
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
               ),
@@ -185,7 +188,7 @@ class _TrackManagementHubScreenState
             FilledButton.icon(
               onPressed: () => setState(() => _addingTrack = true),
               icon: const Icon(Icons.add),
-              label: const Text('Add Your First Track'),
+              label: Text(AppLocalizations.of(context)!.addYourFirstTrack),
             ),
           ],
         ),
@@ -195,9 +198,11 @@ class _TrackManagementHubScreenState
 
   void _onAddTrackComplete(AddTrackResult result) {
     setState(() => _addingTrack = false);
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text('Track "${result.label}" created')));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(AppLocalizations.of(context)!.trackCreated(result.label)),
+      ),
+    );
   }
 
   Future<void> _showDeleteDialog(CurriculumTrack track) async {

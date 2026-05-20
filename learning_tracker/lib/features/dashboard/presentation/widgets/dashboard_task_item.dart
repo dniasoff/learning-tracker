@@ -83,7 +83,7 @@ class DashboardTaskItem extends ConsumerWidget {
                   color: theme.colorScheme.primary,
                 ),
                 onPressed: onComplete,
-                tooltip: 'Mark complete',
+                tooltip: AppLocalizations.of(context)!.markComplete,
               ),
             ],
           ),

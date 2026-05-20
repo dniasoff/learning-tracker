@@ -259,9 +259,9 @@ Sync-point trigger tags: `[P1]` `[P2]` `[P3]` `[P4]` `[P5]` `[P6]` `[P7]`
 - [x] W5.13 (S, S5, done)    Ban literal-string mode/tier comparisons via make audit greps 16+17; audit bumped to 17 greps; both pass clean; commit e3e29cfa
 
 ### Phase 5d · Theme / visual cleanup
-- [ ] W5.14 (M, S5, in-progress)    Move 525 0xFF…… colour literals from features/ → core/theme/app_colors.dart
-- [ ] W5.15 (S, S5, in-progress)    Add custom lint to ban Color(0xFF…) outside core/theme/
-- [ ] W5.16 (S, S5, in-progress)    Move hard-coded English strings in features/ to l10n/
+- [x] W5.14 (M, S5, done)    Move 525 0xFF…… colour literals from features/ → core/theme/app_colors.dart (695→452 literals; 243 replaced across 62 files)
+- [x] W5.15 (S, S5, done)    Add custom lint to ban Color(0xFF…) outside core/theme/ (NoColorLiteralOutsideTheme; 9 unit tests)
+- [x] W5.16 (S, S5, done)    Move hard-coded English strings in features/ to l10n/ (24 strings across 9 files: hubs, onboarding, dashboard, bulk_mark, sacred_time_lock, track_order)
 
 ### Phase 5e · Provider/global cleanup
 - [ ] W5.17 (M, S5, pending)    Replace String activeDbFileName global → accountDbFileNameProvider:AsyncNotifier&lt;String&gt;; gate router on .when

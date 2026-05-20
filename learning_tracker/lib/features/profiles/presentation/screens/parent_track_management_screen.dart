@@ -81,7 +81,7 @@ class _ParentTrackManagementScreenState
                 ),
                 child: const Icon(Icons.add, color: Colors.white),
               ),
-              label: const Text('ADD TRACK'),
+              label: Text(l10n.addTrackButton),
               backgroundColor: AppTheme.brandBlue,
               foregroundColor: Colors.white,
               extendedPadding: const EdgeInsets.symmetric(

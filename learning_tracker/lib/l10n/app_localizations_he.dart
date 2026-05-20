@@ -458,7 +458,19 @@ class AppLocalizationsHe extends AppLocalizations {
   String get addAnotherLearner => 'הוסף לומד נוסף';
 
   @override
+  String get addAnotherTrack => 'הוסף מסלול נוסף';
+
+  @override
   String get startLearning => 'התחל ללמוד';
+
+  @override
+  String get allSet => '!הכל מוכן';
+
+  @override
+  String get addYourFirstTrack => 'הוסף את המסלול הראשון שלך';
+
+  @override
+  String get addTrackButton => 'הוסף מסלול';
 
   @override
   String get language => 'שפה';
@@ -1935,6 +1947,32 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String get controlledByParent => 'בשליטת ההורה';
+
+  @override
+  String get sacredTimeLockGoodShabbos => 'שבת שלום';
+
+  @override
+  String get sacredTimeLockShabbosSubtitle => 'האפליקציה סגורה לכבוד שבת.';
+
+  @override
+  String get sacredTimeLockGoodYomTov => 'חג שמח';
+
+  @override
+  String get sacredTimeLockYomTovSubtitle => 'האפליקציה סגורה לכבוד יום טוב.';
+
+  @override
+  String get sacredTimeLockShabbosYomTovGreeting => 'שבת שלום וחג שמח';
+
+  @override
+  String get sacredTimeLockShabbosYomTovSubtitle =>
+      'האפליקציה סגורה לכבוד שבת ויום טוב.';
+
+  @override
+  String get sacredTimeLockYomKippurGreeting => 'גמר חתימה טובה';
+
+  @override
+  String get sacredTimeLockYomKippurSubtitle =>
+      'האפליקציה סגורה לכבוד יום כיפור.';
 
   @override
   String get sacredTimeDetect => 'זיהוי אוטומטי';

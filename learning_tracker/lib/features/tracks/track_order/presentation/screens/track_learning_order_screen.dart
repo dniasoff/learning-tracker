@@ -4,10 +4,11 @@ import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/labels/domain_term_labels.dart';
+import 'package:learning_tracker/features/tracks/track_order/presentation/providers/track_learning_order_providers.dart';
 import 'package:learning_tracker/features/tracks/whole_curriculum_order/domain/models/learning_order_item.dart';
 import 'package:learning_tracker/features/tracks/whole_curriculum_order/presentation/widgets/draggable_order_item.dart';
 import 'package:learning_tracker/features/tracks/whole_curriculum_order/presentation/widgets/reset_order_dialog.dart';
-import 'package:learning_tracker/features/tracks/track_order/presentation/providers/track_learning_order_providers.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
 
 class TrackLearningOrderScreen extends ConsumerStatefulWidget {
   const TrackLearningOrderScreen({
@@ -58,7 +59,7 @@ class _TrackLearningOrderScreenState
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
-            tooltip: 'Reset to Default Order',
+            tooltip: AppLocalizations.of(context)!.resetToDefaultOrder,
             onPressed: () => _resetToDefault(context),
           ),
         ],

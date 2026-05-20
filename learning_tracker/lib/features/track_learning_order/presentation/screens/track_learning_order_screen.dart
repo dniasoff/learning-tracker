@@ -8,6 +8,7 @@ import 'package:learning_tracker/features/learning_order/domain/models/learning_
 import 'package:learning_tracker/features/learning_order/presentation/widgets/draggable_order_item.dart';
 import 'package:learning_tracker/features/learning_order/presentation/widgets/reset_order_dialog.dart';
 import 'package:learning_tracker/features/track_learning_order/presentation/providers/track_learning_order_providers.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
 
 class TrackLearningOrderScreen extends ConsumerStatefulWidget {
   const TrackLearningOrderScreen({
@@ -58,7 +59,7 @@ class _TrackLearningOrderScreenState
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
-            tooltip: 'Reset to Default Order',
+            tooltip: AppLocalizations.of(context)!.resetToDefaultOrder,
             onPressed: () => _resetToDefault(context),
           ),
         ],

@@ -918,11 +918,35 @@ abstract class AppLocalizations {
   /// **'Add Another Learner'**
   String get addAnotherLearner;
 
+  /// No description provided for @addAnotherTrack.
+  ///
+  /// In en, this message translates to:
+  /// **'Add Another Track'**
+  String get addAnotherTrack;
+
   /// No description provided for @startLearning.
   ///
   /// In en, this message translates to:
   /// **'Start Learning'**
   String get startLearning;
+
+  /// No description provided for @allSet.
+  ///
+  /// In en, this message translates to:
+  /// **'All set!'**
+  String get allSet;
+
+  /// No description provided for @addYourFirstTrack.
+  ///
+  /// In en, this message translates to:
+  /// **'Add Your First Track'**
+  String get addYourFirstTrack;
+
+  /// No description provided for @addTrackButton.
+  ///
+  /// In en, this message translates to:
+  /// **'ADD TRACK'**
+  String get addTrackButton;
 
   /// No description provided for @language.
   ///
@@ -3550,6 +3574,54 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Controlled by parent'**
   String get controlledByParent;
+
+  /// No description provided for @sacredTimeLockGoodShabbos.
+  ///
+  /// In en, this message translates to:
+  /// **'Good Shabbos'**
+  String get sacredTimeLockGoodShabbos;
+
+  /// No description provided for @sacredTimeLockShabbosSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'The app is closed for Shabbos.'**
+  String get sacredTimeLockShabbosSubtitle;
+
+  /// No description provided for @sacredTimeLockGoodYomTov.
+  ///
+  /// In en, this message translates to:
+  /// **'Good Yom Tov'**
+  String get sacredTimeLockGoodYomTov;
+
+  /// No description provided for @sacredTimeLockYomTovSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'The app is closed for Yom Tov.'**
+  String get sacredTimeLockYomTovSubtitle;
+
+  /// No description provided for @sacredTimeLockShabbosYomTovGreeting.
+  ///
+  /// In en, this message translates to:
+  /// **'Good Shabbos & Good Yom Tov'**
+  String get sacredTimeLockShabbosYomTovGreeting;
+
+  /// No description provided for @sacredTimeLockShabbosYomTovSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'The app is closed for Shabbos and Yom Tov.'**
+  String get sacredTimeLockShabbosYomTovSubtitle;
+
+  /// No description provided for @sacredTimeLockYomKippurGreeting.
+  ///
+  /// In en, this message translates to:
+  /// **'Have an easy and meaningful fast'**
+  String get sacredTimeLockYomKippurGreeting;
+
+  /// No description provided for @sacredTimeLockYomKippurSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'The app is closed for Yom Kippur.'**
+  String get sacredTimeLockYomKippurSubtitle;
 
   /// No description provided for @sacredTimeDetect.
   ///

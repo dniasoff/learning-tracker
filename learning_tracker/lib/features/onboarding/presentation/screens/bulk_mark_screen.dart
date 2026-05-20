@@ -570,7 +570,7 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
       data: (rawItems) {
         final items = _applyScope(rawItems);
         if (items.isEmpty) {
-          return Center(child: Text('No results for "$_searchQuery"'));
+          return Center(child: Text(l10n.noResultsForQuery(_searchQuery)));
         }
         return ListView.builder(
           itemCount: items.length,

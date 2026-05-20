@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/features/sacred_time/domain/models/sacred_window.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/providers/sacred_windows_provider.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// Top-level wrapper that overlays a full-screen "Sacred Time" lock when
 /// [currentSacredWindowProvider] returns non-null. Mounted at the
@@ -35,7 +36,9 @@ class _LockScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final spec = _specFor(window.kind);
+    final (greeting, subtitle) = _stringsFor(window.kind, l10n);
     return PopScope(
       canPop: false,
       child: AnnotatedRegion<SystemUiOverlayStyle>(
@@ -55,7 +58,7 @@ class _LockScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 28),
                   Text(
-                    spec.greeting,
+                    greeting,
                     textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.displaySmall?.copyWith(
                       color: Colors.white,
@@ -65,7 +68,7 @@ class _LockScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 14),
                   Text(
-                    spec.subtitle,
+                    subtitle,
                     textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
                       color: Colors.white.withValues(alpha: 0.78),
@@ -86,45 +89,58 @@ class _LockScreen extends StatelessWidget {
       case SacredWindowKind.shabbos:
         return const _LockSpec(
           icon: Icons.local_fire_department_outlined,
-          greeting: 'Good Shabbos',
-          subtitle: 'The app is closed for Shabbos.',
           background: Color(0xFF11215C),
         );
       case SacredWindowKind.yomTov:
         return const _LockSpec(
           icon: Icons.celebration_outlined,
-          greeting: 'Good Yom Tov',
-          subtitle: 'The app is closed for Yom Tov.',
           background: Color(0xFF4A2A8A),
         );
       case SacredWindowKind.shabbosYomTov:
         return const _LockSpec(
           icon: Icons.celebration_outlined,
-          greeting: 'Good Shabbos & Good Yom Tov',
-          subtitle: 'The app is closed for Shabbos and Yom Tov.',
           background: Color(0xFF31246C),
         );
       case SacredWindowKind.yomKippur:
         return const _LockSpec(
           icon: Icons.menu_book_outlined,
-          greeting: 'Have an easy and meaningful fast',
-          subtitle: 'The app is closed for Yom Kippur.',
           background: Color(0xFF1A2333),
+        );
+    }
+  }
+
+  static (String greeting, String subtitle) _stringsFor(
+    SacredWindowKind kind,
+    AppLocalizations l10n,
+  ) {
+    switch (kind) {
+      case SacredWindowKind.shabbos:
+        return (
+          l10n.sacredTimeLockGoodShabbos,
+          l10n.sacredTimeLockShabbosSubtitle,
+        );
+      case SacredWindowKind.yomTov:
+        return (
+          l10n.sacredTimeLockGoodYomTov,
+          l10n.sacredTimeLockYomTovSubtitle,
+        );
+      case SacredWindowKind.shabbosYomTov:
+        return (
+          l10n.sacredTimeLockShabbosYomTovGreeting,
+          l10n.sacredTimeLockShabbosYomTovSubtitle,
+        );
+      case SacredWindowKind.yomKippur:
+        return (
+          l10n.sacredTimeLockYomKippurGreeting,
+          l10n.sacredTimeLockYomKippurSubtitle,
         );
     }
   }
 }
 
 class _LockSpec {
-  const _LockSpec({
-    required this.icon,
-    required this.greeting,
-    required this.subtitle,
-    required this.background,
-  });
+  const _LockSpec({required this.icon, required this.background});
 
   final IconData icon;
-  final String greeting;
-  final String subtitle;
   final Color background;
 }

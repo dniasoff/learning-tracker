@@ -7,7 +7,6 @@ import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
 import 'package:learning_tracker/core/enums/user_mode.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
-import 'package:learning_tracker/features/profiles/domain/services/pin_service.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/utils/text_input_formatters.dart';
 import 'package:learning_tracker/core/widgets/app_bar_title.dart';
@@ -20,9 +19,11 @@ import 'package:learning_tracker/features/content_browsing/presentation/provider
 import 'package:learning_tracker/features/onboarding/presentation/providers/onboarding_providers.dart';
 import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
 import 'package:learning_tracker/features/profiles/domain/repositories/profile_repository.dart';
+import 'package:learning_tracker/features/profiles/domain/services/pin_service.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/track_setup/domain/entities/add_track_result.dart';
 import 'package:learning_tracker/features/track_setup/presentation/screens/add_track_flow_screen.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Returns child-aware text based on profile mode.
@@ -938,12 +939,12 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
               const SizedBox(height: 48),
               FilledButton(
                 onPressed: _onStartLearning,
-                child: const Text('Start Learning'),
+                child: Text(AppLocalizations.of(context)!.startLearning),
               ),
               const SizedBox(height: 12),
               OutlinedButton(
                 onPressed: _onAddAnotherTrack,
-                child: const Text('Add Another Track'),
+                child: Text(AppLocalizations.of(context)!.addAnotherTrack),
               ),
             ],
           ),
@@ -1010,17 +1011,17 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
               const SizedBox(height: 48),
               FilledButton(
                 onPressed: _navigateToDashboard,
-                child: const Text('Start Learning'),
+                child: Text(AppLocalizations.of(context)!.startLearning),
               ),
               const SizedBox(height: 12),
               OutlinedButton(
                 onPressed: _onAddAnotherTrack,
-                child: const Text('Add Another Track'),
+                child: Text(AppLocalizations.of(context)!.addAnotherTrack),
               ),
               const SizedBox(height: 12),
               TextButton(
                 onPressed: _addAnotherLearner,
-                child: const Text('Add Another Learner'),
+                child: Text(AppLocalizations.of(context)!.addAnotherLearner),
               ),
             ],
           ),
@@ -1040,7 +1041,10 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
             color: theme.colorScheme.primary,
           ),
           const SizedBox(height: 16),
-          Text('All set!', style: theme.textTheme.headlineSmall),
+          Text(
+            AppLocalizations.of(context)!.allSet,
+            style: theme.textTheme.headlineSmall,
+          ),
         ],
       ),
     );
