@@ -295,10 +295,10 @@ class _DailyTasksSection extends ConsumerWidget {
             padding: EdgeInsets.symmetric(vertical: 32),
             child: Center(child: CircularProgressIndicator()),
           ),
-          error: (e, _) => _InfoCard(
-            icon: Icons.error_outline,
-            title: AppLocalizations.of(context)!.tasksUnableToLoad,
-            subtitle: e.toString(),
+          error: (e, st) => AppErrorView(
+            error: e,
+            stackTrace: st,
+            onRetry: () => ref.invalidate(allDailyTasksProvider),
           ),
           data: (tasks) {
             if (tasks.isEmpty) {
