@@ -60,6 +60,11 @@ Tracker: _bmad-output/refactor-task-tracker.md
 - `dart analyze lib/core/sync/` clean (no issues).
 - next: check P3 gate (verify S3/S4 scope done), then W2.31
 
+## [2026-05-20 07:30] task-complete
+- task: W2.33
+- detail: SyncOrchestratorImpl now owns its own StreamController<SyncStatus> + _currentStatus field. statusStream/currentStatus getters return own data. _safeEmitStatus no longer calls _engine.emitStatus — emits to own controller. dispose() closes the controller. sync_status_providers.dart (core) repointed from syncEngineProvider to syncOrchestratorProvider (imported from sync_orchestrator_providers.dart, same core/sync/providers/ dir). sync_providers.dart (features) syncStatusStreamProvider + syncStatusProvider also repointed to orchestrator. dart analyze clean.
+- next: W2.34
+
 ## [2026-05-20 07:00] task-complete
 - tasks: W2.31 + W2.32
 

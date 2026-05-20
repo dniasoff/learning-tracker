@@ -5,6 +5,8 @@ import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/providers/network_providers.dart';
 import 'package:learning_tracker/core/providers/talker_provider.dart';
 import 'package:learning_tracker/core/sync/providers/outbox_providers.dart';
+import 'package:learning_tracker/core/sync/providers/sync_orchestrator_providers.dart';
+import 'package:learning_tracker/core/sync/sync_orchestrator.dart';
 import 'package:learning_tracker/core/sync/sync_write_facade.dart';
 import 'package:learning_tracker/core/time/local_day_clock.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
@@ -108,27 +110,30 @@ final syncEngineProvider = Provider<SyncEngine?>((ref) {
 
 /// Provider for sync status stream.
 ///
-/// Phase 5: the canonical source has moved to
-/// `core/sync/providers/sync_status_providers.dart`. This provider is kept
-/// in place for backward compatibility; new code should prefer the core
-/// provider directly.
+/// W2.33: now delegates to the orchestrator's own status stream via
+/// [syncOrchestratorProvider]. Emits [SyncStatus.localOnly] when no
+/// orchestrator is available.
+///
+/// Previously delegated to [SyncEngine.statusStream]. The canonical source of
+/// truth for sync-status is `core/sync/providers/sync_status_providers.dart`.
 final syncStatusStreamProvider = StreamProvider<SyncStatus>((ref) {
-  final engine = ref.watch(syncEngineProvider);
-  if (engine == null) {
+  final orchestrator = ref.watch<SyncOrchestrator?>(syncOrchestratorProvider);
+  if (orchestrator == null) {
     return Stream.value(const SyncStatus.localOnly());
   }
-  return engine.statusStream;
+  return orchestrator.statusStream;
 });
 
 /// Provider for current sync status (from stream).
 ///
-/// Phase 5: the canonical source has moved to
-/// `core/sync/providers/sync_status_providers.dart`. This provider is kept
-/// in place for backward compatibility; new code should prefer the core
-/// provider directly.
+/// W2.33: now delegates to the orchestrator's own status via
+/// [syncOrchestratorProvider].
+///
+/// Previously delegated to [SyncEngine.currentStatus]. The canonical source of
+/// truth for sync-status is `core/sync/providers/sync_status_providers.dart`.
 final syncStatusProvider = Provider<SyncStatus>((ref) {
-  final engine = ref.watch(syncEngineProvider);
-  if (engine == null) return const SyncStatus.localOnly();
+  final orchestrator = ref.watch<SyncOrchestrator?>(syncOrchestratorProvider);
+  if (orchestrator == null) return const SyncStatus.localOnly();
 
   final asyncStatus = ref.watch(syncStatusStreamProvider);
   return asyncStatus.when(

@@ -150,6 +150,18 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
   ListenerSupervisor? _listenerSupervisor;
   LifecycleObserver? _lifecycleObserver;
 
+  // W2.33 — own StatusStream + currentStatus ─────────────────────────────────
+
+  /// Broadcast stream of [SyncStatus] changes owned by the orchestrator.
+  ///
+  /// Previously this delegated to [SyncEngine.statusStream]. Moving ownership
+  /// here decouples status from the engine so W2.35 can delete [SyncEngine]
+  /// without disrupting the status stream consumed by UI providers.
+  final StreamController<SyncStatus> _statusController =
+      StreamController<SyncStatus>.broadcast();
+
+  SyncStatus _currentStatus = const SyncStatus.localOnly();
+
   /// Guards [start] / [dispose] so the lifecycle observer and listener set are
   /// registered exactly once per session (S7). A second [start] is a no-op.
   bool _started = false;
@@ -236,11 +248,13 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
   /// longer.
   static const Duration _overallTimeout = Duration(seconds: 90);
 
+  /// W2.33: status is now owned by the orchestrator (not the engine).
   @override
-  SyncStatus get currentStatus => _engine.currentStatus;
+  SyncStatus get currentStatus => _currentStatus;
 
+  /// W2.33: status stream is now owned by the orchestrator (not the engine).
   @override
-  Stream<SyncStatus> get statusStream => _engine.statusStream;
+  Stream<SyncStatus> get statusStream => _statusController.stream;
 
   @override
   Future<void> pushAllLocalData() {
@@ -459,21 +473,16 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
     return pullOnLaunch();
   }
 
-  /// Best-effort proxy to [SyncEngine.emitStatus]. Status transitions go
-  /// through the engine's broadcast stream, but a test stub or a
-  /// transitively-rebuilt provider may temporarily make the engine
-  /// unresolvable — in that case the pull must still complete and the
-  /// per-launch guard must still flip, so swallowing a failed emit is
-  /// strictly safer than letting it propagate.
+  /// Emit a [SyncStatus] on the orchestrator's own stream.
+  ///
+  /// W2.33: status is owned by the orchestrator — the [SyncEngine] delegate
+  /// is no longer involved. If the controller is already closed (e.g. the
+  /// orchestrator was disposed between a pull starting and completing) the
+  /// emit is a safe no-op.
   void _safeEmitStatus(SyncStatus status) {
-    try {
-      _engine.emitStatus(status);
-    } catch (e, stackTrace) {
-      _logger?.warning(
-        event: 'sync_orchestrator_emit_status_failed',
-        exception: e,
-        stackTrace: stackTrace,
-      );
+    _currentStatus = status;
+    if (!_statusController.isClosed) {
+      _statusController.add(status);
     }
   }
 
@@ -520,6 +529,8 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
     _listenerSupervisor?.stop();
     _lifecycleObserver = null;
     _listenerSupervisor = null;
+    // W2.33: close the owned status stream.
+    _statusController.close();
   }
 
   // ── Listener event handling ─────────────────────────────────────────────────
