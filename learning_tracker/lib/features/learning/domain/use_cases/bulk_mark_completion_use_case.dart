@@ -53,7 +53,7 @@ class BulkMarkCompletionUseCase {
     // stored rows fall below any "completedAt >= trackStartDate" threshold used
     // by streak math and pace calculations. The caller may pass the sentinel
     // explicitly; when they don't (completedAt == null), we enforce it here so
-    // no caller can accidentally write DateTime.now() for a prior-mark row.
+    // no caller can accidentally write a live timestamp for a prior-mark row.
     //
     // For live source, pass the caller's value through (null → nowUtc() inside
     // the repository, explicit value for test injection).

@@ -1394,9 +1394,9 @@
       "count": { "type": "int" }
     }
   },
-  "tierCounterLifetimeItems": "{count} items",
+  "tierCounterLifetimeItems": "{count} items in lifetime",
   "@tierCounterLifetimeItems": {
-    "description": "Lifetime-tier counter — total distinct items the user has ever marked learned (across live + bulkInTrack + lifetimeOnly). Short form to avoid C2 tile truncation.",
+    "description": "Lifetime-tier counter — total distinct items the user has ever marked learned (across live + bulkInTrack + lifetimeOnly).",
     "placeholders": {
       "count": { "type": "int" }
     }

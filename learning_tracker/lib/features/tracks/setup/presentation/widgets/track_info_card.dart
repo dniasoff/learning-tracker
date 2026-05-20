@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/theme/app_colors.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/time/local_day_clock.dart';
 import 'package:learning_tracker/core/utils/hebrew_calendar_utils.dart';
 import 'package:learning_tracker/features/progress/domain/services/pace_calculator.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
@@ -11,7 +13,7 @@ import 'package:learning_tracker/l10n/app_localizations.dart';
 /// Info card shown at the TOP of the Track Detail screen, surfacing key pace
 /// and timeline metrics: started date, goal date, required & actual pace, and
 /// elapsed / remaining day counts.
-class TrackInfoCard extends StatelessWidget {
+class TrackInfoCard extends ConsumerWidget {
   const TrackInfoCard({
     super.key,
     required this.track,
@@ -48,18 +50,18 @@ class TrackInfoCard extends StatelessWidget {
   // ---------------------------------------------------------------------------
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
     final locale = Localizations.localeOf(context).toString();
 
-    final now = DateTime.now().toLocal();
+    final today = ref.watch(localDayClockProvider).today();
     final startedLocal = track.activatedAt.toLocal();
 
-    final elapsedDays = now.difference(startedLocal).inDays;
+    final elapsedDays = today.difference(startedLocal).inDays;
 
     final targetDate = goal?.targetDate?.toLocal();
-    final remainingDays = targetDate?.difference(now).inDays;
+    final remainingDays = targetDate?.difference(today).inDays;
 
     return Container(
       padding: const EdgeInsets.all(18),
@@ -97,7 +99,7 @@ class TrackInfoCard extends StatelessWidget {
             _infoRow(
               theme,
               label: l10n.trackInfoRequiredPace,
-              value: _requiredPaceLabel(l10n, goal!, paceCalc),
+              value: _requiredPaceLabel(l10n, goal!, paceCalc, today),
             ),
 
           // ── Actual pace ───────────────────────────────────────────────────
@@ -127,12 +129,13 @@ class TrackInfoCard extends StatelessWidget {
     AppLocalizations l10n,
     Goal goal,
     PaceCalculator? paceCalc,
+    DateTime today,
   ) {
     if (goal.goalType == 'deadline') {
       if (paceCalc == null ||
           paceCalc.requiredVelocity == 0 ||
           (goal.targetDate != null &&
-              goal.targetDate!.isBefore(DateTime.now()))) {
+              goal.targetDate!.isBefore(today))) {
         return '—';
       }
       return '${paceCalc.requiredVelocity.toStringAsFixed(1)} '

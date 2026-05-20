@@ -2809,7 +2809,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String tierCounterLifetimeItems(int count) {
-    return '$count items';
+    return '$count items in lifetime';
   }
 
   @override

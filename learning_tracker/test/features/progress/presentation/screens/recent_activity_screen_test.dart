@@ -291,17 +291,21 @@ void main() {
     },
   );
 
-  testWidgets('Hebrew Terms toggle swaps title to native script', (
-    tester,
-  ) async {
+  testWidgets(
+      'Hebrew Terms toggle swaps domain terms (chart title) but NOT structural title',
+      (tester) async {
+    // "Recent Activity" is a structural string per product-rules.md Rule 1 —
+    // it follows UI locale only and must never change with the Hebrew Terms setting.
     await tester.pumpWidget(buildScreen(useHebrewTerms: true));
     await tester.pumpAndSettle();
 
-    // With the toggle ON, terms come from `HebrewTerms` constants —
-    // the screen title becomes "פעילות אחרונה".
-    expect(find.text('פעילות אחרונה'), findsOneWidget);
-    // English form must NOT appear when the toggle is ON.
-    expect(find.text('Recent Activity'), findsNothing);
+    // Structural title must remain in UI locale (English) regardless of Hebrew Terms.
+    expect(find.text('Recent Activity'), findsOneWidget);
+    expect(find.text('פעילות אחרונה'), findsNothing);
+
+    // Domain terms inside the screen DO change: chart section title switches
+    // to Hebrew script when the toggle is ON.
+    expect(find.text('לימוד & חזרות'), findsOneWidget);
   });
 
   testWidgets('switching time-range pill triggers a fresh chart fetch', (

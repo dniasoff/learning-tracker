@@ -11,6 +11,7 @@ import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/theme/app_colors.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/time/local_day_clock.dart';
 import 'package:learning_tracker/core/utils/percentage_formatter.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/bulk_prior_completion_service.dart';
@@ -76,12 +77,13 @@ final _trackPaceCalcProvider =
         : 0;
 
     final goal = await db.goalDao.getGoalByTrack(track.id);
+    final clock = ref.watch(localDayClockProvider);
     final targetDate =
         (goal?.goalType == 'deadline' && goal?.targetDate != null)
             ? goal!.targetDate!.toLocal()
-            : DateTime.now().toLocal();
+            : clock.today();
 
-    final today = DateTime.now().toLocal();
+    final today = clock.today();
 
     return PaceCalculator.compute(
       totalItems: totalItems,

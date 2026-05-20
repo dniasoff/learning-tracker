@@ -233,7 +233,7 @@ void main() {
         // The three engagement / achievement / lifetime counter labels.
         expect(find.text('7-day streak'), findsOneWidget);
         expect(find.text('4 siyumim earned'), findsOneWidget);
-        expect(find.text('42 items'), findsOneWidget);
+        expect(find.text('42 items in lifetime'), findsOneWidget);
         // Adult mode must NOT render the ⭐ points counter even when the
         // dashboardGlobalPointsProvider has a non-zero value.
         expect(find.text('250 pts'), findsNothing);
@@ -270,7 +270,7 @@ void main() {
 
         expect(find.text('3-day streak'), findsOneWidget);
         expect(find.text('2 siyumim earned'), findsOneWidget);
-        expect(find.text('15 items'), findsOneWidget);
+        expect(find.text('15 items in lifetime'), findsOneWidget);
         // ⭐ points counter must appear in child mode.
         expect(find.text('1200 pts'), findsOneWidget);
 
@@ -682,7 +682,7 @@ void main() {
         // mounted and rendering past the loading state.
         expect(find.text('5-day streak'), findsOneWidget);
         // Lifetime counter — also stubbed (lifetime is its own provider).
-        expect(find.text('200 items'), findsOneWidget);
+        expect(find.text('200 items in lifetime'), findsOneWidget);
 
         await tester.pumpWidget(const SizedBox.shrink());
         await tester.pump(Duration.zero);

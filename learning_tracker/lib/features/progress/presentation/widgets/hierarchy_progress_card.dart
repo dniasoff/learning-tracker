@@ -277,4 +277,3 @@ class _ProgressCircle extends StatelessWidget {
     );
   }
 }
-

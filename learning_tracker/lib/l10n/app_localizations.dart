@@ -4973,10 +4973,10 @@ abstract class AppLocalizations {
   /// **'{count} siyumim earned'**
   String tierCounterSiyumimEarned(int count);
 
-  /// Lifetime-tier counter — total distinct items the user has ever marked learned (across live + bulkInTrack + lifetimeOnly). Short form to avoid C2 tile truncation.
+  /// Lifetime-tier counter — total distinct items the user has ever marked learned (across live + bulkInTrack + lifetimeOnly).
   ///
   /// In en, this message translates to:
-  /// **'{count} items'**
+  /// **'{count} items in lifetime'**
   String tierCounterLifetimeItems(int count);
 
   /// Child-mode points counter — appears as the fourth counter in the header row when child mode is active.

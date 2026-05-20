@@ -399,4 +399,3 @@ String curriculumHebrewName(CurriculumId curriculum) =>
 /// [CurriculumLabel] or [curriculumLabelText].
 String curriculumEnglishName(CurriculumId curriculum) =>
     curriculum.displayNameEn;
-
