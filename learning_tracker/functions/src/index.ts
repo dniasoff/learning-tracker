@@ -8,14 +8,80 @@ const db = admin.firestore();
 
 /**
  * Triggered when a Firebase Auth user is deleted.
- * Cascades deletion to all Firestore data under `users/{uid}` using
- * Admin SDK recursiveDelete — no subcollection enumeration needed.
+ *
+ * Cascades two sets of operations:
+ *
+ *   1. USER DATA: Deletes all Firestore data under `users/{uid}` using
+ *      Admin SDK recursiveDelete (existing behaviour).
+ *
+ *   2. W6.23 — PARENT GRANTS: If the user was a parent, all active/pending
+ *      tutor grants they issued are revoked. Child profiles are already
+ *      deleted by step 1 (under `users/{uid}/learner_profiles/`).
+ *
+ *   3. W6.24 — TUTOR GRANTS: If the user was a tutor, all active grants
+ *      where they are the tutor are transitioned to `revoked_by_tutor` with
+ *      a sentinel note that the account was deleted. The tutor_name_snapshot
+ *      on audit log entries is preserved (already captured at write-time —
+ *      no action needed here).
  */
 export const onUserDeleted = auth.user().onDelete(async (user) => {
   const uid = user.uid;
-  logger.info(`onUserDeleted: cascading delete for uid=${uid}`);
+  const now = admin.firestore.Timestamp.now();
+  logger.info(`onUserDeleted: starting cascade for uid=${uid}`);
+
+  // ── Step 1: Delete all user data ──────────────────────────────────────────
   await db.recursiveDelete(db.collection("users").doc(uid));
-  logger.info(`onUserDeleted: complete for uid=${uid}`);
+  logger.info(`onUserDeleted: user data deleted for uid=${uid}`);
+
+  // ── Step 2 (W6.23): Revoke all grants where this user is the parent ────────
+  const parentGrantsSnap = await db
+    .collection("tutor_grants")
+    .where("parent_uid", "==", uid)
+    .where("state", "in", ["pending", "active"])
+    .get();
+
+  const parentGrantBatch = db.batch();
+  for (const grantDoc of parentGrantsSnap.docs) {
+    parentGrantBatch.update(grantDoc.ref, {
+      state: "revoked_by_parent",
+      revoked_at: now,
+      updated_at: now,
+      _delete_cascade: true, // sentinel: revoked because parent account deleted
+    });
+  }
+  if (parentGrantsSnap.size > 0) {
+    await parentGrantBatch.commit();
+    logger.info(
+      `onUserDeleted: revoked ${parentGrantsSnap.size} parent grants for uid=${uid}`
+    );
+  }
+
+  // ── Step 3 (W6.24): Resign all grants where this user is the tutor ─────────
+  // The tutor_name_snapshot on existing audit entries is already captured at
+  // write-time and persists independently (FR-7.2 requirement satisfied).
+  const tutorGrantsSnap = await db
+    .collection("tutor_grants")
+    .where("tutor_uid", "==", uid)
+    .where("state", "==", "active")
+    .get();
+
+  const tutorGrantBatch = db.batch();
+  for (const grantDoc of tutorGrantsSnap.docs) {
+    tutorGrantBatch.update(grantDoc.ref, {
+      state: "revoked_by_tutor",
+      revoked_at: now,
+      updated_at: now,
+      _delete_cascade: true, // sentinel: resigned because tutor account deleted
+    });
+  }
+  if (tutorGrantsSnap.size > 0) {
+    await tutorGrantBatch.commit();
+    logger.info(
+      `onUserDeleted: resigned ${tutorGrantsSnap.size} tutor grants for uid=${uid}`
+    );
+  }
+
+  logger.info(`onUserDeleted: cascade complete for uid=${uid}`);
 });
 
 /**

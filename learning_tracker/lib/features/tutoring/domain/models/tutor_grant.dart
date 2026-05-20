@@ -127,8 +127,8 @@ class TutorGrantDoc {
   }) {
     // Simple concatenation with separator (colons are not valid in doc IDs;
     // underscores are safe). Email special chars are URL-encoded.
-    // ignore: unnecessary_raw_strings — using raw string for readability
     final encodedEmail = tutorEmail.toLowerCase().replaceAll(
+      // ignore: unnecessary_raw_strings — raw string is clearer for regex char classes
       RegExp(r'[^a-zA-Z0-9]'),
       '_',
     );

@@ -2,6 +2,9 @@
 //
 // Import this barrel (features/tutoring/tutoring.dart) from outside this
 // feature. Do NOT import deep paths directly.
+//
+// ignore_for_file: directives_ordering — exports are grouped by semantic
+// section (models, services, use-cases, providers) rather than alphabetically.
 library tutoring;
 
 // ── Domain models (W3.38, W4.27-W4.29) ────────────────────────────────────
@@ -11,8 +14,10 @@ export 'package:learning_tracker/features/tutoring/domain/models/tutor_permissio
 export 'package:learning_tracker/features/tutoring/domain/models/tutor_grant_aggregate.dart';
 export 'package:learning_tracker/features/tutoring/domain/models/session_role.dart';
 
-// ── Domain services (W4.30) ────────────────────────────────────────────────
+// ── Domain services (W4.30, W6.20-W6.22, W6.25) ──────────────────────────
 export 'package:learning_tracker/features/tutoring/domain/services/tutor_pin_service.dart';
+export 'package:learning_tracker/features/tutoring/domain/services/tutor_audit_log_writer.dart';
+export 'package:learning_tracker/features/tutoring/domain/services/tutor_notification_service.dart';
 
 // ── Domain use cases (W4.31-W4.34) ────────────────────────────────────────
 export 'package:learning_tracker/features/tutoring/domain/use_cases/tutor_invite_use_cases.dart';

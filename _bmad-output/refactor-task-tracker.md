@@ -318,7 +318,7 @@ Sync-point trigger tags: `[P1]` `[P2]` `[P3]` `[P4]` `[P5]` `[P6]` `[P7]`
 ### Phase 6h · Cascades + notifications
 - [x] W6.23 (M, S3, done)    Parent-delete → all grants revoked + child profiles deleted (cascade extension)
 - [x] W6.24 (M, S3, done)    Tutor-delete → all grants auto-resign; audit log preserves tutor name snapshot
-- [ ] W6.25 (S, S3, pending)    Notify parent on tutor decline/resign; notify tutor on parent revoke
+- [x] W6.25 (S, S3, done)    Notify parent on tutor decline/resign; notify tutor on parent revoke
 
 ---
 
@@ -350,8 +350,8 @@ Sync-point trigger tags: `[P1]` `[P2]` `[P3]` `[P4]` `[P5]` `[P6]` `[P7]`
 - [ ] W7.17 (M, S5, pending)    Create AppErrorView widget in core/widgets/ consuming AsyncValue.error → category-mapped UI
 - [ ] W7.18 (M, S5, pending)    Migrate 20+ screens from errorWithMessage(e.toString()) to AppErrorView
 - [x] W7.19 (S, S3, done)    Extend PiiRedactor.sensitiveKeys with displayName, firstName, lastName, city, lat, lon, deviceId, oauthCode, magicLinkUrl, tutor_email
-- [ ] W7.20 (S, S1, pending)    Add lint no_e_to_string_in_ui (forbids e.toString() inside presentation/)
-- [ ] W7.21 (S, S1, pending)    Add lint no_raw_logevent (forbids logEvent(name, …) outside analytics_service.dart)
+- [x] W7.20 (S, S1, done)    Add lint no_e_to_string_in_ui (forbids e.toString() inside presentation/) — WARNING severity; checks common exception identifier names
+- [x] W7.21 (S, S1, done)    Add lint no_raw_logevent (forbids logEvent(name, …) outside analytics_service.dart) — ERROR severity
 
 ### Phase 7e · Polish + final verify
 - [ ] W7.22 (S, S1, pending)    Delete root Makefile; canonical is learning_tracker/Makefile
