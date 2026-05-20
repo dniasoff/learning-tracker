@@ -1,5 +1,9 @@
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
+import 'package:learning_tracker/core/exceptions/invalid_track_operation_exception.dart';
+
+export 'package:learning_tracker/core/exceptions/invalid_track_operation_exception.dart'
+    show InvalidTrackOperationException;
 
 /// Repository interface for track management operations.
 ///
@@ -42,13 +46,5 @@ abstract class TrackRepository {
   });
 }
 
-/// Exception thrown when attempting an invalid track operation.
-///
-/// For example: attempting to deactivate the personal track.
-class InvalidTrackOperationException implements Exception {
-  const InvalidTrackOperationException(this.message);
-  final String message;
-
-  @override
-  String toString() => 'InvalidTrackOperationException: $message';
-}
+// InvalidTrackOperationException is now defined in core/exceptions/ (W7.4).
+// Re-exported above so existing importers of this file don't need updating.

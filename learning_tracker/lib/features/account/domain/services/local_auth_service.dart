@@ -1,35 +1,32 @@
 import 'package:drift/drift.dart';
 import 'package:learning_tracker/core/database/daos/user_profile_dao.dart';
+import 'package:learning_tracker/core/exceptions/app_exception.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/account/domain/services/password_hasher.dart';
 
 /// Thrown when a local-born signup is attempted with an email that
 /// already has a local-born row. Distinct from a Firebase-level
 /// collision (handled by the upgrade flow in 20.9).
-class DuplicateEmailException implements Exception {
-  const DuplicateEmailException(this.email);
+class DuplicateEmailException extends ConflictException {
+  const DuplicateEmailException(this.email)
+    : super('$email is already registered');
   final String email;
-  @override
-  String toString() => 'DuplicateEmailException: $email already registered';
 }
 
 /// Thrown when sign-in fails because the email is unknown *or* the
 /// password does not match. The single error type is intentional —
 /// distinguishing the two would enable user enumeration.
-class InvalidCredentialsException implements Exception {
-  const InvalidCredentialsException();
-  @override
-  String toString() => 'InvalidCredentialsException';
+class InvalidCredentialsException extends PermissionException {
+  const InvalidCredentialsException() : super('Invalid email or password');
 }
 
 /// Thrown when sign-up receives malformed input (invalid email,
 /// password too short, etc). Caller surfaces a friendly message.
-class InvalidInputException implements Exception {
-  const InvalidInputException(this.field, this.reason);
+class InvalidInputException extends ValidationException {
+  const InvalidInputException(this.field, this.reason)
+    : super('$field: $reason');
   final String field;
   final String reason;
-  @override
-  String toString() => 'InvalidInputException($field): $reason';
 }
 
 /// Domain service for local-born account authentication.

@@ -1,3 +1,4 @@
+import 'package:learning_tracker/core/exceptions/app_exception.dart';
 import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
 
 /// Repository contract for profile operations.
@@ -39,31 +40,21 @@ abstract class ProfileRepository {
 }
 
 /// Thrown when attempting to create more than 10 profiles per account.
-class MaxProfilesExceededException implements Exception {
+class MaxProfilesExceededException extends ValidationException {
+  const MaxProfilesExceededException(this.accountId)
+    : super('Account $accountId already has 10 profiles');
   final int accountId;
-  const MaxProfilesExceededException(this.accountId);
-
-  @override
-  String toString() =>
-      'MaxProfilesExceededException: Account $accountId already has 10 profiles';
 }
 
-/// Thrown when a profile with the same name (case-insensitive) already exists
-/// for the account.
 /// Thrown when attempting to delete the last remaining profile.
-class LastProfileException implements Exception {
-  const LastProfileException();
-
-  @override
-  String toString() =>
-      'LastProfileException: Cannot delete the last profile — at least one must exist';
+class LastProfileException extends ValidationException {
+  const LastProfileException()
+    : super('Cannot delete the last profile — at least one must exist');
 }
 
-class DuplicateProfileNameException implements Exception {
+/// Thrown when a profile with the same name (case-insensitive) already exists.
+class DuplicateProfileNameException extends ConflictException {
+  const DuplicateProfileNameException(this.displayName)
+    : super('A profile named "$displayName" already exists');
   final String displayName;
-  const DuplicateProfileNameException(this.displayName);
-
-  @override
-  String toString() =>
-      'DuplicateProfileNameException: A profile named "$displayName" already exists';
 }

@@ -1,3 +1,4 @@
+import 'package:learning_tracker/core/exceptions/app_exception.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/network/sefaria/models/curriculum_hierarchy_config.dart';
 
@@ -42,12 +43,10 @@ abstract class CurriculumContentFetcher {
 }
 
 /// Exception thrown when a Sefaria API call fails.
-class SefariaApiException implements Exception {
-  const SefariaApiException(this.message, {this.statusCode, this.cause});
+class SefariaApiException extends NetworkException {
+  const SefariaApiException(super.message, {this.statusCode, super.cause});
 
-  final String message;
   final int? statusCode;
-  final Object? cause;
 
   @override
   String toString() =>

@@ -1,6 +1,7 @@
 import 'package:drift/drift.dart';
 import 'package:learning_tracker/core/database/daos/user_profile_dao.dart';
 import 'package:learning_tracker/core/database/registry/device_registry_database.dart';
+import 'package:learning_tracker/core/exceptions/app_exception.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/account/domain/models/app_user.dart';
 import 'package:learning_tracker/features/account/domain/repositories/auth_repository.dart';
@@ -8,28 +9,24 @@ import 'package:learning_tracker/features/account/domain/services/password_hashe
 
 /// Thrown when the email is already in use by an existing Firebase
 /// account. UI layer must enter the guided merge flow — see v2 §4.3.
-class EmailCollisionException implements Exception {
-  const EmailCollisionException(this.email);
+class EmailCollisionException extends ConflictException {
+  const EmailCollisionException(this.email) : super('$email is already in use');
   final String email;
-  @override
-  String toString() => 'EmailCollisionException: $email';
 }
 
 /// Thrown when the password supplied for the upgrade does not match
 /// the local-born account's stored argon2id hash.
-class UpgradePasswordMismatchException implements Exception {
-  const UpgradePasswordMismatchException();
-  @override
-  String toString() => 'UpgradePasswordMismatchException';
+class UpgradePasswordMismatchException extends PermissionException {
+  const UpgradePasswordMismatchException()
+    : super('Password does not match local account');
 }
 
 /// Thrown when an upgrade account exists but email ownership has not been
 /// verified yet. Caller should keep the account local-born, prompt the user
 /// to verify via inbox link, and retry completion.
-class UpgradeEmailNotVerifiedException implements Exception {
-  const UpgradeEmailNotVerifiedException();
-  @override
-  String toString() => 'UpgradeEmailNotVerifiedException';
+class UpgradeEmailNotVerifiedException extends ValidationException {
+  const UpgradeEmailNotVerifiedException()
+    : super('Email address has not been verified yet');
 }
 
 /// Domain service for the local → cloud upgrade flow (v2 §4.3).

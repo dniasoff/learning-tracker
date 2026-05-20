@@ -1,4 +1,5 @@
 import 'package:learning_tracker/core/database/user/user_database.dart';
+import 'package:learning_tracker/core/exceptions/app_exception.dart';
 
 /// Repository interface for learning ledger operations.
 ///
@@ -71,12 +72,8 @@ class LedgerManualBatchItem {
 }
 
 /// Thrown when a child profile attempts to self-mark a manual completion.
-class ChildSelfMarkException implements Exception {
-  final String message;
+class ChildSelfMarkException extends PermissionException {
   const ChildSelfMarkException([
-    this.message = 'Children cannot mark their own completions',
+    super.message = 'Children cannot mark their own completions',
   ]);
-
-  @override
-  String toString() => 'ChildSelfMarkException: $message';
 }

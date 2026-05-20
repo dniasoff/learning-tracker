@@ -3,16 +3,13 @@ import 'dart:io';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:learning_tracker/core/database/content/content_database.dart';
 import 'package:learning_tracker/core/database/seed_version.dart';
+import 'package:learning_tracker/core/exceptions/app_exception.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:sqlite3/sqlite3.dart';
 
 /// Exception thrown when the seed database cannot be initialized.
-class SeedManagerException implements Exception {
-  SeedManagerException(this.message);
-  final String message;
-
-  @override
-  String toString() => 'SeedManagerException: $message';
+class SeedManagerException extends InternalException {
+  SeedManagerException(super.message);
 }
 
 /// Manages the Content DB lifecycle on startup.

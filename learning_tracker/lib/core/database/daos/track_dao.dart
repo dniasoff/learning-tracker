@@ -6,6 +6,7 @@ import 'package:learning_tracker/core/database/tables/curriculum_tracks.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
+import 'package:learning_tracker/core/exceptions/invalid_track_operation_exception.dart';
 import 'package:learning_tracker/core/sync/outbox/outbox_processor.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 
@@ -117,8 +118,8 @@ class TrackDao extends DatabaseAccessor<UserDatabase>
     TrackType trackType,
   ) async {
     if (trackType == TrackType.personal) {
-      throw const InvalidOperationException(
-        'Cannot deactivate personal track - it is always active',
+      throw const InvalidTrackOperationException(
+        'Cannot deactivate personal track — it is always active',
       );
     }
 
@@ -475,11 +476,5 @@ class TrackDao extends DatabaseAccessor<UserDatabase>
   }
 }
 
-/// Exception thrown when attempting an invalid track operation.
-class InvalidOperationException implements Exception {
-  const InvalidOperationException(this.message);
-  final String message;
-
-  @override
-  String toString() => 'InvalidOperationException: $message';
-}
+// InvalidOperationException removed — replaced by the core
+// InvalidTrackOperationException (W7.4).

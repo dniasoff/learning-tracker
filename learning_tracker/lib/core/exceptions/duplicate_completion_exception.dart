@@ -1,8 +1,10 @@
+import 'package:learning_tracker/core/exceptions/app_exception.dart';
+
 /// Exception thrown when attempting to create a duplicate completion.
 ///
 /// This is thrown when a user tries to mark an item as complete for a
 /// stage that has already been completed under any track.
-class DuplicateCompletionException implements Exception {
+class DuplicateCompletionException extends ConflictException {
   /// The curriculum ID where the duplicate was attempted
   final String curriculumId;
 
@@ -23,14 +25,10 @@ class DuplicateCompletionException implements Exception {
     required this.sefariaRef,
     required this.stageId,
     required this.existingTrackName,
-  });
-
-  @override
-  String toString() {
-    return 'DuplicateCompletionException: Item $sefariaRef stage $stageId '
-        'in curriculum $curriculumId is already completed under '
-        '$existingTrackName track';
-  }
+  }) : super(
+         'Item $sefariaRef stage $stageId in curriculum $curriculumId is '
+         'already completed under $existingTrackName track',
+       );
 
   /// User-facing error message for display in snackbars/dialogs
   String get userMessage {

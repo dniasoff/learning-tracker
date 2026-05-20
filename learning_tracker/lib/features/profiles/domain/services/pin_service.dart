@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:learning_tracker/core/analytics/analytics_provider.dart';
 import 'package:learning_tracker/core/analytics/analytics_service.dart';
+import 'package:learning_tracker/core/exceptions/app_exception.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
@@ -320,14 +321,13 @@ class PinService {
 }
 
 /// Exception thrown when PIN verification is attempted during lockout.
-class PinLockoutException implements Exception {
-  const PinLockoutException(this.remainingMinutes);
+class PinLockoutException extends PermissionException {
+  const PinLockoutException(this.remainingMinutes)
+    : super(
+        'Too many failed attempts. Try again in $remainingMinutes minute(s).',
+      );
 
   final int remainingMinutes;
-
-  @override
-  String toString() =>
-      'PinLockoutException: Too many failed attempts. Try again in $remainingMinutes minute(s).';
 }
 
 /// Provider for FlutterSecureStorage instance.

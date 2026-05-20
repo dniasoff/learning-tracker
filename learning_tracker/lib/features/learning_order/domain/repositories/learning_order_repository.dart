@@ -1,14 +1,12 @@
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/core/exceptions/app_exception.dart';
 import 'package:learning_tracker/features/learning_order/domain/models/learning_order_item.dart';
 
 /// Thrown by [LearningOrderRepository.saveOrder] when the caller is in child
 /// mode and a parent has locked the ordering.
-class ParentControlException implements Exception {
-  const ParentControlException();
-
-  @override
-  String toString() =>
-      'ParentControlException: ordering is restricted by parent controls';
+class ParentControlException extends PermissionException {
+  const ParentControlException()
+    : super('Ordering is restricted by parent controls');
 }
 
 /// Repository for managing custom learning order per curriculum.

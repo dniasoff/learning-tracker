@@ -1,4 +1,5 @@
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/core/exceptions/app_exception.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/network/sefaria/models/curriculum_hierarchy_config.dart';
 
@@ -63,13 +64,6 @@ abstract class ContentRepository {
 }
 
 /// Exception thrown when content fails to load from assets.
-class ContentLoadException implements Exception {
-  const ContentLoadException(this.message, {this.cause});
-
-  final String message;
-  final Object? cause;
-
-  @override
-  String toString() =>
-      'ContentLoadException: $message${cause != null ? ' caused by: $cause' : ''}';
+class ContentLoadException extends NetworkException {
+  const ContentLoadException(super.message, {super.cause});
 }

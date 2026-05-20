@@ -1,4 +1,3 @@
-import 'package:learning_tracker/core/database/daos/track_dao.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
@@ -84,12 +83,10 @@ class TrackRepositoryImpl implements TrackRepository {
     CurriculumId curriculumId,
     TrackType trackType,
   ) async {
-    try {
-      await _database.trackDao.deactivateTrack(curriculumId, trackType);
-      await _pushCurriculumTrackIfCloud(curriculumId, trackType);
-    } on InvalidOperationException catch (e) {
-      throw InvalidTrackOperationException(e.message);
-    }
+    // InvalidTrackOperationException from track_dao.dart propagates naturally
+    // (no wrapping needed — both DAO and domain now throw the same type).
+    await _database.trackDao.deactivateTrack(curriculumId, trackType);
+    await _pushCurriculumTrackIfCloud(curriculumId, trackType);
   }
 
   @override

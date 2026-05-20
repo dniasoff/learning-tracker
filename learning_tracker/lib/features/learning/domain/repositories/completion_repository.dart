@@ -1,4 +1,5 @@
 import 'package:learning_tracker/core/database/user/user_database.dart';
+import 'package:learning_tracker/core/exceptions/app_exception.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_request.dart';
 import 'package:learning_tracker/features/learning/domain/entities/mark_completion_result.dart';
 
@@ -52,17 +53,13 @@ abstract class CompletionRepository {
 }
 
 /// Exception thrown when attempting to complete a stage out of order.
-class StageProgressionException implements Exception {
-  final String message;
-  final int attemptedStage;
-  final int? lastCompletedStage;
-
+class StageProgressionException extends ValidationException {
   StageProgressionException({
-    required this.message,
+    required String message,
     required this.attemptedStage,
     this.lastCompletedStage,
-  });
+  }) : super(message);
 
-  @override
-  String toString() => 'StageProgressionException: $message';
+  final int attemptedStage;
+  final int? lastCompletedStage;
 }

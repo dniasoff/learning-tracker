@@ -1,6 +1,7 @@
 import 'package:drift/drift.dart';
 import 'package:learning_tracker/core/database/registry/tables/device_accounts.dart';
 import 'package:learning_tracker/core/database/registry/tables/device_state.dart';
+import 'package:learning_tracker/core/exceptions/app_exception.dart';
 
 part 'device_registry_database.g.dart';
 
@@ -8,11 +9,9 @@ part 'device_registry_database.g.dart';
 const kMaxDeviceAccounts = 5;
 
 /// Thrown when attempting to add a 6th account.
-class MaxAccountsReachedException implements Exception {
-  const MaxAccountsReachedException();
-  @override
-  String toString() =>
-      'MaxAccountsReachedException: device already has $kMaxDeviceAccounts accounts';
+class MaxAccountsReachedException extends ValidationException {
+  const MaxAccountsReachedException()
+    : super('Device already has $kMaxDeviceAccounts accounts');
 }
 
 /// Tiny Drift database that tracks all accounts on this device.

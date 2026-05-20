@@ -3,6 +3,7 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/core/exceptions/app_exception.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/network/sefaria/models/curriculum_hierarchy_config.dart';
@@ -223,7 +224,9 @@ class CloudContentService {
     final path =
         '$_contentPrefix/${curriculum.storageKey}/hierarchy/$languageCode.json.gz';
 
-    AppLogger.instance.info(event: 'CloudContentService: downloading hierarchy $path');
+    AppLogger.instance.info(
+      event: 'CloudContentService: downloading hierarchy $path',
+    );
 
     final data = await fetchBlob(path);
 
@@ -351,11 +354,6 @@ class CloudContentService {
 }
 
 /// Exception thrown when content download fails.
-class ContentDownloadException implements Exception {
-  const ContentDownloadException(this.message);
-
-  final String message;
-
-  @override
-  String toString() => 'ContentDownloadException: $message';
+class ContentDownloadException extends NetworkException {
+  const ContentDownloadException(super.message);
 }
