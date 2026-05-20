@@ -157,11 +157,11 @@ When reviewing code or copy, audit against this document. The 2026-05-20 audits 
 These appear in the fix plan's "Open questions" section. When decided, fold them in here.
 
 - ~~**Q-S1.**~~ **Decided 2026-05-20.** `siyum` / `siyumim` is a **domain term** governed by Hebrew Terms (same category as chazara — no English translation exists). Added to `docs/hebrew-terms.md` §6. Proper-name siyumim (Siyum HaShas, etc.) are also domain terms.
-- **Q-A.** Adult dashboard top section shape — three candidates outlined in the fix plan.
-- **Q-W.** Weekday header preference — 3-letter (`Sun Mon Tue`) or 1-letter (`S M T W T F S`).
-- **Q-IA.** Recent Activity "All Time" IA shape.
+- ~~**Q-A.**~~ **Decided 2026-05-21.** Adult dashboard top section = **3 counters, no points** (streak · siyumim · lifetime items). Same `ProgressTierCounterRow` with `showPoints: false`. No separate adult metrics or adult-specific counter set.
+- ~~**Q-W.**~~ **Decided 2026-05-21.** Weekday header format = **3-letter** (`Sun Mon Tue Wed Thu Fri Sat`). Matches calendar convention used elsewhere in the app.
+- ~~**Q-IA.**~~ **Decided 2026-05-21.** Recent Activity "All Time" = **Totals summary card only**. Shows total limudim, total chazaros, total active days — a simple stats card. No per-day calendar grid for the All Time range. Last 7 / Last 30 keep the existing day-cell calendar.
 - **Q-O.** Definitive list of online-only flows beyond sign-in / password reset / first sync / remote config refresh.
-- **Q-G.** Pace grace window (day-count after track start during which to show "On track" / "Just started" rather than ahead/behind).
+- ~~**Q-G.**~~ **Decided 2026-05-20.** Pace grace window = **1 day** (days 0 and 1 of a track). From day 2 onward the ahead/behind comparison is live. `kPaceGraceWindowDays = 1` in `pace_calculator.dart`.
 - **Q-Term.** Code-side `UserMode.parent` → `adult` rename — bundled with Stream C or separate cleanup pass.
 
 ---
