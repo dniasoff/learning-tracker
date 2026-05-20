@@ -240,9 +240,9 @@ Sync-point trigger tags: `[P1]` `[P2]` `[P3]` `[P4]` `[P5]` `[P6]` `[P7]`
 ## Wave 5 — Class cleanup + god-screen decomposition (~22 tasks)
 
 ### Phase 5a · God-screen decomposition (S5)
-- [ ] W5.1  (L, S5, pending)    app_intro_screen.dart (1370 LOC) → IntroScaffold + IntroPageView + 3 page widgets + IntroPageIndicator + GlowingCtaButton
-- [ ] W5.2  (L, S5, pending)    sign_in_screen.dart (1237 LOC) → SignInController:AsyncNotifier&lt;SignInState&gt; + SignInForm + SignInModeCard + SignInActions + EmailVerificationDialog
-- [ ] W5.3  (L, S5, pending)    gamification_screen.dart (1127 LOC) → 11 private classes promoted to widgets/gamification/
+- [ ] W5.1  (L, S5, in-progress)    app_intro_screen.dart (1370 LOC) → IntroScaffold + IntroPageView + 3 page widgets + IntroPageIndicator + GlowingCtaButton
+- [ ] W5.2  (L, S5, in-progress)    sign_in_screen.dart (1237 LOC) → SignInController:AsyncNotifier&lt;SignInState&gt; + SignInForm + SignInModeCard + SignInActions + EmailVerificationDialog
+- [ ] W5.3  (L, S5, in-progress)    gamification_screen.dart (1127 LOC) → 11 private classes promoted to widgets/gamification/
 - [ ] W5.4  (L, S5, pending)    profile_picker_screen.dart (1059 LOC) → ConsumerWidget + ProfileGrid + AddProfileDialog + segmented sections (tutored in W6.14)
 - [ ] W5.5  (L, S5, pending)    onboarding_screen.dart (1030 LOC) → OnboardingPhaseRouter + per-phase step widgets + OnboardingResumeStore
 - [ ] W5.6  (L, S5, pending)    reward_configuration_screen.dart (1004 LOC) → RewardConfigController:Notifier&lt;RewardForm&gt; + RewardCard + sub-widgets
@@ -331,13 +331,13 @@ Sync-point trigger tags: `[P1]` `[P2]` `[P3]` `[P4]` `[P5]` `[P6]` `[P7]`
 - [x] W7.4  (S, S5, done)    Rename InvalidOperationException → InvalidTrackOperationException; under ValidationException
 
 ### Phase 7b · Crisis-class telemetry (S2)
-- [ ] W7.5  (M, S2, in-progress)    Wire merge_row_skipped event at silent skip sites in DriftMergeStore + ProfileProgramMerger — closes L2
-- [ ] W7.6  (S, S2, in-progress)    Wire merge_router_halt event at pull_pipeline.dart halt site
-- [ ] W7.7  (S, S2, in-progress)    Wire outbox_dead_lettered event at outbox_processor max-attempts
-- [ ] W7.8  (S, S2, in-progress)    Wire listener_error event from ListenerSupervisor._onError callback
-- [ ] W7.9  (S, S2, in-progress)    Wire sync_pull_started/completed/failed events at orchestrator boundaries
-- [ ] W7.10 (S, S2, in-progress)    Wire permission_denied event from gateway typed FirestorePermissionDeniedException
-- [ ] W7.11 (S, S2, in-progress)    Wire tutor-mode events: tutor_invite_*, tutor_grant_*, tutor_action_recorded, tutor_pin_set, tutor_live_mark_blocked; bulk_engagement_skipped, lifetime_achievement_skipped — **B1 regression telemetry**
+- [x] W7.5  (M, S2, done)    Wire merge_row_skipped event at silent skip sites in DriftMergeStore + ProfileProgramMerger — closes L2
+- [x] W7.6  (S, S2, done)    Wire merge_router_halt event at pull_pipeline.dart halt site
+- [x] W7.7  (S, S2, done)    Wire outbox_dead_lettered event at outbox_processor max-attempts
+- [x] W7.8  (S, S2, done)    Wire listener_error event from ListenerSupervisor._onError callback
+- [x] W7.9  (S, S2, done)    Wire sync_pull_started/completed/failed events at orchestrator boundaries
+- [x] W7.10 (S, S2, done)    Wire permission_denied event from gateway typed FirestorePermissionDeniedException
+- [x] W7.11 (S, S2, done)    Wire tutor-mode events: tutor_invite_*, tutor_grant_*, tutor_action_recorded, tutor_pin_set, tutor_live_mark_blocked; bulk_engagement_skipped, lifetime_achievement_skipped — **B1 regression telemetry**
 
 ### Phase 7c · Firebase Analytics + Crashlytics (S5)
 - [x] W7.12 (M, S5, done)    Add firebase_analytics to pubspec.yaml

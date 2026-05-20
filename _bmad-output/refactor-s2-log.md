@@ -191,3 +191,18 @@ W2.32: Created LocalDataUploadService (features/sync/data/local_data_upload_serv
 ## [2026-05-20] sync-point-cleared
 - sync-point: P5
 - detail: W3.46 completed successfully. Firestore rules (new layout W3.30-W3.37), indexes (tutor_grants only), and Cloud Functions (onUserDeleted, deleteLearnerProfile, deleteCurriculumTrack, deleteAccountData, purgeExpiredAuditLogs, tutorBulkPriorCompletions) are all live on torah-study-tracker. P5 is cleared. S3's 17 tutor-UI tasks are unblocked.
+
+## [2026-05-20] task-complete
+- tasks: W7.5, W7.6, W7.7, W7.8, W7.9, W7.10, W7.11
+- commit: b2569e04
+- detail:
+  W7.5: merge_row_skipped wired at 9 silent-skip sites in DriftMergeStore (completion malformed, track missing curriculum_id/activated_at, bookmark malformed/track_not_yet_synced, settings missing curriculum_id/empty_stages_list, stage_definition missing_key_fields, learning_order missing_key_fields) and 1 site in ProfileProgramMerger (malformed_fields). Analytics injected via optional AnalyticsService? param in both classes. mergeRouterProvider updated to pass analyticsServiceProvider to DriftMergeStore + ProfileProgramMerger.
+  W7.6: merge_router_halt fired in PullPipeline._pullCollection when dispatcher returns MergeOutcome.halt. Analytics passed from orchestrator → PullPipeline constructor. Fires unawaited() in sync context.
+  W7.7: outbox_dead_lettered wired at both dead-letter sites in OutboxProcessor.drain() — completions filter lambda and non-completion kinds loop. Uses unawaited() (both are synchronous lambdas). outbox_providers.dart wired with analyticsServiceProvider.
+  W7.8: listener_error fired in SyncOrchestratorImpl._onListenerError (sync method). Uses unawaited() pattern. Parameters: channel, error.
+  W7.9: sync_pull_started fired at pullOnLaunch entry; sync_pull_completed on success; sync_pull_failed in catch block. All use await (method is async). Parameter: triggered_from_resume on all three. sync_orchestrator_providers.dart wired with analyticsServiceProvider.
+  W7.10: permission_denied caught from FirestorePermissionDeniedException in pullOnLaunch catch block (W7.10 works because firestore_gateway_impl.dart already converts PERMISSION_DENIED → typed exception in _guardPermission). Parameters: collection, operation.
+  W7.11: Tutor events wired with await in async methods: inviteSent (InviteTutorUseCase), inviteAccepted (AcceptTutorInviteUseCase), inviteDeclined (DeclineTutorInviteUseCase), grantRescinded (RescindTutorInviteUseCase), grantRevoked (RevokeTutorGrantUseCase), tutorResigned (ResignTutorGrantUseCase), pinSet (TutorPinService.setTutorPin), liveMarkBlocked (MarkLiveCompletionUseCase). actionRecorded in TutorAuditLogWriter._log() uses unawaited() (sync). B1 regression telemetry: bulkEngagementSkipped + lifetimeAchievementSkipped in MarkCompletionUseCase.call() using await.
+  All unawaited_futures lint issues resolved: async methods use await, sync contexts use unawaited() from dart:async.
+  dart analyze lib/core/sync/ lib/features/tutoring/ lib/features/learning/ — No issues found.
+- next: S2-Telemetry scope complete (7/7 tasks done)
