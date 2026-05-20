@@ -1,5 +1,5 @@
+import 'package:learning_tracker/core/domain/value_objects/schedule_spec.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/features/stages/domain/models/schedule_type.dart';
 
 /// Default curriculum configuration constants per D3.
 ///
@@ -10,9 +10,21 @@ class CurriculumDefaults {
 
   /// Default stage definitions applied to all curricula.
   static const List<DefaultStageDefinition> defaultStages = [
-    DefaultStageDefinition(stageOrder: 0, stageName: 'לימוד', delayDays: 0),
-    DefaultStageDefinition(stageOrder: 1, stageName: 'חזרה א׳', delayDays: 1),
-    DefaultStageDefinition(stageOrder: 2, stageName: 'חזרה ב׳', delayDays: 7),
+    DefaultStageDefinition(
+      stageOrder: 0,
+      stageName: 'לימוד',
+      schedule: DelaySchedule(0),
+    ),
+    DefaultStageDefinition(
+      stageOrder: 1,
+      stageName: 'חזרה א׳',
+      schedule: DelaySchedule(1),
+    ),
+    DefaultStageDefinition(
+      stageOrder: 2,
+      stageName: 'חזרה ב׳',
+      schedule: DelaySchedule(7),
+    ),
   ];
 
   /// Points awarded per stage completion (keyed by stageOrder).
@@ -32,22 +44,34 @@ class CurriculumDefaults {
   };
 }
 
+/// A default stage configuration used to seed new tracks.
+///
+/// Carries a [ScheduleSpec] instead of the old nullable quartet
+/// (scheduleType, delayDays, daysOfWeek?, rollingWindowSize?) — W4.10.
 class DefaultStageDefinition {
   const DefaultStageDefinition({
     required this.stageOrder,
     required this.stageName,
-    required this.delayDays,
-    this.scheduleType = ScheduleType.delay,
-    this.daysOfWeek,
-    this.rollingWindowSize,
+    required this.schedule,
   });
 
   final int stageOrder;
   final String stageName;
-  final int delayDays;
-  final ScheduleType scheduleType;
-  final List<int>? daysOfWeek;
-  final int? rollingWindowSize;
+  final ScheduleSpec schedule;
+
+  // ── Convenience accessors for repository write-back ─────────────────────
+
+  /// `delay_days` column value — non-zero only for [DelaySchedule].
+  int get delayDays => schedule.delayDays;
+
+  /// `days_of_week` column value — non-null only for [WeeklySchedule].
+  List<int>? get daysOfWeek => schedule.daysOfWeek;
+
+  /// `rolling_window_size` column value — non-null only for [RollingSchedule].
+  int? get rollingWindowSize => schedule.rollingWindowSize;
+
+  /// `schedule_type` column value.
+  String get scheduleTypeKey => schedule.storageKey;
 }
 
 /// How a level's raw data value should be interpreted for display.

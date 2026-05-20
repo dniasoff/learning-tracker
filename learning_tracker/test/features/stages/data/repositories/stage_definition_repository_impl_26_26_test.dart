@@ -1,18 +1,20 @@
-// Tests for story 26.26 (DNI-369):
-// - addStage accepts scheduleType / daysOfWeek / rollingWindowSize
+// Tests for story 26.26 (DNI-369) — updated for W4.10 ScheduleSpec API:
+// - addStage accepts ScheduleSpec (DelaySchedule / WeeklySchedule / RollingSchedule)
 // - reorderStages is atomic (real in-memory Drift DB)
 // - reorderStages throws ProtectedStageException when Learn displaced
 // - deleteStage throws ProtectedStageException for the Learn stage
-// - StageValidator is consulted on addStage and updateStage
+// - StageValidator / ScheduleSpec constructors validate invariants on addStage
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/daos/completion_dao.dart';
 import 'package:learning_tracker/core/database/daos/stage_dao.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart' as db;
+import 'package:learning_tracker/core/domain/value_objects/schedule_spec.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/features/stages/data/repositories/stage_definition_repository_impl.dart';
 import 'package:learning_tracker/features/stages/domain/exceptions/protected_stage_exception.dart';
 import 'package:learning_tracker/features/stages/domain/models/schedule_type.dart';
+import 'package:learning_tracker/features/stages/domain/models/stage_definition.dart';
 import 'package:mocktail/mocktail.dart';
 
 import '../../../../helpers/test_database.dart' show seedProfile;
@@ -96,10 +98,10 @@ void main() {
   });
 
   // =========================================================================
-  // Group 1: addStage with new schedule params (mock-based unit tests)
+  // Group 1: addStage with ScheduleSpec (mock-based unit tests)
   // =========================================================================
 
-  group('addStage — new schedule params (unit)', () {
+  group('addStage — ScheduleSpec params (unit)', () {
     late MockStageDao mockStageDao;
     late MockCompletionDao mockCompletionDao;
     late List<Map<String, dynamic>> pushedSettings;
@@ -129,7 +131,7 @@ void main() {
       ).thenAnswer((_) async => [_makeRow()]);
     });
 
-    test('addStage(delay) writes scheduleType=delay to DAO', () async {
+    test('addStage(DelaySchedule) writes scheduleType=delay to DAO', () async {
       when(() => mockStageDao.getStageDefinitionById(4)).thenAnswer(
         (_) async => _makeRow(
           id: 4,
@@ -144,15 +146,17 @@ void main() {
       final result = await repository.addStage(
         curriculum,
         'Extra',
-        14,
         profileId: 1,
         trackId: 1,
+        schedule: const DelaySchedule(14),
       );
 
       expect(result.scheduleType, ScheduleType.delay);
       expect(result.stageOrder, 4);
       expect(result.daysOfWeek, isNull);
       expect(result.rollingWindowSize, isNull);
+      // ScheduleSpec convenience getter
+      expect(result.schedule, const DelaySchedule(14));
 
       final captured =
           verify(
@@ -160,10 +164,11 @@ void main() {
               ).captured.single
               as db.StageDefinitionsCompanion;
       expect(captured.scheduleType.value, 'delay');
+      expect(captured.delayDays.value, 14);
     });
 
     test(
-      'addStage(weekly) writes scheduleType=weekly and daysOfWeek to DAO',
+      'addStage(WeeklySchedule) writes scheduleType=weekly and daysOfWeek to DAO',
       () async {
         when(() => mockStageDao.getStageDefinitionById(4)).thenAnswer(
           (_) async => _makeRow(
@@ -180,15 +185,14 @@ void main() {
         final result = await repository.addStage(
           curriculum,
           'Weekly Review',
-          0,
           profileId: 1,
           trackId: 1,
-          scheduleType: ScheduleType.weekly,
-          daysOfWeek: [1, 3, 5],
+          schedule: WeeklySchedule([1, 3, 5]),
         );
 
         expect(result.scheduleType, ScheduleType.weekly);
         expect(result.daysOfWeek, [1, 3, 5]);
+        expect(result.schedule, WeeklySchedule([1, 3, 5]));
 
         final captured =
             verify(
@@ -201,7 +205,7 @@ void main() {
     );
 
     test(
-      'addStage(rolling) writes scheduleType=rolling and windowSize to DAO',
+      'addStage(RollingSchedule) writes scheduleType=rolling and windowSize to DAO',
       () async {
         when(() => mockStageDao.getStageDefinitionById(4)).thenAnswer(
           (_) async => _makeRow(
@@ -218,15 +222,14 @@ void main() {
         final result = await repository.addStage(
           curriculum,
           'Rolling',
-          0,
           profileId: 1,
           trackId: 1,
-          scheduleType: ScheduleType.rolling,
-          rollingWindowSize: 10,
+          schedule: RollingSchedule(10),
         );
 
         expect(result.scheduleType, ScheduleType.rolling);
         expect(result.rollingWindowSize, 10);
+        expect(result.schedule, RollingSchedule(10));
 
         final captured =
             verify(
@@ -239,19 +242,12 @@ void main() {
     );
 
     test(
-      'addStage(weekly) without daysOfWeek throws ArgumentError (validator)',
+      'WeeklySchedule() with empty daysOfWeek throws AssertionError',
       () async {
+        // Validation now happens at ScheduleSpec construction time
         expect(
-          () => repository.addStage(
-            curriculum,
-            'Bad Weekly',
-            0,
-            profileId: 1,
-            trackId: 1,
-            scheduleType: ScheduleType.weekly,
-            // daysOfWeek deliberately omitted
-          ),
-          throwsA(isA<ArgumentError>()),
+          () => WeeklySchedule([]),
+          throwsA(isA<AssertionError>()),
         );
 
         verifyNever(() => mockStageDao.insertStageDefinition(any()));
@@ -259,19 +255,11 @@ void main() {
     );
 
     test(
-      'addStage(rolling) without rollingWindowSize throws ArgumentError (validator)',
+      'WeeklySchedule() with out-of-range day throws AssertionError',
       () async {
         expect(
-          () => repository.addStage(
-            curriculum,
-            'Bad Rolling',
-            0,
-            profileId: 1,
-            trackId: 1,
-            scheduleType: ScheduleType.rolling,
-            // rollingWindowSize deliberately omitted
-          ),
-          throwsA(isA<ArgumentError>()),
+          () => WeeklySchedule([0, 3, 5]), // 0 is invalid (Mon=1..Sun=7)
+          throwsA(isA<AssertionError>()),
         );
 
         verifyNever(() => mockStageDao.insertStageDefinition(any()));
@@ -279,41 +267,16 @@ void main() {
     );
 
     test(
-      'addStage(weekly) with empty daysOfWeek throws ArgumentError',
+      'RollingSchedule() with windowSize=0 throws AssertionError',
       () async {
         expect(
-          () => repository.addStage(
-            curriculum,
-            'Bad Weekly',
-            0,
-            profileId: 1,
-            trackId: 1,
-            scheduleType: ScheduleType.weekly,
-            daysOfWeek: [], // empty list
-          ),
-          throwsA(isA<ArgumentError>()),
+          () => RollingSchedule(0),
+          throwsA(isA<AssertionError>()),
         );
 
         verifyNever(() => mockStageDao.insertStageDefinition(any()));
       },
     );
-
-    test('addStage(rolling) with windowSize=0 throws ArgumentError', () async {
-      expect(
-        () => repository.addStage(
-          curriculum,
-          'Bad Rolling',
-          0,
-          profileId: 1,
-          trackId: 1,
-          scheduleType: ScheduleType.rolling,
-          rollingWindowSize: 0, // non-positive
-        ),
-        throwsA(isA<ArgumentError>()),
-      );
-
-      verifyNever(() => mockStageDao.insertStageDefinition(any()));
-    });
   });
 
   // =========================================================================
@@ -321,7 +284,7 @@ void main() {
   // =========================================================================
 
   group('addStage — round-trip with real DB', () {
-    test('scheduleType/daysOfWeek round-trips for weekly stage', () async {
+    test('WeeklySchedule round-trips for weekly stage', () async {
       final ctx = await _makeRealRepo();
       addTearDown(() => ctx.database.close());
 
@@ -334,26 +297,26 @@ void main() {
       final stage = await ctx.repository.addStage(
         curriculum,
         'Weekly Review',
-        0,
         profileId: 1,
         trackId: ctx.trackId,
-        scheduleType: ScheduleType.weekly,
-        daysOfWeek: [2, 4],
+        schedule: WeeklySchedule([2, 4]),
       );
 
       expect(stage.scheduleType, ScheduleType.weekly);
       expect(stage.daysOfWeek, [2, 4]);
       expect(stage.rollingWindowSize, isNull);
+      expect(stage.schedule, WeeklySchedule([2, 4]));
 
       // Verify persisted value is readable back
       final stages = await ctx.repository.getStagesForCurriculum(curriculum);
       final persisted = stages.firstWhere((s) => s.id == stage.id);
       expect(persisted.scheduleType, ScheduleType.weekly);
       expect(persisted.daysOfWeek, [2, 4]);
+      expect(persisted.schedule, WeeklySchedule([2, 4]));
     });
 
     test(
-      'scheduleType/rollingWindowSize round-trips for rolling stage',
+      'RollingSchedule round-trips for rolling stage',
       () async {
         final ctx = await _makeRealRepo();
         addTearDown(() => ctx.database.close());
@@ -367,21 +330,21 @@ void main() {
         final stage = await ctx.repository.addStage(
           curriculum,
           'Rolling',
-          0,
           profileId: 1,
           trackId: ctx.trackId,
-          scheduleType: ScheduleType.rolling,
-          rollingWindowSize: 7,
+          schedule: RollingSchedule(7),
         );
 
         expect(stage.scheduleType, ScheduleType.rolling);
         expect(stage.rollingWindowSize, 7);
         expect(stage.daysOfWeek, isNull);
+        expect(stage.schedule, RollingSchedule(7));
 
         final stages = await ctx.repository.getStagesForCurriculum(curriculum);
         final persisted = stages.firstWhere((s) => s.id == stage.id);
         expect(persisted.scheduleType, ScheduleType.rolling);
         expect(persisted.rollingWindowSize, 7);
+        expect(persisted.schedule, RollingSchedule(7));
       },
     );
   });
@@ -584,6 +547,52 @@ void main() {
       await repository.updateStage(2, name: 'Review', delayDays: 3);
 
       verify(() => mockStageDao.updateStageDefinition(any())).called(1);
+    });
+  });
+
+  // =========================================================================
+  // Group 6: ScheduleSpec.fromParts — reconstruction from raw DB columns
+  // =========================================================================
+
+  group('ScheduleSpec.fromParts — reconstruction', () {
+    test('fromParts with delay key returns DelaySchedule', () {
+      final spec = ScheduleSpec.fromParts(
+        scheduleTypeKey: 'delay',
+        delayDays: 7,
+        daysOfWeek: null,
+        rollingWindowSize: null,
+      );
+      expect(spec, const DelaySchedule(7));
+    });
+
+    test('fromParts with weekly key returns WeeklySchedule', () {
+      final spec = ScheduleSpec.fromParts(
+        scheduleTypeKey: 'weekly',
+        delayDays: 0,
+        daysOfWeek: [1, 5],
+        rollingWindowSize: null,
+      );
+      expect(spec, WeeklySchedule([1, 5]));
+    });
+
+    test('fromParts with rolling key returns RollingSchedule', () {
+      final spec = ScheduleSpec.fromParts(
+        scheduleTypeKey: 'rolling',
+        delayDays: 0,
+        daysOfWeek: null,
+        rollingWindowSize: 14,
+      );
+      expect(spec, RollingSchedule(14));
+    });
+
+    test('fromParts with unknown key falls back to DelaySchedule', () {
+      final spec = ScheduleSpec.fromParts(
+        scheduleTypeKey: 'unknown_legacy',
+        delayDays: 3,
+        daysOfWeek: null,
+        rollingWindowSize: null,
+      );
+      expect(spec, const DelaySchedule(3));
     });
   });
 }

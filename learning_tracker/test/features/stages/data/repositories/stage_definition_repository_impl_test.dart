@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/daos/completion_dao.dart';
 import 'package:learning_tracker/core/database/daos/stage_dao.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart' as db;
+import 'package:learning_tracker/core/domain/value_objects/schedule_spec.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/features/stages/data/repositories/stage_definition_repository_impl.dart';
 import 'package:learning_tracker/features/stages/domain/exceptions/protected_stage_exception.dart';
@@ -138,9 +139,9 @@ void main() {
         final result = await repository.addStage(
           curriculum,
           'Chazara 3',
-          30,
           profileId: 1,
           trackId: 1,
+          schedule: const DelaySchedule(30),
         );
 
         expect(result.stageOrder, 4);
@@ -261,9 +262,9 @@ void main() {
         () => repository.addStage(
           curriculum,
           'Extra Stage',
-          60,
           profileId: 1,
           trackId: 1,
+          schedule: const DelaySchedule(60),
         ),
         throwsA(isA<StageLimitExceededException>()),
       );
@@ -347,9 +348,9 @@ void main() {
       await repository.addStage(
         curriculum,
         'Extra',
-        30,
         profileId: 1,
         trackId: 1,
+        schedule: const DelaySchedule(30),
       );
 
       expect(pushedSettings, hasLength(1));

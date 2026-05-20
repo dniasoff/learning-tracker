@@ -1,9 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:learning_tracker/core/domain/value_objects/schedule_spec.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/stages/data/repositories/stage_definition_repository_impl.dart';
-import 'package:learning_tracker/features/stages/domain/models/schedule_type.dart';
 import 'package:learning_tracker/features/stages/domain/models/stage_definition.dart';
 import 'package:learning_tracker/features/stages/domain/repositories/stage_definition_repository.dart';
 import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
@@ -69,23 +69,17 @@ class StageEditorNotifier extends AsyncNotifier<List<StageDefinition>> {
       ref.read(stageDefinitionRepositoryProvider(_curriculum));
 
   Future<void> addStage(
-    String name,
-    int delayDays, {
+    String name, {
     required int trackId,
-    ScheduleType scheduleType = ScheduleType.delay,
-    List<int>? daysOfWeek,
-    int? rollingWindowSize,
+    ScheduleSpec schedule = const DelaySchedule(0),
   }) async {
     final profileId = ref.read(activeProfileIdProvider);
     await _repository.addStage(
       _curriculum,
       name,
-      delayDays,
       profileId: profileId,
       trackId: trackId,
-      scheduleType: scheduleType,
-      daysOfWeek: daysOfWeek,
-      rollingWindowSize: rollingWindowSize,
+      schedule: schedule,
     );
     ref.invalidate(stageListProvider(_curriculum));
     state = await AsyncValue.guard(

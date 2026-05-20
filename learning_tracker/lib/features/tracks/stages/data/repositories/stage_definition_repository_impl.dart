@@ -4,6 +4,7 @@ import 'package:drift/drift.dart';
 import 'package:learning_tracker/core/database/daos/completion_dao.dart';
 import 'package:learning_tracker/core/database/daos/stage_dao.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart' as db;
+import 'package:learning_tracker/core/domain/value_objects/schedule_spec.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/tracks/stages/domain/exceptions/protected_stage_exception.dart';
@@ -53,13 +54,10 @@ class StageDefinitionRepositoryImpl implements StageDefinitionRepository {
   @override
   Future<StageDefinition> addStage(
     CurriculumId curriculumId,
-    String name,
-    int delayDays, {
+    String name, {
     required int profileId,
     required int trackId,
-    ScheduleType scheduleType = ScheduleType.delay,
-    List<int>? daysOfWeek,
-    int? rollingWindowSize,
+    ScheduleSpec schedule = const DelaySchedule(0),
   }) async {
     final count = await _stageDao.countStagesForCurriculum(
       curriculumId.storageKey,
@@ -78,17 +76,18 @@ class StageDefinitionRepositoryImpl implements StageDefinitionRepository {
       curriculumId: curriculumId,
       stageOrder: newOrder,
       stageName: name,
-      delayDays: delayDays,
+      delayDays: schedule.delayDays,
       isDefault: false,
-      scheduleType: scheduleType,
-      daysOfWeek: daysOfWeek,
-      rollingWindowSize: rollingWindowSize,
+      scheduleType: ScheduleType.fromStorageKey(schedule.storageKey),
+      daysOfWeek: schedule.daysOfWeek,
+      rollingWindowSize: schedule.rollingWindowSize,
     );
     final validationError = StageValidator.validate(candidate);
     if (validationError != null) {
       throw ArgumentError(validationError);
     }
 
+    final encodedDaysOfWeek = schedule.daysOfWeek;
     final id = await _stageDao.insertStageDefinition(
       db.StageDefinitionsCompanion.insert(
         profileId: profileId,
@@ -96,11 +95,13 @@ class StageDefinitionRepositoryImpl implements StageDefinitionRepository {
         trackId: trackId,
         stageOrder: newOrder,
         stageName: name,
-        delayDays: delayDays,
+        delayDays: schedule.delayDays,
         isDefault: const Value(false),
-        scheduleType: Value(scheduleType.storageKey),
-        daysOfWeek: Value(daysOfWeek != null ? jsonEncode(daysOfWeek) : null),
-        rollingWindowSize: Value(rollingWindowSize),
+        scheduleType: Value(schedule.storageKey),
+        daysOfWeek: Value(
+          encodedDaysOfWeek != null ? jsonEncode(encodedDaysOfWeek) : null,
+        ),
+        rollingWindowSize: Value(schedule.rollingWindowSize),
       ),
     );
 
@@ -315,6 +316,9 @@ class StageDefinitionRepositoryImpl implements StageDefinitionRepository {
   // ── Private helpers ──────────────────────────────────────────────────────
 
   StageDefinition _rowToModel(db.StageDefinition row) {
+    final decodedDaysOfWeek = row.daysOfWeek != null
+        ? (jsonDecode(row.daysOfWeek!) as List).cast<int>()
+        : null;
     return StageDefinition(
       id: row.id,
       curriculumId: _curriculumFromStorageKey(row.curriculumId),
@@ -323,11 +327,12 @@ class StageDefinitionRepositoryImpl implements StageDefinitionRepository {
       delayDays: row.delayDays,
       isDefault: row.isDefault,
       scheduleType: ScheduleType.fromStorageKey(row.scheduleType),
-      daysOfWeek: row.daysOfWeek != null
-          ? (jsonDecode(row.daysOfWeek!) as List).cast<int>()
-          : null,
+      daysOfWeek: decodedDaysOfWeek,
       rollingWindowSize: row.rollingWindowSize,
     );
+    // Note: StageDefinition.schedule (a ScheduleSpec getter) is derived from
+    // the above fields — no additional storage needed here. W3.27 will
+    // collapse the quartet into a single JSON column and remove the raw fields.
   }
 
   CurriculumId _curriculumFromStorageKey(String key) =>

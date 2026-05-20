@@ -4,6 +4,7 @@ library;
 
 import 'package:drift/native.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
+import 'package:learning_tracker/core/domain/value_objects/schedule_spec.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/network/sefaria/models/curriculum_hierarchy_config.dart';
@@ -84,9 +85,9 @@ void main() {
       final newStage = await repository.addStage(
         curriculum,
         'Chazara 3',
-        30,
         profileId: 1,
         trackId: trackId,
+        schedule: const DelaySchedule(30),
       );
 
       expect(newStage.stageName, 'Chazara 3');

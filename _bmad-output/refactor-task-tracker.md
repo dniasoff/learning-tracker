@@ -202,7 +202,7 @@ Sync-point trigger tags: `[P1]` `[P2]` `[P3]` `[P4]` `[P5]` `[P6]` `[P7]`
 - [x] W4.7  (M, S4, done)    ProgramStartingPosition VO replacing 'offset:N|ref:&lt;sefariaRef&gt;' grammar — **owns B2 + B3 window enforcement**
 - [x] W4.8  (S, S5, done)    Scope(level: ScopeLevel, value: ScopeValue) typed VO
 - [x] W4.9  (S, S5, done)    ProfileMode { adult, child } + AccountTier { local, cloud } enums; deprecation on string equality
-- [ ] W4.10 (M, S4, in-progress)    Sealed ScheduleSpec { DelaySchedule, WeeklySchedule, RollingSchedule } replacing nullable quartet
+- [x] W4.10 (M, S4, done)    Sealed ScheduleSpec { DelaySchedule, WeeklySchedule, RollingSchedule } replacing nullable quartet
 
 ### Phase 4b · Anemic features rebuilt
 - [ ] W4.11 (M, S3, pending)    parent_mode PIN → PinFlowMachine pure domain (~100 LOC) + SetParentPinUseCase + VerifyParentPinUseCase; thin Riverpod adapter

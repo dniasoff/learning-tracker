@@ -1,5 +1,5 @@
+import 'package:learning_tracker/core/domain/value_objects/schedule_spec.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/features/stages/domain/models/schedule_type.dart';
 import 'package:learning_tracker/features/stages/domain/models/stage_definition.dart';
 
 /// Abstract repository for managing stage definitions per curriculum.
@@ -11,17 +11,16 @@ abstract class StageDefinitionRepository {
 
   /// Adds a new custom stage. Assigns stageOrder = max + 1.
   ///
+  /// [schedule] defaults to [DelaySchedule(0)] (delay = 0 days / immediate).
+  ///
   /// Throws [StageLimitExceededException] if curriculum already has 10 stages.
   /// Throws [ArgumentError] if [StageValidator] rejects the new stage.
   Future<StageDefinition> addStage(
     CurriculumId curriculumId,
-    String name,
-    int delayDays, {
+    String name, {
     required int profileId,
     required int trackId,
-    ScheduleType scheduleType = ScheduleType.delay,
-    List<int>? daysOfWeek,
-    int? rollingWindowSize,
+    ScheduleSpec schedule = const DelaySchedule(0),
   });
 
   /// Updates the name and/or delayDays of an existing stage.

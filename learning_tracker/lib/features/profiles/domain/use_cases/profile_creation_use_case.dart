@@ -136,7 +136,7 @@ class ProfileCreationUseCase {
                   stageOrder: stage.stageOrder,
                   stageName: stage.stageName,
                   delayDays: stage.delayDays,
-                  scheduleType: Value(stage.scheduleType.storageKey),
+                  scheduleType: Value(stage.scheduleTypeKey),
                 ),
               );
         }

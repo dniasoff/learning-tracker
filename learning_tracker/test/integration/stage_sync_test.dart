@@ -2,6 +2,7 @@ import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
+import 'package:learning_tracker/core/domain/value_objects/schedule_spec.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/features/stages/data/repositories/stage_definition_repository_impl.dart';
 
@@ -61,9 +62,9 @@ void main() {
         final newStage = await repository.addStage(
           curriculum,
           'Chazara 3',
-          30,
           profileId: 1,
           trackId: trackId,
+          schedule: const DelaySchedule(30),
         );
 
         expect(newStage.stageName, 'Chazara 3');
@@ -158,9 +159,9 @@ void main() {
       await repository.addStage(
         curriculum,
         'Custom',
-        60,
         profileId: 1,
         trackId: trackId,
+        schedule: const DelaySchedule(60),
       );
 
       pushedSettings.clear();
