@@ -123,8 +123,9 @@ Future<double> dashboardTrackCompletionPercentage(Ref ref, int trackId) async {
       .firstOrNull;
   if (curriculum == null) {
     AppLogger.instance.warning(
-      event: 'dashboardTrackCompletionPercentage: unknown curriculumId '
-      '"${track.curriculumId}" for track $trackId — skipping',
+      event:
+          'dashboardTrackCompletionPercentage: unknown curriculumId '
+          '"${track.curriculumId}" for track $trackId — skipping',
     );
     return 0.0;
   }
@@ -190,8 +191,9 @@ Future<double> dashboardCompletionPercentage(
     final stages = await stageRepository.getStagesByTrack(trackId);
     if (stages.isEmpty) {
       AppLogger.instance.warning(
-        event: 'dashboardCompletionPercentage: no stages for curriculum '
-        '${curriculum.storageKey}, skipping — track may be misconfigured',
+        event:
+            'dashboardCompletionPercentage: no stages for curriculum '
+            '${curriculum.storageKey}, skipping — track may be misconfigured',
       );
       continue;
     }
@@ -202,7 +204,10 @@ Future<double> dashboardCompletionPercentage(
   }
 
   const service = TrackCompletionService();
-  return service.computeCurriculumPercentage(byTrack: byTrack, totalItems: totalItems);
+  return service.computeCurriculumPercentage(
+    byTrack: byTrack,
+    totalItems: totalItems,
+  );
 }
 
 /// Per-curriculum last completion timestamp, scoped to active profile.
@@ -271,6 +276,26 @@ Future<int> dashboardGlobalPoints(Ref ref) async {
   return service.getGlobalTotal();
 }
 
+/// Write-path effect: strips legacy stock-template milestones for the current
+/// profile and pushes updated gamification settings to Firestore if any rows
+/// were removed.
+///
+/// This is intentionally separate from the read providers below so that a
+/// mutation (delete + cloud push) never runs inside a provider that is
+/// re-evaluated on every widget rebuild.  Callers that depend on the post-strip
+/// state should watch this provider to ensure it completes before reading
+/// milestone data.
+@riverpod
+Future<void> stripStockMilestonesEffect(Ref ref) async {
+  final db = ref.watch(userDatabaseProvider);
+  final profileId = ref.watch(activeProfileIdProvider);
+  final milestoneService = RewardMilestoneService(db, profileId: profileId);
+
+  if (await milestoneService.stripStockTemplateMilestones()) {
+    await ref.read(syncEngineProvider)?.pushGamificationSettingsSnapshot();
+  }
+}
+
 /// Next reward milestone for the child dashboard (closest threshold not yet met).
 ///
 /// Delegates selection to [NextRewardSelector].
@@ -280,13 +305,14 @@ Future<DashboardChildNextReward?> dashboardChildNextReward(Ref ref) async {
   final userMode = ref.watch(dashboardUserModeProvider).asData?.value;
   if (userMode != UserMode.child) return null;
 
+  // Ensure stock template milestones are purged before reading reward state.
+  // The actual strip + cloud push runs in [stripStockMilestonesEffectProvider]
+  // (a separate write-path provider) so this read provider stays side-effect-free.
+  await ref.watch(stripStockMilestonesEffectProvider.future);
+
   final db = ref.watch(userDatabaseProvider);
   final profileId = ref.watch(activeProfileIdProvider);
   final milestoneService = RewardMilestoneService(db, profileId: profileId);
-
-  if (await milestoneService.stripStockTemplateMilestones()) {
-    await ref.read(syncEngineProvider)?.pushGamificationSettingsSnapshot();
-  }
 
   final tracks = await db.trackDao.getActiveTracksForProfile(profileId);
 
@@ -390,7 +416,10 @@ Future<PaceStatus?> dashboardPaceStatus(
   } else if (goal.goalType == 'pace' &&
       goal.paceValue != null &&
       goal.pacePeriod != null) {
-    paceTarget = PacePeriodTarget(rate: goal.paceValue!, period: goal.pacePeriod!);
+    paceTarget = PacePeriodTarget(
+      rate: goal.paceValue!,
+      period: goal.pacePeriod!,
+    );
   } else {
     paceTarget = null;
   }

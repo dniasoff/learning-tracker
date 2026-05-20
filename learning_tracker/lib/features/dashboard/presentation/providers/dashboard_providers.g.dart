@@ -214,6 +214,8 @@ String _$dashboardActiveCurriculaStreamHash() =>
 /// stage defined for the track (stageOrder 1 = learn, 2+ = chazara).
 ///
 /// Formula: `(items where all required stages are done) / totalItems`.
+///
+/// Delegates computation to [TrackCompletionService].
 
 @ProviderFor(dashboardTrackCompletionPercentage)
 final dashboardTrackCompletionPercentageProvider =
@@ -226,6 +228,8 @@ final dashboardTrackCompletionPercentageProvider =
 /// stage defined for the track (stageOrder 1 = learn, 2+ = chazara).
 ///
 /// Formula: `(items where all required stages are done) / totalItems`.
+///
+/// Delegates computation to [TrackCompletionService].
 
 final class DashboardTrackCompletionPercentageProvider
     extends $FunctionalProvider<AsyncValue<double>, double, FutureOr<double>>
@@ -237,6 +241,8 @@ final class DashboardTrackCompletionPercentageProvider
   /// stage defined for the track (stageOrder 1 = learn, 2+ = chazara).
   ///
   /// Formula: `(items where all required stages are done) / totalItems`.
+  ///
+  /// Delegates computation to [TrackCompletionService].
   DashboardTrackCompletionPercentageProvider._({
     required DashboardTrackCompletionPercentageFamily super.from,
     required int super.argument,
@@ -283,7 +289,7 @@ final class DashboardTrackCompletionPercentageProvider
 }
 
 String _$dashboardTrackCompletionPercentageHash() =>
-    r'62b4a26ecfecaaa54550b18fa32d780a517d7d06';
+    r'6279fdc2aeaf81c07f3e6549537e2c5e2fa31c89';
 
 /// Item-based completion for one track.
 ///
@@ -292,6 +298,8 @@ String _$dashboardTrackCompletionPercentageHash() =>
 /// stage defined for the track (stageOrder 1 = learn, 2+ = chazara).
 ///
 /// Formula: `(items where all required stages are done) / totalItems`.
+///
+/// Delegates computation to [TrackCompletionService].
 
 final class DashboardTrackCompletionPercentageFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<double>, int> {
@@ -311,6 +319,8 @@ final class DashboardTrackCompletionPercentageFamily extends $Family
   /// stage defined for the track (stageOrder 1 = learn, 2+ = chazara).
   ///
   /// Formula: `(items where all required stages are done) / totalItems`.
+  ///
+  /// Delegates computation to [TrackCompletionService].
 
   DashboardTrackCompletionPercentageProvider call(int trackId) =>
       DashboardTrackCompletionPercentageProvider._(
@@ -330,6 +340,8 @@ final class DashboardTrackCompletionPercentageFamily extends $Family
 /// once toward the numerator.
 ///
 /// Formula: `(distinct sefariaRefs fully done in any track) / totalLeafItems`.
+///
+/// Delegates computation to [TrackCompletionService].
 
 @ProviderFor(dashboardCompletionPercentage)
 final dashboardCompletionPercentageProvider =
@@ -343,6 +355,8 @@ final dashboardCompletionPercentageProvider =
 /// once toward the numerator.
 ///
 /// Formula: `(distinct sefariaRefs fully done in any track) / totalLeafItems`.
+///
+/// Delegates computation to [TrackCompletionService].
 
 final class DashboardCompletionPercentageProvider
     extends $FunctionalProvider<AsyncValue<double>, double, FutureOr<double>>
@@ -355,6 +369,8 @@ final class DashboardCompletionPercentageProvider
   /// once toward the numerator.
   ///
   /// Formula: `(distinct sefariaRefs fully done in any track) / totalLeafItems`.
+  ///
+  /// Delegates computation to [TrackCompletionService].
   DashboardCompletionPercentageProvider._({
     required DashboardCompletionPercentageFamily super.from,
     required CurriculumId super.argument,
@@ -400,7 +416,7 @@ final class DashboardCompletionPercentageProvider
 }
 
 String _$dashboardCompletionPercentageHash() =>
-    r'2ae6dcefadedaece939fe5296246bfee4ebd96eb';
+    r'7ceee9ec3e5bf87f4b23ed05225cc6e1931cc5af';
 
 /// Per-curriculum item-based completion percentage, scoped to active profile.
 ///
@@ -410,6 +426,8 @@ String _$dashboardCompletionPercentageHash() =>
 /// once toward the numerator.
 ///
 /// Formula: `(distinct sefariaRefs fully done in any track) / totalLeafItems`.
+///
+/// Delegates computation to [TrackCompletionService].
 
 final class DashboardCompletionPercentageFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<double>, CurriculumId> {
@@ -430,6 +448,8 @@ final class DashboardCompletionPercentageFamily extends $Family
   /// once toward the numerator.
   ///
   /// Formula: `(distinct sefariaRefs fully done in any track) / totalLeafItems`.
+  ///
+  /// Delegates computation to [TrackCompletionService].
 
   DashboardCompletionPercentageProvider call(CurriculumId curriculum) =>
       DashboardCompletionPercentageProvider._(argument: curriculum, from: this);
@@ -656,12 +676,80 @@ final class DashboardGlobalPointsProvider
 String _$dashboardGlobalPointsHash() =>
     r'936c0e8d7b3adac83f55c2b6debf265fef08768f';
 
+/// Write-path effect: strips legacy stock-template milestones for the current
+/// profile and pushes updated gamification settings to Firestore if any rows
+/// were removed.
+///
+/// This is intentionally separate from the read providers below so that a
+/// mutation (delete + cloud push) never runs inside a provider that is
+/// re-evaluated on every widget rebuild.  Callers that depend on the post-strip
+/// state should watch this provider to ensure it completes before reading
+/// milestone data.
+
+@ProviderFor(stripStockMilestonesEffect)
+final stripStockMilestonesEffectProvider =
+    StripStockMilestonesEffectProvider._();
+
+/// Write-path effect: strips legacy stock-template milestones for the current
+/// profile and pushes updated gamification settings to Firestore if any rows
+/// were removed.
+///
+/// This is intentionally separate from the read providers below so that a
+/// mutation (delete + cloud push) never runs inside a provider that is
+/// re-evaluated on every widget rebuild.  Callers that depend on the post-strip
+/// state should watch this provider to ensure it completes before reading
+/// milestone data.
+
+final class StripStockMilestonesEffectProvider
+    extends $FunctionalProvider<AsyncValue<void>, void, FutureOr<void>>
+    with $FutureModifier<void>, $FutureProvider<void> {
+  /// Write-path effect: strips legacy stock-template milestones for the current
+  /// profile and pushes updated gamification settings to Firestore if any rows
+  /// were removed.
+  ///
+  /// This is intentionally separate from the read providers below so that a
+  /// mutation (delete + cloud push) never runs inside a provider that is
+  /// re-evaluated on every widget rebuild.  Callers that depend on the post-strip
+  /// state should watch this provider to ensure it completes before reading
+  /// milestone data.
+  StripStockMilestonesEffectProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'stripStockMilestonesEffectProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$stripStockMilestonesEffectHash();
+
+  @$internal
+  @override
+  $FutureProviderElement<void> $createElement($ProviderPointer pointer) =>
+      $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<void> create(Ref ref) {
+    return stripStockMilestonesEffect(ref);
+  }
+}
+
+String _$stripStockMilestonesEffectHash() =>
+    r'7d64d689d43199ab0dd797653d22398b171ccd06';
+
 /// Next reward milestone for the child dashboard (closest threshold not yet met).
+///
+/// Delegates selection to [NextRewardSelector].
 
 @ProviderFor(dashboardChildNextReward)
 final dashboardChildNextRewardProvider = DashboardChildNextRewardProvider._();
 
 /// Next reward milestone for the child dashboard (closest threshold not yet met).
+///
+/// Delegates selection to [NextRewardSelector].
 
 final class DashboardChildNextRewardProvider
     extends
@@ -674,6 +762,8 @@ final class DashboardChildNextRewardProvider
         $FutureModifier<DashboardChildNextReward?>,
         $FutureProvider<DashboardChildNextReward?> {
   /// Next reward milestone for the child dashboard (closest threshold not yet met).
+  ///
+  /// Delegates selection to [NextRewardSelector].
   DashboardChildNextRewardProvider._()
     : super(
         from: null,
@@ -701,7 +791,7 @@ final class DashboardChildNextRewardProvider
 }
 
 String _$dashboardChildNextRewardHash() =>
-    r'be7471959903a2497d61a012336d25f258395a4f';
+    r'5b2fbc543f8d2cb045bd04b9610d823128d9ef88';
 
 /// Streak recovery info — whether the streak was just saved by grace period.
 
@@ -754,6 +844,8 @@ String _$dashboardStreakRecoveryHash() =>
 ///
 /// Fetches goal data and computes pace internally so the dashboard
 /// doesn't need to know goal details.
+///
+/// Delegates computation to [ComputePaceStatusUseCase].
 
 @ProviderFor(dashboardPaceStatus)
 final dashboardPaceStatusProvider = DashboardPaceStatusFamily._();
@@ -762,6 +854,8 @@ final dashboardPaceStatusProvider = DashboardPaceStatusFamily._();
 ///
 /// Fetches goal data and computes pace internally so the dashboard
 /// doesn't need to know goal details.
+///
+/// Delegates computation to [ComputePaceStatusUseCase].
 
 final class DashboardPaceStatusProvider
     extends
@@ -775,6 +869,8 @@ final class DashboardPaceStatusProvider
   ///
   /// Fetches goal data and computes pace internally so the dashboard
   /// doesn't need to know goal details.
+  ///
+  /// Delegates computation to [ComputePaceStatusUseCase].
   DashboardPaceStatusProvider._({
     required DashboardPaceStatusFamily super.from,
     required CurriculumId super.argument,
@@ -820,12 +916,14 @@ final class DashboardPaceStatusProvider
 }
 
 String _$dashboardPaceStatusHash() =>
-    r'85c63b585f4f6d9678b64f02af058bfc6566ccdd';
+    r'58c2212bf9f975d24b8ba5b0993f3359357bc357';
 
 /// Per-curriculum pace status for the dashboard.
 ///
 /// Fetches goal data and computes pace internally so the dashboard
 /// doesn't need to know goal details.
+///
+/// Delegates computation to [ComputePaceStatusUseCase].
 
 final class DashboardPaceStatusFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<PaceStatus?>, CurriculumId> {
@@ -842,6 +940,8 @@ final class DashboardPaceStatusFamily extends $Family
   ///
   /// Fetches goal data and computes pace internally so the dashboard
   /// doesn't need to know goal details.
+  ///
+  /// Delegates computation to [ComputePaceStatusUseCase].
 
   DashboardPaceStatusProvider call(CurriculumId curriculum) =>
       DashboardPaceStatusProvider._(argument: curriculum, from: this);
