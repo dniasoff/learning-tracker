@@ -1,14 +1,18 @@
-import 'package:learning_tracker/core/sync/merge/entity_merger.dart';
-import 'package:learning_tracker/core/sync/merge/merge_rules.dart';
-
 /// LWW merger for learner profile rows.
 ///
 /// Natural key: `profile_id` (the profile is identifying itself). Remote
 /// wins iff its `updated_at` is strictly newer than the local row.
+library;
+
+import 'package:learning_tracker/core/sync/codec/learner_profile_codec.dart';
+import 'package:learning_tracker/core/sync/merge/entity_merger.dart';
+import 'package:learning_tracker/core/sync/merge/merge_rules.dart';
+
 class LearnerProfileMerger implements EntityMerger {
   LearnerProfileMerger({required MergeStore store}) : _store = store;
 
   final MergeStore _store;
+  static const _codec = LearnerProfileCodec();
 
   @override
   String get kind => EntityKind.learnerProfile;
@@ -19,13 +23,18 @@ class LearnerProfileMerger implements EntityMerger {
     required List<Map<String, dynamic>> rows,
   }) async {
     for (final row in rows) {
-      final naturalKey = (row['profile_id'] ?? profileId).toString();
+      final decoded = _codec.decode(row);
+      // Fall back to caller's profileId when profile_id is absent.
+      final naturalKey = decoded != null
+          ? decoded.profileId.toString()
+          : profileId.toString();
+
       final localUpdatedAt = await _store.currentUpdatedAt(
         kind: kind,
         profileId: profileId,
         naturalKey: naturalKey,
       );
-      final remoteUpdatedAt = _parseUpdatedAt(row['updated_at']);
+      final remoteUpdatedAt = decoded?.updatedAt;
       if (!remoteIsNewer(
         localUpdatedAt: localUpdatedAt,
         remoteUpdatedAt: remoteUpdatedAt,
@@ -34,11 +43,5 @@ class LearnerProfileMerger implements EntityMerger {
       }
       await _store.upsert(kind: kind, profileId: profileId, fields: row);
     }
-  }
-
-  DateTime? _parseUpdatedAt(Object? raw) {
-    if (raw is DateTime) return raw;
-    if (raw is String) return DateTime.tryParse(raw);
-    return null;
   }
 }

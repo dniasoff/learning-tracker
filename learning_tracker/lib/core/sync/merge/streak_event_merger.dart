@@ -7,13 +7,15 @@
 /// the composite-UNIQUE `(profileId, eventTimestamp, eventType)` from
 /// Story 25.2 (DNI-323).
 ///
-/// API note: lives at `core/sync/merge/` so the DNI-334 `MergeRouter`
-/// can pick it up unchanged when that PR lands on `dev`. Until then
-/// this class can be used directly by `core/streak/` code.
+/// NOTE (W3.37): The current Firestore shape uses `event_type` /
+/// `event_timestamp`. After W3.37 migrates streak to `streak_events/{ulid}`
+/// with `study_date` / `created_at`, this merger will consume
+/// [StreakEventCodec] directly.
 library;
 
 import 'package:learning_tracker/core/database/user/user_database.dart'
     hide StreakEvent;
+import 'package:learning_tracker/core/sync/codec/firestore_codec.dart';
 import 'package:learning_tracker/core/sync/merge/entity_merger.dart';
 import 'package:learning_tracker/features/gamification/streak/streak_event.dart';
 import 'package:learning_tracker/features/gamification/streak/streak_event_log.dart';
@@ -36,9 +38,8 @@ class StreakEventMerger implements EntityMerger {
   }) async {
     for (final row in rows) {
       final eventType = row['event_type'] as String?;
-      final tsRaw = row['event_timestamp'];
-      if (eventType == null || tsRaw == null) continue;
-      final ts = tsRaw is DateTime ? tsRaw : DateTime.parse(tsRaw.toString());
+      final ts = FirestoreCodec.parseDateTime(row['event_timestamp']);
+      if (eventType == null || ts == null) continue;
 
       await _log.append(
         StreakEvent(

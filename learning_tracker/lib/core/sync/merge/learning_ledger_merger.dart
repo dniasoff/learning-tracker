@@ -1,7 +1,3 @@
-import 'package:drift/drift.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
-import 'package:learning_tracker/core/sync/merge/entity_merger.dart';
-
 /// Append-only merger for `learning_ledger` rows (W2.27 / closes M1).
 ///
 /// Learning ledger is an append-only event log. Merging reduces to
@@ -9,10 +5,17 @@ import 'package:learning_tracker/core/sync/merge/entity_merger.dart';
 /// UNIQUE `(profileId, ulid)` index (Story 25.2 / DNI-323) via
 /// `INSERT OR IGNORE`.
 ///
-/// Firestore shape (from SyncEngine._mergeLedgerEntries):
-///   profileId/profile_id, ulid, curriculumId, entryScope, unitIdentifier,
-///   unitDisplayNameHe, unitDisplayNameEn, trackType, trackId, completedAt,
-///   completionNumber, markedBy, isManual.
+/// NOTE: Field names are camelCase matching the legacy SyncEngine shape.
+/// W3 schema work (W3.19+) will migrate these to snake_case; at that point
+/// the LearningLedgerCodec decode path will be wired in place of the inline
+/// extraction below.
+library;
+
+import 'package:drift/drift.dart';
+import 'package:learning_tracker/core/database/user/user_database.dart';
+import 'package:learning_tracker/core/sync/codec/firestore_codec.dart';
+import 'package:learning_tracker/core/sync/merge/entity_merger.dart';
+
 class LearningLedgerMerger implements EntityMerger {
   LearningLedgerMerger(UserDatabase db) : _db = db;
 
@@ -33,10 +36,11 @@ class LearningLedgerMerger implements EntityMerger {
         (await _db.select(_db.learnerProfiles).get()).map((p) => p.id).toSet();
 
     for (final row in rows) {
+      // Legacy camelCase field names — will become snake_case after W3.19.
       final curriculumId = row['curriculumId'] as String?;
       final unitIdentifier = row['unitIdentifier'] as String?;
       final trackType = row['trackType'] as String?;
-      final completedAt = _parseTimestamp(row['completedAt']);
+      final completedAt = FirestoreCodec.parseDateTime(row['completedAt']);
 
       if (curriculumId == null ||
           unitIdentifier == null ||
@@ -46,11 +50,7 @@ class LearningLedgerMerger implements EntityMerger {
       }
 
       final rawPid = row['profileId'] ?? row['profile_id'];
-      var rowProfileId = rawPid is int
-          ? rawPid
-          : rawPid is num
-          ? rawPid.toInt()
-          : int.tryParse(rawPid?.toString() ?? '') ?? 0;
+      var rowProfileId = FirestoreCodec.parseInt(rawPid) ?? 0;
       if (rowProfileId == 0) rowProfileId = profileId;
 
       if (!existingProfileIds.contains(rowProfileId)) continue;
@@ -70,20 +70,14 @@ class LearningLedgerMerger implements EntityMerger {
           unitDisplayNameHe: row['unitDisplayNameHe'] as String? ?? '',
           unitDisplayNameEn: row['unitDisplayNameEn'] as String? ?? '',
           trackType: trackType,
-          trackId: Value((row['trackId'] as num?)?.toInt()),
+          trackId: Value(FirestoreCodec.parseInt(row['trackId'])),
           completedAt: completedAt,
-          completionNumber: (row['completionNumber'] as num?)?.toInt() ?? 1,
-          markedBy: (row['markedBy'] as num?)?.toInt() ?? 0,
-          isManual: Value(row['isManual'] as bool? ?? false),
+          completionNumber: FirestoreCodec.parseInt(row['completionNumber']) ?? 1,
+          markedBy: FirestoreCodec.parseInt(row['markedBy']) ?? 0,
+          isManual: Value(FirestoreCodec.parseBool(row['isManual']) ?? false),
         ),
       );
     }
-  }
-
-  DateTime? _parseTimestamp(Object? raw) {
-    if (raw is DateTime) return raw;
-    if (raw is String) return DateTime.tryParse(raw);
-    return null;
   }
 
   /// Fallback ULID generation when the remote row omits `ulid`.

@@ -1,17 +1,18 @@
-import 'package:learning_tracker/core/sync/merge/entity_merger.dart';
-import 'package:learning_tracker/core/sync/merge/merge_rules.dart';
-
 /// LWW merger for per-curriculum learning-order rows (W2.26 / closes C3/H3).
 ///
 /// Each row has a natural key of `curriculum_id + '|' + sefaria_ref`.
 /// Remote wins iff its `updated_at` is strictly newer than the local row.
-///
-/// Previously `pullLearningOrder` silently halted because no [EntityMerger]
-/// was registered for 'learning_order' in [MergeRouter]. This closes C3/H3.
+library;
+
+import 'package:learning_tracker/core/sync/codec/learning_order_codec.dart';
+import 'package:learning_tracker/core/sync/merge/entity_merger.dart';
+import 'package:learning_tracker/core/sync/merge/merge_rules.dart';
+
 class LearningOrderMerger implements EntityMerger {
   LearningOrderMerger({required MergeStore store}) : _store = store;
 
   final MergeStore _store;
+  static const _codec = LearningOrderCodec();
 
   @override
   String get kind => EntityKind.learningOrder;
@@ -22,30 +23,22 @@ class LearningOrderMerger implements EntityMerger {
     required List<Map<String, dynamic>> rows,
   }) async {
     for (final row in rows) {
-      final curriculumId = row['curriculum_id']?.toString() ?? '';
-      final sefariaRef = row['sefaria_ref']?.toString() ?? '';
-      if (curriculumId.isEmpty || sefariaRef.isEmpty) continue;
+      final decoded = _codec.decode(row);
+      if (decoded == null) continue; // Missing curriculumId/sefariaRef — skip.
 
-      final naturalKey = '$curriculumId|$sefariaRef';
+      final naturalKey = '${decoded.curriculumId}|${decoded.sefariaRef}';
       final localUpdatedAt = await _store.currentUpdatedAt(
         kind: kind,
         profileId: profileId,
         naturalKey: naturalKey,
       );
-      final remoteUpdatedAt = _parseUpdatedAt(row['updated_at']);
       if (!remoteIsNewer(
         localUpdatedAt: localUpdatedAt,
-        remoteUpdatedAt: remoteUpdatedAt,
+        remoteUpdatedAt: decoded.updatedAt,
       )) {
         continue;
       }
       await _store.upsert(kind: kind, profileId: profileId, fields: row);
     }
-  }
-
-  DateTime? _parseUpdatedAt(Object? raw) {
-    if (raw is DateTime) return raw;
-    if (raw is String) return DateTime.tryParse(raw);
-    return null;
   }
 }

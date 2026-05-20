@@ -1,4 +1,5 @@
 import 'package:learning_tracker/core/database/user/user_database.dart';
+import 'package:learning_tracker/core/sync/codec/firestore_codec.dart';
 import 'package:learning_tracker/core/sync/merge/entity_merger.dart';
 import 'package:learning_tracker/core/sync/merge/merge_rules.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -112,9 +113,5 @@ class GamificationSettingsMerger implements EntityMerger {
     await prefs.setInt(_timestampKey(profileId), stamp);
   }
 
-  DateTime? _parseTimestamp(Object? raw) {
-    if (raw is DateTime) return raw;
-    if (raw is String) return DateTime.tryParse(raw);
-    return null;
-  }
+  DateTime? _parseTimestamp(Object? raw) => FirestoreCodec.parseDateTime(raw);
 }

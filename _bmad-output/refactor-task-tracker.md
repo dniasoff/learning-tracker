@@ -133,21 +133,21 @@ Sync-point trigger tags: `[P1]` `[P2]` `[P3]` `[P4]` `[P5]` `[P6]` `[P7]`
 - [x] W3.3  (M, S2, done)    Add NaturalKey VO with per-entity constructors
 
 ### Phase 3b · Codecs (S2)
-- [ ] W3.4  (S, S2, pending)    Create lib/core/sync/codec/ + EntityCodec&lt;E&gt; abstract base
-- [ ] W3.5  (S, S2, pending)    Add FirestoreCodec time-conversion helper (DateTime ⇄ Timestamp)
-- [ ] W3.6  (M, S2, pending)    CompletionEventCodec
-- [ ] W3.7  (M, S2, pending)    BookmarkCodec
-- [ ] W3.8  (M, S2, pending)    TrackCodec
-- [ ] W3.9  (M, S2, pending)    StageDefinitionCodec
-- [ ] W3.10 (M, S2, pending)    LearningOrderCodec
-- [ ] W3.11 (M, S2, pending)    ProfileProgramCodec
-- [ ] W3.12 (M, S2, pending)    SettingsCodec (after splitting stage_definitions out)
-- [ ] W3.13 (M, S2, pending)    StreakEventCodec
-- [ ] W3.14 (M, S2, pending)    LearnerProfileCodec
-- [ ] W3.15 (M, S2, pending)    LearningLedgerCodec
-- [ ] W3.16 (M, S2, pending)    GoalCodec
-- [ ] W3.17 (M, S2, pending)    TutorGrantCodec
-- [ ] W3.18 (M, S2, pending)    Migrate mergers to consume codecs (kills 5-way marshaling — T6) `[P4]`
+- [x] W3.4  (S, S2, done)    Create lib/core/sync/codec/ + EntityCodec&lt;E&gt; abstract base
+- [x] W3.5  (S, S2, done)    Add FirestoreCodec time-conversion helper (DateTime ⇄ Timestamp)
+- [x] W3.6  (M, S2, done)    CompletionEventCodec
+- [x] W3.7  (M, S2, done)    BookmarkCodec
+- [x] W3.8  (M, S2, done)    TrackCodec
+- [x] W3.9  (M, S2, done)    StageDefinitionCodec
+- [x] W3.10 (M, S2, done)    LearningOrderCodec
+- [x] W3.11 (M, S2, done)    ProfileProgramCodec
+- [x] W3.12 (M, S2, done)    SettingsCodec (after splitting stage_definitions out)
+- [x] W3.13 (M, S2, done)    StreakEventCodec
+- [x] W3.14 (M, S2, done)    LearnerProfileCodec
+- [x] W3.15 (M, S2, done)    LearningLedgerCodec
+- [x] W3.16 (M, S2, done)    GoalCodec
+- [x] W3.17 (M, S2, done)    TutorGrantCodec
+- [x] W3.18 (M, S2, done)    Migrate mergers to consume codecs (kills 5-way marshaling — T6) `[P4]`
 
 ### Phase 3c · Drift schema rebuild (S2)
 - [ ] W3.19 (M, S2, pending)    Rewrite Drift schema as v=1 from scratch; drop all onUpgrade migration steps
@@ -253,8 +253,8 @@ Sync-point trigger tags: `[P1]` `[P2]` `[P3]` `[P4]` `[P5]` `[P6]` `[P7]`
 - [x] W5.9  (M, S5, done)    ListenerSupervisor: _restartInFlight+_rerunRequested → sealed _RestartCycle; commit 3b94facc
 
 ### Phase 5c · Primitive obsession sweep
-- [ ] W5.10 (M, S5, in-progress)    Profile mode literals (profile.mode == 'child') → ProfileMode enum across 20+ sites
-- [ ] W5.11 (M, S5, in-progress)    Account tier literals (account.tier == 'cloudBorn') → AccountTier enum
+- [x] W5.10 (M, S5, done)    Profile mode literals (profile.mode == 'child') → ProfileMode enum across 5 sites; commit 102c1914
+- [x] W5.11 (M, S5, done)    Account tier literals (account.tier == 'cloudBorn') → AccountTier/UserTier enums across 6 files; AccountX+UserTierX extensions added; commit b605a5b2
 - [ ] W5.12 (M, S5, in-progress)    Continue SefariaRef VO migration (started W4.1) across remaining sites
 - [ ] W5.13 (S, S5, in-progress)    Ban literal-string mode/tier comparisons via make audit grep
 

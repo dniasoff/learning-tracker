@@ -1,5 +1,6 @@
 import 'package:drift/drift.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
+import 'package:learning_tracker/core/sync/codec/firestore_codec.dart';
 import 'package:learning_tracker/core/sync/merge/entity_merger.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 
@@ -528,19 +529,9 @@ class DriftMergeStore implements MergeStore {
 
   // ── Shared parse helpers ────────────────────────────────────────────────────
 
-  static DateTime? _parseDateTime(Object? raw) {
-    if (raw == null) return null;
-    if (raw is DateTime) return raw;
-    if (raw is String) return DateTime.tryParse(raw);
-    if (raw is int) {
-      return DateTime.fromMillisecondsSinceEpoch(raw * 1000, isUtc: true);
-    }
-    if (raw is Map) {
-      final s = raw['seconds'];
-      if (s is int) {
-        return DateTime.fromMillisecondsSinceEpoch(s * 1000, isUtc: true);
-      }
-    }
-    return null;
-  }
+  /// Delegate to [FirestoreCodec.parseDateTime] — centralised timestamp
+  /// parsing handles DateTime, String (ISO-8601), int (Unix seconds), and
+  /// Map `{'seconds': int}` (Timestamp JSON).
+  static DateTime? _parseDateTime(Object? raw) =>
+      FirestoreCodec.parseDateTime(raw);
 }

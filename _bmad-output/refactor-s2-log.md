@@ -84,6 +84,32 @@ W2.32: Created LocalDataUploadService (features/sync/data/local_data_upload_serv
 - detail: Migrated all syncEngineProvider consumer call-sites in presentation/provider layers to syncWriteFacadeProvider. Files migrated: preference_providers.dart, sacred_location_provider.dart, dashboard_providers.dart, achievements_overview_provider.dart, reward_configuration_screen.dart, point_config_screen.dart, learning_order_providers.dart (both tracks/whole_curriculum_order and features/learning_order paths), stage_providers.dart (both features/stages and features/tracks/stages paths — including globalStageRepositoryProvider), track_providers.dart, bookmark_providers.dart, completion_providers.dart, profile_providers.dart, curriculum_activation_providers.dart, onboarding_providers.dart (goalRepositoryProvider + bulkPriorCompletionServiceProvider + StageDefinitionRepositoryImpl inline). Skipped: sync_lifecycle_observer.dart (uses setOnlineState + attachListeners not on SyncWriteFacade). Verified zero remaining ref.watch/ref.read(syncEngineProvider) outside of definition files and lifecycle observer. dart analyze shows no new errors (pre-existing errors from other streams' in-progress work only). Closes H1.
 - next: W2.35
 
+## [2026-05-20 11:30] task-complete
+- tasks: W3.4 + W3.5 + W3.6 + W3.7 + W3.8 + W3.9 + W3.10 + W3.11 + W3.12 + W3.13 + W3.14 + W3.15 + W3.16 + W3.17 + W3.18
+- detail:
+  W3.4: Created lib/core/sync/codec/entity_codec.dart — abstract EntityCodec<T> with kind/decode/encode.
+  W3.5: Created lib/core/sync/codec/firestore_codec.dart — static helpers parseDateTime (handles DateTime/String/int/Map), encodeDateTime (ISO-8601), parseInt, parseBool. Replaces 5-way marshaling in individual mergers.
+  W3.6: CompletionEventCodec + CompletionEventRow — decodes firestoreId, profileId, curriculumId, sefariaRef, stageId, trackType, eventTimestamp.
+  W3.7: BookmarkCodec + BookmarkRow — decodes curriculumId, sefariaRef, trackType, bookmarkedAt, updatedAt.
+  W3.8: TrackCodec + TrackRow — decodes curriculumId, trackType, paceUnit, learningUnit, unitType, targetDailyItems, isActive, activatedAt, updatedAt (post-W3.24 column renames kept as aliases in codec).
+  W3.9: StageDefinitionCodec + StageDefinitionRow — decodes curriculumId, trackId, stageOrder, dailyTarget, scheduleSpec, updatedAt.
+  W3.10: LearningOrderCodec + LearningOrderRow — decodes curriculumId, sefariaRef, position, updatedAt.
+  W3.11: ProfileProgramCodec + ProfileProgramRow — decodes profileId, curriculumId, programType, startDate, targetDate, updatedAt.
+  W3.12: SettingsCodec + SettingsRow — decodes curriculumId, dailyGoalMinutes, updatedAt; also decodes nested stageDefinitions list via StageDefinitionCodec.
+  W3.13: StreakEventCodec + StreakEventRow — post-W3.37 shape (streak_events/{ulid} collection): ulid, profileId, eventDate, kind, streakLengthAtEvent, createdAt.
+  W3.14: LearnerProfileCodec + LearnerProfileRow — decodes profileId, displayName, avatarIndex, createdAt, updatedAt.
+  W3.15: LearningLedgerCodec + LearningLedgerRow — decodes ulid, profileId, curriculumId, sefariaRef, completedAt (legacy camelCase fields preserved; W3 schema unification will clean up).
+  W3.16: GoalCodec + GoalRow — decodes profileId, curriculumId, trackId, paceValue, pacePeriod, targetDate, updatedAt.
+  W3.17: TutorGrantCodec + TutorGrantRow — decodes grantId, tutorUid, parentUid, childProfileId, state, createdAt, updatedAt. Added EntityKind.tutorGrant to entity_merger.dart.
+  W3.18: Migrated all 14 merger files to consume codecs:
+    * bookmark_merger, completion_event_merger, track_config_merger, learner_profile_merger, learning_order_merger, stage_definition_merger, settings_merger, profile_program_merger — each uses its typed codec decode() + NaturalKey factory.
+    * goal_merger, learning_ledger_merger, streak_event_merger — use FirestoreCodec.parseDateTime (inline Firestore field access preserved until W3 schema rebuild).
+    * notification_settings_merger, gamification_settings_merger, ui_preferences_merger — _parseTimestamp replaced with FirestoreCodec.parseDateTime delegation + import added.
+    * drift_merge_store — _parseDateTime replaced with FirestoreCodec.parseDateTime delegation + import added.
+  dart analyze lib/core/sync/merge/ lib/core/sync/codec/ — No issues found.
+  P4 gate: W3.18 done.
+- next: W3.19 (Drift schema rebuild v=1)
+
 ## [2026-05-20 10:00] task-complete
 - tasks: W3.1 + W3.2 + W3.3
 - detail:

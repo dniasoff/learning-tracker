@@ -1,4 +1,5 @@
 import 'package:learning_tracker/core/preferences/profile_scoped_preference_keys.dart';
+import 'package:learning_tracker/core/sync/codec/firestore_codec.dart';
 import 'package:learning_tracker/core/sync/merge/entity_merger.dart';
 import 'package:learning_tracker/core/sync/merge/merge_rules.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -140,9 +141,5 @@ class UiPreferencesMerger implements EntityMerger {
     );
   }
 
-  DateTime? _parseTimestamp(Object? raw) {
-    if (raw is DateTime) return raw;
-    if (raw is String) return DateTime.tryParse(raw);
-    return null;
-  }
+  DateTime? _parseTimestamp(Object? raw) => FirestoreCodec.parseDateTime(raw);
 }

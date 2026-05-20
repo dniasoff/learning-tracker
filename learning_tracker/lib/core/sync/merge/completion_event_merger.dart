@@ -1,5 +1,3 @@
-import 'package:learning_tracker/core/sync/merge/entity_merger.dart';
-
 /// Append-only merger for completion events.
 ///
 /// Completions are events, not state — once written they are never updated
@@ -8,10 +6,17 @@ import 'package:learning_tracker/core/sync/merge/entity_merger.dart';
 /// a duplicate pull is a no-op. The natural key here is the firestore
 /// document id (`firestore_id`), which is the only stable identifier the
 /// server provides for a given event.
+library;
+
+import 'package:learning_tracker/core/ids/natural_key.dart';
+import 'package:learning_tracker/core/sync/codec/completion_event_codec.dart';
+import 'package:learning_tracker/core/sync/merge/entity_merger.dart';
+
 class CompletionEventMerger implements EntityMerger {
   CompletionEventMerger({required MergeStore store}) : _store = store;
 
   final MergeStore _store;
+  static const _codec = CompletionEventCodec();
 
   @override
   String get kind => EntityKind.completion;
@@ -22,18 +27,22 @@ class CompletionEventMerger implements EntityMerger {
     required List<Map<String, dynamic>> rows,
   }) async {
     for (final row in rows) {
-      final naturalKey =
-          row['firestore_id']?.toString() ?? _eventKey(row, profileId);
+      final decoded = _codec.decode(row);
+      if (decoded == null) continue; // Malformed row — skip.
+
+      final naturalKey = NaturalKey.forCompletion(
+        firestoreId: decoded.firestoreId,
+        profileId: profileId,
+        curriculumId: decoded.curriculumId,
+        sefariaRef: decoded.sefariaRef,
+        completedAt: decoded.eventTimestamp.toIso8601String(),
+      );
       await _store.insertIfAbsent(
         kind: kind,
         profileId: profileId,
-        naturalKey: naturalKey,
+        naturalKey: naturalKey.value,
         fields: row,
       );
     }
   }
-
-  String _eventKey(Map<String, dynamic> row, int profileId) =>
-      '$profileId|${row['curriculum_id']}|${row['sefaria_ref']}|'
-      '${row['completed_at']}';
 }

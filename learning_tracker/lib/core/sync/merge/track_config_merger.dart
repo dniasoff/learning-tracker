@@ -1,14 +1,20 @@
-import 'package:learning_tracker/core/sync/merge/entity_merger.dart';
-import 'package:learning_tracker/core/sync/merge/merge_rules.dart';
-
 /// LWW merger for curriculum-track configuration rows.
 ///
 /// Natural key: `(curriculum_id, track_type)`. Remote wins iff its
-/// `updated_at` is strictly newer than the local row.
+/// `activated_at` / `deactivated_at` (whichever is later) is strictly
+/// newer than the local row — matches [DriftMergeStore.currentUpdatedAt]
+/// for [EntityKind.trackConfig].
+library;
+
+import 'package:learning_tracker/core/sync/codec/track_codec.dart';
+import 'package:learning_tracker/core/sync/merge/entity_merger.dart';
+import 'package:learning_tracker/core/sync/merge/merge_rules.dart';
+
 class TrackConfigMerger implements EntityMerger {
   TrackConfigMerger({required MergeStore store}) : _store = store;
 
   final MergeStore _store;
+  static const _codec = TrackCodec();
 
   @override
   String get kind => EntityKind.trackConfig;
@@ -19,13 +25,18 @@ class TrackConfigMerger implements EntityMerger {
     required List<Map<String, dynamic>> rows,
   }) async {
     for (final row in rows) {
-      final naturalKey = '${row['curriculum_id']}|${row['track_type']}';
+      final decoded = _codec.decode(row);
+      if (decoded == null) continue; // Missing required fields — skip.
+
+      final naturalKey = '${decoded.curriculumId}|${decoded.trackType}';
       final localUpdatedAt = await _store.currentUpdatedAt(
         kind: kind,
         profileId: profileId,
         naturalKey: naturalKey,
       );
-      final remoteUpdatedAt = _parseUpdatedAt(row['updated_at']);
+      // The "updatedAt" for a track is the later of activatedAt and
+      // deactivatedAt (mirrors DriftMergeStore.currentUpdatedAt logic).
+      final remoteUpdatedAt = _effectiveTimestamp(decoded);
       if (!remoteIsNewer(
         localUpdatedAt: localUpdatedAt,
         remoteUpdatedAt: remoteUpdatedAt,
@@ -36,9 +47,11 @@ class TrackConfigMerger implements EntityMerger {
     }
   }
 
-  DateTime? _parseUpdatedAt(Object? raw) {
-    if (raw is DateTime) return raw;
-    if (raw is String) return DateTime.tryParse(raw);
-    return null;
+  static DateTime _effectiveTimestamp(TrackRow track) {
+    final deactivated = track.deactivatedAt;
+    if (deactivated != null && deactivated.isAfter(track.activatedAt)) {
+      return deactivated;
+    }
+    return track.activatedAt;
   }
 }
