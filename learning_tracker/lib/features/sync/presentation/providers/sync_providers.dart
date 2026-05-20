@@ -1,121 +1,23 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:learning_tracker/core/analytics/analytics_provider.dart';
-import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
-import 'package:learning_tracker/core/providers/network_providers.dart';
-import 'package:learning_tracker/core/providers/talker_provider.dart';
-import 'package:learning_tracker/core/sync/providers/outbox_providers.dart';
 import 'package:learning_tracker/core/sync/providers/sync_orchestrator_providers.dart';
 import 'package:learning_tracker/core/sync/sync_orchestrator.dart';
 import 'package:learning_tracker/core/sync/sync_write_facade.dart';
 import 'package:learning_tracker/core/time/local_day_clock.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
-import 'package:learning_tracker/features/account/presentation/providers/auth_providers.dart'
-    show authRepositoryProvider;
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
-import 'package:learning_tracker/features/sync/data/firestore_data_source.dart';
-import 'package:learning_tracker/features/sync/data/offline_queue.dart';
 import 'package:learning_tracker/features/sync/data/outbox_sync_write_facade.dart';
-import 'package:learning_tracker/features/sync/data/sync_engine.dart';
 import 'package:learning_tracker/features/sync/domain/models/sync_status.dart';
-
-/// Provider for FirestoreDataSource, scoped to the active profile.
-///
-/// Returns null when the user is not cloud-born (v2 §4.5 tier gate).
-/// NOTE: [FirestoreDataSource] is a legacy adapter kept alive while
-/// [SyncEngine] still depends on it. New code should use
-/// [firestoreGatewayProvider] instead.
-final firestoreDataSourceProvider = Provider<FirestoreDataSource?>((ref) {
-  final authState = ref.watch(authStateProvider);
-  if (!authState.isCloudBorn) return null;
-
-  final gateway = ref.watch(firestoreGatewayProvider);
-  if (gateway == null) return null;
-  final auth = ref.watch(authRepositoryProvider);
-  final profileId = ref.watch(activeProfileIdProvider);
-
-  return FirestoreDataSource(
-    gateway: gateway,
-    auth: auth,
-    profileId: profileId,
-  );
-});
-
-/// Provider for OfflineQueue.
-///
-/// Returns null for local-born users — offline queue is a no-op since
-/// there's nothing to sync. Only cloud-born users queue writes.
-final offlineQueueProvider = Provider<OfflineQueue?>((ref) {
-  final authState = ref.watch(authStateProvider);
-  if (!authState.isCloudBorn) return null;
-
-  final database = ref.watch(userDatabaseProvider);
-  final gateway = ref.watch(firestoreGatewayProvider);
-  if (gateway == null) return null;
-  final talker = ref.watch(talkerProvider);
-
-  return OfflineQueue(
-    database: database,
-    firestoreGateway: gateway,
-    logger: AppLogger(talker),
-  );
-});
-
-/// Provider for SyncEngine.
-///
-/// v2 tier-gated activation (per v2 §4.5):
-/// - `tier != cloudBorn` → returns `null` (local-born accounts never
-///   instantiate SyncEngine — saves memory and battery)
-/// - `tier == cloudBorn` + offline → engine instantiated but dormant
-/// - `tier == cloudBorn` + online → full sync active
-final syncEngineProvider = Provider<SyncEngine?>((ref) {
-  final authState = ref.watch(authStateProvider);
-
-  // Local-born or signed out — never instantiate (v2 §4.5).
-  if (!authState.isCloudBorn) return null;
-
-  final database = ref.watch(userDatabaseProvider);
-  final firestoreDataSource = ref.watch(firestoreDataSourceProvider);
-  if (firestoreDataSource == null) return null;
-  final offlineQueue = ref.watch(offlineQueueProvider);
-  if (offlineQueue == null) return null;
-  final talker = ref.watch(talkerProvider);
-  final connectivityService = ref.watch(connectivityServiceProvider);
-
-  final analytics = ref.watch(analyticsServiceProvider);
-  final outboxProcessor = ref.watch(outboxProcessorProvider);
-
-  final engine = SyncEngine(
-    database: database,
-    firestoreDataSource: firestoreDataSource,
-    offlineQueue: offlineQueue,
-    logger: AppLogger(talker),
-    connectivityService: connectivityService,
-    analytics: analytics,
-    outboxProcessor: outboxProcessor,
-  );
-
-  // Initialize; surface errors onto the status stream.
-  engine.initialize().catchError((Object error, StackTrace stackTrace) {
-    // catchError needed so unhandled async error doesn't crash the isolate.
-  });
-
-  ref.onDispose(() {
-    engine.dispose();
-  });
-
-  return engine;
-});
 
 /// Provider for sync status stream.
 ///
-/// W2.33: now delegates to the orchestrator's own status stream via
+/// W2.33: delegates to the orchestrator's own status stream via
 /// [syncOrchestratorProvider]. Emits [SyncStatus.localOnly] when no
 /// orchestrator is available.
 ///
-/// Previously delegated to [SyncEngine.statusStream]. The canonical source of
-/// truth for sync-status is `core/sync/providers/sync_status_providers.dart`.
+/// Canonical source of truth for sync-status is
+/// `core/sync/providers/sync_status_providers.dart`.
 final syncStatusStreamProvider = StreamProvider<SyncStatus>((ref) {
   final orchestrator = ref.watch<SyncOrchestrator?>(syncOrchestratorProvider);
   if (orchestrator == null) {
@@ -126,11 +28,11 @@ final syncStatusStreamProvider = StreamProvider<SyncStatus>((ref) {
 
 /// Provider for current sync status (from stream).
 ///
-/// W2.33: now delegates to the orchestrator's own status via
+/// W2.33: delegates to the orchestrator's own status via
 /// [syncOrchestratorProvider].
 ///
-/// Previously delegated to [SyncEngine.currentStatus]. The canonical source of
-/// truth for sync-status is `core/sync/providers/sync_status_providers.dart`.
+/// Canonical source of truth for sync-status is
+/// `core/sync/providers/sync_status_providers.dart`.
 final syncStatusProvider = Provider<SyncStatus>((ref) {
   final orchestrator = ref.watch<SyncOrchestrator?>(syncOrchestratorProvider);
   if (orchestrator == null) return const SyncStatus.localOnly();
@@ -150,14 +52,12 @@ final syncStatusProvider = Provider<SyncStatus>((ref) {
 
 /// Outbox-backed [SyncWriteFacade] provider.
 ///
-/// Tier-gated: returns `null` for local-born accounts (same rule as
-/// [syncEngineProvider]).  Cloud-born accounts get an [OutboxSyncWriteFacade]
-/// that enqueues mutations into the outbox table for async push.
+/// Tier-gated: returns `null` for local-born accounts (same rule as the
+/// deleted syncEngineProvider). Cloud-born accounts get an
+/// [OutboxSyncWriteFacade] that enqueues mutations into the outbox table for
+/// async push.
 ///
-/// **Migration path (W2.34):** call sites that currently do
-/// `ref.watch(syncEngineProvider)?.<method>` should be migrated to
-/// `ref.watch(syncWriteFacadeProvider)?.<method>`.  Once all 21 consumers
-/// have been migrated, [syncEngineProvider] can be deleted (W2.35).
+/// W2.35: [syncEngineProvider] deleted — this is the sole write-path provider.
 final syncWriteFacadeProvider = Provider<SyncWriteFacade?>((ref) {
   final authState = ref.watch(authStateProvider);
   if (!authState.isCloudBorn) return null;

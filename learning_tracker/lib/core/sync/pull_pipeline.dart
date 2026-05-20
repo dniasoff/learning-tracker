@@ -134,6 +134,28 @@ class PullPipeline {
     pageSize: pageSize,
   );
 
+  // W2.29 — stage_definitions pull (closes H4).
+  Future<void> pullStageDefinitions({
+    required int profileId,
+    int pageSize = defaultPageSize,
+  }) => _pullCollection(
+    profileId: profileId,
+    collection: 'stage_definitions',
+    kind: EntityKind.stageDefinition,
+    pageSize: pageSize,
+  );
+
+  // W2.28 — streak events pull (closes M4).
+  Future<void> pullStreak({
+    required int profileId,
+    int pageSize = defaultPageSize,
+  }) => _pullCollection(
+    profileId: profileId,
+    collection: 'streak_events',
+    kind: EntityKind.streak,
+    pageSize: pageSize,
+  );
+
   /// Pull a single-document Firestore subcollection (notification_settings,
   /// gamification_settings, ui_preferences). Wraps the document in a
   /// single-element list so the [MergeDispatcher] receives the standard

@@ -21,8 +21,8 @@ import 'package:learning_tracker/core/network/sefaria/curriculum_content_fetcher
 import 'package:learning_tracker/features/profiles/domain/services/pin_service.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/utils/hebrew_calendar_utils.dart';
-import 'package:learning_tracker/features/sync/data/offline_queue.dart';
-import 'package:learning_tracker/features/sync/data/sync_engine.dart';
+import 'package:learning_tracker/core/sync/sync_orchestrator.dart';
+import 'package:learning_tracker/features/sync/data/outbox_sync_write_facade.dart';
 import 'package:learning_tracker/features/sync/domain/models/sync_status.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:test/test.dart';
@@ -261,12 +261,14 @@ void main() {
   // ── Story 1.9: Sync infrastructure ───────────────────────────
 
   group('Story 1.9 -- Sync infrastructure', tags: ['story_1_9'], () {
-    test('SyncEngine class exists', () {
-      expect(SyncEngine, isNotNull);
+    test('SyncOrchestrator abstract class exists', () {
+      // W2.35: SyncEngine deleted — SyncOrchestrator is the new public surface.
+      expect(SyncOrchestrator, isNotNull);
     });
 
-    test('OfflineQueue class exists', () {
-      expect(OfflineQueue, isNotNull);
+    test('OutboxSyncWriteFacade class exists', () {
+      // W2.35: OfflineQueue deleted — OutboxSyncWriteFacade is the replacement.
+      expect(OutboxSyncWriteFacade, isNotNull);
     });
 
     test('SyncStatus freezed union has expected factories', () {

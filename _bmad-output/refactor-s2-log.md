@@ -84,6 +84,24 @@ W2.32: Created LocalDataUploadService (features/sync/data/local_data_upload_serv
 - detail: Migrated all syncEngineProvider consumer call-sites in presentation/provider layers to syncWriteFacadeProvider. Files migrated: preference_providers.dart, sacred_location_provider.dart, dashboard_providers.dart, achievements_overview_provider.dart, reward_configuration_screen.dart, point_config_screen.dart, learning_order_providers.dart (both tracks/whole_curriculum_order and features/learning_order paths), stage_providers.dart (both features/stages and features/tracks/stages paths — including globalStageRepositoryProvider), track_providers.dart, bookmark_providers.dart, completion_providers.dart, profile_providers.dart, curriculum_activation_providers.dart, onboarding_providers.dart (goalRepositoryProvider + bulkPriorCompletionServiceProvider + StageDefinitionRepositoryImpl inline). Skipped: sync_lifecycle_observer.dart (uses setOnlineState + attachListeners not on SyncWriteFacade). Verified zero remaining ref.watch/ref.read(syncEngineProvider) outside of definition files and lifecycle observer. dart analyze shows no new errors (pre-existing errors from other streams' in-progress work only). Closes H1.
 - next: W2.35
 
+## [2026-05-20 09:00] task-complete
+- tasks: W2.35 + W2.36 + W2.37 + W2.38 + W2.39
+- detail:
+  W2.35: Deleted features/sync/data/sync_engine.dart.
+  W2.36: Deleted features/sync/data/firestore_data_source.dart. Closes M5.
+  W2.37: Deleted features/sync/data/offline_queue.dart.
+  W2.38: Deleted features/sync/presentation/widgets/sync_lifecycle_observer.dart (was a re-export barrel, no importers). Simplified app/sync_runtime/sync_lifecycle_observer.dart — stripped connectivity subscription, setOnlineState, attachListeners, detachListeners (all on deleted SyncEngine); now just ref.watch(syncOrchestratorProvider) to ensure the orchestrator is alive.
+  W2.39: Stripped legacy providers (firestoreDataSourceProvider, offlineQueueProvider, syncEngineProvider) from features/sync/presentation/providers/sync_providers.dart. Removed 6 unused imports. Kept syncStatusStreamProvider, syncStatusProvider, syncWriteFacadeProvider.
+  Also fixed test files referencing deleted classes:
+    - epic_01_foundation_test.dart: replaced SyncEngine/OfflineQueue class-exists checks with SyncOrchestrator/OutboxSyncWriteFacade.
+    - epic_13_cloud_sync_test.dart: replaced 1210-line file with 52-line stubs (all 4 groups skip-wrapped; coverage noted in comments).
+    - epic_24_stop_bleeding_test.dart: removed pull-on-launch + LWW groups (had MockSyncEngine); kept push-on-write tests using MockSyncWriteFacade.
+    - epic_25_story_22_firewall_test.dart: removed SyncEngine-dependent AC2/AC3 pull tests; kept AC1 (schema), AC2 (DB writes + DeviceRestoreService stub), AC3 (DB isolation).
+    - sync_rework_engine_test.dart: replaced 1261-line file with 48-line stubs (S5/S6/S8/I1/I6 skip-wrapped; coverage noted).
+  Fixed pull_pipeline.dart: added pullStageDefinitions + pullStreak (were referenced in SyncOrchestrator.pullOnLaunch but missing from PullPipeline — W2.28/W2.29 gap). dart analyze lib/core/sync/ clean.
+  Removed resolveEngine parameter from SyncOrchestratorImpl constructor (SyncEngine deleted). Made resolvePushAllLocalData + resolveBackfillGoals required (always provided by sync_orchestrator_providers.dart). Removed core/sync/ → features/sync/ import from sync_orchestrator_providers.dart (resolveEngine was the reason for it).
+- next: W2.40
+
 ## [2026-05-20 04:30] sync-point-cleared (S2 side only)
 - sync-point: P2 (S2 contribution)
 - detail: S2's W2.21-W2.25 are all done. Per protocol, must verify S3 (W2.10-W2.20) and S4 (W2.1-W2.9) before proceeding past W2.30 to W2.31. S4 W2.1-W2.9 confirmed done in tracker. S3 W2.10-W2.20 still in-progress. Proceeding with W2.26-W2.30 (mergers) which don't require P2 themselves; will check tracker again before W2.31.

@@ -26,10 +26,7 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_command.dart';
 import 'package:learning_tracker/features/learning/data/completion_writer.dart';
-import 'package:learning_tracker/core/logging/logger.dart';
-import 'package:learning_tracker/core/sync/firestore_gateway.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
-import 'package:learning_tracker/features/sync/data/offline_queue.dart';
 import 'package:test/test.dart';
 
 import '../helpers/drift_memory.dart';
@@ -38,48 +35,14 @@ void main() {
   group('Invariant net — 2026-05-17 quality crisis', tags: ['invariants'], () {
     // ── N1 — offline-queue drains to 0 ─────────────────────────────────────
 
-    group('N1: offline-queue drains to 0 after online flush', () {
-      test(
-        'OfflineQueue.flush() removes all successfully-pushed items',
-        () async {
-          final db = inMemoryDb();
-          addTearDown(db.close);
-
-          // Seed three heterogeneous operations. `completion` is intentionally
-          // NOT used: post-rework the outbox table is the canonical completion
-          // queue and OfflineQueue no longer flushes `completion` rows.
-          await db.syncQueueDao.enqueue(
-            'bookmark',
-            '{"profile_id":1,"sefariaRef":"Berakhot 1:1"}',
-          );
-          await db.syncQueueDao.enqueue('streak', '{"profile_id":1}');
-          await db.syncQueueDao.enqueue('settings', '{"profile_id":1}');
-
-          expect(await db.syncQueueDao.getPendingCount(), 3);
-
-          final talker = AppLogger.init();
-          final queue = OfflineQueue(
-            database: db,
-            firestoreGateway: _AlwaysOkGateway(),
-            logger: AppLogger(talker),
-          );
-
-          final synced = await queue.flush();
-
-          expect(
-            synced,
-            3,
-            reason: 'N1: flush must report 3 successful pushes',
-          );
-          expect(
-            await db.syncQueueDao.getPendingCount(),
-            0,
-            reason:
-                'N1: after a successful online flush the queue must be empty',
-          );
-        },
-      );
-    });
+    group(
+      'N1: offline-queue drains to 0 after online flush',
+      skip: 'Retired W2.35 — OfflineQueue deleted; equivalent invariant '
+          'covered by OutboxProcessor tests (outbox drains to 0 after flush)',
+      () {
+        test('placeholder', () {});
+      },
+    );
 
     // ── N2 — single SyncOrchestrator per session ────────────────────────────
 
@@ -489,176 +452,4 @@ void main() {
       );
     });
   });
-}
-
-// ── Test doubles ─────────────────────────────────────────────────────────────
-
-/// Stub [FirestoreGateway] that silently accepts every push operation.
-/// Used by N1 to let OfflineQueue.flush() succeed without a real Firestore.
-class _AlwaysOkGateway implements FirestoreGateway {
-  @override
-  Future<void> pushCompletion({
-    required int profileId,
-    required Map<String, dynamic> data,
-    String? docId,
-  }) async {}
-
-  @override
-  Future<List<String>> pushCompletionsBatch({
-    required int profileId,
-    required List<({String entityKey, Map<String, dynamic> payload})> items,
-  }) async => items.map((e) => e.entityKey).toList();
-
-  @override
-  Future<void> pushStreak({
-    required int profileId,
-    required Map<String, dynamic> data,
-  }) async {}
-
-  @override
-  Future<void> pushSettings({
-    required int profileId,
-    required Map<String, dynamic> data,
-  }) async {}
-
-  @override
-  Future<void> pushTrack({
-    required int profileId,
-    required Map<String, dynamic> data,
-  }) async {}
-
-  @override
-  Future<void> pushLearningOrder({
-    required int profileId,
-    required Map<String, dynamic> data,
-  }) async {}
-
-  @override
-  Future<void> pushBookmark({
-    required int profileId,
-    required Map<String, dynamic> data,
-  }) async {}
-
-  @override
-  Future<void> pushNotificationSettings({
-    required int profileId,
-    required Map<String, dynamic> data,
-  }) async {}
-
-  @override
-  Future<void> pushGamificationSettings({
-    required int profileId,
-    required Map<String, dynamic> data,
-  }) async {}
-
-  @override
-  Future<void> pushLearnerProfile({
-    required int profileId,
-    required Map<String, dynamic> data,
-  }) async {}
-
-  @override
-  Future<void> deleteLearnerProfile(int profileId) async {}
-
-  @override
-  Future<void> pushLedgerEntry({
-    required int profileId,
-    required Map<String, dynamic> data,
-  }) async {}
-
-  @override
-  Future<void> pushLedgerEntriesBatch({
-    required int profileId,
-    required List<Map<String, dynamic>> entries,
-  }) async {}
-
-  @override
-  Future<void> pushProfileProgram({
-    required int profileId,
-    required Map<String, dynamic> data,
-  }) async {}
-
-  @override
-  Future<void> removeProfileProgramAssignment({
-    required int profileId,
-    required String curriculumStorageKey,
-  }) async {}
-
-  @override
-  Future<FirestorePage> fetchPage({
-    required int profileId,
-    required String collection,
-    required int pageSize,
-    Map<String, dynamic>? cursor,
-  }) async => const FirestorePage(rows: []);
-
-  @override
-  Future<List<Map<String, dynamic>>> fetchAll({
-    required int profileId,
-    required String collection,
-  }) async => const [];
-
-  @override
-  Future<void> pushGoal({
-    required int profileId,
-    required Map<String, dynamic> data,
-  }) async {}
-  @override
-  Future<void> deleteGoal({
-    required int profileId,
-    required String firestoreId,
-  }) async {}
-
-  @override
-  Future<void> pushUiPreferences({
-    required int profileId,
-    required Map<String, dynamic> data,
-  }) async {}
-
-  @override
-  Future<void> pushAccountProfile({required Map<String, dynamic> data}) async {}
-
-  @override
-  Future<void> pushCurriculumImportMetadata({
-    required int profileId,
-    required Map<String, dynamic> data,
-  }) async {}
-
-  @override
-  Future<void> deleteUserData(String uid) async {}
-
-  @override
-  Future<void> pushDiagnosticLog({
-    required String uid,
-    required Map<String, dynamic> data,
-  }) async {}
-
-  @override
-  Future<void> pushAccountUserProfile({
-    required String uid,
-    required Map<String, dynamic> data,
-  }) async {}
-
-  @override
-  Stream<List<Map<String, dynamic>>> listenToCollection({
-    required int profileId,
-    required String collection,
-  }) => const Stream.empty();
-
-  @override
-  Stream<Map<String, dynamic>?> listenToDocument({
-    required int profileId,
-    required String collection,
-    required String docId,
-  }) => const Stream.empty();
-
-  @override
-  Future<List<Map<String, dynamic>>> fetchLearnerProfiles() async => const [];
-
-  @override
-  Future<Map<String, dynamic>?> fetchDocument({
-    required int profileId,
-    required String collection,
-    required String docId,
-  }) async => null;
 }
