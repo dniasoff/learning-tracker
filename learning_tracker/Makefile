@@ -226,7 +226,7 @@ lint: ## Run custom_lint (skips gracefully if not in pubspec)
 	  echo "custom_lint not in pubspec — skipping (add custom_lint to dev_dependencies when ready)"; \
 	fi
 
-audit: ## Run all 15 enforcement greps (NFR19) — exits non-zero on any violation
+audit: ## Run all 17 enforcement greps (NFR19) — exits non-zero on any violation
 	@echo "=== audit: enforcement greps ==="
 	@FAIL=0; \
 	echo "1/15 — No Firebase imports outside core/auth or core/sync"; \
@@ -331,9 +331,35 @@ audit: ## Run all 15 enforcement greps (NFR19) — exits non-zero on any violati
 	    | grep -P "features/([^/]+)/(?!\1\.dart)" \
 	    | awk -F: '{match($$1, /features\/([^\/]+)\//, a); match($$0, /features\/([^\/]+)\//, b); if(a[1] != b[1]) print}'; \
 	fi; \
+	echo "16/17 — No raw profile.mode string comparisons (use ProfileMode enum) (W5.10)"; \
+	if grep -rn "\.mode == '" lib/ --include="*.dart" \
+	    | grep -v "\.g\.dart" | grep -v "\.freezed\.dart" \
+	    | grep -v "lib/core/domain/value_objects/profile_mode\.dart" \
+	    | grep -v ":[[:space:]]*//" \
+	    | grep -q .; then \
+	  grep -rn "\.mode == '" lib/ --include="*.dart" \
+	    | grep -v "\.g\.dart" | grep -v "\.freezed\.dart" \
+	    | grep -v "lib/core/domain/value_objects/profile_mode\.dart" \
+	    | grep -v ":[[:space:]]*//";\
+	  FAIL=1; \
+	fi; \
+	echo "17/17 — No raw account.tier string comparisons (use AccountTier/UserTier enum) (W5.11)"; \
+	if grep -rn "\.tier [!=]= '" lib/ --include="*.dart" \
+	    | grep -v "\.g\.dart" | grep -v "\.freezed\.dart" \
+	    | grep -v "lib/core/domain/value_objects/account_tier\.dart" \
+	    | grep -v "lib/core/database/daos/user_profile_dao\.dart" \
+	    | grep -v "lib/core/database/registry/device_registry_database\.dart" \
+	    | grep -q .; then \
+	  grep -rn "\.tier [!=]= '" lib/ --include="*.dart" \
+	    | grep -v "\.g\.dart" | grep -v "\.freezed\.dart" \
+	    | grep -v "lib/core/domain/value_objects/account_tier\.dart" \
+	    | grep -v "lib/core/database/daos/user_profile_dao\.dart" \
+	    | grep -v "lib/core/database/registry/device_registry_database\.dart"; \
+	  FAIL=1; \
+	fi; \
 	if [ "$$FAIL" -eq 1 ]; then \
 	  echo "=== audit FAILED — fix violations above ==="; \
 	  exit 1; \
 	else \
-	  echo "=== audit PASSED — all 15 greps clean ==="; \
+	  echo "=== audit PASSED — all 17 greps clean ==="; \
 	fi
