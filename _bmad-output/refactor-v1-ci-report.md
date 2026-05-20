@@ -236,3 +236,50 @@ None — all in-scope files either had no errors or were fixed in this run.
 | Commit | Description |
 |---|---|
 | `b7a24e0d` | fix(tests): migrate Wave 3 schema test errors — Test-Fix-C scope |
+
+---
+
+## Test-Fix-B Results (2026-05-20)
+
+**Agent:** Test-Fix-B  
+**Scope:** `test/core/` — all 40 subdirectory test files  
+**Branch:** dev  
+**Commit:** `2d5e8e81`
+
+### Error count delta
+
+| Metric | Before | After |
+|---|---|---|
+| `dart analyze test/core` errors | 23 compile errors | 0 |
+| Runtime test failures (`test/core/`) | ~43 failures across 15+ files | **0** — 2380/2380 pass |
+
+### Root causes addressed
+
+| Category | Fix applied |
+|---|---|
+| Missing FK seed rows (learner_profiles, accounts) | Added `seedProfile()`, `seedProfileZero()`, account row inserts in setUp for `curriculum_scope_dao_test`, `curriculum_scope_dao_extra_test`, `learning_order_dao_test`, `learning_order_dao_extended_test`, `parent_analytics_repository_test`, `profile_dao_test` (added account id=2) |
+| W3.22 UNIQUE(profileId, curriculumId) violations | Fixed multi-track setups in `learning_ledger_dao_extended_test` and `learning_ledger_dao_extra_test` to use distinct curriculumId values |
+| W3.22 trackType removed | Removed trackType from CurriculumTracksCompanion inserts; updated `user_database_dataclass_test` CurriculumTrack.toJson check |
+| W3.22 deactivateTrack no longer throws | Changed two `throwsA(isA<InvalidTrackOperationException>())` tests to `completes` in `track_dao_test` and `track_dao_delete_test`; removed unused import |
+| W3.27 schedule JSON | Fixed `user_database_dataclass_extended_test` to check `json['schedule']` instead of `json['delayDays']` |
+| Goals column renames (W3) | Fixed `user_database_companion_coverage_test`: `pace_unit` → `pace_period`, `learning_unit` → `pace_granularity` |
+| Timezone comparison in upsertFromSync | Fixed `track_dao_extra_test` to use `.toUtc()` when comparing stateChangedAt DateTime |
+| W4.26 priorMarkOnly removed | (handled in prior sessions) |
+| AppLogger.instance type change | Changed `AppLogger.instance` → `AppLogger.instance.talker` for Talker access; added `.talker` type test |
+| SyncPushException parameter rename | `cause:` → `pushCause:` in `outbox_processor_test` |
+| LWW merger tests (TrackConfigMerger, LearnerProfileMerger) | Rewrote tests with correct field names (`activated_at`, `state_changed_at`, all required profile fields) |
+| Dataclass column name updates | `user_database_dataclass_core_test`: state/stateChangedAt/activatedAt, entryScope, pacePeriod/paceGranularity |
+| Compiler type resolution (app_router) | Added TutorGrant import to `lib/app/router/app_router.dart` so generated part file resolves in test context |
+
+### Files modified (41 total)
+
+All 40 files under `test/core/` that had failures plus `lib/app/router/app_router.dart` (one-line import fix for generated part file).
+
+### Verify
+
+```bash
+cd learning_tracker && flutter test test/core/ --no-pub
+# → 00:28 +2380: All tests passed!
+dart analyze test/core
+# → No issues found!
+```
