@@ -1988,6 +1988,14 @@ class AppLocalizationsEn extends AppLocalizations {
       'This will restore the natural Sefaria order for this curriculum. Your custom ordering will be lost.';
 
   @override
+  String get reorderConfirmTitle => 'Reorder Content?';
+
+  @override
+  String reorderConfirmBody(int overdueCount) {
+    return 'Reordering will clear your $overdueCount outstanding overdue item(s). Consider completing them first.';
+  }
+
+  @override
   String get controlledByParent => 'Controlled by parent';
 
   @override

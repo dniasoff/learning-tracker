@@ -1,9 +1,13 @@
+import 'dart:async' show unawaited;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/labels/domain_term_labels.dart';
+import 'package:learning_tracker/core/widgets/reorder_confirm_dialog.dart';
+import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
 import 'package:learning_tracker/features/tracks/track_order/presentation/providers/track_learning_order_providers.dart';
 import 'package:learning_tracker/features/tracks/whole_curriculum_order/domain/models/learning_order_item.dart';
 import 'package:learning_tracker/features/tracks/whole_curriculum_order/presentation/widgets/draggable_order_item.dart';
@@ -144,11 +148,23 @@ class _TrackLearningOrderScreenState
     );
   }
 
-  void _onReorderSedarim(int oldIndex, int newIndex) {
-    if (newIndex > oldIndex) newIndex -= 1;
+  Future<void> _onReorderSedarim(int oldIndex, int newIndex) async {
+    // Reorder-amnesty guard: warn the user if they have outstanding overdue
+    // items that will be cleared by this reorder.
+    final overdueCount = await ref.read(
+      overdueCountForCurriculumProvider(widget.curriculumId).future,
+    );
+    if (!mounted) return;
+    final confirmed = await ReorderConfirmDialog.showIfNeeded(
+      context,
+      overdueCount: overdueCount,
+    );
+    if (!confirmed || !mounted) return;
+
+    final adjustedNew = newIndex > oldIndex ? newIndex - 1 : newIndex;
     final items = List<LearningOrderItem>.from(_localSedarim!);
     final moved = items.removeAt(oldIndex);
-    items.insert(newIndex, moved);
+    items.insert(adjustedNew, moved);
     final updated = items
         .asMap()
         .entries
@@ -157,14 +173,26 @@ class _TrackLearningOrderScreenState
         )
         .toList();
     setState(() => _localSedarim = updated);
-    _persistSedarim(updated);
+    unawaited(_persistSedarim(updated));
   }
 
-  void _onReorderMasechtos(int oldIndex, int newIndex) {
-    if (newIndex > oldIndex) newIndex -= 1;
+  Future<void> _onReorderMasechtos(int oldIndex, int newIndex) async {
+    // Reorder-amnesty guard: warn the user if they have outstanding overdue
+    // items that will be cleared by this reorder.
+    final overdueCount = await ref.read(
+      overdueCountForCurriculumProvider(widget.curriculumId).future,
+    );
+    if (!mounted) return;
+    final confirmed = await ReorderConfirmDialog.showIfNeeded(
+      context,
+      overdueCount: overdueCount,
+    );
+    if (!confirmed || !mounted) return;
+
+    final adjustedNew = newIndex > oldIndex ? newIndex - 1 : newIndex;
     final items = List<LearningOrderItem>.from(_localMasechtos!);
     final moved = items.removeAt(oldIndex);
-    items.insert(newIndex, moved);
+    items.insert(adjustedNew, moved);
     final updated = items
         .asMap()
         .entries

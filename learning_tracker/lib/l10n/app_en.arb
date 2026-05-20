@@ -956,6 +956,13 @@
   "resetToDefaultOrder": "Reset to Default Order",
   "resetToDefaultOrderDialogTitle": "Reset to Default Order",
   "resetToDefaultOrderDialogBody": "This will restore the natural Sefaria order for this curriculum. Your custom ordering will be lost.",
+  "reorderConfirmTitle": "Reorder Content?",
+  "reorderConfirmBody": "Reordering will clear your {overdueCount} outstanding overdue item(s). Consider completing them first.",
+  "@reorderConfirmBody": {
+    "placeholders": {
+      "overdueCount": { "type": "int" }
+    }
+  },
   "controlledByParent": "Controlled by parent",
 
   "sacredTimeLockGoodShabbos": "Good Shabbos",

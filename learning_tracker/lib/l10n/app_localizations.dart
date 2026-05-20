@@ -3605,6 +3605,18 @@ abstract class AppLocalizations {
   /// **'This will restore the natural Sefaria order for this curriculum. Your custom ordering will be lost.'**
   String get resetToDefaultOrderDialogBody;
 
+  /// No description provided for @reorderConfirmTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Reorder Content?'**
+  String get reorderConfirmTitle;
+
+  /// No description provided for @reorderConfirmBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Reordering will clear your {overdueCount} outstanding overdue item(s). Consider completing them first.'**
+  String reorderConfirmBody(int overdueCount);
+
   /// No description provided for @controlledByParent.
   ///
   /// In en, this message translates to:

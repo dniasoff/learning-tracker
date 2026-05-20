@@ -1966,6 +1966,14 @@ class AppLocalizationsHe extends AppLocalizations {
       'פעולה זו תשחזר את הסדר הטבעי של ספריא עבור קורס לימוד זה. הסדר המותאם אישית שלכם יאבד.';
 
   @override
+  String get reorderConfirmTitle => 'לשנות סדר תוכן?';
+
+  @override
+  String reorderConfirmBody(int overdueCount) {
+    return 'שינוי הסדר יאפס את $overdueCount הפריטים הפיגורים שלך. שקול להשלים אותם קודם.';
+  }
+
+  @override
   String get controlledByParent => 'בשליטת ההורה';
 
   @override

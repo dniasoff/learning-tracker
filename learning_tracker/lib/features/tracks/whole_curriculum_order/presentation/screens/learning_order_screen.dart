@@ -1,3 +1,5 @@
+import 'dart:async' show unawaited;
+
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -5,6 +7,8 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/widgets/app_bar_title.dart';
 import 'package:learning_tracker/core/widgets/app_error_view.dart';
+import 'package:learning_tracker/core/widgets/reorder_confirm_dialog.dart';
+import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
 import 'package:learning_tracker/features/tracks/whole_curriculum_order/domain/models/learning_order_item.dart';
 import 'package:learning_tracker/features/tracks/whole_curriculum_order/presentation/providers/learning_order_providers.dart';
 import 'package:learning_tracker/features/tracks/whole_curriculum_order/presentation/widgets/draggable_order_item.dart';
@@ -115,11 +119,23 @@ class _LearningOrderScreenState extends ConsumerState<LearningOrderScreen> {
     );
   }
 
-  void _onReorder(int oldIndex, int newIndex) {
-    if (newIndex > oldIndex) newIndex -= 1;
+  Future<void> _onReorder(int oldIndex, int newIndex) async {
+    // Reorder-amnesty guard: warn the user if they have outstanding overdue
+    // items that will be cleared by this reorder.
+    final overdueCount = await ref.read(
+      overdueCountForCurriculumProvider(widget.curriculumId).future,
+    );
+    if (!mounted) return;
+    final confirmed = await ReorderConfirmDialog.showIfNeeded(
+      context,
+      overdueCount: overdueCount,
+    );
+    if (!confirmed || !mounted) return;
+
+    final adjustedNew = newIndex > oldIndex ? newIndex - 1 : newIndex;
     final items = List<LearningOrderItem>.from(_localOrder!);
     final moved = items.removeAt(oldIndex);
-    items.insert(newIndex, moved);
+    items.insert(adjustedNew, moved);
 
     // Update userSortOrder to reflect new positions
     final updated = items
@@ -136,10 +152,12 @@ class _LearningOrderScreenState extends ConsumerState<LearningOrderScreen> {
 
     // Persist asynchronously via use case.
     final useCase = ref.read(saveLearningOrderUseCaseProvider);
-    useCase(widget.curriculumId, updated).then((_) {
-      // Invalidate provider so other screens see updated order
-      ref.invalidate(learningOrderProvider(widget.curriculumId));
-    });
+    unawaited(
+      useCase(widget.curriculumId, updated).then((_) {
+        // Invalidate provider so other screens see updated order
+        ref.invalidate(learningOrderProvider(widget.curriculumId));
+      }),
+    );
   }
 
   Future<void> _resetToDefault(BuildContext context) async {
