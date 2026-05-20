@@ -31,10 +31,9 @@ void main() {
     String stageName = 'Learn',
     int delayDays = 0,
     bool isDefault = true,
-    String scheduleType = 'delay',
-    String? daysOfWeek,
-    int? rollingWindowSize,
   }) {
+    // W3.27: schedule quartet replaced by single JSON schedule column.
+    final schedule = '{"type":"delay","delay_days":$delayDays}';
     return db.StageDefinition(
       id: id,
       profileId: 0,
@@ -42,11 +41,9 @@ void main() {
       trackId: 1,
       stageOrder: stageOrder,
       stageName: stageName,
-      delayDays: delayDays,
       isDefault: isDefault,
-      scheduleType: scheduleType,
-      daysOfWeek: daysOfWeek,
-      rollingWindowSize: rollingWindowSize,
+      schedule: schedule,
+      updatedAt: DateTime.utc(2026, 1, 1),
     );
   }
 
@@ -220,7 +217,8 @@ void main() {
               ).captured.single
               as db.StageDefinitionsCompanion;
       expect(captured.stageName.value, 'Review');
-      expect(captured.delayDays.value, 3);
+      // W3.27: schedule is a JSON string; check it encodes delay_days=3.
+      expect(captured.schedule.value, contains('"delay_days":3'));
     });
 
     // Scenario 6: resetToDefaults deletes all and inserts 3 defaults

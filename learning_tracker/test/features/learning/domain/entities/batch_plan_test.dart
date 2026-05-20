@@ -11,14 +11,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/features/learning/domain/entities/batch_plan.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_source.dart';
 
-// ── Helpers ──────────────────────────────────────────────────────────────────
-
-// BatchPlan only stores commands; CompletionCommand requires a Freezed import
-// that transitions through broken user_database.g.dart — avoid instantiating
-// real commands here. Pass an empty list; the classification logic is
-// independent of command content.
-const _kEmptyCommands = <dynamic>[];
-
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
 void main() {
@@ -63,7 +55,7 @@ void main() {
   // ── Credit-tier predicates ────────────────────────────────────────────────
   group('BatchPlan credit-tier predicates', () {
     test('LiveBatchPlan: all tiers enabled', () {
-      final plan = const LiveBatchPlan(commands: []);
+      const plan = LiveBatchPlan(commands: []);
       expect(plan.creditsEngagement, isTrue);
       expect(plan.creditsAchievement, isTrue);
       expect(plan.creditsLifetime, isTrue);
@@ -72,7 +64,7 @@ void main() {
     test(
       'BulkInTrackPlan: engagement suppressed; achievement + lifetime enabled',
       () {
-        final plan = const BulkInTrackPlan(commands: []);
+        const plan = BulkInTrackPlan(commands: []);
         expect(plan.creditsEngagement, isFalse);
         expect(plan.creditsAchievement, isTrue);
         expect(plan.creditsLifetime, isTrue);
@@ -80,7 +72,7 @@ void main() {
     );
 
     test('LifetimeOnlyPlan: only lifetime enabled', () {
-      final plan = const LifetimeOnlyPlan(commands: []);
+      const plan = LifetimeOnlyPlan(commands: []);
       expect(plan.creditsEngagement, isFalse);
       expect(plan.creditsAchievement, isFalse);
       expect(plan.creditsLifetime, isTrue);

@@ -215,12 +215,13 @@ void main() {
         // Deactivate Bavli
         await service.deactivate(CurriculumId.bavli);
 
-        // The track row is soft-deleted (deletedAt IS NOT NULL), not hard-deleted.
+        // The track row is soft-deleted (state == 'deleted'), not hard-deleted.
+        // W3.28/W3.29: isActive/deletedAt replaced by unified `state` column.
         final allTracks = await database.trackDao.getAllTracks(
           CurriculumId.bavli,
         );
         expect(allTracks, hasLength(1));
-        expect(allTracks.first.deletedAt, isNotNull);
+        expect(allTracks.first.state, 'deleted');
 
         // Completion data is preserved — completions are append-only (FR5 / E24).
         final completions = await database.completionDao

@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
+import 'package:learning_tracker/core/database/daos/completion_dao.dart'
+    show Completion;
 import 'package:learning_tracker/features/dashboard/domain/services/parent_dashboard_aggregator.dart';
 
 void main() {

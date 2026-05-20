@@ -38,7 +38,7 @@ void main() {
         trackId: trackId,
         stageOrder: 1,
         stageName: 'Learn',
-        schedule: Value('{"type":"delay","delay_days":0}'),
+        schedule: const Value('{"type":"delay","delay_days":0}'),
       ),
     );
 
@@ -115,22 +115,27 @@ void main() {
       expect(data.recentCompletions.first.sefariaRef, 'Berakhot 1:1');
     });
 
-    test('returns streak from db', () async {
-      await db
-          .into(db.streakEvents)
-          .insert(
-            StreakEventsCompanion.insert(
-              profileId: profileId,
-              currentStreak: const Value(5),
-              maxStreak: const Value(10),
-            ),
-          );
+    test('returns streak derived from streak_events', () async {
+      // W3.37: streak is derived from streak_events; seed 5 consecutive days.
+      final now = DateTime.utc(2026, 3, 20);
+      for (var i = 0; i < 5; i++) {
+        final day = now.subtract(Duration(days: 4 - i));
+        final dayUtc = DateTime.utc(day.year, day.month, day.day);
+        await db.streakEventDao.appendEvent(
+          StreakEventsCompanion.insert(
+            profileId: profileId,
+            eventType: 'completion',
+            dayUtc: dayUtc,
+            eventTimestamp: dayUtc,
+          ),
+        );
+      }
 
       final aggregator = ParentDashboardAggregator(db, profileId: profileId);
-      final data = await aggregator.compute(now: DateTime.utc(2026, 3, 20));
+      final data = await aggregator.compute(now: now);
 
       expect(data.currentStreak, 5);
-      expect(data.maxStreak, 10);
+      expect(data.maxStreak, 5);
     });
 
     // -------------------------------------------------------------------

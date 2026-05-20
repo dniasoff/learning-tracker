@@ -9,9 +9,9 @@ library;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
-import 'package:learning_tracker/features/learning/domain/entities/completion_command.dart';
-import 'package:learning_tracker/features/learning/data/completion_writer.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
+import 'package:learning_tracker/features/learning/data/completion_writer.dart';
+import 'package:learning_tracker/features/learning/domain/entities/completion_command.dart';
 
 import '../helpers/drift_memory.dart';
 
@@ -27,7 +27,6 @@ void main() {
       final trackId = await db.trackDao.restoreOrCreate(
         profileId: 1,
         curriculumId: CurriculumId.mishnayos,
-        trackType: TrackType.personal,
       );
 
       final writer = CompletionWriter(db);
@@ -65,7 +64,6 @@ void main() {
         final trackId = await db.trackDao.restoreOrCreate(
           profileId: 1,
           curriculumId: CurriculumId.mishnayos,
-          trackType: TrackType.personal,
         );
 
         final writer = CompletionWriter(db);

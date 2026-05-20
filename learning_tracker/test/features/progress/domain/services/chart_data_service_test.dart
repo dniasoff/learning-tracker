@@ -68,13 +68,13 @@ void main() {
       });
 
       test('counts completions per day', () async {
-        await insertCompletion(eventTimestamp: DateTime(2026, 3, 1, 10));
+        await insertCompletion(completedAt: DateTime(2026, 3, 1, 10));
         await insertCompletion(
-          eventTimestamp: DateTime(2026, 3, 1, 14),
+          completedAt: DateTime(2026, 3, 1, 14),
           sefariaRef: 'ref_2',
         );
         await insertCompletion(
-          eventTimestamp: DateTime(2026, 3, 3, 8),
+          completedAt: DateTime(2026, 3, 3, 8),
           sefariaRef: 'ref_3',
         );
 

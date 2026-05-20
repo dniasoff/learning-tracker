@@ -1,6 +1,9 @@
 // Tests for StreakService.getRecoveryInfo, getStreak, watchStreak — the
 // getStreakCalendar path is already covered by streak_service_test.dart.
-import 'package:drift/drift.dart' show Value;
+//
+// W3.37: the `streaks` snapshot table was dropped. Streak state is derived
+// from `streak_events` via StreakReducer. Seed streak via appendEvent loops.
+// getRecoveryInfo always returns wasRecovered:false post-W3.20.
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/features/gamification/domain/services/streak_service.dart';
@@ -13,6 +16,7 @@ void main() {
 
   setUp(() async {
     db = inMemoryDb();
+    await seedProfile(db);
     service = StreakService(db, profileId: 1);
   });
 
@@ -20,22 +24,22 @@ void main() {
     await db.close();
   });
 
-  Future<void> insertStreak({
-    int profileId = 1,
-    int currentStreak = 5,
-    DateTime? graceUsedDate,
-    int maxStreak = 10,
-  }) async {
-    await db
-        .into(db.streakEvents)
-        .insert(
-          StreakEventsCompanion.insert(
-            profileId: profileId,
-            currentStreak: Value(currentStreak),
-            maxStreak: Value(maxStreak),
-            graceUsedDate: Value(graceUsedDate),
-          ),
-        );
+  /// Seed [count] consecutive completion events so the reducer returns a
+  /// streak of [count]. Events end on today's UTC day.
+  Future<void> seedStreak(int count, {int profileId = 1}) async {
+    final today = DateTime.now().toUtc();
+    for (var i = 0; i < count; i++) {
+      final day = today.subtract(Duration(days: count - 1 - i));
+      final dayUtc = DateTime.utc(day.year, day.month, day.day);
+      await db.streakEventDao.appendEvent(
+        StreakEventsCompanion.insert(
+          profileId: profileId,
+          eventType: 'completion',
+          dayUtc: dayUtc,
+          eventTimestamp: dayUtc,
+        ),
+      );
+    }
   }
 
   // =========================================================================
@@ -44,7 +48,7 @@ void main() {
 
   group('StreakService.getRecoveryInfo', () {
     test(
-      'returns wasRecovered:false and streak:0 when no streak row exists',
+      'returns wasRecovered:false and streak:0 when no events exist',
       () async {
         final info = await service.getRecoveryInfo();
 
@@ -54,45 +58,26 @@ void main() {
       },
     );
 
-    test('returns wasRecovered:false when graceUsedDate is null', () async {
-      await insertStreak(graceUsedDate: null, currentStreak: 7);
+    test('returns wasRecovered:false with currentStreak from events', () async {
+      await seedStreak(7);
 
       final info = await service.getRecoveryInfo();
 
+      // W3.20: grace-period is not supported; wasRecovered is always false.
       expect(info.wasRecovered, isFalse);
       expect(info.currentStreak, 7);
-      expect(info.missedDate, isNull);
     });
 
     test(
-      'returns wasRecovered:false when graceUsedDate is not today',
+      'returns correct currentStreak when only other profile has events',
       () async {
-        // Use a date clearly in the past.
-        final pastDate = DateTime.utc(2020, 1, 1);
-        await insertStreak(graceUsedDate: pastDate, currentStreak: 3);
+        // Only profile 2 has events — service is scoped to profile 1.
+        await seedStreak(5, profileId: 2);
 
         final info = await service.getRecoveryInfo();
 
-        // The grace date is not the same local day as "now", so wasRecovered
-        // is false.
+        expect(info.currentStreak, 0);
         expect(info.wasRecovered, isFalse);
-        expect(info.currentStreak, 3);
-      },
-    );
-
-    test(
-      'returns wasRecovered:true and missedDate when graceUsedDate is today',
-      () async {
-        // Use today's UTC date so isSameLocalDay returns true.
-        final today = DateTime.now().toUtc();
-        await insertStreak(graceUsedDate: today, currentStreak: 4);
-
-        final info = await service.getRecoveryInfo();
-
-        expect(info.wasRecovered, isTrue);
-        expect(info.currentStreak, 4);
-        // missedDate should be yesterday.
-        expect(info.missedDate, isNotNull);
       },
     );
   });
@@ -102,26 +87,26 @@ void main() {
   // =========================================================================
 
   group('StreakService.getStreak', () {
-    test('returns null when no streak row exists', () async {
+    test('returns empty state when no events exist', () async {
       final streak = await service.getStreak();
-      expect(streak, isNull);
+      expect(streak.currentStreak, 0);
+      expect(streak.maxStreak, 0);
     });
 
-    test('returns streak row when one exists for the profile', () async {
-      await insertStreak(currentStreak: 12);
+    test('returns correct streak derived from events', () async {
+      await seedStreak(12);
 
       final streak = await service.getStreak();
 
-      expect(streak, isNotNull);
-      expect(streak!.currentStreak, 12);
+      expect(streak.currentStreak, 12);
     });
 
-    test('returns null for a different profileId', () async {
-      await insertStreak(profileId: 2, currentStreak: 5);
+    test('events for different profileId do not affect this service', () async {
+      await seedStreak(5, profileId: 2);
 
       // service is scoped to profileId 1
       final streak = await service.getStreak();
-      expect(streak, isNull);
+      expect(streak.currentStreak, 0);
     });
   });
 
@@ -130,17 +115,16 @@ void main() {
   // =========================================================================
 
   group('StreakService.watchStreak', () {
-    test('emits null initially when no streak row exists', () async {
+    test('emits empty state initially when no events exist', () async {
       final first = await service.watchStreak().first;
-      expect(first, isNull);
+      expect(first.currentStreak, 0);
     });
 
-    test('emits streak after insertion', () async {
-      await insertStreak(currentStreak: 8);
+    test('emits correct streak after events are inserted', () async {
+      await seedStreak(8);
 
       final first = await service.watchStreak().first;
-      expect(first, isNotNull);
-      expect(first!.currentStreak, 8);
+      expect(first.currentStreak, 8);
     });
   });
 }

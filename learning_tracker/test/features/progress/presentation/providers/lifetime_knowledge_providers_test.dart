@@ -253,7 +253,7 @@ void main() {
           trackType: 'personal',
           eventTimestamp: ts,
           // Use a distinct trackId so the event differs if needed.
-          trackId: Value(const Value<int?>(null)),
+          trackId: const Value<int?>(null),
         ),
       );
 

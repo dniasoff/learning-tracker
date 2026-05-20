@@ -13,13 +13,11 @@ library;
 
 import 'dart:convert';
 
-import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
-import 'package:learning_tracker/features/learning/domain/entities/completion_command.dart';
 import 'package:learning_tracker/features/learning/data/completion_writer.dart';
-import 'package:learning_tracker/core/sync/outbox/outbox_processor.dart';
+import 'package:learning_tracker/features/learning/domain/entities/completion_command.dart';
 
 import '../helpers/drift_memory.dart';
 
@@ -150,14 +148,8 @@ void main() {
           reason: 'S2: exactly N outbox rows must be written',
         );
 
-        final syncQueueRows = await db.select(db.syncQueue).get();
-        expect(
-          syncQueueRows,
-          isEmpty,
-          reason:
-              'S2: the new write path must write zero sync_queue rows; '
-              'only the outbox table is the push source',
-        );
+        // W3.20+: sync_queue table removed — only the outbox table is the
+        // push source. No assertion needed: the table no longer exists.
       },
     );
 
@@ -346,48 +338,9 @@ void main() {
     );
   });
 
-  // ── G6 — purgeCompletionRows removes legacy `completion` sync_queue rows ──
-  //
-  // purgeCompletionRows must filter on the shared OutboxEntityKind.completion
-  // constant, not a hardcoded literal — a rename then cannot silently turn the
-  // purge into a no-op.
-  group('G6 — SyncQueueDao.purgeCompletionRows', () {
-    late UserDatabase db;
-
-    setUp(() async {
-      db = inMemoryDb();
-    });
-
-    tearDown(() => db.close());
-
-    test('purgeCompletionRows removes a seeded completion row and leaves other '
-        'operation types untouched', () async {
-      // Seed a legacy `completion` row plus a non-completion row.
-      await db.syncQueueDao.enqueue(OutboxEntityKind.completion, '{}');
-      await db.syncQueueDao.enqueue(OutboxEntityKind.streak, '{}');
-
-      expect(
-        await db.syncQueueDao.getPendingCount(),
-        equals(2),
-        reason: 'precondition: two rows queued',
-      );
-
-      final removed = await db.syncQueueDao.purgeCompletionRows();
-      expect(
-        removed,
-        equals(1),
-        reason: 'exactly the one completion row must be purged',
-      );
-
-      final remaining = await db.syncQueueDao.getAllPending();
-      expect(remaining, hasLength(1));
-      expect(
-        remaining.single.operationType,
-        equals(OutboxEntityKind.streak),
-        reason: 'non-completion rows must survive the purge',
-      );
-    });
-  });
+  // G6 — SyncQueueDao.purgeCompletionRows: REMOVED
+  // W3.20+: sync_queue table and SyncQueueDao were deleted when the outbox
+  // table replaced them. This test group is no longer applicable.
 }
 
 Map<String, Object?> _decodePayload(String raw) =>

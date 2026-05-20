@@ -4,12 +4,6 @@ import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/features/progress/domain/models/lifetime_knowledge.dart';
 import 'package:learning_tracker/features/progress/domain/services/lifetime_tree_builder.dart';
 
-// Minimal stub for LearningLedgerData — we only need entryScope + unitIdentifier.
-// Using the real UserDatabase type would require a full DB setup; instead we
-// use a minimal helper class with the same field names used by the builder.
-import 'package:learning_tracker/core/database/user/user_database.dart'
-    show LearningLedgerData;
-
 ContentItem leaf(
   String sefariaRef, {
   String level1 = 'Zeraim',
@@ -29,22 +23,6 @@ ContentItem leaf(
   sortOrder: sortOrder,
   isLeaf: true,
 );
-
-// Helper to create a LearningLedgerData-like object for testing.
-// Since we can't easily construct Drift row types in isolation, we test via
-// the builder's public computeLearnedLeafRefs by passing typed data.
-// For this test, we use a thin wrapper that mimics the fields we need.
-class _LedgerEntry {
-  _LedgerEntry({required this.entryScope, required this.unitIdentifier});
-  final String entryScope;
-  final String unitIdentifier;
-}
-
-// Bridge: convert our test entries into the DAO data type.
-// We use a whitebox approach: LearningLedgerData has `entryScope` and
-// `unitIdentifier` fields exposed via the DAO. We can't easily instantiate it,
-// so we test the pure logic by passing empty lists and verifying behavior
-// through the completedRefs path which IS unit-testable.
 
 void main() {
   late LifetimeTreeBuilder builder;
@@ -176,7 +154,7 @@ void main() {
 
       test('includes non-leaf items with Hebrew names', () {
         final items = [
-          ContentItem(
+          const ContentItem(
             curriculumId: 'mishnayos',
             level1: 'Zeraim',
             level2: null,

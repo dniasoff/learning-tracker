@@ -214,7 +214,7 @@ void main() {
           sefariaRef: 'Berakhot.2a',
           stageOrder: 1,
           stageDefinitionId: 1,
-          trackId: Value(trackId),
+          trackId: trackId,
           priority: 'normal',
           createdAt: now,
         ),

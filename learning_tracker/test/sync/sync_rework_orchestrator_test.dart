@@ -41,7 +41,6 @@ import 'package:learning_tracker/core/sync/providers/sync_orchestrator_providers
 import 'package:learning_tracker/core/sync/sync_orchestrator.dart';
 import 'package:learning_tracker/features/account/domain/models/auth_state.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
-import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
 
 // ---------------------------------------------------------------------------
 // Fakes
@@ -213,6 +212,11 @@ class _ChannelCountingGateway implements FirestoreGateway {
     required String collection,
     required String docId,
   }) async => null;
+  @override
+  Future<void> pushStageDefinition({
+    required int profileId,
+    required Map<String, dynamic> data,
+  }) async {}
 }
 
 /// Builds a real [SyncOrchestratorImpl] wired against fakes.
@@ -226,11 +230,11 @@ SyncOrchestratorImpl _buildOrchestrator(
 }) {
   final mergeRouter = MergeRouter(mergers: const <String, EntityMerger>{});
   return SyncOrchestratorImpl(
-    resolveEngine: () =>
-        throw StateError('S7: start()/dispose() must not touch the engine'),
     resolveMergeRouter: () => mergeRouter,
     resolveGateway: () => gateway,
     resolveProfileId: resolveProfileId ?? () => 1,
+    resolvePushAllLocalData: () async {},
+    resolveBackfillGoals: () async => 0,
   );
 }
 
@@ -418,8 +422,10 @@ void main() {
     // Riverpod wiring contract — keepAlive + the absence of any
     // ref.watch(syncEngineProvider) — so the provider's build closure runs
     // exactly once and an unrelated invalidation does not re-run it.
-    test('S7 provider: invalidating syncEngineProvider does not rebuild '
-        'syncOrchestratorProvider', () {
+    // W2.35: syncEngineProvider deleted — the invariant is now tested via the
+    // keepAlive contract: two reads of syncOrchestratorProvider must return
+    // the same instance regardless of any intervening provider mutations.
+    test('S7 provider: syncOrchestratorProvider is a keepAlive singleton', () {
       var orchestratorRebuilds = 0;
 
       final container = ProviderContainer(
@@ -439,26 +445,21 @@ void main() {
       final first = container.read(syncOrchestratorProvider);
       final rebuildsAfterFirstRead = orchestratorRebuilds;
 
-      // Invalidate the engine — the Bug #1 trigger from the sign-in flow.
-      container.invalidate(syncEngineProvider);
-      // Force the engine provider to rebuild so the invalidation is real.
-      container.read(syncEngineProvider);
-
+      // Read again — a keepAlive provider must return the same instance.
       final second = container.read(syncOrchestratorProvider);
 
       expect(
         identical(first, second),
         isTrue,
         reason:
-            'S7: reading syncOrchestratorProvider before and after a '
-            'syncEngineProvider invalidation must yield the same instance',
+            'S7: syncOrchestratorProvider must return the same instance on '
+            'repeated reads (keepAlive singleton)',
       );
       expect(
         orchestratorRebuilds,
         equals(rebuildsAfterFirstRead),
         reason:
-            'S7: invalidating syncEngineProvider must NOT rebuild '
-            'syncOrchestratorProvider — exactly one orchestrator per session',
+            'S7: re-reading syncOrchestratorProvider must NOT trigger a rebuild',
       );
     });
 
@@ -506,7 +507,7 @@ void main() {
     test('S7 call-sites: sign-in and upgrade flows no longer invalidate '
         'syncEngineProvider', () {
       const signInPath =
-          'lib/features/auth/presentation/screens/sign_in_screen.dart';
+          'lib/features/account/presentation/screens/sign_in_screen.dart';
       const upgradePath =
           'lib/features/settings/presentation/screens/'
           'upgrade_to_cloud_screen.dart';

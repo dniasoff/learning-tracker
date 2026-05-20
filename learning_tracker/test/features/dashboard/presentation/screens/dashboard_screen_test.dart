@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/core/enums/user_mode.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/dashboard/presentation/screens/dashboard_screen.dart';
@@ -70,9 +69,9 @@ void main() {
         id: 1,
         profileId: 0,
         curriculumId: CurriculumId.mishnayos.storageKey,
-        trackType: TrackType.personal.storageKey,
-        isActive: true,
-        activatedAt: DateTime(2026, 1, 1),
+        state: 'active',
+        stateChangedAt: DateTime.utc(2026, 1, 1),
+        activatedAt: DateTime.utc(2026, 1, 1),
       );
 
       await tester.pumpWidget(

@@ -5,7 +5,6 @@ library;
 
 import 'dart:convert';
 
-import 'package:drift/drift.dart' show Value;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/features/settings/domain/services/data_export_import_service.dart';
@@ -138,23 +137,32 @@ void main() {
       expect(learningOrder.first['sefariaRef'], 'Berakhot');
     });
 
-    test('exports streak rows', () async {
-      await db.streakEventDao.upsertStreakByProfile(
-        1,
-        const StreakEventsCompanion(
-          currentStreak: Value(5),
-          maxStreak: Value(10),
-        ),
-      );
+    test(
+      'exports streak_events rows (streaks table dropped in W3.20)',
+      () async {
+        // W3.37: streak state is derived from streak_events; seed one event.
+        final now = DateTime.utc(2026, 3, 20);
+        await db.streakEventDao.appendEvent(
+          StreakEventsCompanion.insert(
+            profileId: 1,
+            eventType: 'completion',
+            dayUtc: now,
+            eventTimestamp: now,
+          ),
+        );
 
-      final data =
-          jsonDecode(await service.exportData()) as Map<String, dynamic>;
-      final streaks = (data['streaks'] as List).cast<Map<String, dynamic>>();
+        final data =
+            jsonDecode(await service.exportData()) as Map<String, dynamic>;
+        // streaks is always empty in W3.20+ — events are in streakEvents.
+        final streaks = (data['streaks'] as List).cast<Map<String, dynamic>>();
+        expect(streaks, isEmpty);
 
-      expect(streaks, hasLength(1));
-      expect(streaks.first['currentStreak'], 5);
-      expect(streaks.first['maxStreak'], 10);
-    });
+        final streakEvents = (data['streakEvents'] as List)
+            .cast<Map<String, dynamic>>();
+        expect(streakEvents, hasLength(1));
+        expect(streakEvents.first['eventType'], 'completion');
+      },
+    );
   });
 
   // ── importData ────────────────────────────────────────────────────────────
@@ -382,28 +390,40 @@ void main() {
       expect(orders.first.sefariaRef, 'Berakhot');
     });
 
-    test('importData imports streaks', () async {
-      final payload = buildImportJson(
-        streaks: [
-          {
-            'id': 1,
-            'profileId': 1,
-            'currentStreak': 7,
-            'maxStreak': 14,
-            'lastCompletionDate': null,
-            'graceUsedDate': null,
-            'gracePeriodDays': 1,
-          },
-        ],
-      );
+    test(
+      'importData imports streak_events (streaks key ignored in W3.20+)',
+      () async {
+        // W3.20: `streaks` key is legacy — import reads from `streakEvents`.
+        const ts = '2026-03-20T00:00:00.000Z';
+        final payload = buildImportJson(
+          streaks: [
+            // Legacy format — should be silently ignored.
+            {'id': 1, 'profileId': 1, 'currentStreak': 7, 'maxStreak': 14},
+          ],
+        );
 
-      await service.importData(payload);
+        // Also build a payload that includes streakEvents.
+        final payloadWithEvents = jsonEncode({
+          ...jsonDecode(payload) as Map<String, dynamic>,
+          'streakEvents': [
+            {
+              'id': 1,
+              'profileId': 1,
+              'eventType': 'completion',
+              'dayUtc': ts,
+              'eventTimestamp': ts,
+              'createdAt': ts,
+            },
+          ],
+        });
 
-      final streak = await db.streakEventDao.getStreakByProfile(1);
-      expect(streak, isNotNull);
-      expect(streak!.currentStreak, 7);
-      expect(streak.maxStreak, 14);
-    });
+        await service.importData(payloadWithEvents);
+
+        final events = await db.streakEventDao.getEventsByProfile(1);
+        expect(events, hasLength(1));
+        expect(events.first.eventType, 'completion');
+      },
+    );
 
     test(
       'importData is a no-op on invalid JSON (throws FormatException)',

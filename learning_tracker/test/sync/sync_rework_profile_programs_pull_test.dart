@@ -210,6 +210,13 @@ class _ProfileProgramsGateway implements FirestoreGateway {
     required String collection,
     required String docId,
   }) async => null;
+
+  // W7.15: pushStageDefinition added to FirestoreGateway interface.
+  @override
+  Future<void> pushStageDefinition({
+    required int profileId,
+    required Map<String, dynamic> data,
+  }) async {}
 }
 
 // ---------------------------------------------------------------------------
@@ -225,11 +232,11 @@ SyncOrchestratorImpl _buildOrchestrator(
     mergers: {EntityKind.profileProgram: ProfileProgramMerger(store: store)},
   );
   return SyncOrchestratorImpl(
-    resolveEngine: () =>
-        throw StateError('F-H3: pullOnLaunch must not touch the engine'),
     resolveMergeRouter: () => router,
     resolveGateway: () => gateway,
     resolveProfileId: () => 1,
+    resolvePushAllLocalData: () async {},
+    resolveBackfillGoals: () async => 0,
   );
 }
 

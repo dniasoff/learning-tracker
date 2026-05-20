@@ -17,8 +17,6 @@ import 'package:drift/drift.dart' hide isNotNull, isNull;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/features/learning/domain/entities/completion_command.dart';
-import 'package:learning_tracker/features/learning/data/completion_writer.dart';
 import 'package:learning_tracker/core/sync/firestore_gateway_impl.dart';
 import 'package:learning_tracker/core/sync/outbox/outbox_processor.dart';
 import 'package:learning_tracker/core/sync/push_pipeline_impl.dart';
@@ -26,6 +24,8 @@ import 'package:learning_tracker/core/time/local_day_clock.dart';
 import 'package:learning_tracker/features/account/domain/models/app_user.dart';
 import 'package:learning_tracker/features/account/domain/repositories/auth_repository.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
+import 'package:learning_tracker/features/learning/data/completion_writer.dart';
+import 'package:learning_tracker/features/learning/domain/entities/completion_command.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/bookmark_repository.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/completion_repository.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/bulk_prior_completion_service.dart';
@@ -414,7 +414,7 @@ void main() {
               stageId: 1,
               trackType: 'personal',
               eventTimestamp: sentinelTs,
-              priorMarkOnly: const Value(true),
+              // W4.26: priorMarkOnly removed from schema
             ),
           );
           await db.completionEventDao.appendEvent(
@@ -425,7 +425,7 @@ void main() {
               stageId: 2,
               trackType: 'personal',
               eventTimestamp: sentinelTs,
-              priorMarkOnly: const Value(true),
+              // W4.26: priorMarkOnly removed from schema
             ),
           );
 
@@ -477,7 +477,7 @@ void main() {
               stageId: stage,
               trackType: 'personal',
               eventTimestamp: sentinelTs,
-              priorMarkOnly: const Value(true),
+              // W4.26: priorMarkOnly removed from schema
             ),
           );
         }
@@ -535,7 +535,7 @@ void main() {
             stageId: 1,
             trackType: 'personal',
             eventTimestamp: sentinelTs,
-            priorMarkOnly: const Value(true),
+            // W4.26: priorMarkOnly removed from completion_events schema
           ),
         );
 
@@ -584,7 +584,7 @@ void main() {
             stageId: 1,
             trackType: 'personal',
             eventTimestamp: sentinelTs,
-            priorMarkOnly: const Value(true),
+            // W4.26: priorMarkOnly removed from completion_events schema
           ),
         );
 
