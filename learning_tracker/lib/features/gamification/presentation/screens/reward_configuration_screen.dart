@@ -7,19 +7,18 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
-import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/theme/app_colors.dart';
 import 'package:learning_tracker/core/utils/text_input_formatters.dart';
-import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/gamification/domain/models/reward_milestone.dart';
 import 'package:learning_tracker/features/gamification/domain/reward_milestone_icons.dart';
-import 'package:learning_tracker/features/gamification/domain/services/reward_milestone_service.dart';
-import 'package:learning_tracker/features/gamification/presentation/providers/achievements_overview_provider.dart';
-import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
-import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
+import 'package:learning_tracker/features/gamification/presentation/providers/reward_config_controller.dart';
+import 'package:learning_tracker/features/gamification/presentation/widgets/avatar_picker_row.dart';
+import 'package:learning_tracker/features/gamification/presentation/widgets/manage_rewards_list.dart';
+import 'package:learning_tracker/features/gamification/presentation/widgets/reward_config_header.dart';
+import 'package:learning_tracker/features/gamification/presentation/widgets/reward_form.dart';
+import 'package:learning_tracker/features/gamification/presentation/widgets/reward_type_segmented.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
-// High-fidelity parent reward screen (navy #00218D, orange #F2994A).
 const Color _kNavy = Color(0xFF00218D);
 const Color _kOrange = Color(0xFFF2994A);
 const Color _kPageBg = AppColors.surfaceF4b;
@@ -42,24 +41,19 @@ class _RewardConfigurationScreenState
   final _nameController = TextEditingController();
   final _pointsController = TextEditingController();
 
-  List<CurriculumTrack> _tracks = [];
-  int? _selectedTrackId;
-  bool _isGlobalReward = false;
-  int _iconIndex = 0;
-  String? _editingMilestoneId;
-  bool _loading = true;
-  String? _error;
-
-  /// Total-points ladder when there are no active tracks, or when the parent
-  /// explicitly chose "Total points".
-  bool get _usesGlobalLadder => _tracks.isEmpty || _isGlobalReward;
+  // Track whether the controllers were last updated by the notifier to avoid
+  // infinite update loops.
+  String _lastSyncedName = '';
+  String _lastSyncedPoints = '';
 
   @override
   void initState() {
     super.initState();
-    _nameController.addListener(() => setState(() {}));
-    _pointsController.addListener(() => setState(() {}));
-    unawaited(_bootstrap());
+    _nameController.addListener(_onNameChanged);
+    _pointsController.addListener(_onPointsChanged);
+    unawaited(
+      ref.read(rewardConfigControllerProvider.notifier).bootstrap(),
+    );
   }
 
   @override
@@ -69,35 +63,35 @@ class _RewardConfigurationScreenState
     super.dispose();
   }
 
-  Future<void> _bootstrap() async {
-    setState(() {
-      _loading = true;
-      _error = null;
-    });
-    try {
-      final db = ref.read(userDatabaseProvider);
-      final profileId = ref.read(activeProfileIdProvider);
-      final tracks = await db.trackDao.getActiveTracksForProfile(profileId);
-      if (!mounted) return;
-      setState(() {
-        _tracks = tracks;
-        _selectedTrackId = tracks.isNotEmpty ? tracks.first.id : null;
-        if (tracks.isEmpty) {
-          _isGlobalReward = true;
-        }
-        _loading = false;
-      });
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _error = e.toString();
-          _loading = false;
-        });
-      }
+  void _onNameChanged() {
+    final v = _nameController.text;
+    if (v != _lastSyncedName) {
+      ref.read(rewardConfigControllerProvider.notifier).setName(v);
     }
   }
 
-  String _trackTitle(CurriculumTrack track, AppLocalizations l10n) {
+  void _onPointsChanged() {
+    final v = _pointsController.text;
+    if (v != _lastSyncedPoints) {
+      ref.read(rewardConfigControllerProvider.notifier).setPointsText(v);
+    }
+  }
+
+  /// Syncs the text controllers to the notifier state without re-triggering
+  /// listener callbacks (avoids infinite loops when applyMilestoneToForm
+  /// or clearForm updates notifier state externally).
+  void _syncControllersFromState(RewardForm form) {
+    if (form.name != _nameController.text) {
+      _lastSyncedName = form.name;
+      _nameController.text = form.name;
+    }
+    if (form.pointsText != _pointsController.text) {
+      _lastSyncedPoints = form.pointsText;
+      _pointsController.text = form.pointsText;
+    }
+  }
+
+  String _trackTitle(CurriculumTrack track) {
     final c = CurriculumId.values
         .where((x) => x.storageKey == track.curriculumId)
         .firstOrNull;
@@ -105,184 +99,7 @@ class _RewardConfigurationScreenState
     return curriculumLabelText(ref, curriculum: c);
   }
 
-  Future<void> _invalidateChildRewardProviders() async {
-    ref.invalidate(achievementsOverviewProvider);
-    ref.invalidate(dashboardChildNextRewardProvider);
-  }
-
-  Future<void> _persistAndSync() async {
-    await ref.read(syncWriteFacadeProvider)?.pushGamificationSettingsSnapshot();
-    await _invalidateChildRewardProviders();
-  }
-
-  void _clearForm() {
-    setState(() {
-      _editingMilestoneId = null;
-      _iconIndex = 0;
-      _nameController.clear();
-      _pointsController.clear();
-      if (_tracks.isEmpty) {
-        _isGlobalReward = true;
-      }
-    });
-  }
-
-  void _applyMilestoneToForm(RewardMilestone m) {
-    setState(() {
-      _editingMilestoneId = m.id;
-      final globalMilestone = m.trackId == RewardMilestone.kGlobalTrackSentinel;
-      _isGlobalReward = _tracks.isEmpty || globalMilestone;
-      if (!_isGlobalReward) {
-        _selectedTrackId = m.trackId;
-      }
-      _iconIndex = RewardMilestoneIcons.clampIndex(m.iconIndex);
-      _nameController.text = m.title;
-      _pointsController.text = '${m.thresholdPoints}';
-    });
-  }
-
-  Future<List<RewardMilestone>> _milestonesForCurrentLadder() async {
-    final db = ref.read(userDatabaseProvider);
-    final profileId = ref.read(activeProfileIdProvider);
-    final svc = RewardMilestoneService(db, profileId: profileId);
-    if (_usesGlobalLadder) {
-      return svc.getGlobalMilestones();
-    }
-    final tid = _selectedTrackId;
-    if (tid == null) return const [];
-    return svc.getMilestonesForTrack(tid);
-  }
-
-  Future<bool> _hasDuplicateThresholdAsync(
-    int threshold, {
-    String? excludeId,
-  }) async {
-    final list = await _milestonesForCurrentLadder();
-    for (final m in list) {
-      if (excludeId != null && m.id == excludeId) continue;
-      if (m.thresholdPoints == threshold) return true;
-    }
-    return false;
-  }
-
-  Future<void> _saveReward() async {
-    final l10n = AppLocalizations.of(context)!;
-    final title = _nameController.text.trim();
-    final pointsParsed = int.tryParse(_pointsController.text.trim()) ?? 0;
-    final wasEditing = _editingMilestoneId != null;
-
-    if (title.isEmpty || pointsParsed <= 0) {
-      return;
-    }
-
-    if (!_usesGlobalLadder && _selectedTrackId == null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(l10n.rewardConfigNoActiveTracks)));
-      return;
-    }
-
-    if (await _hasDuplicateThresholdAsync(
-      pointsParsed,
-      excludeId: _editingMilestoneId,
-    )) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l10n.rewardConfigDuplicateThreshold)),
-        );
-      }
-      return;
-    }
-
-    final db = ref.read(userDatabaseProvider);
-    final profileId = ref.read(activeProfileIdProvider);
-    final svc = RewardMilestoneService(db, profileId: profileId);
-    final trackId = _usesGlobalLadder
-        ? RewardMilestone.kGlobalTrackSentinel
-        : _selectedTrackId!;
-
-    await svc.upsertMilestone(
-      trackId: trackId,
-      title: title,
-      thresholdPoints: pointsParsed,
-      milestoneId: _editingMilestoneId,
-      isEnabled: true,
-      iconIndex: RewardMilestoneIcons.clampIndex(_iconIndex),
-    );
-    await _persistAndSync();
-    _clearForm();
-    if (!mounted) return;
-    await showDialog<void>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(
-          wasEditing
-              ? l10n.rewardConfigRewardUpdatedTitle
-              : l10n.rewardConfigRewardCreatedTitle,
-        ),
-        content: Text(
-          wasEditing
-              ? l10n.rewardConfigRewardUpdatedBody(title)
-              : l10n.rewardConfigRewardCreatedBody(title),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(),
-            child: Text(MaterialLocalizations.of(dialogContext).okButtonLabel),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Future<void> _toggleEnabled(RewardMilestone m) async {
-    final db = ref.read(userDatabaseProvider);
-    final profileId = ref.read(activeProfileIdProvider);
-    final svc = RewardMilestoneService(db, profileId: profileId);
-    await svc.upsertMilestone(
-      trackId: m.trackId,
-      title: m.title,
-      thresholdPoints: m.thresholdPoints,
-      milestoneId: m.id,
-      isEnabled: !m.isEnabled,
-      iconIndex: RewardMilestoneIcons.clampIndex(m.iconIndex),
-    );
-    await _persistAndSync();
-    if (mounted) setState(() {});
-  }
-
-  Future<void> _confirmDelete(RewardMilestone m) async {
-    final l10n = AppLocalizations.of(context)!;
-    final go = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(l10n.deleteReward),
-        content: Text(l10n.deleteRewardConfirm(m.title)),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: Text(l10n.cancel),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: Text(l10n.deleteReward),
-          ),
-        ],
-      ),
-    );
-    if (go != true || !mounted) return;
-
-    final db = ref.read(userDatabaseProvider);
-    final profileId = ref.read(activeProfileIdProvider);
-    final svc = RewardMilestoneService(db, profileId: profileId);
-    await svc.removeMilestone(m.id);
-    await _persistAndSync();
-    if (_editingMilestoneId == m.id) _clearForm();
-    if (mounted) setState(() {});
-  }
-
-  Future<void> _openManageRewardsSheet() async {
-    final l10n = AppLocalizations.of(context)!;
+  Future<void> _openManageRewardsSheet(AppLocalizations l10n) async {
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -291,6 +108,7 @@ class _RewardConfigurationScreenState
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (ctx) {
+        final notifier = ref.read(rewardConfigControllerProvider.notifier);
         return SafeArea(
           child: Padding(
             padding: EdgeInsets.only(
@@ -313,19 +131,17 @@ class _RewardConfigurationScreenState
                 const SizedBox(height: 12),
                 SizedBox(
                   height: MediaQuery.sizeOf(context).height * 0.42,
-                  child: _ManageRewardsList(
-                    load: _milestonesForCurrentLadder,
+                  child: ManageRewardsList(
+                    load: notifier.milestonesForCurrentLadder,
                     onEdit: (m) {
                       Navigator.pop(ctx);
-                      _applyMilestoneToForm(m);
+                      notifier.applyMilestoneToForm(m);
                     },
                     onDelete: (m) async {
                       Navigator.pop(ctx);
-                      await _confirmDelete(m);
+                      await _confirmDelete(m, l10n);
                     },
-                    onToggle: (m) async {
-                      await _toggleEnabled(m);
-                    },
+                    onToggle: (m) => notifier.toggleEnabled(m),
                   ),
                 ),
               ],
@@ -336,46 +152,119 @@ class _RewardConfigurationScreenState
     );
   }
 
-  int get _previewPoints => int.tryParse(_pointsController.text.trim()) ?? 0;
+  Future<void> _confirmDelete(
+    RewardMilestone milestone,
+    AppLocalizations l10n,
+  ) async {
+    final go = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(l10n.deleteReward),
+        content: Text(l10n.deleteRewardConfirm(milestone.title)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(l10n.cancel),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(l10n.deleteReward),
+          ),
+        ],
+      ),
+    );
+    if (go != true || !mounted) return;
+    await ref
+        .read(rewardConfigControllerProvider.notifier)
+        .deleteMilestone(milestone);
+  }
 
-  String get _previewTitle {
-    final t = _nameController.text.trim();
-    if (t.isEmpty) {
-      return AppLocalizations.of(context)!.rewardConfigNamePlaceholder;
+  Future<void> _saveReward(AppLocalizations l10n) async {
+    final result = await ref
+        .read(rewardConfigControllerProvider.notifier)
+        .saveReward();
+    if (!mounted) return;
+
+    switch (result) {
+      case RewardSaveInvalidInput():
+        // Empty title / invalid points — no-op; button should be disabled.
+        break;
+      case RewardSaveNoTrack():
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.rewardConfigNoActiveTracks)),
+        );
+      case RewardSaveDuplicateThreshold():
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.rewardConfigDuplicateThreshold)),
+        );
+      case RewardSaved(:final title, :final wasEditing):
+        await showDialog<void>(
+          context: context,
+          builder: (dialogContext) => AlertDialog(
+            title: Text(
+              wasEditing
+                  ? l10n.rewardConfigRewardUpdatedTitle
+                  : l10n.rewardConfigRewardCreatedTitle,
+            ),
+            content: Text(
+              wasEditing
+                  ? l10n.rewardConfigRewardUpdatedBody(title)
+                  : l10n.rewardConfigRewardCreatedBody(title),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(dialogContext).pop(),
+                child: Text(
+                  MaterialLocalizations.of(dialogContext).okButtonLabel,
+                ),
+              ),
+            ],
+          ),
+        );
     }
-    return t;
   }
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final form = ref.watch(rewardConfigControllerProvider);
     final topInset = MediaQuery.paddingOf(context).top;
 
-    if (_loading) {
+    // Keep text controllers in sync with notifier state (e.g. after clear/apply).
+    _syncControllersFromState(form);
+
+    if (form.loading) {
       return const Scaffold(
         backgroundColor: _kPageBg,
         body: Center(child: CircularProgressIndicator()),
       );
     }
 
-    if (_error != null) {
+    if (form.error != null) {
       return Scaffold(
         backgroundColor: _kPageBg,
         appBar: AppBar(title: Text(l10n.rewardConfigurationTitle)),
-        body: Center(child: Text(_error!)),
+        body: Center(child: Text(form.error!)),
       );
     }
+
+    final notifier = ref.read(rewardConfigControllerProvider.notifier);
+    final previewTitle = form.name.trim().isEmpty
+        ? l10n.rewardConfigNamePlaceholder
+        : form.name.trim();
 
     return Scaffold(
       backgroundColor: _kPageBg,
       body: Column(
         children: [
-          _RewardConfigHeader(
+          RewardConfigHeader(
             topInset: topInset,
             title: l10n.rewardConfigScreenContextLabel,
             onBack: () => context.maybePop(),
             onMenuSelected: (value) {
-              if (value == 'manage') unawaited(_openManageRewardsSheet());
+              if (value == 'manage') {
+                unawaited(_openManageRewardsSheet(l10n));
+              }
             },
           ),
           Expanded(
@@ -426,25 +315,9 @@ class _RewardConfigurationScreenState
                         ),
                       ),
                       const SizedBox(height: 12),
-                      SizedBox(
-                        height: 76,
-                        child: ListView.separated(
-                          scrollDirection: Axis.horizontal,
-                          padding: const EdgeInsets.symmetric(horizontal: 2),
-                          itemCount: RewardMilestoneIcons.choices.length,
-                          separatorBuilder: (_, __) =>
-                              const SizedBox(width: 10),
-                          itemBuilder: (context, i) {
-                            return SizedBox(
-                              width: 64,
-                              child: _AvatarTile(
-                                icon: RewardMilestoneIcons.choices[i],
-                                selected: _iconIndex == i,
-                                onTap: () => setState(() => _iconIndex = i),
-                              ),
-                            );
-                          },
-                        ),
+                      AvatarPickerRow(
+                        selectedIndex: form.iconIndex,
+                        onSelect: notifier.setIconIndex,
                       ),
                       const SizedBox(height: 22),
                       Text(
@@ -486,20 +359,14 @@ class _RewardConfigurationScreenState
                         ),
                       ),
                       const SizedBox(height: 8),
-                      _RewardTypeSegmented(
+                      RewardTypeSegmented(
                         perTrackLabel: l10n.rewardConfigPerTrackTab,
                         totalLabel: l10n.rewardConfigTotalPointsTab,
-                        perTrackEnabled: _tracks.isNotEmpty,
-                        isGlobal: _usesGlobalLadder,
-                        onChanged: (global) {
-                          if (_tracks.isEmpty) {
-                            setState(() => _isGlobalReward = true);
-                            return;
-                          }
-                          setState(() => _isGlobalReward = global);
-                        },
+                        perTrackEnabled: form.tracks.isNotEmpty,
+                        isGlobal: form.usesGlobalLadder,
+                        onChanged: notifier.setGlobalReward,
                       ),
-                      if (!_usesGlobalLadder) ...[
+                      if (!form.usesGlobalLadder) ...[
                         const SizedBox(height: 18),
                         Text(
                           l10n.rewardConfigChooseTrackLabel,
@@ -519,7 +386,7 @@ class _RewardConfigurationScreenState
                           child: DropdownButtonHideUnderline(
                             child: DropdownButton<int>(
                               // ignore: deprecated_member_use
-                              value: _selectedTrackId,
+                              value: form.selectedTrackId,
                               isExpanded: true,
                               borderRadius: BorderRadius.circular(12),
                               padding: const EdgeInsets.symmetric(
@@ -530,15 +397,15 @@ class _RewardConfigurationScreenState
                                 color: _kNavy,
                               ),
                               items: [
-                                for (final t in _tracks)
+                                for (final t in form.tracks)
                                   DropdownMenuItem(
                                     value: t.id,
-                                    child: Text(_trackTitle(t, l10n)),
+                                    child: Text(_trackTitle(t)),
                                   ),
                               ],
                               onChanged: (id) {
                                 if (id == null) return;
-                                setState(() => _selectedTrackId = id);
+                                notifier.setSelectedTrack(id);
                               },
                             ),
                           ),
@@ -570,93 +437,16 @@ class _RewardConfigurationScreenState
                         ),
                       ),
                       const SizedBox(height: 22),
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: _kPreviewBg,
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              l10n.rewardConfigPreviewLabel,
-                              style: const TextStyle(
-                                color: _kNavy,
-                                fontWeight: FontWeight.w800,
-                                fontSize: 11,
-                                letterSpacing: 1,
-                              ),
-                            ),
-                            const SizedBox(height: 12),
-                            Row(
-                              crossAxisAlignment: CrossAxisAlignment.center,
-                              children: [
-                                Container(
-                                  width: 56,
-                                  height: 56,
-                                  decoration: const BoxDecoration(
-                                    color: Colors.white,
-                                    shape: BoxShape.circle,
-                                  ),
-                                  child: Icon(
-                                    RewardMilestoneIcons.iconForIndex(
-                                      _iconIndex,
-                                    ),
-                                    color: _kNavy,
-                                    size: 30,
-                                  ),
-                                ),
-                                const SizedBox(width: 14),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        _previewTitle,
-                                        style: const TextStyle(
-                                          color: _kNavy,
-                                          fontWeight: FontWeight.w800,
-                                          fontSize: 16,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 6),
-                                      Row(
-                                        children: [
-                                          Container(
-                                            width: 8,
-                                            height: 8,
-                                            decoration: const BoxDecoration(
-                                              color: _kOrange,
-                                              shape: BoxShape.circle,
-                                            ),
-                                          ),
-                                          const SizedBox(width: 6),
-                                          Text(
-                                            l10n.rewardConfigPointsPreview(
-                                              _previewPoints,
-                                            ),
-                                            style: const TextStyle(
-                                              color: _kOrange,
-                                              fontWeight: FontWeight.w800,
-                                              fontSize: 15,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
+                      _RewardPreview(
+                        iconIndex: form.iconIndex,
+                        previewTitle: previewTitle,
+                        previewPoints: form.previewPoints,
+                        l10n: l10n,
                       ),
                       const SizedBox(height: 16),
                       Center(
                         child: TextButton(
-                          onPressed: _clearForm,
+                          onPressed: notifier.clearForm,
                           child: Text(
                             l10n.rewardConfigCancel,
                             style: const TextStyle(
@@ -672,7 +462,7 @@ class _RewardConfigurationScreenState
                         width: double.infinity,
                         height: 52,
                         child: FilledButton(
-                          onPressed: _saveReward,
+                          onPressed: () => unawaited(_saveReward(l10n)),
                           style: FilledButton.styleFrom(
                             backgroundColor: _kNavy,
                             foregroundColor: Colors.white,
@@ -702,304 +492,99 @@ class _RewardConfigurationScreenState
   }
 }
 
-class _RewardConfigHeader extends StatelessWidget {
-  const _RewardConfigHeader({
-    required this.topInset,
-    required this.title,
-    required this.onBack,
-    required this.onMenuSelected,
+/// Inline preview card showing how the reward will appear to the learner.
+class _RewardPreview extends StatelessWidget {
+  const _RewardPreview({
+    required this.iconIndex,
+    required this.previewTitle,
+    required this.previewPoints,
+    required this.l10n,
   });
 
-  final double topInset;
-  final String title;
-  final VoidCallback onBack;
-  final void Function(String) onMenuSelected;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Colors.white,
-      elevation: 0,
-      child: Padding(
-        padding: EdgeInsets.only(
-          top: topInset + 4,
-          left: 4,
-          right: 4,
-          bottom: 12,
-        ),
-        child: Row(
-          children: [
-            SizedBox(
-              width: 48,
-              child: IconButton(
-                padding: EdgeInsets.zero,
-                icon: const Icon(Icons.arrow_back_ios_new_rounded),
-                color: _kNavy,
-                onPressed: onBack,
-              ),
-            ),
-            Expanded(
-              child: Text(
-                title,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  color: _kNavy,
-                  fontWeight: FontWeight.w800,
-                  fontSize: 18,
-                ),
-              ),
-            ),
-            SizedBox(
-              width: 48,
-              child: PopupMenuButton<String>(
-                padding: EdgeInsets.zero,
-                icon: const Icon(Icons.more_vert_rounded, color: _kNavy),
-                onSelected: onMenuSelected,
-                itemBuilder: (ctx) => [
-                  PopupMenuItem(
-                    value: 'manage',
-                    child: Text(
-                      AppLocalizations.of(ctx)!.rewardConfigMenuManageRewards,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _AvatarTile extends StatelessWidget {
-  const _AvatarTile({
-    required this.icon,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final IconData icon;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(14),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          padding: const EdgeInsets.symmetric(vertical: 16),
-          decoration: BoxDecoration(
-            color: _kFieldFill,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(
-              color: selected ? _kNavy : Colors.transparent,
-              width: selected ? 3 : 0,
-            ),
-          ),
-          child: Icon(
-            icon,
-            color: selected ? _kNavy : _kMutedLabel.withValues(alpha: 0.45),
-            size: 32,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _RewardTypeSegmented extends StatelessWidget {
-  const _RewardTypeSegmented({
-    required this.perTrackLabel,
-    required this.totalLabel,
-    required this.perTrackEnabled,
-    required this.isGlobal,
-    required this.onChanged,
-  });
-
-  final String perTrackLabel;
-  final String totalLabel;
-  final bool perTrackEnabled;
-  final bool isGlobal;
-  final ValueChanged<bool> onChanged;
+  final int iconIndex;
+  final String previewTitle;
+  final int previewPoints;
+  final AppLocalizations l10n;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(4),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: _kFieldFill,
-        borderRadius: BorderRadius.circular(24),
+        color: _kPreviewBg,
+        borderRadius: BorderRadius.circular(16),
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            child: _Seg(
-              label: perTrackLabel,
-              selected: !isGlobal,
-              enabled: perTrackEnabled,
-              onTap: perTrackEnabled ? () => onChanged(false) : null,
+          Text(
+            l10n.rewardConfigPreviewLabel,
+            style: const TextStyle(
+              color: _kNavy,
+              fontWeight: FontWeight.w800,
+              fontSize: 11,
+              letterSpacing: 1,
             ),
           ),
-          Expanded(
-            child: _Seg(
-              label: totalLabel,
-              selected: isGlobal,
-              enabled: true,
-              onTap: () => onChanged(true),
-            ),
+          const SizedBox(height: 12),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Container(
+                width: 56,
+                height: 56,
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  RewardMilestoneIcons.iconForIndex(iconIndex),
+                  color: _kNavy,
+                  size: 30,
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      previewTitle,
+                      style: const TextStyle(
+                        color: _kNavy,
+                        fontWeight: FontWeight.w800,
+                        fontSize: 16,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        Container(
+                          width: 8,
+                          height: 8,
+                          decoration: const BoxDecoration(
+                            color: _kOrange,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          l10n.rewardConfigPointsPreview(previewPoints),
+                          style: const TextStyle(
+                            color: _kOrange,
+                            fontWeight: FontWeight.w800,
+                            fontSize: 15,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
         ],
       ),
-    );
-  }
-}
-
-class _Seg extends StatelessWidget {
-  const _Seg({
-    required this.label,
-    required this.selected,
-    required this.enabled,
-    this.onTap,
-  });
-
-  final String label;
-  final bool selected;
-  final bool enabled;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    const baseMuted = _kMutedLabel;
-    final labelColor = !enabled
-        ? baseMuted.withValues(alpha: 0.35)
-        : (selected ? Colors.white : baseMuted);
-
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: enabled ? onTap : null,
-        borderRadius: BorderRadius.circular(20),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          alignment: Alignment.center,
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          decoration: BoxDecoration(
-            color: selected ? _kNavy : Colors.transparent,
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: Text(
-            label,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: labelColor,
-              fontWeight: FontWeight.w700,
-              fontSize: 13,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _ManageRewardsList extends StatefulWidget {
-  const _ManageRewardsList({
-    required this.load,
-    required this.onEdit,
-    required this.onDelete,
-    required this.onToggle,
-  });
-
-  final Future<List<RewardMilestone>> Function() load;
-  final void Function(RewardMilestone) onEdit;
-  final Future<void> Function(RewardMilestone) onDelete;
-  final Future<void> Function(RewardMilestone) onToggle;
-
-  @override
-  State<_ManageRewardsList> createState() => _ManageRewardsListState();
-}
-
-class _ManageRewardsListState extends State<_ManageRewardsList> {
-  late Future<List<RewardMilestone>> _future;
-
-  @override
-  void initState() {
-    super.initState();
-    _future = widget.load();
-  }
-
-  Future<void> _refresh() async {
-    setState(() {
-      _future = widget.load();
-    });
-    await _future;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-    return FutureBuilder<List<RewardMilestone>>(
-      future: _future,
-      builder: (context, snap) {
-        if (snap.connectionState != ConnectionState.done) {
-          return const Center(child: CircularProgressIndicator());
-        }
-        final list = [...?snap.data]
-          ..sort((a, b) => a.thresholdPoints.compareTo(b.thresholdPoints));
-        if (list.isEmpty) {
-          return Center(
-            child: Text(
-              l10n.rewardConfigEmptyMilestones,
-              textAlign: TextAlign.center,
-            ),
-          );
-        }
-        return ListView.separated(
-          itemCount: list.length,
-          separatorBuilder: (_, __) => const Divider(height: 1),
-          itemBuilder: (_, i) {
-            final m = list[i];
-            return ListTile(
-              contentPadding: EdgeInsets.zero,
-              title: Text(
-                m.title,
-                style: const TextStyle(fontWeight: FontWeight.w700),
-              ),
-              subtitle: Text(
-                '${l10n.rewardConfigPointsThresholdLabel}: ${m.thresholdPoints}',
-              ),
-              trailing: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Switch.adaptive(
-                    value: m.isEnabled,
-                    onChanged: (_) async {
-                      await widget.onToggle(m);
-                      await _refresh();
-                    },
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.edit_outlined),
-                    onPressed: () => widget.onEdit(m),
-                  ),
-                  IconButton(
-                    icon: Icon(
-                      Icons.delete_outline,
-                      color: Theme.of(context).colorScheme.error,
-                    ),
-                    onPressed: () => widget.onDelete(m),
-                  ),
-                ],
-              ),
-            );
-          },
-        );
-      },
     );
   }
 }
