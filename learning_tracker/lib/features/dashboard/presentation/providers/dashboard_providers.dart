@@ -17,6 +17,7 @@ import 'package:learning_tracker/features/gamification/domain/services/points_se
 import 'package:learning_tracker/features/gamification/domain/services/reward_milestone_service.dart';
 import 'package:learning_tracker/features/gamification/domain/services/streak_service.dart';
 import 'package:learning_tracker/features/gamification/streak/streak_state_provider.dart';
+import 'package:learning_tracker/features/learning/domain/entities/completion_tier_filter.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/completion_writer_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/goal_entity.dart';
@@ -25,6 +26,7 @@ import 'package:learning_tracker/features/scheduler/domain/services/cross_curric
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/curriculum_scope_providers.dart';
 import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
+import 'package:learning_tracker/features/tracks/domain/services/track_progress_service.dart';
 import 'package:learning_tracker/features/tracks/stages/presentation/providers/stage_providers.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
@@ -106,33 +108,21 @@ Stream<List<CurriculumId>> dashboardActiveCurriculaStream(Ref ref) {
   });
 }
 
-/// Returns the lifetime "all stages done per item" completion percentage for
-/// one track, across ALL completion sources (live + bulk-prior + lifetime
-/// imports).
+/// Track completion percentage for the Manage Tracks card.
+///
+/// Uses [CompletionTierFilter.trackAchievement] (live + bulkInTrack) — matching
+/// the "I learnt it" intent of the Manage Tracks display. Lifetime-only imports
+/// are excluded because they do not represent in-track learning activity.
 ///
 /// An item is "done" when ALL of the track's required stages have a
-/// completion record for it.  Required stages = every non-superseded
-/// stage defined for the track (stageOrder 1 = learn, 2+ = chazara).
+/// completion record.  Formula: `(done items) / totalItems`.
 ///
-/// Formula: `(items where all required stages are done) / totalItems`.
-///
-/// Delegates computation to [TrackCompletionService].
+/// Delegates computation to [TrackProgressService] (Layer 3 unification).
 ///
 /// **Why this differs from [trackDualProgressMetricsProvider].currentCyclePercentage:**
-///
-/// This provider answers "how complete is this track overall, across all
-/// time and all completion sources?" — a multi-stage gate, all-time calculation.
-///
-/// [trackDualProgressMetricsProvider].currentCyclePercentage answers "how many
-/// distinct items has the user touched since the track was last activated
-/// (`track.activatedAt`)?" — a time-gated, single-ref-presence check that
-/// resets on track re-activation.
-///
-/// The two percentages intentionally diverge:
-/// - Users with bulk-prior imports see a high value here (31%+) but 0% in the
-///   cycle metric, because bulk-prior completions pre-date `activatedAt`.
-/// - The cycle metric is labelled "Since reactivation" in the UI to make this
-///   distinction visible.
+/// This answers "how complete is this track overall?" (all-time, multi-stage gate).
+/// The cycle metric answers "how many items has the user touched since the last
+/// track activation?" (time-gated, single-ref check).
 ///
 /// See also: [trackDualProgressMetricsProvider] (lifetime_knowledge_providers.dart).
 @riverpod
@@ -153,22 +143,14 @@ Future<double> dashboardTrackCompletionPercentage(Ref ref, int trackId) async {
     );
     return 0.0;
   }
-  final stageRepository = ref.watch(globalStageRepositoryProvider);
-  final stages = await stageRepository.getStagesByTrack(trackId);
-  if (stages.isEmpty) return 0.0;
-
-  final completions = await db.completionDao.getCompletionsByTrackAndProfile(
-    trackId,
-    profileId,
-  );
   final totalItems = await ref.watch(
     scopedItemCountProvider(curriculum).future,
   );
-
-  const service = TrackCompletionService();
-  return service.computeTrackPercentage(
-    stages: stages,
-    completions: completions,
+  final service = ref.watch(trackProgressServiceProvider);
+  return service.completionPercent(
+    trackId: trackId,
+    profileId: profileId,
+    tier: CompletionTierFilter.trackAchievement,
     totalItems: totalItems,
   );
 }
