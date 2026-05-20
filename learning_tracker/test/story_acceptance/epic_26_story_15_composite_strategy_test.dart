@@ -252,7 +252,7 @@ void main() {
 
       test('saveOrder source code wraps upserts in database.transaction', () async {
         final file = File(
-          'lib/features/learning_order/data/repositories/learning_order_repository_impl.dart',
+          'lib/features/tracks/whole_curriculum_order/data/repositories/learning_order_repository_impl.dart',
         );
         final source = file.readAsStringSync();
         expect(

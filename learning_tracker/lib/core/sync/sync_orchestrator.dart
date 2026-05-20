@@ -663,6 +663,9 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
     // channel.
     'streak_events' => EntityKind.streak,
     'curriculum_tracks' => EntityKind.trackConfig,
+    // W2.29 — route real-time stage_definitions events through the
+    // StageDefinitionMerger (registered in merge_router.dart).
+    'stage_definitions' => EntityKind.stageDefinition,
     _ => null,
   };
 }

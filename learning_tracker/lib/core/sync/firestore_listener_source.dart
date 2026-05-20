@@ -17,11 +17,12 @@ import 'package:learning_tracker/core/sync/listener_supervisor.dart';
 ///
 /// Channels exposed (each must have a matching entry in
 /// `SyncOrchestratorImpl._channelToKind` and an [EntityMerger]):
-///   completions       — profile subcollection
-///   bookmarks         — profile subcollection
-///   settings          — profile subcollection
-///   streak_events     — per-event collection (W3.37: replaces streak/data doc)
-///   curriculum_tracks — profile subcollection
+///   completions        — profile subcollection
+///   bookmarks          — profile subcollection
+///   settings           — profile subcollection
+///   streak_events      — per-event collection (W3.37: replaces streak/data doc)
+///   curriculum_tracks  — profile subcollection
+///   stage_definitions  — profile subcollection (W2.29 — real-time listener)
 ///
 /// `learning_order` is intentionally absent — it has no [EntityMerger] yet
 /// and is covered by `PullPipeline.pullLearningOrder()` on launch.
@@ -65,6 +66,13 @@ class FirestoreListenerSource implements ListenerSource {
       'curriculum_tracks': gateway.listenToCollection(
         profileId: profileId,
         collection: 'curriculum_tracks',
+      ),
+      // W2.29 — wire the real-time listener for stage_definitions so that
+      // changes pushed from another device propagate without a full pull.
+      // Push + pull are already wired; this closes the listener gap.
+      'stage_definitions': gateway.listenToCollection(
+        profileId: profileId,
+        collection: 'stage_definitions',
       ),
     };
   }
