@@ -93,6 +93,7 @@ class TrackDao extends DatabaseAccessor<UserDatabase>
           state: const Value(TrackState.active),
           stateChangedAt: now,
           activatedAt: now,
+          lastReorderAt: Value(now),
         ),
       );
     } else if (existing.state != TrackState.active) {
@@ -103,6 +104,7 @@ class TrackDao extends DatabaseAccessor<UserDatabase>
           state: const Value(TrackState.active),
           stateChangedAt: Value(now),
           activatedAt: Value(now),
+          lastReorderAt: Value(now),
         ),
       );
     }
@@ -333,6 +335,9 @@ class TrackDao extends DatabaseAccessor<UserDatabase>
             state: const Value(TrackState.active),
             stateChangedAt: Value(now),
             activatedAt: Value(now),
+            // Reset amnesty to activation time so no pre-existing tasks are
+            // erroneously amnestied on re-activation.
+            lastReorderAt: Value(now),
           ),
         );
       }
@@ -346,6 +351,10 @@ class TrackDao extends DatabaseAccessor<UserDatabase>
         state: const Value(TrackState.active),
         stateChangedAt: now,
         activatedAt: now,
+        // lastReorderAt = activatedAt so the default (canonical) order is
+        // treated as the initial reorder baseline and no overdue amnesty fires
+        // on first activation.
+        lastReorderAt: Value(now),
       ),
     );
   }
@@ -416,6 +425,22 @@ class TrackDao extends DatabaseAccessor<UserDatabase>
     );
   }
 
+  /// Stamp the reorder amnesty timestamp for [trackId].
+  ///
+  /// Must be called immediately after any content-order change (sedarim,
+  /// masechtos, or whole-curriculum reorder / reset). The projection filter in
+  /// `_buildProjectionTasks` uses this timestamp to amnesty overdue items that
+  /// were scheduled before the most recent reorder.
+  ///
+  /// Do NOT call this for pace changes, stage-config changes, bookmark
+  /// advances, or profile-level edits — only for content order changes.
+  Future<void> stampReorderAt(int trackId, {DateTime? at}) async {
+    final ts = at ?? DateTimeFactory.nowUtc();
+    await (update(curriculumTracks)..where((t) => t.id.equals(trackId))).write(
+      CurriculumTracksCompanion(lastReorderAt: Value(ts)),
+    );
+  }
+
   /// Initialize default tracks for a curriculum and profile.
   ///
   /// Creates only the personal track (active by default).
@@ -441,6 +466,7 @@ class TrackDao extends DatabaseAccessor<UserDatabase>
           state: const Value(TrackState.active),
           stateChangedAt: now,
           activatedAt: now,
+          lastReorderAt: Value(now),
         ),
       );
     }

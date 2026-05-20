@@ -36,6 +36,23 @@ class CurriculumTracks extends Table {
   /// Null if pace has never been reset.
   DateTimeColumn get paceResetDate => dateTime().nullable()();
 
+  /// UTC timestamp of the most recent content-order change for this track.
+  ///
+  /// Set to [activatedAt] on track creation so the initial (default) order is
+  /// treated as "just reordered" and no prior tasks are amnestied on first
+  /// activation. Updated every time the user reorders sedarim, masechtos, or
+  /// whole-curriculum items for this track.
+  ///
+  /// The projection filter uses this to filter out overdue items whose
+  /// [scheduledDate] is strictly before this timestamp — i.e. items that were
+  /// scheduled before the last reorder are amnestied (cleared) and will
+  /// re-project from today's date forward.
+  ///
+  /// Null rows (from rows created before this column existed) are treated as
+  /// [DateTime.fromMillisecondsSinceEpoch(0)] — "never amnestied" — so all
+  /// historic overdue tasks remain visible.
+  DateTimeColumn get lastReorderAt => dateTime().nullable()();
+
   @override
   List<Set<Column>> get uniqueKeys => [
     {profileId, curriculumId},

@@ -740,6 +740,106 @@ final class AllDailyTasksProvider
 
 String _$allDailyTasksHash() => r'387c881ebc08643a42b1c122555dc722031e4be5';
 
+/// Overdue task count for a single curriculum.
+///
+/// Reads from [allDailyTasksProvider] and filters by [curriculumId] +
+/// [isOverdue].  Used by the reorder-confirm dialog to show the user how many
+/// overdue items would be amnestied (architecture §10.1 / reorder-amnesty).
+
+@ProviderFor(overdueCountForCurriculum)
+final overdueCountForCurriculumProvider = OverdueCountForCurriculumFamily._();
+
+/// Overdue task count for a single curriculum.
+///
+/// Reads from [allDailyTasksProvider] and filters by [curriculumId] +
+/// [isOverdue].  Used by the reorder-confirm dialog to show the user how many
+/// overdue items would be amnestied (architecture §10.1 / reorder-amnesty).
+
+final class OverdueCountForCurriculumProvider
+    extends $FunctionalProvider<AsyncValue<int>, int, FutureOr<int>>
+    with $FutureModifier<int>, $FutureProvider<int> {
+  /// Overdue task count for a single curriculum.
+  ///
+  /// Reads from [allDailyTasksProvider] and filters by [curriculumId] +
+  /// [isOverdue].  Used by the reorder-confirm dialog to show the user how many
+  /// overdue items would be amnestied (architecture §10.1 / reorder-amnesty).
+  OverdueCountForCurriculumProvider._({
+    required OverdueCountForCurriculumFamily super.from,
+    required CurriculumId super.argument,
+  }) : super(
+         retry: null,
+         name: r'overdueCountForCurriculumProvider',
+         isAutoDispose: true,
+         dependencies: null,
+         $allTransitiveDependencies: null,
+       );
+
+  @override
+  String debugGetCreateSourceHash() => _$overdueCountForCurriculumHash();
+
+  @override
+  String toString() {
+    return r'overdueCountForCurriculumProvider'
+        ''
+        '($argument)';
+  }
+
+  @$internal
+  @override
+  $FutureProviderElement<int> $createElement($ProviderPointer pointer) =>
+      $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<int> create(Ref ref) {
+    final argument = this.argument as CurriculumId;
+    return overdueCountForCurriculum(ref, argument);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is OverdueCountForCurriculumProvider &&
+        other.argument == argument;
+  }
+
+  @override
+  int get hashCode {
+    return argument.hashCode;
+  }
+}
+
+String _$overdueCountForCurriculumHash() =>
+    r'c9bfd20930388ba5cb2fa0b6f1c724238763afb3';
+
+/// Overdue task count for a single curriculum.
+///
+/// Reads from [allDailyTasksProvider] and filters by [curriculumId] +
+/// [isOverdue].  Used by the reorder-confirm dialog to show the user how many
+/// overdue items would be amnestied (architecture §10.1 / reorder-amnesty).
+
+final class OverdueCountForCurriculumFamily extends $Family
+    with $FunctionalFamilyOverride<FutureOr<int>, CurriculumId> {
+  OverdueCountForCurriculumFamily._()
+    : super(
+        retry: null,
+        name: r'overdueCountForCurriculumProvider',
+        dependencies: null,
+        $allTransitiveDependencies: null,
+        isAutoDispose: true,
+      );
+
+  /// Overdue task count for a single curriculum.
+  ///
+  /// Reads from [allDailyTasksProvider] and filters by [curriculumId] +
+  /// [isOverdue].  Used by the reorder-confirm dialog to show the user how many
+  /// overdue items would be amnestied (architecture §10.1 / reorder-amnesty).
+
+  OverdueCountForCurriculumProvider call(CurriculumId curriculumId) =>
+      OverdueCountForCurriculumProvider._(argument: curriculumId, from: this);
+
+  @override
+  String toString() => r'overdueCountForCurriculumProvider';
+}
+
 /// Returns the first [DailyTask] for [trackId] that falls in [category],
 /// or null when the bucket is empty.
 ///

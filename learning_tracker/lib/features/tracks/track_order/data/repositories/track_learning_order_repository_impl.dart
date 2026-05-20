@@ -122,6 +122,9 @@ class TrackLearningOrderRepositoryImpl implements TrackLearningOrderRepository {
   ) async {
     final refs = items.map((i) => i.sefariaRef).toList();
     await _database.trackLearningOrderDao.upsertOrder(trackId, refs);
+    // Reorder-amnesty: stamp lastReorderAt so the projection clears overdue
+    // items that were scheduled before this reorder (architecture §10.1).
+    await _database.trackDao.stampReorderAt(trackId);
   }
 
   @override
@@ -131,10 +134,15 @@ class TrackLearningOrderRepositoryImpl implements TrackLearningOrderRepository {
   ) async {
     final refs = items.map((i) => i.sefariaRef).toList();
     await _database.trackLearningOrderDao.upsertOrder(trackId, refs);
+    // Reorder-amnesty: stamp lastReorderAt so the projection clears overdue
+    // items scheduled before this reorder (architecture §10.1).
+    await _database.trackDao.stampReorderAt(trackId);
   }
 
   @override
   Future<void> resetToDefault(int trackId) async {
     await _database.trackLearningOrderDao.deleteByTrack(trackId);
+    // Reorder-amnesty: reset-to-default is a content-order change.
+    await _database.trackDao.stampReorderAt(trackId);
   }
 }

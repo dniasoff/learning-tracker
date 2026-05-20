@@ -1127,6 +1127,18 @@ class $CurriculumTracksTable extends CurriculumTracks
         type: DriftSqlType.dateTime,
         requiredDuringInsert: false,
       );
+  static const VerificationMeta _lastReorderAtMeta = const VerificationMeta(
+    'lastReorderAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> lastReorderAt =
+      GeneratedColumn<DateTime>(
+        'last_reorder_at',
+        aliasedName,
+        true,
+        type: DriftSqlType.dateTime,
+        requiredDuringInsert: false,
+      );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -1136,6 +1148,7 @@ class $CurriculumTracksTable extends CurriculumTracks
     stateChangedAt,
     activatedAt,
     paceResetDate,
+    lastReorderAt,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -1208,6 +1221,15 @@ class $CurriculumTracksTable extends CurriculumTracks
         ),
       );
     }
+    if (data.containsKey('last_reorder_at')) {
+      context.handle(
+        _lastReorderAtMeta,
+        lastReorderAt.isAcceptableOrUnknown(
+          data['last_reorder_at']!,
+          _lastReorderAtMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -1249,6 +1271,10 @@ class $CurriculumTracksTable extends CurriculumTracks
         DriftSqlType.dateTime,
         data['${effectivePrefix}pace_reset_date'],
       ),
+      lastReorderAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}last_reorder_at'],
+      ),
     );
   }
 
@@ -1283,6 +1309,23 @@ class CurriculumTrack extends DataClass implements Insertable<CurriculumTrack> {
   /// Date when pace was last reset (for Reset Pace recovery action).
   /// Null if pace has never been reset.
   final DateTime? paceResetDate;
+
+  /// UTC timestamp of the most recent content-order change for this track.
+  ///
+  /// Set to [activatedAt] on track creation so the initial (default) order is
+  /// treated as "just reordered" and no prior tasks are amnestied on first
+  /// activation. Updated every time the user reorders sedarim, masechtos, or
+  /// whole-curriculum items for this track.
+  ///
+  /// The projection filter uses this to filter out overdue items whose
+  /// [scheduledDate] is strictly before this timestamp — i.e. items that were
+  /// scheduled before the last reorder are amnestied (cleared) and will
+  /// re-project from today's date forward.
+  ///
+  /// Null rows (from rows created before this column existed) are treated as
+  /// [DateTime.fromMillisecondsSinceEpoch(0)] — "never amnestied" — so all
+  /// historic overdue tasks remain visible.
+  final DateTime? lastReorderAt;
   const CurriculumTrack({
     required this.id,
     required this.profileId,
@@ -1291,6 +1334,7 @@ class CurriculumTrack extends DataClass implements Insertable<CurriculumTrack> {
     required this.stateChangedAt,
     required this.activatedAt,
     this.paceResetDate,
+    this.lastReorderAt,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -1303,6 +1347,9 @@ class CurriculumTrack extends DataClass implements Insertable<CurriculumTrack> {
     map['activated_at'] = Variable<DateTime>(activatedAt);
     if (!nullToAbsent || paceResetDate != null) {
       map['pace_reset_date'] = Variable<DateTime>(paceResetDate);
+    }
+    if (!nullToAbsent || lastReorderAt != null) {
+      map['last_reorder_at'] = Variable<DateTime>(lastReorderAt);
     }
     return map;
   }
@@ -1318,6 +1365,9 @@ class CurriculumTrack extends DataClass implements Insertable<CurriculumTrack> {
       paceResetDate: paceResetDate == null && nullToAbsent
           ? const Value.absent()
           : Value(paceResetDate),
+      lastReorderAt: lastReorderAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(lastReorderAt),
     );
   }
 
@@ -1334,6 +1384,7 @@ class CurriculumTrack extends DataClass implements Insertable<CurriculumTrack> {
       stateChangedAt: serializer.fromJson<DateTime>(json['stateChangedAt']),
       activatedAt: serializer.fromJson<DateTime>(json['activatedAt']),
       paceResetDate: serializer.fromJson<DateTime?>(json['paceResetDate']),
+      lastReorderAt: serializer.fromJson<DateTime?>(json['lastReorderAt']),
     );
   }
   @override
@@ -1347,6 +1398,7 @@ class CurriculumTrack extends DataClass implements Insertable<CurriculumTrack> {
       'stateChangedAt': serializer.toJson<DateTime>(stateChangedAt),
       'activatedAt': serializer.toJson<DateTime>(activatedAt),
       'paceResetDate': serializer.toJson<DateTime?>(paceResetDate),
+      'lastReorderAt': serializer.toJson<DateTime?>(lastReorderAt),
     };
   }
 
@@ -1358,6 +1410,7 @@ class CurriculumTrack extends DataClass implements Insertable<CurriculumTrack> {
     DateTime? stateChangedAt,
     DateTime? activatedAt,
     Value<DateTime?> paceResetDate = const Value.absent(),
+    Value<DateTime?> lastReorderAt = const Value.absent(),
   }) => CurriculumTrack(
     id: id ?? this.id,
     profileId: profileId ?? this.profileId,
@@ -1368,6 +1421,9 @@ class CurriculumTrack extends DataClass implements Insertable<CurriculumTrack> {
     paceResetDate: paceResetDate.present
         ? paceResetDate.value
         : this.paceResetDate,
+    lastReorderAt: lastReorderAt.present
+        ? lastReorderAt.value
+        : this.lastReorderAt,
   );
   CurriculumTrack copyWithCompanion(CurriculumTracksCompanion data) {
     return CurriculumTrack(
@@ -1386,6 +1442,9 @@ class CurriculumTrack extends DataClass implements Insertable<CurriculumTrack> {
       paceResetDate: data.paceResetDate.present
           ? data.paceResetDate.value
           : this.paceResetDate,
+      lastReorderAt: data.lastReorderAt.present
+          ? data.lastReorderAt.value
+          : this.lastReorderAt,
     );
   }
 
@@ -1398,7 +1457,8 @@ class CurriculumTrack extends DataClass implements Insertable<CurriculumTrack> {
           ..write('state: $state, ')
           ..write('stateChangedAt: $stateChangedAt, ')
           ..write('activatedAt: $activatedAt, ')
-          ..write('paceResetDate: $paceResetDate')
+          ..write('paceResetDate: $paceResetDate, ')
+          ..write('lastReorderAt: $lastReorderAt')
           ..write(')'))
         .toString();
   }
@@ -1412,6 +1472,7 @@ class CurriculumTrack extends DataClass implements Insertable<CurriculumTrack> {
     stateChangedAt,
     activatedAt,
     paceResetDate,
+    lastReorderAt,
   );
   @override
   bool operator ==(Object other) =>
@@ -1423,7 +1484,8 @@ class CurriculumTrack extends DataClass implements Insertable<CurriculumTrack> {
           other.state == this.state &&
           other.stateChangedAt == this.stateChangedAt &&
           other.activatedAt == this.activatedAt &&
-          other.paceResetDate == this.paceResetDate);
+          other.paceResetDate == this.paceResetDate &&
+          other.lastReorderAt == this.lastReorderAt);
 }
 
 class CurriculumTracksCompanion extends UpdateCompanion<CurriculumTrack> {
@@ -1434,6 +1496,7 @@ class CurriculumTracksCompanion extends UpdateCompanion<CurriculumTrack> {
   final Value<DateTime> stateChangedAt;
   final Value<DateTime> activatedAt;
   final Value<DateTime?> paceResetDate;
+  final Value<DateTime?> lastReorderAt;
   const CurriculumTracksCompanion({
     this.id = const Value.absent(),
     this.profileId = const Value.absent(),
@@ -1442,6 +1505,7 @@ class CurriculumTracksCompanion extends UpdateCompanion<CurriculumTrack> {
     this.stateChangedAt = const Value.absent(),
     this.activatedAt = const Value.absent(),
     this.paceResetDate = const Value.absent(),
+    this.lastReorderAt = const Value.absent(),
   });
   CurriculumTracksCompanion.insert({
     this.id = const Value.absent(),
@@ -1451,6 +1515,7 @@ class CurriculumTracksCompanion extends UpdateCompanion<CurriculumTrack> {
     required DateTime stateChangedAt,
     required DateTime activatedAt,
     this.paceResetDate = const Value.absent(),
+    this.lastReorderAt = const Value.absent(),
   }) : profileId = Value(profileId),
        curriculumId = Value(curriculumId),
        stateChangedAt = Value(stateChangedAt),
@@ -1463,6 +1528,7 @@ class CurriculumTracksCompanion extends UpdateCompanion<CurriculumTrack> {
     Expression<DateTime>? stateChangedAt,
     Expression<DateTime>? activatedAt,
     Expression<DateTime>? paceResetDate,
+    Expression<DateTime>? lastReorderAt,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -1472,6 +1538,7 @@ class CurriculumTracksCompanion extends UpdateCompanion<CurriculumTrack> {
       if (stateChangedAt != null) 'state_changed_at': stateChangedAt,
       if (activatedAt != null) 'activated_at': activatedAt,
       if (paceResetDate != null) 'pace_reset_date': paceResetDate,
+      if (lastReorderAt != null) 'last_reorder_at': lastReorderAt,
     });
   }
 
@@ -1483,6 +1550,7 @@ class CurriculumTracksCompanion extends UpdateCompanion<CurriculumTrack> {
     Value<DateTime>? stateChangedAt,
     Value<DateTime>? activatedAt,
     Value<DateTime?>? paceResetDate,
+    Value<DateTime?>? lastReorderAt,
   }) {
     return CurriculumTracksCompanion(
       id: id ?? this.id,
@@ -1492,6 +1560,7 @@ class CurriculumTracksCompanion extends UpdateCompanion<CurriculumTrack> {
       stateChangedAt: stateChangedAt ?? this.stateChangedAt,
       activatedAt: activatedAt ?? this.activatedAt,
       paceResetDate: paceResetDate ?? this.paceResetDate,
+      lastReorderAt: lastReorderAt ?? this.lastReorderAt,
     );
   }
 
@@ -1519,6 +1588,9 @@ class CurriculumTracksCompanion extends UpdateCompanion<CurriculumTrack> {
     if (paceResetDate.present) {
       map['pace_reset_date'] = Variable<DateTime>(paceResetDate.value);
     }
+    if (lastReorderAt.present) {
+      map['last_reorder_at'] = Variable<DateTime>(lastReorderAt.value);
+    }
     return map;
   }
 
@@ -1531,7 +1603,8 @@ class CurriculumTracksCompanion extends UpdateCompanion<CurriculumTrack> {
           ..write('state: $state, ')
           ..write('stateChangedAt: $stateChangedAt, ')
           ..write('activatedAt: $activatedAt, ')
-          ..write('paceResetDate: $paceResetDate')
+          ..write('paceResetDate: $paceResetDate, ')
+          ..write('lastReorderAt: $lastReorderAt')
           ..write(')'))
         .toString();
   }
@@ -6886,6 +6959,17 @@ class $LearningOrderTable extends LearningOrder
     requiredDuringInsert: false,
     defaultValue: currentDateAndTime,
   );
+  static const VerificationMeta _learningOrderVersionMeta =
+      const VerificationMeta('learningOrderVersion');
+  @override
+  late final GeneratedColumn<int> learningOrderVersion = GeneratedColumn<int>(
+    'learning_order_version',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(1),
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -6894,6 +6978,7 @@ class $LearningOrderTable extends LearningOrder
     sefariaRef,
     userSortOrder,
     updatedAt,
+    learningOrderVersion,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -6954,6 +7039,15 @@ class $LearningOrderTable extends LearningOrder
         updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
       );
     }
+    if (data.containsKey('learning_order_version')) {
+      context.handle(
+        _learningOrderVersionMeta,
+        learningOrderVersion.isAcceptableOrUnknown(
+          data['learning_order_version']!,
+          _learningOrderVersionMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -6991,6 +7085,10 @@ class $LearningOrderTable extends LearningOrder
         DriftSqlType.dateTime,
         data['${effectivePrefix}updated_at'],
       )!,
+      learningOrderVersion: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}learning_order_version'],
+      )!,
     );
   }
 
@@ -7010,6 +7108,15 @@ class LearningOrderData extends DataClass
   final String sefariaRef;
   final int userSortOrder;
   final DateTime updatedAt;
+
+  /// The content-DB seed version ([SeedMetadata.version]) against which this
+  /// order was last saved.
+  ///
+  /// Default 1 is safe for existing rows: if the current seed version exceeds
+  /// the saved version the order is considered stale and the projection is
+  /// re-amnestied (last_reorder_at set to nowUtc) so overdue tasks reset.
+  /// See §10.1 of the architecture spec.
+  final int learningOrderVersion;
   const LearningOrderData({
     required this.id,
     required this.profileId,
@@ -7017,6 +7124,7 @@ class LearningOrderData extends DataClass
     required this.sefariaRef,
     required this.userSortOrder,
     required this.updatedAt,
+    required this.learningOrderVersion,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -7027,6 +7135,7 @@ class LearningOrderData extends DataClass
     map['sefaria_ref'] = Variable<String>(sefariaRef);
     map['user_sort_order'] = Variable<int>(userSortOrder);
     map['updated_at'] = Variable<DateTime>(updatedAt);
+    map['learning_order_version'] = Variable<int>(learningOrderVersion);
     return map;
   }
 
@@ -7038,6 +7147,7 @@ class LearningOrderData extends DataClass
       sefariaRef: Value(sefariaRef),
       userSortOrder: Value(userSortOrder),
       updatedAt: Value(updatedAt),
+      learningOrderVersion: Value(learningOrderVersion),
     );
   }
 
@@ -7053,6 +7163,9 @@ class LearningOrderData extends DataClass
       sefariaRef: serializer.fromJson<String>(json['sefariaRef']),
       userSortOrder: serializer.fromJson<int>(json['userSortOrder']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+      learningOrderVersion: serializer.fromJson<int>(
+        json['learningOrderVersion'],
+      ),
     );
   }
   @override
@@ -7065,6 +7178,7 @@ class LearningOrderData extends DataClass
       'sefariaRef': serializer.toJson<String>(sefariaRef),
       'userSortOrder': serializer.toJson<int>(userSortOrder),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
+      'learningOrderVersion': serializer.toJson<int>(learningOrderVersion),
     };
   }
 
@@ -7075,6 +7189,7 @@ class LearningOrderData extends DataClass
     String? sefariaRef,
     int? userSortOrder,
     DateTime? updatedAt,
+    int? learningOrderVersion,
   }) => LearningOrderData(
     id: id ?? this.id,
     profileId: profileId ?? this.profileId,
@@ -7082,6 +7197,7 @@ class LearningOrderData extends DataClass
     sefariaRef: sefariaRef ?? this.sefariaRef,
     userSortOrder: userSortOrder ?? this.userSortOrder,
     updatedAt: updatedAt ?? this.updatedAt,
+    learningOrderVersion: learningOrderVersion ?? this.learningOrderVersion,
   );
   LearningOrderData copyWithCompanion(LearningOrderCompanion data) {
     return LearningOrderData(
@@ -7097,6 +7213,9 @@ class LearningOrderData extends DataClass
           ? data.userSortOrder.value
           : this.userSortOrder,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+      learningOrderVersion: data.learningOrderVersion.present
+          ? data.learningOrderVersion.value
+          : this.learningOrderVersion,
     );
   }
 
@@ -7108,7 +7227,8 @@ class LearningOrderData extends DataClass
           ..write('curriculumId: $curriculumId, ')
           ..write('sefariaRef: $sefariaRef, ')
           ..write('userSortOrder: $userSortOrder, ')
-          ..write('updatedAt: $updatedAt')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('learningOrderVersion: $learningOrderVersion')
           ..write(')'))
         .toString();
   }
@@ -7121,6 +7241,7 @@ class LearningOrderData extends DataClass
     sefariaRef,
     userSortOrder,
     updatedAt,
+    learningOrderVersion,
   );
   @override
   bool operator ==(Object other) =>
@@ -7131,7 +7252,8 @@ class LearningOrderData extends DataClass
           other.curriculumId == this.curriculumId &&
           other.sefariaRef == this.sefariaRef &&
           other.userSortOrder == this.userSortOrder &&
-          other.updatedAt == this.updatedAt);
+          other.updatedAt == this.updatedAt &&
+          other.learningOrderVersion == this.learningOrderVersion);
 }
 
 class LearningOrderCompanion extends UpdateCompanion<LearningOrderData> {
@@ -7141,6 +7263,7 @@ class LearningOrderCompanion extends UpdateCompanion<LearningOrderData> {
   final Value<String> sefariaRef;
   final Value<int> userSortOrder;
   final Value<DateTime> updatedAt;
+  final Value<int> learningOrderVersion;
   const LearningOrderCompanion({
     this.id = const Value.absent(),
     this.profileId = const Value.absent(),
@@ -7148,6 +7271,7 @@ class LearningOrderCompanion extends UpdateCompanion<LearningOrderData> {
     this.sefariaRef = const Value.absent(),
     this.userSortOrder = const Value.absent(),
     this.updatedAt = const Value.absent(),
+    this.learningOrderVersion = const Value.absent(),
   });
   LearningOrderCompanion.insert({
     this.id = const Value.absent(),
@@ -7156,6 +7280,7 @@ class LearningOrderCompanion extends UpdateCompanion<LearningOrderData> {
     required String sefariaRef,
     required int userSortOrder,
     this.updatedAt = const Value.absent(),
+    this.learningOrderVersion = const Value.absent(),
   }) : profileId = Value(profileId),
        curriculumId = Value(curriculumId),
        sefariaRef = Value(sefariaRef),
@@ -7167,6 +7292,7 @@ class LearningOrderCompanion extends UpdateCompanion<LearningOrderData> {
     Expression<String>? sefariaRef,
     Expression<int>? userSortOrder,
     Expression<DateTime>? updatedAt,
+    Expression<int>? learningOrderVersion,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -7175,6 +7301,8 @@ class LearningOrderCompanion extends UpdateCompanion<LearningOrderData> {
       if (sefariaRef != null) 'sefaria_ref': sefariaRef,
       if (userSortOrder != null) 'user_sort_order': userSortOrder,
       if (updatedAt != null) 'updated_at': updatedAt,
+      if (learningOrderVersion != null)
+        'learning_order_version': learningOrderVersion,
     });
   }
 
@@ -7185,6 +7313,7 @@ class LearningOrderCompanion extends UpdateCompanion<LearningOrderData> {
     Value<String>? sefariaRef,
     Value<int>? userSortOrder,
     Value<DateTime>? updatedAt,
+    Value<int>? learningOrderVersion,
   }) {
     return LearningOrderCompanion(
       id: id ?? this.id,
@@ -7193,6 +7322,7 @@ class LearningOrderCompanion extends UpdateCompanion<LearningOrderData> {
       sefariaRef: sefariaRef ?? this.sefariaRef,
       userSortOrder: userSortOrder ?? this.userSortOrder,
       updatedAt: updatedAt ?? this.updatedAt,
+      learningOrderVersion: learningOrderVersion ?? this.learningOrderVersion,
     );
   }
 
@@ -7217,6 +7347,9 @@ class LearningOrderCompanion extends UpdateCompanion<LearningOrderData> {
     if (updatedAt.present) {
       map['updated_at'] = Variable<DateTime>(updatedAt.value);
     }
+    if (learningOrderVersion.present) {
+      map['learning_order_version'] = Variable<int>(learningOrderVersion.value);
+    }
     return map;
   }
 
@@ -7228,7 +7361,8 @@ class LearningOrderCompanion extends UpdateCompanion<LearningOrderData> {
           ..write('curriculumId: $curriculumId, ')
           ..write('sefariaRef: $sefariaRef, ')
           ..write('userSortOrder: $userSortOrder, ')
-          ..write('updatedAt: $updatedAt')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('learningOrderVersion: $learningOrderVersion')
           ..write(')'))
         .toString();
   }
@@ -12989,6 +13123,7 @@ typedef $$CurriculumTracksTableCreateCompanionBuilder =
       required DateTime stateChangedAt,
       required DateTime activatedAt,
       Value<DateTime?> paceResetDate,
+      Value<DateTime?> lastReorderAt,
     });
 typedef $$CurriculumTracksTableUpdateCompanionBuilder =
     CurriculumTracksCompanion Function({
@@ -12999,6 +13134,7 @@ typedef $$CurriculumTracksTableUpdateCompanionBuilder =
       Value<DateTime> stateChangedAt,
       Value<DateTime> activatedAt,
       Value<DateTime?> paceResetDate,
+      Value<DateTime?> lastReorderAt,
     });
 
 final class $$CurriculumTracksTableReferences
@@ -13209,6 +13345,11 @@ class $$CurriculumTracksTableFilterComposer
 
   ColumnFilters<DateTime> get paceResetDate => $composableBuilder(
     column: $table.paceResetDate,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get lastReorderAt => $composableBuilder(
+    column: $table.lastReorderAt,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -13431,6 +13572,11 @@ class $$CurriculumTracksTableOrderingComposer
     column: $table.paceResetDate,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<DateTime> get lastReorderAt => $composableBuilder(
+    column: $table.lastReorderAt,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$CurriculumTracksTableAnnotationComposer
@@ -13468,6 +13614,11 @@ class $$CurriculumTracksTableAnnotationComposer
 
   GeneratedColumn<DateTime> get paceResetDate => $composableBuilder(
     column: $table.paceResetDate,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get lastReorderAt => $composableBuilder(
+    column: $table.lastReorderAt,
     builder: (column) => column,
   );
 
@@ -13692,6 +13843,7 @@ class $$CurriculumTracksTableTableManager
                 Value<DateTime> stateChangedAt = const Value.absent(),
                 Value<DateTime> activatedAt = const Value.absent(),
                 Value<DateTime?> paceResetDate = const Value.absent(),
+                Value<DateTime?> lastReorderAt = const Value.absent(),
               }) => CurriculumTracksCompanion(
                 id: id,
                 profileId: profileId,
@@ -13700,6 +13852,7 @@ class $$CurriculumTracksTableTableManager
                 stateChangedAt: stateChangedAt,
                 activatedAt: activatedAt,
                 paceResetDate: paceResetDate,
+                lastReorderAt: lastReorderAt,
               ),
           createCompanionCallback:
               ({
@@ -13710,6 +13863,7 @@ class $$CurriculumTracksTableTableManager
                 required DateTime stateChangedAt,
                 required DateTime activatedAt,
                 Value<DateTime?> paceResetDate = const Value.absent(),
+                Value<DateTime?> lastReorderAt = const Value.absent(),
               }) => CurriculumTracksCompanion.insert(
                 id: id,
                 profileId: profileId,
@@ -13718,6 +13872,7 @@ class $$CurriculumTracksTableTableManager
                 stateChangedAt: stateChangedAt,
                 activatedAt: activatedAt,
                 paceResetDate: paceResetDate,
+                lastReorderAt: lastReorderAt,
               ),
           withReferenceMapper: (p0) => p0
               .map(
@@ -17742,6 +17897,7 @@ typedef $$LearningOrderTableCreateCompanionBuilder =
       required String sefariaRef,
       required int userSortOrder,
       Value<DateTime> updatedAt,
+      Value<int> learningOrderVersion,
     });
 typedef $$LearningOrderTableUpdateCompanionBuilder =
     LearningOrderCompanion Function({
@@ -17751,6 +17907,7 @@ typedef $$LearningOrderTableUpdateCompanionBuilder =
       Value<String> sefariaRef,
       Value<int> userSortOrder,
       Value<DateTime> updatedAt,
+      Value<int> learningOrderVersion,
     });
 
 final class $$LearningOrderTableReferences
@@ -17816,6 +17973,11 @@ class $$LearningOrderTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
+  ColumnFilters<int> get learningOrderVersion => $composableBuilder(
+    column: $table.learningOrderVersion,
+    builder: (column) => ColumnFilters(column),
+  );
+
   $$LearnerProfilesTableFilterComposer get profileId {
     final $$LearnerProfilesTableFilterComposer composer = $composerBuilder(
       composer: this,
@@ -17874,6 +18036,11 @@ class $$LearningOrderTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<int> get learningOrderVersion => $composableBuilder(
+    column: $table.learningOrderVersion,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   $$LearnerProfilesTableOrderingComposer get profileId {
     final $$LearnerProfilesTableOrderingComposer composer = $composerBuilder(
       composer: this,
@@ -17927,6 +18094,11 @@ class $$LearningOrderTableAnnotationComposer
 
   GeneratedColumn<DateTime> get updatedAt =>
       $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  GeneratedColumn<int> get learningOrderVersion => $composableBuilder(
+    column: $table.learningOrderVersion,
+    builder: (column) => column,
+  );
 
   $$LearnerProfilesTableAnnotationComposer get profileId {
     final $$LearnerProfilesTableAnnotationComposer composer = $composerBuilder(
@@ -17986,6 +18158,7 @@ class $$LearningOrderTableTableManager
                 Value<String> sefariaRef = const Value.absent(),
                 Value<int> userSortOrder = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
+                Value<int> learningOrderVersion = const Value.absent(),
               }) => LearningOrderCompanion(
                 id: id,
                 profileId: profileId,
@@ -17993,6 +18166,7 @@ class $$LearningOrderTableTableManager
                 sefariaRef: sefariaRef,
                 userSortOrder: userSortOrder,
                 updatedAt: updatedAt,
+                learningOrderVersion: learningOrderVersion,
               ),
           createCompanionCallback:
               ({
@@ -18002,6 +18176,7 @@ class $$LearningOrderTableTableManager
                 required String sefariaRef,
                 required int userSortOrder,
                 Value<DateTime> updatedAt = const Value.absent(),
+                Value<int> learningOrderVersion = const Value.absent(),
               }) => LearningOrderCompanion.insert(
                 id: id,
                 profileId: profileId,
@@ -18009,6 +18184,7 @@ class $$LearningOrderTableTableManager
                 sefariaRef: sefariaRef,
                 userSortOrder: userSortOrder,
                 updatedAt: updatedAt,
+                learningOrderVersion: learningOrderVersion,
               ),
           withReferenceMapper: (p0) => p0
               .map(

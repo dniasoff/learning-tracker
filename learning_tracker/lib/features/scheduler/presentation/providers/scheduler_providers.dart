@@ -392,6 +392,22 @@ Future<List<DailyTask>> allDailyTasks(Ref ref) async {
   }).toList()..sort((a, b) => a.priority.index.compareTo(b.priority.index));
 }
 
+/// Overdue task count for a single curriculum.
+///
+/// Reads from [allDailyTasksProvider] and filters by [curriculumId] +
+/// [isOverdue].  Used by the reorder-confirm dialog to show the user how many
+/// overdue items would be amnestied (architecture §10.1 / reorder-amnesty).
+@riverpod
+Future<int> overdueCountForCurriculum(
+  Ref ref,
+  CurriculumId curriculumId,
+) async {
+  final tasks = await ref.watch(allDailyTasksProvider.future);
+  return tasks
+      .where((t) => t.curriculumId == curriculumId && t.isOverdue)
+      .length;
+}
+
 /// Derives the overdue and dueToday task lists from the pure projection.
 ///
 /// This is the authoritative source of truth for the overdue/today buckets
@@ -424,6 +440,11 @@ Future<List<DailyTask>> _buildProjectionTasks({
   final trackIds = <CurriculumId, int>{};
   final trackLabels = <CurriculumId, String>{};
   final trackStartedAtMap = <CurriculumId, DateTime>{};
+  // §10.1 / reorder-amnesty: the projection filters out overdue items whose
+  // scheduled date is strictly before the most-recent reorder timestamp.
+  // Null lastReorderAt (rows created before this column was added) is treated
+  // as epoch 0 — no historic tasks are amnestied.
+  final trackLastReorderAtMap = <CurriculumId, DateTime>{};
   for (final curriculum in activeCurricula) {
     final tracksForCurriculum = activeTracks
         .where((t) => t.curriculumId == curriculum.storageKey)
@@ -434,6 +455,8 @@ Future<List<DailyTask>> _buildProjectionTasks({
     trackIds[curriculum] = preferred.id;
     trackLabels[curriculum] = TrackType.personal.storageKey;
     trackStartedAtMap[curriculum] = preferred.activatedAt;
+    trackLastReorderAtMap[curriculum] =
+        preferred.lastReorderAt ?? DateTime.fromMillisecondsSinceEpoch(0);
   }
 
   final todayDate = DateUtils.extractLocalDate(now);
@@ -542,8 +565,22 @@ Future<List<DailyTask>> _buildProjectionTasks({
                 today: todayDate,
               );
 
+              // Reorder-amnesty filter: build ref→scheduledDate index.
+              final progLastReorderAt =
+                  trackLastReorderAtMap[curriculum] ??
+                  DateTime.fromMillisecondsSinceEpoch(0);
+              final progScheduleIndex = <String, DateTime>{
+                for (final unit in schedule) unit.sefariaRef: unit.date,
+              };
+
               // Map projection refs to DailyTask objects.
               for (final ref in projection.overdue) {
+                // Amnesty: skip overdue items scheduled before the last reorder.
+                final scheduledDate = progScheduleIndex[ref];
+                if (scheduledDate != null &&
+                    scheduledDate.isBefore(progLastReorderAt)) {
+                  continue;
+                }
                 final taskRefs = resolvedOrFallbackProgramRefs(
                   todayRef: ref,
                   contentItems: contentItems,
@@ -697,7 +734,26 @@ Future<List<DailyTask>> _buildProjectionTasks({
       today: todayDate,
     );
 
+    // Reorder-amnesty filter (§10.1): build a ref→scheduledDate index so we
+    // can drop overdue items whose scheduled date is strictly before the
+    // track's lastReorderAt.  Items scheduled on/after lastReorderAt are
+    // never amnestied — only items that were already overdue at the time of
+    // the reorder are cleared.
+    final lastReorderAt =
+        trackLastReorderAtMap[curriculum] ??
+        DateTime.fromMillisecondsSinceEpoch(0);
+    final scheduleIndex = <String, DateTime>{
+      for (final unit in schedule) unit.sefariaRef: unit.date,
+    };
+
     for (final ref in projection.overdue) {
+      final scheduledDate = scheduleIndex[ref];
+      // Amnesty: skip overdue items whose scheduled date is strictly before
+      // the most recent reorder.  Items with no schedule entry (shouldn't
+      // happen) are kept to avoid silently dropping tasks.
+      if (scheduledDate != null && scheduledDate.isBefore(lastReorderAt)) {
+        continue;
+      }
       result.add(
         DailyTask(
           curriculumId: curriculum,

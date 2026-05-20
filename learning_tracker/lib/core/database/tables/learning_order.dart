@@ -23,6 +23,16 @@ class LearningOrder extends Table {
   IntColumn get userSortOrder => integer()();
   DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime)();
 
+  /// The content-DB seed version ([SeedMetadata.version]) against which this
+  /// order was last saved.
+  ///
+  /// Default 1 is safe for existing rows: if the current seed version exceeds
+  /// the saved version the order is considered stale and the projection is
+  /// re-amnestied (last_reorder_at set to nowUtc) so overdue tasks reset.
+  /// See §10.1 of the architecture spec.
+  IntColumn get learningOrderVersion =>
+      integer().withDefault(const Constant(1))();
+
   @override
   List<Set<Column>> get uniqueKeys => [
     {profileId, curriculumId, sefariaRef},
