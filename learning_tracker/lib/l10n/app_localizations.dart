@@ -5362,6 +5362,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'days'**
   String get trackInfoDays;
+
+  /// Section heading for the All Time summary card in the Recent Activity screen.
+  ///
+  /// In en, this message translates to:
+  /// **'All-time activity'**
+  String get allTimeActivityTitle;
+
+  /// Label for the active-days stat in the All Time summary card (Recent Activity screen).
+  ///
+  /// In en, this message translates to:
+  /// **'Active days'**
+  String get allTimeActiveDays;
 }
 
 class _AppLocalizationsDelegate

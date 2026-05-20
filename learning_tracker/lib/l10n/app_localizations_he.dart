@@ -3008,4 +3008,10 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String get trackInfoDays => 'ימים';
+
+  @override
+  String get allTimeActivityTitle => 'פעילות כל הזמנים';
+
+  @override
+  String get allTimeActiveDays => 'ימים פעילים';
 }

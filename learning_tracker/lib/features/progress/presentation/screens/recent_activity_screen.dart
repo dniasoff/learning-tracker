@@ -121,7 +121,7 @@ class _RecentActivityScreenState extends ConsumerState<RecentActivityScreen> {
             const SizedBox(height: 10),
             _buildCurriculumFilter(l10n),
             const SizedBox(height: 16),
-            _StreakHeaderCard(window: window),
+            _StreakHeaderCard(window: window, timeRange: _timeRange),
             const SizedBox(height: 14),
             _ChartSection(
               title:
@@ -230,9 +230,13 @@ class _RecentActivityScreenState extends ConsumerState<RecentActivityScreen> {
 // ── Streak header ──────────────────────────────────────────────────────────
 
 class _StreakHeaderCard extends ConsumerWidget {
-  const _StreakHeaderCard({required this.window});
+  const _StreakHeaderCard({
+    required this.window,
+    required this.timeRange,
+  });
 
   final RecentActivityWindow window;
+  final ChartTimeRange timeRange;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -338,22 +342,131 @@ class _StreakHeaderCard extends ConsumerWidget {
             ),
           ],
           const SizedBox(height: 10),
-          activeDatesAsync.when(
-            data: (activeDates) => StreakCalendar(
-              activeDates: activeDates,
-              startDate: window.startDate,
-              endDate: window.endDate,
-            ),
-            loading: () => LoadingIndicator(message: l10n.loading),
-            error: (e, _) => ErrorDisplay(
-              message: l10n.chartFailedToLoad,
-              onRetry: () => ref.invalidate(
-                recentActivityStreakDatesProvider(window),
+          // All Time: show a totals summary card instead of a calendar grid.
+          // Rendering every day since 2000-01-01 in a flat grid would cause
+          // widget explosion and device freeze (~9,600+ cells). Q-IA decision
+          // (UX Audit 2026-05-20): All Time view = totals summary only.
+          if (timeRange == ChartTimeRange.allTime)
+            _AllTimeSummaryCard(window: window)
+          else
+            activeDatesAsync.when(
+              data: (activeDates) => StreakCalendar(
+                activeDates: activeDates,
+                startDate: window.startDate,
+                endDate: window.endDate,
+              ),
+              loading: () => LoadingIndicator(message: l10n.loading),
+              error: (e, _) => ErrorDisplay(
+                message: l10n.chartFailedToLoad,
+                onRetry: () => ref.invalidate(
+                  recentActivityStreakDatesProvider(window),
+                ),
               ),
             ),
-          ),
         ],
       ),
+    );
+  }
+}
+
+// ── All Time summary card ──────────────────────────────────────────────────
+
+/// Totals-only card shown when the user selects the "All Time" range.
+///
+/// Replaces the `StreakCalendar` grid which would otherwise iterate ~9,600+
+/// cells (2000-01-01 → today) and freeze the device. Shows three aggregate
+/// stats: active days, total limudim done, total chazaros done.
+class _AllTimeSummaryCard extends ConsumerWidget {
+  const _AllTimeSummaryCard({required this.window});
+
+  final RecentActivityWindow window;
+
+  static const String _loading = '…';
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
+    final terms = domainTermLabels(ref);
+    final theme = Theme.of(context);
+
+    final activeDatesAsync = ref.watch(
+      recentActivityStreakDatesProvider(window),
+    );
+    final limudChazaraAsync = ref.watch(
+      recentActivityLimudimChazarosProvider(window),
+    );
+
+    final activeDaysLabel = activeDatesAsync.asData?.value.length.toString() ??
+        _loading;
+    final limudCount = limudChazaraAsync.asData?.value
+        .fold<int>(0, (sum, d) => sum + d.limudCount)
+        .toString() ?? _loading;
+    final chazaraCount = limudChazaraAsync.asData?.value
+        .fold<int>(0, (sum, d) => sum + d.chazaraCount)
+        .toString() ?? _loading;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          l10n.allTimeActivityTitle,
+          style: theme.textTheme.labelSmall?.copyWith(
+            color: const Color(0xFF778099),
+            letterSpacing: 0.4,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        const SizedBox(height: 12),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceAround,
+          children: [
+            _AllTimeStat(
+              value: activeDaysLabel,
+              label: l10n.allTimeActiveDays,
+            ),
+            _AllTimeStat(
+              value: limudCount,
+              label: '${terms.limud} done',
+            ),
+            _AllTimeStat(
+              value: chazaraCount,
+              label: '${terms.chazaros} done',
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _AllTimeStat extends StatelessWidget {
+  const _AllTimeStat({required this.value, required this.label});
+
+  final String value;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Column(
+      children: [
+        Text(
+          value,
+          style: theme.textTheme.headlineMedium?.copyWith(
+            fontWeight: FontWeight.w800,
+            color: const Color(0xFF1A1F2F),
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          label,
+          textAlign: TextAlign.center,
+          style: theme.textTheme.labelSmall?.copyWith(
+            color: const Color(0xFF778099),
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ],
     );
   }
 }

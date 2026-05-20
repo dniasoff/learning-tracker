@@ -66,13 +66,13 @@ class StreakCalendar extends StatelessWidget {
   }
 
   static String _weekdayInitial(int weekday) => switch (weekday) {
-    DateTime.monday => 'M',
-    DateTime.tuesday => 'T',
-    DateTime.wednesday => 'W',
-    DateTime.thursday => 'T',
-    DateTime.friday => 'F',
-    DateTime.saturday => 'S',
-    DateTime.sunday => 'S',
+    DateTime.monday => 'Mon',
+    DateTime.tuesday => 'Tue',
+    DateTime.wednesday => 'Wed',
+    DateTime.thursday => 'Thu',
+    DateTime.friday => 'Fri',
+    DateTime.saturday => 'Sat',
+    DateTime.sunday => 'Sun',
     _ => '',
   };
 }
@@ -121,7 +121,7 @@ class _DayLabel extends StatelessWidget {
         child: Text(
           label,
           style: TextStyle(
-            fontSize: 11,
+            fontSize: 10,
             color: Theme.of(context).colorScheme.onSurfaceVariant,
             fontWeight: FontWeight.w600,
           ),

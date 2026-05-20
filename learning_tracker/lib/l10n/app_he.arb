@@ -1711,5 +1711,13 @@
   "trackInfoDays": "ימים",
   "@trackInfoDays": {
     "description": "Unit suffix for day counts in the TrackInfoCard."
+  },
+  "allTimeActivityTitle": "פעילות כל הזמנים",
+  "@allTimeActivityTitle": {
+    "description": "Section heading for the All Time summary card in the Recent Activity screen."
+  },
+  "allTimeActiveDays": "ימים פעילים",
+  "@allTimeActiveDays": {
+    "description": "Label for the active-days stat in the All Time summary card (Recent Activity screen)."
   }
 }

@@ -3041,4 +3041,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get trackInfoDays => 'days';
+
+  @override
+  String get allTimeActivityTitle => 'All-time activity';
+
+  @override
+  String get allTimeActiveDays => 'Active days';
 }

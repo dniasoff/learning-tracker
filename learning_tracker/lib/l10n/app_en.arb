@@ -1716,5 +1716,13 @@
   "trackInfoDays": "days",
   "@trackInfoDays": {
     "description": "Unit suffix for day counts in the TrackInfoCard (e.g. 'Elapsed 14 days')."
+  },
+  "allTimeActivityTitle": "All-time activity",
+  "@allTimeActivityTitle": {
+    "description": "Section heading for the All Time summary card in the Recent Activity screen."
+  },
+  "allTimeActiveDays": "Active days",
+  "@allTimeActiveDays": {
+    "description": "Label for the active-days stat in the All Time summary card (Recent Activity screen)."
   }
 }
