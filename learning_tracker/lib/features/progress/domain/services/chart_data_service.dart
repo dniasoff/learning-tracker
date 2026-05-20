@@ -1,7 +1,8 @@
 import 'package:learning_tracker/core/database/daos/completion_dao.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
+import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/user_mode.dart';
-import 'package:learning_tracker/core/learning/completion_constants.dart';
+import 'package:learning_tracker/features/learning/domain/entities/completion_tier_filter.dart';
 import 'package:learning_tracker/features/progress/domain/models/chart_data.dart';
 
 /// Service for aggregating completion data into chart-ready structures.
@@ -14,31 +15,23 @@ class ChartDataService {
 
   ChartDataService(this._db, {int profileId = 0}) : _profileId = profileId;
 
-  Future<List<Completion>> _loadCompletions(String? curriculumId) {
-    if (curriculumId != null) {
-      return _db.completionDao.getCompletionsByCurriculumAndProfile(
-        curriculumId,
-        _profileId,
-      );
-    }
-    return _db.completionDao.getCompletionsByProfile(_profileId);
-  }
-
   /// Get daily completion counts within a date range.
   ///
-  /// Bulk-prior sentinel rows (timestamp == [kBulkPriorSentinelMs]) are
-  /// excluded so the chart only reflects live in-session activity.
+  /// Uses [CompletionTierFilter.liveOnly] via [CompletionDao.getCompletionsByTier]
+  /// so only in-session completions appear on the activity bar chart.
+  /// Replaces the former kBulkPriorSentinelMs magic-constant filter (Layer 3).
   Future<List<DailyCompletionData>> getDailyCompletions({
     required DateTime startDate,
     required DateTime endDate,
     String? curriculumId,
   }) async {
-    final allCompletions = await _loadCompletions(curriculumId);
-    final completions = allCompletions
-        .where(
-          (c) => c.completedAt.millisecondsSinceEpoch != kBulkPriorSentinelMs,
-        )
-        .toList();
+    final completions = await _db.completionDao.getCompletionsByTier(
+      profileId: _profileId,
+      tier: CompletionTierFilter.liveOnly,
+      curriculumId: curriculumId != null
+          ? _curriculumIdFromStorageKey(curriculumId)
+          : null,
+    );
 
     final counts = <DateTime, int>{};
     for (final c in completions) {
@@ -62,20 +55,21 @@ class ChartDataService {
 
   /// Get cumulative progress over time.
   ///
-  /// Bulk-prior sentinel rows (timestamp == [kBulkPriorSentinelMs]) are
-  /// excluded so the chart plots only live activity; bulk imports are not
-  /// treated as historical data points on the timeline.
+  /// Uses [CompletionTierFilter.liveOnly] via [CompletionDao.getCompletionsByTier]
+  /// so the chart plots only live activity. Replaces the former
+  /// kBulkPriorSentinelMs magic-constant filter (Layer 3).
   Future<List<CumulativeProgressPoint>> getCumulativeProgress({
     required DateTime startDate,
     required DateTime endDate,
     String? curriculumId,
   }) async {
-    final allCompletions = await _loadCompletions(curriculumId);
-    final completions = allCompletions
-        .where(
-          (c) => c.completedAt.millisecondsSinceEpoch != kBulkPriorSentinelMs,
-        )
-        .toList();
+    final completions = await _db.completionDao.getCompletionsByTier(
+      profileId: _profileId,
+      tier: CompletionTierFilter.liveOnly,
+      curriculumId: curriculumId != null
+          ? _curriculumIdFromStorageKey(curriculumId)
+          : null,
+    );
 
     final dailyCounts = <DateTime, int>{};
     for (final c in completions) {
@@ -155,7 +149,13 @@ class ChartDataService {
   }) async {
     if (userMode == UserMode.adult) return null;
 
-    final completions = await _loadCompletions(curriculumId);
+    final completions = await _db.completionDao.getCompletionsByTier(
+      profileId: _profileId,
+      tier: CompletionTierFilter.liveOnly,
+      curriculumId: curriculumId != null
+          ? _curriculumIdFromStorageKey(curriculumId)
+          : null,
+    );
 
     final pointsByDate = <DateTime, int>{};
     for (final c in completions) {
@@ -200,5 +200,13 @@ class ChartDataService {
   static DateTime _extractLocalDate(DateTime dt) {
     final local = dt.toLocal();
     return DateTime(local.year, local.month, local.day);
+  }
+
+  /// Resolve a storage-key string to [CurriculumId], or null if unknown.
+  static CurriculumId? _curriculumIdFromStorageKey(String key) {
+    for (final c in CurriculumId.values) {
+      if (c.storageKey == key) return c;
+    }
+    return null;
   }
 }
