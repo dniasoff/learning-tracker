@@ -32,8 +32,8 @@ Sync-point trigger tags: `[P1]` `[P2]` `[P3]` `[P4]` `[P5]` `[P6]` `[P7]`
 
 ### Phase 1b · Core relocations
 - [x] W1.7  (S, S1, done)    Move features/sync/domain/merge_rules.dart → core/sync/merge/; update 5 merger imports — closes H2
-- [ ] W1.8  (S, S1, in-progress)    Move profile_scoped_preference_keys.dart → core/preferences/; update 8 importers
-- [ ] W1.9  (S, S1, pending)    Move language_provider.dart → core/preferences/
+- [x] W1.8  (S, S1, done)    Move profile_scoped_preference_keys.dart → core/preferences/; update 8 importers
+- [ ] W1.9  (S, S1, in-progress)    Move language_provider.dart → core/preferences/
 
 ### Phase 1c · Barrel-file convention + lint enforcement
 - [ ] W1.10 (M, S1, pending)    Create empty barrel files features/&lt;feature&gt;.dart for all 18 features `[P1]`
@@ -88,11 +88,11 @@ Sync-point trigger tags: `[P1]` `[P2]` `[P3]` `[P4]` `[P5]` `[P6]` `[P7]`
 - [x] W2.15 (M, S3, done)    Migrate importers `[P2]`
 
 ### Phase 2c · Dissolve parent_mode (S3)
-- [ ] W2.16 (S, S3, in-progress)    Move reward + point config screens → features/gamification/
-- [ ] W2.17 (S, S3, pending)    Move PIN keypad widget → core/widgets/
-- [ ] W2.18 (S, S3, pending)    Move parent_dashboard_aggregator → features/dashboard/
-- [ ] W2.19 (M, S3, pending)    Move pin_service + create PinFlowMachine domain skeleton → features/profiles/ (full domain in W4.11)
-- [ ] W2.20 (S, S3, pending)    Delete features/parent_mode/ directory
+- [x] W2.16 (S, S3, done)    Move reward + point config screens → features/gamification/
+- [x] W2.17 (S, S3, done)    Move PIN keypad widget → core/widgets/
+- [x] W2.18 (S, S3, done)    Move parent_dashboard_aggregator → features/dashboard/
+- [x] W2.19 (M, S3, done)    Move pin_service + create PinFlowMachine domain skeleton → features/profiles/ (full domain in W4.11)
+- [x] W2.20 (S, S3, done)    Delete features/parent_mode/ directory
 
 ### Phase 2d · Core/ misfiled-feature promotions (S2)
 - [x] W2.21 (S, S2, done)    Move core/learning/ → features/learning/ (absorb optimistic_completion_provider, completion_writer)
@@ -121,7 +121,7 @@ Sync-point trigger tags: `[P1]` `[P2]` `[P3]` `[P4]` `[P5]` `[P6]` `[P7]`
 - [ ] W2.40 (S, S2, pending)    Confirm H5 + M2 gone with deleted files; cleanup trivia in core/sync/ `[P3]`
 
 ### Phase 2g · Tutoring feature skeleton (S3)
-- [ ] W2.41 (S, S3, pending)    Create features/tutoring/ skeleton (data/, domain/, presentation/) + empty tutoring.dart barrel — populated W3/W4/W6
+- [x] W2.41 (S, S3, done)    Create features/tutoring/ skeleton (data/, domain/, presentation/) + empty tutoring.dart barrel — populated W3/W4/W6
 
 ---
 
@@ -173,7 +173,7 @@ Sync-point trigger tags: `[P1]` `[P2]` `[P3]` `[P4]` `[P5]` `[P6]` `[P7]`
 - [ ] W3.37 (S, S2, pending)    Change streak/ from snapshot doc → streak_events/{ulid} collection
 
 ### Phase 3e · Tutor mode schema (S3)
-- [ ] W3.38 (M, S3, pending)    Add tutor_grants/{grantId} top-level collection with deterministic doc-id strategy
+- [ ] W3.38 (M, S3, in-progress)    Add tutor_grants/{grantId} top-level collection with deterministic doc-id strategy
 - [ ] W3.39 (M, S3, pending)    Add Firestore composite indexes: (tutor_uid, state), (parent_uid, child_profile_id, state), (tutor_email, state)
 - [ ] W3.40 (M, S3, pending)    Add tutor_grants/{grantId}/audit_log/{entryId} sub-collection
 - [ ] W3.41 (M, S3, pending)    Firestore rules: cross-uid read on users/{ownerUid}/learner_profiles/{pid}/** if active tutor grant; deny live-completion write from non-owner uids
@@ -199,7 +199,7 @@ Sync-point trigger tags: `[P1]` `[P2]` `[P3]` `[P4]` `[P5]` `[P6]` `[P7]`
 - [x] W4.4  (M, S5, done)    StudyDayPattern VO with dayKindFor(Weekday) + equality
 - [x] W4.5  (S, S5, done)    CalendarSystem { hebrew, english } enum
 - [x] W4.6  (S, S4, done)    PaceTarget sealed = sole goal target representation
-- [ ] W4.7  (M, S4, in-progress)    ProgramStartingPosition VO replacing 'offset:N|ref:&lt;sefariaRef&gt;' grammar — **owns B2 + B3 window enforcement**
+- [x] W4.7  (M, S4, done)    ProgramStartingPosition VO replacing 'offset:N|ref:&lt;sefariaRef&gt;' grammar — **owns B2 + B3 window enforcement**
 - [x] W4.8  (S, S5, done)    Scope(level: ScopeLevel, value: ScopeValue) typed VO
 - [x] W4.9  (S, S5, done)    ProfileMode { adult, child } + AccountTier { local, cloud } enums; deprecation on string equality
 - [ ] W4.10 (M, S4, pending)    Sealed ScheduleSpec { DelaySchedule, WeeklySchedule, RollingSchedule } replacing nullable quartet
