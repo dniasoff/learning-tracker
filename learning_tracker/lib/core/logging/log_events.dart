@@ -1,0 +1,169 @@
+// core/logging/log_events.dart — W1.29
+//
+// Typed string constants for structured log event names.
+//
+// Naming convention: `<subsystem>_<action>` in snake_case.
+// All [AppLogger] call sites MUST use a constant from this file (or from a
+// feature-level extension file) rather than an ad-hoc string literal.
+//
+// To extend: add a new `abstract final class` scoped to the subsystem.
+// Do NOT add constants directly to [LogEvents] — keep subsystems separate.
+
+/// Namespace aggregating all log-event constant groups.
+///
+/// Usage:
+/// ```dart
+/// AppLogger.instance.info(event: LogEvents.sync.pullOnLaunchCompleted);
+/// AppLogger.instance.error(event: LogEvents.sync.mergeFailed, exception: e);
+/// ```
+abstract final class LogEvents {
+  // Prevent instantiation — this is a pure-namespace class.
+  LogEvents._();
+
+  static const sync = _SyncEvents._();
+  static const auth = _AuthEvents._();
+  static const profile = _ProfileEvents._();
+  static const scheduler = _SchedulerEvents._();
+  static const track = _TrackEvents._();
+  static const tutor = _TutorEvents._();
+  static const content = _ContentEvents._();
+  static const notification = _NotificationEvents._();
+}
+
+// ─── Sync ────────────────────────────────────────────────────────────────────
+
+final class _SyncEvents {
+  const _SyncEvents._();
+
+  // Pull lifecycle
+  String get pullOnLaunchStarted => 'sync_pull_on_launch_started';
+  String get pullOnLaunchCompleted => 'sync_pull_on_launch_completed';
+  String get pullOnLaunchFailed => 'sync_pull_on_launch_failed';
+  String get listenerAttached => 'sync_listener_attached';
+  String get listenerDetached => 'sync_listener_detached';
+  String get listenerError => 'sync_listener_error';
+
+  // Push lifecycle
+  String get pushStarted => 'sync_push_started';
+  String get pushCompleted => 'sync_push_completed';
+  String get pushFailed => 'sync_push_failed';
+  String get outboxItemEnqueued => 'sync_outbox_item_enqueued';
+  String get outboxDeadLettered => 'sync_outbox_dead_lettered';
+
+  // Merge / router
+  String get mergeRowSkipped => 'sync_merge_row_skipped';
+  String get mergeRouterHalt => 'sync_merge_router_halt';
+  String get mergeFailed => 'sync_merge_failed';
+
+  // Conflict / permission
+  String get permissionDenied => 'sync_permission_denied';
+  String get conflictResolved => 'sync_conflict_resolved';
+}
+
+// ─── Auth ────────────────────────────────────────────────────────────────────
+
+final class _AuthEvents {
+  const _AuthEvents._();
+
+  String get signInStarted => 'auth_sign_in_started';
+  String get signInCompleted => 'auth_sign_in_completed';
+  String get signInFailed => 'auth_sign_in_failed';
+  String get signOutCompleted => 'auth_sign_out_completed';
+  String get magicLinkSent => 'auth_magic_link_sent';
+  String get magicLinkFailed => 'auth_magic_link_failed';
+  String get sessionRestored => 'auth_session_restored';
+  String get sessionExpired => 'auth_session_expired';
+}
+
+// ─── Profile ─────────────────────────────────────────────────────────────────
+
+final class _ProfileEvents {
+  const _ProfileEvents._();
+
+  String get created => 'profile_created';
+  String get switched => 'profile_switched';
+  String get deleted => 'profile_deleted';
+  String get pinSet => 'profile_pin_set';
+  String get pinVerified => 'profile_pin_verified';
+  String get pinFailed => 'profile_pin_failed';
+}
+
+// ─── Scheduler ───────────────────────────────────────────────────────────────
+
+final class _SchedulerEvents {
+  const _SchedulerEvents._();
+
+  String get goalCreated => 'scheduler_goal_created';
+  String get goalUpdated => 'scheduler_goal_updated';
+  String get goalDeleted => 'scheduler_goal_deleted';
+  String get tasksGenerated => 'scheduler_tasks_generated';
+  String get tasksGenerationFailed => 'scheduler_tasks_generation_failed';
+}
+
+// ─── Track ───────────────────────────────────────────────────────────────────
+
+final class _TrackEvents {
+  const _TrackEvents._();
+
+  String get created => 'track_created';
+  String get edited => 'track_edited';
+  String get deleted => 'track_deleted';
+  String get completionMarked => 'track_completion_marked';
+  String get completionReverted => 'track_completion_reverted';
+  String get bulkMarkStarted => 'track_bulk_mark_started';
+  String get bulkMarkCompleted => 'track_bulk_mark_completed';
+}
+
+// ─── Tutor ───────────────────────────────────────────────────────────────────
+
+final class _TutorEvents {
+  const _TutorEvents._();
+
+  // Invite flow
+  String get inviteSent => 'tutor_invite_sent';
+  String get inviteAccepted => 'tutor_invite_accepted';
+  String get inviteDeclined => 'tutor_invite_declined';
+  String get inviteExpired => 'tutor_invite_expired';
+
+  // Grant lifecycle
+  String get grantRescinded => 'tutor_grant_rescinded';
+  String get grantRevoked => 'tutor_grant_revoked';
+  String get tutorResigned => 'tutor_resigned';
+
+  // Action log
+  String get actionRecorded => 'tutor_action_recorded';
+
+  // PIN
+  String get pinSet => 'tutor_pin_set';
+  String get pinVerified => 'tutor_pin_verified';
+  String get pinFailed => 'tutor_pin_failed';
+
+  // Blocked operation
+  String get liveMarkBlocked => 'tutor_live_mark_blocked';
+}
+
+// ─── Content ─────────────────────────────────────────────────────────────────
+
+final class _ContentEvents {
+  const _ContentEvents._();
+
+  String get chunkDownloadStarted => 'content_chunk_download_started';
+  String get chunkDownloadCompleted => 'content_chunk_download_completed';
+  String get chunkDownloadFailed => 'content_chunk_download_failed';
+  String get dbUpgradeStarted => 'content_db_upgrade_started';
+  String get dbUpgradeCompleted => 'content_db_upgrade_completed';
+  String get dbUpgradeFailed => 'content_db_upgrade_failed';
+}
+
+// ─── Notification ────────────────────────────────────────────────────────────
+
+final class _NotificationEvents {
+  const _NotificationEvents._();
+
+  String get reminderScheduled => 'notification_reminder_scheduled';
+  String get reminderFired => 'notification_reminder_fired';
+  String get streakAlertScheduled => 'notification_streak_alert_scheduled';
+  String get streakAlertFired => 'notification_streak_alert_fired';
+  String get permissionGranted => 'notification_permission_granted';
+  String get permissionDenied => 'notification_permission_denied';
+}
