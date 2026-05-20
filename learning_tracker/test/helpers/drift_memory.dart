@@ -16,33 +16,19 @@ import 'package:drift/native.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 
-/// Inserts a single test completion via the canonical event log (C1 / v20).
+/// Inserts a single test completion via the canonical event log.
 ///
-/// Accepts a [CompletionsCompanion] so existing test setup code keeps the
-/// same companion-construction syntax; `trackId` and `completedAt` are
-/// mapped to [CompletionEventsCompanion] fields.
-Future<int> seedCompletion(UserDatabase db, CompletionsCompanion c) =>
-    db.completionEventDao.appendEvent(
-      CompletionEventsCompanion.insert(
-        profileId: c.profileId.value,
-        curriculumId: c.curriculumId.value,
-        sefariaRef: c.sefariaRef.value,
-        stageId: c.stageId.value,
-        trackType: c.trackType.value,
-        trackId: c.trackId.present
-            ? Value<int?>(c.trackId.value)
-            : const Value<int?>.absent(),
-        points: c.points.present ? Value(c.points.value) : const Value(0),
-        eventTimestamp: c.completedAt.present
-            ? c.completedAt.value
-            : DateTime.utc(2026, 1, 1),
-      ),
-    );
+/// NOTE (W3.20): The `completions` legacy table was dropped. This helper
+/// now works directly with [CompletionEventsCompanion].
+Future<int> seedCompletion(
+  UserDatabase db,
+  CompletionEventsCompanion c,
+) => db.completionEventDao.appendEvent(c);
 
 /// Inserts multiple test completions via the canonical event log.
 Future<void> seedCompletionsBatch(
   UserDatabase db,
-  List<CompletionsCompanion> entries,
+  List<CompletionEventsCompanion> entries,
 ) async {
   for (final c in entries) {
     await seedCompletion(db, c);

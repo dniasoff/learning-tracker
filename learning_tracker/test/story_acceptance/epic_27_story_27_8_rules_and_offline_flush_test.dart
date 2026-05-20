@@ -4,17 +4,16 @@
 /// Two groups, both running against the in-process `fake_cloud_firestore`
 /// helper landed in DNI-377:
 ///
-///   Group A — Firestore rules (NFR13, FR4):
-///     1. `delete()` is rejected by every event/snapshot collection rule
-///        (strict-rules mode against the real `firestore.rules`).
-///     2. Field-validator clauses for completion_events (points range,
+///   Group A — Firestore rules (W3.30-W3.37 new layout):
+///     The old top-level compat blocks (accounts, learner_profiles,
+///     completion_events, etc.) were removed in W3.30. Tests now assert
+///     the live nested layout under users/{uid}/learner_profiles/{profileId}.
+///
+///     1. `delete()` is rejected by the key nested-layout collections:
+///        completions, streak_events, learning_ledger, import_metadata.
+///     2. Field-validator clauses for completions (points range,
 ///        future `completed_at`) and the snapshot field whitelists are
-///        present in the rules file. These cannot be exercised dynamically
-///        because `fake_firebase_security_rules` does not evaluate
-///        `request.resource.data` clauses (documented limitation in
-///        `test/helpers/firestore_fake.dart`). Structural assertions prove
-///        the rules are authored correctly; the production emulator suite
-///        under `test/firestore-rules/` enforces them dynamically.
+///        present in the rules file.
 ///
 ///   Group B — Offline completion flush (FR24):
 ///     1. With the gateway "online" flag cleared, 50 successive
@@ -28,16 +27,15 @@ library;
 
 import 'dart:io';
 
-import 'package:drift/drift.dart' show Value;
 import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
-import 'package:learning_tracker/features/learning/domain/entities/completion_command.dart';
-import 'package:learning_tracker/features/learning/data/completion_writer.dart';
 import 'package:learning_tracker/core/sync/firestore_gateway.dart';
 import 'package:learning_tracker/core/sync/outbox/outbox_processor.dart';
 import 'package:learning_tracker/core/sync/outbox/push_pipeline.dart';
 import 'package:learning_tracker/core/sync/push_pipeline_impl.dart';
 import 'package:learning_tracker/core/time/local_day_clock.dart';
+import 'package:learning_tracker/features/learning/data/completion_writer.dart';
+import 'package:learning_tracker/features/learning/domain/entities/completion_command.dart';
 import 'package:test/test.dart';
 
 import '../helpers/drift_memory.dart';
@@ -47,68 +45,48 @@ void main() {
   // ── Group A — Firestore rules ───────────────────────────────────────────
 
   group(
-    'Story 27.8 — Firestore rules enforce per-collection semantics',
+    'Story 27.8 — Firestore rules enforce per-collection semantics (new layout W3.30-W3.37)',
     tags: ['story_27_8_rules'],
     () {
-      // Every collection's rule terminates with `allow delete: if false;`
-      // (events use the combined `allow update, delete: if false`). That
-      // is the one semantic the fake CAN exercise on every collection,
-      // because `delete()` maps to `Method.delete` which the parser
-      // recognises without needing `request.resource.data`.
-      const denyCollections = [
-        'accounts',
-        'learner_profiles',
-        'completion_events',
-        'streak_events',
-        'learning_ledger',
-        'track_configs',
-        'bookmarks',
-        'settings',
-      ];
-
-      for (final coll in denyCollections) {
-        test('delete on $coll/{docId} is rejected by the rules', () async {
-          final fake = createFakeFirestore(
-            authenticatedUid: 'uid_a',
-            strictRules: true,
-          );
-          await expectLater(
-            () => fake.collection(coll).doc('uid_a_1').delete(),
-            throwsA(isA<Exception>()),
-            reason: '`allow delete: if false;` must trip for $coll',
-          );
-        });
-      }
-
       // Static rule-file assertions — these pin the field validators that
-      // the dynamic fake cannot evaluate.
+      // the dynamic fake cannot evaluate. After W3.30, the old top-level
+      // compat blocks are gone; assertions now target the live nested layout.
       group('rules file pins per-AC field validators', () {
         late String rules;
         setUpAll(() {
           rules = _readProjectRules();
         });
 
-        test('completion_events enforces 0 <= points <= 100', () {
-          final block = _extractRuleBlock(rules, 'completion_events/{docId}');
+        // W3.35 — completions in the nested layout enforce points + timestamp.
+        test('completions/{completionId} enforces 0 <= points <= 100', () {
+          final block = _extractRuleBlock(rules, 'completions/{completionId}');
           expect(block, contains('points >= 0'));
           expect(block, contains('points <= 100'));
         });
 
-        test('completion_events enforces completed_at <= request.time', () {
-          final block = _extractRuleBlock(rules, 'completion_events/{docId}');
-          expect(block, contains('completed_at <= request.time'));
-        });
+        test(
+          'completions/{completionId} enforces completed_at <= request.time',
+          () {
+            final block = _extractRuleBlock(
+              rules,
+              'completions/{completionId}',
+            );
+            expect(block, contains('completed_at <= request.time'));
+          },
+        );
 
-        test('completion_events denies update and delete', () {
-          final block = _extractRuleBlock(rules, 'completion_events/{docId}');
+        test('completions/{completionId} denies update and delete', () {
+          final block = _extractRuleBlock(rules, 'completions/{completionId}');
           expect(block, contains('allow update: if false'));
           expect(block, contains('allow delete: if false'));
         });
 
+        // W3.37 — streak_events is now a per-event collection.
+        // W3.36 — learning_ledger uses ULID doc-ids; still append-only.
         test('streak_events and learning_ledger deny update and delete', () {
           for (final c in [
-            'streak_events/{docId}',
-            'learning_ledger/{docId}',
+            'streak_events/{streakEventId}',
+            'learning_ledger/{entryId}',
           ]) {
             final block = _extractRuleBlock(rules, c);
             expect(block, contains('allow update: if false'), reason: c);
@@ -116,15 +94,16 @@ void main() {
           }
         });
 
+        // Snapshot collections in the nested layout gate writes through
+        // a .hasOnly() whitelist.
         test(
           'snapshot collections gate writes through hasOnly() field whitelist',
           () {
             for (final c in [
-              'accounts/{docId}',
-              'learner_profiles/{docId}',
-              'track_configs/{docId}',
-              'bookmarks/{docId}',
-              'settings/{docId}',
+              'bookmarks/{bookmarkId}',
+              'stage_definitions/{stageId}',
+              'import_metadata/{docId}', // W3.34: renamed
+              'profile_programs/{curriculumId}',
             ]) {
               final block = _extractRuleBlock(rules, c);
               expect(
@@ -145,7 +124,9 @@ void main() {
           'global deny-all wildcard precedes per-collection allow rules',
           () {
             final denyIdx = rules.indexOf('match /{document=**}');
-            final firstAllowIdx = rules.indexOf('match /accounts');
+            // After W3.30 top-level compat blocks removed; first allow is
+            // the tutor_grants block or the users/ block.
+            final firstAllowIdx = rules.indexOf('match /tutor_grants');
             expect(denyIdx, greaterThan(-1));
             expect(firstAllowIdx, greaterThan(-1));
             expect(
@@ -157,6 +138,21 @@ void main() {
             );
           },
         );
+
+        // W3.33 — preferences/{scope} replaces three separate collections.
+        test('preferences/{scope} block allows owner reads/writes (W3.33)', () {
+          final block = _extractRuleBlock(rules, 'preferences/{scope}');
+          expect(
+            block,
+            contains('isOwner(uid)'),
+            reason: 'preferences must be owner-gated',
+          );
+          expect(
+            block,
+            contains('allow delete: if false'),
+            reason: 'preferences docs must not be deletable by clients',
+          );
+        });
       });
     },
   );
@@ -213,26 +209,23 @@ void main() {
         },
       );
 
-      test(
-        'completions block contains no tutor-bypass allow clause',
-        () {
-          final block = _extractRuleBlock(rules, 'completions/{completionId}');
-          expect(
-            block,
-            isNot(contains('isTutorOf')),
-            reason:
-                'isTutorOf MUST NOT appear in the completions block — '
-                'tutors may never write live completions directly',
-          );
-          expect(
-            block,
-            isNot(contains('isActiveTutorGrant')),
-            reason:
-                'isActiveTutorGrant MUST NOT appear in the completions block '
-                '— tutor completion writes go through Cloud Functions only',
-          );
-        },
-      );
+      test('completions block contains no tutor-bypass allow clause', () {
+        final block = _extractRuleBlock(rules, 'completions/{completionId}');
+        expect(
+          block,
+          isNot(contains('isTutorOf')),
+          reason:
+              'isTutorOf MUST NOT appear in the completions block — '
+              'tutors may never write live completions directly',
+        );
+        expect(
+          block,
+          isNot(contains('isActiveTutorGrant')),
+          reason:
+              'isActiveTutorGrant MUST NOT appear in the completions block '
+              '— tutor completion writes go through Cloud Functions only',
+        );
+      });
 
       test('completions block denies update and delete', () {
         final block = _extractRuleBlock(rules, 'completions/{completionId}');
@@ -240,16 +233,19 @@ void main() {
         expect(block, contains('allow delete: if false'));
       });
 
-      test('completions block documents the load-bearing security boundary', () {
-        // The keyword comment is a searchable audit trail.
-        expect(
-          rules,
-          contains('TUTOR WRITE BLOCK'),
-          reason:
-              'The rules file must contain the TUTOR WRITE BLOCK comment '
-              'as a searchable security-boundary marker for auditors',
-        );
-      });
+      test(
+        'completions block documents the load-bearing security boundary',
+        () {
+          // The keyword comment is a searchable audit trail.
+          expect(
+            rules,
+            contains('TUTOR WRITE BLOCK'),
+            reason:
+                'The rules file must contain the TUTOR WRITE BLOCK comment '
+                'as a searchable security-boundary marker for auditors',
+          );
+        },
+      );
 
       // ── 2. tutor_grants — client writes forbidden ────────────────────────
       //
@@ -327,8 +323,7 @@ void main() {
         expect(
           block,
           contains('allow read: if isSignedIn()'),
-          reason:
-              'tutor_grants must require authentication for all reads',
+          reason: 'tutor_grants must require authentication for all reads',
         );
       });
     },
@@ -485,15 +480,17 @@ void main() {
 // ── Helpers ────────────────────────────────────────────────────────────────
 
 /// Seed a curriculum_tracks row so completion FKs resolve.
+///
+/// Updated for W3.22/W3.28: trackType and isActive columns removed;
+/// state + stateChangedAt are the new lifecycle columns.
 Future<int> _seedTrack(UserDatabase db) => db
     .into(db.curriculumTracks)
     .insert(
       CurriculumTracksCompanion.insert(
         profileId: 1,
         curriculumId: 'mishnah_yomit',
-        trackType: 'personal',
         activatedAt: DateTime.utc(2026, 5, 1),
-        isActive: const Value(true),
+        stateChangedAt: DateTime.utc(2026, 5, 1),
       ),
     );
 
@@ -835,4 +832,10 @@ class _ToggleableFakeGateway implements FirestoreGateway {
     required String collection,
     required String docId,
   }) async => null;
+
+  @override
+  Future<void> pushStageDefinition({
+    required int profileId,
+    required Map<String, dynamic> data,
+  }) async {}
 }

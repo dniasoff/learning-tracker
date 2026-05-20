@@ -263,6 +263,27 @@ Set<String> _learnedLeafRefs({
   final level3Actions = <String, bool>{};
   final level4Actions = <String, bool>{};
 
+  // Registry mapping every recognised entry-scope string to the action map it
+  // populates. Replaces the inline switch; adding a new scope is a 1-line edit.
+  const entryScopeLevel = <String, int>{
+    'seder': 1,
+    'sefer': 1,
+    'level1': 1,
+    'masechta': 2,
+    'siman': 2,
+    'level2': 2,
+    'perek': 3,
+    'daf': 3,
+    'halacha': 3,
+    'pasuk': 3,
+    'level3': 3,
+    'mishna': 4,
+    'amud': 4,
+    'seif': 4,
+    'seif_katan': 4,
+    'level4': 4,
+  };
+
   for (final entry in ledgerEntries) {
     final entryScope = entry.entryScope;
     final unitId = entry.unitIdentifier;
@@ -272,38 +293,21 @@ Set<String> _learnedLeafRefs({
         ? entryScope.substring('unmark_'.length)
         : entryScope;
     final action = !isUnmark;
-    switch (resolvedType) {
-      case 'seder':
-      case 'sefer':
-      case 'level1':
-        level1Actions.putIfAbsent(unitId, () => action);
-        break;
-      case 'masechta':
-      case 'siman':
-      case 'level2':
-        level2Actions.putIfAbsent(unitId, () => action);
-        break;
-      case 'perek':
-      case 'daf':
-      case 'halacha':
-      case 'pasuk':
-      case 'level3':
-        level3Actions.putIfAbsent(unitId, () => action);
-        break;
-      case 'mishna':
-      case 'amud':
-      case 'seif':
-      case 'seif_katan':
-      case 'level4':
-        level4Actions.putIfAbsent(unitId, () => action);
-        break;
-      default:
-        if (resolvedType.startsWith('level')) {
-          refActions.putIfAbsent(unitId, () => action);
-        } else if (action) {
-          learnedRefs.add(unitId);
-        }
-        break;
+
+    final levelActions = switch (entryScopeLevel[resolvedType]) {
+      1 => level1Actions,
+      2 => level2Actions,
+      3 => level3Actions,
+      4 => level4Actions,
+      _ => null,
+    };
+    if (levelActions != null) {
+      levelActions.putIfAbsent(unitId, () => action);
+    } else if (resolvedType.startsWith('level')) {
+      // Generic "levelN" scope not in the registry → treat as a leaf ref.
+      refActions.putIfAbsent(unitId, () => action);
+    } else if (action) {
+      learnedRefs.add(unitId);
     }
   }
 

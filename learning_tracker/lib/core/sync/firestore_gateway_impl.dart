@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
+import 'package:learning_tracker/core/sync/exceptions/firestore_permission_denied_exception.dart';
 import 'package:learning_tracker/core/sync/firestore_gateway.dart';
 import 'package:learning_tracker/features/account/domain/repositories/auth_repository.dart';
 
@@ -257,9 +258,16 @@ class FirestoreGatewayImpl implements FirestoreGateway {
     required int profileId,
     required Map<String, dynamic> data,
   }) async {
-    final doc = _doc(profileId, 'streak', 'data');
-    if (doc == null) throw _notAuthenticated;
-    await doc.set({
+    // W3.37: streak changed from single snapshot doc (streak/data) to an
+    // append-only event collection (streak_events/{ulid}). Each StreakEvent
+    // stored in Drift gets its own document keyed by the event ULID. The
+    // outbox payload carries a 'ulid' field; fall back to a server-side
+    // auto-generated doc-id if absent so old outbox rows flush cleanly.
+    final collection = _collection(profileId, 'streak_events');
+    if (collection == null) throw _notAuthenticated;
+    final ulid = data['ulid'] as String?;
+    final ref = ulid != null ? collection.doc(ulid) : collection.doc();
+    await ref.set({
       ..._stripInternalKeys(data),
       'synced_at': FieldValue.serverTimestamp(),
     }, SetOptions(merge: true));
@@ -335,7 +343,8 @@ class FirestoreGatewayImpl implements FirestoreGateway {
     required int profileId,
     required Map<String, dynamic> data,
   }) async {
-    final doc = _doc(profileId, 'notification_settings', 'preferences');
+    // W3.33: unified into preferences/{scope} — scope = 'notification_settings'.
+    final doc = _doc(profileId, 'preferences', 'notification_settings');
     if (doc == null) throw _notAuthenticated;
     await doc.set({
       ..._stripInternalKeys(data),
@@ -348,7 +357,8 @@ class FirestoreGatewayImpl implements FirestoreGateway {
     required int profileId,
     required Map<String, dynamic> data,
   }) async {
-    final doc = _doc(profileId, 'gamification_settings', 'config');
+    // W3.33: unified into preferences/{scope} — scope = 'gamification_settings'.
+    final doc = _doc(profileId, 'preferences', 'gamification_settings');
     if (doc == null) throw _notAuthenticated;
     await doc.set({
       ..._stripInternalKeys(data),
@@ -392,12 +402,17 @@ class FirestoreGatewayImpl implements FirestoreGateway {
     required int profileId,
     required Map<String, dynamic> data,
   }) async {
+    // W3.36: use the ULID from the payload as doc-id instead of auto-id.
+    // This makes the write idempotent — retrying the same outbox row always
+    // hits the same document (INSERT OR IGNORE semantics via merge:true).
     final collection = _collection(profileId, 'learning_ledger');
     if (collection == null) throw _notAuthenticated;
-    await collection.add({
+    final ulid = data['ulid'] as String?;
+    final ref = ulid != null ? collection.doc(ulid) : collection.doc();
+    await ref.set({
       ..._stripInternalKeys(data),
       'synced_at': FieldValue.serverTimestamp(),
-    });
+    }, SetOptions(merge: true));
   }
 
   @override
@@ -410,11 +425,13 @@ class FirestoreGatewayImpl implements FirestoreGateway {
     if (collection == null) throw _notAuthenticated;
     final batch = _firestore.batch();
     for (final entry in entries) {
-      final doc = collection.doc();
-      batch.set(doc, {
+      // W3.36: use ULID as doc-id for idempotent batch writes.
+      final ulid = entry['ulid'] as String?;
+      final ref = ulid != null ? collection.doc(ulid) : collection.doc();
+      batch.set(ref, {
         ..._stripInternalKeys(entry),
         'synced_at': FieldValue.serverTimestamp(),
-      });
+      }, SetOptions(merge: true));
     }
     await batch.commit();
   }
@@ -468,7 +485,12 @@ class FirestoreGatewayImpl implements FirestoreGateway {
       query = query.startAfter([cursor['firestore_id']]);
     }
 
-    final snapshot = await query.get();
+    // W7.10: convert PERMISSION_DENIED → FirestorePermissionDeniedException.
+    final snapshot = await _guardPermission(
+      () => query.get(),
+      collection: collection,
+      operation: 'read',
+    );
     final rows = snapshot.docs
         .map((doc) => _normalizeRow({...doc.data(), 'firestore_id': doc.id}))
         .toList(growable: false);
@@ -528,7 +550,8 @@ class FirestoreGatewayImpl implements FirestoreGateway {
     required int profileId,
     required Map<String, dynamic> data,
   }) async {
-    final doc = _doc(profileId, 'ui_preferences', 'data');
+    // W3.33: unified into preferences/{scope} — scope = 'ui_preferences'.
+    final doc = _doc(profileId, 'preferences', 'ui_preferences');
     if (doc == null) throw _notAuthenticated;
     await doc.set({
       ..._stripInternalKeys(data),
@@ -556,7 +579,8 @@ class FirestoreGatewayImpl implements FirestoreGateway {
     required int profileId,
     required Map<String, dynamic> data,
   }) async {
-    final collection = _collection(profileId, 'curriculum_import_metadata');
+    // W3.34: renamed collection curriculum_import_metadata → import_metadata.
+    final collection = _collection(profileId, 'import_metadata');
     if (collection == null) throw _notAuthenticated;
     final docId = data['curriculum_id']?.toString() ?? 'default';
     await collection.doc(docId).set({
@@ -788,4 +812,31 @@ class FirestoreGatewayImpl implements FirestoreGateway {
 
   Exception get _notAuthenticated =>
       Exception('FirestoreGatewayImpl: user not authenticated');
+
+  // ── W7.10: PERMISSION_DENIED conversion ────────────────────────────────────
+
+  /// Wrap a Firestore operation and convert Firebase PERMISSION_DENIED errors
+  /// to [FirestorePermissionDeniedException] so callers can catch a typed
+  /// domain exception rather than a raw [FirebaseException].
+  ///
+  /// Any other [FirebaseException] is re-thrown unchanged.
+  static Future<T> _guardPermission<T>(
+    Future<T> Function() op, {
+    String? collection,
+    String? operation,
+  }) async {
+    try {
+      return await op();
+    } on FirebaseException catch (e) {
+      if (e.code == 'permission-denied') {
+        throw FirestorePermissionDeniedException(
+          e.message ?? 'Firestore PERMISSION_DENIED',
+          collection: collection,
+          operation: operation,
+          cause: e,
+        );
+      }
+      rethrow;
+    }
+  }
 }

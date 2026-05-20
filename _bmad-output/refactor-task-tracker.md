@@ -270,7 +270,7 @@ Sync-point trigger tags: `[P1]` `[P2]` `[P3]` `[P4]` `[P5]` `[P6]` `[P7]`
 
 ### Phase 5f · Naming + ConsumerWidget conversions
 - [x] W5.20 (M, S5, done)    Rename *Service classes by intent: ConnectivityService→Gateway, NotificationService→Gateway; rest assessed and logged as follow-up (genuine domain services)
-- [ ] W5.21 (M, S5, pending)    Convert ~20 worst ConsumerStatefulWidget instances to ConsumerWidget + hooks/notifier
+- [x] W5.21 (M, S5, done)    Convert ConsumerStatefulWidget → ConsumerWidget: SchedulerScreen (_isGroupedView → SchedulerGroupedView @riverpod Notifier); other candidates assessed — complex state skipped; follow-up logged
 
 ### Phase 5g · Decision-table replacements
 - [ ] W5.22 (M, S5, pending)    Replace any remaining switch-over-strings → Map&lt;EnumKey, Handler&gt; registries

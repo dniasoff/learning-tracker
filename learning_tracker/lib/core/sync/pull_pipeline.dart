@@ -1,3 +1,7 @@
+import 'dart:async';
+
+import 'package:learning_tracker/core/analytics/analytics_service.dart';
+import 'package:learning_tracker/core/logging/log_events.dart';
 import 'package:learning_tracker/core/sync/firestore_gateway.dart';
 import 'package:learning_tracker/core/sync/merge/entity_merger.dart';
 
@@ -34,11 +38,16 @@ class PullPipeline {
   PullPipeline({
     required FirestoreGateway gateway,
     required MergeDispatcher dispatcher,
+    // W7.6: optional analytics — fires merge_router_halt when the dispatcher
+    // signals halt so the event is visible in analytics dashboards.
+    AnalyticsService? analytics,
   }) : _gateway = gateway,
-       _dispatcher = dispatcher;
+       _dispatcher = dispatcher,
+       _analytics = analytics;
 
   final FirestoreGateway _gateway;
   final MergeDispatcher _dispatcher;
+  final AnalyticsService? _analytics;
 
   static const int defaultPageSize = 200;
 
@@ -160,26 +169,27 @@ class PullPipeline {
   /// gamification_settings, ui_preferences). Wraps the document in a
   /// single-element list so the [MergeDispatcher] receives the standard
   /// `List<Map<String, dynamic>>` contract.
+  // W3.33: three preference docs unified into preferences/{scope}.
   Future<void> pullNotificationSettings({required int profileId}) =>
       _pullDocument(
         profileId: profileId,
-        collection: 'notification_settings',
-        docId: 'preferences',
+        collection: 'preferences',
+        docId: 'notification_settings',
         kind: EntityKind.notificationSettings,
       );
 
   Future<void> pullGamificationSettings({required int profileId}) =>
       _pullDocument(
         profileId: profileId,
-        collection: 'gamification_settings',
-        docId: 'config',
+        collection: 'preferences',
+        docId: 'gamification_settings',
         kind: EntityKind.gamificationSettings,
       );
 
   Future<void> pullUiPreferences({required int profileId}) => _pullDocument(
     profileId: profileId,
-    collection: 'ui_preferences',
-    docId: 'data',
+    collection: 'preferences',
+    docId: 'ui_preferences',
     kind: EntityKind.uiPreferences,
   );
 
@@ -195,11 +205,7 @@ class PullPipeline {
       docId: docId,
     );
     if (doc == null || doc.isEmpty) return;
-    await _dispatcher.dispatch(
-      profileId: profileId,
-      kind: kind,
-      rows: [doc],
-    );
+    await _dispatcher.dispatch(profileId: profileId, kind: kind, rows: [doc]);
   }
 
   Future<void> _pullCollection({
@@ -223,7 +229,19 @@ class PullPipeline {
         kind: kind,
         rows: page.rows,
       );
-      if (outcome == MergeOutcome.halt) return;
+      if (outcome == MergeOutcome.halt) {
+        // W7.6: fire telemetry so the halt is visible in analytics dashboards
+        // (the structured log captures it separately via AppLogger).
+        _analytics?.logEvent(
+          LogEvents.sync.mergeRouterHalt,
+          parameters: {
+            'collection': collection,
+            'entity_kind': kind,
+            'profile_id': profileId,
+          },
+        );
+        return;
+      }
 
       cursor = page.rows.last;
     }
