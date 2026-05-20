@@ -234,3 +234,39 @@ Tracker: _bmad-output/refactor-task-tracker.md
 - Used Riverpod 3's `Notifier<T>` (not removed `StateNotifier`) — `StateNotifierProvider` API unavailable in flutter_riverpod ^3.3.1
 - All new/modified files: zero issues from `dart analyze --fatal-infos`
 - Commit: `e383b0a5` — `refactor(W5.2): split sign_in_screen.dart into controller + form widgets`
+
+---
+
+## S5-godscreens-final (2026-05-20)
+
+### W5.4 — Split profile_picker_screen.dart [DONE]
+- Original: ~1219 LOC (augmented by S3's W6.14 tutor segmentation)
+- Extracted 7 new files under `features/profiles/presentation/widgets/`:
+  - `profile_card.dart` — ProfileCard (was `_ProfileCard`)
+  - `add_profile_card.dart` — AddProfileCard + `_DashedRoundedRectPainter` + `_DashedCirclePainter` + `_drawDashedPath` (was `_AddProfileCard`)
+  - `add_profile_mode_pick_card.dart` — AddProfileModePickCard (was inline public class in screen file)
+  - `profile_grid.dart` — ProfileGrid ConsumerWidget (new; wraps GridView.builder with callbacks)
+  - `my_children_section.dart` — MyChildrenSection (new; section header + ProfileGrid, W6.14)
+  - `tutored_children_section.dart` — TutoredChildrenSection + `_TutoredChildRow` (was `_TutoredChildrenSection` + `_TutoredChildRow`, W6.14 S3)
+  - `add_profile_dialog.dart` — `showAddProfileDialog()` free function (extracted all dialog + creation + PIN-prompt logic)
+- Screen is now a thin ConsumerStatefulWidget orchestrator owning only navigation and manage/rename/delete sheet logic
+- Re-exports `AddProfileModePickCard` for backward compat (was public in screen file)
+- S3's W6.14 "My children" + "Tutored children" segmented sections fully preserved
+- Pre-existing errors: none encountered in touched files
+- Commit: `5b6db6d6`
+
+### W5.5 — Split onboarding_screen.dart [DONE]
+- Original: 1109 LOC (augmented by S3's W6.1-W6.3 three-branch onboarding fork)
+- Extracted 1 new provider file + 5 new step files:
+  - `providers/onboarding_resume_store.dart` — OnboardingResumeStore class + OnboardingSnapshot value class (replaces inline `_tryResumeFromSavedState`/`_saveState`/`_clearSavedState`); `kOnboardingComplete` public const; `kOnboardingSkipped`/`kOnboardingJoinedToTutor` public consts
+  - `steps/onboarding_profile_creation_step.dart` — OnboardingProfileCreationStep ConsumerStatefulWidget + ProfileCreatedCallback typedef; owns entire name/mode/prefs form + profile creation logic
+  - `steps/onboarding_parent_pin_step.dart` — OnboardingParentPinStep ConsumerStatefulWidget + PinStep enum (replaces former `_PinStep` enum from screen); owns enter→confirm PIN flow
+  - `steps/onboarding_add_another_prompt_step.dart` — OnboardingAddAnotherPromptStep (was `_buildAddAnotherPrompt`)
+  - `steps/onboarding_handoff_step.dart` — OnboardingHandoffStep (was `_buildHandoff`)
+  - `steps/onboarding_done_step.dart` — OnboardingDoneStep (was `_buildDone`)
+- Screen becomes thin OnboardingPhaseRouter orchestrator (~260 LOC): owns `_ScreenPhase` enum, phase transitions, save/restore delegation to OnboardingResumeStore, and navigation
+- `_buildPermissionPrompt` extracted into `_PermissionPromptPhase StatefulWidget` (self-contained `addPostFrameCallback` side-effect)
+- `_buildIntentChooser` / W6.1 three-branch fork fully preserved (delegates to `OnboardingIntentStep` from account/onboarding)
+- `kOnboardingComplete` re-exported from screen file for backward compat with 6 consumers
+- Pre-existing errors: none encountered in touched files
+- Commit: `272343be`

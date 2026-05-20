@@ -243,8 +243,8 @@ Sync-point trigger tags: `[P1]` `[P2]` `[P3]` `[P4]` `[P5]` `[P6]` `[P7]`
 - [x] W5.1  (L, S5, done)    app_intro_screen.dart (1370 LOC) → IntroScaffold + IntroPageView + 3 page widgets + IntroPageIndicator + GlowingCtaButton; commit cd365ca1
 - [x] W5.2  (L, S5, done)    sign_in_screen.dart (1237 LOC) → SignInController:Notifier&lt;SignInState&gt; + SignInForm + SignInModeCard + SignInActions + EmailVerificationDialog; commit e383b0a5
 - [x] W5.3  (L, S5, done)    gamification_screen.dart (1127 LOC) → 11 private classes promoted to widgets/gamification/
-- [ ] W5.4  (L, S5, pending)    profile_picker_screen.dart (1059 LOC) → ConsumerWidget + ProfileGrid + AddProfileDialog + segmented sections (tutored in W6.14)
-- [ ] W5.5  (L, S5, pending)    onboarding_screen.dart (1030 LOC) → OnboardingPhaseRouter + per-phase step widgets + OnboardingResumeStore
+- [x] W5.4  (L, S5, done)    profile_picker_screen.dart (1059 LOC) → ConsumerWidget + ProfileGrid + AddProfileDialog + segmented sections (tutored in W6.14); commit 5b6db6d6
+- [x] W5.5  (L, S5, done)    onboarding_screen.dart (1030 LOC) → OnboardingPhaseRouter + per-phase step widgets + OnboardingResumeStore; commit 272343be
 - [x] W5.6  (L, S5, done)    reward_configuration_screen.dart (1004 LOC) → RewardConfigController:Notifier&lt;RewardForm&gt; + RewardCard + sub-widgets
 
 ### Phase 5b · Sealed-union state refactors
