@@ -8,6 +8,7 @@ import 'package:google_sign_in/google_sign_in.dart'
 import 'package:internet_connection_checker/internet_connection_checker.dart';
 import 'package:learning_tracker/core/database/daos/user_profile_dao.dart';
 import 'package:learning_tracker/core/database/registry/device_registry_database.dart';
+import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/providers/registry_provider.dart';
@@ -607,6 +608,23 @@ class SignInController extends Notifier<SignInState> {
     }
   }
 
+  /// Re-sends the email-verification message, swallowing failures into a
+  /// logged warning instead of the previous silent empty-catch.
+  ///
+  /// Extracted from the inline `onSendAgain` closure so the catch path is
+  /// directly testable without driving the full dialog UI.
+  Future<void> resendVerificationEmail() async {
+    try {
+      await _ref.read(authRepositoryProvider).sendEmailVerification();
+    } catch (e, stackTrace) {
+      AppLogger.instance.warning(
+        event: 'send_verification_email_failed',
+        exception: e,
+        stackTrace: stackTrace,
+      );
+    }
+  }
+
   /// Builds the email-verification callback to pass to [showEmailVerificationDialog].
   Future<bool> Function(String email, AppLocalizations l10n)
   buildVerificationCallback(BuildContext context) {
@@ -614,11 +632,7 @@ class SignInController extends Notifier<SignInState> {
       context: context,
       email: email,
       l10n: l10n,
-      onSendAgain: () async {
-        try {
-          await _ref.read(authRepositoryProvider).sendEmailVerification();
-        } catch (_) {}
-      },
+      onSendAgain: resendVerificationEmail,
       onVerified: () async {
         return await _tryApplyPendingVerificationCode() ||
             await _refreshAndCheckVerified() ||
