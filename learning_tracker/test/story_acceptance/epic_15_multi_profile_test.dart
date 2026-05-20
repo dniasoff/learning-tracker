@@ -10,7 +10,7 @@ import 'package:learning_tracker/core/enums/cross_profile_scope.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/features/scheduler/domain/services/learning_program_service.dart';
-import 'package:learning_tracker/features/content_browsing/domain/services/content_version_check_service.dart';
+// ContentVersionCheckService removed — content is now bundled
 import 'package:learning_tracker/features/gamification/domain/services/points_service.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/learning_ledger_repository.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/track_repository.dart';
@@ -820,16 +820,8 @@ void main() {
       group('AC: Version check on launch detects newer content', () {
         test(
           'ContentVersionCheckService returns empty (bundled content)',
-          () async {
-            final versionCheckService = ContentVersionCheckService();
-
-            final result = await versionCheckService.checkForUpdates([
-              CurriculumId.bavli,
-              CurriculumId.mishnayos,
-            ]);
-
-            expect(result, isEmpty);
-          },
+          skip: 'ContentVersionCheckService removed — content is now bundled',
+          () async {},
         );
       });
 
@@ -845,17 +837,11 @@ void main() {
       group(
         'AC: Restore/reinstall re-fetches content for active curricula',
         () {
-          test('checkForUpdates returns empty for bundled content', () async {
-            final versionCheckService = ContentVersionCheckService();
-
-            final result = await versionCheckService.checkForUpdates([
-              CurriculumId.bavli,
-              CurriculumId.mishnayos,
-              CurriculumId.yerushalmi,
-            ]);
-
-            expect(result, isEmpty);
-          });
+          test(
+            'checkForUpdates returns empty for bundled content',
+            skip: 'ContentVersionCheckService removed — content is now bundled',
+            () async {},
+          );
         },
       );
 
@@ -1586,7 +1572,7 @@ void main() {
           curriculum.storageKey,
         );
         expect(stages, hasLength(1));
-        expect(stages.first.scheduleType, 'delay');
+        expect(stages.first.schedule, contains('"type":"delay"'));
       });
 
       test('weekly stage can be created with days_of_week', () async {
@@ -1597,7 +1583,7 @@ void main() {
             trackId: trackId,
             stageOrder: 2,
             stageName: 'Weekly Review',
-            schedule: Value('{"type":"delay","delay_days":0}'),
+            schedule: Value('{"type":"weekly","days_of_week":[5,6]}'),
           ),
         );
 
@@ -1605,8 +1591,8 @@ void main() {
           curriculum.storageKey,
         );
         expect(stages, hasLength(1));
-        expect(stages.first.scheduleType, 'weekly');
-        expect(stages.first.daysOfWeek, '[5, 6]');
+        expect(stages.first.schedule, contains('"type":"weekly"'));
+        expect(stages.first.schedule, contains('"days_of_week"'));
       });
 
       test('rolling stage can be created with window size', () async {
@@ -1617,7 +1603,7 @@ void main() {
             trackId: trackId,
             stageOrder: 3,
             stageName: 'Rolling Back-20',
-            schedule: Value('{"type":"delay","delay_days":0}'),
+            schedule: Value('{"type":"rolling","rolling_window_size":20}'),
           ),
         );
 
@@ -1625,8 +1611,8 @@ void main() {
           curriculum.storageKey,
         );
         expect(stages, hasLength(1));
-        expect(stages.first.scheduleType, 'rolling');
-        expect(stages.first.rollingWindowSize, 20);
+        expect(stages.first.schedule, contains('"type":"rolling"'));
+        expect(stages.first.schedule, contains('"rolling_window_size":20'));
       });
     });
 
@@ -1659,12 +1645,10 @@ void main() {
         );
         expect(stages, hasLength(2));
         for (final stage in stages) {
-          expect(stage.scheduleType, 'delay');
-          expect(stage.daysOfWeek, isNull);
-          expect(stage.rollingWindowSize, isNull);
+          expect(stage.schedule, contains('"type":"delay"'));
         }
         // delayDays preserved
-        expect(stages[1].delayDays, 1);
+        expect(stages[1].schedule, contains('"delay_days":1'));
       });
     });
 
@@ -2084,12 +2068,12 @@ void main() {
         expect(stages.length, 4);
         expect(stages[0].stageName, 'לימוד');
         expect(stages[1].stageName, 'חזרה יומית');
-        expect(stages[1].delayDays, 1);
+        expect(stages[1].schedule, contains('"delay_days":1'));
         expect(stages[2].stageName, 'חזרה שבועית');
-        expect(stages[2].scheduleType, 'weekly');
+        expect(stages[2].schedule, contains('"type":"weekly"'));
         expect(stages[3].stageName, 'חזרה מחזורית');
-        expect(stages[3].scheduleType, 'rolling');
-        expect(stages[3].rollingWindowSize, 20);
+        expect(stages[3].schedule, contains('"type":"rolling"'));
+        expect(stages[3].schedule, contains('"rolling_window_size":20'));
       });
 
       test('stores preset ID in profile_programs', () async {
@@ -2143,12 +2127,12 @@ void main() {
         );
         expect(stages.length, 3); // לימוד + 2 custom
         expect(stages[0].stageName, 'לימוד');
-        expect(stages[0].delayDays, 0);
+        expect(stages[0].schedule, contains('"delay_days":0'));
         expect(stages[1].stageName, 'Chazara 1');
-        expect(stages[1].delayDays, 1);
-        expect(stages[1].scheduleType, 'delay');
+        expect(stages[1].schedule, contains('"delay_days":1'));
+        expect(stages[1].schedule, contains('"type":"delay"'));
         expect(stages[2].stageName, 'Chazara 2');
-        expect(stages[2].delayDays, 7);
+        expect(stages[2].schedule, contains('"delay_days":7'));
       });
 
       test('creates weekly schedule rounds with days of week', () async {
@@ -2173,8 +2157,9 @@ void main() {
         );
         expect(stages.length, 2); // לימוד + 1 weekly
         expect(stages[1].stageName, 'Chazara 1');
-        expect(stages[1].scheduleType, 'weekly');
-        final days = jsonDecode(stages[1].daysOfWeek!) as List;
+        expect(stages[1].schedule, contains('"type":"weekly"'));
+        final days =
+            (jsonDecode(stages[1].schedule) as Map)['days_of_week'] as List;
         expect(days, containsAll([5, 6]));
       });
     });
@@ -2196,7 +2181,7 @@ void main() {
         expect(stages.length, 1);
         expect(stages[0].stageName, 'לימוד');
         expect(stages[0].stageOrder, 1);
-        expect(stages[0].delayDays, 0);
+        expect(stages[0].schedule, contains('"delay_days":0'));
       });
     });
 

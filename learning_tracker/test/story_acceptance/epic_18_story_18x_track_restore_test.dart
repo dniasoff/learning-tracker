@@ -4,10 +4,10 @@
 @Tags(['epic_18'])
 library;
 
+import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:test/test.dart';
 
 import '../helpers/drift_memory.dart' show seedProfile;
@@ -28,32 +28,28 @@ void main() {
       test('create → soft-delete → recreate returns same trackId', () async {
         const profileId = 1;
         const curriculum = CurriculumId.mishnayos;
-        const trackType = TrackType.personal;
 
         // Create
         final id1 = await db.trackDao.restoreOrCreate(
           profileId: profileId,
           curriculumId: curriculum,
-          trackType: trackType,
         );
 
         // Soft-delete
         await db.trackDao.deleteTrackAndData(id1);
         final deleted = await db.trackDao.getTrackById(id1);
-        expect(deleted?.deletedAt, isNotNull);
+        expect(deleted?.state, isNot('active'));
 
         // Recreate — must return same id, no UNIQUE violation
         final id2 = await db.trackDao.restoreOrCreate(
           profileId: profileId,
           curriculumId: curriculum,
-          trackType: trackType,
         );
         expect(id2, equals(id1));
 
         // Track must be active again
         final restored = await db.trackDao.getTrackById(id2);
-        expect(restored?.isActive, isTrue);
-        expect(restored?.deletedAt, isNull);
+        expect(restored?.state, 'active');
       });
 
       test(
@@ -61,24 +57,21 @@ void main() {
         () async {
           const profileId = 1;
           const curriculum = CurriculumId.mishnayos;
-          const trackType = TrackType.personal;
 
           final id1 = await db.trackDao.restoreOrCreate(
             profileId: profileId,
             curriculumId: curriculum,
-            trackType: trackType,
           );
 
           // Call again without deleting — must return same id
           final id2 = await db.trackDao.restoreOrCreate(
             profileId: profileId,
             curriculumId: curriculum,
-            trackType: trackType,
           );
 
           expect(id2, equals(id1));
           final track = await db.trackDao.getTrackById(id2);
-          expect(track?.isActive, isTrue);
+          expect(track?.state, 'active');
         },
       );
 
@@ -87,13 +80,11 @@ void main() {
         () async {
           const profileId = 1;
           const curriculum = CurriculumId.mishnayos;
-          const trackType = TrackType.personal;
 
           // Create track and add a completion
           final trackId = await db.trackDao.restoreOrCreate(
             profileId: profileId,
             curriculumId: curriculum,
-            trackType: trackType,
           );
           await db
               .into(db.completionEvents)
@@ -103,7 +94,7 @@ void main() {
                   curriculumId: curriculum.storageKey,
                   sefariaRef: 'Mishnah Berakhot 1',
                   stageId: 1,
-                  trackType: trackType.storageKey,
+                  trackType: 'personal',
                   trackId: Value(trackId),
                   eventTimestamp: DateTime.utc(2026, 5, 1),
                 ),

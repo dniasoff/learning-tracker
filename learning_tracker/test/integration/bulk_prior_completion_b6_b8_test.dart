@@ -188,7 +188,6 @@ Future<void> _seedStagesWithSuperseded(
           stageOrder: count + 1,
           stageName: 'Old Chazara (superseded)',
           schedule: Value('{"type":"delay","delay_days":0}'),
-          supersededAt: Value(DateTime.utc(2026, 1, 1)),
         ),
       );
 }
@@ -430,7 +429,6 @@ void main() {
                   trackId: Value(trackId),
                   points: const Value(0),
                   eventTimestamp: sentinel,
-                  priorMarkOnly: const Value(true),
                 ),
               );
         }
@@ -499,7 +497,6 @@ void main() {
                 trackId: Value(trackId),
                 points: const Value(0),
                 eventTimestamp: sentinel,
-                priorMarkOnly: const Value(true),
               ),
             );
       }
@@ -552,7 +549,6 @@ void main() {
               trackId: Value(trackId),
               points: const Value(0),
               eventTimestamp: sentinel,
-              priorMarkOnly: const Value(true),
             ),
           );
       // Live-learning row for stage 2 (non-sentinel, priorMarkOnly = false
@@ -624,7 +620,6 @@ void main() {
               trackId: Value(trackId),
               points: const Value(0),
               eventTimestamp: sentinel,
-              priorMarkOnly: const Value(true),
             ),
           );
 
@@ -745,7 +740,6 @@ void main() {
                   trackId: Value(tid),
                   points: const Value(0),
                   eventTimestamp: sentinel,
-                  priorMarkOnly: const Value(true),
                 ),
               );
         }
@@ -850,7 +844,6 @@ void main() {
                 trackId: Value(tid),
                 points: const Value(0),
                 eventTimestamp: kBulkPriorSentinelDate,
-                priorMarkOnly: const Value(true),
               ),
             );
 
@@ -1034,7 +1027,6 @@ void main() {
                 trackId: Value(trackId),
                 points: const Value(0),
                 eventTimestamp: kBulkPriorSentinelDate,
-                priorMarkOnly: const Value(true),
               ),
             );
 
@@ -1137,7 +1129,7 @@ void main() {
           profileId: profileId,
         );
 
-        // Verify the prior-mark row has priorMarkOnly = true.
+        // Verify the prior-mark row has sentinel timestamp (replaces priorMarkOnly).
         final afterPriorMark =
             await (db.select(db.completionEvents)..where(
                   (t) =>
@@ -1147,9 +1139,9 @@ void main() {
                 ))
                 .getSingle();
         expect(
-          afterPriorMark.priorMarkOnly,
-          isTrue,
-          reason: 'Bulk-prior-mark must set priorMarkOnly = true',
+          afterPriorMark.eventTimestamp,
+          kBulkPriorSentinelDate,
+          reason: 'Bulk-prior-mark must use sentinel timestamp',
         );
 
         // Step 2: genuine in-app learning via CompletionWriter.commit().
@@ -1170,7 +1162,7 @@ void main() {
           ),
         );
 
-        // Verify the row was upgraded: priorMarkOnly = false.
+        // Verify the row was upgraded: timestamp is no longer the sentinel.
         final afterRealLearning =
             await (db.select(db.completionEvents)..where(
                   (t) =>
@@ -1180,10 +1172,10 @@ void main() {
                 ))
                 .getSingle();
         expect(
-          afterRealLearning.priorMarkOnly,
-          isFalse,
+          afterRealLearning.eventTimestamp,
+          isNot(kBulkPriorSentinelDate),
           reason:
-              'CompletionWriter must clear priorMarkOnly when real learning '
+              'CompletionWriter must update eventTimestamp when real learning '
               'hits an existing prior-mark row',
         );
         expect(

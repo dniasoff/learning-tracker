@@ -76,19 +76,29 @@ db.StageDefinition _makeRow({
   String scheduleType = 'delay',
   String? daysOfWeek,
   int? rollingWindowSize,
-}) => db.StageDefinition(
-  id: id,
-  profileId: 0,
-  curriculumId: 'mishnayos',
-  trackId: 1,
-  stageOrder: stageOrder,
-  stageName: stageName,
-  delayDays: delayDays,
-  isDefault: isDefault,
-  scheduleType: scheduleType,
-  daysOfWeek: daysOfWeek,
-  rollingWindowSize: rollingWindowSize,
-);
+}) {
+  // Build the JSON schedule string from the old-style quartet parameters.
+  String scheduleJson;
+  if (scheduleType == 'weekly') {
+    scheduleJson = '{"type":"weekly","days_of_week":${daysOfWeek ?? '[]'}}';
+  } else if (scheduleType == 'rolling') {
+    scheduleJson =
+        '{"type":"rolling","rolling_window_size":${rollingWindowSize ?? 0}}';
+  } else {
+    scheduleJson = '{"type":"delay","delay_days":$delayDays}';
+  }
+  return db.StageDefinition(
+    id: id,
+    profileId: 0,
+    curriculumId: 'mishnayos',
+    trackId: 1,
+    stageOrder: stageOrder,
+    stageName: stageName,
+    isDefault: isDefault,
+    schedule: scheduleJson,
+    updatedAt: DateTime.utc(2026, 1, 1),
+  );
+}
 
 void main() {
   const curriculum = CurriculumId.mishnayos;
@@ -163,8 +173,8 @@ void main() {
                 () => mockStageDao.insertStageDefinition(captureAny()),
               ).captured.single
               as db.StageDefinitionsCompanion;
-      expect(captured.scheduleType.value, 'delay');
-      expect(captured.delayDays.value, 14);
+      expect(captured.schedule.value, contains('"type":"delay"'));
+      expect(captured.schedule.value, contains('"delay_days":14'));
     });
 
     test(
@@ -199,8 +209,8 @@ void main() {
                   () => mockStageDao.insertStageDefinition(captureAny()),
                 ).captured.single
                 as db.StageDefinitionsCompanion;
-        expect(captured.scheduleType.value, 'weekly');
-        expect(captured.daysOfWeek.value, '[1,3,5]');
+        expect(captured.schedule.value, contains('"type":"weekly"'));
+        expect(captured.schedule.value, contains('"days_of_week"'));
       },
     );
 
@@ -236,8 +246,8 @@ void main() {
                   () => mockStageDao.insertStageDefinition(captureAny()),
                 ).captured.single
                 as db.StageDefinitionsCompanion;
-        expect(captured.scheduleType.value, 'rolling');
-        expect(captured.rollingWindowSize.value, 10);
+        expect(captured.schedule.value, contains('"type":"rolling"'));
+        expect(captured.schedule.value, contains('"rolling_window_size":10'));
       },
     );
 

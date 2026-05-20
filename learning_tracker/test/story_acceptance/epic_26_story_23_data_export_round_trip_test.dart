@@ -141,7 +141,9 @@ void main() {
           .insert(
             StreakEventsCompanion.insert(
               profileId: pid,
-              currentStreak: const Value(3),
+              eventType: 'completion',
+              dayUtc: DateTime.utc(2026, 3, 1),
+              eventTimestamp: DateTime.utc(2026, 3, 1, 18),
             ),
           );
 
@@ -348,28 +350,34 @@ void main() {
           ),
         );
 
-        // Streaks for both profiles
-        await db
-            .into(db.streakEvents)
-            .insert(
-              StreakEventsCompanion.insert(
-                profileId: acct1Id,
-                currentStreak: const Value(7),
-                maxStreak: const Value(12),
-                lastCompletionDate: Value(DateTime(2026, 3, 1)),
-              ),
-            );
-
-        await db
-            .into(db.streakEvents)
-            .insert(
-              StreakEventsCompanion.insert(
-                profileId: acct2Id,
-                currentStreak: const Value(3),
-                maxStreak: const Value(5),
-                lastCompletionDate: Value(DateTime(2026, 3, 2)),
-              ),
-            );
+        // Streaks for both profiles — insert streak events (7 consecutive
+        // days ending 2026-03-01 for alice, 3 days ending 2026-03-02 for bob)
+        for (var i = 6; i >= 0; i--) {
+          final day = DateTime.utc(2026, 3, 1).subtract(Duration(days: i));
+          await db
+              .into(db.streakEvents)
+              .insert(
+                StreakEventsCompanion.insert(
+                  profileId: acct1Id,
+                  eventType: 'completion',
+                  dayUtc: day,
+                  eventTimestamp: day.copyWith(hour: 18),
+                ),
+              );
+        }
+        for (var i = 2; i >= 0; i--) {
+          final day = DateTime.utc(2026, 3, 2).subtract(Duration(days: i));
+          await db
+              .into(db.streakEvents)
+              .insert(
+                StreakEventsCompanion.insert(
+                  profileId: acct2Id,
+                  eventType: 'completion',
+                  dayUtc: day,
+                  eventTimestamp: day.copyWith(hour: 18),
+                ),
+              );
+        }
 
         // Goals for profile 1
         await db
@@ -515,9 +523,12 @@ void main() {
         );
 
         // ── Verify profile isolation: each profile's data is scoped ──
-        // Streaks: one per profile, with correct counts
+        // Streaks: event log per profile, with correct event counts
         final streakRows = await db.select(db.streakEvents).get();
-        final streaksByProfile = {for (final s in streakRows) s.profileId: s};
+        final streakEventsByProfile = <int, List<dynamic>>{};
+        for (final s in streakRows) {
+          streakEventsByProfile.putIfAbsent(s.profileId, () => []).add(s);
+        }
 
         // Profile IDs are re-inserted with auto-increment from 1
         // The two accounts get IDs (they may be different from original
@@ -525,16 +536,16 @@ void main() {
         final restoredAccounts = await db.select(db.accounts).get();
         expect(restoredAccounts, hasLength(2));
 
-        // Each account must have its streak row
+        // Each account must have streak event rows
         for (final acct in restoredAccounts) {
           expect(
-            streaksByProfile.containsKey(acct.id),
+            streakEventsByProfile.containsKey(acct.id),
             isTrue,
-            reason: 'Account ${acct.displayName} must have a streak row',
+            reason: 'Account ${acct.displayName} must have streak event rows',
           );
         }
 
-        // Verify streak values are preserved
+        // Verify streak event counts are preserved (7 events for Alice, 3 for Bob)
         final aliceAcct = restoredAccounts.firstWhere(
           (a) => a.displayName == 'Alice',
         );
@@ -542,10 +553,8 @@ void main() {
           (a) => a.displayName == 'Bob',
         );
 
-        expect(streaksByProfile[aliceAcct.id]!.currentStreak, equals(7));
-        expect(streaksByProfile[aliceAcct.id]!.maxStreak, equals(12));
-        expect(streaksByProfile[bobAcct.id]!.currentStreak, equals(3));
-        expect(streaksByProfile[bobAcct.id]!.maxStreak, equals(5));
+        expect(streakEventsByProfile[aliceAcct.id]!.length, equals(7));
+        expect(streakEventsByProfile[bobAcct.id]!.length, equals(3));
 
         // Completions: profile-scoped
         final allCompletions = await db.completionDao
@@ -630,7 +639,7 @@ void main() {
                 sefariaRef: 'Berakhot 2a',
                 stageId: 1,
                 trackType: 'programmed',
-                trackId: Value(Value<int?>(trackId)),
+                trackId: Value(trackId),
                 points: const Value(10),
                 eventTimestamp: DateTime.utc(2026, 2, 1),
               ),
@@ -644,7 +653,7 @@ void main() {
                 sefariaRef: 'Berakhot 3a',
                 stageId: 1,
                 trackType: 'programmed',
-                trackId: Value(Value<int?>(trackId)),
+                trackId: Value(trackId),
                 points: const Value(5),
                 eventTimestamp: DateTime.utc(2026, 2, 2),
                 purgedAt: Value(purgedAt),

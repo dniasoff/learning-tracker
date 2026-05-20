@@ -467,9 +467,14 @@ void main() {
             // streak row. Both should commit successfully.
             await db.transaction(() async {
               await db.outboxDao.insertOutboxRow(_completionRow());
-              await db
-                  .into(db.streakEvents)
-                  .insert(StreakEventsCompanion.insert(profileId: 1));
+              await db.into(db.streakEvents).insert(
+                StreakEventsCompanion.insert(
+                  profileId: 1,
+                  eventType: 'completion',
+                  dayUtc: DateTime.utc(2026, 1, 1),
+                  eventTimestamp: DateTime.utc(2026, 1, 1, 18),
+                ),
+              );
             });
 
             final outboxRows = await db.select(db.outbox).get();
@@ -1807,34 +1812,41 @@ void main() {
 
       // AC: BaseDao<T> is a Dart mixin offering getById, getByProfile,
       //     count, exists.
+      // Use goalDao (which mixes in BaseDao) as the exemplar since
+      // StreakEventDao no longer uses BaseDao (event log, not snapshot).
       test(
         'BaseDao<T> mixin provides count/exists/getById/getByProfile',
         () async {
-          await db.streakEventDao.upsertStreakByProfile(
-            1,
-            StreakEventsCompanion.insert(
+          // Insert a track for profile 1 first (goals need a track FK)
+          final trackId1 = await db.into(db.curriculumTracks).insertReturning(
+            CurriculumTracksCompanion.insert(
               profileId: 1,
-              currentStreak: const Value(5),
+              curriculumId: 'mishnayos',
+              stateChangedAt: DateTime.utc(2026, 1, 1),
+              activatedAt: DateTime.utc(2026, 1, 1),
             ),
-          );
-          await db.streakEventDao.upsertStreakByProfile(
-            2,
-            StreakEventsCompanion.insert(
-              profileId: 2,
-              currentStreak: const Value(3),
+          ).then((r) => r.id);
+
+          await db.into(db.goals).insert(
+            GoalsCompanion.insert(
+              profileId: 1,
+              curriculumId: 'mishnayos',
+              trackId: trackId1,
+              createdAt: DateTime.utc(2026, 1, 1),
+              updatedAt: DateTime.utc(2026, 1, 1),
             ),
           );
 
-          expect(await db.streakEventDao.count(profileId: 1), 1);
-          expect(await db.streakEventDao.exists(profileId: 1), isTrue);
-          expect(await db.streakEventDao.count(profileId: 99), 0);
-          expect(await db.streakEventDao.exists(profileId: 99), isFalse);
+          expect(await db.goalDao.count(profileId: 1), 1);
+          expect(await db.goalDao.exists(profileId: 1), isTrue);
+          expect(await db.goalDao.count(profileId: 99), 0);
+          expect(await db.goalDao.exists(profileId: 99), isFalse);
 
-          final byProfile = await db.streakEventDao.getByProfile(1);
+          final byProfile = await db.goalDao.getByProfile(1);
           expect(byProfile, hasLength(1));
           expect(byProfile.first.profileId, 1);
 
-          final byId = await db.streakEventDao.getById(byProfile.first.id);
+          final byId = await db.goalDao.getById(byProfile.first.id);
           expect(byId, isNotNull);
           expect(byId!.profileId, 1);
         },

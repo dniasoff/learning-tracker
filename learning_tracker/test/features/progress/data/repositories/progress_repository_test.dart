@@ -1,4 +1,5 @@
 import 'package:drift/drift.dart' as drift;
+import 'package:drift/drift.dart' show Value;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';

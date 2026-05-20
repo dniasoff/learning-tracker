@@ -10,6 +10,7 @@
 ///   - _parseScheduleType / _parseDaysOfWeek (exercised via custom rounds)
 library;
 
+import 'package:drift/drift.dart' show Value;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
@@ -146,7 +147,7 @@ void main() {
       expect(stages, hasLength(1));
       expect(stages.first.stageOrder, 1);
       expect(stages.first.stageName, 'לימוד');
-      expect(stages.first.delayDays, 0);
+      expect(stages.first.schedule, contains('"delay_days":0'));
     });
 
     test('replaces existing stages', () async {
@@ -249,7 +250,7 @@ void main() {
 
       expect(stages[1].stageName, 'Chazarah 1');
       expect(stages[1].stageOrder, 2);
-      expect(stages[1].delayDays, 7);
+      expect(stages[1].schedule, contains('"delay_days":7'));
 
       expect(stages[2].stageName, 'Chazarah 2');
       expect(stages[2].stageOrder, 3);
@@ -296,7 +297,7 @@ void main() {
 
       final stages = await db.stageDao.getStagesByTrack(trackId);
       stages.sort((a, b) => a.stageOrder.compareTo(b.stageOrder));
-      expect(stages[1].scheduleType, ScheduleType.rolling.storageKey);
+      expect(stages[1].schedule, contains('"type":"rolling"'));
     });
   });
 
@@ -325,9 +326,9 @@ void main() {
       expect(stages, hasLength(3)); // Learn + 2 rounds
       expect(stages[0].stageName, 'לימוד');
       expect(stages[1].stageName, 'Chazara A');
-      expect(stages[1].delayDays, 1);
+      expect(stages[1].schedule, contains('"delay_days":1'));
       expect(stages[2].stageName, 'Chazara B');
-      expect(stages[2].delayDays, 7);
+      expect(stages[2].schedule, contains('"delay_days":7'));
     });
 
     test('stage orders are sequential starting from 1', () async {
@@ -369,8 +370,8 @@ void main() {
         final stages = await db.stageDao.getStagesByTrack(trackId);
         expect(stages, hasLength(2));
         expect(stages[1].stageName, 'Weekly Review');
-        // scheduleType stored as storageKey string
-        expect(stages[1].scheduleType, ScheduleType.weekly.storageKey);
+        // scheduleType stored in JSON schedule column
+        expect(stages[1].schedule, contains('"type":"weekly"'));
       },
     );
 
@@ -414,7 +415,7 @@ void main() {
       expect(stages[0].stageOrder, 1);
       expect(stages[1].stageName, 'חזרה א');
       expect(stages[1].stageOrder, 2);
-      expect(stages[1].delayDays, 3);
+      expect(stages[1].schedule, contains('"delay_days":3'));
       expect(stages[2].stageName, 'חזרה ב');
       expect(stages[2].stageOrder, 3);
     });

@@ -230,17 +230,18 @@ void main() {
             ),
           );
 
-      // Streaks
-      await db
-          .into(db.streakEvents)
-          .insert(
-            StreakEventsCompanion.insert(
-              profileId: 0,
-              currentStreak: const Value(5),
-              maxStreak: const Value(12),
-              lastCompletionDate: Value(DateTime(2026, 3, 17)),
-            ),
-          );
+      // Streaks — insert 5 consecutive events ending 2026-03-16 (yesterday of 3/17)
+      for (var i = 4; i >= 0; i--) {
+        final day = DateTime.utc(2026, 3, 16).subtract(Duration(days: i));
+        await db.into(db.streakEvents).insert(
+          StreakEventsCompanion.insert(
+            profileId: 0,
+            eventType: 'completion',
+            dayUtc: day,
+            eventTimestamp: day.copyWith(hour: 18),
+          ),
+        );
+      }
 
       // Point configs
       await db
@@ -481,10 +482,9 @@ void main() {
         final stages = await db.stageDao.getAllStageDefinitions();
         expect(stages.length, equals(2));
 
-        final streak = await db.streakEventDao.getStreak();
-        expect(streak, isNotNull);
-        expect(streak!.currentStreak, equals(5));
-        expect(streak.maxStreak, equals(12));
+        final streakEvents = await db.streakEventDao.getEventsByProfile(0);
+        expect(streakEvents, isNotEmpty);
+        expect(streakEvents.length, equals(5));
 
         final bookmarks = await db.bookmarkDao.getAllBookmarks();
         expect(bookmarks.length, equals(1));
@@ -584,7 +584,7 @@ void main() {
         isEmpty,
       );
       expect(await db.goalDao.getAllGoals(), isEmpty);
-      expect(await db.streakEventDao.getStreak(), isNull);
+      expect(await db.streakEventDao.getEventsByProfile(0), isEmpty);
 
       // Import
       await service.importData(exported);
@@ -598,7 +598,10 @@ void main() {
       );
       expect((await db.goalDao.getAllGoals()).length, equals(1));
       expect((await db.stageDao.getAllStageDefinitions()).length, equals(2));
-      expect((await db.streakEventDao.getStreak())?.currentStreak, equals(5));
+      expect(
+        (await db.streakEventDao.getEventsByProfile(0)).length,
+        equals(5),
+      );
       expect((await db.select(db.pointConfigs).get()).length, equals(1));
       expect((await db.bookmarkDao.getAllBookmarks()).length, equals(1));
       expect(
