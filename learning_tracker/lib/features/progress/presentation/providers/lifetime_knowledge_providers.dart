@@ -20,9 +20,11 @@ import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/calendar_position_providers.dart';
+import 'package:learning_tracker/features/learning/domain/entities/completion_tier_filter.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/completion_writer_providers.dart';
 import 'package:learning_tracker/features/progress/domain/models/lifetime_knowledge.dart';
 import 'package:learning_tracker/features/progress/domain/services/lifetime_tree_builder.dart';
+import 'package:learning_tracker/features/tracks/domain/services/track_progress_service.dart';
 
 // ---------------------------------------------------------------------------
 // Re-exports (backward compatibility — consumers continue to import from here)
@@ -190,16 +192,19 @@ final trackDualProgressMetricsProvider = FutureProvider.autoDispose
         final denominator = leaves.length;
         if (denominator == 0) continue;
 
-        final sessionCompletions = await db.completionDao
-            .getCompletionsByTrackAndProfileSince(
-              track.id,
-              profileId,
-              track.activatedAt,
-            );
-        final currentCycleRefs = sessionCompletions
-            .map((c) => c.sefariaRef)
-            .toSet();
-        final currentCyclePct = currentCycleRefs.length / denominator;
+        // Layer 3 migration: use TrackProgressService with trackAchievement tier.
+        // since: track.activatedAt preserves the time-gated "this cycle" semantics.
+        // requireAllStages: false matches the old distinct-refs-only count.
+        // trackAchievement excludes lifetimeOnly rows (correct per B1 policy).
+        final progressSvc = ref.read(trackProgressServiceProvider);
+        final currentCyclePct = await progressSvc.completionPercent(
+          trackId: track.id,
+          profileId: profileId,
+          tier: CompletionTierFilter.trackAchievement,
+          totalItems: denominator,
+          requireAllStages: false,
+          since: track.activatedAt,
+        );
 
         final allTrackCompletions = await db.completionDao
             .getCompletionsByTrackAndProfile(track.id, profileId);
