@@ -77,3 +77,11 @@ Tracker: `_bmad-output/refactor-task-tracker.md`
 - next: Daniel to: (1) run 14-item manual smoke checklist; (2) decide Option A/B/C for remaining test errors; (3) once CI passes, tag v1.0 pre-launch milestone.
 
 ---
+
+## [2026-05-20] V5-B — W3+W4 task-truth verification complete
+
+- stream: V5-B | sync-point: — | review: V5-B | task: W3.1-W3.47, W4.1-W4.35
+- detail: 82 tasks verified across W3 (47) + W4 (35). B1/B2/B3 all PASS (25+20+14 tests). 4 tasks demoted done→pending: W3.18 (merger codec migration partial — goal_merger + learning_ledger_merger still use raw FirestoreCodec, not typed codecs), W3.19 (schemaVersion=23 not 1 per verification matrix; onUpgrade correctly absent), W3.44 (goals DB table not collapsed — goalType/paceValue/pacePeriod/targetDate columns still present), W4.16 (TrackDualProgressCalculator class missing; only TrackDualProgressMetric data class exists). 78 tasks confirmed true. Report: `_bmad-output/refactor-v5-b-truth-report.md`. Tracker updated.
+- next: Fix 4 demoted tasks before V6 final smoke.
+
+---

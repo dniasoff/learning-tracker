@@ -28,7 +28,7 @@ Sync-point trigger tags: `[P1]` `[P2]` `[P3]` `[P4]` `[P5]` `[P6]` `[P7]`
 - [x] W1.3  (M, S1, done)    Split main.dart bootstrap into lib/app/bootstrap/{firebase, crashlytics, logger, analytics, seed, account, notifications}_bootstrap.dart
 - [x] W1.4  (S, S1, done)    Move device_restore_screen.dart + restore service + restore_providers → lib/app/restore/
 - [x] W1.5  (S, S1, done)    Move SyncLifecycleObserver orchestrator-path → lib/app/sync_runtime/ (legacy stays until Wave 2)
-- [x] W1.6  (S, S1, done)    Shrink main.dart to ~30 lines (bootstrap() then runApp(App()))
+- [ ] W1.6  (S, S1, pending)    Shrink main.dart to ~30 lines (bootstrap() then runApp(App())) — V5-A: main.dart is 102 lines/80 substantive; bootstrap orchestration still inline
 
 ### Phase 1b · Core relocations
 - [x] W1.7  (S, S1, done)    Move features/sync/domain/merge_rules.dart → core/sync/merge/; update 5 merger imports — closes H2
@@ -71,19 +71,19 @@ Sync-point trigger tags: `[P1]` `[P2]` `[P3]` `[P4]` `[P5]` `[P6]` `[P7]`
 ### Phase 2a · Tracks cluster merge (S4)
 - [x] W2.1  (M, S4, done)    Create features/tracks/ skeleton (data/, domain/, presentation/)
 - [x] W2.2  (M, S4, done)    Move features/track_setup/** → features/tracks/setup/
-- [x] W2.3  (M, S4, done)    Move features/learning_order/** → features/tracks/whole_curriculum_order/
-- [x] W2.4  (M, S4, done)    Move features/track_learning_order/** → features/tracks/track_order/
-- [x] W2.5  (M, S4, done)    Move features/stages/** → features/tracks/stages/
+- [ ] W2.3  (M, S4, pending)    Move features/learning_order/** → features/tracks/whole_curriculum_order/ — V5-A: new path exists but features/learning_order/ not deleted (8 source files remain)
+- [ ] W2.4  (M, S4, pending)    Move features/track_learning_order/** → features/tracks/track_order/ — V5-A: new path exists but features/track_learning_order/ not deleted (5 source files remain)
+- [ ] W2.5  (M, S4, pending)    Move features/stages/** → features/tracks/stages/ — V5-A: new path exists but features/stages/ not deleted (9 source files remain; 42 external imports still use old path)
 - [x] W2.6  (S, S4, done)    Add tracks/data/ layer placeholder — closes M6
-- [x] W2.7  (S, S4, done)    Pull curriculum_activation_service from settings → tracks
+- [ ] W2.7  (S, S4, pending)    Pull curriculum_activation_service from settings → tracks — V5-A: tracks version exists (193 LOC) but settings/curriculum_activation_service.dart not deleted (161 LOC original remains)
 - [x] W2.8  (M, S4, done)    Fill features/tracks/tracks.dart barrel with public surface
-- [x] W2.9  (M, S4, done)    Migrate all importers from deep paths → tracks.dart barrel `[P2]`
+- [ ] W2.9  (M, S4, pending)    Migrate all importers from deep paths → tracks.dart barrel `[P2]` — V5-A: 42 files still import features/stages/ deep paths, 16 import features/learning_order/, 4 import features/track_learning_order/ (old dirs not deleted so migration blocked)
 
 ### Phase 2b · Account cluster merge (S3)
 - [x] W2.10 (M, S3, done)    Create features/account/ skeleton
 - [x] W2.11 (M, S3, done)    Move features/auth/** → features/account/
 - [x] W2.12 (M, S3, done)    Move sign-up/magic-link/upgrade halves of onboarding/** → account/onboarding/ (track-setup half stays for W6)
-- [x] W2.13 (M, S3, done)    Move account_management_service from settings → account
+- [ ] W2.13 (M, S3, pending)    Move account_management_service from settings → account — V5-A: account version exists but settings/domain/services/account_management_service.dart not deleted (byte-identical duplicate, 144 lines)
 - [x] W2.14 (S, S3, done)    Fill features/account/account.dart barrel
 - [x] W2.15 (M, S3, done)    Migrate importers `[P2]`
 
@@ -99,13 +99,13 @@ Sync-point trigger tags: `[P1]` `[P2]` `[P3]` `[P4]` `[P5]` `[P6]` `[P7]`
 - [x] W2.22 (S, S2, done)    Move core/streak/ → features/gamification/streak/
 - [x] W2.23 (S, S2, done)    Move core/services/{calendar_program_*, local_calendar_engine, daily_schedule_composer, cross_curriculum_aggregator} → sacred_calendar/ + scheduling/
 - [x] W2.24 (S, S2, done)    Move core/services/pin_service → features/profiles/
-- [x] W2.25 (S, S2, done)    Delete core/services/ (now empty) `[P2]`
+- [ ] W2.25 (S, S2, pending)    Delete core/services/ (now empty) `[P2]` — V5-A: core/services/ still exists containing orphaned pin_service.g.dart artifact
 
 ### Phase 2e · Missing mergers (S2)
 - [x] W2.26 (M, S2, done)    Add EntityKind.learningOrder + LearningOrderMerger + router case + mergeRouterProvider entry — closes C3/H3
 - [x] W2.27 (M, S2, done)    Add 7 mergers + channels for SyncEngine-only collections (goals, learning_ledger, notif_settings, gamification_settings, ui_preferences, learning_order, profile_programs) — closes M1
 - [x] W2.28 (M, S2, done)    Add pullStreak step in pull_pipeline — closes M4
-- [x] W2.29 (M, S2, done)    Wire real stage_definitions/ push + pull + listener channel + _channelToKind — closes H4
+- [ ] W2.29 (M, S2, pending)    Wire real stage_definitions/ push + pull + listener channel + _channelToKind — closes H4 — V5-A: push (push_pipeline_impl:98) + pull (pull_pipeline:146) wired; listener channel absent from FirestoreListenerSource.openChannels() and _channelToKind switch
 - [x] W2.30 (S, S2, done)    Make _pullCollection throw on MergeOutcome.halt (after W2.26 lands)
 
 ### Phase 2f · Single-shot legacy sync deletion (S2)
@@ -147,10 +147,10 @@ Sync-point trigger tags: `[P1]` `[P2]` `[P3]` `[P4]` `[P5]` `[P6]` `[P7]`
 - [x] W3.15 (M, S2, done)    LearningLedgerCodec
 - [x] W3.16 (M, S2, done)    GoalCodec
 - [x] W3.17 (M, S2, done)    TutorGrantCodec
-- [x] W3.18 (M, S2, done)    Migrate mergers to consume codecs (kills 5-way marshaling — T6) `[P4]`
+- [ ] W3.18 (M, S2, pending)    Migrate mergers to consume codecs (kills 5-way marshaling — T6) `[P4]` — V5-B: PARTIAL — goal_merger + learning_ledger_merger still use FirestoreCodec directly; GoalCodec + LearningLedgerCodec exist but unused by their mergers
 
 ### Phase 3c · Drift schema rebuild (S2)
-- [x] W3.19 (M, S2, done)    Rewrite Drift schema as v=1 from scratch; drop all onUpgrade migration steps
+- [ ] W3.19 (M, S2, pending)    Rewrite Drift schema as v=1 from scratch; drop all onUpgrade migration steps — V5-B: schemaVersion=23 (not 1); onUpgrade absent ✓ but schemaVersion integer fails verification matrix
 - [x] W3.20 (S, S2, done)    Drop tables: completions, streaks, sync_queue
 - [x] W3.21 (M, S2, done)    Add completions_view over completion_events WHERE purged_at IS NULL
 - [x] W3.22 (S, S2, done)    Drop trackType column from curriculum_tracks; UNIQUE → (profileId, curriculumId)
@@ -181,7 +181,7 @@ Sync-point trigger tags: `[P1]` `[P2]` `[P3]` `[P4]` `[P5]` `[P6]` `[P7]`
 - [x] W3.43 (M, S3, done)    Cloud Function: bulk-prior completion write proxy (writes as owner uid after tutor permission check)
 
 ### Phase 3f · Goal model collapse (S4)
-- [x] W3.44 (M, S4, done)    Collapse goal entity: drop goalType/paceValue/pacePeriod/targetDate → PaceTarget? field only; migrate goal_repository_impl + dashboard_providers
+- [ ] W3.44 (M, S4, pending)    Collapse goal entity: drop goalType/paceValue/pacePeriod/targetDate → PaceTarget? field only; migrate goal_repository_impl + dashboard_providers — V5-B: goals.dart still has all old columns (lines 18-28); DB table not collapsed
 
 ### Phase 3g · Wipe and verify (S2)
 - [x] W3.45 (S, S2, done)    Wipe Firestore (gcloud firestore delete on users/) + delete dev Drift DBs
@@ -210,7 +210,7 @@ Sync-point trigger tags: `[P1]` `[P2]` `[P3]` `[P4]` `[P5]` `[P6]` `[P7]`
 - [x] W4.13 (M, S4, done)    tracks setup → TrackBlueprintDraftRepository (SharedPreferences impl) replacing 7 ad-hoc keys
 - [x] W4.14 (M, S4, done)    tracks setup → ProvisionTrackUseCase replacing TrackCreationService.createTrack — **B3 integration check (back-date generates overdue)**
 - [x] W4.15 (S, S4, done)    track_learning_order → TrackOrder aggregate, OrderingLevel { sedarim, masechtos } VO, MasechtaOrderingPolicy
-- [x] W4.16 (M, S5, done)    progress → promote inline models to domain/; extract LifetimeTreeBuilder/OverlappingCurriculaDeduplicator/TrackDualProgressCalculator — **B1 lifetime tier subscriber + B3 projection check**
+- [ ] W4.16 (M, S5, pending)    progress → promote inline models to domain/; extract LifetimeTreeBuilder/OverlappingCurriculaDeduplicator/TrackDualProgressCalculator — **B1 lifetime tier subscriber + B3 projection check** — V5-B: LifetimeTreeBuilder + OverlappingCurriculaDeduplicator ✓; TrackDualProgressCalculator class missing (only TrackDualProgressMetric data class exists)
 - [x] W4.17 (M, S5, done)    dashboard → extract NextRewardSelector + ComputePaceStatusUseCase + TrackCompletionService — **B3 projection check**
 
 ### Phase 4c · Business-logic relocations
