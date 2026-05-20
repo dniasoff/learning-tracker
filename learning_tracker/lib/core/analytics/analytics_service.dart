@@ -11,6 +11,7 @@
 /// [AppLogger] so the structured-log trail is preserved.
 library;
 
+import 'package:learning_tracker/core/domain/value_objects/sefaria_ref.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 
 /// Named analytics event constants (Story 27.14, DNI-390).
@@ -48,11 +49,11 @@ abstract class AnalyticsService {
   Future<void> logAppLaunch() => logEvent(AnalyticsEvent.appLaunch);
 
   Future<void> logCompletionRecorded({
-    required String sefariaRef,
+    required SefariaRef sefariaRef,
     required String trackType,
   }) => logEvent(
     AnalyticsEvent.completionRecorded,
-    parameters: {'sefaria_ref': sefariaRef, 'track_type': trackType},
+    parameters: {'sefaria_ref': sefariaRef.value, 'track_type': trackType},
   );
 
   Future<void> logBulkMarkPriorUsed({
