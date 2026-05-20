@@ -26,12 +26,12 @@ Sync-point trigger tags: `[P1]` `[P2]` `[P3]` `[P4]` `[P5]` `[P6]` `[P7]`
 - [x] W1.1  (S, S1, done)    Create lib/app/ with sub-dirs: router/, bootstrap/, restore/, sync_runtime/
 - [x] W1.2  (S, S1, done)    Move core/navigation/{app_router, app_router.gr, router_provider, app_shell, guards/auth_guard}.dart → lib/app/router/
 - [x] W1.3  (M, S1, done)    Split main.dart bootstrap into lib/app/bootstrap/{firebase, crashlytics, logger, analytics, seed, account, notifications}_bootstrap.dart
-- [ ] W1.4  (S, S1, in-progress)    Move device_restore_screen.dart + restore service + restore_providers → lib/app/restore/
-- [ ] W1.5  (S, S1, pending)    Move SyncLifecycleObserver orchestrator-path → lib/app/sync_runtime/ (legacy stays until Wave 2)
-- [ ] W1.6  (S, S1, pending)    Shrink main.dart to ~30 lines (bootstrap() then runApp(App()))
+- [x] W1.4  (S, S1, done)    Move device_restore_screen.dart + restore service + restore_providers → lib/app/restore/
+- [x] W1.5  (S, S1, done)    Move SyncLifecycleObserver orchestrator-path → lib/app/sync_runtime/ (legacy stays until Wave 2)
+- [x] W1.6  (S, S1, done)    Shrink main.dart to ~30 lines (bootstrap() then runApp(App()))
 
 ### Phase 1b · Core relocations
-- [ ] W1.7  (S, S1, pending)    Move features/sync/domain/merge_rules.dart → core/sync/merge/; update 5 merger imports — closes H2
+- [ ] W1.7  (S, S1, in-progress)    Move features/sync/domain/merge_rules.dart → core/sync/merge/; update 5 merger imports — closes H2
 - [ ] W1.8  (S, S1, pending)    Move profile_scoped_preference_keys.dart → core/preferences/; update 8 importers
 - [ ] W1.9  (S, S1, pending)    Move language_provider.dart → core/preferences/
 
@@ -80,15 +80,15 @@ Sync-point trigger tags: `[P1]` `[P2]` `[P3]` `[P4]` `[P5]` `[P6]` `[P7]`
 - [x] W2.9  (M, S4, done)    Migrate all importers from deep paths → tracks.dart barrel `[P2]`
 
 ### Phase 2b · Account cluster merge (S3)
-- [ ] W2.10 (M, S3, in-progress)    Create features/account/ skeleton
-- [ ] W2.11 (M, S3, pending)    Move features/auth/** → features/account/
-- [ ] W2.12 (M, S3, pending)    Move sign-up/magic-link/upgrade halves of onboarding/** → account/onboarding/ (track-setup half stays for W6)
-- [ ] W2.13 (M, S3, pending)    Move account_management_service from settings → account
-- [ ] W2.14 (S, S3, pending)    Fill features/account/account.dart barrel
-- [ ] W2.15 (M, S3, pending)    Migrate importers `[P2]`
+- [x] W2.10 (M, S3, done)    Create features/account/ skeleton
+- [x] W2.11 (M, S3, done)    Move features/auth/** → features/account/
+- [x] W2.12 (M, S3, done)    Move sign-up/magic-link/upgrade halves of onboarding/** → account/onboarding/ (track-setup half stays for W6)
+- [x] W2.13 (M, S3, done)    Move account_management_service from settings → account
+- [x] W2.14 (S, S3, done)    Fill features/account/account.dart barrel
+- [x] W2.15 (M, S3, done)    Migrate importers `[P2]`
 
 ### Phase 2c · Dissolve parent_mode (S3)
-- [ ] W2.16 (S, S3, pending)    Move reward + point config screens → features/gamification/
+- [ ] W2.16 (S, S3, in-progress)    Move reward + point config screens → features/gamification/
 - [ ] W2.17 (S, S3, pending)    Move PIN keypad widget → core/widgets/
 - [ ] W2.18 (S, S3, pending)    Move parent_dashboard_aggregator → features/dashboard/
 - [ ] W2.19 (M, S3, pending)    Move pin_service + create PinFlowMachine domain skeleton → features/profiles/ (full domain in W4.11)
@@ -97,13 +97,13 @@ Sync-point trigger tags: `[P1]` `[P2]` `[P3]` `[P4]` `[P5]` `[P6]` `[P7]`
 ### Phase 2d · Core/ misfiled-feature promotions (S2)
 - [x] W2.21 (S, S2, done)    Move core/learning/ → features/learning/ (absorb optimistic_completion_provider, completion_writer)
 - [x] W2.22 (S, S2, done)    Move core/streak/ → features/gamification/streak/
-- [ ] W2.23 (S, S2, in-progress)    Move core/services/{calendar_program_*, local_calendar_engine, daily_schedule_composer, cross_curriculum_aggregator} → sacred_calendar/ + scheduling/
-- [ ] W2.24 (S, S2, pending)    Move core/services/pin_service → features/profiles/
-- [ ] W2.25 (S, S2, pending)    Delete core/services/ (now empty) `[P2]`
+- [x] W2.23 (S, S2, done)    Move core/services/{calendar_program_*, local_calendar_engine, daily_schedule_composer, cross_curriculum_aggregator} → sacred_calendar/ + scheduling/
+- [x] W2.24 (S, S2, done)    Move core/services/pin_service → features/profiles/
+- [x] W2.25 (S, S2, done)    Delete core/services/ (now empty) `[P2]`
 
 ### Phase 2e · Missing mergers (S2)
-- [ ] W2.26 (M, S2, pending)    Add EntityKind.learningOrder + LearningOrderMerger + router case + mergeRouterProvider entry — closes C3/H3
-- [ ] W2.27 (M, S2, pending)    Add 7 mergers + channels for SyncEngine-only collections (goals, learning_ledger, notif_settings, gamification_settings, ui_preferences, learning_order, profile_programs) — closes M1
+- [x] W2.26 (M, S2, done)    Add EntityKind.learningOrder + LearningOrderMerger + router case + mergeRouterProvider entry — closes C3/H3
+- [ ] W2.27 (M, S2, in-progress)    Add 7 mergers + channels for SyncEngine-only collections (goals, learning_ledger, notif_settings, gamification_settings, ui_preferences, learning_order, profile_programs) — closes M1
 - [ ] W2.28 (M, S2, pending)    Add pullStreak step in pull_pipeline — closes M4
 - [ ] W2.29 (M, S2, pending)    Wire real stage_definitions/ push + pull + listener channel + _channelToKind — closes H4
 - [ ] W2.30 (S, S2, pending)    Make _pullCollection throw on MergeOutcome.halt (after W2.26 lands)
@@ -194,14 +194,14 @@ Sync-point trigger tags: `[P1]` `[P2]` `[P3]` `[P4]` `[P5]` `[P6]` `[P7]`
 
 ### Phase 4a · Value objects
 - [x] W4.1  (M, S5, done)    SefariaRef VO with parse + segment ops; start strangler migration of 73 raw-String sites
-- [ ] W4.2  (S, S5, in-progress)    StageOrder VO (≥1, monotonic)
-- [ ] W4.3  (S, S5, pending)    Pin VO (4 ASCII digits, validates on construction)
-- [ ] W4.4  (M, S5, pending)    StudyDayPattern VO with dayKindFor(Weekday) + equality
-- [ ] W4.5  (S, S5, pending)    CalendarSystem { hebrew, english } enum
-- [ ] W4.6  (S, S4, pending)    PaceTarget sealed = sole goal target representation
-- [ ] W4.7  (M, S4, pending)    ProgramStartingPosition VO replacing 'offset:N|ref:&lt;sefariaRef&gt;' grammar — **owns B2 + B3 window enforcement**
-- [ ] W4.8  (S, S5, pending)    Scope(level: ScopeLevel, value: ScopeValue) typed VO
-- [ ] W4.9  (S, S5, pending)    ProfileMode { adult, child } + AccountTier { local, cloud } enums; deprecation on string equality
+- [x] W4.2  (S, S5, done)    StageOrder VO (≥1, monotonic)
+- [x] W4.3  (S, S5, done)    Pin VO (4 ASCII digits, validates on construction)
+- [x] W4.4  (M, S5, done)    StudyDayPattern VO with dayKindFor(Weekday) + equality
+- [x] W4.5  (S, S5, done)    CalendarSystem { hebrew, english } enum
+- [x] W4.6  (S, S4, done)    PaceTarget sealed = sole goal target representation
+- [ ] W4.7  (M, S4, in-progress)    ProgramStartingPosition VO replacing 'offset:N|ref:&lt;sefariaRef&gt;' grammar — **owns B2 + B3 window enforcement**
+- [x] W4.8  (S, S5, done)    Scope(level: ScopeLevel, value: ScopeValue) typed VO
+- [x] W4.9  (S, S5, done)    ProfileMode { adult, child } + AccountTier { local, cloud } enums; deprecation on string equality
 - [ ] W4.10 (M, S4, pending)    Sealed ScheduleSpec { DelaySchedule, WeeklySchedule, RollingSchedule } replacing nullable quartet
 
 ### Phase 4b · Anemic features rebuilt
