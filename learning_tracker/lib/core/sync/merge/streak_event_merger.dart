@@ -14,8 +14,8 @@ library;
 
 import 'package:learning_tracker/core/database/user/user_database.dart'
     hide StreakEvent;
-import 'package:learning_tracker/core/streak/streak_event.dart';
-import 'package:learning_tracker/core/streak/streak_event_log.dart';
+import 'package:learning_tracker/features/gamification/streak/streak_event.dart';
+import 'package:learning_tracker/features/gamification/streak/streak_event_log.dart';
 import 'package:learning_tracker/core/sync/merge/entity_merger.dart';
 
 class StreakEventMerger implements EntityMerger {

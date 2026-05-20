@@ -7,7 +7,7 @@ import 'package:learning_tracker/features/learning/presentation/providers/comple
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/services/cross_curriculum_aggregator.dart';
-import 'package:learning_tracker/core/streak/streak_state_provider.dart';
+import 'package:learning_tracker/features/gamification/streak/streak_state_provider.dart';
 import 'package:learning_tracker/core/time/local_day_clock.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/core/utils/pace_derivation.dart';

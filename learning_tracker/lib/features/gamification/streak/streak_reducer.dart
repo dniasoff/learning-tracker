@@ -13,7 +13,7 @@
 ///     and `currentStreak` is `0` (max survives).
 library;
 
-import 'package:learning_tracker/core/streak/streak_event.dart';
+import 'package:learning_tracker/features/gamification/streak/streak_event.dart';
 
 class StreakState {
   const StreakState({
