@@ -83,9 +83,13 @@ class ActiveTrackCard extends ConsumerWidget {
         ? null
         : dualMetricMatches.first;
     final currentCyclePct = dualMetric?.currentCyclePercentage ?? 0.0;
+    final lifetimePct = dualMetric?.lifetimePercentage ?? 0.0;
     final currentCycleDisplay = dualMetricsAsync.isLoading
         ? '…'
         : formatFractionAsPercent(currentCyclePct);
+    final lifetimeDisplay = dualMetricsAsync.isLoading
+        ? '…'
+        : formatFractionAsPercent(lifetimePct);
 
     final curriculumTasks = allTasks
         .where((t) => t.trackId == track.id)
@@ -213,17 +217,31 @@ class ActiveTrackCard extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   mainAxisSize: MainAxisSize.max,
                   children: [
-                    Text(
-                      '${l10n.trackCurrentCycle} • $currentCycleDisplay',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.labelSmall?.copyWith(
-                        color: AppTheme.brandInkMuted,
-                        fontWeight: FontWeight.w600,
-                      ),
+                    // Dual progress labels — Track progress (current cycle)
+                    // and Lifetime — share the same data source as the
+                    // Progress hub per-track rows. Wrap so they fall to a
+                    // second line on narrow cards instead of clipping.
+                    Wrap(
+                      spacing: 12,
+                      runSpacing: 2,
+                      children: [
+                        Text(
+                          '${terms.trackProgress}: $currentCycleDisplay',
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            color: AppTheme.brandInkMuted,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        Text(
+                          '${terms.lifetimeLabel}: $lifetimeDisplay',
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            color: AppTheme.brandInkMuted,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 2),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 10),
                     FilledButton(
                       onPressed: () {
                         // If there's a concrete next-task / current focus,

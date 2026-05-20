@@ -28,6 +28,7 @@ import 'package:learning_tracker/features/dashboard/presentation/widgets/streak_
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/lifetime_knowledge_providers.dart';
+import 'package:learning_tracker/features/progress/presentation/widgets/progress_tier_counter_row.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dart';
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
@@ -310,7 +311,12 @@ class DashboardBody extends ConsumerWidget {
             ),
           ],
         ),
-        const SizedBox(height: 24),
+        const SizedBox(height: 18),
+        // Tier counter row (engagement / achievement / lifetime [/ ⭐ points]).
+        // Shared with Progress hub — same widget, same providers.
+        // Child mode renders the fourth ⭐ points counter (see Task #14 brief).
+        ProgressTierCounterRow(showPoints: userMode == UserMode.child),
+        const SizedBox(height: 22),
         if (userMode == UserMode.child) ...[
           ChildPointsRewardsTabCard(
             totalPoints: totalPoints,

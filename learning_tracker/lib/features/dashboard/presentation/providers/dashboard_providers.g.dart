@@ -207,42 +207,66 @@ final class DashboardActiveCurriculaStreamProvider
 String _$dashboardActiveCurriculaStreamHash() =>
     r'9689fa138119b78a0b3bf8ad2013549a05ca3d37';
 
-/// Item-based completion for one track.
+/// Track completion percentage for the Manage Tracks card.
+///
+/// Uses [CompletionTierFilter.trackAchievement] (live + bulkInTrack) — matching
+/// the "I learnt it" intent of the Manage Tracks display. Lifetime-only imports
+/// are excluded because they do not represent in-track learning activity.
 ///
 /// An item is "done" when ALL of the track's required stages have a
-/// completion record for it.  Required stages = every non-superseded
-/// stage defined for the track (stageOrder 1 = learn, 2+ = chazara).
+/// completion record.  Formula: `(done items) / totalItems`.
 ///
-/// Formula: `(items where all required stages are done) / totalItems`.
+/// Delegates computation to [TrackProgressService] (Layer 3 unification).
 ///
-/// Delegates computation to [TrackCompletionService].
+/// **Why this differs from [trackDualProgressMetricsProvider].currentCyclePercentage:**
+/// This answers "how complete is this track overall?" (all-time, multi-stage gate).
+/// The cycle metric answers "how many items has the user touched since the last
+/// track activation?" (time-gated, single-ref check).
+///
+/// See also: [trackDualProgressMetricsProvider] (lifetime_knowledge_providers.dart).
 
 @ProviderFor(dashboardTrackCompletionPercentage)
 final dashboardTrackCompletionPercentageProvider =
     DashboardTrackCompletionPercentageFamily._();
 
-/// Item-based completion for one track.
+/// Track completion percentage for the Manage Tracks card.
+///
+/// Uses [CompletionTierFilter.trackAchievement] (live + bulkInTrack) — matching
+/// the "I learnt it" intent of the Manage Tracks display. Lifetime-only imports
+/// are excluded because they do not represent in-track learning activity.
 ///
 /// An item is "done" when ALL of the track's required stages have a
-/// completion record for it.  Required stages = every non-superseded
-/// stage defined for the track (stageOrder 1 = learn, 2+ = chazara).
+/// completion record.  Formula: `(done items) / totalItems`.
 ///
-/// Formula: `(items where all required stages are done) / totalItems`.
+/// Delegates computation to [TrackProgressService] (Layer 3 unification).
 ///
-/// Delegates computation to [TrackCompletionService].
+/// **Why this differs from [trackDualProgressMetricsProvider].currentCyclePercentage:**
+/// This answers "how complete is this track overall?" (all-time, multi-stage gate).
+/// The cycle metric answers "how many items has the user touched since the last
+/// track activation?" (time-gated, single-ref check).
+///
+/// See also: [trackDualProgressMetricsProvider] (lifetime_knowledge_providers.dart).
 
 final class DashboardTrackCompletionPercentageProvider
     extends $FunctionalProvider<AsyncValue<double>, double, FutureOr<double>>
     with $FutureModifier<double>, $FutureProvider<double> {
-  /// Item-based completion for one track.
+  /// Track completion percentage for the Manage Tracks card.
+  ///
+  /// Uses [CompletionTierFilter.trackAchievement] (live + bulkInTrack) — matching
+  /// the "I learnt it" intent of the Manage Tracks display. Lifetime-only imports
+  /// are excluded because they do not represent in-track learning activity.
   ///
   /// An item is "done" when ALL of the track's required stages have a
-  /// completion record for it.  Required stages = every non-superseded
-  /// stage defined for the track (stageOrder 1 = learn, 2+ = chazara).
+  /// completion record.  Formula: `(done items) / totalItems`.
   ///
-  /// Formula: `(items where all required stages are done) / totalItems`.
+  /// Delegates computation to [TrackProgressService] (Layer 3 unification).
   ///
-  /// Delegates computation to [TrackCompletionService].
+  /// **Why this differs from [trackDualProgressMetricsProvider].currentCyclePercentage:**
+  /// This answers "how complete is this track overall?" (all-time, multi-stage gate).
+  /// The cycle metric answers "how many items has the user touched since the last
+  /// track activation?" (time-gated, single-ref check).
+  ///
+  /// See also: [trackDualProgressMetricsProvider] (lifetime_knowledge_providers.dart).
   DashboardTrackCompletionPercentageProvider._({
     required DashboardTrackCompletionPercentageFamily super.from,
     required int super.argument,
@@ -289,17 +313,25 @@ final class DashboardTrackCompletionPercentageProvider
 }
 
 String _$dashboardTrackCompletionPercentageHash() =>
-    r'6279fdc2aeaf81c07f3e6549537e2c5e2fa31c89';
+    r'6c62c3cd2383c19a9e71eb4ae7f5763211f620c7';
 
-/// Item-based completion for one track.
+/// Track completion percentage for the Manage Tracks card.
+///
+/// Uses [CompletionTierFilter.trackAchievement] (live + bulkInTrack) — matching
+/// the "I learnt it" intent of the Manage Tracks display. Lifetime-only imports
+/// are excluded because they do not represent in-track learning activity.
 ///
 /// An item is "done" when ALL of the track's required stages have a
-/// completion record for it.  Required stages = every non-superseded
-/// stage defined for the track (stageOrder 1 = learn, 2+ = chazara).
+/// completion record.  Formula: `(done items) / totalItems`.
 ///
-/// Formula: `(items where all required stages are done) / totalItems`.
+/// Delegates computation to [TrackProgressService] (Layer 3 unification).
 ///
-/// Delegates computation to [TrackCompletionService].
+/// **Why this differs from [trackDualProgressMetricsProvider].currentCyclePercentage:**
+/// This answers "how complete is this track overall?" (all-time, multi-stage gate).
+/// The cycle metric answers "how many items has the user touched since the last
+/// track activation?" (time-gated, single-ref check).
+///
+/// See also: [trackDualProgressMetricsProvider] (lifetime_knowledge_providers.dart).
 
 final class DashboardTrackCompletionPercentageFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<double>, int> {
@@ -312,15 +344,23 @@ final class DashboardTrackCompletionPercentageFamily extends $Family
         isAutoDispose: true,
       );
 
-  /// Item-based completion for one track.
+  /// Track completion percentage for the Manage Tracks card.
+  ///
+  /// Uses [CompletionTierFilter.trackAchievement] (live + bulkInTrack) — matching
+  /// the "I learnt it" intent of the Manage Tracks display. Lifetime-only imports
+  /// are excluded because they do not represent in-track learning activity.
   ///
   /// An item is "done" when ALL of the track's required stages have a
-  /// completion record for it.  Required stages = every non-superseded
-  /// stage defined for the track (stageOrder 1 = learn, 2+ = chazara).
+  /// completion record.  Formula: `(done items) / totalItems`.
   ///
-  /// Formula: `(items where all required stages are done) / totalItems`.
+  /// Delegates computation to [TrackProgressService] (Layer 3 unification).
   ///
-  /// Delegates computation to [TrackCompletionService].
+  /// **Why this differs from [trackDualProgressMetricsProvider].currentCyclePercentage:**
+  /// This answers "how complete is this track overall?" (all-time, multi-stage gate).
+  /// The cycle metric answers "how many items has the user touched since the last
+  /// track activation?" (time-gated, single-ref check).
+  ///
+  /// See also: [trackDualProgressMetricsProvider] (lifetime_knowledge_providers.dart).
 
   DashboardTrackCompletionPercentageProvider call(int trackId) =>
       DashboardTrackCompletionPercentageProvider._(
