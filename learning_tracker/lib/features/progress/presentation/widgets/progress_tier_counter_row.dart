@@ -174,7 +174,7 @@ class _Counter extends StatelessWidget {
             Text(
               label,
               textAlign: TextAlign.center,
-              maxLines: 2,
+              maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: theme.textTheme.labelSmall?.copyWith(
                 color: AppTheme.brandInkMuted,

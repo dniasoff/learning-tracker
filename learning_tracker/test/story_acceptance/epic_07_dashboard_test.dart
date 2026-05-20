@@ -493,7 +493,7 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(find.text('משניות'), findsOneWidget);
-        expect(find.text('75.00% complete'), findsOneWidget);
+        expect(find.text('75% complete'), findsOneWidget);
         expect(find.text('Next: Berachos 1:1'), findsOneWidget);
         expect(find.byIcon(Icons.trending_up), findsOneWidget);
 

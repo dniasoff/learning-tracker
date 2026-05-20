@@ -321,11 +321,11 @@ void main() {
         await tester.pump(const Duration(milliseconds: 100));
 
         // Both labels are rendered side-by-side in the card footer.
-        // `formatFractionAsPercent` formats with 2 decimal places by default
-        // (e.g. 0.35 → "35.00%"). Tests assert the exact rendered string so
-        // any formatter tweak surfaces as a deliberate failure.
-        expect(find.text('Track progress: 35.00%'), findsOneWidget);
-        expect(find.text('Lifetime: 74.00%'), findsOneWidget);
+        // `formatFractionAsPercent` now uses adaptive precision: whole numbers
+        // have no decimal, non-whole values use 1 decimal place.
+        // 0.35 → "35%" (whole when rounded to 1 dp), 0.74 → "74%".
+        expect(find.text('Track progress: 35%'), findsOneWidget);
+        expect(find.text('Lifetime: 74%'), findsOneWidget);
         // Legacy single-label format must be gone.
         expect(find.textContaining('Since reactivation'), findsNothing);
 

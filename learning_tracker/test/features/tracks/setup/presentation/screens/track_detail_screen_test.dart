@@ -153,7 +153,7 @@ void main() {
               db: db,
               track: track,
               curriculum: CurriculumId.mishnayos,
-              // 0.35 → 35.00%, 0.74 → 74.00% (default formatter decimals=2)
+              // 0.35 → 35%, 0.74 → 74% (adaptive precision: whole numbers, no dp)
               currentCycle: 0.35,
               lifetime: 0.74,
             ),
@@ -165,14 +165,14 @@ void main() {
         await tester.pump(const Duration(milliseconds: 100));
 
         expect(
-          find.text('Track progress: 35.00%'),
+          find.text('Track progress: 35%'),
           findsOneWidget,
           reason:
               'Dual progress label must surface the current-cycle pct from '
               'trackDualProgressMetricsProvider as "Track progress: X%".',
         );
         expect(
-          find.text('Lifetime: 74.00%'),
+          find.text('Lifetime: 74%'),
           findsOneWidget,
           reason:
               'Dual progress label must surface the lifetime tier pct from '
@@ -182,7 +182,7 @@ void main() {
     );
 
     testWidgets(
-      'zero-valued metrics still render both labels at 0.00%',
+      'zero-valued metrics still render both labels at 0%',
       (tester) async {
         final track = _track();
         await tester.pumpWidget(
@@ -202,8 +202,8 @@ void main() {
 
         // Both labels must render even when the user has no progress yet,
         // so the dual-progress contract is the same in empty state.
-        expect(find.text('Track progress: 0.00%'), findsOneWidget);
-        expect(find.text('Lifetime: 0.00%'), findsOneWidget);
+        expect(find.text('Track progress: 0%'), findsOneWidget);
+        expect(find.text('Lifetime: 0%'), findsOneWidget);
       },
     );
   });

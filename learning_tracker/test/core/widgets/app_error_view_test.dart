@@ -115,7 +115,7 @@ void main() {
       'tapping "Report this issue" calls CrashlyticsService.recordError',
       (tester) async {
         final crashlytics = _RecordingCrashlyticsService();
-        final err = const _TestInternalException('boom');
+        const err = _TestInternalException('boom');
         await tester.pumpWidget(
           _buildWidget(error: err, crashlytics: crashlytics),
         );

@@ -202,7 +202,7 @@ void main() {
 
         expect(find.text('Seder Zeraim'), findsOneWidget);
         // Single-stage: no chazara column, so subtitle is progress-only.
-        expect(find.text('5/10 (50.00%)'), findsOneWidget);
+        expect(find.text('5/10 (50%)'), findsOneWidget);
         expect(find.textContaining('chazaros'), findsNothing);
         expect(find.text('Learned: 5'), findsOneWidget);
         expect(find.byType(LinearProgressIndicator), findsOneWidget);
