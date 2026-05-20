@@ -28,7 +28,7 @@ class StreakAlertService {
        _analytics = analytics ?? const NullAnalyticsService(),
        _streakProvider = StreakStateProvider(
          db: db,
-         clock: const LocalDayClock(),
+         clock: const SystemLocalDayClock(),
        );
 
   final UserDatabase _db;

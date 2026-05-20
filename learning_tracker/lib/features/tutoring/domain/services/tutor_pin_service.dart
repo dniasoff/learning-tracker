@@ -116,7 +116,8 @@ class TutorPinService {
   Future<bool> hasTutorPin(int profileId) => _pinService.hasTutorPin(profileId);
 
   /// Remove the tutor PIN and lockout state for [profileId].
-  Future<void> clearTutorPin(int profileId) => _pinService.clearTutorPin(profileId);
+  Future<void> clearTutorPin(int profileId) =>
+      _pinService.clearTutorPin(profileId);
 
   /// Remaining lockout in minutes (0 if not locked).
   Future<int> lockoutRemainingMinutes(int profileId) =>

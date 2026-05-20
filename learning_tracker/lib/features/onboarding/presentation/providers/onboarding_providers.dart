@@ -1,7 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/analytics/analytics_provider.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
-import 'package:learning_tracker/features/scheduler/domain/services/learning_program_service.dart';
 import 'package:learning_tracker/core/sync/providers/outbox_providers.dart'
     show firestoreGatewayProvider;
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
@@ -14,6 +13,7 @@ import 'package:learning_tracker/features/onboarding/domain/services/user_profil
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/scheduler/data/repositories/goal_repository_impl.dart';
 import 'package:learning_tracker/features/scheduler/domain/repositories/goal_repository.dart';
+import 'package:learning_tracker/features/scheduler/domain/services/learning_program_service.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/curriculum_activation_providers.dart';
 import 'package:learning_tracker/features/stages/data/repositories/stage_definition_repository_impl.dart';
 import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
@@ -91,7 +91,7 @@ final learningProcessWizardServiceProvider =
       final db = ref.watch(userDatabaseProvider);
       return LearningProcessWizardService(
         stageDao: db.stageDao,
-        learningProgramRepo: LearningProgramRepository.instance,
+        learningProgramRepo: ref.read(learningProgramRepositoryProvider),
         profileProgramDao: db.profileProgramDao,
       );
     });

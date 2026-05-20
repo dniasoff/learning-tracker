@@ -1,19 +1,17 @@
 import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:learning_tracker/core/database/daos/completion_dao.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
-import 'package:learning_tracker/features/learning/presentation/providers/completion_writer_providers.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/providers/calendar_providers.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
-import 'package:learning_tracker/features/scheduler/domain/services/calendar_program_registry.dart';
-import 'package:learning_tracker/features/scheduler/domain/services/calendar_program_service.dart';
-import 'package:learning_tracker/features/scheduler/domain/services/learning_program_service.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/core/utils/pace_derivation.dart';
+import 'package:learning_tracker/features/learning/presentation/providers/completion_writer_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/scheduler/data/repositories/daily_plan_repository.dart';
 import 'package:learning_tracker/features/scheduler/data/repositories/scheduler_completion_repository_impl.dart';
@@ -24,7 +22,10 @@ import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dar
 import 'package:learning_tracker/features/scheduler/domain/models/pace_status.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/schedule_config.dart';
 import 'package:learning_tracker/features/scheduler/domain/projection/projection.dart';
+import 'package:learning_tracker/features/scheduler/domain/services/calendar_program_registry.dart';
+import 'package:learning_tracker/features/scheduler/domain/services/calendar_program_service.dart';
 import 'package:learning_tracker/features/scheduler/domain/services/daily_task_generator.dart';
+import 'package:learning_tracker/features/scheduler/domain/services/learning_program_service.dart';
 import 'package:learning_tracker/features/scheduler/domain/services/pace_calculator.dart';
 import 'package:learning_tracker/features/scheduler/domain/services/scheduler_engine.dart';
 import 'package:learning_tracker/features/scheduler/domain/services/sefaria_ref_matcher.dart';
@@ -291,6 +292,7 @@ Future<List<DailyTask>> allDailyTasks(Ref ref) async {
     calendarService: calendarService,
     getScopedContent: (curriculumId) =>
         ref.read(scopedCurriculumContentProvider(curriculumId).future),
+    programRepository: ref.read(learningProgramRepositoryProvider),
   );
 
   // ── Step 2: engine-generated chazara/review tasks ─────────────────────
@@ -313,6 +315,7 @@ Future<List<DailyTask>> allDailyTasks(Ref ref) async {
       calendarService: calendarService,
       getScopedContent: (curriculumId) =>
           ref.read(scopedCurriculumContentProvider(curriculumId).future),
+      programRepository: ref.read(learningProgramRepositoryProvider),
     ),
   );
 
@@ -396,6 +399,7 @@ Future<List<DailyTask>> _buildProjectionTasks({
   required DateTime now,
   required CalendarProgramService calendarService,
   required Future<List<ContentItem>> Function(CurriculumId) getScopedContent,
+  required LearningProgramRepository programRepository,
 }) async {
   final activeKeys = await db.activeCurriculumDao.getActiveCurriculaByProfile(
     profileId,
@@ -414,12 +418,10 @@ Future<List<DailyTask>> _buildProjectionTasks({
         .where((t) => t.curriculumId == curriculum.storageKey)
         .toList();
     if (tracksForCurriculum.isEmpty) continue;
-    final preferred = tracksForCurriculum.firstWhere(
-      (t) => t.trackType == TrackType.personal.storageKey,
-      orElse: () => tracksForCurriculum.first,
-    );
+    // W3.22: trackType dropped — one track per curriculum per profile.
+    final preferred = tracksForCurriculum.first;
     trackIds[curriculum] = preferred.id;
-    trackLabels[curriculum] = preferred.trackType;
+    trackLabels[curriculum] = TrackType.personal.storageKey;
     trackStartedAtMap[curriculum] = preferred.activatedAt;
   }
 
@@ -465,7 +467,7 @@ Future<List<DailyTask>> _buildProjectionTasks({
         .getProgramForProfileAndCurriculum(profileId, curriculum.storageKey);
 
     if (enrollment != null) {
-      final program = LearningProgramRepository.instance.getProgramById(
+      final program = programRepository.getProgramById(
         enrollment.programId,
       );
       final apiKey = program?.apiProgramKey;
@@ -738,6 +740,7 @@ Future<List<DailyTask>> _buildFreshPlan({
   required DateTime now,
   required CalendarProgramService calendarService,
   required Future<List<ContentItem>> Function(CurriculumId) getScopedContent,
+  required LearningProgramRepository programRepository,
 }) async {
   final activeKeys = await db.activeCurriculumDao.getActiveCurriculaByProfile(
     profileId,
@@ -758,12 +761,10 @@ Future<List<DailyTask>> _buildFreshPlan({
         .where((t) => t.curriculumId == curriculum.storageKey)
         .toList();
     if (tracksForCurriculum.isEmpty) continue;
-    final preferred = tracksForCurriculum.firstWhere(
-      (t) => t.trackType == TrackType.personal.storageKey,
-      orElse: () => tracksForCurriculum.first,
-    );
+    // W3.22: trackType dropped — one track per curriculum per profile.
+    final preferred = tracksForCurriculum.first;
     trackIds[curriculum] = preferred.id;
-    trackLabels[curriculum] = preferred.trackType;
+    trackLabels[curriculum] = TrackType.personal.storageKey;
     trackStartedAtMap[curriculum] = preferred.activatedAt;
   }
 
@@ -909,6 +910,7 @@ Future<List<DailyTask>> _buildFreshPlan({
     trackLabels: trackLabels,
     calendarService: calendarService,
     getScopedContent: getScopedContent,
+    programRepository: programRepository,
   );
   overridden.sort((a, b) => a.priority.index.compareTo(b.priority.index));
   return overridden;
@@ -976,6 +978,7 @@ Future<List<DailyTask>> _applyProgramCalendarOverrides({
   required Map<CurriculumId, String> trackLabels,
   required CalendarProgramService calendarService,
   required Future<List<ContentItem>> Function(CurriculumId) getScopedContent,
+  required LearningProgramRepository programRepository,
 }) async {
   final result = List<DailyTask>.from(generated);
 
@@ -987,7 +990,7 @@ Future<List<DailyTask>> _applyProgramCalendarOverrides({
         .getProgramForProfileAndCurriculum(profileId, curriculum.storageKey);
     if (enrollment == null) continue;
 
-    final program = LearningProgramRepository.instance.getProgramById(
+    final program = programRepository.getProgramById(
       enrollment.programId,
     );
     final apiKey = program?.apiProgramKey;

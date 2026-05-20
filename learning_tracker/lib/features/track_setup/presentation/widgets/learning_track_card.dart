@@ -63,8 +63,9 @@ class LearningTrackCard extends ConsumerWidget {
       track.curriculumId,
     );
 
-    final accent = trackAccentForType(track.trackType);
-    final icon = trackTypeIconData(track.trackType);
+    // W3.22: trackType column dropped — all tracks are now 'personal'.
+    const accent = AppColors.blueMedium;
+    const icon = Icons.menu_book_rounded;
 
     return Material(
       color: Colors.transparent,

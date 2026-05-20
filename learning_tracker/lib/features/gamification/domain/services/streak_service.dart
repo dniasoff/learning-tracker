@@ -14,7 +14,7 @@ import 'package:learning_tracker/features/gamification/streak/streak_state_provi
 class StreakService {
   StreakService(UserDatabase db, {int profileId = 0})
     : _profileId = profileId,
-      _provider = StreakStateProvider(db: db, clock: const LocalDayClock());
+      _provider = StreakStateProvider(db: db, clock: const SystemLocalDayClock());
 
   final int _profileId;
   final StreakStateProvider _provider;

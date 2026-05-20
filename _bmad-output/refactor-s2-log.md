@@ -144,6 +144,25 @@ W2.32: Created LocalDataUploadService (features/sync/data/local_data_upload_serv
   Removed resolveEngine parameter from SyncOrchestratorImpl constructor (SyncEngine deleted). Made resolvePushAllLocalData + resolveBackfillGoals required (always provided by sync_orchestrator_providers.dart). Removed core/sync/ → features/sync/ import from sync_orchestrator_providers.dart (resolveEngine was the reason for it).
 - next: W2.40
 
+## [2026-05-20] task-complete
+- tasks: W3.19–W3.29
+- detail:
+  W3.19: Drift schema rewritten as v=1 with no onUpgrade migrations — single `MigrationStrategy(onCreate: ...)` only.
+  W3.20: Completions, Streaks, SyncQueue Drift tables dropped. Completion is now a hand-written data class in completion_dao.dart (mirrors old Drift row). completions_view replaces the table. ~20 callers updated with explicit completion_dao.dart imports.
+  W3.21: completions_view added over completion_events WHERE purged_at IS NULL.
+  W3.22: trackType column dropped from CurriculumTracks. UNIQUE now (profileId, curriculumId). TrackState constants class added to track_dao.dart. All callers rewritten to use state/stateChangedAt instead of isActive/deactivatedAt.
+  W3.23: updatedAt added to bookmarks, settings, stage_definitions Drift tables.
+  W3.24: SQL columns renamed: pace_unit→pace_period, learning_unit→pace_granularity, unit_type→entry_scope. .named() aliases dropped.
+  W3.25: Missing FKs added to schema.
+  W3.26: calendar_cycles.sefariaRefHe and seed_metadata.contentHash made nullable. LocalCalendarEngine updated with ?? '' coalescing.
+  W3.27: stage_definitions schedule quartet (scheduleType/delayDays/daysOfWeek/rollingWindowSize) replaced with single JSON `schedule` column. Both stage_definition_repository_impl files (features/stages/ and features/tracks/stages/) rewritten with _decodeSchedule/_encodeSchedule helpers. scheduler_stage_repository_impl, edit_track_screens updated.
+  W3.28: state (enum text) + stateChangedAt added to CurriculumTracks. TrackState constants class: active/retired/archived/deleted.
+  W3.29: isActive/deletedAt/deactivatedAt/supersededAt dropped from CurriculumTracks. Track edit service updated (supersedeStagesToTrack removed, replaced with clearFirst:true delete-and-replace). All cascade fixups: curriculum_activation_service (settings+tracks versions), local_data_upload_service, track_creation_service (both versions), track_repository_impl, data_export_import_service.
+  ScopeEntry/AddTrackResult type-identity cleanup: unified all track_setup/ entity imports to use tracks/setup/ canonical (BulkMarkScreen, HierarchySelectionPanel, ScopeStepContent all now on same type).
+  scheduler_providers.dart: LearningProgramRepository passed as explicit param to _buildProjectionTasks/_buildFreshPlan/_applyProgramCalendarOverrides (was invalid ref.read in non-provider context).
+  build_runner confirmed clean. dart analyze lib/: 0 S2-scope errors (8 pre-existing S5 errors in parent_settings_screen.dart + settings_screen.dart remain — ambiguous_import + non_bool, out of scope).
+- next: W3.30–W3.37 (Firestore rebuild)
+
 ## [2026-05-20 04:30] sync-point-cleared (S2 side only)
 - sync-point: P2 (S2 contribution)
 - detail: S2's W2.21-W2.25 are all done. Per protocol, must verify S3 (W2.10-W2.20) and S4 (W2.1-W2.9) before proceeding past W2.30 to W2.31. S4 W2.1-W2.9 confirmed done in tracker. S3 W2.10-W2.20 still in-progress. Proceeding with W2.26-W2.30 (mergers) which don't require P2 themselves; will check tracker again before W2.31.

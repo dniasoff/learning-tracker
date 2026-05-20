@@ -107,12 +107,11 @@ class AcceptTutorInviteUseCase {
   const AcceptTutorInviteUseCase(this._repository);
   final TutorGrantRepository _repository;
 
-  Future<TutorGrantResult> call({
-    required TutorGrant grant,
-  }) async {
+  Future<TutorGrantResult> call({required TutorGrant grant}) async {
     if (!grant.canAccept) {
       return TutorGrantPreconditionError(
-        message: 'Grant ${grant.grantId} is not in a state that can be accepted '
+        message:
+            'Grant ${grant.grantId} is not in a state that can be accepted '
             '(current state: ${grant.grantState.rawState.toJson()}).',
       );
     }
@@ -125,12 +124,11 @@ class DeclineTutorInviteUseCase {
   const DeclineTutorInviteUseCase(this._repository);
   final TutorGrantRepository _repository;
 
-  Future<TutorGrantResult> call({
-    required TutorGrant grant,
-  }) async {
+  Future<TutorGrantResult> call({required TutorGrant grant}) async {
     if (!grant.canDecline) {
       return TutorGrantPreconditionError(
-        message: 'Grant ${grant.grantId} is not in a state that can be declined '
+        message:
+            'Grant ${grant.grantId} is not in a state that can be declined '
             '(current state: ${grant.grantState.rawState.toJson()}).',
       );
     }
@@ -143,12 +141,11 @@ class RescindTutorInviteUseCase {
   const RescindTutorInviteUseCase(this._repository);
   final TutorGrantRepository _repository;
 
-  Future<TutorGrantResult> call({
-    required TutorGrant grant,
-  }) async {
+  Future<TutorGrantResult> call({required TutorGrant grant}) async {
     if (!grant.canRescind) {
       return TutorGrantPreconditionError(
-        message: 'Grant ${grant.grantId} cannot be rescinded '
+        message:
+            'Grant ${grant.grantId} cannot be rescinded '
             '(current state: ${grant.grantState.rawState.toJson()}). '
             'Only pending grants can be rescinded. '
             'Use revokeGrant for active grants.',

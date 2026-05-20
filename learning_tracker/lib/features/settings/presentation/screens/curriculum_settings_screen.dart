@@ -7,12 +7,12 @@ import 'package:learning_tracker/core/constants/app_constants.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
-import 'package:learning_tracker/features/scheduler/domain/services/learning_program_service.dart';
 import 'package:learning_tracker/core/widgets/app_bar_title.dart';
 import 'package:learning_tracker/features/onboarding/presentation/providers/onboarding_providers.dart';
 import 'package:learning_tracker/features/onboarding/presentation/screens/bulk_mark_screen.dart';
 import 'package:learning_tracker/features/onboarding/presentation/screens/learning_process_wizard_screen.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
+import 'package:learning_tracker/features/scheduler/domain/services/learning_program_service.dart';
 import 'package:learning_tracker/features/stages/presentation/providers/stage_providers.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -221,7 +221,7 @@ final _currentProgramProvider =
       final profileProgram = await userDb.profileProgramDao
           .getProgramForProfileAndCurriculum(profileId, curriculum.storageKey);
       if (profileProgram == null) return null;
-      return LearningProgramRepository.instance.getProgramById(
+      return ref.read(learningProgramRepositoryProvider).getProgramById(
         profileProgram.programId,
       );
     });

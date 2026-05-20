@@ -150,17 +150,17 @@ Sync-point trigger tags: `[P1]` `[P2]` `[P3]` `[P4]` `[P5]` `[P6]` `[P7]`
 - [x] W3.18 (M, S2, done)    Migrate mergers to consume codecs (kills 5-way marshaling — T6) `[P4]`
 
 ### Phase 3c · Drift schema rebuild (S2)
-- [ ] W3.19 (M, S2, pending)    Rewrite Drift schema as v=1 from scratch; drop all onUpgrade migration steps
-- [ ] W3.20 (S, S2, pending)    Drop tables: completions, streaks, sync_queue
-- [ ] W3.21 (M, S2, pending)    Add completions_view over completion_events WHERE purged_at IS NULL
-- [ ] W3.22 (S, S2, pending)    Drop trackType column from curriculum_tracks; UNIQUE → (profileId, curriculumId)
-- [ ] W3.23 (M, S2, pending)    Add real updatedAt to bookmarks, settings, stage_definitions — closes M3
-- [ ] W3.24 (S, S2, pending)    Rename SQL columns: pace_unit→pace_period, learning_unit→pace_granularity, unit_type→entry_scope; drop .named() aliases — closes T4
-- [ ] W3.25 (S, S2, pending)    Add missing FKs: learner_profiles→accounts, curriculum_scopes/learning_order/learning_ledger→learner_profiles
-- [ ] W3.26 (S, S2, pending)    Replace '' defaults with nullable() on calendar_cycles.sefariaRefHe + seed_metadata.contentHash
-- [ ] W3.27 (M, S2, pending)    Replace stage_definitions schedule quartet with single JSON 'schedule' column (sealed ScheduleSpec materialisation)
-- [ ] W3.28 (S, S2, pending)    Add unified state ∈ {active, retired, archived, deleted} + stateChangedAt — closes T7
-- [ ] W3.29 (S, S2, pending)    Drop isActive/deletedAt/deactivatedAt/supersededAt ad-hoc tombstone columns
+- [x] W3.19 (M, S2, done)    Rewrite Drift schema as v=1 from scratch; drop all onUpgrade migration steps
+- [x] W3.20 (S, S2, done)    Drop tables: completions, streaks, sync_queue
+- [x] W3.21 (M, S2, done)    Add completions_view over completion_events WHERE purged_at IS NULL
+- [x] W3.22 (S, S2, done)    Drop trackType column from curriculum_tracks; UNIQUE → (profileId, curriculumId)
+- [x] W3.23 (M, S2, done)    Add real updatedAt to bookmarks, settings, stage_definitions — closes M3
+- [x] W3.24 (S, S2, done)    Rename SQL columns: pace_unit→pace_period, learning_unit→pace_granularity, unit_type→entry_scope; drop .named() aliases — closes T4
+- [x] W3.25 (S, S2, done)    Add missing FKs: learner_profiles→accounts, curriculum_scopes/learning_order/learning_ledger→learner_profiles
+- [x] W3.26 (S, S2, done)    Replace '' defaults with nullable() on calendar_cycles.sefariaRefHe + seed_metadata.contentHash
+- [x] W3.27 (M, S2, done)    Replace stage_definitions schedule quartet with single JSON 'schedule' column (sealed ScheduleSpec materialisation)
+- [x] W3.28 (S, S2, done)    Add unified state ∈ {active, retired, archived, deleted} + stateChangedAt — closes T7
+- [x] W3.29 (S, S2, done)    Drop isActive/deletedAt/deactivatedAt/supersededAt ad-hoc tombstone columns
 
 ### Phase 3d · Firestore rebuild (S2)
 - [ ] W3.30 (S, S2, pending)    Delete top-level compat blocks from firestore.rules — closes T11

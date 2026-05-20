@@ -18,8 +18,9 @@ class SeedMetadata extends Table {
   /// Number of CalendarCycles rows in this seed
   IntColumn get calendarCycleCount => integer()();
 
-  /// SHA-256 hash of all content (refs + calendar keys) for integrity checks
-  TextColumn get contentHash => text().withDefault(const Constant(''))();
+  /// SHA-256 hash of all content (refs + calendar keys) for integrity checks.
+  /// Null when not computed by the seed build pipeline.
+  TextColumn get contentHash => text().nullable()();
 
   /// Minimum app version required to read this seed format
   TextColumn get minAppVersion => text().withDefault(const Constant('1.0.0'))();

@@ -71,8 +71,9 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
     final curriculumBarColor = AppTheme.getCurriculumColorByKey(
       track.curriculumId,
     );
-    final accent = trackAccentForType(track.trackType);
-    final icon = trackTypeIconData(track.trackType);
+    // W3.22: trackType column dropped — all tracks are now 'personal'.
+    const accent = AppColors.blueMedium;
+    const icon = Icons.menu_book_rounded;
     final locale = Localizations.localeOf(context).toString();
     final activatedDate = DateFormat.yMMMd(locale).format(track.activatedAt);
 

@@ -1,5 +1,6 @@
 import 'package:drift/drift.dart';
 import 'package:learning_tracker/core/database/base_dao.dart';
+import 'package:learning_tracker/core/database/daos/track_dao.dart';
 import 'package:learning_tracker/core/database/tables/curriculum_tracks.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
@@ -11,8 +12,10 @@ part 'active_curriculum_dao.g.dart';
 /// Queries "active curricula" from the `curriculum_tracks` table.
 ///
 /// A curriculum is active for a profile iff at least one row in
-/// `curriculum_tracks` has `(profile_id = ?, curriculum_id = ?, is_active = 1)`.
+/// `curriculum_tracks` has `(profile_id = ?, curriculum_id = ?, state = 'active')`.
 /// This eliminates the former `active_curricula` table and its split-brain risk.
+///
+/// W3.22/W3.28: uses `state = 'active'` instead of `is_active = 1`.
 @DriftAccessor(tables: [CurriculumTracks])
 class ActiveCurriculumDao extends DatabaseAccessor<UserDatabase>
     with
@@ -36,7 +39,9 @@ class ActiveCurriculumDao extends DatabaseAccessor<UserDatabase>
   Future<List<String>> getActiveCurriculaByProfile(int profileId) async {
     final rows =
         await (select(curriculumTracks)..where(
-              (t) => t.profileId.equals(profileId) & t.isActive.equals(true),
+              (t) =>
+                  t.profileId.equals(profileId) &
+                  t.state.equals(TrackState.active),
             ))
             .get();
     return rows.map((r) => r.curriculumId).toSet().toList();
@@ -45,7 +50,9 @@ class ActiveCurriculumDao extends DatabaseAccessor<UserDatabase>
   /// Watch stream of active curriculum IDs for a specific profile.
   Stream<List<String>> watchActiveCurriculaByProfile(int profileId) {
     return (select(curriculumTracks)..where(
-          (t) => t.profileId.equals(profileId) & t.isActive.equals(true),
+          (t) =>
+              t.profileId.equals(profileId) &
+              t.state.equals(TrackState.active),
         ))
         .watch()
         .map((rows) => rows.map((r) => r.curriculumId).toSet().toList());
@@ -62,7 +69,7 @@ class ActiveCurriculumDao extends DatabaseAccessor<UserDatabase>
                 (t) =>
                     t.profileId.equals(profileId) &
                     t.curriculumId.equals(curriculum.storageKey) &
-                    t.isActive.equals(true),
+                    t.state.equals(TrackState.active),
               )
               ..limit(1))
             .getSingleOrNull();
@@ -71,30 +78,31 @@ class ActiveCurriculumDao extends DatabaseAccessor<UserDatabase>
 
   /// Activate a curriculum for a specific profile (idempotent).
   ///
-  /// No-op if a track already exists. Creates a default personal track row
-  /// when called with no existing track (e.g. in tests or legacy flows).
+  /// No-op if a track already exists with state = 'active'. Creates a default
+  /// track row when called with no existing track.
   /// In production, prefer [TrackDao.initializeDefaultTracks].
   Future<void> activateByProfile(CurriculumId curriculum, int profileId) async {
     final alreadyActive = await isActiveForProfile(curriculum, profileId);
     if (alreadyActive) return;
 
+    final now = DateTimeFactory.nowUtc();
     await into(curriculumTracks).insert(
       CurriculumTracksCompanion.insert(
         profileId: profileId,
         curriculumId: curriculum.storageKey,
-        trackType: TrackType.personal.storageKey,
-        isActive: const Value(true),
-        activatedAt: DateTimeFactory.nowUtc(),
+        state: const Value(TrackState.active),
+        stateChangedAt: now,
+        activatedAt: now,
       ),
       mode: InsertMode.insertOrIgnore,
     );
   }
 
-  /// Deactivate a curriculum for a specific profile (hard delete).
+  /// Deactivate a curriculum for a specific profile.
   ///
-  /// Deletes all tracks for the (profile, curriculum) pair and their
-  /// associated data (completions, goals, stages, etc.) via the track
-  /// cascade. Throws [StateError] if this is the last active curriculum.
+  /// Delegates to [TrackDao.deleteTrackAndData] for each track belonging to
+  /// the (profile, curriculum) pair. Throws [StateError] if this is the last
+  /// active curriculum.
   Future<void> deactivateByProfile(
     CurriculumId curriculum,
     int profileId,
@@ -120,7 +128,7 @@ class ActiveCurriculumDao extends DatabaseAccessor<UserDatabase>
   }
 
   /// Remove a curriculum from active for a profile without the last-curriculum
-  /// guard. No-op — [deleteTrackAndData] already removes the track row; no
+  /// guard. No-op — [deleteTrackAndData] already updates the track state; no
   /// separate active_curricula row exists to clean up.
   Future<void> forceRemoveForProfile(
     CurriculumId curriculum,

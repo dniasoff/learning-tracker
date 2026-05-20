@@ -28,6 +28,10 @@ const _defaults = [
 ///
 /// Uses Drift [StageDao] for local persistence and calls a Firestore push
 /// callback after every mutation (same pattern as CurriculumActivationService).
+///
+/// W3.27: reads/writes the single JSON `schedule` column; the domain
+/// [StageDefinition] model still exposes the full quartet (scheduleType,
+/// delayDays, daysOfWeek, rollingWindowSize) derived at read time.
 class StageDefinitionRepositoryImpl implements StageDefinitionRepository {
   StageDefinitionRepositoryImpl({
     required StageDao stageDao,
@@ -63,7 +67,7 @@ class StageDefinitionRepositoryImpl implements StageDefinitionRepository {
       curriculumId.storageKey,
     );
     if (count >= _maxStages) {
-      throw const StageLimitExceededException(maxStages: _maxStages);
+      throw StageLimitExceededException(maxStages: _maxStages);
     }
 
     final maxOrder =
@@ -71,8 +75,6 @@ class StageDefinitionRepositoryImpl implements StageDefinitionRepository {
     final newOrder = maxOrder + 1;
 
     // Validate the stage definition before persisting.
-    // StageValidator checks additional invariants that ScheduleSpec constructors
-    // don't cover (e.g. weekly days-of-week range — already checked, but kept).
     final candidate = StageDefinition(
       id: 0,
       curriculumId: curriculumId,
@@ -89,7 +91,6 @@ class StageDefinitionRepositoryImpl implements StageDefinitionRepository {
       throw ArgumentError(validationError);
     }
 
-    final encodedDaysOfWeek = schedule.daysOfWeek;
     final id = await _stageDao.insertStageDefinition(
       db.StageDefinitionsCompanion.insert(
         profileId: profileId,
@@ -97,13 +98,8 @@ class StageDefinitionRepositoryImpl implements StageDefinitionRepository {
         trackId: trackId,
         stageOrder: newOrder,
         stageName: name,
-        delayDays: schedule.delayDays,
         isDefault: const Value(false),
-        scheduleType: Value(schedule.storageKey),
-        daysOfWeek: Value(
-          encodedDaysOfWeek != null ? jsonEncode(encodedDaysOfWeek) : null,
-        ),
-        rollingWindowSize: Value(schedule.rollingWindowSize),
+        schedule: Value(_encodeSchedule(schedule)),
       ),
     );
 
@@ -120,19 +116,23 @@ class StageDefinitionRepositoryImpl implements StageDefinitionRepository {
 
     final curriculumId = _curriculumFromStorageKey(existing.curriculumId);
 
+    // Decode current schedule, apply delayDays override if provided.
+    final currentSpec = _decodeSchedule(existing.schedule);
+    final updatedSpec = delayDays != null
+        ? DelaySchedule(delayDays)
+        : currentSpec;
+
     // Validate the updated stage definition.
     final candidate = StageDefinition(
       id: id,
       curriculumId: curriculumId,
       stageOrder: existing.stageOrder,
       stageName: name ?? existing.stageName,
-      delayDays: delayDays ?? existing.delayDays,
+      delayDays: updatedSpec.delayDays,
       isDefault: existing.isDefault,
-      scheduleType: ScheduleType.fromStorageKey(existing.scheduleType),
-      daysOfWeek: existing.daysOfWeek != null
-          ? (jsonDecode(existing.daysOfWeek!) as List).cast<int>()
-          : null,
-      rollingWindowSize: existing.rollingWindowSize,
+      scheduleType: ScheduleType.fromStorageKey(updatedSpec.storageKey),
+      daysOfWeek: updatedSpec.daysOfWeek,
+      rollingWindowSize: updatedSpec.rollingWindowSize,
     );
     final validationError = StageValidator.validate(candidate);
     if (validationError != null) {
@@ -147,11 +147,8 @@ class StageDefinitionRepositoryImpl implements StageDefinitionRepository {
         trackId: Value(existing.trackId),
         stageOrder: Value(existing.stageOrder),
         stageName: Value(name ?? existing.stageName),
-        delayDays: Value(delayDays ?? existing.delayDays),
         isDefault: Value(existing.isDefault),
-        scheduleType: Value(existing.scheduleType),
-        daysOfWeek: Value(existing.daysOfWeek),
-        rollingWindowSize: Value(existing.rollingWindowSize),
+        schedule: Value(_encodeSchedule(updatedSpec)),
       ),
     );
 
@@ -179,7 +176,6 @@ class StageDefinitionRepositoryImpl implements StageDefinitionRepository {
     List<int> orderedIds,
   ) async {
     // Guard: Learn stage (stageOrder == 1) must remain at position 1.
-    // Fetch the current Learn stage for this curriculum.
     final allStages = await _stageDao.getStageDefinitionsByCurriculum(
       curriculumId.storageKey,
     );
@@ -212,11 +208,8 @@ class StageDefinitionRepositoryImpl implements StageDefinitionRepository {
             trackId: Value(existing.trackId),
             stageOrder: Value(-(i + 1)),
             stageName: Value(existing.stageName),
-            delayDays: Value(existing.delayDays),
             isDefault: Value(existing.isDefault),
-            scheduleType: Value(existing.scheduleType),
-            daysOfWeek: Value(existing.daysOfWeek),
-            rollingWindowSize: Value(existing.rollingWindowSize),
+            schedule: Value(existing.schedule),
           ),
         );
       }
@@ -233,11 +226,8 @@ class StageDefinitionRepositoryImpl implements StageDefinitionRepository {
             trackId: Value(existing.trackId),
             stageOrder: Value(i + 1),
             stageName: Value(existing.stageName),
-            delayDays: Value(existing.delayDays),
             isDefault: Value(existing.isDefault),
-            scheduleType: Value(existing.scheduleType),
-            daysOfWeek: Value(existing.daysOfWeek),
-            rollingWindowSize: Value(existing.rollingWindowSize),
+            schedule: Value(existing.schedule),
           ),
         );
       }
@@ -262,8 +252,8 @@ class StageDefinitionRepositoryImpl implements StageDefinitionRepository {
           trackId: trackId,
           stageOrder: d.stageOrder,
           stageName: d.stageName,
-          delayDays: d.delayDays,
           isDefault: const Value(true),
+          schedule: Value(_encodeSchedule(DelaySchedule(d.delayDays))),
         ),
       );
     }
@@ -284,8 +274,8 @@ class StageDefinitionRepositoryImpl implements StageDefinitionRepository {
           trackId: trackId,
           stageOrder: d.stageOrder,
           stageName: d.stageName,
-          delayDays: d.delayDays,
           isDefault: const Value(true),
+          schedule: Value(_encodeSchedule(DelaySchedule(d.delayDays))),
         ),
       );
     }
@@ -317,24 +307,48 @@ class StageDefinitionRepositoryImpl implements StageDefinitionRepository {
 
   // ── Private helpers ──────────────────────────────────────────────────────
 
+  /// Decode the JSON `schedule` column into a [ScheduleSpec].
+  static ScheduleSpec _decodeSchedule(String scheduleJson) {
+    try {
+      final map = jsonDecode(scheduleJson) as Map<String, dynamic>;
+      final type = map['type'] as String? ?? 'delay';
+      return switch (type) {
+        'weekly' => ScheduleSpec.weekly(
+          (map['days'] as List<dynamic>? ?? []).cast<int>(),
+        ),
+        'rolling' => ScheduleSpec.rolling(
+          (map['window_size'] as num? ?? 1).toInt(),
+        ),
+        _ => ScheduleSpec.delay((map['delay_days'] as num? ?? 0).toInt()),
+      };
+    } catch (_) {
+      return const DelaySchedule(0);
+    }
+  }
+
+  /// Encode a [ScheduleSpec] to the JSON string stored in the `schedule` column.
+  static String _encodeSchedule(ScheduleSpec spec) => switch (spec) {
+    WeeklySchedule(:final daysOfWeek) =>
+      jsonEncode({'type': 'weekly', 'days': daysOfWeek}),
+    RollingSchedule(:final windowSize) =>
+      jsonEncode({'type': 'rolling', 'window_size': windowSize}),
+    DelaySchedule(:final delayDays) =>
+      jsonEncode({'type': 'delay', 'delay_days': delayDays}),
+  };
+
   StageDefinition _rowToModel(db.StageDefinition row) {
-    final decodedDaysOfWeek = row.daysOfWeek != null
-        ? (jsonDecode(row.daysOfWeek!) as List).cast<int>()
-        : null;
+    final spec = _decodeSchedule(row.schedule);
     return StageDefinition(
       id: row.id,
       curriculumId: _curriculumFromStorageKey(row.curriculumId),
       stageOrder: row.stageOrder,
       stageName: row.stageName,
-      delayDays: row.delayDays,
+      delayDays: spec.delayDays,
       isDefault: row.isDefault,
-      scheduleType: ScheduleType.fromStorageKey(row.scheduleType),
-      daysOfWeek: decodedDaysOfWeek,
-      rollingWindowSize: row.rollingWindowSize,
+      scheduleType: ScheduleType.fromStorageKey(spec.storageKey),
+      daysOfWeek: spec.daysOfWeek,
+      rollingWindowSize: spec.rollingWindowSize,
     );
-    // Note: StageDefinition.schedule (a ScheduleSpec getter) is derived from
-    // the above fields — no additional storage needed here. W3.27 will
-    // collapse the quartet into a single JSON column and remove the raw fields.
   }
 
   CurriculumId _curriculumFromStorageKey(String key) =>
@@ -348,18 +362,21 @@ class StageDefinitionRepositoryImpl implements StageDefinitionRepository {
       'curriculum_id': curriculumId.storageKey,
       'updated_at': DateTimeFactory.nowUtc().toIso8601String(),
       'stages': stages
-          .map(
-            (s) => {
+          .map((s) {
+            final spec = _decodeSchedule(s.schedule);
+            return {
               'stage_order': s.stageOrder,
               'stage_name': s.stageName,
-              'delay_days': s.delayDays,
               'is_default': s.isDefault,
-              'schedule_type': s.scheduleType,
-              if (s.daysOfWeek != null) 'days_of_week': s.daysOfWeek,
-              if (s.rollingWindowSize != null)
-                'rolling_window_size': s.rollingWindowSize,
-            },
-          )
+              'schedule': jsonDecode(s.schedule),
+              // Legacy fields for back-compat with older Firestore readers.
+              'delay_days': spec.delayDays,
+              'schedule_type': spec.storageKey,
+              if (spec.daysOfWeek != null) 'days_of_week': spec.daysOfWeek,
+              if (spec.rollingWindowSize != null)
+                'rolling_window_size': spec.rollingWindowSize,
+            };
+          })
           .toList(),
     });
   }

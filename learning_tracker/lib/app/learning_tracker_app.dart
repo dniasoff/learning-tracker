@@ -3,6 +3,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/app/sync_runtime/sync_lifecycle_observer.dart';
 import 'package:learning_tracker/core/analytics/streak_milestone_analytics_observer.dart';
+import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/navigation/router_provider.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/account/presentation/providers/magic_link_providers.dart';
@@ -39,7 +40,8 @@ class _LearningTrackerAppState extends ConsumerState<LearningTrackerApp> {
     // Story 27.14 (DNI-390): activate streak milestone analytics observer.
     ref.watch(streakMilestoneAnalyticsObserverProvider);
     final isChildMode =
-        ref.watch(selectedProfileProvider).asData?.value?.mode == 'child';
+        ref.watch(selectedProfileProvider).asData?.value?.profileMode ==
+        ProfileMode.child;
 
     return SyncLifecycleObserver(
       child: MaterialApp.router(

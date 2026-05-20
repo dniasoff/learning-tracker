@@ -1,10 +1,10 @@
 import 'package:learning_tracker/core/providers/calendar_providers.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
-import 'package:learning_tracker/features/scheduler/domain/services/calendar_program_registry.dart';
-import 'package:learning_tracker/features/scheduler/domain/services/learning_program_service.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/dashboard/domain/models/calendar_position.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
+import 'package:learning_tracker/features/scheduler/domain/services/calendar_program_registry.dart';
+import 'package:learning_tracker/features/scheduler/domain/services/learning_program_service.dart';
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
 import 'package:learning_tracker/features/stages/presentation/providers/stage_providers.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -34,7 +34,7 @@ Future<CalendarPosition> programCalendarPosition(Ref ref, int trackId) async {
     throw StateError('Track $trackId has no program enrollment');
   }
 
-  final program = LearningProgramRepository.instance.getProgramById(
+  final program = ref.read(learningProgramRepositoryProvider).getProgramById(
     enrollment.programId,
   );
   if (program == null) {

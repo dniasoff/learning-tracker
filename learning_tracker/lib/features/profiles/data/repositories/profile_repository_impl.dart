@@ -179,19 +179,15 @@ class ProfileRepositoryImpl implements ProfileRepository {
     }
 
     await _db.transaction(() async {
-      // Cascade delete all associated data
-      await (_db.delete(
-        _db.completions,
-      )..where((t) => t.profileId.equals(id))).go();
+      // Cascade delete all associated data.
+      // W3.20: `completions` and `streaks` tables dropped — their data is now
+      // in `completion_events` and `streak_events` which cascade-delete via FK.
       await (_db.delete(
         _db.bookmarks,
       )..where((t) => t.profileId.equals(id))).go();
       await (_db.delete(_db.goals)..where((t) => t.profileId.equals(id))).go();
       await (_db.delete(
         _db.stageDefinitions,
-      )..where((t) => t.profileId.equals(id))).go();
-      await (_db.delete(
-        _db.streaks,
       )..where((t) => t.profileId.equals(id))).go();
       await (_db.delete(
         _db.learningOrder,

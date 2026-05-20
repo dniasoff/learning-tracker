@@ -379,10 +379,9 @@ class $CalendarCyclesTable extends CalendarCycles
   late final GeneratedColumn<String> sefariaRefHe = GeneratedColumn<String>(
     'sefaria_ref_he',
     aliasedName,
-    false,
+    true,
     type: DriftSqlType.string,
     requiredDuringInsert: false,
-    defaultValue: const Constant(''),
   );
   static const VerificationMeta _displayNameMeta = const VerificationMeta(
     'displayName',
@@ -482,7 +481,7 @@ class $CalendarCyclesTable extends CalendarCycles
       sefariaRefHe: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}sefaria_ref_he'],
-      )!,
+      ),
       displayName: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}display_name'],
@@ -509,9 +508,9 @@ class CalendarCycle extends DataClass implements Insertable<CalendarCycle> {
   final String sefariaRef;
 
   /// Sefaria ref for this program on this date (Hebrew, `heRef` from
-  /// /api/calendars). Empty string when the API didn't return one.
+  /// /api/calendars). Null when the API didn't return one.
   /// e.g., 'ברכות ב׳', 'משנה ברכות א׳:א׳'
-  final String sefariaRefHe;
+  final String? sefariaRefHe;
 
   /// Human-readable display name (localized)
   final String displayName;
@@ -519,7 +518,7 @@ class CalendarCycle extends DataClass implements Insertable<CalendarCycle> {
     required this.programKey,
     required this.dateKey,
     required this.sefariaRef,
-    required this.sefariaRefHe,
+    this.sefariaRefHe,
     required this.displayName,
   });
   @override
@@ -528,7 +527,9 @@ class CalendarCycle extends DataClass implements Insertable<CalendarCycle> {
     map['program_key'] = Variable<String>(programKey);
     map['date_key'] = Variable<String>(dateKey);
     map['sefaria_ref'] = Variable<String>(sefariaRef);
-    map['sefaria_ref_he'] = Variable<String>(sefariaRefHe);
+    if (!nullToAbsent || sefariaRefHe != null) {
+      map['sefaria_ref_he'] = Variable<String>(sefariaRefHe);
+    }
     map['display_name'] = Variable<String>(displayName);
     return map;
   }
@@ -538,7 +539,9 @@ class CalendarCycle extends DataClass implements Insertable<CalendarCycle> {
       programKey: Value(programKey),
       dateKey: Value(dateKey),
       sefariaRef: Value(sefariaRef),
-      sefariaRefHe: Value(sefariaRefHe),
+      sefariaRefHe: sefariaRefHe == null && nullToAbsent
+          ? const Value.absent()
+          : Value(sefariaRefHe),
       displayName: Value(displayName),
     );
   }
@@ -552,7 +555,7 @@ class CalendarCycle extends DataClass implements Insertable<CalendarCycle> {
       programKey: serializer.fromJson<String>(json['programKey']),
       dateKey: serializer.fromJson<String>(json['dateKey']),
       sefariaRef: serializer.fromJson<String>(json['sefariaRef']),
-      sefariaRefHe: serializer.fromJson<String>(json['sefariaRefHe']),
+      sefariaRefHe: serializer.fromJson<String?>(json['sefariaRefHe']),
       displayName: serializer.fromJson<String>(json['displayName']),
     );
   }
@@ -563,7 +566,7 @@ class CalendarCycle extends DataClass implements Insertable<CalendarCycle> {
       'programKey': serializer.toJson<String>(programKey),
       'dateKey': serializer.toJson<String>(dateKey),
       'sefariaRef': serializer.toJson<String>(sefariaRef),
-      'sefariaRefHe': serializer.toJson<String>(sefariaRefHe),
+      'sefariaRefHe': serializer.toJson<String?>(sefariaRefHe),
       'displayName': serializer.toJson<String>(displayName),
     };
   }
@@ -572,13 +575,13 @@ class CalendarCycle extends DataClass implements Insertable<CalendarCycle> {
     String? programKey,
     String? dateKey,
     String? sefariaRef,
-    String? sefariaRefHe,
+    Value<String?> sefariaRefHe = const Value.absent(),
     String? displayName,
   }) => CalendarCycle(
     programKey: programKey ?? this.programKey,
     dateKey: dateKey ?? this.dateKey,
     sefariaRef: sefariaRef ?? this.sefariaRef,
-    sefariaRefHe: sefariaRefHe ?? this.sefariaRefHe,
+    sefariaRefHe: sefariaRefHe.present ? sefariaRefHe.value : this.sefariaRefHe,
     displayName: displayName ?? this.displayName,
   );
   CalendarCycle copyWithCompanion(CalendarCyclesCompanion data) {
@@ -629,7 +632,7 @@ class CalendarCyclesCompanion extends UpdateCompanion<CalendarCycle> {
   final Value<String> programKey;
   final Value<String> dateKey;
   final Value<String> sefariaRef;
-  final Value<String> sefariaRefHe;
+  final Value<String?> sefariaRefHe;
   final Value<String> displayName;
   final Value<int> rowid;
   const CalendarCyclesCompanion({
@@ -672,7 +675,7 @@ class CalendarCyclesCompanion extends UpdateCompanion<CalendarCycle> {
     Value<String>? programKey,
     Value<String>? dateKey,
     Value<String>? sefariaRef,
-    Value<String>? sefariaRefHe,
+    Value<String?>? sefariaRefHe,
     Value<String>? displayName,
     Value<int>? rowid,
   }) {
@@ -1070,10 +1073,9 @@ class $SeedMetadataTable extends SeedMetadata
   late final GeneratedColumn<String> contentHash = GeneratedColumn<String>(
     'content_hash',
     aliasedName,
-    false,
+    true,
     type: DriftSqlType.string,
     requiredDuringInsert: false,
-    defaultValue: const Constant(''),
   );
   static const VerificationMeta _minAppVersionMeta = const VerificationMeta(
     'minAppVersion',
@@ -1203,7 +1205,7 @@ class $SeedMetadataTable extends SeedMetadata
       contentHash: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}content_hash'],
-      )!,
+      ),
       minAppVersion: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}min_app_version'],
@@ -1234,8 +1236,9 @@ class SeedMetadataData extends DataClass
   /// Number of CalendarCycles rows in this seed
   final int calendarCycleCount;
 
-  /// SHA-256 hash of all content (refs + calendar keys) for integrity checks
-  final String contentHash;
+  /// SHA-256 hash of all content (refs + calendar keys) for integrity checks.
+  /// Null when not computed by the seed build pipeline.
+  final String? contentHash;
 
   /// Minimum app version required to read this seed format
   final String minAppVersion;
@@ -1245,7 +1248,7 @@ class SeedMetadataData extends DataClass
     required this.buildId,
     required this.textCacheCount,
     required this.calendarCycleCount,
-    required this.contentHash,
+    this.contentHash,
     required this.minAppVersion,
   });
   @override
@@ -1256,7 +1259,9 @@ class SeedMetadataData extends DataClass
     map['build_id'] = Variable<String>(buildId);
     map['text_cache_count'] = Variable<int>(textCacheCount);
     map['calendar_cycle_count'] = Variable<int>(calendarCycleCount);
-    map['content_hash'] = Variable<String>(contentHash);
+    if (!nullToAbsent || contentHash != null) {
+      map['content_hash'] = Variable<String>(contentHash);
+    }
     map['min_app_version'] = Variable<String>(minAppVersion);
     return map;
   }
@@ -1268,7 +1273,9 @@ class SeedMetadataData extends DataClass
       buildId: Value(buildId),
       textCacheCount: Value(textCacheCount),
       calendarCycleCount: Value(calendarCycleCount),
-      contentHash: Value(contentHash),
+      contentHash: contentHash == null && nullToAbsent
+          ? const Value.absent()
+          : Value(contentHash),
       minAppVersion: Value(minAppVersion),
     );
   }
@@ -1284,7 +1291,7 @@ class SeedMetadataData extends DataClass
       buildId: serializer.fromJson<String>(json['buildId']),
       textCacheCount: serializer.fromJson<int>(json['textCacheCount']),
       calendarCycleCount: serializer.fromJson<int>(json['calendarCycleCount']),
-      contentHash: serializer.fromJson<String>(json['contentHash']),
+      contentHash: serializer.fromJson<String?>(json['contentHash']),
       minAppVersion: serializer.fromJson<String>(json['minAppVersion']),
     );
   }
@@ -1297,7 +1304,7 @@ class SeedMetadataData extends DataClass
       'buildId': serializer.toJson<String>(buildId),
       'textCacheCount': serializer.toJson<int>(textCacheCount),
       'calendarCycleCount': serializer.toJson<int>(calendarCycleCount),
-      'contentHash': serializer.toJson<String>(contentHash),
+      'contentHash': serializer.toJson<String?>(contentHash),
       'minAppVersion': serializer.toJson<String>(minAppVersion),
     };
   }
@@ -1308,7 +1315,7 @@ class SeedMetadataData extends DataClass
     String? buildId,
     int? textCacheCount,
     int? calendarCycleCount,
-    String? contentHash,
+    Value<String?> contentHash = const Value.absent(),
     String? minAppVersion,
   }) => SeedMetadataData(
     version: version ?? this.version,
@@ -1316,7 +1323,7 @@ class SeedMetadataData extends DataClass
     buildId: buildId ?? this.buildId,
     textCacheCount: textCacheCount ?? this.textCacheCount,
     calendarCycleCount: calendarCycleCount ?? this.calendarCycleCount,
-    contentHash: contentHash ?? this.contentHash,
+    contentHash: contentHash.present ? contentHash.value : this.contentHash,
     minAppVersion: minAppVersion ?? this.minAppVersion,
   );
   SeedMetadataData copyWithCompanion(SeedMetadataCompanion data) {
@@ -1382,7 +1389,7 @@ class SeedMetadataCompanion extends UpdateCompanion<SeedMetadataData> {
   final Value<String> buildId;
   final Value<int> textCacheCount;
   final Value<int> calendarCycleCount;
-  final Value<String> contentHash;
+  final Value<String?> contentHash;
   final Value<String> minAppVersion;
   const SeedMetadataCompanion({
     this.version = const Value.absent(),
@@ -1432,7 +1439,7 @@ class SeedMetadataCompanion extends UpdateCompanion<SeedMetadataData> {
     Value<String>? buildId,
     Value<int>? textCacheCount,
     Value<int>? calendarCycleCount,
-    Value<String>? contentHash,
+    Value<String?>? contentHash,
     Value<String>? minAppVersion,
   }) {
     return SeedMetadataCompanion(
@@ -1711,7 +1718,7 @@ typedef $$CalendarCyclesTableCreateCompanionBuilder =
       required String programKey,
       required String dateKey,
       required String sefariaRef,
-      Value<String> sefariaRefHe,
+      Value<String?> sefariaRefHe,
       Value<String> displayName,
       Value<int> rowid,
     });
@@ -1720,7 +1727,7 @@ typedef $$CalendarCyclesTableUpdateCompanionBuilder =
       Value<String> programKey,
       Value<String> dateKey,
       Value<String> sefariaRef,
-      Value<String> sefariaRefHe,
+      Value<String?> sefariaRefHe,
       Value<String> displayName,
       Value<int> rowid,
     });
@@ -1868,7 +1875,7 @@ class $$CalendarCyclesTableTableManager
                 Value<String> programKey = const Value.absent(),
                 Value<String> dateKey = const Value.absent(),
                 Value<String> sefariaRef = const Value.absent(),
-                Value<String> sefariaRefHe = const Value.absent(),
+                Value<String?> sefariaRefHe = const Value.absent(),
                 Value<String> displayName = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => CalendarCyclesCompanion(
@@ -1884,7 +1891,7 @@ class $$CalendarCyclesTableTableManager
                 required String programKey,
                 required String dateKey,
                 required String sefariaRef,
-                Value<String> sefariaRefHe = const Value.absent(),
+                Value<String?> sefariaRefHe = const Value.absent(),
                 Value<String> displayName = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => CalendarCyclesCompanion.insert(
@@ -2101,7 +2108,7 @@ typedef $$SeedMetadataTableCreateCompanionBuilder =
       required String buildId,
       required int textCacheCount,
       required int calendarCycleCount,
-      Value<String> contentHash,
+      Value<String?> contentHash,
       Value<String> minAppVersion,
     });
 typedef $$SeedMetadataTableUpdateCompanionBuilder =
@@ -2111,7 +2118,7 @@ typedef $$SeedMetadataTableUpdateCompanionBuilder =
       Value<String> buildId,
       Value<int> textCacheCount,
       Value<int> calendarCycleCount,
-      Value<String> contentHash,
+      Value<String?> contentHash,
       Value<String> minAppVersion,
     });
 
@@ -2286,7 +2293,7 @@ class $$SeedMetadataTableTableManager
                 Value<String> buildId = const Value.absent(),
                 Value<int> textCacheCount = const Value.absent(),
                 Value<int> calendarCycleCount = const Value.absent(),
-                Value<String> contentHash = const Value.absent(),
+                Value<String?> contentHash = const Value.absent(),
                 Value<String> minAppVersion = const Value.absent(),
               }) => SeedMetadataCompanion(
                 version: version,
@@ -2304,7 +2311,7 @@ class $$SeedMetadataTableTableManager
                 required String buildId,
                 required int textCacheCount,
                 required int calendarCycleCount,
-                Value<String> contentHash = const Value.absent(),
+                Value<String?> contentHash = const Value.absent(),
                 Value<String> minAppVersion = const Value.absent(),
               }) => SeedMetadataCompanion.insert(
                 version: version,

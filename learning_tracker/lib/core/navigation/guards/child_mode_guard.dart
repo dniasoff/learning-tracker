@@ -1,5 +1,6 @@
 import 'package:auto_route/auto_route.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
+import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 
 /// Route guard that only allows access for child-mode profiles (FR67).
 ///
@@ -31,6 +32,9 @@ class ChildModeGuard extends AutoRouteGuard {
     }
 
     final profile = await _getDatabase().profileDao.getProfileById(profileId);
-    resolver.next(profile?.mode == 'child');
+    resolver.next(
+      profile != null &&
+          ProfileMode.fromStorageKey(profile.mode) == ProfileMode.child,
+    );
   }
 }

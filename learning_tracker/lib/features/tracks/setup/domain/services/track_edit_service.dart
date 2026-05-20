@@ -1,7 +1,6 @@
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
-import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/learning_process_wizard_service.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/goal_entity.dart';
 import 'package:learning_tracker/features/scheduler/domain/repositories/goal_repository.dart';
@@ -55,15 +54,14 @@ class TrackEditService {
         );
       }
 
-      // 2. Chazarah — supersede existing active stages then insert replacements.
+      // 2. Chazarah — delete existing stages then insert replacements.
+      // W3.28/W3.29: supersededAt dropped; stages are now hard-deleted and
+      // replaced (completions.stageId FKs are managed at the application layer).
       if (chazarahWizard != null) {
-        final now = DateTimeFactory.nowUtc();
-        await _database.stageDao.supersedeStagesToTrack(trackId, now);
         await _wizardService.applyWizardResult(
           chazarahWizard,
           profileId: profileId,
           trackId: trackId,
-          clearFirst: false,
         );
       }
     });

@@ -21,29 +21,29 @@ enum TutorAuditAction {
   studyDayChanged;
 
   String toJson() => switch (this) {
-        TutorAuditAction.configChanged => 'config_changed',
-        TutorAuditAction.completionBulkPrior => 'completion_bulk_prior',
-        TutorAuditAction.completionReset => 'completion_reset',
-        TutorAuditAction.bookmarkAdvanced => 'bookmark_advanced',
-        TutorAuditAction.profileEdited => 'profile_edited',
-        TutorAuditAction.goalChanged => 'goal_changed',
-        TutorAuditAction.stageChanged => 'stage_changed',
-        TutorAuditAction.rewardChanged => 'reward_changed',
-        TutorAuditAction.studyDayChanged => 'study_day_changed',
-      };
+    TutorAuditAction.configChanged => 'config_changed',
+    TutorAuditAction.completionBulkPrior => 'completion_bulk_prior',
+    TutorAuditAction.completionReset => 'completion_reset',
+    TutorAuditAction.bookmarkAdvanced => 'bookmark_advanced',
+    TutorAuditAction.profileEdited => 'profile_edited',
+    TutorAuditAction.goalChanged => 'goal_changed',
+    TutorAuditAction.stageChanged => 'stage_changed',
+    TutorAuditAction.rewardChanged => 'reward_changed',
+    TutorAuditAction.studyDayChanged => 'study_day_changed',
+  };
 
   static TutorAuditAction fromJson(String value) => switch (value) {
-        'config_changed' => TutorAuditAction.configChanged,
-        'completion_bulk_prior' => TutorAuditAction.completionBulkPrior,
-        'completion_reset' => TutorAuditAction.completionReset,
-        'bookmark_advanced' => TutorAuditAction.bookmarkAdvanced,
-        'profile_edited' => TutorAuditAction.profileEdited,
-        'goal_changed' => TutorAuditAction.goalChanged,
-        'stage_changed' => TutorAuditAction.stageChanged,
-        'reward_changed' => TutorAuditAction.rewardChanged,
-        'study_day_changed' => TutorAuditAction.studyDayChanged,
-        _ => throw ArgumentError('Unknown TutorAuditAction: $value'),
-      };
+    'config_changed' => TutorAuditAction.configChanged,
+    'completion_bulk_prior' => TutorAuditAction.completionBulkPrior,
+    'completion_reset' => TutorAuditAction.completionReset,
+    'bookmark_advanced' => TutorAuditAction.bookmarkAdvanced,
+    'profile_edited' => TutorAuditAction.profileEdited,
+    'goal_changed' => TutorAuditAction.goalChanged,
+    'stage_changed' => TutorAuditAction.stageChanged,
+    'reward_changed' => TutorAuditAction.rewardChanged,
+    'study_day_changed' => TutorAuditAction.studyDayChanged,
+    _ => throw ArgumentError('Unknown TutorAuditAction: $value'),
+  };
 }
 
 /// A single audit log entry recording one tutor-originated mutation.
@@ -86,15 +86,15 @@ class TutorAuditLogEntry {
   final DateTime timestamp;
 
   Map<String, dynamic> toFirestore() => {
-        'entry_id': entryId,
-        'tutor_uid': tutorUid,
-        'tutor_name_snapshot': tutorNameSnapshot,
-        'action': action.toJson(),
-        'target': target,
-        if (beforeValue != null) 'before_value': beforeValue,
-        if (afterValue != null) 'after_value': afterValue,
-        'timestamp': timestamp.toUtc().toIso8601String(),
-      };
+    'entry_id': entryId,
+    'tutor_uid': tutorUid,
+    'tutor_name_snapshot': tutorNameSnapshot,
+    'action': action.toJson(),
+    'target': target,
+    if (beforeValue != null) 'before_value': beforeValue,
+    if (afterValue != null) 'after_value': afterValue,
+    'timestamp': timestamp.toUtc().toIso8601String(),
+  };
 
   factory TutorAuditLogEntry.fromFirestore(Map<String, dynamic> data) =>
       TutorAuditLogEntry(

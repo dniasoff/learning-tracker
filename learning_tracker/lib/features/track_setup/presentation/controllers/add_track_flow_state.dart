@@ -1,5 +1,5 @@
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/features/track_setup/domain/entities/add_track_result.dart';
+import 'package:learning_tracker/features/tracks/setup/domain/entities/add_track_result.dart';
 
 /// Navigation-level sealed state for the AddTrackFlow wizard.
 ///

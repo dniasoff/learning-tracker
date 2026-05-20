@@ -21,7 +21,8 @@ class RevokeTutorGrantUseCase {
   Future<TutorGrantResult> call({required TutorGrant grant}) async {
     if (!grant.canRevoke) {
       return TutorGrantPreconditionError(
-        message: 'Grant ${grant.grantId} cannot be revoked '
+        message:
+            'Grant ${grant.grantId} cannot be revoked '
             '(current state: ${grant.grantState.rawState.toJson()}). '
             'Only active grants can be revoked by the parent.',
       );
@@ -38,7 +39,8 @@ class ResignTutorGrantUseCase {
   Future<TutorGrantResult> call({required TutorGrant grant}) async {
     if (!grant.canResign) {
       return TutorGrantPreconditionError(
-        message: 'Grant ${grant.grantId} cannot be resigned '
+        message:
+            'Grant ${grant.grantId} cannot be resigned '
             '(current state: ${grant.grantState.rawState.toJson()}). '
             'Only active grants can be resigned by the tutor.',
       );

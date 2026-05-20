@@ -1,8 +1,11 @@
 import 'package:learning_tracker/core/analytics/parent_analytics_repository.dart';
+import 'package:learning_tracker/core/database/daos/track_dao.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/cross_profile_scope.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
+import 'package:learning_tracker/core/time/local_day_clock.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
+import 'package:learning_tracker/features/gamification/streak/streak_state_provider.dart';
 import 'package:learning_tracker/features/learning/data/completion_writer.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_command.dart';
 import 'package:learning_tracker/features/sync/data/outbox_sync_write_facade.dart';
@@ -27,12 +30,17 @@ class LocalDataUploadService {
   }) : _facade = facade,
        _database = database,
        _profileId = profileId,
-       _logger = logger;
+       _logger = logger,
+       _streakStateProvider = StreakStateProvider(
+         db: database,
+         clock: const SystemLocalDayClock(),
+       );
 
   final OutboxSyncWriteFacade _facade;
   final UserDatabase _database;
   final int _profileId;
   final AppLogger? _logger;
+  final StreakStateProvider _streakStateProvider;
 
   static const _goalsBackfilledKey = 'sync_goals_backfilled_v1';
 
@@ -92,7 +100,6 @@ class LocalDataUploadService {
       if (track == null) continue;
       await _facade.pushBookmark({
         'curriculum_id': b.curriculumId,
-        'track_type': track.trackType,
         'content_item_id': b.sefariaRef,
         'updated_at': b.updatedAt.toIso8601String(),
       });
@@ -147,14 +154,16 @@ class LocalDataUploadService {
     );
 
     // ── Streak ────────────────────────────────────────────────────────────
-    final streak = await _database.streakDao.getStreakByProfile(_profileId);
-    if (streak != null) {
+    // W3.20: streaks table dropped; derive from streak_events via
+    // StreakStateProvider rather than reading the cached snapshot row.
+    final streakState = await _streakStateProvider.read(profileId: _profileId);
+    if (streakState.currentStreak > 0 ||
+        streakState.lastCompletionDayUtc != null) {
       await _facade.enqueueStreakPayload({
-        'current_count': streak.currentStreak,
-        'max_count': streak.maxStreak,
-        'last_completion_date': streak.lastCompletionDate?.toIso8601String(),
-        'grace_used_date': streak.graceUsedDate?.toIso8601String(),
-        'grace_period_days': streak.gracePeriodDays,
+        'current_count': streakState.currentStreak,
+        'max_count': streakState.maxStreak,
+        'last_completion_date': streakState.lastCompletionDayUtc
+            ?.toIso8601String(),
       });
       _logger?.debug(event: 'local_data_upload_streak_queued');
     }
@@ -190,10 +199,9 @@ class LocalDataUploadService {
         'profile_id': t.profileId,
         'track_id': t.id,
         'curriculum_id': t.curriculumId,
-        'track_type': t.trackType,
-        'is_active': t.isActive,
+        'state': t.state,
+        'state_changed_at': t.stateChangedAt.toIso8601String(),
         'activated_at': t.activatedAt.toIso8601String(),
-        'deactivated_at': t.deactivatedAt?.toIso8601String(),
         'pace_reset_date': t.paceResetDate?.toIso8601String(),
       });
     }

@@ -68,7 +68,7 @@ class StageDefinitionRepositoryImpl implements StageDefinitionRepository {
       curriculumId.storageKey,
     );
     if (count >= _maxStages) {
-      throw const StageLimitExceededException(maxStages: _maxStages);
+      throw StageLimitExceededException(maxStages: _maxStages);
     }
 
     final maxOrder =

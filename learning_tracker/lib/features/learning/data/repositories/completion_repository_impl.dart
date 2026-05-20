@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:drift/drift.dart' as drift;
+import 'package:learning_tracker/core/database/daos/completion_dao.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
@@ -535,20 +536,20 @@ class CompletionRepositoryImpl implements CompletionRepository {
     required String trackType,
     required int profileId,
   }) async {
+    // W3.22: trackType dropped — one track per {profileId, curriculumId}.
     final track =
         await (_database.select(_database.curriculumTracks)
               ..where(
                 (t) =>
                     t.profileId.equals(profileId) &
-                    t.curriculumId.equals(curriculumId) &
-                    t.trackType.equals(trackType),
+                    t.curriculumId.equals(curriculumId),
               )
               ..limit(1))
             .getSingleOrNull();
     if (track == null) {
       throw StateError(
         'No curriculum track found for profile=$profileId, '
-        'curriculum=$curriculumId, trackType=$trackType',
+        'curriculum=$curriculumId',
       );
     }
     return track.id;

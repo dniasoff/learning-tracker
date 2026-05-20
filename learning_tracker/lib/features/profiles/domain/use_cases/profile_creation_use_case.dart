@@ -121,7 +121,7 @@ class ProfileCreationUseCase {
                 profileId: newProfileId,
                 curriculumId: curriculumId.storageKey,
                 state: const Value(TrackState.active),
-                stateChangedAt: Value(now),
+                stateChangedAt: now,
                 activatedAt: now,
               ),
             );

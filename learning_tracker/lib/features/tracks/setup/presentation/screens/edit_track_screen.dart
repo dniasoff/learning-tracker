@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -105,9 +107,18 @@ class _EditTrackScreenState extends ConsumerState<EditTrackScreen> {
     }
 
     // Chazarah delays = delayDays of stages with stageOrder > 1 (skip learn).
+    // W3.27: schedule quartet replaced by JSON column; decode delay_days here.
     final delays = stages
         .where((s) => s.stageOrder > 1)
-        .map((s) => s.delayDays)
+        .map((s) {
+          try {
+            final sched =
+                jsonDecode(s.schedule) as Map<String, dynamic>;
+            return (sched['delay_days'] as num?)?.toInt() ?? 0;
+          } catch (_) {
+            return 0;
+          }
+        })
         .toList();
 
     if (!mounted) return;
@@ -283,7 +294,7 @@ class _EditTrackScreenState extends ConsumerState<EditTrackScreen> {
         .getProgramForProfileAndCurriculum(profileId, curriculum.storageKey);
     if (enrollment == null) return;
 
-    final program = LearningProgramRepository.instance.getProgramById(
+    final program = ref.read(learningProgramRepositoryProvider).getProgramById(
       enrollment.programId,
     );
     final apiKey = program?.apiProgramKey;

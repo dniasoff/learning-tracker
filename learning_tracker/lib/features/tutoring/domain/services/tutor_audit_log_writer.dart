@@ -79,113 +79,104 @@ class TutorAuditLogWriter {
     required String target,
     required String? beforeValue,
     required String? afterValue,
-  }) =>
-      _log(
-        action: TutorAuditAction.configChanged,
-        target: target,
-        beforeValue: beforeValue,
-        afterValue: afterValue,
-      );
+  }) => _log(
+    action: TutorAuditAction.configChanged,
+    target: target,
+    beforeValue: beforeValue,
+    afterValue: afterValue,
+  );
 
   /// Bulk-prior completions submitted (also written by Cloud Function W3.43).
   Future<void> logCompletionBulkPrior({
     required String target,
     required String afterValue, // JSON: { count: N }
-  }) =>
-      _log(
-        action: TutorAuditAction.completionBulkPrior,
-        target: target,
-        afterValue: afterValue,
-      );
+  }) => _log(
+    action: TutorAuditAction.completionBulkPrior,
+    target: target,
+    afterValue: afterValue,
+  );
 
   /// A completion was reset by the tutor.
   Future<void> logCompletionReset({
     required String target,
     required String? beforeValue,
-  }) =>
-      _log(
-        action: TutorAuditAction.completionReset,
-        target: target,
-        beforeValue: beforeValue,
-      );
+  }) => _log(
+    action: TutorAuditAction.completionReset,
+    target: target,
+    beforeValue: beforeValue,
+  );
 
   /// A bookmark was advanced by the tutor.
   Future<void> logBookmarkAdvanced({
     required String target,
     required String? beforeValue,
     required String? afterValue,
-  }) =>
-      _log(
-        action: TutorAuditAction.bookmarkAdvanced,
-        target: target,
-        beforeValue: beforeValue,
-        afterValue: afterValue,
-      );
+  }) => _log(
+    action: TutorAuditAction.bookmarkAdvanced,
+    target: target,
+    beforeValue: beforeValue,
+    afterValue: afterValue,
+  );
 
   /// A learner profile field was edited by the tutor.
   Future<void> logProfileEdited({
     required String target, // e.g. "profile/42.displayName"
     required String? beforeValue,
     required String? afterValue,
-  }) =>
-      _log(
-        action: TutorAuditAction.profileEdited,
-        target: target,
-        beforeValue: beforeValue,
-        afterValue: afterValue,
-      );
+  }) => _log(
+    action: TutorAuditAction.profileEdited,
+    target: target,
+    beforeValue: beforeValue,
+    afterValue: afterValue,
+  );
 
   /// A goal was created, modified, or deleted by the tutor.
   Future<void> logGoalChanged({
     required String target, // e.g. "goal/{goalId}.targetDate"
     required String? beforeValue,
     required String? afterValue,
-  }) =>
-      _log(
-        action: TutorAuditAction.goalChanged,
-        target: target,
-        beforeValue: beforeValue,
-        afterValue: afterValue,
-      );
+  }) => _log(
+    action: TutorAuditAction.goalChanged,
+    target: target,
+    beforeValue: beforeValue,
+    afterValue: afterValue,
+  );
 
   /// A stage configuration was changed by the tutor.
   Future<void> logStageChanged({
     required String target, // e.g. "stage/{stageId}.delayDays"
     required String? beforeValue,
     required String? afterValue,
-  }) =>
-      _log(
-        action: TutorAuditAction.stageChanged,
-        target: target,
-        beforeValue: beforeValue,
-        afterValue: afterValue,
-      );
+  }) => _log(
+    action: TutorAuditAction.stageChanged,
+    target: target,
+    beforeValue: beforeValue,
+    afterValue: afterValue,
+  );
 
   /// A reward configuration was changed by the tutor.
   Future<void> logRewardChanged({
     required String target,
     required String? beforeValue,
     required String? afterValue,
-  }) =>
-      _log(
-        action: TutorAuditAction.rewardChanged,
-        target: target,
-        beforeValue: beforeValue,
-        afterValue: afterValue,
-      );
+  }) => _log(
+    action: TutorAuditAction.rewardChanged,
+    target: target,
+    beforeValue: beforeValue,
+    afterValue: afterValue,
+  );
 
   /// Study day schedule was changed by the tutor.
   Future<void> logStudyDayChanged({
     required String target,
     required String? beforeValue,
     required String? afterValue,
-  }) =>
-      _log(
-        action: TutorAuditAction.studyDayChanged,
-        target: target,
-        beforeValue: beforeValue,
-        afterValue: afterValue,
-      );
+  }) => _log(
+    action: TutorAuditAction.studyDayChanged,
+    target: target,
+    beforeValue: beforeValue,
+    afterValue: afterValue,
+  );
 
   // ── Internal ──────────────────────────────────────────────────────────────
 

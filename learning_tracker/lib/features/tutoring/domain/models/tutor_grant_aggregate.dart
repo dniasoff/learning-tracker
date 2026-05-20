@@ -11,7 +11,8 @@
 import 'package:learning_tracker/features/tutoring/domain/models/tutor_grant.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/tutor_permissions.dart';
 
-export 'package:learning_tracker/features/tutoring/domain/models/tutor_grant.dart' show TutorGrantDoc, TutorGrantState;
+export 'package:learning_tracker/features/tutoring/domain/models/tutor_grant.dart'
+    show TutorGrantDoc, TutorGrantState;
 
 // ── Sealed grant state ──────────────────────────────────────────────────────
 
@@ -113,10 +114,7 @@ final class ExpiredGrant extends GrantState {
 ///     methods validate the precondition so the client can surface errors
 ///     before the network round-trip.
 class TutorGrant {
-  TutorGrant({
-    required this.doc,
-    required this.grantState,
-  });
+  TutorGrant({required this.doc, required this.grantState});
 
   /// Raw Firestore document.
   final TutorGrantDoc doc;
@@ -167,7 +165,8 @@ class TutorGrant {
     switch (doc.state) {
       case TutorGrantState.pending:
         return PendingGrant(
-          expiresAt: doc.expiresAt ?? doc.invitedAt.add(const Duration(days: 7)),
+          expiresAt:
+              doc.expiresAt ?? doc.invitedAt.add(const Duration(days: 7)),
         );
       case TutorGrantState.active:
         return ActiveGrant(
@@ -175,9 +174,7 @@ class TutorGrant {
           permissions: perms ?? TutorPermissions.defaults(),
         );
       case TutorGrantState.declined:
-        return DeclinedGrant(
-          declinedAt: doc.declinedAt ?? doc.updatedAt,
-        );
+        return DeclinedGrant(declinedAt: doc.declinedAt ?? doc.updatedAt);
       case TutorGrantState.rescinded:
         return RescindedGrant(revokedAt: doc.revokedAt ?? doc.updatedAt);
       case TutorGrantState.revokedByParent:
@@ -185,9 +182,7 @@ class TutorGrant {
       case TutorGrantState.revokedByTutor:
         return RevokedByTutorGrant(revokedAt: doc.revokedAt ?? doc.updatedAt);
       case TutorGrantState.expired:
-        return ExpiredGrant(
-          expiresAt: doc.expiresAt ?? doc.updatedAt,
-        );
+        return ExpiredGrant(expiresAt: doc.expiresAt ?? doc.updatedAt);
     }
   }
 }

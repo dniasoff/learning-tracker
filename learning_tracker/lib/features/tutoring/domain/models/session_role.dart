@@ -26,10 +26,7 @@ sealed class ProfileSelection {
 /// The authenticated user owns the profile (parent viewing their child's
 /// profile, or a single-user account viewing their own).
 final class OwnProfileSelection extends ProfileSelection {
-  const OwnProfileSelection({
-    required super.profileId,
-    required this.ownerUid,
-  });
+  const OwnProfileSelection({required super.profileId, required this.ownerUid});
 
   /// UID of the authenticated owner.
   final String ownerUid;
@@ -95,31 +92,29 @@ class ResolvedSession {
       permissions ?? _ownerPermissions();
 
   static TutorPermissions _ownerPermissions() => const TutorPermissions(
-        canViewProgress: true,
-        canViewContent: true,
-        canBulkPriorCompletion: true,
-        canResetCompletion: true,
-        canEditGoals: true,
-        canEditStages: true,
-        canEditRewards: true,
-        canEditStudyDays: true,
-      );
+    canViewProgress: true,
+    canViewContent: true,
+    canBulkPriorCompletion: true,
+    canResetCompletion: true,
+    canEditGoals: true,
+    canEditStages: true,
+    canEditRewards: true,
+    canEditStudyDays: true,
+  );
 
   factory ResolvedSession.forOwner({
     required ProfileSelection selection,
     required bool isChildMode,
-  }) =>
-      ResolvedSession(
-        role: isChildMode ? SessionRole.childSelf : SessionRole.parentOfOwn,
-        profileSelection: selection,
-      );
+  }) => ResolvedSession(
+    role: isChildMode ? SessionRole.childSelf : SessionRole.parentOfOwn,
+    profileSelection: selection,
+  );
 
   factory ResolvedSession.forTutor({
     required TutoredProfileSelection selection,
-  }) =>
-      ResolvedSession(
-        role: SessionRole.tutor,
-        profileSelection: selection,
-        permissions: selection.permissions,
-      );
+  }) => ResolvedSession(
+    role: SessionRole.tutor,
+    profileSelection: selection,
+    permissions: selection.permissions,
+  );
 }

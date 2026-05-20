@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:drift/drift.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/sync/codec/firestore_codec.dart';
@@ -39,24 +41,18 @@ class DriftMergeStore implements MergeStore {
         return row?.updatedAt;
 
       case EntityKind.trackConfig:
-        final parts = naturalKey.split('|');
-        if (parts.length != 2) return null;
-        final curriculumId = parts[0];
-        final trackType = parts[1];
+        // Natural key for tracks: "curriculum_id" (W3.22: trackType removed).
+        final curriculumId = naturalKey;
         final row =
             await (_db.select(_db.curriculumTracks)..where(
                   (t) =>
                       t.profileId.equals(profileId) &
-                      t.curriculumId.equals(curriculumId) &
-                      t.trackType.equals(trackType),
+                      t.curriculumId.equals(curriculumId),
                 ))
                 .getSingleOrNull();
-        // Track uses activatedAt as its LWW timestamp (most recent state change).
+        // Track uses stateChangedAt as its LWW timestamp.
         if (row == null) return null;
-        final deactivated = row.deactivatedAt;
-        return (deactivated != null && deactivated.isAfter(row.activatedAt))
-            ? deactivated
-            : row.activatedAt;
+        return row.stateChangedAt;
 
       case EntityKind.bookmark:
         // Natural key for bookmarks: "curriculum_id|track_type"
@@ -276,46 +272,49 @@ class DriftMergeStore implements MergeStore {
 
   Future<void> _upsertTrack(int profileId, Map<String, dynamic> fields) async {
     final curriculumId = fields['curriculum_id'] as String?;
-    final trackType = fields['track_type'] as String?;
-    if (curriculumId == null || trackType == null) return;
+    if (curriculumId == null) return;
 
-    final isActive = fields['is_active'] as bool? ?? true;
+    // W3.22: trackType dropped. W3.28: use state enum.
+    final state =
+        fields['state'] as String? ??
+        ((fields['is_active'] as bool? ?? true)
+            ? 'active'
+            : 'retired'); // back-compat shim
     final activatedAt = _parseDateTime(fields['activated_at']);
     if (activatedAt == null) return;
-    final deactivatedAt = _parseDateTime(fields['deactivated_at']);
+    final stateChangedAt =
+        _parseDateTime(fields['state_changed_at']) ??
+        _parseDateTime(fields['deactivated_at']) ??
+        activatedAt;
     final paceResetDate = _parseDateTime(fields['pace_reset_date']);
 
     final existing =
         await (_db.select(_db.curriculumTracks)..where(
               (t) =>
                   t.profileId.equals(profileId) &
-                  t.curriculumId.equals(curriculumId) &
-                  t.trackType.equals(trackType),
+                  t.curriculumId.equals(curriculumId),
             ))
             .getSingleOrNull();
 
     if (existing == null) {
-      await _db
-          .into(_db.curriculumTracks)
-          .insert(
-            CurriculumTracksCompanion.insert(
-              profileId: profileId,
-              curriculumId: curriculumId,
-              trackType: trackType,
-              isActive: Value(isActive),
-              activatedAt: activatedAt,
-              deactivatedAt: Value(deactivatedAt),
-              paceResetDate: Value(paceResetDate),
-            ),
-          );
+      await _db.into(_db.curriculumTracks).insert(
+        CurriculumTracksCompanion.insert(
+          profileId: profileId,
+          curriculumId: curriculumId,
+          state: Value(state),
+          stateChangedAt: stateChangedAt,
+          activatedAt: activatedAt,
+          paceResetDate: Value(paceResetDate),
+        ),
+      );
     } else {
       await (_db.update(
         _db.curriculumTracks,
       )..where((t) => t.id.equals(existing.id))).write(
         CurriculumTracksCompanion(
-          isActive: Value(isActive),
+          state: Value(state),
+          stateChangedAt: Value(stateChangedAt),
           activatedAt: Value(activatedAt),
-          deactivatedAt: Value(deactivatedAt),
           paceResetDate: Value(paceResetDate),
         ),
       );
@@ -338,14 +337,14 @@ class DriftMergeStore implements MergeStore {
       return;
     }
 
-    // Bookmarks in the DB are keyed by trackId (FK), not track_type string.
-    // Find the track row to get the trackId.
+    // Bookmarks in the DB are keyed by trackId (FK).
+    // W3.22: trackType dropped; UNIQUE is {profileId, curriculumId}.
+    // Find the active track row to get the trackId.
     final track =
         await (_db.select(_db.curriculumTracks)..where(
               (t) =>
                   t.profileId.equals(profileId) &
-                  t.curriculumId.equals(curriculumId) &
-                  t.trackType.equals(trackType),
+                  t.curriculumId.equals(curriculumId),
             ))
             .getSingleOrNull();
 
@@ -381,11 +380,11 @@ class DriftMergeStore implements MergeStore {
       final trackId = s['track_id'] as int? ?? defaultTrackId;
       final stageOrder = s['stage_order'] as int? ?? 0;
       final stageName = s['stage_name'] as String? ?? '';
-      final delayDays = s['delay_days'] as int? ?? 0;
       final isDefault = s['is_default'] as bool? ?? false;
-      final scheduleType = s['schedule_type'] as String? ?? 'delay';
-      final daysOfWeek = s['days_of_week'] as String?;
-      final rollingWindowSize = s['rolling_window_size'] as int?;
+      // W3.27: prefer pre-encoded JSON schedule; fall back to quartet fields.
+      final schedule = _encodeSchedule(s);
+      final updatedAt =
+          _parseDateTime(s['updated_at']) ?? DateTimeFactory.nowUtc();
 
       return StageDefinitionsCompanion.insert(
         profileId: profileId,
@@ -393,11 +392,9 @@ class DriftMergeStore implements MergeStore {
         trackId: trackId,
         stageOrder: stageOrder,
         stageName: stageName,
-        delayDays: delayDays,
         isDefault: Value(isDefault),
-        scheduleType: Value(scheduleType),
-        daysOfWeek: Value(daysOfWeek),
-        rollingWindowSize: Value(rollingWindowSize),
+        schedule: Value(schedule),
+        updatedAt: Value(updatedAt),
       );
     }).toList();
 
@@ -416,19 +413,14 @@ class DriftMergeStore implements MergeStore {
         fields['stage_order'] as int? ??
         int.tryParse(fields['stage_order']?.toString() ?? '');
     final stageName = fields['stage_name'] as String? ?? '';
-    final delayDays =
-        fields['delay_days'] as int? ??
-        int.tryParse(fields['delay_days']?.toString() ?? '') ??
-        0;
 
     if (curriculumId == null || trackId == null || stageOrder == null) return;
 
     final isDefault = fields['is_default'] as bool? ?? false;
-    final scheduleType = fields['schedule_type'] as String? ?? 'delay';
-    final daysOfWeek = fields['days_of_week'] as String?;
-    final rollingWindowSize =
-        fields['rolling_window_size'] as int? ??
-        int.tryParse(fields['rolling_window_size']?.toString() ?? '');
+    // W3.27: prefer pre-encoded JSON schedule; fall back to quartet fields.
+    final schedule = _encodeSchedule(fields);
+    final updatedAt =
+        _parseDateTime(fields['updated_at']) ?? DateTimeFactory.nowUtc();
 
     final existing =
         await (_db.select(_db.stageDefinitions)..where(
@@ -448,11 +440,9 @@ class DriftMergeStore implements MergeStore {
           trackId: trackId,
           stageOrder: stageOrder,
           stageName: stageName,
-          delayDays: delayDays,
           isDefault: Value(isDefault),
-          scheduleType: Value(scheduleType),
-          daysOfWeek: Value(daysOfWeek),
-          rollingWindowSize: Value(rollingWindowSize),
+          schedule: Value(schedule),
+          updatedAt: Value(updatedAt),
         ),
       );
     } else {
@@ -461,13 +451,55 @@ class DriftMergeStore implements MergeStore {
       )..where((t) => t.id.equals(existing.id))).write(
         StageDefinitionsCompanion(
           stageName: Value(stageName),
-          delayDays: Value(delayDays),
           isDefault: Value(isDefault),
-          scheduleType: Value(scheduleType),
-          daysOfWeek: Value(daysOfWeek),
-          rollingWindowSize: Value(rollingWindowSize),
+          schedule: Value(schedule),
+          updatedAt: Value(updatedAt),
         ),
       );
+    }
+  }
+
+  /// Encode schedule spec from raw Firestore fields into the JSON column format.
+  ///
+  /// Accepts either a pre-encoded `schedule` JSON string (new shape, W3.27)
+  /// or the legacy quartet (schedule_type, delay_days, days_of_week,
+  /// rolling_window_size). Returns a JSON string compatible with ScheduleSpec.
+  static String _encodeSchedule(Map<String, dynamic> s) {
+    // New shape: schedule is already a JSON string or map.
+    final raw = s['schedule'];
+    if (raw is String && raw.isNotEmpty) return raw;
+    if (raw is Map) {
+      return jsonEncode(raw);
+    }
+    // Legacy quartet → JSON.
+    final scheduleType = s['schedule_type'] as String? ?? 'delay';
+    final delayDays = (s['delay_days'] as num?)?.toInt() ?? 0;
+    final daysOfWeek = s['days_of_week'];
+    final rollingWindowSize = s['rolling_window_size'] as int?;
+
+    switch (scheduleType) {
+      case 'days_of_week':
+        List<int> days;
+        if (daysOfWeek is String) {
+          try {
+            final decoded = jsonDecode(daysOfWeek);
+            days = (decoded as List).cast<int>();
+          } catch (_) {
+            days = const [];
+          }
+        } else if (daysOfWeek is List) {
+          days = daysOfWeek.cast<int>();
+        } else {
+          days = const [];
+        }
+        return jsonEncode({'type': 'days_of_week', 'days': days});
+      case 'rolling_window':
+        return jsonEncode({
+          'type': 'rolling_window',
+          'window_size': rollingWindowSize ?? 7,
+        });
+      default:
+        return jsonEncode({'type': 'delay', 'delay_days': delayDays});
     }
   }
 

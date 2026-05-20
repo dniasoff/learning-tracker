@@ -1,4 +1,5 @@
 import 'package:drift/drift.dart';
+import 'package:learning_tracker/core/database/tables/accounts.dart';
 
 /// LearnerProfiles table — learner profiles within an account.
 ///
@@ -7,9 +8,16 @@ import 'package:drift/drift.dart';
 ///
 /// Architecture-doc-correct name (was: Profiles). Renamed in schema v1
 /// as part of the E25 greenfield rebuild (DNI-322).
+/// W3.25: accountId FK added.
 class LearnerProfiles extends Table {
   IntColumn get id => integer().autoIncrement()();
-  IntColumn get accountId => integer()();
+
+  /// W3.25: FK → accounts(id) CASCADE DELETE.
+  IntColumn get accountId => integer().references(
+    Accounts,
+    #id,
+    onDelete: KeyAction.cascade,
+  )();
   TextColumn get displayName => text()();
   TextColumn get mode => text()(); // 'child' or 'adult'
   IntColumn get avatarIndex => integer().withDefault(const Constant<int>(0))();

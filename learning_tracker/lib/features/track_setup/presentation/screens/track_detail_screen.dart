@@ -14,7 +14,7 @@ import 'package:learning_tracker/features/dashboard/presentation/providers/dashb
 import 'package:learning_tracker/features/onboarding/presentation/screens/bulk_mark_screen.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/curriculum_scope_providers.dart';
 import 'package:learning_tracker/features/track_learning_order/presentation/screens/track_learning_order_screen.dart';
-import 'package:learning_tracker/features/track_setup/domain/entities/add_track_result.dart';
+import 'package:learning_tracker/features/tracks/setup/domain/entities/add_track_result.dart';
 import 'package:learning_tracker/features/track_setup/presentation/providers/after_track_change_invalidation.dart';
 import 'package:learning_tracker/features/track_setup/presentation/screens/edit_track_screen.dart';
 import 'package:learning_tracker/features/track_setup/presentation/widgets/learning_track_card.dart';
@@ -70,8 +70,9 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
     final curriculumBarColor = AppTheme.getCurriculumColorByKey(
       track.curriculumId,
     );
-    final accent = trackAccentForType(track.trackType);
-    final icon = trackTypeIconData(track.trackType);
+    // W3.22: trackType column dropped — all tracks are now 'personal'.
+    const accent = AppColors.blueMedium;
+    const icon = Icons.menu_book_rounded;
     final locale = Localizations.localeOf(context).toString();
     final activatedDate = DateFormat.yMMMd(locale).format(track.activatedAt);
 

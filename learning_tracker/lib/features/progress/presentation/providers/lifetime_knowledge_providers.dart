@@ -211,7 +211,8 @@ final trackDualProgressMetricsProvider = FutureProvider.autoDispose
         metrics.add(
           TrackDualProgressMetric(
             trackId: track.id,
-            trackLabel: '$localizedCurriculum (${track.trackType})',
+            // W3.22: trackType dropped — label is just the curriculum name.
+            trackLabel: localizedCurriculum,
             curriculumId: curriculum,
             currentCyclePercentage: currentCyclePct.clamp(0.0, 1.0),
             lifetimePercentage: lifetimePct.clamp(0.0, 1.0),

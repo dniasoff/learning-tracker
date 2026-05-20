@@ -47,14 +47,12 @@ class _TrackPointData {
     required this.curriculum,
     required this.profileId,
     required this.trackId,
-    required this.trackType,
     required this.stages,
   });
 
   final CurriculumId curriculum;
   final int profileId;
   final int trackId;
-  final String trackType;
   final List<_StagePointConfig> stages;
 }
 
@@ -145,7 +143,6 @@ final _pointConfigDataProvider = FutureProvider.autoDispose<List<_TrackPointData
           curriculum: curriculum,
           profileId: profileId,
           trackId: track.id,
-          trackType: track.trackType,
           stages: stageConfigs,
         ),
       );

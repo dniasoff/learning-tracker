@@ -56,13 +56,9 @@ class BookmarkRepositoryImpl implements BookmarkRepository {
     CurriculumId curriculumId,
     TrackType trackType,
   ) async {
+    // W3.22: trackType dropped — one active track per curriculum per profile.
     final tracks = await _database.trackDao.getActiveTracks(curriculumId);
-    final match = tracks
-        .where(
-          (t) =>
-              t.trackType == trackType.storageKey && t.profileId == _profileId,
-        )
-        .firstOrNull;
+    final match = tracks.where((t) => t.profileId == _profileId).firstOrNull;
     return match?.id;
   }
 

@@ -49,14 +49,13 @@ class TutorNotificationService {
     required String parentEmail,
     required String tutorEmail,
     required String childName,
-  }) =>
-      _email.send(
-        TutorDeclinedEmail(
-          toAddress: parentEmail,
-          tutorEmail: tutorEmail,
-          childName: childName,
-        ),
-      );
+  }) => _email.send(
+    TutorDeclinedEmail(
+      toAddress: parentEmail,
+      tutorEmail: tutorEmail,
+      childName: childName,
+    ),
+  );
 
   /// Notify the parent that their tutor resigned from an active grant.
   ///
@@ -70,14 +69,13 @@ class TutorNotificationService {
     required String parentEmail,
     required String tutorName,
     required String childName,
-  }) =>
-      _email.send(
-        TutorResignedEmail(
-          toAddress: parentEmail,
-          tutorName: tutorName,
-          childName: childName,
-        ),
-      );
+  }) => _email.send(
+    TutorResignedEmail(
+      toAddress: parentEmail,
+      tutorName: tutorName,
+      childName: childName,
+    ),
+  );
 
   /// Notify the tutor that the parent revoked their grant.
   ///
@@ -91,12 +89,11 @@ class TutorNotificationService {
     required String tutorEmail,
     required String parentName,
     required String childName,
-  }) =>
-      _email.send(
-        TutorGrantRevokedEmail(
-          toAddress: tutorEmail,
-          parentName: parentName,
-          childName: childName,
-        ),
-      );
+  }) => _email.send(
+    TutorGrantRevokedEmail(
+      toAddress: tutorEmail,
+      parentName: parentName,
+      childName: childName,
+    ),
+  );
 }

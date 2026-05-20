@@ -1,9 +1,10 @@
 /// LWW merger for curriculum-track configuration rows.
 ///
-/// Natural key: `(curriculum_id, track_type)`. Remote wins iff its
-/// `activated_at` / `deactivated_at` (whichever is later) is strictly
-/// newer than the local row — matches [DriftMergeStore.currentUpdatedAt]
-/// for [EntityKind.trackConfig].
+/// Natural key: `curriculum_id` (W3.22: trackType removed from schema).
+/// Remote wins iff its `state_changed_at` is strictly newer than the local row.
+///
+/// W3.22/W3.28: natural key simplified from `(curriculum_id|track_type)`
+/// to just `curriculum_id`; `deactivatedAt` replaced by `stateChangedAt`.
 library;
 
 import 'package:learning_tracker/core/sync/codec/track_codec.dart';
@@ -28,30 +29,21 @@ class TrackConfigMerger implements EntityMerger {
       final decoded = _codec.decode(row);
       if (decoded == null) continue; // Missing required fields — skip.
 
-      final naturalKey = '${decoded.curriculumId}|${decoded.trackType}';
+      // W3.22: natural key is just curriculumId (one track per curriculum).
+      final naturalKey = decoded.curriculumId;
       final localUpdatedAt = await _store.currentUpdatedAt(
         kind: kind,
         profileId: profileId,
         naturalKey: naturalKey,
       );
-      // The "updatedAt" for a track is the later of activatedAt and
-      // deactivatedAt (mirrors DriftMergeStore.currentUpdatedAt logic).
-      final remoteUpdatedAt = _effectiveTimestamp(decoded);
+      // The LWW timestamp for a track is stateChangedAt.
       if (!remoteIsNewer(
         localUpdatedAt: localUpdatedAt,
-        remoteUpdatedAt: remoteUpdatedAt,
+        remoteUpdatedAt: decoded.stateChangedAt,
       )) {
         continue;
       }
       await _store.upsert(kind: kind, profileId: profileId, fields: row);
     }
-  }
-
-  static DateTime _effectiveTimestamp(TrackRow track) {
-    final deactivated = track.deactivatedAt;
-    if (deactivated != null && deactivated.isAfter(track.activatedAt)) {
-      return deactivated;
-    }
-    return track.activatedAt;
   }
 }

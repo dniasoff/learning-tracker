@@ -5,12 +5,22 @@ import 'package:learning_tracker/core/database/base_dao.dart';
 import 'package:learning_tracker/core/database/tables/curriculum_tracks.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/core/exceptions/invalid_track_operation_exception.dart';
 import 'package:learning_tracker/core/sync/outbox/outbox_processor.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 
 part 'track_dao.g.dart';
+
+/// Track lifecycle state constants. Must match the `state` column values
+/// in [CurriculumTracks] (W3.28).
+class TrackState {
+  const TrackState._();
+
+  static const active = 'active';
+  static const retired = 'retired';
+  static const archived = 'archived';
+  static const deleted = 'deleted';
+}
 
 @DriftAccessor(tables: [CurriculumTracks])
 class TrackDao extends DatabaseAccessor<UserDatabase>
@@ -29,15 +39,12 @@ class TrackDao extends DatabaseAccessor<UserDatabase>
   @override
   Expression<int> profileIdColumn($CurriculumTracksTable t) => t.profileId;
 
-  /// Get all active tracks for a curriculum.
-  ///
-  /// Returns only tracks where isActive = true and deletedAt IS NULL.
+  /// Get all active tracks for a curriculum (state = 'active').
   Future<List<CurriculumTrack>> getActiveTracks(CurriculumId curriculumId) =>
       (select(curriculumTracks)..where(
             (t) =>
                 t.curriculumId.equals(curriculumId.storageKey) &
-                t.isActive.equals(true) &
-                t.deletedAt.isNull(),
+                t.state.equals(TrackState.active),
           ))
           .get();
 
@@ -47,115 +54,106 @@ class TrackDao extends DatabaseAccessor<UserDatabase>
         curriculumTracks,
       )..where((t) => t.curriculumId.equals(curriculumId.storageKey))).get();
 
-  /// Check if a specific track is active for a curriculum.
-  Future<bool> isTrackActive(
-    CurriculumId curriculumId,
-    TrackType trackType,
-  ) async {
+  /// Check if the track for a curriculum is active (state = 'active').
+  ///
+  /// W3.22: trackType removed — one track per (profileId, curriculumId).
+  Future<bool> isTrackActive(CurriculumId curriculumId, int profileId) async {
     final track =
         await (select(curriculumTracks)..where(
               (t) =>
                   t.curriculumId.equals(curriculumId.storageKey) &
-                  t.trackType.equals(trackType.storageKey),
+                  t.profileId.equals(profileId),
             ))
             .getSingleOrNull();
 
-    return track?.isActive ?? false;
+    return track?.state == TrackState.active;
   }
 
   /// Activate a track for a curriculum.
   ///
-  /// If the track doesn't exist, creates it. If it exists and is inactive,
-  /// reactivates it with a new activatedAt timestamp.
+  /// If the track doesn't exist, creates it. If it exists and is not active,
+  /// reactivates it with a new activatedAt + stateChangedAt timestamp.
   Future<void> activateTrack(
-    CurriculumId curriculumId,
-    TrackType trackType, {
+    CurriculumId curriculumId, {
     int profileId = 0,
   }) async {
+    final now = DateTimeFactory.nowUtc();
     final existing =
         await (select(curriculumTracks)..where(
               (t) =>
                   t.curriculumId.equals(curriculumId.storageKey) &
-                  t.trackType.equals(trackType.storageKey),
+                  t.profileId.equals(profileId),
             ))
             .getSingleOrNull();
 
     if (existing == null) {
-      // Create new active track
       await into(curriculumTracks).insert(
         CurriculumTracksCompanion.insert(
           profileId: profileId,
           curriculumId: curriculumId.storageKey,
-          trackType: trackType.storageKey,
-          isActive: const Value(true),
-          activatedAt: DateTimeFactory.nowUtc(),
+          state: const Value(TrackState.active),
+          stateChangedAt: now,
+          activatedAt: now,
         ),
       );
-    } else if (!existing.isActive) {
-      // Reactivate existing track
+    } else if (existing.state != TrackState.active) {
       await (update(curriculumTracks)..where(
-            (t) =>
-                t.curriculumId.equals(curriculumId.storageKey) &
-                t.trackType.equals(trackType.storageKey),
+            (t) => t.id.equals(existing.id),
           ))
           .write(
             CurriculumTracksCompanion(
-              isActive: const Value(true),
-              activatedAt: Value(DateTimeFactory.nowUtc()),
-              deactivatedAt: const Value(null),
+              state: const Value(TrackState.active),
+              stateChangedAt: Value(now),
+              activatedAt: Value(now),
             ),
           );
     }
-    // If already active, do nothing
+    // If already active, do nothing.
   }
 
-  /// Deactivate a track for a curriculum.
+  /// Retire a track for a curriculum (soft-deactivation, reversible).
   ///
-  /// Cannot deactivate the personal track. Preserves the track record
-  /// (doesn't delete) to maintain history.
-  Future<void> deactivateTrack(
-    CurriculumId curriculumId,
-    TrackType trackType,
-  ) async {
-    if (trackType == TrackType.personal) {
-      throw const InvalidTrackOperationException(
-        'Cannot deactivate personal track — it is always active',
-      );
-    }
-
+  /// Sets state = 'retired'. The track can be reactivated via [activateTrack].
+  Future<void> retireTrack(CurriculumId curriculumId, {int profileId = 0}) async {
+    final now = DateTimeFactory.nowUtc();
     final existing =
         await (select(curriculumTracks)..where(
               (t) =>
                   t.curriculumId.equals(curriculumId.storageKey) &
-                  t.trackType.equals(trackType.storageKey),
+                  t.profileId.equals(profileId),
             ))
             .getSingleOrNull();
 
-    if (existing != null && existing.isActive) {
+    if (existing != null && existing.state == TrackState.active) {
       await (update(curriculumTracks)..where(
-            (t) =>
-                t.curriculumId.equals(curriculumId.storageKey) &
-                t.trackType.equals(trackType.storageKey),
+            (t) => t.id.equals(existing.id),
           ))
           .write(
             CurriculumTracksCompanion(
-              isActive: const Value(false),
-              deactivatedAt: Value(DateTimeFactory.nowUtc()),
+              state: const Value(TrackState.retired),
+              stateChangedAt: Value(now),
             ),
           );
     }
   }
 
+  /// Kept for API compatibility with callers that passed a TrackType.
+  /// W3.22: trackType is no longer stored; the argument is ignored.
+  Future<void> deactivateTrack(
+    CurriculumId curriculumId, [
+    // ignore: avoid_unused_constructor_parameters
+    dynamic trackType,
+  ]) => retireTrack(curriculumId);
+
   /// Get all active tracks for a profile.
   ///
-  /// Returns only tracks where isActive = true and deletedAt IS NULL.
+  /// Returns only tracks where state = 'active'.
   Future<List<CurriculumTrack>> getActiveTracksForProfile(int profileId) =>
       (select(curriculumTracks)
             ..where(
               (t) =>
                   t.profileId.equals(profileId) &
-                  t.isActive.equals(true) &
-                  t.deletedAt.isNull(),
+                  t.state.equals(TrackState.active),
             )
             ..orderBy([(t) => OrderingTerm.asc(t.curriculumId)]))
           .get();
@@ -166,32 +164,31 @@ class TrackDao extends DatabaseAccessor<UserDatabase>
   )..where((t) => t.id.equals(trackId))).getSingleOrNull();
 
   /// Watch all active tracks for a profile.
-  ///
-  /// Emits only tracks where isActive = true and deletedAt IS NULL.
   Stream<List<CurriculumTrack>> watchActiveTracksForProfile(int profileId) {
     return (select(curriculumTracks)
           ..where(
             (t) =>
                 t.profileId.equals(profileId) &
-                t.isActive.equals(true) &
-                t.deletedAt.isNull(),
+                t.state.equals(TrackState.active),
           )
           ..orderBy([(t) => OrderingTerm.asc(t.curriculumId)]))
         .watch();
   }
 
-  /// Soft-delete a track by stamping [deletedAt] and clearing configuration
-  /// data. Completions, streak events, and ledger rows are intentionally
+  /// Soft-delete a track by setting state = 'deleted' and clearing config.
+  ///
+  /// Completions, streak events, and ledger rows are intentionally
   /// preserved (append-only invariant, FR5 / E24).
   ///
   /// Non-append-only configuration tables (goals, stages, daily plans, point
   /// configs, curriculum scopes, study day configs, learning order) are still
   /// hard-deleted because they hold no historical value once the track is gone.
-  /// The track row itself is never removed; [deletedAt] is the tombstone.
+  /// The track row itself is never removed; `state = 'deleted'` is the tombstone.
   Future<void> deleteTrackAndData(int trackId) async {
     final track = await getTrackById(trackId);
     if (track == null) return;
 
+    final now = DateTimeFactory.nowUtc();
     await db.transaction(() async {
       await db.goalDao.deleteGoalsForTrack(trackId);
       await (db.delete(
@@ -203,14 +200,13 @@ class TrackDao extends DatabaseAccessor<UserDatabase>
       await db.curriculumScopeDao.clearScopesForTrack(trackId);
       await db.studyDayConfigDao.deleteConfigsForTrack(trackId);
       await db.trackLearningOrderDao.deleteByTrack(trackId);
-      final deletedAt = DateTimeFactory.nowUtc();
-      // Soft-delete: stamp deletedAt instead of removing the row.
+      // Soft-delete: set state = 'deleted' instead of removing the row.
       await (update(
         curriculumTracks,
       )..where((t) => t.id.equals(trackId))).write(
         CurriculumTracksCompanion(
-          isActive: const Value(false),
-          deletedAt: Value(deletedAt),
+          state: const Value(TrackState.deleted),
+          stateChangedAt: Value(now),
         ),
       );
       // I-5: push soft-delete to Firestore so other devices apply it.
@@ -222,11 +218,11 @@ class TrackDao extends DatabaseAccessor<UserDatabase>
           payload: jsonEncode({
             'track_id': trackId,
             'curriculum_id': track.curriculumId,
-            'track_type': track.trackType,
-            'deleted_at': deletedAt.toUtc().toIso8601String(),
+            'state': TrackState.deleted,
+            'deleted_at': now.toUtc().toIso8601String(),
             'profile_id': track.profileId,
           }),
-          createdAt: deletedAt,
+          createdAt: now,
         ),
       );
       final curriculum = CurriculumId.values
@@ -249,24 +245,24 @@ class TrackDao extends DatabaseAccessor<UserDatabase>
     curriculumTracks,
   )..where((t) => t.profileId.equals(profileId))).get();
 
-  /// Upsert a track row from a remote sync payload keyed by the
-  /// (profileId, curriculumId, trackType) composite. Replaces the current
-  /// state fields with the remote values.
+  /// Upsert a track row from a remote sync payload keyed by
+  /// (profileId, curriculumId). Replaces the current state fields with
+  /// the remote values.
+  ///
+  /// W3.22: trackType parameter removed — use state instead.
   Future<void> upsertFromSync({
     required int profileId,
     required CurriculumId curriculumId,
-    required TrackType trackType,
-    required bool isActive,
+    required String state,
     required DateTime activatedAt,
-    DateTime? deactivatedAt,
+    required DateTime stateChangedAt,
     DateTime? paceResetDate,
   }) async {
     final existing =
         await (select(curriculumTracks)..where(
               (t) =>
                   t.profileId.equals(profileId) &
-                  t.curriculumId.equals(curriculumId.storageKey) &
-                  t.trackType.equals(trackType.storageKey),
+                  t.curriculumId.equals(curriculumId.storageKey),
             ))
             .getSingleOrNull();
 
@@ -275,10 +271,9 @@ class TrackDao extends DatabaseAccessor<UserDatabase>
         CurriculumTracksCompanion.insert(
           profileId: profileId,
           curriculumId: curriculumId.storageKey,
-          trackType: trackType.storageKey,
-          isActive: Value(isActive),
+          state: Value(state),
+          stateChangedAt: stateChangedAt,
           activatedAt: activatedAt,
-          deactivatedAt: Value(deactivatedAt),
           paceResetDate: Value(paceResetDate),
         ),
       );
@@ -287,9 +282,9 @@ class TrackDao extends DatabaseAccessor<UserDatabase>
         curriculumTracks,
       )..where((t) => t.id.equals(existing.id))).write(
         CurriculumTracksCompanion(
-          isActive: Value(isActive),
+          state: Value(state),
+          stateChangedAt: Value(stateChangedAt),
           activatedAt: Value(activatedAt),
-          deactivatedAt: Value(deactivatedAt),
           paceResetDate: Value(paceResetDate),
         ),
       );
@@ -297,15 +292,12 @@ class TrackDao extends DatabaseAccessor<UserDatabase>
   }
 
   /// Count active tracks for a profile.
-  ///
-  /// Excludes soft-deleted tracks (deletedAt IS NOT NULL).
   Future<int> countActiveTracksForProfile(int profileId) async {
     final tracks =
         await (select(curriculumTracks)..where(
               (t) =>
                   t.profileId.equals(profileId) &
-                  t.isActive.equals(true) &
-                  t.deletedAt.isNull(),
+                  t.state.equals(TrackState.active),
             ))
             .get();
     return tracks.length;
@@ -313,49 +305,34 @@ class TrackDao extends DatabaseAccessor<UserDatabase>
 
   /// Restore a soft-deleted track or create a new one.
   ///
-  /// Looks up the (profileId, curriculumId, trackType) triple, ignoring deletedAt.
-  ///
-  /// * Found + soft-deleted  → clears deletedAt, reactivates row, resets
-  ///   [activatedAt] to now (new learning session). Returns its id.
-  /// * Found + active        → returns id (idempotent).
-  /// * Not found             → inserts new row. Returns new id.
-  ///
-  /// Completions from before the restore are intentionally preserved — they
-  /// count toward lifetime stats. The new [activatedAt] acts as a session
-  /// boundary: current-session progress is computed from completions where
-  /// completedAt >= activatedAt, so the track starts at 0% for the new cycle.
-  ///
-  /// Use this instead of [initializeDefaultTracks] when re-adding a previously
-  /// deleted track to avoid UNIQUE(profileId, curriculumId, trackType) violations.
+  /// * Found + deleted/retired  → reactivates row, resets [activatedAt] to now.
+  ///   Returns its id.
+  /// * Found + active           → returns id (idempotent).
+  /// * Not found                → inserts new row. Returns new id.
   Future<int> restoreOrCreate({
     required int profileId,
     required CurriculumId curriculumId,
-    required TrackType trackType,
   }) async {
+    final now = DateTimeFactory.nowUtc();
     final existing =
         await (select(curriculumTracks)
               ..where(
                 (t) =>
                     t.profileId.equals(profileId) &
-                    t.curriculumId.equals(curriculumId.storageKey) &
-                    t.trackType.equals(trackType.storageKey),
+                    t.curriculumId.equals(curriculumId.storageKey),
               )
               ..limit(1))
             .getSingleOrNull();
 
     if (existing != null) {
-      if (existing.deletedAt != null) {
-        // Reset activatedAt to now so this is treated as a new learning session.
-        // Old completions stay in the DB for lifetime stats; current-session
-        // progress queries filter by completedAt >= activatedAt.
+      if (existing.state != TrackState.active) {
         await (update(
           curriculumTracks,
         )..where((t) => t.id.equals(existing.id))).write(
           CurriculumTracksCompanion(
-            isActive: const Value(true),
-            activatedAt: Value(DateTimeFactory.nowUtc()),
-            deactivatedAt: const Value(null),
-            deletedAt: const Value(null),
+            state: const Value(TrackState.active),
+            stateChangedAt: Value(now),
+            activatedAt: Value(now),
           ),
         );
       }
@@ -366,27 +343,24 @@ class TrackDao extends DatabaseAccessor<UserDatabase>
       CurriculumTracksCompanion.insert(
         profileId: profileId,
         curriculumId: curriculumId.storageKey,
-        trackType: trackType.storageKey,
-        isActive: const Value(true),
-        activatedAt: DateTimeFactory.nowUtc(),
+        state: const Value(TrackState.active),
+        stateChangedAt: now,
+        activatedAt: now,
       ),
     );
   }
 
-  /// Physically remove all data for [trackId] — completions, config, and the
-  /// track row itself.
+  /// Physically remove all data for [trackId] — completions (tombstoned),
+  /// config, and the track row itself.
   ///
   /// Use this when the user explicitly requests "Delete and wipe history".
-  /// Unlike [deleteTrackAndData], this leaves no tombstone: the track row is
-  /// hard-deleted so [restoreOrCreate] will create a brand-new row next time.
+  /// Unlike [deleteTrackAndData], this leaves no tombstone.
   /// streak_events are profile-scoped and are not touched.
   ///
   /// C3: completion_events are never deleted (append-only, N8 invariant).
   /// Instead, each event row is stamped with [purgedAt] as a tombstone.
-  /// The completions projection rows are deleted (safe — derived table).
   /// N8 guarantees: completion_events row count never decreases after purge.
   Future<void> purgeHistory(int trackId) async {
-    // Fetch before the transaction — the row will be gone afterwards.
     final track = await getTrackById(trackId);
     if (track == null) return;
 
@@ -406,10 +380,6 @@ class TrackDao extends DatabaseAccessor<UserDatabase>
             ))
             .write(CompletionEventsCompanion(purgedAt: Value(purgedAt)));
       }
-      // C3: delete from completions projection (safe — derived table).
-      await (db.delete(
-        db.completions,
-      )..where((t) => t.trackId.equals(trackId))).go();
       await db.goalDao.deleteGoalsForTrack(trackId);
       await (db.delete(
         db.stageDefinitions,
@@ -419,8 +389,8 @@ class TrackDao extends DatabaseAccessor<UserDatabase>
       await db.curriculumScopeDao.clearScopesForTrack(trackId);
       await db.studyDayConfigDao.deleteConfigsForTrack(trackId);
       await db.trackLearningOrderDao.deleteByTrack(trackId);
-      // Hard-delete the track row. Bookmarks cascade-delete via ON DELETE
-      // CASCADE (C2). Learning ledger trackId is SET NULL via ON DELETE SET NULL.
+      // Hard-delete the track row. Bookmarks cascade-delete via ON DELETE CASCADE (C2).
+      // Learning ledger trackId is SET NULL via ON DELETE SET NULL.
       await (db.delete(
         curriculumTracks,
       )..where((t) => t.id.equals(trackId))).go();
@@ -463,18 +433,16 @@ class TrackDao extends DatabaseAccessor<UserDatabase>
             .get();
 
     if (existing.isEmpty) {
+      final now = DateTimeFactory.nowUtc();
       await into(curriculumTracks).insert(
         CurriculumTracksCompanion.insert(
           profileId: profileId,
           curriculumId: curriculumId.storageKey,
-          trackType: TrackType.personal.storageKey,
-          isActive: const Value(true),
-          activatedAt: DateTimeFactory.nowUtc(),
+          state: const Value(TrackState.active),
+          stateChangedAt: now,
+          activatedAt: now,
         ),
       );
     }
   }
 }
-
-// InvalidOperationException removed — replaced by the core
-// InvalidTrackOperationException (W7.4).

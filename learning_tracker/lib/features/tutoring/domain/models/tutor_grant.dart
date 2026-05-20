@@ -28,39 +28,38 @@ enum TutorGrantState {
   expired;
 
   String toJson() => switch (this) {
-        TutorGrantState.pending => 'pending',
-        TutorGrantState.active => 'active',
-        TutorGrantState.declined => 'declined',
-        TutorGrantState.rescinded => 'rescinded',
-        TutorGrantState.revokedByParent => 'revoked_by_parent',
-        TutorGrantState.revokedByTutor => 'revoked_by_tutor',
-        TutorGrantState.expired => 'expired',
-      };
+    TutorGrantState.pending => 'pending',
+    TutorGrantState.active => 'active',
+    TutorGrantState.declined => 'declined',
+    TutorGrantState.rescinded => 'rescinded',
+    TutorGrantState.revokedByParent => 'revoked_by_parent',
+    TutorGrantState.revokedByTutor => 'revoked_by_tutor',
+    TutorGrantState.expired => 'expired',
+  };
 
   static TutorGrantState fromJson(String value) => switch (value) {
-        'pending' => TutorGrantState.pending,
-        'active' => TutorGrantState.active,
-        'declined' => TutorGrantState.declined,
-        'rescinded' => TutorGrantState.rescinded,
-        'revoked_by_parent' => TutorGrantState.revokedByParent,
-        'revoked_by_tutor' => TutorGrantState.revokedByTutor,
-        'expired' => TutorGrantState.expired,
-        _ => throw ArgumentError('Unknown TutorGrantState: $value'),
-      };
+    'pending' => TutorGrantState.pending,
+    'active' => TutorGrantState.active,
+    'declined' => TutorGrantState.declined,
+    'rescinded' => TutorGrantState.rescinded,
+    'revoked_by_parent' => TutorGrantState.revokedByParent,
+    'revoked_by_tutor' => TutorGrantState.revokedByTutor,
+    'expired' => TutorGrantState.expired,
+    _ => throw ArgumentError('Unknown TutorGrantState: $value'),
+  };
 
   /// True when the tutor currently has access to the child's profile.
   bool get isActive => this == TutorGrantState.active;
 
   /// True when the grant is in a terminal state.
   bool get isTerminal => switch (this) {
-        TutorGrantState.declined ||
-        TutorGrantState.rescinded ||
-        TutorGrantState.revokedByParent ||
-        TutorGrantState.revokedByTutor ||
-        TutorGrantState.expired =>
-          true,
-        _ => false,
-      };
+    TutorGrantState.declined ||
+    TutorGrantState.rescinded ||
+    TutorGrantState.revokedByParent ||
+    TutorGrantState.revokedByTutor ||
+    TutorGrantState.expired => true,
+    _ => false,
+  };
 }
 
 /// Raw Firestore document for a tutor grant.
@@ -138,20 +137,22 @@ class TutorGrantDoc {
   }
 
   Map<String, dynamic> toFirestore() => {
-        'grant_id': grantId,
-        'parent_uid': parentUid,
-        'child_profile_id': childProfileId,
-        'tutor_email': tutorEmail,
-        if (tutorUid != null) 'tutor_uid': tutorUid,
-        'state': state.toJson(),
-        if (inviteToken != null) 'invite_token': inviteToken,
-        'invited_at': invitedAt.toUtc().toIso8601String(),
-        if (acceptedAt != null) 'accepted_at': acceptedAt!.toUtc().toIso8601String(),
-        if (declinedAt != null) 'declined_at': declinedAt!.toUtc().toIso8601String(),
-        if (revokedAt != null) 'revoked_at': revokedAt!.toUtc().toIso8601String(),
-        if (expiresAt != null) 'expires_at': expiresAt!.toUtc().toIso8601String(),
-        'updated_at': updatedAt.toUtc().toIso8601String(),
-      };
+    'grant_id': grantId,
+    'parent_uid': parentUid,
+    'child_profile_id': childProfileId,
+    'tutor_email': tutorEmail,
+    if (tutorUid != null) 'tutor_uid': tutorUid,
+    'state': state.toJson(),
+    if (inviteToken != null) 'invite_token': inviteToken,
+    'invited_at': invitedAt.toUtc().toIso8601String(),
+    if (acceptedAt != null)
+      'accepted_at': acceptedAt!.toUtc().toIso8601String(),
+    if (declinedAt != null)
+      'declined_at': declinedAt!.toUtc().toIso8601String(),
+    if (revokedAt != null) 'revoked_at': revokedAt!.toUtc().toIso8601String(),
+    if (expiresAt != null) 'expires_at': expiresAt!.toUtc().toIso8601String(),
+    'updated_at': updatedAt.toUtc().toIso8601String(),
+  };
 
   factory TutorGrantDoc.fromFirestore(Map<String, dynamic> data) {
     DateTime? parseTs(dynamic v) {
@@ -199,18 +200,18 @@ class TutorGrantDoc {
     DateTime? expiresAt,
     DateTime? updatedAt,
   }) => TutorGrantDoc(
-        grantId: grantId,
-        parentUid: parentUid,
-        childProfileId: childProfileId,
-        tutorEmail: tutorEmail,
-        tutorUid: tutorUid ?? this.tutorUid,
-        state: state ?? this.state,
-        inviteToken: inviteToken ?? this.inviteToken,
-        invitedAt: invitedAt,
-        acceptedAt: acceptedAt ?? this.acceptedAt,
-        declinedAt: declinedAt ?? this.declinedAt,
-        revokedAt: revokedAt ?? this.revokedAt,
-        expiresAt: expiresAt ?? this.expiresAt,
-        updatedAt: updatedAt ?? this.updatedAt,
-      );
+    grantId: grantId,
+    parentUid: parentUid,
+    childProfileId: childProfileId,
+    tutorEmail: tutorEmail,
+    tutorUid: tutorUid ?? this.tutorUid,
+    state: state ?? this.state,
+    inviteToken: inviteToken ?? this.inviteToken,
+    invitedAt: invitedAt,
+    acceptedAt: acceptedAt ?? this.acceptedAt,
+    declinedAt: declinedAt ?? this.declinedAt,
+    revokedAt: revokedAt ?? this.revokedAt,
+    expiresAt: expiresAt ?? this.expiresAt,
+    updatedAt: updatedAt ?? this.updatedAt,
+  );
 }

@@ -2,6 +2,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/database/seed/learning_program_seeds.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/features/scheduler/domain/services/calendar_program_registry.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
+
+part 'learning_program_service.g.dart';
 
 /// In-memory learning program data, replacing the old ContentDatabase DAO.
 ///
@@ -51,13 +54,24 @@ String learningProgramLabelText(
   return reg?.displayNameHe ?? program.displayName;
 }
 
+/// Riverpod provider for [LearningProgramRepository].
+///
+/// Use this instead of [LearningProgramRepository.instance] so program
+/// data is accessible through the provider graph.
+@Riverpod(keepAlive: true)
+LearningProgramRepository learningProgramRepository(Ref ref) =>
+    LearningProgramRepository._create();
+
 /// Provides learning program data from compile-time constants.
 ///
 /// Drop-in replacement for `ContentLearningProgramDao` — same query patterns,
 /// no database required.
 class LearningProgramRepository {
-  LearningProgramRepository._();
-  static final instance = LearningProgramRepository._();
+  LearningProgramRepository._create();
+
+  /// Legacy singleton — prefer [learningProgramRepositoryProvider].
+  @Deprecated('Use learningProgramRepositoryProvider via Riverpod instead')
+  static final instance = LearningProgramRepository._create();
 
   late final List<LearningProgramData> _programs = _buildPrograms();
 

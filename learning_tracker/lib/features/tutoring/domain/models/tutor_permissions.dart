@@ -27,7 +27,7 @@ class TutorPermissions {
     this.canEditStages = false,
     this.canEditRewards = false,
     this.canEditStudyDays = false,
-  })  : canMarkLiveCompletion = false;
+  }) : canMarkLiveCompletion = false;
 
   // Intentionally not in constructor — always false.
   // ignore: prefer_const_constructors_in_immutables (it IS const — the field is final)
@@ -65,9 +65,8 @@ class TutorPermissions {
   factory TutorPermissions.defaults() => const TutorPermissions();
 
   /// Minimal read-only permissions (progress + content view only).
-  factory TutorPermissions.readOnly() => const TutorPermissions(
-        canBulkPriorCompletion: false,
-      );
+  factory TutorPermissions.readOnly() =>
+      const TutorPermissions(canBulkPriorCompletion: false);
 
   TutorPermissions copyWith({
     bool? canViewProgress,
@@ -78,33 +77,32 @@ class TutorPermissions {
     bool? canEditStages,
     bool? canEditRewards,
     bool? canEditStudyDays,
-  }) =>
-      TutorPermissions(
-        canViewProgress: canViewProgress ?? this.canViewProgress,
-        canViewContent: canViewContent ?? this.canViewContent,
-        canBulkPriorCompletion:
-            canBulkPriorCompletion ?? this.canBulkPriorCompletion,
-        canResetCompletion: canResetCompletion ?? this.canResetCompletion,
-        canEditGoals: canEditGoals ?? this.canEditGoals,
-        canEditStages: canEditStages ?? this.canEditStages,
-        canEditRewards: canEditRewards ?? this.canEditRewards,
-        canEditStudyDays: canEditStudyDays ?? this.canEditStudyDays,
-      );
+  }) => TutorPermissions(
+    canViewProgress: canViewProgress ?? this.canViewProgress,
+    canViewContent: canViewContent ?? this.canViewContent,
+    canBulkPriorCompletion:
+        canBulkPriorCompletion ?? this.canBulkPriorCompletion,
+    canResetCompletion: canResetCompletion ?? this.canResetCompletion,
+    canEditGoals: canEditGoals ?? this.canEditGoals,
+    canEditStages: canEditStages ?? this.canEditStages,
+    canEditRewards: canEditRewards ?? this.canEditRewards,
+    canEditStudyDays: canEditStudyDays ?? this.canEditStudyDays,
+  );
 
   /// Serialise to the nested Firestore map stored in tutor_grants/{grantId}.
   Map<String, dynamic> toFirestore() => {
-        // canMarkLiveCompletion is intentionally omitted — it is always false
-        // and the Cloud Function enforces it independently. Storing it would
-        // allow a rogue client to read it and think it might change.
-        'can_view_progress': canViewProgress,
-        'can_view_content': canViewContent,
-        'can_bulk_prior_completion': canBulkPriorCompletion,
-        'can_reset_completion': canResetCompletion,
-        'can_edit_goals': canEditGoals,
-        'can_edit_stages': canEditStages,
-        'can_edit_rewards': canEditRewards,
-        'can_edit_study_days': canEditStudyDays,
-      };
+    // canMarkLiveCompletion is intentionally omitted — it is always false
+    // and the Cloud Function enforces it independently. Storing it would
+    // allow a rogue client to read it and think it might change.
+    'can_view_progress': canViewProgress,
+    'can_view_content': canViewContent,
+    'can_bulk_prior_completion': canBulkPriorCompletion,
+    'can_reset_completion': canResetCompletion,
+    'can_edit_goals': canEditGoals,
+    'can_edit_stages': canEditStages,
+    'can_edit_rewards': canEditRewards,
+    'can_edit_study_days': canEditStudyDays,
+  };
 
   factory TutorPermissions.fromFirestore(Map<String, dynamic> data) =>
       TutorPermissions(
@@ -134,15 +132,15 @@ class TutorPermissions {
 
   @override
   int get hashCode => Object.hash(
-        canViewProgress,
-        canViewContent,
-        canBulkPriorCompletion,
-        canResetCompletion,
-        canEditGoals,
-        canEditStages,
-        canEditRewards,
-        canEditStudyDays,
-      );
+    canViewProgress,
+    canViewContent,
+    canBulkPriorCompletion,
+    canResetCompletion,
+    canEditGoals,
+    canEditStages,
+    canEditRewards,
+    canEditStudyDays,
+  );
 
   @override
   String toString() =>

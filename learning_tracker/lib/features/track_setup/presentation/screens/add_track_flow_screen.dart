@@ -15,7 +15,6 @@ import 'package:learning_tracker/features/onboarding/domain/services/bulk_prior_
 import 'package:learning_tracker/features/onboarding/presentation/providers/onboarding_providers.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/goal_entity.dart';
 import 'package:learning_tracker/features/scheduler/domain/services/learning_program_service.dart';
-import 'package:learning_tracker/features/track_setup/domain/entities/add_track_result.dart';
 import 'package:learning_tracker/features/track_setup/domain/services/track_creation_service.dart';
 import 'package:learning_tracker/features/track_setup/presentation/providers/add_track_providers.dart';
 import 'package:learning_tracker/features/track_setup/presentation/providers/after_track_change_invalidation.dart';
@@ -28,6 +27,7 @@ import 'package:learning_tracker/features/track_setup/presentation/steps/step_st
 import 'package:learning_tracker/features/track_setup/presentation/steps/step_study_days.dart';
 import 'package:learning_tracker/features/track_setup/presentation/widgets/curriculum_picker_step.dart';
 import 'package:learning_tracker/features/track_setup/presentation/widgets/program_selection_step.dart';
+import 'package:learning_tracker/features/tracks/setup/domain/entities/add_track_result.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -116,7 +116,7 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
   bool get _hasProgramStepForCurriculum {
     final id = _state.curriculumId;
     if (id == null) return false;
-    return LearningProgramRepository.instance
+    return ref.read(learningProgramRepositoryProvider)
         .getActiveProgramsByCurriculumType(id.storageKey)
         .isNotEmpty;
   }
@@ -212,14 +212,14 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
     // Reload program from DB if we had one
     LearningProgramData? selectedProgram;
     if (programId != null) {
-      selectedProgram = LearningProgramRepository.instance.getProgramById(
+      selectedProgram = ref.read(learningProgramRepositoryProvider).getProgramById(
         programId,
       );
     }
 
     final programsExistForResume =
         curriculum != null &&
-        LearningProgramRepository.instance
+        ref.read(learningProgramRepositoryProvider)
             .getActiveProgramsByCurriculumType(curriculum.storageKey)
             .isNotEmpty;
 

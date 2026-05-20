@@ -1,34 +1,40 @@
 /// Codec for Firestore `curriculum_tracks/{id}` documents.
+///
+/// W3.22: trackType removed from the schema — one track per (profileId, curriculumId).
+/// W3.28/W3.29: isActive/deactivatedAt replaced by unified `state` enum + stateChangedAt.
 library;
 
 import 'package:learning_tracker/core/sync/codec/entity_codec.dart';
 import 'package:learning_tracker/core/sync/codec/firestore_codec.dart';
 import 'package:learning_tracker/core/sync/merge/entity_merger.dart';
 
-/// Decoded shape for a curriculum track row.
+/// Decoded shape for a curriculum track row (W3.22/W3.28).
 class TrackRow {
   const TrackRow({
     required this.curriculumId,
-    required this.trackType,
-    required this.isActive,
+    required this.state,
     required this.activatedAt,
-    this.deactivatedAt,
+    required this.stateChangedAt,
     this.paceResetDate,
   });
 
   final String curriculumId;
-  final String trackType;
-  final bool isActive;
+
+  /// Lifecycle state: 'active' | 'retired' | 'archived' | 'deleted'.
+  final String state;
+
   final DateTime activatedAt;
-  final DateTime? deactivatedAt;
+
+  /// LWW timestamp — when `state` was last changed.
+  final DateTime stateChangedAt;
+
   final DateTime? paceResetDate;
 }
 
 /// Codec for the `curriculum_tracks` Firestore collection.
 ///
-/// Natural key: `(curriculumId, trackType)`.
-/// LWW: remote wins when `activated_at` (or `deactivated_at` if later)
-/// is strictly newer than the local equivalent.
+/// Natural key: `curriculumId` (one track per profile+curriculum, W3.22).
+/// LWW: remote wins when `state_changed_at` is strictly newer than local.
 class TrackCodec extends EntityCodec<TrackRow> {
   const TrackCodec();
 
@@ -38,19 +44,30 @@ class TrackCodec extends EntityCodec<TrackRow> {
   @override
   TrackRow? decode(Map<String, dynamic> raw) {
     final curriculumId = raw['curriculum_id'] as String?;
-    final trackType = raw['track_type'] as String?;
     final activatedAt = FirestoreCodec.parseDateTime(raw['activated_at']);
 
-    if (curriculumId == null || trackType == null || activatedAt == null) {
-      return null;
+    if (curriculumId == null || activatedAt == null) return null;
+
+    // Back-compat: old docs carry `is_active` instead of `state`.
+    final String state;
+    final rawState = raw['state'] as String?;
+    if (rawState != null && rawState.isNotEmpty) {
+      state = rawState;
+    } else {
+      final isActive = FirestoreCodec.parseBool(raw['is_active']) ?? true;
+      state = isActive ? 'active' : 'retired';
     }
+
+    final stateChangedAt =
+        FirestoreCodec.parseDateTime(raw['state_changed_at']) ??
+        FirestoreCodec.parseDateTime(raw['deactivated_at']) ??
+        activatedAt;
 
     return TrackRow(
       curriculumId: curriculumId,
-      trackType: trackType,
-      isActive: FirestoreCodec.parseBool(raw['is_active']) ?? true,
+      state: state,
       activatedAt: activatedAt,
-      deactivatedAt: FirestoreCodec.parseDateTime(raw['deactivated_at']),
+      stateChangedAt: stateChangedAt,
       paceResetDate: FirestoreCodec.parseDateTime(raw['pace_reset_date']),
     );
   }
@@ -58,11 +75,9 @@ class TrackCodec extends EntityCodec<TrackRow> {
   @override
   Map<String, dynamic> encode(TrackRow model) => {
         'curriculum_id': model.curriculumId,
-        'track_type': model.trackType,
-        'is_active': model.isActive,
+        'state': model.state,
         'activated_at': FirestoreCodec.encodeDateTime(model.activatedAt),
-        if (model.deactivatedAt != null)
-          'deactivated_at': FirestoreCodec.encodeDateTime(model.deactivatedAt),
+        'state_changed_at': FirestoreCodec.encodeDateTime(model.stateChangedAt),
         if (model.paceResetDate != null)
           'pace_reset_date': FirestoreCodec.encodeDateTime(model.paceResetDate),
       };

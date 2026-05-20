@@ -185,22 +185,33 @@ class OutboxSyncWriteFacade implements SyncWriteFacade {
       'schema_version': 2,
       'profile_id': _profileId,
       'updated_at': now.toIso8601String(),
-      'app_locale': ProfileScopedPreferenceKeys.readAppLocale(prefs, _profileId),
-      'use_hebrew_calendar':
-          ProfileScopedPreferenceKeys.readUseHebrewCalendar(prefs, _profileId),
+      'app_locale': ProfileScopedPreferenceKeys.readAppLocale(
+        prefs,
+        _profileId,
+      ),
+      'use_hebrew_calendar': ProfileScopedPreferenceKeys.readUseHebrewCalendar(
+        prefs,
+        _profileId,
+      ),
       'text_display': {
-        'font_size_index':
-            ProfileScopedPreferenceKeys.readFontSizeIndex(prefs, _profileId),
-        'show_nikud':
-            ProfileScopedPreferenceKeys.readShowNikud(prefs, _profileId),
+        'font_size_index': ProfileScopedPreferenceKeys.readFontSizeIndex(
+          prefs,
+          _profileId,
+        ),
+        'show_nikud': ProfileScopedPreferenceKeys.readShowNikud(
+          prefs,
+          _profileId,
+        ),
       },
       'learning_order_parent_controls':
           ProfileScopedPreferenceKeys.readLearningOrderParentControls(
             prefs,
             _profileId,
           ),
-      'hebrew_terms_script':
-          ProfileScopedPreferenceKeys.readHebrewTermsScript(prefs, _profileId),
+      'hebrew_terms_script': ProfileScopedPreferenceKeys.readHebrewTermsScript(
+        prefs,
+        _profileId,
+      ),
     };
 
     if (_profileId == 0) {
@@ -217,8 +228,7 @@ class OutboxSyncWriteFacade implements SyncWriteFacade {
       if (source != null) sacredTime['source'] = source;
       final fixedAt = prefs.getInt('sacred_time_fixed_at_ms');
       if (fixedAt != null) sacredTime['fixed_at_ms'] = fixedAt;
-      sacredTime['in_israel'] =
-          prefs.getBool('sacred_time_in_israel') ?? false;
+      sacredTime['in_israel'] = prefs.getBool('sacred_time_in_israel') ?? false;
       payload['sacred_time'] = sacredTime;
     }
 
@@ -268,7 +278,8 @@ class OutboxSyncWriteFacade implements SyncWriteFacade {
   String _goalKey(Map<String, dynamic> goal) {
     final id = goal['id']?.toString() ?? goal['goal_id']?.toString();
     if (id != null) return id;
-    final curriculum = goal['curriculumId']?.toString() ??
+    final curriculum =
+        goal['curriculumId']?.toString() ??
         goal['curriculum_id']?.toString() ??
         '';
     final pct = (goal['targetPercent'] ?? goal['target_percent'] ?? 0)
@@ -284,13 +295,12 @@ class OutboxSyncWriteFacade implements SyncWriteFacade {
   // [LocalDataUploadService] for entity kinds that are not yet on the facade
   // interface.
 
-  Future<void> enqueueNotificationSettings(
-    Map<String, dynamic> payload,
-  ) => _enqueue(
-    OutboxEntityKind.notificationSettings,
-    'notification_settings_$_profileId',
-    payload,
-  );
+  Future<void> enqueueNotificationSettings(Map<String, dynamic> payload) =>
+      _enqueue(
+        OutboxEntityKind.notificationSettings,
+        'notification_settings_$_profileId',
+        payload,
+      );
 
   Future<void> enqueueProfileProgram(Map<String, dynamic> payload) => _enqueue(
     OutboxEntityKind.profileProgram,
@@ -298,11 +308,8 @@ class OutboxSyncWriteFacade implements SyncWriteFacade {
     payload,
   );
 
-  Future<void> enqueueStreakPayload(Map<String, dynamic> payload) => _enqueue(
-    OutboxEntityKind.streak,
-    'streak_$_profileId',
-    payload,
-  );
+  Future<void> enqueueStreakPayload(Map<String, dynamic> payload) =>
+      _enqueue(OutboxEntityKind.streak, 'streak_$_profileId', payload);
 
   Future<void> enqueueLedgerEntry(Map<String, dynamic> payload) => _enqueue(
     OutboxEntityKind.learningLedgerEntry,

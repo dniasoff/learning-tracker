@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:learning_tracker/core/analytics/analytics_service.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/sync/firestore_gateway.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
@@ -123,7 +122,6 @@ class TrackCreationService {
     final trackId = await _database.trackDao.restoreOrCreate(
       profileId: profileId,
       curriculumId: curriculum,
-      trackType: TrackType.personal,
     );
 
     // Activate the curriculum in active_curricula (idempotent, outside
@@ -321,7 +319,6 @@ class TrackCreationService {
         profileId: profileId,
         data: {
           'curriculum_id': curriculum.storageKey,
-          'track_type': TrackType.personal.storageKey,
           'content_item_id': bookmarkRef,
           'updated_at': updatedAt.toIso8601String(),
         },

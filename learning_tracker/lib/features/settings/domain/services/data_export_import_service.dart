@@ -601,7 +601,7 @@ class DataExportImportService {
                 stateChangedAt: Value(
                   rawStateChangedAt != null
                       ? DateTime.parse(rawStateChangedAt)
-                      : null,
+                      : DateTimeFactory.nowUtc(),
                 ),
                 activatedAt: Value(
                   DateTime.parse(map['activatedAt'] as String),

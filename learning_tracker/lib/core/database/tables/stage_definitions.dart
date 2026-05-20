@@ -5,7 +5,15 @@ import 'package:learning_tracker/core/database/tables/learner_profiles.dart';
 /// Stage definitions table per D3.
 ///
 /// Defines the learning stages (e.g., learning, chazara1, chazara2)
-/// for each curriculum with ordering and delay configuration.
+/// for each curriculum with ordering and schedule configuration.
+///
+/// W3.23: added `updatedAt` for LWW sync support.
+/// W3.27: replaced schedule quartet (scheduleType/daysOfWeek/
+///   rollingWindowSize/delayDays) with a single JSON `schedule` column.
+///   The JSON encodes the ScheduleSpec sealed union, e.g.
+///   `{"type":"delay","delay_days":7}` or
+///   `{"type":"days_of_week","days":[0,3,5]}`.
+/// W3.29: dropped `supersededAt` — lifecycle managed via `state`.
 class StageDefinitions extends Table {
   IntColumn get id => integer().autoIncrement()();
 
@@ -16,18 +24,17 @@ class StageDefinitions extends Table {
   IntColumn get trackId => integer().references(CurriculumTracks, #id)();
   IntColumn get stageOrder => integer()();
   TextColumn get stageName => text()();
-  IntColumn get delayDays => integer()();
   BoolColumn get isDefault => boolean().withDefault(const Constant(false))();
-  TextColumn get scheduleType => text().withDefault(const Constant('delay'))();
-  TextColumn get daysOfWeek => text().nullable()();
-  IntColumn get rollingWindowSize => integer().nullable()();
 
-  /// Set when a stage row is superseded by an edit-track operation.
-  ///
-  /// Completions already recorded keep their stageId FK pointing at the old
-  /// row. The scheduler only uses rows where supersededAt IS NULL when
-  /// assigning stages to newly-learned items.
-  DateTimeColumn get supersededAt => dateTime().nullable()();
+  /// JSON-encoded ScheduleSpec, e.g. {"type":"delay","delay_days":7}.
+  /// Replaces the former quartet: scheduleType / daysOfWeek /
+  /// rollingWindowSize / delayDays.
+  TextColumn get schedule => text().withDefault(
+    const Constant('{"type":"delay","delay_days":0}'),
+  )();
+
+  /// W3.23: last-write-wins timestamp for sync.
+  DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime)();
 
   @override
   List<Set<Column>> get uniqueKeys => [

@@ -4,6 +4,7 @@ part of 'streak_event_dao.dart';
 
 // ignore_for_file: type=lint
 mixin _$StreakEventDaoMixin on DatabaseAccessor<UserDatabase> {
+  $AccountsTable get accounts => attachedDatabase.accounts;
   $LearnerProfilesTable get learnerProfiles => attachedDatabase.learnerProfiles;
   $StreakEventsTable get streakEvents => attachedDatabase.streakEvents;
   StreakEventDaoManager get managers => StreakEventDaoManager(this);
@@ -12,6 +13,8 @@ mixin _$StreakEventDaoMixin on DatabaseAccessor<UserDatabase> {
 class StreakEventDaoManager {
   final _$StreakEventDaoMixin _db;
   StreakEventDaoManager(this._db);
+  $$AccountsTableTableManager get accounts =>
+      $$AccountsTableTableManager(_db.attachedDatabase, _db.accounts);
   $$LearnerProfilesTableTableManager get learnerProfiles =>
       $$LearnerProfilesTableTableManager(
         _db.attachedDatabase,

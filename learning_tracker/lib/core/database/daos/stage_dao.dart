@@ -15,21 +15,15 @@ class StageDao extends DatabaseAccessor<UserDatabase> with _$StageDaoMixin {
     stageDefinitions,
   )..where((t) => t.id.equals(id))).getSingleOrNull();
 
-  /// Returns active (non-superseded) stage definitions for a curriculum,
-  /// ordered by stageOrder.
+  /// Returns stage definitions for a curriculum, ordered by stageOrder.
   ///
-  /// Filters out rows where `supersededAt IS NOT NULL` so that callers
-  /// (e.g. [BulkPriorCompletionService._allStageIds]) only see the current
-  /// stage set and do not write completions for stageOrders that belonged to
-  /// a previous track-edit cycle.
+  /// W3.29: supersededAt dropped — all rows for the curriculum are returned.
+  /// The edit-track flow now deletes-and-recreates rather than superseding.
   Future<List<StageDefinition>> getStageDefinitionsByCurriculum(
     String curriculumId,
   ) =>
       (select(stageDefinitions)
-            ..where(
-              (t) =>
-                  t.curriculumId.equals(curriculumId) & t.supersededAt.isNull(),
-            )
+            ..where((t) => t.curriculumId.equals(curriculumId))
             ..orderBy([(t) => OrderingTerm.asc(t.stageOrder)]))
           .get();
 
@@ -66,15 +60,14 @@ class StageDao extends DatabaseAccessor<UserDatabase> with _$StageDaoMixin {
     return row?.read(countCol) ?? 0;
   }
 
-  // ========== Track-Scoped Queries (Story 20.2) ==========
+  // ========== Track-Scoped Queries ==========
 
-  /// Get active stage definitions for a specific track, ordered by stageOrder.
+  /// Get stage definitions for a specific track, ordered by stageOrder.
   ///
-  /// Excludes superseded rows (set by edit-track) so the scheduler and UI
-  /// always see only the current stage set.
+  /// W3.29: supersededAt dropped; all rows for the track are returned.
   Future<List<StageDefinition>> getStagesByTrack(int trackId) =>
       (select(stageDefinitions)
-            ..where((t) => t.trackId.equals(trackId) & t.supersededAt.isNull())
+            ..where((t) => t.trackId.equals(trackId))
             ..orderBy([(t) => OrderingTerm.asc(t.stageOrder)]))
           .get();
 
@@ -82,16 +75,11 @@ class StageDao extends DatabaseAccessor<UserDatabase> with _$StageDaoMixin {
   Future<int> deleteStagesForTrack(int trackId) =>
       (delete(stageDefinitions)..where((t) => t.trackId.equals(trackId))).go();
 
-  /// Stamp supersededAt on every currently-active stage for [trackId].
-  ///
-  /// Called by the edit-track flow before inserting replacement stages.
-  /// Old rows survive so completions.stageId FKs remain valid.
-  Future<int> supersedeStagesToTrack(int trackId, DateTime at) =>
-      (update(stageDefinitions)
-            ..where((t) => t.trackId.equals(trackId) & t.supersededAt.isNull()))
-          .write(StageDefinitionsCompanion(supersededAt: Value(at)));
-
   /// Replace all stage definitions for a track.
+  ///
+  /// W3.29: replaces the old supersede-then-insert approach with a simple
+  /// delete-and-recreate. stageId FKs on completion_events are plain integers
+  /// (no DB constraint) so hard-deleting is safe.
   Future<void> replaceStagesForTrack(
     int trackId,
     List<StageDefinitionsCompanion> stages,
@@ -125,17 +113,12 @@ class StageDao extends DatabaseAccessor<UserDatabase> with _$StageDaoMixin {
   }
 
   /// Runs [body] inside a database transaction.
-  ///
-  /// Exposed so that repository-layer callers (e.g. [StageDefinitionRepositoryImpl])
-  /// can wrap multi-step reorder operations atomically without importing
-  /// the database directly.
   Future<T> runTransaction<T>(Future<T> Function() body) =>
       db.transaction(body);
 
   /// Replace all stage definitions for a curriculum with remote data.
   ///
   /// Used during sync merge (last-write-wins per D4).
-  /// Deletes existing stages for the curriculum and inserts the new ones.
   Future<void> replaceStagesForCurriculum(
     String curriculumId,
     List<StageDefinitionsCompanion> stages,

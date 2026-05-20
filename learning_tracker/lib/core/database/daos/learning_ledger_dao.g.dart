@@ -4,6 +4,7 @@ part of 'learning_ledger_dao.dart';
 
 // ignore_for_file: type=lint
 mixin _$LearningLedgerDaoMixin on DatabaseAccessor<UserDatabase> {
+  $AccountsTable get accounts => attachedDatabase.accounts;
   $LearnerProfilesTable get learnerProfiles => attachedDatabase.learnerProfiles;
   $CurriculumTracksTable get curriculumTracks =>
       attachedDatabase.curriculumTracks;
@@ -14,6 +15,8 @@ mixin _$LearningLedgerDaoMixin on DatabaseAccessor<UserDatabase> {
 class LearningLedgerDaoManager {
   final _$LearningLedgerDaoMixin _db;
   LearningLedgerDaoManager(this._db);
+  $$AccountsTableTableManager get accounts =>
+      $$AccountsTableTableManager(_db.attachedDatabase, _db.accounts);
   $$LearnerProfilesTableTableManager get learnerProfiles =>
       $$LearnerProfilesTableTableManager(
         _db.attachedDatabase,

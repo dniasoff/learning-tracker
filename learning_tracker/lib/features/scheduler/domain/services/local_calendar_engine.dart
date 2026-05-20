@@ -1,7 +1,7 @@
 import 'package:learning_tracker/core/database/content/content_database.dart';
+import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/scheduler/domain/services/calendar_program_registry.dart';
 import 'package:learning_tracker/features/scheduler/domain/services/calendar_program_service.dart';
-import 'package:learning_tracker/core/utils/date_utils.dart';
 
 /// Offline-first calendar engine that reads pre-computed cycle data from
 /// the [ContentDatabase].
@@ -58,8 +58,9 @@ class LocalCalendarEngine {
       programId: def.id,
       displayNameEn: def.displayNameEn,
       displayNameHe: def.displayNameHe,
-      todayRef: row.sefariaRef,
-      todayRefHe: row.sefariaRefHe,
+      // W3.26: sefariaRef / sefariaRefHe are now nullable — coalesce to ''.
+      todayRef: row.sefariaRef ?? '',
+      todayRefHe: row.sefariaRefHe ?? '',
       apiSource: 'local',
       date: _parseDateKey(row.dateKey),
     );
@@ -86,8 +87,8 @@ class LocalCalendarEngine {
           programId: def.id,
           displayNameEn: def.displayNameEn,
           displayNameHe: def.displayNameHe,
-          todayRef: row.sefariaRef,
-          todayRefHe: row.sefariaRefHe,
+          todayRef: row.sefariaRef ?? '',
+          todayRefHe: row.sefariaRefHe ?? '',
           apiSource: 'local',
           date: _parseDateKey(row.dateKey),
         ),

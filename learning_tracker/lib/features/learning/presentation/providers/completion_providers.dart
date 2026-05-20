@@ -19,13 +19,12 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'completion_providers.g.dart';
 
-/// Storage key for [CurriculumTracks.trackType] (e.g. [TrackType.personal.storageKey]).
+/// Storage key for the track type (always [TrackType.personal.storageKey]).
+///
+/// W3.22: `trackType` column dropped — all tracks are implicitly 'personal'.
 final trackStorageKeyForTrackIdProvider = FutureProvider.autoDispose
     .family<String, int>((ref, trackId) async {
-      final db = ref.watch(userDatabaseProvider);
-      final row = await db.trackDao.getTrackById(trackId);
-      if (row == null) return TrackType.personal.storageKey;
-      return row.trackType;
+      return TrackType.personal.storageKey;
     });
 
 /// Provider family to check whether a specific stage is already completed.

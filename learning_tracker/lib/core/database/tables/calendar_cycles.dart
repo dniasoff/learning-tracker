@@ -15,9 +15,9 @@ class CalendarCycles extends Table {
   TextColumn get sefariaRef => text()();
 
   /// Sefaria ref for this program on this date (Hebrew, `heRef` from
-  /// /api/calendars). Empty string when the API didn't return one.
+  /// /api/calendars). Null when the API didn't return one.
   /// e.g., 'ברכות ב׳', 'משנה ברכות א׳:א׳'
-  TextColumn get sefariaRefHe => text().withDefault(const Constant(''))();
+  TextColumn get sefariaRefHe => text().nullable()();
 
   /// Human-readable display name (localized)
   TextColumn get displayName => text().withDefault(const Constant(''))();
