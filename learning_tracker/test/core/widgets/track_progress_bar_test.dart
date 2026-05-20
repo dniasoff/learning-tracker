@@ -1,47 +1,31 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/widgets/track_progress_bar.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
-  group('TrackProgressBar (v1 — personal only)', () {
-    setUp(() {
-      // Force Hebrew Terms off so the bar's label renders the English form
-      // ("Personal") rather than the Hebrew script the provider defaults to
-      // for non-zero profiles in tests.
-      SharedPreferences.setMockInitialValues({'hebrew_terms_script_p0': false});
-    });
-
-    testWidgets('renders bar with personal-track count and label', (
-      tester,
-    ) async {
-      final trackCounts = {TrackType.personal: 150};
-
+  group('TrackProgressBar', () {
+    testWidgets('renders bar with completion count', (tester) async {
       await tester.pumpWidget(
-        ProviderScope(
-          child: MaterialApp(
-            theme: AppTheme.lightTheme(),
-            home: Scaffold(body: TrackProgressBar(trackCounts: trackCounts)),
+        MaterialApp(
+          theme: AppTheme.lightTheme(),
+          home: const Scaffold(
+            body: TrackProgressBar(completionCount: 150),
           ),
         ),
       );
       await tester.pumpAndSettle();
 
       expect(find.byType(TrackProgressBar), findsOneWidget);
-      expect(find.text('Personal: 150'), findsOneWidget);
+      expect(find.text('150'), findsOneWidget);
     });
 
     testWidgets('shows empty state when count is zero', (tester) async {
-      final trackCounts = {TrackType.personal: 0};
-
       await tester.pumpWidget(
-        ProviderScope(
-          child: MaterialApp(
-            theme: AppTheme.lightTheme(),
-            home: Scaffold(body: TrackProgressBar(trackCounts: trackCounts)),
+        MaterialApp(
+          theme: AppTheme.lightTheme(),
+          home: const Scaffold(
+            body: TrackProgressBar(completionCount: 0),
           ),
         ),
       );
@@ -51,17 +35,14 @@ void main() {
 
     testWidgets('respects height parameter', (tester) async {
       const customHeight = 32.0;
-      final trackCounts = {TrackType.personal: 10};
 
       await tester.pumpWidget(
-        ProviderScope(
-          child: MaterialApp(
-            theme: AppTheme.lightTheme(),
-            home: Scaffold(
-              body: TrackProgressBar(
-                trackCounts: trackCounts,
-                height: customHeight,
-              ),
+        MaterialApp(
+          theme: AppTheme.lightTheme(),
+          home: const Scaffold(
+            body: TrackProgressBar(
+              completionCount: 10,
+              height: customHeight,
             ),
           ),
         ),
@@ -81,33 +62,27 @@ void main() {
     });
 
     testWidgets('hides labels when showLabels is false', (tester) async {
-      final trackCounts = {TrackType.personal: 10};
-
       await tester.pumpWidget(
-        ProviderScope(
-          child: MaterialApp(
-            theme: AppTheme.lightTheme(),
-            home: Scaffold(
-              body: TrackProgressBar(
-                trackCounts: trackCounts,
-                showLabels: false,
-              ),
+        MaterialApp(
+          theme: AppTheme.lightTheme(),
+          home: const Scaffold(
+            body: TrackProgressBar(
+              completionCount: 10,
+              showLabels: false,
             ),
           ),
         ),
       );
 
-      expect(find.text('Personal: 10'), findsNothing);
+      expect(find.text('10'), findsNothing);
     });
 
-    testWidgets('uses personal track color from theme', (tester) async {
-      final trackCounts = {TrackType.personal: 1};
-
+    testWidgets('uses brand blue color from theme', (tester) async {
       await tester.pumpWidget(
-        ProviderScope(
-          child: MaterialApp(
-            theme: AppTheme.lightTheme(),
-            home: Scaffold(body: TrackProgressBar(trackCounts: trackCounts)),
+        MaterialApp(
+          theme: AppTheme.lightTheme(),
+          home: const Scaffold(
+            body: TrackProgressBar(completionCount: 1),
           ),
         ),
       );
@@ -124,7 +99,7 @@ void main() {
       final coloredContainers = containers.where((container) {
         final decoration = container.decoration;
         if (decoration is BoxDecoration) {
-          return decoration.color == AppTheme.trackPersonal;
+          return decoration.color == AppTheme.brandBlue;
         }
         return false;
       }).toList();

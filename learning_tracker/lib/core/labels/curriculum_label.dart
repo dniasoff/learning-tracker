@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/core/labels/curriculum_label_providers.dart';
 import 'package:learning_tracker/core/labels/curriculum_label_renderer.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
@@ -13,8 +12,8 @@ import 'package:learning_tracker/features/scheduler/domain/services/learning_pro
 
 /// The single entry point for rendering any curriculum-aware label in the UI.
 ///
-/// The widget exposes six modes — three sync ([curriculum], [trackType],
-/// [calendarProgram], [learningProgram], [level], [item]) and three async
+/// The widget exposes modes — sync ([curriculum], [calendarProgram],
+/// [learningProgram], [level], [item]) and async
 /// ([breadcrumb], [local], [parent]). Every mode picks the Hebrew vs English
 /// form from [useHebrewTermsProvider]. Whenever the rendered string is Hebrew
 /// script the underlying `Text` is forced to `TextDirection.rtl`, satisfying
@@ -34,29 +33,6 @@ class CurriculumLabel extends ConsumerWidget {
     super.key,
   }) : _kind = _Kind.curriculum,
        _curriculumId = id,
-       _trackType = null,
-       _calendarEntry = null,
-       _learningProgram = null,
-       _level = null,
-       _rawValue = null,
-       _parentL1Value = null,
-       _hebrewName = null,
-       _item = null,
-       _itemMode = null,
-       _sefariaRef = null;
-
-  /// Renders a `TrackType` label (e.g. "Personal" / "אישי").
-  const CurriculumLabel.trackType(
-    TrackType trackType, {
-    this.style,
-    this.maxLines,
-    this.overflow,
-    this.textAlign,
-    this.textDirection,
-    super.key,
-  }) : _kind = _Kind.trackType,
-       _curriculumId = null,
-       _trackType = trackType,
        _calendarEntry = null,
        _learningProgram = null,
        _level = null,
@@ -78,7 +54,6 @@ class CurriculumLabel extends ConsumerWidget {
     super.key,
   }) : _kind = _Kind.calendarProgram,
        _curriculumId = null,
-       _trackType = null,
        _calendarEntry = entry,
        _learningProgram = null,
        _level = null,
@@ -102,7 +77,6 @@ class CurriculumLabel extends ConsumerWidget {
     super.key,
   }) : _kind = _Kind.learningProgram,
        _curriculumId = null,
-       _trackType = null,
        _calendarEntry = null,
        _learningProgram = program,
        _level = null,
@@ -133,7 +107,6 @@ class CurriculumLabel extends ConsumerWidget {
     super.key,
   }) : _kind = _Kind.level,
        _curriculumId = curriculumId,
-       _trackType = null,
        _calendarEntry = null,
        _learningProgram = null,
        _level = level,
@@ -156,7 +129,6 @@ class CurriculumLabel extends ConsumerWidget {
     super.key,
   }) : _kind = _Kind.item,
        _curriculumId = null,
-       _trackType = null,
        _calendarEntry = null,
        _learningProgram = null,
        _level = null,
@@ -178,7 +150,6 @@ class CurriculumLabel extends ConsumerWidget {
     super.key,
   }) : _kind = _Kind.breadcrumb,
        _curriculumId = null,
-       _trackType = null,
        _calendarEntry = null,
        _learningProgram = null,
        _level = null,
@@ -200,7 +171,6 @@ class CurriculumLabel extends ConsumerWidget {
     super.key,
   }) : _kind = _Kind.local,
        _curriculumId = null,
-       _trackType = null,
        _calendarEntry = null,
        _learningProgram = null,
        _level = null,
@@ -223,7 +193,6 @@ class CurriculumLabel extends ConsumerWidget {
     super.key,
   }) : _kind = _Kind.parent,
        _curriculumId = null,
-       _trackType = null,
        _calendarEntry = null,
        _learningProgram = null,
        _level = null,
@@ -236,7 +205,6 @@ class CurriculumLabel extends ConsumerWidget {
 
   final _Kind _kind;
   final CurriculumId? _curriculumId;
-  final TrackType? _trackType;
   final CalendarProgramEntry? _calendarEntry;
   final LearningProgramData? _learningProgram;
   final int? _level;
@@ -261,12 +229,6 @@ class CurriculumLabel extends ConsumerWidget {
           useHebrew
               ? _curriculumId!.displayNameHe
               : _curriculumId!.displayNameEn,
-          useHebrew: useHebrew,
-        );
-      case _Kind.trackType:
-        final useHebrew = ref.watch(useHebrewTermsProvider);
-        return _text(
-          useHebrew ? _trackType!.displayNameHe : _trackType!.displayNameEn,
           useHebrew: useHebrew,
         );
       case _Kind.calendarProgram:
@@ -391,7 +353,6 @@ class CurriculumLabel extends ConsumerWidget {
 
 enum _Kind {
   curriculum,
-  trackType,
   calendarProgram,
   learningProgram,
   level,
@@ -439,9 +400,3 @@ String curriculumHebrewName(CurriculumId curriculum) =>
 String curriculumEnglishName(CurriculumId curriculum) =>
     curriculum.displayNameEn;
 
-/// Pure-string variant of [CurriculumLabel.trackType]. Watches
-/// [useHebrewTermsProvider].
-String trackTypeLabelText(WidgetRef ref, {required TrackType trackType}) {
-  final useHebrew = ref.watch(useHebrewTermsProvider);
-  return useHebrew ? trackType.displayNameHe : trackType.displayNameEn;
-}

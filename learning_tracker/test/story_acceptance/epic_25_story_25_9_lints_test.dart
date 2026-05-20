@@ -173,7 +173,7 @@ void main() {
       reason:
           'New displayNameEn/displayNameHe caller(s) outside core/labels. '
           'Route through curriculumLabelText / calendarEntryLabelText / '
-          'learningProgramLabelText / trackTypeLabelText (or '
+          'learningProgramLabelText (or '
           'CurriculumLabel.* widget) instead. Offenders:\n'
           '${offenders.join('\n')}',
     );

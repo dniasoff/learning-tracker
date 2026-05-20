@@ -12,7 +12,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/features/scheduler/domain/services/calendar_program_service.dart';
 import 'package:learning_tracker/features/scheduler/domain/services/learning_program_service.dart';
@@ -37,42 +36,6 @@ Widget _wrap(
 }
 
 void main() {
-  group('AC1 — CurriculumLabel.trackType(TrackType.personal)', () {
-    testWidgets('en + Hebrew-terms OFF → transliterated English name', (
-      tester,
-    ) async {
-      await tester.pumpWidget(
-        _wrap(
-          const CurriculumLabel.trackType(TrackType.personal),
-          hebrewTermsScript: false,
-        ),
-      );
-      await tester.pumpAndSettle();
-      expect(find.text('Personal'), findsOneWidget);
-    });
-
-    testWidgets('Hebrew-terms ON → Hebrew script with RTL directionality', (
-      tester,
-    ) async {
-      await tester.pumpWidget(
-        _wrap(
-          const CurriculumLabel.trackType(TrackType.personal),
-          hebrewTermsScript: true,
-        ),
-      );
-      await tester.pumpAndSettle();
-      final textWidget = tester.widget<Text>(find.byType(Text));
-      expect(textWidget.data, equals('אישי'));
-      // Direction is forced to RTL on Hebrew strings regardless of ambient,
-      // matching the AC: "the rendered text is the Hebrew script with RTL
-      // directionality."
-      final renderedDirection =
-          textWidget.textDirection ??
-          Directionality.of(tester.element(find.byType(Text)));
-      expect(renderedDirection, equals(TextDirection.rtl));
-    });
-  });
-
   group('AC2 — CurriculumLabel.calendarProgram', () {
     const entry = CalendarProgramEntry(
       programId: 'daf_yomi',
@@ -187,45 +150,4 @@ void main() {
     );
   });
 
-  group('AC5 — trackTypeLabelText pure-string helper', () {
-    testWidgets('returns Hebrew when toggle on', (tester) async {
-      String? captured;
-      await tester.pumpWidget(
-        _wrap(
-          Consumer(
-            builder: (context, ref, _) {
-              captured = trackTypeLabelText(ref, trackType: TrackType.personal);
-              return const SizedBox.shrink();
-            },
-          ),
-          hebrewTermsScript: true,
-        ),
-      );
-      await tester.pumpAndSettle();
-      expect(captured, equals('אישי'));
-    });
-
-    testWidgets('returns English when toggle off', (tester) async {
-      String? captured;
-      await tester.pumpWidget(
-        _wrap(
-          Consumer(
-            builder: (context, ref, _) {
-              captured = trackTypeLabelText(ref, trackType: TrackType.personal);
-              return const SizedBox.shrink();
-            },
-          ),
-          hebrewTermsScript: false,
-        ),
-      );
-      await tester.pumpAndSettle();
-      expect(captured, equals('Personal'));
-    });
-  });
-
-  group('AC6 — TrackType exposes a Hebrew display name', () {
-    test('TrackType.personal.displayNameHe == "אישי"', () {
-      expect(TrackType.personal.displayNameHe, equals('אישי'));
-    });
-  });
 }

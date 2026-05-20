@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/core/enums/track_type.dart';
 
 /// Material 3 theme for the Torah learning app.
 ///
@@ -123,15 +122,6 @@ class AppTheme {
         .where((c) => c.storageKey == storageKey)
         .firstOrNull;
     return curriculum != null ? getCurriculumColor(curriculum) : brandBlue;
-  }
-
-  static const Color trackPersonal = brandBlue;
-
-  static Color getTrackColor(TrackType trackType) {
-    switch (trackType) {
-      case TrackType.personal:
-        return trackPersonal;
-    }
   }
 
   // ---------------------------------------------------------------------------

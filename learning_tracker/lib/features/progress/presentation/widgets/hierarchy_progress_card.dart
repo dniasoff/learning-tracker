@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:learning_tracker/core/enums/track_type.dart';
-import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/labels/domain_term_labels.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/utils/percentage_formatter.dart';
@@ -114,8 +112,6 @@ class _ExpandableHierarchyCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     StageBreakdownRow(stageBreakdown: level.stageBreakdown),
-                    const SizedBox(height: 4),
-                    _TrackBreakdownLine(trackBreakdown: level.trackBreakdown),
                     if (level.subLevels != null) ...[
                       Divider(
                         height: 20,
@@ -187,8 +183,6 @@ class _LevelContent extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         StageBreakdownRow(stageBreakdown: level.stageBreakdown),
-        const SizedBox(height: 4),
-        _TrackBreakdownLine(trackBreakdown: level.trackBreakdown),
       ],
     );
   }
@@ -279,51 +273,3 @@ class _ProgressCircle extends StatelessWidget {
   }
 }
 
-class _TrackBreakdownLine extends StatelessWidget {
-  const _TrackBreakdownLine({required this.trackBreakdown});
-
-  final Map<TrackType, int> trackBreakdown;
-
-  @override
-  Widget build(BuildContext context) {
-    final nonZero = trackBreakdown.entries.where((e) => e.value > 0).toList();
-    if (nonZero.isEmpty) return const SizedBox.shrink();
-
-    return Wrap(
-      spacing: 12,
-      children: nonZero.map((entry) {
-        final color = AppTheme.getTrackColor(entry.key);
-        return Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 8,
-              height: 8,
-              decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-            ),
-            const SizedBox(width: 4),
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                CurriculumLabel.trackType(
-                  entry.key,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: AppTheme.brandInkMuted,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                Text(
-                  ': ${entry.value}',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: AppTheme.brandInkMuted,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ],
-            ),
-          ],
-        );
-      }).toList(),
-    );
-  }
-}

@@ -7,10 +7,6 @@ void main() {
       expect(TrackType.personal.storageKey, 'personal');
     });
 
-    test('has correct display name', () {
-      expect(TrackType.personal.displayNameEn, 'Personal');
-    });
-
     test('fromStorageKey parses valid key', () {
       expect(TrackType.fromStorageKey('personal'), TrackType.personal);
     });

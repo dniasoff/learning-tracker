@@ -1,23 +1,20 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:learning_tracker/core/enums/track_type.dart';
-import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 
-/// A segmented progress bar showing completion breakdown by track type.
+/// A progress bar showing completion count.
 ///
-/// V1 has one track type (`personal`), so this collapses to a single-color
-/// bar; the widget is kept in this shape for forward compatibility.
-class TrackProgressBar extends ConsumerWidget {
+/// Previously segmented by track type; track-type display has been removed
+/// per product rules (no track-type labels anywhere in the UI).
+class TrackProgressBar extends StatelessWidget {
   const TrackProgressBar({
     super.key,
-    required this.trackCounts,
+    required this.completionCount,
     this.height = 24.0,
     this.showLabels = true,
   });
 
-  /// Map of track types to completion counts.
-  final Map<TrackType, int> trackCounts;
+  /// Total completion count to display.
+  final int completionCount;
 
   /// Height of the progress bar in logical pixels.
   final double height;
@@ -26,10 +23,8 @@ class TrackProgressBar extends ConsumerWidget {
   final bool showLabels;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final total = trackCounts.values.fold<int>(0, (sum, count) => sum + count);
-
-    if (total == 0) {
+  Widget build(BuildContext context) {
+    if (completionCount == 0) {
       return _buildEmptyState();
     }
 
@@ -41,10 +36,13 @@ class TrackProgressBar extends ConsumerWidget {
           borderRadius: BorderRadius.circular(height / 2),
           child: SizedBox(
             height: height,
-            child: Row(children: _buildSegments(total)),
+            child: Container(color: AppTheme.brandBlue),
           ),
         ),
-        if (showLabels) ...[const SizedBox(height: 8), _buildLabels(ref)],
+        if (showLabels) ...[
+          const SizedBox(height: 8),
+          _buildLabel(context),
+        ],
       ],
     );
   }
@@ -62,48 +60,21 @@ class TrackProgressBar extends ConsumerWidget {
     );
   }
 
-  List<Widget> _buildSegments(int total) {
-    final segments = <Widget>[];
-
-    for (final trackType in TrackType.values) {
-      final count = trackCounts[trackType] ?? 0;
-      if (count > 0) {
-        final proportion = count / total;
-        segments.add(
-          Expanded(
-            flex: (proportion * 100).round(),
-            child: Container(color: AppTheme.getTrackColor(trackType)),
+  Widget _buildLabel(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 12,
+          height: 12,
+          decoration: const BoxDecoration(
+            color: AppTheme.brandBlue,
+            shape: BoxShape.circle,
           ),
-        );
-      }
-    }
-
-    return segments;
-  }
-
-  Widget _buildLabels(WidgetRef ref) {
-    return Wrap(
-      spacing: 16,
-      runSpacing: 4,
-      children: TrackType.values.map((trackType) {
-        final count = trackCounts[trackType] ?? 0;
-        final label = trackTypeLabelText(ref, trackType: trackType);
-        return Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 12,
-              height: 12,
-              decoration: BoxDecoration(
-                color: AppTheme.getTrackColor(trackType),
-                shape: BoxShape.circle,
-              ),
-            ),
-            const SizedBox(width: 4),
-            Text('$label: $count', style: const TextStyle(fontSize: 12)),
-          ],
-        );
-      }).toList(),
+        ),
+        const SizedBox(width: 4),
+        Text('$completionCount', style: const TextStyle(fontSize: 12)),
+      ],
     );
   }
 }

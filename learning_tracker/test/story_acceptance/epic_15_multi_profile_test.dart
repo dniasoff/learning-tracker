@@ -3093,7 +3093,6 @@ void main() {
         isManual: false,
       );
       expect(completion.trackType, TrackType.personal);
-      expect(completion.trackType.displayNameEn, 'Personal');
     });
 
     // AC 8: Parent/tutor can view any child profile's journey
