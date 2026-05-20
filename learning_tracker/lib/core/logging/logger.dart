@@ -45,16 +45,16 @@ class AppLogger {
   /// In unit tests, inject a specific [AppLogger] via the constructor instead
   /// of relying on this singleton.
   static AppLogger get instance {
-    _appLoggerInstance ??= AppLogger(talker);
+    _appLoggerInstance ??= AppLogger(rawTalker);
     return _appLoggerInstance!;
   }
 
   /// The singleton [Talker] instance used for low-level log routing.
   ///
-  /// Use [instance] for structured logging. Use [talker] only when the raw
+  /// Use [instance] for structured logging. Use [rawTalker] only when the raw
   /// [Talker] type is required (e.g. third-party integrations, provider
   /// wiring with [TalkerRiverpodObserver]).
-  static Talker get talker {
+  static Talker get rawTalker {
     _talkerInstance ??= _createTalker();
     return _talkerInstance!;
   }
@@ -65,7 +65,7 @@ class AppLogger {
   /// Returns the underlying [Talker] for wiring into [TalkerRiverpodObserver].
   static Talker init() {
     _talkerInstance = _createTalker();
-    _appLoggerInstance = null; // reset so instance re-wraps the new talker
+    _appLoggerInstance = null; // reset so instance re-wraps the new rawTalker
     return _talkerInstance!;
   }
 

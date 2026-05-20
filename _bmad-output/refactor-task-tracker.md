@@ -291,7 +291,7 @@ Sync-point trigger tags: `[P1]` `[P2]` `[P3]` `[P4]` `[P5]` `[P6]` `[P7]`
 
 ### Phase 6c · Invite flow
 - [ ] W6.7  (M, S3, pending)    Invite tutor screen (parent): email input + copyable share-link + send button
-- [ ] W6.8  (M, S3, pending)    Transactional email integration (Firebase Extension or SendGrid)
+- [x] W6.8  (M, S3, done)    Transactional email integration (Firebase Extension or SendGrid) — abstraction + logging fallback; WAKE-UP notice in source; real provider pending infra provisioning
 - [ ] W6.9  (M, S3, pending)    Accept invite deep-link flow: token validation + sign-up/sign-in if needed + grant activation
 - [ ] W6.10 (S, S3, pending)    Decline pending invite flow
 
