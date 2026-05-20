@@ -204,3 +204,33 @@ Tracker: _bmad-output/refactor-task-tracker.md
 ## Cross-stream issues noted
 - Pre-existing errors in `features/tracks/setup/presentation/` (add_track_controller.dart, add_track_flow_screen.dart, track_detail_screen.dart) and `features/stages/data/` (const_with_non_const) — not caused by S5 work
 - `stage_definition_repository_impl.dart:66` uses `const` with a non-const constructor — pre-existing, out of scope
+
+---
+
+## S5-godscreens-A (2026-05-20)
+
+### W5.1 — Split app_intro_screen.dart [DONE]
+- Original: 1371 LOC in `features/onboarding/presentation/screens/app_intro_screen.dart`
+- Extracted 5 new files under `features/onboarding/presentation/widgets/`:
+  - `glowing_cta_button.dart` — `GlowingCtaButton` (was `_GlowingButton`; public rename)
+  - `intro_daily_plan_page.dart` — `IntroDailyPlanIllustration` + `IntroDailyPlanProgressBar` + helper fns
+  - `intro_mishna_page.dart` — `IntroMishnaIllustration` + `IntroMishnaProgressBar`
+  - `intro_rewards_page.dart` — `IntroRewardsHeroIllustration` + `IntroFeatureCardsRow` + `IntroChildModeTag` + `IntroScholarLevelCard`
+  - `intro_page_indicator.dart` — `IntroPageIndicator` (animated dot-row; new widget per plan spec, not yet wired into screen to preserve observable behaviour)
+- `AppIntroScreen` + `_AppIntroScreenState` remain as thin coordinator in main file
+- `_IntroPage` remains inline (page content dispatcher) referencing extracted illustration widgets
+- All new/modified files: zero issues from `dart analyze --fatal-infos`
+- Commit: `cd365ca1` — `refactor(W5.1): split app_intro_screen.dart into illustration + button widgets`
+
+### W5.2 — Split sign_in_screen.dart [DONE]
+- Original: 1245 LOC in `features/account/presentation/screens/sign_in_screen.dart`
+- Extracted 4 widget files under `features/account/presentation/widgets/`:
+  - `sign_in_mode_card.dart` — `SignInModeCard` + `SignInModeHint` enum + `RegistryMatchKind` enum
+  - `sign_in_form.dart` — `SignInForm` (email + password + keep-signed-in; pure display widget)
+  - `sign_in_actions.dart` — `SignInActions` (sign-in button + Google button + sign-up link)
+  - `email_verification_dialog.dart` — `showEmailVerificationDialog` helper wrapping `EmailVerificationConfirmPanel`
+- Created `features/account/presentation/notifiers/sign_in_controller.dart` — `SignInController extends Notifier<SignInState>` (sealed `SignInIdle` / `SignInSubmitting` / `SignInError`); owns all async sign-in business logic (email/Google, offline restore, post-sign-in navigation, email verification); screen injects navigation router + error/dialog callbacks via `setCallbacks()`
+- `SignInScreen` remains `ConsumerStatefulWidget` owning `TextEditingControllers` + debounced registry lookup; all async auth delegates to `SignInController`
+- Used Riverpod 3's `Notifier<T>` (not removed `StateNotifier`) — `StateNotifierProvider` API unavailable in flutter_riverpod ^3.3.1
+- All new/modified files: zero issues from `dart analyze --fatal-infos`
+- Commit: `e383b0a5` — `refactor(W5.2): split sign_in_screen.dart into controller + form widgets`
