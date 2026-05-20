@@ -125,6 +125,55 @@ FIXED / commit 14fd65e3 (same commit as C3)
 
 ---
 
+## V3-W4b — Schema + Skips
+
+### V2-R6 C1/C2 — Schema version + dropped table assertions
+
+**Status: Already resolved (commit a36bb4ae)**
+
+Verified all 3 files were fixed in the Runtime-Fix-C pass:
+- `test/story_acceptance/epic_25_story_22_firewall_test.dart` — `greaterThanOrEqualTo(1)`; table list updated to `completion_events`, `streak_events`, `outbox`, `prior_completion_imports`; dropped `completions`, `streaks`, `sync_queue`.
+- `test/story_acceptance/epic_02_content_test.dart` — both `schemaVersion` assertions → `greaterThanOrEqualTo(1)`.
+- `test/infrastructure_test.dart` — `schemaVersion` assertion → `greaterThanOrEqualTo(1)` with comment.
+
+No further action needed for C1/C2.
+
+---
+
+### V2-R6 C4 — @Skip recovery for epic_18 + epic_15
+
+**Commit: 98f842b4**
+
+**epic_18_track_overhaul_test.dart:**
+- File-level `@Skip('TODO: Fix missing pushCurriculumTrack parameter')` removed.
+- Root cause (pushCurriculumTrack param) was already fixed in a36bb4ae.
+- All 21 tests now pass green (0 skips).
+
+**epic_15_multi_profile_test.dart:**
+- Blanket `@Skip('TODO: Fix missing pushCurriculumTrack parameter')` replaced with concrete: `@Skip('V3-W4: 30 fixture FK failures after removing blanket skip — see TODO above')`.
+- All 10+ `expect(true, isTrue)` placeholders replaced with per-test `skip:` annotations carrying specific reasons (ContentVersionCheckService removed, widget/compile-time-only tests, architecture docs).
+- Blocking issue documented: seedProfile() pre-creates profile 1; FK-constrained groups need per-group seedProfile; max-profile tests need count adjustment.
+- TODO left for targeted fixture refactor.
+
+---
+
+### V2-R6 C5 — Epic 13 cloud sync coverage (Story 13.4 port)
+
+**Commits: 3e50a2c6 (test + impl fix)**
+
+**epic_13_cloud_sync_test.dart:**
+- Story 13.4 (New Device Data Restore) ported with 8 real assertions (AC1–AC8) using `_StubSyncOrchestrator` pattern identical to epic_25_story_22_firewall_test.dart.
+- Stories 13.1–13.3 remain skipped with concrete references to replacement test files (outbox processor, SyncOrchestratorImpl + PullPipeline, EntityMerger unit tests).
+- Result: 8 pass, 3 skipped.
+
+**lib/app/restore/device_restore_service.dart (impl fix):**
+- `isNewDevice()` was missing `state == _kStateComplete → return false` guard — caused AC5 failure (restore ran on already-restored device).
+- `isNewDevice()` was not gating on `_isAuthenticated` — caused AC3 failure (unauthenticated + empty DB returned `true`).
+- Fixed: `_kStateComplete` guard added; unauthenticated guard added after in_progress check; dead `profiles.isEmpty` fallback path removed.
+- `dart analyze` + `dart format` clean.
+
+---
+
 ## V3-W4c — Real B3 Regression Test
 
 **Finding:** V2-R6 C3 — The W4.14 committed test file used `_TestableUseCase._buildResult()`, a hand-rolled duplicate of production `ProvisionTrackUseCase._toResult()`. All 13 tests exercised the duplicate, not the real use case. A regression in `_toResult` would pass all tests.
