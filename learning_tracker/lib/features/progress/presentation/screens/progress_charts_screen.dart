@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/user_mode.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
+import 'package:learning_tracker/core/theme/app_colors.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/core/widgets/error_display.dart';
 import 'package:learning_tracker/core/widgets/loading_indicator.dart';
@@ -53,7 +54,7 @@ class _ProgressChartsScreenState extends ConsumerState<ProgressChartsScreen> {
     final theme = Theme.of(context);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F6FB),
+      backgroundColor: AppColors.surfaceF4b,
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 20),
@@ -164,9 +165,7 @@ class _ProgressChartsScreenState extends ConsumerState<ProgressChartsScreen> {
                 duration: const Duration(milliseconds: 180),
                 padding: const EdgeInsets.symmetric(vertical: 9),
                 decoration: BoxDecoration(
-                  color: selected
-                      ? const Color(0xFF123DAE)
-                      : Colors.transparent,
+                  color: selected ? AppColors.blueMid : Colors.transparent,
                   borderRadius: BorderRadius.circular(999),
                 ),
                 child: Text(
@@ -374,7 +373,7 @@ class _ChartSection extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF03174C).withValues(alpha: 0.05),
+            color: AppColors.blueNavy.withValues(alpha: 0.05),
             blurRadius: 12,
             offset: const Offset(0, 6),
           ),
@@ -442,7 +441,7 @@ class _FilterPill extends StatelessWidget {
       showCheckmark: false,
       side: BorderSide.none,
       backgroundColor: Colors.white,
-      selectedColor: const Color(0xFF123DAE),
+      selectedColor: AppColors.blueMid,
       labelStyle: Theme.of(context).textTheme.labelMedium?.copyWith(
         color: selected ? Colors.white : const Color(0xFF4D5668),
         fontWeight: FontWeight.w700,

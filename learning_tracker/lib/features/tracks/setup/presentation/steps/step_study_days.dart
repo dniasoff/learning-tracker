@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:learning_tracker/core/theme/app_colors.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/tracks/setup/domain/services/track_creation_service.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
@@ -77,7 +78,7 @@ class _StudyDaysEditableState extends State<StudyDaysEditable> {
                     title: _dayName(dayNum),
                     subtitle: '',
                     subtitleColor: AppTheme.brandInkMuted,
-                    activeColor: const Color(0xFFE9ECF2),
+                    activeColor: AppColors.surfaceE9,
                     isShabbos: dayNum == 6,
                     isOn: isActive,
                     onChanged: (v) =>

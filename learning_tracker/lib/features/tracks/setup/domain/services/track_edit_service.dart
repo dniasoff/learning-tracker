@@ -36,6 +36,7 @@ class TrackEditService {
     String? label,
     Map<int, String>? studyDays,
     WizardResult? chazarahWizard,
+
     /// Sealed goal-mode discriminant. Pass [DeadlineTarget] or
     /// [PacePeriodTarget] to update; `null` keeps the existing goal mode.
     /// Pass `null` with [clearPaceTarget] = `true` to remove the goal.
@@ -87,8 +88,9 @@ class TrackEditService {
     }
 
     AppLogger.instance.info(
-      event: 'TrackEditService: track $trackId edited for ${curriculum.storageKey} '
-      '(profile=$profileId)',
+      event:
+          'TrackEditService: track $trackId edited for ${curriculum.storageKey} '
+          '(profile=$profileId)',
     );
   }
 

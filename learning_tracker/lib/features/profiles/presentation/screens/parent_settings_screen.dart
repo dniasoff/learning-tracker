@@ -3,14 +3,15 @@ import 'dart:async';
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import 'package:learning_tracker/core/navigation/app_router.dart';
+import 'package:learning_tracker/core/theme/app_colors.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_providers.dart'
-    show authRepositoryProvider;
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
-import 'package:learning_tracker/features/profiles/presentation/widgets/parent_portal_bottom_nav.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
+import 'package:learning_tracker/features/profiles/presentation/widgets/parent_portal_bottom_nav.dart';
 import 'package:learning_tracker/features/settings/presentation/utils/account_actions.dart';
 import 'package:learning_tracker/features/settings/presentation/widgets/backup_sync_section.dart';
 import 'package:learning_tracker/features/settings/presentation/widgets/user_profile_header_card.dart';
@@ -189,14 +190,14 @@ class ParentSettingsScreen extends ConsumerWidget {
                   child: _ManageRow(
                     iconBackground: _dangerIconBg,
                     icon: Icons.logout_rounded,
-                    iconColor: const Color(0xFFB43A4A),
+                    iconColor: AppColors.chartRed,
                     title: l10n.signOut,
-                    titleColor: const Color(0xFFB43A4A),
+                    titleColor: AppColors.chartRed,
                     subtitle: null,
                     leadingSquare: true,
                     trailing: const Icon(
                       Icons.logout_outlined,
-                      color: Color(0xFFB43A4A),
+                      color: AppColors.chartRed,
                       size: 24,
                     ),
                     onTap: () => showSignOutConfirmation(context, ref),
@@ -247,7 +248,7 @@ class ParentSettingsScreen extends ConsumerWidget {
       thickness: 1,
       indent: 72,
       endIndent: 16,
-      color: Color(0xFFE9ECF2),
+      color: AppColors.surfaceE9,
     );
   }
 }
@@ -344,7 +345,7 @@ class _ManageRow extends StatelessWidget {
                       Text(
                         subtitle!,
                         style: theme.textTheme.bodySmall?.copyWith(
-                          color: subtitleColor ?? const Color(0xFF8E97A6),
+                          color: subtitleColor ?? AppColors.inkMidGrey,
                           fontSize: 14,
                           height: 1.25,
                         ),

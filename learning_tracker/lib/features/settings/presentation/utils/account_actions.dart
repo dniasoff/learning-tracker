@@ -10,6 +10,7 @@ import 'package:learning_tracker/core/navigation/router_provider.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/providers/network_providers.dart';
 import 'package:learning_tracker/core/providers/registry_provider.dart';
+import 'package:learning_tracker/core/theme/app_colors.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/account/domain/models/app_user.dart';
 import 'package:learning_tracker/features/account/domain/services/account_lifecycle_service.dart';
@@ -56,12 +57,12 @@ Future<void> showSignOutConfirmation(
                     width: 88,
                     height: 88,
                     decoration: const BoxDecoration(
-                      color: Color(0xFFFDE7EA),
+                      color: AppColors.statusErrorSoft,
                       shape: BoxShape.circle,
                     ),
                     child: const Icon(
                       Icons.logout_rounded,
-                      color: Color(0xFFB43A4A),
+                      color: AppColors.chartRed,
                       size: 40,
                     ),
                   ),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:learning_tracker/core/theme/app_colors.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
@@ -30,7 +31,7 @@ class ReviewPresetCard extends StatelessWidget {
         color: isSelected ? null : Colors.white,
         borderRadius: BorderRadius.circular(22),
         border: Border.all(
-          color: isSelected ? AppTheme.brandBlueDeep : const Color(0xFFE9ECF2),
+          color: isSelected ? AppTheme.brandBlueDeep : AppColors.surfaceE9,
           width: isSelected ? 2 : 1,
         ),
       ),
@@ -47,8 +48,8 @@ class ReviewPresetCard extends StatelessWidget {
                 CircleAvatar(
                   radius: 16,
                   backgroundColor: isSelected
-                      ? const Color(0x33FFFFFF)
-                      : const Color(0xFFE9ECF2),
+                      ? AppColors.scrimLight
+                      : AppColors.surfaceE9,
                   child: Icon(
                     icon,
                     size: 17,

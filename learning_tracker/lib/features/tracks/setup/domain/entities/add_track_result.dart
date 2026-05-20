@@ -1,13 +1,45 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/features/onboarding/domain/models/wizard_result_wrapper.dart';
+import 'package:learning_tracker/features/scheduler/domain/models/goal_entity.dart';
+import 'package:learning_tracker/features/scheduler/domain/services/learning_program_service.dart';
 
 part 'add_track_result.freezed.dart';
+
+/// Typed container for bulk-mark intent collected during the AddTrackFlow.
+///
+/// Domain-layer counterpart to [BulkMarkResult] (presentation), carrying
+/// only the counts the domain needs — avoids pulling a presentation widget
+/// into the domain entity.
+class BulkMarkIntent {
+  const BulkMarkIntent({
+    required this.itemCount,
+    required this.completionCount,
+  });
+
+  /// Number of distinct content items marked.
+  final int itemCount;
+
+  /// Total completion records written (may exceed [itemCount] if multi-stage).
+  final int completionCount;
+
+  @override
+  bool operator ==(Object other) =>
+      other is BulkMarkIntent &&
+      other.itemCount == itemCount &&
+      other.completionCount == completionCount;
+
+  @override
+  int get hashCode => Object.hash(itemCount, completionCount);
+
+  @override
+  String toString() =>
+      'BulkMarkIntent(itemCount: $itemCount, completionCount: $completionCount)';
+}
 
 /// Result returned by [AddTrackFlow] on successful completion.
 ///
 /// Contains all configuration gathered across the 8-step wizard.
-/// Uses [Object?] for wizard/goal/bulkMark results to avoid importing
-/// presentation-layer types into the domain layer (clean architecture).
 @freezed
 abstract class AddTrackResult with _$AddTrackResult {
   const factory AddTrackResult({
@@ -18,14 +50,14 @@ abstract class AddTrackResult with _$AddTrackResult {
     List<ScopeEntry>? scopeSelections,
     required Map<int, String> studyDays,
 
-    /// Opaque wizard result — cast to `LearningProcessWizardResult`.
-    Object? wizardResult,
+    /// Stage/review schedule configuration from the chazara wizard.
+    LearningProcessWizardResult? wizardResult,
 
-    /// Opaque goal result — cast to `GoalEntity`.
-    Object? goalResult,
+    /// Goal configuration from the goal step.
+    GoalEntity? goalResult,
 
-    /// Opaque bulk mark result — cast to `BulkMarkResult`.
-    Object? bulkMarkResult,
+    /// Bulk prior-completion intent from the confirmation step.
+    BulkMarkIntent? bulkMarkResult,
 
     /// Sefaria ref for program starting position (Screen 8 program mode).
     String? startingRef,
@@ -51,14 +83,13 @@ abstract class AddTrackState with _$AddTrackState {
     int? programId,
     String? programName,
 
-    /// Full program object for reading stagesConfig metadata.
-    /// Opaque Object? to avoid importing DB types into domain.
-    Object? selectedProgram,
+    /// Full program data for reading stagesConfig metadata.
+    LearningProgramData? selectedProgram,
     Map<int, String>? studyDays,
-    Object? wizardResult,
-    Object? goalResult,
+    LearningProcessWizardResult? wizardResult,
+    GoalEntity? goalResult,
     String? trackLabel,
-    Object? bulkMarkResult,
+    BulkMarkIntent? bulkMarkResult,
     String? startingRef,
     @Default(false) bool contentActivated,
   }) = _AddTrackState;

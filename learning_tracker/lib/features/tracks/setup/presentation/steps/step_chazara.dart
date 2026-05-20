@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/domain_term_labels.dart';
+import 'package:learning_tracker/core/theme/app_colors.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/onboarding/domain/models/wizard_result_wrapper.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/learning_process_wizard_service.dart';
@@ -213,7 +214,7 @@ class _ChazaraInlineSetupState extends ConsumerState<ChazaraInlineSetup> {
                       border: Border.all(
                         color: _selectedPresetIndex == -1
                             ? AppTheme.brandBlueBright
-                            : const Color(0xFFE9ECF2),
+                            : AppColors.surfaceE9,
                         width: _selectedPresetIndex == -1 ? 2 : 1,
                       ),
                     ),
@@ -229,11 +230,11 @@ class _ChazaraInlineSetupState extends ConsumerState<ChazaraInlineSetup> {
                               children: [
                                 const CircleAvatar(
                                   radius: 15,
-                                  backgroundColor: Color(0xFFF9E4C8),
+                                  backgroundColor: AppColors.peachTint,
                                   child: Icon(
                                     Icons.settings_suggest_rounded,
                                     size: 16,
-                                    color: Color(0xFF7D5411),
+                                    color: AppColors.goldDark,
                                   ),
                                 ),
                                 const SizedBox(width: 10),
@@ -250,7 +251,7 @@ class _ChazaraInlineSetupState extends ConsumerState<ChazaraInlineSetup> {
                                     vertical: 3,
                                   ),
                                   decoration: BoxDecoration(
-                                    color: const Color(0xFFE5E9FF),
+                                    color: AppColors.surfaceBlueLight,
                                     borderRadius: BorderRadius.circular(10),
                                   ),
                                   child: Text(

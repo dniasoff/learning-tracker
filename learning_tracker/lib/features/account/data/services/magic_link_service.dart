@@ -73,7 +73,9 @@ class MagicLinkService {
     try {
       final initial = await _appLinks.getInitialLink();
       if (initial != null) {
-        AppLogger.instance.info(event: 'MagicLinkService received initial link');
+        AppLogger.instance.info(
+          event: 'MagicLinkService received initial link',
+        );
         await _handleIncomingLink(initial);
       }
     } catch (e, stack) {
@@ -101,7 +103,9 @@ class MagicLinkService {
     final authUri = _extractActionUri(uri);
     final link = authUri.toString();
     final mode = authUri.queryParameters['mode'];
-    AppLogger.instance.info(event: 'MagicLinkService parsed mode: ${mode ?? 'none'}');
+    AppLogger.instance.info(
+      event: 'MagicLinkService parsed mode: ${mode ?? 'none'}',
+    );
     if (mode == 'verifyEmail') {
       await _handleVerifyEmailLink(authUri);
       return;
@@ -200,14 +204,18 @@ class MagicLinkService {
       await _authRepository.checkActionCode(oobCode);
       await _authRepository.applyActionCode(oobCode);
       await prefs.remove(kPendingVerifyEmailOobCode);
-      AppLogger.instance.info(event: 'Applied verify-email action code successfully');
+      AppLogger.instance.info(
+        event: 'Applied verify-email action code successfully',
+      );
       await _authRepository.reloadCurrentUser();
     } catch (e, stack) {
       final code = _extractFirebaseCode(e);
       if (code == 'invalid-action-code' || code == 'expired-action-code') {
         // Code may already be consumed if another handler/browser applied it.
         await prefs.remove(kPendingVerifyEmailOobCode);
-        AppLogger.instance.info(event: 'Verify-email action code already consumed');
+        AppLogger.instance.info(
+          event: 'Verify-email action code already consumed',
+        );
       }
       AppLogger.instance.handle(e, stack);
     }

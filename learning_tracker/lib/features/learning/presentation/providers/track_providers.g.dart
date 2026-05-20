@@ -53,7 +53,7 @@ final class TrackRepositoryProvider
   }
 }
 
-String _$trackRepositoryHash() => r'9ef1aee581734a13820140be7d032f6fddee3457';
+String _$trackRepositoryHash() => r'5d47a46993379472783b56a6b373ace0c2a546c6';
 
 /// Provides the list of active tracks for a specific curriculum.
 

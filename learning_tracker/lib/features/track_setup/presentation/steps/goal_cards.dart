@@ -1,6 +1,7 @@
 import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/material.dart';
+import 'package:learning_tracker/core/theme/app_colors.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
@@ -122,7 +123,7 @@ class PaceGoalCard extends StatelessWidget {
         color: Colors.white,
         borderRadius: BorderRadius.circular(24),
         border: Border.all(
-          color: isActive ? AppTheme.brandBlueBright : const Color(0xFFE9ECF2),
+          color: isActive ? AppTheme.brandBlueBright : AppColors.surfaceE9,
           width: isActive ? 2 : 1,
         ),
       ),
@@ -135,7 +136,7 @@ class PaceGoalCard extends StatelessWidget {
               children: [
                 const CircleAvatar(
                   radius: 14,
-                  backgroundColor: Color(0xFFE5E9FF),
+                  backgroundColor: AppColors.surfaceBlueLight,
                   child: Icon(
                     Icons.speed_rounded,
                     size: 16,
@@ -255,7 +256,7 @@ class DeadlineGoalCard extends StatelessWidget {
         color: Colors.white,
         borderRadius: BorderRadius.circular(24),
         border: Border.all(
-          color: isActive ? AppTheme.brandBlueBright : const Color(0xFFE9ECF2),
+          color: isActive ? AppTheme.brandBlueBright : AppColors.surfaceE9,
           width: isActive ? 2 : 1,
         ),
       ),
@@ -268,11 +269,11 @@ class DeadlineGoalCard extends StatelessWidget {
               children: [
                 const CircleAvatar(
                   radius: 14,
-                  backgroundColor: Color(0xFFF9E4C8),
+                  backgroundColor: AppColors.peachTint,
                   child: Icon(
                     Icons.calendar_month_rounded,
                     size: 16,
-                    color: Color(0xFF7D5411),
+                    color: AppColors.goldDark,
                   ),
                 ),
                 const SizedBox(width: 10),
@@ -294,7 +295,7 @@ class DeadlineGoalCard extends StatelessWidget {
                   vertical: 12,
                 ),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF4F5F8),
+                  color: AppColors.surfaceF4,
                   borderRadius: BorderRadius.circular(14),
                 ),
                 child: Row(

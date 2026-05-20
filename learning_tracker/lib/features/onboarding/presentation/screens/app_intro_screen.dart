@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:learning_tracker/core/labels/domain_term_labels.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
+import 'package:learning_tracker/core/theme/app_colors.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -16,7 +17,7 @@ const _kNavy = Color(0xFF1A36A5);
 const _kGreen = Color(0xFF1DB97D);
 const _kCoral = Color(0xFFF86B6B);
 const _kPeach = Color(0xFFFFD8C8);
-const _kGoldTrophy = Color(0xFFFFC94A);
+const _kGoldTrophy = AppColors.goldTrophy;
 const _kBg = Color(0xFFF8F9FB);
 const _kPillBlue = Color(0xFFC8D8F8);
 const _kMysteryBorder = Color(0xFFC9A86A);
@@ -608,7 +609,7 @@ class _IntroDailyPlanIllustration extends StatelessWidget {
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             _WindowDot(c: _kCoral),
-                            _WindowDot(c: Color(0xFFFFC94A)),
+                            _WindowDot(c: AppColors.goldTrophy),
                             _WindowDot(c: Color(0xFF5BC0EB)),
                           ],
                         ),
@@ -948,7 +949,7 @@ class _IntroRewardsHeroIllustration extends StatelessWidget {
                 color: _kNavy,
                 boxShadow: [
                   BoxShadow(
-                    color: Color(0x40000000),
+                    color: AppColors.scrimDark,
                     blurRadius: 18,
                     offset: Offset(0, 10),
                   ),

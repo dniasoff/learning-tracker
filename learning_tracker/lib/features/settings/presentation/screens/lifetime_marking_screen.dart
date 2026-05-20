@@ -7,6 +7,7 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
+import 'package:learning_tracker/core/theme/app_colors.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/widgets/app_bar_title.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/widgets/hierarchy_selection_panel.dart';
@@ -164,7 +165,7 @@ class _LifetimeLibraryCategoryCard extends ConsumerWidget {
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: const Color(0xFFE9ECF2)),
+            border: Border.all(color: AppColors.surfaceE9),
             boxShadow: const [
               BoxShadow(
                 color: Color(0x121D2939),
@@ -481,7 +482,7 @@ class _LifetimeCurriculumMarkingScreenState
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: const Color(0xFFE9ECF2)),
+                      border: Border.all(color: AppColors.surfaceE9),
                       boxShadow: const [
                         BoxShadow(
                           color: Color(0x121D2939),
@@ -537,7 +538,7 @@ class _LifetimeCurriculumMarkingScreenState
                               alpha: 0.45,
                             ),
                             borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: const Color(0xFFE9ECF2)),
+                            border: Border.all(color: AppColors.surfaceE9),
                           ),
                           child: Row(
                             crossAxisAlignment: CrossAxisAlignment.start,

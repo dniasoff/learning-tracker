@@ -127,7 +127,7 @@ final class ProfileRepositoryProvider
   }
 }
 
-String _$profileRepositoryHash() => r'3a0b0678ecf51fc128251cc2b1bd69dff57a1da7';
+String _$profileRepositoryHash() => r'c9296d2f6106fde461c56e63533441e6ca991519';
 
 /// The currently selected profile ID. Null means no profile selected yet.
 

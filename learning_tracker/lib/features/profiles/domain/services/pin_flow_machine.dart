@@ -105,16 +105,15 @@ class PinFlowSnapshot {
     String? digits,
     Object? firstPin = _sentinel,
     Object? errorMessage = _sentinel,
-  }) =>
-      PinFlowSnapshot(
-        mode: mode ?? this.mode,
-        step: step ?? this.step,
-        digits: digits ?? this.digits,
-        firstPin: firstPin == _sentinel ? this.firstPin : firstPin as String?,
-        errorMessage: errorMessage == _sentinel
-            ? this.errorMessage
-            : errorMessage as String?,
-      );
+  }) => PinFlowSnapshot(
+    mode: mode ?? this.mode,
+    step: step ?? this.step,
+    digits: digits ?? this.digits,
+    firstPin: firstPin == _sentinel ? this.firstPin : firstPin as String?,
+    errorMessage: errorMessage == _sentinel
+        ? this.errorMessage
+        : errorMessage as String?,
+  );
 }
 
 const _sentinel = Object();
@@ -167,10 +166,7 @@ class PinFlowMachine {
   void addDigit(String digit) {
     if (_pendingPin != null || _state.isDone) return;
     if (_state.digits.length >= 4) return;
-    _state = _state.copyWith(
-      digits: _state.digits + digit,
-      errorMessage: null,
-    );
+    _state = _state.copyWith(digits: _state.digits + digit, errorMessage: null);
     if (_state.digits.length == 4) {
       _onFourDigits();
     }
@@ -219,9 +215,9 @@ class PinFlowMachine {
   // ── Private helpers ───────────────────────────────────────────────────────
 
   static PinFlowStep _initialStep(PinFlowMode mode) => switch (mode) {
-        PinFlowMode.setup => PinFlowStep.enterNew,
-        PinFlowMode.change || PinFlowMode.verify => PinFlowStep.verifyCurrent,
-      };
+    PinFlowMode.setup => PinFlowStep.enterNew,
+    PinFlowMode.change || PinFlowMode.verify => PinFlowStep.verifyCurrent,
+  };
 
   void _onFourDigits() {
     final pin = _state.digits;

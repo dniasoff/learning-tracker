@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:drift/drift.dart';
+import 'package:learning_tracker/core/database/daos/track_dao.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/cross_profile_scope.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
@@ -166,8 +167,10 @@ class DataExportImportService {
     // --- Goals ---
     final goals = await _database.goalDao.getAllGoals();
 
-    // --- Streaks (cross-profile) ---
-    final streaks = await _database.select(_database.streaks).get();
+    // W3.20: `streaks` table dropped — exported as empty list for
+    // backwards-compat with old importers that require the key. Streak
+    // state is derived from streakEvents on import.
+    const streaks = <Never>[];
 
     // --- Streak events ---
     final streakEvents = await _database.select(_database.streakEvents).get();
@@ -212,12 +215,10 @@ class DataExportImportService {
               'id': t.id,
               'profileId': t.profileId,
               'curriculumId': t.curriculumId,
-              'trackType': t.trackType,
-              'isActive': t.isActive,
+              'state': t.state,
+              'stateChangedAt': t.stateChangedAt?.toIso8601String(),
               'activatedAt': t.activatedAt.toIso8601String(),
-              'deactivatedAt': t.deactivatedAt?.toIso8601String(),
               'paceResetDate': t.paceResetDate?.toIso8601String(),
-              'deletedAt': t.deletedAt?.toIso8601String(),
             },
           )
           .toList(),
@@ -258,11 +259,8 @@ class DataExportImportService {
               'trackId': s.trackId,
               'stageOrder': s.stageOrder,
               'stageName': s.stageName,
-              'delayDays': s.delayDays,
               'isDefault': s.isDefault,
-              'scheduleType': s.scheduleType,
-              'daysOfWeek': s.daysOfWeek,
-              'rollingWindowSize': s.rollingWindowSize,
+              'schedule': s.schedule,
             },
           )
           .toList(),
@@ -432,19 +430,9 @@ class DataExportImportService {
           )
           .toList(),
 
-      'streaks': streaks
-          .map(
-            (s) => {
-              'id': s.id,
-              'profileId': s.profileId,
-              'currentStreak': s.currentStreak,
-              'maxStreak': s.maxStreak,
-              'lastCompletionDate': s.lastCompletionDate?.toIso8601String(),
-              'graceUsedDate': s.graceUsedDate?.toIso8601String(),
-              'gracePeriodDays': s.gracePeriodDays,
-            },
-          )
-          .toList(),
+      // W3.20: `streaks` table dropped; always export as empty list for
+      // backwards-compat with old importers that expect this key.
+      'streaks': streaks,
 
       'streakEvents': streakEvents
           .map(
@@ -521,11 +509,10 @@ class DataExportImportService {
     validateAndPreview(jsonString);
 
     await _database.transaction(() async {
-      // Clear existing user data (order: FK children before parents)
+      // Clear existing user data (order: FK children before parents).
+      // W3.20: `streaks` and `completions` tables dropped — no longer cleared.
       await _database.delete(_database.streakEvents).go();
-      await _database.delete(_database.streaks).go();
       await _database.delete(_database.completionEvents).go();
-      await _database.delete(_database.completions).go();
       await _database.delete(_database.learningLedger).go();
       await _database.delete(_database.dailyPlans).go();
       await _database.delete(_database.trackLearningOrder).go();
@@ -592,6 +579,15 @@ class DataExportImportService {
       for (final t in data['curriculumTracks'] as List) {
         final map = t as Map<String, dynamic>;
         final originalTrackId = map['id'] as int?;
+        // Back-compat: old exports used isActive+deactivatedAt; new exports
+        // use state+stateChangedAt (W3.28/W3.29).
+        final rawState = map['state'] as String?;
+        final rawIsActive = map['isActive'] as bool?;
+        final state =
+            rawState ??
+            ((rawIsActive == false) ? TrackState.retired : TrackState.active);
+        final rawStateChangedAt =
+            map['stateChangedAt'] as String? ?? map['deactivatedAt'] as String?;
         await _database
             .into(_database.curriculumTracks)
             .insert(
@@ -601,24 +597,18 @@ class DataExportImportService {
                     : const Value.absent(),
                 profileId: Value(map['profileId'] as int? ?? 0),
                 curriculumId: Value(map['curriculumId'] as String),
-                trackType: Value(map['trackType'] as String),
-                isActive: Value(map['isActive'] as bool? ?? true),
+                state: Value(state),
+                stateChangedAt: Value(
+                  rawStateChangedAt != null
+                      ? DateTime.parse(rawStateChangedAt)
+                      : null,
+                ),
                 activatedAt: Value(
                   DateTime.parse(map['activatedAt'] as String),
-                ),
-                deactivatedAt: Value(
-                  map['deactivatedAt'] != null
-                      ? DateTime.parse(map['deactivatedAt'] as String)
-                      : null,
                 ),
                 paceResetDate: Value(
                   map['paceResetDate'] != null
                       ? DateTime.parse(map['paceResetDate'] as String)
-                      : null,
-                ),
-                deletedAt: Value(
-                  map['deletedAt'] != null
-                      ? DateTime.parse(map['deletedAt'] as String)
                       : null,
                 ),
               ),
@@ -665,6 +655,8 @@ class DataExportImportService {
       // --- Import stage definitions ---
       for (final s in data['stageDefinitions'] as List) {
         final map = s as Map<String, dynamic>;
+        // Back-compat: old exports had quartet fields; new exports have `schedule`.
+        final scheduleJson = _resolveScheduleJson(map);
         await _database
             .into(_database.stageDefinitions)
             .insert(
@@ -674,11 +666,8 @@ class DataExportImportService {
                 trackId: map['trackId'] as int? ?? 0,
                 stageOrder: map['stageOrder'] as int,
                 stageName: map['stageName'] as String,
-                delayDays: map['delayDays'] as int,
                 isDefault: Value(map['isDefault'] as bool? ?? false),
-                scheduleType: Value(map['scheduleType'] as String? ?? 'delay'),
-                daysOfWeek: Value(map['daysOfWeek'] as String?),
-                rollingWindowSize: Value(map['rollingWindowSize'] as int?),
+                schedule: Value(scheduleJson),
               ),
             );
       }
@@ -716,24 +705,11 @@ class DataExportImportService {
             );
       }
 
-      // --- Import completions ---
-      for (final c in data['completions'] as List) {
-        final map = c as Map<String, dynamic>;
-        await _database
-            .into(_database.completions)
-            .insert(
-              CompletionsCompanion.insert(
-                profileId: map['profileId'] as int? ?? 0,
-                curriculumId: map['curriculumId'] as String,
-                sefariaRef: map['sefariaRef'] as String,
-                stageId: map['stageId'] as int,
-                trackType: map['trackType'] as String,
-                trackId: map['trackId'] as int? ?? 0,
-                completedAt: DateTime.parse(map['completedAt'] as String),
-                points: Value(map['points'] as int? ?? 0),
-              ),
-            );
-      }
+      // W3.20: `completions` table dropped. Completion history is now stored
+      // exclusively in `completion_events` and projected via `completions_view`.
+      // Old exports that contain a `completions` section are intentionally
+      // skipped here — the matching completion_events rows (also in the export)
+      // carry the canonical data. No rows are lost.
 
       // --- Import completion events ---
       for (final e in (data['completionEvents'] as List? ?? [])) {
@@ -900,30 +876,10 @@ class DataExportImportService {
             );
       }
 
-      // --- Import streaks ---
-      for (final s in data['streaks'] as List) {
-        final map = s as Map<String, dynamic>;
-        await _database
-            .into(_database.streaks)
-            .insert(
-              StreaksCompanion.insert(
-                profileId: map['profileId'] as int? ?? 0,
-                currentStreak: Value(map['currentStreak'] as int? ?? 0),
-                maxStreak: Value(map['maxStreak'] as int? ?? 0),
-                lastCompletionDate: Value(
-                  map['lastCompletionDate'] != null
-                      ? DateTime.parse(map['lastCompletionDate'] as String)
-                      : null,
-                ),
-                graceUsedDate: Value(
-                  map['graceUsedDate'] != null
-                      ? DateTime.parse(map['graceUsedDate'] as String)
-                      : null,
-                ),
-                gracePeriodDays: Value(map['gracePeriodDays'] as int? ?? 1),
-              ),
-            );
-      }
+      // W3.20: `streaks` table dropped. Streak state is now derived from
+      // `streak_events` via StreakStateProvider / StreakReducer. Old exports
+      // may contain a `streaks` key (legacy snapshot rows) — they are skipped
+      // here because the corresponding streak_events rows carry the same history.
 
       // --- Import streak events ---
       for (final e in (data['streakEvents'] as List? ?? [])) {
@@ -942,5 +898,36 @@ class DataExportImportService {
             );
       }
     });
+  }
+
+  // ── Helpers ─────────────────────────────────────────────────────────────────
+
+  /// Build a JSON schedule string from an export map.
+  ///
+  /// New exports (W3.27+) include a `schedule` string field directly.
+  /// Old exports have a quartet: `scheduleType`, `delayDays`, `daysOfWeek`,
+  /// `rollingWindowSize`. This helper normalises both shapes.
+  static String _resolveScheduleJson(Map<String, dynamic> map) {
+    // Prefer new `schedule` field if present.
+    final rawSchedule = map['schedule'];
+    if (rawSchedule != null) {
+      return rawSchedule is String ? rawSchedule : jsonEncode(rawSchedule);
+    }
+    // Fall back to old quartet.
+    final type = map['scheduleType'] as String? ?? 'delay';
+    final delayDays = map['delayDays'] as int? ?? 0;
+    switch (type) {
+      case 'weekly':
+        final days = map['daysOfWeek'];
+        final daysList = days is String
+            ? (jsonDecode(days) as List).cast<int>()
+            : (days as List?)?.cast<int>() ?? <int>[];
+        return jsonEncode({'type': 'weekly', 'days': daysList});
+      case 'rolling':
+        final windowSize = map['rollingWindowSize'] as int? ?? 7;
+        return jsonEncode({'type': 'rolling', 'window_size': windowSize});
+      default:
+        return jsonEncode({'type': 'delay', 'delay_days': delayDays});
+    }
   }
 }

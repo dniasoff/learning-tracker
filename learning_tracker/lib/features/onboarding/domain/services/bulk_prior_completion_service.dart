@@ -188,7 +188,8 @@ class BulkPriorCompletionService {
     final stages = await _stageRepository.getStagesForCurriculum(curriculumId);
     if (stages.isEmpty) {
       AppLogger.instance.warning(
-        event: 'BulkPriorCompletionService: no stage definitions found for '
+        event:
+            'BulkPriorCompletionService: no stage definitions found for '
             '$curriculumId — falling back to $fallback',
       );
       return fallback;
@@ -325,39 +326,63 @@ class BulkPriorCompletionService {
     required CurriculumId curriculumId,
   }) async {
     final purgedAt = DateTimeFactory.nowUtc();
+    final trackType = TrackType.personal.storageKey;
+    final curriculumKey = curriculumId.storageKey;
 
-    // Tombstone only prior-mark rows for this item on the personal track.
-    // B8 fix: rows where priorMarkOnly = false have been upgraded to real
-    // in-app learning records and MUST be left untouched — unticking a
-    // prior-mark must not delete a genuinely-learned item from Lifetime.
+    // ── 1. Identify the stage IDs that have prior-import records ─────────────
+    // B8 fix: only tombstone completion_events rows that still have a matching
+    // row in prior_completion_imports. Rows promoted to real-learning by
+    // CompletionWriter (B8 upgrade) will have had their import record deleted,
+    // so they will be invisible here and left untouched.
+    final importRows = await (_database.select(
+      _database.priorCompletionImports,
+    )..where(
+          (t) =>
+              t.profileId.equals(profileId) &
+              t.sefariaRef.equals(sefariaRef) &
+              t.curriculumId.equals(curriculumKey) &
+              t.trackType.equals(trackType),
+        ))
+        .get();
+
+    if (importRows.isEmpty) return; // Nothing to expunge.
+
+    final stageIds = importRows.map((r) => r.stageId).toList();
+
+    // ── 2. Tombstone the completion_events rows for the identified stages ─────
     await (_database.update(_database.completionEvents)..where(
           (t) =>
               t.profileId.equals(profileId) &
               t.sefariaRef.equals(sefariaRef) &
-              t.curriculumId.equals(curriculumId.storageKey) &
-              t.trackType.equals(TrackType.personal.storageKey) &
-              t.priorMarkOnly.equals(true),
+              t.curriculumId.equals(curriculumKey) &
+              t.trackType.equals(trackType) &
+              t.stageId.isIn(stageIds),
         ))
         .write(CompletionEventsCompanion(purgedAt: Value(purgedAt)));
 
-    // ── Propagate tombstones to Firestore via outbox ──────────────────────
-    // Query the rows that were just tombstoned so we can build per-row outbox
-    // entries. We use the same WHERE conditions plus purgedAt IS NOT NULL to
-    // avoid re-enqueuing rows that were already tombstoned in a prior call.
+    // ── 3. Delete the import records ──────────────────────────────────────────
+    await _database.priorCompletionImportDao.deleteImportsForItem(
+      profileId: profileId,
+      sefariaRef: sefariaRef,
+      curriculumId: curriculumKey,
+      trackType: trackType,
+    );
+
+    // ── 4. Propagate tombstones to Firestore via outbox ───────────────────────
     if (_outboxDao == null) {
-      // No outbox DAO injected — tombstone is local-only. This is acceptable
-      // for test environments but should not happen in production.
+      // No outbox DAO injected — tombstone is local-only. Acceptable in tests.
       return;
     }
 
+    // Query the rows that were just tombstoned to build per-row outbox entries.
     final tombstonedRows =
         await (_database.select(_database.completionEvents)..where(
               (t) =>
                   t.profileId.equals(profileId) &
                   t.sefariaRef.equals(sefariaRef) &
-                  t.curriculumId.equals(curriculumId.storageKey) &
-                  t.trackType.equals(TrackType.personal.storageKey) &
-                  t.priorMarkOnly.equals(true) &
+                  t.curriculumId.equals(curriculumKey) &
+                  t.trackType.equals(trackType) &
+                  t.stageId.isIn(stageIds) &
                   t.purgedAt.isNotNull(),
             ))
             .get();

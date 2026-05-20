@@ -80,7 +80,7 @@ final class AddTrackControllerProvider
 }
 
 String _$addTrackControllerHash() =>
-    r'1fea8b8b0b1969a5945944fe77c6b7e9f45fb583';
+    r'23578f7a475ab2a9005f621e58b81ab2a0113c31';
 
 /// State-machine controller for the Add Track wizard.
 ///

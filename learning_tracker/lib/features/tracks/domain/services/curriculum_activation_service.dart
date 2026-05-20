@@ -1,7 +1,7 @@
 import 'package:drift/drift.dart';
+import 'package:learning_tracker/core/database/daos/track_dao.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/track_repository.dart';
 import 'package:learning_tracker/features/settings/domain/exceptions/last_active_curriculum_exception.dart';
@@ -129,8 +129,9 @@ class CurriculumActivationService {
             return matches.first;
           }
           AppLogger.instance.warning(
-            event: 'CurriculumActivationService.getActiveCurricula: '
-            'unknown curriculum key: $key',
+            event:
+                'CurriculumActivationService.getActiveCurricula: '
+                'unknown curriculum key: $key',
           );
           return null;
         })
@@ -146,13 +147,15 @@ class CurriculumActivationService {
   }
 
   Future<int> _resolveTrackId(CurriculumId curriculum, int profileId) async {
+    // W3.22: trackType column dropped; UNIQUE is now {profileId, curriculumId}.
+    // A profile has at most one track per curriculum — fetch by the new key.
     final track =
         await (_database.select(_database.curriculumTracks)
               ..where(
                 (t) =>
                     t.profileId.equals(profileId) &
                     t.curriculumId.equals(curriculum.storageKey) &
-                    t.trackType.equals(TrackType.personal.storageKey),
+                    t.state.equals(TrackState.active),
               )
               ..limit(1))
             .getSingleOrNull();
@@ -176,10 +179,9 @@ class CurriculumActivationService {
         'profile_id': track.profileId,
         'track_id': track.id,
         'curriculum_id': track.curriculumId,
-        'track_type': track.trackType,
-        'is_active': track.isActive,
+        'state': track.state,
+        'state_changed_at': track.stateChangedAt?.toIso8601String(),
         'activated_at': track.activatedAt.toIso8601String(),
-        'deactivated_at': track.deactivatedAt?.toIso8601String(),
         'pace_reset_date': track.paceResetDate?.toIso8601String(),
       });
     }

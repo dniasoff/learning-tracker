@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/providers/calendar_providers.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
-import 'package:learning_tracker/features/scheduler/domain/services/calendar_program_registry.dart';
-import 'package:learning_tracker/features/scheduler/domain/services/learning_program_service.dart';
 import 'package:learning_tracker/core/sync/providers/outbox_providers.dart';
+import 'package:learning_tracker/core/theme/app_colors.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/core/utils/text_input_formatters.dart';
@@ -19,6 +19,8 @@ import 'package:learning_tracker/features/onboarding/domain/services/learning_pr
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/goal_entity.dart';
+import 'package:learning_tracker/features/scheduler/domain/services/calendar_program_registry.dart';
+import 'package:learning_tracker/features/scheduler/domain/services/learning_program_service.dart';
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
 import 'package:learning_tracker/features/tracks/setup/domain/services/track_creation_service.dart';
 import 'package:learning_tracker/features/tracks/setup/presentation/providers/after_track_change_invalidation.dart';
@@ -354,9 +356,9 @@ class _EditTrackScreenState extends ConsumerState<EditTrackScreen> {
     }
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FC),
+      backgroundColor: AppColors.surfaceF5,
       appBar: AppBar(
-        backgroundColor: const Color(0xFFF5F7FC),
+        backgroundColor: AppColors.surfaceF5,
         elevation: 0,
         title: Text(
           l10n.trackEditTitle,
@@ -397,11 +399,11 @@ class _EditTrackScreenState extends ConsumerState<EditTrackScreen> {
               decoration: const InputDecoration(
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.all(Radius.circular(12)),
-                  borderSide: BorderSide(color: Color(0xFFE2E6F0)),
+                  borderSide: BorderSide(color: AppColors.surfaceGreyBlue),
                 ),
                 enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.all(Radius.circular(12)),
-                  borderSide: BorderSide(color: Color(0xFFE2E6F0)),
+                  borderSide: BorderSide(color: AppColors.surfaceGreyBlue),
                 ),
                 contentPadding: EdgeInsets.symmetric(
                   horizontal: 14,
@@ -455,7 +457,7 @@ class _EditTrackScreenState extends ConsumerState<EditTrackScreen> {
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
           decoration: BoxDecoration(
-            color: const Color(0xFFF0F2F8),
+            color: AppColors.surfaceBlueNeutral,
             borderRadius: BorderRadius.circular(8),
           ),
           child: Text(
@@ -552,7 +554,7 @@ class _EditTrackScreenState extends ConsumerState<EditTrackScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
         decoration: BoxDecoration(
-          border: Border.all(color: const Color(0xFFE2E6F0)),
+          border: Border.all(color: AppColors.surfaceGreyBlue),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Row(
@@ -596,7 +598,7 @@ class _EditTrackScreenState extends ConsumerState<EditTrackScreen> {
             title: _dayName(kStepStudyDayNumbers[i]),
             subtitle: '',
             subtitleColor: AppTheme.brandInkMuted,
-            activeColor: const Color(0xFFE9ECF2),
+            activeColor: AppColors.surfaceE9,
             isShabbos: kStepStudyDayNumbers[i] == 6,
             isOn: _editedStudyDays[kStepStudyDayNumbers[i]] == 'study',
             onChanged: (v) => setState(
@@ -672,7 +674,7 @@ class _EditTrackScreenState extends ConsumerState<EditTrackScreen> {
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: const Color(0xFFF5F7FC),
+      backgroundColor: AppColors.surfaceF5,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
@@ -792,7 +794,7 @@ class _SectionCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF0A2056).withValues(alpha: 0.06),
+            color: AppColors.blueDeepNavy.withValues(alpha: 0.06),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -825,7 +827,7 @@ class _StepperButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: const Color(0xFFF0F2F8),
+      color: AppColors.surfaceBlueNeutral,
       borderRadius: BorderRadius.circular(10),
       child: InkWell(
         borderRadius: BorderRadius.circular(10),
@@ -865,7 +867,7 @@ class _PeriodChip extends StatelessWidget {
         decoration: BoxDecoration(
           color: isSelected
               ? AppTheme.brandBlueBright
-              : const Color(0xFFF0F2F8),
+              : AppColors.surfaceBlueNeutral,
           borderRadius: BorderRadius.circular(20),
         ),
         child: Text(

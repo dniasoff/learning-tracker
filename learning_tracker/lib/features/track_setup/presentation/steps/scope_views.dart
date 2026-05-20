@@ -4,6 +4,7 @@ import 'package:learning_tracker/core/content/content_grouping.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
+import 'package:learning_tracker/core/theme/app_colors.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/track_setup/domain/entities/add_track_result.dart';
 import 'package:learning_tracker/features/track_setup/presentation/steps/scope_tiles.dart';
@@ -146,7 +147,7 @@ class ScopeTopLevelView extends ConsumerWidget {
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: const Color(0xFFE9ECF2)),
+            border: Border.all(color: AppColors.surfaceE9),
           ),
           child: Padding(
             padding: const EdgeInsets.fromLTRB(12, 12, 12, 10),

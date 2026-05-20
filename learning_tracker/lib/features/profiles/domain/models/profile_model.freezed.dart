@@ -14,7 +14,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$ProfileModel {
 
- int get id; int get accountId; String get displayName; String get mode;// 'child' or 'adult'
+ int get id; int get accountId; String get displayName; String get mode;// 'child' or 'adult' — raw storage key
  int get avatarIndex; DateTime get createdAt; DateTime get updatedAt;
 /// Create a copy of ProfileModel
 /// with the given fields replaced by the non-null parameter values.
@@ -212,15 +212,15 @@ return $default(_that.id,_that.accountId,_that.displayName,_that.mode,_that.avat
 /// @nodoc
 
 
-class _ProfileModel implements ProfileModel {
-  const _ProfileModel({required this.id, required this.accountId, required this.displayName, required this.mode, required this.avatarIndex, required this.createdAt, required this.updatedAt});
+class _ProfileModel extends ProfileModel {
+  const _ProfileModel({required this.id, required this.accountId, required this.displayName, required this.mode, required this.avatarIndex, required this.createdAt, required this.updatedAt}): super._();
   
 
 @override final  int id;
 @override final  int accountId;
 @override final  String displayName;
 @override final  String mode;
-// 'child' or 'adult'
+// 'child' or 'adult' — raw storage key
 @override final  int avatarIndex;
 @override final  DateTime createdAt;
 @override final  DateTime updatedAt;

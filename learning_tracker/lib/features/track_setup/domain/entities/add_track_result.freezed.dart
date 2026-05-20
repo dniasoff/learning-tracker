@@ -14,10 +14,10 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$AddTrackResult {
 
- CurriculumId get curriculumId; String get label; int? get programId; String? get programName; List<ScopeEntry>? get scopeSelections; Map<int, String> get studyDays;/// Opaque wizard result — cast to `LearningProcessWizardResult`.
- Object? get wizardResult;/// Opaque goal result — cast to `GoalEntity`.
- Object? get goalResult;/// Opaque bulk mark result — cast to `BulkMarkResult`.
- Object? get bulkMarkResult;/// Sefaria ref for program starting position (Screen 8 program mode).
+ CurriculumId get curriculumId; String get label; int? get programId; String? get programName; List<ScopeEntry>? get scopeSelections; Map<int, String> get studyDays;/// Stage/review schedule configuration from the chazara wizard.
+ LearningProcessWizardResult? get wizardResult;/// Goal configuration from the goal step.
+ GoalEntity? get goalResult;/// Bulk prior-completion intent from the confirmation step.
+ BulkMarkIntent? get bulkMarkResult;/// Sefaria ref for program starting position (Screen 8 program mode).
  String? get startingRef;
 /// Create a copy of AddTrackResult
 /// with the given fields replaced by the non-null parameter values.
@@ -29,12 +29,12 @@ $AddTrackResultCopyWith<AddTrackResult> get copyWith => _$AddTrackResultCopyWith
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is AddTrackResult&&(identical(other.curriculumId, curriculumId) || other.curriculumId == curriculumId)&&(identical(other.label, label) || other.label == label)&&(identical(other.programId, programId) || other.programId == programId)&&(identical(other.programName, programName) || other.programName == programName)&&const DeepCollectionEquality().equals(other.scopeSelections, scopeSelections)&&const DeepCollectionEquality().equals(other.studyDays, studyDays)&&const DeepCollectionEquality().equals(other.wizardResult, wizardResult)&&const DeepCollectionEquality().equals(other.goalResult, goalResult)&&const DeepCollectionEquality().equals(other.bulkMarkResult, bulkMarkResult)&&(identical(other.startingRef, startingRef) || other.startingRef == startingRef));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is AddTrackResult&&(identical(other.curriculumId, curriculumId) || other.curriculumId == curriculumId)&&(identical(other.label, label) || other.label == label)&&(identical(other.programId, programId) || other.programId == programId)&&(identical(other.programName, programName) || other.programName == programName)&&const DeepCollectionEquality().equals(other.scopeSelections, scopeSelections)&&const DeepCollectionEquality().equals(other.studyDays, studyDays)&&(identical(other.wizardResult, wizardResult) || other.wizardResult == wizardResult)&&(identical(other.goalResult, goalResult) || other.goalResult == goalResult)&&(identical(other.bulkMarkResult, bulkMarkResult) || other.bulkMarkResult == bulkMarkResult)&&(identical(other.startingRef, startingRef) || other.startingRef == startingRef));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,curriculumId,label,programId,programName,const DeepCollectionEquality().hash(scopeSelections),const DeepCollectionEquality().hash(studyDays),const DeepCollectionEquality().hash(wizardResult),const DeepCollectionEquality().hash(goalResult),const DeepCollectionEquality().hash(bulkMarkResult),startingRef);
+int get hashCode => Object.hash(runtimeType,curriculumId,label,programId,programName,const DeepCollectionEquality().hash(scopeSelections),const DeepCollectionEquality().hash(studyDays),wizardResult,goalResult,bulkMarkResult,startingRef);
 
 @override
 String toString() {
@@ -49,11 +49,11 @@ abstract mixin class $AddTrackResultCopyWith<$Res>  {
   factory $AddTrackResultCopyWith(AddTrackResult value, $Res Function(AddTrackResult) _then) = _$AddTrackResultCopyWithImpl;
 @useResult
 $Res call({
- CurriculumId curriculumId, String label, int? programId, String? programName, List<ScopeEntry>? scopeSelections, Map<int, String> studyDays, Object? wizardResult, Object? goalResult, Object? bulkMarkResult, String? startingRef
+ CurriculumId curriculumId, String label, int? programId, String? programName, List<ScopeEntry>? scopeSelections, Map<int, String> studyDays, LearningProcessWizardResult? wizardResult, GoalEntity? goalResult, BulkMarkIntent? bulkMarkResult, String? startingRef
 });
 
 
-
+$GoalEntityCopyWith<$Res>? get goalResult;
 
 }
 /// @nodoc
@@ -74,11 +74,26 @@ as String,programId: freezed == programId ? _self.programId : programId // ignor
 as int?,programName: freezed == programName ? _self.programName : programName // ignore: cast_nullable_to_non_nullable
 as String?,scopeSelections: freezed == scopeSelections ? _self.scopeSelections : scopeSelections // ignore: cast_nullable_to_non_nullable
 as List<ScopeEntry>?,studyDays: null == studyDays ? _self.studyDays : studyDays // ignore: cast_nullable_to_non_nullable
-as Map<int, String>,wizardResult: freezed == wizardResult ? _self.wizardResult : wizardResult ,goalResult: freezed == goalResult ? _self.goalResult : goalResult ,bulkMarkResult: freezed == bulkMarkResult ? _self.bulkMarkResult : bulkMarkResult ,startingRef: freezed == startingRef ? _self.startingRef : startingRef // ignore: cast_nullable_to_non_nullable
+as Map<int, String>,wizardResult: freezed == wizardResult ? _self.wizardResult : wizardResult // ignore: cast_nullable_to_non_nullable
+as LearningProcessWizardResult?,goalResult: freezed == goalResult ? _self.goalResult : goalResult // ignore: cast_nullable_to_non_nullable
+as GoalEntity?,bulkMarkResult: freezed == bulkMarkResult ? _self.bulkMarkResult : bulkMarkResult // ignore: cast_nullable_to_non_nullable
+as BulkMarkIntent?,startingRef: freezed == startingRef ? _self.startingRef : startingRef // ignore: cast_nullable_to_non_nullable
 as String?,
   ));
 }
+/// Create a copy of AddTrackResult
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$GoalEntityCopyWith<$Res>? get goalResult {
+    if (_self.goalResult == null) {
+    return null;
+  }
 
+  return $GoalEntityCopyWith<$Res>(_self.goalResult!, (value) {
+    return _then(_self.copyWith(goalResult: value));
+  });
+}
 }
 
 
@@ -160,7 +175,7 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( CurriculumId curriculumId,  String label,  int? programId,  String? programName,  List<ScopeEntry>? scopeSelections,  Map<int, String> studyDays,  Object? wizardResult,  Object? goalResult,  Object? bulkMarkResult,  String? startingRef)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( CurriculumId curriculumId,  String label,  int? programId,  String? programName,  List<ScopeEntry>? scopeSelections,  Map<int, String> studyDays,  LearningProcessWizardResult? wizardResult,  GoalEntity? goalResult,  BulkMarkIntent? bulkMarkResult,  String? startingRef)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _AddTrackResult() when $default != null:
 return $default(_that.curriculumId,_that.label,_that.programId,_that.programName,_that.scopeSelections,_that.studyDays,_that.wizardResult,_that.goalResult,_that.bulkMarkResult,_that.startingRef);case _:
@@ -181,7 +196,7 @@ return $default(_that.curriculumId,_that.label,_that.programId,_that.programName
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( CurriculumId curriculumId,  String label,  int? programId,  String? programName,  List<ScopeEntry>? scopeSelections,  Map<int, String> studyDays,  Object? wizardResult,  Object? goalResult,  Object? bulkMarkResult,  String? startingRef)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( CurriculumId curriculumId,  String label,  int? programId,  String? programName,  List<ScopeEntry>? scopeSelections,  Map<int, String> studyDays,  LearningProcessWizardResult? wizardResult,  GoalEntity? goalResult,  BulkMarkIntent? bulkMarkResult,  String? startingRef)  $default,) {final _that = this;
 switch (_that) {
 case _AddTrackResult():
 return $default(_that.curriculumId,_that.label,_that.programId,_that.programName,_that.scopeSelections,_that.studyDays,_that.wizardResult,_that.goalResult,_that.bulkMarkResult,_that.startingRef);case _:
@@ -201,7 +216,7 @@ return $default(_that.curriculumId,_that.label,_that.programId,_that.programName
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( CurriculumId curriculumId,  String label,  int? programId,  String? programName,  List<ScopeEntry>? scopeSelections,  Map<int, String> studyDays,  Object? wizardResult,  Object? goalResult,  Object? bulkMarkResult,  String? startingRef)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( CurriculumId curriculumId,  String label,  int? programId,  String? programName,  List<ScopeEntry>? scopeSelections,  Map<int, String> studyDays,  LearningProcessWizardResult? wizardResult,  GoalEntity? goalResult,  BulkMarkIntent? bulkMarkResult,  String? startingRef)?  $default,) {final _that = this;
 switch (_that) {
 case _AddTrackResult() when $default != null:
 return $default(_that.curriculumId,_that.label,_that.programId,_that.programName,_that.scopeSelections,_that.studyDays,_that.wizardResult,_that.goalResult,_that.bulkMarkResult,_that.startingRef);case _:
@@ -239,12 +254,12 @@ class _AddTrackResult implements AddTrackResult {
   return EqualUnmodifiableMapView(_studyDays);
 }
 
-/// Opaque wizard result — cast to `LearningProcessWizardResult`.
-@override final  Object? wizardResult;
-/// Opaque goal result — cast to `GoalEntity`.
-@override final  Object? goalResult;
-/// Opaque bulk mark result — cast to `BulkMarkResult`.
-@override final  Object? bulkMarkResult;
+/// Stage/review schedule configuration from the chazara wizard.
+@override final  LearningProcessWizardResult? wizardResult;
+/// Goal configuration from the goal step.
+@override final  GoalEntity? goalResult;
+/// Bulk prior-completion intent from the confirmation step.
+@override final  BulkMarkIntent? bulkMarkResult;
 /// Sefaria ref for program starting position (Screen 8 program mode).
 @override final  String? startingRef;
 
@@ -258,12 +273,12 @@ _$AddTrackResultCopyWith<_AddTrackResult> get copyWith => __$AddTrackResultCopyW
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _AddTrackResult&&(identical(other.curriculumId, curriculumId) || other.curriculumId == curriculumId)&&(identical(other.label, label) || other.label == label)&&(identical(other.programId, programId) || other.programId == programId)&&(identical(other.programName, programName) || other.programName == programName)&&const DeepCollectionEquality().equals(other._scopeSelections, _scopeSelections)&&const DeepCollectionEquality().equals(other._studyDays, _studyDays)&&const DeepCollectionEquality().equals(other.wizardResult, wizardResult)&&const DeepCollectionEquality().equals(other.goalResult, goalResult)&&const DeepCollectionEquality().equals(other.bulkMarkResult, bulkMarkResult)&&(identical(other.startingRef, startingRef) || other.startingRef == startingRef));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _AddTrackResult&&(identical(other.curriculumId, curriculumId) || other.curriculumId == curriculumId)&&(identical(other.label, label) || other.label == label)&&(identical(other.programId, programId) || other.programId == programId)&&(identical(other.programName, programName) || other.programName == programName)&&const DeepCollectionEquality().equals(other._scopeSelections, _scopeSelections)&&const DeepCollectionEquality().equals(other._studyDays, _studyDays)&&(identical(other.wizardResult, wizardResult) || other.wizardResult == wizardResult)&&(identical(other.goalResult, goalResult) || other.goalResult == goalResult)&&(identical(other.bulkMarkResult, bulkMarkResult) || other.bulkMarkResult == bulkMarkResult)&&(identical(other.startingRef, startingRef) || other.startingRef == startingRef));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,curriculumId,label,programId,programName,const DeepCollectionEquality().hash(_scopeSelections),const DeepCollectionEquality().hash(_studyDays),const DeepCollectionEquality().hash(wizardResult),const DeepCollectionEquality().hash(goalResult),const DeepCollectionEquality().hash(bulkMarkResult),startingRef);
+int get hashCode => Object.hash(runtimeType,curriculumId,label,programId,programName,const DeepCollectionEquality().hash(_scopeSelections),const DeepCollectionEquality().hash(_studyDays),wizardResult,goalResult,bulkMarkResult,startingRef);
 
 @override
 String toString() {
@@ -278,11 +293,11 @@ abstract mixin class _$AddTrackResultCopyWith<$Res> implements $AddTrackResultCo
   factory _$AddTrackResultCopyWith(_AddTrackResult value, $Res Function(_AddTrackResult) _then) = __$AddTrackResultCopyWithImpl;
 @override @useResult
 $Res call({
- CurriculumId curriculumId, String label, int? programId, String? programName, List<ScopeEntry>? scopeSelections, Map<int, String> studyDays, Object? wizardResult, Object? goalResult, Object? bulkMarkResult, String? startingRef
+ CurriculumId curriculumId, String label, int? programId, String? programName, List<ScopeEntry>? scopeSelections, Map<int, String> studyDays, LearningProcessWizardResult? wizardResult, GoalEntity? goalResult, BulkMarkIntent? bulkMarkResult, String? startingRef
 });
 
 
-
+@override $GoalEntityCopyWith<$Res>? get goalResult;
 
 }
 /// @nodoc
@@ -303,12 +318,27 @@ as String,programId: freezed == programId ? _self.programId : programId // ignor
 as int?,programName: freezed == programName ? _self.programName : programName // ignore: cast_nullable_to_non_nullable
 as String?,scopeSelections: freezed == scopeSelections ? _self._scopeSelections : scopeSelections // ignore: cast_nullable_to_non_nullable
 as List<ScopeEntry>?,studyDays: null == studyDays ? _self._studyDays : studyDays // ignore: cast_nullable_to_non_nullable
-as Map<int, String>,wizardResult: freezed == wizardResult ? _self.wizardResult : wizardResult ,goalResult: freezed == goalResult ? _self.goalResult : goalResult ,bulkMarkResult: freezed == bulkMarkResult ? _self.bulkMarkResult : bulkMarkResult ,startingRef: freezed == startingRef ? _self.startingRef : startingRef // ignore: cast_nullable_to_non_nullable
+as Map<int, String>,wizardResult: freezed == wizardResult ? _self.wizardResult : wizardResult // ignore: cast_nullable_to_non_nullable
+as LearningProcessWizardResult?,goalResult: freezed == goalResult ? _self.goalResult : goalResult // ignore: cast_nullable_to_non_nullable
+as GoalEntity?,bulkMarkResult: freezed == bulkMarkResult ? _self.bulkMarkResult : bulkMarkResult // ignore: cast_nullable_to_non_nullable
+as BulkMarkIntent?,startingRef: freezed == startingRef ? _self.startingRef : startingRef // ignore: cast_nullable_to_non_nullable
 as String?,
   ));
 }
 
+/// Create a copy of AddTrackResult
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$GoalEntityCopyWith<$Res>? get goalResult {
+    if (_self.goalResult == null) {
+    return null;
+  }
 
+  return $GoalEntityCopyWith<$Res>(_self.goalResult!, (value) {
+    return _then(_self.copyWith(goalResult: value));
+  });
+}
 }
 
 /// @nodoc
@@ -574,9 +604,8 @@ as String,
 /// @nodoc
 mixin _$AddTrackState {
 
- AddTrackStep get currentStep; CurriculumId? get curriculumId; List<ScopeEntry>? get scopeSelections; int? get programId; String? get programName;/// Full program object for reading stagesConfig metadata.
-/// Opaque Object? to avoid importing DB types into domain.
- Object? get selectedProgram; Map<int, String>? get studyDays; Object? get wizardResult; Object? get goalResult; String? get trackLabel; Object? get bulkMarkResult; String? get startingRef; bool get contentActivated;
+ AddTrackStep get currentStep; CurriculumId? get curriculumId; List<ScopeEntry>? get scopeSelections; int? get programId; String? get programName;/// Full program data for reading stagesConfig metadata.
+ LearningProgramData? get selectedProgram; Map<int, String>? get studyDays; LearningProcessWizardResult? get wizardResult; GoalEntity? get goalResult; String? get trackLabel; BulkMarkIntent? get bulkMarkResult; String? get startingRef; bool get contentActivated;
 /// Create a copy of AddTrackState
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -587,12 +616,12 @@ $AddTrackStateCopyWith<AddTrackState> get copyWith => _$AddTrackStateCopyWithImp
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is AddTrackState&&(identical(other.currentStep, currentStep) || other.currentStep == currentStep)&&(identical(other.curriculumId, curriculumId) || other.curriculumId == curriculumId)&&const DeepCollectionEquality().equals(other.scopeSelections, scopeSelections)&&(identical(other.programId, programId) || other.programId == programId)&&(identical(other.programName, programName) || other.programName == programName)&&const DeepCollectionEquality().equals(other.selectedProgram, selectedProgram)&&const DeepCollectionEquality().equals(other.studyDays, studyDays)&&const DeepCollectionEquality().equals(other.wizardResult, wizardResult)&&const DeepCollectionEquality().equals(other.goalResult, goalResult)&&(identical(other.trackLabel, trackLabel) || other.trackLabel == trackLabel)&&const DeepCollectionEquality().equals(other.bulkMarkResult, bulkMarkResult)&&(identical(other.startingRef, startingRef) || other.startingRef == startingRef)&&(identical(other.contentActivated, contentActivated) || other.contentActivated == contentActivated));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is AddTrackState&&(identical(other.currentStep, currentStep) || other.currentStep == currentStep)&&(identical(other.curriculumId, curriculumId) || other.curriculumId == curriculumId)&&const DeepCollectionEquality().equals(other.scopeSelections, scopeSelections)&&(identical(other.programId, programId) || other.programId == programId)&&(identical(other.programName, programName) || other.programName == programName)&&(identical(other.selectedProgram, selectedProgram) || other.selectedProgram == selectedProgram)&&const DeepCollectionEquality().equals(other.studyDays, studyDays)&&(identical(other.wizardResult, wizardResult) || other.wizardResult == wizardResult)&&(identical(other.goalResult, goalResult) || other.goalResult == goalResult)&&(identical(other.trackLabel, trackLabel) || other.trackLabel == trackLabel)&&(identical(other.bulkMarkResult, bulkMarkResult) || other.bulkMarkResult == bulkMarkResult)&&(identical(other.startingRef, startingRef) || other.startingRef == startingRef)&&(identical(other.contentActivated, contentActivated) || other.contentActivated == contentActivated));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,currentStep,curriculumId,const DeepCollectionEquality().hash(scopeSelections),programId,programName,const DeepCollectionEquality().hash(selectedProgram),const DeepCollectionEquality().hash(studyDays),const DeepCollectionEquality().hash(wizardResult),const DeepCollectionEquality().hash(goalResult),trackLabel,const DeepCollectionEquality().hash(bulkMarkResult),startingRef,contentActivated);
+int get hashCode => Object.hash(runtimeType,currentStep,curriculumId,const DeepCollectionEquality().hash(scopeSelections),programId,programName,selectedProgram,const DeepCollectionEquality().hash(studyDays),wizardResult,goalResult,trackLabel,bulkMarkResult,startingRef,contentActivated);
 
 @override
 String toString() {
@@ -607,11 +636,11 @@ abstract mixin class $AddTrackStateCopyWith<$Res>  {
   factory $AddTrackStateCopyWith(AddTrackState value, $Res Function(AddTrackState) _then) = _$AddTrackStateCopyWithImpl;
 @useResult
 $Res call({
- AddTrackStep currentStep, CurriculumId? curriculumId, List<ScopeEntry>? scopeSelections, int? programId, String? programName, Object? selectedProgram, Map<int, String>? studyDays, Object? wizardResult, Object? goalResult, String? trackLabel, Object? bulkMarkResult, String? startingRef, bool contentActivated
+ AddTrackStep currentStep, CurriculumId? curriculumId, List<ScopeEntry>? scopeSelections, int? programId, String? programName, LearningProgramData? selectedProgram, Map<int, String>? studyDays, LearningProcessWizardResult? wizardResult, GoalEntity? goalResult, String? trackLabel, BulkMarkIntent? bulkMarkResult, String? startingRef, bool contentActivated
 });
 
 
-
+$GoalEntityCopyWith<$Res>? get goalResult;
 
 }
 /// @nodoc
@@ -631,14 +660,30 @@ as AddTrackStep,curriculumId: freezed == curriculumId ? _self.curriculumId : cur
 as CurriculumId?,scopeSelections: freezed == scopeSelections ? _self.scopeSelections : scopeSelections // ignore: cast_nullable_to_non_nullable
 as List<ScopeEntry>?,programId: freezed == programId ? _self.programId : programId // ignore: cast_nullable_to_non_nullable
 as int?,programName: freezed == programName ? _self.programName : programName // ignore: cast_nullable_to_non_nullable
-as String?,selectedProgram: freezed == selectedProgram ? _self.selectedProgram : selectedProgram ,studyDays: freezed == studyDays ? _self.studyDays : studyDays // ignore: cast_nullable_to_non_nullable
-as Map<int, String>?,wizardResult: freezed == wizardResult ? _self.wizardResult : wizardResult ,goalResult: freezed == goalResult ? _self.goalResult : goalResult ,trackLabel: freezed == trackLabel ? _self.trackLabel : trackLabel // ignore: cast_nullable_to_non_nullable
-as String?,bulkMarkResult: freezed == bulkMarkResult ? _self.bulkMarkResult : bulkMarkResult ,startingRef: freezed == startingRef ? _self.startingRef : startingRef // ignore: cast_nullable_to_non_nullable
+as String?,selectedProgram: freezed == selectedProgram ? _self.selectedProgram : selectedProgram // ignore: cast_nullable_to_non_nullable
+as LearningProgramData?,studyDays: freezed == studyDays ? _self.studyDays : studyDays // ignore: cast_nullable_to_non_nullable
+as Map<int, String>?,wizardResult: freezed == wizardResult ? _self.wizardResult : wizardResult // ignore: cast_nullable_to_non_nullable
+as LearningProcessWizardResult?,goalResult: freezed == goalResult ? _self.goalResult : goalResult // ignore: cast_nullable_to_non_nullable
+as GoalEntity?,trackLabel: freezed == trackLabel ? _self.trackLabel : trackLabel // ignore: cast_nullable_to_non_nullable
+as String?,bulkMarkResult: freezed == bulkMarkResult ? _self.bulkMarkResult : bulkMarkResult // ignore: cast_nullable_to_non_nullable
+as BulkMarkIntent?,startingRef: freezed == startingRef ? _self.startingRef : startingRef // ignore: cast_nullable_to_non_nullable
 as String?,contentActivated: null == contentActivated ? _self.contentActivated : contentActivated // ignore: cast_nullable_to_non_nullable
 as bool,
   ));
 }
+/// Create a copy of AddTrackState
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$GoalEntityCopyWith<$Res>? get goalResult {
+    if (_self.goalResult == null) {
+    return null;
+  }
 
+  return $GoalEntityCopyWith<$Res>(_self.goalResult!, (value) {
+    return _then(_self.copyWith(goalResult: value));
+  });
+}
 }
 
 
@@ -720,7 +765,7 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( AddTrackStep currentStep,  CurriculumId? curriculumId,  List<ScopeEntry>? scopeSelections,  int? programId,  String? programName,  Object? selectedProgram,  Map<int, String>? studyDays,  Object? wizardResult,  Object? goalResult,  String? trackLabel,  Object? bulkMarkResult,  String? startingRef,  bool contentActivated)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( AddTrackStep currentStep,  CurriculumId? curriculumId,  List<ScopeEntry>? scopeSelections,  int? programId,  String? programName,  LearningProgramData? selectedProgram,  Map<int, String>? studyDays,  LearningProcessWizardResult? wizardResult,  GoalEntity? goalResult,  String? trackLabel,  BulkMarkIntent? bulkMarkResult,  String? startingRef,  bool contentActivated)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _AddTrackState() when $default != null:
 return $default(_that.currentStep,_that.curriculumId,_that.scopeSelections,_that.programId,_that.programName,_that.selectedProgram,_that.studyDays,_that.wizardResult,_that.goalResult,_that.trackLabel,_that.bulkMarkResult,_that.startingRef,_that.contentActivated);case _:
@@ -741,7 +786,7 @@ return $default(_that.currentStep,_that.curriculumId,_that.scopeSelections,_that
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( AddTrackStep currentStep,  CurriculumId? curriculumId,  List<ScopeEntry>? scopeSelections,  int? programId,  String? programName,  Object? selectedProgram,  Map<int, String>? studyDays,  Object? wizardResult,  Object? goalResult,  String? trackLabel,  Object? bulkMarkResult,  String? startingRef,  bool contentActivated)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( AddTrackStep currentStep,  CurriculumId? curriculumId,  List<ScopeEntry>? scopeSelections,  int? programId,  String? programName,  LearningProgramData? selectedProgram,  Map<int, String>? studyDays,  LearningProcessWizardResult? wizardResult,  GoalEntity? goalResult,  String? trackLabel,  BulkMarkIntent? bulkMarkResult,  String? startingRef,  bool contentActivated)  $default,) {final _that = this;
 switch (_that) {
 case _AddTrackState():
 return $default(_that.currentStep,_that.curriculumId,_that.scopeSelections,_that.programId,_that.programName,_that.selectedProgram,_that.studyDays,_that.wizardResult,_that.goalResult,_that.trackLabel,_that.bulkMarkResult,_that.startingRef,_that.contentActivated);case _:
@@ -761,7 +806,7 @@ return $default(_that.currentStep,_that.curriculumId,_that.scopeSelections,_that
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( AddTrackStep currentStep,  CurriculumId? curriculumId,  List<ScopeEntry>? scopeSelections,  int? programId,  String? programName,  Object? selectedProgram,  Map<int, String>? studyDays,  Object? wizardResult,  Object? goalResult,  String? trackLabel,  Object? bulkMarkResult,  String? startingRef,  bool contentActivated)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( AddTrackStep currentStep,  CurriculumId? curriculumId,  List<ScopeEntry>? scopeSelections,  int? programId,  String? programName,  LearningProgramData? selectedProgram,  Map<int, String>? studyDays,  LearningProcessWizardResult? wizardResult,  GoalEntity? goalResult,  String? trackLabel,  BulkMarkIntent? bulkMarkResult,  String? startingRef,  bool contentActivated)?  $default,) {final _that = this;
 switch (_that) {
 case _AddTrackState() when $default != null:
 return $default(_that.currentStep,_that.curriculumId,_that.scopeSelections,_that.programId,_that.programName,_that.selectedProgram,_that.studyDays,_that.wizardResult,_that.goalResult,_that.trackLabel,_that.bulkMarkResult,_that.startingRef,_that.contentActivated);case _:
@@ -792,9 +837,8 @@ class _AddTrackState implements AddTrackState {
 
 @override final  int? programId;
 @override final  String? programName;
-/// Full program object for reading stagesConfig metadata.
-/// Opaque Object? to avoid importing DB types into domain.
-@override final  Object? selectedProgram;
+/// Full program data for reading stagesConfig metadata.
+@override final  LearningProgramData? selectedProgram;
  final  Map<int, String>? _studyDays;
 @override Map<int, String>? get studyDays {
   final value = _studyDays;
@@ -804,10 +848,10 @@ class _AddTrackState implements AddTrackState {
   return EqualUnmodifiableMapView(value);
 }
 
-@override final  Object? wizardResult;
-@override final  Object? goalResult;
+@override final  LearningProcessWizardResult? wizardResult;
+@override final  GoalEntity? goalResult;
 @override final  String? trackLabel;
-@override final  Object? bulkMarkResult;
+@override final  BulkMarkIntent? bulkMarkResult;
 @override final  String? startingRef;
 @override@JsonKey() final  bool contentActivated;
 
@@ -821,12 +865,12 @@ _$AddTrackStateCopyWith<_AddTrackState> get copyWith => __$AddTrackStateCopyWith
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _AddTrackState&&(identical(other.currentStep, currentStep) || other.currentStep == currentStep)&&(identical(other.curriculumId, curriculumId) || other.curriculumId == curriculumId)&&const DeepCollectionEquality().equals(other._scopeSelections, _scopeSelections)&&(identical(other.programId, programId) || other.programId == programId)&&(identical(other.programName, programName) || other.programName == programName)&&const DeepCollectionEquality().equals(other.selectedProgram, selectedProgram)&&const DeepCollectionEquality().equals(other._studyDays, _studyDays)&&const DeepCollectionEquality().equals(other.wizardResult, wizardResult)&&const DeepCollectionEquality().equals(other.goalResult, goalResult)&&(identical(other.trackLabel, trackLabel) || other.trackLabel == trackLabel)&&const DeepCollectionEquality().equals(other.bulkMarkResult, bulkMarkResult)&&(identical(other.startingRef, startingRef) || other.startingRef == startingRef)&&(identical(other.contentActivated, contentActivated) || other.contentActivated == contentActivated));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _AddTrackState&&(identical(other.currentStep, currentStep) || other.currentStep == currentStep)&&(identical(other.curriculumId, curriculumId) || other.curriculumId == curriculumId)&&const DeepCollectionEquality().equals(other._scopeSelections, _scopeSelections)&&(identical(other.programId, programId) || other.programId == programId)&&(identical(other.programName, programName) || other.programName == programName)&&(identical(other.selectedProgram, selectedProgram) || other.selectedProgram == selectedProgram)&&const DeepCollectionEquality().equals(other._studyDays, _studyDays)&&(identical(other.wizardResult, wizardResult) || other.wizardResult == wizardResult)&&(identical(other.goalResult, goalResult) || other.goalResult == goalResult)&&(identical(other.trackLabel, trackLabel) || other.trackLabel == trackLabel)&&(identical(other.bulkMarkResult, bulkMarkResult) || other.bulkMarkResult == bulkMarkResult)&&(identical(other.startingRef, startingRef) || other.startingRef == startingRef)&&(identical(other.contentActivated, contentActivated) || other.contentActivated == contentActivated));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,currentStep,curriculumId,const DeepCollectionEquality().hash(_scopeSelections),programId,programName,const DeepCollectionEquality().hash(selectedProgram),const DeepCollectionEquality().hash(_studyDays),const DeepCollectionEquality().hash(wizardResult),const DeepCollectionEquality().hash(goalResult),trackLabel,const DeepCollectionEquality().hash(bulkMarkResult),startingRef,contentActivated);
+int get hashCode => Object.hash(runtimeType,currentStep,curriculumId,const DeepCollectionEquality().hash(_scopeSelections),programId,programName,selectedProgram,const DeepCollectionEquality().hash(_studyDays),wizardResult,goalResult,trackLabel,bulkMarkResult,startingRef,contentActivated);
 
 @override
 String toString() {
@@ -841,11 +885,11 @@ abstract mixin class _$AddTrackStateCopyWith<$Res> implements $AddTrackStateCopy
   factory _$AddTrackStateCopyWith(_AddTrackState value, $Res Function(_AddTrackState) _then) = __$AddTrackStateCopyWithImpl;
 @override @useResult
 $Res call({
- AddTrackStep currentStep, CurriculumId? curriculumId, List<ScopeEntry>? scopeSelections, int? programId, String? programName, Object? selectedProgram, Map<int, String>? studyDays, Object? wizardResult, Object? goalResult, String? trackLabel, Object? bulkMarkResult, String? startingRef, bool contentActivated
+ AddTrackStep currentStep, CurriculumId? curriculumId, List<ScopeEntry>? scopeSelections, int? programId, String? programName, LearningProgramData? selectedProgram, Map<int, String>? studyDays, LearningProcessWizardResult? wizardResult, GoalEntity? goalResult, String? trackLabel, BulkMarkIntent? bulkMarkResult, String? startingRef, bool contentActivated
 });
 
 
-
+@override $GoalEntityCopyWith<$Res>? get goalResult;
 
 }
 /// @nodoc
@@ -865,15 +909,31 @@ as AddTrackStep,curriculumId: freezed == curriculumId ? _self.curriculumId : cur
 as CurriculumId?,scopeSelections: freezed == scopeSelections ? _self._scopeSelections : scopeSelections // ignore: cast_nullable_to_non_nullable
 as List<ScopeEntry>?,programId: freezed == programId ? _self.programId : programId // ignore: cast_nullable_to_non_nullable
 as int?,programName: freezed == programName ? _self.programName : programName // ignore: cast_nullable_to_non_nullable
-as String?,selectedProgram: freezed == selectedProgram ? _self.selectedProgram : selectedProgram ,studyDays: freezed == studyDays ? _self._studyDays : studyDays // ignore: cast_nullable_to_non_nullable
-as Map<int, String>?,wizardResult: freezed == wizardResult ? _self.wizardResult : wizardResult ,goalResult: freezed == goalResult ? _self.goalResult : goalResult ,trackLabel: freezed == trackLabel ? _self.trackLabel : trackLabel // ignore: cast_nullable_to_non_nullable
-as String?,bulkMarkResult: freezed == bulkMarkResult ? _self.bulkMarkResult : bulkMarkResult ,startingRef: freezed == startingRef ? _self.startingRef : startingRef // ignore: cast_nullable_to_non_nullable
+as String?,selectedProgram: freezed == selectedProgram ? _self.selectedProgram : selectedProgram // ignore: cast_nullable_to_non_nullable
+as LearningProgramData?,studyDays: freezed == studyDays ? _self._studyDays : studyDays // ignore: cast_nullable_to_non_nullable
+as Map<int, String>?,wizardResult: freezed == wizardResult ? _self.wizardResult : wizardResult // ignore: cast_nullable_to_non_nullable
+as LearningProcessWizardResult?,goalResult: freezed == goalResult ? _self.goalResult : goalResult // ignore: cast_nullable_to_non_nullable
+as GoalEntity?,trackLabel: freezed == trackLabel ? _self.trackLabel : trackLabel // ignore: cast_nullable_to_non_nullable
+as String?,bulkMarkResult: freezed == bulkMarkResult ? _self.bulkMarkResult : bulkMarkResult // ignore: cast_nullable_to_non_nullable
+as BulkMarkIntent?,startingRef: freezed == startingRef ? _self.startingRef : startingRef // ignore: cast_nullable_to_non_nullable
 as String?,contentActivated: null == contentActivated ? _self.contentActivated : contentActivated // ignore: cast_nullable_to_non_nullable
 as bool,
   ));
 }
 
+/// Create a copy of AddTrackState
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$GoalEntityCopyWith<$Res>? get goalResult {
+    if (_self.goalResult == null) {
+    return null;
+  }
 
+  return $GoalEntityCopyWith<$Res>(_self.goalResult!, (value) {
+    return _then(_self.copyWith(goalResult: value));
+  });
+}
 }
 
 // dart format on

@@ -8,6 +8,7 @@ import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/labels/curriculum_label_providers.dart';
 import 'package:learning_tracker/core/labels/domain_term_labels.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
+import 'package:learning_tracker/core/theme/app_colors.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/widgets/app_error_view.dart';
 import 'package:learning_tracker/core/widgets/empty_state.dart';
@@ -40,7 +41,7 @@ class LearningScreen extends ConsumerWidget {
     final maxStreak = streakAsync.asData?.value.maxStreak ?? 0;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F5F8),
+      backgroundColor: AppColors.surfaceF4,
       body: Theme(
         data: plusJakartaTheme,
         child: SafeArea(

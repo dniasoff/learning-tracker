@@ -97,7 +97,7 @@ final class ReminderEnabledProvider
   }
 }
 
-String _$reminderEnabledHash() => r'bace316ba99ddebd74e9a93df6bb2ff52d18ba72';
+String _$reminderEnabledHash() => r'a231e9700c6556798b7c13fe153a2a7fa3113a07';
 
 /// Manages the daily reminder enabled state.
 
@@ -155,7 +155,7 @@ final class ReminderTimeProvider
   }
 }
 
-String _$reminderTimeHash() => r'ff7723948eac93bc575d9032f4bc1a7268e6f9a6';
+String _$reminderTimeHash() => r'0f5032f1a2f73cc0a18b72c973d32f4b74a103f0';
 
 /// Manages the daily reminder time.
 
@@ -214,7 +214,7 @@ final class StreakAlertEnabledProvider
 }
 
 String _$streakAlertEnabledHash() =>
-    r'39a8f700db151c6612bcfba58e6a0f9ff13f71aa';
+    r'1f38d06c6816473574458b1b169b0d0434967f0c';
 
 /// Manages the streak alert enabled state.
 
@@ -272,7 +272,7 @@ final class StreakAlertTimeProvider
   }
 }
 
-String _$streakAlertTimeHash() => r'089d764abf39cbfed3514f2b70015be2e2fa973c';
+String _$streakAlertTimeHash() => r'6b0e887a8529f7972754c32bc3c704ff66a67ee8';
 
 /// Manages the streak alert time.
 
@@ -331,7 +331,7 @@ final class RewardNotificationEnabledProvider
 }
 
 String _$rewardNotificationEnabledHash() =>
-    r'6a07fd08218442a47f6990a3cb230b2054266252';
+    r'99c6cddc896b03bbb67b9387ad7ac322bbe72edf';
 
 /// Manages the reward notification enabled state.
 
@@ -606,7 +606,7 @@ final class ReminderSyncEffectProvider
 }
 
 String _$reminderSyncEffectHash() =>
-    r'5f0f609acad2a00aa45b11fd6fc88abb95c398a6';
+    r'50201b14a76144729ef0df5c3478767786dae121';
 
 /// Provides the [StreakAlertService] instance.
 

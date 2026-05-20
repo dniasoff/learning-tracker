@@ -4,6 +4,7 @@ import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/labels/domain_term_labels.dart';
+import 'package:learning_tracker/core/theme/app_colors.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/utils/percentage_formatter.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
@@ -62,8 +63,9 @@ class LearningTrackCard extends ConsumerWidget {
       track.curriculumId,
     );
 
-    final accent = trackAccentForType(track.trackType);
-    final icon = trackTypeIconData(track.trackType);
+    // W3.22: trackType column dropped — all tracks are now 'personal'.
+    const accent = AppColors.blueMedium;
+    const icon = Icons.menu_book_rounded;
 
     return Material(
       color: Colors.transparent,
@@ -78,7 +80,7 @@ class LearningTrackCard extends ConsumerWidget {
             borderRadius: BorderRadius.circular(30),
             boxShadow: [
               BoxShadow(
-                color: const Color(0xFF0A2056).withValues(alpha: 0.07),
+                color: AppColors.blueDeepNavy.withValues(alpha: 0.07),
                 blurRadius: 14,
                 offset: const Offset(0, 6),
               ),
@@ -191,7 +193,7 @@ IconData trackTypeIconData(String trackType) {
 
 Color trackAccentForType(String trackType) {
   return switch (trackType) {
-    'personal' => const Color(0xFF1C47C4),
+    'personal' => AppColors.blueMedium,
     'school' => const Color(0xFFBC8105),
     'advanced' => const Color(0xFF0EAE81),
     _ => AppTheme.brandBlue,

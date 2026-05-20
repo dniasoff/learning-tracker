@@ -65,7 +65,8 @@ class CurriculumImportService {
       return CurriculumImportResult(curriculumId: curriculum, success: true);
     } catch (e) {
       AppLogger.instance.error(
-        event: 'CurriculumImportService: failed to activate ${curriculum.displayNameEn}',
+        event:
+            'CurriculumImportService: failed to activate ${curriculum.displayNameEn}',
         exception: e,
       );
       return CurriculumImportResult(

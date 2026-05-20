@@ -7,6 +7,7 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/labels/domain_term_labels.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
+import 'package:learning_tracker/core/theme/app_colors.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/utils/percentage_formatter.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
@@ -85,9 +86,9 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
     final estimatedFinish = _estimatedFinish(goal, itemsRemaining, locale);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FC),
+      backgroundColor: AppColors.surfaceF5,
       appBar: AppBar(
-        backgroundColor: const Color(0xFFF5F7FC),
+        backgroundColor: AppColors.surfaceF5,
         elevation: 0,
         title: Text(
           titleText,
@@ -154,7 +155,7 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF0A2056).withValues(alpha: 0.07),
+            color: AppColors.blueDeepNavy.withValues(alpha: 0.07),
             blurRadius: 14,
             offset: const Offset(0, 6),
           ),
@@ -327,7 +328,7 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF0A2056).withValues(alpha: 0.07),
+            color: AppColors.blueDeepNavy.withValues(alpha: 0.07),
             blurRadius: 14,
             offset: const Offset(0, 6),
           ),
@@ -342,7 +343,7 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
               ),
               leading: const Icon(
                 Icons.check_circle_outline,
-                color: Color(0xFF1C47C4),
+                color: AppColors.blueMedium,
               ),
               title: Text(AppLocalizations.of(context)!.trackMarkContentDone),
               trailing: const Icon(Icons.chevron_right_rounded),
@@ -354,7 +355,7 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
             ListTile(
               leading: const Icon(
                 Icons.swap_vert_rounded,
-                color: Color(0xFF1C47C4),
+                color: AppColors.blueMedium,
               ),
               title: Text(AppLocalizations.of(context)!.trackReorderContent),
               trailing: const Icon(Icons.chevron_right_rounded),
@@ -379,7 +380,10 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
                     ),
                   )
                 : null,
-            leading: const Icon(Icons.edit_outlined, color: Color(0xFF1C47C4)),
+            leading: const Icon(
+              Icons.edit_outlined,
+              color: AppColors.blueMedium,
+            ),
             title: Text(AppLocalizations.of(context)!.trackEditLabel),
             trailing: const Icon(Icons.chevron_right_rounded),
             onTap: () => Navigator.of(context).push<void>(

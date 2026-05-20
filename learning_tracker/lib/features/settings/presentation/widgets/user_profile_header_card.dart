@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:learning_tracker/core/theme/app_colors.dart';
 import 'package:learning_tracker/features/account/domain/models/app_user.dart';
 import 'package:learning_tracker/features/account/domain/models/auth_state.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
@@ -174,7 +175,7 @@ class _UserProfileHeaderCardState extends ConsumerState<UserProfileHeaderCard> {
                     Text(
                       user.email!,
                       style: theme.textTheme.bodySmall?.copyWith(
-                        color: const Color(0xFF8E97A6),
+                        color: AppColors.inkMidGrey,
                         fontSize: 16,
                       ),
                     ),
@@ -212,7 +213,7 @@ class _SettingsProfileSurface extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFFE9ECF2)),
+        border: Border.all(color: AppColors.surfaceE9),
         boxShadow: const [
           BoxShadow(
             color: Color(0x121D2939),

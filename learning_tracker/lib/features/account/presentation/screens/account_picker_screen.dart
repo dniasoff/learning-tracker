@@ -9,6 +9,7 @@ import 'package:learning_tracker/core/database/registry/device_registry_database
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/providers/registry_provider.dart';
+import 'package:learning_tracker/core/theme/app_colors.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/account/domain/services/account_lifecycle_service.dart';
 import 'package:learning_tracker/features/account/domain/services/session_persistence_service.dart';
@@ -37,7 +38,7 @@ class AccountPickerScreen extends ConsumerWidget {
     final theme = Theme.of(context);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FC),
+      backgroundColor: AppColors.surfaceF5,
       body: SafeArea(
         child: FutureBuilder<List<DeviceAccount>>(
           future: registry.getAllAccounts(),
@@ -353,13 +354,13 @@ class _AccountTile extends ConsumerWidget {
 
   Color _avatarFg(bool isCloud, bool hasValidSession) {
     if (!isCloud) return const Color(0xFF6A4926);
-    if (!hasValidSession) return const Color(0xFFB43A4A);
+    if (!hasValidSession) return AppColors.chartRed;
     return AppTheme.brandBlue;
   }
 
   Color _pillBg(bool isCloud, bool hasValidSession) {
     if (!isCloud) return const Color(0xFFE8EBF0);
-    if (!hasValidSession) return const Color(0xFFFDE7EA);
+    if (!hasValidSession) return AppColors.statusErrorSoft;
     return const Color(0xFFE8EEFF);
   }
 

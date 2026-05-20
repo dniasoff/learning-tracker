@@ -118,9 +118,7 @@ class ComputePaceStatusUseCase {
   ///
   /// Exposed as a static helper so callers (provider or parent aggregator)
   /// can share the same normalisation logic.
-  static Map<DateTime, int> buildDailyCounts(
-    Iterable<DateTime> completedAts,
-  ) {
+  static Map<DateTime, int> buildDailyCounts(Iterable<DateTime> completedAts) {
     final counts = <DateTime, int>{};
     for (final completedAt in completedAts) {
       final local = DateUtils.extractLocalDate(completedAt);

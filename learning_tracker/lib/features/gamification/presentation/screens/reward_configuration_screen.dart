@@ -8,6 +8,7 @@ import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
+import 'package:learning_tracker/core/theme/app_colors.dart';
 import 'package:learning_tracker/core/utils/text_input_formatters.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/gamification/domain/models/reward_milestone.dart';
@@ -21,7 +22,7 @@ import 'package:learning_tracker/l10n/app_localizations.dart';
 // High-fidelity parent reward screen (navy #00218D, orange #F2994A).
 const Color _kNavy = Color(0xFF00218D);
 const Color _kOrange = Color(0xFFF2994A);
-const Color _kPageBg = Color(0xFFF4F6FB);
+const Color _kPageBg = AppColors.surfaceF4b;
 const Color _kFieldFill = Color(0xFFF2F4F8);
 const Color _kPreviewBg = Color(0xFFEEF3FA);
 const Color _kMutedLabel = Color(0xFF6B7280);

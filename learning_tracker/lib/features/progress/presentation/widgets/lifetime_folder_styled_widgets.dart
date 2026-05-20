@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/labels/domain_term_labels.dart';
+import 'package:learning_tracker/core/theme/app_colors.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/utils/percentage_formatter.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/lifetime_knowledge_providers.dart';
@@ -274,7 +275,7 @@ class LifetimeCurriculumFolderRow extends ConsumerWidget {
                   const Icon(
                     Icons.check_circle_rounded,
                     size: 20,
-                    color: Color(0xFF3BDD87),
+                    color: AppColors.statusSuccessMuted,
                   ),
                   const SizedBox(width: 6),
                 ],
@@ -374,7 +375,7 @@ class _LifetimeFolderTreeNodeState
   @override
   Widget build(BuildContext context) {
     final color = switch (widget.node.state) {
-      LifetimeNodeState.full => const Color(0xFF3BDD87),
+      LifetimeNodeState.full => AppColors.statusSuccessMuted,
       LifetimeNodeState.partial => const Color(0xFFFFD26A),
       LifetimeNodeState.none => Colors.white.withValues(alpha: 0.5),
     };
@@ -505,9 +506,9 @@ class LifetimeMarkingScopeRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = isPersisted
-        ? const Color(0xFF3BDD87)
+        ? AppColors.statusSuccessMuted
         : switch (visual) {
-            MarkingRowVisual.direct => const Color(0xFF3BDD87),
+            MarkingRowVisual.direct => AppColors.statusSuccessMuted,
             MarkingRowVisual.implicit => const Color(0xFFFFD26A),
             MarkingRowVisual.none =>
               lightSurface

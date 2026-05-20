@@ -1,5 +1,6 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import 'package:learning_tracker/core/theme/app_colors.dart';
 import 'package:learning_tracker/features/progress/domain/models/chart_data.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
@@ -86,7 +87,7 @@ class CompletionsBarChart extends StatelessWidget {
                   BarChartRodData(
                     toY: data[i].count.toDouble(),
                     color: i == data.length - 1
-                        ? const Color(0xFF123DAE)
+                        ? AppColors.blueMid
                         : const Color(0xFFC8CEDB),
                     width: isShortRange ? 18 : 10,
                     borderRadius: const BorderRadius.only(

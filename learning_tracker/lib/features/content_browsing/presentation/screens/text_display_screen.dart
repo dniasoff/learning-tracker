@@ -1,13 +1,14 @@
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import 'package:learning_tracker/core/enums/user_mode.dart';
 import 'package:learning_tracker/core/labels/curriculum_label_providers.dart';
 import 'package:learning_tracker/core/labels/domain_term_labels.dart';
-import 'package:learning_tracker/features/learning/presentation/providers/completion_writer_providers.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/preferences/text_display_preferences.dart';
+import 'package:learning_tracker/core/theme/app_colors.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/theme/text_styles.dart';
 import 'package:learning_tracker/core/utils/gematriya.dart';
@@ -19,6 +20,7 @@ import 'package:learning_tracker/features/dashboard/presentation/providers/dashb
 import 'package:learning_tracker/features/gamification/presentation/widgets/achievement_unlock_celebration.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_request.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/completion_providers.dart';
+import 'package:learning_tracker/features/learning/presentation/providers/completion_writer_providers.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dart';
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
@@ -50,9 +52,9 @@ class TextDisplayScreen extends ConsumerWidget {
     final adj = adjAsync.asData?.value;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FC),
+      backgroundColor: AppColors.surfaceF5,
       appBar: AppBar(
-        backgroundColor: const Color(0xFFF5F7FC),
+        backgroundColor: AppColors.surfaceF5,
         elevation: 0,
         automaticallyImplyLeading: false,
         toolbarHeight: 72,
@@ -261,7 +263,7 @@ class _TextContentView extends StatelessWidget {
                 if (textContent.hebrewText.isNotEmpty) ...[
                   _ReaderSectionCard(
                     label: AppLocalizations.of(context)!.textReaderHebrewTab,
-                    labelBackground: const Color(0xFFF26666),
+                    labelBackground: AppColors.statusDanger,
                     alignLabelRight: false,
                     child: _NumberedSegmentColumn(
                       segments: segments,
@@ -363,7 +365,7 @@ class _TextContentView extends StatelessWidget {
         Container(
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
           decoration: BoxDecoration(
-            color: const Color(0xFFF5F7FC),
+            color: AppColors.surfaceF5,
             border: Border(
               top: BorderSide(
                 color: AppTheme.brandOutline.withValues(alpha: 0.4),
@@ -673,7 +675,11 @@ class _CompletionSectionState extends ConsumerState<_CompletionSection> {
         );
       }
     } catch (e, st) {
-      AppLogger.instance.error(event: 'Failed to mark completion', exception: e, stackTrace: st);
+      AppLogger.instance.error(
+        event: 'Failed to mark completion',
+        exception: e,
+        stackTrace: st,
+      );
       if (mounted) {
         setState(() => _saving = false);
         ScaffoldMessenger.of(context).showSnackBar(

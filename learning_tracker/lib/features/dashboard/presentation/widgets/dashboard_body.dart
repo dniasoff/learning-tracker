@@ -4,11 +4,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import 'package:learning_tracker/core/database/user/user_database.dart';
+import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/user_mode.dart';
 import 'package:learning_tracker/core/labels/domain_term_labels.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/sync/initial_sync_state.dart';
+import 'package:learning_tracker/core/theme/app_colors.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/core/utils/percentage_formatter.dart';
@@ -166,7 +168,8 @@ class DashboardBody extends ConsumerWidget {
 
     if (activeTracks.isEmpty) {
       final isChildMode =
-          ref.watch(selectedProfileProvider).asData?.value?.mode == 'child';
+          ref.watch(selectedProfileProvider).asData?.value?.profileMode ==
+          ProfileMode.child;
       return EmptyDashboard(
         name: name,
         greeting: _greeting(l10n),
@@ -270,11 +273,11 @@ class DashboardBody extends ConsumerWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: BoxDecoration(
-                color: const Color(0xFFF26666),
+                color: AppColors.statusDanger,
                 borderRadius: BorderRadius.circular(20),
                 boxShadow: [
                   BoxShadow(
-                    color: const Color(0xFFF26666).withValues(alpha: 0.28),
+                    color: AppColors.statusDanger.withValues(alpha: 0.28),
                     blurRadius: 12,
                     offset: const Offset(0, 6),
                   ),
@@ -351,13 +354,13 @@ class DashboardBody extends ConsumerWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
               decoration: BoxDecoration(
-                color: const Color(0xFFF26666).withValues(alpha: 0.14),
+                color: AppColors.statusDanger.withValues(alpha: 0.14),
                 borderRadius: BorderRadius.circular(999),
               ),
               child: Text(
                 l10n.remaining(totalRemaining),
                 style: theme.textTheme.labelMedium?.copyWith(
-                  color: const Color(0xFFF26666),
+                  color: AppColors.statusDanger,
                   fontWeight: FontWeight.w700,
                 ),
               ),
@@ -395,10 +398,10 @@ class DashboardBody extends ConsumerWidget {
           label: l10n.urgent,
           title: l10n.missedOverdue,
           count: overdueCount,
-          color: const Color(0xFFD63C3C),
-          labelColor: const Color(0xFFD63C3C),
-          titleColor: const Color(0xFFD63C3C),
-          borderColor: const Color(0xFFD63C3C),
+          color: AppColors.statusError,
+          labelColor: AppColors.statusError,
+          titleColor: AppColors.statusError,
+          borderColor: AppColors.statusError,
           dashedBorder: true,
           onTap: () {
             ref

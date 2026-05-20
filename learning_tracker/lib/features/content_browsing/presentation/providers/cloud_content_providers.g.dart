@@ -65,7 +65,7 @@ final class CloudContentServiceProvider
 }
 
 String _$cloudContentServiceHash() =>
-    r'ef6e6bffdf88448f56a5955384cd2bc9b8882c94';
+    r'bf3d50d9b620cf52a4f68ad23e8ba657cd467b24';
 
 /// Provides the TextDownloadStatusDao from UserDatabase.
 

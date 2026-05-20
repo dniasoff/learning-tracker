@@ -1,6 +1,7 @@
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
+import 'package:learning_tracker/core/theme/app_colors.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/widgets/animated_progress_bar.dart';
 import 'package:learning_tracker/features/dashboard/presentation/widgets/dashboard_helpers.dart';
@@ -45,7 +46,7 @@ class DashboardAllCaughtUpCard extends StatelessWidget {
                     end: Alignment.bottomRight,
                     colors: [
                       Color(0xFF1E52D4),
-                      Color(0xFF1639A8),
+                      AppColors.blueLight,
                       Color(0xFF0E266F),
                     ],
                   ),
@@ -77,7 +78,7 @@ class DashboardAllCaughtUpCard extends StatelessWidget {
                       child: const Icon(
                         Icons.check_rounded,
                         size: 34,
-                        color: Color(0xFF1639A8),
+                        color: AppColors.blueLight,
                       ),
                     ),
                   ),

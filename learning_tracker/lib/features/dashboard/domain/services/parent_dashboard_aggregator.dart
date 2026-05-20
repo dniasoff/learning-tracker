@@ -1,7 +1,10 @@
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/core/utils/date_utils.dart' show DateTimeFactory;
+import 'package:learning_tracker/core/time/local_day_clock.dart';
+import 'package:learning_tracker/core/utils/date_utils.dart'
+    show DateTimeFactory;
 import 'package:learning_tracker/features/dashboard/domain/use_cases/compute_pace_status_use_case.dart';
+import 'package:learning_tracker/features/gamification/streak/streak_state_provider.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/goal_entity.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/pace_status.dart';
 import 'package:learning_tracker/features/stages/domain/models/stage_definition.dart'
@@ -76,13 +79,19 @@ class ParentDashboardAggregator {
   final UserDatabase _db;
   final int _profileId;
   final StageDefinitionRepository? _stageRepository;
+  late final StreakStateProvider _streakProvider;
 
   ParentDashboardAggregator(
     this._db, {
     int profileId = 0,
     StageDefinitionRepository? stageRepository,
   }) : _profileId = profileId,
-       _stageRepository = stageRepository;
+       _stageRepository = stageRepository {
+    _streakProvider = StreakStateProvider(
+      db: _db,
+      clock: const LocalDayClock(),
+    );
+  }
 
   /// Compute the full dashboard data snapshot.
   ///
@@ -92,7 +101,7 @@ class ParentDashboardAggregator {
     final completions = await _db.completionDao.getCompletionsByProfile(
       _profileId,
     );
-    final streak = await _db.streakDao.getStreakByProfile(_profileId);
+    final streak = await _streakProvider.read(profileId: _profileId);
     final activeCurriculaKeys = await _db.activeCurriculumDao
         .getActiveCurriculaByProfile(_profileId);
 
@@ -147,8 +156,8 @@ class ParentDashboardAggregator {
     return ParentDashboardData(
       curricula: curriculaSummaries,
       globalPoints: globalPoints,
-      currentStreak: streak?.currentStreak ?? 0,
-      maxStreak: streak?.maxStreak ?? 0,
+      currentStreak: streak.currentStreak,
+      maxStreak: streak.maxStreak,
       recentCompletions: recent,
       engagement: engagement,
     );
@@ -236,7 +245,10 @@ class ParentDashboardAggregator {
     } else if (goal.goalType == 'pace' &&
         goal.paceValue != null &&
         goal.pacePeriod != null) {
-      paceTarget = PacePeriodTarget(rate: goal.paceValue!, period: goal.pacePeriod!);
+      paceTarget = PacePeriodTarget(
+        rate: goal.paceValue!,
+        period: goal.pacePeriod!,
+      );
     } else {
       paceTarget = null;
     }

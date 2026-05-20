@@ -274,9 +274,7 @@ class LifetimeTreeBuilder {
   /// of the matching intermediate (non-leaf) hierarchy row.
   ///
   /// Called once per curriculum before [build].
-  static Map<String, String> buildHeLabelLookup(
-    List<ContentItem> content,
-  ) {
+  static Map<String, String> buildHeLabelLookup(List<ContentItem> content) {
     final out = <String, String>{};
     for (final it in content) {
       if (it.isLeaf) continue;

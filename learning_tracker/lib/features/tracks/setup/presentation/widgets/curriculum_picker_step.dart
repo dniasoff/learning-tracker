@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/labels/domain_term_labels.dart';
+import 'package:learning_tracker/core/theme/app_colors.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
@@ -133,7 +134,7 @@ class _CurriculumTile extends ConsumerWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: const Color(0xFFE9ECF2)),
+        border: Border.all(color: AppColors.surfaceE9),
         boxShadow: const [
           BoxShadow(
             color: Color(0x0F1D2939),
@@ -236,12 +237,12 @@ class _CurriculumTile extends ConsumerWidget {
       CurriculumId.mishnayos => const _CurriculumStyle(
         icon: Icons.menu_book_rounded,
         iconColor: Color(0xFF3F53BF),
-        background: Color(0xFFE5E9FF),
+        background: AppColors.surfaceBlueLight,
       ),
       CurriculumId.bavli => const _CurriculumStyle(
         icon: Icons.gavel_rounded,
-        iconColor: Color(0xFF7D5411),
-        background: Color(0xFFF9E4C8),
+        iconColor: AppColors.goldDark,
+        background: AppColors.peachTint,
       ),
       CurriculumId.chumash => const _CurriculumStyle(
         icon: Icons.book_outlined,

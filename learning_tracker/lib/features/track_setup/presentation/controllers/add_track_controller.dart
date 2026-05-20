@@ -1,6 +1,9 @@
 import 'dart:convert';
 
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/features/onboarding/domain/models/wizard_result_wrapper.dart';
+import 'package:learning_tracker/features/scheduler/domain/models/goal_entity.dart';
+import 'package:learning_tracker/features/scheduler/domain/services/learning_program_service.dart';
 import 'package:learning_tracker/features/track_setup/domain/entities/add_track_result.dart';
 import 'package:learning_tracker/features/track_setup/domain/services/track_creation_service.dart';
 import 'package:learning_tracker/features/track_setup/presentation/controllers/add_track_flow_state.dart';
@@ -240,7 +243,7 @@ class AddTrackController extends _$AddTrackController {
   void onProgramSelected(
     int? programId,
     String? programName,
-    Object? program, // opaque LearningProgramData
+    LearningProgramData? program,
   ) {
     final updated = state.formData.copyWith(
       programId: programId,
@@ -271,13 +274,13 @@ class AddTrackController extends _$AddTrackController {
   }
 
   /// User completed chazara/stages setup.
-  void onStagesComplete(Object? wizardResult) {
+  void onStagesComplete(LearningProcessWizardResult? wizardResult) {
     final updated = state.formData.copyWith(wizardResult: wizardResult);
     _advance(updated);
   }
 
   /// User completed goal setup.
-  void onGoalComplete(Object? goalResult) {
+  void onGoalComplete(GoalEntity? goalResult) {
     final updated = state.formData.copyWith(goalResult: goalResult);
     _advance(updated);
   }
@@ -287,7 +290,10 @@ class AddTrackController extends _$AddTrackController {
   /// Delegates actual track creation to the calling screen (which has a
   /// `BuildContext` for dialogs). The screen calls [submit] after any
   /// necessary confirmation dialogs.
-  void onConfirmationComplete(Object? bulkMarkResult, String? startingRef) {
+  void onConfirmationComplete(
+    BulkMarkIntent? bulkMarkResult,
+    String? startingRef,
+  ) {
     final updated = state.formData.copyWith(
       bulkMarkResult: bulkMarkResult,
       startingRef: startingRef,

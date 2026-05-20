@@ -59,7 +59,7 @@ final class LearningLedgerRepositoryProvider
 }
 
 String _$learningLedgerRepositoryHash() =>
-    r'2f5627f17ad5cf0e414ed22e96494e5c8e663753';
+    r'996282201999988bab13a66fd80e1675fa9c7f36';
 
 /// Provides the manual completion use case.
 
@@ -112,4 +112,4 @@ final class ManualCompletionUseCaseProvider
 }
 
 String _$manualCompletionUseCaseHash() =>
-    r'b67a203ab9e182bc27787021b6565134ba5ac583';
+    r'26974e41bdbdc3607e508bbc2db55ba6923069d5';

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:learning_tracker/core/theme/app_colors.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/dashboard/presentation/widgets/dashboard_helpers.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
@@ -77,7 +78,7 @@ class ChildPointsRewardsTabCard extends StatelessWidget {
                     end: Alignment.bottomRight,
                     colors: [
                       kChildRewardsCardBlueTop,
-                      Color(0xFF1639A8),
+                      AppColors.blueLight,
                       kChildRewardsCardBlueDeep,
                     ],
                   ),
@@ -203,7 +204,7 @@ class ChildPointsRewardsTabCard extends StatelessWidget {
                       onPressed: onOpenRewards,
                       style: FilledButton.styleFrom(
                         backgroundColor: Colors.white,
-                        foregroundColor: const Color(0xFF1639A8),
+                        foregroundColor: AppColors.blueLight,
                         elevation: 0,
                         padding: const EdgeInsets.symmetric(
                           horizontal: 28,
@@ -221,7 +222,7 @@ class ChildPointsRewardsTabCard extends StatelessWidget {
                             l10n.dashboardRedeemPrizes,
                             style: theme.textTheme.titleSmall?.copyWith(
                               fontWeight: FontWeight.w800,
-                              color: const Color(0xFF1639A8),
+                              color: AppColors.blueLight,
                             ),
                           ),
                           const SizedBox(width: 8),

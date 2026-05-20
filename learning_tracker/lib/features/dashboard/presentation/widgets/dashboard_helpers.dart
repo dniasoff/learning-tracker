@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:learning_tracker/core/theme/app_colors.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dart';
 
 /// Color constants shared across dashboard widgets.
@@ -7,7 +8,7 @@ import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dar
 const Color kActiveTrackPrimaryBlue = Color(0xFF122FA0);
 
 /// Green completion bar (self-paced card).
-const Color kActiveTrackCompletionGreen = Color(0xFF22C55E);
+const Color kActiveTrackCompletionGreen = AppColors.statusSuccess;
 
 /// Grey pill behind next-task / current-focus content.
 const Color kActiveTrackFocusPillBg = Color(0xFFF1F2F5);
@@ -19,7 +20,7 @@ const Color kAllCaughtUpProgressFill = Color(0xFFFFB775);
 const Color kChildRewardsCardBlueTop = Color(0xFF1E52D4);
 const Color kChildRewardsCardBlueDeep = Color(0xFF0E266F);
 const Color kChildRewardsProgressTrack = Color(0xFF0A1F55);
-const Color kChildRewardsProgressFill = Color(0xFF22C55E);
+const Color kChildRewardsProgressFill = AppColors.statusSuccess;
 
 class DashboardTaskGroups {
   const DashboardTaskGroups({

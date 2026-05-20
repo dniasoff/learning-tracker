@@ -14,6 +14,7 @@ import 'package:learning_tracker/core/providers/registry_provider.dart';
 import 'package:learning_tracker/core/sync/providers/outbox_providers.dart'
     show firestoreGatewayProvider;
 import 'package:learning_tracker/core/sync/providers/sync_orchestrator_providers.dart';
+import 'package:learning_tracker/core/theme/app_colors.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/utils/text_input_formatters.dart';
 import 'package:learning_tracker/features/account/data/services/magic_link_service.dart';
@@ -930,7 +931,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
     final signInMode = _effectiveSignInMode(isOnline: isOnline);
     final registrySubtitle = _registrySubtitle(isOnline: isOnline, l10n: l10n);
     return Scaffold(
-      backgroundColor: const Color(0xFFF3F4F8),
+      backgroundColor: AppColors.surfaceF3,
       body: SafeArea(
         child: LayoutBuilder(
           builder: (context, constraints) => SingleChildScrollView(

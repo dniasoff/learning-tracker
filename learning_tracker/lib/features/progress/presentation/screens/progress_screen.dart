@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
+import 'package:learning_tracker/core/theme/app_colors.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/widgets/empty_state.dart';
 import 'package:learning_tracker/core/widgets/stat_card.dart';
@@ -38,7 +39,7 @@ class ProgressScreen extends ConsumerWidget {
 
     final l10n = AppLocalizations.of(context)!;
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F6FB),
+      backgroundColor: AppColors.surfaceF4b,
       body: Theme(
         data: baseTheme.copyWith(
           textTheme: interTextTheme,
@@ -140,7 +141,7 @@ class _StatGrid extends StatelessWidget {
       children: [
         _OverviewStatCard(
           icon: Icons.verified_outlined,
-          iconColor: const Color(0xFFF8C146),
+          iconColor: AppColors.chartAmber,
           value: '$totalUniqueUnits',
           label: l10n.statCompletions,
           onTap: () => context.router.push(CompletionHistoryRoute()),
@@ -162,7 +163,7 @@ class _StatGrid extends StatelessWidget {
         ),
         _OverviewStatCard(
           icon: Icons.hub_outlined,
-          iconColor: const Color(0xFFF8C146),
+          iconColor: AppColors.chartAmber,
           value: '$activeTracks',
           label: l10n.statActiveTracks,
           onTap: () => context.router.push(TrackManagementHubRoute()),
@@ -223,7 +224,7 @@ class _ProgressChartsTile extends StatelessWidget {
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
-              color: const Color(0xFF03174C).withValues(alpha: 0.06),
+              color: AppColors.blueNavy.withValues(alpha: 0.06),
               blurRadius: 12,
               offset: const Offset(0, 5),
             ),
@@ -291,7 +292,7 @@ class _LearningJourneyTile extends StatelessWidget {
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
-              color: const Color(0xFF03174C).withValues(alpha: 0.06),
+              color: AppColors.blueNavy.withValues(alpha: 0.06),
               blurRadius: 12,
               offset: const Offset(0, 5),
             ),
@@ -359,7 +360,7 @@ class _ItemsLearnedTile extends StatelessWidget {
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
-              color: const Color(0xFF03174C).withValues(alpha: 0.06),
+              color: AppColors.blueNavy.withValues(alpha: 0.06),
               blurRadius: 12,
               offset: const Offset(0, 5),
             ),

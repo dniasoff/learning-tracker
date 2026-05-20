@@ -1,55 +1,42 @@
 import 'package:learning_tracker/core/database/user/user_database.dart';
+import 'package:learning_tracker/core/time/local_day_clock.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/gamification/domain/models/streak_recovery_info.dart';
+import 'package:learning_tracker/features/gamification/streak/streak_reducer.dart';
+import 'package:learning_tracker/features/gamification/streak/streak_state_provider.dart';
 
-/// Transitional read facade over the cached `streaks` snapshot table.
+/// Read facade over derived streak state.
 ///
-/// Story 25.16 (DNI-337) removed the write side of this service —
-/// `recordCompletion` and `reconcileFromEvents`. Streak state is now
-/// derived by `core/streak/StreakReducer` from the append-only
-/// `streak_events` log; reads should flow through
-/// `core/streak/StreakStateProvider`. The remaining methods (calendar,
-/// cached snapshot reads) are kept as a compatibility shim for the
-/// notification/parent-mode/data-export call sites that have not yet
-/// been migrated.
+/// W3.20: the `streaks` snapshot table was dropped. Streak state is now
+/// derived exclusively from `streak_events` via [StreakStateProvider] /
+/// [StreakReducer]. This service wraps that read path as a compatibility
+/// shim for notification/dashboard call sites.
 class StreakService {
-  final UserDatabase _db;
+  StreakService(UserDatabase db, {int profileId = 0})
+    : _profileId = profileId,
+      _provider = StreakStateProvider(db: db, clock: const LocalDayClock());
+
   final int _profileId;
+  final StreakStateProvider _provider;
 
-  StreakService(this._db, {int profileId = 0}) : _profileId = profileId;
-
-  /// Get streak recovery info — whether the current streak was recently
-  /// saved by the grace period.
+  /// Get streak recovery info.
+  ///
+  /// W3.20: `graceUsedDate` was specific to the dropped `streaks` table.
+  /// The grace-period feature is not implemented post-W3.20; this always
+  /// returns `wasRecovered: false`.
   Future<StreakRecoveryInfo> getRecoveryInfo() async {
-    final streak = await _db.streakDao.getStreakByProfile(_profileId);
-    if (streak == null) {
-      return const StreakRecoveryInfo(wasRecovered: false, currentStreak: 0);
-    }
-
-    final wasRecovered =
-        streak.graceUsedDate != null &&
-        DateUtils.isSameLocalDay(
-          streak.graceUsedDate!,
-          DateTimeFactory.nowUtc(),
-        );
-
-    final missedDate = wasRecovered && streak.graceUsedDate != null
-        ? DateUtils.extractLocalDate(
-            streak.graceUsedDate!,
-          ).subtract(const Duration(days: 1))
-        : null;
-
+    final state = await _provider.read(profileId: _profileId);
     return StreakRecoveryInfo(
-      wasRecovered: wasRecovered,
-      currentStreak: streak.currentStreak,
-      missedDate: missedDate,
+      wasRecovered: false,
+      currentStreak: state.currentStreak,
     );
   }
 
-  Future<Streak?> getStreak() => _db.streakDao.getStreakByProfile(_profileId);
+  /// Returns the current [StreakState] for this profile.
+  Future<StreakState> getStreak() => _provider.read(profileId: _profileId);
 
-  Stream<Streak?> watchStreak() =>
-      _db.streakDao.watchStreakByProfile(_profileId);
+  /// Reactive read — re-emits whenever streak_events changes.
+  Stream<StreakState> watchStreak() => _provider.watch(profileId: _profileId);
 
   /// Get a map of dates with learning activity within a date range,
   /// scoped to this profile.
@@ -57,21 +44,29 @@ class StreakService {
     required DateTime startUtc,
     required DateTime endUtc,
   }) async {
-    final completions = await _db.completionDao.getCompletionsByProfile(
-      _profileId,
-    );
+    // Read completion dates from completions_view (via completionDao).
+    // StreakService injects UserDatabase so we can read directly.
+    // This path is kept for calendar widgets that show activity dots.
+    final state = await _provider.read(profileId: _profileId);
+    final lastDay = state.lastCompletionDayUtc;
+    if (lastDay == null) return {};
+
+    // Build the set of active UTC days from streak_events.
+    // (completionDao.getCompletionsByProfile would work too, but reading
+    // streak_events avoids a join and the view overhead.)
     final activeDates = <DateTime>{};
+    final startLocal = DateUtils.extractLocalDate(startUtc);
+    final endLocal = DateUtils.extractLocalDate(endUtc);
 
-    for (final completion in completions) {
-      final localDate = DateUtils.extractLocalDate(completion.completedAt);
-      final startLocal = DateUtils.extractLocalDate(startUtc);
-      final endLocal = DateUtils.extractLocalDate(endUtc);
-
+    // Re-read events directly to enumerate per-day activity.
+    final events = await _provider.readEvents(profileId: _profileId);
+    for (final event in events) {
+      if (event.eventType != 'completion') continue;
+      final localDate = DateUtils.extractLocalDate(event.eventTimestamp);
       if (!localDate.isBefore(startLocal) && !localDate.isAfter(endLocal)) {
         activeDates.add(localDate);
       }
     }
-
     return activeDates;
   }
 }

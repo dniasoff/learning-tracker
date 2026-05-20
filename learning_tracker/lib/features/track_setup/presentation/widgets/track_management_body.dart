@@ -5,6 +5,7 @@ import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
+import 'package:learning_tracker/core/theme/app_colors.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/widgets/app_error_view.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
@@ -57,9 +58,9 @@ class _TrackManagementBodyState extends ConsumerState<TrackManagementBody> {
     final activeAsync = ref.watch(activeTracksProvider);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FC),
+      backgroundColor: AppColors.surfaceF5,
       appBar: AppBar(
-        backgroundColor: const Color(0xFFF5F7FC),
+        backgroundColor: AppColors.surfaceF5,
         elevation: 0,
         centerTitle: false,
         automaticallyImplyLeading: false,
@@ -162,13 +163,13 @@ class _TrackManagementBodyState extends ConsumerState<TrackManagementBody> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
             decoration: BoxDecoration(
-              color: const Color(0xFFFFF2CF),
+              color: AppColors.warnYellow,
               borderRadius: BorderRadius.circular(999),
             ),
             child: Text(
               AppLocalizations.of(context)!.activeTracksRunning(activeCount),
               style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                color: const Color(0xFFE9A42A),
+                color: AppColors.goldAmber,
                 fontWeight: FontWeight.w800,
                 letterSpacing: 0.6,
               ),

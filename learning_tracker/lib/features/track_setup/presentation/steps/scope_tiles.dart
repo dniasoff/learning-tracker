@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:learning_tracker/core/theme/app_colors.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 
 /// A single row in the hierarchy: checkbox + title + optional drill arrow.
@@ -74,7 +75,7 @@ class ScopeLevelTile extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: const Color(0xFFE9ECF2)),
+        border: Border.all(color: AppColors.surfaceE9),
       ),
       child: Material(
         color: Colors.transparent,
@@ -87,7 +88,7 @@ class ScopeLevelTile extends StatelessWidget {
               children: [
                 CircleAvatar(
                   radius: 20,
-                  backgroundColor: const Color(0xFFF3F4F8),
+                  backgroundColor: AppColors.surfaceF3,
                   child: Icon(icon, size: 19, color: AppTheme.brandBlueDeep),
                 ),
                 const SizedBox(width: 12),
@@ -112,13 +113,13 @@ class ScopeLevelTile extends StatelessWidget {
                                 vertical: 2,
                               ),
                               decoration: BoxDecoration(
-                                color: const Color(0xFFF3D4A5),
+                                color: AppColors.peachMid,
                                 borderRadius: BorderRadius.circular(10),
                               ),
                               child: Text(
                                 badgeText!,
                                 style: const TextStyle(
-                                  color: Color(0xFF594624),
+                                  color: AppColors.peachDark,
                                   fontSize: 9.5,
                                   fontWeight: FontWeight.w700,
                                 ),

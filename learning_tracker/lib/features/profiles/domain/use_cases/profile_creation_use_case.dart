@@ -1,8 +1,10 @@
+import 'dart:convert';
+
 import 'package:drift/drift.dart';
 import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
+import 'package:learning_tracker/core/database/daos/track_dao.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
@@ -118,8 +120,8 @@ class ProfileCreationUseCase {
               CurriculumTracksCompanion.insert(
                 profileId: newProfileId,
                 curriculumId: curriculumId.storageKey,
-                trackType: TrackType.personal.storageKey,
-                isActive: const Value(true),
+                state: const Value(TrackState.active),
+                stateChangedAt: Value(now),
                 activatedAt: now,
               ),
             );
@@ -135,8 +137,16 @@ class ProfileCreationUseCase {
                   trackId: trackId,
                   stageOrder: stage.stageOrder,
                   stageName: stage.stageName,
-                  delayDays: stage.delayDays,
-                  scheduleType: Value(stage.scheduleTypeKey),
+                  isDefault: const Value(true),
+                  schedule: Value(
+                    jsonEncode({
+                      'type': stage.scheduleTypeKey,
+                      'delay_days': stage.delayDays,
+                      if (stage.daysOfWeek != null) 'days': stage.daysOfWeek,
+                      if (stage.rollingWindowSize != null)
+                        'window_size': stage.rollingWindowSize,
+                    }),
+                  ),
                 ),
               );
         }

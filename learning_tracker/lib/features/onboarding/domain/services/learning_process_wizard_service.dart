@@ -125,6 +125,20 @@ class LearningProcessWizardService {
           ? _parseDaysOfWeek(stage['days'] as List)
           : null;
 
+      final scheduleJson = switch (scheduleType) {
+        ScheduleType.weekly => jsonEncode({
+          'type': 'weekly',
+          'days': daysOfWeek ?? [],
+        }),
+        ScheduleType.rolling => jsonEncode({
+          'type': 'rolling',
+          'window_size': (stage['window'] as int?) ?? 7,
+        }),
+        _ => jsonEncode({
+          'type': 'delay',
+          'delay_days': (stage['delay_days'] as int?) ?? 0,
+        }),
+      };
       await _stageDao.insertStageDefinition(
         db.StageDefinitionsCompanion.insert(
           profileId: profileId,
@@ -132,11 +146,8 @@ class LearningProcessWizardService {
           trackId: trackId,
           stageOrder: i + 1,
           stageName: stage['label'] as String,
-          delayDays: (stage['delay_days'] as int?) ?? 0,
           isDefault: const Value(false),
-          scheduleType: Value(scheduleType.storageKey),
-          daysOfWeek: Value(daysOfWeek != null ? jsonEncode(daysOfWeek) : null),
-          rollingWindowSize: Value(stage['window'] as int?),
+          schedule: Value(scheduleJson),
         ),
       );
     }
@@ -155,8 +166,8 @@ class LearningProcessWizardService {
         trackId: trackId,
         stageOrder: 1,
         stageName: 'לימוד',
-        delayDays: 0,
         isDefault: const Value(false),
+        schedule: const Value('{"type":"delay","delay_days":0}'),
       ),
     );
 
@@ -164,6 +175,13 @@ class LearningProcessWizardService {
     final rounds = result.customRounds ?? [];
     for (var i = 0; i < rounds.length; i++) {
       final round = rounds[i];
+      final roundScheduleJson = switch (round.scheduleType) {
+        ScheduleType.weekly => jsonEncode({
+          'type': 'weekly',
+          'days': round.daysOfWeek ?? [],
+        }),
+        _ => jsonEncode({'type': 'delay', 'delay_days': round.delayDays ?? 0}),
+      };
       await _stageDao.insertStageDefinition(
         db.StageDefinitionsCompanion.insert(
           profileId: profileId,
@@ -171,12 +189,8 @@ class LearningProcessWizardService {
           trackId: trackId,
           stageOrder: i + 2,
           stageName: round.label,
-          delayDays: round.delayDays ?? 0,
           isDefault: const Value(false),
-          scheduleType: Value(round.scheduleType.storageKey),
-          daysOfWeek: Value(
-            round.daysOfWeek != null ? jsonEncode(round.daysOfWeek) : null,
-          ),
+          schedule: Value(roundScheduleJson),
         ),
       );
     }
@@ -194,8 +208,8 @@ class LearningProcessWizardService {
         trackId: trackId,
         stageOrder: 1,
         stageName: 'לימוד',
-        delayDays: 0,
         isDefault: const Value(false),
+        schedule: const Value('{"type":"delay","delay_days":0}'),
       ),
     );
   }

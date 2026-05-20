@@ -47,7 +47,8 @@ final activeCurriculaStreamProvider = StreamProvider<List<CurriculumId>>((
             return matches.first;
           }
           AppLogger.instance.warning(
-            event: 'activeCurriculaStreamProvider: unknown curriculum key: $key',
+            event:
+                'activeCurriculaStreamProvider: unknown curriculum key: $key',
           );
           return null;
         })

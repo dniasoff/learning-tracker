@@ -1,6 +1,7 @@
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:learning_tracker/core/theme/app_colors.dart';
 import 'package:learning_tracker/features/notifications/presentation/providers/notification_providers.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
@@ -22,9 +23,9 @@ class NotificationsScreen extends ConsumerWidget {
     ref.watch(streakAlertSyncEffectProvider);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF3F4F8),
+      backgroundColor: AppColors.surfaceF3,
       appBar: AppBar(
-        backgroundColor: const Color(0xFFF3F4F8),
+        backgroundColor: AppColors.surfaceF3,
         elevation: 0,
         titleSpacing: 0,
         title: Text(

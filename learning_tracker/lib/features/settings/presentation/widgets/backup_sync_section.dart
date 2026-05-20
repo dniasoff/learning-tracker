@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/sync/providers/sync_orchestrator_providers.dart';
 import 'package:learning_tracker/core/sync/providers/sync_status_providers.dart';
+import 'package:learning_tracker/core/theme/app_colors.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
 import 'package:learning_tracker/features/sync/domain/models/sync_status.dart';
@@ -140,7 +141,7 @@ class BackupSyncSection extends ConsumerWidget {
                   width: double.infinity,
                   child: FilledButton(
                     style: FilledButton.styleFrom(
-                      backgroundColor: const Color(0xFFF3D4A5),
+                      backgroundColor: AppColors.peachMid,
                       foregroundColor: const Color(0xFF2C2A26),
                       minimumSize: const Size.fromHeight(48),
                       shape: RoundedRectangleBorder(
@@ -217,7 +218,7 @@ class BackupSyncSection extends ConsumerWidget {
                 width: double.infinity,
                 child: FilledButton(
                   style: FilledButton.styleFrom(
-                    backgroundColor: const Color(0xFFF3D4A5),
+                    backgroundColor: AppColors.peachMid,
                     foregroundColor: const Color(0xFF2C2A26),
                     minimumSize: const Size.fromHeight(42),
                     shape: RoundedRectangleBorder(
@@ -244,7 +245,7 @@ class BackupSyncSection extends ConsumerWidget {
                         alignment: Alignment.center,
                         child: const Icon(
                           Icons.arrow_upward_rounded,
-                          color: Color(0xFFF3D4A5),
+                          color: AppColors.peachMid,
                           size: 12,
                         ),
                       ),

@@ -307,7 +307,7 @@ final class SkippedTasksProvider
   }
 }
 
-String _$skippedTasksHash() => r'60881d1f3735d1d9774489183f5acebf28e1a6c3';
+String _$skippedTasksHash() => r'b7c86fcb9c93c53d2d1501f1eadfcdd5c7c5f8db';
 
 /// Holds the set of sefaria refs skipped (dismissed) today.
 ///
@@ -592,22 +592,36 @@ String _$dailyPlanRepositoryHash() =>
 
 /// All daily tasks across active curricula.
 ///
-/// The raw plan is snapshotted to the `daily_plans` table on the first
-/// read of each local day and served back verbatim on subsequent reads.
-/// Completions do **not** regenerate the plan — today's list is a
-/// contract. Skipped-task filtering and previously-skipped priority
-/// boosting are applied at read time.
+/// The projection (pure overdue/today computation from synced inputs) is
+/// authoritative.  Every self-paced track is required by the setup UI to
+/// carry an explicit pace; the projection's API enforces it
+/// (`MissingPaceError`).
+///
+/// daily_plans is used as a write-through cache for chazara tasks produced
+/// by the engine (review items that require stage-completion timing data the
+/// pure projection does not compute).  The overdue/today buckets are NEVER
+/// read from daily_plans.isOverdue — they come solely from the projection.
+///
+/// Skipped-task filtering and previously-skipped priority boosting are
+/// applied at read time.
 
 @ProviderFor(allDailyTasks)
 final allDailyTasksProvider = AllDailyTasksProvider._();
 
 /// All daily tasks across active curricula.
 ///
-/// The raw plan is snapshotted to the `daily_plans` table on the first
-/// read of each local day and served back verbatim on subsequent reads.
-/// Completions do **not** regenerate the plan — today's list is a
-/// contract. Skipped-task filtering and previously-skipped priority
-/// boosting are applied at read time.
+/// The projection (pure overdue/today computation from synced inputs) is
+/// authoritative.  Every self-paced track is required by the setup UI to
+/// carry an explicit pace; the projection's API enforces it
+/// (`MissingPaceError`).
+///
+/// daily_plans is used as a write-through cache for chazara tasks produced
+/// by the engine (review items that require stage-completion timing data the
+/// pure projection does not compute).  The overdue/today buckets are NEVER
+/// read from daily_plans.isOverdue — they come solely from the projection.
+///
+/// Skipped-task filtering and previously-skipped priority boosting are
+/// applied at read time.
 
 final class AllDailyTasksProvider
     extends
@@ -619,11 +633,18 @@ final class AllDailyTasksProvider
     with $FutureModifier<List<DailyTask>>, $FutureProvider<List<DailyTask>> {
   /// All daily tasks across active curricula.
   ///
-  /// The raw plan is snapshotted to the `daily_plans` table on the first
-  /// read of each local day and served back verbatim on subsequent reads.
-  /// Completions do **not** regenerate the plan — today's list is a
-  /// contract. Skipped-task filtering and previously-skipped priority
-  /// boosting are applied at read time.
+  /// The projection (pure overdue/today computation from synced inputs) is
+  /// authoritative.  Every self-paced track is required by the setup UI to
+  /// carry an explicit pace; the projection's API enforces it
+  /// (`MissingPaceError`).
+  ///
+  /// daily_plans is used as a write-through cache for chazara tasks produced
+  /// by the engine (review items that require stage-completion timing data the
+  /// pure projection does not compute).  The overdue/today buckets are NEVER
+  /// read from daily_plans.isOverdue — they come solely from the projection.
+  ///
+  /// Skipped-task filtering and previously-skipped priority boosting are
+  /// applied at read time.
   AllDailyTasksProvider._()
     : super(
         from: null,
@@ -650,7 +671,7 @@ final class AllDailyTasksProvider
   }
 }
 
-String _$allDailyTasksHash() => r'65d7f9a35bfac927f630ea19d438ecf18e1d078b';
+String _$allDailyTasksHash() => r'9db2097b20adb67e2a5825d4663902ccd0b2f270';
 
 /// Returns the first [DailyTask] for [trackId] that falls in [category],
 /// or null when the bucket is empty.

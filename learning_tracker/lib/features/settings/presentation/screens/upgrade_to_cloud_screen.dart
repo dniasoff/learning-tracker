@@ -32,27 +32,68 @@ class UpgradeToCloudScreen extends ConsumerStatefulWidget {
 
 enum _CollisionChoice { none, upload, discard }
 
+// ---------------------------------------------------------------------------
+// Sealed state machine — replaces four booleans (_isLoading, _collision,
+// _success, _verificationRequired) that previously formed an implicit state
+// machine.  Exactly one variant is active at any point in time.
+// ---------------------------------------------------------------------------
+
+sealed class _UpgradePhase {
+  const _UpgradePhase();
+}
+
+/// Default form state — user can fill in their password and submit.
+final class _PhaseForm extends _UpgradePhase {
+  const _PhaseForm({this.error, this.isLoading = false});
+  final String? error;
+  final bool isLoading;
+}
+
+/// Email-verification pending — user must click the inbox link.
+final class _PhaseVerifying extends _UpgradePhase {
+  const _PhaseVerifying({required this.bodyText, this.isLoading = false});
+  final String bodyText;
+  final bool isLoading;
+}
+
+/// Email collision detected — user must choose how to resolve it.
+final class _PhaseCollision extends _UpgradePhase {
+  const _PhaseCollision({
+    this.choice = _CollisionChoice.none,
+    this.discardAcknowledged = false,
+    this.error,
+    this.isLoading = false,
+  });
+  final _CollisionChoice choice;
+  final bool discardAcknowledged;
+  final String? error;
+  final bool isLoading;
+}
+
+/// Upgrade completed successfully.
+final class _PhaseSuccess extends _UpgradePhase {
+  const _PhaseSuccess();
+}
+
+// ---------------------------------------------------------------------------
+
 class _UpgradeToCloudScreenState extends ConsumerState<UpgradeToCloudScreen> {
   final _formKey = GlobalKey<FormState>();
   final _passwordController = TextEditingController();
   final _cloudPasswordController = TextEditingController();
 
-  bool _isLoading = false;
-  String? _error;
-  bool _collision = false;
-  bool _success = false;
-  bool _verificationRequired = false;
-  bool _discardAcknowledged = false;
-  _CollisionChoice _choice = _CollisionChoice.none;
+  _UpgradePhase _phase = const _PhaseForm();
 
   Future<bool> _requireInternet() async {
     final checker = ref.read(internetConnectionCheckerProvider);
     final hasConnection = await checker.hasConnection;
     if (!hasConnection && mounted) {
       setState(
-        () => _error =
-            'Internet connection is required to upgrade to cloud. '
-            'Your account and data stay local until you retry online.',
+        () => _phase = const _PhaseForm(
+          error:
+              'Internet connection is required to upgrade to cloud. '
+              'Your account and data stay local until you retry online.',
+        ),
       );
     }
     return hasConnection;
@@ -85,16 +126,15 @@ class _UpgradeToCloudScreenState extends ConsumerState<UpgradeToCloudScreen> {
     final authState = ref.read(authStateProvider);
     final user = authState.currentUser;
     if (user == null || !authState.isLocalBorn) {
-      setState(() => _error = 'Only local-born accounts can be upgraded.');
+      setState(
+        () => _phase = const _PhaseForm(
+          error: 'Only local-born accounts can be upgraded.',
+        ),
+      );
       return;
     }
 
-    setState(() {
-      _isLoading = true;
-      _error = null;
-      _collision = false;
-      _verificationRequired = false;
-    });
+    setState(() => _phase = const _PhaseForm(isLoading: true));
 
     try {
       final dao = ref.read(userDatabaseProvider).userProfileDao;
@@ -118,43 +158,34 @@ class _UpgradeToCloudScreenState extends ConsumerState<UpgradeToCloudScreen> {
           .read(authStateProvider.notifier)
           .setCloudBornSession(profile: upgraded);
       await _pushLocalDataAfterUpgrade();
-      if (mounted) {
-        setState(() {
-          _success = true;
-          _verificationRequired = false;
-        });
-      }
+      if (mounted) setState(() => _phase = const _PhaseSuccess());
     } on UpgradeEmailNotVerifiedException {
       if (mounted) {
-        setState(() {
-          _verificationRequired = true;
-          _error =
-              'We sent a confirmation link to your inbox. After you verify, '
-              'tap "I\'ve verified — complete upgrade" below.';
-        });
+        setState(
+          () => _phase = const _PhaseVerifying(
+            bodyText:
+                'We sent a confirmation link to your inbox. After you verify, '
+                'tap "I\'ve verified — complete upgrade" below.',
+          ),
+        );
       }
     } on UpgradePasswordMismatchException {
       if (mounted) {
-        setState(() => _error = 'Incorrect password.');
+        setState(() => _phase = const _PhaseForm(error: 'Incorrect password.'));
       }
     } on EmailCollisionException {
-      if (mounted) {
-        setState(() {
-          _verificationRequired = false;
-          _collision = true;
-        });
-      }
+      if (mounted) setState(() => _phase = const _PhaseCollision());
     } catch (e) {
       if (mounted) {
-        setState(() {
-          final code = _extractFirebaseCode(e);
-          _error = code == 'network-request-failed'
-              ? 'Internet connection is required to upgrade to cloud.'
-              : 'Upgrade failed: $e';
-        });
+        final code = _extractFirebaseCode(e);
+        setState(
+          () => _phase = _PhaseForm(
+            error: code == 'network-request-failed'
+                ? 'Internet connection is required to upgrade to cloud.'
+                : 'Upgrade failed: $e',
+          ),
+        );
       }
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -171,10 +202,15 @@ class _UpgradeToCloudScreenState extends ConsumerState<UpgradeToCloudScreen> {
     final user = authState.currentUser;
     if (user == null) return;
 
-    setState(() {
-      _isLoading = true;
-      _error = null;
-    });
+    // Preserve the current body text while loading.
+    final currentBodyText = switch (_phase) {
+      _PhaseVerifying(:final bodyText) => bodyText,
+      _ => '',
+    };
+    setState(
+      () =>
+          _phase = _PhaseVerifying(bodyText: currentBodyText, isLoading: true),
+    );
 
     try {
       final dao = ref.read(userDatabaseProvider).userProfileDao;
@@ -193,28 +229,27 @@ class _UpgradeToCloudScreenState extends ConsumerState<UpgradeToCloudScreen> {
         password: _passwordController.text,
       );
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              AppLocalizations.of(context)!.errorVerificationEmailSent,
+        setState(() => _phase = _PhaseVerifying(bodyText: currentBodyText));
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                AppLocalizations.of(context)!.errorVerificationEmailSent,
+              ),
             ),
-          ),
-        );
+          );
+        }
       }
     } on UpgradePasswordMismatchException {
-      if (mounted) setState(() => _error = 'Incorrect password.');
-    } on EmailCollisionException {
       if (mounted) {
-        setState(() {
-          _verificationRequired = false;
-          _collision = true;
-          _error = null;
-        });
+        setState(() => _phase = const _PhaseForm(error: 'Incorrect password.'));
       }
-    } catch (e) {
-      if (mounted) setState(() => _error = 'Could not resend verification: $e');
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
+    } on EmailCollisionException {
+      if (mounted) setState(() => _phase = const _PhaseCollision());
+    } catch (_) {
+      if (mounted) {
+        setState(() => _phase = _PhaseVerifying(bodyText: currentBodyText));
+      }
     }
   }
 
@@ -222,16 +257,29 @@ class _UpgradeToCloudScreenState extends ConsumerState<UpgradeToCloudScreen> {
   /// (upload) or Option B (discard) both require the cloud account
   /// password.
   Future<void> _executeCollisionChoice() async {
-    if (_choice == _CollisionChoice.none) return;
+    final collision = _phase;
+    if (collision is! _PhaseCollision) return;
+    if (collision.choice == _CollisionChoice.none) return;
     if (!await _requireInternet()) return;
     if (_cloudPasswordController.text.isEmpty) {
-      setState(() => _error = 'Please enter your cloud account password.');
+      setState(
+        () => _phase = _PhaseCollision(
+          choice: collision.choice,
+          discardAcknowledged: collision.discardAcknowledged,
+          error: 'Please enter your cloud account password.',
+        ),
+      );
       return;
     }
-    if (_choice == _CollisionChoice.discard && !_discardAcknowledged) {
+    if (collision.choice == _CollisionChoice.discard &&
+        !collision.discardAcknowledged) {
       setState(
-        () => _error =
-            'Please acknowledge that local data will be replaced by cloud data.',
+        () => _phase = _PhaseCollision(
+          choice: collision.choice,
+          discardAcknowledged: collision.discardAcknowledged,
+          error:
+              'Please acknowledge that local data will be replaced by cloud data.',
+        ),
       );
       return;
     }
@@ -240,10 +288,13 @@ class _UpgradeToCloudScreenState extends ConsumerState<UpgradeToCloudScreen> {
     final user = authState.currentUser;
     if (user == null) return;
 
-    setState(() {
-      _isLoading = true;
-      _error = null;
-    });
+    setState(
+      () => _phase = _PhaseCollision(
+        choice: collision.choice,
+        discardAcknowledged: collision.discardAcknowledged,
+        isLoading: true,
+      ),
+    );
 
     try {
       final dao = ref.read(userDatabaseProvider).userProfileDao;
@@ -259,7 +310,7 @@ class _UpgradeToCloudScreenState extends ConsumerState<UpgradeToCloudScreen> {
         accountId: account?.accountId,
       );
 
-      final upgraded = _choice == _CollisionChoice.upload
+      final upgraded = collision.choice == _CollisionChoice.upload
           ? await service.executeUploadLocalIntoCloud(
               localProfile: profile,
               cloudPassword: _cloudPasswordController.text,
@@ -273,36 +324,32 @@ class _UpgradeToCloudScreenState extends ConsumerState<UpgradeToCloudScreen> {
           .read(authStateProvider.notifier)
           .setCloudBornSession(profile: upgraded);
       await _pushLocalDataAfterUpgrade();
-      if (mounted) {
-        setState(() {
-          _success = true;
-          _verificationRequired = false;
-          _collision = false;
-        });
-      }
+      if (mounted) setState(() => _phase = const _PhaseSuccess());
     } on UpgradeEmailNotVerifiedException {
       if (mounted) {
-        setState(() {
-          _verificationRequired = true;
-          _collision = false;
-          _error =
-              'This cloud account is not verified yet. Check your inbox, '
-              'then tap "I\'ve verified — complete upgrade" below.';
-        });
+        setState(
+          () => _phase = const _PhaseVerifying(
+            bodyText:
+                'This cloud account is not verified yet. Check your inbox, '
+                'then tap "I\'ve verified — complete upgrade" below.',
+          ),
+        );
       }
     } catch (e) {
       if (mounted) {
-        setState(() {
-          final code = _extractFirebaseCode(e);
-          _error = code == 'wrong-password'
-              ? 'Incorrect cloud account password.'
-              : code == 'network-request-failed'
-              ? 'Internet connection is required to complete this merge option.'
-              : 'Merge failed: $e';
-        });
+        final code = _extractFirebaseCode(e);
+        setState(
+          () => _phase = _PhaseCollision(
+            choice: collision.choice,
+            discardAcknowledged: collision.discardAcknowledged,
+            error: code == 'wrong-password'
+                ? 'Incorrect cloud account password.'
+                : code == 'network-request-failed'
+                ? 'Internet connection is required to complete this merge option.'
+                : 'Merge failed: $e',
+          ),
+        );
       }
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -336,83 +383,91 @@ class _UpgradeToCloudScreenState extends ConsumerState<UpgradeToCloudScreen> {
                   style: theme.textTheme.bodyMedium,
                 ),
                 const SizedBox(height: 24),
-                if (_success)
-                  _SuccessBlock(theme: theme)
-                else if (_verificationRequired)
-                  _VerificationRequiredBlock(
-                    email: authState.currentUser?.email,
-                    bodyText:
-                        _error ??
-                        'We sent a confirmation link to your inbox. '
-                            'Open it, then tap the button below to finish upgrading.',
-                    isLoading: _isLoading,
-                    onIVerified: _submit,
-                    onResend: _resendVerification,
-                    onCancel: () {
-                      setState(() {
-                        _verificationRequired = false;
-                        _error = null;
-                      });
-                    },
-                  )
-                else if (_collision)
-                  _CollisionBlock(
-                    theme: theme,
-                    choice: _choice,
-                    cloudPasswordController: _cloudPasswordController,
-                    discardAcknowledged: _discardAcknowledged,
-                    error: _error,
-                    isLoading: _isLoading,
-                    onChoose: (c) => setState(() {
-                      _choice = c;
-                      _error = null;
-                    }),
-                    onAcknowledge: (v) =>
-                        setState(() => _discardAcknowledged = v ?? false),
-                    onExecute: _executeCollisionChoice,
-                    onCancel: () {
-                      setState(() {
-                        _collision = false;
-                        _choice = _CollisionChoice.none;
+                switch (_phase) {
+                  _PhaseSuccess() => _SuccessBlock(theme: theme),
+                  _PhaseVerifying(:final bodyText, :final isLoading) =>
+                    _VerificationRequiredBlock(
+                      email: authState.currentUser?.email,
+                      bodyText: bodyText,
+                      isLoading: isLoading,
+                      onIVerified: _submit,
+                      onResend: _resendVerification,
+                      onCancel: () =>
+                          setState(() => _phase = const _PhaseForm()),
+                    ),
+                  _PhaseCollision(
+                    :final choice,
+                    :final discardAcknowledged,
+                    :final error,
+                    :final isLoading,
+                  ) =>
+                    _CollisionBlock(
+                      theme: theme,
+                      choice: choice,
+                      cloudPasswordController: _cloudPasswordController,
+                      discardAcknowledged: discardAcknowledged,
+                      error: error,
+                      isLoading: isLoading,
+                      onChoose: (c) => setState(
+                        () => _phase = _PhaseCollision(
+                          choice: c,
+                          discardAcknowledged: discardAcknowledged,
+                        ),
+                      ),
+                      onAcknowledge: (v) => setState(
+                        () => _phase = _PhaseCollision(
+                          choice: choice,
+                          discardAcknowledged: v ?? false,
+                        ),
+                      ),
+                      onExecute: _executeCollisionChoice,
+                      onCancel: () {
                         _cloudPasswordController.clear();
-                        _discardAcknowledged = false;
-                        _error = null;
-                      });
-                    },
-                  )
-                else ...[
-                  TextFormField(
-                    controller: _passwordController,
-                    obscureText: true,
-                    inputFormatters: const [NoSpaceFormatter()],
-                    decoration: const InputDecoration(
-                      labelText: 'Confirm your password',
+                        setState(() => _phase = const _PhaseCollision());
+                      },
                     ),
-                    validator: (v) =>
-                        (v == null || v.isEmpty) ? 'Password required' : null,
-                    enabled: !_isLoading,
+                  _PhaseForm(:final error, :final isLoading) => Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      TextFormField(
+                        controller: _passwordController,
+                        obscureText: true,
+                        inputFormatters: const [NoSpaceFormatter()],
+                        decoration: const InputDecoration(
+                          labelText: 'Confirm your password',
+                        ),
+                        validator: (v) => (v == null || v.isEmpty)
+                            ? 'Password required'
+                            : null,
+                        enabled: !isLoading,
+                      ),
+                      if (error != null) ...[
+                        const SizedBox(height: 12),
+                        Text(
+                          error,
+                          style: TextStyle(color: theme.colorScheme.error),
+                        ),
+                      ],
+                      const SizedBox(height: 24),
+                      FilledButton(
+                        onPressed: isLoading ? null : _submit,
+                        child: isLoading
+                            ? const SizedBox(
+                                height: 20,
+                                width: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : Text(
+                                AppLocalizations.of(
+                                  context,
+                                )!.upgradeToCloudButton,
+                              ),
+                      ),
+                    ],
                   ),
-                  if (_error != null) ...[
-                    const SizedBox(height: 12),
-                    Text(
-                      _error!,
-                      style: TextStyle(color: theme.colorScheme.error),
-                    ),
-                  ],
-                  const SizedBox(height: 24),
-                  FilledButton(
-                    onPressed: _isLoading ? null : _submit,
-                    child: _isLoading
-                        ? const SizedBox(
-                            height: 20,
-                            width: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : Text(
-                            AppLocalizations.of(context)!.upgradeToCloudButton,
-                          ),
-                  ),
-                ],
+                },
               ],
             ),
           ),

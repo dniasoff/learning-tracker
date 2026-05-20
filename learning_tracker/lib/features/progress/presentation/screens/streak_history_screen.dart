@@ -2,6 +2,7 @@ import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
+import 'package:learning_tracker/core/theme/app_colors.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/time/local_day_clock.dart';
 import 'package:learning_tracker/core/widgets/app_bar_title.dart';
@@ -57,10 +58,10 @@ class _StreakHistoryScreenState extends ConsumerState<StreakHistoryScreen> {
     final dates = _dateRange(clock);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F6FB),
+      backgroundColor: AppColors.surfaceF4b,
       appBar: AppBar(
         title: const AppBarTitle(text: 'Streak'),
-        backgroundColor: const Color(0xFFF4F6FB),
+        backgroundColor: AppColors.surfaceF4b,
         foregroundColor: AppTheme.brandInk,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
@@ -83,7 +84,7 @@ class _StreakHistoryScreenState extends ConsumerState<StreakHistoryScreen> {
                 Expanded(
                   child: _StreakStatTile(
                     icon: Icons.workspace_premium_rounded,
-                    iconColor: const Color(0xFFF8C146),
+                    iconColor: AppColors.chartAmber,
                     value: '$longest',
                     label: 'LONGEST',
                   ),
@@ -135,7 +136,7 @@ class _StreakHistoryScreenState extends ConsumerState<StreakHistoryScreen> {
                     borderRadius: BorderRadius.circular(20),
                     boxShadow: [
                       BoxShadow(
-                        color: const Color(0xFF03174C).withValues(alpha: 0.06),
+                        color: AppColors.blueNavy.withValues(alpha: 0.06),
                         blurRadius: 12,
                         offset: const Offset(0, 5),
                       ),
@@ -232,7 +233,7 @@ class _StreakStatTile extends StatelessWidget {
         borderRadius: BorderRadius.circular(22),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF03174C).withValues(alpha: 0.08),
+            color: AppColors.blueNavy.withValues(alpha: 0.08),
             blurRadius: 14,
             offset: const Offset(0, 6),
           ),

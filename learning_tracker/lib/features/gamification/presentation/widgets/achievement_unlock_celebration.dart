@@ -8,6 +8,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
+import 'package:learning_tracker/core/theme/app_colors.dart';
+import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/gamification/domain/models/reward_milestone.dart';
 import 'package:learning_tracker/features/gamification/presentation/providers/achievements_overview_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
@@ -174,8 +176,8 @@ class AchievementUnlockCelebration {
 const _partyColors = <Color>[
   Color(0xFFFF6B6B),
   Color(0xFFFFD93D),
-  Color(0xFF6BCB77),
-  Color(0xFF4D96FF),
+  AppColors.chartGreen,
+  AppColors.chartBlue,
   Color(0xFFFF9FF3),
   Color(0xFFFFA502),
   Color(0xFF5F27CD),
@@ -341,7 +343,7 @@ class _UnlockPartyDialogState extends State<_UnlockPartyDialog> {
                         FilledButton(
                           onPressed: () => Navigator.of(context).pop(),
                           style: FilledButton.styleFrom(
-                            backgroundColor: const Color(0xFF0038A8),
+                            backgroundColor: AppTheme.brandBlue,
                             padding: const EdgeInsets.symmetric(
                               horizontal: 32,
                               vertical: 14,

@@ -110,7 +110,7 @@ final class DashboardUserModeProvider
   }
 }
 
-String _$dashboardUserModeHash() => r'fff9df75b1a75bdff8789d1bcd89456dcefac42e';
+String _$dashboardUserModeHash() => r'691eebf2f98e9744deb09ad27484cfb52c71264b';
 
 /// Provider for list of active curricula IDs, scoped to active profile.
 
@@ -738,7 +738,7 @@ final class StripStockMilestonesEffectProvider
 }
 
 String _$stripStockMilestonesEffectHash() =>
-    r'7d64d689d43199ab0dd797653d22398b171ccd06';
+    r'8b10005765c14ffcc1d40ea9289cca867fba2360';
 
 /// Next reward milestone for the child dashboard (closest threshold not yet met).
 ///

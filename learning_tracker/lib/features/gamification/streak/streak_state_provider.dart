@@ -28,6 +28,23 @@ class StreakStateProvider {
   final LocalDayClock _clock;
   final StreakRestorer _restorer;
 
+  /// Returns the raw [StreakEvent] list for [profileId].
+  ///
+  /// Used by callers that need per-event detail (e.g. calendar heatmaps).
+  Future<Iterable<StreakEvent>> readEvents({required int profileId}) async {
+    final rows = await (_db.select(
+      _db.streakEvents,
+    )..where((t) => t.profileId.equals(profileId))).get();
+    return rows.map(
+      (r) => StreakEvent(
+        profileId: r.profileId,
+        eventType: r.eventType,
+        eventTimestamp: r.eventTimestamp,
+        clientDeviceId: r.clientDeviceId,
+      ),
+    );
+  }
+
   /// Returns the current [StreakState] for [profileId].
   Future<StreakState> read({required int profileId}) async {
     await _restorer.restoreIfEmpty(profileId: profileId);

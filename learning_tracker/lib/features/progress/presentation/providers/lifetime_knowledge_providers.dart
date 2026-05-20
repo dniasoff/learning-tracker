@@ -140,7 +140,8 @@ final trackDualProgressMetricsProvider = FutureProvider.autoDispose
             .firstOrNull;
         if (curriculum == null) {
           AppLogger.instance.warning(
-            event: 'trackDualProgressMetrics: unknown curriculumId key: '
+            event:
+                'trackDualProgressMetrics: unknown curriculumId key: '
                 '"${track.curriculumId}" — skipping',
           );
           continue;

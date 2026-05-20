@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
+import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/core/enums/user_mode.dart';
@@ -64,7 +65,9 @@ Future<UserMode> dashboardUserMode(Ref ref) async {
   final profileId = ref.watch(activeProfileIdProvider);
   final profile = await db.profileDao.getProfileById(profileId);
   if (profile == null) return UserMode.adult;
-  return profile.mode == 'child' ? UserMode.child : UserMode.adult;
+  return ProfileMode.fromStorageKey(profile.mode) == ProfileMode.child
+      ? UserMode.child
+      : UserMode.adult;
 }
 
 /// Provider for list of active curricula IDs, scoped to active profile.

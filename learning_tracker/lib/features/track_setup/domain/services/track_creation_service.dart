@@ -104,8 +104,9 @@ class TrackCreationService {
     }
 
     AppLogger.instance.info(
-      event: 'TrackCreationService: track "${result.label}" created for '
-      '${curriculum.storageKey} (profile=$profileId)',
+      event:
+          'TrackCreationService: track "${result.label}" created for '
+          '${curriculum.storageKey} (profile=$profileId)',
     );
 
     // Story 27.14 (DNI-390): fire analytics event after successful track creation.
@@ -133,8 +134,9 @@ class TrackCreationService {
       await _activationService.activateForProfile(curriculum, profileId);
     } catch (_) {
       AppLogger.instance.debug(
-        event: 'TrackCreationService: curriculum ${curriculum.storageKey} '
-        'activation skipped (likely already active)',
+        event:
+            'TrackCreationService: curriculum ${curriculum.storageKey} '
+            'activation skipped (likely already active)',
       );
     }
 
@@ -161,8 +163,8 @@ class TrackCreationService {
     await _database.transaction(() async {
       await _stageRepository.deleteStagesForTrack(trackId);
 
-      if (result.wizardResult is LearningProcessWizardResult) {
-        final wizard = result.wizardResult! as LearningProcessWizardResult;
+      if (result.wizardResult != null) {
+        final wizard = result.wizardResult!;
         await _wizardService.applyWizardResult(
           wizard.wizardResult,
           profileId: profileId,
@@ -207,8 +209,8 @@ class TrackCreationService {
     required CurriculumId curriculum,
     required int trackId,
   }) async {
-    if (result.goalResult is! GoalEntity) return;
-    final goal = result.goalResult! as GoalEntity;
+    if (result.goalResult == null) return;
+    final goal = result.goalResult!;
     // Use the track label as the description when the goal entity has none
     // (belt-and-suspenders: step_goal seeds it, but older flows may not).
     final description = goal.description.isNotEmpty

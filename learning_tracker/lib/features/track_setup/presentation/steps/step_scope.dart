@@ -7,6 +7,7 @@ import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/labels/domain_term_labels.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
+import 'package:learning_tracker/core/theme/app_colors.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/track_setup/domain/entities/add_track_result.dart';
@@ -258,7 +259,7 @@ class _ScopeStepContentState extends ConsumerState<ScopeStepContent> {
             alignment: AlignmentDirectional.centerStart,
             child: DecoratedBox(
               decoration: BoxDecoration(
-                color: const Color(0xFFE5E9FF),
+                color: AppColors.surfaceBlueLight,
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Padding(

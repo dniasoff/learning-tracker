@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/features/scheduler/domain/services/learning_program_service.dart';
+import 'package:learning_tracker/core/theme/app_colors.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/features/scheduler/domain/services/learning_program_service.dart';
 
 /// Stage 2: Join a calendar program or continue self-paced.
 ///
@@ -91,10 +93,10 @@ class _ProgramSelectionStepState extends ConsumerState<ProgramSelectionStep> {
                     program: _programs[i],
                     accentColor: i.isEven
                         ? const Color(0xFFDDE4FF)
-                        : const Color(0xFFF9E4C8),
+                        : AppColors.peachTint,
                     iconColor: i.isEven
                         ? const Color(0xFF2F4CB5)
-                        : const Color(0xFF7D5411),
+                        : AppColors.goldDark,
                     onTap: () => widget.onSelected(
                       _programs[i].id,
                       learningProgramLabelText(ref, program: _programs[i]),
@@ -117,7 +119,7 @@ class _ProgramSelectionStepState extends ConsumerState<ProgramSelectionStep> {
                 FilledButton.icon(
                   onPressed: () => widget.onSelected(null, null, null),
                   style: FilledButton.styleFrom(
-                    backgroundColor: const Color(0xFFF3D4A5),
+                    backgroundColor: AppColors.peachMid,
                     foregroundColor: const Color(0xFF2E271E),
                     elevation: 0,
                     minimumSize: const Size.fromHeight(60),
@@ -163,7 +165,7 @@ class _FeaturedProgramCard extends ConsumerWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(28),
-        border: Border.all(color: const Color(0xFFE9ECF2)),
+        border: Border.all(color: AppColors.surfaceE9),
         boxShadow: const [
           BoxShadow(
             color: Color(0x0F1D2939),
@@ -187,7 +189,7 @@ class _FeaturedProgramCard extends ConsumerWidget {
                   height: 52,
                   decoration: const BoxDecoration(
                     shape: BoxShape.circle,
-                    color: Color(0xFFE5E9FF),
+                    color: AppColors.surfaceBlueLight,
                   ),
                   child: const Icon(
                     Icons.menu_book_rounded,
@@ -243,8 +245,8 @@ class _CompactProgramCard extends ConsumerWidget {
   const _CompactProgramCard({
     required this.program,
     required this.onTap,
-    this.accentColor = const Color(0xFFF9E4C8),
-    this.iconColor = const Color(0xFF7D5411),
+    this.accentColor = AppColors.peachTint,
+    this.iconColor = AppColors.goldDark,
   });
 
   final LearningProgramData program;
@@ -260,7 +262,7 @@ class _CompactProgramCard extends ConsumerWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: const Color(0xFFE9ECF2)),
+        border: Border.all(color: AppColors.surfaceE9),
       ),
       child: Material(
         color: Colors.transparent,

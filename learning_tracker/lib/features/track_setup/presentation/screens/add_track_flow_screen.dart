@@ -7,13 +7,14 @@ import 'package:learning_tracker/core/content/hierarchy_selection.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/labels/domain_term_labels.dart';
-import 'package:learning_tracker/features/scheduler/domain/services/learning_program_service.dart';
+import 'package:learning_tracker/core/theme/app_colors.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/onboarding/domain/models/wizard_result_wrapper.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/bulk_prior_completion_service.dart';
 import 'package:learning_tracker/features/onboarding/presentation/providers/onboarding_providers.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/goal_entity.dart';
+import 'package:learning_tracker/features/scheduler/domain/services/learning_program_service.dart';
 import 'package:learning_tracker/features/track_setup/domain/entities/add_track_result.dart';
 import 'package:learning_tracker/features/track_setup/domain/services/track_creation_service.dart';
 import 'package:learning_tracker/features/track_setup/presentation/providers/add_track_providers.dart';
@@ -385,12 +386,12 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
                         width: 88,
                         height: 88,
                         decoration: const BoxDecoration(
-                          color: Color(0xFFFDE7EA),
+                          color: AppColors.statusErrorSoft,
                           shape: BoxShape.circle,
                         ),
                         child: const Icon(
                           Icons.exit_to_app_rounded,
-                          color: Color(0xFFB43A4A),
+                          color: AppColors.chartRed,
                           size: 40,
                         ),
                       ),

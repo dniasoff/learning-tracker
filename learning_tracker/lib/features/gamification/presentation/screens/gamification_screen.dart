@@ -8,6 +8,8 @@ import 'package:intl/intl.dart';
 import 'package:learning_tracker/core/enums/user_mode.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
+import 'package:learning_tracker/core/theme/app_colors.dart';
+import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/gamification/domain/models/reward_milestone.dart';
@@ -34,7 +36,7 @@ Future<Set<DateTime>> streakCalendar(Ref ref) async {
   return streakService.getStreakCalendar(startUtc: thirtyDaysAgo, endUtc: now);
 }
 
-const Color _kBrandBlue = Color(0xFF0038A8);
+const Color _kBrandBlue = AppTheme.brandBlue;
 const Color _kPageBg = Color(0xFFF0F2F5);
 
 String _curriculumLabel(
@@ -177,7 +179,7 @@ class _GamificationScreenState extends ConsumerState<GamificationScreen> {
                                 l10n.noRewardsYet,
                                 textAlign: TextAlign.center,
                                 style: Theme.of(context).textTheme.bodyLarge
-                                    ?.copyWith(color: const Color(0xFF708090)),
+                                    ?.copyWith(color: AppTheme.brandCoral),
                               ),
                             ),
                           )
@@ -309,7 +311,7 @@ class _AchievementsHeader extends StatelessWidget {
           style: Theme.of(context).textTheme.titleLarge?.copyWith(
             fontWeight: FontWeight.w800,
             letterSpacing: -0.3,
-            color: const Color(0xFF1A1A1A),
+            color: AppColors.inkDeepDark,
           ),
         ),
       ),
@@ -445,7 +447,7 @@ class _TrackFilterRow extends StatelessWidget {
           style: Theme.of(context).textTheme.labelSmall?.copyWith(
             fontWeight: FontWeight.w800,
             letterSpacing: 1.4,
-            color: const Color(0xFF708090),
+            color: AppTheme.brandCoral,
           ),
         ),
         const SizedBox(height: 10),
@@ -515,7 +517,7 @@ class _FilterChip extends StatelessWidget {
           child: Text(
             label,
             style: TextStyle(
-              color: selected ? Colors.white : const Color(0xFF4A5568),
+              color: selected ? Colors.white : AppColors.inkSlate,
               fontWeight: FontWeight.w700,
               fontSize: 13,
             ),
@@ -567,13 +569,13 @@ class _AchievementTierCard extends StatelessWidget {
 
   Color _statusTextColor(_TierStyle scheme) {
     if (row.isLegendTier) {
-      if (row.isUnlocked) return const Color(0xFF69F0AE);
+      if (row.isUnlocked) return AppColors.streakActive;
       if (row.isNextUp) return Colors.white;
       return Colors.white70;
     }
-    if (row.isUnlocked) return const Color(0xFF2E7D32);
+    if (row.isUnlocked) return AppColors.statusSuccessDeep;
     if (row.isNextUp) return _kBrandBlue;
-    return const Color(0xFF90A4AE);
+    return AppColors.streakEmpty;
   }
 
   @override
@@ -640,7 +642,7 @@ class _AchievementTierCard extends StatelessWidget {
                     minHeight: 7,
                     backgroundColor: scheme.barBg,
                     color: row.isLegendTier && row.isUnlocked
-                        ? const Color(0xFF69F0AE)
+                        ? AppColors.streakActive
                         : scheme.barFill,
                   ),
                 ),
@@ -658,7 +660,7 @@ class _AchievementTierCard extends StatelessWidget {
                                 letterSpacing: 0.3,
                                 color: row.isLegendTier
                                     ? Colors.white.withValues(alpha: 0.9)
-                                    : const Color(0xFF4A5568),
+                                    : AppColors.inkSlate,
                               ),
                         ),
                       ),
@@ -668,7 +670,7 @@ class _AchievementTierCard extends StatelessWidget {
                           fontWeight: FontWeight.w800,
                           color: row.isLegendTier
                               ? Colors.white.withValues(alpha: 0.9)
-                              : const Color(0xFF4A5568),
+                              : AppColors.inkSlate,
                         ),
                       ),
                     ],
@@ -933,8 +935,8 @@ class _TierStyle {
         iconBorder: Colors.white30,
         titleColor: Colors.white,
         mutedIconColor: Colors.white70,
-        barBg: const Color(0xFF404060),
-        barFill: const Color(0xFF9E9E9E),
+        barBg: AppColors.chartBarBg,
+        barFill: AppColors.chartBarFillMuted,
         tagBg: Colors.white.withValues(alpha: 0.2),
         tagFg: Colors.white,
         lockIconColor: Colors.white70,
@@ -960,11 +962,11 @@ class _TierStyle {
         return const _TierStyle(
           cardBg: Colors.white,
           borderColor: Color(0xFFECEFF1),
-          iconBg: Color(0xFF90A4AE),
+          iconBg: AppColors.streakEmpty,
           iconFg: Colors.white,
-          iconBorder: Color(0xFF78909C),
+          iconBorder: AppColors.iconBlueGrey,
           titleColor: Color(0xFF37474F),
-          mutedIconColor: Color(0xFF90A4AE),
+          mutedIconColor: AppColors.streakEmpty,
           barBg: Color(0xFFE8ECEF),
           barFill: Color(0xFF546E7A),
           tagBg: Color(0xFFCFD8DC),
@@ -1029,7 +1031,7 @@ class _TierStyle {
           barFill: Color(0xFF00ACC1),
           tagBg: Color(0xFFB2EBF2),
           tagFg: Color(0xFF00838F),
-          lockIconColor: Color(0xFF0097A7),
+          lockIconColor: AppColors.chartTeal,
         );
       case 'Elite Star':
         return const _TierStyle(
@@ -1051,15 +1053,15 @@ class _TierStyle {
           cardBg: Colors.white,
           borderColor: Color(0xFFE0E0E0),
           iconBg: Color(0xFFF5F5F5),
-          iconFg: Color(0xFF78909C),
+          iconFg: AppColors.iconBlueGrey,
           iconBorder: Color(0xFFB0BEC5),
           titleColor: Color(0xFF37474F),
-          mutedIconColor: Color(0xFF90A4AE),
+          mutedIconColor: AppColors.streakEmpty,
           barBg: Color(0xFFECEFF1),
           barFill: _kBrandBlue,
           tagBg: Color(0xFFECEFF1),
           tagFg: Color(0xFF546E7A),
-          lockIconColor: Color(0xFF78909C),
+          lockIconColor: AppColors.iconBlueGrey,
         );
     }
   }

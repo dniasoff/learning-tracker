@@ -1,0 +1,199 @@
+import 'package:flutter/material.dart';
+
+/// Supplementary colour constants for feature-specific UI elements.
+///
+/// The canonical brand palette lives in [AppTheme] (app_theme.dart).
+/// This file holds semantic colours that appear in feature presentation layers
+/// but do not belong to the Material colour-scheme definition.
+///
+/// Naming convention:
+///   - Functional groupings (status*, streak*, chart*, etc.)
+///   - Light-palette constants only; dark variants are [<name>Dark]
+///   - Alpha-variants use [withValues(alpha:)] at call site
+///
+/// Usage: import 'package:learning_tracker/core/theme/app_colors.dart';
+abstract final class AppColors {
+  AppColors._();
+
+  // ---------------------------------------------------------------------------
+  // Status / semantic
+  // ---------------------------------------------------------------------------
+
+  /// Generic error/danger red used in UI badges, streak-break indicators, etc.
+  static const Color statusError = Color(0xFFD63C3C);
+
+  /// Lighter error tint (badge backgrounds, alert backgrounds).
+  static const Color statusErrorSoft = Color(0xFFFDE7EA);
+
+  /// Slightly brighter danger red for notifications / overdue indicators.
+  static const Color statusDanger = Color(0xFFF26666);
+
+  /// Amber / warning amber (overdue-light, caution banners).
+  static const Color statusWarning = Color(0xFFE9A42A);
+
+  /// Warning background tint.
+  static const Color statusWarningSoft = Color(0xFFFFF2CF);
+
+  /// Success green for completion confirmations.
+  static const Color statusSuccess = Color(0xFF22C55E);
+
+  /// Muted success green (streak active, in-progress items).
+  static const Color statusSuccessMuted = Color(0xFF3BDD87);
+
+  /// Deep success green (siyum / full-track complete).
+  static const Color statusSuccessDeep = Color(0xFF2E7D32);
+
+  // ---------------------------------------------------------------------------
+  // Neutral surface tones (extended beyond AppTheme.brandCream*)
+  // ---------------------------------------------------------------------------
+
+  /// Very light blue-grey surface — scaffold backgrounds, content screens.
+  static const Color surfaceF5 = Color(0xFFF5F7FC);
+
+  /// Light neutral surface for section backgrounds.
+  static const Color surfaceF3 = Color(0xFFF3F4F8);
+
+  /// Slightly warmer light neutral (step card backgrounds).
+  static const Color surfaceF4 = Color(0xFFF4F5F8);
+
+  /// Slightly different warm-neutral variant.
+  static const Color surfaceF4b = Color(0xFFF4F6FB);
+
+  /// Common widget tray / card surface — border colour and inactive backgrounds.
+  static const Color surfaceE9 = Color(0xFFE9ECF2);
+
+  /// Soft blue-tinted neutral (card tint, progress containers).
+  static const Color surfaceBlueNeutral = Color(0xFFF0F2F8);
+
+  /// Light lavender-blue tint (selected chip bg, blue-themed items).
+  static const Color surfaceBlueLight = Color(0xFFE5E9FF);
+
+  /// Light grey-blue (divider lines, outline borders).
+  static const Color surfaceGreyBlue = Color(0xFFE2E6F0);
+
+  // ---------------------------------------------------------------------------
+  // Feature accent — blue shades (brand-adjacent, used in gradient stops,
+  // selected states, deep backgrounds)
+  // ---------------------------------------------------------------------------
+
+  /// Deep brand-navy (gradient bottom, heavy chip backgrounds).
+  static const Color blueNavy = Color(0xFF03174C);
+
+  /// Dark navy variant used in deep screen gradients.
+  static const Color blueDeepNavy = Color(0xFF0A2056);
+
+  /// Bright medium blue (selected-tab highlight, step indicator active).
+  static const Color blueMedium = Color(0xFF1C47C4);
+
+  /// Slightly lighter mid-blue (button tints, tile borders).
+  static const Color blueLight = Color(0xFF1639A8);
+
+  /// Another mid-blue shade used in tracks-setup components.
+  static const Color blueMid = Color(0xFF123DAE);
+
+  // ---------------------------------------------------------------------------
+  // Gamification — gold / amber / peach
+  // ---------------------------------------------------------------------------
+
+  /// Trophy gold (streak flame icon, milestone badge fill).
+  static const Color goldTrophy = Color(0xFFFFC94A);
+
+  /// Warm amber (point bubbles, reward-card header).
+  static const Color goldAmber = Color(0xFFE9A42A);
+
+  /// Dark amber / honey (text on gold backgrounds).
+  static const Color goldDark = Color(0xFF7D5411);
+
+  /// Warm peach tint (reward card body background).
+  static const Color peachTint = Color(0xFFF9E4C8);
+
+  /// Medium amber-peach (icon backgrounds on reward cards).
+  static const Color peachMid = Color(0xFFF3D4A5);
+
+  /// Peach amber-dark (reward card text).
+  static const Color peachDark = Color(0xFF594624);
+
+  /// Warning-tone soft yellow (overdue banners, reminder badges).
+  static const Color warnYellow = Color(0xFFFFF2CF);
+
+  // ---------------------------------------------------------------------------
+  // Chart palette (used across progress / stats screens)
+  // ---------------------------------------------------------------------------
+
+  /// Chart series colour — primary blue.
+  static const Color chartBlue = Color(0xFF4D96FF);
+
+  /// Chart series colour — teal-cyan.
+  static const Color chartTeal = Color(0xFF0097A7);
+
+  /// Chart series colour — green.
+  static const Color chartGreen = Color(0xFF6BCB77);
+
+  /// Chart series colour — amber.
+  static const Color chartAmber = Color(0xFFF8C146);
+
+  /// Chart series colour — red.
+  static const Color chartRed = Color(0xFFB43A4A);
+
+  /// Chart bar background (empty bar).
+  static const Color chartBarBg = Color(0xFF404060);
+
+  /// Chart bar fill (inactive / muted).
+  static const Color chartBarFillMuted = Color(0xFF9E9E9E);
+
+  // ---------------------------------------------------------------------------
+  // Streak / calendar specific
+  // ---------------------------------------------------------------------------
+
+  /// Streak active day fill (bright green).
+  static const Color streakActive = Color(0xFF69F0AE);
+
+  /// Streak empty / rest day (muted blue-grey).
+  static const Color streakEmpty = Color(0xFF90A4AE);
+
+  // ---------------------------------------------------------------------------
+  // Content / text tones (beyond AppTheme.brandInk*)
+  // ---------------------------------------------------------------------------
+
+  /// Very dark ink (near-black) for display headings in dark containers.
+  static const Color inkDeepDark = Color(0xFF1A1A1A);
+
+  /// Standard dark slate used for body text on white cards.
+  static const Color inkSlate = Color(0xFF4A5568);
+
+  /// Mid-grey muted text (sub-labels, placeholders).
+  static const Color inkMidGrey = Color(0xFF8E97A6);
+
+  /// Light blue-grey icon colour.
+  static const Color iconBlueGrey = Color(0xFF78909C);
+
+  // ---------------------------------------------------------------------------
+  // Misc accent tones (used one or a few times across feature screens;
+  // gathered here to avoid per-file magic-number repetition)
+  // ---------------------------------------------------------------------------
+
+  /// Deep purple accent (mussar curriculum, some achievement icons).
+  static const Color accentPurpleDeep = Color(0xFF4A2A8A);
+
+  /// Teal-green accent (Nach / Yerushalmi identity icon).
+  static const Color accentTealGreen = Color(0xFF1D7D73);
+
+  /// Light teal surface for content-type chips.
+  static const Color accentTealSoft = Color(0xFFE0F4FF);
+
+  /// Coral/salmon for overdue / missed tasks.
+  static const Color accentCoral = Color(0xFFF86B6B);
+
+  /// Burnt-orange accent (warning chips, deadline chip).
+  static const Color accentBurntOrange = Color(0xFFE65100);
+
+  // ---------------------------------------------------------------------------
+  // Semi-transparent overlays (common alpha masks)
+  // ---------------------------------------------------------------------------
+
+  /// Dark scrim overlay (0x40 ≈ 25 % opacity black).
+  static const Color scrimDark = Color(0x40000000);
+
+  /// Light scrim overlay.
+  static const Color scrimLight = Color(0x33FFFFFF);
+}
