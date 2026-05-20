@@ -4,7 +4,7 @@ import 'dart:convert';
 import 'package:drift/drift.dart';
 import 'package:learning_tracker/core/analytics/analytics_service.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
-import 'package:learning_tracker/core/learning/completion_command.dart';
+import 'package:learning_tracker/features/learning/domain/entities/completion_command.dart';
 import 'package:learning_tracker/core/sync/outbox/outbox_processor.dart';
 
 /// Result of a [CompletionWriter.commit] call.
