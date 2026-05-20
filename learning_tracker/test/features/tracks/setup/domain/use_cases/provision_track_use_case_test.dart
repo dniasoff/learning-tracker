@@ -14,111 +14,66 @@
 ///      [programSchedule] + [project] pipeline.
 library;
 
+import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:learning_tracker/core/analytics/analytics_service.dart';
+import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/domain/value_objects/program_starting_position.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/time/local_day_clock.dart';
+import 'package:learning_tracker/features/onboarding/domain/services/learning_process_wizard_service.dart';
+import 'package:learning_tracker/features/scheduler/data/repositories/goal_repository_impl.dart';
 import 'package:learning_tracker/features/scheduler/domain/projection/projection.dart';
+import 'package:learning_tracker/features/scheduler/domain/services/learning_program_service.dart';
+import 'package:learning_tracker/features/settings/domain/services/curriculum_activation_service.dart';
 import 'package:learning_tracker/features/tracks/setup/domain/aggregates/track_blueprint.dart';
 import 'package:learning_tracker/features/tracks/setup/domain/entities/add_track_result.dart';
+import 'package:learning_tracker/features/tracks/setup/domain/services/track_creation_service.dart';
 import 'package:learning_tracker/features/tracks/setup/domain/use_cases/provision_track_use_case.dart';
+import 'package:learning_tracker/features/tracks/stages/data/repositories/stage_definition_repository_impl.dart';
 
-// ── Fake service ─────────────────────────────────────────────────────────────
+// ── Spy service ──────────────────────────────────────────────────────────────
 
-/// Minimal spy — captures the [AddTrackResult] passed to [createTrack] so
-/// bridge tests can inspect it without a real DB.
-class _FakeCreationService {
+/// Subclass of [TrackCreationService] that overrides [createTrack] to capture
+/// calls without performing any database writes.
+///
+/// This lets the bridge tests instantiate the REAL [ProvisionTrackUseCase] and
+/// verify that production [_toResult] logic correctly maps [TrackBlueprint]
+/// to [AddTrackResult].  A regression in [_toResult] will now cause bridge
+/// test failures.
+class _SpyTrackCreationService extends TrackCreationService {
+  _SpyTrackCreationService(UserDatabase db)
+    : super(
+        database: db,
+        activationService: CurriculumActivationService(
+          database: db,
+          pushCurriculumTrack: null,
+        ),
+        wizardService: LearningProcessWizardService(
+          stageDao: db.stageDao,
+          learningProgramRepo: LearningProgramRepository.instance,
+          profileProgramDao: db.profileProgramDao,
+        ),
+        goalRepository: GoalRepositoryImpl(database: db),
+        stageRepository: StageDefinitionRepositoryImpl(
+          stageDao: db.stageDao,
+          completionDao: db.completionDao,
+          pushSettings: null,
+        ),
+        analytics: const NullAnalyticsService(),
+      );
+
   AddTrackResult? capturedResult;
   int? capturedProfileId;
 
+  @override
   Future<void> createTrack({
     required AddTrackResult result,
     required int profileId,
   }) async {
     capturedResult = result;
     capturedProfileId = profileId;
-  }
-}
-
-/// [ProvisionTrackUseCase] wrapper that injects the [_FakeCreationService].
-///
-/// Because [ProvisionTrackUseCase] holds a concrete [TrackCreationService] by
-/// type, we expose a factory-style constructor that accepts a callback so the
-/// test can intercept the [AddTrackResult] without requiring a real database.
-///
-/// This keeps the production type unmodified while still enabling unit testing.
-class _TestableUseCase {
-  _TestableUseCase({required LocalDayClock clock})
-    : _clock = clock,
-      _spy = _FakeCreationService();
-
-  final LocalDayClock _clock;
-  final _FakeCreationService _spy;
-
-  AddTrackResult? get capturedResult => _spy.capturedResult;
-  int? get capturedProfileId => _spy.capturedProfileId;
-
-  Future<void> call({
-    required TrackBlueprint blueprint,
-    required int profileId,
-  }) async {
-    // Replicate the bridge logic from ProvisionTrackUseCase so the tests
-    // cover the same code path without requiring a real TrackCreationService.
-    // This is a deliberate duplication kept tiny — the actual _toResult logic
-    // is tested by running the production ProvisionTrackUseCase in the
-    // integration group below (B3 projection tests exercise the full path).
-    final result = _buildResult(blueprint);
-    await _spy.createTrack(result: result, profileId: profileId);
-  }
-
-  AddTrackResult _buildResult(TrackBlueprint blueprint) {
-    final today = _clock.today();
-    int? programId;
-    String? programName;
-    String? startingRef;
-
-    switch (blueprint.programSelection) {
-      case CalendarProgramSelection(
-        programId: final pid,
-        programName: final pname,
-        startingPosition: final pos,
-      ):
-        programId = pid;
-        programName = pname;
-        final grammar = pos.toLegacyGrammar(today);
-        startingRef = grammar.isEmpty ? null : grammar;
-      case SelfPacedSelection():
-        break;
-    }
-
-    final wizardResult = switch (blueprint.stageConfiguration) {
-      WizardStageConfiguration(:final wizardResult) => wizardResult,
-      SingleStageConfiguration() || ScheduleSpecConfiguration() => null,
-    };
-
-    final goalResult = switch (blueprint.goalIntent) {
-      SpecifiedGoalIntent(:final goal) => goal,
-      NoGoalIntent() => null,
-    };
-
-    final bulkMarkResult = switch (blueprint.bulkMarkIntent) {
-      BulkMarkedIntent(:final itemCount, :final completionCount) =>
-        BulkMarkIntent(itemCount: itemCount, completionCount: completionCount),
-      NoBulkMarkIntent() => null,
-    };
-
-    return AddTrackResult(
-      curriculumId: blueprint.curriculumId,
-      label: blueprint.label,
-      programId: programId,
-      programName: programName,
-      scopeSelections: blueprint.scopeSelections,
-      studyDays: blueprint.studyDays,
-      wizardResult: wizardResult,
-      goalResult: goalResult,
-      bulkMarkResult: bulkMarkResult,
-      startingRef: startingRef,
-    );
+    // No database writes — spy only.
   }
 }
 
@@ -189,21 +144,31 @@ void main() {
   const profileId = 1;
 
   late FakeLocalDayClock clock;
-  late _TestableUseCase testUseCase;
+  late UserDatabase db;
+  late _SpyTrackCreationService spyService;
+  late ProvisionTrackUseCase useCase;
 
   setUp(() {
     clock = FakeLocalDayClock(today);
-    testUseCase = _TestableUseCase(clock: clock);
+    db = UserDatabase(NativeDatabase.memory());
+    spyService = _SpyTrackCreationService(db);
+    useCase = ProvisionTrackUseCase(service: spyService, clock: clock);
   });
 
+  tearDown(() async => db.close());
+
   // ── W4.14 — Bridge: TrackBlueprint → AddTrackResult conversion ─────────────
+  //
+  // These tests exercise the REAL ProvisionTrackUseCase._toResult() method.
+  // A regression in production _toResult() (e.g., wrong switch branch) will
+  // cause failures here.
   group('ProvisionTrackUseCase bridge', () {
     test('self-paced blueprint → createTrack with no programId', () async {
       final blueprint = _selfPacedBlueprint();
 
-      await testUseCase(blueprint: blueprint, profileId: profileId);
+      await useCase(blueprint: blueprint, profileId: profileId);
 
-      final result = testUseCase.capturedResult!;
+      final result = spyService.capturedResult!;
       expect(result.programId, isNull);
       expect(result.startingRef, isNull);
       expect(result.curriculumId, CurriculumId.bavli);
@@ -217,9 +182,9 @@ void main() {
       );
       final blueprint = _calendarBlueprint(startingPosition: pos);
 
-      await testUseCase(blueprint: blueprint, profileId: profileId);
+      await useCase(blueprint: blueprint, profileId: profileId);
 
-      final result = testUseCase.capturedResult!;
+      final result = spyService.capturedResult!;
       expect(result.programId, 1);
       expect(result.programName, 'Daf Yomi');
       expect(result.curriculumId, CurriculumId.bavli);
@@ -234,10 +199,10 @@ void main() {
         );
         final blueprint = _calendarBlueprint(startingPosition: pos);
 
-        await testUseCase(blueprint: blueprint, profileId: profileId);
+        await useCase(blueprint: blueprint, profileId: profileId);
 
         // offset:0 → toLegacyGrammar produces "" → normalised to null.
-        expect(testUseCase.capturedResult!.startingRef, isNull);
+        expect(spyService.capturedResult!.startingRef, isNull);
       },
     );
 
@@ -250,10 +215,10 @@ void main() {
       );
       final blueprint = _calendarBlueprint(startingPosition: pos);
 
-      await testUseCase(blueprint: blueprint, profileId: profileId);
+      await useCase(blueprint: blueprint, profileId: profileId);
 
       expect(
-        testUseCase.capturedResult!.startingRef,
+        spyService.capturedResult!.startingRef,
         'offset:$n',
         reason: 'B3: offset grammar must encode the back-date offset',
       );
@@ -263,17 +228,17 @@ void main() {
       final blueprint = _selfPacedBlueprint();
       const expectedProfileId = 42;
 
-      await testUseCase(blueprint: blueprint, profileId: expectedProfileId);
+      await useCase(blueprint: blueprint, profileId: expectedProfileId);
 
-      expect(testUseCase.capturedProfileId, expectedProfileId);
+      expect(spyService.capturedProfileId, expectedProfileId);
     });
 
     test('NoGoalIntent → goalResult is null in AddTrackResult', () async {
       final blueprint = _selfPacedBlueprint();
 
-      await testUseCase(blueprint: blueprint, profileId: profileId);
+      await useCase(blueprint: blueprint, profileId: profileId);
 
-      expect(testUseCase.capturedResult!.goalResult, isNull);
+      expect(spyService.capturedResult!.goalResult, isNull);
     });
 
     test(
@@ -281,9 +246,9 @@ void main() {
       () async {
         final blueprint = _selfPacedBlueprint();
 
-        await testUseCase(blueprint: blueprint, profileId: profileId);
+        await useCase(blueprint: blueprint, profileId: profileId);
 
-        expect(testUseCase.capturedResult!.bulkMarkResult, isNull);
+        expect(spyService.capturedResult!.bulkMarkResult, isNull);
       },
     );
 
@@ -292,9 +257,9 @@ void main() {
       () async {
         final blueprint = _selfPacedBlueprint();
 
-        await testUseCase(blueprint: blueprint, profileId: profileId);
+        await useCase(blueprint: blueprint, profileId: profileId);
 
-        expect(testUseCase.capturedResult!.wizardResult, isNull);
+        expect(spyService.capturedResult!.wizardResult, isNull);
       },
     );
   });
@@ -430,6 +395,62 @@ void main() {
           rt.daysFromToday(today),
           n,
           reason: 'B3: offset grammar must survive a round-trip',
+        );
+      },
+    );
+  });
+
+  // ── Adversarial validator ─────────────────────────────────────────────────
+  //
+  // This group exists to prove the tests are NOT false positives.
+  //
+  // The bridge tests above exercise the REAL ProvisionTrackUseCase._toResult()
+  // via the spy. This test documents that a concrete regression in _toResult
+  // (e.g., the offset grammar branch being silenced so all back-dated starts
+  // emit null) would be detected:
+  //
+  //   • If _toResult omitted the startingRef for N≥1, the bridge test
+  //     'back-dated N=5 → startingRef encodes offset:5' would fail with:
+  //       Expected: 'offset:5'
+  //       Actual:   <null>
+  //
+  //   • If _toResult returned an empty string instead of null for N=0, the
+  //     bridge test 'today start → no startingRef' would fail with:
+  //       Expected: <null>
+  //       Actual:   ''
+  //
+  // The test below asserts the N=1 boundary directly — one day before today
+  // must produce 'offset:1', not null, not 'offset:0', not anything else.
+  // This is the minimal offset that exercises the non-trivial branch in
+  // _toResult (the grammar.isEmpty → null normalisation path is the branch
+  // that a naive mutation might break for small offsets).
+  group('adversarial validator — _toResult regression sensitivity', () {
+    test(
+      'N=1 back-date → startingRef is exactly "offset:1" (not null, not "offset:0")',
+      () async {
+        // If production _toResult had a bug such as:
+        //   final grammar = pos.toLegacyGrammar(today);
+        //   startingRef = grammar.isEmpty ? null : grammar;
+        // being replaced by:
+        //   startingRef = null; // or startingRef = 'offset:0';
+        // this test would fail, proving the spy exercises the real code path.
+        const n = 1;
+        final startDate = today.subtract(const Duration(days: n));
+        final pos = ProgramStartingPosition.create(
+          startDate: startDate,
+          today: today,
+        );
+        final blueprint = _calendarBlueprint(startingPosition: pos);
+
+        await useCase(blueprint: blueprint, profileId: profileId);
+
+        expect(
+          spyService.capturedResult!.startingRef,
+          'offset:1',
+          reason:
+              'Adversarial: _toResult must produce offset:1 for N=1; '
+              'null or offset:0 would indicate a regression in the '
+              'offset-branch of ProvisionTrackUseCase._toResult()',
         );
       },
     );

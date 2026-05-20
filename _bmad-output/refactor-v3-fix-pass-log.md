@@ -122,3 +122,26 @@ FIXED / commit 14fd65e3 (same commit as C3)
 | C2 | 5a9347bc | Firestore rules ✓ | 12 new assertions (22 pass) |
 | C3 | 14fd65e3 | 7 Cloud Functions ✓ | 10 unit tests pass |
 | C4 | 14fd65e3 | 1 Cloud Function ✓ | 3 structural assertions |
+
+---
+
+## V3-W4c — Real B3 Regression Test
+
+**Finding:** V2-R6 C3 — The W4.14 committed test file used `_TestableUseCase._buildResult()`, a hand-rolled duplicate of production `ProvisionTrackUseCase._toResult()`. All 13 tests exercised the duplicate, not the real use case. A regression in `_toResult` would pass all tests.
+
+**Fix applied:**
+- Replaced `_TestableUseCase` / `_FakeCreationService` pattern with `_SpyTrackCreationService`, a proper subclass of the real `TrackCreationService` that overrides `createTrack` to capture calls without DB writes.
+- `ProvisionTrackUseCase` is now instantiated directly with `service: spyService, clock: clock`. The real `_toResult()` is exercised on every bridge test call.
+- Deleted `_TestableUseCase`, `_FakeCreationService`, and `_buildResult()` entirely.
+- Added `setUp` / `tearDown` with in-memory `UserDatabase` (required to construct `_SpyTrackCreationService`).
+- Added 14th test: `adversarial validator — _toResult regression sensitivity / N=1 back-date → startingRef is exactly "offset:1"`. This test documents that a mutation silencing the offset branch (returning null or "offset:0" for N=1) would produce a clear assertion failure, confirming the spy exercises the real code path.
+
+**Test file:** `learning_tracker/test/features/tracks/setup/domain/use_cases/provision_track_use_case_test.dart`
+
+**Result:**
+- 13 original B3 cases: all pass against real `ProvisionTrackUseCase`
+- 1 adversarial validator test: passes (and would fail if `_toResult` offset branch were corrupted)
+- `dart format`: no changes required
+- `dart analyze --fatal-infos`: no issues
+
+**Commit:** fix(v2-r6-c3): replace hollow B3 regression with real use case test (13 tests + adversarial validator)
