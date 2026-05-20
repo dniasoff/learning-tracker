@@ -1,43 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/features/dashboard/domain/use_cases/compute_pace_status_use_case.dart';
+import 'package:learning_tracker/features/scheduler/domain/models/goal_entity.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/pace_status.dart';
-
-Goal _paceGoal({int paceValue = 3, String pacePeriod = 'per_week'}) => Goal(
-      id: 1,
-      profileId: 1,
-      curriculumId: 'mishnayos',
-      trackId: 1,
-      targetPercent: 100,
-      description: '',
-      dateType: 'english',
-      goalType: 'pace',
-      paceValue: paceValue,
-      pacePeriod: pacePeriod,
-      createdAt: DateTime(2026, 1, 1),
-      updatedAt: DateTime(2026, 1, 1),
-    );
-
-Goal _deadlineGoal({
-  DateTime? targetDate,
-  int? paceValue,
-  String? pacePeriod,
-}) =>
-    Goal(
-      id: 2,
-      profileId: 1,
-      curriculumId: 'mishnayos',
-      trackId: 1,
-      targetPercent: 100,
-      description: '',
-      dateType: 'english',
-      goalType: 'deadline',
-      targetDate: targetDate ?? DateTime(2026, 12, 31),
-      paceValue: paceValue,
-      pacePeriod: pacePeriod,
-      createdAt: DateTime(2026, 1, 1),
-      updatedAt: DateTime(2026, 1, 1),
-    );
 
 void main() {
   const useCase = ComputePaceStatusUseCase();
@@ -51,7 +15,7 @@ void main() {
       test('returns PaceStatus for valid pace goal', () {
         final result = useCase.execute(
           PaceStatusInput(
-            goal: _paceGoal(paceValue: 7, pacePeriod: 'per_week'),
+            paceTarget: PacePeriodTarget(rate: 7, period: 'per_week'),
             completedItems: 0,
             dailyCompletionCounts: {},
             totalItems: 100,
@@ -71,7 +35,7 @@ void main() {
         }
         final result = useCase.execute(
           PaceStatusInput(
-            goal: _paceGoal(paceValue: 7, pacePeriod: 'per_week'),
+            paceTarget: PacePeriodTarget(rate: 7, period: 'per_week'),
             completedItems: 30,
             dailyCompletionCounts: counts,
             totalItems: 100,
@@ -88,22 +52,10 @@ void main() {
     // Deadline goal
     // ------------------------------------------------------------------
     group('deadline goal', () {
-      test('returns null when targetDate is null', () {
-        final goal = Goal(
-          id: 3,
-          profileId: 1,
-          curriculumId: 'mishnayos',
-          trackId: 1,
-          targetPercent: 100,
-          description: '',
-          dateType: 'english',
-          goalType: 'deadline',
-          createdAt: DateTime(2026, 1, 1),
-          updatedAt: DateTime(2026, 1, 1),
-        );
+      test('returns null when paceTarget is null (no goal set)', () {
         final result = useCase.execute(
           PaceStatusInput(
-            goal: goal,
+            paceTarget: null,
             completedItems: 0,
             dailyCompletionCounts: {},
             totalItems: 100,
@@ -113,30 +65,29 @@ void main() {
         expect(result, isNull);
       });
 
-      test('returns PaceStatus when targetDate is set with stored pace', () {
+      test('returns PaceStatus for DeadlineTarget', () {
         final result = useCase.execute(
           PaceStatusInput(
-            goal: _deadlineGoal(
-              paceValue: 5,
-              pacePeriod: 'per_week',
-            ),
+            paceTarget: DeadlineTarget(DateTime(2026, 12, 31)),
             completedItems: 0,
             dailyCompletionCounts: {},
             totalItems: 100,
             today: today,
+            studyDaysInWindow: 200,
+            studyDaysPerWeek: 5,
           ),
         );
         expect(result, isNotNull);
       });
 
-      test('uses derived pace when targetDate set but no stored pace', () {
+      test('uses derived pace when studyDaysInWindow is non-zero — B3 verified', () {
         // B3 NOTE: deadline goal ALWAYS yields a projection — even on day one
         // with 0 completions — via calculateForPaceGoal. Back-dated enrolments
         // generate overdue tasks in the scheduler; here we verify the pace
         // projection is also non-null for such a goal.
         final result = useCase.execute(
           PaceStatusInput(
-            goal: _deadlineGoal(), // no paceValue / pacePeriod
+            paceTarget: DeadlineTarget(DateTime(2026, 12, 31)),
             completedItems: 0,
             dailyCompletionCounts: {},
             totalItems: 100,
@@ -152,7 +103,7 @@ void main() {
       test('falls back to 1/week when studyDaysInWindow is zero', () {
         final result = useCase.execute(
           PaceStatusInput(
-            goal: _deadlineGoal(),
+            paceTarget: DeadlineTarget(DateTime(2026, 12, 31)),
             completedItems: 0,
             dailyCompletionCounts: {},
             totalItems: 100,

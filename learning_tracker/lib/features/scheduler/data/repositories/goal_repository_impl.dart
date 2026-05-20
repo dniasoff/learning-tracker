@@ -26,16 +26,15 @@ class GoalRepositoryImpl implements GoalRepository {
     required CurriculumId curriculumId,
     required int trackId,
     required double targetPercent,
-    DateTime? targetDate,
+    PaceTarget? paceTarget,
     String description = '',
     String dateType = 'gregorian',
-    String goalType = 'deadline',
-    int? paceValue,
-    String? pacePeriod,
     String? paceGranularity,
   }) async {
     return await _database.transaction(() async {
       final now = DateTimeFactory.nowUtc();
+      final (goalType, targetDate, paceValue, pacePeriod) =
+          _decomposePaceTarget(paceTarget);
 
       final id = await _database.goalDao.insertGoal(
         GoalsCompanion.insert(
@@ -43,7 +42,7 @@ class GoalRepositoryImpl implements GoalRepository {
           curriculumId: curriculumId.storageKey,
           trackId: trackId,
           targetPercent: drift.Value(targetPercent),
-          targetDate: drift.Value(targetDate?.toUtc()),
+          targetDate: drift.Value(targetDate),
           description: drift.Value(description),
           dateType: drift.Value(dateType),
           goalType: drift.Value(goalType),
@@ -82,13 +81,9 @@ class GoalRepositoryImpl implements GoalRepository {
   Future<GoalEntity> updateGoal({
     required int goalId,
     double? targetPercent,
-    DateTime? targetDate,
-    bool clearTargetDate = false,
+    PaceTarget? paceTarget,
+    bool clearPaceTarget = false,
     String? description,
-    String? goalType,
-    int? paceValue,
-    String? pacePeriod,
-    bool clearPace = false,
     PaceGranularity? paceGranularity,
     bool clearLearningUnit = false,
   }) async {
@@ -107,6 +102,30 @@ class GoalRepositoryImpl implements GoalRepository {
                 ? paceGranularity.storageKey
                 : existing.paceGranularity);
 
+      // Decompose paceTarget if explicitly set; keep existing values otherwise.
+      final String resolvedGoalType;
+      final DateTime? resolvedTargetDate;
+      final int? resolvedPaceValue;
+      final String? resolvedPacePeriod;
+      if (clearPaceTarget) {
+        resolvedGoalType = 'none';
+        resolvedTargetDate = null;
+        resolvedPaceValue = null;
+        resolvedPacePeriod = null;
+      } else if (paceTarget != null) {
+        final decomposed = _decomposePaceTarget(paceTarget);
+        resolvedGoalType = decomposed.$1;
+        resolvedTargetDate = decomposed.$2;
+        resolvedPaceValue = decomposed.$3;
+        resolvedPacePeriod = decomposed.$4;
+      } else {
+        // No change to goal-mode fields.
+        resolvedGoalType = existing.goalType;
+        resolvedTargetDate = existing.targetDate;
+        resolvedPaceValue = existing.paceValue;
+        resolvedPacePeriod = existing.pacePeriod;
+      }
+
       await _database.goalDao.updateGoal(
         GoalsCompanion(
           id: drift.Value(goalId),
@@ -114,17 +133,11 @@ class GoalRepositoryImpl implements GoalRepository {
           curriculumId: drift.Value(existing.curriculumId),
           trackId: drift.Value(existing.trackId),
           targetPercent: drift.Value(targetPercent ?? existing.targetPercent),
-          targetDate: clearTargetDate
-              ? const drift.Value(null)
-              : drift.Value(targetDate?.toUtc() ?? existing.targetDate),
+          targetDate: drift.Value(resolvedTargetDate?.toUtc()),
           description: drift.Value(description ?? existing.description),
-          goalType: drift.Value(goalType ?? existing.goalType),
-          paceValue: clearPace
-              ? const drift.Value(null)
-              : drift.Value(paceValue ?? existing.paceValue),
-          pacePeriod: clearPace
-              ? const drift.Value(null)
-              : drift.Value(pacePeriod ?? existing.pacePeriod),
+          goalType: drift.Value(resolvedGoalType),
+          paceValue: drift.Value(resolvedPaceValue),
+          pacePeriod: drift.Value(resolvedPacePeriod),
           paceGranularity: drift.Value(resolvedLearningUnit),
           createdAt: drift.Value(existing.createdAt),
           updatedAt: drift.Value(now),
@@ -153,6 +166,20 @@ class GoalRepositoryImpl implements GoalRepository {
     if (existing != null) {
       final entity = _toEntity(existing);
       await _syncDeleteGoal(entity);
+    }
+  }
+
+  /// Decomposes a [PaceTarget] into the four raw DB columns
+  /// (goalType, targetDate, paceValue, pacePeriod).
+  (String goalType, DateTime? targetDate, int? paceValue, String? pacePeriod)
+  _decomposePaceTarget(PaceTarget? paceTarget) {
+    switch (paceTarget) {
+      case DeadlineTarget(:final dueDate):
+        return ('deadline', dueDate.toUtc(), null, null);
+      case PacePeriodTarget(:final rate, :final period):
+        return ('pace', null, rate, period);
+      case null:
+        return ('none', null, null, null);
     }
   }
 

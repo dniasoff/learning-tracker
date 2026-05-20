@@ -5,8 +5,10 @@ import 'package:learning_tracker/features/scheduler/domain/models/goal_entity.da
 abstract class GoalRepository {
   /// Create a new goal for a curriculum.
   ///
-  /// [targetDate] is stored as UTC per P5. If the date originates from a
-  /// Hebrew date picker, it must be converted to Gregorian UTC before calling.
+  /// [paceTarget] is the sealed discriminant that carries all goal-mode data:
+  /// - [DeadlineTarget] for deadline-based goals (targetDate inside)
+  /// - [PacePeriodTarget] for pace-based goals (rate + period inside)
+  /// - `null` for "no goal" / goalType='none'
   ///
   /// [profileId] is the learner profile that owns the goal (must match the
   /// track's profile when creating from add-track / onboarding).
@@ -15,19 +17,19 @@ abstract class GoalRepository {
     required CurriculumId curriculumId,
     required int trackId,
     required double targetPercent,
-    DateTime? targetDate,
+    PaceTarget? paceTarget,
     String description,
     String dateType,
-    String goalType,
-    int? paceValue,
-    String? pacePeriod,
     String? paceGranularity,
   });
 
   /// Get all goals for a curriculum, sorted by target date.
   Future<List<GoalEntity>> getGoals(CurriculumId curriculumId);
 
-  /// Update an existing goal's deadline and/or target percentage.
+  /// Update an existing goal's pace target and/or other fields.
+  ///
+  /// [paceTarget] is the sealed discriminant. Pass `null` with
+  /// [clearPaceTarget] == `true` to remove the goal mode entirely.
   ///
   /// [paceGranularity] is the typed learning-unit granularity. When provided,
   /// it takes precedence over any previously stored unit. Passing
@@ -35,13 +37,9 @@ abstract class GoalRepository {
   Future<GoalEntity> updateGoal({
     required int goalId,
     double? targetPercent,
-    DateTime? targetDate,
-    bool clearTargetDate,
+    PaceTarget? paceTarget,
+    bool clearPaceTarget,
     String? description,
-    String? goalType,
-    int? paceValue,
-    String? pacePeriod,
-    bool clearPace,
     PaceGranularity? paceGranularity,
     bool clearLearningUnit,
   });

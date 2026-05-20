@@ -6,6 +6,7 @@ import 'package:drift/drift.dart' hide isNotNull, isNull;
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/features/scheduler/data/repositories/goal_repository_impl.dart';
+import 'package:learning_tracker/features/scheduler/domain/models/goal_entity.dart';
 import 'package:learning_tracker/features/scheduler/data/repositories/scheduler_completion_repository_impl.dart';
 import 'package:learning_tracker/features/scheduler/data/repositories/scheduler_learning_order_repository_impl.dart';
 import 'package:learning_tracker/features/scheduler/data/repositories/scheduler_stage_repository_impl.dart';
@@ -487,7 +488,7 @@ void main() {
           curriculumId: curriculum,
           trackId: trackId,
           targetPercent: 100.0,
-          targetDate: targetDate,
+          paceTarget: DeadlineTarget(targetDate),
         );
 
         expect(goal.id, isNotNull);
@@ -510,7 +511,7 @@ void main() {
           curriculumId: curriculum,
           trackId: trackId,
           targetPercent: 100.0,
-          targetDate: hebrewConverted,
+          paceTarget: DeadlineTarget(hebrewConverted),
         );
 
         expect(goal.targetDate, equals(hebrewConverted));
@@ -530,21 +531,21 @@ void main() {
           curriculumId: curriculum,
           trackId: trackId,
           targetPercent: 100.0,
-          targetDate: date1,
+          paceTarget: DeadlineTarget(date1),
         );
         await goalRepo.createGoal(
           profileId: 1,
           curriculumId: curriculum,
           trackId: trackId,
           targetPercent: 50.0,
-          targetDate: date2,
+          paceTarget: DeadlineTarget(date2),
         );
         await goalRepo.createGoal(
           profileId: 1,
           curriculumId: curriculum,
           trackId: trackId,
           targetPercent: 75.0,
-          targetDate: date3,
+          paceTarget: DeadlineTarget(date3),
         );
 
         final goals = await goalRepo.getGoals(curriculum);
@@ -564,13 +565,13 @@ void main() {
           curriculumId: curriculum,
           trackId: trackId,
           targetPercent: 100.0,
-          targetDate: DateTime.utc(2027, 1, 1),
+          paceTarget: DeadlineTarget(DateTime.utc(2027, 1, 1)),
         );
 
         final updated = await goalRepo.updateGoal(
           goalId: goal.id!,
           targetPercent: 80.0,
-          targetDate: DateTime.utc(2027, 6, 1),
+          paceTarget: DeadlineTarget(DateTime.utc(2027, 6, 1)),
         );
 
         expect(updated.targetPercent, 80.0);
@@ -588,14 +589,14 @@ void main() {
           curriculumId: curriculum,
           trackId: trackId,
           targetPercent: 100.0,
-          targetDate: DateTime.utc(2027, 1, 1),
+          paceTarget: DeadlineTarget(DateTime.utc(2027, 1, 1)),
         );
         await goalRepo.createGoal(
           profileId: 1,
           curriculumId: chumash,
           trackId: trackId,
           targetPercent: 50.0,
-          targetDate: DateTime.utc(2027, 6, 1),
+          paceTarget: DeadlineTarget(DateTime.utc(2027, 6, 1)),
         );
 
         final mishnayosGoals = await goalRepo.getGoals(curriculum);

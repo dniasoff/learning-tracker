@@ -2,6 +2,7 @@ import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart' show DateTimeFactory;
 import 'package:learning_tracker/features/dashboard/domain/use_cases/compute_pace_status_use_case.dart';
+import 'package:learning_tracker/features/scheduler/domain/models/goal_entity.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/pace_status.dart';
 import 'package:learning_tracker/features/stages/domain/models/stage_definition.dart'
     as domain_stage;
@@ -228,11 +229,23 @@ class ParentDashboardAggregator {
     );
     final totalEstimate = totalItems > 0 ? totalItems : 100;
 
+    // Reconstruct PaceTarget from the raw Drift Goal row.
+    final PaceTarget? paceTarget;
+    if (goal.goalType == 'deadline' && goal.targetDate != null) {
+      paceTarget = DeadlineTarget(goal.targetDate!.toUtc());
+    } else if (goal.goalType == 'pace' &&
+        goal.paceValue != null &&
+        goal.pacePeriod != null) {
+      paceTarget = PacePeriodTarget(rate: goal.paceValue!, period: goal.pacePeriod!);
+    } else {
+      paceTarget = null;
+    }
+
     // Delegate to the shared use-case (same algorithm as dashboardPaceStatus).
     const useCase = ComputePaceStatusUseCase();
     final paceStatus = useCase.execute(
       PaceStatusInput(
-        goal: goal,
+        paceTarget: paceTarget,
         completedItems: uniqueRefs.length,
         dailyCompletionCounts: dailyCounts,
         totalItems: totalEstimate,

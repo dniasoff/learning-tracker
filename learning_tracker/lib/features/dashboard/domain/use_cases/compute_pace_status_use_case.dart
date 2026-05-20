@@ -1,6 +1,6 @@
-import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/core/utils/pace_derivation.dart';
+import 'package:learning_tracker/features/scheduler/domain/models/goal_entity.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/pace_status.dart';
 import 'package:learning_tracker/features/scheduler/domain/services/pace_calculator.dart';
 
@@ -11,7 +11,7 @@ import 'package:learning_tracker/features/scheduler/domain/services/pace_calcula
 /// pure: no IO, easily unit-tested.
 class PaceStatusInput {
   const PaceStatusInput({
-    required this.goal,
+    required this.paceTarget,
     required this.completedItems,
     required this.dailyCompletionCounts,
     required this.totalItems,
@@ -20,8 +20,11 @@ class PaceStatusInput {
     this.studyDaysPerWeek,
   });
 
-  /// The goal row to compute pace for.
-  final Goal goal;
+  /// The sealed goal-mode discriminant (from [GoalEntity.paceTarget] or
+  /// reconstructed from the raw Drift [Goal] row).
+  ///
+  /// `null` → no goal set; the use-case returns `null` immediately.
+  final PaceTarget? paceTarget;
 
   /// Number of distinct completed sefariaRefs for this curriculum + track.
   final int completedItems;
@@ -36,15 +39,15 @@ class PaceStatusInput {
   final DateTime today;
 
   /// Number of study days between today and the deadline (inclusive).
-  /// Required when the goal has a `targetDate` but no stored `paceValue`.
+  /// Required for [DeadlineTarget] goals.
   final int? studyDaysInWindow;
 
   /// Number of study days per calendar week for the track.
-  /// Required when the goal has a `targetDate` but no stored `paceValue`.
+  /// Required for [DeadlineTarget] goals.
   final int? studyDaysPerWeek;
 }
 
-/// Pure use-case: converts a [Goal] row + completion counts into a
+/// Pure use-case: converts a [PaceTarget] + completion counts into a
 /// [PaceStatus], or `null` when no projection is possible.
 ///
 /// ## B3 note
@@ -59,64 +62,56 @@ class ComputePaceStatusUseCase {
   /// Computes the pace status for [input].
   ///
   /// Returns `null` when:
-  /// - Goal type is 'deadline' but no `targetDate` is set.
+  /// - [PaceStatusInput.paceTarget] is `null` (no goal set).
+  /// - Goal is a [DeadlineTarget] but study-day data is unavailable.
   PaceStatus? execute(PaceStatusInput input) {
-    final goal = input.goal;
+    switch (input.paceTarget) {
+      // ---------------------------------------------------------------
+      // Pace-based goal
+      // ---------------------------------------------------------------
+      case PacePeriodTarget(:final rate, :final period):
+        final dailyRate = PaceCalculator.paceToDaily(rate, period);
+        return PaceCalculator.calculateForPaceGoal(
+          targetPacePerDay: dailyRate,
+          totalItems: input.totalItems,
+          completedItems: input.completedItems,
+          dailyCompletionCounts: input.dailyCompletionCounts,
+          today: input.today,
+        );
 
-    // ---------------------------------------------------------------
-    // Pace-based goal
-    // ---------------------------------------------------------------
-    if (goal.goalType == 'pace' &&
-        goal.paceValue != null &&
-        goal.pacePeriod != null) {
-      final dailyRate = PaceCalculator.paceToDaily(
-        goal.paceValue!,
-        goal.pacePeriod!,
-      );
-      return PaceCalculator.calculateForPaceGoal(
-        targetPacePerDay: dailyRate,
-        totalItems: input.totalItems,
-        completedItems: input.completedItems,
-        dailyCompletionCounts: input.dailyCompletionCounts,
-        today: input.today,
-      );
+      // ---------------------------------------------------------------
+      // Deadline-based goal
+      //
+      // A deadline goal ALWAYS yields a projection: derive a pace from
+      // the deadline + scope + study-day density and hand off to
+      // `calculateForPaceGoal`. Unlike `PaceCalculator.calculate` (which
+      // is null on day one), `calculateForPaceGoal` projects
+      // deterministically — so "No projection" can never appear for a
+      // track with a deadline.
+      // ---------------------------------------------------------------
+      case DeadlineTarget():
+        final studyDaysInWindow = input.studyDaysInWindow ?? 0;
+        final studyDaysPerWeek = input.studyDaysPerWeek ?? 5;
+        final derived = derivePaceFromDeadline(
+          totalScopeItems: input.totalItems,
+          studyDaysInWindow: studyDaysInWindow,
+          studyDaysPerWeek: studyDaysPerWeek,
+        );
+        final dailyRate = PaceCalculator.paceToDaily(
+          derived.paceValue,
+          derived.pacePeriod,
+        );
+        return PaceCalculator.calculateForPaceGoal(
+          targetPacePerDay: dailyRate,
+          totalItems: input.totalItems,
+          completedItems: input.completedItems,
+          dailyCompletionCounts: input.dailyCompletionCounts,
+          today: input.today,
+        );
+
+      case null:
+        return null;
     }
-
-    // ---------------------------------------------------------------
-    // Deadline-based goal
-    //
-    // A deadline goal ALWAYS yields a projection: prefer the explicit
-    // pace the wizard stored, otherwise derive one from the deadline +
-    // scope + study-day density. `calculateForPaceGoal` projects
-    // deterministically from the target pace (no completion history
-    // needed), so "No projection" can never appear for a track that
-    // has a deadline — unlike `PaceCalculator.calculate`, whose
-    // rolling-average projection is null on day one.
-    // ---------------------------------------------------------------
-    if (goal.targetDate == null) return null;
-
-    var paceValue = goal.paceValue;
-    var pacePeriod = goal.pacePeriod;
-    if (paceValue == null || pacePeriod == null) {
-      final studyDaysInWindow = input.studyDaysInWindow ?? 0;
-      final studyDaysPerWeek = input.studyDaysPerWeek ?? 5;
-      final derived = derivePaceFromDeadline(
-        totalScopeItems: input.totalItems,
-        studyDaysInWindow: studyDaysInWindow,
-        studyDaysPerWeek: studyDaysPerWeek,
-      );
-      paceValue = derived.paceValue;
-      pacePeriod = derived.pacePeriod;
-    }
-
-    final dailyRate = PaceCalculator.paceToDaily(paceValue, pacePeriod);
-    return PaceCalculator.calculateForPaceGoal(
-      targetPacePerDay: dailyRate,
-      totalItems: input.totalItems,
-      completedItems: input.completedItems,
-      dailyCompletionCounts: input.dailyCompletionCounts,
-      today: input.today,
-    );
   }
 
   /// Helper: builds a UTC-normalised daily count map from raw completion rows.

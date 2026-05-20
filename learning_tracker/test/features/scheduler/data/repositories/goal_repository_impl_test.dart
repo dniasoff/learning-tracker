@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/features/scheduler/data/repositories/goal_repository_impl.dart';
+import 'package:learning_tracker/features/scheduler/domain/models/goal_entity.dart';
 
 import '../../../../helpers/test_database.dart';
 
@@ -54,7 +55,7 @@ void main() {
         curriculumId: CurriculumId.mishnayos,
         trackId: trackId,
         targetPercent: 100.0,
-        targetDate: targetDate,
+        paceTarget: DeadlineTarget(targetDate),
         description: 'Finish mishnayos',
         dateType: 'gregorian',
       );
@@ -63,6 +64,8 @@ void main() {
       expect(goal.curriculumId, CurriculumId.mishnayos);
       expect(goal.targetPercent, 100.0);
       expect(goal.description, 'Finish mishnayos');
+      expect(goal.goalType, 'deadline');
+      expect(goal.targetDate, isNotNull);
     });
 
     test('getGoals returns goals for specific curriculum', () async {
@@ -124,25 +127,44 @@ void main() {
       expect(goals, isEmpty);
     });
 
-    group('pace goal fields', () {
-      test('createGoal with pace fields persists correctly', () async {
+    group('pace goal fields — W3.44 PaceTarget sealed VO', () {
+      test('createGoal with PacePeriodTarget persists correctly', () async {
         final goal = await repo.createGoal(
           profileId: 0,
           curriculumId: CurriculumId.bavli,
           trackId: bavliTrackId,
           targetPercent: 100.0,
-          goalType: 'pace',
-          paceValue: 1,
-          pacePeriod: 'per_day',
+          paceTarget: PacePeriodTarget(rate: 1, period: 'per_day'),
         );
 
         expect(goal.goalType, 'pace');
         expect(goal.paceValue, 1);
         expect(goal.pacePeriod, 'per_day');
         expect(goal.targetDate, isNull);
+        // paceTarget getter reflects sealed VO
+        expect(goal.paceTarget, isA<PacePeriodTarget>());
+        expect((goal.paceTarget as PacePeriodTarget).rate, 1);
+        expect((goal.paceTarget as PacePeriodTarget).period, 'per_day');
       });
 
-      test('createGoal defaults to deadline goalType', () async {
+      test('createGoal with DeadlineTarget persists correctly', () async {
+        final due = DateTime(2026, 12, 31).toUtc();
+        final goal = await repo.createGoal(
+          profileId: 0,
+          curriculumId: CurriculumId.bavli,
+          trackId: bavliTrackId,
+          targetPercent: 100.0,
+          paceTarget: DeadlineTarget(due),
+        );
+
+        expect(goal.goalType, 'deadline');
+        expect(goal.targetDate, isNotNull);
+        expect(goal.paceValue, isNull);
+        expect(goal.pacePeriod, isNull);
+        expect(goal.paceTarget, isA<DeadlineTarget>());
+      });
+
+      test('createGoal with null paceTarget defaults to goalType=none', () async {
         final goal = await repo.createGoal(
           profileId: 0,
           curriculumId: CurriculumId.bavli,
@@ -150,63 +172,58 @@ void main() {
           targetPercent: 100.0,
         );
 
-        expect(goal.goalType, 'deadline');
+        expect(goal.goalType, 'none');
         expect(goal.paceValue, isNull);
         expect(goal.pacePeriod, isNull);
+        expect(goal.paceTarget, isNull);
       });
 
-      test('updateGoal changes pace fields', () async {
+      test('updateGoal with PacePeriodTarget changes pace fields', () async {
         final goal = await repo.createGoal(
           profileId: 0,
           curriculumId: CurriculumId.bavli,
           trackId: bavliTrackId,
           targetPercent: 100.0,
-          goalType: 'pace',
-          paceValue: 1,
-          pacePeriod: 'per_day',
+          paceTarget: PacePeriodTarget(rate: 1, period: 'per_day'),
         );
 
         final updated = await repo.updateGoal(
           goalId: goal.id!,
-          paceValue: 5,
-          pacePeriod: 'per_week',
+          paceTarget: PacePeriodTarget(rate: 5, period: 'per_week'),
         );
 
         expect(updated.paceValue, 5);
         expect(updated.pacePeriod, 'per_week');
+        expect(updated.paceTarget, isA<PacePeriodTarget>());
       });
 
-      test('updateGoal with clearPace nulls out pace fields', () async {
+      test('updateGoal with clearPaceTarget nulls out goal mode', () async {
         final goal = await repo.createGoal(
           profileId: 0,
           curriculumId: CurriculumId.bavli,
           trackId: bavliTrackId,
           targetPercent: 100.0,
-          goalType: 'pace',
-          paceValue: 1,
-          pacePeriod: 'per_day',
+          paceTarget: PacePeriodTarget(rate: 1, period: 'per_day'),
         );
 
         final updated = await repo.updateGoal(
           goalId: goal.id!,
-          goalType: 'deadline',
-          clearPace: true,
+          clearPaceTarget: true,
         );
 
-        expect(updated.goalType, 'deadline');
+        expect(updated.goalType, 'none');
         expect(updated.paceValue, isNull);
         expect(updated.pacePeriod, isNull);
+        expect(updated.paceTarget, isNull);
       });
 
-      test('updateGoal preserves pace fields when not clearing', () async {
+      test('updateGoal preserves pace fields when paceTarget not provided', () async {
         final goal = await repo.createGoal(
           profileId: 0,
           curriculumId: CurriculumId.bavli,
           trackId: bavliTrackId,
           targetPercent: 100.0,
-          goalType: 'pace',
-          paceValue: 3,
-          pacePeriod: 'per_week',
+          paceTarget: PacePeriodTarget(rate: 3, period: 'per_week'),
         );
 
         final updated = await repo.updateGoal(
@@ -218,6 +235,17 @@ void main() {
         expect(updated.paceValue, 3);
         expect(updated.pacePeriod, 'per_week');
         expect(updated.description, 'Updated description');
+      });
+
+      test('paceTarget getter returns null for goalType=none', () async {
+        final goal = await repo.createGoal(
+          profileId: 0,
+          curriculumId: CurriculumId.bavli,
+          trackId: bavliTrackId,
+          targetPercent: 100.0,
+        );
+        // goalType=none → paceTarget getter returns null
+        expect(goal.paceTarget, isNull);
       });
     });
   });

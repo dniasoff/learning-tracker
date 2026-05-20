@@ -23,6 +23,7 @@ import 'package:learning_tracker/features/onboarding/domain/services/bulk_prior_
 import 'package:learning_tracker/features/onboarding/domain/services/curriculum_import_service.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/user_profile_service.dart';
 import 'package:learning_tracker/features/scheduler/data/repositories/goal_repository_impl.dart';
+import 'package:learning_tracker/features/scheduler/domain/models/goal_entity.dart';
 import 'package:learning_tracker/features/scheduler/presentation/screens/goal_setup_screen.dart';
 import 'package:learning_tracker/features/settings/domain/services/curriculum_activation_service.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
@@ -287,7 +288,7 @@ void main() {
           curriculumId: CurriculumId.mishnayos,
           trackId: trackId,
           targetPercent: 100.0,
-          targetDate: targetDate,
+          paceTarget: DeadlineTarget(targetDate),
           description: 'Finish by summer',
         );
 
@@ -370,7 +371,7 @@ void main() {
         curriculumId: CurriculumId.mishnayos,
         trackId: trackId,
         targetPercent: 100.0,
-        targetDate: DateTime.utc(2027, 6, 15),
+        paceTarget: DeadlineTarget(DateTime.utc(2027, 6, 15)),
       );
       // bavli: skipped — no goal created
 
@@ -455,7 +456,7 @@ void main() {
         curriculumId: CurriculumId.chumash,
         trackId: trackId,
         targetPercent: 100.0,
-        targetDate: DateTime.utc(2027, 9, 1),
+        paceTarget: DeadlineTarget(DateTime.utc(2027, 9, 1)),
         description: 'Complete Chumash',
       );
 
@@ -472,13 +473,13 @@ void main() {
         curriculumId: CurriculumId.mishnayos,
         trackId: trackId,
         targetPercent: 100.0,
-        targetDate: DateTime.utc(2027, 6, 15),
+        paceTarget: DeadlineTarget(DateTime.utc(2027, 6, 15)),
       );
 
       // Modify later from goal management
       final updated = await goalRepo.updateGoal(
         goalId: goal.id!,
-        targetDate: DateTime.utc(2027, 12, 31),
+        paceTarget: DeadlineTarget(DateTime.utc(2027, 12, 31)),
         description: 'Extended deadline',
       );
 
@@ -499,7 +500,7 @@ void main() {
           curriculumId: CurriculumId.mishnayos,
           trackId: trackId,
           targetPercent: 100.0,
-          targetDate: DateTime.utc(2027, 6, 15),
+          paceTarget: DeadlineTarget(DateTime.utc(2027, 6, 15)),
           description: 'Complete by summer',
         );
 
