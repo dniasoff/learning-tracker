@@ -1,11 +1,27 @@
 import 'package:learning_tracker/core/database/daos/completion_dao.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_request.dart';
+import 'package:learning_tracker/features/learning/domain/entities/completion_source.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/completion_repository.dart';
 
 /// Use case for marking multiple content items as completed in a single operation.
 ///
-/// Useful for "mark this whole perek as learned" scenarios.
+/// Orchestrates the bulk completion flow, gating engagement side effects
+/// according to the [CompletionSource] discriminator (B1 three-tier credit
+/// policy). This mirrors exactly what [MarkCompletionUseCase] does for the
+/// single-item path.
+///
+/// ```
+/// Tier              | Streak / Points | Siyumim / Reports | Lifetime data
+/// ──────────────────┼─────────────────┼───────────────────┼──────────────
+/// live              |       ✓         |        ✓          |      ✓
+/// bulkInTrack       |       ✗         |        ✓          |      ✓
+/// lifetimeOnly      |       ✗         |        ✗          |      ✓
+/// ```
+///
+/// The default source is [CompletionSource.bulkInTrack] because this is the
+/// bulk use case — callers that perform prior-learning wizard bulk-marks must
+/// NOT credit engagement (streak + points). Passing
+/// [CompletionSource.lifetimeOnly] additionally suppresses the achievement tier.
 class BulkMarkCompletionUseCase {
   final CompletionRepository _repository;
 
@@ -13,11 +29,31 @@ class BulkMarkCompletionUseCase {
 
   /// Execute the use case to mark multiple items as completed.
   ///
+  /// [source] controls which handler tiers fire (B1 policy). Defaults to
+  /// [CompletionSource.bulkInTrack] — engagement suppressed, achievement and
+  /// lifetime tiers active — because bulk operations represent prior learning
+  /// that should not inflate the current streak or award points.
+  ///
   /// Creates individual completion records for each item in a single transaction.
   /// If any operation fails, the entire transaction is rolled back.
   ///
   /// Returns the list of created completions.
-  Future<List<Completion>> call(BulkCompletionRequest request) async {
-    return await _repository.bulkMarkComplete(request);
+  Future<List<Completion>> call(
+    BulkCompletionRequest request, {
+    CompletionSource source = CompletionSource.bulkInTrack,
+  }) async {
+    // B1: derive the engagement gate from the source discriminator.
+    // For bulkInTrack / lifetimeOnly the flag maps to false so the repository
+    // correctly suppresses streak events and point awards.
+    final gatedRequest = BulkCompletionRequest(
+      curriculumId: request.curriculumId,
+      sefariaRefs: request.sefariaRefs,
+      stageId: request.stageId,
+      trackType: request.trackType,
+      profileId: request.profileId,
+      awardGamificationPoints: source.creditsEngagement,
+      completedAt: request.completedAt,
+    );
+    return await _repository.bulkMarkComplete(gatedRequest);
   }
 }
