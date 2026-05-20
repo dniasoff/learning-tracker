@@ -354,7 +354,7 @@ Sync-point trigger tags: `[P1]` `[P2]` `[P3]` `[P4]` `[P5]` `[P6]` `[P7]`
 - [x] W7.21 (S, S1, done)    Add lint no_raw_logevent (forbids logEvent(name, …) outside analytics_service.dart) — ERROR severity
 
 ### Phase 7e · Polish + final verify
-- [ ] W7.22 (S, S1, pending)    Delete root Makefile; canonical is learning_tracker/Makefile
-- [ ] W7.23 (S, S1, pending)    Update CLAUDE.md (any remaining stale references)
+- [x] W7.22 (S, S1, done)    Delete root Makefile; canonical is learning_tracker/Makefile — already deleted in prior commit; working-tree copy cleaned up
+- [x] W7.23 (S, S1, done)    Update CLAUDE.md (any remaining stale references) — fixed Rule 3 lib/features/auth/ → lib/core/auth/
 - [ ] W7.24 (M, S5, pending)    Bug-fix integration pass — verify B1, B2, B3 at their respective wave-appropriate sites
 - [ ] W7.25 (M, S5, pending)    Final manual smoke across spot-on screens: EN + HE, single device + two-device sync (own + tutored); add Daf Yomi start_date=today−5, expect ~5 overdue tasks — **B3 verification** `[P7]`

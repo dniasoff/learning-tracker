@@ -41,3 +41,16 @@ Tracker: _bmad-output/refactor-task-tracker.md
 - commit: pending
 - detail: W6.20-W6.22 — TutorAuditLogWriter domain service in tutoring/domain/services/tutor_audit_log_writer.dart: TutorAuditLogRepository abstract interface (appendEntry, idempotent on ULID entryId); TutorAuditLogWriter with 9 per-action methods (logConfigChanged, logCompletionBulkPrior, logCompletionReset, logBookmarkAdvanced, logProfileEdited, logGoalChanged, logStageChanged, logRewardChanged, logStudyDayChanged); tutorNameSnapshot captured at write-time (W6.21 FR-7.2); ULID-style entryId from millisecond timestamp + action name. W6.23-W6.24 — onUserDeleted Cloud Function extended with 3-step cascade: (1) delete user data via recursiveDelete [existing], (2) revoke all pending/active grants where user is parent (sets state=revoked_by_parent, stamps revoked_at, _delete_cascade=true sentinel), (3) resign all active grants where user is tutor (sets state=revoked_by_tutor). TypeScript compiled clean; all 6 functions re-deployed to torah-study-tracker successfully. W6.25 — TutorNotificationService created in tutoring/domain/services/: 3 typed methods (notifyParentOfDecline, notifyParentOfResignation, notifyTutorOfRevocation) wrapping TransactionalEmailService payload types; fire-and-forget (email service contract absorbs errors); currently backed by LoggingTransactionalEmailService until email infra is provisioned. tutoring.dart barrel updated. dart analyze --fatal-infos clean (0 issues).
 - status: W6.20-W6.25 done. Remaining W6 work (W6.1-W6.7, W6.9-W6.19) still gated on P5 (S2 must mark W3.46 done).
+
+## [2026-05-20 08:15] stream-status
+- S3 has completed all non-gated tasks. Full completion list:
+  W2.10-W2.20 (account cluster, parent_mode dissolution, tutoring skeleton)
+  W3.38-W3.43 (tutor Firestore schema, Cloud Functions deployed)
+  W4.11 (PinFlowMachine state machine + SetParentPinUseCase + VerifyParentPinUseCase)
+  W4.27-W4.35 (tutor domain: TutorGrant, TutorPermissions, ProfileSelection, TutorPin, use cases, MarkLiveCompletionUseCase, permissionsProvider)
+  W6.8 (TransactionalEmailService abstraction + LoggingTransactionalEmailService fallback)
+  W6.20-W6.25 (TutorAuditLogWriter, onUserDeleted cascade, TutorNotificationService)
+  W7.19 (PiiRedactor extended)
+- Waiting on P5: W6.1-W6.7, W6.9-W6.19 (17 UI tasks) blocked until S2 marks W3.46 done
+- Note: root Makefile deletion (W7.22/S1 task) landed incidentally in S3 commit 99193333
+  as it was staged in the working tree; the canonical learning_tracker/Makefile exists.
