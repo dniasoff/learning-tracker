@@ -1,5 +1,5 @@
 import 'package:learning_tracker/core/sync/merge/entity_merger.dart';
-import 'package:learning_tracker/features/sync/domain/merge_rules.dart';
+import 'package:learning_tracker/core/sync/merge/merge_rules.dart';
 
 /// LWW merger for learner profile rows.
 ///
