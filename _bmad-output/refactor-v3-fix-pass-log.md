@@ -330,3 +330,68 @@ Resolved 9 V5 demotions (tasks incorrectly marked done in the refactor tracker b
 **Commits:**
 - `688fa74c` — `refactor(v5-w2-w9): fix all stale imports after duplicate-tree deletion`
 - `9513ac5b` — `feat(v5-w2.29): wire stage_definitions real-time listener channel`
+
+---
+
+## Reorder Amnesty + §10.1
+
+**Date:** 2026-05-20
+
+### Task A — Reorder amnesty mechanism
+
+**Schema changes:**
+- `lib/core/database/tables/curriculum_tracks.dart`: added `lastReorderAt: DateTime?` nullable column. Set to `activatedAt` on track creation in `activateTrack`, `restoreOrCreate`, `initializeDefaultTracks`.
+- `lib/core/database/tables/learning_order.dart`: added `learningOrderVersion: int` (default 1) for the §10.1 version-mismatch guard.
+
+**Projection filter** (`lib/features/scheduler/presentation/providers/scheduler_providers.dart` `_buildProjectionTasks`):
+- Reads `preferred.lastReorderAt` into `trackLastReorderAtMap` (null → epoch 0).
+- After `project()`, builds `scheduleIndex` (ref → scheduledDate) and filters `projection.overdue`: refs with `scheduledDate < lastReorderAt` are amnestied (skipped).
+- Applied to both the self-paced path and the program-track path.
+
+**Reorder write sites stamped:**
+- `lib/core/database/daos/track_dao.dart`: new `stampReorderAt(trackId, {DateTime? at})` method.
+- `lib/features/tracks/whole_curriculum_order/data/repositories/learning_order_repository_impl.dart`: `saveOrder` and `resetToDefault` call `_stampReorderAt` after writes.
+- `lib/features/tracks/track_order/data/repositories/track_learning_order_repository_impl.dart`: `saveSedarimOrder`, `saveMasechtosOrder`, `resetToDefault` call `db.trackDao.stampReorderAt(trackId)`.
+
+**NOT triggered on:** pace changes (`resetPace`), stage-config changes, bookmark advances, profile-level edits.
+
+### Task B — Confirm dialog before reorder
+
+**Dialog:** `lib/core/widgets/reorder_confirm_dialog.dart` — `ReorderConfirmDialog.showIfNeeded(context, overdueCount:)`.
+- No-ops (returns true) when `overdueCount == 0`.
+- Shows "Reordering will clear your N outstanding overdue item(s). Consider completing them first." with Cancel / Continue.
+
+**Provider:** `overdueCountForCurriculumProvider(CurriculumId)` in `scheduler_providers.dart` — counts `isOverdue` tasks from `allDailyTasks` for a single curriculum.
+
+**Wire-up:**
+- `lib/features/tracks/whole_curriculum_order/presentation/screens/learning_order_screen.dart` `_onReorder` — async, shows dialog before persisting.
+- `lib/features/tracks/track_order/presentation/screens/track_learning_order_screen.dart` `_onReorderSedarim` / `_onReorderMasechtos` — both async, show dialog before persisting.
+
+**L10n:** `reorderConfirmTitle` + `reorderConfirmBody(overdueCount)` in `app_en.arb` and `app_he.arb`.
+
+### Task C — §10.1 `learning_order_version` guard
+
+**Implementation:** `LearningOrderRepositoryImpl` gains `currentContentVersion` param (default 1).
+- `getOrder`: if `rows.first.learningOrderVersion != _currentContentVersion`, logs `learning_order_version_mismatch` warning and calls `_stampReorderAt` to re-amnesty.
+- `saveOrder`: stamps `learningOrderVersion = _currentContentVersion` on every upserted row.
+
+**Provider wiring:** `contentVersionProvider` (FutureProvider<int>) reads `SeedMetadata.version` from the content DB. `learningOrderRepositoryProvider` passes it and the active `profileId` to `LearningOrderRepositoryImpl`.
+
+### Regression tests
+
+9 tests in `test/features/scheduler/reorder_amnesty_test.dart`:
+- Scenario A (4): stampReorderAt updates the column; projection amnesty logic; saveOrder stamps the track; resetToDefault stamps the track.
+- Scenario B (2): resetPace does NOT change lastReorderAt; non-reorder state change does NOT change lastReorderAt.
+- Scenario C (3): version mismatch triggers amnesty; no mismatch leaves lastReorderAt untouched; saveOrder stamps the version on rows.
+
+| Item | Description | CI |
+|------|-------------|:--:|
+| Task A | Schema + projection filter + reorder write sites | GREEN |
+| Task B | Confirm dialog (en + he) | GREEN |
+| Task C | Version guard + amnesty on mismatch | GREEN |
+| **Total** | **9 new tests** | **GREEN (5227 pass, 125 skip)** |
+
+**Commits:**
+- `3a8b023a` — `feat(amnesty): reorder clears overdue via lastReorderAt filter`
+- `54c334ec` — `feat(amnesty): confirm dialog before reorder with overdue count`
+- `8b646212` — `feat(content-version): learning_order_version guard + amnesty on mismatch`
