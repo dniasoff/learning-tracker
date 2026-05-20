@@ -20,6 +20,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/features/sacred_time/domain/models/sacred_window.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/providers/sacred_windows_provider.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/widgets/sacred_time_lock_overlay.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -36,6 +37,10 @@ SacredWindow _activeShabboWindow() => SacredWindow(
 /// Pumps [child] inside a [ProviderScope] and [MaterialApp] with the given
 /// [overrides]. Returns quickly without calling pumpAndSettle (avoids timer
 /// hangs from Riverpod keepAlive providers).
+///
+/// Includes [AppLocalizations.localizationsDelegates] so that widgets using
+/// [AppLocalizations.of(context)!] (e.g. [SacredTimeLockOverlay]) can resolve
+/// localised strings without throwing a null-check error.
 Future<void> _pump(
   WidgetTester tester,
   Widget child, {
@@ -44,7 +49,11 @@ Future<void> _pump(
   await tester.pumpWidget(
     ProviderScope(
       overrides: overrides,
-      child: MaterialApp(home: child),
+      child: MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: child,
+      ),
     ),
   );
   await tester.pump(); // first frame
@@ -168,8 +177,10 @@ void main() {
         await tester.pumpWidget(
           UncontrolledProviderScope(
             container: container,
-            child: const MaterialApp(
-              home: SacredTimeLockOverlay(child: Text('DASHBOARD')),
+            child: MaterialApp(
+              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: const SacredTimeLockOverlay(child: Text('DASHBOARD')),
             ),
           ),
         );

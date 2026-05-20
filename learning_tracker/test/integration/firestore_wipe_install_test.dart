@@ -271,11 +271,30 @@ void main() {
       final updatedAt = profileData['updated_at'] is DateTime
           ? profileData['updated_at'] as DateTime
           : DateTime.parse(profileData['updated_at'] as String);
+      final accountId = (profileData['account_id'] as num).toInt();
+
+      // Seed the accounts row first — learner_profiles.accountId is a FK
+      // (accounts.id). In a real cloud-restore, the account row is created
+      // during sign-in before profile data is pulled. Here we insert a minimal
+      // account row so the FK constraint is satisfied.
+      await dbB
+          .into(dbB.accounts)
+          .insertOnConflictUpdate(
+            AccountsCompanion.insert(
+              email: 'test@example.com',
+              tier: 'localBorn',
+              displayName: profileData['display_name'] as String? ?? 'User',
+              userMode: profileData['mode'] as String? ?? 'adult',
+              createdAt: createdAt,
+              updatedAt: updatedAt,
+            ),
+          );
+
       await dbB
           .into(dbB.learnerProfiles)
           .insertOnConflictUpdate(
             LearnerProfilesCompanion.insert(
-              accountId: (profileData['account_id'] as num).toInt(),
+              accountId: accountId,
               displayName: profileData['display_name'] as String,
               mode: profileData['mode'] as String? ?? 'adult',
               createdAt: createdAt,

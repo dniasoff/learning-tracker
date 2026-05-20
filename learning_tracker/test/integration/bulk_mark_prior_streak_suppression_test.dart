@@ -13,9 +13,9 @@ import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/network/sefaria/models/curriculum_hierarchy_config.dart';
-import 'package:learning_tracker/features/gamification/streak/streak_state_provider.dart';
 import 'package:learning_tracker/core/time/local_day_clock.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
+import 'package:learning_tracker/features/gamification/streak/streak_state_provider.dart';
 import 'package:learning_tracker/features/learning/data/repositories/completion_repository_impl.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_request.dart';
 
@@ -24,13 +24,27 @@ import 'package:learning_tracker/features/learning/domain/entities/completion_re
 Future<int> _seedProfileAndTrack(UserDatabase db) async {
   final now = DateTime.utc(2026, 5, 13, 12, 0, 0);
 
+  // Insert an account row first — learner_profiles.accountId is a FK.
+  final accountId = await db
+      .into(db.accounts)
+      .insert(
+        AccountsCompanion.insert(
+          email: 'test@example.com',
+          tier: 'localBorn',
+          displayName: 'Test User',
+          userMode: 'adult',
+          createdAt: now,
+          updatedAt: now,
+        ),
+      );
+
   final profileRow = await db
       .into(db.learnerProfiles)
       .insertReturning(
         LearnerProfilesCompanion.insert(
-          accountId: 1,
+          accountId: accountId,
           displayName: 'Test User',
-          mode: 'parent',
+          mode: 'adult',
           createdAt: now,
           updatedAt: now,
         ),

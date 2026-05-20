@@ -20,14 +20,14 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
-import 'package:learning_tracker/features/learning/domain/entities/completion_command.dart';
-import 'package:learning_tracker/features/learning/data/completion_writer.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/network/sefaria/models/curriculum_hierarchy_config.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
+import 'package:learning_tracker/features/learning/data/completion_writer.dart';
 import 'package:learning_tracker/features/learning/data/repositories/completion_repository_impl.dart';
 import 'package:learning_tracker/features/learning/domain/entities/bookmark.dart';
+import 'package:learning_tracker/features/learning/domain/entities/completion_command.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/bookmark_repository.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/bulk_prior_completion_service.dart';
 import 'package:learning_tracker/features/stages/data/repositories/stage_definition_repository_impl.dart';
@@ -86,6 +86,54 @@ class _StubContentRepository implements ContentRepository {
 class MockBookmarkRepository extends Mock implements BookmarkRepository {}
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
+
+/// Inserts a prior-mark completion into BOTH [completion_events] AND
+/// [prior_completion_imports], mirroring the production path in
+/// [CompletionWriter.commitBatch] when [priorMarkOnly] = true.
+///
+/// The [expungePriorCompletions] method identifies which rows to tombstone by
+/// querying [prior_completion_imports]; seeding only [completion_events] would
+/// make expunge a no-op (W4.26 / B8 fix). Tests that bypass
+/// [BulkPriorCompletionService.execute] must call this helper instead of
+/// inserting directly into [completion_events].
+Future<void> _insertPriorMark(
+  UserDatabase db, {
+  required int profileId,
+  required String curriculumId,
+  required String sefariaRef,
+  required int stageId,
+  required int trackId,
+  String trackType = 'personal',
+  int points = 0,
+}) async {
+  final sentinel = kBulkPriorSentinelDate;
+  await db
+      .into(db.completionEvents)
+      .insert(
+        CompletionEventsCompanion.insert(
+          profileId: profileId,
+          curriculumId: curriculumId,
+          sefariaRef: sefariaRef,
+          stageId: stageId,
+          trackType: trackType,
+          trackId: Value(trackId),
+          points: Value(points),
+          eventTimestamp: sentinel,
+        ),
+      );
+  await db
+      .into(db.priorCompletionImports)
+      .insert(
+        PriorCompletionImportsCompanion.insert(
+          profileId: profileId,
+          curriculumId: curriculumId,
+          sefariaRef: sefariaRef,
+          stageId: stageId,
+          trackType: trackType,
+          source: 'bulkInTrack',
+        ),
+      );
+}
 
 ContentItem _leaf(String ref, int sortOrder) => ContentItem(
   curriculumId: 'mishnayos',
@@ -161,7 +209,7 @@ Future<void> _seedStages(
             trackId: trackId,
             stageOrder: i,
             stageName: i == 1 ? 'Learn' : 'Chazara $i',
-            schedule: Value('{"type":"delay","delay_days":0}'),
+            schedule: const Value('{"type":"delay","delay_days":0}'),
           ),
         );
   }
@@ -187,7 +235,7 @@ Future<void> _seedStagesWithSuperseded(
           trackId: trackId,
           stageOrder: count + 1,
           stageName: 'Old Chazara (superseded)',
-          schedule: Value('{"type":"delay","delay_days":0}'),
+          schedule: const Value('{"type":"delay","delay_days":0}'),
         ),
       );
 }
@@ -278,9 +326,15 @@ void main() {
       expect(stagesByRef['ref_b'], containsAll([1, 2, 3]));
     });
 
-    test('AC3 (M1): superseded stages are excluded — '
-        'only active stages receive completion_events', () async {
-      // Seed 2 active stages + 1 superseded stage at stageOrder 3.
+    test('AC3: all seeded stages receive completion_events — '
+        '(note: supersededAt column dropped in W3.29; all 3 stages are active)',
+        () async {
+      // W3.29 dropped `supersededAt`. The helper still inserts 3 stages (2
+      // "active" + 1 formerly "superseded"), but since the column is gone there
+      // is no way to mark a stage as superseded at the DB level. The edit-track
+      // flow now deletes-and-recreates stages instead of superseding them.
+      // Therefore `_allStageOrders` returns all 3 stages and the service writes
+      // 3 completions — the "only 2 active" expectation was outdated.
       await _seedStagesWithSuperseded(
         db,
         profileId: profileId,
@@ -325,23 +379,21 @@ void main() {
         profileId: profileId,
       );
 
-      // 1 item × 2 active stages = 2 completions; superseded stage 3 excluded.
+      // 1 item × 3 stages = 3 completions (all stages; supersededAt removed).
       expect(
         result.completionCount,
-        2,
+        3,
         reason:
-            'M1: superseded stage must be excluded; only 2 active stages '
-            'produce completions',
+            'W3.29: supersededAt dropped — all 3 seeded stages are active and '
+            'must produce completions',
       );
 
       final events = await db.completionDao.getCompletionsByProfile(profileId);
       final stageIds = events.map((e) => e.stageId).toSet();
       expect(
         stageIds,
-        equals({1, 2}),
-        reason:
-            'Only active stageOrders (1, 2) must appear; '
-            'superseded stageOrder 3 must be absent',
+        equals({1, 2, 3}),
+        reason: 'All 3 stageOrders must appear (no superseded filtering)',
       );
     });
 
@@ -413,24 +465,17 @@ void main() {
     test(
       'AC1: sets purgedAt on all sentinel-dated rows for the given sefariaRef',
       () async {
-        // Insert 3 prior-mark rows (sentinel timestamp, priorMarkOnly = true)
-        // for 'ref_target'.
-        final sentinel = kBulkPriorSentinelDate;
+        // Insert 3 prior-mark rows into BOTH completion_events AND
+        // prior_completion_imports (W4.26: expunge reads the import table).
         for (var stage = 1; stage <= 3; stage++) {
-          await db
-              .into(db.completionEvents)
-              .insert(
-                CompletionEventsCompanion.insert(
-                  profileId: profileId,
-                  curriculumId: 'mishnayos',
-                  sefariaRef: 'ref_target',
-                  stageId: stage,
-                  trackType: 'personal',
-                  trackId: Value(trackId),
-                  points: const Value(0),
-                  eventTimestamp: sentinel,
-                ),
-              );
+          await _insertPriorMark(
+            db,
+            profileId: profileId,
+            curriculumId: 'mishnayos',
+            sefariaRef: 'ref_target',
+            stageId: stage,
+            trackId: trackId,
+          );
         }
 
         final bookmarkRepo = MockBookmarkRepository();
@@ -481,24 +526,18 @@ void main() {
     );
 
     test('AC2: does NOT touch rows for a different sefariaRef', () async {
-      final sentinel = kBulkPriorSentinelDate;
-
-      // Insert prior-mark rows (priorMarkOnly = true) for two different refs.
+      // Insert prior-mark rows for two different refs.
+      // Both go into completion_events + prior_completion_imports so expunge
+      // can correctly identify only ref_target's row for tombstoning.
       for (final ref in ['ref_target', 'ref_other']) {
-        await db
-            .into(db.completionEvents)
-            .insert(
-              CompletionEventsCompanion.insert(
-                profileId: profileId,
-                curriculumId: 'mishnayos',
-                sefariaRef: ref,
-                stageId: 1,
-                trackType: 'personal',
-                trackId: Value(trackId),
-                points: const Value(0),
-                eventTimestamp: sentinel,
-              ),
-            );
+        await _insertPriorMark(
+          db,
+          profileId: profileId,
+          curriculumId: 'mishnayos',
+          sefariaRef: ref,
+          stageId: 1,
+          trackId: trackId,
+        );
       }
 
       final service = BulkPriorCompletionService(
@@ -533,28 +572,19 @@ void main() {
 
     test('AC3: does NOT touch live-learning rows (non-sentinel timestamp) '
         'for the same sefariaRef', () async {
-      final sentinel = kBulkPriorSentinelDate;
       final liveDate = DateTime.utc(2026, 5, 10, 9, 0); // real study date
 
-      // Prior-mark row (sentinel, priorMarkOnly = true).
-      await db
-          .into(db.completionEvents)
-          .insert(
-            CompletionEventsCompanion.insert(
-              profileId: profileId,
-              curriculumId: 'mishnayos',
-              sefariaRef: 'ref_live',
-              stageId: 1,
-              trackType: 'personal',
-              trackId: Value(trackId),
-              points: const Value(0),
-              eventTimestamp: sentinel,
-            ),
-          );
-      // Live-learning row for stage 2 (non-sentinel, priorMarkOnly = false
-      // by default — must NOT be purged). Insert directly into completionEvents
-      // with a different stageId so the natural-key UNIQUE constraint
-      // (profileId, sefariaRef, stageId, trackType) is satisfied.
+      // Prior-mark row for stage 1 — goes into BOTH tables (W4.26).
+      await _insertPriorMark(
+        db,
+        profileId: profileId,
+        curriculumId: 'mishnayos',
+        sefariaRef: 'ref_live',
+        stageId: 1,
+        trackId: trackId,
+      );
+      // Live-learning row for stage 2 (non-sentinel timestamp, NOT in
+      // prior_completion_imports — must NOT be tombstoned by expunge).
       await db
           .into(db.completionEvents)
           .insert(
@@ -606,22 +636,14 @@ void main() {
 
     test('AC4: expunge is idempotent — calling twice does not throw '
         'and purgedAt remains set', () async {
-      final sentinel = kBulkPriorSentinelDate;
-
-      await db
-          .into(db.completionEvents)
-          .insert(
-            CompletionEventsCompanion.insert(
-              profileId: profileId,
-              curriculumId: 'mishnayos',
-              sefariaRef: 'ref_idem',
-              stageId: 1,
-              trackType: 'personal',
-              trackId: Value(trackId),
-              points: const Value(0),
-              eventTimestamp: sentinel,
-            ),
-          );
+      await _insertPriorMark(
+        db,
+        profileId: profileId,
+        curriculumId: 'mishnayos',
+        sefariaRef: 'ref_idem',
+        stageId: 1,
+        trackId: trackId,
+      );
 
       final service = BulkPriorCompletionService(
         contentRepository: _StubContentRepository(const []),
@@ -685,7 +707,6 @@ void main() {
     test(
       'AC6: does NOT touch rows belonging to a different profileId',
       () async {
-        final sentinel = kBulkPriorSentinelDate;
         final now = DateTimeFactory.nowUtc();
 
         // Seed a second account + profile.
@@ -724,24 +745,18 @@ void main() {
               ),
             );
 
-        // Insert a prior-mark row (priorMarkOnly = true) for profile 1 and
-        // another for profile 2.
+        // Insert a prior-mark row for profile 1 and another for profile 2,
+        // seeding BOTH completion_events AND prior_completion_imports (W4.26).
         for (final pid in [profileId, otherProfileId]) {
           final tid = pid == profileId ? trackId : otherTrackId;
-          await db
-              .into(db.completionEvents)
-              .insert(
-                CompletionEventsCompanion.insert(
-                  profileId: pid,
-                  curriculumId: 'mishnayos',
-                  sefariaRef: 'ref_shared',
-                  stageId: 1,
-                  trackType: 'personal',
-                  trackId: Value(tid),
-                  points: const Value(0),
-                  eventTimestamp: sentinel,
-                ),
-              );
+          await _insertPriorMark(
+            db,
+            profileId: pid,
+            curriculumId: 'mishnayos',
+            sefariaRef: 'ref_shared',
+            stageId: 1,
+            trackId: tid,
+          );
         }
 
         final service = BulkPriorCompletionService(
@@ -828,28 +843,24 @@ void main() {
         final bavliTrackId = await seedTrack(db, profileId, 'bavli');
 
         // Helper: insert a sentinel completion row directly (priorMarkOnly = true).
-        Future<void> insertSentinel(
-          String sefariaRef,
-          String curriculumId,
-          int tid,
-        ) => db
-            .into(db.completionEvents)
-            .insert(
-              CompletionEventsCompanion.insert(
-                profileId: profileId,
-                curriculumId: curriculumId,
-                sefariaRef: sefariaRef,
-                stageId: 1,
-                trackType: 'personal',
-                trackId: Value(tid),
-                points: const Value(0),
-                eventTimestamp: kBulkPriorSentinelDate,
-              ),
-            );
-
         // Prior-mark same sefariaRef under BOTH curricula.
-        await insertSentinel('Berakhot 1', 'mishnayos', trackId);
-        await insertSentinel('Berakhot 1', 'bavli', bavliTrackId);
+        // Must seed BOTH completion_events AND prior_completion_imports (W4.26).
+        await _insertPriorMark(
+          db,
+          profileId: profileId,
+          curriculumId: 'mishnayos',
+          sefariaRef: 'Berakhot 1',
+          stageId: 1,
+          trackId: trackId,
+        );
+        await _insertPriorMark(
+          db,
+          profileId: profileId,
+          curriculumId: 'bavli',
+          sefariaRef: 'Berakhot 1',
+          stageId: 1,
+          trackId: bavliTrackId,
+        );
 
         final service = BulkPriorCompletionService(
           contentRepository: _StubContentRepository(const []),
@@ -1012,23 +1023,17 @@ void main() {
               ),
             );
 
-        // Insert a prior-mark row at stageId=2 for the same item (sentinel
-        // timestamp, priorMarkOnly = true). Different stageId avoids the UNIQUE
-        // constraint.
-        await db
-            .into(db.completionEvents)
-            .insert(
-              CompletionEventsCompanion.insert(
-                profileId: profileId,
-                curriculumId: 'mishnayos',
-                sefariaRef: 'Berakhot 3',
-                stageId: 2,
-                trackType: 'personal',
-                trackId: Value(trackId),
-                points: const Value(0),
-                eventTimestamp: kBulkPriorSentinelDate,
-              ),
-            );
+        // Insert a prior-mark row at stageId=2 for the same item.
+        // Seeds BOTH completion_events AND prior_completion_imports (W4.26).
+        // Different stageId avoids the UNIQUE constraint on completion_events.
+        await _insertPriorMark(
+          db,
+          profileId: profileId,
+          curriculumId: 'mishnayos',
+          sefariaRef: 'Berakhot 3',
+          stageId: 2,
+          trackId: trackId,
+        );
 
         final service = BulkPriorCompletionService(
           contentRepository: _StubContentRepository(const []),
@@ -1138,9 +1143,11 @@ void main() {
                       t.profileId.equals(profileId),
                 ))
                 .getSingle();
+        // Compare via millisecondsSinceEpoch to avoid UTC vs. local
+        // DateTime mismatch when the value round-trips through Drift/SQLite.
         expect(
-          afterPriorMark.eventTimestamp,
-          kBulkPriorSentinelDate,
+          afterPriorMark.eventTimestamp.millisecondsSinceEpoch,
+          kBulkPriorSentinelDate.millisecondsSinceEpoch,
           reason: 'Bulk-prior-mark must use sentinel timestamp',
         );
 
