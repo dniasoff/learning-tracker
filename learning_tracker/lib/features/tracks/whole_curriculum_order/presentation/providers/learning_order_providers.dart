@@ -13,6 +13,16 @@ import 'package:learning_tracker/features/tracks/whole_curriculum_order/domain/r
 import 'package:learning_tracker/features/tracks/whole_curriculum_order/domain/use_cases/save_learning_order_use_case.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+/// The current seed/content version from [SeedMetadata] (§10.1 version guard).
+///
+/// Reads the `version` field from the content DB's single SeedMetadata row.
+/// Defaults to 1 when no metadata row is found (test / first-install paths).
+final contentVersionProvider = FutureProvider<int>((ref) async {
+  final contentDb = ref.watch(contentDatabaseProvider);
+  final meta = await contentDb.seedMetadataDao.getVersion();
+  return meta?.version ?? 1;
+});
+
 /// Provides the LearningOrderRepository (stateless — curriculum passed per call).
 final learningOrderRepositoryProvider = Provider<LearningOrderRepository>((
   ref,
@@ -20,10 +30,20 @@ final learningOrderRepositoryProvider = Provider<LearningOrderRepository>((
   final database = ref.watch(userDatabaseProvider);
   final contentRepository = ref.watch(contentRepositoryProvider);
   final syncFacade = ref.watch(syncWriteFacadeProvider);
+  final profileId = ref.watch(activeProfileIdProvider);
+  // §10.1: pass the current content version for the version-mismatch guard.
+  // Use 1 as a safe synchronous default; the FutureProvider resolves shortly
+  // after startup but the repository is accessed from async call sites so the
+  // version will be current in practice.
+  final contentVersion = ref
+      .watch(contentVersionProvider)
+      .maybeWhen(data: (v) => v, orElse: () => 1);
   return LearningOrderRepositoryImpl(
     database: database,
     contentRepository: contentRepository,
     syncEngine: syncFacade,
+    profileId: profileId,
+    currentContentVersion: contentVersion,
   );
 });
 
