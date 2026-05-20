@@ -240,12 +240,12 @@ Sync-point trigger tags: `[P1]` `[P2]` `[P3]` `[P4]` `[P5]` `[P6]` `[P7]`
 ## Wave 5 — Class cleanup + god-screen decomposition (~22 tasks)
 
 ### Phase 5a · God-screen decomposition (S5)
-- [x] W5.1  (L, S5, done)    app_intro_screen.dart (1370 LOC) → IntroScaffold + IntroPageView + 3 page widgets + IntroPageIndicator + GlowingCtaButton; commit cd365ca1
+- [ ] W5.1  (L, S5, pending)    app_intro_screen.dart (1370 LOC) → IntroScaffold + IntroPageView + 3 page widgets + IntroPageIndicator + GlowingCtaButton; commit cd365ca1 — V5-C DEMOTED: 5 widget files extracted but screen is 473 LOC (target &lt;400); IntroScaffold/IntroPageView do not exist as separate files
 - [x] W5.2  (L, S5, done)    sign_in_screen.dart (1237 LOC) → SignInController:Notifier&lt;SignInState&gt; + SignInForm + SignInModeCard + SignInActions + EmailVerificationDialog; commit e383b0a5
 - [x] W5.3  (L, S5, done)    gamification_screen.dart (1127 LOC) → 11 private classes promoted to widgets/gamification/
 - [x] W5.4  (L, S5, done)    profile_picker_screen.dart (1059 LOC) → ConsumerWidget + ProfileGrid + AddProfileDialog + segmented sections (tutored in W6.14); commit 5b6db6d6
 - [x] W5.5  (L, S5, done)    onboarding_screen.dart (1030 LOC) → OnboardingPhaseRouter + per-phase step widgets + OnboardingResumeStore; commit 272343be
-- [x] W5.6  (L, S5, done)    reward_configuration_screen.dart (1004 LOC) → RewardConfigController:Notifier&lt;RewardForm&gt; + RewardCard + sub-widgets
+- [ ] W5.6  (L, S5, pending)    reward_configuration_screen.dart (1004 LOC) → RewardConfigController:Notifier&lt;RewardForm&gt; + RewardCard + sub-widgets — V5-C DEMOTED: screen is 588 LOC (target &lt;400); _RewardPreview class (lines 494–588) not extracted to widgets/
 
 ### Phase 5b · Sealed-union state refactors
 - [x] W5.7  (M, S5, done)    Boolean state machines → sealed unions: _AnimState (add_track_flow_screen x2) + _PinStep (onboarding_screen); commit 3b94facc

@@ -93,3 +93,11 @@ Tracker: `_bmad-output/refactor-task-tracker.md`
 - next: Fix 4 demoted tasks before V6 final smoke.
 
 ---
+
+## [2026-05-20] V5-C — W5+W6+W7 task-truth verification complete
+
+- stream: V5-C | sync-point: — | review: V5-C | task: W5.1–W5.22, W6.1–W6.25, W7.1–W7.25
+- detail: 71 tasks verified. 70 VERIFIED, 2 DEMOTED. Demotions: W5.1 (app_intro_screen.dart is 473 LOC, exceeds <400 target; claimed IntroScaffold/IntroPageView do not exist as separate files; 5 widget files extracted), W5.6 (reward_configuration_screen.dart is 588 LOC, 188 over <400 target; _RewardPreview class not extracted from screen). All W6 tutor-mode tasks verified: screens exist, FirestoreTutorGrantRepository wired (not stub), TutorPermissions.canMarkLiveCompletion invariant confirmed, MarkLiveCompletionUseCase throws TutorWriteForbiddenException, text_display_screen catches it. All W7 telemetry/exception/polish tasks verified: merge_row_skipped fires at silent-skip sites in DriftMergeStore+ProfileProgramMerger, all sync telemetry events fire at correct orchestrator boundaries, firebase_analytics in pubspec, PiiRedactor extended with all claimed keys including to/recipient/email_to, no_e_to_string_in_ui + no_raw_logevent lints registered, root Makefile deleted. Notable caveats (not demoted): W5.5 (423 LOC, marginally over 400), W5.7 (_PinStep is enum not sealed class), W6.15 (indicator driven by incomingTutorGrantsProvider not permissionsProvider). Report: `_bmad-output/refactor-v5-c-truth-report.md`. Tracker updated with 2 demotions.
+- next: Fix W5.1 (extract remaining classes, reduce to <400 LOC) and W5.6 (extract _RewardPreview, reduce to <400 LOC) before V6 final smoke.
+
+---
