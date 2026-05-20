@@ -381,7 +381,7 @@ void main() {
       ignore = en.chartTotalTorahPoints;
       ignore = en.chartLearningJourney;
       ignore = en.chartJourneyMotivation;
-      ignore = en.chartSevenDayStreak;
+      ignore = en.chartSevenDayStreak(0);
       ignore = en.chartLast7Days;
       ignore = en.chartLast30Days;
       ignore = en.chartAllTime;
@@ -1122,7 +1122,7 @@ void main() {
       ignore = he.chartTotalTorahPoints;
       ignore = he.chartLearningJourney;
       ignore = he.chartJourneyMotivation;
-      ignore = he.chartSevenDayStreak;
+      ignore = he.chartSevenDayStreak(0);
       ignore = he.chartLast7Days;
       ignore = he.chartLast30Days;
       ignore = he.chartAllTime;
