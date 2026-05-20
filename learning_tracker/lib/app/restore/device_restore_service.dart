@@ -85,23 +85,23 @@ class DeviceRestoreService {
   Future<bool> isNewDevice() async {
     final state = await _readRestoreState();
     if (state == _kStateInProgress) return true;
+    // Already completed a restore — not a new device.
+    if (state == _kStateComplete) return false;
+
+    // Unauthenticated sessions cannot perform a cloud restore.
+    if (!_isAuthenticated) return false;
 
     // Valid Firebase session + no completions = signed in on a clean
     // install. This catches the reinstall case even if stale profile
     // rows exist locally (otherwise the empty-completions check would
     // be hidden by leftover SQLite state).
-    // Use the injected authenticated flag (set at construction time).
-    final firebaseUid = _isAuthenticated ? 'authenticated' : null;
     final analytics = ParentAnalyticsRepositoryImpl(_database);
     final completions = await analytics.getAllCompletions(
       scope: CrossProfileScope.syncRestore,
     );
-    if (firebaseUid != null && completions.isEmpty) return true;
+    if (completions.isEmpty) return true;
 
-    if (completions.isNotEmpty) return false;
-
-    final profiles = await _database.userProfileDao.getAllUserProfiles();
-    return profiles.isEmpty;
+    return false;
   }
 
   Future<String?> _readRestoreState() async {
