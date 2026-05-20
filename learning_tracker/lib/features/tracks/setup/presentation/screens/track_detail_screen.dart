@@ -7,23 +7,91 @@ import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/labels/domain_term_labels.dart';
+import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/theme/app_colors.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/utils/percentage_formatter.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
+import 'package:learning_tracker/features/onboarding/domain/services/bulk_prior_completion_service.dart';
 import 'package:learning_tracker/features/onboarding/presentation/screens/bulk_mark_screen.dart';
+import 'package:learning_tracker/features/progress/domain/services/pace_calculator.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/lifetime_knowledge_providers.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/curriculum_scope_providers.dart';
 import 'package:learning_tracker/features/tracks/setup/domain/entities/add_track_result.dart';
 import 'package:learning_tracker/features/tracks/setup/presentation/providers/after_track_change_invalidation.dart';
 import 'package:learning_tracker/features/tracks/setup/presentation/screens/edit_track_screen.dart';
+import 'package:learning_tracker/features/tracks/setup/presentation/widgets/track_info_card.dart';
 import 'package:learning_tracker/features/tracks/track_order/presentation/screens/track_learning_order_screen.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 final _trackGoalProvider = FutureProvider.autoDispose.family<Goal?, int>(
   (ref, trackId) =>
       ref.watch(userDatabaseProvider).goalDao.getGoalByTrack(trackId),
+);
+
+/// Computes a [PaceCalculator] for the given [CurriculumTrack].
+///
+/// Live completions: `completedAt >= track.activatedAt` (excluding sentinel).
+/// Bulk baseline: completions with the sentinel date (2000-01-01).
+/// Total items: from [scopedItemCountProvider] (0 when curriculum unknown).
+/// targetDate: deadline-goal date when available; otherwise today (so
+///   requiredVelocity returns 0 — not meaningful for pace goals).
+final _trackPaceCalcProvider =
+    FutureProvider.autoDispose.family<PaceCalculator, CurriculumTrack>(
+  (ref, track) async {
+    final db = ref.watch(userDatabaseProvider);
+    final profileId = track.profileId;
+
+    final allCompletions =
+        await db.completionDao.getCompletionsByTrackAndProfile(
+      track.id,
+      profileId,
+    );
+
+    final trackStart = track.activatedAt.toLocal();
+
+    final liveCount = allCompletions
+        .where(
+          (c) =>
+              !c.completedAt.isBefore(trackStart) &&
+              !c.completedAt.isAtSameMomentAs(kBulkPriorSentinelDate),
+        )
+        .length;
+
+    final bulkBaseline = allCompletions
+        .where(
+          (c) =>
+              c.completedAt.isAtSameMomentAs(kBulkPriorSentinelDate) ||
+              c.completedAt.isBefore(trackStart),
+        )
+        .length;
+
+    final curriculum = CurriculumId.values
+        .where((c) => c.storageKey == track.curriculumId)
+        .firstOrNull;
+
+    final totalItems = curriculum != null
+        ? await ref.watch(scopedItemCountProvider(curriculum).future)
+        : 0;
+
+    final goal = await db.goalDao.getGoalByTrack(track.id);
+    final targetDate =
+        (goal?.goalType == 'deadline' && goal?.targetDate != null)
+            ? goal!.targetDate!.toLocal()
+            : DateTime.now().toLocal();
+
+    final today = DateTime.now().toLocal();
+
+    return PaceCalculator.compute(
+      totalItems: totalItems,
+      bulkBaseline: bulkBaseline,
+      liveProgress: liveCount,
+      trackStartDate: trackStart,
+      targetDate: targetDate,
+      today: today,
+    );
+  },
 );
 
 @RoutePage()
@@ -81,7 +149,6 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
     final lifetimeDisplay = dualMetricsAsync.isLoading
         ? '…'
         : formatFractionAsPercent(lifetimePct);
-    final terms = domainTermLabels(ref);
 
     final hasProgramEnrollment = curriculum != null
         ? (ref
@@ -110,6 +177,10 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
         : null;
     final estimatedFinish = _estimatedFinish(goal, itemsRemaining, locale);
 
+    final useHebrewCalendar = ref.watch(useHebrewDateProvider);
+    final paceCalc =
+        ref.watch(_trackPaceCalcProvider(track)).asData?.value;
+
     return Scaffold(
       backgroundColor: AppColors.surfaceF5,
       appBar: AppBar(
@@ -126,6 +197,13 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
+          TrackInfoCard(
+            track: track,
+            goal: goal,
+            paceCalc: paceCalc,
+            useHebrewCalendar: useHebrewCalendar,
+          ),
+          const SizedBox(height: 16),
           _buildHeaderCard(
             context,
             theme,
@@ -139,9 +217,9 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
             cyclePercentDisplay,
             curriculumBarColor,
             chazaraTerm,
-            trackProgressLabel: terms.trackProgress,
+            trackProgressLabel: l10n.trackProgress,
             trackProgressDisplay: trackProgressDisplay,
-            lifetimeLabel: terms.lifetimeLabel,
+            lifetimeLabel: l10n.lifetimeLabel,
             lifetimeDisplay: lifetimeDisplay,
             goal: goal,
             itemsRemaining: itemsRemaining,

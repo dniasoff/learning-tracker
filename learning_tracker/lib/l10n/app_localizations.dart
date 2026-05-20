@@ -4973,10 +4973,10 @@ abstract class AppLocalizations {
   /// **'{count} siyumim earned'**
   String tierCounterSiyumimEarned(int count);
 
-  /// Lifetime-tier counter — total distinct items the user has ever marked learned (across live + bulkInTrack + lifetimeOnly).
+  /// Lifetime-tier counter — total distinct items the user has ever marked learned (across live + bulkInTrack + lifetimeOnly). Short form to avoid C2 tile truncation.
   ///
   /// In en, this message translates to:
-  /// **'{count} items in lifetime'**
+  /// **'{count} items'**
   String tierCounterLifetimeItems(int count);
 
   /// Child-mode points counter — appears as the fourth counter in the header row when child mode is active.
@@ -5050,6 +5050,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Streak'**
   String get streakLabel;
+
+  /// Subtitle clarifying that the headline streak number is profile-global (across every curriculum), while the calendar dots follow the active curriculum filter.
+  ///
+  /// In en, this message translates to:
+  /// **'Streak across all curricula'**
+  String get labelStreakAcrossAllCurricula;
+
+  /// No description provided for @paceAheadByDays.
+  ///
+  /// In en, this message translates to:
+  /// **'Ahead by {count} days'**
+  String paceAheadByDays(int count);
+
+  /// No description provided for @paceOnTrack.
+  ///
+  /// In en, this message translates to:
+  /// **'On pace'**
+  String get paceOnTrack;
+
+  /// No description provided for @paceBehindByDays.
+  ///
+  /// In en, this message translates to:
+  /// **'Behind by {count} days'**
+  String paceBehindByDays(int count);
 
   /// NEW sense: distinct sefariaRefs ever touched (lifetime tier — replaces the deprecated ITEMS LEARNED stat-card sense). Distinct from the legacy `itemsLearnedTitle` screen-title key.
   ///
@@ -5284,6 +5308,60 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Lifetime · imported'**
   String get provenanceLifetimeImported;
+
+  /// Label for the track start date row in the TrackInfoCard.
+  ///
+  /// In en, this message translates to:
+  /// **'Started'**
+  String get trackInfoStarted;
+
+  /// Label for the goal (target) date row in the TrackInfoCard — only shown for deadline goals.
+  ///
+  /// In en, this message translates to:
+  /// **'Goal'**
+  String get trackInfoGoal;
+
+  /// Label for the required pace row in the TrackInfoCard.
+  ///
+  /// In en, this message translates to:
+  /// **'Required pace'**
+  String get trackInfoRequiredPace;
+
+  /// Label for the actual pace row in the TrackInfoCard.
+  ///
+  /// In en, this message translates to:
+  /// **'Actual pace'**
+  String get trackInfoActualPace;
+
+  /// Sub-caption under the actual pace label clarifying the measurement window and source.
+  ///
+  /// In en, this message translates to:
+  /// **'Last 7 days · live learning only'**
+  String get trackInfoActualPaceCaption;
+
+  /// Unit suffix for pace values shown in the TrackInfoCard (e.g. '2.3 items/day').
+  ///
+  /// In en, this message translates to:
+  /// **'items/day'**
+  String get trackInfoItemsPerDay;
+
+  /// Label prefix for the elapsed-days segment in the TrackInfoCard.
+  ///
+  /// In en, this message translates to:
+  /// **'Elapsed'**
+  String get trackInfoElapsed;
+
+  /// Label prefix for the remaining-days segment in the TrackInfoCard.
+  ///
+  /// In en, this message translates to:
+  /// **'Remaining'**
+  String get trackInfoRemaining;
+
+  /// Unit suffix for day counts in the TrackInfoCard (e.g. 'Elapsed 14 days').
+  ///
+  /// In en, this message translates to:
+  /// **'days'**
+  String get trackInfoDays;
 }
 
 class _AppLocalizationsDelegate

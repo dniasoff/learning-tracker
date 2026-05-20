@@ -2776,7 +2776,7 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String tierCounterLifetimeItems(int count) {
-    return '$count פריטים בידע';
+    return '$count פריטים';
   }
 
   @override
@@ -2816,6 +2816,22 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String get streakLabel => 'רצף';
+
+  @override
+  String get labelStreakAcrossAllCurricula => 'רצף בכל המסלולים';
+
+  @override
+  String paceAheadByDays(int count) {
+    return 'לפני ב-$count ימים';
+  }
+
+  @override
+  String get paceOnTrack => 'בקצב הנכון';
+
+  @override
+  String paceBehindByDays(int count) {
+    return 'מאחור ב-$count ימים';
+  }
 
   @override
   String itemsLearnedCount(int count) {
@@ -2965,4 +2981,31 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String get provenanceLifetimeImported => 'ייבוא לכל החיים';
+
+  @override
+  String get trackInfoStarted => 'התחיל';
+
+  @override
+  String get trackInfoGoal => 'יעד';
+
+  @override
+  String get trackInfoRequiredPace => 'קצב נדרש';
+
+  @override
+  String get trackInfoActualPace => 'קצב בפועל';
+
+  @override
+  String get trackInfoActualPaceCaption => '7 ימים אחרונים · לימוד חי בלבד';
+
+  @override
+  String get trackInfoItemsPerDay => 'פריטים ליום';
+
+  @override
+  String get trackInfoElapsed => 'חלף';
+
+  @override
+  String get trackInfoRemaining => 'נותר';
+
+  @override
+  String get trackInfoDays => 'ימים';
 }

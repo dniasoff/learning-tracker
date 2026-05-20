@@ -2809,7 +2809,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String tierCounterLifetimeItems(int count) {
-    return '$count items in lifetime';
+    return '$count items';
   }
 
   @override
@@ -2849,6 +2849,22 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get streakLabel => 'Streak';
+
+  @override
+  String get labelStreakAcrossAllCurricula => 'Streak across all curricula';
+
+  @override
+  String paceAheadByDays(int count) {
+    return 'Ahead by $count days';
+  }
+
+  @override
+  String get paceOnTrack => 'On pace';
+
+  @override
+  String paceBehindByDays(int count) {
+    return 'Behind by $count days';
+  }
 
   @override
   String itemsLearnedCount(int count) {
@@ -2998,4 +3014,31 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get provenanceLifetimeImported => 'Lifetime · imported';
+
+  @override
+  String get trackInfoStarted => 'Started';
+
+  @override
+  String get trackInfoGoal => 'Goal';
+
+  @override
+  String get trackInfoRequiredPace => 'Required pace';
+
+  @override
+  String get trackInfoActualPace => 'Actual pace';
+
+  @override
+  String get trackInfoActualPaceCaption => 'Last 7 days · live learning only';
+
+  @override
+  String get trackInfoItemsPerDay => 'items/day';
+
+  @override
+  String get trackInfoElapsed => 'Elapsed';
+
+  @override
+  String get trackInfoRemaining => 'Remaining';
+
+  @override
+  String get trackInfoDays => 'days';
 }

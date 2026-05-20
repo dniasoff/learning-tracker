@@ -1389,9 +1389,9 @@
       "count": { "type": "int" }
     }
   },
-  "tierCounterLifetimeItems": "{count} פריטים בידע",
+  "tierCounterLifetimeItems": "{count} פריטים",
   "@tierCounterLifetimeItems": {
-    "description": "Lifetime-tier counter — total distinct items ever learned.",
+    "description": "Lifetime-tier counter — total distinct items ever learned. Short form to avoid tile truncation.",
     "placeholders": {
       "count": { "type": "int" }
     }
@@ -1451,6 +1451,23 @@
   "streakLabel": "רצף",
   "@streakLabel": {
     "description": "Title-case 'Streak' label."
+  },
+  "labelStreakAcrossAllCurricula": "רצף בכל המסלולים",
+  "@labelStreakAcrossAllCurricula": {
+    "description": "Subtitle clarifying that the headline streak number is profile-global."
+  },
+  "paceAheadByDays": "לפני ב-{count} ימים",
+  "@paceAheadByDays": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "paceOnTrack": "בקצב הנכון",
+  "paceBehindByDays": "מאחור ב-{count} ימים",
+  "@paceBehindByDays": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
   },
   "itemsLearnedCount": "{count} פריטים נלמדו",
   "@itemsLearnedCount": {
@@ -1658,5 +1675,41 @@
   "provenanceLifetimeImported": "ייבוא לכל החיים",
   "@provenanceLifetimeImported": {
     "description": "Per-leaf provenance label when the leaf entered via a lifetime-only import."
+  },
+  "trackInfoStarted": "התחיל",
+  "@trackInfoStarted": {
+    "description": "Label for the track start date row in the TrackInfoCard."
+  },
+  "trackInfoGoal": "יעד",
+  "@trackInfoGoal": {
+    "description": "Label for the goal (target) date row in the TrackInfoCard."
+  },
+  "trackInfoRequiredPace": "קצב נדרש",
+  "@trackInfoRequiredPace": {
+    "description": "Label for the required pace row in the TrackInfoCard."
+  },
+  "trackInfoActualPace": "קצב בפועל",
+  "@trackInfoActualPace": {
+    "description": "Label for the actual pace row in the TrackInfoCard."
+  },
+  "trackInfoActualPaceCaption": "7 ימים אחרונים · לימוד חי בלבד",
+  "@trackInfoActualPaceCaption": {
+    "description": "Sub-caption under the actual pace label."
+  },
+  "trackInfoItemsPerDay": "פריטים ליום",
+  "@trackInfoItemsPerDay": {
+    "description": "Unit suffix for pace values in the TrackInfoCard."
+  },
+  "trackInfoElapsed": "חלף",
+  "@trackInfoElapsed": {
+    "description": "Label prefix for the elapsed-days segment in the TrackInfoCard."
+  },
+  "trackInfoRemaining": "נותר",
+  "@trackInfoRemaining": {
+    "description": "Label prefix for the remaining-days segment in the TrackInfoCard."
+  },
+  "trackInfoDays": "ימים",
+  "@trackInfoDays": {
+    "description": "Unit suffix for day counts in the TrackInfoCard."
   }
 }
