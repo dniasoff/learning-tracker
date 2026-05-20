@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:learning_tracker/core/analytics/analytics_provider.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
@@ -97,7 +98,8 @@ CompletionRepository completionRepository(Ref ref) {
 @riverpod
 MarkCompletionUseCase markCompletionUseCase(Ref ref) {
   final repository = ref.watch(completionRepositoryProvider);
-  return MarkCompletionUseCase(repository);
+  final analytics = ref.watch(analyticsServiceProvider);
+  return MarkCompletionUseCase(repository, analytics: analytics);
 }
 
 /// Provides the bulk mark completion use case.

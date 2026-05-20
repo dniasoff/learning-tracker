@@ -1,4 +1,6 @@
 import 'package:learning_tracker/core/database/daos/completion_dao.dart';
+import 'package:learning_tracker/core/logging/log_events.dart';
+import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_request.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_source.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/completion_repository.dart';
@@ -57,6 +59,27 @@ class BulkMarkCompletionUseCase {
     //
     // For live source, pass the caller's value through (null → nowUtc() inside
     // the repository, explicit value for test injection).
+    // D3 telemetry: log which tier(s) are being bypassed for non-live sources.
+    // These events confirm the three-tier credit policy is enforced on the bulk
+    // path — their presence is expected; their absence would signal a regression.
+    if (source == CompletionSource.bulkInTrack) {
+      AppLogger.instance.info(
+        event: LogEvents.track.bulkEngagementSkipped,
+        fields: {
+          'source': source.name,
+          'item_count': request.sefariaRefs.length,
+        },
+      );
+    } else if (source == CompletionSource.lifetimeOnly) {
+      AppLogger.instance.info(
+        event: LogEvents.track.lifetimeAchievementSkipped,
+        fields: {
+          'source': source.name,
+          'item_count': request.sefariaRefs.length,
+        },
+      );
+    }
+
     final effectiveCompletedAt = source.creditsEngagement
         ? request.completedAt
         : DateTime.utc(2000, 1, 1);
