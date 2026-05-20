@@ -23,10 +23,8 @@ const Color _kChazaraColor = Color(0xFFF2A93B);
 /// [CompletionTierFilter.liveOnly]. The widget itself does no tier filtering;
 /// it renders whatever it is given.
 ///
-/// Differs from [CompletionsBarChart] (single-colour) by displaying the
-/// limud/chazara split per bucket plus a small legend row underneath. Both
-/// widgets coexist during the Phase B handover — the old chart is still
-/// used by the (about-to-be-deleted) progress_charts_screen.
+/// Displays the limud/chazara split per bucket plus a small legend row
+/// underneath. Used by [RecentActivityScreen] (Wave 3 engagement lens).
 class LimudimChazarosBarChart extends ConsumerWidget {
   final List<DailyLimudChazaraData> data;
 

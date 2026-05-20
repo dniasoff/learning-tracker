@@ -662,31 +662,14 @@
   },
   "journeyEmptyTitle": "עדיין אין סיומים",
   "journeyEmptyBody": "כשתסיימו מסכתא או ספר, הוא יירשם כאן כאבן דרך קבועה.",
-  "progressChartsTitle": "תרשימי התקדמות",
-  "chartCompletionsOverTime": "השלמות לאורך זמן",
-  "chartDailyActivity": "פעילות יומית",
   "chartCumulativeProgress": "התקדמות מצטברת",
   "chartCumulativeProgressSubtitle": "סה״כ השלמות לאורך זמן",
   "chartPointsEarned": "נקודות שהורו",
   "chartTotalTorahPoints": "נק׳ תורה סה״כ",
-  "chartLearningJourney": "מסע הלמידה",
-  "chartJourneyMotivation": "שמרו על הלהבה בוערת מדי יום!",
-  "chartSevenDayStreak": "{count, plural, =0{לוח רצף} =1{רצף יום 1!} other{רצף {count} ימים!}}",
-  "@chartSevenDayStreak": {
-    "placeholders": {
-      "count": {"type": "int"}
-    }
-  },
   "chartLast7Days": "7 ימים",
   "chartLast30Days": "30\nימים",
   "chartAllTime": "הכול",
   "chartFilterAll": "הכול",
-  "streakHistoryTitle": "רצף",
-  "streakHistoryCurrent": "נוכחי",
-  "streakHistoryLongest": "הכי ארוך",
-  "streakHistoryLast7Days": "7 ימים אחרונים",
-  "streakHistoryLast29Days": "29 ימים אחרונים",
-  "streakHistoryAllTime": "כל הזמן",
   "learnStreakCurrentAchievement": "הישג נוכחי",
   "learnStreakDayStreak": "{count, plural, =1{רצף יום 1} other{רצף {count} ימים}}",
   "@learnStreakDayStreak": {
@@ -1137,16 +1120,6 @@
   "onboardingStartingPosition": "נקודת התחלה",
   "onboardingStudyDays": "ימי לימוד",
 
-  "filterByTrack": "סנן לפי מסלול",
-  "completionHistoryAllTracks": "כל המסלולים",
-  "completionHistoryFilteredBy": "מסונן לפי: ",
-  "completionHistoryStagePrefix": "שלב {stageId} • ",
-  "@completionHistoryStagePrefix": {
-    "placeholders": {
-      "stageId": { "type": "int" }
-    }
-  },
-
   "stageNameLimud": "לימוד",
   "stageNameChazaraAleph": "חזרה א׳",
   "stageNameChazaraBet": "חזרה ב׳",
@@ -1379,8 +1352,6 @@
 
   "itemsLearnedTitle": "פריטים שנלמדו",
   "itemsLearnedSubtitle": "השלמות מסלול לפי תוכנית",
-  "lifetimeViewTitle": "תצוגת כל החיים",
-  "lifetimeViewSubtitle": "כל מה שלמדת אי פעם",
   "itemsLearnedNoCurricula": "עדיין אין השלמות מסלול",
   "itemsLearnedNoCurriculaSubtitle": "השלם משימות יומיות כדי לראות את ההתקדמות כאן",
   "itemsLearnedOf": "{completed} מתוך {total}",

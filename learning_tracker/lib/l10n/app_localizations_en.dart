@@ -1423,15 +1423,6 @@ class AppLocalizationsEn extends AppLocalizations {
       'When you complete a masechta or sefer, it will be recorded here as a permanent milestone.';
 
   @override
-  String get progressChartsTitle => 'Progress Charts';
-
-  @override
-  String get chartCompletionsOverTime => 'Completions Over Time';
-
-  @override
-  String get chartDailyActivity => 'DAILY ACTIVITY';
-
-  @override
   String get chartCumulativeProgress => 'Cumulative Progress';
 
   @override
@@ -1444,24 +1435,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chartTotalTorahPoints => 'TOTAL TORAH POINTS';
 
   @override
-  String get chartLearningJourney => 'Learning Journey';
-
-  @override
-  String get chartJourneyMotivation => 'Keep the flame alive every day!';
-
-  @override
-  String chartSevenDayStreak(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count DAY STREAK!',
-      one: '1 DAY STREAK!',
-      zero: 'STREAK CALENDAR',
-    );
-    return '$_temp0';
-  }
-
-  @override
   String get chartLast7Days => 'Last 7 Days';
 
   @override
@@ -1472,24 +1445,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get chartFilterAll => 'All';
-
-  @override
-  String get streakHistoryTitle => 'Streak';
-
-  @override
-  String get streakHistoryCurrent => 'CURRENT';
-
-  @override
-  String get streakHistoryLongest => 'LONGEST';
-
-  @override
-  String get streakHistoryLast7Days => 'Last 7 days';
-
-  @override
-  String get streakHistoryLast29Days => 'Last 29 days';
-
-  @override
-  String get streakHistoryAllTime => 'All time';
 
   @override
   String get learnStreakCurrentAchievement => 'CURRENT ACHIEVEMENT';
@@ -2382,20 +2337,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get onboardingStudyDays => 'Study Days';
 
   @override
-  String get filterByTrack => 'Filter by track';
-
-  @override
-  String get completionHistoryAllTracks => 'All Tracks';
-
-  @override
-  String get completionHistoryFilteredBy => 'Filtered by: ';
-
-  @override
-  String completionHistoryStagePrefix(int stageId) {
-    return 'Stage $stageId • ';
-  }
-
-  @override
   String get stageNameLimud => 'לימוד';
 
   @override
@@ -2834,12 +2775,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get itemsLearnedSubtitle => 'Track completions by curriculum';
-
-  @override
-  String get lifetimeViewTitle => 'Lifetime View';
-
-  @override
-  String get lifetimeViewSubtitle => 'Everything you\'ve ever covered';
 
   @override
   String get itemsLearnedNoCurricula => 'No track completions yet';

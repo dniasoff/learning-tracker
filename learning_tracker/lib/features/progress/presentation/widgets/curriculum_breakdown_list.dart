@@ -10,13 +10,10 @@ import 'package:learning_tracker/features/progress/presentation/providers/lifeti
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// Scrollable list of [CurriculumCompletionSummary] rows with expandable
-/// per-curriculum tree views. Shared between [ItemsLearnedScreen],
-/// [LifetimeViewScreen], and [LifetimeKnowledgeScreen].
+/// per-curriculum tree views. Consumed by [LifetimeKnowledgeScreen].
 ///
-/// When [showProvenance] is true (Lifetime Knowledge screen), terminal nodes
-/// render a small "how was this learned" label (e.g. "Live · 3 chazaros").
-/// The label is suppressed on the older screens to preserve their existing
-/// behaviour.
+/// When [showProvenance] is true, terminal nodes render a small
+/// "how was this learned" label (e.g. "Live · 3 chazaros").
 ///
 /// [shrinkWrap] / [physics] are forwarded to the inner [ListView] so callers
 /// that embed the list inside another scroll view (e.g. the Lifetime

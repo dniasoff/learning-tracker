@@ -29,17 +29,11 @@ import 'package:learning_tracker/features/profiles/presentation/screens/parent_s
 import 'package:learning_tracker/features/profiles/presentation/screens/parent_track_management_screen.dart';
 import 'package:learning_tracker/features/profiles/presentation/screens/pin_flow_screen.dart';
 import 'package:learning_tracker/features/profiles/presentation/screens/profile_picker_screen.dart';
-import 'package:learning_tracker/features/progress/presentation/screens/completion_history_screen.dart';
 import 'package:learning_tracker/features/progress/presentation/screens/curriculum_progress_screen.dart';
-import 'package:learning_tracker/features/progress/presentation/screens/items_learned_screen.dart';
 import 'package:learning_tracker/features/progress/presentation/screens/lifetime_knowledge_screen.dart';
-import 'package:learning_tracker/features/progress/presentation/screens/lifetime_view_screen.dart';
-import 'package:learning_tracker/features/progress/presentation/screens/progress_charts_screen.dart';
 import 'package:learning_tracker/features/progress/presentation/screens/progress_screen.dart';
 import 'package:learning_tracker/features/progress/presentation/screens/recent_activity_screen.dart';
 import 'package:learning_tracker/features/progress/presentation/screens/siyumim_milestones_screen.dart';
-import 'package:learning_tracker/features/progress/presentation/screens/streak_history_screen.dart';
-import 'package:learning_tracker/features/progress/presentation/screens/tasks_done_screen.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/screens/city_picker_screen.dart';
 import 'package:learning_tracker/features/scheduler/presentation/screens/scheduler_screen.dart';
 import 'package:learning_tracker/features/scheduler/presentation/screens/study_day_config_screen.dart';
@@ -137,37 +131,17 @@ class AppRouter extends RootStackRouter {
       guards: [authGuard],
     ),
 
-    // Progress charts
+    // Progress lens screens (Wave 3 IA: engagement / achievement / lifetime).
+    // Recent Activity folds in the old Progress Charts + Streak History.
+    // Lifetime Knowledge merges the old Items Learned + Lifetime View.
     AutoRoute(
-      path: '/progress/charts',
-      page: ProgressChartsRoute.page,
-      guards: [authGuard],
-    ),
-
-    // Progress detail screens — tappable stat boxes on Progress.
-    AutoRoute(
-      path: '/progress/completions',
-      page: CompletionHistoryRoute.page,
-      guards: [authGuard],
-    ),
-    AutoRoute(
-      path: '/progress/streak',
-      page: StreakHistoryRoute.page,
-      guards: [authGuard],
-    ),
-    AutoRoute(
-      path: '/progress/tasks-done',
-      page: TasksDoneRoute.page,
-      guards: [authGuard],
-    ),
-    AutoRoute(
-      path: '/progress/items-learned',
-      page: ItemsLearnedRoute.page,
+      path: '/progress/recent',
+      page: RecentActivityRoute.page,
       guards: [authGuard],
     ),
     AutoRoute(
       path: '/progress/lifetime',
-      page: LifetimeViewRoute.page,
+      page: LifetimeKnowledgeRoute.page,
       guards: [authGuard],
     ),
 

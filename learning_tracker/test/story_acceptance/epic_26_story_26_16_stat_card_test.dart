@@ -195,48 +195,22 @@ void main() {
     },
   );
 
-  // ── AC4: progress_screen.dart delegates to StatCard ─────────────────────────
-  group(
-    'Story 26.16 AC4 — progress_screen.dart uses StatCard',
-    tags: ['story_26_16'],
-    () {
-      late String progressScreenSource;
-
-      setUpAll(() {
-        final candidates = [
-          File(
-            'lib/features/progress/presentation/screens/progress_screen.dart',
-          ),
-          File(
-            'learning_tracker/lib/features/progress/presentation/screens/progress_screen.dart',
-          ),
-        ];
-        final file = candidates.firstWhere(
-          (f) => f.existsSync(),
-          orElse: () => candidates.first,
-        );
-        progressScreenSource = file.existsSync() ? file.readAsStringSync() : '';
-      });
-
-      test('imports stat_card.dart', () {
-        expect(
-          progressScreenSource.contains('stat_card'),
-          isTrue,
-          reason:
-              'progress_screen.dart must import stat_card.dart so '
-              '_OverviewStatCard can delegate to StatCard.',
-        );
-      });
-
-      test('references StatCard', () {
-        expect(
-          progressScreenSource.contains('StatCard'),
-          isTrue,
-          reason: '_OverviewStatCard must use StatCard as its implementation.',
-        );
-      });
-    },
-  );
+  // ── AC4: superseded by the Progress IA redesign ────────────────────────────
+  //
+  // The original Story 26.16 AC4 asserted that _OverviewStatCard in
+  // progress_screen.dart delegated to StatCard (the shared primitive). With
+  // the three-lens IA (see docs/planning/progress-ia-redesign.md), the
+  // 4-card stat grid is intentionally retired in favour of
+  // ProgressTierCounterRow — a different shared widget aligned with the
+  // engagement / achievement / lifetime tier model. The AC for that new
+  // structure is covered by progress_tier_counter_row_test.dart and
+  // progress_screen_test.dart.
+  //
+  // The legacy AC4 assertions are removed because the underlying
+  // criterion ("the hub uses the StatCard primitive") no longer applies —
+  // the hub uses ProgressTierCounterRow instead. StatCard itself is still
+  // covered by AC1, AC2, AC3 (it remains the primitive for
+  // TaskCategoryStatBox on the Dashboard, asserted by AC5 below).
 
   // ── AC5: task_category_stat_box.dart delegates to StatCard ──────────────────
   group(

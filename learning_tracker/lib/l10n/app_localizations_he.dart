@@ -1409,15 +1409,6 @@ class AppLocalizationsHe extends AppLocalizations {
       'כשתסיימו מסכתא או ספר, הוא יירשם כאן כאבן דרך קבועה.';
 
   @override
-  String get progressChartsTitle => 'תרשימי התקדמות';
-
-  @override
-  String get chartCompletionsOverTime => 'השלמות לאורך זמן';
-
-  @override
-  String get chartDailyActivity => 'פעילות יומית';
-
-  @override
   String get chartCumulativeProgress => 'התקדמות מצטברת';
 
   @override
@@ -1430,24 +1421,6 @@ class AppLocalizationsHe extends AppLocalizations {
   String get chartTotalTorahPoints => 'נק׳ תורה סה״כ';
 
   @override
-  String get chartLearningJourney => 'מסע הלמידה';
-
-  @override
-  String get chartJourneyMotivation => 'שמרו על הלהבה בוערת מדי יום!';
-
-  @override
-  String chartSevenDayStreak(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: 'רצף $count ימים!',
-      one: 'רצף יום 1!',
-      zero: 'לוח רצף',
-    );
-    return '$_temp0';
-  }
-
-  @override
   String get chartLast7Days => '7 ימים';
 
   @override
@@ -1458,24 +1431,6 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String get chartFilterAll => 'הכול';
-
-  @override
-  String get streakHistoryTitle => 'רצף';
-
-  @override
-  String get streakHistoryCurrent => 'נוכחי';
-
-  @override
-  String get streakHistoryLongest => 'הכי ארוך';
-
-  @override
-  String get streakHistoryLast7Days => '7 ימים אחרונים';
-
-  @override
-  String get streakHistoryLast29Days => '29 ימים אחרונים';
-
-  @override
-  String get streakHistoryAllTime => 'כל הזמן';
 
   @override
   String get learnStreakCurrentAchievement => 'הישג נוכחי';
@@ -2354,20 +2309,6 @@ class AppLocalizationsHe extends AppLocalizations {
   String get onboardingStudyDays => 'ימי לימוד';
 
   @override
-  String get filterByTrack => 'סנן לפי מסלול';
-
-  @override
-  String get completionHistoryAllTracks => 'כל המסלולים';
-
-  @override
-  String get completionHistoryFilteredBy => 'מסונן לפי: ';
-
-  @override
-  String completionHistoryStagePrefix(int stageId) {
-    return 'שלב $stageId • ';
-  }
-
-  @override
   String get stageNameLimud => 'לימוד';
 
   @override
@@ -2801,12 +2742,6 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String get itemsLearnedSubtitle => 'השלמות מסלול לפי תוכנית';
-
-  @override
-  String get lifetimeViewTitle => 'תצוגת כל החיים';
-
-  @override
-  String get lifetimeViewSubtitle => 'כל מה שלמדת אי פעם';
 
   @override
   String get itemsLearnedNoCurricula => 'עדיין אין השלמות מסלול';

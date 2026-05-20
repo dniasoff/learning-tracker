@@ -2627,24 +2627,6 @@ abstract class AppLocalizations {
   /// **'When you complete a masechta or sefer, it will be recorded here as a permanent milestone.'**
   String get journeyEmptyBody;
 
-  /// No description provided for @progressChartsTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Progress Charts'**
-  String get progressChartsTitle;
-
-  /// No description provided for @chartCompletionsOverTime.
-  ///
-  /// In en, this message translates to:
-  /// **'Completions Over Time'**
-  String get chartCompletionsOverTime;
-
-  /// No description provided for @chartDailyActivity.
-  ///
-  /// In en, this message translates to:
-  /// **'DAILY ACTIVITY'**
-  String get chartDailyActivity;
-
   /// No description provided for @chartCumulativeProgress.
   ///
   /// In en, this message translates to:
@@ -2669,24 +2651,6 @@ abstract class AppLocalizations {
   /// **'TOTAL TORAH POINTS'**
   String get chartTotalTorahPoints;
 
-  /// No description provided for @chartLearningJourney.
-  ///
-  /// In en, this message translates to:
-  /// **'Learning Journey'**
-  String get chartLearningJourney;
-
-  /// No description provided for @chartJourneyMotivation.
-  ///
-  /// In en, this message translates to:
-  /// **'Keep the flame alive every day!'**
-  String get chartJourneyMotivation;
-
-  /// No description provided for @chartSevenDayStreak.
-  ///
-  /// In en, this message translates to:
-  /// **'{count, plural, =0{STREAK CALENDAR} =1{1 DAY STREAK!} other{{count} DAY STREAK!}}'**
-  String chartSevenDayStreak(int count);
-
   /// No description provided for @chartLast7Days.
   ///
   /// In en, this message translates to:
@@ -2710,42 +2674,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'All'**
   String get chartFilterAll;
-
-  /// No description provided for @streakHistoryTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Streak'**
-  String get streakHistoryTitle;
-
-  /// No description provided for @streakHistoryCurrent.
-  ///
-  /// In en, this message translates to:
-  /// **'CURRENT'**
-  String get streakHistoryCurrent;
-
-  /// No description provided for @streakHistoryLongest.
-  ///
-  /// In en, this message translates to:
-  /// **'LONGEST'**
-  String get streakHistoryLongest;
-
-  /// No description provided for @streakHistoryLast7Days.
-  ///
-  /// In en, this message translates to:
-  /// **'Last 7 days'**
-  String get streakHistoryLast7Days;
-
-  /// No description provided for @streakHistoryLast29Days.
-  ///
-  /// In en, this message translates to:
-  /// **'Last 29 days'**
-  String get streakHistoryLast29Days;
-
-  /// No description provided for @streakHistoryAllTime.
-  ///
-  /// In en, this message translates to:
-  /// **'All time'**
-  String get streakHistoryAllTime;
 
   /// No description provided for @learnStreakCurrentAchievement.
   ///
@@ -4307,30 +4235,6 @@ abstract class AppLocalizations {
   /// **'Study Days'**
   String get onboardingStudyDays;
 
-  /// No description provided for @filterByTrack.
-  ///
-  /// In en, this message translates to:
-  /// **'Filter by track'**
-  String get filterByTrack;
-
-  /// No description provided for @completionHistoryAllTracks.
-  ///
-  /// In en, this message translates to:
-  /// **'All Tracks'**
-  String get completionHistoryAllTracks;
-
-  /// No description provided for @completionHistoryFilteredBy.
-  ///
-  /// In en, this message translates to:
-  /// **'Filtered by: '**
-  String get completionHistoryFilteredBy;
-
-  /// No description provided for @completionHistoryStagePrefix.
-  ///
-  /// In en, this message translates to:
-  /// **'Stage {stageId} • '**
-  String completionHistoryStagePrefix(int stageId);
-
   /// No description provided for @stageNameLimud.
   ///
   /// In en, this message translates to:
@@ -5020,18 +4924,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Track completions by curriculum'**
   String get itemsLearnedSubtitle;
-
-  /// No description provided for @lifetimeViewTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Lifetime View'**
-  String get lifetimeViewTitle;
-
-  /// No description provided for @lifetimeViewSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Everything you\'ve ever covered'**
-  String get lifetimeViewSubtitle;
 
   /// No description provided for @itemsLearnedNoCurricula.
   ///

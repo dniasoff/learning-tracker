@@ -667,31 +667,14 @@
   },
   "journeyEmptyTitle": "No siyumim yet",
   "journeyEmptyBody": "When you complete a masechta or sefer, it will be recorded here as a permanent milestone.",
-  "progressChartsTitle": "Progress Charts",
-  "chartCompletionsOverTime": "Completions Over Time",
-  "chartDailyActivity": "DAILY ACTIVITY",
   "chartCumulativeProgress": "Cumulative Progress",
   "chartCumulativeProgressSubtitle": "Total completions over time",
   "chartPointsEarned": "Points Earned",
   "chartTotalTorahPoints": "TOTAL TORAH POINTS",
-  "chartLearningJourney": "Learning Journey",
-  "chartJourneyMotivation": "Keep the flame alive every day!",
-  "chartSevenDayStreak": "{count, plural, =0{STREAK CALENDAR} =1{1 DAY STREAK!} other{{count} DAY STREAK!}}",
-  "@chartSevenDayStreak": {
-    "placeholders": {
-      "count": {"type": "int"}
-    }
-  },
   "chartLast7Days": "Last 7 Days",
   "chartLast30Days": "Last 30\nDays",
   "chartAllTime": "All Time",
   "chartFilterAll": "All",
-  "streakHistoryTitle": "Streak",
-  "streakHistoryCurrent": "CURRENT",
-  "streakHistoryLongest": "LONGEST",
-  "streakHistoryLast7Days": "Last 7 days",
-  "streakHistoryLast29Days": "Last 29 days",
-  "streakHistoryAllTime": "All time",
   "learnStreakCurrentAchievement": "CURRENT ACHIEVEMENT",
   "learnStreakDayStreak": "{count, plural, =1{1 Day Streak} other{{count} Day Streak}}",
   "@learnStreakDayStreak": {
@@ -1142,16 +1125,6 @@
   "onboardingStartingPosition": "Starting Position",
   "onboardingStudyDays": "Study Days",
 
-  "filterByTrack": "Filter by track",
-  "completionHistoryAllTracks": "All Tracks",
-  "completionHistoryFilteredBy": "Filtered by: ",
-  "completionHistoryStagePrefix": "Stage {stageId} • ",
-  "@completionHistoryStagePrefix": {
-    "placeholders": {
-      "stageId": { "type": "int" }
-    }
-  },
-
   "stageNameLimud": "לימוד",
   "stageNameChazaraAleph": "חזרה א׳",
   "stageNameChazaraBet": "חזרה ב׳",
@@ -1384,8 +1357,6 @@
 
   "itemsLearnedTitle": "Items Learned",
   "itemsLearnedSubtitle": "Track completions by curriculum",
-  "lifetimeViewTitle": "Lifetime View",
-  "lifetimeViewSubtitle": "Everything you've ever covered",
   "itemsLearnedNoCurricula": "No track completions yet",
   "itemsLearnedNoCurriculaSubtitle": "Complete daily tasks to see your progress here",
   "itemsLearnedOf": "{completed} of {total}",

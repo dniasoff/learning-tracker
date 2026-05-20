@@ -117,7 +117,7 @@ class _StreakHeroCard extends StatelessWidget {
     final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
     return GestureDetector(
-      onTap: () => context.router.push(const StreakHistoryRoute()),
+      onTap: () => context.router.push(const RecentActivityRoute()),
       child: Stack(
         clipBehavior: Clip.none,
         children: [

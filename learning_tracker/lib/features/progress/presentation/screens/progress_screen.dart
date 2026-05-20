@@ -2,19 +2,38 @@ import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/core/enums/user_mode.dart';
+import 'package:learning_tracker/core/labels/curriculum_label.dart';
+import 'package:learning_tracker/core/labels/curriculum_visuals.dart';
+import 'package:learning_tracker/core/labels/domain_term_labels.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/theme/app_colors.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/widgets/empty_state.dart';
-import 'package:learning_tracker/core/widgets/stat_card.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
+import 'package:learning_tracker/features/progress/presentation/providers/journey_providers.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/lifetime_knowledge_providers.dart';
-import 'package:learning_tracker/features/progress/presentation/providers/progress_providers.dart';
-import 'package:learning_tracker/features/progress/presentation/widgets/lifetime_folder_styled_widgets.dart';
+import 'package:learning_tracker/features/progress/presentation/widgets/progress_tier_counter_row.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
+/// Progress hub — the bottom-nav landing page for the three-lens IA.
+///
+/// Top-down structure (per `docs/planning/progress-ia-redesign.md` §2):
+///
+///   1. "Progress" title header.
+///   2. [ProgressTierCounterRow] — engagement / achievement / lifetime
+///      counters; child mode adds a fourth ⭐ points counter.
+///   3. Three lens tiles — Recent Activity / Siyumim & Milestones /
+///      Lifetime Knowledge — each navigating to the respective screen.
+///   4. Per-track section — compact list of the active tracks with dual
+///      track-progress / lifetime % labels; tap pushes the curriculum
+///      progress detail screen.
+///
+/// The legacy 4-card stat grid (ITEMS LEARNED · TASKS DONE · DAY STREAK ·
+/// ACTIVE TRACKS) and the inline Learning Lifetime tree have been retired —
+/// the streak + items info now live in the counter row, the lifetime tree
+/// moved into the Lifetime Knowledge screen.
 @RoutePage()
 class ProgressScreen extends ConsumerWidget {
   const ProgressScreen({super.key});
@@ -30,12 +49,9 @@ class ProgressScreen extends ConsumerWidget {
     final activeCurriculaAsync = ref.watch(
       dashboardActiveCurriculaStreamProvider,
     );
-    final streakAsync = ref.watch(dashboardStreakProvider);
     final profileId = ref.watch(activeProfileIdProvider);
-    final lifetimeSummariesAsync = ref.watch(
-      lifetimeSummariesProvider(profileId),
-    );
-    final overviewStatsAsync = ref.watch(progressOverviewStatsProvider);
+    final userMode =
+        ref.watch(dashboardUserModeProvider).asData?.value ?? UserMode.adult;
 
     final l10n = AppLocalizations.of(context)!;
     return Scaffold(
@@ -59,51 +75,38 @@ class ProgressScreen extends ConsumerWidget {
                 );
               }
 
-              final streakData = streakAsync.asData?.value;
-              final currentStreak = streakData?.currentStreak ?? 0;
-              final overviewStats = overviewStatsAsync.asData?.value;
-              final totalCompletions = overviewStats?.totalCompletions ?? 0;
-              final totalUniqueUnits = overviewStats?.totalUniqueItems ?? 0;
-              final lifetimeSummaries =
-                  lifetimeSummariesAsync.asData?.value ??
-                  const <CurriculumLifetimeSummary>[];
-
               return RefreshIndicator(
                 onRefresh: () async {
                   ref.invalidate(dashboardActiveCurriculaStreamProvider);
                   ref.invalidate(dashboardStreakProvider);
-                  ref.invalidate(progressOverviewStatsProvider);
-                  ref.invalidate(lifetimeSummariesProvider(profileId));
-                  // ignore: deprecated_member_use
-                  ref.invalidate(globalLifetimeCurriculaProvider(profileId));
+                  ref.invalidate(dashboardGlobalPointsProvider);
+                  ref.invalidate(journeyViewModelProvider(profileId));
                   ref.invalidate(
                     lifetimeTotalsAcrossAllCurriculaProvider(profileId),
                   );
+                  ref.invalidate(trackDualProgressMetricsProvider(profileId));
                 },
                 child: ListView(
                   physics: const AlwaysScrollableScrollPhysics(),
-                  padding: const EdgeInsets.fromLTRB(25, 8, 25, 20),
+                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
                   children: [
                     Text(
                       l10n.progress,
                       style: Theme.of(context).textTheme.headlineMedium
                           ?.copyWith(fontWeight: FontWeight.w800),
                     ),
-                    const SizedBox(height: 12),
-                    _StatGrid(
-                      totalCompletions: totalCompletions,
-                      totalUniqueUnits: totalUniqueUnits,
-                      currentStreak: currentStreak,
-                      activeTracks: activeCurricula.length,
+                    const SizedBox(height: 14),
+                    ProgressTierCounterRow(
+                      showPoints: userMode == UserMode.child,
                     ),
-                    const SizedBox(height: 16),
-                    const _ProgressChartsTile(),
-                    const SizedBox(height: 8),
-                    const _LearningJourneyTile(),
-                    const SizedBox(height: 8),
-                    const _ItemsLearnedTile(),
-                    const SizedBox(height: 20),
-                    _LearningLifetimeTreeCard(summaries: lifetimeSummaries),
+                    const SizedBox(height: 18),
+                    const _RecentActivityLensTile(),
+                    const SizedBox(height: 10),
+                    const _SiyumimMilestonesLensTile(),
+                    const SizedBox(height: 10),
+                    const _LifetimeKnowledgeLensTile(),
+                    const SizedBox(height: 22),
+                    _PerTrackSection(profileId: profileId),
                   ],
                 ),
               );
@@ -115,108 +118,33 @@ class ProgressScreen extends ConsumerWidget {
   }
 }
 
-class _StatGrid extends StatelessWidget {
-  const _StatGrid({
-    required this.totalCompletions,
-    required this.totalUniqueUnits,
-    required this.currentStreak,
-    required this.activeTracks,
-  });
+// ── Lens tiles ─────────────────────────────────────────────────────────────
 
-  final int totalCompletions;
-  final int totalUniqueUnits;
-  final int currentStreak;
-  final int activeTracks;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-    return GridView.count(
-      crossAxisCount: 2,
-      crossAxisSpacing: 12,
-      mainAxisSpacing: 12,
-      childAspectRatio: 1.0,
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      children: [
-        _OverviewStatCard(
-          icon: Icons.verified_outlined,
-          iconColor: AppColors.chartAmber,
-          value: '$totalUniqueUnits',
-          label: l10n.statCompletions,
-          onTap: () => context.router.push(CompletionHistoryRoute()),
-        ),
-        _OverviewStatCard(
-          icon: Icons.menu_book_outlined,
-          iconColor: AppTheme.brandBlue,
-          value: '$totalCompletions',
-          label: l10n.statUnitsDone,
-          onTap: () => context.router.push(const TasksDoneRoute()),
-        ),
-        _OverviewStatCard(
-          icon: Icons.local_fire_department_rounded,
-          iconColor: Colors.white,
-          value: '$currentStreak',
-          label: l10n.statDayStreak,
-          highlighted: true,
-          onTap: () => context.router.push(const StreakHistoryRoute()),
-        ),
-        _OverviewStatCard(
-          icon: Icons.hub_outlined,
-          iconColor: AppColors.chartAmber,
-          value: '$activeTracks',
-          label: l10n.statActiveTracks,
-          onTap: () => context.router.push(TrackManagementHubRoute()),
-        ),
-      ],
-    );
-  }
-}
-
-/// Thin screen-local alias that forwards directly to [StatCard].
-///
-/// Keeping the private name avoids touching call sites inside [_StatGrid]
-/// while still satisfying the story AC that the implementation is backed
-/// by the shared primitive (DNI-359 / 26.16).
-class _OverviewStatCard extends StatelessWidget {
-  const _OverviewStatCard({
+/// Shared visual shell for the three lens tiles. The icon + title + subtitle
+/// are passed in so each tile can wire its own emoji, route, and l10n keys
+/// while inheriting the InkWell-on-rounded-card chrome.
+class _LensTile extends StatelessWidget {
+  const _LensTile({
     required this.icon,
+    required this.iconBgColor,
     required this.iconColor,
-    required this.value,
-    required this.label,
-    this.highlighted = false,
-    this.onTap,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
   });
 
   final IconData icon;
+  final Color iconBgColor;
   final Color iconColor;
-  final String value;
-  final String label;
-  final bool highlighted;
-  final VoidCallback? onTap;
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return StatCard(
-      icon: icon,
-      iconColor: iconColor,
-      value: value,
-      label: label,
-      highlighted: highlighted,
+    return InkWell(
+      borderRadius: BorderRadius.circular(20),
       onTap: onTap,
-    );
-  }
-}
-
-class _ProgressChartsTile extends StatelessWidget {
-  const _ProgressChartsTile();
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-    return InkWell(
-      borderRadius: BorderRadius.circular(20),
-      onTap: () => context.router.push(const ProgressChartsRoute()),
       child: Ink(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
@@ -233,17 +161,13 @@ class _ProgressChartsTile extends StatelessWidget {
         child: Row(
           children: [
             Container(
-              width: 34,
-              height: 34,
+              width: 38,
+              height: 38,
               decoration: BoxDecoration(
-                color: const Color(0xFFEEF3FF),
-                borderRadius: BorderRadius.circular(11),
+                color: iconBgColor,
+                borderRadius: BorderRadius.circular(12),
               ),
-              child: const Icon(
-                Icons.bar_chart_rounded,
-                color: AppTheme.brandBlue,
-                size: 20,
-              ),
+              child: Icon(icon, color: iconColor, size: 22),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -251,13 +175,14 @@ class _ProgressChartsTile extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    l10n.progressChartsTile,
+                    title,
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.w700,
                     ),
                   ),
+                  const SizedBox(height: 2),
                   Text(
-                    l10n.progressChartsTileSubtitle,
+                    subtitle,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: AppTheme.brandInkMuted,
                     ),
@@ -276,243 +201,205 @@ class _ProgressChartsTile extends StatelessWidget {
   }
 }
 
-class _LearningJourneyTile extends StatelessWidget {
-  const _LearningJourneyTile();
+class _RecentActivityLensTile extends ConsumerWidget {
+  const _RecentActivityLensTile();
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
-    return InkWell(
-      borderRadius: BorderRadius.circular(20),
+    final terms = domainTermLabels(ref);
+    return _LensTile(
+      icon: Icons.local_fire_department_rounded,
+      iconBgColor: const Color(0xFFFFE9EB),
+      iconColor: const Color(0xFFFF6F77),
+      title: terms.tierLensRecentActivity,
+      subtitle: l10n.progressChartsTileSubtitle,
+      onTap: () => context.router.push(const RecentActivityRoute()),
+    );
+  }
+}
+
+class _SiyumimMilestonesLensTile extends ConsumerWidget {
+  const _SiyumimMilestonesLensTile();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
+    final terms = domainTermLabels(ref);
+    return _LensTile(
+      icon: Icons.emoji_events_outlined,
+      iconBgColor: const Color(0xFFFFF4E0),
+      iconColor: AppColors.chartAmber,
+      title: terms.tierLensSiyumimMilestones,
+      subtitle: l10n.myLearningJourneySubtitle,
       onTap: () => context.router.push(SiyumimMilestonesRoute()),
-      child: Ink(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: AppColors.blueNavy.withValues(alpha: 0.06),
-              blurRadius: 12,
-              offset: const Offset(0, 5),
-            ),
-          ],
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 34,
-              height: 34,
-              decoration: BoxDecoration(
-                color: const Color(0xFFEEF3FF),
-                borderRadius: BorderRadius.circular(11),
-              ),
-              child: const Icon(
-                Icons.menu_book_outlined,
-                color: AppTheme.brandBlue,
-                size: 20,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    l10n.myLearningJourney,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  Text(
-                    l10n.myLearningJourneySubtitle,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: AppTheme.brandInkMuted,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const Icon(
-              Icons.chevron_right_rounded,
-              color: AppTheme.brandInkMuted,
-            ),
-          ],
-        ),
-      ),
     );
   }
 }
 
-class _ItemsLearnedTile extends StatelessWidget {
-  const _ItemsLearnedTile();
+class _LifetimeKnowledgeLensTile extends ConsumerWidget {
+  const _LifetimeKnowledgeLensTile();
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
-    return InkWell(
-      borderRadius: BorderRadius.circular(20),
-      onTap: () => context.router.push(const ItemsLearnedRoute()),
-      child: Ink(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: AppColors.blueNavy.withValues(alpha: 0.06),
-              blurRadius: 12,
-              offset: const Offset(0, 5),
-            ),
-          ],
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 34,
-              height: 34,
-              decoration: BoxDecoration(
-                color: const Color(0xFFEEF3FF),
-                borderRadius: BorderRadius.circular(11),
-              ),
-              child: const Icon(
-                Icons.menu_book_outlined,
-                color: AppTheme.brandBlue,
-                size: 20,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    l10n.itemsLearnedTitle,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  Text(
-                    l10n.itemsLearnedSubtitle,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: AppTheme.brandInkMuted,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const Icon(
-              Icons.chevron_right_rounded,
-              color: AppTheme.brandInkMuted,
-            ),
-          ],
-        ),
-      ),
+    final terms = domainTermLabels(ref);
+    return _LensTile(
+      icon: Icons.menu_book_outlined,
+      iconBgColor: const Color(0xFFEEF3FF),
+      iconColor: AppTheme.brandBlue,
+      title: terms.tierLensLifetimeKnowledge,
+      subtitle: l10n.itemsLearnedSubtitle,
+      onTap: () => context.router.push(const LifetimeKnowledgeRoute()),
     );
   }
 }
 
-class _LearningLifetimeTreeCard extends StatefulWidget {
-  const _LearningLifetimeTreeCard({required this.summaries});
+// ── Per-track section ─────────────────────────────────────────────────────
 
-  final List<CurriculumLifetimeSummary> summaries;
+/// Compact list of the active tracks — one row per track, each showing the
+/// per-track achievement % + lifetime %.
+///
+/// Reads [trackDualProgressMetricsProvider] (already used by Dashboard) so
+/// the two screens share the same numbers and a single cached future.
+class _PerTrackSection extends ConsumerWidget {
+  const _PerTrackSection({required this.profileId});
 
-  @override
-  State<_LearningLifetimeTreeCard> createState() =>
-      _LearningLifetimeTreeCardState();
-}
-
-class _LearningLifetimeTreeCardState extends State<_LearningLifetimeTreeCard> {
-  final Set<CurriculumId> _expandedCurriculumIds = {};
-  final Map<String, bool> _treeExpandedNodes = {};
+  final int profileId;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
-    if (widget.summaries.isEmpty) {
-      return const SizedBox.shrink();
-    }
+    final metricsAsync = ref.watch(trackDualProgressMetricsProvider(profileId));
+    final theme = Theme.of(context);
 
-    // Sort by canonical Jewish-learning order (CurriculumId enum index),
-    // not alphabetical — Chumash → Nach → Mishnayos → Bavli → Yerushalmi →
-    // codes → Mussar.
-    final withProgress =
-        widget.summaries.where((s) => s.learnedLeafCount > 0).toList()..sort(
-          (a, b) => a.curriculumId.index.compareTo(b.curriculumId.index),
+    return metricsAsync.when(
+      loading: () => const Padding(
+        padding: EdgeInsets.symmetric(vertical: 24),
+        child: Center(child: CircularProgressIndicator()),
+      ),
+      error: (error, _) => Padding(
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        child: Text(l10n.errorWithMessage(error.toString())),
+      ),
+      data: (metrics) {
+        if (metrics.isEmpty) return const SizedBox.shrink();
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(4, 0, 4, 10),
+              child: Text(
+                l10n.activeTracksLabel.toUpperCase(),
+                style: theme.textTheme.labelMedium?.copyWith(
+                  letterSpacing: 0.8,
+                  fontWeight: FontWeight.w800,
+                  color: AppTheme.brandInkMuted,
+                ),
+              ),
+            ),
+            for (var i = 0; i < metrics.length; i++) ...[
+              if (i > 0) const SizedBox(height: 10),
+              _PerTrackRow(metric: metrics[i]),
+            ],
+          ],
         );
-
-    if (withProgress.isEmpty) {
-      return const SizedBox.shrink();
-    }
-
-    return LifetimeFolderSurface(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          LifetimeFolderPageHeader(
-            title: l10n.learningLifetime,
-            subtitle: l10n.learningLifetimeExpandHint,
-          ),
-          const SizedBox(height: 12),
-          for (var i = 0; i < withProgress.length; i++) ...[
-            if (i > 0) const SizedBox(height: 4),
-            _curriculumRow(context, withProgress[i]),
-          ],
-        ],
-      ),
+      },
     );
   }
+}
 
-  Widget _curriculumRow(
-    BuildContext context,
-    CurriculumLifetimeSummary summary,
-  ) {
-    final id = summary.curriculumId;
-    final expanded = _expandedCurriculumIds.contains(id);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        LifetimeCurriculumFolderRow(
-          curriculumId: id,
-          trailingPercent: percentTextForCurriculum(summary),
-          isExpanded: expanded,
-          isExpandableListStyle: true,
-          onTap: () {
-            setState(() {
-              if (expanded) {
-                _expandedCurriculumIds.remove(id);
-              } else {
-                _expandedCurriculumIds.add(id);
-              }
-            });
-          },
+class _PerTrackRow extends ConsumerWidget {
+  const _PerTrackRow({required this.metric});
+
+  final TrackDualProgressMetric metric;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final terms = domainTermLabels(ref);
+    final theme = Theme.of(context);
+    final curriculum = metric.curriculumId;
+    final trackPct = (metric.currentCyclePercentage * 100).round();
+    final lifetimePct = (metric.lifetimePercentage * 100).round();
+
+    return InkWell(
+      borderRadius: BorderRadius.circular(16),
+      onTap: () => context.router.push(
+        CurriculumProgressRoute(curriculumId: curriculum.storageKey),
+      ),
+      child: Ink(
+        padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.blueNavy.withValues(alpha: 0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
         ),
-        if (expanded) ...[
-          const SizedBox(height: 8),
-          LifetimeFolderListPanel(
-            maxHeight: 280,
-            child: SingleChildScrollView(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: const Color(0xFFEEF3FF),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(
+                curriculumIcon(curriculum),
+                color: AppTheme.brandBlue,
+                size: 20,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  for (final node in summary.tree)
-                    LifetimeFolderTreeNode(
-                      node: node,
-                      depth: 0,
-                      nodeKey: '${id.storageKey}/0/${node.rawValue}',
-                      expandedNodes: _treeExpandedNodes,
-                      onExpandToggle: (key, isExpanded) {
-                        setState(() {
-                          _treeExpandedNodes[key] = isExpanded;
-                        });
-                      },
+                  Text(
+                    curriculumLabelText(ref, curriculum: curriculum),
+                    style: theme.textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w700,
                     ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 4),
+                  Wrap(
+                    spacing: 12,
+                    runSpacing: 2,
+                    children: [
+                      Text(
+                        '${terms.trackProgress}: $trackPct%',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: AppTheme.brandInkMuted,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      Text(
+                        '${terms.lifetimeLabel}: $lifetimePct%',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: AppTheme.brandInkMuted,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
                 ],
               ),
             ),
-          ),
-        ],
-      ],
+            const Icon(
+              Icons.chevron_right_rounded,
+              color: AppTheme.brandInkMuted,
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
