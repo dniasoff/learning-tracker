@@ -397,9 +397,9 @@ void main() {
       expect(rows, isNotEmpty);
     });
 
-    test('computedField completedAt', () async {
+    test('computedField eventTimestamp', () async {
       final field = db.managers.completionEvents.computedField(
-        (a) => a.completedAt,
+        (a) => a.eventTimestamp,
       );
       final rows = await db.managers.completionEvents.withFields([field]).get();
       expect(rows, isNotEmpty);
@@ -698,45 +698,6 @@ void main() {
 
   // ── streaks annotation composer ────────────────────────────────────────────
 
-  group('streaks annotation composer fields', () {
-    setUp(() async {
-      final accId = await makeAccount(email: 'skcf@test.local');
-      final profId = await makeProfile(accId);
-      await db
-          .into(db.streakEvents)
-          .insert(
-            StreakEventsCompanion.insert(
-              profileId: profId,
-              currentStreak: const Value(3),
-              maxStreak: const Value(5),
-              gracePeriodDays: const Value(1),
-            ),
-          );
-    });
-
-    test('computedField currentStreak', () async {
-      final field = db.managers.streakEvents.computedField(
-        (a) => a.currentStreak,
-      );
-      final rows = await db.managers.streakEvents.withFields([field]).get();
-      expect(rows, isNotEmpty);
-    });
-
-    test('computedField maxStreak', () async {
-      final field = db.managers.streakEvents.computedField((a) => a.maxStreak);
-      final rows = await db.managers.streakEvents.withFields([field]).get();
-      expect(rows, isNotEmpty);
-    });
-
-    test('computedField gracePeriodDays', () async {
-      final field = db.managers.streakEvents.computedField(
-        (a) => a.gracePeriodDays,
-      );
-      final rows = await db.managers.streakEvents.withFields([field]).get();
-      expect(rows, isNotEmpty);
-    });
-  });
-
   // ── streakEvents annotation composer ──────────────────────────────────────
 
   group('streakEvents annotation composer fields', () {
@@ -769,34 +730,6 @@ void main() {
         (a) => a.clientDeviceId,
       );
       final rows = await db.managers.streakEvents.withFields([field]).get();
-      expect(rows, isNotEmpty);
-    });
-  });
-
-  // ── syncQueue annotation composer ─────────────────────────────────────────
-
-  group('syncQueue annotation composer fields', () {
-    setUp(() async {
-      await db
-          .into(db.syncQueue)
-          .insert(
-            SyncQueueCompanion.insert(
-              operationType: 'upsert',
-              payload: '{}',
-              queuedAt: now,
-            ),
-          );
-    });
-
-    test('computedField operationType', () async {
-      final field = db.managers.syncQueue.computedField((a) => a.operationType);
-      final rows = await db.managers.syncQueue.withFields([field]).get();
-      expect(rows, isNotEmpty);
-    });
-
-    test('computedField retryCount', () async {
-      final field = db.managers.syncQueue.computedField((a) => a.retryCount);
-      final rows = await db.managers.syncQueue.withFields([field]).get();
       expect(rows, isNotEmpty);
     });
   });

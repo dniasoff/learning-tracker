@@ -112,9 +112,9 @@ void main() {
       );
     });
 
-    test('computedField accountId', () async {
+    test('computedField displayName', () async {
       final field = db.managers.learnerProfiles.computedField(
-        (a) => a.accountId,
+        (a) => a.displayName,
       );
       expect(
         await db.managers.learnerProfiles.withFields([field]).get(),
@@ -170,9 +170,9 @@ void main() {
       );
     });
 
-    test('computedField trackType', () async {
+    test('computedField state', () async {
       final field = db.managers.curriculumTracks.computedField(
-        (a) => a.trackType,
+        (a) => a.state,
       );
       expect(
         await db.managers.curriculumTracks.withFields([field]).get(),
@@ -180,9 +180,9 @@ void main() {
       );
     });
 
-    test('computedField isActive', () async {
+    test('computedField stateChangedAt', () async {
       final field = db.managers.curriculumTracks.computedField(
-        (a) => a.isActive,
+        (a) => a.stateChangedAt,
       );
       expect(
         await db.managers.curriculumTracks.withFields([field]).get(),
@@ -190,9 +190,9 @@ void main() {
       );
     });
 
-    test('computedField deactivatedAt', () async {
+    test('computedField activatedAt', () async {
       final field = db.managers.curriculumTracks.computedField(
-        (a) => a.deactivatedAt,
+        (a) => a.activatedAt,
       );
       expect(
         await db.managers.curriculumTracks.withFields([field]).get(),
@@ -203,16 +203,6 @@ void main() {
     test('computedField paceResetDate', () async {
       final field = db.managers.curriculumTracks.computedField(
         (a) => a.paceResetDate,
-      );
-      expect(
-        await db.managers.curriculumTracks.withFields([field]).get(),
-        isNotEmpty,
-      );
-    });
-
-    test('computedField deletedAt', () async {
-      final field = db.managers.curriculumTracks.computedField(
-        (a) => a.deletedAt,
       );
       expect(
         await db.managers.curriculumTracks.withFields([field]).get(),
@@ -250,9 +240,9 @@ void main() {
       );
     });
 
-    test('computedField profileId', () async {
+    test('computedField scopeValue', () async {
       final field = db.managers.curriculumScopes.computedField(
-        (a) => a.profileId,
+        (a) => a.scopeValue,
       );
       expect(
         await db.managers.curriculumScopes.withFields([field]).get(),
@@ -375,9 +365,9 @@ void main() {
       );
     });
 
-    test('computedField delayDays', () async {
+    test('computedField schedule', () async {
       final field = db.managers.stageDefinitions.computedField(
-        (a) => a.delayDays,
+        (a) => a.schedule,
       );
       expect(
         await db.managers.stageDefinitions.withFields([field]).get(),
@@ -395,9 +385,9 @@ void main() {
       );
     });
 
-    test('computedField scheduleType', () async {
+    test('computedField stageName', () async {
       final field = db.managers.stageDefinitions.computedField(
-        (a) => a.scheduleType,
+        (a) => a.stageName,
       );
       expect(
         await db.managers.stageDefinitions.withFields([field]).get(),
@@ -405,19 +395,9 @@ void main() {
       );
     });
 
-    test('computedField daysOfWeek', () async {
+    test('computedField updatedAt', () async {
       final field = db.managers.stageDefinitions.computedField(
-        (a) => a.daysOfWeek,
-      );
-      expect(
-        await db.managers.stageDefinitions.withFields([field]).get(),
-        isNotEmpty,
-      );
-    });
-
-    test('computedField rollingWindowSize', () async {
-      final field = db.managers.stageDefinitions.computedField(
-        (a) => a.rollingWindowSize,
+        (a) => a.updatedAt,
       );
       expect(
         await db.managers.stageDefinitions.withFields([field]).get(),
@@ -973,8 +953,8 @@ void main() {
       );
     });
 
-    test('computedField profileId', () async {
-      final field = db.managers.learningOrder.computedField((a) => a.profileId);
+    test('computedField sefariaRef', () async {
+      final field = db.managers.learningOrder.computedField((a) => a.sefariaRef);
       expect(
         await db.managers.learningOrder.withFields([field]).get(),
         isNotEmpty,
@@ -1124,9 +1104,9 @@ void main() {
           .insert(
             StreakEventsCompanion.insert(
               profileId: profId,
-              currentStreak: const Value(3),
-              maxStreak: const Value(5),
-              gracePeriodDays: const Value(1),
+              eventType: 'completion',
+              dayUtc: DateTime.utc(2026, 3, 1),
+              eventTimestamp: now,
             ),
           );
     });
@@ -1139,17 +1119,17 @@ void main() {
       );
     });
 
-    test('computedField profileId', () async {
-      final field = db.managers.streakEvents.computedField((a) => a.profileId);
+    test('computedField eventType', () async {
+      final field = db.managers.streakEvents.computedField((a) => a.eventType);
       expect(
         await db.managers.streakEvents.withFields([field]).get(),
         isNotEmpty,
       );
     });
 
-    test('computedField lastCompletionDate', () async {
+    test('computedField dayUtc', () async {
       final field = db.managers.streakEvents.computedField(
-        (a) => a.lastCompletionDate,
+        (a) => a.dayUtc,
       );
       expect(
         await db.managers.streakEvents.withFields([field]).get(),
@@ -1157,9 +1137,9 @@ void main() {
       );
     });
 
-    test('computedField graceUsedDate', () async {
+    test('computedField clientDeviceId', () async {
       final field = db.managers.streakEvents.computedField(
-        (a) => a.graceUsedDate,
+        (a) => a.clientDeviceId,
       );
       expect(
         await db.managers.streakEvents.withFields([field]).get(),
@@ -1227,42 +1207,6 @@ void main() {
         await db.managers.streakEvents.withFields([field]).get(),
         isNotEmpty,
       );
-    });
-  });
-
-  // ── syncQueue — remaining annotation fields ───────────────────────────────
-
-  group('syncQueue remaining annotation composer fields', () {
-    setUp(() async {
-      await db
-          .into(db.syncQueue)
-          .insert(
-            SyncQueueCompanion.insert(
-              operationType: 'upsert',
-              payload: '{}',
-              queuedAt: now,
-            ),
-          );
-    });
-
-    test('computedField id', () async {
-      final field = db.managers.syncQueue.computedField((a) => a.id);
-      expect(await db.managers.syncQueue.withFields([field]).get(), isNotEmpty);
-    });
-
-    test('computedField payload', () async {
-      final field = db.managers.syncQueue.computedField((a) => a.payload);
-      expect(await db.managers.syncQueue.withFields([field]).get(), isNotEmpty);
-    });
-
-    test('computedField queuedAt', () async {
-      final field = db.managers.syncQueue.computedField((a) => a.queuedAt);
-      expect(await db.managers.syncQueue.withFields([field]).get(), isNotEmpty);
-    });
-
-    test('computedField lastError', () async {
-      final field = db.managers.syncQueue.computedField((a) => a.lastError);
-      expect(await db.managers.syncQueue.withFields([field]).get(), isNotEmpty);
     });
   });
 

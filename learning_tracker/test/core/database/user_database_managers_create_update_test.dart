@@ -57,7 +57,7 @@ void main() {
     (o) => o(
       profileId: profileId,
       curriculumId: 'bavli',
-      trackType: 'personal',
+      stateChangedAt: now,
       activatedAt: now,
     ),
   );
@@ -70,7 +70,6 @@ void main() {
           curriculumId: 'bavli',
           stageName: 'limud',
           stageOrder: 1,
-          delayDays: 0,
         ),
       );
 
@@ -154,7 +153,7 @@ void main() {
     test('update via manager callback', () async {
       final count = await db.managers.curriculumTracks
           .filter((f) => f.id(trackId))
-          .update((o) => o(trackType: const Value('class')));
+          .update((o) => o(state: const Value('retired')));
       expect(count, 1);
     });
 
@@ -374,8 +373,8 @@ void main() {
           sefariaRef: 'Berakhot 2a',
           stageId: stageId,
           trackType: 'personal',
-          trackId: trackId,
-          completedAt: now,
+          trackId: Value(trackId),
+          eventTimestamp: now,
         ),
       );
     });
@@ -664,41 +663,6 @@ void main() {
     });
   });
 
-  // ── streaks ────────────────────────────────────────────────────────────────
-
-  group('streaks manager create/update/withReferences', () {
-    late int streakId;
-
-    setUp(() async {
-      final accId = await makeAccount(email: 'sk-mgr@test.local');
-      final profId = await makeProfile(accId);
-      streakId = await db.managers.streakEvents.create(
-        (o) => o(
-          profileId: profId,
-          currentStreak: const Value(3),
-          maxStreak: const Value(5),
-          gracePeriodDays: const Value(1),
-        ),
-      );
-    });
-
-    test('create via manager callback', () async {
-      expect(streakId, isPositive);
-    });
-
-    test('update via manager callback', () async {
-      final count = await db.managers.streakEvents
-          .filter((f) => f.id(streakId))
-          .update((o) => o(currentStreak: const Value(4)));
-      expect(count, 1);
-    });
-
-    test('withReferences returns rows', () async {
-      final rows = await db.managers.streakEvents.withReferences().get();
-      expect(rows, isNotEmpty);
-    });
-  });
-
   // ── streakEvents ───────────────────────────────────────────────────────────
 
   group('streakEvents manager create/update/withReferences', () {
@@ -731,34 +695,6 @@ void main() {
 
     test('withReferences returns rows', () async {
       final rows = await db.managers.streakEvents.withReferences().get();
-      expect(rows, isNotEmpty);
-    });
-  });
-
-  // ── syncQueue ──────────────────────────────────────────────────────────────
-
-  group('syncQueue manager create/update/withReferences', () {
-    late int sqId;
-
-    setUp(() async {
-      sqId = await db.managers.syncQueue.create(
-        (o) => o(operationType: 'upsert', payload: '{}', queuedAt: now),
-      );
-    });
-
-    test('create via manager callback', () async {
-      expect(sqId, isPositive);
-    });
-
-    test('update via manager callback', () async {
-      final count = await db.managers.syncQueue
-          .filter((f) => f.id(sqId))
-          .update((o) => o(operationType: const Value('delete')));
-      expect(count, 1);
-    });
-
-    test('withReferences returns rows', () async {
-      final rows = await db.managers.syncQueue.withReferences().get();
       expect(rows, isNotEmpty);
     });
   });

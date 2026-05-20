@@ -128,13 +128,12 @@ void main() {
           );
       final sd = await getStageDef(sdId);
 
-      expect(sd.daysOfWeek, '1,3,5');
-      expect(sd.rollingWindowSize, 7);
+      // W3: daysOfWeek/rollingWindowSize/delayDays replaced by schedule JSON
+      expect(sd.schedule, contains('delay_days'));
 
-      final copy = sd.copyWith(stageName: 'review', delayDays: 7);
+      final copy = sd.copyWith(stageName: 'review');
       expect(copy.stageName, 'review');
-      expect(copy.delayDays, 7);
-      expect(copy.daysOfWeek, sd.daysOfWeek);
+      expect(copy.schedule, sd.schedule);
     });
 
     test('toColumns covers nullable daysOfWeek / rollingWindowSize', () async {
@@ -144,15 +143,10 @@ void main() {
       final sdId = await insertStageDef(profileId, trackId);
       final sd = await getStageDef(sdId);
 
-      // nullToAbsent=true: nullable nulls should be absent
+      // W3: schedule replaces all old quartet columns
       final cols = sd.toColumns(true);
-      expect(cols.containsKey('days_of_week'), isFalse);
-      expect(cols.containsKey('rolling_window_size'), isFalse);
-
-      // nullToAbsent=false: nullable nulls should be present
-      final colsAll = sd.toColumns(false);
-      expect(colsAll.containsKey('days_of_week'), isTrue);
-      expect(colsAll.containsKey('rolling_window_size'), isTrue);
+      expect(cols.containsKey('schedule'), isTrue);
+      expect(cols.containsKey('stage_name'), isTrue);
     });
 
     test('toCompanion, equality, hashCode, toString', () async {
@@ -179,9 +173,11 @@ void main() {
       final sd = await getStageDef(sdId);
 
       final copy = sd.copyWithCompanion(
-        const StageDefinitionsCompanion(delayDays: Value(14)),
+        const StageDefinitionsCompanion(
+          schedule: Value('{"type":"delay","delay_days":14}'),
+        ),
       );
-      expect(copy.delayDays, 14);
+      expect(copy.schedule, contains('delay_days":14'));
       expect(copy.stageName, sd.stageName);
     });
 
@@ -423,7 +419,7 @@ void main() {
   // ─── Completion DataClass ─────────────────────────────────────────────────
 
   group('Completion DataClass', () {
-    Future<Completion> getCompletion(int id) async {
+    Future<CompletionEvent> getCompletion(int id) async {
       final rows = await (db.select(
         db.completionEvents,
       )..where((t) => t.id.equals(id))).get();
@@ -465,7 +461,7 @@ void main() {
       expect(json['sefariaRef'], 'Berakhot 5a');
       expect(json['points'], 10);
 
-      final restored = Completion.fromJson(json);
+      final restored = CompletionEvent.fromJson(json);
       expect(restored.sefariaRef, c.sefariaRef);
       expect(restored.curriculumId, c.curriculumId);
     });
@@ -920,152 +916,6 @@ void main() {
     });
   });
 
-  // ─── Streak DataClass ─────────────────────────────────────────────────────
-
-  group('Streak DataClass', () {
-    Future<Streak> getStreak(int id) async {
-      final rows = await (db.select(
-        db.streakEvents,
-      )..where((t) => t.id.equals(id))).get();
-      return rows.first;
-    }
-
-    test('toJson / fromJson round-trip', () async {
-      final accId = await insertAccount(email: 'str@test.local');
-      final profileId = await insertProfile(accId);
-
-      final strId = await db
-          .into(db.streakEvents)
-          .insert(
-            StreakEventsCompanion.insert(
-              profileId: profileId,
-              currentStreak: const Value(5),
-              maxStreak: const Value(10),
-              lastCompletionDate: Value(DateTime.utc(2026, 1, 14)),
-            ),
-          );
-      final str = await getStreak(strId);
-
-      final json = str.toJson();
-      expect(json['currentStreak'], 5);
-      expect(json['maxStreak'], 10);
-
-      final restored = Streak.fromJson(json);
-      expect(restored.currentStreak, str.currentStreak);
-      expect(restored.maxStreak, str.maxStreak);
-    });
-
-    test('copyWith with nullable dates', () async {
-      final accId = await insertAccount(email: 'str2@test.local');
-      final profileId = await insertProfile(accId);
-
-      final strId = await db
-          .into(db.streakEvents)
-          .insert(
-            StreakEventsCompanion.insert(
-              profileId: profileId,
-              currentStreak: const Value(3),
-              maxStreak: const Value(7),
-              graceUsedDate: Value(DateTime.utc(2026, 1, 10)),
-            ),
-          );
-      final str = await getStreak(strId);
-
-      expect(str.graceUsedDate, isNotNull);
-
-      final copy = str.copyWith(currentStreak: 4);
-      expect(copy.currentStreak, 4);
-      expect(copy.maxStreak, str.maxStreak);
-      expect(copy.graceUsedDate, str.graceUsedDate);
-
-      // Clear graceUsedDate
-      final cleared = str.copyWith(graceUsedDate: const Value(null));
-      expect(cleared.graceUsedDate, isNull);
-    });
-
-    test('toColumns with nullable fields', () async {
-      final accId = await insertAccount(email: 'str3@test.local');
-      final profileId = await insertProfile(accId);
-
-      final strId = await db
-          .into(db.streakEvents)
-          .insert(
-            StreakEventsCompanion.insert(
-              profileId: profileId,
-              currentStreak: const Value(0),
-              maxStreak: const Value(0),
-            ),
-          );
-      final str = await getStreak(strId);
-
-      // No dates set — nullToAbsent=true
-      final cols = str.toColumns(true);
-      expect(cols.containsKey('last_completion_date'), isFalse);
-      expect(cols.containsKey('grace_used_date'), isFalse);
-
-      // nullToAbsent=false: should include nulls
-      final colsAll = str.toColumns(false);
-      expect(colsAll.containsKey('last_completion_date'), isTrue);
-      expect(colsAll.containsKey('grace_used_date'), isTrue);
-    });
-
-    test('equality, hashCode, toString', () async {
-      final accId = await insertAccount(email: 'str4@test.local');
-      final profileId = await insertProfile(accId);
-
-      final strId = await db
-          .into(db.streakEvents)
-          .insert(
-            StreakEventsCompanion.insert(
-              profileId: profileId,
-              currentStreak: const Value(7),
-              maxStreak: const Value(14),
-            ),
-          );
-      final str1 = await getStreak(strId);
-      final str2 = await getStreak(strId);
-
-      expect(str1, equals(str2));
-      expect(str1.hashCode, equals(str2.hashCode));
-      expect(str1.toString(), contains('7'));
-    });
-
-    test('toCompanion and copyWithCompanion', () async {
-      final accId = await insertAccount(email: 'str5@test.local');
-      final profileId = await insertProfile(accId);
-
-      final strId = await db
-          .into(db.streakEvents)
-          .insert(
-            StreakEventsCompanion.insert(
-              profileId: profileId,
-              currentStreak: const Value(1),
-              maxStreak: const Value(5),
-            ),
-          );
-      final str = await getStreak(strId);
-
-      final companion = str.toCompanion(true);
-      expect(companion.currentStreak.value, 1);
-
-      final copy = str.copyWithCompanion(
-        const StreakEventsCompanion(currentStreak: Value(10)),
-      );
-      expect(copy.currentStreak, 10);
-      expect(copy.profileId, str.profileId);
-    });
-
-    test('StreakEventsCompanion.copyWith', () {
-      const original = StreakEventsCompanion(
-        currentStreak: Value(5),
-        maxStreak: Value(10),
-      );
-      final copy = original.copyWith(currentStreak: const Value(8));
-      expect(copy.currentStreak.value, 8);
-      expect(copy.maxStreak.value, 10);
-    });
-  });
-
   // ─── StreakEvent DataClass ────────────────────────────────────────────────
 
   group('StreakEvent DataClass', () {
@@ -1186,124 +1036,6 @@ void main() {
       final copy = original.copyWith(eventType: const Value('day_boundary'));
       expect(copy.eventType.value, 'day_boundary');
       expect(copy.dayUtc.value, DateTime.utc(2026, 1, 14));
-    });
-  });
-
-  // ─── SyncQueueData DataClass ──────────────────────────────────────────────
-
-  group('SyncQueueData DataClass', () {
-    Future<SyncQueueData> getSyncQueue(int id) async {
-      final rows = await (db.select(
-        db.syncQueue,
-      )..where((t) => t.id.equals(id))).get();
-      return rows.first;
-    }
-
-    test('toJson / fromJson round-trip', () async {
-      final sqId = await db
-          .into(db.syncQueue)
-          .insert(
-            SyncQueueCompanion.insert(
-              operationType: 'completion',
-              payload: '{"ref":"Berakhot 2a"}',
-              queuedAt: now,
-              retryCount: const Value(0),
-            ),
-          );
-      final sq = await getSyncQueue(sqId);
-
-      final json = sq.toJson();
-      expect(json['operationType'], 'completion');
-      expect(json['retryCount'], 0);
-      expect(json['lastError'], isNull);
-
-      final restored = SyncQueueData.fromJson(json);
-      expect(restored.operationType, sq.operationType);
-      expect(restored.payload, sq.payload);
-    });
-
-    test('copyWith with nullable lastError', () async {
-      final sqId = await db
-          .into(db.syncQueue)
-          .insert(
-            SyncQueueCompanion.insert(
-              operationType: 'bookmark',
-              payload: '{}',
-              queuedAt: now,
-              retryCount: const Value(2),
-              lastError: const Value('Network error'),
-            ),
-          );
-      final sq = await getSyncQueue(sqId);
-
-      expect(sq.lastError, 'Network error');
-
-      final copy = sq.copyWith(retryCount: 3);
-      expect(copy.retryCount, 3);
-      expect(copy.lastError, sq.lastError);
-
-      final cleared = sq.copyWith(lastError: const Value(null));
-      expect(cleared.lastError, isNull);
-    });
-
-    test('toColumns with nullable lastError', () async {
-      final sqId = await db
-          .into(db.syncQueue)
-          .insert(
-            SyncQueueCompanion.insert(
-              operationType: 'settings',
-              payload: '{}',
-              queuedAt: now,
-              retryCount: const Value(0),
-            ),
-          );
-      final sq = await getSyncQueue(sqId);
-
-      final cols = sq.toColumns(true);
-      expect(cols.containsKey('last_error'), isFalse);
-
-      final colsAll = sq.toColumns(false);
-      expect(colsAll.containsKey('last_error'), isTrue);
-    });
-
-    test(
-      'equality, hashCode, toString, toCompanion, copyWithCompanion',
-      () async {
-        final sqId = await db
-            .into(db.syncQueue)
-            .insert(
-              SyncQueueCompanion.insert(
-                operationType: 'streak',
-                payload: '{"streakId":1}',
-                queuedAt: now,
-                retryCount: const Value(1),
-              ),
-            );
-        final sq1 = await getSyncQueue(sqId);
-        final sq2 = await getSyncQueue(sqId);
-
-        expect(sq1, equals(sq2));
-        expect(sq1.hashCode, equals(sq2.hashCode));
-        expect(sq1.toString(), contains('streak'));
-
-        final companion = sq1.toCompanion(true);
-        expect(companion.operationType.value, 'streak');
-
-        final copy = sq1.copyWithCompanion(
-          const SyncQueueCompanion(retryCount: Value(5)),
-        );
-        expect(copy.retryCount, 5);
-      },
-    );
-
-    test('SyncQueueCompanion.copyWith', () {
-      const original = SyncQueueCompanion(
-        operationType: Value('completion'),
-        retryCount: Value(0),
-      );
-      final copy = original.copyWith(retryCount: const Value(3));
-      expect(copy.operationType.value, 'completion');
-      expect(copy.retryCount.value, 3);
     });
   });
 
@@ -1746,7 +1478,7 @@ void main() {
       expect(rows, hasLength(1));
     });
 
-    test('managers.streaks.filter works', () async {
+    test('managers.streakEvents.filter works (snapshot)', () async {
       final accId = await insertAccount(email: 'mgr-str@test.local');
       final profileId = await insertProfile(accId);
 
@@ -1755,16 +1487,17 @@ void main() {
           .insert(
             StreakEventsCompanion.insert(
               profileId: profileId,
-              currentStreak: const Value(5),
-              maxStreak: const Value(10),
+              eventType: 'completion',
+              dayUtc: DateTime.utc(2026, 1, 14),
+              eventTimestamp: now,
             ),
           );
 
       final rows = await db.managers.streakEvents
-          .filter((f) => f.profileId(profileId))
+          .filter((f) => f.eventType('completion'))
           .get();
       expect(rows, hasLength(1));
-      expect(rows.first.currentStreak, 5);
+      expect(rows.first.eventType, 'completion');
     });
 
     test('managers.streakEvents.filter works', () async {
@@ -1810,24 +1543,6 @@ void main() {
           .filter((f) => f.profileId(profileId))
           .get();
       expect(rows, hasLength(1));
-    });
-
-    test('managers.syncQueue.filter works', () async {
-      await db
-          .into(db.syncQueue)
-          .insert(
-            SyncQueueCompanion.insert(
-              operationType: 'completion',
-              payload: '{}',
-              queuedAt: now,
-              retryCount: const Value(0),
-            ),
-          );
-
-      final rows = await db.managers.syncQueue
-          .filter((f) => f.operationType('completion'))
-          .get();
-      expect(rows, isNotEmpty);
     });
 
     test('managers.bookmarks.filter works', () async {

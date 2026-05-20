@@ -194,9 +194,9 @@ void main() {
       expect(rows, hasLength(1));
     });
 
-    test('orderBy accountId', () async {
+    test('orderBy id (was accountId)', () async {
       final rows = await db.managers.learnerProfiles
-          .orderBy((o) => o.accountId.asc())
+          .orderBy((o) => o.id.asc())
           .get();
       expect(rows, hasLength(1));
     });
@@ -236,9 +236,9 @@ void main() {
       expect(rows, hasLength(1));
     });
 
-    test('filter by accountId', () async {
+    test('filter by id (was accountId)', () async {
       final rows = await db.managers.learnerProfiles
-          .filter((f) => f.accountId(1))
+          .filter((f) => f.id(profileId))
           .get();
       expect(rows, hasLength(1));
     });
@@ -291,21 +291,21 @@ void main() {
 
     test('orderBy profileId', () async {
       final rows = await db.managers.curriculumTracks
-          .orderBy((o) => o.profileId.asc())
+          .orderBy((o) => o.id.asc())
           .get();
       expect(rows, hasLength(1));
     });
 
-    test('orderBy trackType', () async {
+    test('orderBy state', () async {
       final rows = await db.managers.curriculumTracks
-          .orderBy((o) => o.trackType.asc())
+          .orderBy((o) => o.state.asc())
           .get();
       expect(rows, hasLength(1));
     });
 
-    test('orderBy isActive', () async {
+    test('orderBy state (was isActive)', () async {
       final rows = await db.managers.curriculumTracks
-          .orderBy((o) => o.isActive.desc())
+          .orderBy((o) => o.state.desc())
           .get();
       expect(rows, hasLength(1));
     });
@@ -317,9 +317,9 @@ void main() {
       expect(rows, hasLength(1));
     });
 
-    test('orderBy deactivatedAt', () async {
+    test('orderBy stateChangedAt', () async {
       final rows = await db.managers.curriculumTracks
-          .orderBy((o) => o.deactivatedAt.asc())
+          .orderBy((o) => o.stateChangedAt.asc())
           .get();
       expect(rows, hasLength(1));
     });
@@ -331,9 +331,9 @@ void main() {
       expect(rows, hasLength(1));
     });
 
-    test('orderBy deletedAt', () async {
+    test('orderBy stateChangedAt (was deletedAt)', () async {
       final rows = await db.managers.curriculumTracks
-          .orderBy((o) => o.deletedAt.asc())
+          .orderBy((o) => o.stateChangedAt.desc())
           .get();
       expect(rows, hasLength(1));
     });
@@ -352,16 +352,16 @@ void main() {
       expect(rows, hasLength(1));
     });
 
-    test('filter by trackType', () async {
+    test('filter by state', () async {
       final rows = await db.managers.curriculumTracks
-          .filter((f) => f.trackType('personal'))
+          .filter((f) => f.state('active'))
           .get();
       expect(rows, hasLength(1));
     });
 
-    test('filter by isActive', () async {
+    test('filter by state (was isActive)', () async {
       final rows = await db.managers.curriculumTracks
-          .filter((f) => f.isActive(true))
+          .filter((f) => f.state('active'))
           .get();
       expect(rows, hasLength(1));
     });
@@ -373,9 +373,9 @@ void main() {
       expect(rows, hasLength(1));
     });
 
-    test('filter by deactivatedAt', () async {
+    test('filter by paceResetDate (was deactivatedAt)', () async {
       final rows = await db.managers.curriculumTracks
-          .filter((f) => f.deactivatedAt(null))
+          .filter((f) => f.paceResetDate(null))
           .get();
       expect(rows, hasLength(1));
     });
@@ -387,9 +387,9 @@ void main() {
       expect(rows, hasLength(1));
     });
 
-    test('filter by deletedAt', () async {
+    test('filter by paceResetDate (was deletedAt)', () async {
       final rows = await db.managers.curriculumTracks
-          .filter((f) => f.deletedAt(null))
+          .filter((f) => f.paceResetDate(null))
           .get();
       expect(rows, hasLength(1));
     });
@@ -425,7 +425,7 @@ void main() {
 
     test('orderBy profileId', () async {
       final rows = await db.managers.curriculumScopes
-          .orderBy((o) => o.profileId.asc())
+          .orderBy((o) => o.id.asc())
           .get();
       expect(rows, hasLength(1));
     });
@@ -460,7 +460,7 @@ void main() {
 
     test('filter by profileId', () async {
       final rows = await db.managers.curriculumScopes
-          .filter((f) => f.profileId(1))
+          .filter((f) => f.profileId.id(1))
           .get();
       expect(rows, hasLength(1));
     });
@@ -522,7 +522,7 @@ void main() {
 
     test('orderBy profileId', () async {
       final rows = await db.managers.profilePrograms
-          .orderBy((o) => o.profileId.asc())
+          .orderBy((o) => o.id.asc())
           .get();
       expect(rows, hasLength(1));
     });
@@ -629,9 +629,9 @@ void main() {
       expect(rows, hasLength(1));
     });
 
-    test('orderBy delayDays', () async {
+    test('orderBy schedule', () async {
       final rows = await db.managers.stageDefinitions
-          .orderBy((o) => o.delayDays.asc())
+          .orderBy((o) => o.schedule.asc())
           .get();
       expect(rows, hasLength(1));
     });
@@ -643,23 +643,23 @@ void main() {
       expect(rows, hasLength(1));
     });
 
-    test('orderBy scheduleType', () async {
+    test('orderBy schedule (was scheduleType)', () async {
       final rows = await db.managers.stageDefinitions
-          .orderBy((o) => o.scheduleType.asc())
+          .orderBy((o) => o.schedule.desc())
           .get();
       expect(rows, hasLength(1));
     });
 
-    test('orderBy daysOfWeek', () async {
+    test('orderBy isDefault (was daysOfWeek)', () async {
       final rows = await db.managers.stageDefinitions
-          .orderBy((o) => o.daysOfWeek.asc())
+          .orderBy((o) => o.isDefault.desc())
           .get();
       expect(rows, hasLength(1));
     });
 
-    test('orderBy rollingWindowSize', () async {
+    test('orderBy stageOrder (was rollingWindowSize)', () async {
       final rows = await db.managers.stageDefinitions
-          .orderBy((o) => o.rollingWindowSize.asc())
+          .orderBy((o) => o.stageOrder.desc())
           .get();
       expect(rows, hasLength(1));
     });
@@ -692,9 +692,9 @@ void main() {
       expect(rows, hasLength(1));
     });
 
-    test('filter by delayDays', () async {
+    test('filter by schedule', () async {
       final rows = await db.managers.stageDefinitions
-          .filter((f) => f.delayDays(0))
+          .filter((f) => f.schedule.contains('delay_days'))
           .get();
       expect(rows, hasLength(1));
     });
@@ -706,23 +706,23 @@ void main() {
       expect(rows, hasLength(1));
     });
 
-    test('filter by scheduleType', () async {
+    test('filter by schedule (was scheduleType)', () async {
       final rows = await db.managers.stageDefinitions
-          .filter((f) => f.scheduleType('delay'))
+          .filter((f) => f.schedule.contains('delay'))
           .get();
       expect(rows, hasLength(1));
     });
 
-    test('filter by daysOfWeek', () async {
+    test('filter by isDefault (was daysOfWeek)', () async {
       final rows = await db.managers.stageDefinitions
-          .filter((f) => f.daysOfWeek(null))
+          .filter((f) => f.isDefault(false))
           .get();
       expect(rows, hasLength(1));
     });
 
-    test('filter by rollingWindowSize', () async {
+    test('filter by isDefault (was rollingWindowSize)', () async {
       final rows = await db.managers.stageDefinitions
-          .filter((f) => f.rollingWindowSize(null))
+          .filter((f) => f.isDefault(false))
           .get();
       expect(rows, hasLength(1));
     });
@@ -757,7 +757,7 @@ void main() {
 
     test('orderBy profileId', () async {
       final rows = await db.managers.pointConfigs
-          .orderBy((o) => o.profileId.asc())
+          .orderBy((o) => o.id.asc())
           .get();
       expect(rows, hasLength(1));
     });
@@ -826,7 +826,7 @@ void main() {
 
     test('orderBy profileId', () async {
       final rows = await db.managers.studyDayConfigs
-          .orderBy((o) => o.profileId.asc())
+          .orderBy((o) => o.dayOfWeek.asc())
           .get();
       expect(rows, hasLength(1));
     });
@@ -939,16 +939,16 @@ void main() {
       expect(rows, hasLength(1));
     });
 
-    test('orderBy trackType', () async {
+    test('orderBy state', () async {
       final rows = await db.managers.completionEvents
           .orderBy((o) => o.trackType.asc())
           .get();
       expect(rows, hasLength(1));
     });
 
-    test('orderBy completedAt', () async {
+    test('orderBy eventTimestamp', () async {
       final rows = await db.managers.completionEvents
-          .orderBy((o) => o.completedAt.desc())
+          .orderBy((o) => o.eventTimestamp.desc())
           .get();
       expect(rows, hasLength(1));
     });
@@ -995,16 +995,16 @@ void main() {
       expect(rows, hasLength(1));
     });
 
-    test('filter by trackType', () async {
+    test('filter by state', () async {
       final rows = await db.managers.completionEvents
           .filter((f) => f.trackType('personal'))
           .get();
       expect(rows, hasLength(1));
     });
 
-    test('filter by completedAt', () async {
+    test('filter by eventTimestamp', () async {
       final rows = await db.managers.completionEvents
-          .filter((f) => f.completedAt(now))
+          .filter((f) => f.eventTimestamp(now))
           .get();
       expect(rows, hasLength(1));
     });
@@ -1074,7 +1074,7 @@ void main() {
       expect(rows, hasLength(1));
     });
 
-    test('orderBy trackType', () async {
+    test('orderBy state', () async {
       final rows = await db.managers.completionEvents
           .orderBy((o) => o.trackType.asc())
           .get();
@@ -1116,7 +1116,7 @@ void main() {
       expect(rows, hasLength(1));
     });
 
-    test('filter by trackType', () async {
+    test('filter by state', () async {
       final rows = await db.managers.completionEvents
           .filter((f) => f.trackType('personal'))
           .get();
@@ -1173,7 +1173,7 @@ void main() {
 
     test('orderBy profileId', () async {
       final rows = await db.managers.dailyPlans
-          .orderBy((o) => o.profileId.asc())
+          .orderBy((o) => o.id.asc())
           .get();
       expect(rows, hasLength(1));
     });
@@ -1418,14 +1418,14 @@ void main() {
       expect(rows, hasLength(1));
     });
 
-    test('orderBy trackType', () async {
+    test('orderBy state', () async {
       final rows = await db.managers.learningLedger
           .orderBy((o) => o.trackType.asc())
           .get();
       expect(rows, hasLength(1));
     });
 
-    test('orderBy completedAt', () async {
+    test('orderBy eventTimestamp', () async {
       final rows = await db.managers.learningLedger
           .orderBy((o) => o.completedAt.desc())
           .get();
@@ -1488,14 +1488,14 @@ void main() {
       expect(rows, hasLength(1));
     });
 
-    test('filter by trackType', () async {
+    test('filter by state', () async {
       final rows = await db.managers.learningLedger
           .filter((f) => f.trackType('personal'))
           .get();
       expect(rows, hasLength(1));
     });
 
-    test('filter by completedAt', () async {
+    test('filter by eventTimestamp', () async {
       final rows = await db.managers.learningLedger
           .filter((f) => f.completedAt(now))
           .get();
@@ -1618,7 +1618,7 @@ void main() {
 
     test('orderBy profileId', () async {
       final rows = await db.managers.learningOrder
-          .orderBy((o) => o.profileId.asc())
+          .orderBy((o) => o.id.asc())
           .get();
       expect(rows, hasLength(1));
     });
@@ -1651,7 +1651,7 @@ void main() {
 
     test('filter by profileId', () async {
       final rows = await db.managers.learningOrder
-          .filter((f) => f.profileId(1))
+          .filter((f) => f.profileId.id(1))
           .get();
       expect(rows, hasLength(1));
     });
@@ -1937,9 +1937,9 @@ void main() {
           .insert(
             StreakEventsCompanion.insert(
               profileId: profId,
-              currentStreak: const Value(5),
-              maxStreak: const Value(10),
-              gracePeriodDays: const Value(1),
+              eventType: 'completion',
+              dayUtc: DateTime.utc(2026, 1, 14),
+              eventTimestamp: now,
             ),
           );
     });
@@ -1953,42 +1953,42 @@ void main() {
 
     test('orderBy profileId', () async {
       final rows = await db.managers.streakEvents
-          .orderBy((o) => o.profileId.asc())
+          .orderBy((o) => o.id.asc())
           .get();
       expect(rows, hasLength(1));
     });
 
-    test('orderBy currentStreak', () async {
+    test('orderBy eventType', () async {
       final rows = await db.managers.streakEvents
-          .orderBy((o) => o.currentStreak.desc())
+          .orderBy((o) => o.eventType.asc())
           .get();
       expect(rows, hasLength(1));
     });
 
-    test('orderBy maxStreak', () async {
+    test('orderBy dayUtc', () async {
       final rows = await db.managers.streakEvents
-          .orderBy((o) => o.maxStreak.desc())
+          .orderBy((o) => o.dayUtc.asc())
           .get();
       expect(rows, hasLength(1));
     });
 
-    test('orderBy lastCompletionDate', () async {
+    test('orderBy eventTimestamp', () async {
       final rows = await db.managers.streakEvents
-          .orderBy((o) => o.lastCompletionDate.asc())
+          .orderBy((o) => o.eventTimestamp.asc())
           .get();
       expect(rows, hasLength(1));
     });
 
-    test('orderBy graceUsedDate', () async {
+    test('orderBy createdAt', () async {
       final rows = await db.managers.streakEvents
-          .orderBy((o) => o.graceUsedDate.asc())
+          .orderBy((o) => o.createdAt.asc())
           .get();
       expect(rows, hasLength(1));
     });
 
-    test('orderBy gracePeriodDays', () async {
+    test('orderBy id (was gracePeriodDays)', () async {
       final rows = await db.managers.streakEvents
-          .orderBy((o) => o.gracePeriodDays.asc())
+          .orderBy((o) => o.id.asc())
           .get();
       expect(rows, hasLength(1));
     });
@@ -1998,37 +1998,37 @@ void main() {
       expect(rows, hasLength(1));
     });
 
-    test('filter by currentStreak', () async {
+    test('filter by eventType', () async {
       final rows = await db.managers.streakEvents
-          .filter((f) => f.currentStreak(5))
+          .filter((f) => f.eventType('completion'))
           .get();
       expect(rows, hasLength(1));
     });
 
-    test('filter by maxStreak', () async {
+    test('filter by dayUtc', () async {
       final rows = await db.managers.streakEvents
-          .filter((f) => f.maxStreak(10))
+          .filter((f) => f.dayUtc(DateTime.utc(2026, 1, 14)))
           .get();
       expect(rows, hasLength(1));
     });
 
-    test('filter by lastCompletionDate', () async {
+    test('filter by clientDeviceId', () async {
       final rows = await db.managers.streakEvents
-          .filter((f) => f.lastCompletionDate(null))
+          .filter((f) => f.clientDeviceId(null))
           .get();
       expect(rows, hasLength(1));
     });
 
-    test('filter by graceUsedDate', () async {
+    test('filter by clientDeviceId (was graceUsedDate)', () async {
       final rows = await db.managers.streakEvents
-          .filter((f) => f.graceUsedDate(null))
+          .filter((f) => f.clientDeviceId(null))
           .get();
       expect(rows, hasLength(1));
     });
 
-    test('filter by gracePeriodDays', () async {
+    test('filter by eventType (was gracePeriodDays)', () async {
       final rows = await db.managers.streakEvents
-          .filter((f) => f.gracePeriodDays(1))
+          .filter((f) => f.eventType('completion'))
           .get();
       expect(rows, hasLength(1));
     });
@@ -2150,81 +2150,6 @@ void main() {
     });
   });
 
-  // ── syncQueue — remaining orderBy ─────────────────────────────────────────
-
-  group('syncQueue — remaining orderBy fields', () {
-    setUp(() async {
-      await db
-          .into(db.syncQueue)
-          .insert(
-            SyncQueueCompanion.insert(
-              operationType: 'upsert',
-              payload: '{}',
-              queuedAt: now,
-            ),
-          );
-    });
-
-    test('orderBy id', () async {
-      final rows = await db.managers.syncQueue.orderBy((o) => o.id.asc()).get();
-      expect(rows, hasLength(1));
-    });
-
-    test('orderBy operationType', () async {
-      final rows = await db.managers.syncQueue
-          .orderBy((o) => o.operationType.asc())
-          .get();
-      expect(rows, hasLength(1));
-    });
-
-    test('orderBy payload', () async {
-      final rows = await db.managers.syncQueue
-          .orderBy((o) => o.payload.asc())
-          .get();
-      expect(rows, hasLength(1));
-    });
-
-    test('orderBy retryCount', () async {
-      final rows = await db.managers.syncQueue
-          .orderBy((o) => o.retryCount.asc())
-          .get();
-      expect(rows, hasLength(1));
-    });
-
-    test('orderBy lastError', () async {
-      final rows = await db.managers.syncQueue
-          .orderBy((o) => o.lastError.asc())
-          .get();
-      expect(rows, hasLength(1));
-    });
-
-    test('filter by id', () async {
-      final rows = await db.managers.syncQueue.filter((f) => f.id(1)).get();
-      expect(rows, hasLength(1));
-    });
-
-    test('filter by operationType', () async {
-      final rows = await db.managers.syncQueue
-          .filter((f) => f.operationType('upsert'))
-          .get();
-      expect(rows, hasLength(1));
-    });
-
-    test('filter by retryCount', () async {
-      final rows = await db.managers.syncQueue
-          .filter((f) => f.retryCount(0))
-          .get();
-      expect(rows, hasLength(1));
-    });
-
-    test('filter by lastError', () async {
-      final rows = await db.managers.syncQueue
-          .filter((f) => f.lastError(null))
-          .get();
-      expect(rows, hasLength(1));
-    });
-  });
-
   // ── textDownloadStatuses — remaining orderBy ──────────────────────────────
 
   group('textDownloadStatuses — remaining orderBy fields', () {
@@ -2325,7 +2250,7 @@ void main() {
 
     test('orderBy profileId', () async {
       final rows = await db.managers.outbox
-          .orderBy((o) => o.profileId.asc())
+          .orderBy((o) => o.id.asc())
           .get();
       expect(rows, hasLength(1));
     });

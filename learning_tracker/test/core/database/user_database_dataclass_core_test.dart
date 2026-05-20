@@ -305,19 +305,18 @@ void main() {
         final track = await getTrack(trackId);
         final comp = track.toCompanion(true);
         expect(comp.curriculumId.value, 'bavli');
-        expect(comp.deactivatedAt.present, isFalse);
         expect(comp.paceResetDate.present, isFalse);
       },
     );
 
-    test('copyWith changes isActive and deactivatedAt', () async {
+    test('copyWith changes state and stateChangedAt', () async {
       final accId = await insertAccount(email: 'ct4@test.local');
       final profId = await insertProfile(accId);
       final trackId = await insertTrack(profId);
       final track = await getTrack(trackId);
-      final copy = track.copyWith(isActive: false, deactivatedAt: Value(now));
-      expect(copy.isActive, isFalse);
-      expect(copy.deactivatedAt, now);
+      final copy = track.copyWith(state: 'retired', stateChangedAt: now);
+      expect(copy.state, 'retired');
+      expect(copy.stateChangedAt, now);
       expect(copy.curriculumId, 'bavli');
     });
 
@@ -328,11 +327,11 @@ void main() {
       final track = await getTrack(trackId);
       final copy = track.copyWithCompanion(
         CurriculumTracksCompanion(
-          deactivatedAt: Value(now),
+          state: const Value('retired'),
           paceResetDate: Value(now),
         ),
       );
-      expect(copy.deactivatedAt, now);
+      expect(copy.state, 'retired');
       expect(copy.paceResetDate, now);
     });
 
@@ -1172,5 +1171,3 @@ void main() {
     });
   });
 }
-
-            .insert(const StageDefinitionsCompanion()),

@@ -55,7 +55,7 @@ void main() {
     (o) => o(
       profileId: profileId,
       curriculumId: 'bavli',
-      trackType: 'personal',
+      stateChangedAt: now,
       activatedAt: now,
     ),
   );
@@ -68,7 +68,6 @@ void main() {
           curriculumId: 'bavli',
           stageName: 'limud',
           stageOrder: 1,
-          delayDays: 0,
         ),
       );
 
@@ -117,12 +116,12 @@ void main() {
       await db.managers.completionEvents.create(
         (o) => o(
           profileId: profId,
-          trackId: trackId,
+          trackId: Value(trackId),
           curriculumId: 'bavli',
           sefariaRef: 'Berakhot 2a',
           stageId: stageId,
           trackType: 'personal',
-          completedAt: now,
+          eventTimestamp: now,
         ),
       );
       await db.managers.learningLedger.create(
@@ -181,9 +180,9 @@ void main() {
       expect(rows, isNotEmpty);
     });
 
-    test('filter by completionsRefs', () async {
+    test('filter by learningLedgerRefs sefariaRef', () async {
       final rows = await db.managers.curriculumTracks
-          .filter((f) => f.completionsRefs((s) => s.sefariaRef('Berakhot 2a')))
+          .filter((f) => f.learningLedgerRefs((s) => s.unitIdentifier('Berakhot 2a')))
           .get();
       expect(rows, isNotEmpty);
     });
@@ -236,12 +235,13 @@ void main() {
 
   group('Companion.toColumns with id present', () {
     test('CurriculumTracksCompanion id present in toColumns', () {
-      const c = CurriculumTracksCompanion(
-        id: Value(42),
-        profileId: Value(1),
-        curriculumId: Value('bavli'),
-        trackType: Value('personal'),
-        activatedAt: Value.absent(),
+      final c = CurriculumTracksCompanion(
+        id: const Value(42),
+        profileId: const Value(1),
+        curriculumId: const Value('bavli'),
+        state: const Value('active'),
+        stateChangedAt: Value(now),
+        activatedAt: Value(now),
       );
       final cols = c.toColumns(false);
       expect(cols.containsKey('id'), isTrue);
@@ -378,16 +378,6 @@ void main() {
       expect(cols.containsKey('id'), isTrue);
     });
 
-    test('SyncQueueCompanion id present in toColumns', () {
-      final c = SyncQueueCompanion(
-        id: const Value(23),
-        payload: const Value('{}'),
-        queuedAt: Value(now),
-      );
-      final cols = c.toColumns(false);
-      expect(cols.containsKey('id'), isTrue);
-    });
-
     test('OutboxCompanion id present in toColumns', () {
       final c = OutboxCompanion(
         id: const Value(25),
@@ -454,7 +444,7 @@ void main() {
   // ── CurriculumTrack.copyWithCompanion absent branches ────────────────────
 
   group('CurriculumTrack.copyWithCompanion absent branches', () {
-    test('copyWithCompanion with deactivatedAt present', () async {
+    test('copyWithCompanion with paceResetDate present', () async {
       final accId = await makeAccount(email: 'cwc-ct@test.local');
       final profId = await makeProfile(accId);
       final trackId = await makeTrack(profId);
@@ -463,23 +453,23 @@ void main() {
           .getSingle();
       // Cover the present branches for nullable optional fields
       final copy = track.copyWithCompanion(
-        CurriculumTracksCompanion(deactivatedAt: Value(now)),
+        CurriculumTracksCompanion(paceResetDate: Value(now)),
       );
-      expect(copy.deactivatedAt, now);
+      expect(copy.paceResetDate, now);
     });
 
-    test('copyWithCompanion without trackType covers else branch', () async {
+    test('copyWithCompanion without state covers else branch', () async {
       final accId = await makeAccount(email: 'cwc-ct2@test.local');
       final profId = await makeProfile(accId);
       final trackId = await makeTrack(profId);
       final track = await db.managers.curriculumTracks
           .filter((f) => f.id(trackId))
           .getSingle();
-      // Cover absent trackType branch
+      // Cover absent state branch
       final copy = track.copyWithCompanion(
         const CurriculumTracksCompanion(curriculumId: Value('mishnah')),
       );
-      expect(copy.trackType, track.trackType);
+      expect(copy.state, track.state);
       expect(copy.curriculumId, 'mishnah');
     });
   });

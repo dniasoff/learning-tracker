@@ -168,13 +168,13 @@ void main() {
       expect(bavliTracks, hasLength(1));
     });
 
-    test('filter by isActive', () async {
+    test('filter by state', () async {
       final accId = await makeAccount();
       final profileId = await makeProfile(accId);
       await makeTrack(profileId);
 
       final active = await db.managers.curriculumTracks
-          .filter((f) => f.isActive(true))
+          .filter((f) => f.state('active'))
           .get();
       expect(active, hasLength(1));
     });
@@ -241,9 +241,9 @@ void main() {
       expect(sd.hashCode, equals(sd2.hashCode));
       expect(sd.toString(), contains('chazara1'));
 
-      final copy = sd.copyWith(delayDays: 3);
+      final copy = sd.copyWith(schedule: '{"type":"delay","delay_days":3}');
       expect(copy.stageName, sd.stageName);
-      expect(copy.delayDays, 3);
+      expect(copy.schedule, '{"type":"delay","delay_days":3}');
     });
 
     test('toCompanion and copyWithCompanion', () async {
@@ -260,9 +260,9 @@ void main() {
       expect(companion.profileId.value, profileId);
 
       final copy = sd.copyWithCompanion(
-        const StageDefinitionsCompanion(delayDays: Value(7)),
+        const StageDefinitionsCompanion(schedule: Value('{"type":"delay","delay_days":7}')),
       );
-      expect(copy.delayDays, 7);
+      expect(copy.schedule, '{"type":"delay","delay_days":7}');
     });
 
     test('managers.stageDefinitions.filter', () async {
@@ -284,10 +284,8 @@ void main() {
       expect(rows, hasLength(2));
       expect(rows.first.stageName, 'limud');
 
-      final StageDefinitionsCompanion(:delayDays) = rows.first.toCompanion(
-        true,
-      );
-      expect(delayDays.value, 0);
+      final companion = rows.first.toCompanion(true);
+      expect(companion.schedule.value, '{"type":"delay","delay_days":0}');
     });
   });
 
@@ -458,7 +456,7 @@ void main() {
       final c = rows.first;
       final json = c.toJson();
       expect(json['sefariaRef'], 'Berakhot 2a');
-      final restored = Completion.fromJson(json);
+      final restored = CompletionEvent.fromJson(json);
       expect(restored.sefariaRef, c.sefariaRef);
 
       final copy = c.copyWith(points: 5);
@@ -629,7 +627,7 @@ void main() {
           );
 
       final rows = await db.managers.learningOrder
-          .filter((f) => f.profileId(profileId))
+          .filter((f) => f.profileId.id(profileId))
           .get();
       expect(rows, hasLength(1));
 
@@ -725,87 +723,6 @@ void main() {
       final copy = original.copyWith(sortOrder: const Value(2));
       expect(copy.sefariaRef.value, 'Berakhot 10a');
       expect(copy.sortOrder.value, 2);
-    });
-  });
-
-  // ─── Streak DataClass + managers ─────────────────────────────────────────
-
-  group('Streak DataClass + managers', () {
-    test('toJson / fromJson, copyWith, equality, managers', () async {
-      final accId = await makeAccount(email: 'str@test.local');
-      final profileId = await makeProfile(accId);
-
-      await db
-          .into(db.streakEvents)
-          .insert(
-            StreakEventsCompanion.insert(
-              profileId: profileId,
-              currentStreak: const Value(5),
-              maxStreak: const Value(10),
-              lastCompletionDate: Value(DateTime.utc(2026, 3, 1)),
-            ),
-          );
-
-      final rows = await db.managers.streakEvents
-          .filter((f) => f.profileId(profileId))
-          .get();
-      expect(rows, hasLength(1));
-
-      final s = rows.first;
-      final json = s.toJson();
-      expect(json['currentStreak'], 5);
-      expect(json['maxStreak'], 10);
-      final restored = Streak.fromJson(json);
-      expect(restored.currentStreak, s.currentStreak);
-
-      final copy = s.copyWith(currentStreak: 6);
-      expect(copy.maxStreak, s.maxStreak);
-      expect(copy.currentStreak, 6);
-
-      final s2 = rows.first;
-      expect(s, equals(s2));
-      expect(s.hashCode, equals(s2.hashCode));
-      expect(s.toString(), contains('5'));
-
-      final companion = s.toCompanion(true);
-      expect(companion.profileId.value, profileId);
-
-      final copyComp = s.copyWithCompanion(
-        const StreakEventsCompanion(currentStreak: Value(7)),
-      );
-      expect(copyComp.currentStreak, 7);
-    });
-
-    test('Streak.toColumns with nullable lastCompletionDate', () async {
-      final accId = await makeAccount(email: 'str2@test.local');
-      final profileId = await makeProfile(accId);
-
-      await db
-          .into(db.streakEvents)
-          .insert(StreakEventsCompanion.insert(profileId: profileId));
-
-      final rows = await db.managers.streakEvents
-          .filter((f) => f.profileId(profileId))
-          .get();
-      final s = rows.first;
-
-      // nullable field absent when nullToAbsent=true
-      final colsAbsent = s.toColumns(true);
-      expect(colsAbsent.containsKey('last_completion_date'), isFalse);
-
-      // included when nullToAbsent=false
-      final colsAll = s.toColumns(false);
-      expect(colsAll.containsKey('last_completion_date'), isTrue);
-    });
-
-    test('StreakEventsCompanion.copyWith', () {
-      const original = StreakEventsCompanion(
-        currentStreak: Value(5),
-        maxStreak: Value(10),
-      );
-      final copy = original.copyWith(currentStreak: const Value(6));
-      expect(copy.maxStreak.value, 10);
-      expect(copy.currentStreak.value, 6);
     });
   });
 
@@ -1002,7 +919,7 @@ void main() {
           );
 
       final rows = await db.managers.curriculumScopes
-          .filter((f) => f.profileId(profileId))
+          .filter((f) => f.profileId.id(profileId))
           .get();
       expect(rows, hasLength(1));
       expect(rows.first.scopeValue, 'Moed');
@@ -1117,7 +1034,7 @@ void main() {
       }
 
       final rows = await db.managers.learningOrder
-          .filter((f) => f.profileId(profileId))
+          .filter((f) => f.profileId.id(profileId))
           .orderBy((o) => o.userSortOrder.asc())
           .get();
       expect(rows, hasLength(3));
