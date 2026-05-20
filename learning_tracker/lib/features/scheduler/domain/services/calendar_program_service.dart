@@ -1,6 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
-import 'package:learning_tracker/core/services/local_calendar_engine.dart';
+import 'package:learning_tracker/features/scheduler/domain/services/local_calendar_engine.dart';
 
 /// Unified calendar entry combining data from any source.
 ///

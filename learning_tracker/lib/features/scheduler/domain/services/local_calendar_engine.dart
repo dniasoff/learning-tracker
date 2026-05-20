@@ -1,6 +1,6 @@
 import 'package:learning_tracker/core/database/content/content_database.dart';
-import 'package:learning_tracker/core/services/calendar_program_registry.dart';
-import 'package:learning_tracker/core/services/calendar_program_service.dart';
+import 'package:learning_tracker/features/scheduler/domain/services/calendar_program_registry.dart';
+import 'package:learning_tracker/features/scheduler/domain/services/calendar_program_service.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 
 /// Offline-first calendar engine that reads pre-computed cycle data from
