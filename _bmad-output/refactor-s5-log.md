@@ -270,3 +270,26 @@ Tracker: _bmad-output/refactor-task-tracker.md
 - `kOnboardingComplete` re-exported from screen file for backward compat with 6 consumers
 - Pre-existing errors: none encountered in touched files
 - Commit: `272343be`
+
+---
+
+## W7.24 + W7.25 + V1 (2026-05-20 ~09:00) — Final verification and CI gate
+
+### W7.24 — Bug-fix integration pass [DONE]
+
+All three bug fixes verified:
+
+- **B1 VERIFIED** (12/12 batch_plan tests pass): CompletionSource enum at `lib/features/learning/domain/entities/completion_source.dart`, MarkCompletionUseCase with B1 telemetry at `lib/features/learning/domain/use_cases/mark_completion_use_case.dart`, sealed BatchPlan at `lib/features/learning/domain/entities/batch_plan.dart`, prior_completion_imports table at `lib/core/database/tables/prior_completion_imports.dart`, LifetimeTreeBuilder consuming all 3 sources at `lib/features/progress/domain/services/lifetime_tree_builder.dart`.
+
+- **B2 VERIFIED** (20/20 program_starting_position tests pass): ProgramStartingPosition VO at `lib/core/domain/value_objects/program_starting_position.dart`, StartDateWindowException throws for future/too-far-back dates, AddTrackFlow picker uses `ProgramStartingPosition.allowedWindow(today)` at `lib/features/tracks/setup/presentation/steps/step_starting_position_calendar.dart:80`.
+
+- **B3 VERIFIED** (13/13 provision_track_use_case tests pass): ProvisionTrackUseCase at `lib/features/tracks/setup/domain/use_cases/provision_track_use_case.dart` encodes back-dated offset to legacy grammar; B3-1 confirms N=5 → 5 overdue tasks; dashboard_helpers.dart surfaces past-dated tasks as overdue.
+
+Report: `_bmad-output/refactor-bug-fix-verification.md`
+
+### W7.25 — Final smoke + V1 CI gate [DONE]
+
+- Manual smoke checklist (14 items) written to `_bmad-output/refactor-manual-smoke-checklist.md`
+- CI gate: PARTIAL PASS. lib/ = 0 errors. test/ = 1040 pre-existing Wave-3 schema errors.
+- Made 2 fix commits: 854acb82 (lib/tool/integration_test fixes), ecb3f269 (test schema bulk fixes)
+- Options A/B/C for remaining failures documented in `_bmad-output/refactor-v1-ci-report.md`

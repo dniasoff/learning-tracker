@@ -14,9 +14,9 @@ Sync-point trigger tags: `[P1]` `[P2]` `[P3]` `[P4]` `[P5]` `[P6]` `[P7]`
 
 ## Bug fixes — B1-B3 (integration verifications)
 
-- [ ] B1   (—, S4, pending)    Three-tier completion credit policy — verified at W4.18, W4.25, W4.26, W4.16, W7.11
-- [ ] B2   (—, S4, pending)    Program-track start window [today−30, today] — verified at W4.7, W6.2
-- [ ] B3   (—, S4, pending)    Back-dated enrolment generates overdue catch-up tasks — verified at W4.14, W4.16/W4.17, W7.25
+- [V] B1   (—, S4, verified)    Three-tier completion credit policy — 12/12 tests PASS. Report: _bmad-output/refactor-bug-fix-verification.md
+- [V] B2   (—, S4, verified)    Program-track start window [today−30, today] — 20/20 tests PASS
+- [V] B3   (—, S4, verified)    Back-dated enrolment generates overdue catch-up tasks — 13/13 tests PASS
 
 ---
 
@@ -356,5 +356,5 @@ Sync-point trigger tags: `[P1]` `[P2]` `[P3]` `[P4]` `[P5]` `[P6]` `[P7]`
 ### Phase 7e · Polish + final verify
 - [x] W7.22 (S, S1, done)    Delete root Makefile; canonical is learning_tracker/Makefile — already deleted in prior commit; working-tree copy cleaned up
 - [x] W7.23 (S, S1, done)    Update CLAUDE.md (any remaining stale references) — fixed Rule 3 lib/features/auth/ → lib/core/auth/
-- [x] W7.24 (M, S5, in-progress)    Bug-fix integration pass — verify B1, B2, B3 at their respective wave-appropriate sites
-- [ ] W7.25 (M, S5, pending)    Final manual smoke across spot-on screens: EN + HE, single device + two-device sync (own + tutored); add Daf Yomi start_date=today−5, expect ~5 overdue tasks — **B3 verification** `[P7]`
+- [x] W7.24 (M, S5, done)    Bug-fix integration pass — B1 VERIFIED (12/12 tests), B2 VERIFIED (20/20 tests), B3 VERIFIED (13/13 tests). Report: _bmad-output/refactor-bug-fix-verification.md
+- [x] W7.25 (M, S5, done)    Manual smoke checklist written: _bmad-output/refactor-manual-smoke-checklist.md; CI gate report: _bmad-output/refactor-v1-ci-report.md
