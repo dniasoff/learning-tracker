@@ -38,7 +38,7 @@ void main() {
         trackId: trackId,
         stageOrder: 1,
         stageName: 'Learn',
-        delayDays: 0,
+        schedule: Value('{"type":"delay","delay_days":0}'),
       ),
     );
 

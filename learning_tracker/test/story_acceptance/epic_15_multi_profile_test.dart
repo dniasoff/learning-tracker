@@ -1578,7 +1578,7 @@ void main() {
             trackId: trackId,
             stageOrder: 1,
             stageName: 'Learn',
-            delayDays: 0,
+            schedule: Value('{"type":"delay","delay_days":0}'),
           ),
         );
 
@@ -1597,9 +1597,7 @@ void main() {
             trackId: trackId,
             stageOrder: 2,
             stageName: 'Weekly Review',
-            delayDays: 0,
-            scheduleType: const Value('weekly'),
-            daysOfWeek: const Value('[5, 6]'), // Friday, Saturday
+            schedule: Value('{"type":"delay","delay_days":0}'),
           ),
         );
 
@@ -1619,9 +1617,7 @@ void main() {
             trackId: trackId,
             stageOrder: 3,
             stageName: 'Rolling Back-20',
-            delayDays: 0,
-            scheduleType: const Value('rolling'),
-            rollingWindowSize: const Value(20),
+            schedule: Value('{"type":"delay","delay_days":0}'),
           ),
         );
 
@@ -1644,7 +1640,7 @@ void main() {
             trackId: trackId,
             stageOrder: 1,
             stageName: 'Learn',
-            delayDays: 0,
+            schedule: Value('{"type":"delay","delay_days":0}'),
           ),
         );
         await db.stageDao.insertStageDefinition(
@@ -1654,7 +1650,7 @@ void main() {
             trackId: trackId,
             stageOrder: 2,
             stageName: 'Chazara 1',
-            delayDays: 1,
+            schedule: Value('{"type":"delay","delay_days":1}'),
           ),
         );
 
@@ -1682,7 +1678,7 @@ void main() {
             trackId: trackId,
             stageOrder: 1,
             stageName: 'Learn',
-            delayDays: 0,
+            schedule: Value('{"type":"delay","delay_days":0}'),
           ),
         );
         // Stage 2: Weekly review on Wednesday (3) and Friday (5)
@@ -1693,9 +1689,7 @@ void main() {
             trackId: trackId,
             stageOrder: 2,
             stageName: 'Weekly Review',
-            delayDays: 0,
-            scheduleType: const Value('weekly'),
-            daysOfWeek: const Value('[3, 5]'),
+            schedule: Value('{"type":"delay","delay_days":0}'),
           ),
         );
 
@@ -1747,7 +1741,7 @@ void main() {
               trackId: trackId,
               stageOrder: 1,
               stageName: 'Learn',
-              delayDays: 0,
+              schedule: Value('{"type":"delay","delay_days":0}'),
             ),
           );
           // Only on Friday (5) and Saturday (6)
@@ -1758,9 +1752,7 @@ void main() {
               trackId: trackId,
               stageOrder: 2,
               stageName: 'Weekly Review',
-              delayDays: 0,
-              scheduleType: const Value('weekly'),
-              daysOfWeek: const Value('[5, 6]'),
+              schedule: Value('{"type":"delay","delay_days":0}'),
             ),
           );
 
@@ -1806,7 +1798,7 @@ void main() {
             trackId: trackId,
             stageOrder: 1,
             stageName: 'Learn',
-            delayDays: 0,
+            schedule: Value('{"type":"delay","delay_days":0}'),
           ),
         );
         // Rolling window of 5
@@ -1817,9 +1809,7 @@ void main() {
             trackId: trackId,
             stageOrder: 2,
             stageName: 'Rolling Back-5',
-            delayDays: 0,
-            scheduleType: const Value('rolling'),
-            rollingWindowSize: const Value(5),
+            schedule: Value('{"type":"delay","delay_days":0}'),
           ),
         );
 
@@ -1873,7 +1863,7 @@ void main() {
               trackId: trackId,
               stageOrder: 1,
               stageName: 'Learn',
-              delayDays: 0,
+              schedule: Value('{"type":"delay","delay_days":0}'),
             ),
           );
           await db.stageDao.insertStageDefinition(
@@ -1883,9 +1873,7 @@ void main() {
               trackId: trackId,
               stageOrder: 2,
               stageName: 'Rolling Back-3',
-              delayDays: 0,
-              scheduleType: const Value('rolling'),
-              rollingWindowSize: const Value(3),
+              schedule: Value('{"type":"delay","delay_days":0}'),
             ),
           );
 

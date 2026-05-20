@@ -150,46 +150,42 @@ void main() {
       const c = CurriculumTracksCompanion();
       final s = c.toString();
       expect(s, contains('CurriculumTracksCompanion'));
-      expect(s, contains('isActive'));
-      expect(s, contains('deactivatedAt'));
+      expect(s, contains('state'));
+      expect(s, contains('stateChangedAt'));
       expect(s, contains('paceResetDate'));
-      expect(s, contains('deletedAt'));
+      expect(s, contains('activatedAt'));
     });
 
     test('custom() covers RawValuesInsertable body', () {
       final insertable = CurriculumTracksCompanion.custom(
         profileId: const Variable(1),
         curriculumId: const Variable('mishnah'),
-        trackType: const Variable('personal'),
-        isActive: const Variable(true),
+        state: const Variable('active'),
+        stateChangedAt: Variable(now),
         activatedAt: Variable(now),
-        deactivatedAt: Variable(now),
         paceResetDate: Variable(now),
-        deletedAt: Variable(now),
       );
       final cols = insertable.toColumns(false);
-      expect(cols.containsKey('is_active'), isTrue);
-      expect(cols.containsKey('deactivated_at'), isTrue);
+      expect(cols.containsKey('state'), isTrue);
+      expect(cols.containsKey('state_changed_at'), isTrue);
       expect(cols.containsKey('pace_reset_date'), isTrue);
-      expect(cols.containsKey('deleted_at'), isTrue);
+      expect(cols.containsKey('activated_at'), isTrue);
     });
 
     test('toColumns with optional fields', () {
       final c = CurriculumTracksCompanion(
         profileId: const Value(1),
         curriculumId: const Value('bavli'),
-        trackType: const Value('personal'),
-        isActive: const Value(false),
+        state: const Value('retired'),
+        stateChangedAt: Value(now),
         activatedAt: Value(now),
-        deactivatedAt: Value(now),
         paceResetDate: Value(now),
-        deletedAt: Value(now),
       );
       final cols = c.toColumns(false);
-      expect(cols.containsKey('is_active'), isTrue);
-      expect(cols.containsKey('deactivated_at'), isTrue);
+      expect(cols.containsKey('state'), isTrue);
+      expect(cols.containsKey('state_changed_at'), isTrue);
       expect(cols.containsKey('pace_reset_date'), isTrue);
-      expect(cols.containsKey('deleted_at'), isTrue);
+      expect(cols.containsKey('activated_at'), isTrue);
     });
   });
 
@@ -279,7 +275,7 @@ void main() {
       final s = c.toString();
       expect(s, contains('StageDefinitionsCompanion'));
       expect(s, contains('stageName'));
-      expect(s, contains('delayDays'));
+      expect(s, contains('schedule'));
     });
 
     test('custom() covers RawValuesInsertable body', () {
@@ -289,17 +285,13 @@ void main() {
         curriculumId: const Variable('bavli'),
         stageName: const Variable('review'),
         stageOrder: const Variable(2),
-        delayDays: const Variable(7),
+        schedule: const Variable('{"type":"delay","delay_days":7}'),
         isDefault: const Variable(false),
-        scheduleType: const Variable('delay'),
-        daysOfWeek: const Variable(null),
-        rollingWindowSize: const Variable(null),
       );
       final cols = insertable.toColumns(false);
       expect(cols.containsKey('stage_name'), isTrue);
-      expect(cols.containsKey('delay_days'), isTrue);
+      expect(cols.containsKey('schedule'), isTrue);
       expect(cols.containsKey('is_default'), isTrue);
-      expect(cols.containsKey('schedule_type'), isTrue);
     });
   });
 
@@ -366,7 +358,7 @@ void main() {
     test('custom() covers RawValuesInsertable body', () {
       final insertable = CompletionEventsCompanion.custom(
         profileId: const Variable(1),
-        trackId: Value(const Variable(1)),
+        trackId: const Variable(1),
         curriculumId: const Variable('bavli'),
         stageId: const Variable(1),
         trackType: const Variable('personal'),
@@ -455,7 +447,7 @@ void main() {
         sefariaRef: const Variable('Berakhot 2a'),
         stageOrder: const Variable(1),
         stageDefinitionId: const Variable(1),
-        trackId: Value(const Variable(1)),
+        trackId: const Variable(1),
         trackLabel: const Variable('Daily Study'),
         priority: const Variable('normal'),
         isOverdue: const Variable(false),
@@ -670,44 +662,42 @@ void main() {
 
   // ─── StreakEventsCompanion ─────────────────────────────────────────────────────
 
-  group('StreakEventsCompanion', () {
+  group('StreakEventsCompanion (snapshot fields removed in W3)', () {
     test('toString covers StringBuffer body', () {
       const c = StreakEventsCompanion();
       final s = c.toString();
       expect(s, contains('StreakEventsCompanion'));
-      expect(s, contains('currentStreak'));
+      expect(s, contains('eventType'));
     });
 
     test('custom() covers RawValuesInsertable body', () {
       final insertable = StreakEventsCompanion.custom(
         profileId: const Variable(1),
-        currentStreak: const Variable(5),
-        maxStreak: const Variable(10),
-        lastCompletionDate: Variable(now),
-        graceUsedDate: Variable(now),
-        gracePeriodDays: const Variable(1),
+        eventType: const Variable('study'),
+        dayUtc: Variable(now),
+        eventTimestamp: Variable(now),
+        clientDeviceId: const Variable('device-x'),
       );
       final cols = insertable.toColumns(false);
-      expect(cols.containsKey('current_streak'), isTrue);
-      expect(cols.containsKey('max_streak'), isTrue);
-      expect(cols.containsKey('last_completion_date'), isTrue);
-      expect(cols.containsKey('grace_used_date'), isTrue);
+      expect(cols.containsKey('event_type'), isTrue);
+      expect(cols.containsKey('day_utc'), isTrue);
+      expect(cols.containsKey('event_timestamp'), isTrue);
+      expect(cols.containsKey('client_device_id'), isTrue);
     });
 
     test(
-      'toColumns with optional fields (lastCompletionDate, graceUsedDate)',
+      'toColumns with optional fields (clientDeviceId)',
       () {
         final c = StreakEventsCompanion(
           profileId: const Value(1),
-          currentStreak: const Value(5),
-          maxStreak: const Value(10),
-          lastCompletionDate: Value(now),
-          graceUsedDate: Value(now),
-          gracePeriodDays: const Value(1),
+          eventType: const Value('study'),
+          dayUtc: Value(now),
+          eventTimestamp: Value(now),
+          clientDeviceId: const Value('device-x'),
         );
         final cols = c.toColumns(false);
-        expect(cols.containsKey('last_completion_date'), isTrue);
-        expect(cols.containsKey('grace_used_date'), isTrue);
+        expect(cols.containsKey('client_device_id'), isTrue);
+        expect(cols.containsKey('event_type'), isTrue);
       },
     );
   });
@@ -750,46 +740,6 @@ void main() {
       final cols = c.toColumns(false);
       expect(cols.containsKey('client_device_id'), isTrue);
       expect(cols.containsKey('created_at'), isTrue);
-    });
-  });
-
-  // ─── SyncQueueCompanion ───────────────────────────────────────────────────
-
-  group('SyncQueueCompanion', () {
-    test('toString covers StringBuffer body', () {
-      const c = SyncQueueCompanion();
-      final s = c.toString();
-      expect(s, contains('SyncQueueCompanion'));
-      expect(s, contains('operationType'));
-      expect(s, contains('retryCount'));
-      expect(s, contains('lastError'));
-    });
-
-    test('custom() covers RawValuesInsertable body', () {
-      final insertable = SyncQueueCompanion.custom(
-        operationType: const Variable('bookmark'),
-        payload: const Variable('{"key":"value"}'),
-        queuedAt: Variable(now),
-        retryCount: const Variable(2),
-        lastError: const Variable('Network error'),
-      );
-      final cols = insertable.toColumns(false);
-      expect(cols.containsKey('operation_type'), isTrue);
-      expect(cols.containsKey('retry_count'), isTrue);
-      expect(cols.containsKey('last_error'), isTrue);
-    });
-
-    test('toColumns with optional fields present', () {
-      final c = SyncQueueCompanion(
-        operationType: const Value('bookmark'),
-        payload: const Value('{}'),
-        queuedAt: Value(now),
-        retryCount: const Value(3),
-        lastError: const Value('error msg'),
-      );
-      final cols = c.toColumns(false);
-      expect(cols.containsKey('retry_count'), isTrue);
-      expect(cols.containsKey('last_error'), isTrue);
     });
   });
 
@@ -951,68 +901,6 @@ void main() {
   });
 
   // ─── Managers for remaining tables ────────────────────────────────────────
-
-  group('managers — syncQueue', () {
-    test('insert, filter, orderBy', () async {
-      await db
-          .into(db.syncQueue)
-          .insert(
-            SyncQueueCompanion.insert(
-              operationType: 'completion',
-              payload: '{"a":1}',
-              queuedAt: now,
-            ),
-          );
-      await db
-          .into(db.syncQueue)
-          .insert(
-            SyncQueueCompanion.insert(
-              operationType: 'bookmark',
-              payload: '{"b":2}',
-              queuedAt: now.add(const Duration(minutes: 1)),
-            ),
-          );
-
-      final completions = await db.managers.syncQueue
-          .filter((f) => f.operationType('completion'))
-          .get();
-      expect(completions, hasLength(1));
-      expect(completions.first.operationType, 'completion');
-
-      final sorted = await db.managers.syncQueue
-          .orderBy((o) => o.queuedAt.asc())
-          .get();
-      expect(sorted, hasLength(2));
-      expect(sorted.first.operationType, 'completion');
-    });
-
-    test('DataClass CRUD round-trip', () async {
-      final id = await db
-          .into(db.syncQueue)
-          .insert(
-            SyncQueueCompanion.insert(
-              operationType: 'streak',
-              payload: '{"streak":5}',
-              queuedAt: now,
-            ),
-          );
-      final row = await (db.select(
-        db.syncQueue,
-      )..where((t) => t.id.equals(id))).getSingleOrNull();
-      expect(row, isNotNull);
-      expect(row!.operationType, 'streak');
-      expect(row.retryCount, 0);
-      expect(row.lastError, isNull);
-
-      await (db.update(db.syncQueue)..where((t) => t.id.equals(id))).write(
-        const SyncQueueCompanion(retryCount: Value(3)),
-      );
-      final updated = await (db.select(
-        db.syncQueue,
-      )..where((t) => t.id.equals(id))).getSingleOrNull();
-      expect(updated!.retryCount, 3);
-    });
-  });
 
   group('managers — textDownloadStatuses', () {
     test('insert, filter, and DataClass round-trip', () async {
@@ -1197,13 +1085,6 @@ void main() {
   // ─── validateIntegrity missing paths ─────────────────────────────────────
 
   group('validateIntegrity — missing required fields', () {
-    test('syncQueue missing operationType triggers insert error', () async {
-      expect(
-        () => db.into(db.syncQueue).insert(const SyncQueueCompanion()),
-        throwsA(anything),
-      );
-    });
-
     test('outbox missing entityKind triggers insert error', () async {
       expect(
         () => db.into(db.outbox).insert(const OutboxCompanion()),

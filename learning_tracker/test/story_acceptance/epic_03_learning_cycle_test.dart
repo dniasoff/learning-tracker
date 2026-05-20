@@ -172,7 +172,7 @@ void main() {
           trackId: childTrackId,
           stageOrder: 1,
           stageName: 'Learning',
-          delayDays: 0,
+          schedule: Value('{"type":"delay","delay_days":0}'),
         ),
       );
       await db.stageDao.insertStageDefinition(
@@ -182,7 +182,7 @@ void main() {
           trackId: childTrackId,
           stageOrder: 2,
           stageName: 'Chazara 1',
-          delayDays: 1,
+          schedule: Value('{"type":"delay","delay_days":1}'),
         ),
       );
 
@@ -255,7 +255,7 @@ void main() {
           trackId: trackId,
           stageOrder: 1,
           stageName: 'Learning',
-          delayDays: 0,
+          schedule: Value('{"type":"delay","delay_days":0}'),
         ),
       );
       await db.stageDao.insertStageDefinition(
@@ -265,7 +265,7 @@ void main() {
           trackId: trackId,
           stageOrder: 2,
           stageName: 'Chazara 1',
-          delayDays: 7,
+          schedule: Value('{"type":"delay","delay_days":7}'),
         ),
       );
 
@@ -312,7 +312,7 @@ void main() {
           trackId: trackId,
           stageOrder: 1,
           stageName: 'Old Stage',
-          delayDays: 5,
+          schedule: Value('{"type":"delay","delay_days":5}'),
         ),
       );
 
@@ -323,7 +323,7 @@ void main() {
           trackId: trackId,
           stageOrder: 1,
           stageName: 'New Stage 1',
-          delayDays: 0,
+          schedule: Value('{"type":"delay","delay_days":0}'),
         ),
         StageDefinitionsCompanion.insert(
           profileId: 1,
@@ -331,7 +331,7 @@ void main() {
           trackId: trackId,
           stageOrder: 2,
           stageName: 'New Stage 2',
-          delayDays: 14,
+          schedule: Value('{"type":"delay","delay_days":14}'),
         ),
       ]);
 

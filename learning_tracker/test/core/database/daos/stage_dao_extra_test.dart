@@ -46,7 +46,7 @@ void main() {
       trackId: overrideTrackId ?? trackId,
       stageOrder: stageOrder,
       stageName: stageName,
-      delayDays: delayDays,
+      schedule: Value('{"type":"delay","delay_days":${delayDays}}'),
       isDefault: const Value(true),
     ),
   );
@@ -155,7 +155,7 @@ void main() {
           trackId: trackId,
           stageOrder: 1,
           stageName: 'New Learn',
-          delayDays: 0,
+          schedule: Value('{"type":"delay","delay_days":0}'),
         ),
         StageDefinitionsCompanion.insert(
           profileId: 1,
@@ -163,7 +163,7 @@ void main() {
           trackId: trackId,
           stageOrder: 2,
           stageName: 'New Chazara',
-          delayDays: 3,
+          schedule: Value('{"type":"delay","delay_days":3}'),
         ),
       ]);
 

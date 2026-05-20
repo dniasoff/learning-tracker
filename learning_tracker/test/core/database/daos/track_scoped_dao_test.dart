@@ -133,7 +133,7 @@ void main() {
           trackId: trackId,
           stageOrder: order,
           stageName: name,
-          delayDays: 0,
+          schedule: Value('{"type":"delay","delay_days":0}'),
         ),
       );
     }

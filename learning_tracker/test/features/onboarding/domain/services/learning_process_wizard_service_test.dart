@@ -158,7 +158,7 @@ void main() {
           trackId: trackId,
           stageOrder: 1,
           stageName: 'Old Stage',
-          delayDays: 0,
+          schedule: Value('{"type":"delay","delay_days":0}'),
         ),
       );
 
@@ -186,7 +186,7 @@ void main() {
             trackId: trackId,
             stageOrder: 1,
             stageName: 'old stage A',
-            delayDays: 0,
+            schedule: Value('{"type":"delay","delay_days":0}'),
           ),
         );
         await db.stageDao.insertStageDefinition(
@@ -196,7 +196,7 @@ void main() {
             trackId: trackId,
             stageOrder: 2,
             stageName: 'old stage B',
-            delayDays: 7,
+            schedule: Value('{"type":"delay","delay_days":7}'),
           ),
         );
         expect(await db.stageDao.getStagesByTrack(trackId), hasLength(2));

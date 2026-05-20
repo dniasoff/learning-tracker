@@ -104,7 +104,7 @@ void main() {
             trackId: trackId,
             stageOrder: 1,
             stageName: 'Learn',
-            delayDays: 0,
+            schedule: Value('{"type":"delay","delay_days":0}'),
             isDefault: const Value(true),
           ),
           StageDefinitionsCompanion.insert(
@@ -113,7 +113,7 @@ void main() {
             trackId: trackId,
             stageOrder: 2,
             stageName: 'Chazara 1',
-            delayDays: 1,
+            schedule: Value('{"type":"delay","delay_days":1}'),
             isDefault: const Value(true),
           ),
           StageDefinitionsCompanion.insert(
@@ -122,7 +122,7 @@ void main() {
             trackId: trackId,
             stageOrder: 3,
             stageName: 'Chazara 2',
-            delayDays: 7,
+            schedule: Value('{"type":"delay","delay_days":7}'),
             isDefault: const Value(true),
           ),
           StageDefinitionsCompanion.insert(
@@ -131,7 +131,7 @@ void main() {
             trackId: trackId,
             stageOrder: 4,
             stageName: 'Chazara 3',
-            delayDays: 30,
+            schedule: Value('{"type":"delay","delay_days":30}'),
             isDefault: const Value(false),
           ),
         ];

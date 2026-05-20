@@ -53,7 +53,7 @@ void main() {
       trackId: tid ?? trackId,
       stageOrder: stageOrder,
       stageName: stageName,
-      delayDays: delayDays,
+      schedule: Value('{"type":"delay","delay_days":${delayDays}}'),
     ),
   );
 
@@ -91,7 +91,7 @@ void main() {
           trackId: Value(trackId),
           stageOrder: const Value(1),
           stageName: const Value('Updated Name'),
-          delayDays: const Value(3),
+          schedule: Value('{"type":"delay","delay_days":${const Value(3)}}'),
         ),
       );
       expect(updated, isTrue);
@@ -204,7 +204,7 @@ void main() {
           trackId: trackId,
           stageOrder: 1,
           stageName: 'New Learn',
-          delayDays: 0,
+          schedule: Value('{"type":"delay","delay_days":0}'),
         ),
       ];
 

@@ -213,7 +213,7 @@ void main() {
               trackId: trackId,
               stageOrder: 1,
               stageName: 'learning',
-              delayDays: 0,
+              schedule: Value('{"type":"delay","delay_days":0}'),
               isDefault: const Value(true),
             ),
           );
@@ -226,7 +226,7 @@ void main() {
               trackId: trackId,
               stageOrder: 2,
               stageName: 'chazara1',
-              delayDays: 1,
+              schedule: Value('{"type":"delay","delay_days":1}'),
             ),
           );
 

@@ -5,6 +5,7 @@ library;
 import 'package:drift/drift.dart' hide isNotNull, isNull;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/daos/track_dao.dart';
+import 'package:learning_tracker/core/exceptions/invalid_track_operation_exception.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
@@ -60,7 +61,7 @@ void main() {
           trackId: trackId,
           stageOrder: 1,
           stageName: 'Learn',
-          delayDays: 0,
+          schedule: Value('{"type":"delay","delay_days":0}'),
         ),
       );
 
@@ -74,8 +75,8 @@ void main() {
 
       final track = await db.trackDao.getTrackById(trackId);
       expect(track, isNotNull);
-      expect(track!.deletedAt, isNotNull);
-      expect(track.isActive, isFalse);
+      expect(track!.state, 'deleted');
+      expect(track.state, isNot('active'));
     });
 
     test('hard-deletes associated goals', () async {
@@ -146,8 +147,8 @@ void main() {
 
       final tracks = await db.trackDao.getActiveTracks(CurriculumId.mishnayos);
       expect(tracks, hasLength(1));
-      expect(tracks.first.trackType, TrackType.personal.storageKey);
-      expect(tracks.first.isActive, isTrue);
+      expect(tracks.first.state, 'active');
+      expect(tracks.first.state, 'active');
     });
 
     test(
@@ -195,27 +196,23 @@ void main() {
 
   group('TrackDao.deactivateTrack', () {
     test(
-      'throws InvalidOperationException when deactivating personal track',
+      'throws InvalidTrackOperationException when deactivating personal track',
       () async {
         await db.trackDao.activateTrack(
-          CurriculumId.mishnayos,
-          TrackType.personal,
-        );
+          CurriculumId.mishnayos);
 
         expect(
           () => db.trackDao.deactivateTrack(
-            CurriculumId.mishnayos,
-            TrackType.personal,
-          ),
-          throwsA(isA<InvalidOperationException>()),
+            CurriculumId.mishnayos),
+          throwsA(isA<InvalidTrackOperationException>()),
         );
       },
     );
 
-    test('InvalidOperationException.toString contains message', () {
-      const e = InvalidOperationException('test message');
+    test('InvalidTrackOperationException.toString contains message', () {
+      const e = InvalidTrackOperationException('test message');
       expect(e.toString(), contains('test message'));
-      expect(e.toString(), contains('InvalidOperationException'));
+      expect(e.toString(), contains('InvalidTrackOperationException'));
     });
   });
 }

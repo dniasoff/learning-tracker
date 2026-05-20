@@ -97,7 +97,7 @@ void main() {
           trackId: trackId,
           stageOrder: 1,
           stageName: 'Learn',
-          delayDays: 0,
+          schedule: Value('{"type":"delay","delay_days":0}'),
         ),
       );
       stageDefinitionId = stageDef;
@@ -274,7 +274,7 @@ void main() {
             trackId: trackId,
             stageOrder: 0,
             stageName: 'Bulk-Prior Sentinel',
-            delayDays: 0,
+            schedule: Value('{"type":"delay","delay_days":0}'),
           ),
         );
         await seedCompletion(

@@ -281,7 +281,7 @@ void main() {
             trackId: tid,
             stageOrder: 1,
             stageName: 'Learn',
-            delayDays: 0,
+            schedule: Value('{"type":"delay","delay_days":0}'),
           ),
         );
         await database.stageDao.insertStageDefinition(
@@ -291,7 +291,7 @@ void main() {
             trackId: tid,
             stageOrder: 2,
             stageName: 'Review',
-            delayDays: 1,
+            schedule: Value('{"type":"delay","delay_days":1}'),
           ),
         );
       }

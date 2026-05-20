@@ -62,7 +62,7 @@ void main() {
           trackId: trackId,
           stageOrder: 1,
           stageName: 'Learn',
-          delayDays: 0,
+          schedule: Value('{"type":"delay","delay_days":0}'),
         ),
       );
       await db.stageDao.insertStageDefinition(
@@ -72,7 +72,7 @@ void main() {
           trackId: trackId,
           stageOrder: 2,
           stageName: 'Chazara 1',
-          delayDays: 1,
+          schedule: Value('{"type":"delay","delay_days":1}'),
         ),
       );
 

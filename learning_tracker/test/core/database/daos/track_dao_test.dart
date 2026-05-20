@@ -1,6 +1,7 @@
 import 'package:drift/drift.dart' hide isNotNull, isNull;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/daos/track_dao.dart';
+import 'package:learning_tracker/core/exceptions/invalid_track_operation_exception.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
@@ -29,53 +30,35 @@ void main() {
     });
 
     test('activateTrack creates a new active personal track', () async {
-      await database.trackDao.activateTrack(
-        CurriculumId.bavli,
-        TrackType.personal,
-      );
+      await database.trackDao.activateTrack(CurriculumId.bavli);
 
       final tracks = await database.trackDao.getActiveTracks(
         CurriculumId.bavli,
       );
       expect(tracks, hasLength(1));
-      expect(tracks.first.trackType, TrackType.personal.storageKey);
-      expect(tracks.first.isActive, isTrue);
+      expect(tracks.first.state, 'active');
+      expect(tracks.first.state, 'active');
     });
 
     test('activateTrack is idempotent for already-active track', () async {
-      await database.trackDao.activateTrack(
-        CurriculumId.bavli,
-        TrackType.personal,
-      );
-      await database.trackDao.activateTrack(
-        CurriculumId.bavli,
-        TrackType.personal,
-      );
+      await database.trackDao.activateTrack(CurriculumId.bavli);
+      await database.trackDao.activateTrack(CurriculumId.bavli);
 
       final tracks = await database.trackDao.getAllTracks(CurriculumId.bavli);
       expect(tracks, hasLength(1));
     });
 
     test('deactivateTrack throws for personal track', () async {
-      await database.trackDao.activateTrack(
-        CurriculumId.bavli,
-        TrackType.personal,
-      );
+      await database.trackDao.activateTrack(CurriculumId.bavli);
 
       expect(
-        () => database.trackDao.deactivateTrack(
-          CurriculumId.bavli,
-          TrackType.personal,
-        ),
-        throwsA(isA<InvalidOperationException>()),
+        () => database.trackDao.deactivateTrack(CurriculumId.bavli),
+        throwsA(isA<InvalidTrackOperationException>()),
       );
     });
 
     test('isTrackActive returns false for non-existent track', () async {
-      final isActive = await database.trackDao.isTrackActive(
-        CurriculumId.bavli,
-        TrackType.personal,
-      );
+      final isActive = await database.trackDao.isTrackActive(CurriculumId.bavli, 0);
       expect(isActive, isFalse);
     });
 
@@ -86,7 +69,7 @@ void main() {
         CurriculumId.bavli,
       );
       expect(tracks, hasLength(1));
-      expect(tracks.first.trackType, TrackType.personal.storageKey);
+      expect(tracks.first.state, 'active');
     });
 
     test('initializeDefaultTracks is idempotent', () async {
@@ -98,14 +81,8 @@ void main() {
     });
 
     test('tracks are scoped to curriculum', () async {
-      await database.trackDao.activateTrack(
-        CurriculumId.bavli,
-        TrackType.personal,
-      );
-      await database.trackDao.activateTrack(
-        CurriculumId.mishnayos,
-        TrackType.personal,
-      );
+      await database.trackDao.activateTrack(CurriculumId.bavli);
+      await database.trackDao.activateTrack(CurriculumId.mishnayos);
 
       final bavliTracks = await database.trackDao.getActiveTracks(
         CurriculumId.bavli,
@@ -149,8 +126,8 @@ void main() {
 
         final row = await database.trackDao.getTrackById(trackId);
         expect(row, isNotNull);
-        expect(row!.deletedAt, isNotNull);
-        expect(row.isActive, isFalse);
+        expect(row!.state, 'deleted');
+        expect(row.state, isNot('active'));
       },
     );
 

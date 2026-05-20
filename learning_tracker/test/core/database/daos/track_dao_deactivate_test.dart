@@ -1,7 +1,8 @@
 // Extra coverage for TrackDao — deactivateTrack personal track guard,
-// InvalidOperationException.toString, and BaseDao accessor methods.
+// InvalidTrackOperationException.toString, and BaseDao accessor methods.
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/daos/track_dao.dart';
+import 'package:learning_tracker/core/exceptions/invalid_track_operation_exception.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
@@ -25,28 +26,25 @@ void main() {
 
   group('TrackDao.deactivateTrack', () {
     test(
-      'deactivating personal track throws InvalidOperationException',
+      'deactivating personal track throws InvalidTrackOperationException',
       () async {
         await expectLater(
-          db.trackDao.deactivateTrack(
-            CurriculumId.mishnayos,
-            TrackType.personal,
-          ),
-          throwsA(isA<InvalidOperationException>()),
+          db.trackDao.deactivateTrack(CurriculumId.mishnayos),
+          throwsA(isA<InvalidTrackOperationException>()),
         );
       },
     );
   });
 
   // =========================================================================
-  // InvalidOperationException
+  // InvalidTrackOperationException
   // =========================================================================
 
-  group('InvalidOperationException', () {
+  group('InvalidTrackOperationException', () {
     test('toString includes the message', () {
-      const ex = InvalidOperationException('test error message');
+      const ex = InvalidTrackOperationException('test error message');
       expect(ex.toString(), contains('test error message'));
-      expect(ex.toString(), contains('InvalidOperationException'));
+      expect(ex.toString(), contains('InvalidTrackOperationException'));
     });
   });
 

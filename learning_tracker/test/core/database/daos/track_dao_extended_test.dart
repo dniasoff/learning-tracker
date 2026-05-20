@@ -110,12 +110,12 @@ void main() {
         );
 
         // Reactivate through activateTrack.
-        await db.trackDao.activateTrack(CurriculumId.bavli, TrackType.personal);
+        await db.trackDao.activateTrack(CurriculumId.bavli);
 
         final tracks = await db.trackDao.getAllTracks(CurriculumId.bavli);
         // Should still be just one row, now active.
         expect(tracks, hasLength(1));
-        expect(tracks.first.isActive, isTrue);
+        expect(tracks.first.state, 'active');
       },
     );
   });
@@ -129,15 +129,15 @@ void main() {
       await db.trackDao.upsertFromSync(
         profileId: 1,
         curriculumId: CurriculumId.mishnayos,
-        trackType: TrackType.personal,
-        isActive: true,
+        state: 'active',
+        stateChangedAt: activatedAt,
         activatedAt: activatedAt,
       );
 
       final tracks = await db.trackDao.getAllForProfile(1);
       expect(tracks, hasLength(1));
       expect(tracks.first.curriculumId, CurriculumId.mishnayos.storageKey);
-      expect(tracks.first.isActive, isTrue);
+      expect(tracks.first.state, 'active');
     });
 
     test(
@@ -147,8 +147,8 @@ void main() {
         await db.trackDao.upsertFromSync(
           profileId: 1,
           curriculumId: CurriculumId.mishnayos,
-          trackType: TrackType.personal,
-          isActive: true,
+          state: 'active',
+          stateChangedAt: activatedAt,
           activatedAt: activatedAt,
         );
 
@@ -157,48 +157,49 @@ void main() {
         await db.trackDao.upsertFromSync(
           profileId: 1,
           curriculumId: CurriculumId.mishnayos,
-          trackType: TrackType.personal,
-          isActive: false,
+          state: 'retired',
+          stateChangedAt: laterDate,
           activatedAt: laterDate,
-          deactivatedAt: laterDate,
         );
 
         final tracks = await db.trackDao.getAllForProfile(1);
         // Should still be only one track (updated, not duplicated).
         expect(tracks, hasLength(1));
-        expect(tracks.first.isActive, isFalse);
+        expect(tracks.first.state, isNot('active'));
       },
     );
 
-    test('stores deactivatedAt when provided', () async {
-      final deactivatedAt = DateTime.utc(2026, 5, 1);
+    test('stores stateChangedAt when retired', () async {
+      final retiredAt = DateTime.utc(2026, 5, 1);
       await db.trackDao.upsertFromSync(
         profileId: 2,
         curriculumId: CurriculumId.bavli,
-        trackType: TrackType.personal,
-        isActive: false,
+        state: 'retired',
+        stateChangedAt: retiredAt,
         activatedAt: activatedAt,
-        deactivatedAt: deactivatedAt,
       );
 
       final tracks = await db.trackDao.getAllForProfile(2);
       expect(tracks, hasLength(1));
-      expect(tracks.first.deactivatedAt, isNotNull);
+      expect(
+        tracks.first.stateChangedAt.millisecondsSinceEpoch,
+        retiredAt.millisecondsSinceEpoch,
+      );
     });
 
     test('two profiles each get their own track row', () async {
       await db.trackDao.upsertFromSync(
         profileId: 1,
         curriculumId: CurriculumId.chumash,
-        trackType: TrackType.personal,
-        isActive: true,
+        state: 'active',
+        stateChangedAt: activatedAt,
         activatedAt: activatedAt,
       );
       await db.trackDao.upsertFromSync(
         profileId: 2,
         curriculumId: CurriculumId.chumash,
-        trackType: TrackType.personal,
-        isActive: true,
+        state: 'active',
+        stateChangedAt: activatedAt,
         activatedAt: activatedAt,
       );
 
@@ -214,14 +215,14 @@ void main() {
       await db.trackDao.upsertFromSync(
         profileId: 1,
         curriculumId: CurriculumId.bavli,
-        trackType: TrackType.personal,
-        isActive: true,
+        state: 'active',
+        stateChangedAt: activatedAt,
         activatedAt: activatedAt,
       );
 
       final tracks = await db.trackDao.getAllForProfile(1);
       expect(tracks, hasLength(1));
-      expect(tracks.first.isActive, isTrue);
+      expect(tracks.first.state, 'active');
       // Compare milliseconds to avoid UTC/local timezone mismatch.
       expect(
         tracks.first.activatedAt.millisecondsSinceEpoch,
@@ -236,39 +237,39 @@ void main() {
       await db.trackDao.upsertFromSync(
         profileId: 1,
         curriculumId: CurriculumId.bavli,
-        trackType: TrackType.personal,
-        isActive: true,
+        state: 'active',
+        stateChangedAt: original,
         activatedAt: original,
       );
 
       await db.trackDao.upsertFromSync(
         profileId: 1,
         curriculumId: CurriculumId.bavli,
-        trackType: TrackType.personal,
-        isActive: false,
+        state: 'retired',
+        stateChangedAt: updated,
         activatedAt: updated,
-        deactivatedAt: updated,
       );
 
       final tracks = await db.trackDao.getAllForProfile(1);
       expect(tracks, hasLength(1)); // no duplicate
-      expect(tracks.first.isActive, isFalse);
+      expect(tracks.first.state, isNot('active'));
       expect(
         tracks.first.activatedAt.millisecondsSinceEpoch,
         updated.millisecondsSinceEpoch,
       );
-      expect(tracks.first.deactivatedAt, isNotNull);
+      expect(tracks.first.stateChangedAt, isNotNull);
     });
 
     test('stores paceResetDate when provided', () async {
       final paceReset = DateTime.utc(2026, 4, 15);
+      final baseDate = DateTime.utc(2026, 1, 1);
 
       await db.trackDao.upsertFromSync(
         profileId: 1,
         curriculumId: CurriculumId.mishnayos,
-        trackType: TrackType.personal,
-        isActive: true,
-        activatedAt: DateTime.utc(2026, 1, 1),
+        state: 'active',
+        stateChangedAt: baseDate,
+        activatedAt: baseDate,
         paceResetDate: paceReset,
       );
 

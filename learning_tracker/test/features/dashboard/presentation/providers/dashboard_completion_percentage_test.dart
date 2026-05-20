@@ -101,7 +101,7 @@ Future<void> _insertStage(
           curriculumId: curriculumId,
           stageOrder: stageOrder,
           stageName: stageName,
-          delayDays: 0,
+          schedule: Value('{"type":"delay","delay_days":0}'),
         ),
       );
 }

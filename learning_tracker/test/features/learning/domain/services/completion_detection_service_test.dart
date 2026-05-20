@@ -78,7 +78,7 @@ void main() {
         trackId: trackId,
         stageOrder: stageOrder,
         stageName: 'Stage $stageOrder',
-        delayDays: 0,
+        schedule: Value('{"type":"delay","delay_days":0}'),
       ),
     );
   }

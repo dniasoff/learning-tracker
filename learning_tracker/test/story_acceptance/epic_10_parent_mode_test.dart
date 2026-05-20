@@ -344,7 +344,7 @@ void main() {
             trackId: trackId,
             stageOrder: i,
             stageName: 'Stage $i',
-            delayDays: 0,
+            schedule: Value('{"type":"delay","delay_days":0}'),
           ),
         );
       }
@@ -422,7 +422,7 @@ void main() {
             trackId: trackId,
             stageOrder: 1,
             stageName: 'Stage 1',
-            delayDays: 0,
+            schedule: Value('{"type":"delay","delay_days":0}'),
           ),
         );
 
@@ -628,7 +628,7 @@ void main() {
             trackId: trackId,
             stageOrder: i,
             stageName: i == 1 ? 'Learning' : 'Chazara ${i - 1}',
-            delayDays: 0,
+            schedule: Value('{"type":"delay","delay_days":0}'),
           ),
         );
       }
@@ -786,7 +786,7 @@ void main() {
               trackId: bavliTrackId,
               stageOrder: i,
               stageName: i == 1 ? 'Learning' : 'Chazara 1',
-              delayDays: 0,
+              schedule: Value('{"type":"delay","delay_days":0}'),
             ),
           );
         }

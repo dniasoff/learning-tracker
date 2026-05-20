@@ -79,7 +79,7 @@ void main() {
           curriculumId: 'bavli',
           stageName: stageName,
           stageOrder: stageOrder,
-          delayDays: 0,
+          schedule: Value('{"type":"delay","delay_days":0}'),
         ),
       );
 
@@ -123,9 +123,7 @@ void main() {
               curriculumId: 'bavli',
               stageName: 'chazara',
               stageOrder: 2,
-              delayDays: 3,
-              daysOfWeek: const Value('1,3,5'),
-              rollingWindowSize: const Value(7),
+              schedule: Value('{"type":"delay","delay_days":3}'),
             ),
           );
       final sd = await getStageDef(sdId);

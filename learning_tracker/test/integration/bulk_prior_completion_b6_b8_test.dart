@@ -161,7 +161,7 @@ Future<void> _seedStages(
             trackId: trackId,
             stageOrder: i,
             stageName: i == 1 ? 'Learn' : 'Chazara $i',
-            delayDays: 0,
+            schedule: Value('{"type":"delay","delay_days":0}'),
           ),
         );
   }
@@ -187,7 +187,7 @@ Future<void> _seedStagesWithSuperseded(
           trackId: trackId,
           stageOrder: count + 1,
           stageName: 'Old Chazara (superseded)',
-          delayDays: 0,
+          schedule: Value('{"type":"delay","delay_days":0}'),
           supersededAt: Value(DateTime.utc(2026, 1, 1)),
         ),
       );

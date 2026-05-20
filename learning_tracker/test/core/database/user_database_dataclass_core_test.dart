@@ -608,7 +608,7 @@ void main() {
             curriculumId: 'bavli',
             stageName: 'limud',
             stageOrder: 1,
-            delayDays: 0,
+            schedule: Value('{"type":"delay","delay_days":0}'),
           ),
         );
 
@@ -1172,3 +1172,5 @@ void main() {
     });
   });
 }
+
+            .insert(const StageDefinitionsCompanion()),
