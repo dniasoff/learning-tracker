@@ -1394,5 +1394,207 @@
       "completed": { "type": "int" },
       "total": { "type": "int" }
     }
+  },
+
+  "tierLensRecentActivity": "Recent Activity",
+  "@tierLensRecentActivity": {
+    "description": "Lens label for the engagement tier (live-only completions) — Recent Activity screen and Progress hub tile."
+  },
+  "tierLensSiyumimMilestones": "Siyumim & Milestones",
+  "@tierLensSiyumimMilestones": {
+    "description": "Lens label for the achievement tier (track-scoped siyumim/milestones) — Siyumim & Milestones screen and Progress hub tile."
+  },
+  "tierLensLifetimeKnowledge": "Lifetime Knowledge",
+  "@tierLensLifetimeKnowledge": {
+    "description": "Lens label for the lifetime tier (all sources — live + bulkInTrack + lifetimeOnly) — Lifetime Knowledge screen and Progress hub tile."
+  },
+
+  "tierCounterStreakDays": "{count}-day streak",
+  "@tierCounterStreakDays": {
+    "description": "Engagement-tier counter — current consecutive-day streak. Appears in the three-counter header row on Dashboard and Progress hub.",
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "tierCounterSiyumimEarned": "{count} siyumim earned",
+  "@tierCounterSiyumimEarned": {
+    "description": "Achievement-tier counter — total siyumim earned across the user's tracks. Appears in the three-counter header row.",
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "tierCounterLifetimeItems": "{count} items in lifetime",
+  "@tierCounterLifetimeItems": {
+    "description": "Lifetime-tier counter — total distinct items the user has ever marked learned (across live + bulkInTrack + lifetimeOnly).",
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "tierCounterPoints": "{count} pts",
+  "@tierCounterPoints": {
+    "description": "Child-mode points counter — appears as the fourth counter in the header row when child mode is active.",
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+
+  "limud": "Limud",
+  "@limud": {
+    "description": "Canonical vocabulary: initial study (stage 1) of one item. Lean-hard transliteration in English-default; Hebrew script when the Hebrew Terms toggle is ON."
+  },
+  "chazara": "Chazara",
+  "@chazara": {
+    "description": "Canonical vocabulary: review (stage 2+) of one item. Lean-hard transliteration in English-default; Hebrew script when the Hebrew Terms toggle is ON."
+  },
+  "chazaros": "Chazaros",
+  "@chazaros": {
+    "description": "Canonical vocabulary: plural of chazara — total review events ever. Used in Lifetime Knowledge totals (`{count} total chazaros`)."
+  },
+  "siyum": "Siyum",
+  "@siyum": {
+    "description": "Canonical vocabulary: finish-celebration of a whole unit (e.g. masechta, sefer). Lean-hard transliteration in English-default; Hebrew script when toggle is ON."
+  },
+  "siyumim": "Siyumim",
+  "@siyumim": {
+    "description": "Canonical vocabulary: plural of siyum."
+  },
+  "milestone": "Milestone",
+  "@milestone": {
+    "description": "Canonical vocabulary: umbrella term for any achievement (siyum, seder-complete, curriculum-complete)."
+  },
+  "milestoneAggregate": "Milestones",
+  "@milestoneAggregate": {
+    "description": "Canonical vocabulary: plural of milestone. Used as a screen/section heading."
+  },
+  "trackProgress": "Track progress",
+  "@trackProgress": {
+    "description": "Canonical vocabulary: per-track progress percentage (engagement + achievement). Distinct from `lifetimeLabel` which reflects all sources."
+  },
+  "lifetimeLabel": "Lifetime",
+  "@lifetimeLabel": {
+    "description": "Canonical vocabulary: lifetime label as used in dual-track-label dashboards (Track progress vs Lifetime). Distinct from `tierLensLifetimeKnowledge` (the lens screen title)."
+  },
+  "recentActivityShort": "Recent Activity",
+  "@recentActivityShort": {
+    "description": "Short form of `tierLensRecentActivity` for use in compact UI (e.g. breadcrumbs)."
+  },
+  "today": "Today",
+  "@today": {
+    "description": "Today label — used in dashboard/recent activity sections."
+  },
+  "streakLabel": "Streak",
+  "@streakLabel": {
+    "description": "Title-case 'Streak' label — distinct from the existing all-caps `streak` key. Used in recent-activity screen section headers."
+  },
+  "itemsLearnedCount": "{count} items learned",
+  "@itemsLearnedCount": {
+    "description": "NEW sense: distinct sefariaRefs ever touched (lifetime tier — replaces the deprecated ITEMS LEARNED stat-card sense). Distinct from the legacy `itemsLearnedTitle` screen-title key.",
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "totalChazaros": "{count} total chazaros",
+  "@totalChazaros": {
+    "description": "Lifetime-tier total review count — every chazara event ever (each event counts).",
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+
+  "siyumHaShas": "Siyum HaShas",
+  "@siyumHaShas": {
+    "description": "Top-level curriculum-complete celebration — Talmud Bavli."
+  },
+  "siyumHaTorah": "Siyum HaTorah",
+  "@siyumHaTorah": {
+    "description": "Top-level curriculum-complete celebration — Chumash (Torah)."
+  },
+  "siyumHaMishnayos": "Siyum HaMishnayos",
+  "@siyumHaMishnayos": {
+    "description": "Top-level curriculum-complete celebration — Mishnayos."
+  },
+  "siyumHaYerushalmi": "Siyum HaYerushalmi",
+  "@siyumHaYerushalmi": {
+    "description": "Top-level curriculum-complete celebration — Talmud Yerushalmi."
+  },
+  "siyumMishnaBerurah": "Siyum Mishna Berurah",
+  "@siyumMishnaBerurah": {
+    "description": "Top-level curriculum-complete celebration — Mishna Berurah."
+  },
+  "siyumMishnehTorah": "Siyum Mishneh Torah",
+  "@siyumMishnehTorah": {
+    "description": "Top-level curriculum-complete celebration — Mishneh Torah (Rambam)."
+  },
+  "siyumNach": "Siyum Nach",
+  "@siyumNach": {
+    "description": "Top-level curriculum-complete celebration — Nach (Neviim + Ketuvim)."
+  },
+  "siyumTanach": "Siyum Tanach",
+  "@siyumTanach": {
+    "description": "Top-level curriculum-complete celebration — Tanach (Torah + Nach)."
+  },
+  "siyumMussar": "Siyum Mussar",
+  "@siyumMussar": {
+    "description": "Top-level curriculum-complete celebration — Mussar curriculum."
+  },
+
+  "siyumSeder": "Siyum Seder",
+  "@siyumSeder": {
+    "description": "Mid-level aggregate siyum — completion of a whole seder (e.g. seder of mishnah/talmud)."
+  },
+  "siyumChelek": "Siyum Chelek",
+  "@siyumChelek": {
+    "description": "Mid-level aggregate siyum — completion of a chelek (e.g. Shulchan Aruch chelek)."
+  },
+
+  "siyumMasechta": "Siyum Masechta {name}",
+  "@siyumMasechta": {
+    "description": "Unit-level siyum — completion of one masechta (tractate). `{name}` is the masechta name (e.g. Berachos).",
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "siyumSefer": "Siyum Sefer {name}",
+  "@siyumSefer": {
+    "description": "Unit-level siyum — completion of one sefer. `{name}` is the sefer name (e.g. Bereishis).",
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "siyumSiman": "Siyum Siman {name}",
+  "@siyumSiman": {
+    "description": "Unit-level siyum — completion of one siman (numbered section, e.g. Shulchan Aruch).",
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "siyumHilchos": "Siyum Hilchos {name}",
+  "@siyumHilchos": {
+    "description": "Unit-level siyum — completion of one section of Hilchos (e.g. Hilchos Shabbos).",
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+
+  "bulkMarkWizardSubtitle": "These count toward siyumim and lifetime knowledge — but not toward your streak or points.",
+  "@bulkMarkWizardSubtitle": {
+    "description": "Subtitle/explainer for the Bulk Mark wizard (Wave 5 Task #17) — clarifies tier credit so the user understands why streak/points are not impacted."
+  },
+  "bulkMarkConfirmationToast": "{count} items marked as previously learned. They'll appear in Lifetime Knowledge and may unlock siyumim.",
+  "@bulkMarkConfirmationToast": {
+    "description": "Confirmation toast after the bulk-mark save completes — used by Wave 5 Task #17.",
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+
+  "lifetimeMarkingSubtitle": "Items you've learned in your life, outside the app's tracks. Counted toward Lifetime Knowledge — not toward siyumim, streak, or points.",
+  "@lifetimeMarkingSubtitle": {
+    "description": "Subtitle for the Lifetime Marking screen (Wave 5 Task #18) — clarifies the lifetimeOnly source so users understand the tier credit."
+  },
+
+  "recentActivityLiveOnlyDisclaimer": "Live learning only — bulk-marked items appear under Lifetime Knowledge.",
+  "@recentActivityLiveOnlyDisclaimer": {
+    "description": "Disclaimer shown on Recent Activity charts to make the live-only scope explicit and point at where bulk-marked items appear instead."
   }
 }

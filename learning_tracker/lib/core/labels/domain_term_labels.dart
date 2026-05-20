@@ -217,6 +217,216 @@ class _DomainTermLabels {
     return entry.todayRef;
   }
 
+  // ── B1 three-tier vocabulary (canonical, toggle-aware) ───────────────────
+  //
+  // These fields expose the canonical "lean-hard Hebrew" vocabulary used by
+  // the B1 three-tier completion-credit IA (engagement / achievement /
+  // lifetime — see `docs/planning/progress-ia-redesign.md`).
+  //
+  // English-default: transliterated Latin form ("Siyum", "Chazara", "Limud").
+  // Hebrew Terms ON: native Hebrew script ("סיום", "חזרה", "לימוד").
+  //
+  // The toggle controls **script**, not concept — irrespective of the
+  // device's `Localizations.localeOf(context)`. Each field's ARB key is
+  // documented next to it so the connection between this class and the
+  // ARBs is traceable.
+
+  /// Canonical "Limud" — initial study (stage 1) of one item.
+  /// ARB en: limud  |  he: limud
+  String get limud => _useHebrew ? 'לימוד' : 'Limud';
+
+  /// Canonical "Chazaros" — plural of chazara (total review events).
+  /// ARB en: chazaros  |  he: chazaros
+  ///
+  /// Distinct from [chazara] (singular). Use this in lifetime totals such
+  /// as "1,200 total chazaros".
+  String get chazaros => _useHebrew ? 'חזרות' : 'Chazaros';
+
+  /// Canonical "Siyum" — finish-celebration of a whole unit.
+  /// ARB en: siyum  |  he: siyum
+  String get siyum => _useHebrew ? 'סיום' : 'Siyum';
+
+  /// Canonical "Siyumim" — plural of siyum.
+  /// ARB en: siyumim  |  he: siyumim
+  String get siyumim => _useHebrew ? 'סיומים' : 'Siyumim';
+
+  /// Canonical "Milestone" — umbrella term for any achievement
+  /// (siyum, seder-complete, curriculum-complete).
+  /// ARB en: milestone  |  he: milestone
+  String get milestone => _useHebrew ? 'הישג' : 'Milestone';
+
+  /// Canonical "Milestones" — plural of milestone.
+  /// ARB en: milestoneAggregate  |  he: milestoneAggregate
+  String get milestoneAggregate => _useHebrew ? 'הישגים' : 'Milestones';
+
+  /// Canonical "Streak" — title-case (distinct from the legacy all-caps
+  /// `streak` ARB key that maps to "STREAK").
+  /// ARB en: streakLabel  |  he: streakLabel
+  String get streakLabel => _useHebrew ? 'רצף' : 'Streak';
+
+  /// Canonical "Today" — used on dashboard / recent-activity sections.
+  /// ARB en: today  |  he: today
+  String get today => _useHebrew ? 'היום' : 'Today';
+
+  /// Canonical "Track progress" — per-track progress percentage label
+  /// (engagement + achievement). Used in the dual track-label dashboards.
+  /// ARB en: trackProgress  |  he: trackProgress
+  String get trackProgress => _useHebrew ? 'התקדמות מסלול' : 'Track progress';
+
+  /// Canonical "Lifetime" — lifetime label used in the dual track-label
+  /// dashboards (Track progress vs Lifetime).
+  /// ARB en: lifetimeLabel  |  he: lifetimeLabel
+  ///
+  /// Distinct from [tierLensLifetimeKnowledge] (the lens screen title).
+  String get lifetimeLabel => _useHebrew ? 'ידע כולל' : 'Lifetime';
+
+  // ── Three-lens labels (toggle-aware) ─────────────────────────────────────
+  //
+  // The Progress IA exposes the three tiers as three lens screens — each
+  // has a canonical label that swaps with the Hebrew Terms toggle.
+
+  /// "Recent Activity" / "פעילות אחרונה" — engagement-tier lens label.
+  /// ARB en: tierLensRecentActivity  |  he: tierLensRecentActivity
+  String get tierLensRecentActivity =>
+      _useHebrew ? 'פעילות אחרונה' : 'Recent Activity';
+
+  /// "Siyumim & Milestones" / "סיומים והישגים" — achievement-tier lens label.
+  /// ARB en: tierLensSiyumimMilestones  |  he: tierLensSiyumimMilestones
+  String get tierLensSiyumimMilestones =>
+      _useHebrew ? 'סיומים והישגים' : 'Siyumim & Milestones';
+
+  /// "Lifetime Knowledge" / "ידע כולל" — lifetime-tier lens label.
+  /// ARB en: tierLensLifetimeKnowledge  |  he: tierLensLifetimeKnowledge
+  String get tierLensLifetimeKnowledge =>
+      _useHebrew ? 'ידע כולל' : 'Lifetime Knowledge';
+
+  /// Short form of [tierLensRecentActivity] for compact UI (breadcrumbs).
+  /// ARB en: recentActivityShort  |  he: recentActivityShort
+  String get recentActivityShort =>
+      _useHebrew ? 'פעילות אחרונה' : 'Recent Activity';
+
+  // ── Tier counters (parameterised, toggle-aware) ──────────────────────────
+  //
+  // The three (or four, in child mode) counter values that appear in the
+  // header row on Dashboard and Progress hub.
+
+  /// "{count}-day streak" / "רצף של {count} ימים" — engagement-tier counter.
+  /// ARB en: tierCounterStreakDays  |  he: tierCounterStreakDays
+  String tierCounterStreakDays(int count) =>
+      _useHebrew ? 'רצף של $count ימים' : '$count-day streak';
+
+  /// "{count} siyumim earned" / "{count} סיומים" — achievement-tier counter.
+  /// ARB en: tierCounterSiyumimEarned  |  he: tierCounterSiyumimEarned
+  String tierCounterSiyumimEarned(int count) =>
+      _useHebrew ? '$count סיומים' : '$count siyumim earned';
+
+  /// "{count} items in lifetime" / "{count} פריטים בידע" — lifetime-tier counter.
+  /// ARB en: tierCounterLifetimeItems  |  he: tierCounterLifetimeItems
+  String tierCounterLifetimeItems(int count) =>
+      _useHebrew ? '$count פריטים בידע' : '$count items in lifetime';
+
+  /// "{count} pts" / "{count} נקודות" — child-mode points counter.
+  /// ARB en: tierCounterPoints  |  he: tierCounterPoints
+  String tierCounterPoints(int count) =>
+      _useHebrew ? '$count נקודות' : '$count pts';
+
+  /// "{count} items learned" / "{count} פריטים נלמדו" — NEW sense: distinct
+  /// items ever touched (lifetime tier). Distinct from the legacy
+  /// `itemsLearnedTitle` screen-title key.
+  /// ARB en: itemsLearnedCount  |  he: itemsLearnedCount
+  String itemsLearnedCount(int count) =>
+      _useHebrew ? '$count פריטים נלמדו' : '$count items learned';
+
+  /// "{count} total chazaros" / "{count} חזרות סה״כ" — lifetime-tier total
+  /// review count.
+  /// ARB en: totalChazaros  |  he: totalChazaros
+  String totalChazaros(int count) =>
+      _useHebrew ? '$count חזרות סה״כ' : '$count total chazaros';
+
+  // ── Per-curriculum siyum labels (toggle-aware) ───────────────────────────
+  //
+  // Top-level: curriculum complete. Mid-level: aggregate (seder/chelek).
+  // Unit-level: masechta / sefer / siman / hilchos (parameterised).
+  //
+  // Each label is a fixed template — the Hebrew form is preferred when the
+  // toggle is on, the Latin transliteration otherwise. These mirror the
+  // ARB strings so screens that do not have a `BuildContext` (or want to
+  // honour the toggle irrespective of device locale) can resolve them
+  // through `DomainTermLabels` instead.
+
+  /// "Siyum HaShas" / "סיום הש״ס" — curriculum complete: Bavli.
+  /// ARB: siyumHaShas
+  String get siyumHaShas => _useHebrew ? 'סיום הש״ס' : 'Siyum HaShas';
+
+  /// "Siyum HaTorah" / "סיום התורה" — curriculum complete: Chumash.
+  /// ARB: siyumHaTorah
+  String get siyumHaTorah => _useHebrew ? 'סיום התורה' : 'Siyum HaTorah';
+
+  /// "Siyum HaMishnayos" / "סיום המשניות" — curriculum complete: Mishnayos.
+  /// ARB: siyumHaMishnayos
+  String get siyumHaMishnayos =>
+      _useHebrew ? 'סיום המשניות' : 'Siyum HaMishnayos';
+
+  /// "Siyum HaYerushalmi" / "סיום הירושלמי" — curriculum complete: Yerushalmi.
+  /// ARB: siyumHaYerushalmi
+  String get siyumHaYerushalmi =>
+      _useHebrew ? 'סיום הירושלמי' : 'Siyum HaYerushalmi';
+
+  /// "Siyum Mishna Berurah" / "סיום משנה ברורה" — curriculum complete.
+  /// ARB: siyumMishnaBerurah
+  String get siyumMishnaBerurah =>
+      _useHebrew ? 'סיום משנה ברורה' : 'Siyum Mishna Berurah';
+
+  /// "Siyum Mishneh Torah" / "סיום משנה תורה" — curriculum complete: Rambam.
+  /// ARB: siyumMishnehTorah
+  String get siyumMishnehTorah =>
+      _useHebrew ? 'סיום משנה תורה' : 'Siyum Mishneh Torah';
+
+  /// "Siyum Nach" / "סיום נ״ך" — curriculum complete: Nach.
+  /// ARB: siyumNach
+  String get siyumNach => _useHebrew ? 'סיום נ״ך' : 'Siyum Nach';
+
+  /// "Siyum Tanach" / "סיום תנ״ך" — curriculum complete: Tanach.
+  /// ARB: siyumTanach
+  String get siyumTanach => _useHebrew ? 'סיום תנ״ך' : 'Siyum Tanach';
+
+  /// "Siyum Mussar" / "סיום מוסר" — curriculum complete: Mussar.
+  /// ARB: siyumMussar
+  String get siyumMussar => _useHebrew ? 'סיום מוסר' : 'Siyum Mussar';
+
+  /// "Siyum Seder" / "סיום סדר" — mid-level aggregate siyum.
+  /// ARB: siyumSeder
+  String get siyumSeder => _useHebrew ? 'סיום סדר' : 'Siyum Seder';
+
+  /// "Siyum Chelek" / "סיום חלק" — mid-level aggregate siyum.
+  /// ARB: siyumChelek
+  String get siyumChelek => _useHebrew ? 'סיום חלק' : 'Siyum Chelek';
+
+  /// "Siyum Masechta {name}" / "סיום מסכת {name}" — unit-level siyum.
+  /// ARB: siyumMasechta
+  ///
+  /// [name] is the masechta name as it should appear in the label (typically
+  /// already in the locale-appropriate form — callers that want the masechta
+  /// name itself rendered in Hebrew should resolve that through the
+  /// curriculum label renderer first).
+  String siyumMasechta(String name) =>
+      _useHebrew ? 'סיום מסכת $name' : 'Siyum Masechta $name';
+
+  /// "Siyum Sefer {name}" / "סיום ספר {name}" — unit-level siyum.
+  /// ARB: siyumSefer
+  String siyumSefer(String name) =>
+      _useHebrew ? 'סיום ספר $name' : 'Siyum Sefer $name';
+
+  /// "Siyum Siman {name}" / "סיום סימן {name}" — unit-level siyum.
+  /// ARB: siyumSiman
+  String siyumSiman(String name) =>
+      _useHebrew ? 'סיום סימן $name' : 'Siyum Siman $name';
+
+  /// "Siyum Hilchos {name}" / "סיום הלכות {name}" — unit-level siyum.
+  /// ARB: siyumHilchos
+  String siyumHilchos(String name) =>
+      _useHebrew ? 'סיום הלכות $name' : 'Siyum Hilchos $name';
+
   /// Reverse of [HebrewTerms.stageNameMap]: Hebrew → English.
   static final Map<String, String> _hebrewToEnglish = {
     for (final entry in HebrewTerms.stageNameMap.entries)

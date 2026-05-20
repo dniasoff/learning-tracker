@@ -611,7 +611,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get noProjection => 'No projection';
 
   @override
-  String get today => 'TODAY';
+  String get today => 'Today';
 
   @override
   String plusNMore(int count) {
@@ -2852,4 +2852,146 @@ class AppLocalizationsEn extends AppLocalizations {
   String itemsLearnedOf(int completed, int total) {
     return '$completed of $total';
   }
+
+  @override
+  String get tierLensRecentActivity => 'Recent Activity';
+
+  @override
+  String get tierLensSiyumimMilestones => 'Siyumim & Milestones';
+
+  @override
+  String get tierLensLifetimeKnowledge => 'Lifetime Knowledge';
+
+  @override
+  String tierCounterStreakDays(int count) {
+    return '$count-day streak';
+  }
+
+  @override
+  String tierCounterSiyumimEarned(int count) {
+    return '$count siyumim earned';
+  }
+
+  @override
+  String tierCounterLifetimeItems(int count) {
+    return '$count items in lifetime';
+  }
+
+  @override
+  String tierCounterPoints(int count) {
+    return '$count pts';
+  }
+
+  @override
+  String get limud => 'Limud';
+
+  @override
+  String get chazara => 'Chazara';
+
+  @override
+  String get chazaros => 'Chazaros';
+
+  @override
+  String get siyum => 'Siyum';
+
+  @override
+  String get siyumim => 'Siyumim';
+
+  @override
+  String get milestone => 'Milestone';
+
+  @override
+  String get milestoneAggregate => 'Milestones';
+
+  @override
+  String get trackProgress => 'Track progress';
+
+  @override
+  String get lifetimeLabel => 'Lifetime';
+
+  @override
+  String get recentActivityShort => 'Recent Activity';
+
+  @override
+  String get streakLabel => 'Streak';
+
+  @override
+  String itemsLearnedCount(int count) {
+    return '$count items learned';
+  }
+
+  @override
+  String totalChazaros(int count) {
+    return '$count total chazaros';
+  }
+
+  @override
+  String get siyumHaShas => 'Siyum HaShas';
+
+  @override
+  String get siyumHaTorah => 'Siyum HaTorah';
+
+  @override
+  String get siyumHaMishnayos => 'Siyum HaMishnayos';
+
+  @override
+  String get siyumHaYerushalmi => 'Siyum HaYerushalmi';
+
+  @override
+  String get siyumMishnaBerurah => 'Siyum Mishna Berurah';
+
+  @override
+  String get siyumMishnehTorah => 'Siyum Mishneh Torah';
+
+  @override
+  String get siyumNach => 'Siyum Nach';
+
+  @override
+  String get siyumTanach => 'Siyum Tanach';
+
+  @override
+  String get siyumMussar => 'Siyum Mussar';
+
+  @override
+  String get siyumSeder => 'Siyum Seder';
+
+  @override
+  String get siyumChelek => 'Siyum Chelek';
+
+  @override
+  String siyumMasechta(String name) {
+    return 'Siyum Masechta $name';
+  }
+
+  @override
+  String siyumSefer(String name) {
+    return 'Siyum Sefer $name';
+  }
+
+  @override
+  String siyumSiman(String name) {
+    return 'Siyum Siman $name';
+  }
+
+  @override
+  String siyumHilchos(String name) {
+    return 'Siyum Hilchos $name';
+  }
+
+  @override
+  String get bulkMarkWizardSubtitle =>
+      'These count toward siyumim and lifetime knowledge — but not toward your streak or points.';
+
+  @override
+  String bulkMarkConfirmationToast(int count) {
+    return '$count items marked as previously learned. They\'ll appear in Lifetime Knowledge and may unlock siyumim.';
+  }
+
+  @override
+  String get lifetimeMarkingSubtitle =>
+      'Items you\'ve learned in your life, outside the app\'s tracks. Counted toward Lifetime Knowledge — not toward siyumim, streak, or points.';
+
+  @override
+  String get recentActivityLiveOnlyDisclaimer =>
+      'Live learning only — bulk-marked items appear under Lifetime Knowledge.';
 }

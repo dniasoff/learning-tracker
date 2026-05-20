@@ -1389,5 +1389,207 @@
       "completed": { "type": "int" },
       "total": { "type": "int" }
     }
+  },
+
+  "tierLensRecentActivity": "פעילות אחרונה",
+  "@tierLensRecentActivity": {
+    "description": "Lens label for the engagement tier (live-only completions)."
+  },
+  "tierLensSiyumimMilestones": "סיומים והישגים",
+  "@tierLensSiyumimMilestones": {
+    "description": "Lens label for the achievement tier (track-scoped siyumim/milestones)."
+  },
+  "tierLensLifetimeKnowledge": "ידע כולל",
+  "@tierLensLifetimeKnowledge": {
+    "description": "Lens label for the lifetime tier (all sources)."
+  },
+
+  "tierCounterStreakDays": "רצף של {count} ימים",
+  "@tierCounterStreakDays": {
+    "description": "Engagement-tier counter — current consecutive-day streak.",
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "tierCounterSiyumimEarned": "{count} סיומים",
+  "@tierCounterSiyumimEarned": {
+    "description": "Achievement-tier counter — total siyumim earned.",
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "tierCounterLifetimeItems": "{count} פריטים בידע",
+  "@tierCounterLifetimeItems": {
+    "description": "Lifetime-tier counter — total distinct items ever learned.",
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "tierCounterPoints": "{count} נקודות",
+  "@tierCounterPoints": {
+    "description": "Child-mode points counter.",
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+
+  "limud": "לימוד",
+  "@limud": {
+    "description": "Canonical vocabulary: initial study (stage 1)."
+  },
+  "chazara": "חזרה",
+  "@chazara": {
+    "description": "Canonical vocabulary: review (stage 2+)."
+  },
+  "chazaros": "חזרות",
+  "@chazaros": {
+    "description": "Canonical vocabulary: plural of chazara."
+  },
+  "siyum": "סיום",
+  "@siyum": {
+    "description": "Canonical vocabulary: finish-celebration of a unit."
+  },
+  "siyumim": "סיומים",
+  "@siyumim": {
+    "description": "Canonical vocabulary: plural of siyum."
+  },
+  "milestone": "הישג",
+  "@milestone": {
+    "description": "Canonical vocabulary: umbrella term for any achievement."
+  },
+  "milestoneAggregate": "הישגים",
+  "@milestoneAggregate": {
+    "description": "Canonical vocabulary: plural of milestone."
+  },
+  "trackProgress": "התקדמות מסלול",
+  "@trackProgress": {
+    "description": "Canonical vocabulary: per-track progress percentage."
+  },
+  "lifetimeLabel": "ידע כולל",
+  "@lifetimeLabel": {
+    "description": "Canonical vocabulary: lifetime label for dual-track-label dashboards."
+  },
+  "recentActivityShort": "פעילות אחרונה",
+  "@recentActivityShort": {
+    "description": "Short form of recent activity label."
+  },
+  "today": "היום",
+  "@today": {
+    "description": "Today label."
+  },
+  "streakLabel": "רצף",
+  "@streakLabel": {
+    "description": "Title-case 'Streak' label."
+  },
+  "itemsLearnedCount": "{count} פריטים נלמדו",
+  "@itemsLearnedCount": {
+    "description": "NEW sense: distinct items ever touched (lifetime tier).",
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "totalChazaros": "{count} חזרות סה״כ",
+  "@totalChazaros": {
+    "description": "Lifetime-tier total review count.",
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+
+  "siyumHaShas": "סיום הש״ס",
+  "@siyumHaShas": {
+    "description": "Top-level curriculum-complete celebration — Talmud Bavli."
+  },
+  "siyumHaTorah": "סיום התורה",
+  "@siyumHaTorah": {
+    "description": "Top-level curriculum-complete celebration — Chumash (Torah)."
+  },
+  "siyumHaMishnayos": "סיום המשניות",
+  "@siyumHaMishnayos": {
+    "description": "Top-level curriculum-complete celebration — Mishnayos."
+  },
+  "siyumHaYerushalmi": "סיום הירושלמי",
+  "@siyumHaYerushalmi": {
+    "description": "Top-level curriculum-complete celebration — Talmud Yerushalmi."
+  },
+  "siyumMishnaBerurah": "סיום משנה ברורה",
+  "@siyumMishnaBerurah": {
+    "description": "Top-level curriculum-complete celebration — Mishna Berurah."
+  },
+  "siyumMishnehTorah": "סיום משנה תורה",
+  "@siyumMishnehTorah": {
+    "description": "Top-level curriculum-complete celebration — Mishneh Torah (Rambam)."
+  },
+  "siyumNach": "סיום נ״ך",
+  "@siyumNach": {
+    "description": "Top-level curriculum-complete celebration — Nach."
+  },
+  "siyumTanach": "סיום תנ״ך",
+  "@siyumTanach": {
+    "description": "Top-level curriculum-complete celebration — Tanach."
+  },
+  "siyumMussar": "סיום מוסר",
+  "@siyumMussar": {
+    "description": "Top-level curriculum-complete celebration — Mussar."
+  },
+
+  "siyumSeder": "סיום סדר",
+  "@siyumSeder": {
+    "description": "Mid-level aggregate siyum — completion of a whole seder."
+  },
+  "siyumChelek": "סיום חלק",
+  "@siyumChelek": {
+    "description": "Mid-level aggregate siyum — completion of a chelek."
+  },
+
+  "siyumMasechta": "סיום מסכת {name}",
+  "@siyumMasechta": {
+    "description": "Unit-level siyum — completion of one masechta.",
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "siyumSefer": "סיום ספר {name}",
+  "@siyumSefer": {
+    "description": "Unit-level siyum — completion of one sefer.",
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "siyumSiman": "סיום סימן {name}",
+  "@siyumSiman": {
+    "description": "Unit-level siyum — completion of one siman.",
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "siyumHilchos": "סיום הלכות {name}",
+  "@siyumHilchos": {
+    "description": "Unit-level siyum — completion of one section of Hilchos.",
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+
+  "bulkMarkWizardSubtitle": "פריטים אלו נספרים לסיומים ולידע הכולל — אך לא לרצף או לנקודות שלך.",
+  "@bulkMarkWizardSubtitle": {
+    "description": "Subtitle/explainer for the Bulk Mark wizard."
+  },
+  "bulkMarkConfirmationToast": "{count} פריטים סומנו כנלמדו בעבר. הם יופיעו בידע הכולל ועשויים לפתוח סיומים.",
+  "@bulkMarkConfirmationToast": {
+    "description": "Confirmation toast after the bulk-mark save completes.",
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+
+  "lifetimeMarkingSubtitle": "פריטים שלמדת בחייך, מחוץ למסלולי האפליקציה. נספרים לידע הכולל — אך לא לסיומים, לרצף, או לנקודות.",
+  "@lifetimeMarkingSubtitle": {
+    "description": "Subtitle for the Lifetime Marking screen."
+  },
+
+  "recentActivityLiveOnlyDisclaimer": "לימוד חי בלבד — פריטים שסומנו בכמות מופיעים תחת הידע הכולל.",
+  "@recentActivityLiveOnlyDisclaimer": {
+    "description": "Disclaimer shown on Recent Activity charts."
   }
 }

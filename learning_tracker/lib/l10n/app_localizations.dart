@@ -1175,10 +1175,10 @@ abstract class AppLocalizations {
   /// **'No projection'**
   String get noProjection;
 
-  /// No description provided for @today.
+  /// Today label — used in dashboard/recent activity sections.
   ///
   /// In en, this message translates to:
-  /// **'TODAY'**
+  /// **'Today'**
   String get today;
 
   /// No description provided for @plusNMore.
@@ -5050,6 +5050,240 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{completed} of {total}'**
   String itemsLearnedOf(int completed, int total);
+
+  /// Lens label for the engagement tier (live-only completions) — Recent Activity screen and Progress hub tile.
+  ///
+  /// In en, this message translates to:
+  /// **'Recent Activity'**
+  String get tierLensRecentActivity;
+
+  /// Lens label for the achievement tier (track-scoped siyumim/milestones) — Siyumim & Milestones screen and Progress hub tile.
+  ///
+  /// In en, this message translates to:
+  /// **'Siyumim & Milestones'**
+  String get tierLensSiyumimMilestones;
+
+  /// Lens label for the lifetime tier (all sources — live + bulkInTrack + lifetimeOnly) — Lifetime Knowledge screen and Progress hub tile.
+  ///
+  /// In en, this message translates to:
+  /// **'Lifetime Knowledge'**
+  String get tierLensLifetimeKnowledge;
+
+  /// Engagement-tier counter — current consecutive-day streak. Appears in the three-counter header row on Dashboard and Progress hub.
+  ///
+  /// In en, this message translates to:
+  /// **'{count}-day streak'**
+  String tierCounterStreakDays(int count);
+
+  /// Achievement-tier counter — total siyumim earned across the user's tracks. Appears in the three-counter header row.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} siyumim earned'**
+  String tierCounterSiyumimEarned(int count);
+
+  /// Lifetime-tier counter — total distinct items the user has ever marked learned (across live + bulkInTrack + lifetimeOnly).
+  ///
+  /// In en, this message translates to:
+  /// **'{count} items in lifetime'**
+  String tierCounterLifetimeItems(int count);
+
+  /// Child-mode points counter — appears as the fourth counter in the header row when child mode is active.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} pts'**
+  String tierCounterPoints(int count);
+
+  /// Canonical vocabulary: initial study (stage 1) of one item. Lean-hard transliteration in English-default; Hebrew script when the Hebrew Terms toggle is ON.
+  ///
+  /// In en, this message translates to:
+  /// **'Limud'**
+  String get limud;
+
+  /// Canonical vocabulary: review (stage 2+) of one item. Lean-hard transliteration in English-default; Hebrew script when the Hebrew Terms toggle is ON.
+  ///
+  /// In en, this message translates to:
+  /// **'Chazara'**
+  String get chazara;
+
+  /// Canonical vocabulary: plural of chazara — total review events ever. Used in Lifetime Knowledge totals (`{count} total chazaros`).
+  ///
+  /// In en, this message translates to:
+  /// **'Chazaros'**
+  String get chazaros;
+
+  /// Canonical vocabulary: finish-celebration of a whole unit (e.g. masechta, sefer). Lean-hard transliteration in English-default; Hebrew script when toggle is ON.
+  ///
+  /// In en, this message translates to:
+  /// **'Siyum'**
+  String get siyum;
+
+  /// Canonical vocabulary: plural of siyum.
+  ///
+  /// In en, this message translates to:
+  /// **'Siyumim'**
+  String get siyumim;
+
+  /// Canonical vocabulary: umbrella term for any achievement (siyum, seder-complete, curriculum-complete).
+  ///
+  /// In en, this message translates to:
+  /// **'Milestone'**
+  String get milestone;
+
+  /// Canonical vocabulary: plural of milestone. Used as a screen/section heading.
+  ///
+  /// In en, this message translates to:
+  /// **'Milestones'**
+  String get milestoneAggregate;
+
+  /// Canonical vocabulary: per-track progress percentage (engagement + achievement). Distinct from `lifetimeLabel` which reflects all sources.
+  ///
+  /// In en, this message translates to:
+  /// **'Track progress'**
+  String get trackProgress;
+
+  /// Canonical vocabulary: lifetime label as used in dual-track-label dashboards (Track progress vs Lifetime). Distinct from `tierLensLifetimeKnowledge` (the lens screen title).
+  ///
+  /// In en, this message translates to:
+  /// **'Lifetime'**
+  String get lifetimeLabel;
+
+  /// Short form of `tierLensRecentActivity` for use in compact UI (e.g. breadcrumbs).
+  ///
+  /// In en, this message translates to:
+  /// **'Recent Activity'**
+  String get recentActivityShort;
+
+  /// Title-case 'Streak' label — distinct from the existing all-caps `streak` key. Used in recent-activity screen section headers.
+  ///
+  /// In en, this message translates to:
+  /// **'Streak'**
+  String get streakLabel;
+
+  /// NEW sense: distinct sefariaRefs ever touched (lifetime tier — replaces the deprecated ITEMS LEARNED stat-card sense). Distinct from the legacy `itemsLearnedTitle` screen-title key.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} items learned'**
+  String itemsLearnedCount(int count);
+
+  /// Lifetime-tier total review count — every chazara event ever (each event counts).
+  ///
+  /// In en, this message translates to:
+  /// **'{count} total chazaros'**
+  String totalChazaros(int count);
+
+  /// Top-level curriculum-complete celebration — Talmud Bavli.
+  ///
+  /// In en, this message translates to:
+  /// **'Siyum HaShas'**
+  String get siyumHaShas;
+
+  /// Top-level curriculum-complete celebration — Chumash (Torah).
+  ///
+  /// In en, this message translates to:
+  /// **'Siyum HaTorah'**
+  String get siyumHaTorah;
+
+  /// Top-level curriculum-complete celebration — Mishnayos.
+  ///
+  /// In en, this message translates to:
+  /// **'Siyum HaMishnayos'**
+  String get siyumHaMishnayos;
+
+  /// Top-level curriculum-complete celebration — Talmud Yerushalmi.
+  ///
+  /// In en, this message translates to:
+  /// **'Siyum HaYerushalmi'**
+  String get siyumHaYerushalmi;
+
+  /// Top-level curriculum-complete celebration — Mishna Berurah.
+  ///
+  /// In en, this message translates to:
+  /// **'Siyum Mishna Berurah'**
+  String get siyumMishnaBerurah;
+
+  /// Top-level curriculum-complete celebration — Mishneh Torah (Rambam).
+  ///
+  /// In en, this message translates to:
+  /// **'Siyum Mishneh Torah'**
+  String get siyumMishnehTorah;
+
+  /// Top-level curriculum-complete celebration — Nach (Neviim + Ketuvim).
+  ///
+  /// In en, this message translates to:
+  /// **'Siyum Nach'**
+  String get siyumNach;
+
+  /// Top-level curriculum-complete celebration — Tanach (Torah + Nach).
+  ///
+  /// In en, this message translates to:
+  /// **'Siyum Tanach'**
+  String get siyumTanach;
+
+  /// Top-level curriculum-complete celebration — Mussar curriculum.
+  ///
+  /// In en, this message translates to:
+  /// **'Siyum Mussar'**
+  String get siyumMussar;
+
+  /// Mid-level aggregate siyum — completion of a whole seder (e.g. seder of mishnah/talmud).
+  ///
+  /// In en, this message translates to:
+  /// **'Siyum Seder'**
+  String get siyumSeder;
+
+  /// Mid-level aggregate siyum — completion of a chelek (e.g. Shulchan Aruch chelek).
+  ///
+  /// In en, this message translates to:
+  /// **'Siyum Chelek'**
+  String get siyumChelek;
+
+  /// Unit-level siyum — completion of one masechta (tractate). `{name}` is the masechta name (e.g. Berachos).
+  ///
+  /// In en, this message translates to:
+  /// **'Siyum Masechta {name}'**
+  String siyumMasechta(String name);
+
+  /// Unit-level siyum — completion of one sefer. `{name}` is the sefer name (e.g. Bereishis).
+  ///
+  /// In en, this message translates to:
+  /// **'Siyum Sefer {name}'**
+  String siyumSefer(String name);
+
+  /// Unit-level siyum — completion of one siman (numbered section, e.g. Shulchan Aruch).
+  ///
+  /// In en, this message translates to:
+  /// **'Siyum Siman {name}'**
+  String siyumSiman(String name);
+
+  /// Unit-level siyum — completion of one section of Hilchos (e.g. Hilchos Shabbos).
+  ///
+  /// In en, this message translates to:
+  /// **'Siyum Hilchos {name}'**
+  String siyumHilchos(String name);
+
+  /// Subtitle/explainer for the Bulk Mark wizard (Wave 5 Task #17) — clarifies tier credit so the user understands why streak/points are not impacted.
+  ///
+  /// In en, this message translates to:
+  /// **'These count toward siyumim and lifetime knowledge — but not toward your streak or points.'**
+  String get bulkMarkWizardSubtitle;
+
+  /// Confirmation toast after the bulk-mark save completes — used by Wave 5 Task #17.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} items marked as previously learned. They\'ll appear in Lifetime Knowledge and may unlock siyumim.'**
+  String bulkMarkConfirmationToast(int count);
+
+  /// Subtitle for the Lifetime Marking screen (Wave 5 Task #18) — clarifies the lifetimeOnly source so users understand the tier credit.
+  ///
+  /// In en, this message translates to:
+  /// **'Items you\'ve learned in your life, outside the app\'s tracks. Counted toward Lifetime Knowledge — not toward siyumim, streak, or points.'**
+  String get lifetimeMarkingSubtitle;
+
+  /// Disclaimer shown on Recent Activity charts to make the live-only scope explicit and point at where bulk-marked items appear instead.
+  ///
+  /// In en, this message translates to:
+  /// **'Live learning only — bulk-marked items appear under Lifetime Knowledge.'**
+  String get recentActivityLiveOnlyDisclaimer;
 }
 
 class _AppLocalizationsDelegate

@@ -2819,4 +2819,146 @@ class AppLocalizationsHe extends AppLocalizations {
   String itemsLearnedOf(int completed, int total) {
     return '$completed מתוך $total';
   }
+
+  @override
+  String get tierLensRecentActivity => 'פעילות אחרונה';
+
+  @override
+  String get tierLensSiyumimMilestones => 'סיומים והישגים';
+
+  @override
+  String get tierLensLifetimeKnowledge => 'ידע כולל';
+
+  @override
+  String tierCounterStreakDays(int count) {
+    return 'רצף של $count ימים';
+  }
+
+  @override
+  String tierCounterSiyumimEarned(int count) {
+    return '$count סיומים';
+  }
+
+  @override
+  String tierCounterLifetimeItems(int count) {
+    return '$count פריטים בידע';
+  }
+
+  @override
+  String tierCounterPoints(int count) {
+    return '$count נקודות';
+  }
+
+  @override
+  String get limud => 'לימוד';
+
+  @override
+  String get chazara => 'חזרה';
+
+  @override
+  String get chazaros => 'חזרות';
+
+  @override
+  String get siyum => 'סיום';
+
+  @override
+  String get siyumim => 'סיומים';
+
+  @override
+  String get milestone => 'הישג';
+
+  @override
+  String get milestoneAggregate => 'הישגים';
+
+  @override
+  String get trackProgress => 'התקדמות מסלול';
+
+  @override
+  String get lifetimeLabel => 'ידע כולל';
+
+  @override
+  String get recentActivityShort => 'פעילות אחרונה';
+
+  @override
+  String get streakLabel => 'רצף';
+
+  @override
+  String itemsLearnedCount(int count) {
+    return '$count פריטים נלמדו';
+  }
+
+  @override
+  String totalChazaros(int count) {
+    return '$count חזרות סה״כ';
+  }
+
+  @override
+  String get siyumHaShas => 'סיום הש״ס';
+
+  @override
+  String get siyumHaTorah => 'סיום התורה';
+
+  @override
+  String get siyumHaMishnayos => 'סיום המשניות';
+
+  @override
+  String get siyumHaYerushalmi => 'סיום הירושלמי';
+
+  @override
+  String get siyumMishnaBerurah => 'סיום משנה ברורה';
+
+  @override
+  String get siyumMishnehTorah => 'סיום משנה תורה';
+
+  @override
+  String get siyumNach => 'סיום נ״ך';
+
+  @override
+  String get siyumTanach => 'סיום תנ״ך';
+
+  @override
+  String get siyumMussar => 'סיום מוסר';
+
+  @override
+  String get siyumSeder => 'סיום סדר';
+
+  @override
+  String get siyumChelek => 'סיום חלק';
+
+  @override
+  String siyumMasechta(String name) {
+    return 'סיום מסכת $name';
+  }
+
+  @override
+  String siyumSefer(String name) {
+    return 'סיום ספר $name';
+  }
+
+  @override
+  String siyumSiman(String name) {
+    return 'סיום סימן $name';
+  }
+
+  @override
+  String siyumHilchos(String name) {
+    return 'סיום הלכות $name';
+  }
+
+  @override
+  String get bulkMarkWizardSubtitle =>
+      'פריטים אלו נספרים לסיומים ולידע הכולל — אך לא לרצף או לנקודות שלך.';
+
+  @override
+  String bulkMarkConfirmationToast(int count) {
+    return '$count פריטים סומנו כנלמדו בעבר. הם יופיעו בידע הכולל ועשויים לפתוח סיומים.';
+  }
+
+  @override
+  String get lifetimeMarkingSubtitle =>
+      'פריטים שלמדת בחייך, מחוץ למסלולי האפליקציה. נספרים לידע הכולל — אך לא לסיומים, לרצף, או לנקודות.';
+
+  @override
+  String get recentActivityLiveOnlyDisclaimer =>
+      'לימוד חי בלבד — פריטים שסומנו בכמות מופיעים תחת הידע הכולל.';
 }
