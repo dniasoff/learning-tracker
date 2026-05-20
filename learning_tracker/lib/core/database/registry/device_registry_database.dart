@@ -1,9 +1,29 @@
 import 'package:drift/drift.dart';
 import 'package:learning_tracker/core/database/registry/tables/device_accounts.dart';
 import 'package:learning_tracker/core/database/registry/tables/device_state.dart';
+import 'package:learning_tracker/core/domain/value_objects/account_tier.dart';
 import 'package:learning_tracker/core/exceptions/app_exception.dart';
 
 part 'device_registry_database.g.dart';
+
+/// Typed [AccountTier] accessor for Drift-generated [DeviceAccount] row.
+///
+/// The serialised [DeviceAccount.tier] field uses the `'cloudBorn'` /
+/// `'localBorn'` storage keys. This extension converts them to the typed
+/// [AccountTier] enum so callers use `account.accountTier.isCloud` instead
+/// of `account.tier == 'cloudBorn'` (W5.11 primitive-obsession sweep).
+extension DeviceAccountX on DeviceAccount {
+  /// Typed account tier parsed from the [tier] storage key.
+  ///
+  /// Falls back to [AccountTier.local] for any unrecognised value.
+  AccountTier get accountTier {
+    try {
+      return AccountTier.fromStorageKey(tier);
+    } on ArgumentError {
+      return AccountTier.local;
+    }
+  }
+}
 
 /// Maximum number of accounts allowed on a single device.
 const kMaxDeviceAccounts = 5;

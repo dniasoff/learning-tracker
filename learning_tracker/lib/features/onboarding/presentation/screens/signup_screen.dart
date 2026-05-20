@@ -330,7 +330,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
 
       // Epic 21.6: check collision with local-born account
       final localMatch = await registry.findByEmail(googleUser.email ?? '');
-      if (localMatch != null && localMatch.tier == 'localBorn') {
+      if (localMatch != null && localMatch.accountTier.isLocal) {
         // Google returned an email matching a local-born account on
         // this device — route to collision/upgrade flow instead of
         // silently merging.

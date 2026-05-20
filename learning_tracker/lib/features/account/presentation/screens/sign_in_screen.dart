@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_sign_in/google_sign_in.dart'
     show GoogleSignInException, GoogleSignInExceptionCode;
 import 'package:internet_connection_checker/internet_connection_checker.dart';
+import 'package:learning_tracker/core/database/daos/user_profile_dao.dart';
 import 'package:learning_tracker/core/database/registry/device_registry_database.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
@@ -92,11 +93,11 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
       final l10n = AppLocalizations.of(context)!;
       setState(() {
         if (account != null) {
-          final tierLabel = account.tier == 'cloudBorn'
+          final tierLabel = account.accountTier.isCloud
               ? l10n.authTierCloud
               : l10n.authTierLocal;
           _registryFoundHint = l10n.authFoundOnDevice(tierLabel);
-          _registryMatchKind = account.tier == 'localBorn'
+          _registryMatchKind = account.accountTier.isLocal
               ? _RegistryMatchKind.localBorn
               : _RegistryMatchKind.cloudBorn;
         } else {
@@ -176,7 +177,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
       if (profile == null) {
         final allProfiles = await dao.getAllUserProfiles();
         for (final candidate in allProfiles) {
-          if (candidate.tier == 'cloudBorn' &&
+          if (candidate.accountTier.isCloud &&
               candidate.email.toLowerCase() == account.email.toLowerCase()) {
             profile = candidate;
             break;
@@ -234,7 +235,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
       final registry = ref.read(deviceRegistryProvider);
       final account = await registry.findByEmail(email);
 
-      if (account != null && account.tier == 'localBorn') {
+      if (account != null && account.accountTier.isLocal) {
         // Local-born account on this device → argon2id verification.
         // Swap to this account's DB first so the argon2 hash is read
         // from the correct file — otherwise we verify against whatever
@@ -306,7 +307,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
             unawaited(context.router.replaceAll([const ProfilePickerRoute()]));
           }
         }
-      } else if (account != null && account.tier == 'cloudBorn') {
+      } else if (account != null && account.accountTier.isCloud) {
         // Cloud-born account on this device → try Firebase or cached session
         final isOnline = await InternetConnectionChecker.instance.hasConnection;
         if (isOnline) {
@@ -530,7 +531,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
 
       // Epic 21.8: collision with local-born account
       final localMatch = await registry.findByEmail(googleUser.email ?? '');
-      if (localMatch != null && localMatch.tier == 'localBorn') {
+      if (localMatch != null && localMatch.accountTier.isLocal) {
         if (mounted) {
           _showError(l10n.authOfflineUseUpgrade);
         }

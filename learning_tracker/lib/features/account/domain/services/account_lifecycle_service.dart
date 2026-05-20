@@ -34,7 +34,7 @@ class AccountLifecycleService {
   Future<void> removeCloudFromDevice(String accountId) async {
     final account = await _registry.findById(accountId);
     if (account == null) return;
-    if (account.tier != 'cloudBorn') {
+    if (!account.accountTier.isCloud) {
       throw StateError(
         'removeCloudFromDevice requires a cloud-born account. '
         'Use deleteLocalAccount for local-born.',
@@ -67,7 +67,7 @@ class AccountLifecycleService {
   Future<void> deleteLocalAccount(String accountId) async {
     final account = await _registry.findById(accountId);
     if (account == null) return;
-    if (account.tier != 'localBorn') {
+    if (!account.accountTier.isLocal) {
       throw StateError(
         'deleteLocalAccount requires a local-born account. '
         'Use removeCloudFromDevice or deleteCloudAccount for cloud-born.',
@@ -96,7 +96,7 @@ class AccountLifecycleService {
   Future<void> deleteCloudAccount(String accountId) async {
     final account = await _registry.findById(accountId);
     if (account == null) return;
-    if (account.tier != 'cloudBorn' || account.firebaseUid == null) {
+    if (!account.accountTier.isCloud || account.firebaseUid == null) {
       throw StateError('deleteCloudAccount requires a cloud-born account');
     }
 

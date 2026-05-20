@@ -18,11 +18,28 @@ enum UserTier { cloudBorn, localBorn }
 extension UserTierX on UserTier {
   String get dbValue => name;
 
+  bool get isCloud => this == UserTier.cloudBorn;
+  bool get isLocal => this == UserTier.localBorn;
+
   static UserTier fromDb(String value) => switch (value) {
     'cloudBorn' => UserTier.cloudBorn,
     'localBorn' => UserTier.localBorn,
     _ => throw StateError('Unknown tier: $value'),
   };
+}
+
+/// Typed [UserTier] accessor for Drift-generated [Account] row.
+///
+/// Falls back to [UserTier.localBorn] for any unrecognised value.
+extension AccountX on Account {
+  /// Typed account tier parsed from the [tier] storage key.
+  UserTier get accountTier {
+    try {
+      return UserTierX.fromDb(tier);
+    } on StateError {
+      return UserTier.localBorn;
+    }
+  }
 }
 
 /// DAO for the accounts table (was: user_profiles table).

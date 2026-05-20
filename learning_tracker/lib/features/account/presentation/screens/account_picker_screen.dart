@@ -4,6 +4,7 @@ import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:internet_connection_checker/internet_connection_checker.dart';
+import 'package:learning_tracker/core/database/daos/user_profile_dao.dart';
 import 'package:learning_tracker/core/database/registry/device_registry_database.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
@@ -231,7 +232,7 @@ class _AccountTile extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context)!;
-    final isCloud = account.tier == 'cloudBorn';
+    final isCloud = account.accountTier.isCloud;
 
     // Cloud session status
     final fbUser = ref.read(authRepositoryProvider).currentUser;
@@ -379,7 +380,7 @@ class _AccountTile extends ConsumerWidget {
     WidgetRef ref,
     bool hasValidSession,
   ) async {
-    final isCloud = account.tier == 'cloudBorn';
+    final isCloud = account.accountTier.isCloud;
 
     if (isCloud && hasValidSession) {
       // Instant switch — cached Firebase session is valid.
@@ -424,7 +425,7 @@ class _AccountTile extends ConsumerWidget {
     if (profile == null) {
       final profiles = await dao.getAllUserProfiles();
       for (final candidate in profiles) {
-        if (candidate.tier == 'cloudBorn' &&
+        if (candidate.accountTier.isCloud &&
             candidate.email.toLowerCase() == account.email.toLowerCase()) {
           profile = candidate;
           break;
@@ -523,7 +524,7 @@ class _AccountTile extends ConsumerWidget {
       databasesPath: docsDir.path,
     );
 
-    final isCloud = account.tier == 'cloudBorn';
+    final isCloud = account.accountTier.isCloud;
     if (isCloud) {
       await service.removeCloudFromDevice(account.accountId);
     } else {
