@@ -50,7 +50,7 @@ dart run build_runner build --delete-conflicting-outputs
 
 ## Layering Rules
 
-The dependency direction is: `app → features → core`. These five invariants are **non-negotiable** and are enforced by custom lints (DNI-386 / DNI-387 — see `docs/coding-standards.md` for details):
+The dependency direction is: `app → features → core`. These five invariants are **non-negotiable** and are enforced by custom lints (DNI-386 / DNI-387):
 
 ### Rule 1 — No `core/` → `features/` imports
 
@@ -60,7 +60,7 @@ The dependency direction is: `app → features → core`. These five invariants 
 
 ### Rule 2 — No cross-feature deep imports
 
-`lib/features/X/` MUST NOT import directly from `lib/features/Y/` sub-paths. The only permitted cross-feature reference is `lib/features/Y/providers.dart` (the feature's public surface).
+`lib/features/X/` MUST NOT import directly from `lib/features/Y/` sub-paths. The only permitted cross-feature reference is the barrel file `lib/features/Y/Y.dart` (the feature's public surface).
 
 **Enforced by:** `no-feature-cross-import` custom lint (DNI-386).
 
@@ -84,4 +84,4 @@ Direct access to `.displayNameEn` or `.displayNameHe` on curriculum enums MUST o
 
 ### Local enforcement
 
-Run `make audit` to execute every layering grep and lint check locally before pushing. Full docs: [`docs/coding-standards.md`](../docs/coding-standards.md).
+Run `make audit` to execute every layering grep and lint check locally before pushing.
