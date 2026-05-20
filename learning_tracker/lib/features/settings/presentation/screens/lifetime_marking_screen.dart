@@ -78,6 +78,19 @@ class LifetimeMarkingScreen extends ConsumerWidget {
           child: ListView(
             padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
             children: [
+              // Tier-policy subtitle — explains the lifetimeOnly source so the
+              // user understands what gets credited where (Wave 5 Task #18).
+              Padding(
+                padding: const EdgeInsets.fromLTRB(4, 0, 4, 14),
+                child: Text(
+                  l10n.lifetimeMarkingSubtitle,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: AppTheme.brandInkMuted,
+                    height: 1.35,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
               for (var i = 0; i < CurriculumId.values.length; i++) ...[
                 if (i > 0) const SizedBox(height: 10),
                 _LifetimeLibraryCategoryCard(

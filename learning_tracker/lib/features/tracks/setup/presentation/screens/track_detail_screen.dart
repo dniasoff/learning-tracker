@@ -13,6 +13,7 @@ import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/utils/percentage_formatter.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/onboarding/presentation/screens/bulk_mark_screen.dart';
+import 'package:learning_tracker/features/progress/presentation/providers/lifetime_knowledge_providers.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/curriculum_scope_providers.dart';
 import 'package:learning_tracker/features/tracks/setup/domain/entities/add_track_result.dart';
 import 'package:learning_tracker/features/tracks/setup/presentation/providers/after_track_change_invalidation.dart';
@@ -58,6 +59,29 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
     );
     final cycleFraction = completionAsync.asData?.value ?? 0.0;
     final cyclePercentDisplay = formatFractionAsPercent(cycleFraction);
+
+    // W5-B (Task #16): dual-progress labels — Track progress (current cycle)
+    // and Lifetime (all-time) — sourced from [trackDualProgressMetricsProvider]
+    // so the Track Detail header matches the same numbers shown on the
+    // Dashboard active-track card and the Progress hub per-track rows.
+    final dualMetricsAsync = ref.watch(
+      trackDualProgressMetricsProvider(track.profileId),
+    );
+    final dualMetricMatches = dualMetricsAsync.asData?.value
+        .where((m) => m.trackId == track.id)
+        .toList();
+    final dualMetric = (dualMetricMatches == null || dualMetricMatches.isEmpty)
+        ? null
+        : dualMetricMatches.first;
+    final currentCyclePct = dualMetric?.currentCyclePercentage ?? 0.0;
+    final lifetimePct = dualMetric?.lifetimePercentage ?? 0.0;
+    final trackProgressDisplay = dualMetricsAsync.isLoading
+        ? '…'
+        : formatFractionAsPercent(currentCyclePct);
+    final lifetimeDisplay = dualMetricsAsync.isLoading
+        ? '…'
+        : formatFractionAsPercent(lifetimePct);
+    final terms = domainTermLabels(ref);
 
     final hasProgramEnrollment = curriculum != null
         ? (ref
@@ -115,6 +139,10 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
             cyclePercentDisplay,
             curriculumBarColor,
             chazaraTerm,
+            trackProgressLabel: terms.trackProgress,
+            trackProgressDisplay: trackProgressDisplay,
+            lifetimeLabel: terms.lifetimeLabel,
+            lifetimeDisplay: lifetimeDisplay,
             goal: goal,
             itemsRemaining: itemsRemaining,
             estimatedFinish: estimatedFinish,
@@ -145,6 +173,10 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
     String cyclePercentDisplay,
     Color curriculumBarColor,
     String chazaraTerm, {
+    required String trackProgressLabel,
+    required String trackProgressDisplay,
+    required String lifetimeLabel,
+    required String lifetimeDisplay,
     Goal? goal,
     int? itemsRemaining,
     String? estimatedFinish,
@@ -193,6 +225,31 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
             ],
           ),
           const SizedBox(height: 16),
+          // W5-B (Task #16): dual progress labels — Track progress (current
+          // cycle since activation) and Lifetime (all-time tier). These two
+          // numbers must always be visible so the user can distinguish
+          // "this cycle" engagement from total knowledge accumulated.
+          Wrap(
+            spacing: 16,
+            runSpacing: 4,
+            children: [
+              Text(
+                '$trackProgressLabel: $trackProgressDisplay',
+                style: theme.textTheme.labelMedium?.copyWith(
+                  color: AppTheme.brandInk,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              Text(
+                '$lifetimeLabel: $lifetimeDisplay',
+                style: theme.textTheme.labelMedium?.copyWith(
+                  color: AppTheme.brandInk,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
           if (!hasProgramEnrollment) ...[
             Row(
               children: [
@@ -338,16 +395,38 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
       child: Column(
         children: [
           if (!hasProgramEnrollment) ...[
+            // W5-B (Task #16): Bulk-prior path — visually differentiated
+            // from a "Mark complete" (live) action with outlined/secondary
+            // styling so users can't confuse historical/lifetime marking
+            // with live completion (which credits engagement). The icon and
+            // foreground colour both use the secondary outline treatment.
+            // Copy hardcoded English for now — l10n sweep follows.
             ListTile(
-              shape: const RoundedRectangleBorder(
-                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+              key: const ValueKey('trackDetail.bulkPriorTile'),
+              shape: RoundedRectangleBorder(
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(24),
+                ),
+                side: BorderSide(
+                  color: AppColors.blueMedium.withValues(alpha: 0.4),
+                  width: 1,
+                ),
               ),
+              tileColor: AppColors.blueMedium.withValues(alpha: 0.06),
               leading: const Icon(
-                Icons.check_circle_outline,
+                Icons.history_edu_outlined,
                 color: AppColors.blueMedium,
               ),
-              title: Text(AppLocalizations.of(context)!.trackMarkContentDone),
-              trailing: const Icon(Icons.chevron_right_rounded),
+              title: const Text(
+                // i18n: hardcoded English for now — vocabulary sweep will
+                // replace this with the new l10n key for "previously learned".
+                'Mark as previously learned',
+                style: TextStyle(color: AppColors.blueMedium),
+              ),
+              trailing: const Icon(
+                Icons.chevron_right_rounded,
+                color: AppColors.blueMedium,
+              ),
               onTap: curriculum != null
                   ? () => _openBulkMark(track, curriculum)
                   : null,

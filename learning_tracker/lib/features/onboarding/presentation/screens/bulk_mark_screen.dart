@@ -388,6 +388,20 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
         _phase = _Phase.done;
       });
 
+      // Wave 5 Task #17: post-save toast clarifying tier credit — shown
+      // immediately after the bulk-mark commits so users see WHERE the items
+      // will land (Lifetime Knowledge, possibly unlocking siyumim).
+      if (mounted) {
+        final l10n = AppLocalizations.of(context)!;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              l10n.bulkMarkConfirmationToast(result.itemCount),
+            ),
+          ),
+        );
+      }
+
       // Refresh progress surfaces immediately after bulk mark.
       ref.invalidate(
         dashboardCompletionPercentageProvider(widget.curriculumId),
@@ -470,6 +484,18 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
             child: Text(
               'Select content you\'ve already completed',
               style: theme.textTheme.titleMedium,
+              textAlign: TextAlign.center,
+            ),
+          ),
+          // Wave 5 Task #17: B1 tier-policy explainer — bulk marks credit
+          // siyumim + lifetime knowledge but NOT streak or points.
+          Padding(
+            padding: const EdgeInsets.fromLTRB(24, 0, 24, 12),
+            child: Text(
+              l10n.bulkMarkWizardSubtitle,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
               textAlign: TextAlign.center,
             ),
           ),

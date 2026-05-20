@@ -1,16 +1,42 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:learning_tracker/core/labels/domain_term_labels.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/utils/percentage_formatter.dart';
 import 'package:learning_tracker/features/progress/domain/models/curriculum_progress_data.dart';
 
 /// Card displaying overall curriculum statistics (brand blue surface).
-class OverallStatsCard extends StatelessWidget {
-  const OverallStatsCard({super.key, required this.stats});
+///
+/// W5-A: adds a [DualStatsRow] header — "Track progress" (current-cycle
+/// achievement) and "Lifetime" (% of items ever touched, including
+/// lifetimeOnly imports). The legacy total/completed/in-progress/not-started
+/// breakdown remains below. When [trackProgressFraction] or
+/// [lifetimeFraction] is null (e.g. while data is loading) the row is
+/// omitted so the card never renders a placeholder percentage.
+class OverallStatsCard extends ConsumerWidget {
+  const OverallStatsCard({
+    super.key,
+    required this.stats,
+    this.trackProgressFraction,
+    this.lifetimeFraction,
+  });
 
   final OverallCurriculumStats stats;
 
+  /// Current-cycle achievement: completedAllStages / totalItems. Rendered as
+  /// "Track progress: X%" — null hides the row.
+  final double? trackProgressFraction;
+
+  /// Lifetime tier: distinct items ever touched / totalItems (includes bulk
+  /// + lifetimeOnly + live). Rendered as "Lifetime: Y%" — null hides the row.
+  final double? lifetimeFraction;
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final terms = domainTermLabels(ref);
+    final showDualStats =
+        trackProgressFraction != null || lifetimeFraction != null;
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
@@ -44,7 +70,22 @@ class OverallStatsCard extends StatelessWidget {
               color: Colors.white,
             ),
           ),
-          const SizedBox(height: 14),
+          if (showDualStats) ...[
+            const SizedBox(height: 12),
+            DualStatsRow(
+              trackLabel: terms.trackProgress,
+              trackFraction: trackProgressFraction,
+              lifetimeLabel: terms.lifetimeLabel,
+              lifetimeFraction: lifetimeFraction,
+            ),
+            const SizedBox(height: 6),
+            Divider(
+              color: Colors.white.withValues(alpha: 0.22),
+              height: 12,
+              thickness: 1,
+            ),
+          ],
+          const SizedBox(height: 8),
           _StatRow(label: 'Total items', value: stats.totalItems),
           _StatRow(
             label: 'Completed all stages',
@@ -62,6 +103,73 @@ class OverallStatsCard extends StatelessWidget {
             leadingDot: true,
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Two-column row of headline percentages.
+///
+/// Used inside [OverallStatsCard] to surface the two B1 lenses side-by-side:
+/// **Track progress** (current cycle, achievement tier) and **Lifetime**
+/// (% of items ever touched, lifetime tier). Either side may be `null` while
+/// the underlying data is loading — those columns render an em-dash so the
+/// row layout stays stable.
+class DualStatsRow extends StatelessWidget {
+  const DualStatsRow({
+    super.key,
+    required this.trackLabel,
+    required this.trackFraction,
+    required this.lifetimeLabel,
+    required this.lifetimeFraction,
+  });
+
+  final String trackLabel;
+  final double? trackFraction;
+  final String lifetimeLabel;
+  final double? lifetimeFraction;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          child: _DualStatCell(
+            label: trackLabel,
+            fraction: trackFraction,
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: _DualStatCell(
+            label: lifetimeLabel,
+            fraction: lifetimeFraction,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _DualStatCell extends StatelessWidget {
+  const _DualStatCell({required this.label, required this.fraction});
+
+  final String label;
+  final double? fraction;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final value = fraction == null
+        ? '—'
+        : formatFractionAsPercent(fraction!, decimals: 0);
+    return Text(
+      '$label: $value',
+      style: theme.textTheme.titleLarge?.copyWith(
+        color: Colors.white,
+        fontWeight: FontWeight.w800,
+        height: 1.1,
       ),
     );
   }

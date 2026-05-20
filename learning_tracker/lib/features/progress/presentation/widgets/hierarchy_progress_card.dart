@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
+import 'package:learning_tracker/core/labels/domain_term_labels.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/utils/percentage_formatter.dart';
 import 'package:learning_tracker/features/progress/domain/models/curriculum_progress_data.dart';
@@ -10,7 +12,7 @@ import 'package:learning_tracker/features/progress/presentation/widgets/stage_br
 ///
 /// Shows level name, progress bar, completion stats. Tapping expands to
 /// show sub-levels with their own progress bars.
-class HierarchyProgressCard extends StatelessWidget {
+class HierarchyProgressCard extends ConsumerWidget {
   const HierarchyProgressCard({
     super.key,
     required this.level,
@@ -21,7 +23,7 @@ class HierarchyProgressCard extends StatelessWidget {
   final Color? curriculumColor;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final hasSubLevels = level.subLevels != null && level.subLevels!.isNotEmpty;
     final color = curriculumColor ?? Theme.of(context).colorScheme.primary;
 
@@ -192,16 +194,26 @@ class _LevelContent extends StatelessWidget {
   }
 }
 
-class _ProgressSummaryLine extends StatelessWidget {
+class _ProgressSummaryLine extends ConsumerWidget {
   const _ProgressSummaryLine({required this.level});
 
   final HierarchyLevelProgress level;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final pct = formatFractionAsPercent(level.completionPercentage);
+    final terms = domainTermLabels(ref);
+    final chazarosCount = level.stageBreakdown.fold<int>(
+      0,
+      (sum, entry) => sum + entry.count,
+    );
+    // W5-A: replaced the legacy raw-completion-count suffix with the new
+    // "N chazaros" vocabulary so the hierarchy subtitle aligns with the
+    // three-tier IA. The number reflects every stage event under this
+    // level — limudim + chazaros.
     return Text(
-      '${level.completedItems}/${level.totalItems} ($pct)',
+      '${level.completedItems}/${level.totalItems} ($pct) · '
+      '$chazarosCount ${terms.chazaros.toLowerCase()}',
       style: Theme.of(context).textTheme.bodySmall?.copyWith(
         color: AppTheme.brandInkMuted,
         fontWeight: FontWeight.w600,

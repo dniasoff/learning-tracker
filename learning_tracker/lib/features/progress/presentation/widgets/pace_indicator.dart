@@ -4,10 +4,19 @@ import 'package:learning_tracker/features/scheduler/domain/models/delta_value.da
 import 'package:learning_tracker/features/scheduler/domain/models/pace_status.dart';
 
 /// Shows behind/on-track/ahead status badge for a curriculum goal.
+///
+/// Optional [subtitleCaption] renders a small disambiguating line under the
+/// badge — used by the Curriculum Progress screen to clarify that pace only
+/// reflects live (engagement-tier) learning, not bulk-mark / lifetime imports.
 class PaceIndicator extends StatelessWidget {
-  const PaceIndicator({super.key, required this.paceStatus});
+  const PaceIndicator({
+    super.key,
+    required this.paceStatus,
+    this.subtitleCaption,
+  });
 
   final PaceStatus paceStatus;
+  final String? subtitleCaption;
 
   @override
   Widget build(BuildContext context) {
@@ -54,32 +63,50 @@ class PaceIndicator extends StatelessWidget {
           ),
         ],
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.14),
-              borderRadius: BorderRadius.circular(14),
-            ),
-            child: Icon(icon, color: color, size: 24),
+          Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.14),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Icon(icon, color: color, size: 24),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Text(
+                  label,
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    color: AppTheme.brandInk,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+              Icon(
+                Icons.flag_outlined,
+                size: 20,
+                color: color.withValues(alpha: 0.85),
+              ),
+            ],
           ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Text(
-              label,
-              style: theme.textTheme.titleSmall?.copyWith(
-                color: AppTheme.brandInk,
-                fontWeight: FontWeight.w700,
+          if (subtitleCaption != null) ...[
+            const SizedBox(height: 8),
+            Padding(
+              padding: const EdgeInsetsDirectional.only(start: 58),
+              child: Text(
+                subtitleCaption!,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: AppTheme.brandInkMuted,
+                  fontWeight: FontWeight.w500,
+                ),
               ),
             ),
-          ),
-          Icon(
-            Icons.flag_outlined,
-            size: 20,
-            color: color.withValues(alpha: 0.85),
-          ),
+          ],
         ],
       ),
     );

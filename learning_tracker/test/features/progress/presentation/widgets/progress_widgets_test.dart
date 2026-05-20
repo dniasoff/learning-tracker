@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
+import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/progress/domain/models/curriculum_progress_data.dart';
 import 'package:learning_tracker/features/progress/presentation/widgets/hierarchy_progress_card.dart';
@@ -11,8 +12,16 @@ import 'package:learning_tracker/features/progress/presentation/widgets/stage_br
 import 'package:learning_tracker/features/scheduler/domain/models/delta_value.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/pace_status.dart';
 
+/// Forces the Hebrew Terms toggle to OFF so the English assertions below
+/// remain stable — the production default is ON in seeded environments.
+class _UseHebrewTermsOff extends UseHebrewTerms {
+  @override
+  bool build() => false;
+}
+
 Widget _wrap(Widget child) {
   return ProviderScope(
+    overrides: [useHebrewTermsProvider.overrideWith(_UseHebrewTermsOff.new)],
     child: MaterialApp(
       theme: AppTheme.lightTheme(),
       home: Scaffold(body: SingleChildScrollView(child: child)),
@@ -127,7 +136,9 @@ void main() {
   });
 
   group('HierarchyProgressCard', () {
-    testWidgets('renders with progress bar and percentage', (tester) async {
+    testWidgets('renders with progress bar, percentage and chazaros count', (
+      tester,
+    ) async {
       const level = HierarchyLevelProgress(
         levelName: 'Seder Zeraim',
         levelLabel: 'Seder',
@@ -140,7 +151,10 @@ void main() {
       await tester.pumpWidget(_wrap(const HierarchyProgressCard(level: level)));
 
       expect(find.text('Seder Zeraim'), findsOneWidget);
-      expect(find.text('5/10 (50.00%)'), findsOneWidget);
+      // W5-A: subtitle now uses the new "N chazaros" vocabulary in place of
+      // the legacy raw "N completions" suffix. The number reflects the sum
+      // of stage event counts on this hierarchy level.
+      expect(find.text('5/10 (50.00%) · 5 chazaros'), findsOneWidget);
       expect(find.text('Learned: 5'), findsOneWidget);
       expect(find.byType(LinearProgressIndicator), findsOneWidget);
     });

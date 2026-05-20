@@ -9,6 +9,8 @@ import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/widgets/app_bar_title.dart';
 import 'package:learning_tracker/core/widgets/error_display.dart';
 import 'package:learning_tracker/core/widgets/loading_indicator.dart';
+import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
+import 'package:learning_tracker/features/progress/presentation/providers/lifetime_knowledge_providers.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/progress_providers.dart';
 import 'package:learning_tracker/features/progress/presentation/widgets/hierarchy_progress_card.dart';
 import 'package:learning_tracker/features/progress/presentation/widgets/overall_stats_card.dart';
@@ -36,6 +38,18 @@ class CurriculumProgressScreen extends ConsumerWidget {
     final terms = domainTermLabels(ref);
     final progressAsync = ref.watch(curriculumProgressProvider(curriculumId));
     final paceAsync = ref.watch(curriculumPaceStatusProvider(curriculumId));
+    final profileId = ref.watch(activeProfileIdProvider);
+    // Lifetime % for this curriculum — used by the new dual-stats row in
+    // OverallStatsCard. Null while loading / when the curriculum has no
+    // content asset so the row falls back to an em-dash on that side.
+    final lifetimeAsync = curriculum == null
+        ? const AsyncValue<CurriculumLifetimeSummary?>.data(null)
+        : ref.watch(
+            lifetimeDataProvider((
+              profileId: profileId,
+              curriculumId: curriculum,
+            )),
+          );
     final curriculumColor = AppTheme.getCurriculumColorByKey(curriculumId);
     final baseTheme = Theme.of(context);
     final plusJakartaTheme = baseTheme.copyWith(
@@ -100,43 +114,72 @@ class CurriculumProgressScreen extends ConsumerWidget {
         child: SafeArea(
           top: false,
           child: progressAsync.when(
-            data: (progressData) => bodyChild(
-              ListView(
-                padding: const EdgeInsets.fromLTRB(25, 10, 25, 32),
-                children: [
-                  paceAsync.when(
-                    data: (pace) => pace != null
-                        ? Padding(
-                            padding: const EdgeInsets.only(bottom: 16),
-                            child: PaceIndicator(paceStatus: pace),
-                          )
-                        : const SizedBox.shrink(),
-                    loading: () => const SizedBox.shrink(),
-                    error: (_, __) => const SizedBox.shrink(),
-                  ),
-                  OverallStatsCard(stats: progressData.overallStats),
-                  const SizedBox(height: 24),
-                  Text(
-                    'Breakdown by Level',
-                    style: plusJakartaTheme.textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.w700,
-                      fontSize: 28,
-                      color: AppTheme.brandInk,
+            data: (progressData) {
+              // Track progress = current-cycle achievement: % of items that
+              // have completed every stage (the existing "completedAllStages"
+              // bucket). Lifetime = % of items ever touched (live + bulk +
+              // lifetimeOnly), sourced from lifetimeDataProvider.
+              final totalItems = progressData.overallStats.totalItems;
+              final trackProgressFraction = totalItems == 0
+                  ? 0.0
+                  : progressData.overallStats.completedAllStages / totalItems;
+              final lifetimeFraction = lifetimeAsync.asData?.value == null
+                  ? null
+                  : (lifetimeAsync.asData!.value!.totalLeafCount == 0
+                        ? 0.0
+                        : lifetimeAsync.asData!.value!.learnedLeafCount /
+                              lifetimeAsync.asData!.value!.totalLeafCount);
+
+              return bodyChild(
+                ListView(
+                  padding: const EdgeInsets.fromLTRB(25, 10, 25, 32),
+                  children: [
+                    paceAsync.when(
+                      data: (pace) => pace != null
+                          ? Padding(
+                              padding: const EdgeInsets.only(bottom: 16),
+                              // English string inlined per W5-A brief
+                              // (vocabulary table in
+                              // docs/planning/progress-ia-redesign.md).
+                              // TODO(l10n): extract to ARB on next sweep.
+                              child: PaceIndicator(
+                                paceStatus: pace,
+                                subtitleCaption:
+                                    'Pace tracks live learning only.',
+                              ),
+                            )
+                          : const SizedBox.shrink(),
+                      loading: () => const SizedBox.shrink(),
+                      error: (_, __) => const SizedBox.shrink(),
                     ),
-                  ),
-                  const SizedBox(height: 12),
-                  ...progressData.hierarchyLevels.map(
-                    (level) => Padding(
-                      padding: const EdgeInsets.only(bottom: 10),
-                      child: HierarchyProgressCard(
-                        level: level,
-                        curriculumColor: curriculumColor,
+                    OverallStatsCard(
+                      stats: progressData.overallStats,
+                      trackProgressFraction: trackProgressFraction,
+                      lifetimeFraction: lifetimeFraction,
+                    ),
+                    const SizedBox(height: 24),
+                    Text(
+                      'Breakdown by Level',
+                      style: plusJakartaTheme.textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 28,
+                        color: AppTheme.brandInk,
                       ),
                     ),
-                  ),
-                ],
-              ),
-            ),
+                    const SizedBox(height: 12),
+                    ...progressData.hierarchyLevels.map(
+                      (level) => Padding(
+                        padding: const EdgeInsets.only(bottom: 10),
+                        child: HierarchyProgressCard(
+                          level: level,
+                          curriculumColor: curriculumColor,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
             loading: () => bodyChild(
               const Center(
                 child: Padding(
