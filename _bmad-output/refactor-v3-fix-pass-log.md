@@ -395,3 +395,36 @@ Resolved 9 V5 demotions (tasks incorrectly marked done in the refactor tracker b
 - `3a8b023a` — `feat(amnesty): reorder clears overdue via lastReorderAt filter`
 - `54c334ec` — `feat(amnesty): confirm dialog before reorder with overdue count`
 - `8b646212` — `feat(content-version): learning_order_version guard + amnesty on mismatch`
+
+---
+
+## Progress Aggregator L1+L2
+
+**Date:** 2026-05-20
+**Agent:** Fix agent (L1+L2 dispatch)
+**Source:** `_bmad-output/refactor-progress-aggregator-analysis.md`
+
+### Fixes landed
+
+| Fix | Description | Files changed | Test file |
+|-----|-------------|---------------|-----------|
+| Fix 1 | Remove hardcoded "+12% vs last week" ARB placeholder; replace with "Total completions over time" / "סה״כ השלמות לאורך זמן" | `app_en.arb`, `app_he.arb`, generated l10n files | `test/l10n/no_hardcoded_percent_in_chart_subtitle_test.dart` |
+| Fix 2 | Exclude bulk-prior sentinel rows from `ChartDataService.getDailyCompletions()` + `getCumulativeProgress()`; sentinel constant moved to shared `lib/core/learning/completion_constants.dart` | `chart_data_service.dart`, `completion_constants.dart` (new), `items_learned_providers.dart` | `test/features/progress/domain/services/chart_data_service_sentinel_test.dart` (4 tests) |
+| Fix 3 | Add `ref.watch<int>(completionCommittedProvider)` to `trackDualProgressMetricsProvider` so dashboard card rebuilds after live completion | `lifetime_knowledge_providers.dart` | `test/features/progress/presentation/providers/track_dual_progress_reactivity_test.dart` (2 tests) |
+| Fix 4 | Change `allTime` chart window start from `DateTime(2024, 1, 1)` to `DateTime(2000, 1, 1)` — matches sentinel epoch, `cumulativeBeforeStart = 0` for all users | `progress_charts_screen.dart` | (no easy unit test — visual change only) |
+| Fix 5 | Rename "This cycle" l10n label to "Since reactivation" / "מאז ההפעלה מחדש" to accurately reflect `activatedAt` semantics | `app_en.arb`, `app_he.arb`, generated l10n files | (covered by Fix 1 l10n regen) |
+| Fix 6 | Add cross-referencing Dart doc comments on both `dashboardTrackCompletionPercentageProvider` and `trackDualProgressMetricsProvider` documenting why the two percentages intentionally differ | `dashboard_providers.dart`, `lifetime_knowledge_providers.dart` | (documentation only) |
+
+### Regression tests added
+
+- `test/l10n/no_hardcoded_percent_in_chart_subtitle_test.dart` — 2 tests (en + he ARB)
+- `test/features/progress/domain/services/chart_data_service_sentinel_test.dart` — 4 tests
+- `test/features/progress/presentation/providers/track_dual_progress_reactivity_test.dart` — 2 tests
+
+### Commit
+
+`3c7710f2` — `fix(progress): L1+L2 progress-aggregator divergence — 6 fixes`
+
+### make ci status
+
+GREEN — 5242 pass, 125 skip (same skip count as pre-patch)
