@@ -226,17 +226,17 @@ lint: ## Run custom_lint (skips gracefully if not in pubspec)
 	  echo "custom_lint not in pubspec — skipping (add custom_lint to dev_dependencies when ready)"; \
 	fi
 
-audit: ## Run all 13 enforcement greps (NFR19) — exits non-zero on any violation
+audit: ## Run all 15 enforcement greps (NFR19) — exits non-zero on any violation
 	@echo "=== audit: enforcement greps ==="
 	@FAIL=0; \
-	echo "1/13 — No Firebase imports outside core/auth or core/sync"; \
+	echo "1/15 — No Firebase imports outside core/auth or core/sync"; \
 	if grep -rn "package:firebase_auth" lib/ --include="*.dart" \
 	    | grep -v "lib/core/auth/" | grep -v "lib/features/auth/" | grep -v "\.g\.dart" | grep -v "\.freezed\.dart" | grep -q .; then \
 	  grep -rn "package:firebase_auth" lib/ --include="*.dart" \
 	    | grep -v "lib/core/auth/" | grep -v "lib/features/auth/" | grep -v "\.g\.dart" | grep -v "\.freezed\.dart"; \
 	  FAIL=1; \
 	fi; \
-	echo "2/13 — No FirebaseFirestore/FirebaseStorage outside core/sync or core/auth"; \
+	echo "2/15 — No FirebaseFirestore/FirebaseStorage outside core/sync or core/auth"; \
 	if grep -rn "FirebaseFirestore\|FirebaseStorage\|firebase_firestore\|firebase_storage" lib/ --include="*.dart" \
 	    | grep -v "lib/core/sync/" | grep -v "lib/core/auth/" | grep -v "lib/core/providers/" \
 	    | grep -v "lib/features/" | grep -v "\.g\.dart" | grep -q .; then \
@@ -245,33 +245,33 @@ audit: ## Run all 13 enforcement greps (NFR19) — exits non-zero on any violati
 	    | grep -v "lib/features/" | grep -v "\.g\.dart"; \
 	  FAIL=1; \
 	fi; \
-	echo "3/13 — No FirebaseAuth.instance.signOut outside core/auth"; \
+	echo "3/15 — No FirebaseAuth.instance.signOut outside core/auth"; \
 	if grep -rn "FirebaseAuth\.instance\.signOut" lib/ --include="*.dart" \
 	    | grep -v "lib/core/auth/" | grep -q .; then \
 	  grep -rn "FirebaseAuth\.instance\.signOut" lib/ --include="*.dart" | grep -v "lib/core/auth/"; \
 	  FAIL=1; \
 	fi; \
-	echo "4/13 — No raw talker import outside core/logging"; \
+	echo "4/15 — No raw talker import outside core/logging"; \
 	if grep -rn "import 'package:talker/talker\.dart'" lib/ --include="*.dart" \
 	    | grep -v "lib/core/logging/" | grep -q .; then \
 	  grep -rn "import 'package:talker/talker\.dart'" lib/ --include="*.dart" | grep -v "lib/core/logging/"; \
 	  FAIL=1; \
 	fi; \
-	echo "5/13 — No debugPrint or bare print() in production code"; \
+	echo "5/15 — No debugPrint or bare print() in production code"; \
 	if grep -rn "debugPrint\|^\s*print(" lib/ --include="*.dart" \
 	    | grep -v "\.g\.dart" | grep -v "\.freezed\.dart" | grep -q .; then \
 	  grep -rn "debugPrint\|^\s*print(" lib/ --include="*.dart" \
 	    | grep -v "\.g\.dart" | grep -v "\.freezed\.dart"; \
 	  FAIL=1; \
 	fi; \
-	echo "6/13 — No DateTime.now() outside core/time"; \
+	echo "6/15 — No DateTime.now() outside core/time"; \
 	if grep -rn "DateTime\.now()" lib/ --include="*.dart" \
 	    | grep -v "lib/core/time/" | grep -v "\.g\.dart" | grep -v "\.freezed\.dart" | grep -v "test/" | grep -q .; then \
 	  grep -rn "DateTime\.now()" lib/ --include="*.dart" \
 	    | grep -v "lib/core/time/" | grep -v "\.g\.dart" | grep -v "\.freezed\.dart" | grep -v "test/"; \
 	  FAIL=1; \
 	fi; \
-	echo "7/13 — No useHebrewTermsProvider read outside core/labels, core/preferences, or settings/onboarding screens"; \
+	echo "7/15 — No useHebrewTermsProvider read outside core/labels, core/preferences, or settings/onboarding screens"; \
 	if grep -rn "useHebrewTermsProvider" lib/ --include="*.dart" \
 	    | grep -v "lib/core/" | grep -v "lib/features/settings/.*_screen\.dart" \
 	    | grep -v "lib/features/onboarding/presentation/screens/onboarding_screen\.dart" \
@@ -282,41 +282,58 @@ audit: ## Run all 13 enforcement greps (NFR19) — exits non-zero on any violati
 	    | grep -v "\.g\.dart" | grep -v ":[[:space:]]*//"; \
 	  FAIL=1; \
 	fi; \
-	echo "8/13 — No displayNameEn/He() outside core/labels (excluding generated files)"; \
+	echo "8/15 — No displayNameEn/He() outside core/labels (excluding generated files)"; \
 	if grep -rn "displayName(En\|He)" lib/ --include="*.dart" \
 	    | grep -v "lib/core/labels/" | grep -v "\.g\.dart" | grep -v "\.freezed\.dart" | grep -q .; then \
 	  grep -rn "displayName(En\|He)" lib/ --include="*.dart" \
 	    | grep -v "lib/core/labels/" | grep -v "\.g\.dart" | grep -v "\.freezed\.dart"; \
 	  FAIL=1; \
 	fi; \
-	echo "9/13 — No empty catch blocks"; \
+	echo "9/15 — No empty catch blocks"; \
 	if grep -rn "catch\s*(_\?\w*)\s*{}" lib/ --include="*.dart" | grep -v "\.g\.dart" | grep -q .; then \
 	  grep -rn "catch\s*(_\?\w*)\s*{}" lib/ --include="*.dart" | grep -v "\.g\.dart"; \
 	  FAIL=1; \
 	fi; \
-	echo "10/13 — No banned TODO/FIXME/XXX markers"; \
+	echo "10/15 — No banned TODO/FIXME/XXX markers"; \
 	if grep -rn "TODO: refactor later\|FIXME: hardcoded for now\|XXX: temporary" lib/ --include="*.dart" | grep -q .; then \
 	  grep -rn "TODO: refactor later\|FIXME: hardcoded for now\|XXX: temporary" lib/ --include="*.dart"; \
 	  FAIL=1; \
 	fi; \
-	echo "11/13 — No .withDefault(const Constant(0)) in database tables"; \
+	echo "11/15 — No .withDefault(const Constant(0)) in database tables"; \
 	if grep -rn "\.withDefault(const Constant(0))" lib/core/database/tables/ --include="*.dart" | grep -q .; then \
 	  grep -rn "\.withDefault(const Constant(0))" lib/core/database/tables/ --include="*.dart"; \
 	  FAIL=1; \
 	fi; \
-	echo "12/13 — No currentAccountId hard-coded to 1"; \
+	echo "12/15 — No currentAccountId hard-coded to 1"; \
 	if grep -rn "currentAccountId.*=.*1\b" lib/ --include="*.dart" | grep -v "\.g\.dart" | grep -q .; then \
 	  grep -rn "currentAccountId.*=.*1\b" lib/ --include="*.dart" | grep -v "\.g\.dart"; \
 	  FAIL=1; \
 	fi; \
-	echo "13/13 — No raw HebrewTerms. calls in lib/features/ (B11-7)"; \
+	echo "13/15 — No raw HebrewTerms. calls in lib/features/ (B11-7)"; \
 	if grep -rn "HebrewTerms\." lib/features/ --include="*.dart" | grep -v "_test\.dart" | grep -v "\.g\.dart" | grep -q .; then \
 	  grep -rn "HebrewTerms\." lib/features/ --include="*.dart" | grep -v "_test\.dart" | grep -v "\.g\.dart"; \
 	  FAIL=1; \
+	fi; \
+	echo "14/15 — No features/ imports inside lib/core/ (W1.12) [warn-only: pre-existing violations pending Wave-2 fix]"; \
+	if grep -rn "package:learning_tracker/features/" lib/core/ --include="*.dart" | grep -v "\.g\.dart" | grep -v "\.freezed\.dart" | grep -q .; then \
+	  echo "  WARN: the following lib/core/ files import from lib/features/ — fix in Wave 2:"; \
+	  grep -rn "package:learning_tracker/features/" lib/core/ --include="*.dart" | grep -v "\.g\.dart" | grep -v "\.freezed\.dart"; \
+	fi; \
+	echo "15/15 — No cross-feature deep imports (must use barrel) (W1.13) [warn-only: pre-existing violations pending Wave-2 fix]"; \
+	if grep -rn "package:learning_tracker/features/" lib/features/ --include="*.dart" \
+	    | grep -v "\.g\.dart" | grep -v "\.freezed\.dart" \
+	    | grep -P "features/([^/]+)/(?!\1\.dart)" \
+	    | awk -F: '{match($$1, /features\/([^\/]+)\//, a); match($$0, /features\/([^\/]+)\//, b); if(a[1] != b[1]) print}' \
+	    | grep -q .; then \
+	  echo "  WARN: the following files use cross-feature deep imports — fix by switching to barrel:"; \
+	  grep -rn "package:learning_tracker/features/" lib/features/ --include="*.dart" \
+	    | grep -v "\.g\.dart" | grep -v "\.freezed\.dart" \
+	    | grep -P "features/([^/]+)/(?!\1\.dart)" \
+	    | awk -F: '{match($$1, /features\/([^\/]+)\//, a); match($$0, /features\/([^\/]+)\//, b); if(a[1] != b[1]) print}'; \
 	fi; \
 	if [ "$$FAIL" -eq 1 ]; then \
 	  echo "=== audit FAILED — fix violations above ==="; \
 	  exit 1; \
 	else \
-	  echo "=== audit PASSED — all 13 greps clean ==="; \
+	  echo "=== audit PASSED — all 15 greps clean ==="; \
 	fi
