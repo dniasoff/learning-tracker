@@ -13,21 +13,32 @@ import 'package:learning_tracker/features/scheduler/presentation/widgets/grouped
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 @RoutePage()
-class SchedulerScreen extends ConsumerStatefulWidget {
+class SchedulerScreen extends ConsumerWidget {
   const SchedulerScreen({super.key});
 
   @override
-  ConsumerState<SchedulerScreen> createState() => _SchedulerScreenState();
-}
-
-class _SchedulerScreenState extends ConsumerState<SchedulerScreen> {
-  bool _isGroupedView = false;
-
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final asyncTasks = ref.watch(allDailyTasksProvider);
     final section = ref.watch(schedulerTaskSectionProvider);
+    final isGroupedView = ref.watch(schedulerGroupedViewProvider);
     final theme = Theme.of(context);
+
+    void skipTask(DailyTask task) {
+      ref.read(skippedTasksProvider.notifier).skip(task.contentItemSefariaRef);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(AppLocalizations.of(context)!.taskSkippedUntilTomorrow),
+          action: SnackBarAction(
+            label: AppLocalizations.of(context)!.undoLabel,
+            onPressed: () {
+              ref
+                  .read(skippedTasksProvider.notifier)
+                  .undoSkip(task.contentItemSefariaRef);
+            },
+          ),
+        ),
+      );
+    }
 
     return Scaffold(
       backgroundColor: AppColors.surfaceF5,
@@ -67,22 +78,23 @@ class _SchedulerScreenState extends ConsumerState<SchedulerScreen> {
                   padding: const EdgeInsets.fromLTRB(16, 2, 16, 0),
                   child: _GoalCard(
                     count: visibleTasks.length,
-                    isGroupedView: _isGroupedView,
-                    onToggleView: () =>
-                        setState(() => _isGroupedView = !_isGroupedView),
+                    isGroupedView: isGroupedView,
+                    onToggleView: () => ref
+                        .read(schedulerGroupedViewProvider.notifier)
+                        .toggle(),
                   ),
                 ),
                 const SizedBox(height: 10),
                 Expanded(
                   child: Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 12),
-                    child: _isGroupedView
+                    child: isGroupedView
                         ? GroupedDailyView(
                             schedule: schedule,
                             onTaskDismissed: (curriculum, index) {
                               final grouped = schedule.groupedByCurriculum;
                               final task = grouped[curriculum]![index];
-                              _skipTask(task);
+                              skipTask(task);
                             },
                             onTaskCompleted: (curriculum, index) {
                               ref.invalidate(allDailyTasksProvider);
@@ -112,23 +124,6 @@ class _SchedulerScreenState extends ConsumerState<SchedulerScreen> {
               ],
             ),
           ),
-        ),
-      ),
-    );
-  }
-
-  void _skipTask(DailyTask task) {
-    ref.read(skippedTasksProvider.notifier).skip(task.contentItemSefariaRef);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(AppLocalizations.of(context)!.taskSkippedUntilTomorrow),
-        action: SnackBarAction(
-          label: AppLocalizations.of(context)!.undoLabel,
-          onPressed: () {
-            ref
-                .read(skippedTasksProvider.notifier)
-                .undoSkip(task.contentItemSefariaRef);
-          },
         ),
       ),
     );

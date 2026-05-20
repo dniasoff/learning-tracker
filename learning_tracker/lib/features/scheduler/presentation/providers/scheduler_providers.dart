@@ -47,6 +47,17 @@ final schedulerTaskSectionProvider =
       SchedulerTaskSectionNotifier.new,
     );
 
+/// Whether the scheduler screen shows tasks grouped by curriculum.
+/// Kept as a provider so [SchedulerScreen] can be a pure [ConsumerWidget]
+/// with no local state (W5.21).
+@riverpod
+class SchedulerGroupedView extends _$SchedulerGroupedView {
+  @override
+  bool build() => false;
+
+  void toggle() => state = !state;
+}
+
 class SchedulerTaskSectionNotifier extends Notifier<SchedulerTaskSection> {
   @override
   SchedulerTaskSection build() => SchedulerTaskSection.all;
@@ -467,9 +478,7 @@ Future<List<DailyTask>> _buildProjectionTasks({
         .getProgramForProfileAndCurriculum(profileId, curriculum.storageKey);
 
     if (enrollment != null) {
-      final program = programRepository.getProgramById(
-        enrollment.programId,
-      );
+      final program = programRepository.getProgramById(enrollment.programId);
       final apiKey = program?.apiProgramKey;
       if (program != null && apiKey != null && apiKey.isNotEmpty) {
         final programKey =
@@ -990,9 +999,7 @@ Future<List<DailyTask>> _applyProgramCalendarOverrides({
         .getProgramForProfileAndCurriculum(profileId, curriculum.storageKey);
     if (enrollment == null) continue;
 
-    final program = programRepository.getProgramById(
-      enrollment.programId,
-    );
+    final program = programRepository.getProgramById(enrollment.programId);
     final apiKey = program?.apiProgramKey;
     if (program == null || apiKey == null || apiKey.isEmpty) continue;
 

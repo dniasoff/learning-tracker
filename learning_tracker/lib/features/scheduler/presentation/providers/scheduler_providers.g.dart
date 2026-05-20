@@ -8,6 +8,73 @@ part of 'scheduler_providers.dart';
 
 // GENERATED CODE - DO NOT MODIFY BY HAND
 // ignore_for_file: type=lint, type=warning
+/// Whether the scheduler screen shows tasks grouped by curriculum.
+/// Kept as a provider so [SchedulerScreen] can be a pure [ConsumerWidget]
+/// with no local state (W5.21).
+
+@ProviderFor(SchedulerGroupedView)
+final schedulerGroupedViewProvider = SchedulerGroupedViewProvider._();
+
+/// Whether the scheduler screen shows tasks grouped by curriculum.
+/// Kept as a provider so [SchedulerScreen] can be a pure [ConsumerWidget]
+/// with no local state (W5.21).
+final class SchedulerGroupedViewProvider
+    extends $NotifierProvider<SchedulerGroupedView, bool> {
+  /// Whether the scheduler screen shows tasks grouped by curriculum.
+  /// Kept as a provider so [SchedulerScreen] can be a pure [ConsumerWidget]
+  /// with no local state (W5.21).
+  SchedulerGroupedViewProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'schedulerGroupedViewProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$schedulerGroupedViewHash();
+
+  @$internal
+  @override
+  SchedulerGroupedView create() => SchedulerGroupedView();
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(bool value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<bool>(value),
+    );
+  }
+}
+
+String _$schedulerGroupedViewHash() =>
+    r'210adcd82bc297cada0aa26f2475cc517193a6d5';
+
+/// Whether the scheduler screen shows tasks grouped by curriculum.
+/// Kept as a provider so [SchedulerScreen] can be a pure [ConsumerWidget]
+/// with no local state (W5.21).
+
+abstract class _$SchedulerGroupedView extends $Notifier<bool> {
+  bool build();
+  @$mustCallSuper
+  @override
+  void runBuild() {
+    final ref = this.ref as $Ref<bool, bool>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<bool, bool>,
+              bool,
+              Object?,
+              Object?
+            >;
+    element.handleCreate(ref, build);
+  }
+}
+
 /// Provides the current UTC date/time. Override in tests to control time.
 
 @ProviderFor(clock)
@@ -671,7 +738,7 @@ final class AllDailyTasksProvider
   }
 }
 
-String _$allDailyTasksHash() => r'9db2097b20adb67e2a5825d4663902ccd0b2f270';
+String _$allDailyTasksHash() => r'387c881ebc08643a42b1c122555dc722031e4be5';
 
 /// Returns the first [DailyTask] for [trackId] that falls in [category],
 /// or null when the bucket is empty.
