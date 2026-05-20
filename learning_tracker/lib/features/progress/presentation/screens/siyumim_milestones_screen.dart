@@ -1,7 +1,6 @@
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:learning_tracker/core/labels/domain_term_labels.dart';
 import 'package:learning_tracker/core/widgets/app_bar_title.dart';
 import 'package:learning_tracker/core/widgets/error_display.dart';
 import 'package:learning_tracker/core/widgets/loading_indicator.dart';
@@ -42,7 +41,6 @@ class SiyumimMilestonesScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
-    final terms = domainTermLabels(ref);
     final activeProfileId = ref.watch(activeProfileIdProvider);
     final effectiveProfileId = profileId ?? activeProfileId;
     final journeyAsync = ref.watch(
@@ -58,7 +56,7 @@ class SiyumimMilestonesScreen extends ConsumerWidget {
     final profileName = profileAsync?.asData?.value?.displayName;
     final title = profileName != null
         ? l10n.journeyTitleNamed(profileName)
-        : terms.tierLensSiyumimMilestones;
+        : l10n.tierLensSiyumimMilestones;
 
     return Scaffold(
       appBar: AppBar(title: AppBarTitle(text: title)),

@@ -106,7 +106,7 @@ class _RecentActivityScreenState extends ConsumerState<RecentActivityScreen> {
                 ),
                 Expanded(
                   child: Text(
-                    terms.tierLensRecentActivity,
+                    l10n.tierLensRecentActivity,
                     textAlign: TextAlign.center,
                     style: theme.textTheme.titleLarge?.copyWith(
                       fontWeight: FontWeight.w700,
@@ -237,7 +237,6 @@ class _StreakHeaderCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
-    final terms = domainTermLabels(ref);
     final theme = Theme.of(context);
     final streakAsync = ref.watch(dashboardStreakProvider);
     final activeDatesAsync = ref.watch(
@@ -252,7 +251,7 @@ class _StreakHeaderCard extends ConsumerWidget {
           Row(
             children: [
               Text(
-                terms.streakLabel.toUpperCase(),
+                l10n.streakLabel.toUpperCase(),
                 style: theme.textTheme.labelSmall?.copyWith(
                   color: const Color(0xFF778099),
                   letterSpacing: 0.6,
@@ -271,7 +270,7 @@ class _StreakHeaderCard extends ConsumerWidget {
                     borderRadius: BorderRadius.circular(999),
                   ),
                   child: Text(
-                    terms.tierCounterStreakDays(s.currentStreak),
+                    l10n.tierCounterStreakDays(s.currentStreak),
                     style: theme.textTheme.labelSmall?.copyWith(
                       color: Colors.white,
                       letterSpacing: 0.4,
@@ -331,7 +330,7 @@ class _StreakHeaderCard extends ConsumerWidget {
           if (window.curriculumId != null) ...[
             const SizedBox(height: 4),
             Text(
-              terms.streakAcrossAllCurricula,
+              l10n.labelStreakAcrossAllCurricula,
               style: theme.textTheme.bodySmall?.copyWith(
                 color: const Color(0xFF778099),
                 fontWeight: FontWeight.w600,
@@ -439,12 +438,12 @@ class _PointsTotalLabel extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final terms = domainTermLabels(ref);
+    final l10n = AppLocalizations.of(context)!;
     final async = ref.watch(recentActivityPointsProvider(window));
     final total =
         async.asData?.value?.fold<int>(0, (sum, d) => sum + d.points);
     return Text(
-      total == null ? '--' : terms.tierCounterPoints(total),
+      total == null ? '--' : l10n.tierCounterPoints(total),
       style: Theme.of(context).textTheme.headlineSmall?.copyWith(
         fontWeight: FontWeight.w800,
         color: const Color(0xFF1A1F2F),

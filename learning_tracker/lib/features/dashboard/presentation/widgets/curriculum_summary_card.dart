@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/utils/percentage_formatter.dart';
@@ -172,26 +173,11 @@ class _ProjectedDate extends StatelessWidget {
 
   final DateTime date;
 
-  static const _months = [
-    '',
-    'Jan',
-    'Feb',
-    'Mar',
-    'Apr',
-    'May',
-    'Jun',
-    'Jul',
-    'Aug',
-    'Sep',
-    'Oct',
-    'Nov',
-    'Dec',
-  ];
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final label = '${_months[date.month]} ${date.day}, ${date.year}';
+    final locale = Localizations.localeOf(context).toString();
+    final label = DateFormat.yMMMd(locale).format(date);
 
     return Row(
       mainAxisSize: MainAxisSize.min,

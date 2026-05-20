@@ -57,12 +57,10 @@ void main() {
       _VocabCase('chazaros', en: 'Chazaros', he: 'חזרות', read: (r) => domainTermLabels(r).chazaros),
       _VocabCase('siyum', en: 'Siyum', he: 'סיום', read: (r) => domainTermLabels(r).siyum),
       _VocabCase('siyumim', en: 'Siyumim', he: 'סיומים', read: (r) => domainTermLabels(r).siyumim),
-      _VocabCase('milestone', en: 'Milestone', he: 'הישג', read: (r) => domainTermLabels(r).milestone),
-      _VocabCase('milestoneAggregate', en: 'Milestones', he: 'הישגים', read: (r) => domainTermLabels(r).milestoneAggregate),
-      _VocabCase('streakLabel', en: 'Streak', he: 'רצף', read: (r) => domainTermLabels(r).streakLabel),
-      _VocabCase('today', en: 'Today', he: 'היום', read: (r) => domainTermLabels(r).today),
-      _VocabCase('trackProgress', en: 'Track progress', he: 'התקדמות מסלול', read: (r) => domainTermLabels(r).trackProgress),
-      _VocabCase('lifetimeLabel', en: 'Lifetime', he: 'ידע כולל', read: (r) => domainTermLabels(r).lifetimeLabel),
+      // milestone, milestoneAggregate, streakLabel, today, trackProgress,
+      // lifetimeLabel — removed from DomainTermLabels (A2/A3 boundary fix).
+      // These are now structural strings served via AppLocalizations (ARB).
+      // They are tested through widget-level integration tests, not here.
     ];
     for (final c in cases) {
       testWidgets('${c.name} — Hebrew OFF returns Latin "${c.en}"', (
@@ -88,130 +86,19 @@ void main() {
     }
   });
 
-  // ── Three-lens labels + recent-activity-short ───────────────────────────
+  // Three-lens labels (tierLensRecentActivity, tierLensSiyumimMilestones,
+  // tierLensLifetimeKnowledge, recentActivityShort) were removed from
+  // DomainTermLabels as part of the A2/A3 boundary fix. They are now
+  // served as structural strings via AppLocalizations (ARB).
 
-  group('B1 vocab — three-lens labels swap script via toggle', () {
-    final cases = <_VocabCase>[
-      _VocabCase(
-        'tierLensRecentActivity',
-        en: 'Recent Activity',
-        he: 'פעילות אחרונה',
-        read: (r) => domainTermLabels(r).tierLensRecentActivity,
-      ),
-      _VocabCase(
-        'tierLensSiyumimMilestones',
-        en: 'Siyumim & Milestones',
-        he: 'סיומים והישגים',
-        read: (r) => domainTermLabels(r).tierLensSiyumimMilestones,
-      ),
-      _VocabCase(
-        'tierLensLifetimeKnowledge',
-        en: 'Lifetime Knowledge',
-        he: 'ידע כולל',
-        read: (r) => domainTermLabels(r).tierLensLifetimeKnowledge,
-      ),
-      _VocabCase(
-        'recentActivityShort',
-        en: 'Recent Activity',
-        he: 'פעילות אחרונה',
-        read: (r) => domainTermLabels(r).recentActivityShort,
-      ),
-    ];
-    for (final c in cases) {
-      testWidgets('${c.name} — Hebrew OFF returns Latin "${c.en}"', (
-        tester,
-      ) async {
-        final got = await _renderWithToggle(
-          tester: tester,
-          hebrewOn: false,
-          extract: c.read,
-        );
-        expect(got, c.en);
-      });
-      testWidgets('${c.name} — Hebrew ON returns Hebrew script "${c.he}"', (
-        tester,
-      ) async {
-        final got = await _renderWithToggle(
-          tester: tester,
-          hebrewOn: true,
-          extract: c.read,
-        );
-        expect(got, c.he);
-      });
-    }
-  });
+  // Tier counters (tierCounterStreakDays, tierCounterSiyumimEarned,
+  // tierCounterLifetimeItems, tierCounterPoints) were removed from
+  // DomainTermLabels as part of the A2/A3 boundary fix. They are now
+  // served as structural strings via AppLocalizations (ARB).
 
-  // ── Tier counters (parameterised) ───────────────────────────────────────
+  // ── Remaining domain-term counters (itemsLearnedCount, totalChazaros) ──
 
-  group('B1 vocab — tier counters swap script via toggle', () {
-    testWidgets('tierCounterStreakDays(6) — Hebrew OFF', (tester) async {
-      final got = await _renderWithToggle(
-        tester: tester,
-        hebrewOn: false,
-        extract: (r) => domainTermLabels(r).tierCounterStreakDays(6),
-      );
-      expect(got, '6-day streak');
-    });
-    testWidgets('tierCounterStreakDays(6) — Hebrew ON', (tester) async {
-      final got = await _renderWithToggle(
-        tester: tester,
-        hebrewOn: true,
-        extract: (r) => domainTermLabels(r).tierCounterStreakDays(6),
-      );
-      expect(got, 'רצף של 6 ימים');
-    });
-
-    testWidgets('tierCounterSiyumimEarned(4) — Hebrew OFF', (tester) async {
-      final got = await _renderWithToggle(
-        tester: tester,
-        hebrewOn: false,
-        extract: (r) => domainTermLabels(r).tierCounterSiyumimEarned(4),
-      );
-      expect(got, '4 siyumim earned');
-    });
-    testWidgets('tierCounterSiyumimEarned(4) — Hebrew ON', (tester) async {
-      final got = await _renderWithToggle(
-        tester: tester,
-        hebrewOn: true,
-        extract: (r) => domainTermLabels(r).tierCounterSiyumimEarned(4),
-      );
-      expect(got, '4 סיומים');
-    });
-
-    testWidgets('tierCounterLifetimeItems(1336) — Hebrew OFF', (tester) async {
-      final got = await _renderWithToggle(
-        tester: tester,
-        hebrewOn: false,
-        extract: (r) => domainTermLabels(r).tierCounterLifetimeItems(1336),
-      );
-      expect(got, '1336 items in lifetime');
-    });
-    testWidgets('tierCounterLifetimeItems(1336) — Hebrew ON', (tester) async {
-      final got = await _renderWithToggle(
-        tester: tester,
-        hebrewOn: true,
-        extract: (r) => domainTermLabels(r).tierCounterLifetimeItems(1336),
-      );
-      expect(got, '1336 פריטים בידע');
-    });
-
-    testWidgets('tierCounterPoints(1250) — Hebrew OFF', (tester) async {
-      final got = await _renderWithToggle(
-        tester: tester,
-        hebrewOn: false,
-        extract: (r) => domainTermLabels(r).tierCounterPoints(1250),
-      );
-      expect(got, '1250 pts');
-    });
-    testWidgets('tierCounterPoints(1250) — Hebrew ON', (tester) async {
-      final got = await _renderWithToggle(
-        tester: tester,
-        hebrewOn: true,
-        extract: (r) => domainTermLabels(r).tierCounterPoints(1250),
-      );
-      expect(got, '1250 נקודות');
-    });
-
+  group('B1 vocab — domain-term counters (remain in DomainTermLabels)', () {
     testWidgets('itemsLearnedCount(1336) — Hebrew OFF', (tester) async {
       final got = await _renderWithToggle(
         tester: tester,

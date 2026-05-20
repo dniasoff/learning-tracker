@@ -5,7 +5,6 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:learning_tracker/core/enums/user_mode.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/labels/curriculum_visuals.dart';
-import 'package:learning_tracker/core/labels/domain_term_labels.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/theme/app_colors.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
@@ -222,12 +221,11 @@ class _RecentActivityLensTile extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
-    final terms = domainTermLabels(ref);
     return _LensTile(
       icon: Icons.local_fire_department_rounded,
       iconBgColor: const Color(0xFFFFE9EB),
       iconColor: const Color(0xFFFF6F77),
-      title: terms.tierLensRecentActivity,
+      title: l10n.tierLensRecentActivity,
       subtitle: l10n.progressChartsTileSubtitle,
       onTap: () => context.router.push(const RecentActivityRoute()),
     );
@@ -240,12 +238,11 @@ class _SiyumimMilestonesLensTile extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
-    final terms = domainTermLabels(ref);
     return _LensTile(
       icon: Icons.emoji_events_outlined,
       iconBgColor: const Color(0xFFFFF4E0),
       iconColor: AppColors.chartAmber,
-      title: terms.tierLensSiyumimMilestones,
+      title: l10n.tierLensSiyumimMilestones,
       subtitle: l10n.myLearningJourneySubtitle,
       onTap: () => context.router.push(SiyumimMilestonesRoute()),
     );
@@ -258,12 +255,11 @@ class _LifetimeKnowledgeLensTile extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
-    final terms = domainTermLabels(ref);
     return _LensTile(
       icon: Icons.menu_book_outlined,
       iconBgColor: const Color(0xFFEEF3FF),
       iconColor: AppTheme.brandBlue,
-      title: terms.tierLensLifetimeKnowledge,
+      title: l10n.tierLensLifetimeKnowledge,
       subtitle: l10n.itemsLearnedSubtitle,
       onTap: () => context.router.push(const LifetimeKnowledgeRoute()),
     );
@@ -331,7 +327,7 @@ class _PerTrackRow extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final terms = domainTermLabels(ref);
+    final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
     final curriculum = metric.curriculumId;
     final trackPct = (metric.currentCyclePercentage * 100).round();
@@ -390,14 +386,14 @@ class _PerTrackRow extends ConsumerWidget {
                     runSpacing: 2,
                     children: [
                       Text(
-                        '${terms.trackProgress}: $trackPct%',
+                        '${l10n.trackProgress}: $trackPct%',
                         style: theme.textTheme.bodySmall?.copyWith(
                           color: AppTheme.brandInkMuted,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
                       Text(
-                        '${terms.lifetimeLabel}: $lifetimePct%',
+                        '${l10n.lifetimeLabel}: $lifetimePct%',
                         style: theme.textTheme.bodySmall?.copyWith(
                           color: AppTheme.brandInkMuted,
                           fontWeight: FontWeight.w600,

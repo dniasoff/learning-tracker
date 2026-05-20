@@ -51,22 +51,6 @@ class DashboardBody extends ConsumerWidget {
     this.profileName,
   });
 
-  static const _months = [
-    '',
-    'Jan',
-    'Feb',
-    'Mar',
-    'Apr',
-    'May',
-    'Jun',
-    'Jul',
-    'Aug',
-    'Sep',
-    'Oct',
-    'Nov',
-    'Dec',
-  ];
-
   String _greeting(AppLocalizations l10n) {
     final hour = DateTimeFactory.nowLocal().hour;
     if (hour < 12) return l10n.goodMorning;
@@ -97,8 +81,9 @@ class DashboardBody extends ConsumerWidget {
     );
   }
 
-  String _formatDashboardDate(DateTime date) {
-    return '${_months[date.month]} ${date.day}, ${date.year}';
+  String _formatDashboardDate(BuildContext context, DateTime date) {
+    final locale = Localizations.localeOf(context).toString();
+    return DateFormat.yMMMd(locale).format(date);
   }
 
   TextStyle _iosTextStyle(
@@ -135,8 +120,11 @@ class DashboardBody extends ConsumerWidget {
     );
     final terms = domainTermLabels(ref);
     final reviewSectionLabel = terms.reviewSection;
-    final chazaraReviewLabel = terms.chazara;
-    final chazaraBubbleLabel = terms.bubbleChazara;
+    // Gate chazara labels on whether any active track has chazara (Rule 8).
+    final anyTrackHasChazara =
+        ref.watch(anyActiveTrackHasChazaraProvider).asData?.value ?? false;
+    final chazaraReviewLabel = anyTrackHasChazara ? terms.chazara : null;
+    final chazaraBubbleLabel = anyTrackHasChazara ? terms.bubbleChazara : null;
     final name = profileName ?? l10n.learner;
     final now = DateTimeFactory.nowLocal();
 
@@ -273,7 +261,7 @@ class DashboardBody extends ConsumerWidget {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    _formatDashboardDate(now),
+                    _formatDashboardDate(context, now),
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: AppTheme.brandInkMuted,
                     ),
@@ -394,22 +382,26 @@ class DashboardBody extends ConsumerWidget {
             context.router.push(const SchedulerRoute());
           },
         ),
-        const SizedBox(height: 14),
-        CompactMissionCard(
-          label: reviewSectionLabel,
-          title: chazaraReviewLabel,
-          count: reviewCount,
-          color: AppTheme.brandGold,
-          labelColor: AppTheme.brandGoldDeep,
-          backgroundColor: const Color(0xFFF1F2F5),
-          borderColor: const Color(0xFFD4D7DE),
-          onTap: () {
-            ref
-                .read(schedulerTaskSectionProvider.notifier)
-                .setSection(SchedulerTaskSection.review);
-            context.router.push(const SchedulerRoute());
-          },
-        ),
+        // Only render the chazara review card when at least one active track
+        // has chazara stages enabled (Rule 8).
+        if (chazaraReviewLabel != null) ...[
+          const SizedBox(height: 14),
+          CompactMissionCard(
+            label: reviewSectionLabel,
+            title: chazaraReviewLabel,
+            count: reviewCount,
+            color: AppTheme.brandGold,
+            labelColor: AppTheme.brandGoldDeep,
+            backgroundColor: const Color(0xFFF1F2F5),
+            borderColor: const Color(0xFFD4D7DE),
+            onTap: () {
+              ref
+                  .read(schedulerTaskSectionProvider.notifier)
+                  .setSection(SchedulerTaskSection.review);
+              context.router.push(const SchedulerRoute());
+            },
+          ),
+        ],
         const SizedBox(height: 14),
         CompactMissionCard(
           label: l10n.urgent,

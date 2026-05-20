@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:learning_tracker/core/labels/domain_term_labels.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/utils/percentage_formatter.dart';
 import 'package:learning_tracker/features/progress/domain/models/curriculum_progress_data.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// Card displaying overall curriculum statistics (brand blue surface).
 ///
@@ -34,7 +34,7 @@ class OverallStatsCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    final terms = domainTermLabels(ref);
+    final l10n = AppLocalizations.of(context)!;
     final showDualStats =
         trackProgressFraction != null || lifetimeFraction != null;
     return Container(
@@ -73,9 +73,9 @@ class OverallStatsCard extends ConsumerWidget {
           if (showDualStats) ...[
             const SizedBox(height: 12),
             DualStatsRow(
-              trackLabel: terms.trackProgress,
+              trackLabel: l10n.trackProgress,
               trackFraction: trackProgressFraction,
-              lifetimeLabel: terms.lifetimeLabel,
+              lifetimeLabel: l10n.lifetimeLabel,
               lifetimeFraction: lifetimeFraction,
             ),
             const SizedBox(height: 6),

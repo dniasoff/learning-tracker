@@ -52,7 +52,6 @@ class _LifetimeKnowledgeScreenState
   Widget build(BuildContext context) {
     final profileId = ref.watch(activeProfileIdProvider);
     final l10n = AppLocalizations.of(context)!;
-    final terms = domainTermLabels(ref);
     final baseTheme = Theme.of(context);
     final textTheme = GoogleFonts.plusJakartaSansTextTheme(baseTheme.textTheme);
 
@@ -77,7 +76,7 @@ class _LifetimeKnowledgeScreenState
         backgroundColor: AppTheme.brandCream,
         foregroundColor: AppTheme.brandInk,
         title: Text(
-          terms.tierLensLifetimeKnowledge,
+          l10n.tierLensLifetimeKnowledge,
           style: textTheme.titleMedium?.copyWith(
             fontWeight: FontWeight.w800,
             color: AppTheme.brandInk,

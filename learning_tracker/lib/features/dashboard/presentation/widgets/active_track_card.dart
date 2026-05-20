@@ -194,10 +194,20 @@ class ActiveTrackCard extends ConsumerWidget {
               const SizedBox(height: 10),
               ActiveTrackFocusPill(label: focusLabel, value: focusValue),
               const SizedBox(height: 10),
+              // Gate the chazara stat column on per-track stage count (Rule 8).
+              // trackHasChazaraProvider returns false while loading, which
+              // conservatively hides the chazara column until we know for sure
+              // the track has chazara stages.
               TrackStatGrid(
                 buckets: taskBuckets,
                 l10n: l10n,
-                chazaraLabel: terms.bubbleChazara,
+                chazaraLabel: (ref
+                            .watch(trackHasChazaraProvider(track.id))
+                            .asData
+                            ?.value ??
+                        false)
+                    ? terms.bubbleChazara
+                    : null,
               ),
               if (taskBuckets.total == 0)
                 Padding(
@@ -226,14 +236,14 @@ class ActiveTrackCard extends ConsumerWidget {
                       runSpacing: 2,
                       children: [
                         Text(
-                          '${terms.trackProgress}: $currentCycleDisplay',
+                          '${l10n.trackProgress}: $currentCycleDisplay',
                           style: theme.textTheme.labelSmall?.copyWith(
                             color: AppTheme.brandInkMuted,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
                         Text(
-                          '${terms.lifetimeLabel}: $lifetimeDisplay',
+                          '${l10n.lifetimeLabel}: $lifetimeDisplay',
                           style: theme.textTheme.labelSmall?.copyWith(
                             color: AppTheme.brandInkMuted,
                             fontWeight: FontWeight.w600,
