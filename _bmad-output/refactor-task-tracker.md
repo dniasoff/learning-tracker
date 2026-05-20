@@ -113,11 +113,11 @@ Sync-point trigger tags: `[P1]` `[P2]` `[P3]` `[P4]` `[P5]` `[P6]` `[P7]`
 - [x] W2.32 (M, S2, done)    Move pushAllLocalData + backfillGoalsForCloudCutover to outbox path
 - [x] W2.33 (M, S2, done)    Move SyncStatus ownership from SyncEngine to SyncOrchestrator (own StreamController); repoint sync_status_providers
 - [x] W2.34 (M, S2, done)    Grep-and-replace 21 syncEngineProvider consumers → syncWriteFacadeProvider — closes H1
-- [ ] W2.35 (S, S2, pending)    Delete features/sync/data/sync_engine.dart
-- [ ] W2.36 (S, S2, pending)    Delete features/sync/data/firestore_data_source.dart — closes M5
-- [ ] W2.37 (S, S2, pending)    Delete features/sync/data/offline_queue.dart
-- [ ] W2.38 (S, S2, pending)    Delete legacy sync_lifecycle_observer.dart (orchestrator wiring stays)
-- [ ] W2.39 (S, S2, pending)    Delete legacy features/sync/presentation/providers/sync_providers.dart
+- [x] W2.35 (S, S2, done)    Delete features/sync/data/sync_engine.dart
+- [x] W2.36 (S, S2, done)    Delete features/sync/data/firestore_data_source.dart — closes M5
+- [x] W2.37 (S, S2, done)    Delete features/sync/data/offline_queue.dart
+- [x] W2.38 (S, S2, done)    Delete legacy sync_lifecycle_observer.dart (orchestrator wiring stays)
+- [x] W2.39 (S, S2, done)    Delete legacy features/sync/presentation/providers/sync_providers.dart — stripped legacy providers; kept syncWriteFacadeProvider + status providers
 - [ ] W2.40 (S, S2, pending)    Confirm H5 + M2 gone with deleted files; cleanup trivia in core/sync/ `[P3]`
 
 ### Phase 2g · Tutoring feature skeleton (S3)
@@ -206,7 +206,7 @@ Sync-point trigger tags: `[P1]` `[P2]` `[P3]` `[P4]` `[P5]` `[P6]` `[P7]`
 
 ### Phase 4b · Anemic features rebuilt
 - [x] W4.11 (M, S3, done)    parent_mode PIN → PinFlowMachine pure domain (~100 LOC) + SetParentPinUseCase + VerifyParentPinUseCase; thin Riverpod adapter
-- [ ] W4.12 (M, S4, pending)    tracks setup → typed TrackBlueprint aggregate; sealed GoalIntent, StageConfiguration, BulkMarkIntent, ProgramSelection
+- [ ] W4.12 (M, S4, in-progress)    tracks setup → typed TrackBlueprint aggregate; sealed GoalIntent, StageConfiguration, BulkMarkIntent, ProgramSelection
 - [ ] W4.13 (M, S4, pending)    tracks setup → TrackBlueprintDraftRepository (SharedPreferences impl) replacing 7 ad-hoc keys
 - [ ] W4.14 (M, S4, pending)    tracks setup → ProvisionTrackUseCase replacing TrackCreationService.createTrack — **B3 integration check (back-date generates overdue)**
 - [ ] W4.15 (S, S4, pending)    track_learning_order → TrackOrder aggregate, OrderingLevel { sedarim, masechtos } VO, MasechtaOrderingPolicy
@@ -248,15 +248,15 @@ Sync-point trigger tags: `[P1]` `[P2]` `[P3]` `[P4]` `[P5]` `[P6]` `[P7]`
 - [ ] W5.6  (L, S5, pending)    reward_configuration_screen.dart (1004 LOC) → RewardConfigController:Notifier&lt;RewardForm&gt; + RewardCard + sub-widgets
 
 ### Phase 5b · Sealed-union state refactors
-- [ ] W5.7  (M, S5, pending)    Replace 3-8 boolean state machines across feature screens → sealed unions
-- [ ] W5.8  (M, S5, pending)    SyncOrchestrator state machine → sealed
-- [ ] W5.9  (M, S5, pending)    OutboxProcessor _flushInProgress/_rerunRequested → sealed FlushState
+- [ ] W5.7  (M, S5, in-progress)    Replace 3-8 boolean state machines across feature screens → sealed unions
+- [ ] W5.8  (M, S5, in-progress)    SyncOrchestrator state machine → sealed
+- [ ] W5.9  (M, S5, in-progress)    OutboxProcessor _flushInProgress/_rerunRequested → sealed FlushState
 
 ### Phase 5c · Primitive obsession sweep
-- [ ] W5.10 (M, S5, pending)    Profile mode literals (profile.mode == 'child') → ProfileMode enum across 20+ sites
-- [ ] W5.11 (M, S5, pending)    Account tier literals (account.tier == 'cloudBorn') → AccountTier enum
-- [ ] W5.12 (M, S5, pending)    Continue SefariaRef VO migration (started W4.1) across remaining sites
-- [ ] W5.13 (S, S5, pending)    Ban literal-string mode/tier comparisons via make audit grep
+- [ ] W5.10 (M, S5, in-progress)    Profile mode literals (profile.mode == 'child') → ProfileMode enum across 20+ sites
+- [ ] W5.11 (M, S5, in-progress)    Account tier literals (account.tier == 'cloudBorn') → AccountTier enum
+- [ ] W5.12 (M, S5, in-progress)    Continue SefariaRef VO migration (started W4.1) across remaining sites
+- [ ] W5.13 (S, S5, in-progress)    Ban literal-string mode/tier comparisons via make audit grep
 
 ### Phase 5d · Theme / visual cleanup
 - [ ] W5.14 (M, S5, pending)    Move 525 0xFF…… colour literals from features/ → core/theme/app_colors.dart
@@ -340,15 +340,15 @@ Sync-point trigger tags: `[P1]` `[P2]` `[P3]` `[P4]` `[P5]` `[P6]` `[P7]`
 - [ ] W7.11 (S, S2, pending)    Wire tutor-mode events: tutor_invite_*, tutor_grant_*, tutor_action_recorded, tutor_pin_set, tutor_live_mark_blocked; bulk_engagement_skipped, lifetime_achievement_skipped — **B1 regression telemetry**
 
 ### Phase 7c · Firebase Analytics + Crashlytics (S5)
-- [ ] W7.12 (M, S5, pending)    Add firebase_analytics to pubspec.yaml
-- [ ] W7.13 (M, S5, pending)    Create FirebaseAnalyticsService impl; LoggingAnalyticsService becomes fallback
-- [ ] W7.14 (S, S5, pending)    Route runZonedGuarded errors to Crashlytics (currently Talker-only)
-- [ ] W7.15 (S, S5, pending)    Fire crash_reported from recordFlutterFatalError
-- [ ] W7.16 (S, S5, pending)    Route ListenerSupervisor._onError to Crashlytics non-fatal
+- [x] W7.12 (M, S5, done)    Add firebase_analytics to pubspec.yaml
+- [x] W7.13 (M, S5, done)    Create FirebaseAnalyticsService impl; LoggingAnalyticsService becomes fallback
+- [x] W7.14 (S, S5, done)    Route runZonedGuarded errors to Crashlytics (currently Talker-only)
+- [x] W7.15 (S, S5, done)    Fire crash_reported from recordFlutterFatalError
+- [x] W7.16 (S, S5, done)    Route ListenerSupervisor._onError to Crashlytics non-fatal
 
 ### Phase 7d · Error UX (S5/S3/S1)
-- [ ] W7.17 (M, S5, pending)    Create AppErrorView widget in core/widgets/ consuming AsyncValue.error → category-mapped UI
-- [ ] W7.18 (M, S5, pending)    Migrate 20+ screens from errorWithMessage(e.toString()) to AppErrorView
+- [x] W7.17 (M, S5, done)    Create AppErrorView widget in core/widgets/ consuming AsyncValue.error → category-mapped UI
+- [x] W7.18 (M, S5, done)    Migrate 14 screens from errorWithMessage(e.toString()) to AppErrorView (gamification/point_config_screen.dart skipped — uses SnackBar catch pattern, not AsyncValue body error)
 - [x] W7.19 (S, S3, done)    Extend PiiRedactor.sensitiveKeys with displayName, firstName, lastName, city, lat, lon, deviceId, oauthCode, magicLinkUrl, tutor_email
 - [x] W7.20 (S, S1, done)    Add lint no_e_to_string_in_ui (forbids e.toString() inside presentation/) — WARNING severity; checks common exception identifier names
 - [x] W7.21 (S, S1, done)    Add lint no_raw_logevent (forbids logEvent(name, …) outside analytics_service.dart) — ERROR severity
