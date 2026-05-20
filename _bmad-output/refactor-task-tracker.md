@@ -221,7 +221,7 @@ Sync-point trigger tags: `[P1]` `[P2]` `[P3]` `[P4]` `[P5]` `[P6]` `[P7]`
 - [ ] W4.22 (S, S5, task-blocked)    track_learning_order_repository_impl._buildMasechtosIndex → MasechtaOrderingPolicy (already W4.15) — BLOCKED: depends on W4.15 (S4 task, not yet done)
 - [ ] W4.23 (S, S5, in-progress)    profile_providers.dart SelectedProfileId → ProfileSession aggregate in profiles/domain/
 - [ ] W4.24 (S, S5, in-progress)    dashboard_providers.dart side-effect-in-read-provider → write-path repository method
-- [ ] W4.25 (M, S4, pending)    core/learning/completion_writer.commitBatch/commit → sealed BatchPlan + _classifyBatch/_applyBatchPlan/_resolveResults — **B1 credit policy at batch classification**
+- [x] W4.25 (M, S4, done)    core/learning/completion_writer.commitBatch/commit → sealed BatchPlan + _classifyBatch/_applyBatchPlan/_resolveResults — **B1 credit policy at batch classification**
 - [ ] W4.26 (M, S4, pending)    Split BulkPriorCompletionService.priorMarkOnly off completion_events → separate prior_completion_imports table — **B1 bulkInTrack path**
 
 ### Phase 4d · Tutor mode domain (S3)
@@ -259,9 +259,9 @@ Sync-point trigger tags: `[P1]` `[P2]` `[P3]` `[P4]` `[P5]` `[P6]` `[P7]`
 - [x] W5.13 (S, S5, done)    Ban literal-string mode/tier comparisons via make audit greps 16+17; audit bumped to 17 greps; both pass clean; commit e3e29cfa
 
 ### Phase 5d · Theme / visual cleanup
-- [ ] W5.14 (M, S5, pending)    Move 525 0xFF…… colour literals from features/ → core/theme/app_colors.dart
-- [ ] W5.15 (S, S5, pending)    Add custom lint to ban Color(0xFF…) outside core/theme/
-- [ ] W5.16 (S, S5, pending)    Move hard-coded English strings in features/ to l10n/
+- [ ] W5.14 (M, S5, in-progress)    Move 525 0xFF…… colour literals from features/ → core/theme/app_colors.dart
+- [ ] W5.15 (S, S5, in-progress)    Add custom lint to ban Color(0xFF…) outside core/theme/
+- [ ] W5.16 (S, S5, in-progress)    Move hard-coded English strings in features/ to l10n/
 
 ### Phase 5e · Provider/global cleanup
 - [ ] W5.17 (M, S5, pending)    Replace String activeDbFileName global → accountDbFileNameProvider:AsyncNotifier&lt;String&gt;; gate router on .when
