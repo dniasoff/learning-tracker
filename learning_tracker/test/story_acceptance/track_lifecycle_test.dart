@@ -226,7 +226,6 @@ void main() {
       final trackId = await db.trackDao.restoreOrCreate(
         profileId: profileId,
         curriculumId: CurriculumId.mishnayos,
-        trackType: TrackType.personal,
       );
 
       await db.trackDao.deleteTrackAndData(trackId);
@@ -243,19 +242,17 @@ void main() {
       final trackId = await db.trackDao.restoreOrCreate(
         profileId: profileId,
         curriculumId: CurriculumId.mishnayos,
-        trackType: TrackType.personal,
       );
       await db.trackDao.deleteTrackAndData(trackId);
 
       await db.trackDao.restoreOrCreate(
         profileId: profileId,
         curriculumId: CurriculumId.mishnayos,
-        trackType: TrackType.personal,
       );
 
       final track = await db.trackDao.getTrackById(trackId);
-      expect(track!.isActive, isTrue);
-      expect(track.deletedAt, isNull);
+      expect(track!.state, 'active');
+      expect(track.state, isNot('deleted'));
     });
 
     test(
@@ -277,7 +274,6 @@ void main() {
         await db.trackDao.restoreOrCreate(
           profileId: profileId,
           curriculumId: CurriculumId.mishnayos,
-          trackType: TrackType.personal,
         );
 
         final restored = await db.trackDao.getTrackById(trackId);
@@ -299,7 +295,6 @@ void main() {
       final trackId = await db.trackDao.restoreOrCreate(
         profileId: profileId,
         curriculumId: CurriculumId.mishnayos,
-        trackType: TrackType.personal,
       );
       await _addCompletion(
         db,
@@ -320,7 +315,6 @@ void main() {
       await db.trackDao.restoreOrCreate(
         profileId: profileId,
         curriculumId: CurriculumId.mishnayos,
-        trackType: TrackType.personal,
       );
 
       final restored = await db.trackDao.getTrackById(trackId);
@@ -399,7 +393,6 @@ void main() {
         await db.trackDao.restoreOrCreate(
           profileId: profileId,
           curriculumId: CurriculumId.mishnayos,
-          trackType: TrackType.personal,
         );
         // Verify: projection computes correctly with no daily_plans rows.
         final allPlans = await (db.select(
@@ -419,12 +412,10 @@ void main() {
       final trackA = await db.trackDao.restoreOrCreate(
         profileId: profileId,
         curriculumId: CurriculumId.mishnayos,
-        trackType: TrackType.personal,
       );
       final trackB = await db.trackDao.restoreOrCreate(
         profileId: profileId,
         curriculumId: CurriculumId.mishnaBerurah,
-        trackType: TrackType.personal,
       );
 
       // Use a past timestamp so it clearly predates any restore activatedAt.
@@ -449,7 +440,6 @@ void main() {
       await db.trackDao.restoreOrCreate(
         profileId: profileId,
         curriculumId: CurriculumId.mishnayos,
-        trackType: TrackType.personal,
       );
 
       final restoredA = await db.trackDao.getTrackById(trackA);
@@ -627,7 +617,6 @@ void main() {
         await db.trackDao.restoreOrCreate(
           profileId: profileId,
           curriculumId: CurriculumId.mishnayos,
-          trackType: TrackType.personal,
         );
         expect(
           await db.completionDao.getAggregateCountByProfile(
@@ -642,7 +631,6 @@ void main() {
         final trackId = await db.trackDao.restoreOrCreate(
           profileId: profileId,
           curriculumId: CurriculumId.mishnayos,
-          trackType: TrackType.personal,
         );
         await _addCompletion(
           db,
@@ -676,7 +664,6 @@ void main() {
         final trackId = await db.trackDao.restoreOrCreate(
           profileId: profileId,
           curriculumId: CurriculumId.mishnayos,
-          trackType: TrackType.personal,
         );
         for (final ref in ['Berakhot 1:1', 'Berakhot 1:2', 'Berakhot 1:3']) {
           await _addCompletion(
@@ -702,7 +689,6 @@ void main() {
           final trackId = await db.trackDao.restoreOrCreate(
             profileId: profileId,
             curriculumId: CurriculumId.mishnayos,
-            trackType: TrackType.personal,
           );
           for (final ref in ['Berakhot 1:1', 'Berakhot 1:2']) {
             await _addCompletion(
@@ -725,7 +711,6 @@ void main() {
           await db.trackDao.restoreOrCreate(
             profileId: profileId,
             curriculumId: CurriculumId.mishnayos,
-            trackType: TrackType.personal,
           );
 
           final restored = await db.trackDao.getTrackById(trackId);
@@ -759,12 +744,10 @@ void main() {
         final trackMishna = await db.trackDao.restoreOrCreate(
           profileId: profileId,
           curriculumId: CurriculumId.mishnayos,
-          trackType: TrackType.personal,
         );
         final trackMB = await db.trackDao.restoreOrCreate(
           profileId: profileId,
           curriculumId: CurriculumId.mishnaBerurah,
-          trackType: TrackType.personal,
         );
 
         await _addCompletion(
@@ -812,7 +795,6 @@ void main() {
           final trackId = await db.trackDao.restoreOrCreate(
             profileId: profileId,
             curriculumId: CurriculumId.mishnayos,
-            trackType: TrackType.personal,
           );
           for (final ref in ['Berakhot 1:1', 'Berakhot 1:2', 'Berakhot 1:3']) {
             await _addCompletion(
@@ -870,12 +852,10 @@ void main() {
         final track1 = await db.trackDao.restoreOrCreate(
           profileId: profile1,
           curriculumId: CurriculumId.mishnayos,
-          trackType: TrackType.personal,
         );
         final track2 = await db.trackDao.restoreOrCreate(
           profileId: profile2,
           curriculumId: CurriculumId.mishnayos,
-          trackType: TrackType.personal,
         );
 
         // Profile 1: 3 completions.
@@ -972,12 +952,10 @@ void main() {
         final id1 = await db.trackDao.restoreOrCreate(
           profileId: profile1,
           curriculumId: CurriculumId.mishnayos,
-          trackType: TrackType.personal,
         );
         final id2 = await db.trackDao.restoreOrCreate(
           profileId: profile2,
           curriculumId: CurriculumId.mishnayos,
-          trackType: TrackType.personal,
         );
 
         expect(

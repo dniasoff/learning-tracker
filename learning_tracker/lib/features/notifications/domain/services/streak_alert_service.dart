@@ -21,6 +21,7 @@ class StreakAlertService {
     required int profileId,
     DateTime Function()? clock,
     AnalyticsService? analytics,
+    LocalDayClock? streakClock,
   }) : _db = db,
        _notificationService = notificationService,
        _profileId = profileId,
@@ -28,7 +29,7 @@ class StreakAlertService {
        _analytics = analytics ?? const NullAnalyticsService(),
        _streakProvider = StreakStateProvider(
          db: db,
-         clock: const SystemLocalDayClock(),
+         clock: streakClock ?? const SystemLocalDayClock(),
        );
 
   final UserDatabase _db;

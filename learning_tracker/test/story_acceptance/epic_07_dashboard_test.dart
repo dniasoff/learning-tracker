@@ -7,6 +7,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart'
     hide expect, group, setUp, tearDown, test;
+import 'package:learning_tracker/core/database/daos/completion_dao.dart'
+    show Completion;
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/cross_profile_scope.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
@@ -16,7 +18,6 @@ import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/features/scheduler/domain/services/cross_curriculum_aggregator.dart';
 import 'package:learning_tracker/features/dashboard/presentation/widgets/curriculum_summary_card.dart';
 import 'package:learning_tracker/features/dashboard/presentation/widgets/points_summary_widget.dart';
-import 'package:learning_tracker/features/dashboard/presentation/widgets/todays_tasks_widget.dart';
 import 'package:learning_tracker/features/gamification/presentation/widgets/streak_widget.dart';
 import 'package:learning_tracker/features/progress/domain/services/chart_data_service.dart';
 import 'package:learning_tracker/features/progress/domain/services/curriculum_progress_service.dart';
@@ -259,24 +260,27 @@ void main() {
     // --- Integration: streak data via database ---
 
     test('streak data is accessible from database for dashboard', () async {
-      // Initially no streak
-      final initial = await db.streakEventDao.getStreak();
-      expect(initial, isNull);
+      // Initially no streak events
+      final initial = await db.streakEventDao.getEventsByProfile(1);
+      expect(initial, isEmpty);
 
-      // Insert a streak record
-      await db.streakEventDao.upsertStreak(
-        StreakEventsCompanion.insert(
-          profileId: 1,
-          currentStreak: const Value(5),
-          maxStreak: const Value(12),
-          lastCompletionDate: Value(DateTime.utc(2026, 3, 16)),
-        ),
-      );
+      // Insert streak events (5 consecutive days ending yesterday)
+      final base = DateTime.utc(2026, 3, 15); // yesterday
+      for (var i = 4; i >= 0; i--) {
+        final day = base.subtract(Duration(days: i));
+        await db.streakEventDao.appendEvent(
+          StreakEventsCompanion.insert(
+            profileId: 1,
+            eventType: 'completion',
+            dayUtc: day,
+            eventTimestamp: day.copyWith(hour: 18),
+          ),
+        );
+      }
 
-      final streak = await db.streakEventDao.getStreak();
-      expect(streak, isNotNull);
-      expect(streak!.currentStreak, equals(5));
-      expect(streak.maxStreak, equals(12));
+      final events = await db.streakEventDao.getEventsByProfile(1);
+      expect(events, isNotEmpty);
+      expect(events.length, equals(5));
     });
 
     test('global points total sums across all completions', () async {
@@ -551,29 +555,11 @@ void main() {
       expect(find.byIcon(Icons.star), findsOneWidget);
     });
 
-    testWidgets('TodaysTasksWidget shows task count and start button', (
-      tester,
-    ) async {
-      var started = false;
-      await tester.pumpWidget(
-        MaterialApp(
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
-          supportedLocales: AppLocalizations.supportedLocales,
-          home: Scaffold(
-            body: TodaysTasksWidget(
-              taskCount: 12,
-              onQuickStart: () => started = true,
-            ),
-          ),
-        ),
-      );
-
-      expect(find.text('12 tasks today'), findsOneWidget);
-      expect(find.text('Start'), findsOneWidget);
-
-      await tester.tap(find.text('Start'));
-      expect(started, isTrue);
-    });
+    test(
+      'TodaysTasksWidget shows task count and start button',
+      skip: 'TodaysTasksWidget removed in Wave 3 refactor',
+      () {},
+    );
   });
 
   // ── Story 7.2: Per-Curriculum Progress Views ────────────────
@@ -967,13 +953,13 @@ void main() {
         final baseDate = DateTime(2026, 3, 10);
         await insertCompletionAt(completedAt: baseDate); // Day 1
         await insertCompletionAt(
-          eventTimestamp: baseDate,
+          completedAt: baseDate,
         ); // Day 1 (second completion)
         await insertCompletionAt(
-          eventTimestamp: baseDate.add(const Duration(days: 2)),
+          completedAt: baseDate.add(const Duration(days: 2)),
         ); // Day 3
         await insertCompletionAt(
-          eventTimestamp: baseDate.add(const Duration(days: 4)),
+          completedAt: baseDate.add(const Duration(days: 4)),
         ); // Day 5
 
         final result = await chartService.getDailyCompletions(
