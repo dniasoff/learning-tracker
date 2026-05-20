@@ -1,93 +1,84 @@
 import 'dart:async';
 
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:google_sign_in/google_sign_in.dart';
+import 'package:learning_tracker/core/auth/auth_gateway_user.dart';
+import 'package:learning_tracker/core/auth/firebase_auth_gateway.dart';
+import 'package:learning_tracker/core/auth/google_sign_in_gateway.dart';
 import 'package:learning_tracker/features/account/data/repositories/auth_repository_impl.dart';
 import 'package:learning_tracker/features/account/domain/models/app_user.dart';
 import 'package:mocktail/mocktail.dart';
 
-class MockFirebaseAuth extends Mock implements FirebaseAuth {}
+class MockFirebaseAuthGateway extends Mock implements FirebaseAuthGateway {}
 
-class MockGoogleSignIn extends Mock implements GoogleSignIn {}
-
-class MockUserCredential extends Mock implements UserCredential {}
-
-class MockUser extends Mock implements User {}
+class MockGoogleSignInGateway extends Mock implements GoogleSignInGateway {}
 
 void main() {
-  late MockFirebaseAuth mockFirebaseAuth;
-  late MockGoogleSignIn mockGoogleSignIn;
+  late MockFirebaseAuthGateway mockAuth;
+  late MockGoogleSignInGateway mockGoogle;
   late AuthRepositoryImpl repository;
 
   setUp(() {
-    mockFirebaseAuth = MockFirebaseAuth();
-    mockGoogleSignIn = MockGoogleSignIn();
+    mockAuth = MockFirebaseAuthGateway();
+    mockGoogle = MockGoogleSignInGateway();
     repository = AuthRepositoryImpl(
-      firebaseAuth: mockFirebaseAuth,
-      googleSignIn: mockGoogleSignIn,
+      firebaseAuthGateway: mockAuth,
+      googleSignInGateway: mockGoogle,
     );
   });
 
   test(
-    'Integration: sign in with email → verify currentUser is non-null → sign out → verify auth state is null',
+    'sign in with email then sign out, end-to-end through the gateway',
     () async {
-      // Set up mocks
-      final mockCredential = MockUserCredential();
-      final mockUser = MockUser();
-      when(() => mockCredential.user).thenReturn(mockUser);
-      when(() => mockUser.uid).thenReturn('test-uid-123');
-      when(() => mockUser.email).thenReturn('test@example.com');
-      when(() => mockUser.displayName).thenReturn('Test User');
-      when(() => mockUser.emailVerified).thenReturn(true);
-      when(() => mockUser.providerData).thenReturn([]);
+      // Auth-state stream emits a user on sign-in, then null on sign-out.
+      // The repository should map both into AppUser? / null.
+      final authStateController = StreamController<AuthGatewayUser?>();
 
-      // Auth state stream: emits user on sign-in, then null on sign-out
-      final authStateController = StreamController<User?>();
+      const fakeUser = AuthGatewayUser(
+        uid: 'test-uid-123',
+        email: 'test@example.com',
+        displayName: 'Test User',
+        emailVerified: true,
+        providers: <String>[],
+      );
 
       when(
-        () => mockFirebaseAuth.signInWithEmailAndPassword(
+        () => mockAuth.signInWithEmailAndPassword(
           email: 'test@example.com',
           password: 'password123',
         ),
       ).thenAnswer((_) async {
-        authStateController.add(mockUser);
-        return mockCredential;
+        authStateController.add(fakeUser);
       });
 
-      when(() => mockGoogleSignIn.signOut()).thenAnswer((_) async {});
-      when(() => mockFirebaseAuth.signOut()).thenAnswer((_) async {
+      when(() => mockGoogle.signOut()).thenAnswer((_) async {});
+      when(() => mockAuth.signOut()).thenAnswer((_) async {
         authStateController.add(null);
       });
 
       when(
-        () => mockFirebaseAuth.authStateChanges(),
+        () => mockAuth.authStateChanges(),
       ).thenAnswer((_) => authStateController.stream);
 
-      // Start listening to auth state via the new onAuthStateChanged API
+      // Start listening to auth state via the public API
       final authStates = <AppUser?>[];
       final subscription = repository.onAuthStateChanged().listen(
         authStates.add,
       );
 
-      // Step 1: Sign in with email/password (now returns void)
+      // Step 1 — sign in
       await repository.signInWithEmail('test@example.com', 'password123');
-
-      // Allow stream to process
       await Future<void>.delayed(Duration.zero);
+
       expect(authStates, contains(isA<AppUser>()));
+      final signedIn = authStates.whereType<AppUser>().first;
+      expect(signedIn.uid, 'test-uid-123');
+      expect(signedIn.email, 'test@example.com');
+      expect(signedIn.emailVerified, isTrue);
 
-      // Step 2: Verify uid is non-null on the emitted AppUser
-      final signedInUser = authStates.whereType<AppUser>().first;
-      expect(signedInUser.uid, equals('test-uid-123'));
-
-      // Step 3: Sign out
+      // Step 2 — sign out
       await repository.signOut();
-
-      // Allow stream to process
       await Future<void>.delayed(Duration.zero);
 
-      // Step 4: Verify auth state is null
       expect(authStates.last, isNull);
 
       await subscription.cancel();

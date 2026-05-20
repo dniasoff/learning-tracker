@@ -1,237 +1,201 @@
 import 'dart:async';
 
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:google_sign_in/google_sign_in.dart';
+import 'package:learning_tracker/core/auth/auth_gateway_user.dart';
+import 'package:learning_tracker/core/auth/firebase_auth_gateway.dart';
+import 'package:learning_tracker/core/auth/google_sign_in_gateway.dart';
 import 'package:learning_tracker/features/account/data/repositories/auth_repository_impl.dart';
 import 'package:learning_tracker/features/account/domain/models/app_user.dart';
 import 'package:mocktail/mocktail.dart';
 
-// Mocks
-class MockFirebaseAuth extends Mock implements FirebaseAuth {}
+// ── Mocks ────────────────────────────────────────────────────────────────────
+// We mock the gateway interfaces, NOT the Firebase SDK directly. After the
+// core/auth refactor `AuthRepositoryImpl` no longer touches FirebaseAuth or
+// GoogleSignIn — it composes the gateways instead, so the tests follow suit.
+class MockFirebaseAuthGateway extends Mock implements FirebaseAuthGateway {}
 
-class MockGoogleSignIn extends Mock implements GoogleSignIn {}
+class MockGoogleSignInGateway extends Mock implements GoogleSignInGateway {}
 
-class MockUserCredential extends Mock implements UserCredential {}
-
-class MockUser extends Mock implements User {}
-
-class MockGoogleSignInAccount extends Mock implements GoogleSignInAccount {}
-
-class MockGoogleSignInAuthentication extends Mock
-    implements GoogleSignInAuthentication {}
-
-class FakeAuthCredential extends Fake implements AuthCredential {}
-
-class MockUserInfo extends Mock implements UserInfo {}
-
-class FakeActionCodeSettings extends Fake implements ActionCodeSettings {}
+AuthGatewayUser _sampleUser({
+  String uid = 'test-uid',
+  String? email = 'user@example.com',
+  String? displayName,
+  bool emailVerified = false,
+  List<String> providers = const <String>[],
+}) => AuthGatewayUser(
+  uid: uid,
+  email: email,
+  displayName: displayName,
+  emailVerified: emailVerified,
+  providers: providers,
+);
 
 void main() {
-  late MockFirebaseAuth mockFirebaseAuth;
-  late MockGoogleSignIn mockGoogleSignIn;
+  late MockFirebaseAuthGateway mockAuth;
+  late MockGoogleSignInGateway mockGoogle;
   late AuthRepositoryImpl repository;
 
-  setUpAll(() {
-    registerFallbackValue(FakeAuthCredential());
-    registerFallbackValue(FakeActionCodeSettings());
-  });
-
   setUp(() {
-    mockFirebaseAuth = MockFirebaseAuth();
-    mockGoogleSignIn = MockGoogleSignIn();
-    when(() => mockGoogleSignIn.initialize()).thenAnswer((_) async {});
+    mockAuth = MockFirebaseAuthGateway();
+    mockGoogle = MockGoogleSignInGateway();
     repository = AuthRepositoryImpl(
-      firebaseAuth: mockFirebaseAuth,
-      googleSignIn: mockGoogleSignIn,
+      firebaseAuthGateway: mockAuth,
+      googleSignInGateway: mockGoogle,
     );
   });
 
   group('signInWithEmail', () {
-    test(
-      'calls FirebaseAuth.signInWithEmailAndPassword with correct email and password',
-      () async {
-        final mockCredential = MockUserCredential();
-        when(
-          () => mockFirebaseAuth.signInWithEmailAndPassword(
-            email: 'test@example.com',
-            password: 'password123',
-          ),
-        ).thenAnswer((_) async => mockCredential);
+    test('delegates to the gateway with the same email/password', () async {
+      when(
+        () => mockAuth.signInWithEmailAndPassword(
+          email: 'test@example.com',
+          password: 'password123',
+        ),
+      ).thenAnswer((_) async {});
 
-        // signInWithEmail now returns void
-        await repository.signInWithEmail('test@example.com', 'password123');
+      await repository.signInWithEmail('test@example.com', 'password123');
 
-        verify(
-          () => mockFirebaseAuth.signInWithEmailAndPassword(
-            email: 'test@example.com',
-            password: 'password123',
-          ),
-        ).called(1);
-      },
-    );
+      verify(
+        () => mockAuth.signInWithEmailAndPassword(
+          email: 'test@example.com',
+          password: 'password123',
+        ),
+      ).called(1);
+    });
   });
 
   group('signUp', () {
     test(
-      'calls FirebaseAuth.createUserWithEmailAndPassword and sets display name',
+      'creates the user via the gateway and updates the display name',
       () async {
-        final mockCredential = MockUserCredential();
-        final mockUser = MockUser();
-        when(() => mockCredential.user).thenReturn(mockUser);
         when(
-          () => mockFirebaseAuth.createUserWithEmailAndPassword(
+          () => mockAuth.createUserWithEmailAndPassword(
             email: 'new@example.com',
             password: 'newpass123',
           ),
-        ).thenAnswer((_) async => mockCredential);
+        ).thenAnswer((_) async => 'new-uid');
         when(
-          () => mockUser.updateDisplayName('Test User'),
+          () => mockAuth.updateDisplayName('Test User'),
         ).thenAnswer((_) async {});
 
-        // signUp now returns void
         await repository.signUp('new@example.com', 'newpass123', 'Test User');
 
         verify(
-          () => mockFirebaseAuth.createUserWithEmailAndPassword(
+          () => mockAuth.createUserWithEmailAndPassword(
             email: 'new@example.com',
             password: 'newpass123',
           ),
         ).called(1);
-        verify(() => mockUser.updateDisplayName('Test User')).called(1);
+        verify(() => mockAuth.updateDisplayName('Test User')).called(1);
       },
     );
-  });
 
-  group('signUp error handling', () {
-    test(
-      'sign-up with invalid email format returns appropriate error',
-      () async {
-        when(
-          () => mockFirebaseAuth.createUserWithEmailAndPassword(
-            email: 'not-an-email',
-            password: 'password123',
-          ),
-        ).thenThrow(
-          FirebaseAuthException(
-            code: 'invalid-email',
-            message: 'The email address is badly formatted.',
-          ),
-        );
+    test('rethrows when the gateway rejects the email', () async {
+      when(
+        () => mockAuth.createUserWithEmailAndPassword(
+          email: 'not-an-email',
+          password: 'password123',
+        ),
+      ).thenThrow(StateError('invalid-email'));
 
-        expect(
-          () => repository.signUp('not-an-email', 'password123', 'Test'),
-          throwsA(
-            isA<FirebaseAuthException>().having(
-              (e) => e.code,
-              'code',
-              'invalid-email',
-            ),
-          ),
-        );
-      },
-    );
+      expect(
+        () => repository.signUp('not-an-email', 'password123', 'Test'),
+        throwsA(isA<StateError>()),
+      );
+    });
   });
 
   group('signInWithGoogle', () {
-    test(
-      'triggers Google Sign-In flow and exchanges credential with Firebase',
-      () async {
-        final mockAccount = MockGoogleSignInAccount();
-        final mockAuth = MockGoogleSignInAuthentication();
-        final mockCredential = MockUserCredential();
+    test('runs Google flow then exchanges the id-token via the gateway', () async {
+      when(
+        () => mockGoogle.authenticate(),
+      ).thenAnswer((_) async => const GoogleSignInResult(idToken: 'tok-1'));
+      when(
+        () => mockAuth.signInWithGoogleIdToken(idToken: 'tok-1'),
+      ).thenAnswer((_) async {});
 
-        when(
-          () => mockGoogleSignIn.authenticate(),
-        ).thenAnswer((_) async => mockAccount);
-        when(() => mockAccount.authentication).thenReturn(mockAuth);
-        when(() => mockAuth.idToken).thenReturn('test-id-token');
-        when(
-          () => mockFirebaseAuth.signInWithCredential(any()),
-        ).thenAnswer((_) async => mockCredential);
+      await repository.signInWithGoogle();
 
-        // signInWithGoogle now returns void
-        await repository.signInWithGoogle();
-
-        verify(() => mockGoogleSignIn.authenticate()).called(1);
-        verify(() => mockFirebaseAuth.signInWithCredential(any())).called(1);
-      },
-    );
+      verify(() => mockGoogle.authenticate()).called(1);
+      verify(
+        () => mockAuth.signInWithGoogleIdToken(idToken: 'tok-1'),
+      ).called(1);
+    });
   });
 
   group('sendSignInLinkToEmail', () {
-    test(
-      'calls FirebaseAuth.sendSignInLinkToEmail with correct email and ActionCodeSettings',
-      () async {
-        when(
-          () => mockFirebaseAuth.sendSignInLinkToEmail(
-            email: any(named: 'email'),
-            actionCodeSettings: any(named: 'actionCodeSettings'),
-          ),
-        ).thenAnswer((_) async {});
+    test('forwards the email + standard continue-url to the gateway', () async {
+      when(
+        () => mockAuth.sendSignInLinkToEmail(
+          email: any(named: 'email'),
+          continueUrl: any(named: 'continueUrl'),
+          androidPackageName: any(named: 'androidPackageName'),
+        ),
+      ).thenAnswer((_) async {});
 
-        await repository.sendSignInLinkToEmail('user@example.com');
+      await repository.sendSignInLinkToEmail('user@example.com');
 
-        verify(
-          () => mockFirebaseAuth.sendSignInLinkToEmail(
-            email: 'user@example.com',
-            actionCodeSettings: any(named: 'actionCodeSettings'),
-          ),
-        ).called(1);
-      },
-    );
+      final captured = verify(
+        () => mockAuth.sendSignInLinkToEmail(
+          email: captureAny(named: 'email'),
+          continueUrl: captureAny(named: 'continueUrl'),
+          androidPackageName: captureAny(named: 'androidPackageName'),
+        ),
+      ).captured;
+      expect(captured[0], 'user@example.com');
+      expect(captured[1], contains('sign-in'));
+      expect(captured[2], 'com.jcom.torah.learning_tracker');
+    });
   });
 
   group('signInWithEmailLink', () {
-    test(
-      'calls FirebaseAuth.signInWithEmailLink and returns AppUser?',
-      () async {
-        final mockCredential = MockUserCredential();
-        final mockUser = MockUser();
-        when(() => mockCredential.user).thenReturn(mockUser);
-        when(() => mockUser.uid).thenReturn('user-uid');
-        when(() => mockUser.email).thenReturn('user@example.com');
-        when(() => mockUser.displayName).thenReturn(null);
-        when(() => mockUser.emailVerified).thenReturn(false);
-        when(() => mockUser.providerData).thenReturn([]);
-        when(
-          () => mockFirebaseAuth.signInWithEmailLink(
-            email: 'user@example.com',
-            emailLink: 'https://example.com/sign-in?oobCode=abc123',
-          ),
-        ).thenAnswer((_) async => mockCredential);
+    test('returns an AppUser converted from the gateway response', () async {
+      when(
+        () => mockAuth.signInWithEmailLink(
+          email: 'user@example.com',
+          emailLink: 'https://example.com/sign-in?oobCode=abc123',
+        ),
+      ).thenAnswer(
+        (_) async =>
+            _sampleUser(uid: 'user-uid', email: 'user@example.com'),
+      );
 
-        final result = await repository.signInWithEmailLink(
-          'user@example.com',
-          'https://example.com/sign-in?oobCode=abc123',
-        );
+      final result = await repository.signInWithEmailLink(
+        'user@example.com',
+        'https://example.com/sign-in?oobCode=abc123',
+      );
 
-        expect(result, isA<AppUser>());
-        expect(result?.uid, equals('user-uid'));
-        verify(
-          () => mockFirebaseAuth.signInWithEmailLink(
-            email: 'user@example.com',
-            emailLink: 'https://example.com/sign-in?oobCode=abc123',
-          ),
-        ).called(1);
-      },
-    );
+      expect(result, isA<AppUser>());
+      expect(result?.uid, 'user-uid');
+      expect(result?.email, 'user@example.com');
+    });
+
+    test('returns null when the gateway returned null', () async {
+      when(
+        () => mockAuth.signInWithEmailLink(
+          email: any(named: 'email'),
+          emailLink: any(named: 'emailLink'),
+        ),
+      ).thenAnswer((_) async => null);
+
+      final result = await repository.signInWithEmailLink('a@b.c', 'link');
+
+      expect(result, isNull);
+    });
   });
 
   group('isSignInWithEmailLink', () {
-    test('correctly validates incoming deep links', () {
+    test('delegates straight to the gateway', () {
       when(
-        () => mockFirebaseAuth.isSignInWithEmailLink(
-          'https://example.com/sign-in?oobCode=abc123',
-        ),
+        () => mockAuth.isSignInWithEmailLink('https://example.com/sign-in?oobCode=abc'),
       ).thenReturn(true);
       when(
-        () => mockFirebaseAuth.isSignInWithEmailLink('https://example.com'),
+        () => mockAuth.isSignInWithEmailLink('https://example.com'),
       ).thenReturn(false);
 
       expect(
         repository.isSignInWithEmailLink(
-          'https://example.com/sign-in?oobCode=abc123',
+          'https://example.com/sign-in?oobCode=abc',
         ),
         isTrue,
       );
@@ -240,153 +204,269 @@ void main() {
   });
 
   group('signOut', () {
-    test('calls FirebaseAuth.signOut and GoogleSignIn.signOut', () async {
-      when(() => mockGoogleSignIn.signOut()).thenAnswer((_) async {});
-      when(() => mockFirebaseAuth.signOut()).thenAnswer((_) async {});
+    test('signs out both Google and Firebase via the gateways', () async {
+      when(() => mockGoogle.signOut()).thenAnswer((_) async {});
+      when(() => mockAuth.signOut()).thenAnswer((_) async {});
 
       await repository.signOut();
 
-      verify(() => mockGoogleSignIn.signOut()).called(1);
-      verify(() => mockFirebaseAuth.signOut()).called(1);
+      verify(() => mockGoogle.signOut()).called(1);
+      verify(() => mockAuth.signOut()).called(1);
     });
   });
 
   group('deleteAccount', () {
-    test('calls FirebaseAuth.currentUser.delete()', () async {
-      final mockUser = MockUser();
-      when(() => mockFirebaseAuth.currentUser).thenReturn(mockUser);
-      when(() => mockUser.delete()).thenAnswer((_) async {});
+    test('asks the gateway to delete the current user', () async {
+      when(() => mockAuth.deleteCurrentUser()).thenAnswer((_) async {});
 
       await repository.deleteAccount();
 
-      verify(() => mockUser.delete()).called(1);
+      verify(() => mockAuth.deleteCurrentUser()).called(1);
     });
   });
 
   group('changePassword', () {
-    test('calls currentUser.updatePassword with new password', () async {
-      final mockUser = MockUser();
-      when(() => mockFirebaseAuth.currentUser).thenReturn(mockUser);
+    test('asks the gateway to update the password', () async {
       when(
-        () => mockUser.updatePassword('newPass123'),
+        () => mockAuth.updatePassword('newPass123'),
       ).thenAnswer((_) async {});
 
       await repository.changePassword('newPass123');
 
-      verify(() => mockUser.updatePassword('newPass123')).called(1);
+      verify(() => mockAuth.updatePassword('newPass123')).called(1);
     });
   });
 
   group('reauthenticateWithEmail', () {
-    test('creates EmailAuthProvider credential and reauthenticates', () async {
-      final mockUser = MockUser();
-      final mockCredential = MockUserCredential();
-      when(() => mockFirebaseAuth.currentUser).thenReturn(mockUser);
+    test('forwards email + password to the gateway', () async {
       when(
-        () => mockUser.reauthenticateWithCredential(any()),
-      ).thenAnswer((_) async => mockCredential);
+        () => mockAuth.reauthenticateWithEmail(
+          email: 'test@example.com',
+          password: 'pass123',
+        ),
+      ).thenAnswer((_) async {});
 
       await repository.reauthenticateWithEmail('test@example.com', 'pass123');
 
-      verify(() => mockUser.reauthenticateWithCredential(any())).called(1);
+      verify(
+        () => mockAuth.reauthenticateWithEmail(
+          email: 'test@example.com',
+          password: 'pass123',
+        ),
+      ).called(1);
     });
   });
 
   group('linkGoogleProvider', () {
-    test(
-      'triggers Google Sign-In and links credential to current user',
-      () async {
-        final mockUser = MockUser();
-        final mockAccount = MockGoogleSignInAccount();
-        final mockAuth = MockGoogleSignInAuthentication();
-        final mockCredential = MockUserCredential();
+    test('runs Google then links the id-token via the gateway', () async {
+      when(() => mockGoogle.authenticate()).thenAnswer(
+        (_) async => const GoogleSignInResult(idToken: 'tok-link'),
+      );
+      when(
+        () => mockAuth.linkWithGoogleIdToken(idToken: 'tok-link'),
+      ).thenAnswer((_) async {});
 
-        when(() => mockFirebaseAuth.currentUser).thenReturn(mockUser);
-        when(
-          () => mockGoogleSignIn.authenticate(),
-        ).thenAnswer((_) async => mockAccount);
-        when(() => mockAccount.authentication).thenReturn(mockAuth);
-        when(() => mockAuth.idToken).thenReturn('test-id-token');
-        when(
-          () => mockUser.linkWithCredential(any()),
-        ).thenAnswer((_) async => mockCredential);
+      await repository.linkGoogleProvider();
 
-        await repository.linkGoogleProvider();
-
-        verify(() => mockUser.linkWithCredential(any())).called(1);
-      },
-    );
+      verify(() => mockGoogle.authenticate()).called(1);
+      verify(
+        () => mockAuth.linkWithGoogleIdToken(idToken: 'tok-link'),
+      ).called(1);
+    });
   });
 
   group('linkEmailProvider', () {
-    test(
-      'creates EmailAuthProvider credential and links to current user',
-      () async {
-        final mockUser = MockUser();
-        final mockCredential = MockUserCredential();
-        when(() => mockFirebaseAuth.currentUser).thenReturn(mockUser);
-        when(
-          () => mockUser.linkWithCredential(any()),
-        ).thenAnswer((_) async => mockCredential);
+    test('forwards email + password to the gateway', () async {
+      when(
+        () => mockAuth.linkWithEmailAndPassword(
+          email: 'test@example.com',
+          password: 'pass123',
+        ),
+      ).thenAnswer((_) async {});
 
-        await repository.linkEmailProvider('test@example.com', 'pass123');
+      await repository.linkEmailProvider('test@example.com', 'pass123');
 
-        verify(() => mockUser.linkWithCredential(any())).called(1);
-      },
-    );
+      verify(
+        () => mockAuth.linkWithEmailAndPassword(
+          email: 'test@example.com',
+          password: 'pass123',
+        ),
+      ).called(1);
+    });
   });
 
   group('getLinkedProviders', () {
-    test('returns list of provider IDs from current user', () {
-      final mockUser = MockUser();
-      final mockProviderInfo1 = MockUserInfo();
-      final mockProviderInfo2 = MockUserInfo();
-      when(() => mockFirebaseAuth.currentUser).thenReturn(mockUser);
+    test('returns whatever the gateway returns', () {
       when(
-        () => mockUser.providerData,
-      ).thenReturn([mockProviderInfo1, mockProviderInfo2]);
-      when(() => mockProviderInfo1.providerId).thenReturn('password');
-      when(() => mockProviderInfo2.providerId).thenReturn('google.com');
+        () => mockAuth.getLinkedProviders(),
+      ).thenReturn(['password', 'google.com']);
 
-      final providers = repository.getLinkedProviders();
-
-      expect(providers, ['password', 'google.com']);
+      expect(repository.getLinkedProviders(), ['password', 'google.com']);
     });
 
-    test('returns empty list when no current user', () {
-      when(() => mockFirebaseAuth.currentUser).thenReturn(null);
+    test('returns an empty list when the gateway has nobody signed in', () {
+      when(() => mockAuth.getLinkedProviders()).thenReturn(const <String>[]);
 
-      final providers = repository.getLinkedProviders();
-
-      expect(providers, isEmpty);
+      expect(repository.getLinkedProviders(), isEmpty);
     });
   });
 
   group('onAuthStateChanged', () {
-    test('emits null when user is signed out', () async {
+    test('emits null when the gateway stream emits null', () async {
       when(
-        () => mockFirebaseAuth.authStateChanges(),
-      ).thenAnswer((_) => Stream.value(null));
+        () => mockAuth.authStateChanges(),
+      ).thenAnswer((_) => Stream<AuthGatewayUser?>.value(null));
 
       final stream = repository.onAuthStateChanged();
 
       await expectLater(stream, emits(isNull));
     });
 
-    test('emits AppUser when user is signed in', () async {
-      final mockUser = MockUser();
-      when(() => mockUser.uid).thenReturn('test-uid');
-      when(() => mockUser.email).thenReturn('test@example.com');
-      when(() => mockUser.displayName).thenReturn('Test User');
-      when(() => mockUser.emailVerified).thenReturn(true);
-      when(() => mockUser.providerData).thenReturn([]);
-      when(
-        () => mockFirebaseAuth.authStateChanges(),
-      ).thenAnswer((_) => Stream.value(mockUser));
+    test('emits a mapped AppUser when the gateway emits a user', () async {
+      when(() => mockAuth.authStateChanges()).thenAnswer(
+        (_) => Stream<AuthGatewayUser?>.value(
+          _sampleUser(uid: 'state-uid', emailVerified: true),
+        ),
+      );
 
       final stream = repository.onAuthStateChanged();
 
-      await expectLater(stream, emits(isA<AppUser>()));
+      await expectLater(
+        stream,
+        emits(
+          isA<AppUser>()
+              .having((u) => u.uid, 'uid', 'state-uid')
+              .having((u) => u.emailVerified, 'emailVerified', true),
+        ),
+      );
+    });
+  });
+
+  group('currentUser', () {
+    test('maps the gateway snapshot to AppUser', () {
+      when(() => mockAuth.currentUser).thenReturn(
+        _sampleUser(
+          uid: 'current-uid',
+          displayName: 'Daniel',
+          providers: const ['password'],
+        ),
+      );
+
+      final user = repository.currentUser;
+
+      expect(user?.uid, 'current-uid');
+      expect(user?.displayName, 'Daniel');
+      expect(user?.providers, ['password']);
+    });
+
+    test('returns null when no user is signed in', () {
+      when(() => mockAuth.currentUser).thenReturn(null);
+
+      expect(repository.currentUser, isNull);
+    });
+  });
+
+  group('reloadCurrentUser', () {
+    test('returns the refreshed AppUser from the gateway', () async {
+      when(() => mockAuth.reloadCurrentUser()).thenAnswer(
+        (_) async => _sampleUser(uid: 'refreshed-uid', emailVerified: true),
+      );
+
+      final user = await repository.reloadCurrentUser();
+
+      expect(user?.uid, 'refreshed-uid');
+      expect(user?.emailVerified, isTrue);
+    });
+
+    test('returns null when no user is signed in', () async {
+      when(() => mockAuth.reloadCurrentUser()).thenAnswer((_) async => null);
+
+      expect(await repository.reloadCurrentUser(), isNull);
+    });
+  });
+
+  group('action codes', () {
+    test('checkActionCode delegates to the gateway', () async {
+      when(() => mockAuth.checkActionCode('oob')).thenAnswer((_) async {});
+
+      await repository.checkActionCode('oob');
+
+      verify(() => mockAuth.checkActionCode('oob')).called(1);
+    });
+
+    test('applyActionCode delegates to the gateway', () async {
+      when(() => mockAuth.applyActionCode('oob')).thenAnswer((_) async {});
+
+      await repository.applyActionCode('oob');
+
+      verify(() => mockAuth.applyActionCode('oob')).called(1);
+    });
+  });
+
+  group('createUserAccount', () {
+    test('returns the UID provided by the gateway', () async {
+      when(
+        () => mockAuth.createUserWithEmailAndPassword(
+          email: 'a@b.c',
+          password: 'pw',
+        ),
+      ).thenAnswer((_) async => 'fresh-uid');
+
+      expect(await repository.createUserAccount('a@b.c', 'pw'), 'fresh-uid');
+    });
+  });
+
+  group('signInAndGetUser', () {
+    test('maps the gateway response to AppUser', () async {
+      when(
+        () => mockAuth.signInAndGetUser(email: 'a@b.c', password: 'pw'),
+      ).thenAnswer((_) async => _sampleUser(uid: 'sign-in-uid'));
+
+      final user = await repository.signInAndGetUser('a@b.c', 'pw');
+
+      expect(user?.uid, 'sign-in-uid');
+    });
+
+    test('returns null when the gateway returns null', () async {
+      when(
+        () => mockAuth.signInAndGetUser(
+          email: any(named: 'email'),
+          password: any(named: 'password'),
+        ),
+      ).thenAnswer((_) async => null);
+
+      expect(await repository.signInAndGetUser('a@b.c', 'pw'), isNull);
+    });
+  });
+
+  group('updateDisplayName', () {
+    test('delegates to the gateway', () async {
+      when(() => mockAuth.updateDisplayName('Daniel')).thenAnswer((_) async {});
+
+      await repository.updateDisplayName('Daniel');
+
+      verify(() => mockAuth.updateDisplayName('Daniel')).called(1);
+    });
+  });
+
+  group('deleteCurrentFirebaseUser', () {
+    test('asks the gateway to delete when a user is signed in', () async {
+      when(
+        () => mockAuth.currentUser,
+      ).thenReturn(_sampleUser(uid: 'will-die'));
+      when(() => mockAuth.deleteCurrentUser()).thenAnswer((_) async {});
+
+      await repository.deleteCurrentFirebaseUser();
+
+      verify(() => mockAuth.deleteCurrentUser()).called(1);
+    });
+
+    test('is a no-op when no user is signed in', () async {
+      when(() => mockAuth.currentUser).thenReturn(null);
+
+      await repository.deleteCurrentFirebaseUser();
+
+      verifyNever(() => mockAuth.deleteCurrentUser());
     });
   });
 }
