@@ -33,6 +33,8 @@ void main() {
   setUp(() async {
     database = createTestDatabase();
     await seedProfileZero(database);
+    // Also seed profile 1 (referenced by learning_order tests).
+    await seedProfile(database);
     mockSyncEngine = MockSyncEngine();
     mockContentRepository = MockContentRepository();
 

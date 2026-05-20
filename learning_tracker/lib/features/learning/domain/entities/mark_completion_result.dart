@@ -1,5 +1,4 @@
 import 'package:learning_tracker/core/database/daos/completion_dao.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/features/gamification/domain/models/reward_milestone.dart';
 
 /// Result of [CompletionRepository.markComplete] including any reward

@@ -1,5 +1,6 @@
 import 'package:drift/drift.dart' show Value;
 import 'package:learning_tracker/core/database/user/user_database.dart';
+import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/sync/firestore_gateway.dart';
 import 'package:learning_tracker/features/learning/data/repositories/learning_ledger_repository_impl.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/learning_ledger_repository.dart';
@@ -38,7 +39,8 @@ void main() {
             id: const Value(42),
             profileId: const Value(1),
             curriculumId: const Value('mishna'),
-            trackType: const Value('personal'),
+            state: const Value('active'),
+            stateChangedAt: Value(DateTime.now().toUtc()),
             activatedAt: Value(DateTime.now().toUtc()),
           ),
         );
@@ -63,7 +65,7 @@ void main() {
 
   LearningLedgerRepositoryImpl createRepo({
     int profileId = 1,
-    String profileMode = 'adult',
+    ProfileMode profileMode = ProfileMode.adult,
     bool parentPinSessionMatches = false,
   }) {
     return LearningLedgerRepositoryImpl(
@@ -146,7 +148,7 @@ void main() {
         () async {
           final repo = createRepo(
             profileId: 5,
-            profileMode: 'child',
+            profileMode: ProfileMode.child,
             parentPinSessionMatches: true,
           );
           final entry = await repo.recordCompletion(
@@ -166,7 +168,7 @@ void main() {
       );
 
       test('rejects child self-mark for manual completions', () async {
-        final repo = createRepo(profileId: 5, profileMode: 'child');
+        final repo = createRepo(profileId: 5, profileMode: ProfileMode.child);
 
         expect(
           () => repo.recordCompletion(
@@ -184,7 +186,7 @@ void main() {
       });
 
       test('allows adult self-mark for manual completions', () async {
-        final repo = createRepo(profileId: 1, profileMode: 'adult');
+        final repo = createRepo(profileId: 1, profileMode: ProfileMode.adult);
         final entry = await repo.recordCompletion(
           curriculumId: 'mishna',
           entryScope: 'masechta',
@@ -202,7 +204,7 @@ void main() {
 
       test('allows parent to mark for child (manual)', () async {
         // Parent is active (profileId=1, mode=adult), marking for child (profileId=5)
-        final repo = createRepo(profileId: 1, profileMode: 'adult');
+        final repo = createRepo(profileId: 1, profileMode: ProfileMode.adult);
         final entry = await repo.recordCompletion(
           curriculumId: 'mishna',
           entryScope: 'masechta',
@@ -219,7 +221,7 @@ void main() {
 
       test('allows auto-completion for child profiles (not manual)', () async {
         // Auto-completions should work for any profile mode
-        final repo = createRepo(profileId: 5, profileMode: 'child');
+        final repo = createRepo(profileId: 5, profileMode: ProfileMode.child);
         final entry = await repo.recordCompletion(
           curriculumId: 'mishna',
           entryScope: 'masechta',

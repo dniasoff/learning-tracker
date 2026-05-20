@@ -1,5 +1,6 @@
 import 'package:drift/drift.dart' show Value;
 import 'package:learning_tracker/core/database/user/user_database.dart';
+import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/sync/firestore_gateway.dart';
 import 'package:learning_tracker/features/learning/data/repositories/learning_ledger_repository_impl.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/learning_ledger_repository.dart';
@@ -46,7 +47,7 @@ void main() {
 
   ManualCompletionUseCase createUseCase({
     int profileId = 1,
-    String profileMode = 'adult',
+    ProfileMode profileMode = ProfileMode.adult,
     bool parentPinSessionMatchesActiveProfile = false,
   }) {
     final repo = LearningLedgerRepositoryImpl(
@@ -68,7 +69,10 @@ void main() {
 
   group('ManualCompletionUseCase', () {
     test('adult can self-mark manual completion', () async {
-      final useCase = createUseCase(profileId: 1, profileMode: 'adult');
+      final useCase = createUseCase(
+        profileId: 1,
+        profileMode: ProfileMode.adult,
+      );
       final entry = await useCase(
         curriculumId: 'mishna',
         entryScope: 'masechta',
@@ -86,7 +90,7 @@ void main() {
     test('child can self-mark when parent PIN session is active', () async {
       final useCase = createUseCase(
         profileId: 5,
-        profileMode: 'child',
+        profileMode: ProfileMode.child,
         parentPinSessionMatchesActiveProfile: true,
       );
       final entry = await useCase(
@@ -103,7 +107,10 @@ void main() {
     });
 
     test('child is rejected from self-marking', () async {
-      final useCase = createUseCase(profileId: 5, profileMode: 'child');
+      final useCase = createUseCase(
+        profileId: 5,
+        profileMode: ProfileMode.child,
+      );
 
       expect(
         () => useCase(
@@ -120,7 +127,10 @@ void main() {
 
     test('parent can mark for child (parent mode active)', () async {
       // Parent is logged in (profileId=1, mode=adult), marking for child
-      final useCase = createUseCase(profileId: 1, profileMode: 'adult');
+      final useCase = createUseCase(
+        profileId: 1,
+        profileMode: ProfileMode.adult,
+      );
       final entry = await useCase(
         curriculumId: 'mishna',
         entryScope: 'masechta',

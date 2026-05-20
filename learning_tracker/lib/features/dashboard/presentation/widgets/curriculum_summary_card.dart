@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
-import 'package:learning_tracker/features/scheduler/domain/services/cross_curriculum_aggregator.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/utils/percentage_formatter.dart';
 import 'package:learning_tracker/core/widgets/animated_progress_bar.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/delta_value.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/pace_status.dart';
+import 'package:learning_tracker/features/scheduler/domain/services/cross_curriculum_aggregator.dart';
 
 /// A summary card for one curriculum on the dashboard.
 ///

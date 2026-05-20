@@ -117,7 +117,7 @@ class ProgramStartingPosition {
       return ProgramStartingPosition._(startDate: _dayOnly(today));
     }
 
-    int offset = 0;
+    var offset = 0;
     String? sefariaRef;
 
     if (rawStartingRef.contains('|')) {

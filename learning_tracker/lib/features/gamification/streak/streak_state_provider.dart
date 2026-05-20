@@ -13,10 +13,10 @@ library;
 
 import 'package:learning_tracker/core/database/user/user_database.dart'
     hide StreakEvent;
+import 'package:learning_tracker/core/time/local_day_clock.dart';
 import 'package:learning_tracker/features/gamification/streak/streak_event.dart';
 import 'package:learning_tracker/features/gamification/streak/streak_reducer.dart';
 import 'package:learning_tracker/features/gamification/streak/streak_restorer.dart';
-import 'package:learning_tracker/core/time/local_day_clock.dart';
 
 class StreakStateProvider {
   StreakStateProvider({required UserDatabase db, required LocalDayClock clock})

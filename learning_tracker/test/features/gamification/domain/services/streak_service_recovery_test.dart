@@ -16,7 +16,17 @@ void main() {
 
   setUp(() async {
     db = inMemoryDb();
-    await seedProfile(db);
+    await seedProfile(db); // seeds account 1 + profile 1
+    // Seed a second profile (id=2) for cross-profile isolation tests.
+    await db.into(db.learnerProfiles).insert(
+      LearnerProfilesCompanion.insert(
+        accountId: 1,
+        displayName: 'Profile 2',
+        mode: 'adult',
+        createdAt: DateTime.utc(2026, 1, 1),
+        updatedAt: DateTime.utc(2026, 1, 1),
+      ),
+    );
     service = StreakService(db, profileId: 1);
   });
 

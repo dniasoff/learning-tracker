@@ -6,13 +6,12 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/sync/firestore_gateway.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
-import 'package:learning_tracker/features/onboarding/domain/models/wizard_result_wrapper.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/learning_process_wizard_service.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/goal_entity.dart';
 import 'package:learning_tracker/features/scheduler/domain/repositories/goal_repository.dart';
-import 'package:learning_tracker/features/settings/domain/services/curriculum_activation_service.dart';
-import 'package:learning_tracker/features/tracks/stages/domain/repositories/stage_definition_repository.dart';
+import 'package:learning_tracker/features/tracks/domain/services/curriculum_activation_service.dart';
 import 'package:learning_tracker/features/tracks/setup/domain/entities/add_track_result.dart';
+import 'package:learning_tracker/features/tracks/stages/domain/repositories/stage_definition_repository.dart';
 
 /// Default study days: all 7 days active (Sun–Shabbos).
 ///

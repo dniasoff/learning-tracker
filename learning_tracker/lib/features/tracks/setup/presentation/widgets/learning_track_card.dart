@@ -102,7 +102,7 @@ class LearningTrackCard extends ConsumerWidget {
                     ),
                   ],
                 ),
-                child: Icon(icon, color: Colors.white, size: 34),
+                child: const Icon(icon, color: Colors.white, size: 34),
               ),
               const SizedBox(width: 14),
               Expanded(

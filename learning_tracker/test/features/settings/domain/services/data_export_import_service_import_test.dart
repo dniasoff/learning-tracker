@@ -323,6 +323,7 @@ void main() {
     test('inserts curriculum scope rows', () async {
       final payload = minimalPayload()
         ..['userProfiles'] = [userProfileMap(id: 1)]
+        ..['learnerProfiles'] = [learnerProfileMap()]
         ..['curriculumTracks'] = [trackMap(id: 1, profileId: 1)]
         ..['curriculumScopes'] = [
           {
@@ -442,11 +443,24 @@ void main() {
 
   group('DataExportImportService.importData — completions', () {
     test('inserts completion rows', () async {
+      // W3.20: the old `completions` section is skipped on import;
+      // use `completionEvents` section instead.
       final payload = minimalPayload()
         ..['userProfiles'] = [userProfileMap(id: 1)]
         ..['learnerProfiles'] = [learnerProfileMap()]
-        ..['curriculumTracks'] = [trackMap(id: 1)]
-        ..['completions'] = [completionMap(trackId: 1, stageId: 1)];
+        ..['completionEvents'] = [
+          {
+            'profileId': 1,
+            'curriculumId': 'bavli',
+            'sefariaRef': 'Berakhot.2a',
+            'stageId': 1,
+            'trackType': 'personal',
+            'trackId': 1,
+            'eventTimestamp': '2026-03-01T00:00:00.000Z',
+            'createdAt': '2026-03-01T00:00:00.000Z',
+            'points': 5,
+          },
+        ];
 
       await service.importData(jsonEncode(payload));
 
@@ -587,6 +601,8 @@ void main() {
   group('DataExportImportService.importData — learningOrder', () {
     test('inserts learning order rows', () async {
       final payload = minimalPayload()
+        ..['userProfiles'] = [userProfileMap(id: 1)]
+        ..['learnerProfiles'] = [learnerProfileMap()]
         ..['learningOrder'] = [
           learningOrderMap(sefariaRef: 'Berakhot.2a', userSortOrder: 3),
         ];
@@ -735,7 +751,7 @@ void main() {
               trackId: trackId,
               stageOrder: 1,
               stageName: 'Learn',
-              schedule: Value('{"type":"delay","delay_days":0}'),
+              schedule: const Value('{"type":"delay","delay_days":0}'),
             ),
           );
 
@@ -849,18 +865,28 @@ void main() {
       expect(await db.select(db.stageDefinitions).get(), hasLength(1));
       expect(await db.select(db.pointConfigs).get(), hasLength(1));
       expect(await db.select(db.completionEvents).get(), hasLength(1));
-      expect(await db.select(db.streakEvents).get(), hasLength(1));
-      expect(await db.select(db.streakEvents).get(), hasLength(1));
+      // Two streak events seeded above (completion + study).
+      expect(await db.select(db.streakEvents).get(), hasLength(2));
       expect(await db.select(db.bookmarks).get(), hasLength(1));
       expect(await db.select(db.learningOrder).get(), hasLength(1));
       expect(await db.select(db.trackLearningOrder).get(), hasLength(1));
     });
 
     test('importData is idempotent when called twice', () async {
+      // W3.37: old `streaks` section is skipped; use `streakEvents` instead.
       final payload = minimalPayload()
         ..['userProfiles'] = [userProfileMap(id: 1)]
+        ..['learnerProfiles'] = [learnerProfileMap()]
         ..['curriculumTracks'] = [trackMap(id: 1)]
-        ..['streaks'] = [streakMap()];
+        ..['streakEvents'] = [
+          {
+            'profileId': 1,
+            'eventType': 'completion',
+            'dayUtc': '2026-05-01T00:00:00.000Z',
+            'eventTimestamp': '2026-05-01T00:00:00.000Z',
+            'createdAt': '2026-05-01T00:00:00.000Z',
+          },
+        ];
 
       final json = jsonEncode(payload);
       await service.importData(json);

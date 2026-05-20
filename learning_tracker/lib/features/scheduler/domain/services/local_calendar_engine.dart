@@ -58,8 +58,8 @@ class LocalCalendarEngine {
       programId: def.id,
       displayNameEn: def.displayNameEn,
       displayNameHe: def.displayNameHe,
-      // W3.26: sefariaRef / sefariaRefHe are now nullable — coalesce to ''.
-      todayRef: row.sefariaRef ?? '',
+      // sefariaRef is non-nullable; sefariaRefHe is nullable — coalesce to ''.
+      todayRef: row.sefariaRef,
       todayRefHe: row.sefariaRefHe ?? '',
       apiSource: 'local',
       date: _parseDateKey(row.dateKey),
@@ -87,7 +87,7 @@ class LocalCalendarEngine {
           programId: def.id,
           displayNameEn: def.displayNameEn,
           displayNameHe: def.displayNameHe,
-          todayRef: row.sefariaRef ?? '',
+          todayRef: row.sefariaRef,
           todayRefHe: row.sefariaRefHe ?? '',
           apiSource: 'local',
           date: _parseDateKey(row.dateKey),

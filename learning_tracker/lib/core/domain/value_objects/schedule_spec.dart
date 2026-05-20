@@ -96,6 +96,7 @@ sealed class ScheduleSpec {
 final class DelaySchedule extends ScheduleSpec {
   const DelaySchedule(this.delayDays);
 
+  @override
   final int delayDays;
 
   @override
@@ -126,6 +127,7 @@ final class WeeklySchedule extends ScheduleSpec {
       ),
       daysOfWeek = List.unmodifiable(daysOfWeek);
 
+  @override
   final List<int> daysOfWeek;
 
   @override

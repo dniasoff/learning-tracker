@@ -1,4 +1,3 @@
-import 'package:learning_tracker/core/database/daos/track_dao.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
@@ -49,7 +48,7 @@ class TrackRepositoryImpl implements TrackRepository {
       'track_id': row.id,
       'curriculum_id': row.curriculumId,
       'state': row.state,
-      'state_changed_at': row.stateChangedAt?.toIso8601String(),
+      'state_changed_at': row.stateChangedAt.toIso8601String(),
       'activated_at': row.activatedAt.toIso8601String(),
       'pace_reset_date': row.paceResetDate?.toIso8601String(),
     });
@@ -76,8 +75,13 @@ class TrackRepositoryImpl implements TrackRepository {
     CurriculumId curriculumId,
     TrackType trackType,
   ) async {
-    // InvalidTrackOperationException from track_dao.dart propagates naturally
-    // (no wrapping needed — both DAO and domain now throw the same type).
+    // W3.22: trackType dropped from schema, but the invariant that the
+    // personal track cannot be removed is still enforced at the repo layer.
+    if (trackType == TrackType.personal) {
+      throw const InvalidTrackOperationException(
+        'Cannot deactivate the personal track',
+      );
+    }
     await _database.trackDao.deactivateTrack(curriculumId, trackType);
     await _pushCurriculumTrackIfCloud(curriculumId);
   }

@@ -158,7 +158,7 @@ void main() {
     });
 
     test('toString includes key fields', () {
-      final order = TrackOrder(
+      const order = TrackOrder(
         trackId: 5,
         curriculumId: CurriculumId.bavli,
         level: OrderingLevel.masechtos,

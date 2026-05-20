@@ -29,11 +29,11 @@ import 'package:learning_tracker/features/progress/domain/services/lifetime_tree
 
 export 'package:learning_tracker/features/progress/domain/models/lifetime_knowledge.dart'
     show
-        LifetimeNodeState,
-        LifetimeTreeNode,
         CurriculumLifetimeSummary,
-        TrackDualProgressMetric,
-        LifetimeTotals;
+        LifetimeNodeState,
+        LifetimeTotals,
+        LifetimeTreeNode,
+        TrackDualProgressMetric;
 
 // ---------------------------------------------------------------------------
 // Providers

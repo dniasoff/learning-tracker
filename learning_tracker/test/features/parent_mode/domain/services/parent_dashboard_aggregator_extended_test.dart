@@ -31,12 +31,14 @@ void main() {
     String curriculumId = 'mishnayos',
     bool isActive = true,
   }) {
+    // W3.28/W3.29: isActive -> state='active'/'retired'.
     return db
         .into(db.curriculumTracks)
         .insert(
           CurriculumTracksCompanion.insert(
             profileId: profileId,
             curriculumId: curriculumId,
+            state: Value(isActive ? 'active' : 'retired'),
             stateChangedAt: DateTime.utc(2026, 1, 1),
             activatedAt: DateTime.utc(2026, 1, 1),
           ),

@@ -15,7 +15,7 @@ void main() {
       test('returns PaceStatus for valid pace goal', () {
         final result = useCase.execute(
           PaceStatusInput(
-            paceTarget: PacePeriodTarget(rate: 7, period: 'per_week'),
+            paceTarget: const PacePeriodTarget(rate: 7, period: 'per_week'),
             completedItems: 0,
             dailyCompletionCounts: {},
             totalItems: 100,
@@ -37,7 +37,7 @@ void main() {
           }
           final result = useCase.execute(
             PaceStatusInput(
-              paceTarget: PacePeriodTarget(rate: 7, period: 'per_week'),
+              paceTarget: const PacePeriodTarget(rate: 7, period: 'per_week'),
               completedItems: 30,
               dailyCompletionCounts: counts,
               totalItems: 100,

@@ -116,23 +116,25 @@ void main() {
     });
 
     test('returns streak derived from streak_events', () async {
-      // W3.37: streak is derived from streak_events; seed 5 consecutive days.
-      final now = DateTime.utc(2026, 3, 20);
+      // W3.37: streak is derived from streak_events; seed 5 consecutive days
+      // ending today so StreakStateProvider (which uses SystemLocalDayClock)
+      // sees an active streak.
+      final today = DateTime.now().toUtc();
+      final todayUtc = DateTime.utc(today.year, today.month, today.day);
       for (var i = 0; i < 5; i++) {
-        final day = now.subtract(Duration(days: 4 - i));
-        final dayUtc = DateTime.utc(day.year, day.month, day.day);
+        final day = todayUtc.subtract(Duration(days: 4 - i));
         await db.streakEventDao.appendEvent(
           StreakEventsCompanion.insert(
             profileId: profileId,
             eventType: 'completion',
-            dayUtc: dayUtc,
-            eventTimestamp: dayUtc,
+            dayUtc: day,
+            eventTimestamp: day,
           ),
         );
       }
 
       final aggregator = ParentDashboardAggregator(db, profileId: profileId);
-      final data = await aggregator.compute(now: now);
+      final data = await aggregator.compute(now: todayUtc);
 
       expect(data.currentStreak, 5);
       expect(data.maxStreak, 5);

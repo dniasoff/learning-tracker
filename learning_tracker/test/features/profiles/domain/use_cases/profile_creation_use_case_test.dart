@@ -13,6 +13,7 @@ import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/profiles/domain/repositories/profile_repository.dart';
 import 'package:learning_tracker/features/profiles/domain/use_cases/profile_creation_use_case.dart';
 
@@ -22,9 +23,20 @@ void main() {
   late UserDatabase db;
   late ProfileCreationUseCase useCase;
 
-  setUp(() {
+  setUp(() async {
     db = makeInMemoryDb();
     useCase = ProfileCreationUseCase(db);
+    // Seed account row for FK on learner_profiles.account_id.
+    await db.into(db.accounts).insert(
+      AccountsCompanion.insert(
+        email: 'test@example.com',
+        tier: 'localBorn',
+        displayName: 'Test Account',
+        userMode: 'adult',
+        createdAt: DateTimeFactory.nowUtc(),
+        updatedAt: DateTimeFactory.nowUtc(),
+      ),
+    );
   });
 
   tearDown(() async {

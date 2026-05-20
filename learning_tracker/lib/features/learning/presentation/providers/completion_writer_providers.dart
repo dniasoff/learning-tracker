@@ -1,6 +1,6 @@
 import 'package:learning_tracker/core/analytics/analytics_provider.dart';
-import 'package:learning_tracker/features/learning/data/completion_writer.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
+import 'package:learning_tracker/features/learning/data/completion_writer.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'completion_writer_providers.g.dart';

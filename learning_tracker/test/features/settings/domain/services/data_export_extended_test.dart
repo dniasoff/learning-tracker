@@ -141,7 +141,7 @@ void main() {
           trackId: trackId,
           stageOrder: 1,
           stageName: 'Learn',
-          schedule: Value('{"type":"delay","delay_days":0}'),
+          schedule: const Value('{"type":"delay","delay_days":0}'),
         ),
       );
 
@@ -226,8 +226,27 @@ void main() {
       'formatVersion': 'schemaV1',
       'exportedAt': '2026-01-01T00:00:00.000Z',
       'appVersion': '1.0.0',
-      'userProfiles': <dynamic>[],
-      'learnerProfiles': <dynamic>[],
+      'userProfiles': [
+        {
+          'id': 1,
+          'displayName': 'Test',
+          'tier': 'localBorn',
+          'userMode': 'parent',
+          'createdAt': '2026-01-01T00:00:00.000Z',
+          'updatedAt': '2026-01-01T00:00:00.000Z',
+        },
+      ],
+      'learnerProfiles': [
+        {
+          'id': 1,
+          'accountId': 1,
+          'displayName': 'Test',
+          'mode': 'adult',
+          'avatarIndex': 0,
+          'createdAt': '2026-01-01T00:00:00.000Z',
+          'updatedAt': '2026-01-01T00:00:00.000Z',
+        },
+      ],
       'curriculumTracks': [
         {
           'id': 1,

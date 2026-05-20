@@ -17,7 +17,6 @@ import 'package:learning_tracker/features/settings/presentation/providers/curric
 import 'package:learning_tracker/features/tracks/setup/domain/entities/add_track_result.dart';
 import 'package:learning_tracker/features/tracks/setup/presentation/providers/after_track_change_invalidation.dart';
 import 'package:learning_tracker/features/tracks/setup/presentation/screens/edit_track_screen.dart';
-import 'package:learning_tracker/features/tracks/setup/presentation/widgets/learning_track_card.dart';
 import 'package:learning_tracker/features/tracks/track_order/presentation/screens/track_learning_order_screen.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 

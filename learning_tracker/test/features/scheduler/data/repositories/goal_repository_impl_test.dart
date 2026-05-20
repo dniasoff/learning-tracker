@@ -134,7 +134,7 @@ void main() {
           curriculumId: CurriculumId.bavli,
           trackId: bavliTrackId,
           targetPercent: 100.0,
-          paceTarget: PacePeriodTarget(rate: 1, period: 'per_day'),
+          paceTarget: const PacePeriodTarget(rate: 1, period: 'per_day'),
         );
 
         expect(goal.goalType, 'pace');
@@ -187,12 +187,12 @@ void main() {
           curriculumId: CurriculumId.bavli,
           trackId: bavliTrackId,
           targetPercent: 100.0,
-          paceTarget: PacePeriodTarget(rate: 1, period: 'per_day'),
+          paceTarget: const PacePeriodTarget(rate: 1, period: 'per_day'),
         );
 
         final updated = await repo.updateGoal(
           goalId: goal.id!,
-          paceTarget: PacePeriodTarget(rate: 5, period: 'per_week'),
+          paceTarget: const PacePeriodTarget(rate: 5, period: 'per_week'),
         );
 
         expect(updated.paceValue, 5);
@@ -206,7 +206,7 @@ void main() {
           curriculumId: CurriculumId.bavli,
           trackId: bavliTrackId,
           targetPercent: 100.0,
-          paceTarget: PacePeriodTarget(rate: 1, period: 'per_day'),
+          paceTarget: const PacePeriodTarget(rate: 1, period: 'per_day'),
         );
 
         final updated = await repo.updateGoal(
@@ -228,7 +228,7 @@ void main() {
             curriculumId: CurriculumId.bavli,
             trackId: bavliTrackId,
             targetPercent: 100.0,
-            paceTarget: PacePeriodTarget(rate: 3, period: 'per_week'),
+            paceTarget: const PacePeriodTarget(rate: 3, period: 'per_week'),
           );
 
           final updated = await repo.updateGoal(

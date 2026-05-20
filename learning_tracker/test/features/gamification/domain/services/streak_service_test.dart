@@ -8,6 +8,7 @@
 /// `test/story_acceptance/epic_25_story_16_streak_test.dart`.
 library;
 
+import 'package:drift/drift.dart' show Value;
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/gamification/domain/services/streak_service.dart';

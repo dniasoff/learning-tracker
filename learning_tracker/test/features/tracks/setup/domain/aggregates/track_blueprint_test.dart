@@ -10,7 +10,7 @@ import 'package:learning_tracker/features/tracks/setup/domain/entities/add_track
 void main() {
   final today = DateTime(2026, 5, 20);
 
-  GoalEntity _makeGoal() => GoalEntity(
+  GoalEntity makeGoal() => GoalEntity(
     curriculumId: CurriculumId.bavli,
     description: 'test',
     createdAt: today,
@@ -24,7 +24,7 @@ void main() {
     });
 
     test('SpecifiedGoalIntent holds goal', () {
-      final goal = _makeGoal();
+      final goal = makeGoal();
       final intent = SpecifiedGoalIntent(goal: goal);
       expect(intent.goal, goal);
     });
@@ -40,13 +40,13 @@ void main() {
     });
 
     test('WizardStageConfiguration holds wizard result', () {
-      final wrapper = LearningProcessWizardResult(
+      const wrapper = LearningProcessWizardResult(
         wizardResult: WizardResult(
           curriculumId: CurriculumId.bavli,
           choice: WizardChoice.noReview,
         ),
       );
-      final config = WizardStageConfiguration(wizardResult: wrapper);
+      const config = WizardStageConfiguration(wizardResult: wrapper);
       expect(config.wizardResult, wrapper);
     });
   });
@@ -115,14 +115,14 @@ void main() {
   // ── TrackBlueprint ──────────────────────────────────────────────────────────
   group('TrackBlueprint', () {
     test('isCalendarProgram false for self-paced', () {
-      final blueprint = TrackBlueprint(
+      const blueprint = TrackBlueprint(
         curriculumId: CurriculumId.bavli,
         label: 'Bavli',
         studyDays: {1: 'study'},
-        programSelection: const SelfPacedSelection(),
-        stageConfiguration: const SingleStageConfiguration(),
-        goalIntent: const NoGoalIntent(),
-        bulkMarkIntent: const NoBulkMarkIntent(),
+        programSelection: SelfPacedSelection(),
+        stageConfiguration: SingleStageConfiguration(),
+        goalIntent: NoGoalIntent(),
+        bulkMarkIntent: NoBulkMarkIntent(),
       );
       expect(blueprint.isCalendarProgram, isFalse);
       expect(blueprint.programId, isNull);
@@ -155,7 +155,7 @@ void main() {
     // W4.12 regression: TrackBlueprint.fromLegacyResult bridge
     group('fromLegacyResult', () {
       test('null programId → SelfPacedSelection', () {
-        final result = AddTrackResult(
+        const result = AddTrackResult(
           curriculumId: CurriculumId.bavli,
           label: 'Bavli',
           studyDays: {1: 'study'},
@@ -168,7 +168,7 @@ void main() {
       });
 
       test('programId present → CalendarProgramSelection', () {
-        final result = AddTrackResult(
+        const result = AddTrackResult(
           curriculumId: CurriculumId.bavli,
           label: 'Daf Yomi',
           programId: 1,
@@ -189,7 +189,7 @@ void main() {
 
       test('bulkMarkResult → BulkMarkedIntent', () {
         const bulk = BulkMarkIntent(itemCount: 3, completionCount: 6);
-        final result = AddTrackResult(
+        const result = AddTrackResult(
           curriculumId: CurriculumId.bavli,
           label: 'Bavli',
           studyDays: {1: 'study'},
@@ -202,7 +202,7 @@ void main() {
       });
 
       test('goalResult → SpecifiedGoalIntent', () {
-        final goal = _makeGoal();
+        final goal = makeGoal();
         final result = AddTrackResult(
           curriculumId: CurriculumId.bavli,
           label: 'Bavli',
@@ -214,13 +214,13 @@ void main() {
       });
 
       test('wizardResult → WizardStageConfiguration', () {
-        final wrapper = LearningProcessWizardResult(
+        const wrapper = LearningProcessWizardResult(
           wizardResult: WizardResult(
             curriculumId: CurriculumId.bavli,
             choice: WizardChoice.noReview,
           ),
         );
-        final result = AddTrackResult(
+        const result = AddTrackResult(
           curriculumId: CurriculumId.bavli,
           label: 'Bavli',
           studyDays: {1: 'study'},

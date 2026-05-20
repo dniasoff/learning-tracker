@@ -43,7 +43,7 @@ void main() {
     });
 
     test('saveDraft + loadDraft round-trips studyDays map', () async {
-      final draft = AddTrackDraft(
+      const draft = AddTrackDraft(
         navStepIndex: 4,
         studyDays: {1: 'study', 6: 'skip', 7: 'study'},
       );

@@ -38,10 +38,12 @@ void main() {
   late MockNavigationResolver mockResolver;
   late MockStackRouter mockRouter;
 
-  setUp(() {
+  setUp(() async {
     db = createTestDatabase();
     mockResolver = MockNavigationResolver();
     mockRouter = MockStackRouter();
+    // Seed account row for FK on learner_profiles.account_id.
+    await seedProfile(db);
   });
 
   tearDown(() async {
