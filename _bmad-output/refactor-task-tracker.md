@@ -25,8 +25,8 @@ Sync-point trigger tags: `[P1]` `[P2]` `[P3]` `[P4]` `[P5]` `[P6]` `[P7]`
 ### Phase 1a · lib/app/ extraction
 - [x] W1.1  (S, S1, done)    Create lib/app/ with sub-dirs: router/, bootstrap/, restore/, sync_runtime/
 - [x] W1.2  (S, S1, done)    Move core/navigation/{app_router, app_router.gr, router_provider, app_shell, guards/auth_guard}.dart → lib/app/router/
-- [ ] W1.3  (M, S1, in-progress)    Split main.dart bootstrap into lib/app/bootstrap/{firebase, crashlytics, logger, analytics, seed, account, notifications}_bootstrap.dart
-- [ ] W1.4  (S, S1, pending)    Move device_restore_screen.dart + restore service + restore_providers → lib/app/restore/
+- [x] W1.3  (M, S1, done)    Split main.dart bootstrap into lib/app/bootstrap/{firebase, crashlytics, logger, analytics, seed, account, notifications}_bootstrap.dart
+- [ ] W1.4  (S, S1, in-progress)    Move device_restore_screen.dart + restore service + restore_providers → lib/app/restore/
 - [ ] W1.5  (S, S1, pending)    Move SyncLifecycleObserver orchestrator-path → lib/app/sync_runtime/ (legacy stays until Wave 2)
 - [ ] W1.6  (S, S1, pending)    Shrink main.dart to ~30 lines (bootstrap() then runApp(App()))
 
