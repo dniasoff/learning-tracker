@@ -1,6 +1,5 @@
 /// Story acceptance tests for Epic 18 -- Onboarding & Track Management Overhaul.
 @Tags(['epic_18'])
-@Skip('TODO: Fix missing pushCurriculumTrack parameter')
 library;
 
 import 'dart:convert';
@@ -124,6 +123,31 @@ void main() {
 
         setUp(() async {
           db = UserDatabase(NativeDatabase.memory());
+          // Point configs are only seeded for child-mode profiles.
+          // Create a child profile manually so _seedPointConfigsIfNeeded fires.
+          final accountId = await db
+              .into(db.accounts)
+              .insert(
+                AccountsCompanion.insert(
+                  email: 'child@example.com',
+                  tier: 'localBorn',
+                  displayName: 'Test Child',
+                  userMode: 'child',
+                  createdAt: DateTime.now(),
+                  updatedAt: DateTime.now(),
+                ),
+              );
+          await db
+              .into(db.learnerProfiles)
+              .insert(
+                LearnerProfilesCompanion.insert(
+                  accountId: accountId,
+                  displayName: 'Test Child',
+                  mode: 'child',
+                  createdAt: DateTime.now(),
+                  updatedAt: DateTime.now(),
+                ),
+              );
           await _insertTrack(db);
 
           final activationService = CurriculumActivationService(
@@ -375,6 +399,7 @@ void main() {
           () async {
             final db = UserDatabase(NativeDatabase.memory());
             addTearDown(db.close);
+            await seedProfile(db);
 
             final service = LearningProcessWizardService(
               stageDao: db.stageDao,
@@ -416,6 +441,7 @@ void main() {
           () async {
             final db = UserDatabase(NativeDatabase.memory());
             addTearDown(db.close);
+            await seedProfile(db);
 
             final bavliTrack = await db
                 .into(db.curriculumTracks)
@@ -521,6 +547,7 @@ void main() {
         test('migration converts English defaults to Hebrew', () async {
           final db = UserDatabase(NativeDatabase.memory());
           addTearDown(db.close);
+          await seedProfile(db);
           final trackId = await _insertTrack(db);
 
           // Insert English defaults
@@ -564,6 +591,7 @@ void main() {
         test('migration does not touch user-customized names', () async {
           final db = UserDatabase(NativeDatabase.memory());
           addTearDown(db.close);
+          await seedProfile(db);
           final trackId = await _insertTrack(db);
 
           await db.stageDao.insertStageDefinition(
@@ -593,6 +621,7 @@ void main() {
         test('migration is idempotent', () async {
           final db = UserDatabase(NativeDatabase.memory());
           addTearDown(db.close);
+          await seedProfile(db);
           final trackId = await _insertTrack(db);
 
           await db.stageDao.insertStageDefinition(
