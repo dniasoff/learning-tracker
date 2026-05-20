@@ -1,16 +1,12 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/core/learning/completion_constants.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
+import 'package:learning_tracker/features/learning/domain/entities/completion_tier_filter.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/lifetime_knowledge_providers.dart';
-
-// Re-export so existing importers of this symbol continue to compile.
-export 'package:learning_tracker/core/learning/completion_constants.dart'
-    show kBulkPriorSentinelMs;
 
 /// Summary of per-curriculum completion data for the Items Learned /
 /// Lifetime View screens.
@@ -35,10 +31,11 @@ class CurriculumCompletionSummary {
 // Testable service functions — used by providers below and by tests directly.
 // ---------------------------------------------------------------------------
 
-/// Compute track-only curriculum completion summary.
+/// Compute track-achievement curriculum completion summary.
 ///
-/// "Track completions" are rows in the `completions` table whose
-/// `completedAt` is NOT the bulk-prior sentinel (`DateTime.utc(2000,1,1)`).
+/// Uses [CompletionTierFilter.trackAchievement] (live + bulkInTrack) via the
+/// tier-filtered DAO, so lifetimeOnly imports are excluded per B1 policy.
+/// Replaces the former kBulkPriorSentinelMs magic-constant filter (Layer 3).
 ///
 /// Returns `null` when the curriculum has no content or no track completions.
 Future<CurriculumCompletionSummary?> computeItemsLearnedSummary({
@@ -57,16 +54,12 @@ Future<CurriculumCompletionSummary?> computeItemsLearnedSummary({
   }
   if (leaves.isEmpty) return null;
 
-  // Load all completions for this curriculum + profile.
-  final allCompletions = await db.completionDao
-      .getCompletionsByCurriculumAndProfile(curriculum.storageKey, profileId);
-
-  // Filter: exclude bulk-prior sentinel rows.
-  final trackCompletions = allCompletions
-      .where(
-        (c) => c.completedAt.millisecondsSinceEpoch != kBulkPriorSentinelMs,
-      )
-      .toList();
+  // Layer 3: use trackAchievement tier (excludes lifetimeOnly).
+  final trackCompletions = await db.completionDao.getCompletionsByTier(
+    profileId: profileId,
+    tier: CompletionTierFilter.trackAchievement,
+    curriculumId: curriculum,
+  );
 
   if (trackCompletions.isEmpty) return null;
 
@@ -147,8 +140,8 @@ Future<CurriculumCompletionSummary?> computeLifetimeViewSummary({
 // Riverpod providers — thin wrappers around the service functions above.
 // ---------------------------------------------------------------------------
 
-/// Per-curriculum summary for track completions only (excludes bulk-prior
-/// sentinel rows and ledger-based lifetime marks).
+/// Per-curriculum summary for track-achievement completions only
+/// (live + bulkInTrack; excludes lifetimeOnly and ledger-based lifetime marks).
 ///
 /// Keyed by `({int profileId, CurriculumId curriculumId})`.
 final itemsLearnedDataProvider = FutureProvider.autoDispose

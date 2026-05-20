@@ -1,13 +1,17 @@
 /// Story acceptance tests for I-3 — Items Learned breakdown + Lifetime view.
 ///
-/// AC-1: [computeItemsLearnedSummary] counts only non-sentinel completions
-///       (track completions — real study dates, not bulk-prior marks).
+/// AC-1: [computeItemsLearnedSummary] counts only trackAchievement completions
+///       (live + bulkInTrack; excludes lifetimeOnly imports per B1 policy).
 ///
-/// AC-2: [computeLifetimeViewSummary] counts both track completions AND
-///       bulk-prior sentinel rows (plus ledger-based lifetime marks).
+/// AC-2: [computeLifetimeViewSummary] counts all completion events AND
+///       ledger-based lifetime marks.
 ///
 /// AC-3: Completion counts are correct for a known dataset (2 real-date +
-///       1 sentinel + 1 ledger mark → items-learned=2, lifetime=4).
+///       1 bulkInTrack import + 1 ledger mark → items-learned=3, lifetime=4).
+///
+/// Layer 3 update (2026-05-20): "sentinel" rows are now seeded via
+/// prior_completion_imports (not just a magic timestamp). The
+/// computeItemsLearnedSummary now uses getCompletionsByTier(trackAchievement).
 @Tags(['story_i3'])
 library;
 
@@ -34,11 +38,81 @@ class _MockContentRepository extends Mock implements ContentRepository {}
 // Helpers
 // ---------------------------------------------------------------------------
 
-/// The sentinel date used by BulkPriorCompletionService.
-final _kSentinel = DateTime.utc(2000, 1, 1);
-
-/// A real-study date (not the sentinel).
+/// A real-study date (live completion).
 final _kRealDate = DateTime.utc(2026, 5, 1, 10);
+
+/// An old bulk-import timestamp (pre-Layer 3 sentinel; used to give
+/// bulk rows a plausible historical timestamp).
+final _kBulkDate = DateTime.utc(2000, 1, 1);
+
+/// Seeds a bulkInTrack completion: event row + prior_completion_imports record.
+///
+/// This is the Layer 3 canonical way to represent a bulk-prior import.
+/// The row will be included in [CompletionTierFilter.trackAchievement] but
+/// excluded from [CompletionTierFilter.liveOnly].
+Future<void> _seedBulkInTrack(
+  UserDatabase db, {
+  required int profileId,
+  required int trackId,
+  required String sefariaRef,
+}) async {
+  await seedCompletion(
+    db,
+    CompletionEventsCompanion.insert(
+      profileId: profileId,
+      curriculumId: CurriculumId.mishnayos.storageKey,
+      sefariaRef: sefariaRef,
+      stageId: 1,
+      trackType: 'personal',
+      trackId: Value(trackId),
+      eventTimestamp: _kBulkDate,
+    ),
+  );
+  await db.priorCompletionImportDao.batchInsertImports([
+    PriorCompletionImportsCompanion.insert(
+      profileId: profileId,
+      curriculumId: CurriculumId.mishnayos.storageKey,
+      sefariaRef: sefariaRef,
+      stageId: 1,
+      trackType: 'personal',
+      source: 'bulkInTrack',
+    ),
+  ]);
+}
+
+/// Seeds a lifetimeOnly completion: event row + prior_completion_imports record.
+///
+/// This will be excluded from [CompletionTierFilter.trackAchievement] but
+/// included in [CompletionTierFilter.lifetime].
+Future<void> _seedLifetimeOnly(
+  UserDatabase db, {
+  required int profileId,
+  required int trackId,
+  required String sefariaRef,
+}) async {
+  await seedCompletion(
+    db,
+    CompletionEventsCompanion.insert(
+      profileId: profileId,
+      curriculumId: CurriculumId.mishnayos.storageKey,
+      sefariaRef: sefariaRef,
+      stageId: 1,
+      trackType: 'personal',
+      trackId: Value(trackId),
+      eventTimestamp: _kBulkDate,
+    ),
+  );
+  await db.priorCompletionImportDao.batchInsertImports([
+    PriorCompletionImportsCompanion.insert(
+      profileId: profileId,
+      curriculumId: CurriculumId.mishnayos.storageKey,
+      sefariaRef: sefariaRef,
+      stageId: 1,
+      trackType: 'personal',
+      source: 'lifetimeOnly',
+    ),
+  ]);
+}
 
 ContentItem _leaf(
   String ref, {
@@ -110,7 +184,7 @@ void main() {
     tearDown(() async => db.close());
 
     test(
-      'AC-1: excludes bulk-prior sentinel rows; counts only real-date completions',
+      'AC-1: excludes lifetimeOnly import rows; counts live + bulkInTrack',
       () async {
         // 10 leaf items in mishnayos.
         final leaves = List.generate(
@@ -121,7 +195,7 @@ void main() {
           () => repo.getContentForCurriculum(CurriculumId.mishnayos),
         ).thenAnswer((_) async => leaves);
 
-        // Insert 4 real-study completions (leaves[0..3]).
+        // Insert 4 real-study (live) completions (leaves[0..3]).
         for (var i = 0; i < 4; i++) {
           await seedCompletion(
             db,
@@ -137,20 +211,14 @@ void main() {
           );
         }
 
-        // Insert 3 bulk-prior SENTINEL completions (leaves[5..7]) — these
-        // must NOT be counted by computeItemsLearnedSummary.
+        // Insert 3 lifetimeOnly import completions (leaves[5..7]) — these
+        // must NOT be counted by computeItemsLearnedSummary (trackAchievement).
         for (var i = 5; i < 8; i++) {
-          await seedCompletion(
+          await _seedLifetimeOnly(
             db,
-            CompletionEventsCompanion.insert(
-              profileId: profileId,
-              curriculumId: CurriculumId.mishnayos.storageKey,
-              sefariaRef: leaves[i].sefariaRef,
-              stageId: 1,
-              trackType: 'personal',
-              trackId: Value(trackId),
-              eventTimestamp: _kSentinel,
-            ),
+            profileId: profileId,
+            trackId: trackId,
+            sefariaRef: leaves[i].sefariaRef,
           );
         }
 
@@ -165,14 +233,14 @@ void main() {
         expect(
           summary!.learnedLeafCount,
           4,
-          reason: 'only the 4 real-date refs must be counted',
+          reason: 'only the 4 live refs must be counted; lifetimeOnly excluded',
         );
         expect(summary.totalLeafCount, 10);
       },
     );
 
     test(
-      'AC-1b: returns null when ALL completions are sentinel (no track data)',
+      'AC-1b: returns null when ALL completions are lifetimeOnly (no track data)',
       () async {
         final leaves = List.generate(
           5,
@@ -182,19 +250,13 @@ void main() {
           () => repo.getContentForCurriculum(CurriculumId.mishnayos),
         ).thenAnswer((_) async => leaves);
 
-        // Only sentinel completions.
+        // Only lifetimeOnly import completions.
         for (var i = 0; i < 3; i++) {
-          await seedCompletion(
+          await _seedLifetimeOnly(
             db,
-            CompletionEventsCompanion.insert(
-              profileId: profileId,
-              curriculumId: CurriculumId.mishnayos.storageKey,
-              sefariaRef: leaves[i].sefariaRef,
-              stageId: 1,
-              trackType: 'personal',
-              trackId: Value(trackId),
-              eventTimestamp: _kSentinel,
-            ),
+            profileId: profileId,
+            trackId: trackId,
+            sefariaRef: leaves[i].sefariaRef,
           );
         }
 
@@ -205,7 +267,7 @@ void main() {
           profileId: profileId,
         );
 
-        expect(summary, isNull, reason: 'no real-date completions → null');
+        expect(summary, isNull, reason: 'no trackAchievement completions → null');
       },
     );
   });
@@ -250,7 +312,7 @@ void main() {
 
     tearDown(() async => db.close());
 
-    test('AC-2: counts both real-date AND sentinel completions', () async {
+    test('AC-2: counts live AND lifetimeOnly import completions', () async {
       final leaves = List.generate(
         10,
         (i) => _leaf('Mishnah Berakhot ${i + 1}:1', sortOrder: i),
@@ -259,7 +321,7 @@ void main() {
         () => repo.getContentForCurriculum(CurriculumId.mishnayos),
       ).thenAnswer((_) async => leaves);
 
-      // 3 real-date completions.
+      // 3 real-date (live) completions.
       for (var i = 0; i < 3; i++) {
         await seedCompletion(
           db,
@@ -275,19 +337,13 @@ void main() {
         );
       }
 
-      // 4 sentinel completions — must be counted by lifetime.
+      // 4 lifetimeOnly import completions — must be counted by lifetime view.
       for (var i = 3; i < 7; i++) {
-        await seedCompletion(
+        await _seedLifetimeOnly(
           db,
-          CompletionEventsCompanion.insert(
-            profileId: profileId,
-            curriculumId: CurriculumId.mishnayos.storageKey,
-            sefariaRef: leaves[i].sefariaRef,
-            stageId: 1,
-            trackType: 'personal',
-            trackId: Value(trackId),
-            eventTimestamp: _kSentinel,
-          ),
+          profileId: profileId,
+          trackId: trackId,
+          sefariaRef: leaves[i].sefariaRef,
         );
       }
 
@@ -299,11 +355,11 @@ void main() {
       );
 
       expect(summary, isNotNull);
-      // 3 real + 4 sentinel = 7 unique learned leaf refs.
+      // 3 live + 4 lifetimeOnly = 7 unique learned leaf refs.
       expect(
         summary!.learnedLeafCount,
         7,
-        reason: 'lifetime must include sentinel rows',
+        reason: 'lifetime view must include lifetimeOnly import rows',
       );
       expect(summary.totalLeafCount, 10);
     });
@@ -349,7 +405,7 @@ void main() {
 
     tearDown(() async => db.close());
 
-    test('AC-3: known dataset — 2 real-date + 1 sentinel + 1 ledger mark; '
+    test('AC-3: known dataset — 2 live + 1 lifetimeOnly import + 1 ledger mark; '
         'items-learned=2, lifetime=4', () async {
       // 8 leaf items.
       final leaves = List.generate(
@@ -360,7 +416,7 @@ void main() {
         () => repo.getContentForCurriculum(CurriculumId.mishnayos),
       ).thenAnswer((_) async => leaves);
 
-      // 2 real-date track completions (leaves[0], leaves[1]).
+      // 2 real-date (live) track completions (leaves[0], leaves[1]).
       for (var i = 0; i < 2; i++) {
         await seedCompletion(
           db,
@@ -376,18 +432,13 @@ void main() {
         );
       }
 
-      // 1 sentinel completion (leaves[2]) — bulk-prior mark.
-      await seedCompletion(
+      // 1 lifetimeOnly import (leaves[2]) — excluded from items-learned,
+      // included in lifetime view.
+      await _seedLifetimeOnly(
         db,
-        CompletionEventsCompanion.insert(
-          profileId: profileId,
-          curriculumId: CurriculumId.mishnayos.storageKey,
-          sefariaRef: leaves[2].sefariaRef,
-          stageId: 1,
-          trackType: 'personal',
-          trackId: Value(trackId),
-          eventTimestamp: _kSentinel,
-        ),
+        profileId: profileId,
+        trackId: trackId,
+        sefariaRef: leaves[2].sefariaRef,
       );
 
       // 1 ledger mark at leaf-ref level (leaves[3]) — counted by lifetime only.
@@ -419,7 +470,7 @@ void main() {
         ),
       );
 
-      // Items-learned: only real-date completions → 2.
+      // Items-learned: trackAchievement tier (live only here) → 2.
       final trackSummary = await computeItemsLearnedSummary(
         db: db,
         repo: repo,
@@ -430,10 +481,10 @@ void main() {
       expect(
         trackSummary!.learnedLeafCount,
         2,
-        reason: 'items-learned counts only real-date completions',
+        reason: 'items-learned excludes lifetimeOnly imports',
       );
 
-      // Lifetime: real-date (2) + sentinel (1) + ledger (1) = 4 unique refs.
+      // Lifetime: live (2) + lifetimeOnly import (1) + ledger (1) = 4 unique refs.
       final lifeSummary = await computeLifetimeViewSummary(
         db: db,
         repo: repo,

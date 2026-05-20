@@ -1,16 +1,18 @@
-/// Regression tests for Fix 2 — sentinel exclusion in ChartDataService.
+/// Regression tests for bulk-import exclusion in ChartDataService.
 ///
-/// For a profile that has ONLY bulk-prior completions (sentinel timestamp
-/// `DateTime.utc(2000, 1, 1)`), both getDailyCompletions() and
+/// For a profile that has ONLY bulk-prior completions (seeded into
+/// prior_completion_imports), both getDailyCompletions() and
 /// getCumulativeProgress() must return data with count = 0 everywhere.
 ///
-/// Fix 2 — Progress Aggregator L1+L2 remediation (2026-05-20).
+/// Updated for Layer 3 migration: the old kBulkPriorSentinelMs timestamp
+/// filter is replaced by the prior_completion_imports LEFT JOIN mechanism.
+/// These tests seed proper import records instead of relying on a magic
+/// timestamp to trigger exclusion.
 library;
 
-import 'package:drift/drift.dart' show Value;
+import 'package:drift/drift.dart' show InsertMode, Value;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
-import 'package:learning_tracker/core/learning/completion_constants.dart';
 import 'package:learning_tracker/features/progress/domain/services/chart_data_service.dart';
 
 import '../../../../helpers/drift_memory.dart';
@@ -21,11 +23,10 @@ void main() {
   late int trackId;
   const profileId = 1;
 
-  // The sentinel DateTime used by BulkPriorCompletionService.
-  final sentinelDate = DateTime.fromMillisecondsSinceEpoch(
-    kBulkPriorSentinelMs,
-    isUtc: true,
-  );
+  // The old sentinel timestamp, retained here to verify that rows stamped
+  // with this value are NOT excluded unless they also appear in
+  // prior_completion_imports (i.e., timestamp alone no longer drives exclusion).
+  final oldSentinelDate = DateTime.utc(2000, 1, 1);
 
   setUp(() async {
     db = inMemoryDb();
@@ -47,31 +48,42 @@ void main() {
     await db.close();
   });
 
-  Future<void> insertSentinelCompletion({String sefariaRef = 'ref_1'}) =>
-      seedCompletion(
-        db,
-        CompletionEventsCompanion.insert(
-          profileId: profileId,
-          curriculumId: 'mishnayos',
-          sefariaRef: sefariaRef,
-          stageId: 1,
-          trackType: 'personal',
-          trackId: Value(trackId),
-          // Use the sentinel timestamp directly — this is what
-          // BulkPriorCompletionService writes.
-          eventTimestamp: sentinelDate,
-        ),
-      );
+  /// Seeds a bulkInTrack completion: event row + prior_completion_imports record.
+  /// This is the correct Layer 3 representation of a bulk-prior import.
+  Future<void> insertBulkImport({String sefariaRef = 'ref_1'}) async {
+    await seedCompletion(
+      db,
+      CompletionEventsCompanion.insert(
+        profileId: profileId,
+        curriculumId: 'mishnayos',
+        sefariaRef: sefariaRef,
+        stageId: 1,
+        trackType: 'personal',
+        trackId: Value(trackId),
+        eventTimestamp: oldSentinelDate,
+      ),
+    );
+    await db.priorCompletionImportDao.batchInsertImports([
+      PriorCompletionImportsCompanion.insert(
+        profileId: profileId,
+        curriculumId: 'mishnayos',
+        sefariaRef: sefariaRef,
+        stageId: 1,
+        trackType: 'personal',
+        source: 'bulkInTrack',
+      ),
+    ]);
+  }
 
-  group('ChartDataService — sentinel exclusion (Fix 2)', () {
+  group('ChartDataService — bulk-import exclusion (Layer 3)', () {
     group('getDailyCompletions', () {
       test(
-        'returns all-zero counts when only bulk-prior sentinel rows exist',
+        'returns all-zero counts when only bulk import rows exist',
         () async {
-          // Insert several sentinel completions for different refs.
-          await insertSentinelCompletion(sefariaRef: 'ref_1');
-          await insertSentinelCompletion(sefariaRef: 'ref_2');
-          await insertSentinelCompletion(sefariaRef: 'ref_3');
+          // Insert several bulk import completions for different refs.
+          await insertBulkImport(sefariaRef: 'ref_1');
+          await insertBulkImport(sefariaRef: 'ref_2');
+          await insertBulkImport(sefariaRef: 'ref_3');
 
           final start = DateTime(2024, 1, 1);
           final end = DateTime(2026, 5, 20);
@@ -86,16 +98,16 @@ void main() {
             result.every((d) => d.count == 0),
             isTrue,
             reason:
-                'bulk-prior sentinel rows must not appear in daily completions',
+                'bulk-import rows must not appear in daily completions',
           );
         },
       );
 
       test(
-        'live completions are still counted when bulk-prior rows also exist',
+        'live completions are still counted when bulk import rows also exist',
         () async {
-          // Mix: one sentinel row + one live row.
-          await insertSentinelCompletion(sefariaRef: 'ref_bulk');
+          // Mix: one bulk import row + one live row.
+          await insertBulkImport(sefariaRef: 'ref_bulk');
           await seedCompletion(
             db,
             CompletionEventsCompanion.insert(
@@ -122,14 +134,49 @@ void main() {
           );
         },
       );
+
+      test(
+        'sentinel-stamped row WITHOUT import record is treated as live (Layer 3 contract)',
+        () async {
+          // A row that happens to have the old sentinel timestamp, but is NOT
+          // in prior_completion_imports, is treated as live in Layer 3.
+          await seedCompletion(
+            db,
+            CompletionEventsCompanion.insert(
+              profileId: profileId,
+              curriculumId: 'mishnayos',
+              sefariaRef: 'ref_sentinel_only',
+              stageId: 1,
+              trackType: 'personal',
+              trackId: Value(trackId),
+              eventTimestamp: oldSentinelDate,
+            ),
+          );
+
+          final result = await service.getDailyCompletions(
+            startDate: DateTime(1990, 1, 1),
+            endDate: DateTime(2026, 12, 31),
+          );
+
+          // The sentinel-timestamped row without an import record IS counted
+          // as live — timestamp alone no longer drives exclusion.
+          expect(
+            result.any((d) => d.count > 0),
+            isTrue,
+            reason:
+                'sentinel timestamp alone does not exclude a row; '
+                'only prior_completion_imports membership does',
+          );
+        },
+      );
     });
 
     group('getCumulativeProgress', () {
       test(
-        'returns all-zero totals when only bulk-prior sentinel rows exist',
+        'returns all-zero totals when only bulk import rows exist',
         () async {
-          await insertSentinelCompletion(sefariaRef: 'ref_1');
-          await insertSentinelCompletion(sefariaRef: 'ref_2');
+          await insertBulkImport(sefariaRef: 'ref_1');
+          await insertBulkImport(sefariaRef: 'ref_2');
 
           final start = DateTime(2024, 1, 1);
           final end = DateTime(2026, 5, 20);
@@ -139,23 +186,23 @@ void main() {
             endDate: end,
           );
 
-          // All totals should be zero — sentinel rows excluded from both the
+          // All totals should be zero — bulk import rows excluded from both the
           // day-range counts AND the cumulativeBeforeStart calculation.
           expect(
             result.every((p) => p.total == 0),
             isTrue,
             reason:
-                'bulk-prior sentinel rows must not inflate cumulativeBeforeStart '
+                'bulk-import rows must not inflate cumulativeBeforeStart '
                 'or any daily total in getCumulativeProgress',
           );
         },
       );
 
       test(
-        'live completions accumulate correctly when bulk-prior rows also exist',
+        'live completions accumulate correctly when bulk import rows also exist',
         () async {
-          // Sentinel row should not appear.
-          await insertSentinelCompletion(sefariaRef: 'ref_bulk');
+          // Bulk import row should not appear.
+          await insertBulkImport(sefariaRef: 'ref_bulk');
           // Live row on 2026-03-15.
           await seedCompletion(
             db,
