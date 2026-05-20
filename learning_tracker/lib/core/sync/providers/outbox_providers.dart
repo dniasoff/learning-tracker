@@ -5,9 +5,9 @@ import 'package:learning_tracker/core/sync/outbox/outbox_processor.dart';
 import 'package:learning_tracker/core/sync/providers/firestore_instance_provider.dart';
 import 'package:learning_tracker/core/sync/push_pipeline_impl.dart';
 import 'package:learning_tracker/core/time/local_day_clock.dart';
-import 'package:learning_tracker/features/auth/presentation/providers/auth_providers.dart'
+import 'package:learning_tracker/features/account/presentation/providers/auth_providers.dart'
     show authRepositoryProvider;
-import 'package:learning_tracker/features/auth/presentation/providers/auth_state_provider.dart';
+import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
 
 /// Provider for [FirestoreGatewayImpl].
 ///

@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/sync/providers/sync_orchestrator_providers.dart';
-import 'package:learning_tracker/features/auth/presentation/providers/connectivity_providers.dart';
+import 'package:learning_tracker/features/account/presentation/providers/connectivity_providers.dart';
 import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
 
 /// Widget that observes app lifecycle and manages sync listeners.

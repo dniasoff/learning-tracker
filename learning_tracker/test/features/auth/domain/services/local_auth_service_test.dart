@@ -1,8 +1,8 @@
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
-import 'package:learning_tracker/features/auth/domain/services/local_auth_service.dart';
-import 'package:learning_tracker/features/auth/domain/services/password_hasher.dart';
+import 'package:learning_tracker/features/account/domain/services/local_auth_service.dart';
+import 'package:learning_tracker/features/account/domain/services/password_hasher.dart';
 
 void main() {
   late UserDatabase db;

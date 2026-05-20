@@ -5,7 +5,7 @@ import 'package:learning_tracker/core/providers/network_providers.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/utils/text_input_formatters.dart';
 import 'package:learning_tracker/core/widgets/app_bar_title.dart';
-import 'package:learning_tracker/features/auth/presentation/providers/auth_state_provider.dart';
+import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
 import 'package:learning_tracker/features/parent_mode/presentation/widgets/parent_pin_setup_dialog.dart';
 import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';

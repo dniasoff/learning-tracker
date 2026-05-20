@@ -5,7 +5,7 @@ import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/sync/providers/sync_orchestrator_providers.dart';
 import 'package:learning_tracker/core/sync/providers/sync_status_providers.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
-import 'package:learning_tracker/features/auth/presentation/providers/auth_state_provider.dart';
+import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
 import 'package:learning_tracker/features/sync/domain/models/sync_status.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 

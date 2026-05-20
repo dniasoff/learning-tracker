@@ -8,7 +8,7 @@ import 'package:drift/drift.dart' hide isNotNull, isNull;
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/cross_profile_scope.dart';
 import 'package:learning_tracker/core/enums/user_mode.dart';
-import 'package:learning_tracker/features/auth/domain/repositories/auth_repository.dart';
+import 'package:learning_tracker/features/account/domain/repositories/auth_repository.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/user_profile_service.dart';
 import 'package:learning_tracker/features/settings/domain/services/account_management_service.dart';
 import 'package:learning_tracker/features/settings/domain/services/data_export_import_service.dart';

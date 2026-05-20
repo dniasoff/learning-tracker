@@ -46,8 +46,8 @@ import 'package:learning_tracker/core/preferences/transliteration_variant_prefer
 import 'package:learning_tracker/core/sync/outbox/outbox_processor.dart';
 import 'package:learning_tracker/core/sync/outbox/push_pipeline.dart';
 import 'package:learning_tracker/core/time/local_day_clock.dart';
-import 'package:learning_tracker/features/auth/domain/models/app_user.dart';
-import 'package:learning_tracker/features/auth/domain/repositories/auth_repository.dart';
+import 'package:learning_tracker/features/account/domain/models/app_user.dart';
+import 'package:learning_tracker/features/account/domain/repositories/auth_repository.dart';
 import 'package:learning_tracker/features/sync/domain/profile_scoped_preference_keys.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:shared_preferences/shared_preferences.dart';

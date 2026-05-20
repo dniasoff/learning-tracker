@@ -18,7 +18,7 @@ library;
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/features/auth/domain/services/pending_local_signup.dart';
+import 'package:learning_tracker/features/account/domain/services/pending_local_signup.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {

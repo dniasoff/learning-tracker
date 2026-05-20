@@ -6,7 +6,7 @@ import 'package:learning_tracker/core/sync/providers/merge_router_provider.dart'
 import 'package:learning_tracker/core/sync/providers/outbox_providers.dart';
 import 'package:learning_tracker/core/sync/providers/resolve_profile_id_provider.dart';
 import 'package:learning_tracker/core/sync/sync_orchestrator.dart';
-import 'package:learning_tracker/features/auth/presentation/providers/auth_state_provider.dart';
+import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
 

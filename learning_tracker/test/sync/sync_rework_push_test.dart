@@ -24,8 +24,8 @@ import 'package:learning_tracker/core/sync/firestore_gateway_impl.dart';
 import 'package:learning_tracker/core/sync/outbox/outbox_processor.dart';
 import 'package:learning_tracker/core/sync/push_pipeline_impl.dart';
 import 'package:learning_tracker/core/time/local_day_clock.dart';
-import 'package:learning_tracker/features/auth/domain/models/app_user.dart';
-import 'package:learning_tracker/features/auth/domain/repositories/auth_repository.dart';
+import 'package:learning_tracker/features/account/domain/models/app_user.dart';
+import 'package:learning_tracker/features/account/domain/repositories/auth_repository.dart';
 
 import '../helpers/drift_memory.dart';
 import '../helpers/firestore_fake.dart';

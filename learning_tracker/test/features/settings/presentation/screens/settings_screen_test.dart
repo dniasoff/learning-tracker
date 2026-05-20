@@ -6,11 +6,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
-import 'package:learning_tracker/features/auth/domain/models/auth_state.dart';
-import 'package:learning_tracker/features/auth/domain/repositories/auth_repository.dart';
-import 'package:learning_tracker/features/auth/presentation/providers/auth_providers.dart'
+import 'package:learning_tracker/features/account/domain/models/auth_state.dart';
+import 'package:learning_tracker/features/account/domain/repositories/auth_repository.dart';
+import 'package:learning_tracker/features/account/presentation/providers/auth_providers.dart'
     show authRepositoryProvider;
-import 'package:learning_tracker/features/auth/presentation/providers/auth_state_provider.dart';
+import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
 import 'package:learning_tracker/features/learning/data/repositories/track_repository_impl.dart';
 import 'package:learning_tracker/features/settings/domain/services/curriculum_activation_service.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/curriculum_activation_providers.dart';

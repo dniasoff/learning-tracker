@@ -3,7 +3,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/daos/user_profile_dao.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
-import 'package:learning_tracker/features/auth/domain/models/auth_state.dart';
+import 'package:learning_tracker/features/account/domain/models/auth_state.dart';
 
 import '../../../../helpers/drift_memory.dart';
 

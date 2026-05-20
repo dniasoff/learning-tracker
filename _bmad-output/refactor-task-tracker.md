@@ -70,14 +70,14 @@ Sync-point trigger tags: `[P1]` `[P2]` `[P3]` `[P4]` `[P5]` `[P6]` `[P7]`
 
 ### Phase 2a · Tracks cluster merge (S4)
 - [x] W2.1  (M, S4, done)    Create features/tracks/ skeleton (data/, domain/, presentation/)
-- [ ] W2.2  (M, S4, pending)    Move features/track_setup/** → features/tracks/setup/
-- [ ] W2.3  (M, S4, pending)    Move features/learning_order/** → features/tracks/whole_curriculum_order/
-- [ ] W2.4  (M, S4, pending)    Move features/track_learning_order/** → features/tracks/track_order/
-- [ ] W2.5  (M, S4, pending)    Move features/stages/** → features/tracks/stages/
-- [ ] W2.6  (S, S4, pending)    Add tracks/data/ layer placeholder — closes M6
-- [ ] W2.7  (S, S4, pending)    Pull curriculum_activation_service from settings → tracks
-- [ ] W2.8  (M, S4, pending)    Fill features/tracks/tracks.dart barrel with public surface
-- [ ] W2.9  (M, S4, pending)    Migrate all importers from deep paths → tracks.dart barrel `[P2]`
+- [x] W2.2  (M, S4, done)    Move features/track_setup/** → features/tracks/setup/
+- [x] W2.3  (M, S4, done)    Move features/learning_order/** → features/tracks/whole_curriculum_order/
+- [x] W2.4  (M, S4, done)    Move features/track_learning_order/** → features/tracks/track_order/
+- [x] W2.5  (M, S4, done)    Move features/stages/** → features/tracks/stages/
+- [x] W2.6  (S, S4, done)    Add tracks/data/ layer placeholder — closes M6
+- [x] W2.7  (S, S4, done)    Pull curriculum_activation_service from settings → tracks
+- [x] W2.8  (M, S4, done)    Fill features/tracks/tracks.dart barrel with public surface
+- [x] W2.9  (M, S4, done)    Migrate all importers from deep paths → tracks.dart barrel `[P2]`
 
 ### Phase 2b · Account cluster merge (S3)
 - [ ] W2.10 (M, S3, in-progress)    Create features/account/ skeleton
@@ -193,8 +193,8 @@ Sync-point trigger tags: `[P1]` `[P2]` `[P3]` `[P4]` `[P5]` `[P6]` `[P7]`
 ## Wave 4 — Domain modelling + value objects + permission model (~35 tasks)
 
 ### Phase 4a · Value objects
-- [ ] W4.1  (M, S5, in-progress)    SefariaRef VO with parse + segment ops; start strangler migration of 73 raw-String sites
-- [ ] W4.2  (S, S5, pending)    StageOrder VO (≥1, monotonic)
+- [x] W4.1  (M, S5, done)    SefariaRef VO with parse + segment ops; start strangler migration of 73 raw-String sites
+- [ ] W4.2  (S, S5, in-progress)    StageOrder VO (≥1, monotonic)
 - [ ] W4.3  (S, S5, pending)    Pin VO (4 ASCII digits, validates on construction)
 - [ ] W4.4  (M, S5, pending)    StudyDayPattern VO with dayKindFor(Weekday) + equality
 - [ ] W4.5  (S, S5, pending)    CalendarSystem { hebrew, english } enum

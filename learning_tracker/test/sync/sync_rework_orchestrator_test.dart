@@ -39,8 +39,8 @@ import 'package:learning_tracker/core/sync/merge/entity_merger.dart';
 import 'package:learning_tracker/core/sync/merge/merge_router.dart';
 import 'package:learning_tracker/core/sync/providers/sync_orchestrator_providers.dart';
 import 'package:learning_tracker/core/sync/sync_orchestrator.dart';
-import 'package:learning_tracker/features/auth/domain/models/auth_state.dart';
-import 'package:learning_tracker/features/auth/presentation/providers/auth_state_provider.dart';
+import 'package:learning_tracker/features/account/domain/models/auth_state.dart';
+import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
 import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
 
 // ---------------------------------------------------------------------------

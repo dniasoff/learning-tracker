@@ -10,12 +10,12 @@ import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart'
     show userDatabaseProvider;
 import 'package:learning_tracker/core/providers/registry_provider.dart';
-import 'package:learning_tracker/features/auth/domain/models/app_user.dart';
-import 'package:learning_tracker/features/auth/domain/models/auth_state.dart';
-import 'package:learning_tracker/features/auth/presentation/providers/auth_providers.dart';
-import 'package:learning_tracker/features/auth/presentation/providers/auth_state_provider.dart'
+import 'package:learning_tracker/features/account/domain/models/app_user.dart';
+import 'package:learning_tracker/features/account/domain/models/auth_state.dart';
+import 'package:learning_tracker/features/account/presentation/providers/auth_providers.dart';
+import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart'
     as auth_state_mod;
-import 'package:learning_tracker/features/auth/presentation/providers/connectivity_providers.dart';
+import 'package:learning_tracker/features/account/presentation/providers/connectivity_providers.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/user_profile_service.dart';
 import 'package:learning_tracker/features/onboarding/presentation/providers/onboarding_providers.dart';
 import 'package:learning_tracker/features/onboarding/presentation/screens/signup_screen.dart';

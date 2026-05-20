@@ -28,7 +28,7 @@ import 'package:learning_tracker/core/preferences/text_display_preferences.dart'
     show FontSize;
 import 'package:learning_tracker/core/preferences/transliteration_variant_preference.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
-import 'package:learning_tracker/features/auth/presentation/providers/auth_providers.dart';
+import 'package:learning_tracker/features/account/presentation/providers/auth_providers.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/text_display_providers.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';

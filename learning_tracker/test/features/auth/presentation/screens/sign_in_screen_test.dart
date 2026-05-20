@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/features/auth/presentation/screens/sign_in_screen.dart';
+import 'package:learning_tracker/features/account/presentation/screens/sign_in_screen.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 void main() {

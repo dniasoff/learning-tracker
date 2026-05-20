@@ -1,8 +1,8 @@
 // Tests for auth exception classes — covers toString() methods
 // that are pure and do not require database or auth setup.
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/features/auth/domain/services/local_auth_service.dart';
-import 'package:learning_tracker/features/auth/domain/services/upgrade_to_cloud_service.dart';
+import 'package:learning_tracker/features/account/domain/services/local_auth_service.dart';
+import 'package:learning_tracker/features/account/domain/services/upgrade_to_cloud_service.dart';
 
 void main() {
   // =========================================================================

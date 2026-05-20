@@ -3,8 +3,8 @@ import 'dart:async';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_sign_in/google_sign_in.dart';
-import 'package:learning_tracker/features/auth/data/repositories/auth_repository_impl.dart';
-import 'package:learning_tracker/features/auth/domain/models/app_user.dart';
+import 'package:learning_tracker/features/account/data/repositories/auth_repository_impl.dart';
+import 'package:learning_tracker/features/account/domain/models/app_user.dart';
 import 'package:mocktail/mocktail.dart';
 
 // Mocks

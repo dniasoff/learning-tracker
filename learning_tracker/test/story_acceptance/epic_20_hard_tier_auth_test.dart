@@ -6,9 +6,9 @@ import 'package:learning_tracker/core/database/user/user_database.dart'
     hide StreakEvent;
 import 'package:learning_tracker/core/streak/streak_event.dart';
 import 'package:learning_tracker/core/streak/streak_reducer.dart';
-import 'package:learning_tracker/features/auth/domain/models/auth_state.dart';
-import 'package:learning_tracker/features/auth/domain/services/local_auth_service.dart';
-import 'package:learning_tracker/features/auth/domain/services/password_hasher.dart';
+import 'package:learning_tracker/features/account/domain/models/auth_state.dart';
+import 'package:learning_tracker/features/account/domain/services/local_auth_service.dart';
+import 'package:learning_tracker/features/account/domain/services/password_hasher.dart';
 import 'package:learning_tracker/features/sync/domain/merge_rules.dart';
 
 import '../helpers/drift_memory.dart' show seedProfile;

@@ -5,7 +5,7 @@ import 'package:learning_tracker/core/providers/talker_provider.dart';
 import 'package:learning_tracker/core/sync/providers/outbox_providers.dart'
     show firestoreGatewayProvider;
 import 'package:learning_tracker/core/sync/providers/sync_orchestrator_providers.dart';
-import 'package:learning_tracker/features/auth/presentation/providers/auth_state_provider.dart';
+import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
 import 'package:learning_tracker/features/onboarding/presentation/providers/onboarding_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/sync/domain/models/restore_status.dart';

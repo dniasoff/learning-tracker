@@ -11,11 +11,11 @@ import 'package:flutter_test/flutter_test.dart'
 import 'package:learning_tracker/core/database/daos/user_profile_dao.dart';
 import 'package:learning_tracker/core/database/registry/device_registry_database.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
-import 'package:learning_tracker/features/auth/domain/models/auth_state.dart';
-import 'package:learning_tracker/features/auth/domain/services/account_lifecycle_service.dart';
-import 'package:learning_tracker/features/auth/domain/services/local_auth_service.dart';
-import 'package:learning_tracker/features/auth/domain/services/password_hasher.dart';
-import 'package:learning_tracker/features/auth/domain/services/session_persistence_service.dart';
+import 'package:learning_tracker/features/account/domain/models/auth_state.dart';
+import 'package:learning_tracker/features/account/domain/services/account_lifecycle_service.dart';
+import 'package:learning_tracker/features/account/domain/services/local_auth_service.dart';
+import 'package:learning_tracker/features/account/domain/services/password_hasher.dart';
+import 'package:learning_tracker/features/account/domain/services/session_persistence_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:test/test.dart' hide isNotNull, isNull;
 

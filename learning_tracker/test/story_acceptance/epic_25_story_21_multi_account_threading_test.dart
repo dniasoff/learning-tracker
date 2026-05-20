@@ -13,10 +13,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 // ignore: unused_import — UserTier alias is re-exported by auth_state.dart.
 import 'package:learning_tracker/core/database/daos/user_profile_dao.dart';
-import 'package:learning_tracker/features/auth/domain/models/auth_state.dart';
-import 'package:learning_tracker/features/auth/presentation/providers/auth_state_provider.dart';
-import 'package:learning_tracker/features/auth/presentation/widgets/no_backup_badge.dart';
-import 'package:learning_tracker/features/auth/presentation/widgets/offline_top_banner.dart';
+import 'package:learning_tracker/features/account/domain/models/auth_state.dart';
+import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
+import 'package:learning_tracker/features/account/presentation/widgets/no_backup_badge.dart';
+import 'package:learning_tracker/features/account/presentation/widgets/offline_top_banner.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 
 /// Resolves the repo root from the `learning_tracker/` sub-directory so the

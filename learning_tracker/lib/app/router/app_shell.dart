@@ -1,7 +1,7 @@
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:learning_tracker/app/router/app_router.dart';
-import 'package:learning_tracker/features/auth/presentation/widgets/offline_top_banner.dart';
+import 'package:learning_tracker/features/account/presentation/widgets/offline_top_banner.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/widgets/sacred_time_lock_overlay.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
