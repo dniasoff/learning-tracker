@@ -109,14 +109,22 @@ class CompletionDetectionService {
 
     final stageIds = stages.map((s) => s.stageOrder).toList();
 
+    // Issue ONE bulk query for all completions in this curriculum + profile,
+    // then index by sefariaRef in memory. Previously this loop ran one DAO
+    // call per leaf — for a masechta with 40 mishnayot leaves that was 40
+    // round trips per detection call, and a seder-level check across
+    // multiple masechtos could trigger hundreds.
+    final allCompletions = await _database.completionDao
+        .getCompletionsByCurriculumAndProfile(curriculumId, profileId);
+    final stagesByRef = <String, Set<int>>{};
+    for (final c in allCompletions) {
+      if (c.trackType != trackType) continue;
+      stagesByRef.putIfAbsent(c.sefariaRef, () => <int>{}).add(c.stageId);
+    }
+
     // Check if every leaf has completions for every stage
     for (final leaf in leafItems) {
-      final completions = await _database.completionDao
-          .getCompletionsForContentAndProfile(leaf.sefariaRef, profileId);
-      final completedStages = completions
-          .where((c) => c.trackType == trackType)
-          .map((c) => c.stageId)
-          .toSet();
+      final completedStages = stagesByRef[leaf.sefariaRef] ?? const <int>{};
 
       for (final stageId in stageIds) {
         if (!completedStages.contains(stageId)) {
