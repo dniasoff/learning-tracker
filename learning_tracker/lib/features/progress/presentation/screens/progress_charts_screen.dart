@@ -10,6 +10,7 @@ import 'package:learning_tracker/core/widgets/error_display.dart';
 import 'package:learning_tracker/core/widgets/loading_indicator.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/progress/domain/models/chart_data.dart';
+import 'package:learning_tracker/features/progress/domain/services/chart_data_service.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/chart_providers.dart';
 import 'package:learning_tracker/features/progress/presentation/widgets/completions_bar_chart.dart';
 import 'package:learning_tracker/features/progress/presentation/widgets/cumulative_line_chart.dart';
@@ -26,9 +27,44 @@ class ProgressChartsScreen extends ConsumerStatefulWidget {
       _ProgressChartsScreenState();
 }
 
+/// Memoization key for chart futures — recreate only when these inputs change.
+class _ChartInputs {
+  final ChartTimeRange range;
+  final CurriculumId? curriculum;
+  final DateTime start;
+  final DateTime end;
+
+  const _ChartInputs({
+    required this.range,
+    required this.curriculum,
+    required this.start,
+    required this.end,
+  });
+
+  @override
+  bool operator ==(Object other) =>
+      other is _ChartInputs &&
+      other.range == range &&
+      other.curriculum == curriculum &&
+      other.start == start &&
+      other.end == end;
+
+  @override
+  int get hashCode => Object.hash(range, curriculum, start, end);
+}
+
 class _ProgressChartsScreenState extends ConsumerState<ProgressChartsScreen> {
   ChartTimeRange _timeRange = ChartTimeRange.last7Days;
   CurriculumId? _curriculum;
+
+  // Memoized futures + the inputs they were built from. Recomputed exactly
+  // once per (timeRange, curriculum) change instead of on every `setState`.
+  _ChartInputs? _cachedInputs;
+  ChartDataService? _cachedService;
+  Future<List<DailyCompletionData>>? _completionsFuture;
+  Future<List<CumulativeProgressPoint>>? _cumulativeFuture;
+  Future<List<DailyPointsData>?>? _pointsFuture;
+  Future<Set<DateTime>>? _streakFuture;
 
   ({DateTime start, DateTime end}) get _dateRange {
     final now = DateTimeFactory.nowLocal();
@@ -42,11 +78,64 @@ class _ProgressChartsScreenState extends ConsumerState<ProgressChartsScreen> {
         start: today.subtract(const Duration(days: 29)),
         end: today,
       ),
-      // DateTime(2000, 1, 1) matches the bulk-prior sentinel epoch so
-      // cumulativeBeforeStart = 0 for all users and the cumulative line
-      // starts at zero on the left. Fix 4 — Progress Aggregator L1+L2.
+      // DateTime(2000, 1, 1) matches the bulk-prior sentinel epoch. The
+      // ChartDataService caps this internally to the first matching
+      // completion (and bucketises to weekly) so the chart never receives
+      // ~9,600 leading empty days — see kChartDailyMaxDays.
       ChartTimeRange.allTime => (start: DateTime(2000, 1, 1), end: today),
     };
+  }
+
+  /// Recompute chart futures only when their inputs change. Called from
+  /// [build] so the futures stay live with provider updates while still
+  /// being stable across unrelated `setState` calls.
+  void _ensureFuturesForInputs() {
+    final dates = _dateRange;
+    final service = ref.read(chartDataServiceProvider);
+    final inputs = _ChartInputs(
+      range: _timeRange,
+      curriculum: _curriculum,
+      start: dates.start,
+      end: dates.end,
+    );
+    if (_cachedInputs == inputs && identical(_cachedService, service)) {
+      return;
+    }
+    _cachedInputs = inputs;
+    _cachedService = service;
+    _completionsFuture = service.getDailyCompletions(
+      startDate: dates.start,
+      endDate: dates.end,
+      curriculumId: _curriculum?.storageKey,
+    );
+    _cumulativeFuture = service.getCumulativeProgress(
+      startDate: dates.start,
+      endDate: dates.end,
+      curriculumId: _curriculum?.storageKey,
+    );
+    _pointsFuture = service.getDailyPoints(
+      startDate: dates.start,
+      endDate: dates.end,
+      userMode: UserMode.child,
+      curriculumId: _curriculum?.storageKey,
+    );
+    _streakFuture = service.getStreakCalendar(
+      startDate: dates.start,
+      endDate: dates.end,
+    );
+  }
+
+  /// Forces the next build to refetch every chart's future — used by the
+  /// per-chart retry buttons.
+  void _invalidateChartCache() {
+    setState(() {
+      _cachedInputs = null;
+      _cachedService = null;
+      _completionsFuture = null;
+      _cumulativeFuture = null;
+      _pointsFuture = null;
+      _streakFuture = null;
+    });
   }
 
   @override
@@ -57,6 +146,9 @@ class _ProgressChartsScreenState extends ConsumerState<ProgressChartsScreen> {
     final currentStreak =
         ref.watch(dashboardStreakProvider).asData?.value.currentStreak ?? 0;
     final theme = Theme.of(context);
+
+    // Recompute memoized futures only when inputs change.
+    _ensureFuturesForInputs();
 
     return Scaffold(
       backgroundColor: AppColors.surfaceF4b,
@@ -226,15 +318,8 @@ class _ProgressChartsScreenState extends ConsumerState<ProgressChartsScreen> {
   }
 
   Widget _buildTotalPointsLabel() {
-    final service = ref.watch(chartDataServiceProvider);
-    final dates = _dateRange;
     return FutureBuilder<List<DailyPointsData>?>(
-      future: service.getDailyPoints(
-        startDate: dates.start,
-        endDate: dates.end,
-        userMode: UserMode.child,
-        curriculumId: _curriculum?.storageKey,
-      ),
+      future: _pointsFuture,
       builder: (context, snapshot) {
         final total = snapshot.data?.fold<int>(
           0,
@@ -252,20 +337,13 @@ class _ProgressChartsScreenState extends ConsumerState<ProgressChartsScreen> {
   }
 
   Widget _buildCompletionsChart(AppLocalizations l10n) {
-    final service = ref.watch(chartDataServiceProvider);
-    final dates = _dateRange;
-
     return FutureBuilder<List<DailyCompletionData>>(
-      future: service.getDailyCompletions(
-        startDate: dates.start,
-        endDate: dates.end,
-        curriculumId: _curriculum?.storageKey,
-      ),
+      future: _completionsFuture,
       builder: (context, snapshot) {
         if (snapshot.hasError) {
           return ErrorDisplay(
             message: l10n.chartFailedToLoad,
-            onRetry: () => setState(() {}),
+            onRetry: _invalidateChartCache,
           );
         }
         if (!snapshot.hasData) {
@@ -277,20 +355,13 @@ class _ProgressChartsScreenState extends ConsumerState<ProgressChartsScreen> {
   }
 
   Widget _buildCumulativeChart(AppLocalizations l10n) {
-    final service = ref.watch(chartDataServiceProvider);
-    final dates = _dateRange;
-
     return FutureBuilder<List<CumulativeProgressPoint>>(
-      future: service.getCumulativeProgress(
-        startDate: dates.start,
-        endDate: dates.end,
-        curriculumId: _curriculum?.storageKey,
-      ),
+      future: _cumulativeFuture,
       builder: (context, snapshot) {
         if (snapshot.hasError) {
           return ErrorDisplay(
             message: l10n.chartFailedToLoad,
-            onRetry: () => setState(() {}),
+            onRetry: _invalidateChartCache,
           );
         }
         if (!snapshot.hasData) {
@@ -302,21 +373,13 @@ class _ProgressChartsScreenState extends ConsumerState<ProgressChartsScreen> {
   }
 
   Widget _buildPointsChart(AppLocalizations l10n, UserMode userMode) {
-    final service = ref.watch(chartDataServiceProvider);
-    final dates = _dateRange;
-
     return FutureBuilder<List<DailyPointsData>?>(
-      future: service.getDailyPoints(
-        startDate: dates.start,
-        endDate: dates.end,
-        userMode: userMode,
-        curriculumId: _curriculum?.storageKey,
-      ),
+      future: _pointsFuture,
       builder: (context, snapshot) {
         if (snapshot.hasError) {
           return ErrorDisplay(
             message: l10n.chartFailedToLoad,
-            onRetry: () => setState(() {}),
+            onRetry: _invalidateChartCache,
           );
         }
         if (!snapshot.hasData || snapshot.data == null) {
@@ -328,19 +391,15 @@ class _ProgressChartsScreenState extends ConsumerState<ProgressChartsScreen> {
   }
 
   Widget _buildStreakCalendar(AppLocalizations l10n) {
-    final service = ref.watch(chartDataServiceProvider);
     final dates = _dateRange;
 
     return FutureBuilder<Set<DateTime>>(
-      future: service.getStreakCalendar(
-        startDate: dates.start,
-        endDate: dates.end,
-      ),
+      future: _streakFuture,
       builder: (context, snapshot) {
         if (snapshot.hasError) {
           return ErrorDisplay(
             message: l10n.chartFailedToLoad,
-            onRetry: () => setState(() {}),
+            onRetry: _invalidateChartCache,
           );
         }
         if (!snapshot.hasData) {

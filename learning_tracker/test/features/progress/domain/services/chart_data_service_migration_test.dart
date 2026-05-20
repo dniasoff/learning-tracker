@@ -1,19 +1,14 @@
-/// Regression tests for the Layer 3 migration of [ChartDataService].
+/// Regression tests for the trackAchievement chart-tier switch (W1-B / Phase A).
 ///
-/// Pre-migration:
-/// - [getDailyCompletions] and [getCumulativeProgress] used
-///   [getCompletionsByCurriculumAndProfile] (all tiers) and filtered out
-///   sentinel rows via `kBulkPriorSentinelMs` magic-constant comparison.
+/// Pre-W1-B:
+/// - Charts used [CompletionTierFilter.liveOnly] — excluded both
+///   bulkInTrack and lifetimeOnly via LEFT JOIN on prior_completion_imports.
 ///
-/// Post-migration:
-/// - Both methods use [CompletionDao.getCompletionsByTier] with
-///   [CompletionTierFilter.liveOnly] — excludes bulkInTrack and lifetimeOnly
-///   via LEFT JOIN on [prior_completion_imports], not a timestamp check.
-///
-/// Expected value changes:
-/// - Live-only profile: results are identical.
-/// - bulkInTrack rows: new = excluded (old sentinel filter did not catch these).
-/// - lifetimeOnly rows: new = excluded (same as old sentinel, different mechanism).
+/// Post-W1-B:
+/// - Charts use [CompletionTierFilter.trackAchievement] — includes live
+///   AND bulkInTrack; still excludes lifetimeOnly. Aligns with the policy
+///   "bulk marks within tracks are equivalent to live learning except no
+///   streak/points — they SHOULD show in charts and siyumim".
 @Tags(['progress', 'migration', 'layer3'])
 library;
 
@@ -124,14 +119,18 @@ void main() {
   setUp(() async {
     db = inMemoryDb();
     await seedProfile(db);
-    trackId = await seedTrack(db, profileId: _profileId, curriculumId: _curriculumId);
+    trackId = await seedTrack(
+      db,
+      profileId: _profileId,
+      curriculumId: _curriculumId,
+    );
     service = ChartDataService(db, profileId: _profileId);
   });
 
   tearDown(() => db.close());
 
-  group('ChartDataService.getDailyCompletions Layer 3 migration', () {
-    test('live-only: counts match pre-migration result', () async {
+  group('ChartDataService.getDailyCompletions trackAchievement tier', () {
+    test('live-only: counts unchanged from pre-W1-B', () async {
       await _seedLive(db, trackId: trackId, ref: 'ref1');
       await _seedLive(db, trackId: trackId, ref: 'ref2');
 
@@ -151,25 +150,30 @@ void main() {
       );
     });
 
-    test('bulkInTrack rows: excluded from daily chart (new behavior)', () async {
-      // bulkInTrack rows are now excluded by liveOnly tier.
-      // Old sentinel path would NOT have excluded these (they use a non-sentinel timestamp).
+    test('bulkInTrack rows: INCLUDED on the chart (W1-B / Phase A)', () async {
+      // bulkInTrack rows now count under trackAchievement tier — these
+      // represent real per-track learning even though they do not earn
+      // streak/points.
       await _seedBulkInTrack(db, trackId: trackId, ref: 'bulk1');
       await _seedBulkInTrack(db, trackId: trackId, ref: 'bulk2');
 
+      // bulkInTrack rows are stamped on _bulkAt = 2000-01-01.
       final result = await service.getDailyCompletions(
-        startDate: DateTime(1990, 1, 1),
-        endDate: DateTime(2026, 12, 31),
+        startDate: DateTime(2000, 1, 1),
+        endDate: DateTime(2000, 1, 1),
       );
 
+      expect(result, hasLength(1));
       expect(
-        result.every((d) => d.count == 0),
-        isTrue,
-        reason: 'bulkInTrack rows must be excluded by liveOnly tier filter',
+        result.first.count,
+        2,
+        reason:
+            'bulkInTrack rows MUST appear on the chart under '
+            'trackAchievement tier',
       );
     });
 
-    test('lifetimeOnly rows: excluded (same as sentinel, new mechanism)', () async {
+    test('lifetimeOnly rows: still EXCLUDED', () async {
       await _seedLifetimeOnly(db, trackId: trackId, ref: 'lt1');
 
       final result = await service.getDailyCompletions(
@@ -180,28 +184,52 @@ void main() {
       expect(
         result.every((d) => d.count == 0),
         isTrue,
-        reason: 'lifetimeOnly rows excluded via prior_completion_imports JOIN',
+        reason: 'lifetimeOnly rows excluded under trackAchievement tier',
       );
     });
 
-    test('mixed: live counted, bulkInTrack excluded', () async {
-      await _seedLive(db, trackId: trackId, ref: 'live1');
-      await _seedBulkInTrack(db, trackId: trackId, ref: 'bulk1');
+    test(
+      'mixed: live + bulkInTrack both counted, lifetimeOnly excluded',
+      () async {
+        // Live on May 10.
+        await _seedLive(db, trackId: trackId, ref: 'live1');
+        // bulkInTrack on 2000-01-01 (the bulk epoch).
+        await _seedBulkInTrack(db, trackId: trackId, ref: 'bulk1');
+        // lifetimeOnly on 2000-01-01.
+        await _seedLifetimeOnly(db, trackId: trackId, ref: 'lt1');
 
-      final result = await service.getDailyCompletions(
-        startDate: _startDate,
-        endDate: _endDate,
-      );
+        final result = await service.getDailyCompletions(
+          startDate: DateTime(2000, 1, 1),
+          endDate: DateTime(2026, 12, 31),
+        );
 
-      final day10 = result.firstWhere((d) => d.date.day == 10);
-      expect(day10.count, 1, reason: 'only the live completion counts');
-    });
+        // For a >60d range the service buckets weekly. We just assert the
+        // totals match what we expect across the entire window.
+        final total = result.fold<int>(0, (sum, d) => sum + d.count);
+        expect(
+          total,
+          2,
+          reason:
+              'one live + one bulkInTrack = 2 charted; lifetimeOnly excluded',
+        );
+      },
+    );
   });
 
-  group('ChartDataService.getCumulativeProgress Layer 3 migration', () {
-    test('live-only: cumulative matches pre-migration result', () async {
-      await _seedLive(db, trackId: trackId, ref: 'ref1', at: DateTime.utc(2026, 5, 5, 10));
-      await _seedLive(db, trackId: trackId, ref: 'ref2', at: DateTime.utc(2026, 5, 10, 10));
+  group('ChartDataService.getCumulativeProgress trackAchievement tier', () {
+    test('live-only: cumulative unchanged from pre-W1-B', () async {
+      await _seedLive(
+        db,
+        trackId: trackId,
+        ref: 'ref1',
+        at: DateTime.utc(2026, 5, 5, 10),
+      );
+      await _seedLive(
+        db,
+        trackId: trackId,
+        ref: 'ref2',
+        at: DateTime.utc(2026, 5, 10, 10),
+      );
 
       final result = await service.getCumulativeProgress(
         startDate: _startDate,
@@ -219,24 +247,29 @@ void main() {
       expect(day11.total, 2, reason: 'no new completions on May 11');
     });
 
-    test('bulkInTrack rows: excluded from cumulative (new behavior)', () async {
+    test('bulkInTrack rows: INCLUDED in cumulative (W1-B / Phase A)', () async {
+      // All three bulkInTrack rows stamped on the bulk epoch 2000-01-01.
       await _seedBulkInTrack(db, trackId: trackId, ref: 'bulk1');
       await _seedBulkInTrack(db, trackId: trackId, ref: 'bulk2');
       await _seedBulkInTrack(db, trackId: trackId, ref: 'bulk3');
 
+      // Window that contains the bulk epoch.
       final result = await service.getCumulativeProgress(
-        startDate: DateTime(1990, 1, 1),
-        endDate: DateTime(2026, 12, 31),
+        startDate: DateTime(2000, 1, 1),
+        endDate: DateTime(2000, 1, 1),
       );
 
+      expect(result, hasLength(1));
       expect(
-        result.every((p) => p.total == 0),
-        isTrue,
-        reason: 'bulkInTrack rows must not inflate cumulativeBeforeStart or daily totals',
+        result.first.total,
+        3,
+        reason:
+            'bulkInTrack rows MUST inflate the cumulative chart under '
+            'trackAchievement tier',
       );
     });
 
-    test('lifetimeOnly rows excluded, live completions before startDate accumulate', () async {
+    test('lifetimeOnly excluded; live before startDate accumulates', () async {
       // One lifetimeOnly row (should not contribute to cumulativeBeforeStart).
       await _seedLifetimeOnly(db, trackId: trackId, ref: 'lt1');
       // One live row before the window start (should add to cumulativeBeforeStart).
@@ -257,7 +290,9 @@ void main() {
       expect(
         result.first.total,
         1,
-        reason: 'cumulativeBeforeStart must include live row before start, not lifetimeOnly',
+        reason:
+            'cumulativeBeforeStart must include live row before start, '
+            'not lifetimeOnly',
       );
     });
   });

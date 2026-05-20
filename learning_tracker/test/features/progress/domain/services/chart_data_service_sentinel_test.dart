@@ -1,13 +1,15 @@
-/// Regression tests for bulk-import exclusion in ChartDataService.
+/// Regression tests for bulk-import handling in ChartDataService.
 ///
-/// For a profile that has ONLY bulk-prior completions (seeded into
-/// prior_completion_imports), both getDailyCompletions() and
-/// getCumulativeProgress() must return data with count = 0 everywhere.
+/// Updated for the trackAchievement chart-tier switch (W1-B / Phase A):
+/// charts now show LIVE + BULK-IN-TRACK completions but still exclude
+/// LIFETIME-ONLY imports. The previous all-zero expectation for
+/// bulkInTrack rows is no longer correct — those rows ARE charted now.
+/// Lifetime-only imports remain excluded.
 ///
-/// Updated for Layer 3 migration: the old kBulkPriorSentinelMs timestamp
-/// filter is replaced by the prior_completion_imports LEFT JOIN mechanism.
-/// These tests seed proper import records instead of relying on a magic
-/// timestamp to trigger exclusion.
+/// The old kBulkPriorSentinelMs timestamp filter was replaced earlier by
+/// the prior_completion_imports LEFT JOIN mechanism (Layer 3). These
+/// tests seed proper import records instead of relying on a magic
+/// timestamp to trigger inclusion/exclusion.
 library;
 
 import 'package:drift/drift.dart' show Value;
@@ -49,8 +51,42 @@ void main() {
   });
 
   /// Seeds a bulkInTrack completion: event row + prior_completion_imports record.
-  /// This is the correct Layer 3 representation of a bulk-prior import.
-  Future<void> insertBulkImport({String sefariaRef = 'ref_1'}) async {
+  /// This is the canonical representation of a bulk-prior import.
+  ///
+  /// Under [CompletionTierFilter.trackAchievement] (used by charts), these
+  /// rows ARE counted on the chart — bulkInTrack rows belong to a real
+  /// track and represent real per-track learning.
+  Future<void> insertBulkInTrack({
+    String sefariaRef = 'ref_1',
+    DateTime? at,
+  }) async {
+    await seedCompletion(
+      db,
+      CompletionEventsCompanion.insert(
+        profileId: profileId,
+        curriculumId: 'mishnayos',
+        sefariaRef: sefariaRef,
+        stageId: 1,
+        trackType: 'personal',
+        trackId: Value(trackId),
+        eventTimestamp: at ?? oldSentinelDate,
+      ),
+    );
+    await db.priorCompletionImportDao.batchInsertImports([
+      PriorCompletionImportsCompanion.insert(
+        profileId: profileId,
+        curriculumId: 'mishnayos',
+        sefariaRef: sefariaRef,
+        stageId: 1,
+        trackType: 'personal',
+        source: 'bulkInTrack',
+      ),
+    ]);
+  }
+
+  /// Seeds a lifetimeOnly import — these MUST NOT appear on charts under any
+  /// tier other than [CompletionTierFilter.lifetime].
+  Future<void> insertLifetimeOnly({String sefariaRef = 'ref_1'}) async {
     await seedCompletion(
       db,
       CompletionEventsCompanion.insert(
@@ -70,56 +106,22 @@ void main() {
         sefariaRef: sefariaRef,
         stageId: 1,
         trackType: 'personal',
-        source: 'bulkInTrack',
+        source: 'lifetimeOnly',
       ),
     ]);
   }
 
-  group('ChartDataService — bulk-import exclusion (Layer 3)', () {
+  group('ChartDataService — tier behavior (trackAchievement)', () {
     group('getDailyCompletions', () {
       test(
-        'returns all-zero counts when only bulk import rows exist',
+        'bulkInTrack rows are charted (new trackAchievement tier)',
         () async {
-          // Insert several bulk import completions for different refs.
-          await insertBulkImport(sefariaRef: 'ref_1');
-          await insertBulkImport(sefariaRef: 'ref_2');
-          await insertBulkImport(sefariaRef: 'ref_3');
-
-          final start = DateTime(2024, 1, 1);
-          final end = DateTime(2026, 5, 20);
-
-          final result = await service.getDailyCompletions(
-            startDate: start,
-            endDate: end,
-          );
-
-          // Every day in the range must have count == 0.
-          expect(
-            result.every((d) => d.count == 0),
-            isTrue,
-            reason:
-                'bulk-import rows must not appear in daily completions',
-          );
-        },
-      );
-
-      test(
-        'live completions are still counted when bulk import rows also exist',
-        () async {
-          // Mix: one bulk import row + one live row.
-          await insertBulkImport(sefariaRef: 'ref_bulk');
-          await seedCompletion(
-            db,
-            CompletionEventsCompanion.insert(
-              profileId: profileId,
-              curriculumId: 'mishnayos',
-              sefariaRef: 'ref_live',
-              stageId: 1,
-              trackType: 'personal',
-              trackId: Value(trackId),
-              eventTimestamp: DateTime(2026, 3, 15, 10),
-            ),
-          );
+          // Stamp bulkInTrack rows on a recent date inside a daily-bucketed
+          // range so the chart shows them as a non-zero day.
+          final bulkDate = DateTime(2026, 3, 15, 10);
+          await insertBulkInTrack(sefariaRef: 'ref_1', at: bulkDate);
+          await insertBulkInTrack(sefariaRef: 'ref_2', at: bulkDate);
+          await insertBulkInTrack(sefariaRef: 'ref_3', at: bulkDate);
 
           final result = await service.getDailyCompletions(
             startDate: DateTime(2026, 3, 15),
@@ -129,17 +131,67 @@ void main() {
           expect(result, hasLength(1));
           expect(
             result.first.count,
-            1,
-            reason: 'live completion must still be counted',
+            3,
+            reason:
+                'bulkInTrack rows MUST be visible on the daily-activity '
+                'chart under the trackAchievement tier (W1-B / Phase A).',
           );
         },
       );
 
+      test('lifetimeOnly rows are EXCLUDED from charts', () async {
+        await insertLifetimeOnly(sefariaRef: 'ref_lt');
+
+        final result = await service.getDailyCompletions(
+          startDate: DateTime(1990, 1, 1),
+          endDate: DateTime(2026, 12, 31),
+        );
+
+        expect(
+          result.every((d) => d.count == 0),
+          isTrue,
+          reason:
+              'lifetimeOnly rows must not appear on per-track charts '
+              'under the trackAchievement tier.',
+        );
+      });
+
+      test('live + bulkInTrack rows BOTH count on the chart', () async {
+        await insertBulkInTrack(
+          sefariaRef: 'ref_bulk',
+          at: DateTime(2026, 3, 15, 9),
+        );
+        await seedCompletion(
+          db,
+          CompletionEventsCompanion.insert(
+            profileId: profileId,
+            curriculumId: 'mishnayos',
+            sefariaRef: 'ref_live',
+            stageId: 1,
+            trackType: 'personal',
+            trackId: Value(trackId),
+            eventTimestamp: DateTime(2026, 3, 15, 10),
+          ),
+        );
+
+        final result = await service.getDailyCompletions(
+          startDate: DateTime(2026, 3, 15),
+          endDate: DateTime(2026, 3, 15),
+        );
+
+        expect(result, hasLength(1));
+        expect(
+          result.first.count,
+          2,
+          reason: 'both live AND bulkInTrack must be counted',
+        );
+      });
+
       test(
-        'sentinel-stamped row WITHOUT import record is treated as live (Layer 3 contract)',
+        'sentinel-stamped row WITHOUT import record is treated as live',
         () async {
           // A row that happens to have the old sentinel timestamp, but is NOT
-          // in prior_completion_imports, is treated as live in Layer 3.
+          // in prior_completion_imports, is treated as live.
           await seedCompletion(
             db,
             CompletionEventsCompanion.insert(
@@ -158,8 +210,6 @@ void main() {
             endDate: DateTime(2026, 12, 31),
           );
 
-          // The sentinel-timestamped row without an import record IS counted
-          // as live — timestamp alone no longer drives exclusion.
           expect(
             result.any((d) => d.count > 0),
             isTrue,
@@ -172,37 +222,58 @@ void main() {
     });
 
     group('getCumulativeProgress', () {
+      test('bulkInTrack rows accumulate on the cumulative chart', () async {
+        await insertBulkInTrack(
+          sefariaRef: 'ref_1',
+          at: DateTime(2026, 3, 15, 9),
+        );
+        await insertBulkInTrack(
+          sefariaRef: 'ref_2',
+          at: DateTime(2026, 3, 16, 9),
+        );
+
+        final result = await service.getCumulativeProgress(
+          startDate: DateTime(2026, 3, 14),
+          endDate: DateTime(2026, 3, 16),
+        );
+
+        expect(result, hasLength(3));
+        expect(result[0].total, 0, reason: 'no completions on March 14');
+        expect(result[1].total, 1, reason: 'one bulkInTrack on March 15');
+        expect(
+          result[2].total,
+          2,
+          reason: 'second bulkInTrack on March 16 — cumulative is 2',
+        );
+      });
+
+      test('lifetimeOnly rows do NOT inflate cumulativeBeforeStart', () async {
+        await insertLifetimeOnly(sefariaRef: 'ref_lt1');
+        await insertLifetimeOnly(sefariaRef: 'ref_lt2');
+
+        final result = await service.getCumulativeProgress(
+          startDate: DateTime(2026, 3, 14),
+          endDate: DateTime(2026, 3, 16),
+        );
+
+        expect(result, hasLength(3));
+        expect(
+          result.every((p) => p.total == 0),
+          isTrue,
+          reason:
+              'lifetimeOnly rows must not inflate cumulativeBeforeStart '
+              'or any daily total in getCumulativeProgress',
+        );
+      });
+
       test(
-        'returns all-zero totals when only bulk import rows exist',
+        'live completions accumulate correctly when bulkInTrack also exists',
         () async {
-          await insertBulkImport(sefariaRef: 'ref_1');
-          await insertBulkImport(sefariaRef: 'ref_2');
-
-          final start = DateTime(2024, 1, 1);
-          final end = DateTime(2026, 5, 20);
-
-          final result = await service.getCumulativeProgress(
-            startDate: start,
-            endDate: end,
+          // bulkInTrack row counts under trackAchievement.
+          await insertBulkInTrack(
+            sefariaRef: 'ref_bulk',
+            at: DateTime(2026, 3, 14, 9),
           );
-
-          // All totals should be zero — bulk import rows excluded from both the
-          // day-range counts AND the cumulativeBeforeStart calculation.
-          expect(
-            result.every((p) => p.total == 0),
-            isTrue,
-            reason:
-                'bulk-import rows must not inflate cumulativeBeforeStart '
-                'or any daily total in getCumulativeProgress',
-          );
-        },
-      );
-
-      test(
-        'live completions accumulate correctly when bulk import rows also exist',
-        () async {
-          // Bulk import row should not appear.
-          await insertBulkImport(sefariaRef: 'ref_bulk');
           // Live row on 2026-03-15.
           await seedCompletion(
             db,
@@ -222,16 +293,21 @@ void main() {
             endDate: DateTime(2026, 3, 16),
           );
 
-          // Day 0 (March 14): 0 — no live completions before start
-          // Day 1 (March 15): 1 — the live completion
-          // Day 2 (March 16): 1 — no additional completions
           expect(result, hasLength(3));
-          expect(result[0].total, 0, reason: 'no live completions on March 14');
-          expect(result[1].total, 1, reason: 'one live completion on March 15');
+          expect(
+            result[0].total,
+            1,
+            reason: 'bulkInTrack on March 14 counts immediately',
+          );
+          expect(
+            result[1].total,
+            2,
+            reason: 'live completion on March 15 — cumulative is 2',
+          );
           expect(
             result[2].total,
-            1,
-            reason: 'cumulative stays at 1 on March 16',
+            2,
+            reason: 'cumulative stays at 2 on March 16',
           );
         },
       );
