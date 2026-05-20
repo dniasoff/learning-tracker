@@ -1,3 +1,17 @@
+// Import so the typedef on line 10 can reference SyncPushException within this
+// file (export alone does not bring the symbol into scope here).
+import 'package:learning_tracker/core/sync/exceptions/sync_push_exception.dart'
+    show SyncPushException;
+
+// Re-export SyncPushException so existing importers of this file don't break
+// after the move to core/sync/exceptions/ (W7.3).
+export 'package:learning_tracker/core/sync/exceptions/sync_push_exception.dart'
+    show SyncPushException;
+
+/// Backward-compat alias — callers that catch [BatchPushException] continue
+/// to work; new code should catch [SyncPushException] directly.
+typedef BatchPushException = SyncPushException;
+
 /// Firestore I/O facade.
 ///
 /// `FirestoreGateway` is the public seam between the rest of the sync
@@ -214,6 +228,16 @@ abstract class FirestoreGateway {
     required String collection,
     required String docId,
   });
+
+  // ── W2.29 additions — stage_definitions/ collection ──────────────────────
+
+  /// Push a single stage definition document to the `stage_definitions/`
+  /// subcollection. The document ID is derived from `trackId` and `stageOrder`
+  /// so that the push is idempotent and updates overwrite previous values.
+  Future<void> pushStageDefinition({
+    required int profileId,
+    required Map<String, dynamic> data,
+  });
 }
 
 /// Result of [FirestoreGateway.fetchPage].
@@ -224,26 +248,4 @@ abstract class FirestoreGateway {
 class FirestorePage {
   const FirestorePage({required this.rows});
   final List<Map<String, dynamic>> rows;
-}
-
-/// Thrown by [FirestoreGateway.pushCompletionsBatch] when one of its
-/// sequentially-committed chunks fails.
-///
-/// [committed] holds the outbox entityKeys whose documents *did* reach
-/// Firestore (the chunks that committed before the failure). The caller
-/// (`OutboxProcessor`) deletes exactly those outbox rows and marks only the
-/// remainder as attempted — so a row that genuinely committed is never
-/// re-pushed and never dead-lettered (H3).
-class BatchPushException implements Exception {
-  BatchPushException({required this.committed, required this.cause});
-
-  /// entityKeys of completions that committed before the failure.
-  final List<String> committed;
-
-  /// The underlying error that aborted the failing chunk.
-  final Object cause;
-
-  @override
-  String toString() =>
-      'BatchPushException(committed: ${committed.length}, cause: $cause)';
 }

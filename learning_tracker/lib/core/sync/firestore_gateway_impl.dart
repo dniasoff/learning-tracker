@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
+import 'package:learning_tracker/core/sync/exceptions/sync_push_exception.dart';
 import 'package:learning_tracker/core/sync/firestore_gateway.dart';
 import 'package:learning_tracker/features/account/domain/repositories/auth_repository.dart';
 
@@ -242,9 +243,9 @@ class FirestoreGatewayImpl implements FirestoreGateway {
       try {
         await batch.commit();
       } catch (e) {
-        throw BatchPushException(
+        throw SyncPushException(
           committed: List.unmodifiable(pushed),
-          cause: e,
+          pushCause: e,
         );
       }
       pushed.addAll(chunk.map((e) => e.entityKey));
@@ -709,6 +710,30 @@ class FirestoreGatewayImpl implements FirestoreGateway {
     final data = snap.data();
     if (data == null) return null;
     return _normalizeRow({...data, 'firestore_id': snap.id});
+  }
+
+  // ── W2.29 additions — stage_definitions/ collection ─────────────────────
+
+  @override
+  Future<void> pushStageDefinition({
+    required int profileId,
+    required Map<String, dynamic> data,
+  }) async {
+    final collection = _collection(profileId, 'stage_definitions');
+    if (collection == null) throw _notAuthenticated;
+    // Doc ID: "{trackId}_{stageOrder}" — deterministic, overwrites cleanly.
+    final trackId = data['track_id']?.toString() ?? '';
+    final stageOrder = data['stage_order']?.toString() ?? '';
+    if (trackId.isEmpty || stageOrder.isEmpty) {
+      throw ArgumentError(
+        'pushStageDefinition requires non-null track_id and stage_order',
+      );
+    }
+    final docId = '${trackId}_$stageOrder';
+    await collection.doc(docId).set({
+      ..._stripInternalKeys(data),
+      'synced_at': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
   }
 
   // ── helpers ───────────────────────────────────────────────────────────────
