@@ -5,6 +5,7 @@ import 'package:learning_tracker/core/sync/merge/completion_event_merger.dart';
 import 'package:learning_tracker/core/sync/merge/drift_merge_store.dart';
 import 'package:learning_tracker/core/sync/merge/entity_merger.dart';
 import 'package:learning_tracker/core/sync/merge/learner_profile_merger.dart';
+import 'package:learning_tracker/core/sync/merge/learning_order_merger.dart';
 import 'package:learning_tracker/core/sync/merge/merge_router.dart';
 import 'package:learning_tracker/core/sync/merge/profile_program_merger.dart';
 import 'package:learning_tracker/core/sync/merge/settings_merger.dart';
@@ -12,7 +13,7 @@ import 'package:learning_tracker/core/sync/merge/stage_definition_merger.dart';
 import 'package:learning_tracker/core/sync/merge/streak_event_merger.dart';
 import 'package:learning_tracker/core/sync/merge/track_config_merger.dart';
 
-/// Provider for [MergeRouter] — wires all 8 [EntityMerger] implementations
+/// Provider for [MergeRouter] — wires all [EntityMerger] implementations
 /// with a concrete [DriftMergeStore] (DNI-334 AC4 + AC5).
 ///
 /// [StreakEventMerger] uses [UserDatabase] directly (via [StreakEventLog])
@@ -31,6 +32,7 @@ final mergeRouterProvider = Provider<MergeRouter>((ref) {
       EntityKind.settings: SettingsMerger(store: store),
       EntityKind.stageDefinition: StageDefinitionMerger(store: store),
       EntityKind.profileProgram: ProfileProgramMerger(store: store),
+      EntityKind.learningOrder: LearningOrderMerger(store: store), // W2.26
     },
   );
 });

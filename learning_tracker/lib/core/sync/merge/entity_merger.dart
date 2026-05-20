@@ -18,6 +18,7 @@ class EntityKind {
   static const settings = 'settings';
   static const stageDefinition = 'stage_definition';
   static const profileProgram = 'profile_program';
+  static const learningOrder = 'learning_order'; // W2.26 — closes C3/H3
 
   /// Deterministic enumeration order for tests and diagnostics.
   static const List<String> all = [
@@ -29,6 +30,7 @@ class EntityKind {
     settings,
     stageDefinition,
     profileProgram,
+    learningOrder,
   ];
 }
 

@@ -95,6 +95,22 @@ class DriftMergeStore implements MergeStore {
         if (row != null) return null;
         return null;
 
+      case EntityKind.learningOrder:
+        // Natural key: "curriculum_id|sefaria_ref"
+        final loparts = naturalKey.split('|');
+        if (loparts.length != 2) return null;
+        final loCurriculumId = loparts[0];
+        final loSefariaRef = loparts[1];
+        final loRow =
+            await (_db.select(_db.learningOrder)..where(
+                  (t) =>
+                      t.profileId.equals(profileId) &
+                      t.curriculumId.equals(loCurriculumId) &
+                      t.sefariaRef.equals(loSefariaRef),
+                ))
+                .getSingleOrNull();
+        return loRow?.updatedAt;
+
       default:
         return null;
     }
@@ -127,6 +143,9 @@ class DriftMergeStore implements MergeStore {
 
       case EntityKind.profileProgram:
         await _upsertProfileProgram(profileId, fields);
+
+      case EntityKind.learningOrder:
+        await _upsertLearningOrder(profileId, fields);
 
       default:
         // Unknown kind — no-op (the MergeRouter has already validated the kind).
@@ -476,6 +495,34 @@ class DriftMergeStore implements MergeStore {
       programId: programId,
       trackingStartDate: trackingStartDate,
       trackingStartRef: trackingStartRef,
+    );
+  }
+
+  Future<void> _upsertLearningOrder(
+    int profileId,
+    Map<String, dynamic> fields,
+  ) async {
+    final curriculumId = fields['curriculum_id'] as String?;
+    final sefariaRef = fields['sefaria_ref'] as String?;
+    final userSortOrder =
+        fields['user_sort_order'] as int? ??
+        int.tryParse(fields['user_sort_order']?.toString() ?? '');
+    final updatedAt = _parseDateTime(fields['updated_at']);
+
+    if (curriculumId == null || sefariaRef == null || userSortOrder == null) {
+      return;
+    }
+    final ts = updatedAt ?? DateTimeFactory.nowUtc();
+
+    await _db.learningOrderDao.upsertLearningOrderIfNewer(
+      LearningOrderCompanion.insert(
+        profileId: profileId,
+        curriculumId: curriculumId,
+        sefariaRef: sefariaRef,
+        userSortOrder: userSortOrder,
+        updatedAt: Value(ts),
+      ),
+      updatedAt: ts,
     );
   }
 

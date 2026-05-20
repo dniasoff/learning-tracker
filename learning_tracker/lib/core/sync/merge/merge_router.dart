@@ -35,6 +35,7 @@ class MergeRouter implements MergeDispatcher {
       case EntityKind.settings:
       case EntityKind.stageDefinition:
       case EntityKind.profileProgram:
+      case EntityKind.learningOrder: // W2.26 — closes C3/H3
         final merger = _mergers[kind];
         if (merger == null) {
           // Kind is recognised but no merger wired up — treat as a
