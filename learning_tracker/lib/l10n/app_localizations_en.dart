@@ -671,11 +671,11 @@ class AppLocalizationsEn extends AppLocalizations {
       'Per curriculum: expand to browse what you have learned';
 
   @override
-  String get addWhatYouLearned => 'Add what you\'ve learned';
+  String get addWhatYouLearned => 'Add Lifetime Learning';
 
   @override
   String get addWhatYouLearnedSettingsSubtitle =>
-      'Log custom Mitzvot or Torah studies';
+      'Entries appear in your Lifetime Learning reports';
 
   @override
   String get lifetimeLearning => 'Lifetime Learning';
@@ -710,11 +710,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get lifetimeNotStarted => 'Not started';
 
   @override
-  String get lifetimeAddHeaderTitle => 'Add what you\'ve learned';
+  String get lifetimeAddHeaderTitle => 'Add Lifetime Learning';
 
   @override
   String get lifetimeAddHeaderSubtitle =>
-      'Mark what you\'ve already studied — in print or anywhere — as lifetime learning.';
+      'Mark what you\'ve already studied as lifetime learning.';
 
   @override
   String get lifetimeHowItWorksTitle => 'How it works';
@@ -998,9 +998,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get profilePickerYourProfiles => 'YOUR PROFILES';
-
-  @override
-  String get profilePickerChildProfiles => 'CHILD PROFILES';
 
   @override
   String get profilePickerTalmidProfiles => 'TALMID PROFILES';

@@ -1,31 +1,26 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
-import 'package:learning_tracker/features/account/presentation/providers/connectivity_providers.dart';
 
-/// Slim top banner shown above the app bar when a cloud-born user
-/// is temporarily offline. Local-born users never see this banner —
-/// being offline is their permanent state, not news (v2 §4.6).
+/// Slim top banner shown above the app bar when a cloud-born user is
+/// temporarily offline. Local-born users never see this banner — being
+/// offline is their permanent state, not news (v2 §4.6).
 ///
-/// Slides down on offline, slides up on reconnect.
-class OfflineTopBanner extends ConsumerWidget {
-  const OfflineTopBanner({super.key});
+/// Pure UI: the parent (app_shell) is the single source of truth for
+/// "should the banner be visible" because it also sizes the appBar's
+/// `PreferredSize` from the same answer. Watching the connectivity +
+/// auth tier from two places risks drift; this widget renders what it
+/// is told.
+class OfflineTopBanner extends StatelessWidget {
+  const OfflineTopBanner({super.key, required this.visible});
+
+  /// Whether the banner should currently be shown.
+  final bool visible;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final authState = ref.watch(authStateProvider);
-    if (!authState.isCloudBorn) return const SizedBox.shrink();
-
-    final connectivity = ref.watch(connectivityStreamProvider);
-    final isOffline = connectivity.maybeWhen(
-      data: (online) => !online,
-      orElse: () => false,
-    );
-
+  Widget build(BuildContext context) {
     return AnimatedSize(
       duration: const Duration(milliseconds: 250),
       curve: Curves.easeOut,
-      child: isOffline
+      child: visible
           ? Semantics(
               liveRegion: true,
               label: "Offline — changes will sync when you're back online",

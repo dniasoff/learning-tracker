@@ -209,7 +209,23 @@ class _PinEntryWidgetState extends State<PinEntryWidget> {
 }
 
 /// Individual PIN digit input field.
-class _PinDigitField extends StatelessWidget {
+///
+/// Renders a fixed-size rounded slot. The actual digit is held in the
+/// controller and obscured at the platform layer (`obscureText: true`) so
+/// screen readers, autofill, and IME suggestions do NOT leak the PIN, and
+/// the text styling (transparent colour) hides the glyph from sight while
+/// keeping the cursor at its natural height.
+///
+/// The visible filled-slot indicator is drawn by us as a small centred
+/// [Container] in a [Stack] overlay — *not* by `obscuringCharacter: '●'`.
+/// That obscuring glyph inherits the field's font size; the `●`
+/// (BLACK CIRCLE, U+25CF) glyph is metric-wider than the digit glyphs in
+/// most fonts, and at the system's max text-scale setting it overflows
+/// the slot — visible as a giant half-circle clipped by the right edge.
+/// Drawing the dot ourselves makes its size independent of font metrics
+/// and text-scale; `obscuringCharacter: ' '` (a space) keeps the platform-
+/// layer obscuring semantics without drawing anything visible.
+class _PinDigitField extends StatefulWidget {
   const _PinDigitField({
     required this.controller,
     required this.focusNode,
@@ -223,66 +239,109 @@ class _PinDigitField extends StatelessWidget {
   final void Function(String) onChanged;
 
   @override
+  State<_PinDigitField> createState() => _PinDigitFieldState();
+}
+
+class _PinDigitFieldState extends State<_PinDigitField> {
+  @override
+  void initState() {
+    super.initState();
+    widget.controller.addListener(_onControllerChange);
+  }
+
+  @override
+  void dispose() {
+    widget.controller.removeListener(_onControllerChange);
+    super.dispose();
+  }
+
+  void _onControllerChange() {
+    if (mounted) setState(() {});
+  }
+
+  @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final hasDigit = widget.controller.text.isNotEmpty;
+    final borderColor = widget.hasError
+        ? theme.colorScheme.error
+        : theme.colorScheme.outline;
 
     return SizedBox(
       width: 56,
       height: 64,
-      child: TextField(
-        controller: controller,
-        focusNode: focusNode,
-        keyboardType: TextInputType.number,
-        textAlign: TextAlign.center,
-        maxLength: 1,
-        obscureText: true,
-        obscuringCharacter: '●',
-        style: theme.textTheme.headlineMedium?.copyWith(
-          fontWeight: FontWeight.bold,
-        ),
-        decoration: InputDecoration(
-          counterText: '',
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(
-              color: hasError
-                  ? theme.colorScheme.error
-                  : theme.colorScheme.outline,
-              width: 2,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          TextField(
+            controller: widget.controller,
+            focusNode: widget.focusNode,
+            keyboardType: TextInputType.number,
+            textAlign: TextAlign.center,
+            maxLength: 1,
+            // Keep platform-layer obscuring (`obscureText: true`) so screen
+            // readers / autofill don't leak the PIN, but make the glyph
+            // invisible so the visible indicator comes from our Stack
+            // overlay (sized independently of font metrics — see class doc).
+            // Space as the obscuring char so no visible character is drawn.
+            obscureText: true,
+            obscuringCharacter: ' ',
+            // Headline-medium metrics keep the cursor at a natural height;
+            // transparent colour hides the glyph the user typed.
+            style: theme.textTheme.headlineMedium?.copyWith(
+              color: Colors.transparent,
+              fontWeight: FontWeight.bold,
             ),
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(
-              color: hasError
-                  ? theme.colorScheme.error
-                  : theme.colorScheme.outline,
-              width: 2,
+            cursorColor: theme.colorScheme.primary,
+            decoration: InputDecoration(
+              counterText: '',
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: borderColor, width: 2),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: borderColor, width: 2),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(
+                  color: widget.hasError
+                      ? theme.colorScheme.error
+                      : theme.colorScheme.primary,
+                  width: 2,
+                ),
+              ),
+              errorBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(
+                  color: theme.colorScheme.error,
+                  width: 2,
+                ),
+              ),
+              filled: true,
+              fillColor: widget.hasError
+                  ? theme.colorScheme.errorContainer.withValues(alpha: 0.1)
+                  : theme.colorScheme.surface,
             ),
+            inputFormatters: [
+              FilteringTextInputFormatter.digitsOnly,
+              LengthLimitingTextInputFormatter(1),
+            ],
+            onChanged: widget.onChanged,
           ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(
-              color: hasError
-                  ? theme.colorScheme.error
-                  : theme.colorScheme.primary,
-              width: 2,
+          if (hasDigit)
+            IgnorePointer(
+              child: Container(
+                width: 14,
+                height: 14,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: theme.colorScheme.onSurface,
+                ),
+              ),
             ),
-          ),
-          errorBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(color: theme.colorScheme.error, width: 2),
-          ),
-          filled: true,
-          fillColor: hasError
-              ? theme.colorScheme.errorContainer.withValues(alpha: 0.1)
-              : theme.colorScheme.surface,
-        ),
-        inputFormatters: [
-          FilteringTextInputFormatter.digitsOnly,
-          LengthLimitingTextInputFormatter(1),
         ],
-        onChanged: onChanged,
       ),
     );
   }

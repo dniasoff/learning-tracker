@@ -175,7 +175,8 @@ void main() {
 
   tearDown(() => db.close());
 
-  Widget buildScreen({bool useHebrewTerms = false}) => ProviderScope(
+  Widget buildScreen({bool useHebrewTerms = false, bool hasChazara = true}) =>
+      ProviderScope(
         overrides: [
           userDatabaseProvider.overrideWith((ref) => db),
           activeProfileIdProvider.overrideWith(() => _ProfileIdOverride(1)),
@@ -188,6 +189,14 @@ void main() {
           ),
           dashboardStreakProvider.overrideWith(
             (ref) => Stream.value((currentStreak: 3, maxStreak: 7)),
+          ),
+          // The screen now hides the chazara term from chart titles + the
+          // all-time tile when no active track has chazara stages
+          // (per-track chazara rule). Default the override to true so
+          // existing assertions exercise the chazara-on path; tests that
+          // need the chazara-off path pass `hasChazara: false`.
+          anyActiveTrackHasChazaraProvider.overrideWith(
+            (ref) => Future.value(hasChazara),
           ),
         ],
         child: const MaterialApp(
@@ -223,100 +232,100 @@ void main() {
     expect(find.text('Limud & Chazaros'), findsOneWidget);
   });
 
-  testWidgets(
-    'live + bulkInTrack are both included; lifetimeOnly is NOT',
-    (tester) async {
-      // Seed three completions today (so the default "Last 7 Days" window
-      // includes them):
-      //   - 1 live (stage 1) on today @ 10:00 — counts.
-      //   - 1 bulkInTrack on today @ 11:00 — counts (track learning).
-      //   - 1 lifetimeOnly on today @ 12:00 — does NOT count (outside the
-      //     track-learning tier; surfaces under Lifetime Knowledge instead).
-      //
-      // Track-learning rule (2026-05-21): everything except points and
-      // streak treats live + bulk-mark in-track as one source.
-      //
-      // Note on the bulk-mark date: production bulk-mark stamps `1/1/2000`
-      // (sentinel) so bulk items naturally fall outside finite recent
-      // windows; this test deliberately seeds the bulkInTrack row with
-      // `bulkAt` (today) so the date-windowed query exercises the tier
-      // filter rather than the date filter — that's the regression we
-      // care about: the SQL filter must NOT exclude bulkInTrack by source.
-      //
-      // F16: Route through `DateTimeFactory.nowLocal()` so the seed clock
-      // matches the production screen's clock when a future test pumps a
-      // frozen clock via `useLocalDayClock`.
-      final today = DateTimeFactory.nowLocal();
-      final liveAt = DateTime(today.year, today.month, today.day, 10);
-      final bulkAt = DateTime(today.year, today.month, today.day, 11);
-      final lifetimeAt = DateTime(today.year, today.month, today.day, 12);
+  testWidgets('live + bulkInTrack are both included; lifetimeOnly is NOT', (
+    tester,
+  ) async {
+    // Seed three completions today (so the default "Last 7 Days" window
+    // includes them):
+    //   - 1 live (stage 1) on today @ 10:00 — counts.
+    //   - 1 bulkInTrack on today @ 11:00 — counts (track learning).
+    //   - 1 lifetimeOnly on today @ 12:00 — does NOT count (outside the
+    //     track-learning tier; surfaces under Lifetime Knowledge instead).
+    //
+    // Track-learning rule (2026-05-21): everything except points and
+    // streak treats live + bulk-mark in-track as one source.
+    //
+    // Note on the bulk-mark date: production bulk-mark stamps `1/1/2000`
+    // (sentinel) so bulk items naturally fall outside finite recent
+    // windows; this test deliberately seeds the bulkInTrack row with
+    // `bulkAt` (today) so the date-windowed query exercises the tier
+    // filter rather than the date filter — that's the regression we
+    // care about: the SQL filter must NOT exclude bulkInTrack by source.
+    //
+    // F16: Route through `DateTimeFactory.nowLocal()` so the seed clock
+    // matches the production screen's clock when a future test pumps a
+    // frozen clock via `useLocalDayClock`.
+    final today = DateTimeFactory.nowLocal();
+    final liveAt = DateTime(today.year, today.month, today.day, 10);
+    final bulkAt = DateTime(today.year, today.month, today.day, 11);
+    final lifetimeAt = DateTime(today.year, today.month, today.day, 12);
 
-      await _seedLive(
-        db,
-        trackId: trackId,
-        ref: 'live_a',
-        stageId: 1,
-        at: liveAt,
-      );
-      await _seedBulkInTrack(
-        db,
-        trackId: trackId,
-        ref: 'bulk_a',
-        stageId: 1,
-        at: bulkAt,
-      );
-      await _seedLifetimeOnly(
-        db,
-        trackId: trackId,
-        ref: 'lifetime_a',
-        stageId: 1,
-        at: lifetimeAt,
-      );
+    await _seedLive(
+      db,
+      trackId: trackId,
+      ref: 'live_a',
+      stageId: 1,
+      at: liveAt,
+    );
+    await _seedBulkInTrack(
+      db,
+      trackId: trackId,
+      ref: 'bulk_a',
+      stageId: 1,
+      at: bulkAt,
+    );
+    await _seedLifetimeOnly(
+      db,
+      trackId: trackId,
+      ref: 'lifetime_a',
+      stageId: 1,
+      at: lifetimeAt,
+    );
 
-      await tester.pumpWidget(buildScreen());
-      await tester.pumpAndSettle();
-
-      // Drill down into the LimudimChazarosBarChart to inspect the data
-      // actually wired through to the widget — guarantees we are checking
-      // what the user sees, not the spy.
-      final chartFinder = find.byType(LimudimChazarosBarChart);
-      expect(chartFinder, findsOneWidget);
-      final chart = tester.widget<LimudimChazarosBarChart>(chartFinder);
-      final todayBucket = chart.data.firstWhere(
-        (d) =>
-            d.date.year == today.year &&
-            d.date.month == today.month &&
-            d.date.day == today.day,
-      );
-
-      // Bar reflects live + bulkInTrack; lifetimeOnly is dropped by the
-      // trackAchievement tier filter on the underlying service.
-      expect(
-        todayBucket.limudCount,
-        2,
-        reason: 'one live + one bulkInTrack stage-1 mark today',
-      );
-      expect(todayBucket.chazaraCount, 0);
-      expect(todayBucket.total, 2);
-    },
-  );
-
-  testWidgets(
-      'Hebrew Terms toggle swaps domain terms (chart title) but NOT structural title',
-      (tester) async {
-    // "Recent Activity" is a structural string per product-rules.md Rule 1 —
-    // it follows UI locale only and must never change with the Hebrew Terms setting.
-    await tester.pumpWidget(buildScreen(useHebrewTerms: true));
+    await tester.pumpWidget(buildScreen());
     await tester.pumpAndSettle();
 
-    // Structural title must remain in UI locale (English) regardless of Hebrew Terms.
-    expect(find.text('Recent Activity'), findsOneWidget);
-    expect(find.text('פעילות אחרונה'), findsNothing);
+    // Drill down into the LimudimChazarosBarChart to inspect the data
+    // actually wired through to the widget — guarantees we are checking
+    // what the user sees, not the spy.
+    final chartFinder = find.byType(LimudimChazarosBarChart);
+    expect(chartFinder, findsOneWidget);
+    final chart = tester.widget<LimudimChazarosBarChart>(chartFinder);
+    final todayBucket = chart.data.firstWhere(
+      (d) =>
+          d.date.year == today.year &&
+          d.date.month == today.month &&
+          d.date.day == today.day,
+    );
 
-    // Domain terms inside the screen DO change: chart section title switches
-    // to Hebrew script when the toggle is ON.
-    expect(find.text('לימוד & חזרות'), findsOneWidget);
+    // Bar reflects live + bulkInTrack; lifetimeOnly is dropped by the
+    // trackAchievement tier filter on the underlying service.
+    expect(
+      todayBucket.limudCount,
+      2,
+      reason: 'one live + one bulkInTrack stage-1 mark today',
+    );
+    expect(todayBucket.chazaraCount, 0);
+    expect(todayBucket.total, 2);
   });
+
+  testWidgets(
+    'Hebrew Terms toggle swaps domain terms (chart title) but NOT structural title',
+    (tester) async {
+      // "Recent Activity" is a structural string per product-rules.md Rule 1 —
+      // it follows UI locale only and must never change with the Hebrew Terms setting.
+      await tester.pumpWidget(buildScreen(useHebrewTerms: true));
+      await tester.pumpAndSettle();
+
+      // Structural title must remain in UI locale (English) regardless of Hebrew Terms.
+      expect(find.text('Recent Activity'), findsOneWidget);
+      expect(find.text('פעילות אחרונה'), findsNothing);
+
+      // Domain terms inside the screen DO change: chart section title switches
+      // to Hebrew script when the toggle is ON.
+      expect(find.text('לימוד & חזרות'), findsOneWidget);
+    },
+  );
 
   testWidgets('switching time-range pill triggers a fresh chart fetch', (
     tester,

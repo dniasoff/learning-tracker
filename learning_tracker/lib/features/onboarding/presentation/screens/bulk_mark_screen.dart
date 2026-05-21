@@ -48,15 +48,10 @@ class BulkMarkScreen extends ConsumerStatefulWidget {
   /// When provided, only content within these scopes is shown.
   final List<ScopeEntry>? scopeConstraints;
 
-  /// When true, completions are created with full gamification points.
-  /// Defaults to false (onboarding "prior learning" bulk marks award no points).
-  final bool awardGamificationPoints;
-
   const BulkMarkScreen({
     super.key,
     required this.curriculumId,
     this.scopeConstraints,
-    this.awardGamificationPoints = false,
   });
 
   @override
@@ -380,7 +375,6 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
         curriculumId: widget.curriculumId,
         resolvedItems: _resolvedItems!,
         stageIds: const [1],
-        awardGamificationPoints: widget.awardGamificationPoints,
       );
 
       setState(() {
@@ -395,9 +389,7 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
         final l10n = AppLocalizations.of(context)!;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(
-              l10n.bulkMarkConfirmationToast(result.itemCount),
-            ),
+            content: Text(l10n.bulkMarkConfirmationToast(result.itemCount)),
           ),
         );
       }

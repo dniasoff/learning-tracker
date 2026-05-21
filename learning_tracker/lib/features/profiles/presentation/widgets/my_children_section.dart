@@ -5,25 +5,22 @@ import 'package:learning_tracker/features/profiles/presentation/widgets/profile_
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 // ---------------------------------------------------------------------------
-// Segmented profile-picker sections (conditional headers — W6.14 refinement).
+// Own profiles section of the profile picker.
 //
-// Logic summary:
-//   ownChild == 0 && tutored == 0  →  ungrouped (no headers)
-//   ownChild > 0  || tutored > 0   →  "YOUR PROFILES" header shown
-//   ownChild > 0                   →  "CHILD PROFILES" sub-section also shown
-//   tutored > 0                    →  "TALMID PROFILES" shown by
-//                                     TutoredChildrenSection (unchanged)
+// The "YOUR PROFILES" header (and the sibling "TALMID PROFILES" header
+// rendered by TutoredChildrenSection) appear only when the current user has
+// at least one active tutored grant — i.e. is a rebbe with ≥1 talmid.
+// Otherwise the picker shows a single flat list with no headers.
+//
+// Within "YOUR PROFILES", child and adult profiles are co-mingled inside one
+// grid — there is no separate "CHILD PROFILES" sub-section.
 // ---------------------------------------------------------------------------
 
 /// Own-profile section ("YOUR PROFILES") of the profile picker.
 ///
 /// Shows a "YOUR PROFILES" header only when [showHeader] is true (i.e. when
-/// child or tutored profiles also exist). The grid always renders ALL owned
+/// the user has ≥1 active tutored grant). The grid always renders ALL owned
 /// profiles — adults and children together — plus the "Add Profile" card.
-///
-/// When segmentation is active ([showHeader] == true and [ownChildCount] > 0),
-/// the screen also inserts a [ChildProfilesSection] below this widget to label
-/// the child-profile subset.
 class OwnProfilesSection extends StatelessWidget {
   const OwnProfilesSection({
     super.key,
@@ -75,40 +72,6 @@ class OwnProfilesSection extends StatelessWidget {
           onProfileTap: onProfileTap,
           onProfileLongPress: onProfileLongPress,
           onAddProfile: onAddProfile,
-        ),
-      ],
-    );
-  }
-}
-
-/// "CHILD PROFILES" sub-section header shown after the own-profiles grid when
-/// child profiles exist and segmentation is active.
-///
-/// The child profile cards are rendered inside the single [ProfileGrid] in
-/// [OwnProfilesSection] — this widget only adds the visual label+divider.
-class ChildProfilesSection extends StatelessWidget {
-  const ChildProfilesSection({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final l10n = AppLocalizations.of(context)!;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        const SizedBox(height: 20),
-        const Divider(),
-        const SizedBox(height: 12),
-        Align(
-          alignment: AlignmentDirectional.centerStart,
-          child: Text(
-            l10n.profilePickerChildProfiles,
-            style: theme.textTheme.labelMedium?.copyWith(
-              color: AppTheme.brandInkMuted,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 0.6,
-            ),
-          ),
         ),
       ],
     );

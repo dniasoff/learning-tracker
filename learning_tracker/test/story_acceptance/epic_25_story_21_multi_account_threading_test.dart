@@ -226,31 +226,36 @@ void main() {
           child: MaterialApp(home: Scaffold(body: child)),
         );
 
-    testWidgets('OfflineTopBanner renders nothing for localBorn tier', (
+    testWidgets('OfflineTopBanner renders nothing when visible == false', (
       tester,
     ) async {
+      // The widget is now pure: it renders only what the `visible` flag
+      // says. The tier + connectivity gate moved to AppShellScreen (the
+      // single source of truth that also sizes the appBar's PreferredSize
+      // from the same decision). The localBorn-hides-banner semantics is
+      // therefore enforced by AppShellScreen passing `visible: false` for
+      // anyone except cloud-born offline users.
       await tester.pumpWidget(
         wrap(
           authState: _signedIn(1, Tier.localBorn),
-          child: const OfflineTopBanner(),
+          child: const OfflineTopBanner(visible: false),
         ),
       );
       await tester.pump();
-      // localBorn always hides the banner — see widget early-return.
       expect(find.byIcon(Icons.cloud_off), findsNothing);
     });
 
-    testWidgets('OfflineTopBanner renders nothing for signed-out users', (
+    testWidgets('OfflineTopBanner renders the banner when visible == true', (
       tester,
     ) async {
       await tester.pumpWidget(
         wrap(
           authState: const AuthState.signedOut(),
-          child: const OfflineTopBanner(),
+          child: const OfflineTopBanner(visible: true),
         ),
       );
       await tester.pump();
-      expect(find.byIcon(Icons.cloud_off), findsNothing);
+      expect(find.byIcon(Icons.cloud_off), findsOneWidget);
     });
 
     testWidgets('NoBackupBadge renders for localBorn tier', (tester) async {

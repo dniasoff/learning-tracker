@@ -185,8 +185,11 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   }
 
   void _onPinSetupComplete() {
-    // W6.1: after PIN setup, show the intent chooser (not addTrack directly).
-    setState(() => _phase = _ScreenPhase.intentChooser);
+    // Child profiles always go straight to track setup. The intent chooser
+    // (Track / Join to tutor / Skip) is adult-only — a child profile has no
+    // use for "Join to tutor" (only adults can be tutors) and no reason to
+    // skip onboarding before adding a track.
+    setState(() => _phase = _ScreenPhase.addTrack);
     unawaited(_saveState());
   }
 

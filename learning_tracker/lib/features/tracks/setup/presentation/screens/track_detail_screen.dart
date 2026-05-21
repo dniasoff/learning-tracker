@@ -38,63 +38,58 @@ final _trackGoalProvider = FutureProvider.autoDispose.family<Goal?, int>(
 /// Total items: from [scopedItemCountProvider] (0 when curriculum unknown).
 /// targetDate: deadline-goal date when available; otherwise today (so
 ///   requiredVelocity returns 0 — not meaningful for pace goals).
-final _trackPaceCalcProvider =
-    FutureProvider.autoDispose.family<PaceCalculator, CurriculumTrack>(
-  (ref, track) async {
-    final db = ref.watch(userDatabaseProvider);
-    final profileId = track.profileId;
+final _trackPaceCalcProvider = FutureProvider.autoDispose
+    .family<PaceCalculator, CurriculumTrack>((ref, track) async {
+      final db = ref.watch(userDatabaseProvider);
+      final profileId = track.profileId;
 
-    final allCompletions =
-        await db.completionDao.getCompletionsByTrackAndProfile(
-      track.id,
-      profileId,
-    );
+      final allCompletions = await db.completionDao
+          .getCompletionsByTrackAndProfile(track.id, profileId);
 
-    final trackStart = track.activatedAt.toLocal();
+      final trackStart = track.activatedAt.toLocal();
 
-    final liveCount = allCompletions
-        .where(
-          (c) =>
-              !c.completedAt.isBefore(trackStart) &&
-              !c.completedAt.isAtSameMomentAs(kBulkPriorSentinelDate),
-        )
-        .length;
+      final liveCount = allCompletions
+          .where(
+            (c) =>
+                !c.completedAt.isBefore(trackStart) &&
+                !c.completedAt.isAtSameMomentAs(kBulkPriorSentinelDate),
+          )
+          .length;
 
-    final bulkBaseline = allCompletions
-        .where(
-          (c) =>
-              c.completedAt.isAtSameMomentAs(kBulkPriorSentinelDate) ||
-              c.completedAt.isBefore(trackStart),
-        )
-        .length;
+      final bulkBaseline = allCompletions
+          .where(
+            (c) =>
+                c.completedAt.isAtSameMomentAs(kBulkPriorSentinelDate) ||
+                c.completedAt.isBefore(trackStart),
+          )
+          .length;
 
-    final curriculum = CurriculumId.values
-        .where((c) => c.storageKey == track.curriculumId)
-        .firstOrNull;
+      final curriculum = CurriculumId.values
+          .where((c) => c.storageKey == track.curriculumId)
+          .firstOrNull;
 
-    final totalItems = curriculum != null
-        ? await ref.watch(scopedItemCountProvider(curriculum).future)
-        : 0;
+      final totalItems = curriculum != null
+          ? await ref.watch(scopedItemCountProvider(curriculum).future)
+          : 0;
 
-    final goal = await db.goalDao.getGoalByTrack(track.id);
-    final clock = ref.watch(localDayClockProvider);
-    final targetDate =
-        (goal?.goalType == 'deadline' && goal?.targetDate != null)
-            ? goal!.targetDate!.toLocal()
-            : clock.today();
+      final goal = await db.goalDao.getGoalByTrack(track.id);
+      final clock = ref.watch(localDayClockProvider);
+      final targetDate =
+          (goal?.goalType == 'deadline' && goal?.targetDate != null)
+          ? goal!.targetDate!.toLocal()
+          : clock.today();
 
-    final today = clock.today();
+      final today = clock.today();
 
-    return PaceCalculator.compute(
-      totalItems: totalItems,
-      bulkBaseline: bulkBaseline,
-      liveProgress: liveCount,
-      trackStartDate: trackStart,
-      targetDate: targetDate,
-      today: today,
-    );
-  },
-);
+      return PaceCalculator.compute(
+        totalItems: totalItems,
+        bulkBaseline: bulkBaseline,
+        liveProgress: liveCount,
+        trackStartDate: trackStart,
+        targetDate: targetDate,
+        today: today,
+      );
+    });
 
 @RoutePage()
 class TrackDetailScreen extends ConsumerStatefulWidget {
@@ -182,8 +177,7 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
     final estimatedFinish = _estimatedFinish(goal, itemsRemaining, locale);
 
     final useHebrewCalendar = ref.watch(useHebrewDateProvider);
-    final paceCalc =
-        ref.watch(_trackPaceCalcProvider(track)).asData?.value;
+    final paceCalc = ref.watch(_trackPaceCalcProvider(track)).asData?.value;
 
     return Scaffold(
       backgroundColor: AppColors.surfaceF5,
@@ -601,7 +595,6 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
         builder: (_) => BulkMarkScreen(
           curriculumId: curriculum,
           scopeConstraints: scopeEntries.isEmpty ? null : scopeEntries,
-          awardGamificationPoints: true,
         ),
       ),
     );

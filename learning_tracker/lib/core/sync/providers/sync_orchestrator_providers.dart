@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:internet_connection_checker/internet_connection_checker.dart';
 import 'package:learning_tracker/core/analytics/analytics_provider.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/providers/crashlytics_provider.dart';
@@ -11,6 +12,7 @@ import 'package:learning_tracker/core/sync/providers/resolve_profile_id_provider
 import 'package:learning_tracker/core/sync/sync_orchestrator.dart';
 import 'package:learning_tracker/core/time/local_day_clock.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
+import 'package:learning_tracker/features/account/presentation/providers/connectivity_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/sync/data/local_data_upload_service.dart';
 import 'package:learning_tracker/features/sync/data/outbox_sync_write_facade.dart';
@@ -86,6 +88,28 @@ final syncOrchestratorProvider = Provider<SyncOrchestrator?>((ref) {
     logger: AppLogger(talker),
   );
 
+  // Connectivity stream: emits true on online, false on offline. The
+  // orchestrator uses this to self-heal the Firestore gRPC channel on
+  // reconnect (DNS wedging mid-session is the most common cause of the
+  // "Syncing…" hang — see SyncOrchestratorImpl._onConnectivityChange).
+  //
+  // We construct the stream with an explicit `hasConnection` seed so the
+  // first emission carries the current connectivity state. Without that
+  // seed the orchestrator can't tell whether a missing `previous` value
+  // means "fresh start, currently online" or "fresh start, currently
+  // offline" — and an app that starts offline must fire the reset on its
+  // first online transition. This mirrors `connectivityStreamProvider`'s
+  // logic; we don't reuse that provider directly because StreamProvider
+  // doesn't expose its underlying Stream via a synchronous getter in this
+  // Riverpod version.
+  final connectivityChecker = ref.read(internetConnectionCheckerProvider);
+  final connectivityStream = () async* {
+    yield await connectivityChecker.hasConnection;
+    yield* connectivityChecker.onStatusChange.map(
+      (status) => status == InternetConnectionStatus.connected,
+    );
+  }();
+
   final orchestrator = SyncOrchestratorImpl(
     // Every collaborator that can itself rebuild is handed in as a lazy
     // resolver, so a later rebuild of any of these providers is picked up
@@ -97,6 +121,7 @@ final syncOrchestratorProvider = Provider<SyncOrchestrator?>((ref) {
     resolveGateway: () => ref.read(firestoreGatewayProvider)!,
     resolveProfileId: resolveProfileId,
     logger: AppLogger(talker),
+    connectivityStream: connectivityStream,
     // §10.2: invalidate initialSyncCompleteProvider the first time a full pull
     // completes so the dashboard re-evaluates its readiness check immediately.
     onFirstSyncComplete: () => ref.invalidate(initialSyncCompleteProvider),

@@ -1,19 +1,19 @@
 /// Widget tests for profile-picker section-header segmentation logic.
 ///
-/// Covers all 4 rows of the segmentation table:
+/// Rule (owner-confirmed, 2026-05-21):
+///   - The "YOUR PROFILES" header (and the sibling "TALMID PROFILES" header
+///     rendered by TutoredChildrenSection) appear **only** when the current
+///     user has ≥ 1 active tutored grant — i.e. is a rebbe with talmidim.
+///   - Otherwise the picker shows a single flat list with no headers.
+///   - Within "YOUR PROFILES", child and adult profiles are co-mingled inside
+///     one grid — there is no separate "CHILD PROFILES" sub-section.
 ///
-/// | ownChild | tutored | Expected sections                           |
-/// |----------|---------|---------------------------------------------|
-/// | 0        | 0       | No section headers — ungrouped grid          |
-/// | >0       | 0       | "YOUR PROFILES" + "CHILD PROFILES"          |
-/// | 0        | >0      | "YOUR PROFILES" + "TALMID PROFILES" (via    |
-/// |          |         | TutoredChildrenSection header key)           |
-/// | >0       | >0      | "YOUR PROFILES" + "CHILD PROFILES" +        |
-/// |          |         | "TALMID PROFILES"                            |
+/// Segmentation table:
 ///
-/// These tests exercise [OwnProfilesSection] and [ChildProfilesSection]
-/// directly (the pure-widget layer), keeping the test scope small and avoiding
-/// the need to mock the full screen provider graph.
+/// | tutored | Expected header inside OwnProfilesSection |
+/// |---------|-------------------------------------------|
+/// | 0       | No header (ungrouped grid, no matter how many own children) |
+/// | >0      | "YOUR PROFILES" header                    |
 library;
 
 import 'package:flutter/material.dart';
@@ -29,7 +29,6 @@ import 'package:learning_tracker/l10n/app_localizations.dart';
 
 final _epoch = DateTime(2026);
 
-/// Minimal profile stub with no callbacks needed by the grid.
 ProfileModel _adult(int id) => ProfileModel(
   id: id,
   accountId: 1,
@@ -50,9 +49,6 @@ ProfileModel _child(int id) => ProfileModel(
   updatedAt: _epoch,
 );
 
-/// Wraps [child] in a [ProviderScope] + [MaterialApp] with localizations.
-/// Uses a [SingleChildScrollView] so grid content doesn't overflow the test
-/// viewport during layout checks.
 Widget _wrap(Widget child) => ProviderScope(
   child: MaterialApp(
     localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -61,15 +57,11 @@ Widget _wrap(Widget child) => ProviderScope(
   ),
 );
 
-/// Pumps [widget] and waits for all animations to settle.
 Future<void> _pump(WidgetTester tester, Widget widget) async {
   await tester.pumpWidget(_wrap(widget));
   await tester.pumpAndSettle();
 }
 
-// ---------------------------------------------------------------------------
-// Shared dummy callbacks (no-op — we only test headers, not tap behaviour)
-// ---------------------------------------------------------------------------
 void _noop1(int _) {}
 void _noop2(ProfileModel _, int __) {}
 
@@ -79,139 +71,13 @@ void _noop2(ProfileModel _, int __) {}
 
 void main() {
   group('OwnProfilesSection — header visibility', () {
-    // ── Row 1: ownChild == 0 && tutored == 0 ──────────────────────────────
-    testWidgets(
-      'shows NO section header when only adult profiles exist (ungrouped)',
-      (tester) async {
-        await _pump(
-          tester,
-          OwnProfilesSection(
-            profiles: [_adult(1), _adult(2)],
-            showHeader: false, // no children, no tutored
-            isSelectingProfile: false,
-            onProfileTap: _noop1,
-            onProfileLongPress: _noop2,
-            onAddProfile: _noop1,
-          ),
-        );
-
-        // "YOUR PROFILES" must NOT appear.
-        expect(find.text('YOUR PROFILES'), findsNothing);
-        // The profile grid should still render.
-        expect(find.text('Adult 1'), findsOneWidget);
-        expect(find.text('Adult 2'), findsOneWidget);
-      },
-    );
-
-    // ── Row 2: ownChild > 0 && tutored == 0 ───────────────────────────────
-    testWidgets(
-      'shows YOUR PROFILES header when child profiles exist (tutored == 0)',
-      (tester) async {
-        await _pump(
-          tester,
-          OwnProfilesSection(
-            profiles: [_adult(1), _child(2)],
-            showHeader: true, // child profiles exist
-            isSelectingProfile: false,
-            onProfileTap: _noop1,
-            onProfileLongPress: _noop2,
-            onAddProfile: _noop1,
-          ),
-        );
-
-        expect(find.text('YOUR PROFILES'), findsOneWidget);
-        expect(find.text('Adult 1'), findsOneWidget);
-        expect(find.text('Child 2'), findsOneWidget);
-      },
-    );
-
-    // ── Row 3: ownChild == 0 && tutored > 0 ───────────────────────────────
-    testWidgets(
-      'shows YOUR PROFILES header when tutored > 0 (no child profiles)',
-      (tester) async {
-        await _pump(
-          tester,
-          OwnProfilesSection(
-            profiles: [_adult(1)],
-            showHeader: true, // tutored grants exist
-            isSelectingProfile: false,
-            onProfileTap: _noop1,
-            onProfileLongPress: _noop2,
-            onAddProfile: _noop1,
-          ),
-        );
-
-        expect(find.text('YOUR PROFILES'), findsOneWidget);
-        expect(find.text('Adult 1'), findsOneWidget);
-      },
-    );
-
-    // ── Row 4: ownChild > 0 && tutored > 0 ────────────────────────────────
-    testWidgets(
-      'shows YOUR PROFILES header when both child and tutored profiles exist',
-      (tester) async {
-        await _pump(
-          tester,
-          OwnProfilesSection(
-            profiles: [_adult(1), _child(2)],
-            showHeader: true,
-            isSelectingProfile: false,
-            onProfileTap: _noop1,
-            onProfileLongPress: _noop2,
-            onAddProfile: _noop1,
-          ),
-        );
-
-        expect(find.text('YOUR PROFILES'), findsOneWidget);
-      },
-    );
-  });
-
-  // ── ChildProfilesSection ─────────────────────────────────────────────────
-  group('ChildProfilesSection — label', () {
-    testWidgets('renders CHILD PROFILES label', (tester) async {
-      await _pump(tester, const ChildProfilesSection());
-      expect(find.text('CHILD PROFILES'), findsOneWidget);
-    });
-  });
-
-  // ── Composite: row 2 — YOUR PROFILES + CHILD PROFILES ───────────────────
-  group('Composite row 2 (ownChild>0, tutored==0)', () {
-    testWidgets(
-      'OwnProfilesSection + ChildProfilesSection renders both headers',
-      (tester) async {
-        await _pump(
-          tester,
-          Column(
-            children: [
-              OwnProfilesSection(
-                profiles: [_adult(1), _child(2)],
-                showHeader: true,
-                isSelectingProfile: false,
-                onProfileTap: _noop1,
-                onProfileLongPress: _noop2,
-                onAddProfile: _noop1,
-              ),
-              const ChildProfilesSection(),
-            ],
-          ),
-        );
-
-        expect(find.text('YOUR PROFILES'), findsOneWidget);
-        expect(find.text('CHILD PROFILES'), findsOneWidget);
-      },
-    );
-  });
-
-  // ── Composite: row 1 — no headers ───────────────────────────────────────
-  group('Composite row 1 (ownChild==0, tutored==0)', () {
-    testWidgets('no headers when adults only, no ChildProfilesSection', (
+    testWidgets('NO header when tutored == 0 — adults only (flat list)', (
       tester,
     ) async {
       await _pump(
         tester,
         OwnProfilesSection(
-          profiles: [_adult(1)],
+          profiles: [_adult(1), _adult(2)],
           showHeader: false,
           isSelectingProfile: false,
           onProfileTap: _noop1,
@@ -221,7 +87,53 @@ void main() {
       );
 
       expect(find.text('YOUR PROFILES'), findsNothing);
+      expect(find.text('Adult 1'), findsOneWidget);
+      expect(find.text('Adult 2'), findsOneWidget);
+    });
+
+    testWidgets(
+      'NO header when tutored == 0 — even with child profiles present '
+      '(flat list, children co-mingled with adults)',
+      (tester) async {
+        await _pump(
+          tester,
+          OwnProfilesSection(
+            profiles: [_adult(1), _child(2)],
+            showHeader: false,
+            isSelectingProfile: false,
+            onProfileTap: _noop1,
+            onProfileLongPress: _noop2,
+            onAddProfile: _noop1,
+          ),
+        );
+
+        // No headers — child profiles are not bucketed separately.
+        expect(find.text('YOUR PROFILES'), findsNothing);
+        expect(find.text('CHILD PROFILES'), findsNothing);
+        // Both profiles render in the grid.
+        expect(find.text('Adult 1'), findsOneWidget);
+        expect(find.text('Child 2'), findsOneWidget);
+      },
+    );
+
+    testWidgets('shows YOUR PROFILES header when tutored > 0', (tester) async {
+      await _pump(
+        tester,
+        OwnProfilesSection(
+          profiles: [_adult(1), _child(2)],
+          showHeader: true,
+          isSelectingProfile: false,
+          onProfileTap: _noop1,
+          onProfileLongPress: _noop2,
+          onAddProfile: _noop1,
+        ),
+      );
+
+      expect(find.text('YOUR PROFILES'), findsOneWidget);
+      // No inner CHILD PROFILES sub-section — children co-mingled.
       expect(find.text('CHILD PROFILES'), findsNothing);
+      expect(find.text('Adult 1'), findsOneWidget);
+      expect(find.text('Child 2'), findsOneWidget);
     });
   });
 }

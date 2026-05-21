@@ -234,9 +234,12 @@ void main() {
       final textFields = find.byType(TextField);
       final firstField = tester.widget<TextField>(textFields.first);
 
-      // Verify obscureText is true
+      // Platform-layer obscuring stays ON so screen readers, autofill, and
+      // IME suggestions never leak the PIN. The visible filled-slot dot is
+      // drawn by an overlay Container (see _PinDigitField doc); the
+      // obscuring char is a space so the TextField itself draws nothing.
       expect(firstField.obscureText, isTrue);
-      expect(firstField.obscuringCharacter, equals('●'));
+      expect(firstField.obscuringCharacter, equals(' '));
     });
 
     testWidgets('should auto-advance to next field after digit entry', (

@@ -98,44 +98,41 @@ void main() {
 
     // Wave 5 Task #17: the wizard MUST explain the B1 tier-credit policy so
     // users understand why streak and points are not impacted.
-    testWidgets(
-      'shows B1 tier-credit subtitle below the selection header',
-      (tester) async {
-        await tester.pumpWidget(
-          ProviderScope(
-            overrides: [
-              curriculumContentProvider.overrideWith(
-                (ref, curriculumId) => Future.value([]),
-              ),
-              contentSearchProvider.overrideWith(
-                (ref, args) => Future.value([]),
-              ),
-              completionRepositoryProvider.overrideWithValue(completionRepo),
-              activeProfileIdProvider.overrideWithValue(1),
-            ],
-            child: const MaterialApp(
-              localizationsDelegates: AppLocalizations.localizationsDelegates,
-              supportedLocales: AppLocalizations.supportedLocales,
-              home: BulkMarkScreen(curriculumId: CurriculumId.mishnayos),
+    testWidgets('shows B1 tier-credit subtitle below the selection header', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            curriculumContentProvider.overrideWith(
+              (ref, curriculumId) => Future.value([]),
             ),
+            contentSearchProvider.overrideWith((ref, args) => Future.value([])),
+            completionRepositoryProvider.overrideWithValue(completionRepo),
+            activeProfileIdProvider.overrideWithValue(1),
+          ],
+          child: const MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: BulkMarkScreen(curriculumId: CurriculumId.mishnayos),
           ),
-        );
-        await tester.pumpAndSettle();
+        ),
+      );
+      await tester.pumpAndSettle();
 
-        // The subtitle uses the W2 l10n key `bulkMarkWizardSubtitle` whose en
-        // copy clarifies the tier policy.
-        expect(
-          find.textContaining(
-            'These count toward siyumim and lifetime knowledge',
-          ),
-          findsOneWidget,
-        );
-        expect(
-          find.textContaining('not toward your streak or points'),
-          findsOneWidget,
-        );
-      },
-    );
+      // The subtitle uses the W2 l10n key `bulkMarkWizardSubtitle` whose en
+      // copy clarifies the tier policy.
+      expect(
+        find.textContaining(
+          'These count toward siyumim and lifetime knowledge',
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.textContaining('not toward your streak or points'),
+        findsOneWidget,
+      );
+    });
 
     // Wave 5 Task #17: after the bulk-mark commits, the screen MUST surface a
     // confirmation toast that names the count and points to Lifetime Knowledge.
@@ -179,9 +176,7 @@ void main() {
 
         // Pre-tick leafA via a sentinel completion so we don't need to drive
         // the hierarchy panel UI to add a selection.
-        when(
-          () => completionRepo.getCompletionsByCurriculum(any()),
-        ).thenAnswer(
+        when(() => completionRepo.getCompletionsByCurriculum(any())).thenAnswer(
           (_) async => [
             Completion(
               id: 1,
@@ -209,7 +204,6 @@ void main() {
             curriculumId: any(named: 'curriculumId'),
             resolvedItems: any(named: 'resolvedItems'),
             stageIds: any(named: 'stageIds'),
-            awardGamificationPoints: any(named: 'awardGamificationPoints'),
           ),
         ).thenAnswer(
           (_) async =>
@@ -255,10 +249,7 @@ void main() {
           find.textContaining('7 items marked as previously learned'),
           findsOneWidget,
         );
-        expect(
-          find.textContaining('Lifetime Knowledge'),
-          findsOneWidget,
-        );
+        expect(find.textContaining('Lifetime Knowledge'), findsOneWidget);
       },
     );
   });

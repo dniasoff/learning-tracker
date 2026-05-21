@@ -86,6 +86,11 @@ class _RecentActivityScreenState extends ConsumerState<RecentActivityScreen> {
     final terms = domainTermLabels(ref);
     final userMode =
         ref.watch(dashboardUserModeProvider).asData?.value ?? UserMode.adult;
+    // Hide every chazara/review reference on this screen when no active track
+    // has chazara stages — per the per-track chazara rule, the absence of
+    // chazara extends to all reports.
+    final anyTrackHasChazara =
+        ref.watch(anyActiveTrackHasChazaraProvider).asData?.value ?? false;
     final theme = Theme.of(context);
     final window = _window;
 
@@ -99,10 +104,7 @@ class _RecentActivityScreenState extends ConsumerState<RecentActivityScreen> {
               children: [
                 IconButton(
                   onPressed: () => context.maybePop(),
-                  icon: const Icon(
-                    Icons.arrow_back_ios_new_rounded,
-                    size: 18,
-                  ),
+                  icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 18),
                 ),
                 Expanded(
                   child: Text(
@@ -124,8 +126,9 @@ class _RecentActivityScreenState extends ConsumerState<RecentActivityScreen> {
             _StreakHeaderCard(window: window, timeRange: _timeRange),
             const SizedBox(height: 14),
             _ChartSection(
-              title:
-                  '${terms.limud} & ${terms.chazaros}',
+              title: anyTrackHasChazara
+                  ? '${terms.limud} & ${terms.chazaros}'
+                  : terms.limud,
               subtitle: l10n.recentActivityLiveOnlyDisclaimer,
               child: SizedBox(
                 height: 200,
@@ -184,8 +187,7 @@ class _RecentActivityScreenState extends ConsumerState<RecentActivityScreen> {
                   textAlign: TextAlign.center,
                   maxLines: 2,
                   style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                    color:
-                        selected ? Colors.white : const Color(0xFF5E6678),
+                    color: selected ? Colors.white : const Color(0xFF5E6678),
                     fontWeight: FontWeight.w700,
                   ),
                 ),
@@ -215,8 +217,9 @@ class _RecentActivityScreenState extends ConsumerState<RecentActivityScreen> {
                 label: curriculumLabelText(ref, curriculum: curriculum),
                 selected: _curriculum == curriculum,
                 onSelected: (_) => setState(
-                  () => _curriculum =
-                      _curriculum == curriculum ? null : curriculum,
+                  () => _curriculum = _curriculum == curriculum
+                      ? null
+                      : curriculum,
                 ),
               ),
             ),
@@ -230,10 +233,7 @@ class _RecentActivityScreenState extends ConsumerState<RecentActivityScreen> {
 // ── Streak header ──────────────────────────────────────────────────────────
 
 class _StreakHeaderCard extends ConsumerWidget {
-  const _StreakHeaderCard({
-    required this.window,
-    required this.timeRange,
-  });
+  const _StreakHeaderCard({required this.window, required this.timeRange});
 
   final RecentActivityWindow window;
   final ChartTimeRange timeRange;
@@ -358,9 +358,8 @@ class _StreakHeaderCard extends ConsumerWidget {
               loading: () => LoadingIndicator(message: l10n.loading),
               error: (e, _) => ErrorDisplay(
                 message: l10n.chartFailedToLoad,
-                onRetry: () => ref.invalidate(
-                  recentActivityStreakDatesProvider(window),
-                ),
+                onRetry: () =>
+                    ref.invalidate(recentActivityStreakDatesProvider(window)),
               ),
             ),
         ],
@@ -395,15 +394,23 @@ class _AllTimeSummaryCard extends ConsumerWidget {
     final limudChazaraAsync = ref.watch(
       recentActivityLimudimChazarosProvider(window),
     );
+    // Hide the "chazaros" tile entirely when no active track has chazara
+    // (per the no-chazara-anywhere rule for tracks without chazara).
+    final anyTrackHasChazara =
+        ref.watch(anyActiveTrackHasChazaraProvider).asData?.value ?? false;
 
-    final activeDaysLabel = activeDatesAsync.asData?.value.length.toString() ??
+    final activeDaysLabel =
+        activeDatesAsync.asData?.value.length.toString() ?? _loading;
+    final limudCount =
+        limudChazaraAsync.asData?.value
+            .fold<int>(0, (sum, d) => sum + d.limudCount)
+            .toString() ??
         _loading;
-    final limudCount = limudChazaraAsync.asData?.value
-        .fold<int>(0, (sum, d) => sum + d.limudCount)
-        .toString() ?? _loading;
-    final chazaraCount = limudChazaraAsync.asData?.value
-        .fold<int>(0, (sum, d) => sum + d.chazaraCount)
-        .toString() ?? _loading;
+    final chazaraCount =
+        limudChazaraAsync.asData?.value
+            .fold<int>(0, (sum, d) => sum + d.chazaraCount)
+            .toString() ??
+        _loading;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -420,18 +427,16 @@ class _AllTimeSummaryCard extends ConsumerWidget {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: [
-            _AllTimeStat(
-              value: activeDaysLabel,
-              label: l10n.allTimeActiveDays,
-            ),
+            _AllTimeStat(value: activeDaysLabel, label: l10n.allTimeActiveDays),
             _AllTimeStat(
               value: limudCount,
               label: l10n.allTimeTermDone(terms.limud),
             ),
-            _AllTimeStat(
-              value: chazaraCount,
-              label: l10n.allTimeTermDone(terms.chazaros),
-            ),
+            if (anyTrackHasChazara)
+              _AllTimeStat(
+                value: chazaraCount,
+                label: l10n.allTimeTermDone(terms.chazaros),
+              ),
           ],
         ),
       ],
@@ -481,17 +486,14 @@ class _LimudChazaraChartBody extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
-    final async = ref.watch(
-      recentActivityLimudimChazarosProvider(window),
-    );
+    final async = ref.watch(recentActivityLimudimChazarosProvider(window));
     return async.when(
       data: (data) => LimudimChazarosBarChart(data: data),
       loading: () => LoadingIndicator(message: l10n.loading),
       error: (e, _) => ErrorDisplay(
         message: l10n.chartFailedToLoad,
-        onRetry: () => ref.invalidate(
-          recentActivityLimudimChazarosProvider(window),
-        ),
+        onRetry: () =>
+            ref.invalidate(recentActivityLimudimChazarosProvider(window)),
       ),
     );
   }
@@ -511,9 +513,7 @@ class _CumulativeChartBody extends ConsumerWidget {
       loading: () => LoadingIndicator(message: l10n.loading),
       error: (e, _) => ErrorDisplay(
         message: l10n.chartFailedToLoad,
-        onRetry: () => ref.invalidate(
-          recentActivityCumulativeProvider(window),
-        ),
+        onRetry: () => ref.invalidate(recentActivityCumulativeProvider(window)),
       ),
     );
   }
@@ -536,9 +536,7 @@ class _PointsChartBody extends ConsumerWidget {
       loading: () => LoadingIndicator(message: l10n.loading),
       error: (e, _) => ErrorDisplay(
         message: l10n.chartFailedToLoad,
-        onRetry: () => ref.invalidate(
-          recentActivityPointsProvider(window),
-        ),
+        onRetry: () => ref.invalidate(recentActivityPointsProvider(window)),
       ),
     );
   }
@@ -553,8 +551,7 @@ class _PointsTotalLabel extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
     final async = ref.watch(recentActivityPointsProvider(window));
-    final total =
-        async.asData?.value?.fold<int>(0, (sum, d) => sum + d.points);
+    final total = async.asData?.value?.fold<int>(0, (sum, d) => sum + d.points);
     return Text(
       total == null ? '--' : l10n.tierCounterPoints(total),
       style: Theme.of(context).textTheme.headlineSmall?.copyWith(

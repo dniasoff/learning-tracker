@@ -35,6 +35,13 @@ class StudyDayConfigScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final configAsync = ref.watch(studyDayConfigsProvider(curriculumId));
     final theme = Theme.of(context);
+    // Resolve the curriculum's active track to gate the chazara/review UI.
+    // Per the per-track chazara rule, a learn-only track must not show any
+    // chazara/review references — body copy, legend, or the review-day toggle.
+    final trackChazaraAsync = ref.watch(
+      _curriculumTrackHasChazaraProvider(curriculumId),
+    );
+    final trackHasChazara = trackChazaraAsync.asData?.value ?? false;
 
     return Scaffold(
       appBar: AppBar(
@@ -57,13 +64,33 @@ class StudyDayConfigScreen extends ConsumerWidget {
               dayTypeMap[config.dayOfWeek] = config.dayType;
             }
 
+            // No chazara on this track → review-day configuration is moot.
+            // Show a chazara-neutral message and skip the toggle entirely.
+            // The message itself must NOT mention "review" or "chazara"
+            // (per the per-track chazara rule — those terms are hidden
+            // anywhere on a learn-only track, including this fallback).
+            if (!trackHasChazara) {
+              return Padding(
+                padding: const EdgeInsets.all(24),
+                child: Center(
+                  child: Text(
+                    'All days are study days for this track.',
+                    textAlign: TextAlign.center,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+              );
+            }
+
             return Padding(
               padding: const EdgeInsets.all(24),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Choose which days include new learning and which are for review (chazara) only.',
+                    'Choose which days include new learning and which are for review only.',
                     style: theme.textTheme.bodyMedium?.copyWith(
                       color: theme.colorScheme.onSurfaceVariant,
                     ),
@@ -167,6 +194,27 @@ class StudyDayConfigScreen extends ConsumerWidget {
     ref.invalidate(allDailyTasksProvider);
   }
 }
+
+/// True when the active-profile curriculum track for [curriculumId] has
+/// more than one stage (i.e. chazara is enabled). Keyed by curriculum
+/// rather than trackId because this screen receives only a curriculumId.
+final _curriculumTrackHasChazaraProvider = FutureProvider.autoDispose
+    .family<bool, CurriculumId>((ref, curriculumId) async {
+      final db = ref.watch(userDatabaseProvider);
+      final profileId = ref.watch(activeProfileIdProvider);
+      final track =
+          await (db.select(db.curriculumTracks)
+                ..where(
+                  (t) =>
+                      t.profileId.equals(profileId) &
+                      t.curriculumId.equals(curriculumId.storageKey),
+                )
+                ..limit(1))
+              .getSingleOrNull();
+      if (track == null) return false;
+      final count = await db.stageDao.countStagesForTrack(track.id);
+      return count > 1;
+    });
 
 class _DayToggleTile extends StatelessWidget {
   const _DayToggleTile({

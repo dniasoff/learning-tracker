@@ -665,11 +665,11 @@ class AppLocalizationsHe extends AppLocalizations {
       'לפי תוכנית: פתחו כדי לעיין במה נלמד';
 
   @override
-  String get addWhatYouLearned => 'הוסיפו מה שלמדתם';
+  String get addWhatYouLearned => 'הוספת לימוד לאורך חיים';
 
   @override
   String get addWhatYouLearnedSettingsSubtitle =>
-      'רישום מצוות או לימוד תורה מותאם אישית';
+      'הרשומות מופיעות בדוחות לימוד לאורך חיים';
 
   @override
   String get lifetimeLearning => 'לימוד חיים';
@@ -704,11 +704,11 @@ class AppLocalizationsHe extends AppLocalizations {
   String get lifetimeNotStarted => 'טרם התחיל';
 
   @override
-  String get lifetimeAddHeaderTitle => 'הוסיפו מה שלמדתם';
+  String get lifetimeAddHeaderTitle => 'הוספת לימוד לאורך חיים';
 
   @override
   String get lifetimeAddHeaderSubtitle =>
-      'סמנו מה שלמדתם כבר — מדפוס או מכל מקום — כלימוד לכל החיים.';
+      'סמנו מה שלמדתם כבר כלימוד לכל החיים.';
 
   @override
   String get lifetimeHowItWorksTitle => 'איך זה עובד';
@@ -987,9 +987,6 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String get profilePickerYourProfiles => 'הפרופילים שלך';
-
-  @override
-  String get profilePickerChildProfiles => 'פרופילי ילדים';
 
   @override
   String get profilePickerTalmidProfiles => 'פרופילי תלמידים';

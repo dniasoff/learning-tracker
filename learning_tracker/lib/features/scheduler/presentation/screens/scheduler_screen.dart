@@ -2,6 +2,7 @@ import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:learning_tracker/core/labels/domain_term_labels.dart';
 import 'package:learning_tracker/core/theme/app_colors.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/widgets/empty_state.dart';
@@ -60,7 +61,11 @@ class SchedulerScreen extends ConsumerWidget {
 
             final schedule = ComposedDailySchedule(
               tasks: visibleTasks,
-              summary: _summaryForSection(section, visibleTasks.length),
+              summary: _summaryForSection(
+                section,
+                visibleTasks.length,
+                domainTermLabels(ref).chazara,
+              ),
             );
 
             return Column(
@@ -159,13 +164,22 @@ List<DailyTask> _filterTasks(
   }
 }
 
-String _summaryForSection(SchedulerTaskSection section, int count) {
+// The Review section is only reachable from the dashboard's chazara mission
+// card, which itself is hidden when no active track has chazara stages. So the
+// chazara label here only ever renders in a chazara-active context — strict
+// per-track gating upstream means we never leak "chazara" onto a learn-only
+// user's screen.
+String _summaryForSection(
+  SchedulerTaskSection section,
+  int count,
+  String chazaraTerm,
+) {
   final noun = count == 1 ? 'task' : 'tasks';
   return switch (section) {
     SchedulerTaskSection.all => '$count $noun today',
     SchedulerTaskSection.today => '$count today $noun',
     SchedulerTaskSection.overdue => '$count missed/overdue $noun',
-    SchedulerTaskSection.review => '$count chazara/review $noun',
+    SchedulerTaskSection.review => '$count $chazaraTerm $noun',
   };
 }
 

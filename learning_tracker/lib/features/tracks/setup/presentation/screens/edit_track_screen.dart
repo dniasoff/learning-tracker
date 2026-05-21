@@ -434,11 +434,22 @@ class _EditTrackScreenState extends ConsumerState<EditTrackScreen> {
               title: l10n.trackEditSectionStudyDays,
               child: _buildStudyDaysSection(theme),
             ),
-            const SizedBox(height: 14),
-            _SectionCard(
-              title: l10n.trackEditSectionReview,
-              child: _buildChazaraSection(context, theme, l10n),
-            ),
+            // Per the per-track chazara rule, the entire Review section is
+            // hidden when this track has no chazara stages — no chazara or
+            // review references on a learn-only track, anywhere. Users who
+            // want to add chazara to a learn-only track recreate it via
+            // Add Track.
+            if (ref
+                    .watch(trackHasChazaraProvider(widget.track.id))
+                    .asData
+                    ?.value ??
+                false) ...[
+              const SizedBox(height: 14),
+              _SectionCard(
+                title: l10n.trackEditSectionReview,
+                child: _buildChazaraSection(context, theme, l10n),
+              ),
+            ],
           ],
           if (_isProgramTrack) ...[
             const SizedBox(height: 14),

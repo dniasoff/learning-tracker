@@ -115,6 +115,29 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
     required int Function() resolveProfileId,
     AppLogger? logger,
 
+    /// Optional stream of connectivity transitions (`true` = online,
+    /// `false` = offline). When supplied, the orchestrator subscribes on
+    /// [start] and, on every offline→online transition, triggers a
+    /// Firestore network reset after a short debounce. This complements
+    /// the lifecycle-observer reset (which only fires on background→
+    /// foreground transitions): if Android wedges the DNS resolver mid-
+    /// session (Doze maintenance, WiFi↔cell handoff with the app still
+    /// foregrounded) the lifecycle observer never sees a non-resumed state,
+    /// so connectivity-driven recovery is the only signal we have.
+    ///
+    /// **Must seed an initial value.** The transition logic looks at the
+    /// previous emission to detect offline→online; without an initial
+    /// seed, the first transition is misclassified as "no previous state".
+    /// Wire via `connectivityStreamProvider.stream`, which seeds from
+    /// `InternetConnectionChecker.hasConnection`.
+    Stream<bool>? connectivityStream,
+
+    /// Test seam: override the Firestore network reset call (used by both
+    /// the lifecycle observer and the connectivity-driven path). Production
+    /// callers pass `null`; the orchestrator falls through to the top-level
+    /// `resetFirestoreNetwork()` from `firestore_instance_provider`.
+    Future<void> Function()? resetFirestoreNetworkOverride,
+
     /// Called once — the first time a full pull completes successfully.
     ///
     /// Wired by [syncOrchestratorProvider] to invalidate
@@ -151,7 +174,9 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
        _analytics = analytics,
        _onFirstSyncComplete = onFirstSyncComplete,
        _resolvePushAllLocalData = resolvePushAllLocalData,
-       _resolveBackfillGoals = resolveBackfillGoals;
+       _resolveBackfillGoals = resolveBackfillGoals,
+       _connectivityStream = connectivityStream,
+       _resetFirestoreNetworkOverride = resetFirestoreNetworkOverride;
 
   /// Optional callback invoked the first time a full pull completes.  See
   /// constructor doc for [onFirstSyncComplete].
@@ -188,6 +213,36 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
 
   ListenerSupervisor? _listenerSupervisor;
   LifecycleObserver? _lifecycleObserver;
+
+  /// Optional connectivity stream injected by the provider. Subscribed in
+  /// [start], cancelled in [dispose]. See constructor doc.
+  final Stream<bool>? _connectivityStream;
+  StreamSubscription<bool>? _connectivitySubscription;
+
+  /// Test seam — see constructor doc.
+  final Future<void> Function()? _resetFirestoreNetworkOverride;
+
+  /// Invoke the configured Firestore network reset (override in tests, the
+  /// top-level production function otherwise). Centralised so both the
+  /// lifecycle and connectivity paths route through the same call.
+  Future<void> _doFirestoreNetworkReset() {
+    final override = _resetFirestoreNetworkOverride;
+    if (override != null) return override();
+    return resetFirestoreNetwork();
+  }
+
+  /// Last observed connectivity value. We only trigger a Firestore reset on
+  /// a transition into the online state — single-shot subscribers (and
+  /// rapid duplicate emissions of the same value) must not loop the reset.
+  bool? _lastConnectivity;
+
+  /// Debounce timer for the connectivity-driven reset. Network state can
+  /// flap (especially on WiFi↔cell handoffs); coalesce rapid transitions
+  /// into a single reset by deferring the call ~1.5 s.
+  Timer? _connectivityResetDebounce;
+  static const Duration _connectivityResetDebounceDuration = Duration(
+    milliseconds: 1500,
+  );
 
   // W2.33 — own StatusStream + currentStatus ─────────────────────────────────
 
@@ -261,7 +316,7 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
       // down a freshly-built channel at app launch.
       resetFirestoreNetwork: () async {
         try {
-          await resetFirestoreNetwork();
+          await _doFirestoreNetworkReset();
         } catch (e, st) {
           _logger?.warning(
             event: 'firestore_network_reset_failed',
@@ -282,6 +337,57 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
 
     lifecycleObserver.start();
     listenerSupervisor.start();
+
+    // Subscribe to connectivity transitions so we can self-heal the
+    // Firestore channel mid-session (not just on background→foreground).
+    // See [_connectivityStream] doc for the rationale.
+    final stream = _connectivityStream;
+    if (stream != null) {
+      _connectivitySubscription = stream.listen(_onConnectivityChange);
+    }
+  }
+
+  /// Handler for [connectivityStream] emissions. Triggers a debounced
+  /// `resetFirestoreNetwork()` on a transition into the online state.
+  void _onConnectivityChange(bool isOnline) {
+    final previous = _lastConnectivity;
+    _lastConnectivity = isOnline;
+
+    // Only act on a genuine offline→online transition.
+    //   - We require `previous == false` so the seeded first emission
+    //     (which carries the current connectivity state, not a change)
+    //     doesn't trigger a wasted reset on a fresh online channel.
+    //   - Duplicate "still online" emissions are ignored.
+    //   - The provider seeds an initial value from `hasConnection`, so
+    //     `previous` is non-null for the second-onward emission — the
+    //     first real transition (after the seed) lights this path.
+    if (!isOnline) return;
+    if (previous == null || previous) return;
+
+    _connectivityResetDebounce?.cancel();
+    _connectivityResetDebounce = Timer(
+      _connectivityResetDebounceDuration,
+      () async {
+        // The network state may have flipped back to offline during the
+        // debounce window. Skip the reset if we're not currently online —
+        // disable/enable on an offline channel is a no-op, but it produces
+        // misleading "reset on reconnect" log lines.
+        if (_lastConnectivity != true) return;
+        try {
+          await _doFirestoreNetworkReset();
+          _logger?.info(
+            event: 'firestore_network_reset_on_reconnect',
+            fields: const {'trigger': 'connectivity'},
+          );
+        } catch (e, st) {
+          _logger?.warning(
+            event: 'firestore_network_reset_on_reconnect_failed',
+            exception: e,
+            stackTrace: st,
+          );
+        }
+      },
+    );
   }
 
   /// Minimum time between full pull-on-launch runs when triggered from resume
@@ -608,6 +714,10 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
   void dispose() {
     if (!_started) return;
     _started = false;
+    _connectivityResetDebounce?.cancel();
+    _connectivityResetDebounce = null;
+    _connectivitySubscription?.cancel();
+    _connectivitySubscription = null;
     _lifecycleObserver?.stop();
     _listenerSupervisor?.stop();
     _lifecycleObserver = null;

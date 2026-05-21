@@ -209,6 +209,11 @@ class BulkPriorCompletionService {
   /// from genuine learning sessions.
   ///
   /// After writing, sets the bookmark to the first uncompleted item.
+  ///
+  /// Bulk-mark-prior is always the `bulkInTrack` source (B1 three-tier policy):
+  /// engagement (streak + points) is unconditionally suppressed; achievement
+  /// (siyumim) and lifetime totals are credited. There is no caller-tunable
+  /// gamification flag — a "live" bulk-mark would be a contradiction in terms.
   Future<BulkPriorCompletionResult> execute({
     required CurriculumId curriculumId,
     required List<ContentItem> resolvedItems,
@@ -218,7 +223,6 @@ class BulkPriorCompletionService {
     /// the service will union in all remaining stages automatically.
     required List<int> stageIds,
     int? profileId,
-    bool awardGamificationPoints = false,
   }) async {
     final sefariaRefs = resolvedItems.map((item) => item.sefariaRef).toList();
     var totalCompletions = 0;
@@ -235,7 +239,8 @@ class BulkPriorCompletionService {
     // API compatibility — callers should pass [1] or empty.
     final effectiveStageIds = [...allConfiguredStageIds]..sort();
 
-    // Create completions for each stage
+    // Create completions for each stage. Bulk-mark-prior is the bulkInTrack
+    // source (B1 policy): engagement suppressed, achievement credited.
     for (final stageId in effectiveStageIds) {
       final request = BulkCompletionRequest(
         curriculumId: curriculumId.storageKey,
@@ -243,7 +248,8 @@ class BulkPriorCompletionService {
         stageId: stageId,
         trackType: TrackType.personal.storageKey,
         profileId: profileId,
-        awardGamificationPoints: awardGamificationPoints,
+        // Engagement gate: prior-mark NEVER credits streak or points.
+        awardGamificationPoints: false,
         // F1 (W7-A): bulk-mark-prior represents the `bulkInTrack` source —
         // engagement is suppressed, but achievement (siyum detection) must
         // fire so a learner who bulk-marks an entire masechta still earns

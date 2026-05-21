@@ -2,6 +2,8 @@ import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/app/router/app_router.dart';
+import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
+import 'package:learning_tracker/features/account/presentation/providers/connectivity_providers.dart';
 import 'package:learning_tracker/features/account/presentation/widgets/offline_top_banner.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/widgets/sacred_time_lock_overlay.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/tutor_grant_aggregate.dart';
@@ -27,6 +29,19 @@ class AppShellScreen extends ConsumerWidget {
         grantsAsync.asData?.value.any((g) => g.grantState is ActiveGrant) ??
         false;
 
+    // Determine offline-banner visibility here so the appBar's PreferredSize
+    // can size itself to the actual rendered content (banner + tutor bar +
+    // status-bar inset). Without this, the PreferredSize is fixed regardless
+    // of state — content either overflows behind the system status bar
+    // (when offline) or leaves an empty gap (when online).
+    final isCloudBorn = ref.watch(authStateProvider).isCloudBorn;
+    final connectivity = ref.watch(connectivityStreamProvider);
+    final isOnline = connectivity.maybeWhen(
+      data: (online) => online,
+      orElse: () => true,
+    );
+    final offlineBannerVisible = isCloudBorn && !isOnline;
+
     return SacredTimeLockOverlay(
       child: AutoTabsScaffold(
         routes: const [
@@ -39,21 +54,35 @@ class AppShellScreen extends ConsumerWidget {
         // inside the widget so local-born users never see it.
         // W6.15: When the user has active tutor grants, we show a subtle
         // tutor-mode indicator alongside the offline banner.
-        appBarBuilder: (_, tabsRouter) => PreferredSize(
-          preferredSize: Size.fromHeight(hasActiveTutoredProfiles ? 56 : 32),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const OfflineTopBanner(),
-              if (hasActiveTutoredProfiles)
-                _TutorModeIndicatorBar(
-                  // W6.16: tapping the indicator exits to profile picker.
-                  onExitToProfiles: () =>
-                      context.router.replaceAll([const ProfilePickerRoute()]),
-                ),
-            ],
-          ),
-        ),
+        appBarBuilder: (innerContext, tabsRouter) {
+          final topInset = MediaQuery.of(innerContext).padding.top;
+          final bannerHeight = offlineBannerVisible ? 32.0 : 0.0;
+          final tutorHeight = hasActiveTutoredProfiles ? 24.0 : 0.0;
+          return PreferredSize(
+            preferredSize: Size.fromHeight(
+              topInset + bannerHeight + tutorHeight,
+            ),
+            child: Padding(
+              // Push our custom appBar content below the system status bar.
+              // Unlike Material's AppBar, raw PreferredSize doesn't inset
+              // automatically, so we add the inset ourselves.
+              padding: EdgeInsets.only(top: topInset),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  OfflineTopBanner(visible: offlineBannerVisible),
+                  if (hasActiveTutoredProfiles)
+                    _TutorModeIndicatorBar(
+                      // W6.16: tapping the indicator exits to profile picker.
+                      onExitToProfiles: () => context.router.replaceAll([
+                        const ProfilePickerRoute(),
+                      ]),
+                    ),
+                ],
+              ),
+            ),
+          );
+        },
         bottomNavigationBuilder: (context, tabsRouter) {
           final l10n = AppLocalizations.of(context)!;
           final items = [

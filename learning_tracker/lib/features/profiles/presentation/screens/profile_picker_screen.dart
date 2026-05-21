@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/providers/network_providers.dart';
@@ -76,21 +75,15 @@ class _ProfilePickerScreenState extends ConsumerState<ProfilePickerScreen> {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context)!;
 
-    // ── Segmentation counts ───────────────────────────────────────────────
-    final ownChildCount = profiles
-        .where((p) => p.profileMode == ProfileMode.child)
-        .length;
-
-    // Read (not watch) the grants here so we can compute tutoredCount for
-    // header logic without blocking on the async result — TutoredChildrenSection
-    // handles the async display independently.  A null/loading result is
-    // treated as 0 grants for the purpose of header visibility.
+    // Section headers ("YOUR PROFILES" / "TALMID PROFILES") only appear when
+    // the current user is a rebbe with at least one active tutored grant.
+    // Otherwise the picker shows a single flat list with no headers — the
+    // user's own child + adult profiles are co-mingled inside the grid.
     final grantsAsync = ref.watch(incomingTutorGrantsProvider);
     final tutoredCount =
         grantsAsync.asData?.value.where((g) => g.grantState.isActive).length ??
         0;
-
-    final isSegmented = ownChildCount > 0 || tutoredCount > 0;
+    final isSegmented = tutoredCount > 0;
 
     return SafeArea(
       top: false,
@@ -127,7 +120,7 @@ class _ProfilePickerScreenState extends ConsumerState<ProfilePickerScreen> {
               ),
             ),
             const SizedBox(height: 20),
-            // ── Own profiles section ──────────────────────────────────────
+            // Own profiles — adults + children co-mingled.
             OwnProfilesSection(
               profiles: profiles,
               showHeader: isSegmented,
@@ -137,10 +130,7 @@ class _ProfilePickerScreenState extends ConsumerState<ProfilePickerScreen> {
                   unawaited(_showManageSheet(profile, count)),
               onAddProfile: (_) => unawaited(_showAddDialog(profiles.length)),
             ),
-            // ── "CHILD PROFILES" sub-section header ───────────────────────
-            // Shown after the own-grid when child profiles exist (segmented).
-            if (isSegmented && ownChildCount > 0) const ChildProfilesSection(),
-            // ── Talmid (tutored) section (W6.14) ─────────────────────────
+            // Talmidim — only renders when the user has ≥1 active tutor grant.
             const TutoredChildrenSection(),
           ],
         ),

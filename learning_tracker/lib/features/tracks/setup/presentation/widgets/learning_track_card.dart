@@ -47,6 +47,18 @@ class LearningTrackCard extends ConsumerWidget {
     final cycleFraction = completionAsync.asData?.value ?? 0.0;
     final cyclePercentDisplay = formatFractionAsPercent(cycleFraction);
 
+    // Per-track chazara gate: only render the chazara-aware label when this
+    // track actually has chazara stages. Tracks without chazara show a neutral
+    // "Track progress" label — never "Completion (with חזרה)".
+    //
+    // Loading default is `false` (chazara-neutral) so a learn-only track
+    // NEVER briefly shows a chazara reference — the strict rule
+    // (`feedback_chazara_conditional_rendering`) wins over the chazara
+    // track's brief "Track progress" → "Completion (with חזרה)" flicker
+    // on first mount.
+    final trackHasChazara =
+        ref.watch(trackHasChazaraProvider(track.id)).asData?.value ?? false;
+
     // The "chazara" term renders per the Hebrew-terms preference: transliterated
     // in English, Hebrew script when the toggle is on (or in Hebrew locale).
     final chazaraTerm = domainTermLabels(ref).chazara;
@@ -135,7 +147,9 @@ class LearningTrackCard extends ConsumerWidget {
                         Row(
                           children: [
                             Text(
-                              l10n.carouselCompletion(chazaraTerm),
+                              trackHasChazara
+                                  ? l10n.carouselCompletion(chazaraTerm)
+                                  : l10n.trackProgress,
                               style: theme.textTheme.labelSmall?.copyWith(
                                 color: AppTheme.brandInkMuted,
                                 fontWeight: FontWeight.w700,

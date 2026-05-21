@@ -1280,13 +1280,13 @@ abstract class AppLocalizations {
   /// No description provided for @addWhatYouLearned.
   ///
   /// In en, this message translates to:
-  /// **'Add what you\'ve learned'**
+  /// **'Add Lifetime Learning'**
   String get addWhatYouLearned;
 
   /// No description provided for @addWhatYouLearnedSettingsSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Log custom Mitzvot or Torah studies'**
+  /// **'Entries appear in your Lifetime Learning reports'**
   String get addWhatYouLearnedSettingsSubtitle;
 
   /// No description provided for @lifetimeLearning.
@@ -1346,13 +1346,13 @@ abstract class AppLocalizations {
   /// No description provided for @lifetimeAddHeaderTitle.
   ///
   /// In en, this message translates to:
-  /// **'Add what you\'ve learned'**
+  /// **'Add Lifetime Learning'**
   String get lifetimeAddHeaderTitle;
 
   /// No description provided for @lifetimeAddHeaderSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Mark what you\'ve already studied — in print or anywhere — as lifetime learning.'**
+  /// **'Mark what you\'ve already studied as lifetime learning.'**
   String get lifetimeAddHeaderSubtitle;
 
   /// No description provided for @lifetimeHowItWorksTitle.
@@ -1858,12 +1858,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'YOUR PROFILES'**
   String get profilePickerYourProfiles;
-
-  /// No description provided for @profilePickerChildProfiles.
-  ///
-  /// In en, this message translates to:
-  /// **'CHILD PROFILES'**
-  String get profilePickerChildProfiles;
 
   /// No description provided for @profilePickerTalmidProfiles.
   ///
