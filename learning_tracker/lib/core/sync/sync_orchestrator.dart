@@ -13,6 +13,8 @@ import 'package:learning_tracker/core/sync/lifecycle_observer.dart';
 import 'package:learning_tracker/core/sync/listener_supervisor.dart';
 import 'package:learning_tracker/core/sync/merge/entity_merger.dart';
 import 'package:learning_tracker/core/sync/merge/merge_router.dart';
+import 'package:learning_tracker/core/sync/providers/firestore_instance_provider.dart'
+    show resetFirestoreNetwork;
 import 'package:learning_tracker/core/sync/pull_pipeline.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/sync/domain/models/sync_status.dart';
@@ -249,6 +251,25 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
     _listenerSupervisor = listenerSupervisor;
 
     final lifecycleObserver = LifecycleObserver(
+      // Self-heal the Firestore gRPC channel on resume from background.
+      // grpc-java sometimes pins a stale DNS answer or a half-open channel
+      // across a network handoff (WiFi↔cell, VPN reconnect) — the symptom is
+      // `Unable to resolve host firestore.googleapis.com` flooding the log
+      // even though the device is online. disable/enable forces the SDK to
+      // rebuild its channel. Cold-start resumes skip this (the observer
+      // guards on having seen a non-resumed state first) so we don't tear
+      // down a freshly-built channel at app launch.
+      resetFirestoreNetwork: () async {
+        try {
+          await resetFirestoreNetwork();
+        } catch (e, st) {
+          _logger?.warning(
+            event: 'firestore_network_reset_failed',
+            exception: e,
+            stackTrace: st,
+          );
+        }
+      },
       redetectTimezone: () async {
         // No-op until DNI-26.24 wires timezone redetection — seam exists.
       },
