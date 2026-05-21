@@ -408,6 +408,22 @@ Future<int> overdueCountForCurriculum(
       .length;
 }
 
+/// Returns the day-level amnesty cutoff for [lastReorderAt]: midnight of
+/// the device-local date on which the reorder occurred, encoded as pseudo-UTC
+/// midnight (the same encoding [ScheduledUnit.date] uses).
+///
+/// Schedule entries are dated to UTC midnight of the unit's local day, while
+/// `lastReorderAt` is a real instant (e.g. activation at 15:00 UTC).  A naive
+/// `scheduledDate.isBefore(lastReorderAt)` would treat same-day schedule
+/// entries as "before" the reorder and amnesty them — wiping today's overdue
+/// for a track activated yesterday.  The amnesty rule (§10.1) is "items
+/// scheduled on days strictly before the day of the reorder", so we normalize
+/// to midnight of the device-local date here.
+DateTime _amnestyDayCutoffUtc(DateTime lastReorderAt) {
+  final local = lastReorderAt.toLocal();
+  return DateTime.utc(local.year, local.month, local.day);
+}
+
 /// Derives the overdue and dueToday task lists from the pure projection.
 ///
 /// This is the authoritative source of truth for the overdue/today buckets
@@ -569,16 +585,25 @@ Future<List<DailyTask>> _buildProjectionTasks({
               final progLastReorderAt =
                   trackLastReorderAtMap[curriculum] ??
                   DateTime.fromMillisecondsSinceEpoch(0);
+              // Day-level cutoff: midnight of the device-local date on which
+              // the reorder happened, encoded as pseudo-UTC midnight (the same
+              // encoding schedule entries use). Without this, a mid-day
+              // lastReorderAt (e.g. track activation at 15:00 UTC) is wrongly
+              // treated as "after" same-day schedule entries (00:00 UTC), and
+              // those entries get silently amnestied even though the user
+              // still owes that day's work.
+              final progAmnestyCutoff = _amnestyDayCutoffUtc(progLastReorderAt);
               final progScheduleIndex = <String, DateTime>{
                 for (final unit in schedule) unit.sefariaRef: unit.date,
               };
 
               // Map projection refs to DailyTask objects.
               for (final ref in projection.overdue) {
-                // Amnesty: skip overdue items scheduled before the last reorder.
+                // Amnesty: skip overdue items scheduled on a day strictly
+                // before the day of the last reorder.
                 final scheduledDate = progScheduleIndex[ref];
                 if (scheduledDate != null &&
-                    scheduledDate.isBefore(progLastReorderAt)) {
+                    scheduledDate.isBefore(progAmnestyCutoff)) {
                   continue;
                 }
                 final taskRefs = resolvedOrFallbackProgramRefs(
@@ -735,23 +760,24 @@ Future<List<DailyTask>> _buildProjectionTasks({
     );
 
     // Reorder-amnesty filter (§10.1): build a ref→scheduledDate index so we
-    // can drop overdue items whose scheduled date is strictly before the
-    // track's lastReorderAt.  Items scheduled on/after lastReorderAt are
-    // never amnestied — only items that were already overdue at the time of
-    // the reorder are cleared.
+    // can drop overdue items whose scheduled date is on a day strictly before
+    // the day of the track's lastReorderAt.  Items scheduled on the same
+    // device-local day as the reorder are never amnestied — the user still
+    // owes that day's work regardless of any mid-day reorder.
     final lastReorderAt =
         trackLastReorderAtMap[curriculum] ??
         DateTime.fromMillisecondsSinceEpoch(0);
+    final amnestyCutoff = _amnestyDayCutoffUtc(lastReorderAt);
     final scheduleIndex = <String, DateTime>{
       for (final unit in schedule) unit.sefariaRef: unit.date,
     };
 
     for (final ref in projection.overdue) {
       final scheduledDate = scheduleIndex[ref];
-      // Amnesty: skip overdue items whose scheduled date is strictly before
-      // the most recent reorder.  Items with no schedule entry (shouldn't
-      // happen) are kept to avoid silently dropping tasks.
-      if (scheduledDate != null && scheduledDate.isBefore(lastReorderAt)) {
+      // Amnesty: skip overdue items whose scheduled date is on a day strictly
+      // before the day of the most recent reorder.  Items with no schedule
+      // entry (shouldn't happen) are kept to avoid silently dropping tasks.
+      if (scheduledDate != null && scheduledDate.isBefore(amnestyCutoff)) {
         continue;
       }
       result.add(

@@ -179,6 +179,74 @@ void main() {
     );
 
     test(
+      'mid-day lastReorderAt does not amnesty same-local-day schedule entries',
+      () async {
+        // Regression for the "track activated yesterday, overdue=0 today" bug.
+        //
+        // Real-world repro: a user activates a self-paced track yesterday
+        // (Israel evening), which stamps lastReorderAt = some mid-day UTC
+        // instant. Schedule entries are dated to UTC midnight of the local
+        // day. A naive `scheduledDate.isBefore(lastReorderAt)` then treats
+        // every same-day entry as "before the reorder" and silently amnesties
+        // it — so the next day, the previous day's allocation never accrues
+        // as overdue.
+        //
+        // The cutoff used by the production filter normalises lastReorderAt
+        // to UTC midnight of its device-local date; this test locks in that
+        // behaviour against an instant-level regression.
+
+        // Today (UTC midnight) and a schedule that started yesterday.
+        final today = DateTime.utc(2026, 5, 21);
+        final yesterdayMidnight = DateTime.utc(2026, 5, 20);
+
+        final schedule = [
+          ScheduledUnit(date: yesterdayMidnight, sefariaRef: 'Y1'),
+          ScheduledUnit(date: today, sefariaRef: 'T1'),
+        ];
+
+        final projection = project(
+          schedule: schedule,
+          completions: const {},
+          today: today,
+        );
+        expect(projection.overdue, equals({'Y1'}));
+        expect(projection.dueToday, equals({'T1'}));
+
+        // Simulate activation yesterday at 15:00 UTC (mid-day).  The local
+        // date is still 2026-05-20 in UTC and in any timezone east of about
+        // UTC-15, so the day-level cutoff must come out to 2026-05-20 00:00
+        // UTC — i.e. the same midnight as the Y1 schedule entry.
+        final midDayYesterday = DateTime.utc(2026, 5, 20, 15, 0, 0);
+
+        // Mimic the production day-level cutoff (see
+        // scheduler_providers.dart:_amnestyDayCutoffUtc).
+        final local = midDayYesterday.toLocal();
+        final cutoff = DateTime.utc(local.year, local.month, local.day);
+
+        final scheduleIndex = <String, DateTime>{
+          for (final unit in schedule) unit.sefariaRef: unit.date,
+        };
+        final amnestied = projection.overdue.where((ref) {
+          final scheduledDate = scheduleIndex[ref];
+          if (scheduledDate == null) return false;
+          return scheduledDate.isBefore(cutoff);
+        }).toSet();
+
+        // Yesterday's entry must NOT be amnestied even though
+        // lastReorderAt is mid-day yesterday.  Pre-fix this set was {'Y1'}.
+        expect(
+          amnestied,
+          isEmpty,
+          reason:
+              'A mid-day lastReorderAt on the same device-local day as a '
+              'schedule entry must not amnesty that entry. The day-level '
+              'cutoff is what makes the projection robust against the '
+              'time-of-day component of lastReorderAt.',
+        );
+      },
+    );
+
+    test(
       'saveOrder stamps lastReorderAt on the active track',
       () async {
         // Arrange: activate a track for profile 1
