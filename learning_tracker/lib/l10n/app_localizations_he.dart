@@ -2923,7 +2923,8 @@ class AppLocalizationsHe extends AppLocalizations {
   }
 
   @override
-  String get paceLiveLearningOnlyCaption => 'הקצב עוקב אחר למידה חיה בלבד.';
+  String get paceLiveLearningOnlyCaption =>
+      'הקצב עוקב אחר לימוד במסלולים בלבד.';
 
   @override
   String get bulkMarkWizardSubtitle =>
@@ -2940,7 +2941,7 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String get recentActivityLiveOnlyDisclaimer =>
-      'לימוד חי בלבד — פריטים שסומנו בכמות מופיעים תחת הידע הכולל.';
+      'לימוד במסלולים בלבד — פריטים שסומנו בכמות מופיעים תחת הידע הכולל.';
 
   @override
   String get lifetimeKnowledgeLoading => 'טוען ידע כולל…';
@@ -2998,7 +2999,8 @@ class AppLocalizationsHe extends AppLocalizations {
   String get trackInfoActualPace => 'קצב בפועל';
 
   @override
-  String get trackInfoActualPaceCaption => '7 ימים אחרונים · לימוד חי בלבד';
+  String get trackInfoActualPaceCaption =>
+      '7 ימים אחרונים · לימוד במסלולים בלבד';
 
   @override
   String get trackInfoItemsPerDay => 'פריטים ליום';

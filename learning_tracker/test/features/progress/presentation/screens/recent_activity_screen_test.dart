@@ -211,7 +211,7 @@ void main() {
     // chart card — so it appears at least once.
     expect(
       find.text(
-        'Live learning only — bulk-marked items appear under Lifetime '
+        'Track learning only — bulk-marked items appear under Lifetime '
         'Knowledge.',
       ),
       findsWidgets,

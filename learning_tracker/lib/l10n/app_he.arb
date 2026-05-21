@@ -1597,9 +1597,9 @@
       "date": { "type": "String" }
     }
   },
-  "paceLiveLearningOnlyCaption": "הקצב עוקב אחר למידה חיה בלבד.",
+  "paceLiveLearningOnlyCaption": "הקצב עוקב אחר לימוד במסלולים בלבד.",
   "@paceLiveLearningOnlyCaption": {
-    "description": "Caption shown under the PaceIndicator on the Curriculum Progress screen — disambiguates pace (live-only) from the lifetime tier."
+    "description": "Caption shown under the PaceIndicator on the Curriculum Progress screen — disambiguates pace (engagement-tier track learning) from the lifetime tier."
   },
 
   "bulkMarkWizardSubtitle": "פריטים אלו נספרים לסיומים ולידע הכולל — אך לא לרצף או לנקודות שלך.",
@@ -1619,7 +1619,7 @@
     "description": "Subtitle for the Lifetime Marking screen."
   },
 
-  "recentActivityLiveOnlyDisclaimer": "לימוד חי בלבד — פריטים שסומנו בכמות מופיעים תחת הידע הכולל.",
+  "recentActivityLiveOnlyDisclaimer": "לימוד במסלולים בלבד — פריטים שסומנו בכמות מופיעים תחת הידע הכולל.",
   "@recentActivityLiveOnlyDisclaimer": {
     "description": "Disclaimer shown on Recent Activity charts."
   },
@@ -1697,7 +1697,7 @@
   "@trackInfoActualPace": {
     "description": "Label for the actual pace row in the TrackInfoCard."
   },
-  "trackInfoActualPaceCaption": "7 ימים אחרונים · לימוד חי בלבד",
+  "trackInfoActualPaceCaption": "7 ימים אחרונים · לימוד במסלולים בלבד",
   "@trackInfoActualPaceCaption": {
     "description": "Sub-caption under the actual pace label."
   },

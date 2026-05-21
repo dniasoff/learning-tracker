@@ -5213,10 +5213,10 @@ abstract class AppLocalizations {
   /// **'All {count} complete · {date}'**
   String siyumimAggregateSubtitle(int count, String date);
 
-  /// Caption shown under the PaceIndicator on the Curriculum Progress screen — disambiguates pace (live-only) from the lifetime tier so users don't conflate the two.
+  /// Caption shown under the PaceIndicator on the Curriculum Progress screen — disambiguates pace (engagement-tier track learning) from the lifetime tier so users don't conflate the two.
   ///
   /// In en, this message translates to:
-  /// **'Pace tracks live learning only.'**
+  /// **'Pace tracks track learning only.'**
   String get paceLiveLearningOnlyCaption;
 
   /// Subtitle/explainer for the Bulk Mark wizard (Wave 5 Task #17) — clarifies tier credit so the user understands why streak/points are not impacted.
@@ -5237,10 +5237,10 @@ abstract class AppLocalizations {
   /// **'Items you\'ve learned in your life, outside the app\'s tracks. Counted toward Lifetime Knowledge — not toward siyumim, streak, or points.'**
   String get lifetimeMarkingSubtitle;
 
-  /// Disclaimer shown on Recent Activity charts to make the live-only scope explicit and point at where bulk-marked items appear instead.
+  /// Disclaimer shown on Recent Activity charts to make the engagement-tier scope explicit and point at where bulk-marked items appear instead.
   ///
   /// In en, this message translates to:
-  /// **'Live learning only — bulk-marked items appear under Lifetime Knowledge.'**
+  /// **'Track learning only — bulk-marked items appear under Lifetime Knowledge.'**
   String get recentActivityLiveOnlyDisclaimer;
 
   /// Loading indicator message on the Lifetime Knowledge screen body.
@@ -5342,7 +5342,7 @@ abstract class AppLocalizations {
   /// Sub-caption under the actual pace label clarifying the measurement window and source.
   ///
   /// In en, this message translates to:
-  /// **'Last 7 days · live learning only'**
+  /// **'Last 7 days · track learning only'**
   String get trackInfoActualPaceCaption;
 
   /// Unit suffix for pace values shown in the TrackInfoCard (e.g. '2.3 items/day').

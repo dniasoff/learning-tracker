@@ -4,7 +4,7 @@
 ///   * `OverallStatsCard` now surfaces two headline percentages — Track
 ///     progress (current cycle, achievement tier) and Lifetime (% of items
 ///     ever touched, including bulk-mark / lifetimeOnly imports).
-///   * The `PaceIndicator` carries the "Pace tracks live learning only."
+///   * The `PaceIndicator` carries the "Pace tracks track learning only."
 ///     caption so users can disambiguate pace from lifetime tier.
 ///   * Hierarchy row subtitles use the new "N chazaros" vocabulary instead
 ///     of the legacy raw "N completions" suffix.
@@ -350,7 +350,7 @@ void main() {
   );
 
   testWidgets(
-    'PaceIndicator surfaces the "Pace tracks live learning only." caption',
+    'PaceIndicator surfaces the "Pace tracks track learning only." caption',
     (tester) async {
       // Seed a goal so the pace provider returns a real PaceStatus rather
       // than null. A target date in the future + zero personal completions
@@ -391,7 +391,7 @@ void main() {
       // is unchanged, so we still assert against the same text — but the
       // test now exercises the AppLocalizations resolution path.
       expect(
-        find.text('Pace tracks live learning only.'),
+        find.text('Pace tracks track learning only.'),
         findsOneWidget,
         reason:
             'The disambiguating caption must render under the PaceIndicator '

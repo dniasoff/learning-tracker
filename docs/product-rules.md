@@ -70,9 +70,11 @@ When reviewing code or copy, audit against this document. The 2026-05-20 audits 
 
 | Source | Engagement (streak, points) | Achievement (siyumim, reports, learn-data) | Lifetime data | Date stamp |
 |---|:---:|:---:|:---:|---|
-| **Live learning** (real-time mark in the app) | ✅ | ✅ | ✅ | Real date (today) |
+| **Track learning** (real-time mark in the app) | ✅ | ✅ | ✅ | Real date (today) |
 | **Bulk-mark in-track** (historical entries inside a track) | ❌ | ✅ | ✅ | **Sentinel date** (e.g. `1/1/2000`) |
 | **Lifetime-mark** (lifetime-only) | ❌ | ❌ | ✅ | n/a |
+
+> Terminology note (2026-05-21): the engagement-tier row was previously labelled "Live learning". Renamed to "Track learning" — *all* learning the user does is live to them; the meaningful distinction is whether the mark is made inside a track vs. as a lifetime-only import. The `CompletionSource.live` enum value is unchanged for now; only user-facing copy and rule text use "track learning".
 
 - The **sentinel date is the mechanism** that lets bulk-in-track entries credit achievement/lifetime *without* leaking into recent activity, streak math, or "today's activity." Every date-keyed read must filter by date — that's where the rule enforces itself.
 - Don't reinvent a parallel `is_bulk` boolean alongside the date; the date *is* the discriminator for date-keyed reads.
@@ -85,15 +87,15 @@ When reviewing code or copy, audit against this document. The 2026-05-20 audits 
 
 ---
 
-## Rule 5 — Pace tracks live learning only
+## Rule 5 — Pace tracks track learning only
 
 - A track is **self-paced** — the user sets a target completion date.
 - App computes **velocity required** = `(total_items − bulk_baseline) ÷ (target_date − track_start_date)`.
-- App computes **actual velocity** = `live_completions_since_track_start ÷ days_elapsed_since_track_start`.
+- App computes **actual velocity** = `track_learning_completions_since_track_start ÷ days_elapsed_since_track_start`.
 - "Ahead / behind" compares those two **from day 1 of the track forward**.
 - **Bulk-marked prior learning establishes the starting baseline** (where the learner is *today*) — it must **never** count as retroactive pace credit. Filtering naturally falls out of Rule 4's sentinel date: any pace read that filters `completedAt >= trackStartDate` excludes bulk entries.
-- Day 1 with no live completions must display *"On track"* or *"Just started"* — not "Ahead by X" and not "Behind by X." A grace window (1–3 days, TBD) is appropriate.
-- The on-screen caption *"Pace tracks live learning only"* is correct and must stay.
+- Day 1 with no track-learning completions must display *"On track"* or *"Just started"* — not "Ahead by X" and not "Behind by X." A grace window (1–3 days, TBD) is appropriate.
+- The on-screen caption *"Pace tracks track learning only"* is correct and must stay.
 
 **Memory link:** `[[completion-credit-policy]]` (the underlying mechanism).
 **Active bug:** see `ux-audit-2026-05-20-fix-plan.md` Stream F.

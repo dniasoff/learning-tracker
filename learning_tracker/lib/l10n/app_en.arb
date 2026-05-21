@@ -1602,9 +1602,9 @@
       "date": { "type": "String" }
     }
   },
-  "paceLiveLearningOnlyCaption": "Pace tracks live learning only.",
+  "paceLiveLearningOnlyCaption": "Pace tracks track learning only.",
   "@paceLiveLearningOnlyCaption": {
-    "description": "Caption shown under the PaceIndicator on the Curriculum Progress screen — disambiguates pace (live-only) from the lifetime tier so users don't conflate the two."
+    "description": "Caption shown under the PaceIndicator on the Curriculum Progress screen — disambiguates pace (engagement-tier track learning) from the lifetime tier so users don't conflate the two."
   },
 
   "bulkMarkWizardSubtitle": "These count toward siyumim and lifetime knowledge — but not toward your streak or points.",
@@ -1624,9 +1624,9 @@
     "description": "Subtitle for the Lifetime Marking screen (Wave 5 Task #18) — clarifies the lifetimeOnly source so users understand the tier credit."
   },
 
-  "recentActivityLiveOnlyDisclaimer": "Live learning only — bulk-marked items appear under Lifetime Knowledge.",
+  "recentActivityLiveOnlyDisclaimer": "Track learning only — bulk-marked items appear under Lifetime Knowledge.",
   "@recentActivityLiveOnlyDisclaimer": {
-    "description": "Disclaimer shown on Recent Activity charts to make the live-only scope explicit and point at where bulk-marked items appear instead."
+    "description": "Disclaimer shown on Recent Activity charts to make the engagement-tier scope explicit and point at where bulk-marked items appear instead."
   },
 
   "lifetimeKnowledgeLoading": "Loading lifetime knowledge…",
@@ -1702,7 +1702,7 @@
   "@trackInfoActualPace": {
     "description": "Label for the actual pace row in the TrackInfoCard."
   },
-  "trackInfoActualPaceCaption": "Last 7 days · live learning only",
+  "trackInfoActualPaceCaption": "Last 7 days · track learning only",
   "@trackInfoActualPaceCaption": {
     "description": "Sub-caption under the actual pace label clarifying the measurement window and source."
   },

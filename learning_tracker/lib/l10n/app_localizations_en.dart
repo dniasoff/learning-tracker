@@ -2956,7 +2956,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get paceLiveLearningOnlyCaption => 'Pace tracks live learning only.';
+  String get paceLiveLearningOnlyCaption => 'Pace tracks track learning only.';
 
   @override
   String get bulkMarkWizardSubtitle =>
@@ -2973,7 +2973,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get recentActivityLiveOnlyDisclaimer =>
-      'Live learning only — bulk-marked items appear under Lifetime Knowledge.';
+      'Track learning only — bulk-marked items appear under Lifetime Knowledge.';
 
   @override
   String get lifetimeKnowledgeLoading => 'Loading lifetime knowledge…';
@@ -3031,7 +3031,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get trackInfoActualPace => 'Actual pace';
 
   @override
-  String get trackInfoActualPaceCaption => 'Last 7 days · live learning only';
+  String get trackInfoActualPaceCaption => 'Last 7 days · track learning only';
 
   @override
   String get trackInfoItemsPerDay => 'items/day';
