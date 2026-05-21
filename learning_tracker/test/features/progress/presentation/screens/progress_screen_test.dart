@@ -177,11 +177,15 @@ void main() {
         // 1. Shared counter row widget is present.
         expect(find.byType(ProgressTierCounterRow), findsOneWidget);
 
-        // 2. Counter values are visible (English default labels — Hebrew
-        // toggle is pinned off in [_wrap]).
-        expect(find.text('6-day streak'), findsOneWidget);
-        expect(find.text('4 Siyumim earned'), findsOneWidget);
-        expect(find.text('1336 items in lifetime'), findsOneWidget);
+        // 2. Counter values + short noun labels are visible (English default
+        // — Hebrew toggle is pinned off in [_wrap]). Big value uses
+        // locale-aware thousands separator so 1336 → "1,336".
+        expect(find.text('6'), findsOneWidget); // streak value
+        expect(find.text('4'), findsOneWidget); // siyumim value
+        expect(find.text('1,336'), findsOneWidget); // lifetime value formatted
+        expect(find.text('Streak'), findsOneWidget);
+        expect(find.text('Siyumim'), findsOneWidget);
+        expect(find.text('Lifetime'), findsOneWidget);
 
         // 3. The three lens tile titles render via `domainTermLabels(ref)`.
         expect(find.text('Recent Activity'), findsOneWidget);
@@ -211,8 +215,9 @@ void main() {
         );
         await tester.pumpAndSettle();
 
-        // No "1250 pts" anywhere in adult mode.
-        expect(find.text('1250 pts'), findsNothing);
+        // No points tile (label or formatted value) in adult mode.
+        expect(find.text('Points'), findsNothing);
+        expect(find.text('1,250'), findsNothing);
       },
     );
 
@@ -231,7 +236,8 @@ void main() {
         );
         await tester.pumpAndSettle();
 
-        expect(find.text('1250 pts'), findsOneWidget);
+        expect(find.text('1,250'), findsOneWidget); // points value formatted
+        expect(find.text('Points'), findsOneWidget);
       },
     );
 

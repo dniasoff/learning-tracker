@@ -123,13 +123,19 @@ void main() {
         );
         await tester.pumpAndSettle();
 
-        // Counter labels (English default).
-        expect(find.text('6-day streak'), findsOneWidget);
-        expect(find.text('4 Siyumim earned'), findsOneWidget);
-        expect(find.text('1336 items in lifetime'), findsOneWidget);
+        // Tile rows: each tile shows the big formatted value above a short
+        // noun label. The value gets a thousands separator so 1336 reads as
+        // "1,336" — earlier it ran together as raw digits.
+        expect(find.text('6'), findsOneWidget); // streak value
+        expect(find.text('4'), findsOneWidget); // siyumim value
+        expect(find.text('1,336'), findsOneWidget); // lifetime value formatted
+        expect(find.text('Streak'), findsOneWidget);
+        expect(find.text('Siyumim'), findsOneWidget);
+        expect(find.text('Lifetime'), findsOneWidget);
         // Points must NOT appear in adult mode even if a non-zero value is
         // provided — the row gates on [showPoints].
-        expect(find.text('250 pts'), findsNothing);
+        expect(find.text('Points'), findsNothing);
+        expect(find.text('250'), findsNothing);
       },
     );
 
@@ -147,10 +153,14 @@ void main() {
         );
         await tester.pumpAndSettle();
 
-        expect(find.text('2-day streak'), findsOneWidget);
-        expect(find.text('1 Siyumim earned'), findsOneWidget);
-        expect(find.text('5 items in lifetime'), findsOneWidget);
-        expect(find.text('1250 pts'), findsOneWidget);
+        expect(find.text('2'), findsOneWidget); // streak value
+        expect(find.text('1'), findsOneWidget); // siyumim value
+        expect(find.text('5'), findsOneWidget); // lifetime value
+        expect(find.text('1,250'), findsOneWidget); // points value formatted
+        expect(find.text('Streak'), findsOneWidget);
+        expect(find.text('Siyumim'), findsOneWidget);
+        expect(find.text('Lifetime'), findsOneWidget);
+        expect(find.text('Points'), findsOneWidget);
       },
     );
 
@@ -168,7 +178,9 @@ void main() {
         );
         await tester.pumpAndSettle();
 
-        expect(find.text('10 Siyumim earned'), findsOneWidget);
+        // 7 + 2 + 1 = 10 siyumim, rendered as the big tile value.
+        expect(find.text('10'), findsOneWidget);
+        expect(find.text('Siyumim'), findsOneWidget);
       },
     );
 
@@ -186,10 +198,14 @@ void main() {
         );
         await tester.pumpAndSettle();
 
-        expect(find.text('0-day streak'), findsOneWidget);
-        expect(find.text('0 Siyumim earned'), findsOneWidget);
-        expect(find.text('0 items in lifetime'), findsOneWidget);
-        expect(find.text('0 pts'), findsOneWidget);
+        // All four tiles render '0' as the big value plus their short noun
+        // label (3 'Streak'/'Lifetime'/'Points' + the locale-aware
+        // 'Siyumim' term).
+        expect(find.text('0'), findsNWidgets(4));
+        expect(find.text('Streak'), findsOneWidget);
+        expect(find.text('Siyumim'), findsOneWidget);
+        expect(find.text('Lifetime'), findsOneWidget);
+        expect(find.text('Points'), findsOneWidget);
       },
     );
 

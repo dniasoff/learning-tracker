@@ -2818,6 +2818,20 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get tierTileLabelStreak => 'Streak';
+
+  @override
+  String tierTileLabelSiyumim(String siyumimTerm) {
+    return '$siyumimTerm';
+  }
+
+  @override
+  String get tierTileLabelLifetime => 'Lifetime';
+
+  @override
+  String get tierTileLabelPoints => 'Points';
+
+  @override
   String get limud => 'Limud';
 
   @override

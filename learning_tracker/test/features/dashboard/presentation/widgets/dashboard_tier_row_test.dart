@@ -30,6 +30,7 @@ import 'package:learning_tracker/features/profiles/presentation/providers/active
 import 'package:learning_tracker/features/progress/domain/models/journey_view_model.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/journey_providers.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/lifetime_knowledge_providers.dart';
+import 'package:learning_tracker/features/progress/presentation/widgets/progress_tier_counter_row.dart';
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/curriculum_activation_providers.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
@@ -230,13 +231,26 @@ void main() {
         await tester.pump(const Duration(milliseconds: 100));
         await tester.pump(const Duration(milliseconds: 100));
 
-        // The three engagement / achievement / lifetime counter labels.
-        expect(find.text('7-day streak'), findsOneWidget);
-        expect(find.text('4 Siyumim earned'), findsOneWidget);
-        expect(find.text('42 items in lifetime'), findsOneWidget);
+        // The three engagement / achievement / lifetime tiles: short noun
+        // labels with the big formatted value above each. The numeric
+        // values are scoped inside the ProgressTierCounterRow because the
+        // surrounding dashboard renders the same digits elsewhere
+        // (active-track tile, etc.) and would otherwise satisfy a global
+        // `find.text('7')`.
+        Finder _inTileRow(String text) => find.descendant(
+              of: find.byType(ProgressTierCounterRow),
+              matching: find.text(text),
+            );
+        expect(_inTileRow('7'), findsOneWidget); // streak value
+        expect(_inTileRow('4'), findsOneWidget); // siyumim value
+        expect(_inTileRow('42'), findsOneWidget); // lifetime value
+        expect(_inTileRow('Streak'), findsOneWidget);
+        expect(_inTileRow('Siyumim'), findsOneWidget);
+        expect(_inTileRow('Lifetime'), findsOneWidget);
         // Adult mode must NOT render the ⭐ points counter even when the
         // dashboardGlobalPointsProvider has a non-zero value.
-        expect(find.text('250 pts'), findsNothing);
+        expect(_inTileRow('Points'), findsNothing);
+        expect(_inTileRow('250'), findsNothing);
 
         await tester.pumpWidget(const SizedBox.shrink());
         await tester.pump(Duration.zero);
@@ -268,11 +282,21 @@ void main() {
         await tester.pump(const Duration(milliseconds: 100));
         await tester.pump(const Duration(milliseconds: 100));
 
-        expect(find.text('3-day streak'), findsOneWidget);
-        expect(find.text('2 Siyumim earned'), findsOneWidget);
-        expect(find.text('15 items in lifetime'), findsOneWidget);
+        // Scope the value-text assertions inside the tile row — dashboard
+        // also renders track tiles that may contain the same digits.
+        Finder _inTileRow(String text) => find.descendant(
+              of: find.byType(ProgressTierCounterRow),
+              matching: find.text(text),
+            );
+        expect(_inTileRow('3'), findsOneWidget); // streak value
+        expect(_inTileRow('2'), findsOneWidget); // siyumim value
+        expect(_inTileRow('15'), findsOneWidget); // lifetime value
+        expect(_inTileRow('1,200'), findsOneWidget); // points value formatted
+        expect(_inTileRow('Streak'), findsOneWidget);
+        expect(_inTileRow('Siyumim'), findsOneWidget);
+        expect(_inTileRow('Lifetime'), findsOneWidget);
         // ⭐ points counter must appear in child mode.
-        expect(find.text('1200 pts'), findsOneWidget);
+        expect(_inTileRow('Points'), findsOneWidget);
 
         await tester.pumpWidget(const SizedBox.shrink());
         await tester.pump(Duration.zero);
@@ -666,23 +690,29 @@ void main() {
         await tester.pump(const Duration(milliseconds: 100));
 
         // 11 unit + 1 aggregate + 0 curriculum = 12 siyumim displayed on
-        // the counter row's middle slot. If the journeyViewModelProvider
-        // tally regressed, this number would either stay at 0 (provider
-        // failure → null asData → fallback) or drift away from 12.
+        // the counter row's middle slot. Scope inside ProgressTierCounterRow
+        // so other dashboard digits don't confound the assertion.
+        Finder _inTileRow(String text) => find.descendant(
+              of: find.byType(ProgressTierCounterRow),
+              matching: find.text(text),
+            );
         expect(
-          find.text('12 Siyumim earned'),
+          _inTileRow('12'),
           findsOneWidget,
           reason:
               'real journeyViewModelProvider must report 11 unit + 1 '
               'aggregate + 0 curriculum = 12 total siyumim from a fully-'
               'seeded Seder Zeraim ledger',
         );
+        expect(_inTileRow('Siyumim'), findsOneWidget);
 
         // The streak counter (stubbed) sanity-check — confirms the row is
         // mounted and rendering past the loading state.
-        expect(find.text('5-day streak'), findsOneWidget);
+        expect(_inTileRow('5'), findsOneWidget); // streak value
+        expect(_inTileRow('Streak'), findsOneWidget);
         // Lifetime counter — also stubbed (lifetime is its own provider).
-        expect(find.text('200 items in lifetime'), findsOneWidget);
+        expect(_inTileRow('200'), findsOneWidget); // lifetime value
+        expect(_inTileRow('Lifetime'), findsOneWidget);
 
         await tester.pumpWidget(const SizedBox.shrink());
         await tester.pump(Duration.zero);
@@ -731,11 +761,21 @@ void main() {
         await tester.pump(const Duration(milliseconds: 100));
         await tester.pump(const Duration(milliseconds: 100));
 
-        // The real provider returns 0/0/0 → the row's siyumim counter
-        // renders "0 siyumim earned". Critically, this assertion uses the
-        // REAL provider — if a milestone tally regression produced a
-        // non-zero number for an empty ledger, this test catches it.
-        expect(find.text('0 Siyumim earned'), findsOneWidget);
+        // The real provider returns 0/0/0 → every counter renders "0".
+        // The siyumim tile is identified by its 'Siyumim' label sitting
+        // next to a '0' value. Critically, this assertion uses the REAL
+        // provider — if a milestone tally regression produced a non-zero
+        // number for an empty ledger, the streak/lifetime/points tiles
+        // would still read 0 (stubbed) but siyumim would diverge.
+        // Scope to the tile row — the dashboard background may contain
+        // other '0' or 'Siyumim' strings (e.g. track rows).
+        Finder _inTileRow(String text) => find.descendant(
+              of: find.byType(ProgressTierCounterRow),
+              matching: find.text(text),
+            );
+        expect(_inTileRow('Siyumim'), findsOneWidget);
+        // Adult mode → 3 tiles (Streak / Siyumim / Lifetime), all reading '0'.
+        expect(_inTileRow('0'), findsNWidgets(3));
 
         await tester.pumpWidget(const SizedBox.shrink());
         await tester.pump(Duration.zero);

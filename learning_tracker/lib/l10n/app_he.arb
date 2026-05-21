@@ -1405,6 +1405,26 @@
     }
   },
 
+  "tierTileLabelStreak": "רצף",
+  "@tierTileLabelStreak": {
+    "description": "Tile-row label (short noun) under the big streak count."
+  },
+  "tierTileLabelSiyumim": "{siyumimTerm}",
+  "@tierTileLabelSiyumim": {
+    "description": "Tile-row label (short noun) under the big siyumim count — renders the locale-aware siyumim term.",
+    "placeholders": {
+      "siyumimTerm": { "type": "String" }
+    }
+  },
+  "tierTileLabelLifetime": "ידע כולל",
+  "@tierTileLabelLifetime": {
+    "description": "Tile-row label (short noun) under the big lifetime-items count."
+  },
+  "tierTileLabelPoints": "נקודות",
+  "@tierTileLabelPoints": {
+    "description": "Tile-row label (short noun) under the big points count."
+  },
+
   "limud": "לימוד",
   "@limud": {
     "description": "Canonical vocabulary: initial study (stage 1)."

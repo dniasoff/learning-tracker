@@ -2785,6 +2785,20 @@ class AppLocalizationsHe extends AppLocalizations {
   }
 
   @override
+  String get tierTileLabelStreak => 'רצף';
+
+  @override
+  String tierTileLabelSiyumim(String siyumimTerm) {
+    return '$siyumimTerm';
+  }
+
+  @override
+  String get tierTileLabelLifetime => 'ידע כולל';
+
+  @override
+  String get tierTileLabelPoints => 'נקודות';
+
+  @override
   String get limud => 'לימוד';
 
   @override

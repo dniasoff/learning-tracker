@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 import 'package:learning_tracker/core/labels/domain_term_labels.dart';
 import 'package:learning_tracker/core/theme/app_colors.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
@@ -77,35 +78,53 @@ class ProgressTierCounterRow extends ConsumerWidget {
         lifetimeTotalsAsync.asData?.value.learnedSections ?? 0;
     final points = pointsAsync.asData?.value ?? 0;
 
-    final streakValue = allReady ? '$currentStreak' : _loadingPlaceholder;
-    final siyumimValue = allReady ? '$totalSiyumim' : _loadingPlaceholder;
-    final lifetimeValue = allReady ? '$lifetimeItems' : _loadingPlaceholder;
-    final pointsValue = allReady ? '$points' : _loadingPlaceholder;
+    // Locale-aware thousands separator (1336 → "1,336" in en-US,
+    // "1,336" in he-IL).  Keeps four-digit counts (and beyond)
+    // readable on the dashboard tile row.
+    final locale = Localizations.localeOf(context).toString();
+    final numberFormat = NumberFormat.decimalPattern(locale);
+
+    final streakValue = allReady
+        ? numberFormat.format(currentStreak)
+        : _loadingPlaceholder;
+    final siyumimValue = allReady
+        ? numberFormat.format(totalSiyumim)
+        : _loadingPlaceholder;
+    final lifetimeValue = allReady
+        ? numberFormat.format(lifetimeItems)
+        : _loadingPlaceholder;
+    final pointsValue =
+        allReady ? numberFormat.format(points) : _loadingPlaceholder;
 
     final counters = <Widget>[
       _Counter(
         emoji: '🔥',
         value: streakValue,
-        label: l10n.tierCounterStreakDays(currentStreak),
+        label: l10n.tierTileLabelStreak,
+        semanticLabel: l10n.tierCounterStreakDays(currentStreak),
         accent: const Color(0xFFFF6F77),
       ),
       _Counter(
         emoji: '🏆',
         value: siyumimValue,
-        label: l10n.tierCounterSiyumimEarned(totalSiyumim, terms.siyumim),
+        label: l10n.tierTileLabelSiyumim(terms.siyumim),
+        semanticLabel:
+            l10n.tierCounterSiyumimEarned(totalSiyumim, terms.siyumim),
         accent: AppColors.chartAmber,
       ),
       _Counter(
         emoji: '📚',
         value: lifetimeValue,
-        label: l10n.tierCounterLifetimeItems(lifetimeItems),
+        label: l10n.tierTileLabelLifetime,
+        semanticLabel: l10n.tierCounterLifetimeItems(lifetimeItems),
         accent: AppTheme.brandBlue,
       ),
       if (showPoints)
         _Counter(
           emoji: '⭐',
           value: pointsValue,
-          label: l10n.tierCounterPoints(points),
+          label: l10n.tierTileLabelPoints,
+          semanticLabel: l10n.tierCounterPoints(points),
           accent: const Color(0xFFE4A100),
         ),
     ];
@@ -128,25 +147,33 @@ class ProgressTierCounterRow extends ConsumerWidget {
   }
 }
 
-/// One vertical counter cell: emoji + big number + multi-line label.
+/// One vertical counter cell: emoji + big number + short noun label.
+///
+/// [label] is the short visible noun (e.g. "Streak"). The big [value]
+/// above it already shows the count — the label deliberately doesn't
+/// repeat it so the tile width is sufficient to render the noun without
+/// ellipsis. [semanticLabel] carries the descriptive form (e.g.
+/// "0-day streak") for screen readers.
 class _Counter extends StatelessWidget {
   const _Counter({
     required this.emoji,
     required this.value,
     required this.label,
+    required this.semanticLabel,
     required this.accent,
   });
 
   final String emoji;
   final String value;
   final String label;
+  final String semanticLabel;
   final Color accent;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Semantics(
-      label: '$emoji $label',
+      label: '$emoji $semanticLabel',
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
         decoration: BoxDecoration(

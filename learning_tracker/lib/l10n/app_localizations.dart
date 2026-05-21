@@ -4985,6 +4985,30 @@ abstract class AppLocalizations {
   /// **'{count} pts'**
   String tierCounterPoints(int count);
 
+  /// Tile-row label (short noun) under the big streak count. The big number above already shows the count, so the label is just the noun — kept short so it fits the tile width without truncation.
+  ///
+  /// In en, this message translates to:
+  /// **'Streak'**
+  String get tierTileLabelStreak;
+
+  /// Tile-row label (short noun) under the big siyumim count. Renders the locale-aware siyumim term (Latin or Hebrew script per the Hebrew Terms toggle).
+  ///
+  /// In en, this message translates to:
+  /// **'{siyumimTerm}'**
+  String tierTileLabelSiyumim(String siyumimTerm);
+
+  /// Tile-row label (short noun) under the big lifetime-items count. Refers to Lifetime Knowledge — all items the user has ever marked learned.
+  ///
+  /// In en, this message translates to:
+  /// **'Lifetime'**
+  String get tierTileLabelLifetime;
+
+  /// Tile-row label (short noun) under the big points count. Child-mode only.
+  ///
+  /// In en, this message translates to:
+  /// **'Points'**
+  String get tierTileLabelPoints;
+
   /// Canonical vocabulary: initial study (stage 1) of one item. Lean-hard transliteration in English-default; Hebrew script when the Hebrew Terms toggle is ON.
   ///
   /// In en, this message translates to:

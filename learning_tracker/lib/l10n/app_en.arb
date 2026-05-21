@@ -1410,6 +1410,26 @@
     }
   },
 
+  "tierTileLabelStreak": "Streak",
+  "@tierTileLabelStreak": {
+    "description": "Tile-row label (short noun) under the big streak count. The big number above already shows the count, so the label is just the noun — kept short so it fits the tile width without truncation."
+  },
+  "tierTileLabelSiyumim": "{siyumimTerm}",
+  "@tierTileLabelSiyumim": {
+    "description": "Tile-row label (short noun) under the big siyumim count. Renders the locale-aware siyumim term (Latin or Hebrew script per the Hebrew Terms toggle).",
+    "placeholders": {
+      "siyumimTerm": { "type": "String" }
+    }
+  },
+  "tierTileLabelLifetime": "Lifetime",
+  "@tierTileLabelLifetime": {
+    "description": "Tile-row label (short noun) under the big lifetime-items count. Refers to Lifetime Knowledge — all items the user has ever marked learned."
+  },
+  "tierTileLabelPoints": "Points",
+  "@tierTileLabelPoints": {
+    "description": "Tile-row label (short noun) under the big points count. Child-mode only."
+  },
+
   "limud": "Limud",
   "@limud": {
     "description": "Canonical vocabulary: initial study (stage 1) of one item. Lean-hard transliteration in English-default; Hebrew script when the Hebrew Terms toggle is ON."
