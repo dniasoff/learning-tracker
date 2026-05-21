@@ -16,6 +16,7 @@ class TrackRow {
     required this.activatedAt,
     required this.stateChangedAt,
     this.paceResetDate,
+    this.syncedAt,
   });
 
   final String curriculumId;
@@ -29,6 +30,10 @@ class TrackRow {
   final DateTime stateChangedAt;
 
   final DateTime? paceResetDate;
+
+  /// Firestore server timestamp set by `FieldValue.serverTimestamp()` at
+  /// push time. Used as the ±5 s clock-skew tie-breaker by mergers.
+  final DateTime? syncedAt;
 }
 
 /// Codec for the `curriculum_tracks` Firestore collection.
@@ -69,6 +74,7 @@ class TrackCodec extends EntityCodec<TrackRow> {
       activatedAt: activatedAt,
       stateChangedAt: stateChangedAt,
       paceResetDate: FirestoreCodec.parseDateTime(raw['pace_reset_date']),
+      syncedAt: FirestoreCodec.parseDateTime(raw['synced_at']),
     );
   }
 

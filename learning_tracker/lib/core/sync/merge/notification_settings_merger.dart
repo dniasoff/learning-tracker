@@ -1,6 +1,5 @@
 import 'package:learning_tracker/core/sync/codec/firestore_codec.dart';
 import 'package:learning_tracker/core/sync/merge/entity_merger.dart';
-import 'package:learning_tracker/core/sync/merge/merge_rules.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -18,8 +17,17 @@ import 'package:shared_preferences/shared_preferences.dart';
 ///
 /// SharedPreferences keys match the SyncEngine constants so both old and new
 /// sync paths share the same persisted values.
+///
+/// Phase 3: the merger consults [MergeStore.remoteIsNewer] (which knows
+/// about clock-skew arbitration), and after a successful apply calls
+/// [MergeStore.persistUpdatedAt] so the persisted LWW timestamp survives
+/// SharedPreferences resets. The SharedPreferences key is kept up to date
+/// in parallel because the rest of the app uses it directly.
 class NotificationSettingsMerger implements EntityMerger {
-  const NotificationSettingsMerger();
+  const NotificationSettingsMerger({required MergeStore store})
+    : _store = store;
+
+  final MergeStore _store;
 
   // SharedPreferences keys — must match SyncEngine constants.
   static const _updatedAtMsKey = 'notification_settings_updated_at_ms';
@@ -30,6 +38,9 @@ class NotificationSettingsMerger implements EntityMerger {
   static const _streakAlertHourKey = 'streak_alert_hour';
   static const _streakAlertMinuteKey = 'streak_alert_minute';
   static const _rewardNotificationEnabledKey = 'reward_notification_enabled';
+
+  /// Single natural key — notification settings are a per-account singleton.
+  static const _naturalKey = 'preferences';
 
   @override
   String get kind => EntityKind.notificationSettings;
@@ -45,14 +56,34 @@ class NotificationSettingsMerger implements EntityMerger {
 
     final prefs = await SharedPreferences.getInstance();
     final remoteUpdatedAt = _parseTimestamp(remote['updated_at']);
-    final localMs = prefs.getInt(_updatedAtMsKey);
-    final localUpdatedAt = localMs == null
-        ? null
-        : DateTime.fromMillisecondsSinceEpoch(localMs, isUtc: true);
+    final remoteSyncedAt = _parseTimestamp(remote['synced_at']);
+    // Local timestamp comes from the SyncKv table (authoritative) with a
+    // SharedPreferences fallback to handle pre-Phase-3 installs.
+    var localUpdatedAt = await _store.currentUpdatedAt(
+      kind: kind,
+      profileId: profileId,
+      naturalKey: _naturalKey,
+    );
+    if (localUpdatedAt == null) {
+      final localMs = prefs.getInt(_updatedAtMsKey);
+      if (localMs != null) {
+        localUpdatedAt = DateTime.fromMillisecondsSinceEpoch(
+          localMs,
+          isUtc: true,
+        );
+      }
+    }
+    final localSyncedAt = await _store.currentSyncedAt(
+      kind: kind,
+      profileId: profileId,
+      naturalKey: _naturalKey,
+    );
 
-    if (!remoteIsNewer(
+    if (!_store.remoteIsNewer(
       localUpdatedAt: localUpdatedAt,
       remoteUpdatedAt: remoteUpdatedAt,
+      localSyncedAt: localSyncedAt,
+      remoteSyncedAt: remoteSyncedAt,
     )) {
       return;
     }
@@ -89,10 +120,15 @@ class NotificationSettingsMerger implements EntityMerger {
       rewardNotifications['enabled'] as bool? ?? true,
     );
 
-    final stamp =
-        remoteUpdatedAt?.millisecondsSinceEpoch ??
-        DateTimeFactory.nowUtc().millisecondsSinceEpoch;
-    await prefs.setInt(_updatedAtMsKey, stamp);
+    final stamp = remoteUpdatedAt ?? DateTimeFactory.nowUtc();
+    await prefs.setInt(_updatedAtMsKey, stamp.millisecondsSinceEpoch);
+    await _store.persistUpdatedAt(
+      kind: kind,
+      profileId: profileId,
+      naturalKey: _naturalKey,
+      updatedAt: stamp,
+      syncedAt: remoteSyncedAt,
+    );
   }
 
   DateTime? _parseTimestamp(Object? raw) => FirestoreCodec.parseDateTime(raw);

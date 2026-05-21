@@ -1,12 +1,15 @@
 /// LWW merger for per-curriculum settings rows.
 ///
 /// Natural key: `curriculum_id`. Remote wins iff its `updated_at` is
-/// strictly newer than the local row.
+/// strictly newer than the local row; within ±5 s clock skew the
+/// Firestore server timestamp (`synced_at`) decides.
+///
+/// Phase 3: after a successful apply the merger persists the remote
+/// `updated_at` via [MergeStore.persistUpdatedAt].
 library;
 
 import 'package:learning_tracker/core/sync/codec/settings_codec.dart';
 import 'package:learning_tracker/core/sync/merge/entity_merger.dart';
-import 'package:learning_tracker/core/sync/merge/merge_rules.dart';
 
 class SettingsMerger implements EntityMerger {
   SettingsMerger({required MergeStore store}) : _store = store;
@@ -25,6 +28,8 @@ class SettingsMerger implements EntityMerger {
     for (final row in rows) {
       final decoded = _codec.decode(row);
       if (decoded == null) continue; // Missing curriculumId — skip.
+      final remoteUpdatedAt = decoded.updatedAt;
+      if (remoteUpdatedAt == null) continue;
 
       final naturalKey = decoded.curriculumId;
       final localUpdatedAt = await _store.currentUpdatedAt(
@@ -32,13 +37,27 @@ class SettingsMerger implements EntityMerger {
         profileId: profileId,
         naturalKey: naturalKey,
       );
-      if (!remoteIsNewer(
+      final localSyncedAt = await _store.currentSyncedAt(
+        kind: kind,
+        profileId: profileId,
+        naturalKey: naturalKey,
+      );
+      if (!_store.remoteIsNewer(
         localUpdatedAt: localUpdatedAt,
-        remoteUpdatedAt: decoded.updatedAt,
+        remoteUpdatedAt: remoteUpdatedAt,
+        localSyncedAt: localSyncedAt,
+        remoteSyncedAt: decoded.syncedAt,
       )) {
         continue;
       }
       await _store.upsert(kind: kind, profileId: profileId, fields: row);
+      await _store.persistUpdatedAt(
+        kind: kind,
+        profileId: profileId,
+        naturalKey: naturalKey,
+        updatedAt: remoteUpdatedAt,
+        syncedAt: decoded.syncedAt,
+      );
     }
   }
 }

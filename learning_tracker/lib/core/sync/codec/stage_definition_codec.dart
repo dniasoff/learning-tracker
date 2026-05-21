@@ -21,6 +21,7 @@ class StageDefinitionRow {
     required this.schedule,
     required this.isDefault,
     this.updatedAt,
+    this.syncedAt,
   });
 
   final String curriculumId;
@@ -33,6 +34,10 @@ class StageDefinitionRow {
 
   final bool isDefault;
   final DateTime? updatedAt;
+
+  /// Firestore server timestamp set by `FieldValue.serverTimestamp()` at
+  /// push time. Used as the ±5 s clock-skew tie-breaker by mergers.
+  final DateTime? syncedAt;
 }
 
 /// Codec for the `stage_definitions` Firestore collection.
@@ -104,6 +109,7 @@ class StageDefinitionCodec extends EntityCodec<StageDefinitionRow> {
       schedule: schedule,
       isDefault: FirestoreCodec.parseBool(raw['is_default']) ?? false,
       updatedAt: FirestoreCodec.parseDateTime(raw['updated_at']),
+      syncedAt: FirestoreCodec.parseDateTime(raw['synced_at']),
     );
   }
 

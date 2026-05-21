@@ -15,6 +15,7 @@ class LearnerProfileRow {
     required this.updatedAt,
     required this.createdAt,
     this.avatarIndex = 0,
+    this.syncedAt,
   });
 
   final int profileId;
@@ -24,6 +25,10 @@ class LearnerProfileRow {
   final DateTime updatedAt;
   final DateTime createdAt;
   final int avatarIndex;
+
+  /// Firestore server timestamp set by `FieldValue.serverTimestamp()` at
+  /// push time. Used as the ±5 s clock-skew tie-breaker by mergers.
+  final DateTime? syncedAt;
 }
 
 /// Codec for the `learner_profiles` Firestore collection.
@@ -62,6 +67,7 @@ class LearnerProfileCodec extends EntityCodec<LearnerProfileRow> {
       updatedAt: updatedAt,
       createdAt: createdAt,
       avatarIndex: FirestoreCodec.parseInt(raw['avatar_index']) ?? 0,
+      syncedAt: FirestoreCodec.parseDateTime(raw['synced_at']),
     );
   }
 

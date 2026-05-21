@@ -86,6 +86,50 @@ abstract class MergeStore {
     required String naturalKey,
   });
 
+  /// Read the persisted Firestore server timestamp (`synced_at`) for
+  /// `(kind, naturalKey)`. Used as the tie-breaker when client
+  /// `updated_at` values are within ±5 s on two devices. Returns `null`
+  /// when no row has been applied or the row carried no `synced_at`
+  /// (legacy data / first sync).
+  Future<DateTime?> currentSyncedAt({
+    required String kind,
+    required int profileId,
+    required String naturalKey,
+  });
+
+  /// Persist the remote `updated_at` (and optional Firestore server
+  /// timestamp `syncedAt`) after a successful merge. Called by every LWW
+  /// merger immediately after [upsert].
+  Future<void> persistUpdatedAt({
+    required String kind,
+    required int profileId,
+    required String naturalKey,
+    required DateTime updatedAt,
+    DateTime? syncedAt,
+  });
+
+  /// Phase-3 LWW gate: returns `true` when the remote row should overwrite
+  /// the current local row.
+  ///
+  /// Rules (in order):
+  ///   1. If `remoteUpdatedAt` is `null`, return `false` — we cannot decide
+  ///      without a remote timestamp.
+  ///   2. If `localUpdatedAt` is `null`, return `true` — no local row yet.
+  ///   3. If `|local - remote| > 5 s`, the strict `remote > local`
+  ///      comparison decides (local wins on ties).
+  ///   4. Within the ±5 s clock-skew window, fall back to the server
+  ///      timestamp (`syncedAt`). Remote wins iff its `syncedAt` is
+  ///      strictly after the local-persisted `syncedAt`.
+  ///   5. If `syncedAt` is missing or equal on both sides, prefer remote
+  ///      (it has authoritatively reached the server; preserves
+  ///      convergence).
+  bool remoteIsNewer({
+    required DateTime? localUpdatedAt,
+    required DateTime? remoteUpdatedAt,
+    DateTime? localSyncedAt,
+    DateTime? remoteSyncedAt,
+  });
+
   /// Upsert a row (LWW winners — the merger has already decided that the
   /// remote row should overwrite local).
   Future<void> upsert({

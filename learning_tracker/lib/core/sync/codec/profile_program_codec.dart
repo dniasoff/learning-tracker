@@ -13,6 +13,8 @@ class ProfileProgramRow {
     required this.programId,
     this.trackingStartDate,
     this.trackingStartRef,
+    this.updatedAt,
+    this.syncedAt,
   });
 
   final int profileId;
@@ -20,6 +22,14 @@ class ProfileProgramRow {
   final int programId;
   final DateTime? trackingStartDate;
   final String? trackingStartRef;
+
+  /// Client `updated_at` (LWW timestamp). Falls back to
+  /// [trackingStartDate] when the document predates the field.
+  final DateTime? updatedAt;
+
+  /// Firestore server timestamp set by `FieldValue.serverTimestamp()` at
+  /// push time. Used as the ±5 s clock-skew tie-breaker by mergers.
+  final DateTime? syncedAt;
 }
 
 /// Codec for the `profile_programs` Firestore collection.
@@ -50,6 +60,8 @@ class ProfileProgramCodec extends EntityCodec<ProfileProgramRow> {
         raw['tracking_start_date'],
       ),
       trackingStartRef: raw['tracking_start_ref'] as String?,
+      updatedAt: FirestoreCodec.parseDateTime(raw['updated_at']),
+      syncedAt: FirestoreCodec.parseDateTime(raw['synced_at']),
     );
   }
 

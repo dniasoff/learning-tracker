@@ -17,12 +17,17 @@ class SettingsRow {
     required this.curriculumId,
     this.trackId,
     this.updatedAt,
+    this.syncedAt,
     this.stages = const [],
   });
 
   final String curriculumId;
   final int? trackId;
   final DateTime? updatedAt;
+
+  /// Firestore server timestamp set by `FieldValue.serverTimestamp()` at
+  /// push time. Used as the ±5 s clock-skew tie-breaker by mergers.
+  final DateTime? syncedAt;
 
   /// Nested stage definitions embedded in the settings document.
   ///
@@ -60,6 +65,7 @@ class SettingsCodec extends EntityCodec<SettingsRow> {
       curriculumId: curriculumId,
       trackId: FirestoreCodec.parseInt(raw['track_id']),
       updatedAt: FirestoreCodec.parseDateTime(raw['updated_at']),
+      syncedAt: FirestoreCodec.parseDateTime(raw['synced_at']),
       stages: stages,
     );
   }

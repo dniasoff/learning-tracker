@@ -49,10 +49,11 @@ void main() {
       await tester.pump(const Duration(milliseconds: 50));
 
       // Title — uses the existing `addWhatYouLearned` key which conveys the
-      // "Mark lifetime knowledge" concept (kept close to existing per
-      // W5-D brief: "the design intent is clarity").
+      // "Mark lifetime knowledge" concept. The Wave-5 copy refresh renamed
+      // the visible string to "Add Lifetime Learning" (matches the
+      // sidebar entry); the key name stays for source-stability.
       expect(
-        find.text("Add what you've learned"),
+        find.text('Add Lifetime Learning'),
         findsOneWidget,
         reason:
             'The AppBar title must render via the addWhatYouLearned l10n key',

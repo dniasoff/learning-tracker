@@ -296,5 +296,76 @@ void main() {
         );
       },
     );
+
+    // ── Scenario 4: local-newer-wins (Phase 3 LWW symmetry) ──────────────────
+
+    test('local newer than remote: Device B keeps its local track state after '
+        'a stale row arrives from Device A', () async {
+      // Both devices start with the same track activated at t0.
+      final t0 = DateTime.utc(2026, 1, 1, 9, 0, 0);
+      await _insertTrack(deviceA, profileId: profileId, activatedAt: t0);
+      await _insertTrack(deviceB, profileId: profileId, activatedAt: t0);
+
+      // Device A retires the track at t1 (older).
+      final t1 = DateTime.utc(2026, 1, 1, 10, 0, 0);
+      final wireFromA = {
+        'curriculum_id': 'mishnayos',
+        'state': 'retired',
+        'activated_at': t0.toIso8601String(),
+        'state_changed_at': t1.toIso8601String(),
+      };
+
+      // Device B retires-and-revives later at t2 (newer than t1).
+      final t2 = DateTime.utc(2026, 1, 1, 12, 0, 0);
+      await (deviceB.update(deviceB.curriculumTracks)..where(
+            (t) =>
+                t.profileId.equals(profileId) &
+                t.curriculumId.equals('mishnayos'),
+          ))
+          .write(
+            CurriculumTracksCompanion(
+              state: const Value('active'),
+              stateChangedAt: Value(t2),
+            ),
+          );
+      // Persist t2 so the merge store treats local as authoritative.
+      await DriftMergeStore(deviceB).persistUpdatedAt(
+        kind: EntityKind.trackConfig,
+        profileId: profileId,
+        naturalKey: 'mishnayos',
+        updatedAt: t2,
+      );
+
+      // Now Device B pulls the stale row from Device A.
+      await routerB.dispatch(
+        profileId: profileId,
+        kind: EntityKind.trackConfig,
+        rows: [wireFromA],
+      );
+
+      final trackB =
+          await (deviceB.select(deviceB.curriculumTracks)..where(
+                (t) =>
+                    t.profileId.equals(profileId) &
+                    t.curriculumId.equals('mishnayos'),
+              ))
+              .getSingleOrNull();
+
+      expect(trackB, isNotNull);
+      expect(
+        trackB!.state,
+        'active',
+        reason:
+            'Phase 3 LWW: Device B local state at t2 must survive a '
+            'remote with older state_changed_at t1',
+      );
+      expect(
+        trackB.stateChangedAt.millisecondsSinceEpoch,
+        t2.millisecondsSinceEpoch,
+        reason:
+            'Phase 3 LWW: local state_changed_at must remain at t2 '
+            '— remote row at t1 must NOT overwrite it',
+      );
+    });
   });
 }

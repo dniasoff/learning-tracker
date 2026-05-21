@@ -12,6 +12,7 @@ class LearningOrderRow {
     required this.sefariaRef,
     required this.userSortOrder,
     this.updatedAt,
+    this.syncedAt,
     this.isCustomOrdered = false,
     this.displayNameHe,
     this.displayNameEn,
@@ -21,6 +22,10 @@ class LearningOrderRow {
   final String sefariaRef;
   final int userSortOrder;
   final DateTime? updatedAt;
+
+  /// Firestore server timestamp set by `FieldValue.serverTimestamp()` at
+  /// push time. Used as the ±5 s clock-skew tie-breaker by mergers.
+  final DateTime? syncedAt;
   final bool isCustomOrdered;
   final String? displayNameHe;
   final String? displayNameEn;
@@ -51,6 +56,7 @@ class LearningOrderCodec extends EntityCodec<LearningOrderRow> {
       sefariaRef: sefariaRef,
       userSortOrder: userSortOrder,
       updatedAt: FirestoreCodec.parseDateTime(raw['updated_at']),
+      syncedAt: FirestoreCodec.parseDateTime(raw['synced_at']),
       isCustomOrdered:
           FirestoreCodec.parseBool(raw['is_custom_ordered']) ?? false,
       displayNameHe: raw['display_name_he'] as String?,

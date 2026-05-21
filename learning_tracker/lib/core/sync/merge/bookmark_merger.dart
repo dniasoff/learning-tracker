@@ -1,13 +1,16 @@
 /// LWW merger for bookmark rows.
 ///
 /// Natural key: `(curriculum_id, track_type)`. Remote wins iff its
-/// `updated_at` is strictly newer than local (see [remoteIsNewer]) —
-/// ties go to local to avoid flapping.
+/// `updated_at` is strictly newer than local; within ±5 s clock skew the
+/// Firestore server timestamp (`synced_at`) decides.
+///
+/// Phase 3: after a successful apply the merger persists the remote
+/// `updated_at` via [MergeStore.persistUpdatedAt] so subsequent pulls
+/// arbitrate symmetrically (local edits between pulls are no longer lost).
 library;
 
 import 'package:learning_tracker/core/sync/codec/bookmark_codec.dart';
 import 'package:learning_tracker/core/sync/merge/entity_merger.dart';
-import 'package:learning_tracker/core/sync/merge/merge_rules.dart';
 
 class BookmarkMerger implements EntityMerger {
   BookmarkMerger({required MergeStore store}) : _store = store;
@@ -33,13 +36,27 @@ class BookmarkMerger implements EntityMerger {
         profileId: profileId,
         naturalKey: naturalKey,
       );
-      if (!remoteIsNewer(
+      final localSyncedAt = await _store.currentSyncedAt(
+        kind: kind,
+        profileId: profileId,
+        naturalKey: naturalKey,
+      );
+      if (!_store.remoteIsNewer(
         localUpdatedAt: localUpdatedAt,
         remoteUpdatedAt: decoded.updatedAt,
+        localSyncedAt: localSyncedAt,
+        remoteSyncedAt: decoded.syncedAt,
       )) {
         continue;
       }
       await _store.upsert(kind: kind, profileId: profileId, fields: row);
+      await _store.persistUpdatedAt(
+        kind: kind,
+        profileId: profileId,
+        naturalKey: naturalKey,
+        updatedAt: decoded.updatedAt,
+        syncedAt: decoded.syncedAt,
+      );
     }
   }
 }

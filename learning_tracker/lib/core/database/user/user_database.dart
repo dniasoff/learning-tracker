@@ -17,6 +17,7 @@ import 'package:learning_tracker/core/database/daos/sacred_window_dao.dart';
 import 'package:learning_tracker/core/database/daos/stage_dao.dart';
 import 'package:learning_tracker/core/database/daos/streak_event_dao.dart';
 import 'package:learning_tracker/core/database/daos/study_day_config_dao.dart';
+import 'package:learning_tracker/core/database/daos/sync_kv_dao.dart';
 import 'package:learning_tracker/core/database/daos/text_download_status_dao.dart';
 import 'package:learning_tracker/core/database/daos/track_dao.dart';
 import 'package:learning_tracker/core/database/daos/track_learning_order_dao.dart';
@@ -39,6 +40,7 @@ import 'package:learning_tracker/core/database/tables/sacred_window_entries.dart
 import 'package:learning_tracker/core/database/tables/stage_definitions.dart';
 import 'package:learning_tracker/core/database/tables/streak_events.dart';
 import 'package:learning_tracker/core/database/tables/study_day_configs.dart';
+import 'package:learning_tracker/core/database/tables/sync_kv.dart';
 import 'package:learning_tracker/core/database/tables/text_download_status.dart';
 import 'package:learning_tracker/core/database/tables/track_learning_order.dart';
 import 'package:learning_tracker/core/database/views/completions_view.dart';
@@ -85,6 +87,7 @@ part 'user_database.g.dart';
     Outbox,
     SacredWindowEntries,
     PriorCompletionImports,
+    SyncKv,
   ],
   views: [CompletionsView],
   daos: [
@@ -110,13 +113,14 @@ part 'user_database.g.dart';
     OutboxDao,
     SacredWindowDao,
     PriorCompletionImportDao,
+    SyncKvDao,
   ],
 )
 class UserDatabase extends _$UserDatabase {
   UserDatabase(super.e);
 
   @override
-  int get schemaVersion => 23;
+  int get schemaVersion => 24;
 
   // drift_dev cannot express WHERE in a Dart-defined view's `as()` body
   // (cascade `..where()` confuses the generator).  The auto-generated SQL for

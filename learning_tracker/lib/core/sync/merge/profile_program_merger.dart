@@ -1,9 +1,12 @@
 /// LWW merger for profile-program association rows.
 ///
 /// Natural key: `(profile_id, curriculum_id)` — one row per profile per
-/// curriculum. Remote always wins (last-write-wins on `tracking_start_date`
-/// is fine; `program_id` and `tracking_start_date` are only ever set via
-/// the setup / onboarding flow, so the most-recent write is canonical).
+/// curriculum.
+///
+/// Phase 3: this merger consults [MergeStore.remoteIsNewer] using the
+/// per-row `updated_at` (falling back to `tracking_start_date` when the
+/// payload predates the new column) and persists the remote `updated_at`
+/// after a successful apply so subsequent pulls arbitrate symmetrically.
 library;
 
 import 'dart:async';
@@ -47,7 +50,45 @@ class ProfileProgramMerger implements EntityMerger {
         continue;
       }
 
+      // LWW timestamp: prefer explicit `updated_at`, fall back to
+      // `tracking_start_date` for older payloads.
+      final remoteUpdatedAt = decoded.updatedAt ?? decoded.trackingStartDate;
+
+      final naturalKey = '${decoded.profileId}|${decoded.curriculumId}';
+      final localUpdatedAt = await _store.currentUpdatedAt(
+        kind: kind,
+        profileId: profileId,
+        naturalKey: naturalKey,
+      );
+      final localSyncedAt = await _store.currentSyncedAt(
+        kind: kind,
+        profileId: profileId,
+        naturalKey: naturalKey,
+      );
+      // When the remote row carries no timestamp at all, this is a
+      // legacy payload; treat it as "always wins on first sync" (the
+      // existing local row is preserved if [remoteIsNewer] would otherwise
+      // be false) by upserting only when no local timestamp is recorded.
+      final shouldApply = remoteUpdatedAt == null
+          ? localUpdatedAt == null
+          : _store.remoteIsNewer(
+              localUpdatedAt: localUpdatedAt,
+              remoteUpdatedAt: remoteUpdatedAt,
+              localSyncedAt: localSyncedAt,
+              remoteSyncedAt: decoded.syncedAt,
+            );
+      if (!shouldApply) continue;
+
       await _store.upsert(kind: kind, profileId: profileId, fields: row);
+      if (remoteUpdatedAt != null) {
+        await _store.persistUpdatedAt(
+          kind: kind,
+          profileId: profileId,
+          naturalKey: naturalKey,
+          updatedAt: remoteUpdatedAt,
+          syncedAt: decoded.syncedAt,
+        );
+      }
     }
   }
 }

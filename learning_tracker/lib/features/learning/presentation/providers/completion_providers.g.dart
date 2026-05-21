@@ -112,7 +112,7 @@ final class MarkCompletionUseCaseProvider
 }
 
 String _$markCompletionUseCaseHash() =>
-    r'7c6f7f668bbff279db3e68350d013052584fc534';
+    r'0962174728eb94aac9e9cbb336c3e8510f6b9b0a';
 
 /// Provides the bulk mark completion use case.
 

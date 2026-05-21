@@ -6,12 +6,15 @@
 ///
 /// W3.27: schedule quartet replaced by JSON `schedule` column.
 /// Natural key: `(curriculum_id, track_id, stage_order)`. Remote wins iff
-/// its `updated_at` is strictly newer than the local row.
+/// its `updated_at` is strictly newer than the local row; within ±5 s
+/// clock skew the Firestore server timestamp (`synced_at`) decides.
+///
+/// Phase 3: after a successful apply the merger persists the remote
+/// `updated_at` via [MergeStore.persistUpdatedAt].
 library;
 
 import 'package:learning_tracker/core/sync/codec/stage_definition_codec.dart';
 import 'package:learning_tracker/core/sync/merge/entity_merger.dart';
-import 'package:learning_tracker/core/sync/merge/merge_rules.dart';
 
 class StageDefinitionMerger implements EntityMerger {
   StageDefinitionMerger({required MergeStore store}) : _store = store;
@@ -39,6 +42,8 @@ class StageDefinitionMerger implements EntityMerger {
     for (final row in rows) {
       final decoded = _codec.decode(row);
       if (decoded == null) continue; // Missing required fields — skip.
+      final remoteUpdatedAt = decoded.updatedAt;
+      if (remoteUpdatedAt == null) continue;
 
       final naturalKey =
           '${decoded.curriculumId}|${decoded.trackId}|${decoded.stageOrder}';
@@ -47,13 +52,27 @@ class StageDefinitionMerger implements EntityMerger {
         profileId: profileId,
         naturalKey: naturalKey,
       );
-      if (!remoteIsNewer(
+      final localSyncedAt = await _store.currentSyncedAt(
+        kind: kind,
+        profileId: profileId,
+        naturalKey: naturalKey,
+      );
+      if (!_store.remoteIsNewer(
         localUpdatedAt: localUpdatedAt,
-        remoteUpdatedAt: decoded.updatedAt,
+        remoteUpdatedAt: remoteUpdatedAt,
+        localSyncedAt: localSyncedAt,
+        remoteSyncedAt: decoded.syncedAt,
       )) {
         continue;
       }
       await _store.upsert(kind: kind, profileId: profileId, fields: row);
+      await _store.persistUpdatedAt(
+        kind: kind,
+        profileId: profileId,
+        naturalKey: naturalKey,
+        updatedAt: remoteUpdatedAt,
+        syncedAt: decoded.syncedAt,
+      );
     }
   }
 }

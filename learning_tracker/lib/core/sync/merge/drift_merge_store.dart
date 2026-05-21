@@ -23,7 +23,18 @@ import 'package:learning_tracker/core/utils/date_utils.dart';
 ///   settings        → [StageDao]                 (replace stages for curriculum)
 ///   stage_definition → [StageDao]               (upsert by curriculum_id + track_id + stage_order)
 ///   streak          → not routed here — [StreakEventMerger] uses [StreakEventLog] directly
+///
+/// Phase 3 of the sync architecture plan adds LWW symmetry: every merger
+/// calls [persistUpdatedAt] after a successful apply, and [currentUpdatedAt]
+/// reads back from the [SyncKv] table so [remoteIsNewer] is symmetric.
+/// Within a ±5 s clock-skew window, [remoteIsNewer] falls back to the
+/// Firestore server timestamp (`synced_at`) to break ties.
 class DriftMergeStore implements MergeStore {
+  /// Clock-skew window for the [remoteIsNewer] tie-breaker. When two
+  /// devices' clocks differ by less than this, the server timestamp
+  /// (`synced_at`) decides instead of the strict `remote > local`
+  /// comparison on the client `updated_at`.
+  static const Duration clockSkewTieBreakWindow = Duration(seconds: 5);
   DriftMergeStore(UserDatabase db, {AnalyticsService? analytics})
     : _db = db,
       _analytics = analytics;
@@ -50,91 +61,98 @@ class DriftMergeStore implements MergeStore {
 
   // ── currentUpdatedAt ────────────────────────────────────────────────────────
 
+  /// Returns the persisted last-applied `updated_at` for `(kind, naturalKey)`.
+  ///
+  /// Phase 3: every LWW kind reads from the [SyncKv] table. The persisted
+  /// value is written by [persistUpdatedAt] inside every merger's
+  /// successful-apply branch. When no value has been recorded yet, returns
+  /// `null` (callers treat that as "remote wins on first sync").
   @override
   Future<DateTime?> currentUpdatedAt({
     required String kind,
     required int profileId,
     required String naturalKey,
-  }) async {
-    switch (kind) {
-      case EntityKind.learnerProfile:
-        final id = int.tryParse(naturalKey);
-        if (id == null) return null;
-        final row = await _db.profileDao.getProfileById(id);
-        return row?.updatedAt;
-
-      case EntityKind.trackConfig:
-        // Natural key for tracks: "curriculum_id" (W3.22: trackType removed).
-        final curriculumId = naturalKey;
-        final row =
-            await (_db.select(_db.curriculumTracks)..where(
-                  (t) =>
-                      t.profileId.equals(profileId) &
-                      t.curriculumId.equals(curriculumId),
-                ))
-                .getSingleOrNull();
-        // Track uses stateChangedAt as its LWW timestamp.
-        if (row == null) return null;
-        return row.stateChangedAt;
-
-      case EntityKind.bookmark:
-        // Natural key for bookmarks: "curriculum_id|track_type"
-        // Bookmarks are keyed by trackId in the DB but track_type in Firestore.
-        // Since we cannot look up by track_type without a full trackDao scan,
-        // return null here to let the remote win on first sync (safe: LWW).
-        // A future migration can persist track_type on the bookmarks table.
-        return null;
-
-      case EntityKind.settings:
-        // Settings updatedAt is stored in SharedPreferences by SyncEngine
-        // (_settingsTimestampKey). DriftMergeStore cannot read SharedPreferences.
-        // Return null — the SettingsMerger handles LWW at the merger level.
-        return null;
-
-      case EntityKind.stageDefinition:
-        // Natural key: "curriculum_id|track_id|stage_order"
-        final parts = naturalKey.split('|');
-        if (parts.length != 3) return null;
-        final curriculumId = parts[0];
-        final trackId = int.tryParse(parts[1]);
-        final stageOrder = int.tryParse(parts[2]);
-        if (trackId == null || stageOrder == null) return null;
-        final row =
-            await (_db.select(_db.stageDefinitions)..where(
-                  (t) =>
-                      t.profileId.equals(profileId) &
-                      t.curriculumId.equals(curriculumId) &
-                      t.trackId.equals(trackId) &
-                      t.stageOrder.equals(stageOrder),
-                ))
-                .getSingleOrNull();
-        // StageDefinitions don't have an updatedAt column — return null to let
-        // the merger-level LWW (from updated_at in the enclosing settings doc)
-        // make the decision. The StageDefinitionMerger checks the row's
-        // updated_at field which comes from the enclosing settings document.
-        if (row != null) return null;
-        return null;
-
-      case EntityKind.learningOrder:
-        // Natural key: "curriculum_id|sefaria_ref"
-        final loparts = naturalKey.split('|');
-        if (loparts.length != 2) return null;
-        final loCurriculumId = loparts[0];
-        final loSefariaRef = loparts[1];
-        final loRow =
-            await (_db.select(_db.learningOrder)..where(
-                  (t) =>
-                      t.profileId.equals(profileId) &
-                      t.curriculumId.equals(loCurriculumId) &
-                      t.sefariaRef.equals(loSefariaRef),
-                ))
-                .getSingleOrNull();
-        return loRow?.updatedAt;
-
-      default:
-        return null;
-    }
+  }) {
+    return _db.syncKvDao.get(kind, _scopedKey(profileId, naturalKey));
   }
+
+  /// Returns the persisted Firestore `synced_at` server timestamp for
+  /// `(kind, naturalKey)`. Used as the tie-breaker by [remoteIsNewer]
+  /// inside the ±5 s clock-skew window.
+  @override
+  Future<DateTime?> currentSyncedAt({
+    required String kind,
+    required int profileId,
+    required String naturalKey,
+  }) {
+    return _db.syncKvDao.getSyncedAt(kind, _scopedKey(profileId, naturalKey));
+  }
+
+  /// Persist the remote `updated_at` (and optional Firestore `synced_at`)
+  /// for `(kind, naturalKey)`. Called by every LWW merger after a
+  /// successful [upsert].
+  @override
+  Future<void> persistUpdatedAt({
+    required String kind,
+    required int profileId,
+    required String naturalKey,
+    required DateTime updatedAt,
+    DateTime? syncedAt,
+  }) {
+    return _db.syncKvDao.upsert(
+      kind,
+      _scopedKey(profileId, naturalKey),
+      updatedAt,
+      syncedAt: syncedAt,
+    );
+  }
+
+  /// Phase-3 LWW gate. See [MergeStore.remoteIsNewer] for the rule order.
+  @override
+  bool remoteIsNewer({
+    required DateTime? localUpdatedAt,
+    required DateTime? remoteUpdatedAt,
+    DateTime? localSyncedAt,
+    DateTime? remoteSyncedAt,
+  }) {
+    if (remoteUpdatedAt == null) return false;
+    if (localUpdatedAt == null) return true;
+
+    final localUtc = localUpdatedAt.toUtc();
+    final remoteUtc = remoteUpdatedAt.toUtc();
+    final diff = remoteUtc.difference(localUtc).abs();
+
+    // Outside the clock-skew window: strict `remote > local` wins; ties go
+    // to local (matches the long-standing flapping-free behaviour).
+    if (diff > clockSkewTieBreakWindow) {
+      return remoteUtc.isAfter(localUtc);
+    }
+
+    // Inside the window: fall back to the Firestore server timestamp.
+    if (remoteSyncedAt != null && localSyncedAt != null) {
+      if (remoteSyncedAt.isAfter(localSyncedAt)) return true;
+      if (localSyncedAt.isAfter(remoteSyncedAt)) return false;
+      // Equal synced_at — fall through to the "prefer remote" default.
+    }
+
+    // Tie within the window with no usable server timestamp on at least one
+    // side → prefer remote (it has authoritatively reached the server;
+    // preserves convergence).
+    //
+    // The one true tie (local == remote with no server-timestamp signal) is
+    // resolved by preferring remote so two devices that wrote the same
+    // value at the same instant converge instead of bouncing.
+    return true;
+  }
+
+  /// Compose the per-profile [SyncKv] entity key from [profileId] and the
+  /// merger's per-kind natural key.
+  ///
+  /// The `(kind, entityKey)` primary key in [SyncKv] is global to the DB,
+  /// not scoped per profile. Prefixing the natural key with `profileId|`
+  /// keeps profiles isolated without adding a third column.
+  static String _scopedKey(int profileId, String naturalKey) =>
+      '$profileId|$naturalKey';
 
   // ── upsert ──────────────────────────────────────────────────────────────────
 

@@ -10980,6 +10980,346 @@ class PriorCompletionImportsCompanion
   }
 }
 
+class $SyncKvTable extends SyncKv with TableInfo<$SyncKvTable, SyncKvData> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $SyncKvTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _kindMeta = const VerificationMeta('kind');
+  @override
+  late final GeneratedColumn<String> kind = GeneratedColumn<String>(
+    'kind',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _entityKeyMeta = const VerificationMeta(
+    'entityKey',
+  );
+  @override
+  late final GeneratedColumn<String> entityKey = GeneratedColumn<String>(
+    'entity_key',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _updatedAtMsMeta = const VerificationMeta(
+    'updatedAtMs',
+  );
+  @override
+  late final GeneratedColumn<int> updatedAtMs = GeneratedColumn<int>(
+    'updated_at_ms',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _syncedAtMsMeta = const VerificationMeta(
+    'syncedAtMs',
+  );
+  @override
+  late final GeneratedColumn<int> syncedAtMs = GeneratedColumn<int>(
+    'synced_at_ms',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    kind,
+    entityKey,
+    updatedAtMs,
+    syncedAtMs,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'sync_kv';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<SyncKvData> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('kind')) {
+      context.handle(
+        _kindMeta,
+        kind.isAcceptableOrUnknown(data['kind']!, _kindMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_kindMeta);
+    }
+    if (data.containsKey('entity_key')) {
+      context.handle(
+        _entityKeyMeta,
+        entityKey.isAcceptableOrUnknown(data['entity_key']!, _entityKeyMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_entityKeyMeta);
+    }
+    if (data.containsKey('updated_at_ms')) {
+      context.handle(
+        _updatedAtMsMeta,
+        updatedAtMs.isAcceptableOrUnknown(
+          data['updated_at_ms']!,
+          _updatedAtMsMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_updatedAtMsMeta);
+    }
+    if (data.containsKey('synced_at_ms')) {
+      context.handle(
+        _syncedAtMsMeta,
+        syncedAtMs.isAcceptableOrUnknown(
+          data['synced_at_ms']!,
+          _syncedAtMsMeta,
+        ),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {kind, entityKey};
+  @override
+  SyncKvData map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return SyncKvData(
+      kind: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}kind'],
+      )!,
+      entityKey: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}entity_key'],
+      )!,
+      updatedAtMs: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}updated_at_ms'],
+      )!,
+      syncedAtMs: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}synced_at_ms'],
+      ),
+    );
+  }
+
+  @override
+  $SyncKvTable createAlias(String alias) {
+    return $SyncKvTable(attachedDatabase, alias);
+  }
+}
+
+class SyncKvData extends DataClass implements Insertable<SyncKvData> {
+  /// Entity kind — matches [EntityKind] constants (e.g. `bookmark`,
+  /// `settings`, `stage_definition`).
+  final String kind;
+
+  /// Natural key of the entity within [kind]. Format is per-kind and
+  /// defined by the individual merger (e.g. `${curriculumId}|${trackType}`
+  /// for bookmarks).
+  final String entityKey;
+
+  /// Last-applied client `updated_at` for this `(kind, entityKey)`.
+  final int updatedAtMs;
+
+  /// Last-known Firestore server timestamp (`synced_at`) for this
+  /// `(kind, entityKey)`. Used as the tie-breaker when client `updated_at`
+  /// values are within ±5 s on two devices.
+  final int? syncedAtMs;
+  const SyncKvData({
+    required this.kind,
+    required this.entityKey,
+    required this.updatedAtMs,
+    this.syncedAtMs,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['kind'] = Variable<String>(kind);
+    map['entity_key'] = Variable<String>(entityKey);
+    map['updated_at_ms'] = Variable<int>(updatedAtMs);
+    if (!nullToAbsent || syncedAtMs != null) {
+      map['synced_at_ms'] = Variable<int>(syncedAtMs);
+    }
+    return map;
+  }
+
+  SyncKvCompanion toCompanion(bool nullToAbsent) {
+    return SyncKvCompanion(
+      kind: Value(kind),
+      entityKey: Value(entityKey),
+      updatedAtMs: Value(updatedAtMs),
+      syncedAtMs: syncedAtMs == null && nullToAbsent
+          ? const Value.absent()
+          : Value(syncedAtMs),
+    );
+  }
+
+  factory SyncKvData.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return SyncKvData(
+      kind: serializer.fromJson<String>(json['kind']),
+      entityKey: serializer.fromJson<String>(json['entityKey']),
+      updatedAtMs: serializer.fromJson<int>(json['updatedAtMs']),
+      syncedAtMs: serializer.fromJson<int?>(json['syncedAtMs']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'kind': serializer.toJson<String>(kind),
+      'entityKey': serializer.toJson<String>(entityKey),
+      'updatedAtMs': serializer.toJson<int>(updatedAtMs),
+      'syncedAtMs': serializer.toJson<int?>(syncedAtMs),
+    };
+  }
+
+  SyncKvData copyWith({
+    String? kind,
+    String? entityKey,
+    int? updatedAtMs,
+    Value<int?> syncedAtMs = const Value.absent(),
+  }) => SyncKvData(
+    kind: kind ?? this.kind,
+    entityKey: entityKey ?? this.entityKey,
+    updatedAtMs: updatedAtMs ?? this.updatedAtMs,
+    syncedAtMs: syncedAtMs.present ? syncedAtMs.value : this.syncedAtMs,
+  );
+  SyncKvData copyWithCompanion(SyncKvCompanion data) {
+    return SyncKvData(
+      kind: data.kind.present ? data.kind.value : this.kind,
+      entityKey: data.entityKey.present ? data.entityKey.value : this.entityKey,
+      updatedAtMs: data.updatedAtMs.present
+          ? data.updatedAtMs.value
+          : this.updatedAtMs,
+      syncedAtMs: data.syncedAtMs.present
+          ? data.syncedAtMs.value
+          : this.syncedAtMs,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SyncKvData(')
+          ..write('kind: $kind, ')
+          ..write('entityKey: $entityKey, ')
+          ..write('updatedAtMs: $updatedAtMs, ')
+          ..write('syncedAtMs: $syncedAtMs')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(kind, entityKey, updatedAtMs, syncedAtMs);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is SyncKvData &&
+          other.kind == this.kind &&
+          other.entityKey == this.entityKey &&
+          other.updatedAtMs == this.updatedAtMs &&
+          other.syncedAtMs == this.syncedAtMs);
+}
+
+class SyncKvCompanion extends UpdateCompanion<SyncKvData> {
+  final Value<String> kind;
+  final Value<String> entityKey;
+  final Value<int> updatedAtMs;
+  final Value<int?> syncedAtMs;
+  final Value<int> rowid;
+  const SyncKvCompanion({
+    this.kind = const Value.absent(),
+    this.entityKey = const Value.absent(),
+    this.updatedAtMs = const Value.absent(),
+    this.syncedAtMs = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  SyncKvCompanion.insert({
+    required String kind,
+    required String entityKey,
+    required int updatedAtMs,
+    this.syncedAtMs = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : kind = Value(kind),
+       entityKey = Value(entityKey),
+       updatedAtMs = Value(updatedAtMs);
+  static Insertable<SyncKvData> custom({
+    Expression<String>? kind,
+    Expression<String>? entityKey,
+    Expression<int>? updatedAtMs,
+    Expression<int>? syncedAtMs,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (kind != null) 'kind': kind,
+      if (entityKey != null) 'entity_key': entityKey,
+      if (updatedAtMs != null) 'updated_at_ms': updatedAtMs,
+      if (syncedAtMs != null) 'synced_at_ms': syncedAtMs,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  SyncKvCompanion copyWith({
+    Value<String>? kind,
+    Value<String>? entityKey,
+    Value<int>? updatedAtMs,
+    Value<int?>? syncedAtMs,
+    Value<int>? rowid,
+  }) {
+    return SyncKvCompanion(
+      kind: kind ?? this.kind,
+      entityKey: entityKey ?? this.entityKey,
+      updatedAtMs: updatedAtMs ?? this.updatedAtMs,
+      syncedAtMs: syncedAtMs ?? this.syncedAtMs,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (kind.present) {
+      map['kind'] = Variable<String>(kind.value);
+    }
+    if (entityKey.present) {
+      map['entity_key'] = Variable<String>(entityKey.value);
+    }
+    if (updatedAtMs.present) {
+      map['updated_at_ms'] = Variable<int>(updatedAtMs.value);
+    }
+    if (syncedAtMs.present) {
+      map['synced_at_ms'] = Variable<int>(syncedAtMs.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SyncKvCompanion(')
+          ..write('kind: $kind, ')
+          ..write('entityKey: $entityKey, ')
+          ..write('updatedAtMs: $updatedAtMs, ')
+          ..write('syncedAtMs: $syncedAtMs, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 class CompletionsViewData extends DataClass {
   final int id;
   final int profileId;
@@ -11287,6 +11627,7 @@ abstract class _$UserDatabase extends GeneratedDatabase {
       $SacredWindowEntriesTable(this);
   late final $PriorCompletionImportsTable priorCompletionImports =
       $PriorCompletionImportsTable(this);
+  late final $SyncKvTable syncKv = $SyncKvTable(this);
   late final $CompletionsViewView completionsView = $CompletionsViewView(this);
   late final Index completionEventsNaturalKey = Index(
     'completion_events_natural_key',
@@ -11355,6 +11696,7 @@ abstract class _$UserDatabase extends GeneratedDatabase {
   );
   late final PriorCompletionImportDao priorCompletionImportDao =
       PriorCompletionImportDao(this as UserDatabase);
+  late final SyncKvDao syncKvDao = SyncKvDao(this as UserDatabase);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -11380,6 +11722,7 @@ abstract class _$UserDatabase extends GeneratedDatabase {
     outbox,
     sacredWindowEntries,
     priorCompletionImports,
+    syncKv,
     completionsView,
     completionEventsNaturalKey,
     learningLedgerProfileCreated,
@@ -20542,6 +20885,188 @@ typedef $$PriorCompletionImportsTableProcessedTableManager =
       PriorCompletionImport,
       PrefetchHooks Function({bool profileId})
     >;
+typedef $$SyncKvTableCreateCompanionBuilder =
+    SyncKvCompanion Function({
+      required String kind,
+      required String entityKey,
+      required int updatedAtMs,
+      Value<int?> syncedAtMs,
+      Value<int> rowid,
+    });
+typedef $$SyncKvTableUpdateCompanionBuilder =
+    SyncKvCompanion Function({
+      Value<String> kind,
+      Value<String> entityKey,
+      Value<int> updatedAtMs,
+      Value<int?> syncedAtMs,
+      Value<int> rowid,
+    });
+
+class $$SyncKvTableFilterComposer
+    extends Composer<_$UserDatabase, $SyncKvTable> {
+  $$SyncKvTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get kind => $composableBuilder(
+    column: $table.kind,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get entityKey => $composableBuilder(
+    column: $table.entityKey,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get updatedAtMs => $composableBuilder(
+    column: $table.updatedAtMs,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get syncedAtMs => $composableBuilder(
+    column: $table.syncedAtMs,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$SyncKvTableOrderingComposer
+    extends Composer<_$UserDatabase, $SyncKvTable> {
+  $$SyncKvTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get kind => $composableBuilder(
+    column: $table.kind,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get entityKey => $composableBuilder(
+    column: $table.entityKey,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get updatedAtMs => $composableBuilder(
+    column: $table.updatedAtMs,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get syncedAtMs => $composableBuilder(
+    column: $table.syncedAtMs,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$SyncKvTableAnnotationComposer
+    extends Composer<_$UserDatabase, $SyncKvTable> {
+  $$SyncKvTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get kind =>
+      $composableBuilder(column: $table.kind, builder: (column) => column);
+
+  GeneratedColumn<String> get entityKey =>
+      $composableBuilder(column: $table.entityKey, builder: (column) => column);
+
+  GeneratedColumn<int> get updatedAtMs => $composableBuilder(
+    column: $table.updatedAtMs,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get syncedAtMs => $composableBuilder(
+    column: $table.syncedAtMs,
+    builder: (column) => column,
+  );
+}
+
+class $$SyncKvTableTableManager
+    extends
+        RootTableManager<
+          _$UserDatabase,
+          $SyncKvTable,
+          SyncKvData,
+          $$SyncKvTableFilterComposer,
+          $$SyncKvTableOrderingComposer,
+          $$SyncKvTableAnnotationComposer,
+          $$SyncKvTableCreateCompanionBuilder,
+          $$SyncKvTableUpdateCompanionBuilder,
+          (
+            SyncKvData,
+            BaseReferences<_$UserDatabase, $SyncKvTable, SyncKvData>,
+          ),
+          SyncKvData,
+          PrefetchHooks Function()
+        > {
+  $$SyncKvTableTableManager(_$UserDatabase db, $SyncKvTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$SyncKvTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$SyncKvTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$SyncKvTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> kind = const Value.absent(),
+                Value<String> entityKey = const Value.absent(),
+                Value<int> updatedAtMs = const Value.absent(),
+                Value<int?> syncedAtMs = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => SyncKvCompanion(
+                kind: kind,
+                entityKey: entityKey,
+                updatedAtMs: updatedAtMs,
+                syncedAtMs: syncedAtMs,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String kind,
+                required String entityKey,
+                required int updatedAtMs,
+                Value<int?> syncedAtMs = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => SyncKvCompanion.insert(
+                kind: kind,
+                entityKey: entityKey,
+                updatedAtMs: updatedAtMs,
+                syncedAtMs: syncedAtMs,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$SyncKvTableProcessedTableManager =
+    ProcessedTableManager<
+      _$UserDatabase,
+      $SyncKvTable,
+      SyncKvData,
+      $$SyncKvTableFilterComposer,
+      $$SyncKvTableOrderingComposer,
+      $$SyncKvTableAnnotationComposer,
+      $$SyncKvTableCreateCompanionBuilder,
+      $$SyncKvTableUpdateCompanionBuilder,
+      (SyncKvData, BaseReferences<_$UserDatabase, $SyncKvTable, SyncKvData>),
+      SyncKvData,
+      PrefetchHooks Function()
+    >;
 
 class $UserDatabaseManager {
   final _$UserDatabase _db;
@@ -20589,4 +21114,6 @@ class $UserDatabaseManager {
         _db,
         _db.priorCompletionImports,
       );
+  $$SyncKvTableTableManager get syncKv =>
+      $$SyncKvTableTableManager(_db, _db.syncKv);
 }

@@ -16,12 +16,16 @@ import 'package:learning_tracker/core/sync/merge/track_config_merger.dart';
 class _FakeMergeStore implements MergeStore {
   /// Simulated storage: kind → profileId → naturalKey → updatedAt
   final _timestamps = <String, Map<int, Map<String, DateTime?>>>{};
+  final _syncedAt = <String, Map<int, Map<String, DateTime?>>>{};
 
   /// All upserted rows (for assertion).
   final List<Map<String, dynamic>> upserted = [];
 
   /// All insertIfAbsent calls.
   final List<Map<String, dynamic>> inserted = [];
+
+  /// All persistUpdatedAt calls.
+  final List<Map<String, dynamic>> persisted = [];
 
   void seedTimestamp({
     required String kind,
@@ -42,6 +46,62 @@ class _FakeMergeStore implements MergeStore {
     required String naturalKey,
   }) async {
     return _timestamps[kind]?[profileId]?[naturalKey];
+  }
+
+  @override
+  Future<DateTime?> currentSyncedAt({
+    required String kind,
+    required int profileId,
+    required String naturalKey,
+  }) async {
+    return _syncedAt[kind]?[profileId]?[naturalKey];
+  }
+
+  @override
+  Future<void> persistUpdatedAt({
+    required String kind,
+    required int profileId,
+    required String naturalKey,
+    required DateTime updatedAt,
+    DateTime? syncedAt,
+  }) async {
+    _timestamps
+            .putIfAbsent(kind, () => {})
+            .putIfAbsent(profileId, () => {})[naturalKey] =
+        updatedAt;
+    _syncedAt
+            .putIfAbsent(kind, () => {})
+            .putIfAbsent(profileId, () => {})[naturalKey] =
+        syncedAt;
+    persisted.add({
+      'kind': kind,
+      'profileId': profileId,
+      'naturalKey': naturalKey,
+      'updatedAt': updatedAt,
+      'syncedAt': syncedAt,
+    });
+  }
+
+  @override
+  bool remoteIsNewer({
+    required DateTime? localUpdatedAt,
+    required DateTime? remoteUpdatedAt,
+    DateTime? localSyncedAt,
+    DateTime? remoteSyncedAt,
+  }) {
+    if (remoteUpdatedAt == null) return false;
+    if (localUpdatedAt == null) return true;
+    // Mirror DriftMergeStore semantics: strict `remote > local` outside
+    // the ±5 s window; inside the window, server timestamp decides.
+    final diff = remoteUpdatedAt.difference(localUpdatedAt).abs();
+    if (diff > const Duration(seconds: 5)) {
+      return remoteUpdatedAt.isAfter(localUpdatedAt);
+    }
+    if (remoteSyncedAt != null && localSyncedAt != null) {
+      if (remoteSyncedAt.isAfter(localSyncedAt)) return true;
+      if (localSyncedAt.isAfter(remoteSyncedAt)) return false;
+    }
+    return true;
   }
 
   @override

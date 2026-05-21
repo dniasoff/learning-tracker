@@ -19,6 +19,7 @@ import 'package:learning_tracker/core/sync/merge/streak_event_merger.dart';
 import 'package:learning_tracker/core/sync/merge/track_config_merger.dart';
 import 'package:learning_tracker/core/sync/merge/tutor_grant_merger.dart';
 import 'package:learning_tracker/core/sync/merge/ui_preferences_merger.dart';
+import 'package:learning_tracker/features/sync/data/reward_settings_merge_delegate.dart';
 
 /// Provider for [MergeRouter] — wires all [EntityMerger] implementations
 /// with a concrete [DriftMergeStore] (DNI-334 AC4 + AC5).
@@ -31,17 +32,28 @@ import 'package:learning_tracker/core/sync/merge/ui_preferences_merger.dart';
 /// [UiPreferencesMerger]. These mergers bypass [DriftMergeStore] and access
 /// [UserDatabase] or [SharedPreferences] directly.
 ///
-/// Note: [GamificationSettingsMerger] is wired with `onRewardSettings: null`
-/// here because [RewardMilestoneService] lives in `features/gamification/` and
-/// importing it from `core/` would violate the layering rule. The reward-
-/// milestones delegate is supplied by an override in `features/sync/` once
-/// W2.31 moves this wiring to the features layer.
+/// Phase 3 of the sync architecture plan: [GamificationSettingsMerger]
+/// receives its `reward_settings` sub-map callback via the
+/// [rewardSettingsMergeDelegateProvider] (lives in `features/sync/data/`).
+/// This keeps the merger in `core/sync/` while letting it call into
+/// [RewardMilestoneService] (which lives in `features/gamification/`)
+/// without a layering violation. Reward-milestone deltas pulled from the
+/// cloud are now applied (the override never landed during W2.31; the
+/// gap is closed here).
 final mergeRouterProvider = Provider<MergeRouter>((ref) {
   final database = ref.watch(userDatabaseProvider);
   // W7.5: inject analytics so DriftMergeStore and ProfileProgramMerger can
   // fire merge_row_skipped events at every silent-skip site.
   final analytics = ref.watch(analyticsServiceProvider);
   final store = DriftMergeStore(database, analytics: analytics);
+
+  // Phase 3: pull the reward-settings merge callback from the features-
+  // layer provider. Keeping it as an injected callback (rather than a
+  // direct import of RewardMilestoneService here) preserves the
+  // core→features boundary at the call-site.
+  final rewardSettingsMergeDelegate = ref.watch(
+    rewardSettingsMergeDelegateProvider,
+  );
 
   return MergeRouter(
     mergers: <String, EntityMerger>{
@@ -59,15 +71,17 @@ final mergeRouterProvider = Provider<MergeRouter>((ref) {
       ),
       EntityKind.learningOrder: LearningOrderMerger(store: store), // W2.26
       // W2.27 — closes M1
-      EntityKind.goal: GoalMerger(database),
+      EntityKind.goal: GoalMerger(database, store: store),
       EntityKind.learningLedger: LearningLedgerMerger(database),
-      EntityKind.notificationSettings: const NotificationSettingsMerger(),
+      EntityKind.notificationSettings: NotificationSettingsMerger(store: store),
       EntityKind.gamificationSettings: GamificationSettingsMerger(
         db: database,
-        // Reward-milestones delegate wired from features/sync/ in W2.31.
-        onRewardSettings: null,
+        store: store,
+        // Phase 3: reward-milestones delegate now wired from
+        // features/sync/data/reward_settings_merge_delegate.dart.
+        onRewardSettings: rewardSettingsMergeDelegate,
       ),
-      EntityKind.uiPreferences: const UiPreferencesMerger(),
+      EntityKind.uiPreferences: UiPreferencesMerger(store: store),
       EntityKind.tutorGrant: const TutorGrantMerger(), // W3.17 / W3.38
     },
   );

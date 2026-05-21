@@ -1,7 +1,6 @@
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/sync/codec/firestore_codec.dart';
 import 'package:learning_tracker/core/sync/merge/entity_merger.dart';
-import 'package:learning_tracker/core/sync/merge/merge_rules.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -29,18 +28,30 @@ typedef RewardSettingsMergeDelegate =
 /// Firestore shape (from SyncEngine._mergeGamificationSettings):
 ///   updated_at, points_config[]{profile_id,track_id,curriculum_id,
 ///   stage_order,points}, reward_settings, lifetime_stats.
+///
+/// Phase 3: the merger consults [MergeStore.remoteIsNewer] (which knows
+/// about clock-skew arbitration), and after a successful apply calls
+/// [MergeStore.persistUpdatedAt] so the persisted LWW timestamp survives
+/// SharedPreferences resets. The SharedPreferences key is kept up to date
+/// in parallel because [RewardMilestoneService] reads it directly.
 class GamificationSettingsMerger implements EntityMerger {
   const GamificationSettingsMerger({
     required UserDatabase db,
+    required MergeStore store,
     RewardSettingsMergeDelegate? onRewardSettings,
   }) : _db = db,
+       _store = store,
        _onRewardSettings = onRewardSettings;
 
   final UserDatabase _db;
+  final MergeStore _store;
   final RewardSettingsMergeDelegate? _onRewardSettings;
 
   static String _timestampKey(int profileId) =>
       'gamification_settings_updated_at_ms_p$profileId';
+
+  /// Single natural key — gamification settings are a per-profile singleton.
+  static const _naturalKey = 'config';
 
   @override
   String get kind => EntityKind.gamificationSettings;
@@ -56,14 +67,32 @@ class GamificationSettingsMerger implements EntityMerger {
 
     final prefs = await SharedPreferences.getInstance();
     final remoteUpdatedAt = _parseTimestamp(remote['updated_at']);
-    final localMs = prefs.getInt(_timestampKey(profileId));
-    final localUpdatedAt = localMs == null
-        ? null
-        : DateTime.fromMillisecondsSinceEpoch(localMs, isUtc: true);
+    final remoteSyncedAt = _parseTimestamp(remote['synced_at']);
+    var localUpdatedAt = await _store.currentUpdatedAt(
+      kind: kind,
+      profileId: profileId,
+      naturalKey: _naturalKey,
+    );
+    if (localUpdatedAt == null) {
+      final localMs = prefs.getInt(_timestampKey(profileId));
+      if (localMs != null) {
+        localUpdatedAt = DateTime.fromMillisecondsSinceEpoch(
+          localMs,
+          isUtc: true,
+        );
+      }
+    }
+    final localSyncedAt = await _store.currentSyncedAt(
+      kind: kind,
+      profileId: profileId,
+      naturalKey: _naturalKey,
+    );
 
-    if (!remoteIsNewer(
+    if (!_store.remoteIsNewer(
       localUpdatedAt: localUpdatedAt,
       remoteUpdatedAt: remoteUpdatedAt,
+      localSyncedAt: localSyncedAt,
+      remoteSyncedAt: remoteSyncedAt,
     )) {
       return;
     }
@@ -106,10 +135,15 @@ class GamificationSettingsMerger implements EntityMerger {
       await _onRewardSettings(rewardMap, profileId);
     }
 
-    final stamp =
-        remoteUpdatedAt?.millisecondsSinceEpoch ??
-        DateTimeFactory.nowUtc().millisecondsSinceEpoch;
-    await prefs.setInt(_timestampKey(profileId), stamp);
+    final stamp = remoteUpdatedAt ?? DateTimeFactory.nowUtc();
+    await prefs.setInt(_timestampKey(profileId), stamp.millisecondsSinceEpoch);
+    await _store.persistUpdatedAt(
+      kind: kind,
+      profileId: profileId,
+      naturalKey: _naturalKey,
+      updatedAt: stamp,
+      syncedAt: remoteSyncedAt,
+    );
   }
 
   DateTime? _parseTimestamp(Object? raw) => FirestoreCodec.parseDateTime(raw);

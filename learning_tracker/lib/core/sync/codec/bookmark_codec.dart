@@ -12,12 +12,17 @@ class BookmarkRow {
     required this.trackType,
     required this.sefariaRef,
     required this.updatedAt,
+    this.syncedAt,
   });
 
   final String curriculumId;
   final String trackType;
   final String sefariaRef;
   final DateTime updatedAt;
+
+  /// Firestore server timestamp set by `FieldValue.serverTimestamp()` at
+  /// push time. Used as the ±5 s clock-skew tie-breaker by mergers.
+  final DateTime? syncedAt;
 }
 
 /// Codec for the `bookmarks` Firestore collection.
@@ -49,6 +54,7 @@ class BookmarkCodec extends EntityCodec<BookmarkRow> {
       trackType: trackType,
       sefariaRef: sefariaRef,
       updatedAt: updatedAt,
+      syncedAt: FirestoreCodec.parseDateTime(raw['synced_at']),
     );
   }
 

@@ -1,15 +1,19 @@
 /// LWW merger for curriculum-track configuration rows.
 ///
 /// Natural key: `curriculum_id` (W3.22: trackType removed from schema).
-/// Remote wins iff its `state_changed_at` is strictly newer than the local row.
+/// Remote wins iff its `state_changed_at` is strictly newer than the local
+/// row; within ±5 s clock skew the Firestore server timestamp (`synced_at`)
+/// decides.
 ///
 /// W3.22/W3.28: natural key simplified from `(curriculum_id|track_type)`
 /// to just `curriculum_id`; `deactivatedAt` replaced by `stateChangedAt`.
+///
+/// Phase 3: after a successful apply the merger persists the remote
+/// `state_changed_at` via [MergeStore.persistUpdatedAt].
 library;
 
 import 'package:learning_tracker/core/sync/codec/track_codec.dart';
 import 'package:learning_tracker/core/sync/merge/entity_merger.dart';
-import 'package:learning_tracker/core/sync/merge/merge_rules.dart';
 
 class TrackConfigMerger implements EntityMerger {
   TrackConfigMerger({required MergeStore store}) : _store = store;
@@ -36,14 +40,28 @@ class TrackConfigMerger implements EntityMerger {
         profileId: profileId,
         naturalKey: naturalKey,
       );
+      final localSyncedAt = await _store.currentSyncedAt(
+        kind: kind,
+        profileId: profileId,
+        naturalKey: naturalKey,
+      );
       // The LWW timestamp for a track is stateChangedAt.
-      if (!remoteIsNewer(
+      if (!_store.remoteIsNewer(
         localUpdatedAt: localUpdatedAt,
         remoteUpdatedAt: decoded.stateChangedAt,
+        localSyncedAt: localSyncedAt,
+        remoteSyncedAt: decoded.syncedAt,
       )) {
         continue;
       }
       await _store.upsert(kind: kind, profileId: profileId, fields: row);
+      await _store.persistUpdatedAt(
+        kind: kind,
+        profileId: profileId,
+        naturalKey: naturalKey,
+        updatedAt: decoded.stateChangedAt,
+        syncedAt: decoded.syncedAt,
+      );
     }
   }
 }

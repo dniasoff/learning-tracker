@@ -208,10 +208,15 @@ void main() {
         });
       });
 
-      // ── AC4 — MergeRules is load-bearing ─────────────────────────────────
+      // ── AC4 — LWW arbitration is load-bearing ──────────────────────────────
 
-      group('MergeRules is load-bearing', () {
-        test('every LWW merger source file imports merge_rules.dart', () {
+      group('LWW arbitration is load-bearing', () {
+        test('every LWW merger source consults MergeStore.remoteIsNewer', () {
+          // Phase 3 (sync architecture plan): the LWW helper moved from
+          // the free `remoteIsNewer()` in merge_rules.dart onto the
+          // [MergeStore] interface so the same call-site can do the
+          // clock-skew tie-break via `synced_at`. The structural check
+          // now verifies every LWW merger calls `_store.remoteIsNewer(`.
           const lwwMergers = <String>[
             'lib/core/sync/merge/learner_profile_merger.dart',
             'lib/core/sync/merge/track_config_merger.dart',
@@ -223,12 +228,12 @@ void main() {
           for (final path in lwwMergers) {
             final src = File(path).readAsStringSync();
             expect(
-              src.contains('merge_rules.dart'),
+              src.contains('_store.remoteIsNewer('),
               isTrue,
               reason:
-                  '$path must import merge_rules.dart so the LWW rule is '
-                  'consulted — DNI-334 AC: MergeRules is load-bearing, not '
-                  'vestigial',
+                  '$path must call _store.remoteIsNewer so the LWW rule '
+                  '(including the ±5 s clock-skew tie-break via synced_at) '
+                  'is consulted — Phase 3 of the sync architecture plan',
             );
           }
         });
@@ -377,7 +382,9 @@ class _Upsert {
 class _RecordingMergeStore implements MergeStore {
   final List<_Upsert> upserts = [];
   final List<String> lwwChecks = [];
+  final List<String> persistedUpdates = [];
   DateTime? localUpdatedAt;
+  DateTime? localSyncedAt;
 
   @override
   Future<DateTime?> currentUpdatedAt({
@@ -387,6 +394,38 @@ class _RecordingMergeStore implements MergeStore {
   }) async {
     lwwChecks.add('$kind:$naturalKey');
     return localUpdatedAt;
+  }
+
+  @override
+  Future<DateTime?> currentSyncedAt({
+    required String kind,
+    required int profileId,
+    required String naturalKey,
+  }) async {
+    return localSyncedAt;
+  }
+
+  @override
+  Future<void> persistUpdatedAt({
+    required String kind,
+    required int profileId,
+    required String naturalKey,
+    required DateTime updatedAt,
+    DateTime? syncedAt,
+  }) async {
+    persistedUpdates.add('$kind:$naturalKey:${updatedAt.toIso8601String()}');
+  }
+
+  @override
+  bool remoteIsNewer({
+    required DateTime? localUpdatedAt,
+    required DateTime? remoteUpdatedAt,
+    DateTime? localSyncedAt,
+    DateTime? remoteSyncedAt,
+  }) {
+    if (remoteUpdatedAt == null) return false;
+    if (localUpdatedAt == null) return true;
+    return remoteUpdatedAt.isAfter(localUpdatedAt);
   }
 
   @override
@@ -416,6 +455,34 @@ class _NullMergeStore implements MergeStore {
     required int profileId,
     required String naturalKey,
   }) async => null;
+
+  @override
+  Future<DateTime?> currentSyncedAt({
+    required String kind,
+    required int profileId,
+    required String naturalKey,
+  }) async => null;
+
+  @override
+  Future<void> persistUpdatedAt({
+    required String kind,
+    required int profileId,
+    required String naturalKey,
+    required DateTime updatedAt,
+    DateTime? syncedAt,
+  }) async {}
+
+  @override
+  bool remoteIsNewer({
+    required DateTime? localUpdatedAt,
+    required DateTime? remoteUpdatedAt,
+    DateTime? localSyncedAt,
+    DateTime? remoteSyncedAt,
+  }) {
+    if (remoteUpdatedAt == null) return false;
+    if (localUpdatedAt == null) return true;
+    return remoteUpdatedAt.isAfter(localUpdatedAt);
+  }
 
   @override
   Future<void> upsert({
