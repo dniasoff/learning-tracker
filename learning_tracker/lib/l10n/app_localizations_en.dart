@@ -2364,7 +2364,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get startingPositionHint =>
-      'Can start up to 30 days back/forward from today';
+      'Can start up to 30 days back from today';
 
   @override
   String startingPositionWhereAreYou(String programName) {

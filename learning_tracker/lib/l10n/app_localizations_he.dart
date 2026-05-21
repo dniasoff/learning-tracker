@@ -2335,7 +2335,7 @@ class AppLocalizationsHe extends AppLocalizations {
   String get startingPositionTitle => 'מיקום התחלתי';
 
   @override
-  String get startingPositionHint => 'ניתן להתחיל עד 30 ימים אחורה/קדימה מהיום';
+  String get startingPositionHint => 'ניתן להתחיל עד 30 ימים אחורה מהיום';
 
   @override
   String startingPositionWhereAreYou(String programName) {

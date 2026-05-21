@@ -4286,7 +4286,7 @@ abstract class AppLocalizations {
   /// No description provided for @startingPositionHint.
   ///
   /// In en, this message translates to:
-  /// **'Can start up to 30 days back/forward from today'**
+  /// **'Can start up to 30 days back from today'**
   String get startingPositionHint;
 
   /// No description provided for @startingPositionWhereAreYou.

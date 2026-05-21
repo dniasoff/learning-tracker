@@ -1136,7 +1136,7 @@
   },
 
   "startingPositionTitle": "מיקום התחלתי",
-  "startingPositionHint": "ניתן להתחיל עד 30 ימים אחורה/קדימה מהיום",
+  "startingPositionHint": "ניתן להתחיל עד 30 ימים אחורה מהיום",
   "startingPositionWhereAreYou": "איפה אתה ב{programName}?",
   "@startingPositionWhereAreYou": {
     "placeholders": {

@@ -1141,7 +1141,7 @@
   },
 
   "startingPositionTitle": "Starting Position",
-  "startingPositionHint": "Can start up to 30 days back/forward from today",
+  "startingPositionHint": "Can start up to 30 days back from today",
   "startingPositionWhereAreYou": "Where are you in {programName}?",
   "@startingPositionWhereAreYou": {
     "placeholders": {

@@ -78,8 +78,10 @@ class _StartingPositionCalendarModeState
     // B2: compute the allowed window once and store as offset bounds.
     _today = DateTimeFactory.nowLocal();
     final window = ProgramStartingPosition.allowedWindow(_today);
-    // Convert the minimum date to a negative offset from today.
-    _minOffsetDays = -window.minDate.difference(window.maxDate).inDays;
+    // Window is [today − N, today]; the back-bound is a negative offset.
+    // `minDate.difference(maxDate)` is already negative (e.g. −30 days) —
+    // double-negating it produced +30 and disabled both arrows.
+    _minOffsetDays = window.minDate.difference(window.maxDate).inDays;
     _calendarProgramKey = _resolveCalendarProgramKey();
     unawaited(_refreshCalendarEntry());
   }
@@ -307,14 +309,22 @@ class _StartingPositionCalendarModeState
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         child: Row(
           children: [
-            _OffsetButton(
-              icon: Icons.chevron_left_rounded,
-              // B2: min is today − kMaxLookBackDays (no older)
-              enabled: _offsetDays > _minOffsetDays,
-              onTap: () {
-                setState(() => _offsetDays -= 1);
-                unawaited(_refreshCalendarEntry());
-              },
+            // B2: min is today − kMaxLookBackDays (no older). When already at
+            // the lower bound, hide the chevron (but keep its slot) so the
+            // header stays centred.
+            Visibility(
+              visible: _offsetDays > _minOffsetDays,
+              maintainSize: true,
+              maintainAnimation: true,
+              maintainState: true,
+              child: _OffsetButton(
+                icon: Icons.chevron_left_rounded,
+                enabled: true,
+                onTap: () {
+                  setState(() => _offsetDays -= 1);
+                  unawaited(_refreshCalendarEntry());
+                },
+              ),
             ),
             Expanded(
               child: Center(
@@ -340,14 +350,23 @@ class _StartingPositionCalendarModeState
                 ),
               ),
             ),
-            _OffsetButton(
-              icon: Icons.chevron_right_rounded,
-              // B2: max is today (no future dates).
-              enabled: _offsetDays < _maxOffsetDays,
-              onTap: () {
-                setState(() => _offsetDays += 1);
-                unawaited(_refreshCalendarEntry());
-              },
+            // B2: max is today (no future dates). Hide the forward chevron
+            // entirely when at the upper bound — the policy is back-only, so
+            // a permanently-disabled arrow is confusing. The slot is kept
+            // (maintainSize) so the centred label doesn't reflow.
+            Visibility(
+              visible: _offsetDays < _maxOffsetDays,
+              maintainSize: true,
+              maintainAnimation: true,
+              maintainState: true,
+              child: _OffsetButton(
+                icon: Icons.chevron_right_rounded,
+                enabled: true,
+                onTap: () {
+                  setState(() => _offsetDays += 1);
+                  unawaited(_refreshCalendarEntry());
+                },
+              ),
             ),
           ],
         ),

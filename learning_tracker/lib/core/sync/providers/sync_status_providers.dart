@@ -41,7 +41,12 @@ final syncStatusProvider = Provider<SyncStatus>((ref) {
   final asyncStatus = ref.watch(syncStatusStreamProvider);
   return asyncStatus.when(
     data: (status) => status,
-    loading: () => SyncStatus.syncing(startedAt: DateTimeFactory.nowLocal()),
+    // Late subscribers (e.g. the Backup & Sync card mounted after pullOnLaunch
+    // already settled) attach to a broadcast stream that has no pending
+    // events. Returning a fresh `syncing` here would wedge the card on
+    // "Syncing…" forever. The orchestrator's [currentStatus] is the
+    // authoritative snapshot between events.
+    loading: () => orchestrator.currentStatus,
     error: (error, _) => SyncStatus.error(
       message: error.toString(),
       failedAt: DateTimeFactory.nowLocal(),
