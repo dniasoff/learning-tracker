@@ -192,11 +192,20 @@ class _Counter extends StatelessWidget {
           children: [
             Text(emoji, style: const TextStyle(fontSize: 22)),
             const SizedBox(height: 4),
-            Text(
-              value,
-              style: theme.textTheme.headlineSmall?.copyWith(
-                fontWeight: FontWeight.w800,
-                color: accent,
+            // FittedBox scales the value down to one line if a thousands-
+            // separated number (e.g. "1,336") would otherwise wrap on the
+            // narrower Progress-hub tile width. The Dashboard tile is wider
+            // and the value renders at its natural size there.
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                value,
+                maxLines: 1,
+                softWrap: false,
+                style: theme.textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.w800,
+                  color: accent,
+                ),
               ),
             ),
             const SizedBox(height: 2),
