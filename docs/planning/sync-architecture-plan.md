@@ -536,13 +536,14 @@ Deliverables:
 ## Phase 4 — Restore + observability (target: week 5)
 
 **Estimate:** 4–6 hours.
-**Outcome:** User sees backlog and offline state. Restore doesn't double-read.
+**Outcome:** User sees backlog and offline state. Restore doesn't double-read. First sign-in on a fresh device with existing cloud profiles bypasses the onboarding wizard.
 
 Deliverables:
 1. Drop duplicate `fetchAll('curriculum_tracks')` in `DeviceRestoreService.restore`; derive active curricula from Drift after the merge.
 2. Emit `SyncStatus.pending` / `offline` / `degraded` from the orchestrator based on outbox depth + connectivity.
 3. `SyncStatusIndicator` shows backlog (already wired in UI — just emit).
 4. Outbox-depth gauge + oldest-row-age gauge logged every 60 s on drain.
+5. **Restore-then-skip-onboarding.** First sign-in on a clean install must await `DeviceRestoreService` and inspect post-restore Drift state: if ≥ 1 `learner_profile` exists locally after restore, route to `ProfilePickerRoute` (multi-profile) or `AppShellRoute` (single profile), **never** to the onboarding wizard. The current `_tryResumeFromSavedState` in `OnboardingScreen` only checks a saved snapshot — it does not observe a freshly-restored DB. Either gate the onboarding entry point on `profileRepository.countProfilesForAccount > 0` before pushing `OnboardingRoute`, or insert a "restore complete → reroute" handler in the sign-in controller's post-pull step.
 
 ## Phase 5 — Cleanup + minor (target: week 6)
 
