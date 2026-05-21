@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
+import 'package:learning_tracker/core/sync/providers/outbox_providers.dart';
 import 'package:learning_tracker/core/sync/providers/sync_orchestrator_providers.dart';
 import 'package:learning_tracker/core/sync/sync_orchestrator.dart';
 import 'package:learning_tracker/core/sync/sync_write_facade.dart';
@@ -71,5 +72,41 @@ final syncWriteFacadeProvider = Provider<SyncWriteFacade?>((ref) {
     database: database,
     profileId: profileId,
     clock: clock,
+    // Phase 1 — write-tee: kick the outbox processor after every enqueue
+    // so writes reach Firestore in the same network round as the local
+    // commit. Resolved lazily so the processor's rebuild lifetime is
+    // independent of the facade.
+    onEnqueueDrain: () =>
+        ref.read(outboxProcessorProvider)?.drain(profileId) ??
+        Future<int>.value(0),
+  );
+});
+
+/// Cloud-born concrete [OutboxSyncWriteFacade] for repositories/services that
+/// need access to outbox-only helpers (`enqueueLedgerEntry`,
+/// `enqueueNotificationSettings`, `enqueueProfileProgram`,
+/// `enqueueStreakPayload`, `enqueueStudyDayConfig`).
+///
+/// Returns `null` for local-born accounts so callers can null-guard cleanly,
+/// matching the [syncWriteFacadeProvider] tier-gate. The instance and the one
+/// returned by [syncWriteFacadeProvider] are NOT shared on purpose: each
+/// provider builds its own facade so widening the surface here cannot
+/// accidentally retire the `SyncWriteFacade` type on the other consumers.
+final outboxSyncWriteFacadeProvider = Provider<OutboxSyncWriteFacade?>((ref) {
+  final authState = ref.watch(authStateProvider);
+  if (!authState.isCloudBorn) return null;
+
+  final database = ref.watch(userDatabaseProvider);
+  final profileId = ref.watch(activeProfileIdProvider);
+  final clock = ref.watch(localDayClockProvider);
+
+  return OutboxSyncWriteFacade(
+    outboxDao: database.outboxDao,
+    database: database,
+    profileId: profileId,
+    clock: clock,
+    onEnqueueDrain: () =>
+        ref.read(outboxProcessorProvider)?.drain(profileId) ??
+        Future<int>.value(0),
   );
 });

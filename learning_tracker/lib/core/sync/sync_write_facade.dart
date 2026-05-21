@@ -64,4 +64,10 @@ abstract class SyncWriteFacade {
     required List<Map<String, dynamic>> stages,
     required DateTime updatedAt,
   });
+
+  /// Plan §F Phase 1 — push a study-day config record to Firestore after a
+  /// local write. The deterministic doc id is derived inside the gateway
+  /// from `curriculum_id`, `day_of_week`, and `track_id` so repeated writes
+  /// for the same composite key are idempotent.
+  Future<void> pushStudyDayConfig(Map<String, dynamic> payload);
 }

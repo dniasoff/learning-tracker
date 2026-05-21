@@ -1,16 +1,21 @@
 import 'package:drift/drift.dart' as drift;
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
-import 'package:learning_tracker/core/sync/firestore_gateway.dart';
 import 'package:learning_tracker/core/time/ulid.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/learning_ledger_repository.dart';
+import 'package:learning_tracker/features/sync/data/outbox_sync_write_facade.dart';
 
-/// Implementation of [LearningLedgerRepository] using Drift database and
-/// [FirestoreGateway] for direct ledger pushes (P2c).
+/// Implementation of [LearningLedgerRepository] using Drift database and the
+/// outbox-backed [OutboxSyncWriteFacade] for ledger pushes.
+///
+/// Phase 1 — was bypassing the outbox via a direct FirestoreGateway push,
+/// which silently dropped writes when offline. Every ledger entry now lands
+/// in the outbox in the same call so the next drain (write-tee, pull-complete,
+/// connectivity, periodic) ships it to Firestore.
 class LearningLedgerRepositoryImpl implements LearningLedgerRepository {
   final UserDatabase _database;
-  final FirestoreGateway? _firestoreGateway;
+  final OutboxSyncWriteFacade? _outboxFacade;
   final int _activeProfileId;
   final ProfileMode _activeProfileMode;
 
@@ -19,12 +24,12 @@ class LearningLedgerRepositoryImpl implements LearningLedgerRepository {
 
   LearningLedgerRepositoryImpl({
     required UserDatabase database,
-    required FirestoreGateway? firestoreGateway,
+    required OutboxSyncWriteFacade? outboxFacade,
     required int activeProfileId,
     required ProfileMode activeProfileMode,
     this.parentPinSessionMatchesActiveProfile = false,
   }) : _database = database,
-       _firestoreGateway = firestoreGateway,
+       _outboxFacade = outboxFacade,
        _activeProfileId = activeProfileId,
        _activeProfileMode = activeProfileMode;
 
@@ -41,6 +46,7 @@ class LearningLedgerRepositoryImpl implements LearningLedgerRepository {
   }
 
   Map<String, dynamic> _ledgerDataToSyncMap(LearningLedgerData entry) => {
+    'ulid': entry.ulid,
     'curriculum_id': entry.curriculumId,
     'entry_scope': entry.entryScope,
     'unit_identifier': entry.unitIdentifier,
@@ -55,10 +61,7 @@ class LearningLedgerRepositoryImpl implements LearningLedgerRepository {
   };
 
   Future<void> _syncLedgerEntry(LearningLedgerData entry) async {
-    await _firestoreGateway?.pushLedgerEntry(
-      profileId: _activeProfileId,
-      data: _ledgerDataToSyncMap(entry),
-    );
+    await _outboxFacade?.enqueueLedgerEntry(_ledgerDataToSyncMap(entry));
   }
 
   @override
@@ -166,10 +169,16 @@ class LearningLedgerRepositoryImpl implements LearningLedgerRepository {
     });
 
     if (results.isNotEmpty) {
-      await _firestoreGateway?.pushLedgerEntriesBatch(
-        profileId: _activeProfileId,
-        entries: results.map(_ledgerDataToSyncMap).toList(),
-      );
+      // Outbox: one row per entry. The push pipeline batches contiguous
+      // learning_ledger_entry rows when it drains (gateway already has a
+      // batched writer), so per-entry enqueue still results in a single
+      // Firestore WriteBatch on the wire.
+      final facade = _outboxFacade;
+      if (facade != null) {
+        for (final entry in results) {
+          await facade.enqueueLedgerEntry(_ledgerDataToSyncMap(entry));
+        }
+      }
     }
 
     return results;

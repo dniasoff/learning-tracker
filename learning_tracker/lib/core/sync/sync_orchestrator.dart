@@ -14,6 +14,7 @@ import 'package:learning_tracker/core/sync/lifecycle_observer.dart';
 import 'package:learning_tracker/core/sync/listener_supervisor.dart';
 import 'package:learning_tracker/core/sync/merge/entity_merger.dart';
 import 'package:learning_tracker/core/sync/merge/merge_router.dart';
+import 'package:learning_tracker/core/sync/outbox/outbox_processor.dart';
 import 'package:learning_tracker/core/sync/providers/firestore_instance_provider.dart'
     show resetFirestoreNetwork;
 import 'package:learning_tracker/core/sync/pull_pipeline.dart';
@@ -167,6 +168,19 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
     /// events for dashboards.
     AnalyticsService? analytics,
 
+    /// Phase 0 sync-architecture-plan: outbox processor used by the five
+    /// drain triggers (write-tee, pull-complete, connectivity-online,
+    /// lifecycle-resume, periodic safety net). Cloud-born accounts must
+    /// provide it; tests that only exercise the pull path can omit it
+    /// (drain calls become no-ops).
+    OutboxProcessor? outboxProcessor,
+
+    /// Phase 0 sync-architecture-plan: interval between periodic drain
+    /// attempts while the orchestrator is started AND online. Exposed for
+    /// tests so they can run the periodic loop in milliseconds instead of
+    /// waiting a full minute.
+    Duration periodicDrainInterval = const Duration(seconds: 60),
+
     /// Phase 2 sync-architecture-plan: minimum time in background before the
     /// listener supervisor parks. Defaults to 60 s; configurable so tests
     /// can drive a much shorter window without sleeping.
@@ -178,9 +192,9 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
     /// to the pull-driven `syncing` / `synced` / `error` states.
     ///
     /// Resolved lazily so a DB swap (multi-account flow) is picked up
-    /// without rebuilding the orchestrator. Used by
-    /// [recordDrainAttempt] to compute pending/offline/degraded status and
-    /// to log the `outbox_depth` observability gauge.
+    /// without rebuilding the orchestrator. Used by [recordDrainAttempt] to
+    /// compute pending/offline/degraded status and to log the
+    /// `outbox_depth` observability gauge.
     OutboxDao Function()? resolveOutboxDao,
   }) : _resolveMergeRouter = resolveMergeRouter,
        _resolveGateway = resolveGateway,
@@ -193,6 +207,8 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
        _resolveBackfillGoals = resolveBackfillGoals,
        _connectivityStream = connectivityStream,
        _resetFirestoreNetworkOverride = resetFirestoreNetworkOverride,
+       _outboxProcessor = outboxProcessor,
+       _periodicDrainInterval = periodicDrainInterval,
        _resolveOutboxDao = resolveOutboxDao,
        parkAfterBackgroundDuration =
            parkAfterBackgroundDuration ?? const Duration(seconds: 60);
@@ -210,9 +226,10 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
   /// into the [SyncStatus.degraded] state. Matches Plan §F Phase 4.
   static const int _degradedAttemptThreshold = 3;
 
-  /// `true` once a `pull-on-launch` completes successfully at least once this
-  /// session — the `synced` precondition per Plan §F Phase 4 deliverable 2.
-  /// Computed-status emission only flips to `synced` after this is set.
+  /// `true` once a `pull-on-launch` completes successfully at least once
+  /// this session — the `synced` precondition per Plan §F Phase 4
+  /// deliverable 2. Computed-status emission only flips to `synced` after
+  /// this is set.
   bool _everPulledOnLaunch = false;
 
   /// Optional callback invoked the first time a full pull completes.  See
@@ -260,6 +277,19 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
   /// Test seam — see constructor doc.
   final Future<void> Function()? _resetFirestoreNetworkOverride;
 
+  /// Phase 0 — outbox processor that drains queued mutations to Firestore.
+  /// Null when not cloud-born (the wired triggers all bail early in that case).
+  final OutboxProcessor? _outboxProcessor;
+
+  /// Phase 0 — cadence for the periodic drain timer. Defaults to 60 s in
+  /// production; tests override to a short interval to exercise the trigger.
+  final Duration _periodicDrainInterval;
+
+  /// Phase 0 — periodic drain timer started in [start] and cancelled in
+  /// [dispose]. Fires only when [_lastConnectivity] is true so a backgrounded
+  /// or offline app does not burn cycles on no-op drains.
+  Timer? _periodicDrainTimer;
+
   /// Invoke the configured Firestore network reset (override in tests, the
   /// top-level production function otherwise). Centralised so both the
   /// lifecycle and connectivity paths route through the same call.
@@ -267,6 +297,38 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
     final override = _resetFirestoreNetworkOverride;
     if (override != null) return override();
     return resetFirestoreNetwork();
+  }
+
+  /// Phase 0 — drain the outbox for the active profile, logging start /
+  /// completion / failure with the [trigger] tag.
+  ///
+  /// Trigger tags: `'pull'`, `'connectivity'`, `'lifecycle'`, `'periodic'`,
+  /// `'write_tee'`. A no-op when no [OutboxProcessor] is configured (i.e.
+  /// the user is not cloud-born or tests omitted the dependency). The
+  /// outbox processor itself owns the single-flight guard so this method is
+  /// safe to call from multiple triggers near-simultaneously.
+  Future<void> _drainOutbox(String trigger) async {
+    final processor = _outboxProcessor;
+    if (processor == null) return;
+    final profileId = _profileId;
+    _logger?.info(
+      event: LogEvents.sync.outboxDrainStarted,
+      fields: {'trigger': trigger},
+    );
+    try {
+      final pushed = await processor.drain(profileId);
+      _logger?.info(
+        event: LogEvents.sync.outboxDrainCompleted,
+        fields: {'trigger': trigger, 'rows_pushed': pushed},
+      );
+    } catch (e, st) {
+      _logger?.warning(
+        event: LogEvents.sync.outboxDrainFailed,
+        fields: {'trigger': trigger},
+        exception: e,
+        stackTrace: st,
+      );
+    }
   }
 
   /// Last observed connectivity value. We only trigger a Firestore reset on
@@ -425,6 +487,16 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
     if (stream != null) {
       _connectivitySubscription = stream.listen(_onConnectivityChange);
     }
+
+    // Phase 0 (trigger 5) — periodic outbox drain. Catches anything missed
+    // by the four event-driven triggers (e.g. a write-tee dropped during a
+    // process suspension). Gates on connectivity inside the callback so a
+    // backgrounded or offline app does no work; the OutboxProcessor's
+    // single-flight guard collapses races with other triggers.
+    _periodicDrainTimer = Timer.periodic(_periodicDrainInterval, (_) {
+      if (_lastConnectivity != true) return;
+      unawaited(_drainOutbox('periodic'));
+    });
   }
 
   /// Handler for [connectivityStream] emissions. Triggers a debounced
@@ -467,6 +539,10 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
             event: 'firestore_network_reset_on_reconnect',
             fields: const {'trigger': 'connectivity'},
           );
+          // Phase 0 (trigger 3) — drain the outbox after the channel
+          // recovers. Anything queued while offline rides the freshly-reset
+          // channel up to Firestore.
+          await _drainOutbox('connectivity');
         } catch (e, st) {
           _logger?.warning(
             event: 'firestore_network_reset_on_reconnect_failed',
@@ -649,6 +725,11 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
           'ui_preferences',
           () => pullPipeline.pullUiPreferences(profileId: _profileId),
         );
+        // Phase 1 — study_day_configs pull (closes the study-day sync gap).
+        await step(
+          'study_day_configs',
+          () => pullPipeline.pullStudyDayConfigs(profileId: _profileId),
+        );
       }).timeout(
         _overallTimeout,
         onTimeout: () => throw TimeoutException(
@@ -682,6 +763,13 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
       }
 
       _everPulledOnLaunch = true;
+      // Phase 0 (triggers 2 + 4) — drain the outbox after every successful
+      // pull. Cold-start and resume-triggered pulls both chain a drain so
+      // anything queued while the pull was in flight (or, for resume, while
+      // the app was backgrounded) lands in Firestore in the same network
+      // round. The drain is awaited before the success status emit so the
+      // UI's "Synced" state genuinely reflects an empty outbox.
+      await _drainOutbox('pull');
       _safeEmitStatus(SyncStatus.synced(lastSyncedAt: syncedAt));
       _logger?.info(event: 'sync_orchestrator_pull_on_launch_complete');
       // After a successful pull, reflect any outbox backlog that arrived
@@ -925,6 +1013,10 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
     _connectivityResetDebounce = null;
     _connectivitySubscription?.cancel();
     _connectivitySubscription = null;
+    // Phase 0 — cancel the periodic drain timer started in [start] so the
+    // disposed orchestrator does not keep firing background work.
+    _periodicDrainTimer?.cancel();
+    _periodicDrainTimer = null;
     _lifecycleObserver?.stop();
     _listenerSupervisor?.stop();
     _lifecycleObserver = null;
@@ -1004,6 +1096,9 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
     // W2.29 — route real-time stage_definitions events through the
     // StageDefinitionMerger (registered in merge_router.dart).
     'stage_definitions' => EntityKind.stageDefinition,
+    // Phase 1 — route real-time study_day_configs events through the
+    // StudyDayConfigMerger.
+    'study_day_configs' => EntityKind.studyDayConfig,
     // Phase 2 (sync-architecture-plan 2026-05-21) — every Phase 2 listener
     // routes its rows through MergeRouter via the appropriate EntityKind.
     'goals' => EntityKind.goal,

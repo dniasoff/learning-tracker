@@ -25,18 +25,18 @@ import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
-import 'package:learning_tracker/core/sync/firestore_gateway.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 import 'package:learning_tracker/features/learning/data/repositories/completion_repository_impl.dart';
 import 'package:learning_tracker/features/learning/data/repositories/learning_ledger_repository_impl.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_request.dart';
 import 'package:learning_tracker/features/learning/domain/services/completion_detection_service.dart';
+import 'package:learning_tracker/features/sync/data/outbox_sync_write_facade.dart';
 import 'package:learning_tracker/features/tracks/stages/data/repositories/stage_definition_repository_impl.dart';
 import 'package:mocktail/mocktail.dart';
 
 import '../../../../helpers/test_database.dart';
 
-class _MockFirestoreGateway extends Mock implements FirestoreGateway {}
+class _MockOutboxFacade extends Mock implements OutboxSyncWriteFacade {}
 
 class _MockContentRepository extends Mock implements ContentRepository {}
 
@@ -98,15 +98,9 @@ void main() {
 
   CompletionRepositoryImpl buildRepo({
     required _MockContentRepository contentRepo,
-    required _MockFirestoreGateway gateway,
+    required _MockOutboxFacade outboxFacade,
   }) {
-    final mockGateway = gateway;
-    when(
-      () => mockGateway.pushLedgerEntry(
-        profileId: any(named: 'profileId'),
-        data: any(named: 'data'),
-      ),
-    ).thenAnswer((_) async {});
+    when(() => outboxFacade.enqueueLedgerEntry(any())).thenAnswer((_) async {});
     // Stub getContentForCurriculum used by bookmark advance path.
     when(
       () => contentRepo.getContentForCurriculum(any()),
@@ -114,7 +108,7 @@ void main() {
 
     final ledgerRepo = LearningLedgerRepositoryImpl(
       database: db,
-      firestoreGateway: gateway,
+      outboxFacade: outboxFacade,
       activeProfileId: profileId,
       activeProfileMode: ProfileMode.adult,
     );
@@ -156,7 +150,7 @@ void main() {
       'lifetimeOnly (creditsAchievement=false): does NOT create siyum',
       () async {
         final contentRepo = _MockContentRepository();
-        final gateway = _MockFirestoreGateway();
+        final outboxFacade = _MockOutboxFacade();
         final leaves = twoLeaves();
 
         // Both leaves exist in content repo.
@@ -176,7 +170,10 @@ void main() {
 
         await seedOneStage();
 
-        final repo = buildRepo(contentRepo: contentRepo, gateway: gateway);
+        final repo = buildRepo(
+          contentRepo: contentRepo,
+          outboxFacade: outboxFacade,
+        );
 
         // Mark both leaves complete with the lifetimeOnly profile:
         // engagement=false (no streak/points) AND achievement=false
@@ -218,7 +215,7 @@ void main() {
         // historical), but they HAVE earned the siyum and it must show up in
         // the ledger.
         final contentRepo = _MockContentRepository();
-        final gateway = _MockFirestoreGateway();
+        final outboxFacade = _MockOutboxFacade();
         final leaves = twoLeaves();
 
         when(
@@ -237,7 +234,10 @@ void main() {
 
         await seedOneStage();
 
-        final repo = buildRepo(contentRepo: contentRepo, gateway: gateway);
+        final repo = buildRepo(
+          contentRepo: contentRepo,
+          outboxFacade: outboxFacade,
+        );
 
         for (final leaf in leaves) {
           await repo.markComplete(
@@ -270,7 +270,7 @@ void main() {
 
     test('live (creditsAchievement=true): DOES create siyum', () async {
       final contentRepo = _MockContentRepository();
-      final gateway = _MockFirestoreGateway();
+      final outboxFacade = _MockOutboxFacade();
       final leaves = twoLeaves();
 
       when(
@@ -289,7 +289,10 @@ void main() {
 
       await seedOneStage();
 
-      final repo = buildRepo(contentRepo: contentRepo, gateway: gateway);
+      final repo = buildRepo(
+        contentRepo: contentRepo,
+        outboxFacade: outboxFacade,
+      );
 
       // Defaults: engagement=true, achievement=true (the live profile).
       for (final leaf in leaves) {

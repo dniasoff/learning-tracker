@@ -105,6 +105,8 @@ String? _channelToKind(String channel) => switch (channel) {
   'streak_events' => EntityKind.streak,
   'curriculum_tracks' => EntityKind.trackConfig,
   'stage_definitions' => EntityKind.stageDefinition,
+  // Phase 1 — study-day config enrolment.
+  'study_day_configs' => EntityKind.studyDayConfig,
   'goals' => EntityKind.goal,
   'learning_ledger' => EntityKind.learningLedger,
   'learning_order' => EntityKind.learningOrder,

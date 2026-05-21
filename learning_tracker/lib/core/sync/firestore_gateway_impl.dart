@@ -904,6 +904,30 @@ class FirestoreGatewayImpl implements FirestoreGateway {
     }, SetOptions(merge: true));
   }
 
+  // ── Phase 1 — study_day_configs/ collection ─────────────────────────────
+
+  @override
+  Future<void> pushStudyDayConfig({
+    required int profileId,
+    required Map<String, dynamic> data,
+  }) async {
+    final collection = _collection(profileId, 'study_day_configs');
+    if (collection == null) throw _notAuthenticated;
+    final curriculumId = data['curriculum_id']?.toString() ?? '';
+    final dayOfWeek = data['day_of_week']?.toString() ?? '';
+    final trackId = data['track_id']?.toString() ?? '';
+    if (curriculumId.isEmpty || dayOfWeek.isEmpty || trackId.isEmpty) {
+      throw ArgumentError(
+        'pushStudyDayConfig requires non-null curriculum_id, day_of_week, and track_id',
+      );
+    }
+    final docId = '${curriculumId}_${dayOfWeek}_$trackId';
+    await collection.doc(docId).set({
+      ..._stripInternalKeys(data),
+      'synced_at': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+  }
+
   // ── helpers ───────────────────────────────────────────────────────────────
 
   /// Converts Firestore-specific types to plain Dart values so the merge

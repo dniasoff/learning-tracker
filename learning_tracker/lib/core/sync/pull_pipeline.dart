@@ -200,6 +200,17 @@ class PullPipeline {
     kind: EntityKind.uiPreferences,
   );
 
+  // Phase 1 — study_day_configs pull.
+  Future<void> pullStudyDayConfigs({
+    required int profileId,
+    int pageSize = defaultPageSize,
+  }) => _pullCollection(
+    profileId: profileId,
+    collection: 'study_day_configs',
+    kind: EntityKind.studyDayConfig,
+    pageSize: pageSize,
+  );
+
   Future<void> _pullDocument({
     required int profileId,
     required String collection,

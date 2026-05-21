@@ -5,10 +5,10 @@ import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
-import 'package:learning_tracker/core/sync/firestore_gateway.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 import 'package:learning_tracker/features/learning/data/repositories/learning_ledger_repository_impl.dart';
 import 'package:learning_tracker/features/learning/domain/services/completion_detection_service.dart';
+import 'package:learning_tracker/features/sync/data/outbox_sync_write_facade.dart';
 import 'package:learning_tracker/features/tracks/stages/data/repositories/stage_definition_repository_impl.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:test/test.dart';
@@ -36,7 +36,7 @@ class _CompletionsViewQueryCounter extends QueryInterceptor {
   }
 }
 
-class _MockFirestoreGateway extends Mock implements FirestoreGateway {}
+class _MockOutboxFacade extends Mock implements OutboxSyncWriteFacade {}
 
 class _MockContentRepository extends Mock implements ContentRepository {}
 
@@ -44,20 +44,17 @@ const _currId = 'mishnayos';
 
 void main() {
   late UserDatabase db;
-  late _MockFirestoreGateway mockGateway;
+  late _MockOutboxFacade mockOutboxFacade;
   late _MockContentRepository mockContentRepo;
   late int trackId;
 
   setUp(() async {
     db = createTestDatabase();
     await seedProfile(db);
-    mockGateway = _MockFirestoreGateway();
+    mockOutboxFacade = _MockOutboxFacade();
     mockContentRepo = _MockContentRepository();
     when(
-      () => mockGateway.pushLedgerEntry(
-        profileId: any(named: 'profileId'),
-        data: any(named: 'data'),
-      ),
+      () => mockOutboxFacade.enqueueLedgerEntry(any()),
     ).thenAnswer((_) async {});
 
     final trackRow = await db
@@ -130,7 +127,7 @@ void main() {
   CompletionDetectionService createService() {
     final ledgerRepo = LearningLedgerRepositoryImpl(
       database: db,
-      firestoreGateway: mockGateway,
+      outboxFacade: mockOutboxFacade,
       activeProfileId: 1,
       activeProfileMode: ProfileMode.adult,
     );

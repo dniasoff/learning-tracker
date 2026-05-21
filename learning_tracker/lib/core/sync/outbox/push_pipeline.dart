@@ -137,4 +137,12 @@ abstract class PushPipeline {
     required String entityKey,
     required Map<String, dynamic> payload,
   });
+
+  // Phase 1 — study_day_configs/ kind ──────────────────────────────────────
+
+  Future<void> pushStudyDayConfig({
+    required int profileId,
+    required String entityKey,
+    required Map<String, dynamic> payload,
+  });
 }

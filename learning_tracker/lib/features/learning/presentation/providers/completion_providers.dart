@@ -81,9 +81,14 @@ CompletionRepository completionRepository(Ref ref) {
     stageRepository: stageRepository,
   );
 
+  // Phase 1 — outbox facade for the streak tee. Cloud-born only; null for
+  // local-born accounts (which short-circuit the enqueue path).
+  final outboxFacade = ref.watch(outboxSyncWriteFacadeProvider);
+
   return CompletionRepositoryImpl(
     database: database,
     syncEngine: syncFacade,
+    outboxFacade: outboxFacade,
     contentRepository: contentRepository,
     bookmarkRepository: bookmarkRepository,
     completionDetectionService: detectionService,

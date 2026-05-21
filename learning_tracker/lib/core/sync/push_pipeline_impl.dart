@@ -207,6 +207,18 @@ class OutboxPushPipeline implements PushPipeline {
     () => _gateway.pushLedgerEntry(profileId: profileId, data: payload),
   );
 
+  // Phase 1 — study_day_configs/ ─────────────────────────────────────────────
+
+  @override
+  Future<void> pushStudyDayConfig({
+    required int profileId,
+    required String entityKey,
+    required Map<String, dynamic> payload,
+  }) => _run(
+    OutboxEntityKind.studyDayConfig,
+    () => _gateway.pushStudyDayConfig(profileId: profileId, data: payload),
+  );
+
   /// Serialize calls per [kind]: wait on any prior in-flight future, then
   /// run [action]. The slot is cleared after the action completes so
   /// failures don't deadlock the chain.

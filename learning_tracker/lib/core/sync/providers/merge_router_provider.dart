@@ -16,6 +16,7 @@ import 'package:learning_tracker/core/sync/merge/profile_program_merger.dart';
 import 'package:learning_tracker/core/sync/merge/settings_merger.dart';
 import 'package:learning_tracker/core/sync/merge/stage_definition_merger.dart';
 import 'package:learning_tracker/core/sync/merge/streak_event_merger.dart';
+import 'package:learning_tracker/core/sync/merge/study_day_config_merger.dart';
 import 'package:learning_tracker/core/sync/merge/track_config_merger.dart';
 import 'package:learning_tracker/core/sync/merge/tutor_grant_merger.dart';
 import 'package:learning_tracker/core/sync/merge/ui_preferences_merger.dart';
@@ -83,6 +84,10 @@ final mergeRouterProvider = Provider<MergeRouter>((ref) {
       ),
       EntityKind.uiPreferences: UiPreferencesMerger(store: store),
       EntityKind.tutorGrant: const TutorGrantMerger(), // W3.17 / W3.38
+      // Phase 1 — study-day config enrolment in the sync pipeline. Bypasses
+      // DriftMergeStore because StudyDayConfigs has a composite PK with a
+      // foreign-key to curriculum_tracks (no compatible store helpers yet).
+      EntityKind.studyDayConfig: StudyDayConfigMerger(database),
     },
   );
 });

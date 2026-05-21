@@ -40,6 +40,8 @@ import 'package:learning_tracker/core/sync/listener_supervisor.dart';
 ///   streak_events                     — per-event collection (W3.37)
 ///   curriculum_tracks                 — profile subcollection
 ///   stage_definitions                 — profile subcollection (W2.29)
+///   study_day_configs                 — profile subcollection (Phase 1 —
+///                                       closes the study-day sync gap)
 ///   goals                             — profile subcollection (Phase 2)
 ///   learning_ledger                   — append-only daily ledger (Phase 2)
 ///   learning_order                    — sort-order overrides (Phase 2)
@@ -77,6 +79,8 @@ class FirestoreListenerSource implements ListenerSource {
     'streak_events': 'event_timestamp',
     'curriculum_tracks': 'state_changed_at',
     'stage_definitions': 'updated_at',
+    // Phase 1 addition:
+    'study_day_configs': 'updated_at',
     // Phase 2 additions:
     'goals': 'updated_at',
     'learning_ledger': 'created_at',
@@ -153,6 +157,11 @@ class FirestoreListenerSource implements ListenerSource {
       // a `where` predicate. The gateway handles the OR query (tutor_uid OR
       // parent_uid == auth.uid). Empty stream when not authenticated.
       'tutor_grants': gateway.listenToTutorGrants(),
+      // Phase 1 — listener for the new study_day_configs collection. The
+      // per-curriculum/per-track day pattern was local-only before; the
+      // merger now consumes pulled rows and reconciles them with the
+      // Drift table.
+      'study_day_configs': coll('study_day_configs'),
     };
   }
 }

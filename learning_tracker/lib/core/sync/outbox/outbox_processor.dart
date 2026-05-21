@@ -36,6 +36,9 @@ class OutboxEntityKind {
   static const uiPreferences = 'ui_preferences';
   static const profileProgram = 'profile_program';
   static const learningLedgerEntry = 'learning_ledger_entry';
+
+  // Phase 1 — study-day config enrolment in the sync pipeline.
+  static const studyDayConfig = 'study_day_config';
 }
 
 /// Drains pending outbox rows for a given profile, dispatching each mutation
@@ -110,6 +113,13 @@ class OutboxProcessor {
   /// window, so a plain (non-cryptographic) PRNG is appropriate.
   final math.Random _random = math.Random();
 
+  /// Single-flight guard: when a [drain] is already running, subsequent calls
+  /// return 0 immediately so the five drain triggers (write-tee, pull-complete,
+  /// connectivity online, lifecycle resume, periodic safety net) cannot stampede
+  /// the push pipeline on near-simultaneous fires. Per-process state — safe for
+  /// the Flutter single-Isolate runtime.
+  bool _draining = false;
+
   /// Drain pending outbox rows for [profileId].
   ///
   /// Completions are collected all at once and dispatched via
@@ -120,7 +130,23 @@ class OutboxProcessor {
   /// time-sensitive entities (completions, streaks) are flushed before
   /// cosmetic ones (settings, order). Returns the number of rows successfully
   /// pushed.
+  ///
+  /// **Single-flight:** if a drain is already in flight for this processor,
+  /// returns 0 immediately. The five wired triggers can fire in quick
+  /// succession (write-tee + connectivity-online + lifecycle-resume +
+  /// pull-complete all coinciding on app launch); this guard collapses them
+  /// to one push round.
   Future<int> drain(int profileId) async {
+    if (_draining) return 0;
+    _draining = true;
+    try {
+      return await _doDrain(profileId);
+    } finally {
+      _draining = false;
+    }
+  }
+
+  Future<int> _doDrain(int profileId) async {
     final now = _clock.nowUtc();
     var successCount = 0;
 
@@ -289,6 +315,9 @@ class OutboxProcessor {
     OutboxEntityKind.uiPreferences,
     OutboxEntityKind.profileProgram,
     OutboxEntityKind.learningLedgerEntry,
+    // Phase 1 — study-day config enrolment (placed late: it is a config-style
+    // entity, drained after time-sensitive entities and other preferences).
+    OutboxEntityKind.studyDayConfig,
   ];
 
   /// Compute the earliest time at which the [attempts]-th row may be retried.
@@ -419,6 +448,12 @@ class OutboxProcessor {
         );
       case OutboxEntityKind.learningLedgerEntry:
         return _pipeline.pushLearningLedgerEntry(
+          profileId: profileId,
+          entityKey: entityKey,
+          payload: payload,
+        );
+      case OutboxEntityKind.studyDayConfig:
+        return _pipeline.pushStudyDayConfig(
           profileId: profileId,
           entityKey: entityKey,
           payload: payload,

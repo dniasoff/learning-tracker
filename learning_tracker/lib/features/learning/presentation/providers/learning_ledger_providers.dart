@@ -2,12 +2,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
-import 'package:learning_tracker/core/sync/providers/outbox_providers.dart';
 import 'package:learning_tracker/features/learning/data/repositories/learning_ledger_repository_impl.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/learning_ledger_repository.dart';
 import 'package:learning_tracker/features/learning/domain/use_cases/manual_completion_use_case.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/parent_pin_session_provider.dart';
+import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'learning_ledger_providers.g.dart';
@@ -30,7 +30,7 @@ final _activeProfileModeProvider = FutureProvider.autoDispose<ProfileMode>((
 @riverpod
 LearningLedgerRepository learningLedgerRepository(Ref ref) {
   final database = ref.watch(userDatabaseProvider);
-  final firestoreGateway = ref.watch(firestoreGatewayProvider);
+  final outboxFacade = ref.watch(outboxSyncWriteFacadeProvider);
   final profileId = ref.watch(activeProfileIdProvider);
   final profileMode =
       ref.watch(_activeProfileModeProvider).value ?? ProfileMode.adult;
@@ -42,7 +42,9 @@ LearningLedgerRepository learningLedgerRepository(Ref ref) {
 
   return LearningLedgerRepositoryImpl(
     database: database,
-    firestoreGateway: firestoreGateway,
+    // Phase 1 — bypass cleanup: route ledger pushes through the outbox so
+    // offline writes are retained and pushed by the next drain.
+    outboxFacade: outboxFacade,
     activeProfileId: profileId,
     activeProfileMode: profileMode,
     parentPinSessionMatchesActiveProfile: parentPinSessionMatches,

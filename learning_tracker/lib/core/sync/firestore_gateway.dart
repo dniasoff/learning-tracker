@@ -276,6 +276,19 @@ abstract class FirestoreGateway {
     required Map<String, dynamic> data,
   });
 
+  // ── Phase 1 — study_day_configs/ collection ──────────────────────────────
+
+  /// Push a study-day config record to the `study_day_configs/` subcollection.
+  ///
+  /// Document ID is derived deterministically from
+  /// `(curriculum_id, day_of_week, track_id)` — matching the composite PK on
+  /// the local `study_day_configs` table — so repeated pushes for the same
+  /// composite key overwrite the same document (idempotent).
+  Future<void> pushStudyDayConfig({
+    required int profileId,
+    required Map<String, dynamic> data,
+  });
+
   // ── Tutor audit log reads (W6.13) ─────────────────────────────────────────
 
   /// Fetch raw audit log entries from `tutor_grants/{grantId}/audit_log/`,
