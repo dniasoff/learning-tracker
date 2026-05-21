@@ -411,7 +411,18 @@ class SignInController extends Notifier<SignInState> {
       }
     }
 
-    if (profileCount == 0 && !cloudAccountHasProfiles) {
+    // Plan §F Phase 4 deliverable 5 — never push the onboarding wizard when
+    // the account already owns profiles in the cloud (returning user on a
+    // clean install). The check above pulls + recounts; this final
+    // re-query reflects any restore that ran in parallel (e.g. the
+    // restoreGuard kicked off DeviceRestoreService while we were here) so
+    // we don't lose a race against the just-merged Drift state.
+    final finalProfileCount = await _ref
+        .read(userDatabaseProvider)
+        .profileDao
+        .countProfilesForAccount(_ref.read(currentAccountIdProvider));
+
+    if (finalProfileCount == 0 && !cloudAccountHasProfiles) {
       unawaited(router.replaceAll([const OnboardingRoute()]));
       return;
     }
@@ -420,18 +431,29 @@ class SignInController extends Notifier<SignInState> {
         .read(userDatabaseProvider)
         .profileDao
         .getProfilesByAccount(_ref.read(currentAccountIdProvider));
+
+    // Multi-profile accounts go to the picker; single-profile accounts go
+    // straight to the app shell. Both paths bypass OnboardingRoute.
     if (profiles.length == 1) {
       _ref.read(selectedProfileIdProvider.notifier).select(profiles.first.id);
       final selectedOrchestrator = _ref.read(syncOrchestratorProvider);
       if (selectedOrchestrator != null) {
         unawaited(selectedOrchestrator.pullOnLaunch());
       }
-    } else {
+      await prefs.setBool(kOnboardingComplete, true);
+      unawaited(router.replaceAll([const AppShellRoute()]));
+    } else if (profiles.length > 1) {
       _ref.read(selectedProfileIdProvider.notifier).clear();
+      await prefs.setBool(kOnboardingComplete, true);
+      unawaited(router.replaceAll([const ProfilePickerRoute()]));
+    } else {
+      // Cloud account has remote profiles but local pull didn't materialise
+      // any — fall back to the app shell; the restoreGuard will pick up
+      // the new-device case and route to DeviceRestoreRoute.
+      _ref.read(selectedProfileIdProvider.notifier).clear();
+      await prefs.setBool(kOnboardingComplete, true);
+      unawaited(router.replaceAll([const AppShellRoute()]));
     }
-
-    await prefs.setBool(kOnboardingComplete, true);
-    unawaited(router.replaceAll([const AppShellRoute()]));
   }
 
   // ── Public actions ──────────────────────────────────────────────────────────

@@ -158,7 +158,7 @@ ParentDashboardAggregator _makeAggregator(UserDatabase db) =>
       stageRepository: StageDefinitionRepositoryImpl(
         stageDao: db.stageDao,
         completionDao: db.completionDao,
-        pushSettings: null,
+        pushStageDefinitions: null,
       ),
     );
 

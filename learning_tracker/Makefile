@@ -361,9 +361,38 @@ audit: ## Run all 17 enforcement greps (NFR19) — exits non-zero on any violati
 	    | grep -v "lib/core/database/registry/device_registry_database\.dart"; \
 	  FAIL=1; \
 	fi; \
+	echo "18/18 — No direct FirestoreGateway.push* outside lib/core/sync/ (Plan §F Phase 5 deliverable 8 — no-direct-gateway-push)"; \
+	# Whitelist exclusions: \
+	#   * lib/features/sync/ — the OutboxSyncWriteFacade lives here. \
+	#   * send_logs_service.dart — pushDiagnosticLog is best-effort telemetry, \
+	#     intentionally direct (out of scope for Phase 5; revisit if logs start \
+	#     dropping offline). \
+	# Known offenders being converted by Squad ALPHA (Phase 1 cleanup): \
+	#   * notification_providers.dart  → outbox via OutboxSyncWriteFacade. \
+	#   * user_profile_service.dart    → outbox via OutboxSyncWriteFacade. \
+	# Whitelisted here so the audit gate doesn't block in-flight work; the grep \
+	# itself still catches NEW regressions (anything that isn't on the whitelist). \
+	if grep -rn "\(_firestoreGateway\|firestoreGateway\|gateway\|_gateway\)\.push" lib/features/ --include="*.dart" \
+	    | grep -v "\.g\.dart" | grep -v "\.freezed\.dart" \
+	    | grep -v "lib/features/sync/" \
+	    | grep -v "lib/features/settings/presentation/utils/send_logs_service\.dart" \
+	    | grep -v "lib/features/notifications/presentation/providers/notification_providers\.dart" \
+	    | grep -v "lib/features/onboarding/domain/services/user_profile_service\.dart" \
+	    | grep -v ":[[:space:]]*//" \
+	    | grep -q .; then \
+	  echo "  All cloud-bound writes must enqueue via OutboxSyncWriteFacade; the gateway is owned by lib/core/sync/ only:"; \
+	  grep -rn "\(_firestoreGateway\|firestoreGateway\|gateway\|_gateway\)\.push" lib/features/ --include="*.dart" \
+	    | grep -v "\.g\.dart" | grep -v "\.freezed\.dart" \
+	    | grep -v "lib/features/sync/" \
+	    | grep -v "lib/features/settings/presentation/utils/send_logs_service\.dart" \
+	    | grep -v "lib/features/notifications/presentation/providers/notification_providers\.dart" \
+	    | grep -v "lib/features/onboarding/domain/services/user_profile_service\.dart" \
+	    | grep -v ":[[:space:]]*//"; \
+	  FAIL=1; \
+	fi; \
 	if [ "$$FAIL" -eq 1 ]; then \
 	  echo "=== audit FAILED — fix violations above ==="; \
 	  exit 1; \
 	else \
-	  echo "=== audit PASSED — all 17 greps clean ==="; \
+	  echo "=== audit PASSED — all 18 greps clean ==="; \
 	fi

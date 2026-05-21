@@ -53,4 +53,15 @@ abstract class SyncWriteFacade {
 
   /// Delete a learner profile from Firestore (tombstones locally first).
   Future<void> deleteLearnerProfile(int profileId);
+
+  /// Plan §F Phase 5 deliverable 6 — push stage definitions via the
+  /// dedicated `stage_definition` outbox kind. Replaces the legacy
+  /// `pushSettings` piggyback so the gateway can write the correct
+  /// `{trackId}_{stageOrder}` doc id per stage.
+  Future<void> pushStageDefinitions({
+    required int trackId,
+    required String curriculumId,
+    required List<Map<String, dynamic>> stages,
+    required DateTime updatedAt,
+  });
 }

@@ -6,7 +6,6 @@ import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/cross_profile_scope.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
-import 'package:learning_tracker/core/sync/firestore_gateway.dart';
 import 'package:learning_tracker/core/sync/sync_orchestrator.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/curriculum_import_service.dart';
 import 'package:learning_tracker/features/sync/domain/models/restore_status.dart';
@@ -32,7 +31,6 @@ class DeviceRestoreService {
   DeviceRestoreService({
     required UserDatabase database,
     required SyncOrchestrator syncOrchestrator,
-    required FirestoreGateway firestoreGateway,
     required int profileId,
     required bool isAuthenticated,
     required CurriculumImportService curriculumImportService,
@@ -40,7 +38,6 @@ class DeviceRestoreService {
     AnalyticsService? analytics,
   }) : _database = database,
        _syncOrchestrator = syncOrchestrator,
-       _firestoreGateway = firestoreGateway,
        _profileId = profileId,
        _isAuthenticated = isAuthenticated,
        _curriculumImportService = curriculumImportService,
@@ -49,7 +46,6 @@ class DeviceRestoreService {
 
   final UserDatabase _database;
   final SyncOrchestrator _syncOrchestrator;
-  final FirestoreGateway _firestoreGateway;
   final int _profileId;
   final bool _isAuthenticated;
   final CurriculumImportService _curriculumImportService;
@@ -175,7 +171,12 @@ class DeviceRestoreService {
         throw Exception('Data pull failed: $message');
       }
 
-      // Step 2: Derive active curricula from Firestore curriculum_tracks.
+      // Step 2: Derive active curricula from the just-pulled local DB.
+      //
+      // `pullOnLaunch` above merged `curriculum_tracks` into Drift, so the
+      // active set is already in `_database.trackDao`. Issuing a second
+      // `fetchAll('curriculum_tracks')` against Firestore here would duplicate
+      // a read that already landed on the wire.
       _updateStatus(
         const RestoreStatus.restoring(
           phase: 'Loading curricula...',
@@ -183,14 +184,10 @@ class DeviceRestoreService {
           totalSteps: totalSteps,
         ),
       );
-      final allTracks = await _firestoreGateway.fetchAll(
-        profileId: _profileId,
-        collection: 'curriculum_tracks',
-      );
-      final activeCurriculaKeys = allTracks
-          .where((t) => t['is_active'] == true)
-          .map((t) => t['curriculum_id'] as String?)
-          .whereType<String>()
+      final localActiveTracks = await _database.trackDao
+          .getActiveTracksForProfile(_profileId);
+      final activeCurriculaKeys = localActiveTracks
+          .map((t) => t.curriculumId)
           .toSet();
 
       // Step 3: Re-import bundled content for active curricula

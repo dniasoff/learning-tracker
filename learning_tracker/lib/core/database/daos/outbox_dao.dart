@@ -77,4 +77,51 @@ class OutboxDao extends DatabaseAccessor<UserDatabase> with _$OutboxDaoMixin {
   /// Delete a successfully-pushed outbox row.
   Future<int> deleteRow(int id) =>
       (delete(outbox)..where((t) => t.id.equals(id))).go();
+
+  /// Total number of pending outbox rows for [profileId] across every kind.
+  ///
+  /// Used by the orchestrator to compute the `pending` / `degraded` /
+  /// `offline` sync-status counts (Phase 4 deliverable 2). Cheap: a single
+  /// COUNT(*) — the orchestrator queries this every drain attempt, so
+  /// O(rows) work would be a regression.
+  Future<int> depth(int profileId) async {
+    final countExpr = outbox.id.count();
+    final row =
+        await (selectOnly(outbox)
+              ..addColumns([countExpr])
+              ..where(outbox.profileId.equals(profileId)))
+            .getSingle();
+    return row.read(countExpr) ?? 0;
+  }
+
+  /// Timestamp of the OLDEST pending outbox row for [profileId], or null when
+  /// the outbox is empty for this profile.
+  ///
+  /// Used alongside [depth] for the `outbox_depth` observability event so
+  /// dashboards can graph stuck-backlog age.
+  Future<DateTime?> oldestPendingAt(int profileId) async {
+    final row =
+        await (select(outbox)
+              ..where((t) => t.profileId.equals(profileId))
+              ..orderBy([(t) => OrderingTerm.asc(t.createdAt)])
+              ..limit(1))
+            .getSingleOrNull();
+    return row?.createdAt;
+  }
+
+  /// Number of pending rows for [profileId] that have already been retried
+  /// [minAttempts] or more times without success — i.e. rows the orchestrator
+  /// should classify as "stuck" / `degraded`.
+  Future<int> stuckCount(int profileId, {required int minAttempts}) async {
+    final countExpr = outbox.id.count();
+    final row =
+        await (selectOnly(outbox)
+              ..addColumns([countExpr])
+              ..where(
+                outbox.profileId.equals(profileId) &
+                    outbox.attempts.isBiggerOrEqualValue(minAttempts),
+              ))
+            .getSingle();
+    return row.read(countExpr) ?? 0;
+  }
 }

@@ -385,7 +385,7 @@ void main() {
         stageRepository: StageDefinitionRepositoryImpl(
           stageDao: db.stageDao,
           completionDao: db.completionDao,
-          pushSettings: null,
+          pushStageDefinitions: null,
         ),
       );
       final pct = await aggregator.computeCompletionPercentage(
@@ -450,7 +450,7 @@ void main() {
           stageRepository: StageDefinitionRepositoryImpl(
             stageDao: db.stageDao,
             completionDao: db.completionDao,
-            pushSettings: null,
+            pushStageDefinitions: null,
           ),
         );
         final pct = await aggregator.computeCompletionPercentage(
@@ -470,7 +470,7 @@ void main() {
         stageRepository: StageDefinitionRepositoryImpl(
           stageDao: db.stageDao,
           completionDao: db.completionDao,
-          pushSettings: null,
+          pushStageDefinitions: null,
         ),
       );
       final pct = await aggregator.computeCompletionPercentage(
@@ -500,7 +500,7 @@ void main() {
           stageRepository: StageDefinitionRepositoryImpl(
             stageDao: db.stageDao,
             completionDao: db.completionDao,
-            pushSettings: null,
+            pushStageDefinitions: null,
           ),
         );
         final data = await aggregator.compute();
@@ -546,7 +546,7 @@ void main() {
         stageRepository: StageDefinitionRepositoryImpl(
           stageDao: db.stageDao,
           completionDao: db.completionDao,
-          pushSettings: null,
+          pushStageDefinitions: null,
         ),
       );
       final data = await aggregator.compute();
@@ -593,7 +593,7 @@ void main() {
         stageRepository: StageDefinitionRepositoryImpl(
           stageDao: db.stageDao,
           completionDao: db.completionDao,
-          pushSettings: null,
+          pushStageDefinitions: null,
         ),
       );
       final data = await aggregator.compute();

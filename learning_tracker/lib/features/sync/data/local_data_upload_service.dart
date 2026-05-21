@@ -9,8 +9,7 @@ import 'package:learning_tracker/features/learning/domain/entities/completion_co
 import 'package:learning_tracker/features/sync/data/outbox_sync_write_facade.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-/// Outbox-backed replacement for [SyncEngine.pushAllLocalData] and
-/// [SyncEngine.backfillGoalsForCloudCutover].
+/// Outbox-backed replacement for [SyncEngine.pushAllLocalData].
 ///
 /// Routes every local entity kind through the outbox table so that
 /// [OutboxProcessor] can drain them asynchronously — matching the
@@ -19,6 +18,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 ///
 /// Thread safety: [pushAllLocalData] is not re-entrant. The caller
 /// ([SyncOrchestrator]) must serialize calls.
+///
+/// The legacy `backfillGoalsForCloudCutover` (DNI-334 cutover bridge) was
+/// removed at Plan §F Phase 5 deliverable 9. See the deletion comment in
+/// the body for the rationale.
 class LocalDataUploadService {
   LocalDataUploadService({
     required OutboxSyncWriteFacade facade,
@@ -34,8 +37,6 @@ class LocalDataUploadService {
   final UserDatabase _database;
   final int _profileId;
   final AppLogger? _logger;
-
-  static const _goalsBackfilledKey = 'sync_goals_backfilled_v1';
 
   // Notification-settings SharedPreferences keys — must match
   // [SyncEngine] and [NotificationSettingsMerger].
@@ -232,43 +233,14 @@ class LocalDataUploadService {
     _logger?.info(event: 'local_data_upload_complete');
   }
 
-  /// One-time backfill of locally-known goals to Firestore.
-  ///
-  /// Idempotent: guarded by [_goalsBackfilledKey] in SharedPreferences.
-  /// Returns the number of goals enqueued (zero on subsequent launches).
-  Future<int> backfillGoalsForCloudCutover() async {
-    final prefs = await SharedPreferences.getInstance();
-    if (prefs.getBool(_goalsBackfilledKey) ?? false) return 0;
-
-    final goals = await _database.goalDao.getAllGoals();
-    for (final g in goals) {
-      final firestoreId =
-          '${g.curriculumId}_${g.targetPercent.toStringAsFixed(1)}_'
-          '${g.createdAt.millisecondsSinceEpoch}';
-      await _facade.pushGoal({
-        'id': firestoreId,
-        'profile_id': g.profileId,
-        'track_id': g.trackId,
-        'curriculumId': g.curriculumId,
-        'targetPercent': g.targetPercent,
-        'targetDate': g.targetDate?.toIso8601String(),
-        'description': g.description,
-        'dateType': g.dateType,
-        'goalType': g.goalType,
-        'paceValue': g.paceValue,
-        'pacePeriod': g.pacePeriod,
-        'paceGranularity': g.paceGranularity,
-        'createdAt': g.createdAt.toIso8601String(),
-        'updatedAt': g.updatedAt.toIso8601String(),
-      });
-    }
-    await prefs.setBool(_goalsBackfilledKey, true);
-    _logger?.info(
-      event: 'local_data_upload_goals_backfilled',
-      fields: {'count': goals.length},
-    );
-    return goals.length;
-  }
+  // Plan §F Phase 5 deliverable 9 — `backfillGoalsForCloudCutover` is gone.
+  // It existed for the one-time DNI-334 cutover where goals had been routed
+  // through `pushSettings` and never reached Firestore. The cutover landed
+  // pre-launch (per the `project_pre_launch_status` memory there are no
+  // live users), so the SharedPrefs flag (`sync_goals_backfilled_v1`) has
+  // never fired in production and there is no goal-data left over to
+  // resurrect. Anything new uses the outbox-backed [pushGoal] path from
+  // first commit forward.
 
   // ── helpers ─────────────────────────────────────────────────────────────────
 

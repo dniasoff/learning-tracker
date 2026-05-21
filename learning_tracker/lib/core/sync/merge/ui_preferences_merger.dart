@@ -1,7 +1,6 @@
 import 'package:learning_tracker/core/preferences/profile_scoped_preference_keys.dart';
 import 'package:learning_tracker/core/sync/codec/firestore_codec.dart';
 import 'package:learning_tracker/core/sync/merge/entity_merger.dart';
-import 'package:learning_tracker/core/sync/merge/merge_rules.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -17,9 +16,25 @@ import 'package:shared_preferences/shared_preferences.dart';
 ///   text_display.{font_size_index, show_nikud},
 ///   learning_order_parent_controls, hebrew_terms_script,
 ///   sacred_time.{latitude, longitude, country_code, city_label, source,
-///               fixed_at_ms, in_israel}  — sacred_time written for profileId==0 only.
+///               fixed_at_ms, in_israel}
+///
+/// Plan §F Phase 5 deliverable 7 — sacred_time is *device*-level (lat/lon/
+/// timezone/in-israel describe the physical device, not a learner) so it
+/// rides along on every profile's UI-prefs snapshot. The merger applies
+/// the incoming block to SharedPreferences regardless of profileId.
+///
+/// Phase 3: the merger consults [MergeStore.remoteIsNewer] (clock-skew
+/// arbitration), and after a successful apply calls
+/// [MergeStore.persistUpdatedAt] so the persisted LWW timestamp survives
+/// SharedPreferences resets. The SharedPreferences key is kept up to date
+/// in parallel because the rest of the app reads it directly.
 class UiPreferencesMerger implements EntityMerger {
-  const UiPreferencesMerger();
+  const UiPreferencesMerger({required MergeStore store}) : _store = store;
+
+  final MergeStore _store;
+
+  /// Single natural key — UI preferences are a per-profile singleton.
+  static const _naturalKey = 'data';
 
   @override
   String get kind => EntityKind.uiPreferences;
@@ -35,16 +50,34 @@ class UiPreferencesMerger implements EntityMerger {
 
     final prefs = await SharedPreferences.getInstance();
     final remoteUpdatedAt = _parseTimestamp(remote['updated_at']);
-    final localMs = prefs.getInt(
-      ProfileScopedPreferenceKeys.uiPreferencesUpdatedAtMs(profileId),
+    final remoteSyncedAt = _parseTimestamp(remote['synced_at']);
+    var localUpdatedAt = await _store.currentUpdatedAt(
+      kind: kind,
+      profileId: profileId,
+      naturalKey: _naturalKey,
     );
-    final localUpdatedAt = localMs == null
-        ? null
-        : DateTime.fromMillisecondsSinceEpoch(localMs, isUtc: true);
+    if (localUpdatedAt == null) {
+      final localMs = prefs.getInt(
+        ProfileScopedPreferenceKeys.uiPreferencesUpdatedAtMs(profileId),
+      );
+      if (localMs != null) {
+        localUpdatedAt = DateTime.fromMillisecondsSinceEpoch(
+          localMs,
+          isUtc: true,
+        );
+      }
+    }
+    final localSyncedAt = await _store.currentSyncedAt(
+      kind: kind,
+      profileId: profileId,
+      naturalKey: _naturalKey,
+    );
 
-    if (!remoteIsNewer(
+    if (!_store.remoteIsNewer(
       localUpdatedAt: localUpdatedAt,
       remoteUpdatedAt: remoteUpdatedAt,
+      localSyncedAt: localSyncedAt,
+      remoteSyncedAt: remoteSyncedAt,
     )) {
       return;
     }
@@ -99,46 +132,51 @@ class UiPreferencesMerger implements EntityMerger {
       );
     }
 
-    // Sacred Time settings are device-global; only the profile-0 document
-    // carries them. Other profile docs leave them untouched.
-    if (profileId == 0) {
-      final sacredTime = remote['sacred_time'];
-      if (sacredTime is Map<String, dynamic>) {
-        final lat = sacredTime['latitude'];
-        final lon = sacredTime['longitude'];
-        if (lat is num && lon is num) {
-          await prefs.setDouble('sacred_time_latitude', lat.toDouble());
-          await prefs.setDouble('sacred_time_longitude', lon.toDouble());
-        }
-        final country = sacredTime['country_code'];
-        if (country is String && country.isNotEmpty) {
-          await prefs.setString('sacred_time_country_code', country);
-        }
-        final city = sacredTime['city_label'];
-        if (city is String && city.isNotEmpty) {
-          await prefs.setString('sacred_time_city_label', city);
-        }
-        final source = sacredTime['source'];
-        if (source is String && source.isNotEmpty) {
-          await prefs.setString('sacred_time_source', source);
-        }
-        final fixedAt = sacredTime['fixed_at_ms'];
-        if (fixedAt is int) {
-          await prefs.setInt('sacred_time_fixed_at_ms', fixedAt);
-        }
-        final inIsrael = sacredTime['in_israel'];
-        if (inIsrael is bool) {
-          await prefs.setBool('sacred_time_in_israel', inIsrael);
-        }
+    // Sacred Time settings are device-global (lat/lon/timezone/in-israel
+    // describe the device, not a learner). Plan §F Phase 5 deliverable 7 —
+    // every profile's UI-prefs snapshot carries the same block, so apply
+    // it on every merge regardless of profileId.
+    final sacredTime = remote['sacred_time'];
+    if (sacredTime is Map<String, dynamic>) {
+      final lat = sacredTime['latitude'];
+      final lon = sacredTime['longitude'];
+      if (lat is num && lon is num) {
+        await prefs.setDouble('sacred_time_latitude', lat.toDouble());
+        await prefs.setDouble('sacred_time_longitude', lon.toDouble());
+      }
+      final country = sacredTime['country_code'];
+      if (country is String && country.isNotEmpty) {
+        await prefs.setString('sacred_time_country_code', country);
+      }
+      final city = sacredTime['city_label'];
+      if (city is String && city.isNotEmpty) {
+        await prefs.setString('sacred_time_city_label', city);
+      }
+      final source = sacredTime['source'];
+      if (source is String && source.isNotEmpty) {
+        await prefs.setString('sacred_time_source', source);
+      }
+      final fixedAt = sacredTime['fixed_at_ms'];
+      if (fixedAt is int) {
+        await prefs.setInt('sacred_time_fixed_at_ms', fixedAt);
+      }
+      final inIsrael = sacredTime['in_israel'];
+      if (inIsrael is bool) {
+        await prefs.setBool('sacred_time_in_israel', inIsrael);
       }
     }
 
-    final stamp =
-        remoteUpdatedAt?.millisecondsSinceEpoch ??
-        DateTimeFactory.nowUtc().millisecondsSinceEpoch;
+    final stamp = remoteUpdatedAt ?? DateTimeFactory.nowUtc();
     await prefs.setInt(
       ProfileScopedPreferenceKeys.uiPreferencesUpdatedAtMs(profileId),
-      stamp,
+      stamp.millisecondsSinceEpoch,
+    );
+    await _store.persistUpdatedAt(
+      kind: kind,
+      profileId: profileId,
+      naturalKey: _naturalKey,
+      updatedAt: stamp,
+      syncedAt: remoteSyncedAt,
     );
   }
 

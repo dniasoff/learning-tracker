@@ -60,7 +60,7 @@ class _SpyTrackCreationService extends TrackCreationService {
         stageRepository: StageDefinitionRepositoryImpl(
           stageDao: db.stageDao,
           completionDao: db.completionDao,
-          pushSettings: null,
+          pushStageDefinitions: null,
         ),
         analytics: const NullAnalyticsService(),
       );

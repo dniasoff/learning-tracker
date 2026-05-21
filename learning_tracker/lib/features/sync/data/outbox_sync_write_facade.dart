@@ -214,23 +214,27 @@ class OutboxSyncWriteFacade implements SyncWriteFacade {
       ),
     };
 
-    if (_profileId == 0) {
-      final sacredTime = <String, dynamic>{};
-      final lat = prefs.getDouble('sacred_time_latitude');
-      final lon = prefs.getDouble('sacred_time_longitude');
-      if (lat != null) sacredTime['latitude'] = lat;
-      if (lon != null) sacredTime['longitude'] = lon;
-      final country = prefs.getString('sacred_time_country_code');
-      if (country != null) sacredTime['country_code'] = country;
-      final city = prefs.getString('sacred_time_city_label');
-      if (city != null) sacredTime['city_label'] = city;
-      final source = prefs.getString('sacred_time_source');
-      if (source != null) sacredTime['source'] = source;
-      final fixedAt = prefs.getInt('sacred_time_fixed_at_ms');
-      if (fixedAt != null) sacredTime['fixed_at_ms'] = fixedAt;
-      sacredTime['in_israel'] = prefs.getBool('sacred_time_in_israel') ?? false;
-      payload['sacred_time'] = sacredTime;
-    }
+    // Plan §F Phase 5 deliverable 7 — sacred-time prefs (lat/lon/timezone/
+    // in-israel) are *device*-level, not profile-specific. Every profile's
+    // UI-prefs snapshot rides the same set so secondary adult profiles on
+    // a multi-profile device don't lose their sacred-window config across
+    // a reinstall. Previously gated on `profileId == 0`, dropping the
+    // sacred-time block for every other profile.
+    final sacredTime = <String, dynamic>{};
+    final lat = prefs.getDouble('sacred_time_latitude');
+    final lon = prefs.getDouble('sacred_time_longitude');
+    if (lat != null) sacredTime['latitude'] = lat;
+    if (lon != null) sacredTime['longitude'] = lon;
+    final country = prefs.getString('sacred_time_country_code');
+    if (country != null) sacredTime['country_code'] = country;
+    final city = prefs.getString('sacred_time_city_label');
+    if (city != null) sacredTime['city_label'] = city;
+    final source = prefs.getString('sacred_time_source');
+    if (source != null) sacredTime['source'] = source;
+    final fixedAt = prefs.getInt('sacred_time_fixed_at_ms');
+    if (fixedAt != null) sacredTime['fixed_at_ms'] = fixedAt;
+    sacredTime['in_israel'] = prefs.getBool('sacred_time_in_israel') ?? false;
+    payload['sacred_time'] = sacredTime;
 
     await _enqueue(
       OutboxEntityKind.uiPreferences,
@@ -320,4 +324,39 @@ class OutboxSyncWriteFacade implements SyncWriteFacade {
         DateTimeFactory.nowUtc().millisecondsSinceEpoch.toString(),
     payload,
   );
+
+  /// Plan §F Phase 5 deliverable 6 — push a stage-definition snapshot via the
+  /// dedicated `stage_definition` outbox kind.
+  ///
+  /// Replaces the historical `pushSettings`-piggyback route (kind=`settings`)
+  /// for stage-definition payloads. Each call enqueues one row per stage —
+  /// the OutboxProcessor dispatches via `PushPipeline.pushStageDefinition`,
+  /// which writes a deterministic doc id of `{trackId}_{stageOrder}`.
+  ///
+  /// [trackId] and [stages] are passed explicitly so this helper does not
+  /// need to crack open `pushSettings`'s aggregate-snapshot payload — each
+  /// stage row carries its own `track_id` + `stage_order` for the gateway.
+  @override
+  Future<void> pushStageDefinitions({
+    required int trackId,
+    required String curriculumId,
+    required List<Map<String, dynamic>> stages,
+    required DateTime updatedAt,
+  }) async {
+    final updatedAtIso = updatedAt.toIso8601String();
+    for (final stage in stages) {
+      final stageOrder = stage['stage_order']?.toString() ?? '';
+      final payload = <String, dynamic>{
+        ...stage,
+        'track_id': trackId,
+        'curriculum_id': curriculumId,
+        'updated_at': updatedAtIso,
+      };
+      await _enqueue(
+        OutboxEntityKind.stageDefinition,
+        '${trackId}_$stageOrder',
+        payload,
+      );
+    }
+  }
 }

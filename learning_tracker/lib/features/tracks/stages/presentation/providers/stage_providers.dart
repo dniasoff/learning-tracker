@@ -16,7 +16,9 @@ final stageDefinitionRepositoryProvider =
       return StageDefinitionRepositoryImpl(
         stageDao: database.stageDao,
         completionDao: database.completionDao,
-        pushSettings: syncFacade?.pushSettings,
+        // Plan §F Phase 5 deliverable 6 — dedicated stage_definition outbox
+        // kind replaces the legacy pushSettings piggyback.
+        pushStageDefinitions: syncFacade?.pushStageDefinitions,
       );
     });
 
@@ -32,7 +34,7 @@ final globalStageRepositoryProvider = Provider<StageDefinitionRepository>((
   return StageDefinitionRepositoryImpl(
     stageDao: database.stageDao,
     completionDao: database.completionDao,
-    pushSettings: syncFacade?.pushSettings,
+    pushStageDefinitions: syncFacade?.pushStageDefinitions,
   );
 });
 

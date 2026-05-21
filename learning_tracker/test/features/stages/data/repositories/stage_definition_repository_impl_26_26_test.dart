@@ -57,7 +57,20 @@ _makeRealRepo() async {
   final repository = StageDefinitionRepositoryImpl(
     stageDao: database.stageDao,
     completionDao: database.completionDao,
-    pushSettings: (s) async => pushedSettings.add(s),
+    pushStageDefinitions:
+        ({
+          required int trackId,
+          required String curriculumId,
+          required List<Map<String, dynamic>> stages,
+          required DateTime updatedAt,
+        }) async {
+          pushedSettings.add({
+            'track_id': trackId,
+            'curriculum_id': curriculumId,
+            'stages': stages,
+            'updated_at': updatedAt.toIso8601String(),
+          });
+        },
   );
   return (
     database: database,
@@ -124,7 +137,20 @@ void main() {
       repository = StageDefinitionRepositoryImpl(
         stageDao: mockStageDao,
         completionDao: mockCompletionDao,
-        pushSettings: (s) async => pushedSettings.add(s),
+        pushStageDefinitions:
+            ({
+              required int trackId,
+              required String curriculumId,
+              required List<Map<String, dynamic>> stages,
+              required DateTime updatedAt,
+            }) async {
+              pushedSettings.add({
+                'track_id': trackId,
+                'curriculum_id': curriculumId,
+                'stages': stages,
+                'updated_at': updatedAt.toIso8601String(),
+              });
+            },
       );
 
       when(
@@ -465,7 +491,7 @@ void main() {
       repository = StageDefinitionRepositoryImpl(
         stageDao: mockStageDao,
         completionDao: mockCompletionDao,
-        pushSettings: null,
+        pushStageDefinitions: null,
       );
     });
 
@@ -521,7 +547,7 @@ void main() {
       repository = StageDefinitionRepositoryImpl(
         stageDao: mockStageDao,
         completionDao: mockCompletionDao,
-        pushSettings: null,
+        pushStageDefinitions: null,
       );
     });
 

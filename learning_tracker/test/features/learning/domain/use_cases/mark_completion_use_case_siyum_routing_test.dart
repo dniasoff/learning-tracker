@@ -158,7 +158,7 @@ void main() {
     final stageRepo = StageDefinitionRepositoryImpl(
       stageDao: db.stageDao,
       completionDao: db.completionDao,
-      pushSettings: null,
+      pushStageDefinitions: null,
     );
     final detectionService = CompletionDetectionService(
       database: db,

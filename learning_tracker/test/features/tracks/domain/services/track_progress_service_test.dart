@@ -113,7 +113,7 @@ StageDefinitionRepository makeStageRepo(UserDatabase db) =>
     StageDefinitionRepositoryImpl(
       stageDao: db.stageDao,
       completionDao: db.completionDao,
-      pushSettings: null,
+      pushStageDefinitions: null,
     );
 
 /// Seeds stage definitions for [trackId] with [stageCount] sequential stages

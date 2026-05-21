@@ -70,8 +70,8 @@ final syncOrchestratorProvider = Provider<SyncOrchestrator?>((ref) {
   // W7.8/W7.9: read (not watch) so analytics upgrades don't rebuild singleton.
   final analytics = ref.read(analyticsServiceProvider);
 
-  // W2.32 — build LocalDataUploadService so orchestrator can route
-  // pushAllLocalData + backfillGoalsForCloudCutover through the outbox path.
+  // W2.32 — build LocalDataUploadService so the orchestrator can route
+  // pushAllLocalData through the outbox path.
   final database = ref.read(userDatabaseProvider);
   final profileId = ref.read(activeProfileIdProvider);
   final clock = ref.read(localDayClockProvider);
@@ -127,11 +127,17 @@ final syncOrchestratorProvider = Provider<SyncOrchestrator?>((ref) {
     onFirstSyncComplete: () => ref.invalidate(initialSyncCompleteProvider),
     // W2.32: outbox-backed push path replaces legacy SyncEngine delegation.
     resolvePushAllLocalData: uploadService.pushAllLocalData,
-    resolveBackfillGoals: uploadService.backfillGoalsForCloudCutover,
+    // Plan §F Phase 5 deliverable 9 — DNI-334 goals-cutover backfill was
+    // removed (pre-launch, no live users). The orchestrator parameter is
+    // kept optional for back-compat with the existing constructor shape.
     // W7.16: forward listener errors to Crashlytics as non-fatal.
     crashlytics: crashlytics,
     // W7.8/W7.9: analytics for listener_error + sync_pull_* events.
     analytics: analytics,
+    // Phase 4 — outbox-driven sync-status emission + observability gauge.
+    // Resolved lazily via ref.read so a DB swap (multi-account flow) is
+    // picked up without rebuilding the orchestrator singleton.
+    resolveOutboxDao: () => ref.read(userDatabaseProvider).outboxDao,
   );
 
   // Idempotent: registers the lifecycle observer + Firestore listeners once.

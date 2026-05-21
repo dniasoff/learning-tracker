@@ -16,7 +16,6 @@ library;
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
-import 'package:learning_tracker/core/sync/firestore_gateway.dart';
 import 'package:learning_tracker/core/sync/sync_orchestrator.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/curriculum_import_service.dart';
@@ -33,8 +32,6 @@ import '../helpers/drift_memory.dart';
 // ---------------------------------------------------------------------------
 // Shared fakes (same pattern as epic_25_story_22_firewall_test.dart)
 // ---------------------------------------------------------------------------
-
-class _MockFirestoreGateway extends Mock implements FirestoreGateway {}
 
 class _MockCurriculumImportService extends Mock
     implements CurriculumImportService {}
@@ -73,21 +70,10 @@ class _StubSyncOrchestrator implements SyncOrchestrator {
 DeviceRestoreService _makeService(
   UserDatabase db, {
   SyncOrchestrator? orchestrator,
-  FirestoreGateway? gateway,
   CurriculumImportService? importService,
   bool isAuthenticated = true,
   int profileId = 1,
 }) {
-  final mockGateway = gateway ?? _MockFirestoreGateway();
-  if (mockGateway is _MockFirestoreGateway) {
-    when(
-      () => mockGateway.fetchAll(
-        profileId: any(named: 'profileId'),
-        collection: any(named: 'collection'),
-      ),
-    ).thenAnswer((_) async => []);
-  }
-
   final mockImport = importService ?? _MockCurriculumImportService();
   if (mockImport is _MockCurriculumImportService) {
     when(
@@ -104,7 +90,6 @@ DeviceRestoreService _makeService(
   return DeviceRestoreService(
     database: db,
     syncOrchestrator: orchestrator ?? _StubSyncOrchestrator(),
-    firestoreGateway: mockGateway,
     profileId: profileId,
     isAuthenticated: isAuthenticated,
     curriculumImportService: mockImport,
@@ -260,19 +245,13 @@ void main() {
         final db = inMemoryDb();
         addTearDown(db.close);
         // Empty DB + authenticated = new device → restore will run.
+        // Seed an active curriculum row locally so the post-restore derivation
+        // (step 2 in DeviceRestoreService) picks it up the same way
+        // pullOnLaunch would have populated it.
+        await seedProfile(db);
+        await seedTrack(db, profileId: 1, curriculumId: 'mishnayos');
 
         final statusLog = <RestoreStatus>[];
-        final gateway = _MockFirestoreGateway();
-        when(
-          () => gateway.fetchAll(
-            profileId: any(named: 'profileId'),
-            collection: 'curriculum_tracks',
-          ),
-        ).thenAnswer(
-          (_) async => [
-            {'curriculum_id': 'mishnayos', 'is_active': true},
-          ],
-        );
 
         final importSvc = _MockCurriculumImportService();
         when(() => importSvc.importAll(any())).thenAnswer((_) async* {
@@ -298,7 +277,6 @@ void main() {
         final svc = DeviceRestoreService(
           database: db,
           syncOrchestrator: _StubSyncOrchestrator(),
-          firestoreGateway: gateway,
           profileId: 1,
           isAuthenticated: true,
           curriculumImportService: importSvc,
@@ -350,14 +328,6 @@ void main() {
         addTearDown(db.close);
         await seedProfile(db); // DB has data → isNewDevice would return false
 
-        final gateway = _MockFirestoreGateway();
-        when(
-          () => gateway.fetchAll(
-            profileId: any(named: 'profileId'),
-            collection: any(named: 'collection'),
-          ),
-        ).thenAnswer((_) async => []);
-
         final importSvc = _MockCurriculumImportService();
         when(
           () => importSvc.importAll(any()),
@@ -372,7 +342,6 @@ void main() {
         final svc = DeviceRestoreService(
           database: db,
           syncOrchestrator: _StubSyncOrchestrator(),
-          firestoreGateway: gateway,
           profileId: 1,
           isAuthenticated: true,
           curriculumImportService: importSvc,

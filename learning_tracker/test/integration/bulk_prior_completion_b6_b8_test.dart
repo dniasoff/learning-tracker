@@ -290,7 +290,7 @@ void main() {
       final stageRepo = StageDefinitionRepositoryImpl(
         stageDao: db.stageDao,
         completionDao: db.completionDao,
-        pushSettings: null,
+        pushStageDefinitions: null,
       );
 
       final service = BulkPriorCompletionService(
@@ -362,7 +362,7 @@ void main() {
         final stageRepo = StageDefinitionRepositoryImpl(
           stageDao: db.stageDao,
           completionDao: db.completionDao,
-          pushSettings: null,
+          pushStageDefinitions: null,
         );
         final service = BulkPriorCompletionService(
           contentRepository: _StubContentRepository([...items]),
@@ -424,7 +424,7 @@ void main() {
       final stageRepo = StageDefinitionRepositoryImpl(
         stageDao: db.stageDao,
         completionDao: db.completionDao,
-        pushSettings: null,
+        pushStageDefinitions: null,
       );
       final service = BulkPriorCompletionService(
         contentRepository: _StubContentRepository([...items]),
@@ -1128,7 +1128,7 @@ void main() {
           stageRepository: StageDefinitionRepositoryImpl(
             stageDao: db.stageDao,
             completionDao: db.completionDao,
-            pushSettings: null,
+            pushStageDefinitions: null,
           ),
         );
         await priorSvc.execute(

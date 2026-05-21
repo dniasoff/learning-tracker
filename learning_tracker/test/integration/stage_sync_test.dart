@@ -36,10 +36,27 @@ void main() {
     await seedProfile(database);
     trackId = await _insertTrack(database);
     pushedSettings = [];
+    // Plan §F Phase 5 deliverable 6 — capture stage-definition push calls
+    // via the dedicated `pushStageDefinitions` path. Existing assertions
+    // on 'curriculum_id' / 'stages' continue to work against the
+    // captured snapshot map.
     repository = StageDefinitionRepositoryImpl(
       stageDao: database.stageDao,
       completionDao: database.completionDao,
-      pushSettings: (settings) async => pushedSettings.add(settings),
+      pushStageDefinitions:
+          ({
+            required int trackId,
+            required String curriculumId,
+            required List<Map<String, dynamic>> stages,
+            required DateTime updatedAt,
+          }) async {
+            pushedSettings.add({
+              'track_id': trackId,
+              'curriculum_id': curriculumId,
+              'stages': stages,
+              'updated_at': updatedAt.toIso8601String(),
+            });
+          },
     );
   });
 

@@ -160,7 +160,7 @@ void main() {
       stageRepo: StageDefinitionRepositoryImpl(
         stageDao: db.stageDao,
         completionDao: db.completionDao,
-        pushSettings: null,
+        pushStageDefinitions: null,
       ),
     );
   });

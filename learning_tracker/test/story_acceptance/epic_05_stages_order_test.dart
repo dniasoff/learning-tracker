@@ -67,7 +67,13 @@ void main() {
       repository = StageDefinitionRepositoryImpl(
         stageDao: database.stageDao,
         completionDao: database.completionDao,
-        pushSettings: (_) async {},
+        pushStageDefinitions:
+            ({
+              required int trackId,
+              required String curriculumId,
+              required List<Map<String, dynamic>> stages,
+              required DateTime updatedAt,
+            }) async {},
       );
     });
 

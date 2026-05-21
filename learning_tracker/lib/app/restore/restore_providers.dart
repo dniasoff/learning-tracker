@@ -16,6 +16,10 @@ import 'package:learning_tracker/features/sync/domain/models/restore_status.dart
 /// Returns null when user has no cloud account (restore requires Firestore).
 final deviceRestoreServiceProvider = Provider<DeviceRestoreService?>((ref) {
   final syncOrchestrator = ref.watch(syncOrchestratorProvider);
+  // `firestoreGatewayProvider` is observed only as a gating signal — the
+  // restore service no longer issues raw Firestore reads (post-pull active
+  // curricula are derived from Drift). Restore still requires a cloud
+  // account, so a null gateway means there's nothing to restore.
   final gateway = ref.watch(firestoreGatewayProvider);
   if (syncOrchestrator == null || gateway == null) return null;
 
@@ -29,7 +33,6 @@ final deviceRestoreServiceProvider = Provider<DeviceRestoreService?>((ref) {
   final service = DeviceRestoreService(
     database: database,
     syncOrchestrator: syncOrchestrator,
-    firestoreGateway: gateway,
     profileId: profileId,
     isAuthenticated: authState.isCloudBorn,
     curriculumImportService: curriculumImportService,

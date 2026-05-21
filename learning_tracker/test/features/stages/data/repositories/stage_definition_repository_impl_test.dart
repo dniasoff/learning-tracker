@@ -56,10 +56,27 @@ void main() {
     mockCompletionDao = MockCompletionDao();
     pushedSettings = [];
 
+    // Plan §F Phase 5 deliverable 6 — capture stage-definition push calls
+    // via the dedicated `pushStageDefinitions` path. Each call yields a
+    // snapshot-shaped map containing the stage list + metadata so the
+    // existing assertions ('curriculum_id', 'stages') continue to work.
     repository = StageDefinitionRepositoryImpl(
       stageDao: mockStageDao,
       completionDao: mockCompletionDao,
-      pushSettings: (settings) async => pushedSettings.add(settings),
+      pushStageDefinitions:
+          ({
+            required int trackId,
+            required String curriculumId,
+            required List<Map<String, dynamic>> stages,
+            required DateTime updatedAt,
+          }) async {
+            pushedSettings.add({
+              'track_id': trackId,
+              'curriculum_id': curriculumId,
+              'stages': stages,
+              'updated_at': updatedAt.toIso8601String(),
+            });
+          },
     );
   });
 

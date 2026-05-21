@@ -15,7 +15,6 @@ import 'package:drift/drift.dart' show Value, Variable;
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
-import 'package:learning_tracker/core/sync/firestore_gateway.dart';
 import 'package:learning_tracker/core/sync/sync_orchestrator.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/curriculum_import_service.dart';
@@ -27,8 +26,6 @@ import 'package:talker/talker.dart';
 import 'package:test/test.dart';
 
 import '../helpers/drift_memory.dart';
-
-class _MockFirestoreGateway extends Mock implements FirestoreGateway {}
 
 class _MockCurriculumImportService extends Mock
     implements CurriculumImportService {}
@@ -208,18 +205,9 @@ void main() {
 
       test('DeviceRestoreService with unauthenticated Firestore skips '
           'restore without throwing', () async {
-        final gatewayStub = _MockFirestoreGateway();
-        when(
-          () => gatewayStub.fetchAll(
-            profileId: any(named: 'profileId'),
-            collection: any(named: 'collection'),
-          ),
-        ).thenAnswer((_) async => []);
-
         final svc = DeviceRestoreService(
           database: db,
           syncOrchestrator: _StubSyncOrchestrator(),
-          firestoreGateway: gatewayStub,
           profileId: 1,
           isAuthenticated: false,
           curriculumImportService: _MockCurriculumImportService(),

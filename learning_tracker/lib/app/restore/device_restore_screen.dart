@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/app/restore/restore_providers.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/navigation/router_provider.dart';
+import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/sync/domain/models/restore_status.dart';
@@ -30,7 +31,7 @@ class _DeviceRestoreScreenState extends ConsumerState<DeviceRestoreScreen> {
     if (service == null) return; // Local-only — no restore possible
     final success = await service.restore();
     if (mounted && success) {
-      _navigateToApp();
+      await _navigateAfterRestore();
     }
   }
 
@@ -39,7 +40,7 @@ class _DeviceRestoreScreenState extends ConsumerState<DeviceRestoreScreen> {
     if (service == null) return;
     final success = await service.retry();
     if (mounted && success) {
-      _navigateToApp();
+      await _navigateAfterRestore();
     }
   }
 
@@ -59,6 +60,42 @@ class _DeviceRestoreScreenState extends ConsumerState<DeviceRestoreScreen> {
     final router = ref.read(routerProvider);
     router.restoreGuard.markRestoreComplete();
     context.router.replaceAll([const AppShellRoute()]);
+  }
+
+  /// Plan §F Phase 4 deliverable 5 — route to the right screen post-restore
+  /// based on the just-merged profile count. NEVER goes to the onboarding
+  /// wizard: by the time we get here, [DeviceRestoreService.restore]
+  /// returned true, so at minimum the pull populated whatever profiles
+  /// exist in the cloud. Treat the just-pulled local DB as the source of
+  /// truth — exactly the gap the spec calls out.
+  ///
+  /// Routing matrix:
+  ///   * profile count == 1 → [AppShellRoute] with the sole profile selected.
+  ///   * profile count >= 2 → [ProfilePickerRoute] so the user picks.
+  ///   * profile count == 0 → [AppShellRoute] (defensive — the restoreGuard
+  ///                          will keep us out of the picker until a profile
+  ///                          exists; this path is unreachable when restore
+  ///                          actually pulled cloud profiles down).
+  Future<void> _navigateAfterRestore() async {
+    _refreshProvidersAfterRestore();
+    final router = ref.read(routerProvider);
+    router.restoreGuard.markRestoreComplete();
+
+    final db = ref.read(userDatabaseProvider);
+    final accountId = ref.read(currentAccountIdProvider);
+    final profiles = await db.profileDao.getProfilesByAccount(accountId);
+
+    if (!mounted) return;
+
+    if (profiles.length == 1) {
+      ref.read(selectedProfileIdProvider.notifier).select(profiles.first.id);
+      await context.router.replaceAll([const AppShellRoute()]);
+    } else if (profiles.length > 1) {
+      ref.read(selectedProfileIdProvider.notifier).clear();
+      await context.router.replaceAll([const ProfilePickerRoute()]);
+    } else {
+      await context.router.replaceAll([const AppShellRoute()]);
+    }
   }
 
   @override

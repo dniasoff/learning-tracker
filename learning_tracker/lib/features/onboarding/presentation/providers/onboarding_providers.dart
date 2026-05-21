@@ -70,7 +70,9 @@ final bulkPriorCompletionServiceProvider = Provider<BulkPriorCompletionService>(
     final stageRepo = StageDefinitionRepositoryImpl(
       stageDao: db.stageDao,
       completionDao: db.completionDao,
-      pushSettings: syncFacade?.pushSettings,
+      // Plan §F Phase 5 deliverable 6 — dedicated stage_definition outbox
+      // kind replaces the legacy pushSettings piggyback.
+      pushStageDefinitions: syncFacade?.pushStageDefinitions,
     );
     return BulkPriorCompletionService(
       contentRepository: contentRepo,

@@ -24,6 +24,22 @@ const _defaults = [
   (stageOrder: 3, stageName: 'חזרה ב׳', delayDays: 7),
 ];
 
+/// Signature for the dedicated stage-definitions push path used by
+/// [StageDefinitionRepositoryImpl] (Plan §F Phase 5 deliverable 6).
+///
+/// Each stage in [stages] is a fully-formed payload (`stage_order`,
+/// `stage_name`, `schedule`, …). The implementation routes the call to the
+/// outbox with kind=`stage_definition` so the `PushPipeline.pushStageDefinition`
+/// gateway method writes deterministic `{trackId}_{stageOrder}` doc ids —
+/// replaces the legacy `pushSettings` piggyback route.
+typedef PushStageDefinitionsFn =
+    Future<void> Function({
+      required int trackId,
+      required String curriculumId,
+      required List<Map<String, dynamic>> stages,
+      required DateTime updatedAt,
+    });
+
 /// Concrete implementation of [StageDefinitionRepository].
 ///
 /// Uses Drift [StageDao] for local persistence and calls a Firestore push
@@ -33,18 +49,23 @@ const _defaults = [
 /// former quartet (scheduleType / delayDays / daysOfWeek / rollingWindowSize).
 /// The [StageDefinition] domain model still carries the quartet fields so that
 /// all downstream consumers (validator, scheduler, UI) remain unaffected.
+///
+/// Plan §F Phase 5 deliverable 6 — the push path now routes through the
+/// dedicated `stage_definition` outbox kind (`pushStageDefinitions`), not
+/// the legacy `pushSettings` piggyback. The old constructor parameter has
+/// been removed; the only push contract is the [pushStageDefinitions] fn.
 class StageDefinitionRepositoryImpl implements StageDefinitionRepository {
   StageDefinitionRepositoryImpl({
     required StageDao stageDao,
     required CompletionDao completionDao,
-    required Future<void> Function(Map<String, dynamic>)? pushSettings,
+    required PushStageDefinitionsFn? pushStageDefinitions,
   }) : _stageDao = stageDao,
        _completionDao = completionDao,
-       _pushSettings = pushSettings;
+       _pushStageDefinitions = pushStageDefinitions;
 
   final StageDao _stageDao;
   final CompletionDao _completionDao;
-  final Future<void> Function(Map<String, dynamic>)? _pushSettings;
+  final PushStageDefinitionsFn? _pushStageDefinitions;
 
   @override
   Future<List<StageDefinition>> getStagesForCurriculum(
@@ -373,27 +394,39 @@ class StageDefinitionRepositoryImpl implements StageDefinitionRepository {
       CurriculumId.values.firstWhere((c) => c.storageKey == key);
 
   Future<void> _pushStages(CurriculumId curriculumId) async {
+    final push = _pushStageDefinitions;
+    if (push == null) return;
+
     final stages = await _stageDao.getStageDefinitionsByCurriculum(
       curriculumId.storageKey,
     );
-    await _pushSettings?.call({
-      'curriculum_id': curriculumId.storageKey,
-      'updated_at': DateTimeFactory.nowUtc().toIso8601String(),
-      'stages': stages.map((s) {
-        final spec = _decodeSchedule(s.schedule);
-        return {
-          'stage_order': s.stageOrder,
-          'stage_name': s.stageName,
-          'schedule': jsonDecode(s.schedule),
-          'is_default': s.isDefault,
-          // Legacy fields for backwards-compat with old Firestore readers.
-          'delay_days': spec.delayDays,
-          'schedule_type': spec.storageKey,
-          if (spec.daysOfWeek != null) 'days_of_week': spec.daysOfWeek,
-          if (spec.rollingWindowSize != null)
-            'rolling_window_size': spec.rollingWindowSize,
-        };
-      }).toList(),
-    });
+    if (stages.isEmpty) return;
+
+    // All stages in a curriculum share the same trackId (one track per
+    // curriculum per profile post-W3.22). Pick the first row's trackId.
+    final trackId = stages.first.trackId;
+    final now = DateTimeFactory.nowUtc();
+    final stagePayloads = stages.map((s) {
+      final spec = _decodeSchedule(s.schedule);
+      return <String, dynamic>{
+        'stage_order': s.stageOrder,
+        'stage_name': s.stageName,
+        'schedule': jsonDecode(s.schedule),
+        'is_default': s.isDefault,
+        // Legacy fields for backwards-compat with old Firestore readers.
+        'delay_days': spec.delayDays,
+        'schedule_type': spec.storageKey,
+        if (spec.daysOfWeek != null) 'days_of_week': spec.daysOfWeek,
+        if (spec.rollingWindowSize != null)
+          'rolling_window_size': spec.rollingWindowSize,
+      };
+    }).toList();
+
+    await push(
+      trackId: trackId,
+      curriculumId: curriculumId.storageKey,
+      stages: stagePayloads,
+      updatedAt: now,
+    );
   }
 }

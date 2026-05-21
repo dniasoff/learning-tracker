@@ -173,7 +173,7 @@ void main() {
             stageRepository: StageDefinitionRepositoryImpl(
               stageDao: db.stageDao,
               completionDao: db.completionDao,
-              pushSettings: null,
+              pushStageDefinitions: null,
             ),
           );
         });
@@ -378,7 +378,13 @@ void main() {
             final repo = StageDefinitionRepositoryImpl(
               stageDao: db.stageDao,
               completionDao: db.completionDao,
-              pushSettings: (_) async {},
+              pushStageDefinitions:
+                  ({
+                    required int trackId,
+                    required String curriculumId,
+                    required List<Map<String, dynamic>> stages,
+                    required DateTime updatedAt,
+                  }) async {},
             );
 
             await repo.initializeDefaults(
