@@ -46,6 +46,19 @@ final class _SyncEvents {
   String get listenerAttached => 'sync_listener_attached';
   String get listenerDetached => 'sync_listener_detached';
   String get listenerError => 'sync_listener_error';
+  // Phase 2 sync-architecture plan — boot-time telemetry for the first 10
+  // snapshots per session so we can validate `.limit(500)` is keeping the
+  // delivered page size bounded. After 10 the orchestrator stops logging to
+  // avoid spam under normal use.
+  String get listenerSnapshotSize => 'sync_listener_snapshot_size';
+  // Phase 2 — recovery pull triggered when a listener snapshot returns
+  // exactly `limit` docs (signal: there may be older changes the listener
+  // window did not cover).
+  String get listenerRecoveryPull => 'sync_listener_recovery_pull';
+  // Phase 2 — listener parking / unparking on long-background lifecycle
+  // transitions.
+  String get listenersParked => 'sync_listeners_parked';
+  String get listenersUnparked => 'sync_listeners_unparked';
 
   // Push lifecycle
   String get pushStarted => 'sync_push_started';
@@ -53,6 +66,10 @@ final class _SyncEvents {
   String get pushFailed => 'sync_push_failed';
   String get outboxItemEnqueued => 'sync_outbox_item_enqueued';
   String get outboxDeadLettered => 'sync_outbox_dead_lettered';
+  // Phase-4 observability gauge: outbox depth + oldest-row age, logged on
+  // every drain attempt (≥60 s apart given the periodic-drain trigger) so
+  // dashboards can graph stuck-backlog age over time.
+  String get outboxDepth => 'sync_outbox_depth';
 
   // Merge / router
   String get mergeRowSkipped => 'sync_merge_row_skipped';

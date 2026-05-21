@@ -64,9 +64,11 @@ class _ChannelCountingGateway implements FirestoreGateway {
       collectionListenerCount + documentListenerCount;
 
   @override
-  Stream<List<Map<String, dynamic>>> listenToCollection({
+  Stream<ListenerSnapshot> listenToCollection({
     required int profileId,
     required String collection,
+    required String orderField,
+    int limit = 500,
   }) {
     collectionListenerCount++;
     openedProfileIds.add(profileId);
@@ -81,6 +83,18 @@ class _ChannelCountingGateway implements FirestoreGateway {
   }) {
     documentListenerCount++;
     openedProfileIds.add(profileId);
+    return const Stream.empty();
+  }
+
+  @override
+  Stream<ListenerSnapshot> listenToTutorGrants({int limit = 500}) {
+    collectionListenerCount++;
+    return const Stream.empty();
+  }
+
+  @override
+  Stream<ListenerSnapshot> listenToLearnerProfiles({int limit = 500}) {
+    collectionListenerCount++;
     return const Stream.empty();
   }
 

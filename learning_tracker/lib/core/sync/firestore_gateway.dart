@@ -207,10 +207,43 @@ abstract class FirestoreGateway {
   });
 
   /// Open a real-time stream of a profile subcollection.
-  Stream<List<Map<String, dynamic>>> listenToCollection({
+  ///
+  /// Phase 2 sync-architecture-plan: every listener is now bounded by
+  /// `.orderBy(<orderField>, descending: true).limit(limit)` so the snapshot
+  /// size is O(updates) rather than O(history). The payload carries an
+  /// [ListenerSnapshot.isAtLimit] flag so the supervisor can trigger a
+  /// recovery pull when the snapshot saturates the page size (signal: there
+  /// may be older docs that fell off the window).
+  ///
+  /// [orderField] is the document field used for ordering. Pass
+  /// [FirestoreGateway.documentIdOrderField] to order by document ID (used for
+  /// collections that have no orderable timestamp field).
+  Stream<ListenerSnapshot> listenToCollection({
     required int profileId,
     required String collection,
+    required String orderField,
+    int limit,
   });
+
+  /// Open a real-time stream of a top-level collection that scopes by the
+  /// caller's uid via a `where` predicate.
+  ///
+  /// Used for the `tutor_grants` collection which lives at root level (not
+  /// under `users/{uid}/...`). Returns the union of documents matching
+  /// `tutor_uid == auth.uid` OR `parent_uid == auth.uid` — Firestore does not
+  /// support disjunctive `where` so this is two streams merged client-side.
+  /// Payload follows the same [ListenerSnapshot] shape as
+  /// [listenToCollection].
+  Stream<ListenerSnapshot> listenToTutorGrants({int limit});
+
+  /// Open a real-time stream of the account-level
+  /// `users/{uid}/learner_profiles/` collection.
+  ///
+  /// This collection is the parent of every per-profile subcollection — it is
+  /// NOT a subcollection of any profile document. The bounded query orders by
+  /// `updated_at` descending and uses the gateway's standard listener page
+  /// size. Empty stream when not authenticated.
+  Stream<ListenerSnapshot> listenToLearnerProfiles({int limit});
 
   /// Open a real-time stream of a single document in a profile subcollection.
   Stream<Map<String, dynamic>?> listenToDocument({
@@ -218,6 +251,10 @@ abstract class FirestoreGateway {
     required String collection,
     required String docId,
   });
+
+  /// Sentinel value for [listenToCollection.orderField] meaning "order by
+  /// document ID" — used when the collection has no orderable timestamp.
+  static const String documentIdOrderField = '__name__';
 
   /// Fetch all learner profile documents at `users/{uid}/learner_profiles/`.
   Future<List<Map<String, dynamic>>> fetchLearnerProfiles();
@@ -266,4 +303,21 @@ abstract class FirestoreGateway {
 class FirestorePage {
   const FirestorePage({required this.rows});
   final List<Map<String, dynamic>> rows;
+}
+
+/// Result of [FirestoreGateway.listenToCollection].
+///
+/// Carries the snapshot's rows plus the "snapshot saturated the listener's
+/// page-size limit" signal. [ListenerSupervisor] consumes [isAtLimit] to
+/// trigger a recovery pull for the collection — without this signal, every
+/// `.limit(N)` snapshot would silently truncate older changes.
+class ListenerSnapshot {
+  const ListenerSnapshot({required this.rows, required this.isAtLimit});
+  final List<Map<String, dynamic>> rows;
+
+  /// True when the snapshot returned exactly the listener's `limit` rows —
+  /// indicates there may be older documents that the listener window did not
+  /// cover. The supervisor reacts by issuing a one-shot recovery pull for the
+  /// collection.
+  final bool isAtLimit;
 }

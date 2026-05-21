@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -30,6 +31,15 @@ class FirestoreGatewayImpl implements FirestoreGateway {
 
   /// Maximum number of operations Firestore permits in a single [WriteBatch].
   static const int _writeBatchLimit = 500;
+
+  /// Default listener page size (Phase 2 of the sync-architecture plan).
+  ///
+  /// Listeners are bounded to keep gRPC stream payloads small and to cap the
+  /// cost of self-echoes on heavy accounts (a user with 10k completions would
+  /// otherwise receive a 10k-doc snapshot on every change). The supervisor
+  /// pairs the bound with a recovery pull when the snapshot saturates this
+  /// limit, so older changes are not silently truncated.
+  static const int kListenerPageSize = 500;
 
   /// Percent-encode one natural-key component so it is safe to join into a
   /// canonical completion key.
@@ -660,12 +670,26 @@ class FirestoreGatewayImpl implements FirestoreGateway {
   }
 
   @override
-  Stream<List<Map<String, dynamic>>> listenToCollection({
+  Stream<ListenerSnapshot> listenToCollection({
     required int profileId,
     required String collection,
+    required String orderField,
+    int limit = kListenerPageSize,
   }) {
     final ref = _collection(profileId, collection);
     if (ref == null) return const Stream.empty();
+
+    // Phase 2 of the sync-architecture plan: every listener is bounded by
+    // `.orderBy(<orderField>, descending: true).limit(limit)`. Per-collection
+    // [orderField] (e.g. `updated_at`, `completed_at`, `event_timestamp`) is
+    // passed in by the caller so each collection sorts by a meaningful
+    // recency field. Collections without an orderable timestamp pass
+    // [FirestoreGateway.documentIdOrderField] and fall through to the
+    // documentId path below.
+    final bounded = orderField == FirestoreGateway.documentIdOrderField
+        ? ref.orderBy(FieldPath.documentId, descending: true).limit(limit)
+        : ref.orderBy(orderField, descending: true).limit(limit);
+
     // The stream must always reflect the full server-confirmed collection
     // state — including, while offline, the locally-cached documents — so the
     // consumer never sees the collection "vanish" off the network.
@@ -678,7 +702,7 @@ class FirestoreGatewayImpl implements FirestoreGateway {
     // un-acked local write — i.e. it is `added` (or `modified`) with
     // `hasPendingWrites` and the document is not otherwise present as a
     // server-confirmed entry. Genuine remote snapshots still emit in full.
-    return ref.snapshots().map((snapshot) {
+    return bounded.snapshots().map((snapshot) {
       // Doc IDs that exist only as un-acked local writes in this snapshot.
       final localOnly = <String>{};
       for (final change in snapshot.docChanges) {
@@ -686,12 +710,128 @@ class FirestoreGatewayImpl implements FirestoreGateway {
           localOnly.add(change.doc.id);
         }
       }
-      return snapshot.docs
+      final rows = snapshot.docs
           .where(
             (d) => !localOnly.contains(d.id) || !d.metadata.hasPendingWrites,
           )
           .map((d) => _normalizeRow({...d.data(), 'firestore_id': d.id}))
           .toList(growable: false);
+      // isAtLimit is computed against the raw snapshot count (pre-local-echo
+      // filtering): the at-limit signal is about the *server's* page, not the
+      // post-filter row count. A snapshot that filled the page even though
+      // some rows were local-echo placeholders still indicates there may be
+      // older changes the listener window did not cover.
+      final isAtLimit = snapshot.docs.length >= limit;
+      return ListenerSnapshot(rows: rows, isAtLimit: isAtLimit);
+    });
+  }
+
+  @override
+  Stream<ListenerSnapshot> listenToTutorGrants({
+    int limit = kListenerPageSize,
+  }) {
+    final uid = _authRepository.currentUser?.uid;
+    if (uid == null) return const Stream.empty();
+
+    // The `tutor_grants` collection lives at the root level and the security
+    // rule grants read access when either `tutor_uid == auth.uid` or
+    // `parent_uid == auth.uid`. Firestore does not support OR queries so we
+    // merge two streams client-side, de-duplicating by document id (a single
+    // grant document references both tutor and parent, but the caller may be
+    // either; a self-tutoring grant is the only path where one doc appears in
+    // both streams — even so dedup is harmless).
+    final asTutor = _firestore
+        .collection('tutor_grants')
+        .where('tutor_uid', isEqualTo: uid)
+        .orderBy('updated_at', descending: true)
+        .limit(limit);
+    final asParent = _firestore
+        .collection('tutor_grants')
+        .where('parent_uid', isEqualTo: uid)
+        .orderBy('updated_at', descending: true)
+        .limit(limit);
+
+    final tutorStream = asTutor.snapshots();
+    final parentStream = asParent.snapshots();
+
+    // ignore: close_sinks — the controller is closed by the
+    // StreamController.onCancel hook below; the analyzer cannot see that.
+    final controller = StreamController<ListenerSnapshot>.broadcast();
+    QuerySnapshot<Map<String, dynamic>>? lastTutor;
+    QuerySnapshot<Map<String, dynamic>>? lastParent;
+
+    void emit() {
+      final docs = <String, DocumentSnapshot<Map<String, dynamic>>>{};
+      var maxSize = 0;
+      for (final src in [lastTutor, lastParent]) {
+        if (src == null) continue;
+        if (src.docs.length > maxSize) maxSize = src.docs.length;
+        for (final d in src.docs) {
+          docs[d.id] = d;
+        }
+      }
+      final rows = docs.values
+          .where((d) => !d.metadata.hasPendingWrites)
+          .map((d) => _normalizeRow({...d.data()!, 'firestore_id': d.id}))
+          .toList(growable: false);
+      // A grant document with no `tutor_email`, `revoked_at` etc. can still
+      // be a valid row — the merger handles missing fields. isAtLimit reflects
+      // the worst case across the two underlying queries.
+      controller.add(ListenerSnapshot(rows: rows, isAtLimit: maxSize >= limit));
+    }
+
+    StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? subTutor;
+    StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? subParent;
+    controller.onListen = () {
+      subTutor = tutorStream.listen((snap) {
+        lastTutor = snap;
+        emit();
+      }, onError: controller.addError);
+      subParent = parentStream.listen((snap) {
+        lastParent = snap;
+        emit();
+      }, onError: controller.addError);
+    };
+    controller.onCancel = () async {
+      await subTutor?.cancel();
+      await subParent?.cancel();
+      await controller.close();
+    };
+    return controller.stream;
+  }
+
+  @override
+  Stream<ListenerSnapshot> listenToLearnerProfiles({
+    int limit = kListenerPageSize,
+  }) {
+    final uid = _authRepository.currentUser?.uid;
+    if (uid == null) return const Stream.empty();
+    // The `learner_profiles` collection lives at the account level
+    // (users/{uid}/learner_profiles) — it is the PARENT of the per-profile
+    // subcollections, not a child of any one profile document. Listen with
+    // the standard bound + order-by-updated_at descending.
+    final ref = _firestore
+        .collection('users')
+        .doc(uid)
+        .collection('learner_profiles');
+    final bounded = ref.orderBy('updated_at', descending: true).limit(limit);
+    return bounded.snapshots().map((snapshot) {
+      final localOnly = <String>{};
+      for (final change in snapshot.docChanges) {
+        if (change.doc.metadata.hasPendingWrites) {
+          localOnly.add(change.doc.id);
+        }
+      }
+      final rows = snapshot.docs
+          .where(
+            (d) => !localOnly.contains(d.id) || !d.metadata.hasPendingWrites,
+          )
+          .map((d) => _normalizeRow({...d.data(), 'firestore_id': d.id}))
+          .toList(growable: false);
+      return ListenerSnapshot(
+        rows: rows,
+        isAtLimit: snapshot.docs.length >= limit,
+      );
     });
   }
 

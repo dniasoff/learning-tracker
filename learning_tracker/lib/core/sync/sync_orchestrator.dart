@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/widgets.dart';
 import 'package:learning_tracker/core/analytics/analytics_service.dart';
+import 'package:learning_tracker/core/database/daos/outbox_dao.dart';
 import 'package:learning_tracker/core/logging/crashlytics_service.dart';
 import 'package:learning_tracker/core/logging/log_events.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
@@ -152,12 +153,11 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
     /// Firestore on the next outbox-processor cycle.
     required Future<void> Function() resolvePushAllLocalData,
 
-    /// Outbox-backed replacement for the legacy goals-backfill path.
-    ///
-    /// Idempotent, guarded by a SharedPreferences flag.  Called once after the
-    /// first successful pull to catch up goals that were created before the
-    /// outbox path was wired (DNI-334 cutover).
-    required Future<int> Function() resolveBackfillGoals,
+    /// Deprecated: no-op since Plan §F Phase 5 deliverable 9 deleted
+    /// `LocalDataUploadService.backfillGoalsForCloudCutover`. The parameter
+    /// is kept (with a default no-op) so the construction site doesn't have
+    /// to ripple-change in lockstep, but a non-null override is harmless.
+    Future<int> Function()? resolveBackfillGoals,
 
     /// W7.16: optional Crashlytics service — when provided, listener errors
     /// are forwarded as non-fatal crashes in addition to the structured log.
@@ -166,6 +166,22 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
     /// W7.8/W7.9: optional analytics service — fires sync_pull_*/listener_error
     /// events for dashboards.
     AnalyticsService? analytics,
+
+    /// Phase 2 sync-architecture-plan: minimum time in background before the
+    /// listener supervisor parks. Defaults to 60 s; configurable so tests
+    /// can drive a much shorter window without sleeping.
+    Duration? parkAfterBackgroundDuration,
+
+    /// Phase 4 sync-architecture-plan: resolver for the active-profile's
+    /// [OutboxDao]. Optional — when absent (e.g. local-born sessions, unit
+    /// tests that don't exercise outbox status) status emission falls back
+    /// to the pull-driven `syncing` / `synced` / `error` states.
+    ///
+    /// Resolved lazily so a DB swap (multi-account flow) is picked up
+    /// without rebuilding the orchestrator. Used by
+    /// [recordDrainAttempt] to compute pending/offline/degraded status and
+    /// to log the `outbox_depth` observability gauge.
+    OutboxDao Function()? resolveOutboxDao,
   }) : _resolveMergeRouter = resolveMergeRouter,
        _resolveGateway = resolveGateway,
        _resolveProfileId = resolveProfileId,
@@ -176,7 +192,28 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
        _resolvePushAllLocalData = resolvePushAllLocalData,
        _resolveBackfillGoals = resolveBackfillGoals,
        _connectivityStream = connectivityStream,
-       _resetFirestoreNetworkOverride = resetFirestoreNetworkOverride;
+       _resetFirestoreNetworkOverride = resetFirestoreNetworkOverride,
+       _resolveOutboxDao = resolveOutboxDao,
+       parkAfterBackgroundDuration =
+           parkAfterBackgroundDuration ?? const Duration(seconds: 60);
+
+  /// Phase 2 sync-architecture-plan: how long the app must spend in
+  /// `paused`/`hidden`/`detached` before the listener supervisor parks.
+  final Duration parkAfterBackgroundDuration;
+
+  /// Phase 4 sync-architecture-plan: lazy resolver for the [OutboxDao] used
+  /// to compute pending / degraded / offline sync-status counts. See
+  /// constructor doc.
+  final OutboxDao Function()? _resolveOutboxDao;
+
+  /// Minimum attempt count before a stuck outbox row pushes the orchestrator
+  /// into the [SyncStatus.degraded] state. Matches Plan §F Phase 4.
+  static const int _degradedAttemptThreshold = 3;
+
+  /// `true` once a `pull-on-launch` completes successfully at least once this
+  /// session — the `synced` precondition per Plan §F Phase 4 deliverable 2.
+  /// Computed-status emission only flips to `synced` after this is set.
+  bool _everPulledOnLaunch = false;
 
   /// Optional callback invoked the first time a full pull completes.  See
   /// constructor doc for [onFirstSyncComplete].
@@ -185,8 +222,9 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
   /// Outbox-backed pushAllLocalData callback.
   final Future<void> Function() _resolvePushAllLocalData;
 
-  /// Outbox-backed backfillGoalsForCloudCutover callback.
-  final Future<int> Function() _resolveBackfillGoals;
+  /// Deprecated: no-op since the DNI-334 cutover backfill was deleted. See
+  /// the constructor doc for the rationale.
+  final Future<int> Function()? _resolveBackfillGoals;
 
   /// Resolves the current [MergeRouter] on demand.
   ///
@@ -302,6 +340,14 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
       ),
       onEvent: _onListenerEvent,
       onError: _onListenerError,
+      // Phase 2 sync-architecture-plan: each at-limit snapshot triggers a
+      // collection-scoped recovery pull (not a full re-pull of every kind).
+      // The supervisor throttles to one invocation per minute per channel.
+      recoveryPullTriggers: _buildRecoveryPullTriggers(),
+      // Phase 2: log the first 10 snapshot sizes per session so we can
+      // validate `.limit(500)` is keeping the delivered page size bounded.
+      // After 10 the supervisor stops calling this callback.
+      snapshotTelemetry: _onListenerSnapshot,
     );
     _listenerSupervisor = listenerSupervisor;
 
@@ -332,6 +378,40 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
         // No-op until DNI-26.24 wires persisted sacred-window cache — seam exists.
       },
       triggerPull: () => pullOnLaunch(triggeredFromResume: true),
+      // Phase 2 sync-architecture-plan: after 60 s in background, detach
+      // every Firestore real-time listener to eliminate idle-listener Firestore
+      // reads and avoid keeping the gRPC channel alive past Doze maintenance.
+      // unpark fires after the resume pull-delta completes, so the local DB
+      // is current before the listener stream resumes.
+      parkListeners: () async {
+        final supervisor = _listenerSupervisor;
+        if (supervisor == null) return;
+        try {
+          await supervisor.park();
+          _logger?.info(event: LogEvents.sync.listenersParked);
+        } catch (e, st) {
+          _logger?.warning(
+            event: 'sync_listeners_park_failed',
+            exception: e,
+            stackTrace: st,
+          );
+        }
+      },
+      unparkListeners: () async {
+        final supervisor = _listenerSupervisor;
+        if (supervisor == null) return;
+        try {
+          await supervisor.unpark();
+          _logger?.info(event: LogEvents.sync.listenersUnparked);
+        } catch (e, st) {
+          _logger?.warning(
+            event: 'sync_listeners_unpark_failed',
+            exception: e,
+            stackTrace: st,
+          );
+        }
+      },
+      parkAfterBackgroundDuration: parkAfterBackgroundDuration,
     );
     _lifecycleObserver = lifecycleObserver;
 
@@ -352,6 +432,14 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
   void _onConnectivityChange(bool isOnline) {
     final previous = _lastConnectivity;
     _lastConnectivity = isOnline;
+
+    // Phase 4 — recompute sync-status whenever connectivity changes so
+    // `offline` lights up on a real transition and `pending`/`synced`
+    // returns when the user comes back. Idempotent and no-op when
+    // outbox-status emission is not wired (no [resolveOutboxDao]).
+    if (previous != isOnline) {
+      unawaited(_recomputeOutboxStatus());
+    }
 
     // Only act on a genuine offline→online transition.
     //   - We require `previous == false` so the seeded first emission
@@ -593,27 +681,34 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
         // the next successful pull, which will retry the write.
       }
 
+      _everPulledOnLaunch = true;
       _safeEmitStatus(SyncStatus.synced(lastSyncedAt: syncedAt));
       _logger?.info(event: 'sync_orchestrator_pull_on_launch_complete');
+      // After a successful pull, reflect any outbox backlog that arrived
+      // mid-pull (or was queued before the cloud session became authenticated).
+      unawaited(_recomputeOutboxStatus());
       // W7.9: fire analytics pull_completed at the exit boundary.
       await _analytics?.logEvent(
         LogEvents.sync.pullCompleted,
         parameters: {'triggered_from_resume': triggeredFromResume},
       );
 
-      // One-time backfill of goals (DNI-334 cutover misrouted them through
-      // `pushSettings` so they never reached the cloud — fixed 2026-05-19).
-      // Idempotent + guarded by SharedPreferences flag; logs a no-op count
-      // on every subsequent launch.  Best-effort: a throwing callback must not
-      // fail the pull.
-      try {
-        await _resolveBackfillGoals();
-      } catch (e, stackTrace) {
-        _logger?.warning(
-          event: 'sync_goal_backfill_failed',
-          exception: e,
-          stackTrace: stackTrace,
-        );
+      // Plan §F Phase 5 deliverable 9 — the DNI-334 goals-cutover backfill
+      // was deleted (we're pre-launch, no live users, the SharedPrefs flag
+      // was never set in production). The callback is kept on the
+      // constructor for back-compat but is now optional; if a host still
+      // wires one we run it best-effort.
+      final backfill = _resolveBackfillGoals;
+      if (backfill != null) {
+        try {
+          await backfill();
+        } catch (e, stackTrace) {
+          _logger?.warning(
+            event: 'sync_goal_backfill_failed',
+            exception: e,
+            stackTrace: stackTrace,
+          );
+        }
       }
     } catch (e, stackTrace) {
       // Reset the pull guard so DeviceRestoreService.retry() (or any other
@@ -673,6 +768,118 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
     if (!_statusController.isClosed) {
       _statusController.add(status);
     }
+  }
+
+  // ── Phase 4 — outbox-derived sync-status emission ───────────────────────────
+
+  /// Record one outbox-drain attempt and emit the appropriate sync-status.
+  ///
+  /// Call this after every drain in the orchestrator (write-tee path,
+  /// pull-complete path, connectivity-online path, lifecycle-resume path,
+  /// periodic timer). The method queries the outbox once and emits the
+  /// derived [SyncStatus] per Plan §F Phase 4 deliverable 2:
+  ///
+  ///   * `offline`   — `_lastConnectivity == false` (regardless of outbox).
+  ///   * `degraded`  — outbox has rows whose `attempts ≥ 3`.
+  ///   * `pending`   — online + outbox not empty + no stuck rows.
+  ///   * `synced`    — online + outbox empty + a pull has completed.
+  ///
+  /// While a pull is actively running ([SyncStatusSyncing]) the method is a
+  /// no-op so the pull's `syncing` indicator is not overwritten with a
+  /// `pending` flicker on every transient drain. Mid-pull writes are still
+  /// reconciled by the post-pull recompute (see [pullOnLaunch]).
+  ///
+  /// Side effect: logs the `sync_outbox_depth` observability gauge so
+  /// dashboards can graph backlog age. Safe to call after [dispose] —
+  /// the status-controller closed-check guards against use-after-dispose.
+  Future<void> recordDrainAttempt() => _recomputeOutboxStatus();
+
+  Future<void> _recomputeOutboxStatus() async {
+    if (_statusController.isClosed) return;
+
+    final resolveDao = _resolveOutboxDao;
+    if (resolveDao == null) {
+      // No outbox wired — keep the existing pull-driven status.
+      return;
+    }
+
+    OutboxDao dao;
+    try {
+      dao = resolveDao();
+    } catch (e, st) {
+      // DB swap mid-flight: log and bail; the next drain attempt will retry.
+      _logger?.warning(
+        event: 'sync_outbox_status_resolver_failed',
+        exception: e,
+        stackTrace: st,
+      );
+      return;
+    }
+
+    final int depth;
+    final DateTime? oldest;
+    final int stuck;
+    try {
+      depth = await dao.depth(_profileId);
+      oldest = await dao.oldestPendingAt(_profileId);
+      stuck = await dao.stuckCount(
+        _profileId,
+        minAttempts: _degradedAttemptThreshold,
+      );
+    } catch (e, st) {
+      // Drift errors during shutdown / DB swap — degrade gracefully.
+      _logger?.warning(
+        event: 'sync_outbox_status_query_failed',
+        exception: e,
+        stackTrace: st,
+      );
+      return;
+    }
+
+    // Treat unknown connectivity (null) as online — the orchestrator only
+    // ever exists in a cloud-born session, so the seed/transition logic in
+    // [_onConnectivityChange] will correct this on the next emission.
+    final isOnline = _lastConnectivity ?? true;
+
+    final oldestAgeSeconds = oldest == null
+        ? 0
+        : DateTimeFactory.nowUtc().difference(oldest).inSeconds;
+    _logger?.info(
+      event: LogEvents.sync.outboxDepth,
+      fields: {
+        'count': depth,
+        'oldest_age_seconds': oldestAgeSeconds,
+        'stuck_count': stuck,
+        'is_online': isOnline,
+      },
+    );
+
+    // Don't overwrite a fresh `syncing` (active pull in progress) — the
+    // pull's own _safeEmitStatus(syncing→synced) chain owns that window.
+    if (_currentStatus is SyncStatusSyncing) return;
+
+    final SyncStatus next;
+    if (!isOnline) {
+      next = SyncStatus.offline(pendingChanges: depth);
+    } else if (stuck > 0) {
+      next = SyncStatus.degraded(
+        pendingChanges: depth,
+        reason:
+            'outbox has $stuck row(s) stuck after '
+            '$_degradedAttemptThreshold+ attempts',
+      );
+    } else if (depth > 0) {
+      next = SyncStatus.pending(pendingChanges: depth);
+    } else if (_everPulledOnLaunch) {
+      next = SyncStatus.synced(lastSyncedAt: DateTimeFactory.nowUtc());
+    } else {
+      // Outbox empty but no pull yet this session — leave whatever the
+      // pull path most-recently emitted (typically `localOnly` or an
+      // in-flight `syncing` that was already filtered above).
+      return;
+    }
+
+    _safeEmitStatus(next);
   }
 
   /// Re-open the Firestore real-time listener set against the current profile.
@@ -797,6 +1004,109 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
     // W2.29 — route real-time stage_definitions events through the
     // StageDefinitionMerger (registered in merge_router.dart).
     'stage_definitions' => EntityKind.stageDefinition,
+    // Phase 2 (sync-architecture-plan 2026-05-21) — every Phase 2 listener
+    // routes its rows through MergeRouter via the appropriate EntityKind.
+    'goals' => EntityKind.goal,
+    'learning_ledger' => EntityKind.learningLedger,
+    'learning_order' => EntityKind.learningOrder,
+    'profile_programs' => EntityKind.profileProgram,
+    'learner_profiles' => EntityKind.learnerProfile,
+    'preferences/notification_settings' => EntityKind.notificationSettings,
+    'preferences/gamification_settings' => EntityKind.gamificationSettings,
+    'preferences/ui_preferences' => EntityKind.uiPreferences,
+    'tutor_grants' => EntityKind.tutorGrant,
     _ => null,
   };
+
+  // ── Phase 2 — recovery-pull triggers ──────────────────────────────────────
+
+  /// Build the per-channel recovery-pull map handed to the
+  /// [ListenerSupervisor]. When a listener snapshot returns
+  /// `isAtLimit == true` (signal: there may be older docs the listener window
+  /// did not cover) the supervisor invokes the matching trigger so the
+  /// pull-pipeline reconciles the collection. Each trigger calls the
+  /// PullPipeline method for its kind only — NOT a full re-pull of every
+  /// kind.
+  Map<String, RecoveryPullTrigger> _buildRecoveryPullTriggers() {
+    Future<void> log(String channel, Future<void> Function() op) async {
+      _logger?.info(
+        event: LogEvents.sync.listenerRecoveryPull,
+        fields: {'channel': channel},
+      );
+      try {
+        await op();
+      } catch (e, st) {
+        _logger?.warning(
+          event: 'sync_listener_recovery_pull_failed',
+          fields: {'channel': channel},
+          exception: e,
+          stackTrace: st,
+        );
+      }
+    }
+
+    PullPipeline pipeline() => PullPipeline(
+      gateway: _resolveGateway(),
+      dispatcher: _resolveMergeRouter(),
+      analytics: _analytics,
+    );
+
+    return {
+      'completions': () => log(
+        'completions',
+        () => pipeline().pullCompletions(profileId: _profileId),
+      ),
+      'bookmarks': () => log(
+        'bookmarks',
+        () => pipeline().pullBookmarks(profileId: _profileId),
+      ),
+      'settings': () =>
+          log('settings', () => pipeline().pullSettings(profileId: _profileId)),
+      'streak_events': () => log(
+        'streak_events',
+        () => pipeline().pullStreak(profileId: _profileId),
+      ),
+      'curriculum_tracks': () => log(
+        'curriculum_tracks',
+        () => pipeline().pullTracks(profileId: _profileId),
+      ),
+      'stage_definitions': () => log(
+        'stage_definitions',
+        () => pipeline().pullStageDefinitions(profileId: _profileId),
+      ),
+      'goals': () =>
+          log('goals', () => pipeline().pullGoals(profileId: _profileId)),
+      'learning_ledger': () => log(
+        'learning_ledger',
+        () => pipeline().pullLearningLedger(profileId: _profileId),
+      ),
+      'learning_order': () => log(
+        'learning_order',
+        () => pipeline().pullLearningOrder(profileId: _profileId),
+      ),
+      'profile_programs': () => log(
+        'profile_programs',
+        () => pipeline().pullProfilePrograms(profileId: _profileId),
+      ),
+      'learner_profiles': () => log(
+        'learner_profiles',
+        () => pipeline().pullLearnerProfiles(profileId: _profileId),
+      ),
+      // tutor_grants has no PullPipeline method (server-driven, no local DB
+      // row). At-limit there would only fire if the user has > 500 active
+      // grants which is well outside the practical envelope.
+    };
+  }
+
+  // ── Phase 2 — snapshot-size telemetry ─────────────────────────────────────
+
+  /// Log [LogEvents.sync.listenerSnapshotSize] for the first 10 snapshots
+  /// per session. The supervisor stops invoking this callback after
+  /// [ListenerSupervisor.maxTelemetrySnapshots] events.
+  void _onListenerSnapshot(String channel, int size, bool isAtLimit) {
+    _logger?.info(
+      event: LogEvents.sync.listenerSnapshotSize,
+      fields: {'collection': channel, 'size': size, 'is_at_limit': isAtLimit},
+    );
+  }
 }

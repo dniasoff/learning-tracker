@@ -375,9 +375,11 @@ class _RecordingGateway implements FirestoreGateway {
     required Map<String, dynamic> data,
   }) async {}
   @override
-  Stream<List<Map<String, dynamic>>> listenToCollection({
+  Stream<ListenerSnapshot> listenToCollection({
     required int profileId,
     required String collection,
+    required String orderField,
+    int limit = 500,
   }) => const Stream.empty();
   @override
   Stream<Map<String, dynamic>?> listenToDocument({
@@ -385,6 +387,12 @@ class _RecordingGateway implements FirestoreGateway {
     required String collection,
     required String docId,
   }) => const Stream.empty();
+  @override
+  Stream<ListenerSnapshot> listenToTutorGrants({int limit = 500}) =>
+      const Stream.empty();
+  @override
+  Stream<ListenerSnapshot> listenToLearnerProfiles({int limit = 500}) =>
+      const Stream.empty();
   @override
   Future<List<Map<String, dynamic>>> fetchLearnerProfiles() async =>
       const <Map<String, dynamic>>[];
@@ -549,9 +557,11 @@ class _PagingGateway implements FirestoreGateway {
     required Map<String, dynamic> data,
   }) async {}
   @override
-  Stream<List<Map<String, dynamic>>> listenToCollection({
+  Stream<ListenerSnapshot> listenToCollection({
     required int profileId,
     required String collection,
+    required String orderField,
+    int limit = 500,
   }) => const Stream.empty();
   @override
   Stream<Map<String, dynamic>?> listenToDocument({
@@ -559,6 +569,12 @@ class _PagingGateway implements FirestoreGateway {
     required String collection,
     required String docId,
   }) => const Stream.empty();
+  @override
+  Stream<ListenerSnapshot> listenToTutorGrants({int limit = 500}) =>
+      const Stream.empty();
+  @override
+  Stream<ListenerSnapshot> listenToLearnerProfiles({int limit = 500}) =>
+      const Stream.empty();
   @override
   Future<List<Map<String, dynamic>>> fetchLearnerProfiles() async =>
       const <Map<String, dynamic>>[];

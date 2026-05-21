@@ -822,9 +822,11 @@ class _ToggleableFakeGateway implements FirestoreGateway {
   }) async {}
 
   @override
-  Stream<List<Map<String, dynamic>>> listenToCollection({
+  Stream<ListenerSnapshot> listenToCollection({
     required int profileId,
     required String collection,
+    required String orderField,
+    int limit = 500,
   }) => const Stream.empty();
 
   @override
@@ -833,6 +835,14 @@ class _ToggleableFakeGateway implements FirestoreGateway {
     required String collection,
     required String docId,
   }) => const Stream.empty();
+
+  @override
+  Stream<ListenerSnapshot> listenToTutorGrants({int limit = 500}) =>
+      const Stream.empty();
+
+  @override
+  Stream<ListenerSnapshot> listenToLearnerProfiles({int limit = 500}) =>
+      const Stream.empty();
 
   @override
   Future<List<Map<String, dynamic>>> fetchLearnerProfiles() async =>

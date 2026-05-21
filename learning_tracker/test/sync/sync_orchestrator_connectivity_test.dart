@@ -31,9 +31,11 @@ import 'package:learning_tracker/core/sync/sync_orchestrator.dart';
 /// returns an empty stream so no events arrive during the test).
 class _EmptyGateway implements FirestoreGateway {
   @override
-  Stream<List<Map<String, dynamic>>> listenToCollection({
+  Stream<ListenerSnapshot> listenToCollection({
     required int profileId,
     required String collection,
+    required String orderField,
+    int limit = 500,
   }) => const Stream.empty();
 
   @override
@@ -42,6 +44,14 @@ class _EmptyGateway implements FirestoreGateway {
     required String collection,
     required String docId,
   }) => const Stream.empty();
+
+  @override
+  Stream<ListenerSnapshot> listenToTutorGrants({int limit = 500}) =>
+      const Stream.empty();
+
+  @override
+  Stream<ListenerSnapshot> listenToLearnerProfiles({int limit = 500}) =>
+      const Stream.empty();
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
