@@ -131,6 +131,40 @@ class DeviceRegistryDatabase extends _$DeviceRegistryDatabase {
     return result.read(count) ?? 0;
   }
 
+  /// Merge duplicate-email registry rows down to one per email.
+  ///
+  /// Duplicates arise when a user deletes their cloud account server-side
+  /// and re-signs-up with the same email — Firebase Auth issues a new uid,
+  /// so [findByFirebaseUid] returns null and the sign-in path historically
+  /// inserted a second registry row for the same email (the "two cards in
+  /// the account picker" symptom).
+  ///
+  /// For each email group, keeps the row with the most-recent `lastUsedAt`
+  /// and removes the others. Does NOT delete the orphan DB files on disk —
+  /// that's a separate concern (the files become unreachable from the
+  /// picker but remain recoverable if needed).
+  ///
+  /// Returns the number of rows removed.
+  Future<int> dedupeByEmail() async {
+    final accounts = await getAllAccounts();
+    final byEmail = <String, List<DeviceAccount>>{};
+    for (final a in accounts) {
+      final key = a.email.trim().toLowerCase();
+      if (key.isEmpty) continue; // tolerate malformed legacy rows
+      byEmail.putIfAbsent(key, () => <DeviceAccount>[]).add(a);
+    }
+    var removed = 0;
+    for (final group in byEmail.values) {
+      if (group.length <= 1) continue;
+      // Keep the most-recently-used; remove the rest from the registry.
+      group.sort((a, b) => b.lastUsedAt.compareTo(a.lastUsedAt));
+      for (var i = 1; i < group.length; i++) {
+        removed += await removeAccount(group[i].accountId);
+      }
+    }
+    return removed;
+  }
+
   // ───── DeviceState queries ────────────────────────────────────
 
   static const _kLastActiveAccountId = 'lastActiveAccountId';

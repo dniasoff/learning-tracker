@@ -149,4 +149,160 @@ void main() {
       },
     );
   });
+
+  // ─── dedupeByEmail — heals "two cards in the account picker" symptom ────
+  //
+  // When a user deletes their cloud account server-side and re-signs-up
+  // with the same email, Firebase Auth mints a new uid. The old registry
+  // row still exists; the new sign-in pre-fix added a second row. This
+  // method merges the email group down to the most-recently-used row.
+
+  group('dedupeByEmail', () {
+    test('is a no-op when no duplicates exist', () async {
+      await db.addAccount(makeAccount(id: 'a1', email: 'alice@test.local'));
+      await db.addAccount(makeAccount(id: 'a2', email: 'bob@test.local'));
+
+      final removed = await db.dedupeByEmail();
+
+      expect(removed, 0);
+      final accounts = await db.getAllAccounts();
+      expect(accounts.map((a) => a.accountId).toSet(), {'a1', 'a2'});
+    });
+
+    test(
+      'keeps the most-recently-used row when two share an email, removes the older',
+      () async {
+        // a_old was used earlier; a_new is the recent re-signup.
+        await db.addAccount(
+          DeviceAccountsCompanion.insert(
+            accountId: 'a_old',
+            email: 'family@example.com',
+            displayName: 'Family Niasoff',
+            tier: 'cloudBorn',
+            firebaseUid: const Value('uid_deleted'),
+            dbFileName: 'user_acc_a_old.db',
+            createdAt: DateTime.utc(2026, 1, 1),
+            lastUsedAt: DateTime.utc(2026, 5, 20, 10, 0, 0),
+          ),
+        );
+        await db.addAccount(
+          DeviceAccountsCompanion.insert(
+            accountId: 'a_new',
+            email: 'family@example.com',
+            displayName: 'Family Niasoff',
+            tier: 'cloudBorn',
+            firebaseUid: const Value('uid_resignup'),
+            dbFileName: 'user_acc_a_new.db',
+            createdAt: DateTime.utc(2026, 5, 21),
+            lastUsedAt: DateTime.utc(2026, 5, 21, 19, 0, 0),
+          ),
+        );
+
+        final removed = await db.dedupeByEmail();
+
+        expect(removed, 1);
+        final accounts = await db.getAllAccounts();
+        expect(accounts, hasLength(1));
+        expect(accounts.first.accountId, 'a_new');
+      },
+    );
+
+    test('groups case-insensitively', () async {
+      await db.addAccount(
+        DeviceAccountsCompanion.insert(
+          accountId: 'lower',
+          email: 'mixedcase@test.local',
+          displayName: 'lower',
+          tier: 'cloudBorn',
+          dbFileName: 'user_acc_lower.db',
+          createdAt: DateTime.utc(2026, 1, 1),
+          lastUsedAt: DateTime.utc(2026, 5, 20),
+        ),
+      );
+      await db.addAccount(
+        DeviceAccountsCompanion.insert(
+          accountId: 'upper',
+          email: 'MixedCase@test.local',
+          displayName: 'upper',
+          tier: 'cloudBorn',
+          dbFileName: 'user_acc_upper.db',
+          createdAt: DateTime.utc(2026, 5, 21),
+          lastUsedAt: DateTime.utc(2026, 5, 21),
+        ),
+      );
+
+      final removed = await db.dedupeByEmail();
+
+      expect(removed, 1);
+      final accounts = await db.getAllAccounts();
+      expect(accounts.single.accountId, 'upper');
+    });
+
+    test('multi-email duplicates are deduped independently', () async {
+      // Two duplicates on email A, two duplicates on email B, one unique.
+      for (final spec in [
+        ('a_older', 'a@test.local', DateTime.utc(2026, 5, 19)),
+        ('a_newer', 'a@test.local', DateTime.utc(2026, 5, 21)),
+        ('b_older', 'b@test.local', DateTime.utc(2026, 5, 18)),
+        ('b_newer', 'b@test.local', DateTime.utc(2026, 5, 20)),
+        ('c_only', 'c@test.local', DateTime.utc(2026, 5, 17)),
+      ]) {
+        await db.addAccount(
+          DeviceAccountsCompanion.insert(
+            accountId: spec.$1,
+            email: spec.$2,
+            displayName: spec.$1,
+            tier: 'cloudBorn',
+            dbFileName: 'user_acc_${spec.$1}.db',
+            createdAt: spec.$3,
+            lastUsedAt: spec.$3,
+          ),
+        );
+      }
+
+      final removed = await db.dedupeByEmail();
+
+      expect(removed, 2);
+      final accounts = await db.getAllAccounts();
+      expect(accounts.map((a) => a.accountId).toSet(), {
+        'a_newer',
+        'b_newer',
+        'c_only',
+      });
+    });
+
+    test(
+      'skips rows with blank/whitespace-only emails (legacy tolerance)',
+      () async {
+        await db.addAccount(
+          DeviceAccountsCompanion.insert(
+            accountId: 'blank1',
+            email: '',
+            displayName: 'blank1',
+            tier: 'cloudBorn',
+            dbFileName: 'user_acc_blank1.db',
+            createdAt: DateTime.utc(2026, 1, 1),
+            lastUsedAt: DateTime.utc(2026, 5, 20),
+          ),
+        );
+        await db.addAccount(
+          DeviceAccountsCompanion.insert(
+            accountId: 'blank2',
+            email: '   ',
+            displayName: 'blank2',
+            tier: 'cloudBorn',
+            dbFileName: 'user_acc_blank2.db',
+            createdAt: DateTime.utc(2026, 1, 1),
+            lastUsedAt: DateTime.utc(2026, 5, 21),
+          ),
+        );
+
+        final removed = await db.dedupeByEmail();
+
+        // Blank-email rows are not grouped (one anomaly per row); leave both.
+        expect(removed, 0);
+        expect(await db.getAllAccounts(), hasLength(2));
+      },
+    );
+  });
 }

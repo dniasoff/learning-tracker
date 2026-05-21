@@ -28,7 +28,6 @@ import 'package:learning_tracker/features/onboarding/presentation/screens/onboar
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:uuid/uuid.dart';
 
 // ── State ──────────────────────────────────────────────────────────────────────
 
@@ -335,7 +334,35 @@ class SignInController extends Notifier<SignInState> {
     if (user == null) return;
 
     final registry = _ref.read(deviceRegistryProvider);
-    final existingEntry = await registry.findByFirebaseUid(user.uid);
+
+    // Heal pre-existing duplicate-email rows in the device registry.
+    // Duplicates can land if an earlier sign-in flow inserted a row for the
+    // same email under a different Firebase uid (account-delete + re-signup
+    // server-side). One-shot per sign-in; cheap when there are no
+    // duplicates (single SELECT + group).
+    await registry.dedupeByEmail();
+
+    // Resolve the registry entry for this Firebase user, in two passes:
+    //   1. Look up by Firebase uid — the happy path for repeat sign-ins.
+    //   2. Fall back to email lookup. If an entry exists for this email
+    //      under a *different* uid (the bug Daniel hit: cloud account was
+    //      deleted server-side, Firebase Auth re-minted a new uid for the
+    //      same email), claim the existing entry by updating its
+    //      firebaseUid. Preserves the local DB (no data loss on re-sign-in)
+    //      and prevents the duplicate account-picker row.
+    var existingEntry = await registry.findByFirebaseUid(user.uid);
+    if (existingEntry == null && (user.email?.isNotEmpty ?? false)) {
+      final byEmail = await registry.findByEmail(user.email!);
+      if (byEmail != null) {
+        await registry.updateAccountTier(
+          byEmail.accountId,
+          byEmail.tier,
+          firebaseUid: user.uid,
+        );
+        existingEntry = await registry.findById(byEmail.accountId);
+      }
+    }
+
     final prefs = await SharedPreferences.getInstance();
     final session = SessionPersistenceService(prefs: prefs, registry: registry);
 
@@ -351,7 +378,12 @@ class SignInController extends Notifier<SignInState> {
           .promoteToCloud(user);
       await session.setActiveAccount(existingEntry.accountId);
     } else {
-      final accountId = const Uuid().v4();
+      // First sign-in on this device for this email AND this uid.
+      // Derive the accountId from the Firebase uid so future sign-ins by
+      // the same Firebase user always resolve via findByFirebaseUid above
+      // (no chance of accidental duplication even if the registry row is
+      // ever lost and recreated).
+      final accountId = user.uid;
       final dbFileName = 'user_acc_$accountId.db';
       _ref.read(accountDbFileNameProvider.notifier).setFileName(dbFileName);
       _ref.invalidate(userDatabaseProvider);
