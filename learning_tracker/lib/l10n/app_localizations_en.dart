@@ -2803,8 +2803,8 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String tierCounterSiyumimEarned(int count) {
-    return '$count siyumim earned';
+  String tierCounterSiyumimEarned(int count, String siyumimTerm) {
+    return '$count $siyumimTerm earned';
   }
 
   @override
@@ -2840,6 +2840,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get trackProgress => 'Track progress';
+
+  @override
+  String get trackMarkPreviouslyLearned => 'Mark as previously learned';
 
   @override
   String get lifetimeLabel => 'Lifetime';
@@ -3047,4 +3050,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get allTimeActiveDays => 'Active days';
+
+  @override
+  String allTimeTermDone(String term) {
+    return '$term done';
+  }
 }

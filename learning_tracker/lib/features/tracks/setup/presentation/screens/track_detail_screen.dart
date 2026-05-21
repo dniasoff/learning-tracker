@@ -123,6 +123,8 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
     // The "chazara" term renders per the Hebrew-terms preference: transliterated
     // in English, Hebrew script when the toggle is on (or in Hebrew locale).
     final chazaraTerm = domainTermLabels(ref).chazara;
+    final trackHasChazara =
+        ref.watch(trackHasChazaraProvider(track.id)).asData?.value ?? false;
 
     final completionAsync = ref.watch(
       dashboardTrackCompletionPercentageProvider(track.id),
@@ -223,6 +225,8 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
             trackProgressDisplay: trackProgressDisplay,
             lifetimeLabel: l10n.lifetimeLabel,
             lifetimeDisplay: lifetimeDisplay,
+            trackHasChazara: trackHasChazara,
+            locale: locale,
             goal: goal,
             itemsRemaining: itemsRemaining,
             estimatedFinish: estimatedFinish,
@@ -257,6 +261,8 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
     required String trackProgressDisplay,
     required String lifetimeLabel,
     required String lifetimeDisplay,
+    required bool trackHasChazara,
+    required String locale,
     Goal? goal,
     int? itemsRemaining,
     String? estimatedFinish,
@@ -334,7 +340,9 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
             Row(
               children: [
                 Text(
-                  l10n.carouselCompletion(chazaraTerm),
+                  trackHasChazara
+                      ? l10n.carouselCompletion(chazaraTerm)
+                      : trackProgressLabel,
                   style: theme.textTheme.labelSmall?.copyWith(
                     color: AppTheme.brandInkMuted,
                     fontWeight: FontWeight.w700,
@@ -369,7 +377,7 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
             _configRow(
               theme,
               l10n.trackDetailConfigGoal,
-              _goalLabel(goal, l10n),
+              _goalLabel(goal, l10n, locale),
             ),
           if (itemsRemaining != null)
             _configRow(
@@ -409,7 +417,7 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
     );
   }
 
-  String? _goalLabel(Goal? goal, AppLocalizations l10n) {
+  String? _goalLabel(Goal? goal, AppLocalizations l10n, String locale) {
     if (goal == null) return null;
     if (goal.goalType == 'pace' &&
         goal.paceValue != null &&
@@ -422,7 +430,7 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
     if (goal.goalType == 'deadline' && goal.targetDate != null) {
       // Show the raw deadline date; the "Est. finish" row is not shown for
       // deadline goals to avoid repeating the same value twice.
-      return DateFormat.yMMMd().format(goal.targetDate!.toLocal());
+      return DateFormat.yMMMd(locale).format(goal.targetDate!.toLocal());
     }
     return null;
   }
@@ -497,11 +505,9 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
                 Icons.history_edu_outlined,
                 color: AppColors.blueMedium,
               ),
-              title: const Text(
-                // i18n: hardcoded English for now — vocabulary sweep will
-                // replace this with the new l10n key for "previously learned".
-                'Mark as previously learned',
-                style: TextStyle(color: AppColors.blueMedium),
+              title: Text(
+                AppLocalizations.of(context)!.trackMarkPreviouslyLearned,
+                style: const TextStyle(color: AppColors.blueMedium),
               ),
               trailing: const Icon(
                 Icons.chevron_right_rounded,

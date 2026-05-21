@@ -125,7 +125,7 @@ void main() {
 
         // Counter labels (English default).
         expect(find.text('6-day streak'), findsOneWidget);
-        expect(find.text('4 siyumim earned'), findsOneWidget);
+        expect(find.text('4 Siyumim earned'), findsOneWidget);
         expect(find.text('1336 items in lifetime'), findsOneWidget);
         // Points must NOT appear in adult mode even if a non-zero value is
         // provided — the row gates on [showPoints].
@@ -148,7 +148,7 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(find.text('2-day streak'), findsOneWidget);
-        expect(find.text('1 siyumim earned'), findsOneWidget);
+        expect(find.text('1 Siyumim earned'), findsOneWidget);
         expect(find.text('5 items in lifetime'), findsOneWidget);
         expect(find.text('1250 pts'), findsOneWidget);
       },
@@ -168,7 +168,7 @@ void main() {
         );
         await tester.pumpAndSettle();
 
-        expect(find.text('10 siyumim earned'), findsOneWidget);
+        expect(find.text('10 Siyumim earned'), findsOneWidget);
       },
     );
 
@@ -187,7 +187,7 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(find.text('0-day streak'), findsOneWidget);
-        expect(find.text('0 siyumim earned'), findsOneWidget);
+        expect(find.text('0 Siyumim earned'), findsOneWidget);
         expect(find.text('0 items in lifetime'), findsOneWidget);
         expect(find.text('0 pts'), findsOneWidget);
       },

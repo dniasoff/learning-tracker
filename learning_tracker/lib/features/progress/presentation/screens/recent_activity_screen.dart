@@ -426,11 +426,11 @@ class _AllTimeSummaryCard extends ConsumerWidget {
             ),
             _AllTimeStat(
               value: limudCount,
-              label: '${terms.limud} done',
+              label: l10n.allTimeTermDone(terms.limud),
             ),
             _AllTimeStat(
               value: chazaraCount,
-              label: '${terms.chazaros} done',
+              label: l10n.allTimeTermDone(terms.chazaros),
             ),
           ],
         ),

@@ -180,7 +180,7 @@ void main() {
         // 2. Counter values are visible (English default labels — Hebrew
         // toggle is pinned off in [_wrap]).
         expect(find.text('6-day streak'), findsOneWidget);
-        expect(find.text('4 siyumim earned'), findsOneWidget);
+        expect(find.text('4 Siyumim earned'), findsOneWidget);
         expect(find.text('1336 items in lifetime'), findsOneWidget);
 
         // 3. The three lens tile titles render via `domainTermLabels(ref)`.

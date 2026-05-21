@@ -232,7 +232,7 @@ void main() {
 
         // The three engagement / achievement / lifetime counter labels.
         expect(find.text('7-day streak'), findsOneWidget);
-        expect(find.text('4 siyumim earned'), findsOneWidget);
+        expect(find.text('4 Siyumim earned'), findsOneWidget);
         expect(find.text('42 items in lifetime'), findsOneWidget);
         // Adult mode must NOT render the ⭐ points counter even when the
         // dashboardGlobalPointsProvider has a non-zero value.
@@ -269,7 +269,7 @@ void main() {
         await tester.pump(const Duration(milliseconds: 100));
 
         expect(find.text('3-day streak'), findsOneWidget);
-        expect(find.text('2 siyumim earned'), findsOneWidget);
+        expect(find.text('2 Siyumim earned'), findsOneWidget);
         expect(find.text('15 items in lifetime'), findsOneWidget);
         // ⭐ points counter must appear in child mode.
         expect(find.text('1200 pts'), findsOneWidget);
@@ -670,7 +670,7 @@ void main() {
         // tally regressed, this number would either stay at 0 (provider
         // failure → null asData → fallback) or drift away from 12.
         expect(
-          find.text('12 siyumim earned'),
+          find.text('12 Siyumim earned'),
           findsOneWidget,
           reason:
               'real journeyViewModelProvider must report 11 unit + 1 '
@@ -735,7 +735,7 @@ void main() {
         // renders "0 siyumim earned". Critically, this assertion uses the
         // REAL provider — if a milestone tally regression produced a
         // non-zero number for an empty ledger, this test catches it.
-        expect(find.text('0 siyumim earned'), findsOneWidget);
+        expect(find.text('0 Siyumim earned'), findsOneWidget);
 
         await tester.pumpWidget(const SizedBox.shrink());
         await tester.pump(Duration.zero);

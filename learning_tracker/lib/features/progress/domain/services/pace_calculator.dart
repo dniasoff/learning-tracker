@@ -1,8 +1,8 @@
 /// Grace window in calendar days from track start during which pace status is
 /// always [PaceStatus.graceWindow] regardless of actual progress.
 ///
-/// Day 1 only (the creation day). From day 2 onward the actual vs required
-/// velocity comparison kicks in. Decided by owner 2026-05-20.
+/// Days 0 and 1 (elapsed days ≤ 1 since track start). From day 2 onward the
+/// actual vs required velocity comparison kicks in. Decided by owner 2026-05-20.
 const int kPaceGraceWindowDays = 1;
 
 /// Canonical pace status for a track.
@@ -145,8 +145,9 @@ class PaceCalculator {
 
     // Required velocity: items left after bulk baseline divided by track days.
     // Guard: when targetDate == trackStartDate, set to 0 (degenerate range).
+    // Clamped to 0 when bulkBaseline > totalItems (over-marked prior learning).
     final requiredVelocity = trackDays > 0
-        ? (totalItems - bulkBaseline) / trackDays
+        ? ((totalItems - bulkBaseline) / trackDays).clamp(0.0, double.infinity)
         : 0.0;
 
     // Elapsed days since track start (0 on day 1).

@@ -4967,11 +4967,11 @@ abstract class AppLocalizations {
   /// **'{count}-day streak'**
   String tierCounterStreakDays(int count);
 
-  /// Achievement-tier counter — total siyumim earned across the user's tracks. Appears in the three-counter header row.
+  /// Achievement-tier counter — total siyumim earned. {siyumimTerm} is the toggle-aware domain term (Siyumim / סיומים).
   ///
   /// In en, this message translates to:
-  /// **'{count} siyumim earned'**
-  String tierCounterSiyumimEarned(int count);
+  /// **'{count} {siyumimTerm} earned'**
+  String tierCounterSiyumimEarned(int count, String siyumimTerm);
 
   /// Lifetime-tier counter — total distinct items the user has ever marked learned (across live + bulkInTrack + lifetimeOnly).
   ///
@@ -5032,6 +5032,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Track progress'**
   String get trackProgress;
+
+  /// Action tile in Track Detail screen to bulk-mark prior learning (lifetime-only credit, no streak/points).
+  ///
+  /// In en, this message translates to:
+  /// **'Mark as previously learned'**
+  String get trackMarkPreviouslyLearned;
 
   /// Canonical vocabulary: lifetime label as used in dual-track-label dashboards (Track progress vs Lifetime). Distinct from `tierLensLifetimeKnowledge` (the lens screen title).
   ///
@@ -5374,6 +5380,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Active days'**
   String get allTimeActiveDays;
+
+  /// Stat label in the All Time summary card. {term} is a toggle-aware domain term (e.g. Limud/לימוד or Chazaros/חזרות).
+  ///
+  /// In en, this message translates to:
+  /// **'{term} done'**
+  String allTimeTermDone(String term);
 }
 
 class _AppLocalizationsDelegate

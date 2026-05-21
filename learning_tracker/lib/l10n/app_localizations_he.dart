@@ -2770,8 +2770,8 @@ class AppLocalizationsHe extends AppLocalizations {
   }
 
   @override
-  String tierCounterSiyumimEarned(int count) {
-    return '$count סיומים';
+  String tierCounterSiyumimEarned(int count, String siyumimTerm) {
+    return '$count $siyumimTerm';
   }
 
   @override
@@ -2807,6 +2807,9 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String get trackProgress => 'התקדמות מסלול';
+
+  @override
+  String get trackMarkPreviouslyLearned => 'סמן כנלמד בעבר';
 
   @override
   String get lifetimeLabel => 'ידע כולל';
@@ -3014,4 +3017,9 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String get allTimeActiveDays => 'ימים פעילים';
+
+  @override
+  String allTimeTermDone(String term) {
+    return '$term שנלמד';
+  }
 }

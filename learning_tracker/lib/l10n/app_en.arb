@@ -1387,11 +1387,12 @@
       "count": { "type": "int" }
     }
   },
-  "tierCounterSiyumimEarned": "{count} siyumim earned",
+  "tierCounterSiyumimEarned": "{count} {siyumimTerm} earned",
   "@tierCounterSiyumimEarned": {
-    "description": "Achievement-tier counter — total siyumim earned across the user's tracks. Appears in the three-counter header row.",
+    "description": "Achievement-tier counter — total siyumim earned. {siyumimTerm} is the toggle-aware domain term (Siyumim / סיומים).",
     "placeholders": {
-      "count": { "type": "int" }
+      "count": { "type": "int" },
+      "siyumimTerm": { "type": "String" }
     }
   },
   "tierCounterLifetimeItems": "{count} items in lifetime",
@@ -1440,6 +1441,10 @@
   "trackProgress": "Track progress",
   "@trackProgress": {
     "description": "Canonical vocabulary: per-track progress percentage (engagement + achievement). Distinct from `lifetimeLabel` which reflects all sources."
+  },
+  "trackMarkPreviouslyLearned": "Mark as previously learned",
+  "@trackMarkPreviouslyLearned": {
+    "description": "Action tile in Track Detail screen to bulk-mark prior learning (lifetime-only credit, no streak/points)."
   },
   "lifetimeLabel": "Lifetime",
   "@lifetimeLabel": {
@@ -1724,5 +1729,12 @@
   "allTimeActiveDays": "Active days",
   "@allTimeActiveDays": {
     "description": "Label for the active-days stat in the All Time summary card (Recent Activity screen)."
+  },
+  "allTimeTermDone": "{term} done",
+  "@allTimeTermDone": {
+    "description": "Stat label in the All Time summary card. {term} is a toggle-aware domain term (e.g. Limud/לימוד or Chazaros/חזרות).",
+    "placeholders": {
+      "term": { "type": "String" }
+    }
   }
 }

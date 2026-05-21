@@ -94,12 +94,19 @@ class PullPipeline {
   Future<void> pullLearnerProfiles({
     required int profileId,
     int pageSize = defaultPageSize,
-  }) => _pullCollection(
-    profileId: profileId,
-    collection: 'learner_profiles',
-    kind: EntityKind.learnerProfile,
-    pageSize: pageSize,
-  );
+  }) async {
+    // learner_profiles lives at users/{uid}/learner_profiles — it is the
+    // profile collection itself, not a subcollection of a profile doc. Using
+    // _pullCollection here would build the wrong path
+    // (users/{uid}/learner_profiles/{profileId}/learner_profiles).
+    final rows = await _gateway.fetchLearnerProfiles();
+    if (rows.isEmpty) return;
+    await _dispatcher.dispatch(
+      profileId: profileId,
+      kind: EntityKind.learnerProfile,
+      rows: rows,
+    );
+  }
 
   Future<void> pullLearningOrder({
     required int profileId,

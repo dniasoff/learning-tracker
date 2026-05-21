@@ -1382,11 +1382,12 @@
       "count": { "type": "int" }
     }
   },
-  "tierCounterSiyumimEarned": "{count} סיומים",
+  "tierCounterSiyumimEarned": "{count} {siyumimTerm}",
   "@tierCounterSiyumimEarned": {
-    "description": "Achievement-tier counter — total siyumim earned.",
+    "description": "Achievement-tier counter — total siyumim earned. {siyumimTerm} is the toggle-aware domain term.",
     "placeholders": {
-      "count": { "type": "int" }
+      "count": { "type": "int" },
+      "siyumimTerm": { "type": "String" }
     }
   },
   "tierCounterLifetimeItems": "{count} פריטים",
@@ -1435,6 +1436,10 @@
   "trackProgress": "התקדמות מסלול",
   "@trackProgress": {
     "description": "Canonical vocabulary: per-track progress percentage."
+  },
+  "trackMarkPreviouslyLearned": "סמן כנלמד בעבר",
+  "@trackMarkPreviouslyLearned": {
+    "description": "Action tile in Track Detail screen to bulk-mark prior learning."
   },
   "lifetimeLabel": "ידע כולל",
   "@lifetimeLabel": {
@@ -1719,5 +1724,12 @@
   "allTimeActiveDays": "ימים פעילים",
   "@allTimeActiveDays": {
     "description": "Label for the active-days stat in the All Time summary card (Recent Activity screen)."
+  },
+  "allTimeTermDone": "{term} שנלמד",
+  "@allTimeTermDone": {
+    "description": "Stat label in the All Time summary card. {term} is a toggle-aware domain term.",
+    "placeholders": {
+      "term": { "type": "String" }
+    }
   }
 }
