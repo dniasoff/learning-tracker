@@ -385,6 +385,20 @@ service cloud.firestore {
             ]);
           allow delete: if isOwner(uid);
         }
+
+        // study_day_configs — per-curriculum, per-track day-of-week schedule
+        // (Plan §F Phase 1 — closes the study-day sync gap). One doc per
+        // (curriculum_id, day_of_week, track_id) triple; client-side LWW
+        // arbitrated by `updated_at`.
+        match /study_day_configs/{configId} {
+          allow read: if isOwner(uid) || hasActiveTutorAccess(uid, profileId);
+          allow create, update: if isOwner(uid)
+            && request.resource.data.keys().hasOnly([
+              'profile_id', 'curriculum_id', 'track_id',
+              'day_of_week', 'day_type', 'updated_at', 'synced_at'
+            ]);
+          allow delete: if isOwner(uid);
+        }
       }
     }
   }

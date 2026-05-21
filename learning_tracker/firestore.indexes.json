@@ -32,6 +32,22 @@
         { "fieldPath": "state",      "order": "ASCENDING" },
         { "fieldPath": "updated_at", "order": "ASCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "tutor_grants",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "tutor_uid",  "order": "ASCENDING" },
+        { "fieldPath": "updated_at", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "tutor_grants",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "parent_uid", "order": "ASCENDING" },
+        { "fieldPath": "updated_at", "order": "DESCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []
