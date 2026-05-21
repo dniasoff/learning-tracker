@@ -29,6 +29,9 @@ class EntityKind {
   // W3.17 — tutor mode (S3 W3.38 adds the Firestore collection)
   static const tutorGrant = 'tutor_grant';
 
+  // Phase 1 — study-day config enrolment in the sync pipeline.
+  static const studyDayConfig = 'study_day_config';
+
   /// Deterministic enumeration order for tests and diagnostics.
   static const List<String> all = [
     completion,
@@ -46,6 +49,7 @@ class EntityKind {
     gamificationSettings,
     uiPreferences,
     tutorGrant,
+    studyDayConfig,
   ];
 }
 

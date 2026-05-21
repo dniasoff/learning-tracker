@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:drift/drift.dart';
@@ -34,15 +35,24 @@ class OutboxSyncWriteFacade implements SyncWriteFacade {
     required UserDatabase database,
     required int profileId,
     required LocalDayClock clock,
+    Future<void> Function()? onEnqueueDrain,
   }) : _dao = outboxDao,
        _database = database,
        _profileId = profileId,
-       _clock = clock;
+       _clock = clock,
+       _onEnqueueDrain = onEnqueueDrain;
 
   final OutboxDao _dao;
   final UserDatabase _database;
   final int _profileId;
   final LocalDayClock _clock;
+
+  /// Phase 1 — write-tee callback. The facade fires this fire-and-forget at
+  /// the end of every [_enqueue] so a write reaches Firestore in the same
+  /// network round as the local commit (best-case 1-RTT). Optional so tests
+  /// can build the facade without a processor; the production provider passes
+  /// a closure that calls `outboxProcessor.drain(profileId)`.
+  final Future<void> Function()? _onEnqueueDrain;
 
   static const _gamificationUpdatedAtMsKeyPrefix =
       'gamification_settings_updated_at_ms_p';
@@ -245,15 +255,27 @@ class OutboxSyncWriteFacade implements SyncWriteFacade {
     String kind,
     String entityKey,
     Map<String, dynamic> payload,
-  ) => _dao.insertOutboxRow(
-    OutboxCompanion(
-      profileId: Value(_profileId),
-      entityKind: Value(kind),
-      entityKey: Value(entityKey),
-      payload: Value(jsonEncode(payload)),
-      createdAt: Value(_clock.nowUtc()),
-    ),
-  );
+  ) async {
+    await _dao.insertOutboxRow(
+      OutboxCompanion(
+        profileId: Value(_profileId),
+        entityKind: Value(kind),
+        entityKey: Value(entityKey),
+        payload: Value(jsonEncode(payload)),
+        createdAt: Value(_clock.nowUtc()),
+      ),
+    );
+    // Phase 1 (trigger 1) — write-tee: kick the outbox processor after every
+    // enqueue. Fire-and-forget so the caller's local commit returns straight
+    // away; the OutboxProcessor owns the single-flight guard so concurrent
+    // tees collapse to one push round. A throw in the drain must not bubble
+    // back to the enqueue caller — the row is already durable in Drift so a
+    // subsequent trigger (periodic, pull-complete) will retry it.
+    final tee = _onEnqueueDrain;
+    if (tee != null) {
+      unawaited(tee().catchError((Object _) {}));
+    }
+  }
 
   /// Derive a stable entity key from a payload by concatenating a few
   /// discriminating fields.  Falls back to a timestamp suffix when neither
@@ -320,4 +342,21 @@ class OutboxSyncWriteFacade implements SyncWriteFacade {
         DateTimeFactory.nowUtc().millisecondsSinceEpoch.toString(),
     payload,
   );
+
+  /// Phase 1 — study-day config enrolment.
+  ///
+  /// Entity key is `${curriculum_id}_${day_of_week}_${track_id}` so repeated
+  /// enqueues of the same (curriculum, day, track) collapse to one Firestore
+  /// document — matching the per-row PK on `study_day_configs`.
+  Future<void> enqueueStudyDayConfig(Map<String, dynamic> payload) {
+    final curriculumId = payload['curriculum_id']?.toString() ?? '';
+    final dayOfWeek = payload['day_of_week']?.toString() ?? '';
+    final trackId = payload['track_id']?.toString() ?? '';
+    final entityKey = '${curriculumId}_${dayOfWeek}_$trackId';
+    return _enqueue(OutboxEntityKind.studyDayConfig, entityKey, payload);
+  }
+
+  @override
+  Future<void> pushStudyDayConfig(Map<String, dynamic> payload) =>
+      enqueueStudyDayConfig(payload);
 }

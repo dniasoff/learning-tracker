@@ -5,12 +5,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
+import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/core/widgets/app_bar_title.dart';
 import 'package:learning_tracker/core/widgets/app_error_view.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/day_type.dart';
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
 import 'package:learning_tracker/features/scheduler/presentation/providers/study_day_config_providers.dart';
+import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// Day labels in display order: Sunday first (ISO weekday 7), then Mon(1)..Sat(6).
@@ -172,6 +174,7 @@ class StudyDayConfigScreen extends ConsumerWidget {
   void _toggleDay(WidgetRef ref, int dayOfWeek, DayType newType) {
     final db = ref.read(userDatabaseProvider);
     final profileId = ref.read(activeProfileIdProvider);
+    final outboxFacade = ref.read(outboxSyncWriteFacadeProvider);
     // Look up trackId then upsert
     (db.select(db.curriculumTracks)
           ..where(
@@ -181,15 +184,26 @@ class StudyDayConfigScreen extends ConsumerWidget {
           )
           ..limit(1))
         .getSingleOrNull()
-        .then((track) {
+        .then((track) async {
           final trackId = track?.id ?? 0;
-          db.studyDayConfigDao.upsertDayConfig(
+          await db.studyDayConfigDao.upsertDayConfig(
             profileId: profileId,
             curriculumId: curriculumId.storageKey,
             trackId: trackId,
             dayOfWeek: dayOfWeek,
             dayType: newType.storageKey,
           );
+          // Phase 1 — sync the toggle to the cloud via the outbox so a
+          // second device sees the new pattern on its next pull. Skipped for
+          // local-born accounts (outbox facade is null).
+          await outboxFacade?.pushStudyDayConfig({
+            'profile_id': profileId,
+            'curriculum_id': curriculumId.storageKey,
+            'track_id': trackId,
+            'day_of_week': dayOfWeek,
+            'day_type': newType.storageKey,
+            'updated_at': DateTimeFactory.nowUtc().toIso8601String(),
+          });
         });
     ref.invalidate(allDailyTasksProvider);
   }

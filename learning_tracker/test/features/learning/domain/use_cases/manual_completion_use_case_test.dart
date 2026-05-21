@@ -1,20 +1,20 @@
 import 'package:drift/drift.dart' show Value;
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
-import 'package:learning_tracker/core/sync/firestore_gateway.dart';
 import 'package:learning_tracker/features/learning/data/repositories/learning_ledger_repository_impl.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/learning_ledger_repository.dart';
 import 'package:learning_tracker/features/learning/domain/use_cases/manual_completion_use_case.dart';
+import 'package:learning_tracker/features/sync/data/outbox_sync_write_facade.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:test/test.dart';
 
 import '../../../../helpers/test_database.dart';
 
-class _MockFirestoreGateway extends Mock implements FirestoreGateway {}
+class _MockOutboxFacade extends Mock implements OutboxSyncWriteFacade {}
 
 void main() {
   late UserDatabase db;
-  late _MockFirestoreGateway mockGateway;
+  late _MockOutboxFacade mockOutboxFacade;
 
   setUp(() async {
     db = createTestDatabase();
@@ -32,12 +32,9 @@ void main() {
             updatedAt: Value(DateTime.now().toUtc()),
           ),
         );
-    mockGateway = _MockFirestoreGateway();
+    mockOutboxFacade = _MockOutboxFacade();
     when(
-      () => mockGateway.pushLedgerEntry(
-        profileId: any(named: 'profileId'),
-        data: any(named: 'data'),
-      ),
+      () => mockOutboxFacade.enqueueLedgerEntry(any()),
     ).thenAnswer((_) async {});
   });
 
@@ -52,7 +49,7 @@ void main() {
   }) {
     final repo = LearningLedgerRepositoryImpl(
       database: db,
-      firestoreGateway: mockGateway,
+      outboxFacade: mockOutboxFacade,
       activeProfileId: profileId,
       activeProfileMode: profileMode,
       parentPinSessionMatchesActiveProfile:

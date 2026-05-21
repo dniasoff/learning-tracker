@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/analytics/analytics_provider.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
-import 'package:learning_tracker/core/sync/providers/outbox_providers.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/notifications/data/services/sacred_window_repository.dart';
 import 'package:learning_tracker/features/notifications/domain/models/reminder_preferences.dart';
@@ -18,6 +17,7 @@ import 'package:learning_tracker/features/sacred_time/presentation/providers/sac
 import 'package:learning_tracker/features/sacred_time/presentation/providers/sacred_windows_provider.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dart';
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
+import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -205,75 +205,70 @@ class RewardNotificationEnabled extends _$RewardNotificationEnabled {
 
 /// Persist the current notification preference set to Firestore for
 /// cloud-born accounts. Local-born accounts remain local-only.
+///
+/// Phase 1 — routes through [OutboxSyncWriteFacade.enqueueNotificationSettings]
+/// so a write made offline is retained and pushed by the next drain. Direct
+/// gateway pushes silently lost writes when the device was offline.
 Future<void> _persistNotificationSettingsToCloud(
   Ref ref, {
   required SharedPreferences prefs,
 }) async {
-  // P2a: use FirestoreGateway directly instead of SyncEngine for this write.
-  final gateway = () {
+  final outboxFacade = () {
     try {
-      return ref.read(firestoreGatewayProvider);
+      return ref.read(outboxSyncWriteFacadeProvider);
     } catch (_) {
       // Some tests build notification providers without full sync dependencies.
       return null;
     }
   }();
-  if (gateway == null) return;
+  if (outboxFacade == null) return;
 
-  final profileId = ref.read(activeProfileIdProvider);
   final updatedAtMs = DateTimeFactory.nowUtc().millisecondsSinceEpoch;
   await prefs.setInt(
     NotificationPreferencesRepository.notificationSettingsUpdatedAtMsKey,
     updatedAtMs,
   );
 
-  await gateway.pushNotificationSettings(
-    profileId: profileId,
-    data: {
-      'schema_version': 1,
-      'daily_reminder': {
-        'enabled':
-            prefs.getBool(
-              NotificationPreferencesRepository.reminderEnabledKey,
-            ) ??
-            true,
-        'hour':
-            prefs.getInt(NotificationPreferencesRepository.reminderHourKey) ??
-            defaultReminderHour,
-        'minute':
-            prefs.getInt(NotificationPreferencesRepository.reminderMinuteKey) ??
-            defaultReminderMinute,
-      },
-      'streak_alert': {
-        'enabled':
-            prefs.getBool(
-              NotificationPreferencesRepository.streakAlertEnabledKey,
-            ) ??
-            true,
-        'hour':
-            prefs.getInt(
-              NotificationPreferencesRepository.streakAlertHourKey,
-            ) ??
-            defaultStreakAlertHour,
-        'minute':
-            prefs.getInt(
-              NotificationPreferencesRepository.streakAlertMinuteKey,
-            ) ??
-            defaultStreakAlertMinute,
-      },
-      'reward_notifications': {
-        'enabled':
-            prefs.getBool(
-              NotificationPreferencesRepository.rewardNotificationEnabledKey,
-            ) ??
-            true,
-      },
-      'updated_at': DateTime.fromMillisecondsSinceEpoch(
-        updatedAtMs,
-        isUtc: true,
-      ).toIso8601String(),
+  await outboxFacade.enqueueNotificationSettings({
+    'schema_version': 1,
+    'daily_reminder': {
+      'enabled':
+          prefs.getBool(NotificationPreferencesRepository.reminderEnabledKey) ??
+          true,
+      'hour':
+          prefs.getInt(NotificationPreferencesRepository.reminderHourKey) ??
+          defaultReminderHour,
+      'minute':
+          prefs.getInt(NotificationPreferencesRepository.reminderMinuteKey) ??
+          defaultReminderMinute,
     },
-  );
+    'streak_alert': {
+      'enabled':
+          prefs.getBool(
+            NotificationPreferencesRepository.streakAlertEnabledKey,
+          ) ??
+          true,
+      'hour':
+          prefs.getInt(NotificationPreferencesRepository.streakAlertHourKey) ??
+          defaultStreakAlertHour,
+      'minute':
+          prefs.getInt(
+            NotificationPreferencesRepository.streakAlertMinuteKey,
+          ) ??
+          defaultStreakAlertMinute,
+    },
+    'reward_notifications': {
+      'enabled':
+          prefs.getBool(
+            NotificationPreferencesRepository.rewardNotificationEnabledKey,
+          ) ??
+          true,
+    },
+    'updated_at': DateTime.fromMillisecondsSinceEpoch(
+      updatedAtMs,
+      isUtc: true,
+    ).toIso8601String(),
+  });
 }
 
 /// Returns true if notifications should currently be suppressed because

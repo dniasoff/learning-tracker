@@ -23,6 +23,9 @@ import 'package:learning_tracker/core/sync/listener_supervisor.dart';
 ///   streak_events      — per-event collection (W3.37: replaces streak/data doc)
 ///   curriculum_tracks  — profile subcollection
 ///   stage_definitions  — profile subcollection (W2.29 — real-time listener)
+///   study_day_configs  — profile subcollection (Phase 1 — closes the
+///                        study-day sync gap; per-curriculum/per-track day
+///                        pattern was previously local-only)
 ///
 /// `learning_order` is intentionally absent — it has no [EntityMerger] yet
 /// and is covered by `PullPipeline.pullLearningOrder()` on launch.
@@ -73,6 +76,14 @@ class FirestoreListenerSource implements ListenerSource {
       'stage_definitions': gateway.listenToCollection(
         profileId: profileId,
         collection: 'stage_definitions',
+      ),
+      // Phase 1 — listener for the new study_day_configs collection. The
+      // per-curriculum/per-track day pattern was local-only before; the
+      // merger now consumes pulled rows and reconciles them with the Drift
+      // table.
+      'study_day_configs': gateway.listenToCollection(
+        profileId: profileId,
+        collection: 'study_day_configs',
       ),
     };
   }

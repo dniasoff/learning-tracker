@@ -272,10 +272,10 @@ void main() {
       ];
       contentRepo = _FakeContentRepository(items);
 
-      // Real ledger repo (no Firestore gateway — local-only).
+      // Real ledger repo (no outbox facade — local-only).
       final ledgerRepo = LearningLedgerRepositoryImpl(
         database: db,
-        firestoreGateway: null,
+        outboxFacade: null,
         activeProfileId: profileId,
         activeProfileMode: ProfileMode.adult,
       );

@@ -9,6 +9,7 @@ import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/learning_process_wizard_service.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/goal_entity.dart';
 import 'package:learning_tracker/features/scheduler/domain/repositories/goal_repository.dart';
+import 'package:learning_tracker/features/sync/data/outbox_sync_write_facade.dart';
 import 'package:learning_tracker/features/tracks/domain/services/curriculum_activation_service.dart';
 import 'package:learning_tracker/features/tracks/setup/domain/entities/add_track_result.dart';
 import 'package:learning_tracker/features/tracks/stages/domain/repositories/stage_definition_repository.dart';
@@ -39,6 +40,7 @@ class TrackCreationService {
     required GoalRepository goalRepository,
     required StageDefinitionRepository stageRepository,
     FirestoreGateway? gateway,
+    OutboxSyncWriteFacade? outboxFacade,
     AnalyticsService? analytics,
   }) : _database = database,
        _activationService = activationService,
@@ -46,6 +48,7 @@ class TrackCreationService {
        _goalRepository = goalRepository,
        _stageRepository = stageRepository,
        _gateway = gateway,
+       _outboxFacade = outboxFacade,
        _analytics = analytics ?? const NullAnalyticsService();
 
   final UserDatabase _database;
@@ -53,7 +56,11 @@ class TrackCreationService {
   final LearningProcessWizardService _wizardService;
   final GoalRepository _goalRepository;
   final StageDefinitionRepository _stageRepository;
+  // Phase 1 — bookmark + profile_program writes go through the outbox; the
+  // remaining `removeProfileProgramAssignment` direct call is a server-side
+  // delete that does not yet have an outbox kind and is left as-is per brief.
   final FirestoreGateway? _gateway;
+  final OutboxSyncWriteFacade? _outboxFacade;
   final AnalyticsService _analytics;
 
   /// Persist all track configuration from the AddTrackFlow result.
@@ -314,26 +321,24 @@ class TrackCreationService {
         sefariaRef: bookmarkRef,
         updatedAt: updatedAt,
       );
-      await _gateway?.pushBookmark(
-        profileId: profileId,
-        data: {
-          'curriculum_id': curriculum.storageKey,
-          'content_item_id': bookmarkRef,
-          'updated_at': updatedAt.toIso8601String(),
-        },
-      );
+      // Phase 1 — route the bookmark write through the outbox so offline
+      // track-creates do not silently drop the bookmark.
+      await _outboxFacade?.pushBookmark({
+        'curriculum_id': curriculum.storageKey,
+        'content_item_id': bookmarkRef,
+        'updated_at': updatedAt.toIso8601String(),
+      });
     }
 
-    await _gateway?.pushProfileProgram(
-      profileId: profileId,
-      data: {
-        'profile_id': profileId,
-        'curriculum_id': curriculum.storageKey,
-        'program_id': programId,
-        'tracking_start_date': trackingStartDate?.toIso8601String(),
-        'tracking_start_ref': bookmarkRef,
-      },
-    );
+    // Phase 1 — route the profile-program assignment through the outbox
+    // (was a direct gateway write that lost the row when offline).
+    await _outboxFacade?.enqueueProfileProgram({
+      'profile_id': profileId,
+      'curriculum_id': curriculum.storageKey,
+      'program_id': programId,
+      'tracking_start_date': trackingStartDate?.toIso8601String(),
+      'tracking_start_ref': bookmarkRef,
+    });
   }
 
   Future<void> _saveStudyDays({
@@ -355,6 +360,18 @@ class TrackCreationService {
         dayOfWeek: entry.key,
         dayType: entry.value,
       );
+      // Phase 1 — sync the new study-day config to the cloud via the outbox.
+      // The cloud doc-id is derived from (curriculum_id, day_of_week,
+      // track_id) so repeated upserts collapse to one document, matching the
+      // local PK semantics.
+      await _outboxFacade?.pushStudyDayConfig({
+        'profile_id': profileId,
+        'curriculum_id': curriculumId.storageKey,
+        'track_id': trackId,
+        'day_of_week': entry.key,
+        'day_type': entry.value,
+        'updated_at': DateTimeFactory.nowUtc().toIso8601String(),
+      });
     }
   }
 

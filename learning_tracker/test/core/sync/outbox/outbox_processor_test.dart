@@ -2,6 +2,7 @@
 /// PushPipeline and in-memory OutboxDao.
 library;
 
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -480,5 +481,154 @@ void main() {
     test('bookmark constant is "bookmark"', () {
       expect(OutboxEntityKind.bookmark, 'bookmark');
     });
+
+    test('studyDayConfig constant is "study_day_config"', () {
+      expect(OutboxEntityKind.studyDayConfig, 'study_day_config');
+    });
   });
+
+  // Phase 0 — single-flight guard. Concurrent drain() calls collapse to one
+  // in-flight invocation so the five wired triggers (write-tee + pull-complete
+  // + connectivity + lifecycle + periodic) cannot stampede the pipeline.
+  group('OutboxProcessor.drain — single-flight', () {
+    test('concurrent drains run the pipeline exactly once', () async {
+      // Use a pipeline whose batch call awaits a Completer so we can hold
+      // the in-flight drain open long enough to fire concurrent drains.
+      final blocking = _BlockingPipeline();
+      final guarded = OutboxProcessor(
+        outboxDao: db.outboxDao,
+        pipeline: blocking,
+        clock: FakeLocalDayClock(DateTime.utc(2026, 5, 14)),
+      );
+
+      await insertRow(entityKind: OutboxEntityKind.completion, entityKey: 'c1');
+
+      // Kick off the first drain — it blocks inside the fake pipeline.
+      final first = guarded.drain(profileId);
+
+      // Fire four more drains while the first is still in flight. Each must
+      // return 0 immediately (the single-flight guard short-circuits them).
+      final concurrent = await Future.wait([
+        guarded.drain(profileId),
+        guarded.drain(profileId),
+        guarded.drain(profileId),
+        guarded.drain(profileId),
+      ]);
+
+      expect(
+        concurrent,
+        equals([0, 0, 0, 0]),
+        reason: 'concurrent drains must skip while another is in flight',
+      );
+
+      // Unblock the first drain and let it complete.
+      blocking.release();
+      final firstResult = await first;
+      expect(firstResult, 1, reason: 'first drain pushed the row');
+
+      // The pipeline saw exactly one batch call (the others were short-circuited).
+      expect(blocking.batchCalls, 1);
+    });
+
+    test('drain releases the guard after completion so a subsequent drain '
+        'can run again', () async {
+      // Use the standard fake pipeline (synchronous) — we drain twice in
+      // sequence to assert the guard is released after the first call.
+      final guarded = OutboxProcessor(
+        outboxDao: db.outboxDao,
+        pipeline: pipeline,
+        clock: FakeLocalDayClock(DateTime.utc(2026, 5, 14)),
+      );
+
+      await insertRow(entityKind: OutboxEntityKind.completion, entityKey: 'c1');
+      await guarded.drain(profileId);
+
+      await insertRow(entityKind: OutboxEntityKind.completion, entityKey: 'c2');
+      final secondCount = await guarded.drain(profileId);
+      expect(secondCount, 1, reason: 'guard released → second drain runs');
+    });
+
+    test('drain releases the guard even when the pipeline throws', () async {
+      // Use a pipeline that throws on its first invocation. The pre-existing
+      // total-failure tests prove _doDrain itself doesn't propagate the
+      // BatchPushException — what matters here is that the single-flight
+      // flag is reset whether or not the inner work threw. After the first
+      // drain runs (and "fails" by retaining the row), a second drain must
+      // be able to start: that is only possible if `_draining` was cleared
+      // in the try/finally.
+      final throwing = _ThrowingThenSucceedingPipeline();
+      final guarded = OutboxProcessor(
+        outboxDao: db.outboxDao,
+        pipeline: throwing,
+        // Use a clock pinned in the future so the row is always eligible
+        // (the backoff check compares lastAttemptAt + delay < now).
+        clock: FakeLocalDayClock(DateTime.utc(2099, 1, 1)),
+      );
+
+      await insertRow(entityKind: OutboxEntityKind.completion, entityKey: 'c1');
+
+      // First drain — the pipeline throws (BatchPushException with empty
+      // committed), the row is retained and marked attempted. The drain
+      // method itself does NOT rethrow.
+      await guarded.drain(profileId);
+
+      final rowsAfterFirst = await db.outboxDao.getPendingByKind(
+        OutboxEntityKind.completion,
+        profileId,
+      );
+      expect(rowsAfterFirst, hasLength(1), reason: 'row retained on failure');
+
+      // Second drain — single-flight flag was cleared, so the drain runs
+      // and the pipeline succeeds on its second invocation. The pinned
+      // future clock keeps the backoff window in the past.
+      final secondCount = await guarded.drain(profileId);
+      expect(
+        secondCount,
+        1,
+        reason: 'guard was released — second drain pushed the row',
+      );
+    });
+  });
+}
+
+/// Pipeline whose `pushCompletionsBatch` parks on a Completer until [release]
+/// is invoked. Lets the test hold an in-flight drain open while firing
+/// concurrent drains.
+class _BlockingPipeline extends Fake implements PushPipeline {
+  final Completer<void> _gate = Completer<void>();
+  int batchCalls = 0;
+
+  void release() => _gate.complete();
+
+  @override
+  Future<List<String>> pushCompletionsBatch({
+    required int profileId,
+    required List<({String entityKey, Map<String, dynamic> payload})> entries,
+  }) async {
+    batchCalls++;
+    await _gate.future;
+    return entries.map((e) => e.entityKey).toList();
+  }
+}
+
+/// Pipeline that throws on its first batch call (total failure) and succeeds
+/// thereafter — used to verify the single-flight guard is released even when
+/// the pipeline throws.
+class _ThrowingThenSucceedingPipeline extends Fake implements PushPipeline {
+  bool _firstCall = true;
+
+  @override
+  Future<List<String>> pushCompletionsBatch({
+    required int profileId,
+    required List<({String entityKey, Map<String, dynamic> payload})> entries,
+  }) async {
+    if (_firstCall) {
+      _firstCall = false;
+      throw BatchPushException(
+        committed: const [],
+        pushCause: Exception('first-call failure'),
+      );
+    }
+    return entries.map((e) => e.entityKey).toList();
+  }
 }

@@ -54,6 +54,13 @@ final class _SyncEvents {
   String get outboxItemEnqueued => 'sync_outbox_item_enqueued';
   String get outboxDeadLettered => 'sync_outbox_dead_lettered';
 
+  // Phase 0 — outbox drain lifecycle. Fired by every drain trigger
+  // (write-tee, pull-complete, connectivity-online, lifecycle-resume,
+  // periodic safety net) so backlog flushes are observable end-to-end.
+  String get outboxDrainStarted => 'sync_outbox_drain_started';
+  String get outboxDrainCompleted => 'sync_outbox_drain_completed';
+  String get outboxDrainFailed => 'sync_outbox_drain_failed';
+
   // Merge / router
   String get mergeRowSkipped => 'sync_merge_row_skipped';
   String get mergeRouterHalt => 'sync_merge_router_halt';

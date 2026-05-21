@@ -43,6 +43,7 @@ class MergeRouter implements MergeDispatcher {
       case EntityKind.gamificationSettings:
       case EntityKind.uiPreferences:
       case EntityKind.tutorGrant: // W3.17 / W3.38 — tutor mode
+      case EntityKind.studyDayConfig: // Phase 1 — study-day config enrolment
         final merger = _mergers[kind];
         if (merger == null) {
           // Kind is recognised but no merger wired up — treat as a

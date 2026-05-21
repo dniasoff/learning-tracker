@@ -10,7 +10,6 @@ import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/providers/calendar_providers.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
-import 'package:learning_tracker/core/sync/providers/outbox_providers.dart';
 import 'package:learning_tracker/core/theme/app_colors.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
@@ -24,6 +23,7 @@ import 'package:learning_tracker/features/scheduler/domain/models/goal_entity.da
 import 'package:learning_tracker/features/scheduler/domain/services/calendar_program_registry.dart';
 import 'package:learning_tracker/features/scheduler/domain/services/learning_program_service.dart';
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
+import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
 import 'package:learning_tracker/features/tracks/setup/domain/services/track_creation_service.dart';
 import 'package:learning_tracker/features/tracks/setup/presentation/providers/after_track_change_invalidation.dart';
 import 'package:learning_tracker/features/tracks/setup/presentation/providers/track_edit_providers.dart';
@@ -320,19 +320,21 @@ class _EditTrackScreenState extends ConsumerState<EditTrackScreen> {
     );
 
     // F-C1: Push the updated profile_program row to Firestore so the
-    // new anchor survives reinstall / sync pull. Non-fatal when offline.
+    // new anchor survives reinstall / sync pull.
+    //
+    // Phase 1 — routed through the outbox: was a direct gateway push that
+    // silently dropped the row when offline. The outbox retains the write and
+    // the next drain (write-tee, pull-complete, connectivity, periodic)
+    // ships it on the next online round.
     try {
-      final gateway = ref.read(firestoreGatewayProvider);
-      await gateway?.pushProfileProgram(
-        profileId: profileId,
-        data: {
-          'profile_id': profileId,
-          'curriculum_id': curriculum.storageKey,
-          'program_id': enrollment.programId,
-          'tracking_start_date': todayUtc.toIso8601String(),
-          'tracking_start_ref': todayRef,
-        },
-      );
+      final outboxFacade = ref.read(outboxSyncWriteFacadeProvider);
+      await outboxFacade?.enqueueProfileProgram({
+        'profile_id': profileId,
+        'curriculum_id': curriculum.storageKey,
+        'program_id': enrollment.programId,
+        'tracking_start_date': todayUtc.toIso8601String(),
+        'tracking_start_ref': todayRef,
+      });
     } catch (e, st) {
       AppLogger.instance.warning(
         event: 'clear_overdue_push_failed: curriculum=${curriculum.storageKey}',

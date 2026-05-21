@@ -31,7 +31,6 @@ import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
-import 'package:learning_tracker/core/sync/firestore_gateway.dart';
 import 'package:learning_tracker/core/sync/sync_write_facade.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
@@ -40,12 +39,13 @@ import 'package:learning_tracker/features/learning/data/repositories/learning_le
 import 'package:learning_tracker/features/learning/domain/entities/completion_request.dart';
 import 'package:learning_tracker/features/learning/domain/services/completion_detection_service.dart';
 import 'package:learning_tracker/features/learning/domain/use_cases/mark_completion_use_case.dart';
+import 'package:learning_tracker/features/sync/data/outbox_sync_write_facade.dart';
 import 'package:learning_tracker/features/tracks/stages/data/repositories/stage_definition_repository_impl.dart';
 import 'package:mocktail/mocktail.dart';
 
 import '../../../../helpers/test_database.dart';
 
-class _MockFirestoreGateway extends Mock implements FirestoreGateway {}
+class _MockOutboxFacade extends Mock implements OutboxSyncWriteFacade {}
 
 class _MockSyncWriteFacade extends Mock implements SyncWriteFacade {}
 
@@ -60,7 +60,7 @@ void main() {
   late int profileId;
   late int trackId;
   late _MockContentRepository contentRepo;
-  late _MockFirestoreGateway gateway;
+  late _MockOutboxFacade outboxFacade;
   late _MockSyncWriteFacade syncFacade;
   late ProviderContainer container;
   late MarkCompletionUseCase useCase;
@@ -115,7 +115,7 @@ void main() {
     );
 
     contentRepo = _MockContentRepository();
-    gateway = _MockFirestoreGateway();
+    outboxFacade = _MockOutboxFacade();
     syncFacade = _MockSyncWriteFacade();
 
     final leaves = oneLeaf();
@@ -136,12 +136,7 @@ void main() {
       () => contentRepo.getContentForCurriculum(any()),
     ).thenAnswer((_) async => []);
 
-    when(
-      () => gateway.pushLedgerEntry(
-        profileId: any(named: 'profileId'),
-        data: any(named: 'data'),
-      ),
-    ).thenAnswer((_) async {});
+    when(() => outboxFacade.enqueueLedgerEntry(any())).thenAnswer((_) async {});
 
     when(() => syncFacade.pushBookmark(any())).thenAnswer((_) async {});
     when(
@@ -151,7 +146,7 @@ void main() {
     // Real components, no test doubles for the logic under test.
     final ledgerRepo = LearningLedgerRepositoryImpl(
       database: db,
-      firestoreGateway: gateway,
+      outboxFacade: outboxFacade,
       activeProfileId: profileId,
       activeProfileMode: ProfileMode.adult,
     );

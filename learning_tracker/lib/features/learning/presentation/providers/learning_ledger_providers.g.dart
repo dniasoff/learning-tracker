@@ -59,7 +59,7 @@ final class LearningLedgerRepositoryProvider
 }
 
 String _$learningLedgerRepositoryHash() =>
-    r'996282201999988bab13a66fd80e1675fa9c7f36';
+    r'384875b77890e7fd3f5e5364f075e45dc189a0f8';
 
 /// Provides the manual completion use case.
 

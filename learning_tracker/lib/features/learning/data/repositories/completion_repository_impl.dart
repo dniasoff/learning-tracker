@@ -7,6 +7,7 @@ import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/core/sync/sync_write_facade.dart';
+import 'package:learning_tracker/core/time/ulid.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 import 'package:learning_tracker/features/gamification/domain/models/reward_milestone.dart';
@@ -19,6 +20,7 @@ import 'package:learning_tracker/features/learning/domain/entities/mark_completi
 import 'package:learning_tracker/features/learning/domain/repositories/bookmark_repository.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/completion_repository.dart';
 import 'package:learning_tracker/features/learning/domain/services/completion_detection_service.dart';
+import 'package:learning_tracker/features/sync/data/outbox_sync_write_facade.dart';
 import 'package:learning_tracker/features/tracks/stages/domain/models/stage_definition.dart'
     as stage_model;
 import 'package:learning_tracker/features/tracks/stages/domain/repositories/stage_definition_repository.dart';
@@ -27,6 +29,7 @@ import 'package:learning_tracker/features/tracks/stages/domain/repositories/stag
 class CompletionRepositoryImpl implements CompletionRepository {
   final UserDatabase _database;
   final SyncWriteFacade? _syncEngine;
+  final OutboxSyncWriteFacade? _outboxFacade;
   final ContentRepository _contentRepository;
   final BookmarkRepository? _bookmarkRepository;
   final CompletionDetectionService? _completionDetectionService;
@@ -39,6 +42,7 @@ class CompletionRepositoryImpl implements CompletionRepository {
     required UserDatabase database,
     required SyncWriteFacade? syncEngine,
     required ContentRepository contentRepository,
+    OutboxSyncWriteFacade? outboxFacade,
     BookmarkRepository? bookmarkRepository,
     CompletionDetectionService? completionDetectionService,
     RewardMilestoneService? rewardMilestoneService,
@@ -47,6 +51,7 @@ class CompletionRepositoryImpl implements CompletionRepository {
     StageDefinitionRepository? stageRepository,
   }) : _database = database,
        _syncEngine = syncEngine,
+       _outboxFacade = outboxFacade,
        _contentRepository = contentRepository,
        _bookmarkRepository = bookmarkRepository,
        _completionDetectionService = completionDetectionService,
@@ -693,8 +698,17 @@ class CompletionRepositoryImpl implements CompletionRepository {
     return result.completion;
   }
 
-  /// Append a streak event. Silently ignores the unique-key conflict
-  /// that happens when the same completion is teed twice (idempotent).
+  /// Append a streak event locally and tee it into the outbox for cloud sync.
+  ///
+  /// Silently ignores the unique-key conflict that happens when the same
+  /// completion is teed twice (idempotent).
+  ///
+  /// Phase 1 — streak events used to be local-only on completion; only the
+  /// once-per-upgrade `LocalDataUploadService.pushAllLocalData` shipped them
+  /// to Firestore, so day-to-day streaks never replicated and a second
+  /// device saw a frozen streak. The outbox enqueue closes that gap: the
+  /// payload shape matches `streak_event_codec.dart` and the gateway writes
+  /// to `streak_events/{ulid}`.
   Future<void> _appendStreakEvent({
     required int profileId,
     required DateTime at,
@@ -712,6 +726,21 @@ class CompletionRepositoryImpl implements CompletionRepository {
             ),
             mode: drift.InsertMode.insertOrIgnore,
           );
+
+      // Phase 1 — sync the streak event via the outbox. ULID encodes the
+      // event timestamp so duplicate enqueues across two devices on the same
+      // logical day collapse to one Firestore doc.
+      final facade = _outboxFacade;
+      if (facade != null) {
+        final ulid = newUlid(at);
+        await facade.enqueueStreakPayload({
+          'ulid': ulid,
+          'profile_id': profileId,
+          'event_type': 'completion',
+          'study_date': dayUtc.toIso8601String(),
+          'created_at': at.toIso8601String(),
+        });
+      }
     } catch (_) {
       // Defensive: never let a telemetry tee block the primary write.
     }

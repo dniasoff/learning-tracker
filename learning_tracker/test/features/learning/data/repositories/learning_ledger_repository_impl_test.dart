@@ -1,19 +1,19 @@
 import 'package:drift/drift.dart' show Value;
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
-import 'package:learning_tracker/core/sync/firestore_gateway.dart';
 import 'package:learning_tracker/features/learning/data/repositories/learning_ledger_repository_impl.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/learning_ledger_repository.dart';
+import 'package:learning_tracker/features/sync/data/outbox_sync_write_facade.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:test/test.dart';
 
 import '../../../../helpers/test_database.dart';
 
-class _MockFirestoreGateway extends Mock implements FirestoreGateway {}
+class _MockOutboxFacade extends Mock implements OutboxSyncWriteFacade {}
 
 void main() {
   late UserDatabase db;
-  late _MockFirestoreGateway mockGateway;
+  late _MockOutboxFacade mockOutboxFacade;
 
   setUp(() async {
     db = createTestDatabase();
@@ -44,18 +44,9 @@ void main() {
             activatedAt: Value(DateTime.now().toUtc()),
           ),
         );
-    mockGateway = _MockFirestoreGateway();
+    mockOutboxFacade = _MockOutboxFacade();
     when(
-      () => mockGateway.pushLedgerEntry(
-        profileId: any(named: 'profileId'),
-        data: any(named: 'data'),
-      ),
-    ).thenAnswer((_) async {});
-    when(
-      () => mockGateway.pushLedgerEntriesBatch(
-        profileId: any(named: 'profileId'),
-        entries: any(named: 'entries'),
-      ),
+      () => mockOutboxFacade.enqueueLedgerEntry(any()),
     ).thenAnswer((_) async {});
   });
 
@@ -70,7 +61,7 @@ void main() {
   }) {
     return LearningLedgerRepositoryImpl(
       database: db,
-      firestoreGateway: mockGateway,
+      outboxFacade: mockOutboxFacade,
       activeProfileId: profileId,
       activeProfileMode: profileMode,
       parentPinSessionMatchesActiveProfile: parentPinSessionMatches,
@@ -135,12 +126,9 @@ void main() {
           isManual: false,
         );
 
-        verify(
-          () => mockGateway.pushLedgerEntry(
-            profileId: any(named: 'profileId'),
-            data: any(named: 'data'),
-          ),
-        ).called(1);
+        // The repository routes ledger pushes through the outbox facade now —
+        // verify the enqueue happened exactly once.
+        verify(() => mockOutboxFacade.enqueueLedgerEntry(any())).called(1);
       });
 
       test(
@@ -283,18 +271,9 @@ void main() {
         expect(entries, hasLength(2));
         expect(entries.first.completionNumber, 1);
         expect(entries.last.completionNumber, 1);
-        verifyNever(
-          () => mockGateway.pushLedgerEntry(
-            profileId: any(named: 'profileId'),
-            data: any(named: 'data'),
-          ),
-        );
-        verify(
-          () => mockGateway.pushLedgerEntriesBatch(
-            profileId: any(named: 'profileId'),
-            entries: any(named: 'entries'),
-          ),
-        ).called(1);
+        // The batch path enqueues one outbox row per entry; the legacy
+        // direct-batch gateway call is no longer used.
+        verify(() => mockOutboxFacade.enqueueLedgerEntry(any())).called(2);
       });
     });
 

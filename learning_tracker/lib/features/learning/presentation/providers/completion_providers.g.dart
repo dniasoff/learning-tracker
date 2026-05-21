@@ -59,7 +59,7 @@ final class CompletionRepositoryProvider
 }
 
 String _$completionRepositoryHash() =>
-    r'439997179304c4dd7e7f6a7a7239a2bdbdadd5ca';
+    r'83bd55ac0ad56d397b6a3c47d9bdbbf0b333ee71';
 
 /// Provides the mark completion use case.
 
@@ -112,7 +112,7 @@ final class MarkCompletionUseCaseProvider
 }
 
 String _$markCompletionUseCaseHash() =>
-    r'7c6f7f668bbff279db3e68350d013052584fc534';
+    r'0962174728eb94aac9e9cbb336c3e8510f6b9b0a';
 
 /// Provides the bulk mark completion use case.
 

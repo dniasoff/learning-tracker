@@ -218,6 +218,13 @@ class _ProfileProgramsGateway implements FirestoreGateway {
     required Map<String, dynamic> data,
   }) async {}
 
+  // Phase 1: pushStudyDayConfig added to FirestoreGateway interface.
+  @override
+  Future<void> pushStudyDayConfig({
+    required int profileId,
+    required Map<String, dynamic> data,
+  }) async {}
+
   // W6.13: fetchAuditLogEntries added to FirestoreGateway interface.
   @override
   Future<List<Map<String, dynamic>>> fetchAuditLogEntries({
