@@ -539,25 +539,22 @@ void main() {
       },
     );
 
-    test(
-      'empty ledger → 0 milestones at every level',
-      () async {
-        final container = _container(
-          db: db,
-          activeCurricula: const [CurriculumId.mishnayos],
-          content: {CurriculumId.mishnayos: _mishnayosContent()},
-        );
-        addTearDown(container.dispose);
+    test('empty ledger → 0 milestones at every level', () async {
+      final container = _container(
+        db: db,
+        activeCurricula: const [CurriculumId.mishnayos],
+        content: {CurriculumId.mishnayos: _mishnayosContent()},
+      );
+      addTearDown(container.dispose);
 
-        final vm = await container.read(
-          journeyViewModelProvider(_profileId).future,
-        );
+      final vm = await container.read(
+        journeyViewModelProvider(_profileId).future,
+      );
 
-        expect(vm.unitLevelSiyumimCount, 0);
-        expect(vm.aggregateLevelSiyumimCount, 0);
-        expect(vm.curriculumLevelSiyumimCount, 0);
-      },
-    );
+      expect(vm.unitLevelSiyumimCount, 0);
+      expect(vm.aggregateLevelSiyumimCount, 0);
+      expect(vm.curriculumLevelSiyumimCount, 0);
+    });
   });
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -672,60 +669,57 @@ void main() {
       },
     );
 
-    test(
-      'Mishna Berurah: siman + chelek scopes in ledger',
-      () async {
-        // Seed all 3 simanim within Chelek 1 plus the chelek-level entry.
-        // The provider's milestone detection should:
-        //   - emit 3 unit-level siyumim (one per siman)
-        //   - emit 1 aggregate-level siyum (Chelek 1 — all simanim complete)
-        //   - emit 0 curriculum-level (Chelek 2's siman 4 is missing)
-        final base = DateTime(2026, 5, 1);
-        for (var i = 1; i <= 3; i++) {
-          await _seedLedgerEntry(
-            db,
-            curriculum: CurriculumId.mishnaBerurah,
-            entryScope: 'siman',
-            unitIdentifier: 'Siman $i',
-            at: base.add(Duration(days: i)),
-          );
-        }
+    test('Mishna Berurah: siman + chelek scopes in ledger', () async {
+      // Seed all 3 simanim within Chelek 1 plus the chelek-level entry.
+      // The provider's milestone detection should:
+      //   - emit 3 unit-level siyumim (one per siman)
+      //   - emit 1 aggregate-level siyum (Chelek 1 — all simanim complete)
+      //   - emit 0 curriculum-level (Chelek 2's siman 4 is missing)
+      final base = DateTime(2026, 5, 1);
+      for (var i = 1; i <= 3; i++) {
+        await _seedLedgerEntry(
+          db,
+          curriculum: CurriculumId.mishnaBerurah,
+          entryScope: 'siman',
+          unitIdentifier: 'Siman $i',
+          at: base.add(Duration(days: i)),
+        );
+      }
 
-        final container = _container(
-          db: db,
-          activeCurricula: const [CurriculumId.mishnaBerurah],
-          content: {CurriculumId.mishnaBerurah: _mishnaBerurahContent()},
-        );
-        addTearDown(container.dispose);
+      final container = _container(
+        db: db,
+        activeCurricula: const [CurriculumId.mishnaBerurah],
+        content: {CurriculumId.mishnaBerurah: _mishnaBerurahContent()},
+      );
+      addTearDown(container.dispose);
 
-        final vm = await container.read(
-          journeyViewModelProvider(_profileId).future,
-        );
+      final vm = await container.read(
+        journeyViewModelProvider(_profileId).future,
+      );
 
-        expect(
-          vm.unitLevelSiyumimCount,
-          3,
-          reason:
-              'three simanim in the ledger → three unit-level siyumim. '
-              "Pre-F2 fix, the scope was hardcoded to 'masechta' but the "
-              "whitelist accepts 'siman' too — counter still correct, but "
-              "the scope on the row was wrong (broke the screen's label "
-              'lookup).',
-        );
-        expect(
-          vm.aggregateLevelSiyumimCount,
-          1,
-          reason:
-              'Chelek 1 contains simanim 1, 2, 3 — all complete, so the '
-              'aggregate siyum fires for Chelek 1.',
-        );
-        expect(
-          vm.curriculumLevelSiyumimCount,
-          0,
-          reason: "Chelek 2's Siman 4 is missing",
-        );
-      },
-    );
+      expect(
+        vm.unitLevelSiyumimCount,
+        3,
+        reason:
+            'three simanim in the ledger → three unit-level siyumim. '
+            "Pre-F2 fix, the scope was hardcoded to 'masechta' but the "
+            "whitelist accepts 'siman' too — counter still correct, but "
+            "the scope on the row was wrong (broke the screen's label "
+            'lookup).',
+      );
+      expect(
+        vm.aggregateLevelSiyumimCount,
+        1,
+        reason:
+            'Chelek 1 contains simanim 1, 2, 3 — all complete, so the '
+            'aggregate siyum fires for Chelek 1.',
+      );
+      expect(
+        vm.curriculumLevelSiyumimCount,
+        0,
+        reason: "Chelek 2's Siman 4 is missing",
+      );
+    });
 
     test(
       'Mishna Berurah: only 1 siman complete → 1 unit · 0 aggregate',

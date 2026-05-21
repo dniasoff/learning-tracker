@@ -93,19 +93,21 @@ Future<int> _countImportsForRef(
   UserDatabase db, {
   required String sefariaRef,
 }) async {
-  final rows = await db.customSelect(
-    '''
+  final rows = await db
+      .customSelect(
+        '''
 SELECT COUNT(*) AS n FROM prior_completion_imports
 WHERE profile_id = ?
   AND curriculum_id = ?
   AND sefaria_ref = ?
 ''',
-    variables: [
-      Variable.withInt(_profileId),
-      Variable.withString(_curriculumId),
-      Variable.withString(sefariaRef),
-    ],
-  ).get();
+        variables: [
+          Variable.withInt(_profileId),
+          Variable.withString(_curriculumId),
+          Variable.withString(sefariaRef),
+        ],
+      )
+      .get();
   return rows.first.read<int>('n');
 }
 
@@ -267,16 +269,8 @@ void main() {
 
   group('getCompletionsByTier — baseline (no duplicates)', () {
     test('liveOnly returns events with NO matching import', () async {
-      await _appendCompletionEvent(
-        db,
-        trackId: trackId,
-        sefariaRef: 'A',
-      );
-      await _appendCompletionEvent(
-        db,
-        trackId: trackId,
-        sefariaRef: 'B',
-      );
+      await _appendCompletionEvent(db, trackId: trackId, sefariaRef: 'A');
+      await _appendCompletionEvent(db, trackId: trackId, sefariaRef: 'B');
       // B is bulk-in-track — should be excluded from liveOnly.
       await _forceInsertDuplicateImport(
         db,
@@ -291,41 +285,43 @@ void main() {
       expect(live.map((c) => c.sefariaRef).toList(), ['A']);
     });
 
-    test('trackAchievement includes live + bulkInTrack, excludes lifetimeOnly',
-        () async {
-      await _appendCompletionEvent(
-        db,
-        trackId: trackId,
-        sefariaRef: 'live_x',
-      );
-      await _appendCompletionEvent(
-        db,
-        trackId: trackId,
-        sefariaRef: 'bulk_y',
-      );
-      await _appendCompletionEvent(
-        db,
-        trackId: trackId,
-        sefariaRef: 'lifetime_z',
-      );
-      await _forceInsertDuplicateImport(
-        db,
-        sefariaRef: 'bulk_y',
-        source: 'bulkInTrack',
-      );
-      await _forceInsertDuplicateImport(
-        db,
-        sefariaRef: 'lifetime_z',
-        source: 'lifetimeOnly',
-      );
+    test(
+      'trackAchievement includes live + bulkInTrack, excludes lifetimeOnly',
+      () async {
+        await _appendCompletionEvent(
+          db,
+          trackId: trackId,
+          sefariaRef: 'live_x',
+        );
+        await _appendCompletionEvent(
+          db,
+          trackId: trackId,
+          sefariaRef: 'bulk_y',
+        );
+        await _appendCompletionEvent(
+          db,
+          trackId: trackId,
+          sefariaRef: 'lifetime_z',
+        );
+        await _forceInsertDuplicateImport(
+          db,
+          sefariaRef: 'bulk_y',
+          source: 'bulkInTrack',
+        );
+        await _forceInsertDuplicateImport(
+          db,
+          sefariaRef: 'lifetime_z',
+          source: 'lifetimeOnly',
+        );
 
-      final achievement = await db.completionDao.getCompletionsByTier(
-        profileId: _profileId,
-        tier: CompletionTierFilter.trackAchievement,
-      );
-      final refs = achievement.map((c) => c.sefariaRef).toSet();
-      expect(refs, {'live_x', 'bulk_y'});
-      expect(refs.contains('lifetime_z'), isFalse);
-    });
+        final achievement = await db.completionDao.getCompletionsByTier(
+          profileId: _profileId,
+          tier: CompletionTierFilter.trackAchievement,
+        );
+        final refs = achievement.map((c) => c.sefariaRef).toSet();
+        expect(refs, {'live_x', 'bulk_y'});
+        expect(refs.contains('lifetime_z'), isFalse);
+      },
+    );
   });
 }

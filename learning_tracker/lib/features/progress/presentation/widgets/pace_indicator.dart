@@ -13,11 +13,7 @@ import 'package:learning_tracker/l10n/app_localizations.dart';
 /// badge — used by the Curriculum Progress screen to clarify that pace only
 /// reflects live (engagement-tier) learning, not bulk-mark / lifetime imports.
 class PaceIndicator extends StatelessWidget {
-  const PaceIndicator({
-    super.key,
-    required this.pace,
-    this.subtitleCaption,
-  });
+  const PaceIndicator({super.key, required this.pace, this.subtitleCaption});
 
   final PaceCalculator pace;
   final String? subtitleCaption;

@@ -83,9 +83,7 @@ class ProgressScreen extends ConsumerWidget {
                   // compose — also re-fetch on pull-to-refresh. Lens
                   // providers participate by `ref.watch`ing the tick (see
                   // progress_lens_refresh_tick_provider.dart).
-                  ref
-                      .read(progressLensRefreshTickProvider.notifier)
-                      .bump();
+                  ref.read(progressLensRefreshTickProvider.notifier).bump();
 
                   // Direct invalidation of hub-owned providers — kept as a
                   // safety net so the refresh remains effective even before

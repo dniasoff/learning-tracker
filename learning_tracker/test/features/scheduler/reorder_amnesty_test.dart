@@ -48,12 +48,12 @@ ContentItem _makeItem(String ref, {int sortOrder = 0}) {
 }
 
 LearningOrderItem _orderItem(String ref, int order) => LearningOrderItem(
-      sefariaRef: ref,
-      displayNameHe: '$ref-he',
-      displayNameEn: '$ref-en',
-      userSortOrder: order,
-      isCustomOrdered: true,
-    );
+  sefariaRef: ref,
+  displayNameHe: '$ref-he',
+  displayNameEn: '$ref-en',
+  userSortOrder: order,
+  isCustomOrdered: true,
+);
 
 /// Minimal selfPacedSchedule helper: assigns one unit per day starting from
 /// [anchor] for each ref in [orderedRefs].
@@ -110,33 +110,32 @@ void main() {
   // ────────────────────────────────────────────────────────────────────────────
 
   group('Scenario A — reorder stamps lastReorderAt', () {
-    test(
-      'stampReorderAt updates lastReorderAt on the track row',
-      () async {
-        // Arrange: create a track row
-        final before = DateTime.utc(2026, 1, 1);
-        final trackId = await db.into(db.curriculumTracks).insert(
-          CurriculumTracksCompanion.insert(
-            profileId: 1,
-            curriculumId: 'mishnayos',
-            stateChangedAt: before,
-            activatedAt: before,
-          ),
-        );
+    test('stampReorderAt updates lastReorderAt on the track row', () async {
+      // Arrange: create a track row
+      final before = DateTime.utc(2026, 1, 1);
+      final trackId = await db
+          .into(db.curriculumTracks)
+          .insert(
+            CurriculumTracksCompanion.insert(
+              profileId: 1,
+              curriculumId: 'mishnayos',
+              stateChangedAt: before,
+              activatedAt: before,
+            ),
+          );
 
-        // Act: stamp reorder
-        final reorderTs = DateTime.utc(2026, 5, 20, 10, 0, 0);
-        await db.trackDao.stampReorderAt(trackId, at: reorderTs);
+      // Act: stamp reorder
+      final reorderTs = DateTime.utc(2026, 5, 20, 10, 0, 0);
+      await db.trackDao.stampReorderAt(trackId, at: reorderTs);
 
-        // Assert: compare via epoch ms to avoid UTC/local offset mismatch
-        final track = await db.trackDao.getTrackById(trackId);
-        expect(track, isNotNull);
-        expect(
-          track!.lastReorderAt?.millisecondsSinceEpoch,
-          equals(reorderTs.millisecondsSinceEpoch),
-        );
-      },
-    );
+      // Assert: compare via epoch ms to avoid UTC/local offset mismatch
+      final track = await db.trackDao.getTrackById(trackId);
+      expect(track, isNotNull);
+      expect(
+        track!.lastReorderAt?.millisecondsSinceEpoch,
+        equals(reorderTs.millisecondsSinceEpoch),
+      );
+    });
 
     test(
       'projection amnesty: overdue items scheduled before lastReorderAt are filtered',
@@ -246,77 +245,74 @@ void main() {
       },
     );
 
-    test(
-      'saveOrder stamps lastReorderAt on the active track',
-      () async {
-        // Arrange: activate a track for profile 1
-        final activatedAt = DateTime.utc(2026, 1, 1);
-        final trackId = await db.into(db.curriculumTracks).insert(
-          CurriculumTracksCompanion.insert(
-            profileId: 1,
-            curriculumId: 'mishnayos',
-            stateChangedAt: activatedAt,
-            activatedAt: activatedAt,
-          ),
-        );
-        expect(trackId, isPositive);
+    test('saveOrder stamps lastReorderAt on the active track', () async {
+      // Arrange: activate a track for profile 1
+      final activatedAt = DateTime.utc(2026, 1, 1);
+      final trackId = await db
+          .into(db.curriculumTracks)
+          .insert(
+            CurriculumTracksCompanion.insert(
+              profileId: 1,
+              curriculumId: 'mishnayos',
+              stateChangedAt: activatedAt,
+              activatedAt: activatedAt,
+            ),
+          );
+      expect(trackId, isPositive);
 
-        final repo = LearningOrderRepositoryImpl(
-          database: db,
-          contentRepository: mockContent,
-          profileId: 1,
-        );
+      final repo = LearningOrderRepositoryImpl(
+        database: db,
+        contentRepository: mockContent,
+        profileId: 1,
+      );
 
-        // Act: save a custom order
-        await repo.saveOrder(CurriculumId.mishnayos, [
-          _orderItem('Berakhot', 0),
-          _orderItem('Peah', 1),
-          _orderItem('Shabbat', 2),
-        ]);
+      // Act: save a custom order
+      await repo.saveOrder(CurriculumId.mishnayos, [
+        _orderItem('Berakhot', 0),
+        _orderItem('Peah', 1),
+        _orderItem('Shabbat', 2),
+      ]);
 
-        // Assert: lastReorderAt is now set to a recent timestamp
-        final track = await db.trackDao.getTrackById(trackId);
-        expect(track, isNotNull);
-        expect(track!.lastReorderAt, isNotNull);
-        // Should be recent (within 10 seconds of now)
-        final diff =
-            DateTimeFactory.nowUtc()
-                .difference(track.lastReorderAt!)
-                .abs()
-                .inSeconds;
-        expect(diff, lessThan(10));
-      },
-    );
+      // Assert: lastReorderAt is now set to a recent timestamp
+      final track = await db.trackDao.getTrackById(trackId);
+      expect(track, isNotNull);
+      expect(track!.lastReorderAt, isNotNull);
+      // Should be recent (within 10 seconds of now)
+      final diff = DateTimeFactory.nowUtc()
+          .difference(track.lastReorderAt!)
+          .abs()
+          .inSeconds;
+      expect(diff, lessThan(10));
+    });
 
-    test(
-      'resetToDefault stamps lastReorderAt on the active track',
-      () async {
-        // Arrange: activate a track
-        final activatedAt = DateTime.utc(2026, 1, 1);
-        final trackId = await db.into(db.curriculumTracks).insert(
-          CurriculumTracksCompanion.insert(
-            profileId: 1,
-            curriculumId: 'mishnayos',
-            stateChangedAt: activatedAt,
-            activatedAt: activatedAt,
-          ),
-        );
+    test('resetToDefault stamps lastReorderAt on the active track', () async {
+      // Arrange: activate a track
+      final activatedAt = DateTime.utc(2026, 1, 1);
+      final trackId = await db
+          .into(db.curriculumTracks)
+          .insert(
+            CurriculumTracksCompanion.insert(
+              profileId: 1,
+              curriculumId: 'mishnayos',
+              stateChangedAt: activatedAt,
+              activatedAt: activatedAt,
+            ),
+          );
 
-        final repo = LearningOrderRepositoryImpl(
-          database: db,
-          contentRepository: mockContent,
-          profileId: 1,
-        );
+      final repo = LearningOrderRepositoryImpl(
+        database: db,
+        contentRepository: mockContent,
+        profileId: 1,
+      );
 
-        // Act: reset to default
-        await repo.resetToDefault(CurriculumId.mishnayos);
+      // Act: reset to default
+      await repo.resetToDefault(CurriculumId.mishnayos);
 
-        // Assert: lastReorderAt is now set
-        final track = await db.trackDao.getTrackById(trackId);
-        expect(track, isNotNull);
-        expect(track!.lastReorderAt, isNotNull);
-      },
-    );
+      // Assert: lastReorderAt is now set
+      final track = await db.trackDao.getTrackById(trackId);
+      expect(track, isNotNull);
+      expect(track!.lastReorderAt, isNotNull);
+    });
   });
 
   // ────────────────────────────────────────────────────────────────────────────
@@ -324,43 +320,42 @@ void main() {
   // ────────────────────────────────────────────────────────────────────────────
 
   group('Scenario B — pace change does NOT stamp lastReorderAt', () {
-    test(
-      'resetPace does not change lastReorderAt',
-      () async {
-        // Arrange: create a track with a known lastReorderAt (epoch ms)
-        const knownReorderMs = 1_742_000_000_000; // some fixed ms
-        final knownReorderAt = DateTime.fromMillisecondsSinceEpoch(
-          knownReorderMs,
-          isUtc: true,
-        );
-        final trackId = await db.into(db.curriculumTracks).insert(
-          CurriculumTracksCompanion.insert(
-            profileId: 1,
-            curriculumId: 'mishnayos',
-            stateChangedAt: knownReorderAt,
-            activatedAt: knownReorderAt,
-            lastReorderAt: Value(knownReorderAt),
-          ),
-        );
+    test('resetPace does not change lastReorderAt', () async {
+      // Arrange: create a track with a known lastReorderAt (epoch ms)
+      const knownReorderMs = 1_742_000_000_000; // some fixed ms
+      final knownReorderAt = DateTime.fromMillisecondsSinceEpoch(
+        knownReorderMs,
+        isUtc: true,
+      );
+      final trackId = await db
+          .into(db.curriculumTracks)
+          .insert(
+            CurriculumTracksCompanion.insert(
+              profileId: 1,
+              curriculumId: 'mishnayos',
+              stateChangedAt: knownReorderAt,
+              activatedAt: knownReorderAt,
+              lastReorderAt: Value(knownReorderAt),
+            ),
+          );
 
-        // Act: reset pace (simulates a pace-change operation)
-        await db.trackDao.resetPace(trackId);
+      // Act: reset pace (simulates a pace-change operation)
+      await db.trackDao.resetPace(trackId);
 
-        // Assert: lastReorderAt milliseconds are unchanged
-        final track = await db.trackDao.getTrackById(trackId);
-        expect(track, isNotNull);
-        expect(
-          track!.lastReorderAt!.millisecondsSinceEpoch,
-          equals(knownReorderMs),
-          reason:
-              'resetPace must not modify lastReorderAt — '
-              'pace changes do not trigger amnesty',
-        );
+      // Assert: lastReorderAt milliseconds are unchanged
+      final track = await db.trackDao.getTrackById(trackId);
+      expect(track, isNotNull);
+      expect(
+        track!.lastReorderAt!.millisecondsSinceEpoch,
+        equals(knownReorderMs),
+        reason:
+            'resetPace must not modify lastReorderAt — '
+            'pace changes do not trigger amnesty',
+      );
 
-        // paceResetDate is set, but lastReorderAt is the same
-        expect(track.paceResetDate, isNotNull);
-      },
-    );
+      // paceResetDate is set, but lastReorderAt is the same
+      expect(track.paceResetDate, isNotNull);
+    });
 
     test(
       'updating stateChangedAt (not a reorder) does not change lastReorderAt',
@@ -371,20 +366,22 @@ void main() {
           knownReorderMs,
           isUtc: true,
         );
-        final trackId = await db.into(db.curriculumTracks).insert(
-          CurriculumTracksCompanion.insert(
-            profileId: 1,
-            curriculumId: 'mishnayos',
-            stateChangedAt: knownReorderAt,
-            activatedAt: knownReorderAt,
-            lastReorderAt: Value(knownReorderAt),
-          ),
-        );
+        final trackId = await db
+            .into(db.curriculumTracks)
+            .insert(
+              CurriculumTracksCompanion.insert(
+                profileId: 1,
+                curriculumId: 'mishnayos',
+                stateChangedAt: knownReorderAt,
+                activatedAt: knownReorderAt,
+                lastReorderAt: Value(knownReorderAt),
+              ),
+            );
 
         // Simulate a non-reorder write (e.g. state change)
-        await (db.update(db.curriculumTracks)
-              ..where((t) => t.id.equals(trackId)))
-            .write(
+        await (db.update(
+          db.curriculumTracks,
+        )..where((t) => t.id.equals(trackId))).write(
           CurriculumTracksCompanion(
             stateChangedAt: Value(DateTime.utc(2026, 5, 1)),
           ),
@@ -405,54 +402,53 @@ void main() {
   // ────────────────────────────────────────────────────────────────────────────
 
   group('Scenario C — learning_order_version guard', () {
-    test(
-      'getOrder: version mismatch stamps lastReorderAt (amnesty)',
-      () async {
-        // Arrange: a track exists with no prior lastReorderAt
-        final activatedAt = DateTime.utc(2026, 1, 1);
-        final trackId = await db.into(db.curriculumTracks).insert(
-          CurriculumTracksCompanion.insert(
-            profileId: 1,
-            curriculumId: 'mishnayos',
-            stateChangedAt: activatedAt,
-            activatedAt: activatedAt,
-          ),
-        );
+    test('getOrder: version mismatch stamps lastReorderAt (amnesty)', () async {
+      // Arrange: a track exists with no prior lastReorderAt
+      final activatedAt = DateTime.utc(2026, 1, 1);
+      final trackId = await db
+          .into(db.curriculumTracks)
+          .insert(
+            CurriculumTracksCompanion.insert(
+              profileId: 1,
+              curriculumId: 'mishnayos',
+              stateChangedAt: activatedAt,
+              activatedAt: activatedAt,
+            ),
+          );
 
-        // Insert a learning_order row with version = 1
-        await db.learningOrderDao.upsertLearningOrder(
-          LearningOrderCompanion.insert(
-            profileId: 1,
-            curriculumId: 'mishnayos',
-            sefariaRef: 'Berakhot',
-            userSortOrder: 0,
-            learningOrderVersion: const Value(1),
-          ),
-        );
-
-        // Repo is initialised with currentContentVersion = 2 (simulates reseed)
-        final repo = LearningOrderRepositoryImpl(
-          database: db,
-          contentRepository: mockContent,
+      // Insert a learning_order row with version = 1
+      await db.learningOrderDao.upsertLearningOrder(
+        LearningOrderCompanion.insert(
           profileId: 1,
-          currentContentVersion: 2,
-        );
+          curriculumId: 'mishnayos',
+          sefariaRef: 'Berakhot',
+          userSortOrder: 0,
+          learningOrderVersion: const Value(1),
+        ),
+      );
 
-        // Act: getOrder — version mismatch should trigger re-amnesty
-        await repo.getOrder(CurriculumId.mishnayos);
+      // Repo is initialised with currentContentVersion = 2 (simulates reseed)
+      final repo = LearningOrderRepositoryImpl(
+        database: db,
+        contentRepository: mockContent,
+        profileId: 1,
+        currentContentVersion: 2,
+      );
 
-        // Assert: lastReorderAt is now stamped
-        final track = await db.trackDao.getTrackById(trackId);
-        expect(track, isNotNull);
-        expect(
-          track!.lastReorderAt,
-          isNotNull,
-          reason:
-              'learning_order_version mismatch must trigger '
-              'stampReorderAt on the active track',
-        );
-      },
-    );
+      // Act: getOrder — version mismatch should trigger re-amnesty
+      await repo.getOrder(CurriculumId.mishnayos);
+
+      // Assert: lastReorderAt is now stamped
+      final track = await db.trackDao.getTrackById(trackId);
+      expect(track, isNotNull);
+      expect(
+        track!.lastReorderAt,
+        isNotNull,
+        reason:
+            'learning_order_version mismatch must trigger '
+            'stampReorderAt on the active track',
+      );
+    });
 
     test(
       'getOrder: no version mismatch → lastReorderAt is NOT changed',
@@ -463,15 +459,17 @@ void main() {
           knownReorderMs,
           isUtc: true,
         );
-        final trackId = await db.into(db.curriculumTracks).insert(
-          CurriculumTracksCompanion.insert(
-            profileId: 1,
-            curriculumId: 'mishnayos',
-            stateChangedAt: knownReorderAt,
-            activatedAt: knownReorderAt,
-            lastReorderAt: Value(knownReorderAt),
-          ),
-        );
+        final trackId = await db
+            .into(db.curriculumTracks)
+            .insert(
+              CurriculumTracksCompanion.insert(
+                profileId: 1,
+                curriculumId: 'mishnayos',
+                stateChangedAt: knownReorderAt,
+                activatedAt: knownReorderAt,
+                lastReorderAt: Value(knownReorderAt),
+              ),
+            );
 
         // Insert a learning_order row with version = 5 (matching content version)
         await db.learningOrderDao.upsertLearningOrder(
@@ -504,37 +502,35 @@ void main() {
       },
     );
 
-    test(
-      'saveOrder stamps saved version onto learning_order rows',
-      () async {
-        // Arrange
-        await db.into(db.curriculumTracks).insert(
-          CurriculumTracksCompanion.insert(
-            profileId: 1,
-            curriculumId: 'mishnayos',
-            stateChangedAt: DateTime.utc(2026, 1, 1),
-            activatedAt: DateTime.utc(2026, 1, 1),
-          ),
-        );
+    test('saveOrder stamps saved version onto learning_order rows', () async {
+      // Arrange
+      await db
+          .into(db.curriculumTracks)
+          .insert(
+            CurriculumTracksCompanion.insert(
+              profileId: 1,
+              curriculumId: 'mishnayos',
+              stateChangedAt: DateTime.utc(2026, 1, 1),
+              activatedAt: DateTime.utc(2026, 1, 1),
+            ),
+          );
 
-        final repo = LearningOrderRepositoryImpl(
-          database: db,
-          contentRepository: mockContent,
-          profileId: 1,
-          currentContentVersion: 7,
-        );
+      final repo = LearningOrderRepositoryImpl(
+        database: db,
+        contentRepository: mockContent,
+        profileId: 1,
+        currentContentVersion: 7,
+      );
 
-        // Act
-        await repo.saveOrder(CurriculumId.mishnayos, [
-          _orderItem('Berakhot', 0),
-        ]);
+      // Act
+      await repo.saveOrder(CurriculumId.mishnayos, [_orderItem('Berakhot', 0)]);
 
-        // Assert: the saved row carries version 7
-        final rows =
-            await db.learningOrderDao.getLearningOrderByCurriculum('mishnayos');
-        expect(rows, hasLength(1));
-        expect(rows.first.learningOrderVersion, equals(7));
-      },
-    );
+      // Assert: the saved row carries version 7
+      final rows = await db.learningOrderDao.getLearningOrderByCurriculum(
+        'mishnayos',
+      );
+      expect(rows, hasLength(1));
+      expect(rows.first.learningOrderVersion, equals(7));
+    });
   });
 }

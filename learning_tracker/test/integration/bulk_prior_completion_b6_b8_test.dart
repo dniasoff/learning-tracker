@@ -326,76 +326,80 @@ void main() {
       expect(stagesByRef['ref_b'], containsAll([1, 2, 3]));
     });
 
-    test('AC3: all seeded stages receive completion_events — '
-        '(note: supersededAt column dropped in W3.29; all 3 stages are active)',
-        () async {
-      // W3.29 dropped `supersededAt`. The helper still inserts 3 stages (2
-      // "active" + 1 formerly "superseded"), but since the column is gone there
-      // is no way to mark a stage as superseded at the DB level. The edit-track
-      // flow now deletes-and-recreates stages instead of superseding them.
-      // Therefore `_allStageOrders` returns all 3 stages and the service writes
-      // 3 completions — the "only 2 active" expectation was outdated.
-      await _seedStagesWithSuperseded(
-        db,
-        profileId: profileId,
-        trackId: trackId,
-        count: 2,
-      );
+    test(
+      'AC3: all seeded stages receive completion_events — '
+      '(note: supersededAt column dropped in W3.29; all 3 stages are active)',
+      () async {
+        // W3.29 dropped `supersededAt`. The helper still inserts 3 stages (2
+        // "active" + 1 formerly "superseded"), but since the column is gone there
+        // is no way to mark a stage as superseded at the DB level. The edit-track
+        // flow now deletes-and-recreates stages instead of superseding them.
+        // Therefore `_allStageOrders` returns all 3 stages and the service writes
+        // 3 completions — the "only 2 active" expectation was outdated.
+        await _seedStagesWithSuperseded(
+          db,
+          profileId: profileId,
+          trackId: trackId,
+          count: 2,
+        );
 
-      final items = [_leaf('ref_m1', 0)];
-      final bookmarkRepo = MockBookmarkRepository();
-      when(
-        () => bookmarkRepo.setBookmark(
-          curriculumId: any(named: 'curriculumId'),
-          trackType: any(named: 'trackType'),
-          sefariaRef: any(named: 'sefariaRef'),
-        ),
-      ).thenAnswer((_) async => _fakeBookmark());
+        final items = [_leaf('ref_m1', 0)];
+        final bookmarkRepo = MockBookmarkRepository();
+        when(
+          () => bookmarkRepo.setBookmark(
+            curriculumId: any(named: 'curriculumId'),
+            trackType: any(named: 'trackType'),
+            sefariaRef: any(named: 'sefariaRef'),
+          ),
+        ).thenAnswer((_) async => _fakeBookmark());
 
-      final completionRepo = CompletionRepositoryImpl(
-        database: db,
-        syncEngine: null,
-        contentRepository: _StubContentRepository([...items]),
-        activeProfileId: profileId,
-      );
-      final stageRepo = StageDefinitionRepositoryImpl(
-        stageDao: db.stageDao,
-        completionDao: db.completionDao,
-        pushSettings: null,
-      );
-      final service = BulkPriorCompletionService(
-        contentRepository: _StubContentRepository([...items]),
-        completionRepository: completionRepo,
-        bookmarkRepository: bookmarkRepo,
-        database: db,
-        syncEngine: null,
-        stageRepository: stageRepo,
-      );
+        final completionRepo = CompletionRepositoryImpl(
+          database: db,
+          syncEngine: null,
+          contentRepository: _StubContentRepository([...items]),
+          activeProfileId: profileId,
+        );
+        final stageRepo = StageDefinitionRepositoryImpl(
+          stageDao: db.stageDao,
+          completionDao: db.completionDao,
+          pushSettings: null,
+        );
+        final service = BulkPriorCompletionService(
+          contentRepository: _StubContentRepository([...items]),
+          completionRepository: completionRepo,
+          bookmarkRepository: bookmarkRepo,
+          database: db,
+          syncEngine: null,
+          stageRepository: stageRepo,
+        );
 
-      final result = await service.execute(
-        curriculumId: CurriculumId.mishnayos,
-        resolvedItems: items,
-        stageIds: [1],
-        profileId: profileId,
-      );
+        final result = await service.execute(
+          curriculumId: CurriculumId.mishnayos,
+          resolvedItems: items,
+          stageIds: [1],
+          profileId: profileId,
+        );
 
-      // 1 item × 3 stages = 3 completions (all stages; supersededAt removed).
-      expect(
-        result.completionCount,
-        3,
-        reason:
-            'W3.29: supersededAt dropped — all 3 seeded stages are active and '
-            'must produce completions',
-      );
+        // 1 item × 3 stages = 3 completions (all stages; supersededAt removed).
+        expect(
+          result.completionCount,
+          3,
+          reason:
+              'W3.29: supersededAt dropped — all 3 seeded stages are active and '
+              'must produce completions',
+        );
 
-      final events = await db.completionDao.getCompletionsByProfile(profileId);
-      final stageIds = events.map((e) => e.stageId).toSet();
-      expect(
-        stageIds,
-        equals({1, 2, 3}),
-        reason: 'All 3 stageOrders must appear (no superseded filtering)',
-      );
-    });
+        final events = await db.completionDao.getCompletionsByProfile(
+          profileId,
+        );
+        final stageIds = events.map((e) => e.stageId).toSet();
+        expect(
+          stageIds,
+          equals({1, 2, 3}),
+          reason: 'All 3 stageOrders must appear (no superseded filtering)',
+        );
+      },
+    );
 
     test('AC2: completion_events for all stages carry the sentinel timestamp '
         '(DateTime.utc(2000, 1, 1)) — not today', () async {

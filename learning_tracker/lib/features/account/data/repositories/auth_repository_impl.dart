@@ -148,10 +148,12 @@ class AuthRepositoryImpl implements AuthRepository {
   // ── Action-code operations ─────────────────────────────────────────────────
 
   @override
-  Future<void> checkActionCode(String oobCode) => _auth.checkActionCode(oobCode);
+  Future<void> checkActionCode(String oobCode) =>
+      _auth.checkActionCode(oobCode);
 
   @override
-  Future<void> applyActionCode(String oobCode) => _auth.applyActionCode(oobCode);
+  Future<void> applyActionCode(String oobCode) =>
+      _auth.applyActionCode(oobCode);
 
   // ── Firebase low-level pass-throughs ──────────────────────────────────────
 
@@ -165,10 +167,7 @@ class AuthRepositoryImpl implements AuthRepository {
 
   @override
   Future<AppUser?> signInAndGetUser(String email, String password) async {
-    final user = await _auth.signInAndGetUser(
-      email: email,
-      password: password,
-    );
+    final user = await _auth.signInAndGetUser(email: email, password: password);
     return _toAppUserOrNull(user);
   }
 

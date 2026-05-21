@@ -134,8 +134,7 @@ class TrackInfoCard extends ConsumerWidget {
     if (goal.goalType == 'deadline') {
       if (paceCalc == null ||
           paceCalc.requiredVelocity == 0 ||
-          (goal.targetDate != null &&
-              goal.targetDate!.isBefore(today))) {
+          (goal.targetDate != null && goal.targetDate!.isBefore(today))) {
         return '—';
       }
       return '${paceCalc.requiredVelocity.toStringAsFixed(1)} '

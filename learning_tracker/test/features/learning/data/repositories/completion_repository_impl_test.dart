@@ -37,16 +37,18 @@ void main() {
 
     final now = DateTime.now();
     // Seed account row first — learner_profiles.account_id is a FK.
-    await database.into(database.accounts).insert(
-      AccountsCompanion.insert(
-        email: 'test@example.com',
-        tier: 'localBorn',
-        displayName: 'Test Account',
-        userMode: 'adult',
-        createdAt: now,
-        updatedAt: now,
-      ),
-    );
+    await database
+        .into(database.accounts)
+        .insert(
+          AccountsCompanion.insert(
+            email: 'test@example.com',
+            tier: 'localBorn',
+            displayName: 'Test Account',
+            userMode: 'adult',
+            createdAt: now,
+            updatedAt: now,
+          ),
+        );
     final profileRow = await database
         .into(database.learnerProfiles)
         .insertReturning(

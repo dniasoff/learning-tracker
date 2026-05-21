@@ -19,5 +19,4 @@ enum TrackType {
       orElse: () => throw ArgumentError('Invalid TrackType key: $key'),
     );
   }
-
 }

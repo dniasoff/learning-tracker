@@ -137,34 +137,31 @@ void main() {
         expect(updated.totalUniqueUnits, 3);
       });
 
-      test(
-        'all three counters can be updated in a single copyWith call',
-        () {
-          final updated = baseline.copyWith(
-            unitLevelSiyumimCount: 10,
-            aggregateLevelSiyumimCount: 20,
-            curriculumLevelSiyumimCount: 30,
-          );
-          expect(updated.unitLevelSiyumimCount, 10);
-          expect(updated.aggregateLevelSiyumimCount, 20);
-          expect(updated.curriculumLevelSiyumimCount, 30);
-          // Equality with the freezed-generated == catches any silent field
-          // mix-up that the individual getters might miss.
-          expect(
-            updated,
-            equals(
-              const JourneyViewModel(
-                curricula: [],
-                totalCompletions: 5,
-                totalUniqueUnits: 3,
-                unitLevelSiyumimCount: 10,
-                aggregateLevelSiyumimCount: 20,
-                curriculumLevelSiyumimCount: 30,
-              ),
+      test('all three counters can be updated in a single copyWith call', () {
+        final updated = baseline.copyWith(
+          unitLevelSiyumimCount: 10,
+          aggregateLevelSiyumimCount: 20,
+          curriculumLevelSiyumimCount: 30,
+        );
+        expect(updated.unitLevelSiyumimCount, 10);
+        expect(updated.aggregateLevelSiyumimCount, 20);
+        expect(updated.curriculumLevelSiyumimCount, 30);
+        // Equality with the freezed-generated == catches any silent field
+        // mix-up that the individual getters might miss.
+        expect(
+          updated,
+          equals(
+            const JourneyViewModel(
+              curricula: [],
+              totalCompletions: 5,
+              totalUniqueUnits: 3,
+              unitLevelSiyumimCount: 10,
+              aggregateLevelSiyumimCount: 20,
+              curriculumLevelSiyumimCount: 30,
             ),
-          );
-        },
-      );
+          ),
+        );
+      });
     });
   });
 

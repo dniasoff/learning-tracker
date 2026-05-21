@@ -183,9 +183,8 @@ class CompletionDetectionService {
     // `stageOrder == 1`, take the lowest-ordered stage we have.
     final limudStage = stages.firstWhere(
       (s) => s.stageOrder == 1,
-      orElse: () => stages.reduce(
-        (a, b) => a.stageOrder < b.stageOrder ? a : b,
-      ),
+      orElse: () =>
+          stages.reduce((a, b) => a.stageOrder < b.stageOrder ? a : b),
     );
     // Completion rows in the live codebase write `stageId` as EITHER the
     // stage_definitions.id (autoincrement FK) OR the stageOrder (1, 2, 3…).

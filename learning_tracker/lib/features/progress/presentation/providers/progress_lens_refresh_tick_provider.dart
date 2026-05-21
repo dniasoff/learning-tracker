@@ -77,6 +77,4 @@ class ProgressLensRefreshTick extends Notifier<int> {
 /// }
 /// ```
 final progressLensRefreshTickProvider =
-    NotifierProvider<ProgressLensRefreshTick, int>(
-      ProgressLensRefreshTick.new,
-    );
+    NotifierProvider<ProgressLensRefreshTick, int>(ProgressLensRefreshTick.new);

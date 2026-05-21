@@ -140,8 +140,7 @@ void main() {
           expect(
             indexes,
             contains('completion_events_natural_key'),
-            reason:
-                'AR4 UNIQUE natural-key index missing on completion_events',
+            reason: 'AR4 UNIQUE natural-key index missing on completion_events',
           );
 
           final master = await db
@@ -225,10 +224,7 @@ void main() {
             'SELECT * FROM completion_events '
             'WHERE profile_id = ? AND curriculum_id = ? '
             'ORDER BY event_timestamp DESC',
-            variables: [
-              Variable.withInt(1),
-              Variable.withString('shas-bavli'),
-            ],
+            variables: [Variable.withInt(1), Variable.withString('shas-bavli')],
           );
           // The UNIQUE index on completion_events covers profile_id + sefaria_ref
           // + stage_id + track_type + curriculum_id. A query filtering on
@@ -242,8 +238,7 @@ void main() {
           expect(
             usesAnyIndex,
             isTrue,
-            reason:
-                'EXPLAIN should report SEARCH or USING INDEX — got: $plan',
+            reason: 'EXPLAIN should report SEARCH or USING INDEX — got: $plan',
           );
         },
       );
@@ -1664,9 +1659,7 @@ void main() {
           // is sufficient to confirm the constructor signature has been migrated.
           // W1.4 moved the canonical file to lib/app/restore/; the
           // lib/features/sync/domain/services/ path is a re-export.
-          final file = File(
-            'lib/app/restore/device_restore_service.dart',
-          );
+          final file = File('lib/app/restore/device_restore_service.dart');
           expect(file.existsSync(), isTrue);
 
           final src = file.readAsStringSync();

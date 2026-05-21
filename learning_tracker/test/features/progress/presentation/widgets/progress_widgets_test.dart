@@ -83,11 +83,7 @@ void main() {
       // elapsed=10, requiredVelocity=2/day, expected=20, live=0 → variance=-20
       // paceVarianceInDays = -20/2 = -10 → behind by 10 days
       await tester.pumpWidget(
-        _wrap(
-          PaceIndicator(
-            pace: makePace(elapsedDays: 10, liveProgress: 0),
-          ),
-        ),
+        _wrap(PaceIndicator(pace: makePace(elapsedDays: 10, liveProgress: 0))),
       );
       await tester.pumpAndSettle();
 
@@ -98,11 +94,7 @@ void main() {
     testWidgets('shows on-track status', (tester) async {
       // elapsed=10, requiredVelocity=2/day, expected=20, live=20 → variance=0 → onTrack
       await tester.pumpWidget(
-        _wrap(
-          PaceIndicator(
-            pace: makePace(elapsedDays: 10, liveProgress: 20),
-          ),
-        ),
+        _wrap(PaceIndicator(pace: makePace(elapsedDays: 10, liveProgress: 20))),
       );
       await tester.pumpAndSettle();
 
@@ -114,11 +106,7 @@ void main() {
       // elapsed=10, requiredVelocity=2/day, expected=20, live=40
       // paceVariance=20, paceVarianceInDays=20/2=10 → ahead by 10 days
       await tester.pumpWidget(
-        _wrap(
-          PaceIndicator(
-            pace: makePace(elapsedDays: 10, liveProgress: 40),
-          ),
-        ),
+        _wrap(PaceIndicator(pace: makePace(elapsedDays: 10, liveProgress: 40))),
       );
       await tester.pumpAndSettle();
 
@@ -182,59 +170,53 @@ void main() {
   });
 
   group('HierarchyProgressCard', () {
-    testWidgets(
-      'single-stage track shows subtitle without chazaros suffix',
-      (tester) async {
-        // Rule 8: chazara entries are those AFTER the first stage. When only
-        // the learn stage exists, the chazaros suffix is omitted entirely.
-        const level = HierarchyLevelProgress(
-          levelName: 'Seder Zeraim',
-          levelLabel: 'Seder',
-          totalItems: 10,
-          completedItems: 5,
-          stageBreakdown: [StageBreakdownEntry(stageName: 'Learned', count: 5)],
-          trackBreakdown: {TrackType.personal: 5},
-        );
+    testWidgets('single-stage track shows subtitle without chazaros suffix', (
+      tester,
+    ) async {
+      // Rule 8: chazara entries are those AFTER the first stage. When only
+      // the learn stage exists, the chazaros suffix is omitted entirely.
+      const level = HierarchyLevelProgress(
+        levelName: 'Seder Zeraim',
+        levelLabel: 'Seder',
+        totalItems: 10,
+        completedItems: 5,
+        stageBreakdown: [StageBreakdownEntry(stageName: 'Learned', count: 5)],
+        trackBreakdown: {TrackType.personal: 5},
+      );
 
-        await tester.pumpWidget(
-          _wrap(const HierarchyProgressCard(level: level)),
-        );
+      await tester.pumpWidget(_wrap(const HierarchyProgressCard(level: level)));
 
-        expect(find.text('Seder Zeraim'), findsOneWidget);
-        // Single-stage: no chazara column, so subtitle is progress-only.
-        expect(find.text('5/10 (50%)'), findsOneWidget);
-        expect(find.textContaining('chazaros'), findsNothing);
-        expect(find.text('Learned: 5'), findsOneWidget);
-        expect(find.byType(LinearProgressIndicator), findsOneWidget);
-      },
-    );
+      expect(find.text('Seder Zeraim'), findsOneWidget);
+      // Single-stage: no chazara column, so subtitle is progress-only.
+      expect(find.text('5/10 (50%)'), findsOneWidget);
+      expect(find.textContaining('chazaros'), findsNothing);
+      expect(find.text('Learned: 5'), findsOneWidget);
+      expect(find.byType(LinearProgressIndicator), findsOneWidget);
+    });
 
-    testWidgets(
-      'multi-stage track shows subtitle with chazaros count',
-      (tester) async {
-        // When a second stage (chazara) exists, the chazaros count is shown.
-        const level = HierarchyLevelProgress(
-          levelName: 'Seder Zeraim',
-          levelLabel: 'Seder',
-          totalItems: 10,
-          completedItems: 5,
-          stageBreakdown: [
-            StageBreakdownEntry(stageName: 'Learned', count: 5),
-            StageBreakdownEntry(stageName: 'Chazara 1', count: 3),
-          ],
-          trackBreakdown: {TrackType.personal: 5},
-        );
+    testWidgets('multi-stage track shows subtitle with chazaros count', (
+      tester,
+    ) async {
+      // When a second stage (chazara) exists, the chazaros count is shown.
+      const level = HierarchyLevelProgress(
+        levelName: 'Seder Zeraim',
+        levelLabel: 'Seder',
+        totalItems: 10,
+        completedItems: 5,
+        stageBreakdown: [
+          StageBreakdownEntry(stageName: 'Learned', count: 5),
+          StageBreakdownEntry(stageName: 'Chazara 1', count: 3),
+        ],
+        trackBreakdown: {TrackType.personal: 5},
+      );
 
-        await tester.pumpWidget(
-          _wrap(const HierarchyProgressCard(level: level)),
-        );
+      await tester.pumpWidget(_wrap(const HierarchyProgressCard(level: level)));
 
-        expect(find.text('Seder Zeraim'), findsOneWidget);
-        // Multi-stage: chazaros suffix appears (count = sum of stages after first).
-        expect(find.textContaining('chazaros'), findsOneWidget);
-        expect(find.byType(LinearProgressIndicator), findsOneWidget);
-      },
-    );
+      expect(find.text('Seder Zeraim'), findsOneWidget);
+      // Multi-stage: chazaros suffix appears (count = sum of stages after first).
+      expect(find.textContaining('chazaros'), findsOneWidget);
+      expect(find.byType(LinearProgressIndicator), findsOneWidget);
+    });
 
     testWidgets('expandable card shows sub-levels on tap', (tester) async {
       const level = HierarchyLevelProgress(

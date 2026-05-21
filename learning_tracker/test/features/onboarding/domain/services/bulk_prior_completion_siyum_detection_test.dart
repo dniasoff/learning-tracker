@@ -321,51 +321,46 @@ void main() {
       await db.close();
     });
 
-    test(
-      'bulk-marking every leaf of a masechta via BulkPriorCompletionService '
-      'creates the masechta siyum ledger entry',
-      () async {
-        // Resolve every leaf in Berakhot — this is what the wizard does after
-        // the user selects the masechta.
-        final items = await bulkService.resolveSelections(
-          curriculumId: CurriculumId.mishnayos,
-          selections: const [
-            HierarchySelection(level1: 'Zeraim', level2: 'Berakhot'),
-          ],
-        );
-        expect(items, hasLength(3), reason: 'sanity: 3 leaves resolved');
+    test('bulk-marking every leaf of a masechta via BulkPriorCompletionService '
+        'creates the masechta siyum ledger entry', () async {
+      // Resolve every leaf in Berakhot — this is what the wizard does after
+      // the user selects the masechta.
+      final items = await bulkService.resolveSelections(
+        curriculumId: CurriculumId.mishnayos,
+        selections: const [
+          HierarchySelection(level1: 'Zeraim', level2: 'Berakhot'),
+        ],
+      );
+      expect(items, hasLength(3), reason: 'sanity: 3 leaves resolved');
 
-        // Execute the bulk-mark — this is the production code path.
-        final result = await bulkService.execute(
-          curriculumId: CurriculumId.mishnayos,
-          resolvedItems: items,
-          stageIds: const [1],
-          profileId: profileId,
-        );
-        expect(result.completionCount, 3);
+      // Execute the bulk-mark — this is the production code path.
+      final result = await bulkService.execute(
+        curriculumId: CurriculumId.mishnayos,
+        resolvedItems: items,
+        stageIds: const [1],
+        profileId: profileId,
+      );
+      expect(result.completionCount, 3);
 
-        // The headline assertion: a masechta siyum landed in the ledger.
-        final entries = await db.learningLedgerDao.getEntriesByProfile(
-          profileId,
-        );
-        expect(
-          entries
-              .where(
-                (e) =>
-                    e.curriculumId == 'mishnayos' &&
-                    e.entryScope == 'masechta' &&
-                    e.unitIdentifier == 'Berakhot',
-              )
-              .toList(),
-          hasLength(1),
-          reason:
-              'F1: bulk-marking every leaf must produce exactly one '
-              "masechta-level siyum ledger row — without W7-A's fix the "
-              'detection service is never invoked and the user gets zero '
-              'siyum entries.',
-        );
-      },
-    );
+      // The headline assertion: a masechta siyum landed in the ledger.
+      final entries = await db.learningLedgerDao.getEntriesByProfile(profileId);
+      expect(
+        entries
+            .where(
+              (e) =>
+                  e.curriculumId == 'mishnayos' &&
+                  e.entryScope == 'masechta' &&
+                  e.unitIdentifier == 'Berakhot',
+            )
+            .toList(),
+        hasLength(1),
+        reason:
+            'F1: bulk-marking every leaf must produce exactly one '
+            "masechta-level siyum ledger row — without W7-A's fix the "
+            'detection service is never invoked and the user gets zero '
+            'siyum entries.',
+      );
+    });
 
     test(
       'partial bulk-mark (missing one leaf) does NOT create the masechta siyum',

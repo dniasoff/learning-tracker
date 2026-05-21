@@ -46,19 +46,19 @@ JourneyViewModel _journey({
   int aggregate = 0,
   int curriculum = 0,
 }) => JourneyViewModel(
-      curricula: const [],
-      totalCompletions: 0,
-      totalUniqueUnits: 0,
-      unitLevelSiyumimCount: unit,
-      aggregateLevelSiyumimCount: aggregate,
-      curriculumLevelSiyumimCount: curriculum,
-    );
+  curricula: const [],
+  totalCompletions: 0,
+  totalUniqueUnits: 0,
+  unitLevelSiyumimCount: unit,
+  aggregateLevelSiyumimCount: aggregate,
+  curriculumLevelSiyumimCount: curriculum,
+);
 
 LifetimeTotals _lifetime({int learned = 0, int total = 0}) => LifetimeTotals(
-      learnedSections: learned,
-      totalSections: total,
-      totalCurricula: 9,
-    );
+  learnedSections: learned,
+  totalSections: total,
+  totalCurricula: 9,
+);
 
 Widget _wrap({
   required bool showPoints,
@@ -76,16 +76,17 @@ Widget _wrap({
         () => _UseHebrewTermsOverride(useHebrew: false),
       ),
       dashboardStreakProvider.overrideWith(
-        (ref) => Stream.value(
-          (currentStreak: currentStreak, maxStreak: currentStreak),
-        ),
+        (ref) => Stream.value((
+          currentStreak: currentStreak,
+          maxStreak: currentStreak,
+        )),
       ),
-      journeyViewModelProvider(_profileId).overrideWith(
-        (ref) => Future.value(journey),
-      ),
-      lifetimeTotalsAcrossAllCurriculaProvider(_profileId).overrideWith(
-        (ref) => Future.value(totals),
-      ),
+      journeyViewModelProvider(
+        _profileId,
+      ).overrideWith((ref) => Future.value(journey)),
+      lifetimeTotalsAcrossAllCurriculaProvider(
+        _profileId,
+      ).overrideWith((ref) => Future.value(totals)),
       dashboardGlobalPointsProvider.overrideWith((ref) => Future.value(points)),
     ],
     child: MaterialApp(
@@ -139,75 +140,72 @@ void main() {
       },
     );
 
-    testWidgets(
-      'child mode renders four counters (adds points)',
-      (tester) async {
-        await tester.pumpWidget(
-          _wrap(
-            showPoints: true,
-            currentStreak: 2,
-            journey: _journey(unit: 1, aggregate: 0, curriculum: 0),
-            totals: _lifetime(learned: 5),
-            points: 1250,
-          ),
-        );
-        await tester.pumpAndSettle();
+    testWidgets('child mode renders four counters (adds points)', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _wrap(
+          showPoints: true,
+          currentStreak: 2,
+          journey: _journey(unit: 1, aggregate: 0, curriculum: 0),
+          totals: _lifetime(learned: 5),
+          points: 1250,
+        ),
+      );
+      await tester.pumpAndSettle();
 
-        expect(find.text('2'), findsOneWidget); // streak value
-        expect(find.text('1'), findsOneWidget); // siyumim value
-        expect(find.text('5'), findsOneWidget); // lifetime value
-        expect(find.text('1,250'), findsOneWidget); // points value formatted
-        expect(find.text('Streak'), findsOneWidget);
-        expect(find.text('Siyumim'), findsOneWidget);
-        expect(find.text('Lifetime'), findsOneWidget);
-        expect(find.text('Points'), findsOneWidget);
-      },
-    );
+      expect(find.text('2'), findsOneWidget); // streak value
+      expect(find.text('1'), findsOneWidget); // siyumim value
+      expect(find.text('5'), findsOneWidget); // lifetime value
+      expect(find.text('1,250'), findsOneWidget); // points value formatted
+      expect(find.text('Streak'), findsOneWidget);
+      expect(find.text('Siyumim'), findsOneWidget);
+      expect(find.text('Lifetime'), findsOneWidget);
+      expect(find.text('Points'), findsOneWidget);
+    });
 
-    testWidgets(
-      'siyumim counter sums all three celebration levels',
-      (tester) async {
-        // 7 unit + 2 aggregate + 1 curriculum = 10 siyumim total.
-        await tester.pumpWidget(
-          _wrap(
-            showPoints: false,
-            currentStreak: 0,
-            journey: _journey(unit: 7, aggregate: 2, curriculum: 1),
-            totals: _lifetime(learned: 0),
-          ),
-        );
-        await tester.pumpAndSettle();
+    testWidgets('siyumim counter sums all three celebration levels', (
+      tester,
+    ) async {
+      // 7 unit + 2 aggregate + 1 curriculum = 10 siyumim total.
+      await tester.pumpWidget(
+        _wrap(
+          showPoints: false,
+          currentStreak: 0,
+          journey: _journey(unit: 7, aggregate: 2, curriculum: 1),
+          totals: _lifetime(learned: 0),
+        ),
+      );
+      await tester.pumpAndSettle();
 
-        // 7 + 2 + 1 = 10 siyumim, rendered as the big tile value.
-        expect(find.text('10'), findsOneWidget);
-        expect(find.text('Siyumim'), findsOneWidget);
-      },
-    );
+      // 7 + 2 + 1 = 10 siyumim, rendered as the big tile value.
+      expect(find.text('10'), findsOneWidget);
+      expect(find.text('Siyumim'), findsOneWidget);
+    });
 
-    testWidgets(
-      'zero state renders cleanly (no crash, all zeros visible)',
-      (tester) async {
-        await tester.pumpWidget(
-          _wrap(
-            showPoints: true,
-            currentStreak: 0,
-            journey: _journey(),
-            totals: _lifetime(),
-            points: 0,
-          ),
-        );
-        await tester.pumpAndSettle();
+    testWidgets('zero state renders cleanly (no crash, all zeros visible)', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _wrap(
+          showPoints: true,
+          currentStreak: 0,
+          journey: _journey(),
+          totals: _lifetime(),
+          points: 0,
+        ),
+      );
+      await tester.pumpAndSettle();
 
-        // All four tiles render '0' as the big value plus their short noun
-        // label (3 'Streak'/'Lifetime'/'Points' + the locale-aware
-        // 'Siyumim' term).
-        expect(find.text('0'), findsNWidgets(4));
-        expect(find.text('Streak'), findsOneWidget);
-        expect(find.text('Siyumim'), findsOneWidget);
-        expect(find.text('Lifetime'), findsOneWidget);
-        expect(find.text('Points'), findsOneWidget);
-      },
-    );
+      // All four tiles render '0' as the big value plus their short noun
+      // label (3 'Streak'/'Lifetime'/'Points' + the locale-aware
+      // 'Siyumim' term).
+      expect(find.text('0'), findsNWidgets(4));
+      expect(find.text('Streak'), findsOneWidget);
+      expect(find.text('Siyumim'), findsOneWidget);
+      expect(find.text('Lifetime'), findsOneWidget);
+      expect(find.text('Points'), findsOneWidget);
+    });
 
     // F17 regression — during the first paint while the dependent providers
     // are still loading, the row must render the "…" placeholder NOT zeros.
@@ -215,68 +213,64 @@ void main() {
     // produced "0-day streak · 0 siyumim earned · 0 items in lifetime" for
     // the brief async window — exactly the "1336 vs 0" confusion the IA
     // redesign was meant to eliminate.
-    testWidgets(
-      'placeholder ("…") shown while every provider is loading',
-      (tester) async {
-        await tester.pumpWidget(
-          ProviderScope(
-            overrides: [
-              activeProfileIdProvider.overrideWith(
-                () => _ProfileIdOverride(_profileId),
-              ),
-              useHebrewTermsProvider.overrideWith(
-                () => _UseHebrewTermsOverride(useHebrew: false),
-              ),
-              // Hold every provider in the loading state by returning futures
-              // and streams that never complete. The widget should NOT fall
-              // back to zeros — it should render the "…" placeholder until
-              // every dependency resolves.
-              dashboardStreakProvider.overrideWith(
-                (ref) => const Stream.empty(),
-              ),
-              journeyViewModelProvider(_profileId).overrideWith(
-                (ref) => Completer<JourneyViewModel>().future,
-              ),
-              lifetimeTotalsAcrossAllCurriculaProvider(_profileId)
-                  .overrideWith(
-                (ref) => Completer<LifetimeTotals>().future,
-              ),
-              dashboardGlobalPointsProvider.overrideWith(
-                (ref) => Completer<int>().future,
-              ),
+    testWidgets('placeholder ("…") shown while every provider is loading', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            activeProfileIdProvider.overrideWith(
+              () => _ProfileIdOverride(_profileId),
+            ),
+            useHebrewTermsProvider.overrideWith(
+              () => _UseHebrewTermsOverride(useHebrew: false),
+            ),
+            // Hold every provider in the loading state by returning futures
+            // and streams that never complete. The widget should NOT fall
+            // back to zeros — it should render the "…" placeholder until
+            // every dependency resolves.
+            dashboardStreakProvider.overrideWith((ref) => const Stream.empty()),
+            journeyViewModelProvider(
+              _profileId,
+            ).overrideWith((ref) => Completer<JourneyViewModel>().future),
+            lifetimeTotalsAcrossAllCurriculaProvider(
+              _profileId,
+            ).overrideWith((ref) => Completer<LifetimeTotals>().future),
+            dashboardGlobalPointsProvider.overrideWith(
+              (ref) => Completer<int>().future,
+            ),
+          ],
+          child: const MaterialApp(
+            localizationsDelegates: [
+              AppLocalizations.delegate,
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
             ],
-            child: const MaterialApp(
-              localizationsDelegates: [
-                AppLocalizations.delegate,
-                GlobalMaterialLocalizations.delegate,
-                GlobalWidgetsLocalizations.delegate,
-                GlobalCupertinoLocalizations.delegate,
-              ],
-              supportedLocales: AppLocalizations.supportedLocales,
-              home: Scaffold(
-                body: Padding(
-                  padding: EdgeInsets.all(16),
-                  child: ProgressTierCounterRow(showPoints: true),
-                ),
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Scaffold(
+              body: Padding(
+                padding: EdgeInsets.all(16),
+                child: ProgressTierCounterRow(showPoints: true),
               ),
             ),
           ),
-        );
-        // Single pump — DO NOT pumpAndSettle because the providers are
-        // intentionally never-completing futures.
-        await tester.pump();
+        ),
+      );
+      // Single pump — DO NOT pumpAndSettle because the providers are
+      // intentionally never-completing futures.
+      await tester.pump();
 
-        // Each counter must show the placeholder, NOT a zero — three "…"
-        // for adult (streak/siyumim/lifetime) + one more for points = 4.
-        expect(
-          find.text('…'),
-          findsNWidgets(4),
-          reason:
-              'loading state must render the placeholder for all four '
-              'counter values, not fall back to misleading zeros',
-        );
-      },
-    );
+      // Each counter must show the placeholder, NOT a zero — three "…"
+      // for adult (streak/siyumim/lifetime) + one more for points = 4.
+      expect(
+        find.text('…'),
+        findsNWidgets(4),
+        reason:
+            'loading state must render the placeholder for all four '
+            'counter values, not fall back to misleading zeros',
+      );
+    });
 
     // F17 partial-loading — when one provider has resolved but others are
     // still loading, every counter VALUE must stay on the placeholder. The
@@ -298,17 +292,14 @@ void main() {
               // Three providers ready, one still loading. The row must
               // remain in loading mode rather than rendering "7 · 0 · 0".
               dashboardStreakProvider.overrideWith(
-                (ref) => Stream.value(
-                  (currentStreak: 7, maxStreak: 7),
-                ),
+                (ref) => Stream.value((currentStreak: 7, maxStreak: 7)),
               ),
-              journeyViewModelProvider(_profileId).overrideWith(
-                (ref) => Future.value(_journey(unit: 3)),
-              ),
-              lifetimeTotalsAcrossAllCurriculaProvider(_profileId)
-                  .overrideWith(
-                (ref) => Completer<LifetimeTotals>().future,
-              ),
+              journeyViewModelProvider(
+                _profileId,
+              ).overrideWith((ref) => Future.value(_journey(unit: 3))),
+              lifetimeTotalsAcrossAllCurriculaProvider(
+                _profileId,
+              ).overrideWith((ref) => Completer<LifetimeTotals>().future),
               dashboardGlobalPointsProvider.overrideWith(
                 (ref) => Future.value(42),
               ),

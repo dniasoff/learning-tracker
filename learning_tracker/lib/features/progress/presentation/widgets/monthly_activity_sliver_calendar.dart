@@ -198,9 +198,7 @@ class _MonthHeaderDelegate extends SliverPersistentHeaderDelegate {
               ),
             ),
             Icon(
-              isExpanded
-                  ? Icons.keyboard_arrow_up
-                  : Icons.keyboard_arrow_down,
+              isExpanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
               size: 20,
             ),
           ],
@@ -241,8 +239,10 @@ class _CompactSummaryCard extends StatelessWidget {
 
     // Determine the last 7 days of the month.
     final monthDate = _yearMonthToDate(rollup.yearMonth);
-    final daysInMonth =
-        DateUtils.getDaysInMonth(monthDate.year, monthDate.month);
+    final daysInMonth = DateUtils.getDaysInMonth(
+      monthDate.year,
+      monthDate.month,
+    );
     final lastSevenStart = daysInMonth - 6; // day numbers are 1-based
 
     final miniCells = <Widget>[];
@@ -305,8 +305,10 @@ class _FullMonthGridSliver extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final monthDate = _yearMonthToDate(rollup.yearMonth);
-    final daysInMonth =
-        DateUtils.getDaysInMonth(monthDate.year, monthDate.month);
+    final daysInMonth = DateUtils.getDaysInMonth(
+      monthDate.year,
+      monthDate.month,
+    );
     // Day-of-week offset so the grid starts on Monday (weekday 1).
     final firstWeekdayOffset = (monthDate.weekday - 1) % 7;
     // Total cells = leading blanks + actual days.
@@ -321,18 +323,15 @@ class _FullMonthGridSliver extends StatelessWidget {
         crossAxisSpacing: 2,
         mainAxisSpacing: 4,
       ),
-      delegate: SliverChildBuilderDelegate(
-        (context, index) {
-          if (index < firstWeekdayOffset) {
-            // Blank leading cell.
-            return const SizedBox.shrink();
-          }
-          final dayNumber = index - firstWeekdayOffset + 1;
-          final isActive = activeDayNums.contains(dayNumber);
-          return _FullDayCell(dayNumber: dayNumber, isActive: isActive);
-        },
-        childCount: totalCells,
-      ),
+      delegate: SliverChildBuilderDelegate((context, index) {
+        if (index < firstWeekdayOffset) {
+          // Blank leading cell.
+          return const SizedBox.shrink();
+        }
+        final dayNumber = index - firstWeekdayOffset + 1;
+        final isActive = activeDayNums.contains(dayNumber);
+        return _FullDayCell(dayNumber: dayNumber, isActive: isActive);
+      }, childCount: totalCells),
     );
   }
 }
@@ -360,10 +359,9 @@ class _FullDayCell extends StatelessWidget {
             fontSize: 12,
             color: isActive
                 ? Colors.white
-                : Theme.of(context)
-                    .colorScheme
-                    .onSurfaceVariant
-                    .withValues(alpha: 0.9),
+                : Theme.of(
+                    context,
+                  ).colorScheme.onSurfaceVariant.withValues(alpha: 0.9),
             fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
           ),
         ),

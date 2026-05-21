@@ -29,10 +29,7 @@ import 'package:learning_tracker/l10n/app_localizations.dart';
 ///
 /// See `docs/planning/progress-ia-redesign.md` §2 for the spec.
 class ProgressTierCounterRow extends ConsumerWidget {
-  const ProgressTierCounterRow({
-    super.key,
-    required this.showPoints,
-  });
+  const ProgressTierCounterRow({super.key, required this.showPoints});
 
   /// When true, renders the fourth ⭐ points counter (child mode).
   final bool showPoints;
@@ -62,7 +59,8 @@ class ProgressTierCounterRow extends ConsumerWidget {
     // redesign.md §2. We use `hasValue` (not `!hasError`) so an errored
     // provider keeps the placeholder rather than rendering a misleading 0.
     final pointsReady = !showPoints || pointsAsync.hasValue;
-    final allReady = streakAsync.hasValue &&
+    final allReady =
+        streakAsync.hasValue &&
         journeyAsync.hasValue &&
         lifetimeTotalsAsync.hasValue &&
         pointsReady;
@@ -72,8 +70,8 @@ class ProgressTierCounterRow extends ConsumerWidget {
     final totalSiyumim = journey == null
         ? 0
         : journey.unitLevelSiyumimCount +
-            journey.aggregateLevelSiyumimCount +
-            journey.curriculumLevelSiyumimCount;
+              journey.aggregateLevelSiyumimCount +
+              journey.curriculumLevelSiyumimCount;
     final lifetimeItems =
         lifetimeTotalsAsync.asData?.value.learnedSections ?? 0;
     final points = pointsAsync.asData?.value ?? 0;
@@ -93,8 +91,9 @@ class ProgressTierCounterRow extends ConsumerWidget {
     final lifetimeValue = allReady
         ? numberFormat.format(lifetimeItems)
         : _loadingPlaceholder;
-    final pointsValue =
-        allReady ? numberFormat.format(points) : _loadingPlaceholder;
+    final pointsValue = allReady
+        ? numberFormat.format(points)
+        : _loadingPlaceholder;
 
     final counters = <Widget>[
       _Counter(
@@ -108,8 +107,10 @@ class ProgressTierCounterRow extends ConsumerWidget {
         emoji: '🏆',
         value: siyumimValue,
         label: l10n.tierTileLabelSiyumim(terms.siyumim),
-        semanticLabel:
-            l10n.tierCounterSiyumimEarned(totalSiyumim, terms.siyumim),
+        semanticLabel: l10n.tierCounterSiyumimEarned(
+          totalSiyumim,
+          terms.siyumim,
+        ),
         accent: AppColors.chartAmber,
       ),
       _Counter(

@@ -41,16 +41,18 @@ void main() {
     setUp(() async {
       db = UserDatabase(NativeDatabase.memory());
       // Seed account row for FK on learner_profiles.account_id.
-      await db.into(db.accounts).insert(
-        AccountsCompanion.insert(
-          email: 'test@example.com',
-          tier: 'localBorn',
-          displayName: 'Test Account',
-          userMode: 'adult',
-          createdAt: DateTimeFactory.nowUtc(),
-          updatedAt: DateTimeFactory.nowUtc(),
-        ),
-      );
+      await db
+          .into(db.accounts)
+          .insert(
+            AccountsCompanion.insert(
+              email: 'test@example.com',
+              tier: 'localBorn',
+              displayName: 'Test Account',
+              userMode: 'adult',
+              createdAt: DateTimeFactory.nowUtc(),
+              updatedAt: DateTimeFactory.nowUtc(),
+            ),
+          );
     });
 
     tearDown(() async {

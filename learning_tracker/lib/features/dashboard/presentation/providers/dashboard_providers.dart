@@ -489,12 +489,14 @@ final dashboardActiveTracksStreamProvider =
 /// A track with a single stage (learn-only / [SingleStageConfiguration])
 /// returns false; any track with 2+ stages (wizard or schedule-spec chazara)
 /// returns true.  Used to gate chazara UI per Rule 8.
-final trackHasChazaraProvider = FutureProvider.autoDispose
-    .family<bool, int>((ref, trackId) async {
-      final db = ref.watch(userDatabaseProvider);
-      final count = await db.stageDao.countStagesForTrack(trackId);
-      return count > 1;
-    });
+final trackHasChazaraProvider = FutureProvider.autoDispose.family<bool, int>((
+  ref,
+  trackId,
+) async {
+  final db = ref.watch(userDatabaseProvider);
+  final count = await db.stageDao.countStagesForTrack(trackId);
+  return count > 1;
+});
 
 /// Whether ANY active track for the current profile has chazara enabled.
 ///

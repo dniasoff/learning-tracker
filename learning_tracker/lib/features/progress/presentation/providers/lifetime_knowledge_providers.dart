@@ -79,9 +79,9 @@ final priorImportsByProfileProvider = FutureProvider.autoDispose
       (ref, profileId) async {
         ref.watch(progressLensRefreshTickProvider);
         final db = ref.watch(userDatabaseProvider);
-        final rows = await (db.select(db.priorCompletionImports)
-              ..where((t) => t.profileId.equals(profileId)))
-            .get();
+        final rows = await (db.select(
+          db.priorCompletionImports,
+        )..where((t) => t.profileId.equals(profileId))).get();
 
         // Partition by (curriculumId, source) in memory.
         final bulk = <String, Set<String>>{};
@@ -155,7 +155,8 @@ final lifetimeDataProvider = FutureProvider.autoDispose
         completionsByProfileForLifetimeProvider(profileId).future,
       );
       final completions =
-          completionsByCurriculum[curriculum.storageKey] ?? const <Completion>[];
+          completionsByCurriculum[curriculum.storageKey] ??
+          const <Completion>[];
       final ledger = await db.learningLedgerDao.getEntriesByCurriculum(
         profileId,
         curriculum.storageKey,

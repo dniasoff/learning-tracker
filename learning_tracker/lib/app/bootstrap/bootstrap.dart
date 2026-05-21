@@ -78,9 +78,9 @@ Future<BootstrapResult> bootstrap() async {
   // bootstrapAccount completed before runApp so this is effectively
   // synchronous from the provider tree's perspective.
   if (resolvedDbFileName != 'learning_tracker') {
-    container.read(accountDbFileNameProvider.notifier).setFileName(
-      resolvedDbFileName,
-    );
+    container
+        .read(accountDbFileNameProvider.notifier)
+        .setFileName(resolvedDbFileName);
   }
 
   container.listen<int?>(selectedProfileIdProvider, (_, id) {

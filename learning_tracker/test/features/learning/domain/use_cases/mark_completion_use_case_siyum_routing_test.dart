@@ -89,14 +89,16 @@ void main() {
     final profile = (await db.select(db.learnerProfiles).get()).first;
     profileId = profile.id;
 
-    final trackRow = await db.into(db.curriculumTracks).insertReturning(
-      CurriculumTracksCompanion.insert(
-        profileId: profileId,
-        curriculumId: 'mishnayos',
-        stateChangedAt: DateTime.utc(2026, 5, 20),
-        activatedAt: DateTime.utc(2026, 5, 20),
-      ),
-    );
+    final trackRow = await db
+        .into(db.curriculumTracks)
+        .insertReturning(
+          CurriculumTracksCompanion.insert(
+            profileId: profileId,
+            curriculumId: 'mishnayos',
+            stateChangedAt: DateTime.utc(2026, 5, 20),
+            activatedAt: DateTime.utc(2026, 5, 20),
+          ),
+        );
     trackId = trackRow.id;
 
     // One stage definition — the masechta is "complete" once stage 1 is
@@ -192,94 +194,10 @@ void main() {
     await db.close();
   });
 
-  group(
-    'MarkCompletionUseCase routing — siyum gate uses creditsAchievement',
-    () {
-      test(
-        'bulkInTrack completes a one-leaf masechta → siyum row in learning_ledger',
-        () async {
-          await useCase.call(
-            const CompletionRequest(
-              curriculumId: 'mishnayos',
-              sefariaRef: oneLeafRef,
-              stageId: 1,
-              trackType: 'personal',
-            ),
-            source: CompletionSource.bulkInTrack,
-          );
-
-          // CompletionDetectionService runs as a fire-and-forget unawaited
-          // future inside CompletionRepositoryImpl.markComplete. Let the
-          // event loop drain so the unawaited write to learning_ledger
-          // commits before we read it back.
-          await Future<void>.delayed(Duration.zero);
-          await Future<void>.delayed(Duration.zero);
-
-          final ledger = await db.learningLedgerDao.getEntriesByProfile(
-            profileId,
-          );
-
-          expect(
-            ledger,
-            isNotEmpty,
-            reason:
-                'bulkInTrack must credit the achievement tier — siyum must '
-                'land in learning_ledger. This is the B1 bug where the '
-                'detection service was wrongly gated on the engagement flag.',
-          );
-
-          // The streak event log must remain empty: bulkInTrack is the
-          // engagement=false / achievement=true profile.
-          final streakRows = await (db.select(
-            db.streakEvents,
-          )..where((t) => t.profileId.equals(profileId))).get();
-          expect(
-            streakRows,
-            isEmpty,
-            reason:
-                'bulkInTrack must NOT credit engagement — no streak event '
-                'should be appended.',
-          );
-        },
-      );
-
-      test(
-        'lifetimeOnly completes the same leaf → no siyum row, no streak',
-        () async {
-          await useCase.call(
-            const CompletionRequest(
-              curriculumId: 'mishnayos',
-              sefariaRef: oneLeafRef,
-              stageId: 1,
-              trackType: 'personal',
-            ),
-            source: CompletionSource.lifetimeOnly,
-          );
-
-          await Future<void>.delayed(Duration.zero);
-          await Future<void>.delayed(Duration.zero);
-
-          final ledger = await db.learningLedgerDao.getEntriesByProfile(
-            profileId,
-          );
-          expect(
-            ledger,
-            isEmpty,
-            reason:
-                'lifetimeOnly is engagement=false AND achievement=false — '
-                'no siyum row may be written.',
-          );
-
-          final streakRows = await (db.select(
-            db.streakEvents,
-          )..where((t) => t.profileId.equals(profileId))).get();
-          expect(streakRows, isEmpty);
-        },
-      );
-
-      test('live completion credits both engagement and achievement', () async {
-        // Guard test: the new gate must not over-suppress. A regular live
-        // completion still credits siyum AND streak.
+  group('MarkCompletionUseCase routing — siyum gate uses creditsAchievement', () {
+    test(
+      'bulkInTrack completes a one-leaf masechta → siyum row in learning_ledger',
+      () async {
         await useCase.call(
           const CompletionRequest(
             curriculumId: 'mishnayos',
@@ -287,7 +205,55 @@ void main() {
             stageId: 1,
             trackType: 'personal',
           ),
-          // Defaults to CompletionSource.live.
+          source: CompletionSource.bulkInTrack,
+        );
+
+        // CompletionDetectionService runs as a fire-and-forget unawaited
+        // future inside CompletionRepositoryImpl.markComplete. Let the
+        // event loop drain so the unawaited write to learning_ledger
+        // commits before we read it back.
+        await Future<void>.delayed(Duration.zero);
+        await Future<void>.delayed(Duration.zero);
+
+        final ledger = await db.learningLedgerDao.getEntriesByProfile(
+          profileId,
+        );
+
+        expect(
+          ledger,
+          isNotEmpty,
+          reason:
+              'bulkInTrack must credit the achievement tier — siyum must '
+              'land in learning_ledger. This is the B1 bug where the '
+              'detection service was wrongly gated on the engagement flag.',
+        );
+
+        // The streak event log must remain empty: bulkInTrack is the
+        // engagement=false / achievement=true profile.
+        final streakRows = await (db.select(
+          db.streakEvents,
+        )..where((t) => t.profileId.equals(profileId))).get();
+        expect(
+          streakRows,
+          isEmpty,
+          reason:
+              'bulkInTrack must NOT credit engagement — no streak event '
+              'should be appended.',
+        );
+      },
+    );
+
+    test(
+      'lifetimeOnly completes the same leaf → no siyum row, no streak',
+      () async {
+        await useCase.call(
+          const CompletionRequest(
+            curriculumId: 'mishnayos',
+            sefariaRef: oneLeafRef,
+            stageId: 1,
+            trackType: 'personal',
+          ),
+          source: CompletionSource.lifetimeOnly,
         );
 
         await Future<void>.delayed(Duration.zero);
@@ -296,13 +262,44 @@ void main() {
         final ledger = await db.learningLedgerDao.getEntriesByProfile(
           profileId,
         );
-        expect(ledger, isNotEmpty);
+        expect(
+          ledger,
+          isEmpty,
+          reason:
+              'lifetimeOnly is engagement=false AND achievement=false — '
+              'no siyum row may be written.',
+        );
 
         final streakRows = await (db.select(
           db.streakEvents,
         )..where((t) => t.profileId.equals(profileId))).get();
-        expect(streakRows, hasLength(1));
-      });
-    },
-  );
+        expect(streakRows, isEmpty);
+      },
+    );
+
+    test('live completion credits both engagement and achievement', () async {
+      // Guard test: the new gate must not over-suppress. A regular live
+      // completion still credits siyum AND streak.
+      await useCase.call(
+        const CompletionRequest(
+          curriculumId: 'mishnayos',
+          sefariaRef: oneLeafRef,
+          stageId: 1,
+          trackType: 'personal',
+        ),
+        // Defaults to CompletionSource.live.
+      );
+
+      await Future<void>.delayed(Duration.zero);
+      await Future<void>.delayed(Duration.zero);
+
+      final ledger = await db.learningLedgerDao.getEntriesByProfile(profileId);
+      expect(ledger, isNotEmpty);
+
+      final streakRows = await (db.select(
+        db.streakEvents,
+      )..where((t) => t.profileId.equals(profileId))).get();
+      expect(streakRows, hasLength(1));
+    });
+  });
 }

@@ -55,14 +55,16 @@ void main() {
     final profiles = await db.select(db.learnerProfiles).get();
     profileId = profiles.first.id;
 
-    final trackRow = await db.into(db.curriculumTracks).insertReturning(
-      CurriculumTracksCompanion.insert(
-        profileId: profileId,
-        curriculumId: 'mishnayos',
-        stateChangedAt: DateTime.utc(2026),
-        activatedAt: DateTime.utc(2026),
-      ),
-    );
+    final trackRow = await db
+        .into(db.curriculumTracks)
+        .insertReturning(
+          CurriculumTracksCompanion.insert(
+            profileId: profileId,
+            curriculumId: 'mishnayos',
+            stateChangedAt: DateTime.utc(2026),
+            activatedAt: DateTime.utc(2026),
+          ),
+        );
     trackId = trackRow.id;
   });
 
@@ -196,8 +198,9 @@ void main() {
         await Future<void>.delayed(Duration.zero);
 
         // H4 assertion: no siyum ledger entry was created.
-        final ledgerEntries =
-            await db.learningLedgerDao.getEntriesByProfile(profileId);
+        final ledgerEntries = await db.learningLedgerDao.getEntriesByProfile(
+          profileId,
+        );
         expect(
           ledgerEntries,
           isEmpty,
@@ -251,8 +254,9 @@ void main() {
 
         await Future<void>.delayed(Duration.zero);
 
-        final ledgerEntries =
-            await db.learningLedgerDao.getEntriesByProfile(profileId);
+        final ledgerEntries = await db.learningLedgerDao.getEntriesByProfile(
+          profileId,
+        );
         expect(
           ledgerEntries,
           isNotEmpty,
@@ -264,54 +268,52 @@ void main() {
       },
     );
 
-    test(
-      'live (creditsAchievement=true): DOES create siyum',
-      () async {
-        final contentRepo = _MockContentRepository();
-        final gateway = _MockFirestoreGateway();
-        final leaves = twoLeaves();
+    test('live (creditsAchievement=true): DOES create siyum', () async {
+      final contentRepo = _MockContentRepository();
+      final gateway = _MockFirestoreGateway();
+      final leaves = twoLeaves();
 
-        when(
-          () => contentRepo.getContentByRef(
-            curriculumId: any(named: 'curriculumId'),
-            sefariaRef: any(named: 'sefariaRef'),
+      when(
+        () => contentRepo.getContentByRef(
+          curriculumId: any(named: 'curriculumId'),
+          sefariaRef: any(named: 'sefariaRef'),
+        ),
+      ).thenAnswer((_) async => leaves.first);
+      when(
+        () => contentRepo.filterByLevel(
+          curriculumId: any(named: 'curriculumId'),
+          level1: any(named: 'level1'),
+          level2: any(named: 'level2'),
+        ),
+      ).thenAnswer((_) async => leaves);
+
+      await seedOneStage();
+
+      final repo = buildRepo(contentRepo: contentRepo, gateway: gateway);
+
+      // Defaults: engagement=true, achievement=true (the live profile).
+      for (final leaf in leaves) {
+        await repo.markComplete(
+          CompletionRequest(
+            curriculumId: 'mishnayos',
+            sefariaRef: leaf.sefariaRef,
+            stageId: 1,
+            trackType: 'personal',
           ),
-        ).thenAnswer((_) async => leaves.first);
-        when(
-          () => contentRepo.filterByLevel(
-            curriculumId: any(named: 'curriculumId'),
-            level1: any(named: 'level1'),
-            level2: any(named: 'level2'),
-          ),
-        ).thenAnswer((_) async => leaves);
-
-        await seedOneStage();
-
-        final repo = buildRepo(contentRepo: contentRepo, gateway: gateway);
-
-        // Defaults: engagement=true, achievement=true (the live profile).
-        for (final leaf in leaves) {
-          await repo.markComplete(
-            CompletionRequest(
-              curriculumId: 'mishnayos',
-              sefariaRef: leaf.sefariaRef,
-              stageId: 1,
-              trackType: 'personal',
-            ),
-          );
-        }
-
-        await Future<void>.delayed(Duration.zero);
-
-        // Live completions SHOULD trigger detection → siyum entry.
-        final ledgerEntries =
-            await db.learningLedgerDao.getEntriesByProfile(profileId);
-        expect(
-          ledgerEntries,
-          isNotEmpty,
-          reason: 'live completions must generate siyum ledger entries',
         );
-      },
-    );
+      }
+
+      await Future<void>.delayed(Duration.zero);
+
+      // Live completions SHOULD trigger detection → siyum entry.
+      final ledgerEntries = await db.learningLedgerDao.getEntriesByProfile(
+        profileId,
+      );
+      expect(
+        ledgerEntries,
+        isNotEmpty,
+        reason: 'live completions must generate siyum ledger entries',
+      );
+    });
   });
 }

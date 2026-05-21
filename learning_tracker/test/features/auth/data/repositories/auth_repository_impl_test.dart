@@ -106,21 +106,24 @@ void main() {
   });
 
   group('signInWithGoogle', () {
-    test('runs Google flow then exchanges the id-token via the gateway', () async {
-      when(
-        () => mockGoogle.authenticate(),
-      ).thenAnswer((_) async => const GoogleSignInResult(idToken: 'tok-1'));
-      when(
-        () => mockAuth.signInWithGoogleIdToken(idToken: 'tok-1'),
-      ).thenAnswer((_) async {});
+    test(
+      'runs Google flow then exchanges the id-token via the gateway',
+      () async {
+        when(
+          () => mockGoogle.authenticate(),
+        ).thenAnswer((_) async => const GoogleSignInResult(idToken: 'tok-1'));
+        when(
+          () => mockAuth.signInWithGoogleIdToken(idToken: 'tok-1'),
+        ).thenAnswer((_) async {});
 
-      await repository.signInWithGoogle();
+        await repository.signInWithGoogle();
 
-      verify(() => mockGoogle.authenticate()).called(1);
-      verify(
-        () => mockAuth.signInWithGoogleIdToken(idToken: 'tok-1'),
-      ).called(1);
-    });
+        verify(() => mockGoogle.authenticate()).called(1);
+        verify(
+          () => mockAuth.signInWithGoogleIdToken(idToken: 'tok-1'),
+        ).called(1);
+      },
+    );
   });
 
   group('sendSignInLinkToEmail', () {
@@ -156,8 +159,7 @@ void main() {
           emailLink: 'https://example.com/sign-in?oobCode=abc123',
         ),
       ).thenAnswer(
-        (_) async =>
-            _sampleUser(uid: 'user-uid', email: 'user@example.com'),
+        (_) async => _sampleUser(uid: 'user-uid', email: 'user@example.com'),
       );
 
       final result = await repository.signInWithEmailLink(
@@ -187,7 +189,9 @@ void main() {
   group('isSignInWithEmailLink', () {
     test('delegates straight to the gateway', () {
       when(
-        () => mockAuth.isSignInWithEmailLink('https://example.com/sign-in?oobCode=abc'),
+        () => mockAuth.isSignInWithEmailLink(
+          'https://example.com/sign-in?oobCode=abc',
+        ),
       ).thenReturn(true);
       when(
         () => mockAuth.isSignInWithEmailLink('https://example.com'),
@@ -259,9 +263,9 @@ void main() {
 
   group('linkGoogleProvider', () {
     test('runs Google then links the id-token via the gateway', () async {
-      when(() => mockGoogle.authenticate()).thenAnswer(
-        (_) async => const GoogleSignInResult(idToken: 'tok-link'),
-      );
+      when(
+        () => mockGoogle.authenticate(),
+      ).thenAnswer((_) async => const GoogleSignInResult(idToken: 'tok-link'));
       when(
         () => mockAuth.linkWithGoogleIdToken(idToken: 'tok-link'),
       ).thenAnswer((_) async {});
@@ -451,9 +455,7 @@ void main() {
 
   group('deleteCurrentFirebaseUser', () {
     test('asks the gateway to delete when a user is signed in', () async {
-      when(
-        () => mockAuth.currentUser,
-      ).thenReturn(_sampleUser(uid: 'will-die'));
+      when(() => mockAuth.currentUser).thenReturn(_sampleUser(uid: 'will-die'));
       when(() => mockAuth.deleteCurrentUser()).thenAnswer((_) async {});
 
       await repository.deleteCurrentFirebaseUser();

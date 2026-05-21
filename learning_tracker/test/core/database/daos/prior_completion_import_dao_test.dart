@@ -71,9 +71,9 @@ void main() {
     });
 
     test('does not match a different sefariaRef', () async {
-      await db.priorCompletionImportDao.batchInsertImports(
-        [makeImport(sefariaRef: 'Berakhot.1a')],
-      );
+      await db.priorCompletionImportDao.batchInsertImports([
+        makeImport(sefariaRef: 'Berakhot.1a'),
+      ]);
 
       final found = await db.priorCompletionImportDao.isImported(
         profileId: 1,

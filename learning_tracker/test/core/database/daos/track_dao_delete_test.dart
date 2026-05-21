@@ -193,19 +193,16 @@ void main() {
   // ── deactivateTrack ──────────────────────────────────────────────────────
 
   group('TrackDao.deactivateTrack', () {
-    test(
-      'retires (no longer throws) — W3.22',
-      () async {
-        // W3.22: deactivateTrack now delegates to retireTrack instead of
-        // throwing InvalidTrackOperationException. Verify it completes cleanly.
-        await db.trackDao.activateTrack(CurriculumId.mishnayos);
+    test('retires (no longer throws) — W3.22', () async {
+      // W3.22: deactivateTrack now delegates to retireTrack instead of
+      // throwing InvalidTrackOperationException. Verify it completes cleanly.
+      await db.trackDao.activateTrack(CurriculumId.mishnayos);
 
-        await expectLater(
-          db.trackDao.deactivateTrack(CurriculumId.mishnayos),
-          completes,
-        );
-      },
-    );
+      await expectLater(
+        db.trackDao.deactivateTrack(CurriculumId.mishnayos),
+        completes,
+      );
+    });
 
     test('InvalidTrackOperationException.toString contains message', () {
       const e = InvalidTrackOperationException('test message');

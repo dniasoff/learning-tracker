@@ -67,19 +67,19 @@ JourneyViewModel _journey({
   int aggregate = 1,
   int curriculum = 0,
 }) => JourneyViewModel(
-      curricula: const [],
-      totalCompletions: 0,
-      totalUniqueUnits: 0,
-      unitLevelSiyumimCount: unit,
-      aggregateLevelSiyumimCount: aggregate,
-      curriculumLevelSiyumimCount: curriculum,
-    );
+  curricula: const [],
+  totalCompletions: 0,
+  totalUniqueUnits: 0,
+  unitLevelSiyumimCount: unit,
+  aggregateLevelSiyumimCount: aggregate,
+  curriculumLevelSiyumimCount: curriculum,
+);
 
 LifetimeTotals _lifetime({int learned = 0, int total = 0}) => LifetimeTotals(
-      learnedSections: learned,
-      totalSections: total,
-      totalCurricula: 9,
-    );
+  learnedSections: learned,
+  totalSections: total,
+  totalCurricula: 9,
+);
 
 List<TrackDualProgressMetric> _metrics({
   required List<CurriculumId> curricula,
@@ -127,12 +127,12 @@ Widget _wrap({
         (ref) => Stream.value((currentStreak: streak, maxStreak: streak)),
       ),
       dashboardGlobalPointsProvider.overrideWith((ref) => Future.value(points)),
-      journeyViewModelProvider(_profileId).overrideWith(
-        (ref) => Future.value(journey),
-      ),
-      lifetimeTotalsAcrossAllCurriculaProvider(_profileId).overrideWith(
-        (ref) => Future.value(totals),
-      ),
+      journeyViewModelProvider(
+        _profileId,
+      ).overrideWith((ref) => Future.value(journey)),
+      lifetimeTotalsAcrossAllCurriculaProvider(
+        _profileId,
+      ).overrideWith((ref) => Future.value(totals)),
       trackDualProgressMetricsProvider(_profileId).overrideWith(
         (ref) => Future.value(_metrics(curricula: activeCurricula)),
       ),
@@ -159,47 +159,44 @@ Widget _wrap({
 
 void main() {
   group('ProgressScreen — three-lens IA hub', () {
-    testWidgets(
-      'renders top counter row + 3 lens tiles + per-track rows '
-      '(adult mode, single track)',
-      (tester) async {
-        await tester.pumpWidget(
-          _wrap(
-            activeCurricula: const [CurriculumId.mishnayos],
-            // 3 + 1 + 0 = 4 siyumim total.
-            journey: _journey(unit: 3, aggregate: 1),
-            totals: _lifetime(learned: 1336),
-            streak: 6,
-          ),
-        );
-        await tester.pumpAndSettle();
+    testWidgets('renders top counter row + 3 lens tiles + per-track rows '
+        '(adult mode, single track)', (tester) async {
+      await tester.pumpWidget(
+        _wrap(
+          activeCurricula: const [CurriculumId.mishnayos],
+          // 3 + 1 + 0 = 4 siyumim total.
+          journey: _journey(unit: 3, aggregate: 1),
+          totals: _lifetime(learned: 1336),
+          streak: 6,
+        ),
+      );
+      await tester.pumpAndSettle();
 
-        // 1. Shared counter row widget is present.
-        expect(find.byType(ProgressTierCounterRow), findsOneWidget);
+      // 1. Shared counter row widget is present.
+      expect(find.byType(ProgressTierCounterRow), findsOneWidget);
 
-        // 2. Counter values + short noun labels are visible (English default
-        // — Hebrew toggle is pinned off in [_wrap]). Big value uses
-        // locale-aware thousands separator so 1336 → "1,336".
-        expect(find.text('6'), findsOneWidget); // streak value
-        expect(find.text('4'), findsOneWidget); // siyumim value
-        expect(find.text('1,336'), findsOneWidget); // lifetime value formatted
-        expect(find.text('Streak'), findsOneWidget);
-        expect(find.text('Siyumim'), findsOneWidget);
-        expect(find.text('Lifetime'), findsOneWidget);
+      // 2. Counter values + short noun labels are visible (English default
+      // — Hebrew toggle is pinned off in [_wrap]). Big value uses
+      // locale-aware thousands separator so 1336 → "1,336".
+      expect(find.text('6'), findsOneWidget); // streak value
+      expect(find.text('4'), findsOneWidget); // siyumim value
+      expect(find.text('1,336'), findsOneWidget); // lifetime value formatted
+      expect(find.text('Streak'), findsOneWidget);
+      expect(find.text('Siyumim'), findsOneWidget);
+      expect(find.text('Lifetime'), findsOneWidget);
 
-        // 3. The three lens tile titles render via `domainTermLabels(ref)`.
-        expect(find.text('Recent Activity'), findsOneWidget);
-        expect(find.text('Siyumim & Milestones'), findsOneWidget);
-        expect(find.text('Lifetime Knowledge'), findsOneWidget);
+      // 3. The three lens tile titles render via `domainTermLabels(ref)`.
+      expect(find.text('Recent Activity'), findsOneWidget);
+      expect(find.text('Siyumim & Milestones'), findsOneWidget);
+      expect(find.text('Lifetime Knowledge'), findsOneWidget);
 
-        // 4. Per-track row shows the dual progress numbers (31% / 33%).
-        expect(find.text('Track progress: 31%'), findsOneWidget);
-        expect(find.text('Lifetime: 33%'), findsOneWidget);
+      // 4. Per-track row shows the dual progress numbers (31% / 33%).
+      expect(find.text('Track progress: 31%'), findsOneWidget);
+      expect(find.text('Lifetime: 33%'), findsOneWidget);
 
-        // 5. Section header for tracks.
-        expect(find.text('ACTIVE TRACKS'), findsOneWidget);
-      },
-    );
+      // 5. Section header for tracks.
+      expect(find.text('ACTIVE TRACKS'), findsOneWidget);
+    });
 
     testWidgets(
       'adult mode hides the points counter even when points provider is non-zero',
@@ -221,70 +218,67 @@ void main() {
       },
     );
 
-    testWidgets(
-      'child mode renders the fourth ⭐ points counter',
-      (tester) async {
-        await tester.pumpWidget(
-          _wrap(
-            activeCurricula: const [CurriculumId.mishnayos],
-            journey: _journey(unit: 1),
-            totals: _lifetime(learned: 5),
-            streak: 2,
-            userMode: UserMode.child,
-            points: 1250,
-          ),
-        );
-        await tester.pumpAndSettle();
+    testWidgets('child mode renders the fourth ⭐ points counter', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _wrap(
+          activeCurricula: const [CurriculumId.mishnayos],
+          journey: _journey(unit: 1),
+          totals: _lifetime(learned: 5),
+          streak: 2,
+          userMode: UserMode.child,
+          points: 1250,
+        ),
+      );
+      await tester.pumpAndSettle();
 
-        expect(find.text('1,250'), findsOneWidget); // points value formatted
-        expect(find.text('Points'), findsOneWidget);
-      },
-    );
+      expect(find.text('1,250'), findsOneWidget); // points value formatted
+      expect(find.text('Points'), findsOneWidget);
+    });
 
-    testWidgets(
-      'legacy 4-card stat grid + inline lifetime tree are GONE',
-      (tester) async {
-        await tester.pumpWidget(
-          _wrap(
-            activeCurricula: const [CurriculumId.mishnayos],
-            journey: _journey(),
-            totals: _lifetime(),
-            streak: 0,
-          ),
-        );
-        await tester.pumpAndSettle();
+    testWidgets('legacy 4-card stat grid + inline lifetime tree are GONE', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _wrap(
+          activeCurricula: const [CurriculumId.mishnayos],
+          journey: _journey(),
+          totals: _lifetime(),
+          streak: 0,
+        ),
+      );
+      await tester.pumpAndSettle();
 
-        // The retired _StatGrid had these all-caps labels via the legacy
-        // l10n keys (statCompletions, statUnitsDone, statActiveTracks).
-        // They must NOT appear on the hub anymore.
-        expect(find.text('ITEMS LEARNED'), findsNothing);
-        expect(find.text('TASKS DONE'), findsNothing);
-        expect(find.text('DAY STREAK'), findsNothing);
+      // The retired _StatGrid had these all-caps labels via the legacy
+      // l10n keys (statCompletions, statUnitsDone, statActiveTracks).
+      // They must NOT appear on the hub anymore.
+      expect(find.text('ITEMS LEARNED'), findsNothing);
+      expect(find.text('TASKS DONE'), findsNothing);
+      expect(find.text('DAY STREAK'), findsNothing);
 
-        // The inline learning-lifetime tree header is gone — the tree
-        // moved into the Lifetime Knowledge screen.
-        expect(find.text('Learning Lifetime'), findsNothing);
-      },
-    );
+      // The inline learning-lifetime tree header is gone — the tree
+      // moved into the Lifetime Knowledge screen.
+      expect(find.text('Learning Lifetime'), findsNothing);
+    });
 
-    testWidgets(
-      'shows empty state when there are no active curricula',
-      (tester) async {
-        await tester.pumpWidget(
-          _wrap(
-            activeCurricula: const [],
-            journey: _journey(),
-            totals: _lifetime(),
-            streak: 0,
-          ),
-        );
-        await tester.pumpAndSettle();
+    testWidgets('shows empty state when there are no active curricula', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _wrap(
+          activeCurricula: const [],
+          journey: _journey(),
+          totals: _lifetime(),
+          streak: 0,
+        ),
+      );
+      await tester.pumpAndSettle();
 
-        expect(find.text('No progress yet'), findsOneWidget);
-        // Counter row + per-track section are not rendered when empty.
-        expect(find.byType(ProgressTierCounterRow), findsNothing);
-      },
-    );
+      expect(find.text('No progress yet'), findsOneWidget);
+      // Counter row + per-track section are not rendered when empty.
+      expect(find.byType(ProgressTierCounterRow), findsNothing);
+    });
 
     testWidgets(
       'tapping each lens tile pushes the matching route on the router',
@@ -325,7 +319,8 @@ void main() {
         expect(
           pushed,
           contains('LifetimeKnowledgeRoute'),
-          reason: 'Lifetime Knowledge lens tile must push LifetimeKnowledgeRoute',
+          reason:
+              'Lifetime Knowledge lens tile must push LifetimeKnowledgeRoute',
         );
       },
     );

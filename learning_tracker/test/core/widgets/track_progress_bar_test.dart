@@ -9,9 +9,7 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           theme: AppTheme.lightTheme(),
-          home: const Scaffold(
-            body: TrackProgressBar(completionCount: 150),
-          ),
+          home: const Scaffold(body: TrackProgressBar(completionCount: 150)),
         ),
       );
       await tester.pumpAndSettle();
@@ -24,9 +22,7 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           theme: AppTheme.lightTheme(),
-          home: const Scaffold(
-            body: TrackProgressBar(completionCount: 0),
-          ),
+          home: const Scaffold(body: TrackProgressBar(completionCount: 0)),
         ),
       );
 
@@ -40,10 +36,7 @@ void main() {
         MaterialApp(
           theme: AppTheme.lightTheme(),
           home: const Scaffold(
-            body: TrackProgressBar(
-              completionCount: 10,
-              height: customHeight,
-            ),
+            body: TrackProgressBar(completionCount: 10, height: customHeight),
           ),
         ),
       );
@@ -66,10 +59,7 @@ void main() {
         MaterialApp(
           theme: AppTheme.lightTheme(),
           home: const Scaffold(
-            body: TrackProgressBar(
-              completionCount: 10,
-              showLabels: false,
-            ),
+            body: TrackProgressBar(completionCount: 10, showLabels: false),
           ),
         ),
       );
@@ -81,9 +71,7 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           theme: AppTheme.lightTheme(),
-          home: const Scaffold(
-            body: TrackProgressBar(completionCount: 1),
-          ),
+          home: const Scaffold(body: TrackProgressBar(completionCount: 1)),
         ),
       );
 

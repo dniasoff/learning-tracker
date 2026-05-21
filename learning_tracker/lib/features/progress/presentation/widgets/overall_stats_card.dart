@@ -135,10 +135,7 @@ class DualStatsRow extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Expanded(
-          child: _DualStatCell(
-            label: trackLabel,
-            fraction: trackFraction,
-          ),
+          child: _DualStatCell(label: trackLabel, fraction: trackFraction),
         ),
         const SizedBox(width: 12),
         Expanded(

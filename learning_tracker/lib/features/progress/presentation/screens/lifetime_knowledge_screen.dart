@@ -136,7 +136,9 @@ class _LifetimeKnowledgeScreenState
                 loading: () => Center(
                   child: Padding(
                     padding: const EdgeInsets.only(top: 48),
-                    child: LoadingIndicator(message: l10n.lifetimeKnowledgeLoading),
+                    child: LoadingIndicator(
+                      message: l10n.lifetimeKnowledgeLoading,
+                    ),
                   ),
                 ),
                 error: (error, _) => Padding(

@@ -46,8 +46,9 @@ void main() {
                 builder: (context, ref, _) {
                   final program = LearningProgramRepository.instance
                       .getProgramByName('daf_yomi')!;
-                  rendered =
-                      ProgramLabelResolver.of(ref).learningProgramLabel(program);
+                  rendered = ProgramLabelResolver.of(
+                    ref,
+                  ).learningProgramLabel(program);
                   return Text(rendered!);
                 },
               ),
@@ -59,35 +60,32 @@ void main() {
       expect(rendered, 'דף יומי');
     });
 
-    testWidgets(
-      'Hebrew OFF → English LearningProgramData.displayName',
-      (tester) async {
-        SharedPreferences.setMockInitialValues({
-          'hebrew_terms_script_p0': false,
-        });
-        String? rendered;
-        await tester.pumpWidget(
-          ProviderScope(
-            child: MaterialApp(
-              home: Scaffold(
-                body: Consumer(
-                  builder: (context, ref, _) {
-                    final program = LearningProgramRepository.instance
-                        .getProgramByName('daf_yomi')!;
-                    rendered = ProgramLabelResolver.of(
-                      ref,
-                    ).learningProgramLabel(program);
-                    return Text(rendered!);
-                  },
-                ),
+    testWidgets('Hebrew OFF → English LearningProgramData.displayName', (
+      tester,
+    ) async {
+      SharedPreferences.setMockInitialValues({'hebrew_terms_script_p0': false});
+      String? rendered;
+      await tester.pumpWidget(
+        ProviderScope(
+          child: MaterialApp(
+            home: Scaffold(
+              body: Consumer(
+                builder: (context, ref, _) {
+                  final program = LearningProgramRepository.instance
+                      .getProgramByName('daf_yomi')!;
+                  rendered = ProgramLabelResolver.of(
+                    ref,
+                  ).learningProgramLabel(program);
+                  return Text(rendered!);
+                },
               ),
             ),
           ),
-        );
-        await tester.pumpAndSettle();
-        expect(rendered, 'Daf Yomi');
-      },
-    );
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(rendered, 'Daf Yomi');
+    });
 
     testWidgets(
       'Hebrew ON + unregistered program → falls back to English displayName',
@@ -157,8 +155,9 @@ void main() {
             home: Scaffold(
               body: Consumer(
                 builder: (context, ref, _) {
-                  rendered =
-                      ProgramLabelResolver.of(ref).calendarEntryLabel(entry);
+                  rendered = ProgramLabelResolver.of(
+                    ref,
+                  ).calendarEntryLabel(entry);
                   return Text(rendered!);
                 },
               ),
@@ -171,9 +170,7 @@ void main() {
     });
 
     testWidgets('Hebrew OFF → entry.displayNameEn', (tester) async {
-      SharedPreferences.setMockInitialValues({
-        'hebrew_terms_script_p0': false,
-      });
+      SharedPreferences.setMockInitialValues({'hebrew_terms_script_p0': false});
       String? rendered;
       await tester.pumpWidget(
         ProviderScope(
@@ -181,8 +178,9 @@ void main() {
             home: Scaffold(
               body: Consumer(
                 builder: (context, ref, _) {
-                  rendered =
-                      ProgramLabelResolver.of(ref).calendarEntryLabel(entry);
+                  rendered = ProgramLabelResolver.of(
+                    ref,
+                  ).calendarEntryLabel(entry);
                   return Text(rendered!);
                 },
               ),
@@ -217,8 +215,9 @@ void main() {
             home: Scaffold(
               body: Consumer(
                 builder: (context, ref, _) {
-                  rendered =
-                      ProgramLabelResolver.of(ref).calendarEntryTodayRef(entry);
+                  rendered = ProgramLabelResolver.of(
+                    ref,
+                  ).calendarEntryTodayRef(entry);
                   return Text(rendered!);
                 },
               ),
@@ -268,9 +267,7 @@ void main() {
     );
 
     testWidgets('Hebrew OFF → entry.todayRef (English)', (tester) async {
-      SharedPreferences.setMockInitialValues({
-        'hebrew_terms_script_p0': false,
-      });
+      SharedPreferences.setMockInitialValues({'hebrew_terms_script_p0': false});
       const entry = CalendarProgramEntry(
         programId: 'daf_yomi',
         displayNameEn: 'Daf Yomi',
@@ -286,8 +283,9 @@ void main() {
             home: Scaffold(
               body: Consumer(
                 builder: (context, ref, _) {
-                  rendered =
-                      ProgramLabelResolver.of(ref).calendarEntryTodayRef(entry);
+                  rendered = ProgramLabelResolver.of(
+                    ref,
+                  ).calendarEntryTodayRef(entry);
                   return Text(rendered!);
                 },
               ),
@@ -335,9 +333,7 @@ void main() {
     });
 
     testWidgets('calendarEntryLabelText Hebrew OFF → English', (tester) async {
-      SharedPreferences.setMockInitialValues({
-        'hebrew_terms_script_p0': false,
-      });
+      SharedPreferences.setMockInitialValues({'hebrew_terms_script_p0': false});
       const entry = CalendarProgramEntry(
         programId: 'daf_yomi',
         displayNameEn: 'Daf Yomi',

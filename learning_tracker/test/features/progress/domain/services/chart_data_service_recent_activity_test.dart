@@ -145,36 +145,11 @@ void main() {
     test('mixed stages on one day produce a stacked bar with both '
         'segments', () async {
       // 2 limudim (stage 1) and 3 chazaros (stages 2 & 3) on May 10.
-      await _seedLive(
-        db,
-        trackId: trackId,
-        ref: 'limud_a',
-        stageId: 1,
-      );
-      await _seedLive(
-        db,
-        trackId: trackId,
-        ref: 'limud_b',
-        stageId: 1,
-      );
-      await _seedLive(
-        db,
-        trackId: trackId,
-        ref: 'chaz_a',
-        stageId: 2,
-      );
-      await _seedLive(
-        db,
-        trackId: trackId,
-        ref: 'chaz_b',
-        stageId: 2,
-      );
-      await _seedLive(
-        db,
-        trackId: trackId,
-        ref: 'chaz_c',
-        stageId: 3,
-      );
+      await _seedLive(db, trackId: trackId, ref: 'limud_a', stageId: 1);
+      await _seedLive(db, trackId: trackId, ref: 'limud_b', stageId: 1);
+      await _seedLive(db, trackId: trackId, ref: 'chaz_a', stageId: 2);
+      await _seedLive(db, trackId: trackId, ref: 'chaz_b', stageId: 2);
+      await _seedLive(db, trackId: trackId, ref: 'chaz_c', stageId: 3);
 
       final result = await service.getDailyLimudimAndChazaros(
         startDate: _startDate,
@@ -312,12 +287,7 @@ void main() {
   group('getStreakCalendarLive', () {
     test('only live marks light up the streak calendar', () async {
       // Bulk row on May 5; live row on May 10.
-      await _seedBulkInTrack(
-        db,
-        trackId: trackId,
-        ref: 'bulk',
-        stageId: 1,
-      );
+      await _seedBulkInTrack(db, trackId: trackId, ref: 'bulk', stageId: 1);
       await db.completionEventDao.appendEvent(
         CompletionEventsCompanion.insert(
           profileId: _profileId,

@@ -10,8 +10,8 @@ import 'package:learning_tracker/core/sync/lifecycle_observer.dart';
 class _HookLog {
   final List<String> calls = [];
   LifecycleHook record(String name) => () async {
-        calls.add(name);
-      };
+    calls.add(name);
+  };
 }
 
 void main() {
@@ -91,28 +91,30 @@ void main() {
       },
     );
 
-    test('back-to-back resumes only reset on the first after backgrounding',
-        () async {
-      final log = _HookLog();
-      final observer = LifecycleObserver(
-        resetFirestoreNetwork: log.record('reset'),
-        redetectTimezone: log.record('tz'),
-        invalidateSacredCache: log.record('cache'),
-        triggerPull: log.record('pull'),
-      );
+    test(
+      'back-to-back resumes only reset on the first after backgrounding',
+      () async {
+        final log = _HookLog();
+        final observer = LifecycleObserver(
+          resetFirestoreNetwork: log.record('reset'),
+          redetectTimezone: log.record('tz'),
+          invalidateSacredCache: log.record('cache'),
+          triggerPull: log.record('pull'),
+        );
 
-      await observer.didChangeAppLifecycleState(AppLifecycleState.resumed);
-      await observer.didChangeAppLifecycleState(AppLifecycleState.paused);
-      await observer.didChangeAppLifecycleState(AppLifecycleState.resumed);
-      log.calls.clear();
+        await observer.didChangeAppLifecycleState(AppLifecycleState.resumed);
+        await observer.didChangeAppLifecycleState(AppLifecycleState.paused);
+        await observer.didChangeAppLifecycleState(AppLifecycleState.resumed);
+        log.calls.clear();
 
-      // A spurious second resumed event (no intervening pause) must NOT
-      // reset Firestore again — the backgrounded flag was cleared by the
-      // first post-pause resume.
-      await observer.didChangeAppLifecycleState(AppLifecycleState.resumed);
+        // A spurious second resumed event (no intervening pause) must NOT
+        // reset Firestore again — the backgrounded flag was cleared by the
+        // first post-pause resume.
+        await observer.didChangeAppLifecycleState(AppLifecycleState.resumed);
 
-      expect(log.calls, equals(['tz', 'cache', 'pull']));
-    });
+        expect(log.calls, equals(['tz', 'cache', 'pull']));
+      },
+    );
 
     test('resetFirestoreNetwork hook is optional', () async {
       final log = _HookLog();
@@ -131,25 +133,22 @@ void main() {
       expect(log.calls, equals(['tz', 'cache', 'pull', 'tz', 'cache', 'pull']));
     });
 
-    test(
-      'hidden and detached states also flag as backgrounded',
-      () async {
-        final log = _HookLog();
-        final observer = LifecycleObserver(
-          resetFirestoreNetwork: log.record('reset'),
-          redetectTimezone: log.record('tz'),
-          invalidateSacredCache: log.record('cache'),
-          triggerPull: log.record('pull'),
-        );
+    test('hidden and detached states also flag as backgrounded', () async {
+      final log = _HookLog();
+      final observer = LifecycleObserver(
+        resetFirestoreNetwork: log.record('reset'),
+        redetectTimezone: log.record('tz'),
+        invalidateSacredCache: log.record('cache'),
+        triggerPull: log.record('pull'),
+      );
 
-        await observer.didChangeAppLifecycleState(AppLifecycleState.resumed);
-        log.calls.clear();
+      await observer.didChangeAppLifecycleState(AppLifecycleState.resumed);
+      log.calls.clear();
 
-        // `hidden` (Flutter 3.13+) is the cross-platform "not visible" state.
-        await observer.didChangeAppLifecycleState(AppLifecycleState.hidden);
-        await observer.didChangeAppLifecycleState(AppLifecycleState.resumed);
-        expect(log.calls.first, equals('reset'));
-      },
-    );
+      // `hidden` (Flutter 3.13+) is the cross-platform "not visible" state.
+      await observer.didChangeAppLifecycleState(AppLifecycleState.hidden);
+      await observer.didChangeAppLifecycleState(AppLifecycleState.resumed);
+      expect(log.calls.first, equals('reset'));
+    });
   });
 }

@@ -53,20 +53,20 @@ class _FakeContentRepo implements ContentRepository {
   final int _leafCount;
 
   List<ContentItem> get _items => List.generate(
-        _leafCount,
-        (i) => ContentItem(
-          curriculumId: _curriculumKey,
-          sefariaRef: 'ref_$i',
-          displayNameEn: 'Item $i',
-          displayNameHe: 'פריט $i',
-          level1: 'Seder',
-          level2: 'Masechta',
-          level3: null,
-          level4: null,
-          isLeaf: true,
-          sortOrder: i,
-        ),
-      );
+    _leafCount,
+    (i) => ContentItem(
+      curriculumId: _curriculumKey,
+      sefariaRef: 'ref_$i',
+      displayNameEn: 'Item $i',
+      displayNameHe: 'פריט $i',
+      level1: 'Seder',
+      level2: 'Masechta',
+      level3: null,
+      level4: null,
+      isLeaf: true,
+      sortOrder: i,
+    ),
+  );
 
   @override
   Future<List<ContentItem>> getContentForCurriculum(
@@ -77,10 +77,10 @@ class _FakeContentRepo implements ContentRepository {
   Future<CurriculumHierarchyConfig> getHierarchyConfig(
     CurriculumId curriculumId,
   ) async => CurriculumHierarchyConfig(
-        curriculumId: curriculumId.storageKey,
-        levelLabels: const ['Seder', 'Masechta'],
-        totalItems: _leafCount,
-      );
+    curriculumId: curriculumId.storageKey,
+    levelLabels: const ['Seder', 'Masechta'],
+    totalItems: _leafCount,
+  );
 
   @override
   Future<List<ContentItem>> filterByLevel({
@@ -137,7 +137,9 @@ ProviderContainer _container({
     overrides: [
       userDatabaseProvider.overrideWithValue(db),
       contentRepositoryProvider.overrideWithValue(_FakeContentRepo(leafCount)),
-      activeProfileIdProvider.overrideWith(() => _ProfileIdOverride(_profileId)),
+      activeProfileIdProvider.overrideWith(
+        () => _ProfileIdOverride(_profileId),
+      ),
       clockProvider.overrideWith((ref) => today),
     ],
   );
@@ -189,7 +191,9 @@ Future<void> _seedGoal(
   required DateTime targetDate,
   required DateTime createdAt,
 }) async {
-  await db.into(db.goals).insert(
+  await db
+      .into(db.goals)
+      .insert(
         GoalsCompanion.insert(
           profileId: _profileId,
           curriculumId: _curriculumKey,
@@ -254,7 +258,8 @@ void main() {
       expect(
         result!.paceStatus,
         PaceStatus.graceWindow,
-        reason: 'Day 0 is always graceWindow — bulk entries must not leak into '
+        reason:
+            'Day 0 is always graceWindow — bulk entries must not leak into '
             'live velocity and inflate paceVariance',
       );
       expect(result.bulkBaseline, 1336);
@@ -327,8 +332,7 @@ void main() {
       expect(
         result.paceStatus,
         PaceStatus.ahead,
-        reason:
-            '150 live items vs 100.8 expected (3.36/day * 30 days) → ahead',
+        reason: '150 live items vs 100.8 expected (3.36/day * 30 days) → ahead',
       );
     },
   );
@@ -386,8 +390,7 @@ void main() {
       expect(
         result.paceStatus,
         PaceStatus.behind,
-        reason:
-            '10 live items vs 100.8 expected (3.36/day * 30 days) → behind',
+        reason: '10 live items vs 100.8 expected (3.36/day * 30 days) → behind',
       );
     },
   );
@@ -399,11 +402,7 @@ void main() {
     db = inMemoryDb();
     await seedProfile(db);
 
-    await seedTrack(
-      db,
-      profileId: _profileId,
-      curriculumId: _curriculumKey,
-    );
+    await seedTrack(db, profileId: _profileId, curriculumId: _curriculumKey);
 
     container = _container(db: db, leafCount: 100, today: _today);
 

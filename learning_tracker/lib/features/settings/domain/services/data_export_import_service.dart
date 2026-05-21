@@ -481,8 +481,7 @@ class DataExportImportService {
 
     // W3.37: `streaks` is always empty (table dropped); use `streakEvents`
     // count as the streakCount so the preview reflects actual streak data.
-    final streakEventCount =
-        (data['streakEvents'] as List? ?? []).length;
+    final streakEventCount = (data['streakEvents'] as List? ?? []).length;
     final legacyStreakCount = (data['streaks'] as List).length;
     return ImportPreview(
       completionCount: (data['completions'] as List).length,
@@ -930,7 +929,10 @@ class DataExportImportService {
         return jsonEncode({'type': 'weekly', 'days_of_week': daysList});
       case 'rolling':
         final windowSize = map['rollingWindowSize'] as int? ?? 7;
-        return jsonEncode({'type': 'rolling', 'rolling_window_size': windowSize});
+        return jsonEncode({
+          'type': 'rolling',
+          'rolling_window_size': windowSize,
+        });
       default:
         return jsonEncode({'type': 'delay', 'delay_days': delayDays});
     }

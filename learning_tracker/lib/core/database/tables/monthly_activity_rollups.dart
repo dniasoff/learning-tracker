@@ -26,10 +26,12 @@ class MonthlyActivityRollups extends Table {
   IntColumn get activeDays => integer().withDefault(const Constant<int>(0))();
 
   /// Total live completion events in this month (stage 1 only).
-  IntColumn get totalCompletions => integer().withDefault(const Constant<int>(0))();
+  IntColumn get totalCompletions =>
+      integer().withDefault(const Constant<int>(0))();
 
   /// Total chazara completion events in this month (stage > 1).
-  IntColumn get totalChazaros => integer().withDefault(const Constant<int>(0))();
+  IntColumn get totalChazaros =>
+      integer().withDefault(const Constant<int>(0))();
 
   /// UTC timestamp of the earliest completion event in this month. Nullable
   /// because a rollup row may be created before any completions exist.
@@ -44,7 +46,8 @@ class MonthlyActivityRollups extends Table {
   ///
   /// The sliver calendar uses this to render the 7-cell mini heat-strip for
   /// the last 7 days of the month without re-querying the raw events table.
-  TextColumn get activeDaysList => text().withDefault(const Constant<String>(''))();
+  TextColumn get activeDaysList =>
+      text().withDefault(const Constant<String>(''))();
 
   @override
   Set<Column<Object>> get primaryKey => {profileId, yearMonth};

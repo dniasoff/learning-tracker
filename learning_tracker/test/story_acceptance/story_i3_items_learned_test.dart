@@ -232,7 +232,11 @@ void main() {
           profileId: profileId,
         );
 
-        expect(summary, isNull, reason: 'no trackAchievement completions → null');
+        expect(
+          summary,
+          isNull,
+          reason: 'no trackAchievement completions → null',
+        );
       },
     );
   });

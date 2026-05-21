@@ -39,10 +39,7 @@ class TrackProgressBar extends StatelessWidget {
             child: Container(color: AppTheme.brandBlue),
           ),
         ),
-        if (showLabels) ...[
-          const SizedBox(height: 8),
-          _buildLabel(context),
-        ],
+        if (showLabels) ...[const SizedBox(height: 8), _buildLabel(context)],
       ],
     );
   }

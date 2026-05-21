@@ -15,16 +15,18 @@ void main() {
     repo = ProfileRepositoryImpl(db);
     // Seed accounts 1 and 2 for FK constraint on learner_profiles.account_id.
     for (final email in ['account1@test.com', 'account2@test.com']) {
-      await db.into(db.accounts).insert(
-        AccountsCompanion.insert(
-          email: email,
-          tier: 'localBorn',
-          displayName: 'Test Account',
-          userMode: 'adult',
-          createdAt: DateTimeFactory.nowUtc(),
-          updatedAt: DateTimeFactory.nowUtc(),
-        ),
-      );
+      await db
+          .into(db.accounts)
+          .insert(
+            AccountsCompanion.insert(
+              email: email,
+              tier: 'localBorn',
+              displayName: 'Test Account',
+              userMode: 'adult',
+              createdAt: DateTimeFactory.nowUtc(),
+              updatedAt: DateTimeFactory.nowUtc(),
+            ),
+          );
     }
   });
 

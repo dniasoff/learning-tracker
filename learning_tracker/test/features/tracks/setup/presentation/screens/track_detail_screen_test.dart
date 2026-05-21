@@ -93,12 +93,12 @@ List<Override> _overridesFor({
     useHebrewTermsProvider.overrideWith(
       () => _UseHebrewTermsOverride(useHebrew: false),
     ),
-    dashboardTrackCompletionPercentageProvider(track.id).overrideWith(
-      (ref) async => currentCycle,
-    ),
-    dashboardHasProgramEnrollmentProvider(curriculum).overrideWith(
-      (ref) async => false,
-    ),
+    dashboardTrackCompletionPercentageProvider(
+      track.id,
+    ).overrideWith((ref) async => currentCycle),
+    dashboardHasProgramEnrollmentProvider(
+      curriculum,
+    ).overrideWith((ref) async => false),
     scopedItemCountProvider(curriculum).overrideWith((ref) async => 100),
     trackDualProgressMetricsProvider(track.profileId).overrideWith(
       (ref) async => [
@@ -113,7 +113,10 @@ List<Override> _overridesFor({
   ];
 }
 
-Widget _wrap({required List<Override> overrides, required CurriculumTrack track}) {
+Widget _wrap({
+  required List<Override> overrides,
+  required CurriculumTrack track,
+}) {
   return ProviderScope(
     overrides: overrides,
     child: MaterialApp(
@@ -142,70 +145,68 @@ void main() {
   });
 
   group('Track Detail — dual progress labels (Task #16)', () {
-    testWidgets(
-      'header shows both "Track progress: X%" and "Lifetime: Y%"',
-      (tester) async {
-        final track = _track();
-        await tester.pumpWidget(
-          _wrap(
+    testWidgets('header shows both "Track progress: X%" and "Lifetime: Y%"', (
+      tester,
+    ) async {
+      final track = _track();
+      await tester.pumpWidget(
+        _wrap(
+          track: track,
+          overrides: _overridesFor(
+            db: db,
             track: track,
-            overrides: _overridesFor(
-              db: db,
-              track: track,
-              curriculum: CurriculumId.mishnayos,
-              // 0.35 → 35%, 0.74 → 74% (adaptive precision: whole numbers, no dp)
-              currentCycle: 0.35,
-              lifetime: 0.74,
-            ),
+            curriculum: CurriculumId.mishnayos,
+            // 0.35 → 35%, 0.74 → 74% (adaptive precision: whole numbers, no dp)
+            currentCycle: 0.35,
+            lifetime: 0.74,
           ),
-        );
-        // Let the FutureProviders + goal lookup settle without
-        // pumpAndSettle (which would spin on auto-disposing providers).
-        await tester.pump(const Duration(milliseconds: 100));
-        await tester.pump(const Duration(milliseconds: 100));
+        ),
+      );
+      // Let the FutureProviders + goal lookup settle without
+      // pumpAndSettle (which would spin on auto-disposing providers).
+      await tester.pump(const Duration(milliseconds: 100));
+      await tester.pump(const Duration(milliseconds: 100));
 
-        expect(
-          find.text('Track progress: 35%'),
-          findsOneWidget,
-          reason:
-              'Dual progress label must surface the current-cycle pct from '
-              'trackDualProgressMetricsProvider as "Track progress: X%".',
-        );
-        expect(
-          find.text('Lifetime: 74%'),
-          findsOneWidget,
-          reason:
-              'Dual progress label must surface the lifetime tier pct from '
-              'trackDualProgressMetricsProvider as "Lifetime: Y%".',
-        );
-      },
-    );
+      expect(
+        find.text('Track progress: 35%'),
+        findsOneWidget,
+        reason:
+            'Dual progress label must surface the current-cycle pct from '
+            'trackDualProgressMetricsProvider as "Track progress: X%".',
+      );
+      expect(
+        find.text('Lifetime: 74%'),
+        findsOneWidget,
+        reason:
+            'Dual progress label must surface the lifetime tier pct from '
+            'trackDualProgressMetricsProvider as "Lifetime: Y%".',
+      );
+    });
 
-    testWidgets(
-      'zero-valued metrics still render both labels at 0%',
-      (tester) async {
-        final track = _track();
-        await tester.pumpWidget(
-          _wrap(
+    testWidgets('zero-valued metrics still render both labels at 0%', (
+      tester,
+    ) async {
+      final track = _track();
+      await tester.pumpWidget(
+        _wrap(
+          track: track,
+          overrides: _overridesFor(
+            db: db,
             track: track,
-            overrides: _overridesFor(
-              db: db,
-              track: track,
-              curriculum: CurriculumId.mishnayos,
-              currentCycle: 0.0,
-              lifetime: 0.0,
-            ),
+            curriculum: CurriculumId.mishnayos,
+            currentCycle: 0.0,
+            lifetime: 0.0,
           ),
-        );
-        await tester.pump(const Duration(milliseconds: 100));
-        await tester.pump(const Duration(milliseconds: 100));
+        ),
+      );
+      await tester.pump(const Duration(milliseconds: 100));
+      await tester.pump(const Duration(milliseconds: 100));
 
-        // Both labels must render even when the user has no progress yet,
-        // so the dual-progress contract is the same in empty state.
-        expect(find.text('Track progress: 0%'), findsOneWidget);
-        expect(find.text('Lifetime: 0%'), findsOneWidget);
-      },
-    );
+      // Both labels must render even when the user has no progress yet,
+      // so the dual-progress contract is the same in empty state.
+      expect(find.text('Track progress: 0%'), findsOneWidget);
+      expect(find.text('Lifetime: 0%'), findsOneWidget);
+    });
   });
 
   group('Track Detail — differentiated bulk-prior tile (Task #16)', () {

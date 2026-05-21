@@ -407,8 +407,7 @@ void main() {
         final entries = await db.learningLedgerDao.getEntriesByProfile(1);
         expect(
           entries.any(
-            (e) =>
-                e.entryScope == 'masechta' && e.unitIdentifier == 'Berakhot',
+            (e) => e.entryScope == 'masechta' && e.unitIdentifier == 'Berakhot',
           ),
           isTrue,
           reason:
@@ -597,142 +596,139 @@ void main() {
       },
     );
 
-    test(
-      'Mishna Berurah level-2 detection writes scope=siman',
-      () async {
-        // Track row for mishna_berurah.
-        final mbTrack = await db
-            .into(db.curriculumTracks)
-            .insertReturning(
-              CurriculumTracksCompanion.insert(
-                profileId: 1,
-                curriculumId: CurriculumId.mishnaBerurah.storageKey,
-                stateChangedAt: DateTime.now(),
-                activatedAt: DateTime.now(),
-              ),
-            );
-
-        // Mishna Berurah content: chelek 1 → siman 1 → 2 leaves.
-        final leaves = <ContentItem>[
-          const ContentItem(
-            curriculumId: 'mishna_berurah',
-            level1: 'Chelek 1',
-            level2: 'Siman 1',
-            displayNameHe: 'סעיף א',
-            displayNameEn: 'Seif 1',
-            sefariaRef: 'MB_1_1_1',
-            sortOrder: 0,
-            isLeaf: true,
-          ),
-          const ContentItem(
-            curriculumId: 'mishna_berurah',
-            level1: 'Chelek 1',
-            level2: 'Siman 1',
-            displayNameHe: 'סעיף ב',
-            displayNameEn: 'Seif 2',
-            sefariaRef: 'MB_1_1_2',
-            sortOrder: 1,
-            isLeaf: true,
-          ),
-        ];
-
-        when(
-          () => mockContentRepo.getContentByRef(
-            curriculumId: CurriculumId.mishnaBerurah,
-            sefariaRef: any(named: 'sefariaRef'),
-          ),
-        ).thenAnswer((_) async => leaves.first);
-
-        when(
-          () => mockContentRepo.filterByLevel(
-            curriculumId: CurriculumId.mishnaBerurah,
-            level1: 'Chelek 1',
-            level2: 'Siman 1',
-          ),
-        ).thenAnswer((_) async => leaves);
-
-        when(
-          () => mockContentRepo.filterByLevel(
-            curriculumId: CurriculumId.mishnaBerurah,
-            level1: 'Chelek 1',
-            level2: null,
-          ),
-        ).thenAnswer((_) async => leaves);
-
-        await db.stageDao.insertStageDefinition(
-          StageDefinitionsCompanion.insert(
-            profileId: 1,
-            curriculumId: CurriculumId.mishnaBerurah.storageKey,
-            trackId: mbTrack.id,
-            stageOrder: 1,
-            stageName: 'Learn',
-            schedule: const Value('{"type":"delay","delay_days":0}'),
-          ),
-        );
-
-        for (final leaf in leaves) {
-          await seedCompletion(
-            db,
-            CompletionEventsCompanion.insert(
+    test('Mishna Berurah level-2 detection writes scope=siman', () async {
+      // Track row for mishna_berurah.
+      final mbTrack = await db
+          .into(db.curriculumTracks)
+          .insertReturning(
+            CurriculumTracksCompanion.insert(
               profileId: 1,
               curriculumId: CurriculumId.mishnaBerurah.storageKey,
-              sefariaRef: leaf.sefariaRef,
-              stageId: 1,
-              trackType: 'personal',
-              trackId: Value(mbTrack.id),
-              eventTimestamp: DateTime.utc(2026, 3, 1),
+              stateChangedAt: DateTime.now(),
+              activatedAt: DateTime.now(),
             ),
           );
-        }
 
-        final service = createService();
-        await service.checkAndRecordCompletions(
-          curriculumId: CurriculumId.mishnaBerurah.storageKey,
-          sefariaRef: leaves.first.sefariaRef,
-          trackType: 'personal',
+      // Mishna Berurah content: chelek 1 → siman 1 → 2 leaves.
+      final leaves = <ContentItem>[
+        const ContentItem(
+          curriculumId: 'mishna_berurah',
+          level1: 'Chelek 1',
+          level2: 'Siman 1',
+          displayNameHe: 'סעיף א',
+          displayNameEn: 'Seif 1',
+          sefariaRef: 'MB_1_1_1',
+          sortOrder: 0,
+          isLeaf: true,
+        ),
+        const ContentItem(
+          curriculumId: 'mishna_berurah',
+          level1: 'Chelek 1',
+          level2: 'Siman 1',
+          displayNameHe: 'סעיף ב',
+          displayNameEn: 'Seif 2',
+          sefariaRef: 'MB_1_1_2',
+          sortOrder: 1,
+          isLeaf: true,
+        ),
+      ];
+
+      when(
+        () => mockContentRepo.getContentByRef(
+          curriculumId: CurriculumId.mishnaBerurah,
+          sefariaRef: any(named: 'sefariaRef'),
+        ),
+      ).thenAnswer((_) async => leaves.first);
+
+      when(
+        () => mockContentRepo.filterByLevel(
+          curriculumId: CurriculumId.mishnaBerurah,
+          level1: 'Chelek 1',
+          level2: 'Siman 1',
+        ),
+      ).thenAnswer((_) async => leaves);
+
+      when(
+        () => mockContentRepo.filterByLevel(
+          curriculumId: CurriculumId.mishnaBerurah,
+          level1: 'Chelek 1',
+          level2: null,
+        ),
+      ).thenAnswer((_) async => leaves);
+
+      await db.stageDao.insertStageDefinition(
+        StageDefinitionsCompanion.insert(
           profileId: 1,
-          markedBy: 1,
-        );
+          curriculumId: CurriculumId.mishnaBerurah.storageKey,
+          trackId: mbTrack.id,
+          stageOrder: 1,
+          stageName: 'Learn',
+          schedule: const Value('{"type":"delay","delay_days":0}'),
+        ),
+      );
 
-        final entries = await db.learningLedgerDao.getEntriesByProfile(1);
-        // Level-2 row: scope=siman (NOT 'masechta', which would silently fall
-        // outside the journey whitelist).
-        expect(
-          entries
-              .where(
-                (e) =>
-                    e.curriculumId == 'mishna_berurah' &&
-                    e.entryScope == 'siman' &&
-                    e.unitIdentifier == 'Siman 1',
-              )
-              .toList(),
-          hasLength(1),
-          reason:
-              'F2: Mishna Berurah level-2 must write entryScope=siman, not '
-              '"masechta". Pre-fix this row used the hardcoded "masechta" '
-              "string and the journey provider's siman whitelist still "
-              'matched it by accident — but the curriculum-level scope was '
-              'wrong, breaking the redesign brief.',
+      for (final leaf in leaves) {
+        await seedCompletion(
+          db,
+          CompletionEventsCompanion.insert(
+            profileId: 1,
+            curriculumId: CurriculumId.mishnaBerurah.storageKey,
+            sefariaRef: leaf.sefariaRef,
+            stageId: 1,
+            trackType: 'personal',
+            trackId: Value(mbTrack.id),
+            eventTimestamp: DateTime.utc(2026, 3, 1),
+          ),
         );
-        // Level-1 row: scope=chelek (NOT 'seder' — that was the hardcoded
-        // bug).
-        expect(
-          entries
-              .where(
-                (e) =>
-                    e.curriculumId == 'mishna_berurah' &&
-                    e.entryScope == 'chelek' &&
-                    e.unitIdentifier == 'Chelek 1',
-              )
-              .toList(),
-          hasLength(1),
-          reason:
-              'F2: Mishna Berurah level-1 must write entryScope=chelek, not '
-              'seder. A chelek covers all simanim within it (in this test '
-              'the only siman is complete, so the chelek also fires).',
-        );
-      },
-    );
+      }
+
+      final service = createService();
+      await service.checkAndRecordCompletions(
+        curriculumId: CurriculumId.mishnaBerurah.storageKey,
+        sefariaRef: leaves.first.sefariaRef,
+        trackType: 'personal',
+        profileId: 1,
+        markedBy: 1,
+      );
+
+      final entries = await db.learningLedgerDao.getEntriesByProfile(1);
+      // Level-2 row: scope=siman (NOT 'masechta', which would silently fall
+      // outside the journey whitelist).
+      expect(
+        entries
+            .where(
+              (e) =>
+                  e.curriculumId == 'mishna_berurah' &&
+                  e.entryScope == 'siman' &&
+                  e.unitIdentifier == 'Siman 1',
+            )
+            .toList(),
+        hasLength(1),
+        reason:
+            'F2: Mishna Berurah level-2 must write entryScope=siman, not '
+            '"masechta". Pre-fix this row used the hardcoded "masechta" '
+            "string and the journey provider's siman whitelist still "
+            'matched it by accident — but the curriculum-level scope was '
+            'wrong, breaking the redesign brief.',
+      );
+      // Level-1 row: scope=chelek (NOT 'seder' — that was the hardcoded
+      // bug).
+      expect(
+        entries
+            .where(
+              (e) =>
+                  e.curriculumId == 'mishna_berurah' &&
+                  e.entryScope == 'chelek' &&
+                  e.unitIdentifier == 'Chelek 1',
+            )
+            .toList(),
+        hasLength(1),
+        reason:
+            'F2: Mishna Berurah level-1 must write entryScope=chelek, not '
+            'seder. A chelek covers all simanim within it (in this test '
+            'the only siman is complete, so the chelek also fires).',
+      );
+    });
 
     // Pure unit tests on the helper — no DB needed.
     group('unitScopeFor helper', () {

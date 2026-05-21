@@ -59,17 +59,20 @@ void main() {
       expect(channels, contains('stage_definitions'));
     });
 
-    test('stage_definitions channel is backed by a listenToCollection call', () {
-      source.openChannels();
+    test(
+      'stage_definitions channel is backed by a listenToCollection call',
+      () {
+        source.openChannels();
 
-      expect(
-        gateway.collectionsCalled,
-        contains('stage_definitions'),
-        reason:
-            'gateway.listenToCollection must be called with '
-            "collection: 'stage_definitions'",
-      );
-    });
+        expect(
+          gateway.collectionsCalled,
+          contains('stage_definitions'),
+          reason:
+              'gateway.listenToCollection must be called with '
+              "collection: 'stage_definitions'",
+        );
+      },
+    );
 
     test('all expected channels are present', () {
       final channels = source.openChannels();

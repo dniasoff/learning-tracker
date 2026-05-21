@@ -118,9 +118,7 @@ List<Override> _overridesFor({
   int points = 0,
 }) {
   return [
-    activeProfileIdProvider.overrideWith(
-      () => _ProfileIdOverride(_profileId),
-    ),
+    activeProfileIdProvider.overrideWith(() => _ProfileIdOverride(_profileId)),
     useHebrewTermsProvider.overrideWith(
       () => _UseHebrewTermsOverride(useHebrew: false),
     ),
@@ -153,9 +151,10 @@ List<Override> _overridesFor({
     ),
     dashboardUserModeProvider.overrideWith((ref) => Future.value(userMode)),
     dashboardStreakProvider.overrideWith(
-      (ref) => Stream.value(
-        (currentStreak: currentStreak, maxStreak: currentStreak),
-      ),
+      (ref) => Stream.value((
+        currentStreak: currentStreak,
+        maxStreak: currentStreak,
+      )),
     ),
     dashboardGlobalPointsProvider.overrideWith((ref) => Future.value(points)),
     dashboardStreakRecoveryProvider.overrideWith(
@@ -165,21 +164,21 @@ List<Override> _overridesFor({
     ),
     allDailyTasksProvider.overrideWith((ref) => Future.value(const [])),
     initialSyncCompleteProvider.overrideWith((ref) => Future.value(true)),
-    journeyViewModelProvider(_profileId).overrideWith(
-      (ref) => Future.value(journey),
-    ),
-    lifetimeTotalsAcrossAllCurriculaProvider(_profileId).overrideWith(
-      (ref) => Future.value(lifetime),
-    ),
-    trackDualProgressMetricsProvider(_profileId).overrideWith(
-      (ref) => Future.value(dualMetrics),
-    ),
+    journeyViewModelProvider(
+      _profileId,
+    ).overrideWith((ref) => Future.value(journey)),
+    lifetimeTotalsAcrossAllCurriculaProvider(
+      _profileId,
+    ).overrideWith((ref) => Future.value(lifetime)),
+    trackDualProgressMetricsProvider(
+      _profileId,
+    ).overrideWith((ref) => Future.value(dualMetrics)),
     // Mark every curriculum as non-program-enrolled so the active-track card
     // takes the self-paced branch (avoids the program-calendar provider tree).
     for (final c in CurriculumId.values)
-      dashboardHasProgramEnrollmentProvider(c).overrideWith(
-        (ref) => Future.value(false),
-      ),
+      dashboardHasProgramEnrollmentProvider(
+        c,
+      ).overrideWith((ref) => Future.value(false)),
   ];
 }
 
@@ -238,9 +237,9 @@ void main() {
         // (active-track tile, etc.) and would otherwise satisfy a global
         // `find.text('7')`.
         Finder _inTileRow(String text) => find.descendant(
-              of: find.byType(ProgressTierCounterRow),
-              matching: find.text(text),
-            );
+          of: find.byType(ProgressTierCounterRow),
+          matching: find.text(text),
+        );
         expect(_inTileRow('7'), findsOneWidget); // streak value
         expect(_inTileRow('4'), findsOneWidget); // siyumim value
         expect(_inTileRow('42'), findsOneWidget); // lifetime value
@@ -257,51 +256,50 @@ void main() {
       },
     );
 
-    testWidgets(
-      'child mode renders 4 counters (adds ⭐ points)',
-      (tester) async {
-        final track = _track();
-        await tester.pumpWidget(
-          _wrap(
-            overrides: _overridesFor(
-              userMode: UserMode.child,
-              currentStreak: 3,
-              journey: _journey(unit: 2),
-              lifetime: _lifetimeTotals(learned: 15, total: 100),
-              points: 1200,
-              tracks: [track],
-              dualMetrics: [
-                _dualMetric(
-                  trackId: track.id,
-                  curriculum: CurriculumId.mishnayos,
-                ),
-              ],
-            ),
+    testWidgets('child mode renders 4 counters (adds ⭐ points)', (
+      tester,
+    ) async {
+      final track = _track();
+      await tester.pumpWidget(
+        _wrap(
+          overrides: _overridesFor(
+            userMode: UserMode.child,
+            currentStreak: 3,
+            journey: _journey(unit: 2),
+            lifetime: _lifetimeTotals(learned: 15, total: 100),
+            points: 1200,
+            tracks: [track],
+            dualMetrics: [
+              _dualMetric(
+                trackId: track.id,
+                curriculum: CurriculumId.mishnayos,
+              ),
+            ],
           ),
-        );
-        await tester.pump(const Duration(milliseconds: 100));
-        await tester.pump(const Duration(milliseconds: 100));
+        ),
+      );
+      await tester.pump(const Duration(milliseconds: 100));
+      await tester.pump(const Duration(milliseconds: 100));
 
-        // Scope the value-text assertions inside the tile row — dashboard
-        // also renders track tiles that may contain the same digits.
-        Finder _inTileRow(String text) => find.descendant(
-              of: find.byType(ProgressTierCounterRow),
-              matching: find.text(text),
-            );
-        expect(_inTileRow('3'), findsOneWidget); // streak value
-        expect(_inTileRow('2'), findsOneWidget); // siyumim value
-        expect(_inTileRow('15'), findsOneWidget); // lifetime value
-        expect(_inTileRow('1,200'), findsOneWidget); // points value formatted
-        expect(_inTileRow('Streak'), findsOneWidget);
-        expect(_inTileRow('Siyumim'), findsOneWidget);
-        expect(_inTileRow('Lifetime'), findsOneWidget);
-        // ⭐ points counter must appear in child mode.
-        expect(_inTileRow('Points'), findsOneWidget);
+      // Scope the value-text assertions inside the tile row — dashboard
+      // also renders track tiles that may contain the same digits.
+      Finder _inTileRow(String text) => find.descendant(
+        of: find.byType(ProgressTierCounterRow),
+        matching: find.text(text),
+      );
+      expect(_inTileRow('3'), findsOneWidget); // streak value
+      expect(_inTileRow('2'), findsOneWidget); // siyumim value
+      expect(_inTileRow('15'), findsOneWidget); // lifetime value
+      expect(_inTileRow('1,200'), findsOneWidget); // points value formatted
+      expect(_inTileRow('Streak'), findsOneWidget);
+      expect(_inTileRow('Siyumim'), findsOneWidget);
+      expect(_inTileRow('Lifetime'), findsOneWidget);
+      // ⭐ points counter must appear in child mode.
+      expect(_inTileRow('Points'), findsOneWidget);
 
-        await tester.pumpWidget(const SizedBox.shrink());
-        await tester.pump(Duration.zero);
-      },
-    );
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(Duration.zero);
+    });
   });
 
   group('Dashboard — dual per-track labels', () {
@@ -360,38 +358,37 @@ void main() {
   });
 
   group('Dashboard — legacy "ACTIVE TRACKS" stat card removed', () {
-    testWidgets(
-      'no widget displays the legacy "ACTIVE TRACKS" stat tile',
-      (tester) async {
-        final track = _track();
-        await tester.pumpWidget(
-          _wrap(
-            overrides: _overridesFor(
-              userMode: UserMode.adult,
-              currentStreak: 0,
-              journey: _journey(),
-              lifetime: _lifetimeTotals(),
-              tracks: [track],
-              dualMetrics: [
-                _dualMetric(
-                  trackId: track.id,
-                  curriculum: CurriculumId.mishnayos,
-                ),
-              ],
-            ),
+    testWidgets('no widget displays the legacy "ACTIVE TRACKS" stat tile', (
+      tester,
+    ) async {
+      final track = _track();
+      await tester.pumpWidget(
+        _wrap(
+          overrides: _overridesFor(
+            userMode: UserMode.adult,
+            currentStreak: 0,
+            journey: _journey(),
+            lifetime: _lifetimeTotals(),
+            tracks: [track],
+            dualMetrics: [
+              _dualMetric(
+                trackId: track.id,
+                curriculum: CurriculumId.mishnayos,
+              ),
+            ],
           ),
-        );
-        await tester.pump(const Duration(milliseconds: 100));
-        await tester.pump(const Duration(milliseconds: 100));
+        ),
+      );
+      await tester.pump(const Duration(milliseconds: 100));
+      await tester.pump(const Duration(milliseconds: 100));
 
-        // Neither casing should appear — the redundant counter card is gone.
-        expect(find.text('ACTIVE TRACKS'), findsNothing);
-        expect(find.text('Active Tracks'.toUpperCase()), findsNothing);
+      // Neither casing should appear — the redundant counter card is gone.
+      expect(find.text('ACTIVE TRACKS'), findsNothing);
+      expect(find.text('Active Tracks'.toUpperCase()), findsNothing);
 
-        await tester.pumpWidget(const SizedBox.shrink());
-        await tester.pump(Duration.zero);
-      },
-    );
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(Duration.zero);
+    });
   });
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -602,9 +599,10 @@ void main() {
           (ref) => Future.value(UserMode.adult),
         ),
         dashboardStreakProvider.overrideWith(
-          (ref) => Stream.value(
-            (currentStreak: currentStreak, maxStreak: currentStreak),
-          ),
+          (ref) => Stream.value((
+            currentStreak: currentStreak,
+            maxStreak: currentStreak,
+          )),
         ),
         dashboardGlobalPointsProvider.overrideWith((ref) => Future.value(0)),
         dashboardStreakRecoveryProvider.overrideWith(
@@ -617,16 +615,16 @@ void main() {
         ),
         allDailyTasksProvider.overrideWith((ref) => Future.value(const [])),
         initialSyncCompleteProvider.overrideWith((ref) => Future.value(true)),
-        lifetimeTotalsAcrossAllCurriculaProvider(_profileId).overrideWith(
-          (ref) => Future.value(lifetime),
-        ),
-        trackDualProgressMetricsProvider(_profileId).overrideWith(
-          (ref) => Future.value(dualMetrics),
-        ),
+        lifetimeTotalsAcrossAllCurriculaProvider(
+          _profileId,
+        ).overrideWith((ref) => Future.value(lifetime)),
+        trackDualProgressMetricsProvider(
+          _profileId,
+        ).overrideWith((ref) => Future.value(dualMetrics)),
         for (final c in CurriculumId.values)
-          dashboardHasProgramEnrollmentProvider(c).overrideWith(
-            (ref) => Future.value(false),
-          ),
+          dashboardHasProgramEnrollmentProvider(
+            c,
+          ).overrideWith((ref) => Future.value(false)),
       ];
     }
 
@@ -693,9 +691,9 @@ void main() {
         // the counter row's middle slot. Scope inside ProgressTierCounterRow
         // so other dashboard digits don't confound the assertion.
         Finder _inTileRow(String text) => find.descendant(
-              of: find.byType(ProgressTierCounterRow),
-              matching: find.text(text),
-            );
+          of: find.byType(ProgressTierCounterRow),
+          matching: find.text(text),
+        );
         expect(
           _inTileRow('12'),
           findsOneWidget,
@@ -770,9 +768,9 @@ void main() {
         // Scope to the tile row — the dashboard background may contain
         // other '0' or 'Siyumim' strings (e.g. track rows).
         Finder _inTileRow(String text) => find.descendant(
-              of: find.byType(ProgressTierCounterRow),
-              matching: find.text(text),
-            );
+          of: find.byType(ProgressTierCounterRow),
+          matching: find.text(text),
+        );
         expect(_inTileRow('Siyumim'), findsOneWidget);
         // Adult mode → 3 tiles (Streak / Siyumim / Lifetime), all reading '0'.
         expect(_inTileRow('0'), findsNWidgets(3));

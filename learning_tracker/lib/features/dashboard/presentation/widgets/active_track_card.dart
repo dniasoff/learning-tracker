@@ -201,7 +201,8 @@ class ActiveTrackCard extends ConsumerWidget {
               TrackStatGrid(
                 buckets: taskBuckets,
                 l10n: l10n,
-                chazaraLabel: (ref
+                chazaraLabel:
+                    (ref
                             .watch(trackHasChazaraProvider(track.id))
                             .asData
                             ?.value ??

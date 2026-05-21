@@ -155,8 +155,7 @@ class PaceCalculator {
 
     // Actual velocity: live completions per elapsed day.
     // Guard: day 0 → 0.0.
-    final actualVelocity =
-        elapsedDays > 0 ? liveProgress / elapsedDays : 0.0;
+    final actualVelocity = elapsedDays > 0 ? liveProgress / elapsedDays : 0.0;
 
     // Expected progress: how far along we should be today at required velocity.
     final expectedProgressToday = requiredVelocity * elapsedDays;
@@ -219,16 +218,17 @@ class PaceCalculator {
 
   @override
   int get hashCode => Object.hash(
-        totalItems,
-        bulkBaseline,
-        liveProgress,
-        trackStartDate,
-        targetDate,
-        today,
-      );
+    totalItems,
+    bulkBaseline,
+    liveProgress,
+    trackStartDate,
+    targetDate,
+    today,
+  );
 
   @override
-  String toString() => 'PaceCalculator('
+  String toString() =>
+      'PaceCalculator('
       'totalItems: $totalItems, '
       'bulkBaseline: $bulkBaseline, '
       'liveProgress: $liveProgress, '

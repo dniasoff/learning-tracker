@@ -9,7 +9,8 @@ import 'package:learning_tracker/features/tracks/whole_curriculum_order/data/rep
 import 'package:learning_tracker/features/tracks/whole_curriculum_order/domain/models/learning_order_item.dart';
 import 'package:mocktail/mocktail.dart';
 
-import '../../../../helpers/drift_memory.dart' show seedProfile, seedProfileZero;
+import '../../../../helpers/drift_memory.dart'
+    show seedProfile, seedProfileZero;
 
 class MockContentRepository extends Mock implements ContentRepository {}
 

@@ -57,76 +57,84 @@ void main() {
       await db.close();
     });
 
-    test('C1 regression: camelCase legacy row is still accepted (fallback)',
-        () async {
-      // Ensure pre-migration documents already in Firestore continue to merge.
-      final db = createTestDatabase();
-      await seedProfile(db);
-      final profiles = await db.select(db.learnerProfiles).get();
-      final profileId = profiles.first.id;
+    test(
+      'C1 regression: camelCase legacy row is still accepted (fallback)',
+      () async {
+        // Ensure pre-migration documents already in Firestore continue to merge.
+        final db = createTestDatabase();
+        await seedProfile(db);
+        final profiles = await db.select(db.learnerProfiles).get();
+        final profileId = profiles.first.id;
 
-      final merger = LearningLedgerMerger(db);
-      final completedAt = DateTime.utc(2025, 6, 1);
+        final merger = LearningLedgerMerger(db);
+        final completedAt = DateTime.utc(2025, 6, 1);
 
-      await merger.merge(
-        profileId: profileId,
-        rows: [
-          {
-            'ulid': 'LEGACY_ULID_001',
-            'profileId': profileId,
-            'curriculumId': 'mishnayos',
-            'unitIdentifier': 'Avot',
-            'trackType': 'personal',
-            'entryScope': 'masechta',
-            'unitDisplayNameHe': 'אבות',
-            'unitDisplayNameEn': 'Avot',
-            'completedAt': completedAt.toIso8601String(),
-            'completionNumber': 1,
-            'markedBy': profileId,
-            'isManual': false,
-          },
-        ],
-      );
+        await merger.merge(
+          profileId: profileId,
+          rows: [
+            {
+              'ulid': 'LEGACY_ULID_001',
+              'profileId': profileId,
+              'curriculumId': 'mishnayos',
+              'unitIdentifier': 'Avot',
+              'trackType': 'personal',
+              'entryScope': 'masechta',
+              'unitDisplayNameHe': 'אבות',
+              'unitDisplayNameEn': 'Avot',
+              'completedAt': completedAt.toIso8601String(),
+              'completionNumber': 1,
+              'markedBy': profileId,
+              'isManual': false,
+            },
+          ],
+        );
 
-      final entries = await db.learningLedgerDao.getEntriesByProfile(profileId);
-      expect(entries, hasLength(1));
-      expect(entries.first.curriculumId, 'mishnayos');
-      expect(entries.first.unitIdentifier, 'Avot');
+        final entries = await db.learningLedgerDao.getEntriesByProfile(
+          profileId,
+        );
+        expect(entries, hasLength(1));
+        expect(entries.first.curriculumId, 'mishnayos');
+        expect(entries.first.unitIdentifier, 'Avot');
 
-      await db.close();
-    });
+        await db.close();
+      },
+    );
 
-    test('C1 regression: pure camelCase row (old shape) was silently discarded',
-        () async {
-      // Verifies that the OLD behaviour (before the fix) was broken: a row
-      // with only camelCase fields would have been skipped because the merger
-      // was reading ONLY camelCase. Now both work. This test confirms the fix
-      // didn't break camelCase support while adding snake_case.
-      final db = createTestDatabase();
-      await seedProfile(db);
-      final profiles = await db.select(db.learnerProfiles).get();
-      final profileId = profiles.first.id;
+    test(
+      'C1 regression: pure camelCase row (old shape) was silently discarded',
+      () async {
+        // Verifies that the OLD behaviour (before the fix) was broken: a row
+        // with only camelCase fields would have been skipped because the merger
+        // was reading ONLY camelCase. Now both work. This test confirms the fix
+        // didn't break camelCase support while adding snake_case.
+        final db = createTestDatabase();
+        await seedProfile(db);
+        final profiles = await db.select(db.learnerProfiles).get();
+        final profileId = profiles.first.id;
 
-      final merger = LearningLedgerMerger(db);
+        final merger = LearningLedgerMerger(db);
 
-      // Row with MISSING required field — should be skipped.
-      await merger.merge(
-        profileId: profileId,
-        rows: [
-          {
-            // No curriculum_id or curriculumId → should be skipped gracefully.
-            'unit_identifier': 'Shabbat',
-            'track_type': 'personal',
-            'completed_at': DateTimeFactory.nowUtc().toIso8601String(),
-          },
-        ],
-      );
+        // Row with MISSING required field — should be skipped.
+        await merger.merge(
+          profileId: profileId,
+          rows: [
+            {
+              // No curriculum_id or curriculumId → should be skipped gracefully.
+              'unit_identifier': 'Shabbat',
+              'track_type': 'personal',
+              'completed_at': DateTimeFactory.nowUtc().toIso8601String(),
+            },
+          ],
+        );
 
-      final entries = await db.learningLedgerDao.getEntriesByProfile(profileId);
-      expect(entries, isEmpty);
+        final entries = await db.learningLedgerDao.getEntriesByProfile(
+          profileId,
+        );
+        expect(entries, isEmpty);
 
-      await db.close();
-    });
+        await db.close();
+      },
+    );
 
     test('dedup: second insert of same ulid is a no-op', () async {
       final db = createTestDatabase();

@@ -121,7 +121,10 @@ void main() {
         final db = createTestDatabase();
 
         expect(db, isNotNull);
-        expect(db.schemaVersion, greaterThanOrEqualTo(1)); // V2-R6: flexible assertion, current value is 23
+        expect(
+          db.schemaVersion,
+          greaterThanOrEqualTo(1),
+        ); // V2-R6: flexible assertion, current value is 23
 
         db.close();
       });

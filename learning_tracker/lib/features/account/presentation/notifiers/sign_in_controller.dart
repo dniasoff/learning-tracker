@@ -204,13 +204,12 @@ class SignInController extends Notifier<SignInState> {
     required String password,
     required StackRouter router,
     required AppLocalizations l10n,
-  }) =>
-      _tryLocalFallbackSignIn(
-        email: email,
-        password: password,
-        router: router,
-        l10n: l10n,
-      );
+  }) => _tryLocalFallbackSignIn(
+    email: email,
+    password: password,
+    router: router,
+    l10n: l10n,
+  );
 
   Future<bool> _tryLocalFallbackSignIn({
     required String email,
@@ -271,8 +270,7 @@ class SignInController extends Notifier<SignInState> {
   Future<bool> tryOfflineCloudRestoreForTest(
     DeviceAccount account,
     StackRouter router,
-  ) =>
-      _tryOfflineCloudRestore(account, router);
+  ) => _tryOfflineCloudRestore(account, router);
 
   Future<bool> _tryOfflineCloudRestore(
     DeviceAccount account,

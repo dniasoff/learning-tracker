@@ -222,18 +222,14 @@ Future<PaceCalculator?> curriculumPaceStatus(
   // Split completions into bulk baseline (before trackStartDate) and live
   // (on or after trackStartDate). Bulk entries have sentinel date 2000-01-01
   // which is always before any real trackStartDate.
-  final bulkBaseline = personalCompletions
-      .where((c) {
-        final local = DateUtils.extractLocalDate(c.completedAt);
-        return local.isBefore(trackStartDate);
-      })
-      .length;
-  final liveProgress = personalCompletions
-      .where((c) {
-        final local = DateUtils.extractLocalDate(c.completedAt);
-        return !local.isBefore(trackStartDate);
-      })
-      .length;
+  final bulkBaseline = personalCompletions.where((c) {
+    final local = DateUtils.extractLocalDate(c.completedAt);
+    return local.isBefore(trackStartDate);
+  }).length;
+  final liveProgress = personalCompletions.where((c) {
+    final local = DateUtils.extractLocalDate(c.completedAt);
+    return !local.isBefore(trackStartDate);
+  }).length;
 
   // F5 — telemetry: detect bulk leakage (live completions dated before
   // trackStartDate slipping through). This should always fire zero; if it
@@ -247,10 +243,7 @@ Future<PaceCalculator?> curriculumPaceStatus(
     if (leaked.isNotEmpty) {
       AppLogger.instance.warning(
         event: 'pace_bulk_leakage_detected',
-        fields: {
-          'leakedCount': leaked.length,
-          'curriculumId': curriculumId,
-        },
+        fields: {'leakedCount': leaked.length, 'curriculumId': curriculumId},
       );
     }
   }

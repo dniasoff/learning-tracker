@@ -188,16 +188,18 @@ Future<void> _seedImport(
   String curriculumId = 'mishnayos',
   String trackType = 'personal',
 }) async {
-  await db.into(db.priorCompletionImports).insert(
-    PriorCompletionImportsCompanion.insert(
-      profileId: _profileId,
-      curriculumId: curriculumId,
-      sefariaRef: sefariaRef,
-      stageId: stageId,
-      trackType: trackType,
-      source: 'bulkInTrack',
-    ),
-  );
+  await db
+      .into(db.priorCompletionImports)
+      .insert(
+        PriorCompletionImportsCompanion.insert(
+          profileId: _profileId,
+          curriculumId: curriculumId,
+          sefariaRef: sefariaRef,
+          stageId: stageId,
+          trackType: trackType,
+          source: 'bulkInTrack',
+        ),
+      );
 }
 
 // ---------------------------------------------------------------------------

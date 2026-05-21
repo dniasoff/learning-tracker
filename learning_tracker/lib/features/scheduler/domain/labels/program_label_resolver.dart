@@ -64,7 +64,8 @@ class ProgramLabelResolver {
   /// the Hebrew Terms toggle. Falls back to the English
   /// [CalendarProgramEntry.todayRef] when the Hebrew form is unavailable.
   String calendarEntryTodayRef(CalendarProgramEntry entry) {
-    if (_labels.isHebrew && entry.todayRefHe.isNotEmpty) return entry.todayRefHe;
+    if (_labels.isHebrew && entry.todayRefHe.isNotEmpty)
+      return entry.todayRefHe;
     return entry.todayRef;
   }
 }

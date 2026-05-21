@@ -13,6 +13,7 @@
 // against its own copy. We pin the expected canonical strings to the
 // design-doc table (`docs/planning/progress-ia-redesign.md`) explicitly.
 library;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -52,11 +53,36 @@ void main() {
 
   group('B1 vocab — concept terms swap script via toggle', () {
     final cases = <_VocabCase>[
-      _VocabCase('limud', en: 'Limud', he: 'לימוד', read: (r) => domainTermLabels(r).limud),
-      _VocabCase('chazara', en: 'Chazara', he: 'חזרה', read: (r) => domainTermLabels(r).chazara),
-      _VocabCase('chazaros', en: 'Chazaros', he: 'חזרות', read: (r) => domainTermLabels(r).chazaros),
-      _VocabCase('siyum', en: 'Siyum', he: 'סיום', read: (r) => domainTermLabels(r).siyum),
-      _VocabCase('siyumim', en: 'Siyumim', he: 'סיומים', read: (r) => domainTermLabels(r).siyumim),
+      _VocabCase(
+        'limud',
+        en: 'Limud',
+        he: 'לימוד',
+        read: (r) => domainTermLabels(r).limud,
+      ),
+      _VocabCase(
+        'chazara',
+        en: 'Chazara',
+        he: 'חזרה',
+        read: (r) => domainTermLabels(r).chazara,
+      ),
+      _VocabCase(
+        'chazaros',
+        en: 'Chazaros',
+        he: 'חזרות',
+        read: (r) => domainTermLabels(r).chazaros,
+      ),
+      _VocabCase(
+        'siyum',
+        en: 'Siyum',
+        he: 'סיום',
+        read: (r) => domainTermLabels(r).siyum,
+      ),
+      _VocabCase(
+        'siyumim',
+        en: 'Siyumim',
+        he: 'סיומים',
+        read: (r) => domainTermLabels(r).siyumim,
+      ),
       // milestone, milestoneAggregate, streakLabel, today, trackProgress,
       // lifetimeLabel — removed from DomainTermLabels (A2/A3 boundary fix).
       // These are now structural strings served via AppLocalizations (ARB).
@@ -138,17 +164,72 @@ void main() {
 
   group('B1 vocab — per-curriculum siyum getters swap script via toggle', () {
     final cases = <_VocabCase>[
-      _VocabCase('siyumHaShas', en: 'Siyum HaShas', he: 'סיום הש״ס', read: (r) => domainTermLabels(r).siyumHaShas),
-      _VocabCase('siyumHaTorah', en: 'Siyum HaTorah', he: 'סיום התורה', read: (r) => domainTermLabels(r).siyumHaTorah),
-      _VocabCase('siyumHaMishnayos', en: 'Siyum HaMishnayos', he: 'סיום המשניות', read: (r) => domainTermLabels(r).siyumHaMishnayos),
-      _VocabCase('siyumHaYerushalmi', en: 'Siyum HaYerushalmi', he: 'סיום הירושלמי', read: (r) => domainTermLabels(r).siyumHaYerushalmi),
-      _VocabCase('siyumMishnaBerurah', en: 'Siyum Mishna Berurah', he: 'סיום משנה ברורה', read: (r) => domainTermLabels(r).siyumMishnaBerurah),
-      _VocabCase('siyumMishnehTorah', en: 'Siyum Mishneh Torah', he: 'סיום משנה תורה', read: (r) => domainTermLabels(r).siyumMishnehTorah),
-      _VocabCase('siyumNach', en: 'Siyum Nach', he: 'סיום נ״ך', read: (r) => domainTermLabels(r).siyumNach),
-      _VocabCase('siyumTanach', en: 'Siyum Tanach', he: 'סיום תנ״ך', read: (r) => domainTermLabels(r).siyumTanach),
-      _VocabCase('siyumMussar', en: 'Siyum Mussar', he: 'סיום מוסר', read: (r) => domainTermLabels(r).siyumMussar),
-      _VocabCase('siyumSeder', en: 'Siyum Seder', he: 'סיום סדר', read: (r) => domainTermLabels(r).siyumSeder),
-      _VocabCase('siyumChelek', en: 'Siyum Chelek', he: 'סיום חלק', read: (r) => domainTermLabels(r).siyumChelek),
+      _VocabCase(
+        'siyumHaShas',
+        en: 'Siyum HaShas',
+        he: 'סיום הש״ס',
+        read: (r) => domainTermLabels(r).siyumHaShas,
+      ),
+      _VocabCase(
+        'siyumHaTorah',
+        en: 'Siyum HaTorah',
+        he: 'סיום התורה',
+        read: (r) => domainTermLabels(r).siyumHaTorah,
+      ),
+      _VocabCase(
+        'siyumHaMishnayos',
+        en: 'Siyum HaMishnayos',
+        he: 'סיום המשניות',
+        read: (r) => domainTermLabels(r).siyumHaMishnayos,
+      ),
+      _VocabCase(
+        'siyumHaYerushalmi',
+        en: 'Siyum HaYerushalmi',
+        he: 'סיום הירושלמי',
+        read: (r) => domainTermLabels(r).siyumHaYerushalmi,
+      ),
+      _VocabCase(
+        'siyumMishnaBerurah',
+        en: 'Siyum Mishna Berurah',
+        he: 'סיום משנה ברורה',
+        read: (r) => domainTermLabels(r).siyumMishnaBerurah,
+      ),
+      _VocabCase(
+        'siyumMishnehTorah',
+        en: 'Siyum Mishneh Torah',
+        he: 'סיום משנה תורה',
+        read: (r) => domainTermLabels(r).siyumMishnehTorah,
+      ),
+      _VocabCase(
+        'siyumNach',
+        en: 'Siyum Nach',
+        he: 'סיום נ״ך',
+        read: (r) => domainTermLabels(r).siyumNach,
+      ),
+      _VocabCase(
+        'siyumTanach',
+        en: 'Siyum Tanach',
+        he: 'סיום תנ״ך',
+        read: (r) => domainTermLabels(r).siyumTanach,
+      ),
+      _VocabCase(
+        'siyumMussar',
+        en: 'Siyum Mussar',
+        he: 'סיום מוסר',
+        read: (r) => domainTermLabels(r).siyumMussar,
+      ),
+      _VocabCase(
+        'siyumSeder',
+        en: 'Siyum Seder',
+        he: 'סיום סדר',
+        read: (r) => domainTermLabels(r).siyumSeder,
+      ),
+      _VocabCase(
+        'siyumChelek',
+        en: 'Siyum Chelek',
+        he: 'סיום חלק',
+        read: (r) => domainTermLabels(r).siyumChelek,
+      ),
     ];
     for (final c in cases) {
       testWidgets('${c.name} — Hebrew OFF returns Latin "${c.en}"', (
@@ -248,7 +329,12 @@ void main() {
 }
 
 class _VocabCase {
-  const _VocabCase(this.name, {required this.en, required this.he, required this.read});
+  const _VocabCase(
+    this.name, {
+    required this.en,
+    required this.he,
+    required this.read,
+  });
   final String name;
   final String en;
   final String he;

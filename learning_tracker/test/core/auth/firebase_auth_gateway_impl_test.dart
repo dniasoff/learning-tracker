@@ -104,9 +104,7 @@ void main() {
 
       await expectLater(
         gateway.authStateChanges(),
-        emits(
-          isA<AuthGatewayUser>().having((u) => u.uid, 'uid', 'stream-uid'),
-        ),
+        emits(isA<AuthGatewayUser>().having((u) => u.uid, 'uid', 'stream-uid')),
       );
     });
   });
@@ -247,9 +245,7 @@ void main() {
     test('sends an ActionCodeSettings-aware verification email', () async {
       final user = MockUser();
       when(() => mockFirebaseAuth.currentUser).thenReturn(user);
-      when(
-        () => user.sendEmailVerification(any()),
-      ).thenAnswer((_) async {});
+      when(() => user.sendEmailVerification(any())).thenAnswer((_) async {});
 
       await gateway.sendEmailVerification(
         continueUrl: 'https://example.com/verify',
@@ -336,9 +332,9 @@ void main() {
 
   group('checkActionCode + applyActionCode', () {
     test('checkActionCode delegates', () async {
-      when(() => mockFirebaseAuth.checkActionCode('oob')).thenAnswer(
-        (_) async => FakeActionCodeInfo(),
-      );
+      when(
+        () => mockFirebaseAuth.checkActionCode('oob'),
+      ).thenAnswer((_) async => FakeActionCodeInfo());
 
       await gateway.checkActionCode('oob');
 
@@ -346,7 +342,9 @@ void main() {
     });
 
     test('applyActionCode delegates', () async {
-      when(() => mockFirebaseAuth.applyActionCode('oob')).thenAnswer((_) async {});
+      when(
+        () => mockFirebaseAuth.applyActionCode('oob'),
+      ).thenAnswer((_) async {});
 
       await gateway.applyActionCode('oob');
 
@@ -419,10 +417,7 @@ void main() {
           () => user.reauthenticateWithCredential(any()),
         ).thenAnswer((_) async => MockUserCredential());
 
-        await gateway.reauthenticateWithEmail(
-          email: 'a@b.c',
-          password: 'pw',
-        );
+        await gateway.reauthenticateWithEmail(email: 'a@b.c', password: 'pw');
 
         verify(() => user.reauthenticateWithCredential(any())).called(1);
       },

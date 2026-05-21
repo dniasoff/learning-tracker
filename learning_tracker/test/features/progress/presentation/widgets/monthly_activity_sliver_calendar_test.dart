@@ -65,49 +65,43 @@ List<MonthlyActivityRollup> _tenYearsFixture() =>
 // ── Widget wrapper ────────────────────────────────────────────────────────────
 
 Widget _wrap(Widget child) => MaterialApp(
-      home: Scaffold(
-        body: SizedBox(
-          height: 600,
-          child: child,
-        ),
-      ),
-    );
+  home: Scaffold(body: SizedBox(height: 600, child: child)),
+);
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
 void main() {
   group('MonthlyActivitySliverCalendar — spike', () {
-    testWidgets(
-      'renders 120 months without widget explosion or exception',
-      (tester) async {
-        final rollups = _tenYearsFixture();
-        expect(rollups, hasLength(120));
+    testWidgets('renders 120 months without widget explosion or exception', (
+      tester,
+    ) async {
+      final rollups = _tenYearsFixture();
+      expect(rollups, hasLength(120));
 
-        // NOTE: Frame build time cannot be directly measured in flutter_test.
-        // The sliver delegate guarantees O(viewport) widget instantiations, not
-        // O(120). If Flutter ever exposes tracing hooks in test mode, add:
-        //   final sw = Stopwatch()..start();
-        //   await tester.pump();
-        //   sw.stop();
-        //   expect(sw.elapsedMilliseconds, lessThan(16)); // 60fps budget
+      // NOTE: Frame build time cannot be directly measured in flutter_test.
+      // The sliver delegate guarantees O(viewport) widget instantiations, not
+      // O(120). If Flutter ever exposes tracing hooks in test mode, add:
+      //   final sw = Stopwatch()..start();
+      //   await tester.pump();
+      //   sw.stop();
+      //   expect(sw.elapsedMilliseconds, lessThan(16)); // 60fps budget
 
-        await tester.pumpWidget(
-          _wrap(MonthlyActivitySliverCalendar(rollups: rollups)),
-        );
-        // pumpAndSettle not required — the widget is synchronous.
-        await tester.pump();
+      await tester.pumpWidget(
+        _wrap(MonthlyActivitySliverCalendar(rollups: rollups)),
+      );
+      // pumpAndSettle not required — the widget is synchronous.
+      await tester.pump();
 
-        // The widget built without throwing.
-        expect(tester.takeException(), isNull);
+      // The widget built without throwing.
+      expect(tester.takeException(), isNull);
 
-        // The CustomScrollView is present.
-        expect(find.byType(CustomScrollView), findsOneWidget);
+      // The CustomScrollView is present.
+      expect(find.byType(CustomScrollView), findsOneWidget);
 
-        // The first month header is visible in the viewport.
-        // '2016' is present in the first header label.
-        expect(find.textContaining('2016'), findsWidgets);
-      },
-    );
+      // The first month header is visible in the viewport.
+      // '2016' is present in the first header label.
+      expect(find.textContaining('2016'), findsWidgets);
+    });
 
     testWidgets('empty list shows no-activity fallback', (tester) async {
       await tester.pumpWidget(
@@ -119,34 +113,33 @@ void main() {
       expect(find.text('No activity data'), findsOneWidget);
     });
 
-    testWidgets(
-      'tapping a month header expands the full daily grid',
-      (tester) async {
-        // Use a single month for a deterministic test.
-        final single = [_makeRollup(0)]; // January 2016
+    testWidgets('tapping a month header expands the full daily grid', (
+      tester,
+    ) async {
+      // Use a single month for a deterministic test.
+      final single = [_makeRollup(0)]; // January 2016
 
-        await tester.pumpWidget(
-          _wrap(MonthlyActivitySliverCalendar(rollups: single)),
-        );
-        await tester.pump();
+      await tester.pumpWidget(
+        _wrap(MonthlyActivitySliverCalendar(rollups: single)),
+      );
+      await tester.pump();
 
-        // No SliverGrid present before expansion.
-        expect(find.byType(SliverGrid), findsNothing);
+      // No SliverGrid present before expansion.
+      expect(find.byType(SliverGrid), findsNothing);
 
-        // Tap the header to expand.
-        await tester.tap(find.byType(GestureDetector).first);
-        await tester.pump();
+      // Tap the header to expand.
+      await tester.tap(find.byType(GestureDetector).first);
+      await tester.pump();
 
-        // After expansion a SliverGrid is now present.
-        expect(find.byType(SliverGrid), findsOneWidget);
+      // After expansion a SliverGrid is now present.
+      expect(find.byType(SliverGrid), findsOneWidget);
 
-        // Tap again to collapse.
-        await tester.tap(find.byType(GestureDetector).first);
-        await tester.pump();
+      // Tap again to collapse.
+      await tester.tap(find.byType(GestureDetector).first);
+      await tester.pump();
 
-        expect(find.byType(SliverGrid), findsNothing);
-      },
-    );
+      expect(find.byType(SliverGrid), findsNothing);
+    });
 
     testWidgets(
       'only viewport-visible month widgets are built for 120 months',

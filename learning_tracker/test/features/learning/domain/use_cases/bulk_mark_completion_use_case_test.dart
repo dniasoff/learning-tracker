@@ -216,47 +216,38 @@ void main() {
       },
     );
 
-    test(
-      'explicit bulkInTrack source enforces sentinel date',
-      () async {
-        await useCase(
-          requestWithoutDate(),
-          source: CompletionSource.bulkInTrack,
-        );
+    test('explicit bulkInTrack source enforces sentinel date', () async {
+      await useCase(requestWithoutDate(), source: CompletionSource.bulkInTrack);
 
-        final captured =
-            verify(
-                  () => repository.bulkMarkComplete(captureAny()),
-                ).captured.single
-                as BulkCompletionRequest;
+      final captured =
+          verify(
+                () => repository.bulkMarkComplete(captureAny()),
+              ).captured.single
+              as BulkCompletionRequest;
 
-        expect(captured.completedAt, equals(sentinel));
-      },
-    );
+      expect(captured.completedAt, equals(sentinel));
+    });
 
-    test(
-      'lifetimeOnly source enforces sentinel date',
-      () async {
-        await useCase(
-          requestWithoutDate(),
-          source: CompletionSource.lifetimeOnly,
-        );
+    test('lifetimeOnly source enforces sentinel date', () async {
+      await useCase(
+        requestWithoutDate(),
+        source: CompletionSource.lifetimeOnly,
+      );
 
-        final captured =
-            verify(
-                  () => repository.bulkMarkComplete(captureAny()),
-                ).captured.single
-                as BulkCompletionRequest;
+      final captured =
+          verify(
+                () => repository.bulkMarkComplete(captureAny()),
+              ).captured.single
+              as BulkCompletionRequest;
 
-        expect(
-          captured.completedAt,
-          equals(sentinel),
-          reason:
-              'lifetimeOnly also suppresses engagement — '
-              'must use sentinel to avoid contaminating streak math',
-        );
-      },
-    );
+      expect(
+        captured.completedAt,
+        equals(sentinel),
+        reason:
+            'lifetimeOnly also suppresses engagement — '
+            'must use sentinel to avoid contaminating streak math',
+      );
+    });
 
     test(
       'live source passes completedAt through as null (repo uses nowUtc)',
