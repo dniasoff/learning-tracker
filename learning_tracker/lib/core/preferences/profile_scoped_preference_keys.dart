@@ -87,9 +87,11 @@ class ProfileScopedPreferenceKeys {
     final scoped = prefs.getBool(hebrewTermsScript(profileId));
     if (scoped != null) return scoped;
     if (profileId == 0) {
-      return prefs.getBool(legacyHebrewTermsScriptKey) ?? false;
+      // Legacy key defaults to true — Hebrew script is the factory default
+      // (§9 of hebrew-terms.md). The old `?? false` was stale.
+      return prefs.getBool(legacyHebrewTermsScriptKey) ?? true;
     }
-    return false;
+    return true;
   }
 
   /// Reads the saved transliteration variant ("ashkenazi" or "sephardi").

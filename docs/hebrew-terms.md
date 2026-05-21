@@ -143,15 +143,27 @@ The audit (2026-05-18) found the implementation has diverged from this spec:
    domain term.
 3. **Dead constant.** `HebrewTerms.uiBubbleChazara` is defined but never used;
    the "CHAZARA" bubble reads a plain locale string and never switches.
+   — **FIXED** (A4): wired to `DomainTermLabels.bubbleChazara`; dashboard widgets
+   now call `terms.bubbleChazara` so the bubble switches live.
 4. **Hardcoded term.** "Talmid Chochom" / "TALMID CHOCHOM" appear as inline
    string literals instead of going through the setting.
+   — **FIXED** (prior wave).
 5. **Broken enforcement.** The `make audit` layering grep targets a symbol name
    (`hebrewTermsScriptProvider`) that does not exist; the real provider
    (`useHebrewTermsProvider`) is unguarded. The grep must be corrected.
 6. **Stage names frozen.** Existing stage labels do not re-render on a setting
    change (§8) — only newly-created defaults are affected. Must be fixed.
+   — **FIXED** (A4): `StageBreakdownRow` converted to `ConsumerWidget`; calls
+   `terms.resolveStoredStageName()` per entry. `PointConfigScreen` resolved
+   `primaryStageName` through the toggle in `_CurriculumPointsCard.build`.
 7. **Stale doc.** A settings-screen comment claims the default is `false`; it
    is `true` (§9).
+   — **FIXED** (A4): settings screen comment corrected to `true`;
+   `ProfileScopedPreferenceKeys.readHebrewTermsScript` legacy fallback updated
+   from `false` → `true` to match `HebrewTermsPreference.defaultValue`.
 8. **Duplication.** `HebrewTerms.curriculumDisplayNames` duplicates
    `CurriculumId.displayNameHe`; the Hebrew "חזרה" string is defined in several
    places. Consolidate to one source per term.
+   — **FIXED** (A4): `curriculumDisplayNames` removed (prior wave); `uiChazara`,
+   `uiReviewSection`, `uiBubbleChazara`, and the `stageNameMap` 'Review' entry
+   now all reference `stageChazaraPrefix` — single source for `'חזרה'`.

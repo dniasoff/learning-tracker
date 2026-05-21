@@ -29,7 +29,7 @@ class HebrewTerms {
     'Chazara 1': 'חזרה א׳',
     'Chazara 2': 'חזרה ב׳',
     'Chazara 3': 'חזרה ג׳',
-    'Review': 'חזרה',
+    'Review': stageChazaraPrefix,
     'Review 1': 'חזרה א׳',
     'Review 2': 'חזרה ב׳',
     'Next-Day Review': 'חזרה יומית',
@@ -109,20 +109,23 @@ class HebrewTerms {
   // └──────────────────────────┴────────────────────┴────────────────────────┘
 
   // ── Chazara / Review terms ───────────────────────────────────────────────
+  //
+  // All three constants reference [stageChazaraPrefix] — the single source for
+  // the Hebrew string 'חזרה' — so the value is defined exactly once (§11.8).
 
   /// "Chazara" (the review concept) → Hebrew script.
   ///
   /// Use the [domainTermLabels.chazara] helper in `lib/core/labels/` to get
   /// the toggle-resolved form. This constant is the Hebrew half.
-  static const String uiChazara = 'חזרה';
+  static const String uiChazara = stageChazaraPrefix;
 
   /// "REVIEW SECTION" header → Hebrew.
-  static const String uiReviewSection = 'חזרה';
+  static const String uiReviewSection = stageChazaraPrefix;
 
   /// "CHAZARA" bubble label → Hebrew script.
   ///
   /// Wired to the toggle via [domainTermLabels.bubbleChazara].
-  static const String uiBubbleChazara = 'חזרה';
+  static const String uiBubbleChazara = stageChazaraPrefix;
 
   // ── Structural Torah unit terms ──────────────────────────────────────────
 

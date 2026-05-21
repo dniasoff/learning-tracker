@@ -460,19 +460,20 @@ void main() {
       );
     });
 
-    test('returns false when nothing is set (non-zero profileId)', () async {
+    // Default is true — Hebrew script is the factory default (§9 / §11.7 fix).
+    test('returns true when nothing is set (non-zero profileId)', () async {
       final prefs = await SharedPreferences.getInstance();
       expect(
         ProfileScopedPreferenceKeys.readHebrewTermsScript(prefs, 8),
-        isFalse,
+        isTrue,
       );
     });
 
-    test('returns false when nothing is set (profileId 0)', () async {
+    test('returns true when nothing is set (profileId 0)', () async {
       final prefs = await SharedPreferences.getInstance();
       expect(
         ProfileScopedPreferenceKeys.readHebrewTermsScript(prefs, 0),
-        isFalse,
+        isTrue,
       );
     });
   });
@@ -498,11 +499,12 @@ void main() {
       );
     });
 
-    test('returns false by default for non-zero profile', () async {
+    // Default is true — Hebrew script is the factory default (§9 / §11.7 fix).
+    test('returns true by default for non-zero profile', () async {
       final prefs = await SharedPreferences.getInstance();
       expect(
         ProfileScopedPreferenceKeys.readHebrewTermsScript(prefs, 6),
-        isFalse,
+        isTrue,
       );
     });
   });

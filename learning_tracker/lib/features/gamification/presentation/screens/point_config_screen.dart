@@ -475,6 +475,7 @@ class _CurriculumPointsCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final terms = domainTermLabels(ref);
+    final resolvedStageName = terms.resolveStoredStageName(primaryStageName);
     return Material(
       color: Colors.white,
       elevation: 2,
@@ -586,7 +587,7 @@ class _CurriculumPointsCard extends ConsumerWidget {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          '$primaryStageName · ${l10n.pointSettingsPrimaryStageLabel}',
+                          '$resolvedStageName · ${l10n.pointSettingsPrimaryStageLabel}',
                           style: theme.textTheme.labelSmall?.copyWith(
                             color: AppTheme.brandInkSoft,
                           ),
