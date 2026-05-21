@@ -1,15 +1,19 @@
-/// Regression tests for the Recent Activity engagement-tier additions to
-/// [ChartDataService] (W3-A / Task #9):
-///   - [ChartDataService.getDailyLimudimAndChazaros] — stacked
-///     limud/chazara two-colour split, live-only.
-///   - [ChartDataService.getCumulativeProgressLive] — cumulative line,
-///     live-only.
-///   - [ChartDataService.getStreakCalendarLive] — weekly dot calendar,
-///     live-only.
+/// Regression tests for the Recent Activity charts in [ChartDataService].
 ///
-/// All three drop bulkInTrack and lifetimeOnly rows (which surface under
-/// Lifetime Knowledge instead), and the stacked feed splits the live rows
-/// into stage-1 (limud) and stage ≥ 2 (chazara) segments.
+/// Tier policy (2026-05-21): everything except points and streak counts
+/// track learning = live + bulk-mark in-track. So:
+///   - [ChartDataService.getDailyLimudimAndChazaros] — stacked
+///     limud/chazara split, **trackAchievement** tier (live + bulk).
+///   - [ChartDataService.getCumulativeProgressLive] — cumulative line,
+///     **trackAchievement** tier.
+///   - [ChartDataService.getStreakCalendarLive] — streak calendar dots,
+///     **liveOnly** (the streak exception).
+///
+/// All three drop lifetimeOnly rows (which surface under Lifetime
+/// Knowledge instead); the streak calendar additionally drops bulkInTrack
+/// because streak credit is reserved for live in-session marks. The
+/// stacked feed splits the rows into stage-1 (limud) and stage ≥ 2
+/// (chazara) segments.
 @Tags(['progress', 'recent_activity'])
 library;
 
@@ -194,39 +198,54 @@ void main() {
       );
     });
 
-    test('bulkInTrack rows are EXCLUDED from the live-only stacked feed', () async {
-      await _seedLive(db, trackId: trackId, ref: 'live', stageId: 1);
-      await _seedBulkInTrack(db, trackId: trackId, ref: 'bulk', stageId: 1);
+    test(
+      'bulkInTrack rows ARE included in the track-learning stacked feed',
+      () async {
+        // Track-learning rule (2026-05-21): bulk-mark in-track counts the
+        // same as a live mark for the Recent Activity chart.
+        await _seedLive(db, trackId: trackId, ref: 'live', stageId: 1);
+        await _seedBulkInTrack(db, trackId: trackId, ref: 'bulk', stageId: 1);
 
-      final result = await service.getDailyLimudimAndChazaros(
-        startDate: _startDate,
-        endDate: _endDate,
-      );
+        final result = await service.getDailyLimudimAndChazaros(
+          startDate: _startDate,
+          endDate: _endDate,
+        );
 
-      final day10 = result.firstWhere((d) => d.date == _liveDay);
-      expect(day10.limudCount, 1, reason: 'only the live mark counts');
-      expect(day10.chazaraCount, 0);
-    });
+        final day10 = result.firstWhere((d) => d.date == _liveDay);
+        expect(
+          day10.limudCount,
+          2,
+          reason: 'live + bulk-in-track both count as track learning',
+        );
+        expect(day10.chazaraCount, 0);
+      },
+    );
 
-    test('lifetimeOnly rows are EXCLUDED from the live-only stacked feed',
-        () async {
-      await _seedLive(db, trackId: trackId, ref: 'live', stageId: 2);
-      await _seedLifetimeOnly(
-        db,
-        trackId: trackId,
-        ref: 'lifetime',
-        stageId: 2,
-      );
+    test(
+      'lifetimeOnly rows are EXCLUDED from the track-learning stacked feed',
+      () async {
+        await _seedLive(db, trackId: trackId, ref: 'live', stageId: 2);
+        await _seedLifetimeOnly(
+          db,
+          trackId: trackId,
+          ref: 'lifetime',
+          stageId: 2,
+        );
 
-      final result = await service.getDailyLimudimAndChazaros(
-        startDate: _startDate,
-        endDate: _endDate,
-      );
+        final result = await service.getDailyLimudimAndChazaros(
+          startDate: _startDate,
+          endDate: _endDate,
+        );
 
-      final day10 = result.firstWhere((d) => d.date == _liveDay);
-      expect(day10.limudCount, 0);
-      expect(day10.chazaraCount, 1, reason: 'only the live mark counts');
-    });
+        final day10 = result.firstWhere((d) => d.date == _liveDay);
+        expect(day10.limudCount, 0);
+        expect(
+          day10.chazaraCount,
+          1,
+          reason: 'lifetime-only imports do not surface in Recent Activity',
+        );
+      },
+    );
 
     test('curriculum filter applies', () async {
       // Add a bavli track + completion on the same day; the mishnayos
@@ -262,29 +281,32 @@ void main() {
   });
 
   group('getCumulativeProgressLive', () {
-    test('only live rows contribute to the running total', () async {
-      await _seedLive(db, trackId: trackId, ref: 'live_1', stageId: 1);
-      await _seedBulkInTrack(db, trackId: trackId, ref: 'bulk_1', stageId: 1);
-      await _seedLifetimeOnly(
-        db,
-        trackId: trackId,
-        ref: 'lifetime_1',
-        stageId: 1,
-      );
+    test(
+      'live + bulkInTrack contribute to the running total; lifetimeOnly does not',
+      () async {
+        await _seedLive(db, trackId: trackId, ref: 'live_1', stageId: 1);
+        await _seedBulkInTrack(db, trackId: trackId, ref: 'bulk_1', stageId: 1);
+        await _seedLifetimeOnly(
+          db,
+          trackId: trackId,
+          ref: 'lifetime_1',
+          stageId: 1,
+        );
 
-      final result = await service.getCumulativeProgressLive(
-        startDate: _startDate,
-        endDate: _endDate,
-      );
+        final result = await service.getCumulativeProgressLive(
+          startDate: _startDate,
+          endDate: _endDate,
+        );
 
-      // Day-9 has zero; day-10 has one; day-11..end stays at one. The
-      // total ever climbs to 1, not 3.
-      expect(
-        result.map((p) => p.total).reduce((a, b) => a > b ? a : b),
-        1,
-        reason: 'bulkInTrack and lifetimeOnly must not bump the live total',
-      );
-    });
+        // Track-learning rule: bulk-mark counts. Total climbs to 2 (live +
+        // bulk), not 1 — and lifetimeOnly stays excluded.
+        expect(
+          result.map((p) => p.total).reduce((a, b) => a > b ? a : b),
+          2,
+          reason: 'live + bulk-in-track count; lifetime-only does not',
+        );
+      },
+    );
   });
 
   group('getStreakCalendarLive', () {

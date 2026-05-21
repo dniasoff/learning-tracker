@@ -1619,9 +1619,9 @@
     "description": "Subtitle for the Lifetime Marking screen."
   },
 
-  "recentActivityLiveOnlyDisclaimer": "לימוד במסלולים בלבד — פריטים שסומנו בכמות מופיעים תחת הידע הכולל.",
+  "recentActivityLiveOnlyDisclaimer": "כולל לימוד במסלולים (חי + סימון בקבוצה). ייבוא לכל החיים מופיע תחת הידע הכולל.",
   "@recentActivityLiveOnlyDisclaimer": {
-    "description": "Disclaimer shown on Recent Activity charts."
+    "description": "Subtitle shown on Recent Activity charts. Track learning = live + bulk-mark in-track."
   },
 
   "lifetimeKnowledgeLoading": "טוען ידע כולל…",

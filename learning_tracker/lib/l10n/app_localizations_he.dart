@@ -2941,7 +2941,7 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String get recentActivityLiveOnlyDisclaimer =>
-      'לימוד במסלולים בלבד — פריטים שסומנו בכמות מופיעים תחת הידע הכולל.';
+      'כולל לימוד במסלולים (חי + סימון בקבוצה). ייבוא לכל החיים מופיע תחת הידע הכולל.';
 
   @override
   String get lifetimeKnowledgeLoading => 'טוען ידע כולל…';

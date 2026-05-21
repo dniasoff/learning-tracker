@@ -166,13 +166,31 @@ class CompletionDetectionService {
     final leafItems = allItems.where((item) => item.isLeaf).toList();
     if (leafItems.isEmpty) return;
 
-    // Get all stages that need to be complete
+    // Siyum fires on **limud (stage 1) completion** — finishing the
+    // learning of every leaf in the unit. Chazara (stages ≥ 2) is review
+    // of already-learned material and does NOT gate siyum. This is the
+    // standard product semantic per docs/hebrew-terms.md §6 ("siyum =
+    // completing a unit of learning") and is required for bulk-mark on a
+    // chazara-enabled track to produce siyumim — bulk-mark only writes
+    // stage 1, so requiring all stages would silently zero out siyumim
+    // every time a user bulk-marks an entire masechta during onboarding.
     final stages = _stageRepository != null
         ? await _stageRepository.getStagesForCurriculum(curriculum)
         : const <domain_stage.StageDefinition>[];
     if (stages.isEmpty) return;
 
-    final stageIds = stages.map((s) => s.stageOrder).toList();
+    // Find the limud (stage 1) row. Defensive fallback: if no stage has
+    // `stageOrder == 1`, take the lowest-ordered stage we have.
+    final limudStage = stages.firstWhere(
+      (s) => s.stageOrder == 1,
+      orElse: () => stages.reduce(
+        (a, b) => a.stageOrder < b.stageOrder ? a : b,
+      ),
+    );
+    // Completion rows in the live codebase write `stageId` as EITHER the
+    // stage_definitions.id (autoincrement FK) OR the stageOrder (1, 2, 3…).
+    // Accept both formats when checking limud completion.
+    final limudStageIds = <int>{limudStage.id, limudStage.stageOrder};
 
     // Issue ONE bulk query for all completions in this curriculum + profile,
     // then index by sefariaRef in memory. Previously this loop ran one DAO
@@ -187,14 +205,11 @@ class CompletionDetectionService {
       stagesByRef.putIfAbsent(c.sefariaRef, () => <int>{}).add(c.stageId);
     }
 
-    // Check if every leaf has completions for every stage
+    // Check that every leaf has a limud completion.
     for (final leaf in leafItems) {
       final completedStages = stagesByRef[leaf.sefariaRef] ?? const <int>{};
-
-      for (final stageId in stageIds) {
-        if (!completedStages.contains(stageId)) {
-          return; // Not all stages complete for this leaf
-        }
+      if (!completedStages.any(limudStageIds.contains)) {
+        return; // Limud not complete for this leaf — siyum not yet reached.
       }
     }
 

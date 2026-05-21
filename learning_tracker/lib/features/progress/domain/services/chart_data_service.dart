@@ -90,16 +90,18 @@ class ChartDataService {
   /// (stage > 1) for the Recent Activity screen's two-colour stacked bar
   /// chart.
   ///
-  /// Uses [CompletionTierFilter.liveOnly] — the Recent Activity lens is the
-  /// **engagement-tier** view, which the three-tier policy reserves for live
-  /// in-session marks. Bulk-marked items are surfaced on the Lifetime
-  /// Knowledge lens instead, never here.
+  /// Uses [CompletionTierFilter.trackAchievement] — Recent Activity counts
+  /// track learning (live + bulk-mark in-track), per the unified rule that
+  /// "track-based learning = actual app learning, except for points and
+  /// streak". Bulk-mark items are stamped with the sentinel date (1/1/2000)
+  /// so they naturally fall outside finite recent windows; for "all time"
+  /// spans the bucketing surfaces them at year 2000.
   ///
   /// Bucketing matches [getDailyCompletions]: daily for spans
   /// ≤ [kChartDailyMaxDays], weekly otherwise. For longer spans the
-  /// effective start is bumped to the user's first live completion so the
-  /// chart never displays thousands of empty leading buckets — same cap
-  /// applied by the other Recent Activity methods.
+  /// effective start is bumped to the user's first track-learning completion
+  /// so the chart never displays thousands of empty leading buckets — same
+  /// cap applied by the other Recent Activity methods.
   Future<List<DailyLimudChazaraData>> getDailyLimudimAndChazaros({
     required DateTime startDate,
     required DateTime endDate,
@@ -110,12 +112,12 @@ class ChartDataService {
       requestedStart: startDate,
       requestedEnd: endDate,
       curriculumId: curriculum,
-      tier: CompletionTierFilter.liveOnly,
+      tier: CompletionTierFilter.trackAchievement,
     );
 
     final completions = await _db.completionDao.getCompletionsByTier(
       profileId: _profileId,
-      tier: CompletionTierFilter.liveOnly,
+      tier: CompletionTierFilter.trackAchievement,
       curriculumId: curriculum,
       since: effectiveStart,
       until: _endOfDay(endDate),
@@ -197,15 +199,15 @@ class ChartDataService {
     );
   }
 
-  /// Live-only counterpart of [getDailyCompletions] for the Recent Activity
-  /// engagement-tier lens.
+  /// Track-learning counterpart of [getDailyCompletions] for the Recent
+  /// Activity screen.
   ///
-  /// The Recent Activity screen renders the engagement tier — only live
-  /// in-session marks count here. The other charts on that screen
-  /// (Limudim & Chazaros, Cumulative live, Points) all share the same tier
-  /// filter; this method gives screens a simple, non-stacked daily count
-  /// when they need it (e.g. tooltips, totals) without re-implementing the
-  /// SQL.
+  /// Recent Activity counts **track learning** (live + bulk-mark in-track),
+  /// not engagement-only — the unified rule places everything except points
+  /// and streak in the track-learning tier. This method gives screens a
+  /// simple, non-stacked daily count (for tooltips, totals) without
+  /// re-implementing the SQL. The method name retains the historic "Live"
+  /// suffix for callsite stability; the filter is [trackAchievement].
   ///
   /// Bucketing matches [getDailyCompletions].
   Future<List<DailyCompletionData>> getDailyCompletionsLive({
@@ -218,12 +220,12 @@ class ChartDataService {
       requestedStart: startDate,
       requestedEnd: endDate,
       curriculumId: curriculum,
-      tier: CompletionTierFilter.liveOnly,
+      tier: CompletionTierFilter.trackAchievement,
     );
 
     final completions = await _db.completionDao.getCompletionsByTier(
       profileId: _profileId,
-      tier: CompletionTierFilter.liveOnly,
+      tier: CompletionTierFilter.trackAchievement,
       curriculumId: curriculum,
       since: effectiveStart,
       until: _endOfDay(endDate),
@@ -242,10 +244,11 @@ class ChartDataService {
     );
   }
 
-  /// Live-only counterpart of [getCumulativeProgress] for the Recent Activity
-  /// engagement-tier lens. Only live in-session marks contribute to the
-  /// running total — bulk-marked items roll up to Lifetime Knowledge
-  /// instead.
+  /// Track-learning counterpart of [getCumulativeProgress] for the Recent
+  /// Activity screen. Both live and bulk-mark-in-track completions contribute
+  /// to the running total — only lifetime-only imports are excluded. The
+  /// method name retains the historic "Live" suffix for callsite stability;
+  /// the filter is [trackAchievement].
   Future<List<CumulativeProgressPoint>> getCumulativeProgressLive({
     required DateTime startDate,
     required DateTime endDate,
@@ -256,7 +259,7 @@ class ChartDataService {
       requestedStart: startDate,
       requestedEnd: endDate,
       curriculumId: curriculum,
-      tier: CompletionTierFilter.liveOnly,
+      tier: CompletionTierFilter.trackAchievement,
     );
 
     final beforeStartCutoff = effectiveStart.subtract(
@@ -264,7 +267,7 @@ class ChartDataService {
     );
     final priorRows = await _db.completionDao.getCompletionsByTier(
       profileId: _profileId,
-      tier: CompletionTierFilter.liveOnly,
+      tier: CompletionTierFilter.trackAchievement,
       curriculumId: curriculum,
       until: beforeStartCutoff,
     );
@@ -272,7 +275,7 @@ class ChartDataService {
 
     final completions = await _db.completionDao.getCompletionsByTier(
       profileId: _profileId,
-      tier: CompletionTierFilter.liveOnly,
+      tier: CompletionTierFilter.trackAchievement,
       curriculumId: curriculum,
       since: effectiveStart,
       until: _endOfDay(endDate),

@@ -352,52 +352,121 @@ void main() {
       },
     );
 
-    test('does NOT create entry when not all stages complete', () async {
-      final leaves = createLeafItems('Zeraim', 'Berakhot', 2);
+    test(
+      'fires siyum on limud (stage 1) completion alone — chazara not required',
+      () async {
+        // Regression for: bulk-mark on a chazara-enabled track must still
+        // produce siyum entries. Previously the detection service required
+        // every stage to be complete; that silently zeroed out siyumim for
+        // anyone who bulk-marked an entire masechta during onboarding on
+        // a multi-stage (limud + chazara) track. Per docs/hebrew-terms.md
+        // §6, siyum = "completing a unit of learning" — chazara is review
+        // of already-siyumed material and does NOT gate the siyum.
+        final leaves = createLeafItems('Zeraim', 'Berakhot', 2);
 
-      when(
-        () => mockContentRepo.getContentByRef(
-          curriculumId: CurriculumId.mishnayos,
-          sefariaRef: any(named: 'sefariaRef'),
-        ),
-      ).thenAnswer((_) async => leaves.first);
+        when(
+          () => mockContentRepo.getContentByRef(
+            curriculumId: CurriculumId.mishnayos,
+            sefariaRef: any(named: 'sefariaRef'),
+          ),
+        ).thenAnswer((_) async => leaves.first);
 
-      when(
-        () => mockContentRepo.filterByLevel(
-          curriculumId: CurriculumId.mishnayos,
-          level1: 'Zeraim',
-          level2: 'Berakhot',
-        ),
-      ).thenAnswer((_) async => leaves);
+        when(
+          () => mockContentRepo.filterByLevel(
+            curriculumId: CurriculumId.mishnayos,
+            level1: 'Zeraim',
+            level2: 'Berakhot',
+          ),
+        ).thenAnswer((_) async => leaves);
 
-      when(
-        () => mockContentRepo.filterByLevel(
-          curriculumId: CurriculumId.mishnayos,
-          level1: 'Zeraim',
-          level2: null,
-        ),
-      ).thenAnswer((_) async => leaves);
+        when(
+          () => mockContentRepo.filterByLevel(
+            curriculumId: CurriculumId.mishnayos,
+            level1: 'Zeraim',
+            level2: null,
+          ),
+        ).thenAnswer((_) async => leaves);
 
-      await insertStage(1);
-      await insertStage(2);
+        await insertStage(1);
+        await insertStage(2);
 
-      // All leaves for stage 1 only
-      for (final leaf in leaves) {
-        await insertCompletion(leaf.sefariaRef, 1);
-      }
+        // All leaves for stage 1 only — stage 2 (chazara) untouched.
+        for (final leaf in leaves) {
+          await insertCompletion(leaf.sefariaRef, 1);
+        }
 
-      final service = createService();
-      await service.checkAndRecordCompletions(
-        curriculumId: _currId,
-        sefariaRef: leaves.first.sefariaRef,
-        trackType: 'personal',
-        profileId: 1,
-        markedBy: 1,
-      );
+        final service = createService();
+        await service.checkAndRecordCompletions(
+          curriculumId: _currId,
+          sefariaRef: leaves.first.sefariaRef,
+          trackType: 'personal',
+          profileId: 1,
+          markedBy: 1,
+        );
 
-      final entries = await db.learningLedgerDao.getEntriesByProfile(1);
-      expect(entries, isEmpty);
-    });
+        final entries = await db.learningLedgerDao.getEntriesByProfile(1);
+        expect(
+          entries.any(
+            (e) =>
+                e.entryScope == 'masechta' && e.unitIdentifier == 'Berakhot',
+          ),
+          isTrue,
+          reason:
+              'A unit-level siyum must fire when every leaf has a limud '
+              '(stage 1) completion, even on a track with chazara stages.',
+        );
+      },
+    );
+
+    test(
+      'does NOT fire siyum when some leaves are missing limud completion',
+      () async {
+        // Sanity: siyum still requires every leaf's limud — partial limud
+        // coverage must not fire.
+        final leaves = createLeafItems('Zeraim', 'Berakhot', 3);
+
+        when(
+          () => mockContentRepo.getContentByRef(
+            curriculumId: CurriculumId.mishnayos,
+            sefariaRef: any(named: 'sefariaRef'),
+          ),
+        ).thenAnswer((_) async => leaves.first);
+
+        when(
+          () => mockContentRepo.filterByLevel(
+            curriculumId: CurriculumId.mishnayos,
+            level1: 'Zeraim',
+            level2: 'Berakhot',
+          ),
+        ).thenAnswer((_) async => leaves);
+
+        when(
+          () => mockContentRepo.filterByLevel(
+            curriculumId: CurriculumId.mishnayos,
+            level1: 'Zeraim',
+            level2: null,
+          ),
+        ).thenAnswer((_) async => leaves);
+
+        await insertStage(1);
+
+        // Only 2 of 3 leaves have limud completion.
+        await insertCompletion(leaves[0].sefariaRef, 1);
+        await insertCompletion(leaves[1].sefariaRef, 1);
+
+        final service = createService();
+        await service.checkAndRecordCompletions(
+          curriculumId: _currId,
+          sefariaRef: leaves[0].sefariaRef,
+          trackType: 'personal',
+          profileId: 1,
+          markedBy: 1,
+        );
+
+        final entries = await db.learningLedgerDao.getEntriesByProfile(1);
+        expect(entries, isEmpty);
+      },
+    );
   });
 
   // ──────────────────────────────────────────────────────────────────────────

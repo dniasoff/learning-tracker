@@ -2973,7 +2973,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get recentActivityLiveOnlyDisclaimer =>
-      'Track learning only — bulk-marked items appear under Lifetime Knowledge.';
+      'Counts track learning (live + bulk-mark). Lifetime-only imports appear under Lifetime Knowledge.';
 
   @override
   String get lifetimeKnowledgeLoading => 'Loading lifetime knowledge…';

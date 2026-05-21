@@ -197,7 +197,7 @@ void main() {
         ),
       );
 
-  testWidgets('renders engagement-tier title + live-only disclaimer', (
+  testWidgets('renders Recent Activity title + track-learning disclaimer', (
     tester,
   ) async {
     await tester.pumpWidget(buildScreen());
@@ -208,11 +208,12 @@ void main() {
     expect(find.text('Recent Activity'), findsOneWidget);
 
     // Disclaimer used on both the limud+chazara bar chart and the cumulative
-    // chart card — so it appears at least once.
+    // chart card — so it appears at least once. Post-tier-unification copy:
+    // recent-activity counts track learning (live + bulk-mark).
     expect(
       find.text(
-        'Track learning only — bulk-marked items appear under Lifetime '
-        'Knowledge.',
+        'Counts track learning (live + bulk-mark). Lifetime-only imports '
+        'appear under Lifetime Knowledge.',
       ),
       findsWidgets,
     );
@@ -223,19 +224,28 @@ void main() {
   });
 
   testWidgets(
-    'live completion is included; bulkInTrack + lifetimeOnly are NOT',
+    'live + bulkInTrack are both included; lifetimeOnly is NOT',
     (tester) async {
       // Seed three completions today (so the default "Last 7 Days" window
       // includes them):
-      //   - 1 live (stage 1) on today @ 10:00.
-      //   - 1 bulkInTrack on today @ 11:00 (must NOT show on bar chart).
-      //   - 1 lifetimeOnly on today @ 12:00 (must NOT show on bar chart).
+      //   - 1 live (stage 1) on today @ 10:00 — counts.
+      //   - 1 bulkInTrack on today @ 11:00 — counts (track learning).
+      //   - 1 lifetimeOnly on today @ 12:00 — does NOT count (outside the
+      //     track-learning tier; surfaces under Lifetime Knowledge instead).
+      //
+      // Track-learning rule (2026-05-21): everything except points and
+      // streak treats live + bulk-mark in-track as one source.
+      //
+      // Note on the bulk-mark date: production bulk-mark stamps `1/1/2000`
+      // (sentinel) so bulk items naturally fall outside finite recent
+      // windows; this test deliberately seeds the bulkInTrack row with
+      // `bulkAt` (today) so the date-windowed query exercises the tier
+      // filter rather than the date filter — that's the regression we
+      // care about: the SQL filter must NOT exclude bulkInTrack by source.
       //
       // F16: Route through `DateTimeFactory.nowLocal()` so the seed clock
       // matches the production screen's clock when a future test pumps a
-      // frozen clock via `useLocalDayClock`. The previous `DateTime.now()`
-      // call read the system clock directly, leaving open the possibility
-      // of seed/production divergence in a clock-injected test.
+      // frozen clock via `useLocalDayClock`.
       final today = DateTimeFactory.nowLocal();
       final liveAt = DateTime(today.year, today.month, today.day, 10);
       final bulkAt = DateTime(today.year, today.month, today.day, 11);
@@ -279,15 +289,15 @@ void main() {
             d.date.day == today.day,
       );
 
-      // Bar reflects the single live mark — bulkInTrack & lifetimeOnly are
-      // dropped by the live-only tier filter on the underlying service.
+      // Bar reflects live + bulkInTrack; lifetimeOnly is dropped by the
+      // trackAchievement tier filter on the underlying service.
       expect(
         todayBucket.limudCount,
-        1,
-        reason: 'one live stage-1 mark today',
+        2,
+        reason: 'one live + one bulkInTrack stage-1 mark today',
       );
       expect(todayBucket.chazaraCount, 0);
-      expect(todayBucket.total, 1);
+      expect(todayBucket.total, 2);
     },
   );
 

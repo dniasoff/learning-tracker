@@ -68,13 +68,15 @@ When reviewing code or copy, audit against this document. The 2026-05-20 audits 
 
 ## Rule 4 — Completion credit policy (three tiers + sentinel date)
 
-| Source | Engagement (streak, points) | Achievement (siyumim, reports, learn-data) | Lifetime data | Date stamp |
+| Source | Engagement (streak, points) | Track-learning tier (siyumim, reports, pace, recent activity, learn-data, dashboard counters) | Lifetime data | Date stamp |
 |---|:---:|:---:|:---:|---|
-| **Track learning** (real-time mark in the app) | ✅ | ✅ | ✅ | Real date (today) |
-| **Bulk-mark in-track** (historical entries inside a track) | ❌ | ✅ | ✅ | **Sentinel date** (e.g. `1/1/2000`) |
+| **Track learning – live** (real-time mark in the app) | ✅ | ✅ | ✅ | Real date (today) |
+| **Track learning – bulk-mark in-track** (historical entries inside a track) | ❌ | ✅ | ✅ | **Sentinel date** (e.g. `1/1/2000`) |
 | **Lifetime-mark** (lifetime-only) | ❌ | ❌ | ✅ | n/a |
 
-> Terminology note (2026-05-21): the engagement-tier row was previously labelled "Live learning". Renamed to "Track learning" — *all* learning the user does is live to them; the meaningful distinction is whether the mark is made inside a track vs. as a lifetime-only import. The `CompletionSource.live` enum value is unchanged for now; only user-facing copy and rule text use "track learning".
+> **Unifying rule (2026-05-21):** track-based learning *is* actual app learning. Every counter, chart, and report on the app's screens treats live mark + bulk-mark in-track as one combined source — **the only exceptions are points and streak**, which remain live-only because they reward real-time engagement. Bulk-mark items naturally fall outside finite "last 7 / 30 days" windows because of the sentinel date, but they are never filtered out by tier.
+>
+> The previous "Live learning" label is retired in user-facing copy in favour of "Track learning". The `CompletionSource.live` enum identifier is unchanged for now; only rule text and UI strings carry the rename.
 
 - The **sentinel date is the mechanism** that lets bulk-in-track entries credit achievement/lifetime *without* leaking into recent activity, streak math, or "today's activity." Every date-keyed read must filter by date — that's where the rule enforces itself.
 - Don't reinvent a parallel `is_bulk` boolean alongside the date; the date *is* the discriminator for date-keyed reads.

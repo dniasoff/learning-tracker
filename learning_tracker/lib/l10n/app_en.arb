@@ -1624,9 +1624,9 @@
     "description": "Subtitle for the Lifetime Marking screen (Wave 5 Task #18) — clarifies the lifetimeOnly source so users understand the tier credit."
   },
 
-  "recentActivityLiveOnlyDisclaimer": "Track learning only — bulk-marked items appear under Lifetime Knowledge.",
+  "recentActivityLiveOnlyDisclaimer": "Counts track learning (live + bulk-mark). Lifetime-only imports appear under Lifetime Knowledge.",
   "@recentActivityLiveOnlyDisclaimer": {
-    "description": "Disclaimer shown on Recent Activity charts to make the engagement-tier scope explicit and point at where bulk-marked items appear instead."
+    "description": "Subtitle shown on Recent Activity charts. Track learning = live + bulk-mark in-track (the achievement tier). Lifetime-only imports are the only completions excluded here."
   },
 
   "lifetimeKnowledgeLoading": "Loading lifetime knowledge…",

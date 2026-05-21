@@ -5237,10 +5237,10 @@ abstract class AppLocalizations {
   /// **'Items you\'ve learned in your life, outside the app\'s tracks. Counted toward Lifetime Knowledge — not toward siyumim, streak, or points.'**
   String get lifetimeMarkingSubtitle;
 
-  /// Disclaimer shown on Recent Activity charts to make the engagement-tier scope explicit and point at where bulk-marked items appear instead.
+  /// Subtitle shown on Recent Activity charts. Track learning = live + bulk-mark in-track (the achievement tier). Lifetime-only imports are the only completions excluded here.
   ///
   /// In en, this message translates to:
-  /// **'Track learning only — bulk-marked items appear under Lifetime Knowledge.'**
+  /// **'Counts track learning (live + bulk-mark). Lifetime-only imports appear under Lifetime Knowledge.'**
   String get recentActivityLiveOnlyDisclaimer;
 
   /// Loading indicator message on the Lifetime Knowledge screen body.

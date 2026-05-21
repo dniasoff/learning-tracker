@@ -11,22 +11,23 @@
 /// lifetime           |  ✓   |      ✓      |      ✓
 /// ```
 ///
-/// ### Semantics (owner-confirmed)
+/// ### Semantics (owner-confirmed, 2026-05-21)
+///
+/// **Rule:** track-based learning *is* actual app learning. Everywhere
+/// except points and streak, use [trackAchievement] — bulk-mark in-track
+/// counts the same as a live mark. [liveOnly] is reserved exclusively for
+/// the engagement tier (points + streak).
 ///
 /// **[liveOnly]** — Engagement tier. Includes only in-session marks
-/// (not present in `prior_completion_imports`). Used for streak points
-/// and points-earned-per-day, where credit is awarded only for marks
-/// made live in-session. NOTE: progress *charts* (daily activity bars,
-/// cumulative progress line, streak calendar) and siyumim use
-/// [trackAchievement] instead — bulk-in-track marks belong on charts
-/// because they represent real per-track learning even though they do
-/// not earn streak/points.
+/// (not present in `prior_completion_imports`). Used **only** by
+/// streak-eligibility and points-earned-per-day, where credit is awarded
+/// solely for marks made live in-session. Everything else — charts,
+/// counters, pace, recent activity, siyumim — uses [trackAchievement].
 ///
-/// **[trackAchievement]** — Achievement tier. Includes live completions
+/// **[trackAchievement]** — Track-learning tier. Includes live completions
 /// PLUS bulk-marks made inside a track wizard (`source = 'bulkInTrack'`).
-/// Used for track-completion %, siyumim, reports, "I learnt it" displays,
-/// Manage Tracks card, curriculum progress screens, AND progress charts
-/// (daily activity, cumulative progress, streak calendar).
+/// The default tier for every screen, report, dashboard counter, and chart
+/// except the streak calendar dots and the points-per-day chart.
 ///
 /// **[lifetime]** — Lifetime tier. Includes ALL three sources — live,
 /// bulkInTrack, and lifetimeOnly (historical imports). Used for lifetime

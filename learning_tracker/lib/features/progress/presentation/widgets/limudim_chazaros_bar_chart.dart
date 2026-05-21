@@ -18,13 +18,13 @@ const Color _kChazaraColor = Color(0xFFF2A93B);
 ///  - **Limud** (bottom segment, deep blue) — stage-1 initial-learning marks.
 ///  - **Chazara** (top segment, accent amber) — stage ≥ 2 review marks.
 ///
-/// The chart is strictly **live-only** data — provenance of the data comes
-/// from [ChartDataService.getDailyLimudimAndChazaros] which applies
-/// [CompletionTierFilter.liveOnly]. The widget itself does no tier filtering;
-/// it renders whatever it is given.
+/// The chart shows **track learning** data — provenance comes from
+/// [ChartDataService.getDailyLimudimAndChazaros] which applies
+/// [CompletionTierFilter.trackAchievement] (live + bulk-mark in-track). The
+/// widget itself does no tier filtering; it renders whatever it is given.
 ///
 /// Displays the limud/chazara split per bucket plus a small legend row
-/// underneath. Used by [RecentActivityScreen] (Wave 3 engagement lens).
+/// underneath. Used by [RecentActivityScreen].
 class LimudimChazarosBarChart extends ConsumerWidget {
   final List<DailyLimudChazaraData> data;
 
