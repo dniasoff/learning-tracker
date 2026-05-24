@@ -85,11 +85,37 @@ class _RecordingNotificationGateway implements NotificationGateway {
   Future<bool> requestPermission() => Future.value(false);
 
   @override
+  Future<bool> hasPermission() => Future.value(false);
+
+  @override
   Future<void> scheduleDailyReminder({
     required int hour,
     required int minute,
     required String body,
   }) async {}
+
+  @override
+  Future<void> scheduleDailyReminderForProfile({
+    required int profileId,
+    required int hour,
+    required int minute,
+    required String title,
+    required String body,
+  }) async {}
+
+  @override
+  Future<void> cancelDailyReminderForProfile(int profileId) async {}
+
+  @override
+  Future<void> scheduleBatchRemindersForProfile({
+    required int profileId,
+    required List<tz_lib.TZDateTime> fireTimes,
+    required String title,
+    required String body,
+  }) async {}
+
+  @override
+  Future<void> cancelBatchRemindersForProfile(int profileId) async {}
 
   @override
   Future<void> scheduleStreakAlert({

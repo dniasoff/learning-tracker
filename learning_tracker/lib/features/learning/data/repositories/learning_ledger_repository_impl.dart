@@ -3,6 +3,7 @@ import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/time/ulid.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
+import 'package:learning_tracker/features/learning/domain/entities/completion_source.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/learning_ledger_repository.dart';
 import 'package:learning_tracker/features/sync/data/outbox_sync_write_facade.dart';
 
@@ -115,10 +116,16 @@ class LearningLedgerRepositoryImpl implements LearningLedgerRepository {
     return entry;
   }
 
+  /// Sentinel date written for non-live batch marks so that streak,
+  /// points-per-day, and recent-activity reads are not inflated by
+  /// historical or bulk imports.
+  static final DateTime _kSentinelDate = DateTime.utc(2000, 1, 1);
+
   @override
   Future<List<LearningLedgerData>> recordCompletionsBatch(
-    List<LedgerManualBatchItem> items,
-  ) async {
+    List<LedgerManualBatchItem> items, {
+    CompletionSource source = CompletionSource.lifetimeOnly,
+  }) async {
     if (items.isEmpty) return const [];
 
     for (final item in items) {
@@ -129,6 +136,12 @@ class LearningLedgerRepositoryImpl implements LearningLedgerRepository {
     }
 
     final results = <LearningLedgerData>[];
+
+    // Non-live sources (bulkInTrack, lifetimeOnly) use the sentinel date so
+    // engagement reads (streak, points-per-day) are never credited for them.
+    final completedAt = source.creditsEngagement
+        ? DateTimeFactory.nowUtc()
+        : _kSentinelDate;
 
     await _database.transaction(() async {
       for (final item in items) {
@@ -153,7 +166,7 @@ class LearningLedgerRepositoryImpl implements LearningLedgerRepository {
             unitDisplayNameEn: item.unitDisplayNameEn,
             trackType: item.trackType,
             trackId: drift.Value(item.trackId),
-            completedAt: now,
+            completedAt: completedAt,
             completionNumber: completionNumber,
             markedBy: item.markedBy,
             isManual: drift.Value(item.isManual),

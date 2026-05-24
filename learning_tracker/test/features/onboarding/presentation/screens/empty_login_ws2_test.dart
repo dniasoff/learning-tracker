@@ -12,6 +12,8 @@ import 'package:learning_tracker/features/account/domain/models/auth_state.dart'
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
 import 'package:learning_tracker/features/dashboard/presentation/widgets/skipped_onboarding_cta_banner.dart'
     show SkippedOnboardingCtaBanner;
+import 'package:learning_tracker/features/notifications/domain/services/notification_gateway.dart';
+import 'package:learning_tracker/features/notifications/presentation/providers/notification_providers.dart';
 import 'package:learning_tracker/features/onboarding/presentation/providers/onboarding_resume_store.dart';
 import 'package:learning_tracker/features/onboarding/presentation/screens/empty_login_screen.dart';
 import 'package:learning_tracker/features/onboarding/presentation/screens/onboarding_screen.dart';
@@ -20,6 +22,13 @@ import 'package:mocktail/mocktail.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class _MockStackRouter extends Mock implements StackRouter {}
+
+// Stub gateway so DeviceNotificationToggle doesn't crash in tests — WS5 added
+// hasPermission() which hits the uninitialized platform plugin in test env.
+class _StubNotificationGateway extends Mock implements NotificationGateway {
+  @override
+  Future<bool> hasPermission() async => false;
+}
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -41,6 +50,10 @@ Widget _wrapWithProviders({
           tier: Tier.localBorn,
         ),
       ),
+      // Override notificationServiceProvider so DeviceNotificationToggle
+      // (added by WS5) doesn't crash when hasPermission() hits the
+      // uninitialized FlutterLocalNotifications platform plugin in tests.
+      notificationServiceProvider.overrideWithValue(_StubNotificationGateway()),
     ],
     child: MaterialApp(
       home: StackRouterScope(
@@ -275,9 +288,9 @@ void main() {
         await tester.pump();
         await tester.pumpAndSettle();
 
-        // WS5 stub notification toggle
+        // WS5: DeviceNotificationToggle is rendered with key 'device_notification_toggle'
         expect(
-          find.byKey(const Key('empty_login_notification_toggle')),
+          find.byKey(const Key('device_notification_toggle')),
           findsOneWidget,
         );
         expect(find.text('Device notifications'), findsOneWidget);

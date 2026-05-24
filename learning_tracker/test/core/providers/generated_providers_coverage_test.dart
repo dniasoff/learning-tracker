@@ -791,12 +791,5 @@ void main() {
       );
     });
 
-    test('manualCompletionUseCaseProvider debugGetCreateSourceHash', () {
-      // covers lines 67, 80-81, 91-92
-      expect(
-        manualCompletionUseCaseProvider.debugGetCreateSourceHash(),
-        isNotEmpty,
-      );
-    });
   });
 }

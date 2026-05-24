@@ -20,6 +20,9 @@ void main() {
   setUp(() {
     SharedPreferences.setMockInitialValues({});
     mockService = MockNotificationGateway();
+    // Stub hasPermission so DeviceNotificationToggle doesn't crash with
+    // 'Null is not a subtype of Future<bool>' — WS5 added this method.
+    when(() => mockService.hasPermission()).thenAnswer((_) async => true);
   });
 
   Widget buildSubject() {

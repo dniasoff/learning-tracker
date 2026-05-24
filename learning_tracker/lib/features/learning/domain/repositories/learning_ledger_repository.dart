@@ -1,5 +1,6 @@
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/exceptions/app_exception.dart';
+import 'package:learning_tracker/features/learning/domain/entities/completion_source.dart';
 
 /// Repository interface for learning ledger operations.
 ///
@@ -30,9 +31,15 @@ abstract class LearningLedgerRepository {
   ///
   /// Same permission rules as [recordCompletion]. Uses one DB transaction and
   /// a single cloud sync batch so large selections stay responsive.
+  ///
+  /// [source] controls which tier of side effects fire and whether the sentinel
+  /// date (DateTime.utc(2000, 1, 1)) is written instead of the real timestamp.
+  /// Defaults to [CompletionSource.lifetimeOnly] so historical imports never
+  /// inflate streak, points, or recent-activity reads.
   Future<List<LearningLedgerData>> recordCompletionsBatch(
-    List<LedgerManualBatchItem> items,
-  );
+    List<LedgerManualBatchItem> items, {
+    CompletionSource source = CompletionSource.lifetimeOnly,
+  });
 
   /// Get the full lifetime ledger for a profile.
   Future<List<LearningLedgerData>> getLifetimeLedger(int profileId);

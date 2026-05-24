@@ -95,6 +95,12 @@
 - detail: WS4.banner — _ChildViewBanner added to AppShellScreen (shows "Viewing [name]" strip with Exit when child profile active, no tutor bar shown); WS4.boundary — parent portal tab-0 now gated behind _confirmSwitchIntoChild() AlertDialog; WS4.settings — settings_screen.dart restructured under DEVICE and PROFILE scope headings; WS4.login-sect — Login heading omitted (no debug toggle exists; empty section worse than no section). 7 tests added. Commits: 77a81512, 4ef1eb5a, 16720c8f. Pre-existing CI failures from WS5/WS8 in-flight noted; not caused by WS4.
 - next: Awaiting WS5, WS7, WS8 P3 reports.
 
+## [2026-05-24 15:00] TASK-DONE — WS5 complete
+
+- stream: WS5
+- detail: WS5.key-prefs (df6b23cf) — notification prefs keys + IDs namespaced by profileId; 10 tests. WS5.per-profile (689b1e9b) — allProfilesReminderBootstrap schedules all profiles on login; tap handler parses daily_reminder:<profileId> payload → switch profile → open SchedulerRoute; 10 tests. WS5.two-layers (c9f993fe) — DeviceNotificationToggle widget added to NotificationsScreen (layer 1) + wired into EmptyLoginScreen replacing stub; 3 tests. WS5.clobber (1eb69df2) — merger round-trip test: 4 tests prove zero cross-profile clobber (merge A then B → A intact; merge B then A → B intact); LWW correctness green. Lint fixes (77a81512). Key sync-crisis guard green. Pre-existing CI failures from WS7 generated files; not caused by WS5.
+- next: Awaiting WS7, WS8 P3 reports.
+
 ## [2026-05-24 13:05] START — WS8 begins
 
 - stream: WS8

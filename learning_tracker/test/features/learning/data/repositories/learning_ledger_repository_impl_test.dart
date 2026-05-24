@@ -2,6 +2,7 @@ import 'package:drift/drift.dart' show Value;
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/features/learning/data/repositories/learning_ledger_repository_impl.dart';
+import 'package:learning_tracker/features/learning/domain/entities/completion_source.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/learning_ledger_repository.dart';
 import 'package:learning_tracker/features/sync/data/outbox_sync_write_facade.dart';
 import 'package:mocktail/mocktail.dart';
@@ -275,6 +276,136 @@ void main() {
         // direct-batch gateway call is no longer used.
         verify(() => mockOutboxFacade.enqueueLedgerEntry(any())).called(2);
       });
+
+      // ── WS8 sentinel date tests ────────────────────────────────────────────
+      //
+      // These are the acceptance-criterion tests for WS8.credit-path: prove
+      // that non-live [CompletionSource]s write the sentinel date
+      // (DateTime.utc(2000, 1, 1)) to stored rows, NOT DateTime.now(). The
+      // sentinel prevents any date-keyed read (streak, pace, recent activity)
+      // from crediting lifetime/bulk marks.
+
+      List<LedgerManualBatchItem> twoItems() => [
+        const LedgerManualBatchItem(
+          curriculumId: 'mishna',
+          entryScope: 'level1',
+          unitIdentifier: 'Seder Zeraim',
+          unitDisplayNameHe: 'סדר זרעים',
+          unitDisplayNameEn: 'Seder Zeraim',
+          trackType: 'personal',
+          markedBy: 1,
+          isManual: true,
+        ),
+        const LedgerManualBatchItem(
+          curriculumId: 'mishna',
+          entryScope: 'level2',
+          unitIdentifier: 'Berakhot',
+          unitDisplayNameHe: 'ברכות',
+          unitDisplayNameEn: 'Berakhot',
+          trackType: 'personal',
+          markedBy: 1,
+          isManual: true,
+        ),
+      ];
+
+      // Helper: normalise a DateTime to UTC so Drift's local-timezone rounding
+      // does not cause false failures. Drift stores timestamps as UTC ms-since-
+      // epoch integers, but the round-trip through SQLite can produce a local-
+      // timezone DateTime on some platforms. Converting to UTC before comparison
+      // removes the offset. The sentinel year (2000) is chosen to be far enough
+      // in the past that even UTC+14 cannot push it into 2001.
+      DateTime normaliseToUtc(DateTime dt) => dt.toUtc();
+
+      test(
+        'WS8 — default source (lifetimeOnly) writes sentinel date to all rows',
+        () async {
+          final repo = createRepo();
+          // Default source = CompletionSource.lifetimeOnly per the updated API.
+          final entries = await repo.recordCompletionsBatch(twoItems());
+
+          expect(entries, hasLength(2));
+          for (final entry in entries) {
+            final stored = normaliseToUtc(entry.completedAt);
+            expect(
+              stored.year,
+              equals(2000),
+              reason:
+                  'lifetimeOnly (default) must write the sentinel date '
+                  '(year 2000) so no date-keyed read credits these rows '
+                  'toward streak or pace',
+            );
+            expect(stored.month, equals(1));
+            expect(stored.day, equals(1));
+          }
+        },
+      );
+
+      test(
+        'WS8 — explicit lifetimeOnly source writes sentinel date',
+        () async {
+          final repo = createRepo();
+          final entries = await repo.recordCompletionsBatch(
+            twoItems(),
+            source: CompletionSource.lifetimeOnly,
+          );
+
+          expect(entries, hasLength(2));
+          for (final entry in entries) {
+            final stored = normaliseToUtc(entry.completedAt);
+            expect(stored.year, equals(2000));
+            expect(stored.month, equals(1));
+            expect(stored.day, equals(1));
+          }
+        },
+      );
+
+      test(
+        'WS8 — bulkInTrack source writes sentinel date',
+        () async {
+          final repo = createRepo();
+          final entries = await repo.recordCompletionsBatch(
+            twoItems(),
+            source: CompletionSource.bulkInTrack,
+          );
+
+          expect(entries, hasLength(2));
+          for (final entry in entries) {
+            final stored = normaliseToUtc(entry.completedAt);
+            expect(
+              stored.year,
+              equals(2000),
+              reason:
+                  'bulkInTrack also suppresses engagement — '
+                  'sentinel must be written to avoid inflating recent activity',
+            );
+            expect(stored.month, equals(1));
+            expect(stored.day, equals(1));
+          }
+        },
+      );
+
+      test(
+        'WS8 — live source writes a real (non-sentinel) timestamp',
+        () async {
+          final repo = createRepo();
+          final entries = await repo.recordCompletionsBatch(
+            twoItems(),
+            source: CompletionSource.live,
+          );
+
+          expect(entries, hasLength(2));
+          for (final entry in entries) {
+            final stored = normaliseToUtc(entry.completedAt);
+            expect(
+              stored.year,
+              isNot(equals(2000)),
+              reason:
+                  'live source must NOT use the sentinel — '
+                  'it should record the actual time of marking (year > 2000)',
+            );
+          }
+        },
+      );
     });
 
     group('getLifetimeLedger', () {

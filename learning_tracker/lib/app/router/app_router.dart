@@ -16,7 +16,9 @@ import 'package:learning_tracker/features/content_browsing/presentation/screens/
 import 'package:learning_tracker/features/content_browsing/presentation/screens/curriculum_list_screen.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/screens/text_display_screen.dart';
 import 'package:learning_tracker/features/dashboard/presentation/screens/dashboard_screen.dart';
+import 'package:learning_tracker/features/gamification/presentation/screens/child_redemption_screen.dart';
 import 'package:learning_tracker/features/gamification/presentation/screens/gamification_screen.dart';
+import 'package:learning_tracker/features/gamification/presentation/screens/parent_pending_redemptions_screen.dart';
 import 'package:learning_tracker/features/gamification/presentation/screens/point_config_screen.dart';
 import 'package:learning_tracker/features/gamification/presentation/screens/reward_configuration_screen.dart';
 import 'package:learning_tracker/features/learning/presentation/screens/learning_screen.dart';
@@ -200,6 +202,18 @@ class AppRouter extends RootStackRouter {
       page: GamificationRoute.page,
       guards: [authGuard, childModeGuard],
     ),
+    // WS7.child-ui — child prize redemption screen (child mode, no PIN).
+    AutoRoute(
+      path: '/redeem',
+      page: ChildRedemptionRoute.page,
+      guards: [authGuard, childModeGuard],
+    ),
+    // WS7.redeem — parent approves/declines pending prize requests (PIN-gated).
+    AutoRoute(
+      path: '/parent-mode/pending-redemptions',
+      page: ParentPendingRedemptionsRoute.page,
+      guards: [authGuard, childModeGuard, pinGuard],
+    ),
     AutoRoute(
       path: '/notifications',
       page: NotificationsRoute.page,
@@ -264,12 +278,12 @@ class AppRouter extends RootStackRouter {
     AutoRoute(
       path: '/settings/lifetime',
       page: LifetimeMarkingRoute.page,
-      guards: [authGuard],
+      guards: [authGuard, childModeGuard, pinGuard],
     ),
     AutoRoute(
       path: '/settings/lifetime/:curriculumId',
       page: LifetimeCurriculumMarkingRoute.page,
-      guards: [authGuard],
+      guards: [authGuard, childModeGuard, pinGuard],
     ),
     AutoRoute(
       path: '/curriculum/:curriculumId/order',
