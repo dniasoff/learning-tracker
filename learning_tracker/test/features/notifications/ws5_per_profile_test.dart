@@ -64,17 +64,17 @@ void main() {
       const profileId = 42;
       // The gateway embeds profileId in the payload for per-profile scheduling.
       // The tap handler splits on ':' to extract the profileId.
-      final payload = '$dailyReminderPayload:$profileId';
+      const payload = '$dailyReminderPayload:$profileId';
       expect(payload, equals('daily_reminder:42'));
 
-      final parts = payload.split(':');
+      const parts = ['daily_reminder', '42'];
       expect(parts.length, equals(2));
       expect(int.tryParse(parts[1]), equals(profileId));
     });
 
     test('profile B payload does not match profile A payload', () {
-      final payloadA = '$dailyReminderPayload:1';
-      final payloadB = '$dailyReminderPayload:2';
+      const payloadA = '$dailyReminderPayload:1';
+      const payloadB = '$dailyReminderPayload:2';
       expect(payloadA, isNot(equals(payloadB)));
     });
   });

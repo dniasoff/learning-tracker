@@ -463,6 +463,8 @@
   "sectionTracks": "TRACKS",
   "sectionAccount": "ACCOUNT",
   "sectionParentalControls": "PARENTAL CONTROLS",
+  "sectionDevice": "DEVICE",
+  "sectionProfile": "PROFILE",
   "changePassword": "Change Password",
   "signOut": "Sign Out",
   "deleteAccountTitle": "Delete Account",
@@ -496,6 +498,21 @@
   "profilePickerTalmidProfiles": "TALMID PROFILES",
   "profilePickerTutoredChildren": "TUTORED CHILDREN",
   "tutorModeIndicator": "Tutor mode",
+  "viewingChildBanner": "Viewing {name}",
+  "@viewingChildBanner": {
+    "placeholders": {
+      "name": {"type": "String"}
+    }
+  },
+  "viewingChildBannerExit": "Exit",
+  "switchIntoChildTitle": "Switch to child view",
+  "switchIntoChildMessage": "You are about to enter {name}'s full experience. You can exit anytime from the banner at the top.",
+  "@switchIntoChildMessage": {
+    "placeholders": {
+      "name": {"type": "String"}
+    }
+  },
+  "switchIntoChildConfirm": "Switch in",
   "tutorCannotMarkLiveCompletion": "Tutors cannot mark live completions",
   "tutorWriteForbiddenTitle": "Action not allowed",
   "tutorWriteForbiddenMessage": "Tutors cannot mark live forward completions. This action would credit the child's streak and rewards, which is reserved for the parent or child.",

@@ -897,6 +897,12 @@ class AppLocalizationsHe extends AppLocalizations {
   String get sectionParentalControls => 'הורה';
 
   @override
+  String get sectionDevice => 'מכשיר';
+
+  @override
+  String get sectionProfile => 'פרופיל';
+
+  @override
   String get changePassword => 'שינוי סיסמה';
 
   @override
@@ -996,6 +1002,25 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String get tutorModeIndicator => 'מצב מדריך';
+
+  @override
+  String viewingChildBanner(String name) {
+    return 'צופה ב-$name';
+  }
+
+  @override
+  String get viewingChildBannerExit => 'יציאה';
+
+  @override
+  String get switchIntoChildTitle => 'מעבר לתצוגת ילד';
+
+  @override
+  String switchIntoChildMessage(String name) {
+    return 'אתה עומד להיכנס לחוויה המלאה של $name. ניתן לצאת בכל עת מהפס שבראש המסך.';
+  }
+
+  @override
+  String get switchIntoChildConfirm => 'כניסה';
 
   @override
   String get tutorCannotMarkLiveCompletion =>

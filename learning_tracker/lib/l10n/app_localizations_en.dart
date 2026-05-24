@@ -906,6 +906,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get sectionParentalControls => 'PARENTAL CONTROLS';
 
   @override
+  String get sectionDevice => 'DEVICE';
+
+  @override
+  String get sectionProfile => 'PROFILE';
+
+  @override
   String get changePassword => 'Change Password';
 
   @override
@@ -1007,6 +1013,25 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get tutorModeIndicator => 'Tutor mode';
+
+  @override
+  String viewingChildBanner(String name) {
+    return 'Viewing $name';
+  }
+
+  @override
+  String get viewingChildBannerExit => 'Exit';
+
+  @override
+  String get switchIntoChildTitle => 'Switch to child view';
+
+  @override
+  String switchIntoChildMessage(String name) {
+    return 'You are about to enter $name\'s full experience. You can exit anytime from the banner at the top.';
+  }
+
+  @override
+  String get switchIntoChildConfirm => 'Switch in';
 
   @override
   String get tutorCannotMarkLiveCompletion =>

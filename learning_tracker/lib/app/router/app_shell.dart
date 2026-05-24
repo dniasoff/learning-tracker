@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/app/router/app_router.dart';
 import 'package:learning_tracker/core/database/registry/device_registry_database.dart';
+import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/providers/registry_provider.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
@@ -26,6 +27,11 @@ import 'package:shared_preferences/shared_preferences.dart';
 // app's primary blue to signal "you are in a different access context".
 const _tutorAccentColor = Color(0xFFD97706); // Amber-600
 
+// WS4.banner: Child-view banner colour — a teal/emerald green that is distinct
+// from both the tutor amber and the primary blue, signalling "you are inside a
+// child's profile, not your own".
+const _childViewAccentColor = Color(0xFF047857); // Emerald-700
+
 @RoutePage()
 class AppShellScreen extends ConsumerWidget {
   const AppShellScreen({super.key});
@@ -40,6 +46,23 @@ class AppShellScreen extends ConsumerWidget {
     final hasActiveTutoredProfiles =
         grantsAsync.asData?.value.any((g) => g.grantState is ActiveGrant) ??
         false;
+
+    // WS4.banner (DEC-25/D3): Detect when a parent is viewing a child's profile.
+    // Show the "Viewing [child]" banner whenever the active profile is a child
+    // AND we are NOT in tutor mode (tutor mode has its own indicator bar).
+    // The banner is absent in tutor mode because the tutor bar already provides
+    // the context signal; only one context banner is shown at a time.
+    final activeProfileId = ref.watch(activeProfileIdProvider);
+    final profilesAsync = ref.watch(profileListStreamProvider);
+    final profiles = profilesAsync.asData?.value ?? <ProfileModel>[];
+    final activeProfile =
+        profiles.where((p) => p.id == activeProfileId).firstOrNull;
+    final isViewingChildProfile =
+        !hasActiveTutoredProfiles &&
+        activeProfile?.profileMode == ProfileMode.child;
+    final viewingChildName = isViewingChildProfile
+        ? (activeProfile?.displayName ?? '')
+        : null;
 
     // Determine offline-banner visibility here so the appBar's PreferredSize
     // can size itself to the actual rendered content (banner + tutor bar +
@@ -70,9 +93,11 @@ class AppShellScreen extends ConsumerWidget {
           final topInset = MediaQuery.of(innerContext).padding.top;
           final bannerHeight = offlineBannerVisible ? 32.0 : 0.0;
           final tutorHeight = hasActiveTutoredProfiles ? 24.0 : 0.0;
+          // WS4.banner: child-view bar height — only when no tutor bar.
+          final childViewHeight = isViewingChildProfile ? 28.0 : 0.0;
           return PreferredSize(
             preferredSize: Size.fromHeight(
-              topInset + bannerHeight + tutorHeight,
+              topInset + bannerHeight + tutorHeight + childViewHeight,
             ),
             child: Padding(
               // Push our custom appBar content below the system status bar.
@@ -88,6 +113,27 @@ class AppShellScreen extends ConsumerWidget {
                   // switcher to change profiles.
                   if (hasActiveTutoredProfiles)
                     const _TutorModeIndicatorBar(),
+                  // WS4.banner (DEC-25): "Viewing [child]" banner for the
+                  // parent/child-mode path. Only shown when a child profile is
+                  // active and no tutor bar is already displayed.
+                  if (isViewingChildProfile && viewingChildName != null)
+                    _ChildViewBanner(
+                      childName: viewingChildName,
+                      profiles: profiles,
+                      onExit: () {
+                        // Switch to the first adult profile if one exists,
+                        // otherwise open the switcher sheet (handled inside
+                        // _ChildViewBanner via the onExit callback).
+                        final adultProfile = profiles.firstWhere(
+                          (p) => p.profileMode == ProfileMode.adult,
+                          orElse: () => profiles.first,
+                        );
+                        ref
+                            .read(selectedProfileIdProvider.notifier)
+                            .select(adultProfile.id);
+                        innerContext.router.replaceAll([const AppShellRoute()]);
+                      },
+                    ),
                 ],
               ),
             ),
@@ -199,6 +245,83 @@ class _ShellNavItem extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+// WS4.banner (DEC-25 / D3): "Viewing [child]" banner.
+//
+// A slim strip shown below the offline-sync strip (and above any other bar)
+// when a parent has an active child profile selected. Provides a one-tap
+// exit that switches back to the first available adult profile on this login.
+//
+// Only shown when:
+//   • The active profile is a child (ProfileMode.child), AND
+//   • No tutor-mode bar is displayed (tutor mode has its own indicator).
+//
+// The exit callback switches the selected profile to the first adult profile
+// in [profiles] (or the first profile in the list when no adult exists) and
+// replaces the route stack with the AppShell, exactly as the switcher does.
+class _ChildViewBanner extends ConsumerWidget {
+  const _ChildViewBanner({
+    required this.childName,
+    required this.profiles,
+    required this.onExit,
+  });
+
+  final String childName;
+  final List<ProfileModel> profiles;
+  final VoidCallback onExit;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
+    return Container(
+      height: 28,
+      color: _childViewAccentColor,
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      child: Row(
+        children: [
+          const Icon(
+            Icons.child_care_rounded,
+            size: 13,
+            color: Colors.white,
+          ),
+          const SizedBox(width: 6),
+          Expanded(
+            child: Text(
+              l10n.viewingChildBanner(childName),
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0.4,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          GestureDetector(
+            onTap: onExit,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.2),
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Text(
+                l10n.viewingChildBannerExit,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.4,
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

@@ -1679,6 +1679,18 @@ abstract class AppLocalizations {
   /// **'PARENTAL CONTROLS'**
   String get sectionParentalControls;
 
+  /// No description provided for @sectionDevice.
+  ///
+  /// In en, this message translates to:
+  /// **'DEVICE'**
+  String get sectionDevice;
+
+  /// No description provided for @sectionProfile.
+  ///
+  /// In en, this message translates to:
+  /// **'PROFILE'**
+  String get sectionProfile;
+
   /// No description provided for @changePassword.
   ///
   /// In en, this message translates to:
@@ -1876,6 +1888,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Tutor mode'**
   String get tutorModeIndicator;
+
+  /// No description provided for @viewingChildBanner.
+  ///
+  /// In en, this message translates to:
+  /// **'Viewing {name}'**
+  String viewingChildBanner(String name);
+
+  /// No description provided for @viewingChildBannerExit.
+  ///
+  /// In en, this message translates to:
+  /// **'Exit'**
+  String get viewingChildBannerExit;
+
+  /// No description provided for @switchIntoChildTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Switch to child view'**
+  String get switchIntoChildTitle;
+
+  /// No description provided for @switchIntoChildMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'You are about to enter {name}\'s full experience. You can exit anytime from the banner at the top.'**
+  String switchIntoChildMessage(String name);
+
+  /// No description provided for @switchIntoChildConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Switch in'**
+  String get switchIntoChildConfirm;
 
   /// No description provided for @tutorCannotMarkLiveCompletion.
   ///
