@@ -125,6 +125,12 @@
 - detail: Read all required docs (plan, audit, log, tracker, product-rules, CLAUDE.md). Confirmed: app_shell.dart has _TutorModeIndicatorBar (tutor bar) but no child-view banner (DEC-25⚪). parent_portal_bottom_nav.dart:146 tab-0 does silent replaceAll to child dashboard (DEC-4🟡). settings_screen.dart uses TRACKS/LEARNING feature headers, no Device/Profile scope grouping (D2🔴). debug toggle absent — no Login section to build (WS4.login-sect). Starting WS4.banner.
 - next: WS4.banner → WS4.boundary → WS4.settings+login-sect
 
+## [2026-05-24 15:00] TASK-DONE — WS4 (all tasks complete)
+
+- stream: WS4
+- detail: WS4.banner — _ChildViewBanner added to AppShellScreen; shown when child profile active + tutor bar absent; displays "Viewing [name]" with emerald-700 strip; exit switches to first adult profile; l10n viewingChildBanner/viewingChildBannerExit EN+HE. WS4.boundary — navigateParentPortalTab() case 0 gated behind _confirmSwitchIntoChild() AlertDialog (requires explicit confirm before entering child's full experience); ref param added; caller updated; l10n switchIntoChildTitle/Message/Confirm EN+HE. WS4.settings — settings_screen.dart restructured: DEVICE section (App Permissions) + PROFILE section (per-learner settings); old TRACKS/LEARNING feature headers removed. WS4.login-sect — Login section omitted (debug toggle absent); no empty heading shipped. 7 tests added/updated across ws4_mode_boundaries_test.dart and settings_screen_test.dart; all green. Commit 4ef1eb5a. Note: app_shell.dart + l10n changes were incidentally committed in WS5's 77a81512 (stash contamination); functional effect identical.
+- next: P3 sync gate
+
 ## [2026-05-24 12:00] START — WS3 begins
 
 - stream: WS3
