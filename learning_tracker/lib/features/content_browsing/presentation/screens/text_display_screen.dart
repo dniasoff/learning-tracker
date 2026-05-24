@@ -25,10 +25,9 @@ import 'package:learning_tracker/features/learning/presentation/providers/comple
 import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dart';
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/session_role.dart';
-import 'package:learning_tracker/features/tutoring/domain/models/tutor_grant_aggregate.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/tutor_permissions.dart';
 import 'package:learning_tracker/features/tutoring/domain/use_cases/mark_live_completion_use_case.dart';
-import 'package:learning_tracker/features/tutoring/presentation/providers/manage_tutors_providers.dart';
+import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 @RoutePage()
@@ -742,13 +741,18 @@ class _CompletionSectionState extends ConsumerState<_CompletionSection> {
     }
   }
 
-  // W6.15/W6.17: Returns true when the current user is in a tutor context
-  // (has any active incoming tutor grant). When true, live-mark actions
+  // W6.15/W6.17 / WS3.3e (DEC-21): Returns true only when the current user
+  // is *actively viewing a talmid's profile context* (i.e. has passed the
+  // TutorPinEntryGate for a specific child). When true, live-mark actions
   // are disabled (FR-3, FR-6.2).
+  //
+  // Fix for DEC-21 dual-role bug: previously checked incomingTutorGrantsProvider,
+  // which returned true whenever the user had ANY active grant — causing a tutor
+  // who also has their own adult profile to have live-mark wrongly disabled on
+  // their *own* profile. The correct gate is the active selection provider,
+  // which is non-null only while inside a specific talmid's context.
   bool _isTutorSession(WidgetRef ref) {
-    final grantsAsync = ref.watch(incomingTutorGrantsProvider);
-    return grantsAsync.asData?.value.any((g) => g.grantState is ActiveGrant) ??
-        false;
+    return ref.watch(activeTutoredProfileSelectionProvider) != null;
   }
 
   // H1: Build a ResolvedSession that reflects the current user's role so
