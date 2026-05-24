@@ -478,8 +478,12 @@ class _AccountTile extends ConsumerWidget {
     );
     await session.setActiveAccount(account.accountId);
     await prefs.setBool(kOnboardingComplete, true);
+    // DEC-34: do NOT call signOut() — switching accounts must never terminate
+    // other accounts' sessions. The Drift DB swap above isolates the data;
+    // the AuthState update below makes this account the active on-screen context.
+    // Firebase's currentUser may still point at a cloud account from before the
+    // switch; that is intentional — the local-born account does not use Firebase.
     ref.read(authStateProvider.notifier).setLocalBornSession(profile: profile);
-    await ref.read(authRepositoryProvider).signOut();
 
     if (context.mounted) {
       unawaited(context.router.replaceAll([const AppShellRoute()]));

@@ -883,5 +883,119 @@ void main() {
         await tempDir.delete(recursive: true);
       });
     });
+
+    // ─── DEC-34: Multi-session auth model (WS1.auth-model) ─────
+    group(
+      'DEC-34 — Multi-session account switch keeps both accounts alive',
+      tags: ['story_dec34'],
+      () {
+        // The core invariant of DEC-34: switching from account A to account B
+        // must leave both accounts' registry entries and Drift data intact.
+        // This domain-layer test verifies the data-persistence side of the
+        // invariant — the UI enforcement (no signOut() call) is covered by
+        // code review of account_picker_screen.dart:_activateLocalAccountFromLocalData.
+
+        test(
+          'switching active account leaves both accounts in registry',
+          () async {
+            final registry = DeviceRegistryDatabase(NativeDatabase.memory());
+            SharedPreferences.setMockInitialValues({});
+            final prefs = await SharedPreferences.getInstance();
+            final sessionService = SessionPersistenceService(
+              prefs: prefs,
+              registry: registry,
+            );
+
+            // Two accounts registered (simulating two sign-ins).
+            await registry.addAccount(
+              DeviceAccountsCompanion.insert(
+                accountId: 'acc-alice',
+                email: 'alice@test.local',
+                displayName: 'Alice',
+                tier: 'cloudBorn',
+                dbFileName: 'user_acc_alice.db',
+                createdAt: DateTime.utc(2026, 1, 1),
+                lastUsedAt: DateTime.utc(2026, 1, 1),
+              ),
+            );
+            await registry.addAccount(
+              DeviceAccountsCompanion.insert(
+                accountId: 'acc-bob',
+                email: 'bob@test.local',
+                displayName: 'Bob',
+                tier: 'localBorn',
+                dbFileName: 'user_acc_bob.db',
+                createdAt: DateTime.utc(2026, 1, 2),
+                lastUsedAt: DateTime.utc(2026, 1, 2),
+              ),
+            );
+
+            // Initially Alice is active.
+            await sessionService.setActiveAccount('acc-alice');
+            expect(await sessionService.resolveActiveAccountId(), 'acc-alice');
+
+            // Simulate account switch to Bob (no removal/deletion).
+            await sessionService.setActiveAccount('acc-bob');
+
+            // After switching to Bob, Alice's registry entry is still intact.
+            final allAccounts = await registry.getAllAccounts();
+            expect(allAccounts, hasLength(2));
+
+            final alice = await registry.findById('acc-alice');
+            expect(alice, isNotNull, reason: 'Alice must remain in registry after switch');
+            expect(alice!.email, 'alice@test.local');
+
+            final bob = await registry.findById('acc-bob');
+            expect(bob, isNotNull, reason: 'Bob must be the new active account');
+            expect(bob!.email, 'bob@test.local');
+
+            // Active account pointer updated to Bob.
+            expect(
+              await sessionService.resolveActiveAccountId(),
+              'acc-bob',
+              reason: 'Active account is now Bob',
+            );
+
+            await registry.close();
+          },
+        );
+
+        test(
+          'switching does not remove the previously active account',
+          () async {
+            final registry = DeviceRegistryDatabase(NativeDatabase.memory());
+            SharedPreferences.setMockInitialValues({});
+            final prefs = await SharedPreferences.getInstance();
+            final sessionService = SessionPersistenceService(
+              prefs: prefs,
+              registry: registry,
+            );
+
+            for (final id in ['acc-1', 'acc-2', 'acc-3']) {
+              await registry.addAccount(
+                DeviceAccountsCompanion.insert(
+                  accountId: id,
+                  email: '$id@test.local',
+                  displayName: id,
+                  tier: 'localBorn',
+                  dbFileName: 'user_$id.db',
+                  createdAt: DateTime.utc(2026, 1, 1),
+                  lastUsedAt: DateTime.utc(2026, 1, 1),
+                ),
+              );
+            }
+
+            // Cycle through all three accounts; registry must always have 3.
+            for (final id in ['acc-1', 'acc-2', 'acc-3', 'acc-1']) {
+              await sessionService.setActiveAccount(id);
+              final count = (await registry.getAllAccounts()).length;
+              expect(count, 3, reason: 'All 3 accounts must survive switch to $id');
+            }
+
+            await registry.close();
+          },
+        );
+      },
+    );
   });
 }
