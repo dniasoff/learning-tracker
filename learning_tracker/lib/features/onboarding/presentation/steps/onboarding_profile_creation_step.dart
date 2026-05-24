@@ -29,9 +29,20 @@ typedef ProfileCreatedCallback =
 /// Onboarding phase: gather name, mode, and display preferences, then create
 /// the profile row.
 class OnboardingProfileCreationStep extends ConsumerStatefulWidget {
-  const OnboardingProfileCreationStep({super.key, required this.onCreated});
+  const OnboardingProfileCreationStep({
+    super.key,
+    required this.onCreated,
+    // WS2.skip: optional callback — when provided, a "Skip for now" affordance
+    // is shown at the bottom so the user can bypass profile creation entirely
+    // and reach the empty-login surface.
+    this.onSkipProfileCreation,
+  });
 
   final ProfileCreatedCallback onCreated;
+
+  /// Called when the user taps "Skip for now" at the profile-creation phase.
+  /// Null = no skip affordance rendered.
+  final VoidCallback? onSkipProfileCreation;
 
   @override
   ConsumerState<OnboardingProfileCreationStep> createState() =>
@@ -520,6 +531,19 @@ class _OnboardingProfileCreationStepState
                 color: AppTheme.brandInkMuted,
               ),
             ),
+            // WS2.skip: skip affordance — only shown when a callback is wired.
+            if (widget.onSkipProfileCreation != null) ...[
+              const SizedBox(height: 8),
+              TextButton(
+                onPressed: widget.onSkipProfileCreation,
+                child: Text(
+                  'Skip for now',
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: AppTheme.brandInkMuted,
+                  ),
+                ),
+              ),
+            ],
           ],
         ),
       ),

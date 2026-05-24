@@ -23,8 +23,8 @@ import 'package:learning_tracker/features/account/presentation/providers/auth_pr
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart'
     as auth_state;
 import 'package:learning_tracker/features/account/presentation/widgets/email_verification_dialog.dart';
-import 'package:learning_tracker/features/onboarding/presentation/screens/onboarding_screen.dart'
-    show kOnboardingComplete;
+import 'package:learning_tracker/features/onboarding/presentation/providers/onboarding_resume_store.dart'
+    show kOnboardingComplete, kOnboardingSkipped;
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -455,7 +455,17 @@ class SignInController extends Notifier<SignInState> {
         .countProfilesForAccount(_ref.read(currentAccountIdProvider));
 
     if (finalProfileCount == 0 && !cloudAccountHasProfiles) {
-      unawaited(router.replaceAll([const OnboardingRoute()]));
+      // WS2.relax: if the user has previously skipped profile creation,
+      // route to the empty-login surface rather than forcing them back into
+      // the onboarding wizard. Without this, a 0-profile account that chose
+      // "skip" would be trapped in an infinite onboarding loop.
+      final hasSkipped = prefs.getBool(kOnboardingSkipped) ?? false;
+      if (hasSkipped) {
+        await prefs.setBool(kOnboardingComplete, true);
+        unawaited(router.replaceAll([const EmptyLoginRoute()]));
+      } else {
+        unawaited(router.replaceAll([const OnboardingRoute()]));
+      }
       return;
     }
 

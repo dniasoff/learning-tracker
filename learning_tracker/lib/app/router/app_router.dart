@@ -22,6 +22,7 @@ import 'package:learning_tracker/features/gamification/presentation/screens/rewa
 import 'package:learning_tracker/features/learning/presentation/screens/learning_screen.dart';
 import 'package:learning_tracker/features/notifications/presentation/screens/notifications_screen.dart';
 import 'package:learning_tracker/features/onboarding/presentation/screens/app_intro_screen.dart';
+import 'package:learning_tracker/features/onboarding/presentation/screens/empty_login_screen.dart';
 import 'package:learning_tracker/features/onboarding/presentation/screens/onboarding_screen.dart';
 import 'package:learning_tracker/features/onboarding/presentation/screens/permission_prompt_screen.dart';
 import 'package:learning_tracker/features/profiles/presentation/screens/manage_learners_screen.dart';
@@ -94,6 +95,13 @@ class AppRouter extends RootStackRouter {
       guards: [authGuard],
     ),
     AutoRoute(path: '/onboarding', page: OnboardingRoute.page),
+    // WS2.surface: zero-profile landing surface for users who skipped profile
+    // creation. Auth-guarded (user must be signed in) but no profile required.
+    AutoRoute(
+      path: '/empty-login',
+      page: EmptyLoginRoute.page,
+      guards: [authGuard],
+    ),
     AutoRoute(
       path: '/permission-prompt',
       page: PermissionPromptRoute.page,

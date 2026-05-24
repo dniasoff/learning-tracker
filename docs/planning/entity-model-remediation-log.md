@@ -28,3 +28,9 @@
 - stream: WS1
 - detail: Source docs read; key files explored. Baseline CI green (5779 tests). Core bug confirmed: _activateLocalAccountFromLocalData (account_picker_screen.dart:482) calls signOut() after setting local session — violating DEC-34. Fix: remove that signOut() call. Starting WS1.auth-model.
 - next: WS1.auth-model → WS1.switcher → WS1.count-gate → WS1.consolidate
+
+## [2026-05-24 10:15] TASK-DONE — WS1.auth-model
+
+- stream: WS1
+- detail: WS1.auth-model complete — removed signOut() from _activateLocalAccountFromLocalData; Drift DB swap + AuthState.setLocalBornSession() is now the sole switch mechanism; 2 new DEC-34 acceptance tests green; committed 40bdd3e1.
+- next: WS1.switcher

@@ -261,7 +261,10 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     await _clearSavedState();
     await _store.markComplete(skipped: true, joinedToTutor: joinedToTutor);
     if (!mounted) return;
-    unawaited(context.router.replaceAll([const AppShellRoute()]));
+    // WS2.skip/WS2.surface: route to the empty-login surface (zero-profile
+    // landing). The existing AppShellRoute is guarded by ProfileGuard which
+    // blocks zero-profile accounts — EmptyLoginRoute has no such guard.
+    unawaited(context.router.replaceAll([const EmptyLoginRoute()]));
   }
 
   // ── Build — OnboardingPhaseRouter ──────────────────────────────────────────
@@ -324,6 +327,13 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                     useHebrewTerms: useHebrewTerms,
                     showNikud: showNikud,
                     transliterationVariant: transliterationVariant,
+                  ),
+              // WS2.skip: wire skip at the profile-creation phase so the user
+              // can bypass profile creation entirely and land on the
+              // empty-login surface.
+              onSkipProfileCreation:
+                  () => unawaited(
+                    _navigateToDashboardSkipped(joinedToTutor: false),
                   ),
             ),
             _ScreenPhase.parentPinSetup => OnboardingParentPinStep(
