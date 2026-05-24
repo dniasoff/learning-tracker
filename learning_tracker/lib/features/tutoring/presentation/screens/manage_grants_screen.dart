@@ -7,12 +7,16 @@
 //   ListIncomingTutorAccessUseCase — list grants where caller is tutor
 //   ResignTutorGrantUseCase        — resign from an active grant
 
+import 'dart:async';
+
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/widgets/app_error_view.dart';
+import 'package:learning_tracker/features/account/presentation/providers/auth_providers.dart'
+    hide authStateProvider;
 import 'package:learning_tracker/features/tutoring/domain/models/tutor_grant_aggregate.dart';
 import 'package:learning_tracker/features/tutoring/presentation/providers/manage_tutors_providers.dart';
 
@@ -188,6 +192,22 @@ class _GrantRowState extends ConsumerState<_GrantRow> {
       await ref.read(resignTutorGrantUseCaseProvider).call(grant: widget.grant);
       if (mounted) {
         ref.invalidate(incomingTutorGrantsProvider);
+        // WS3.3g: fire-and-forget notification — parent is notified of resignation.
+        // Tutor name from current auth user; parent email not available on grant
+        // (no email field on TutorGrant — parent UID only), so we pass empty string;
+        // the logging implementation absorbs silently.
+        final currentUser = ref.read(authRepositoryProvider).currentUser;
+        final tutorName =
+            currentUser?.displayName ?? currentUser?.email ?? 'Your tutor';
+        unawaited(
+          ref
+              .read(tutorNotificationGatewayProvider)
+              .notifyParentOfResignation(
+                parentEmail: '', // Parent email not available from grant doc
+                tutorName: tutorName,
+                childName: widget.grant.childProfileId,
+              ),
+        );
       }
     } catch (e, st) {
       AppLogger.instance.error(

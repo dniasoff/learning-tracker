@@ -9,6 +9,8 @@
 //   RevokeTutorGrantUseCase         — revoke active grant
 //   RescindTutorInviteUseCase       — rescind pending invite
 
+import 'dart:async';
+
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -16,6 +18,8 @@ import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/widgets/app_error_view.dart';
+import 'package:learning_tracker/features/account/presentation/providers/auth_providers.dart'
+    hide authStateProvider;
 import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/tutor_grant_aggregate.dart';
@@ -178,6 +182,7 @@ class _ChildGrantsSection extends ConsumerWidget {
                     _TutorGrantRow.active(
                       grant: grant,
                       childProfileId: profile.id.toString(),
+                      childName: profile.displayName,
                     ),
                 ],
                 if (pending.isNotEmpty) ...[
@@ -186,6 +191,7 @@ class _ChildGrantsSection extends ConsumerWidget {
                     _TutorGrantRow.pending(
                       grant: grant,
                       childProfileId: profile.id.toString(),
+                      childName: profile.displayName,
                     ),
                 ],
               ],
@@ -242,15 +248,18 @@ class _TutorGrantRow extends ConsumerStatefulWidget {
   const _TutorGrantRow.active({
     required this.grant,
     required this.childProfileId,
+    required this.childName,
   }) : isActive = true;
 
   const _TutorGrantRow.pending({
     required this.grant,
     required this.childProfileId,
+    required this.childName,
   }) : isActive = false;
 
   final TutorGrant grant;
   final String childProfileId;
+  final String childName;
   final bool isActive;
 
   @override
@@ -278,6 +287,20 @@ class _TutorGrantRowState extends ConsumerState<_TutorGrantRow> {
       await ref.read(revokeTutorGrantUseCaseProvider).call(grant: widget.grant);
       if (mounted) {
         ref.invalidate(outgoingTutorGrantsProvider(widget.childProfileId));
+        // WS3.3g: fire-and-forget notification — tutor is notified of revocation.
+        // Parent name from current auth user; falls back to 'Parent' if unavailable.
+        final parentName =
+            ref.read(authRepositoryProvider).currentUser?.displayName ??
+            'Parent';
+        unawaited(
+          ref
+              .read(tutorNotificationGatewayProvider)
+              .notifyTutorOfRevocation(
+                tutorEmail: widget.grant.tutorEmail,
+                parentName: parentName,
+                childName: widget.childName,
+              ),
+        );
       }
     } catch (e, st) {
       AppLogger.instance.error(

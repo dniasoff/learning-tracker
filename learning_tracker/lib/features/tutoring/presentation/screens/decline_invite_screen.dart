@@ -21,8 +21,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
+import 'package:learning_tracker/features/account/presentation/providers/auth_providers.dart'
+    hide authStateProvider;
 import 'package:learning_tracker/features/tutoring/domain/models/tutor_grant_aggregate.dart';
 import 'package:learning_tracker/features/tutoring/domain/use_cases/tutor_invite_use_cases.dart';
+import 'package:learning_tracker/features/tutoring/presentation/providers/manage_tutors_providers.dart';
 import 'package:learning_tracker/features/tutoring/presentation/providers/tutor_grant_providers.dart';
 
 /// A full-page screen for declining a pending tutor invite.
@@ -105,6 +108,21 @@ class _DeclineInviteScreenState extends ConsumerState<DeclineInviteScreen> {
       switch (result) {
         case TutorGrantSuccess():
           setState(() => _step = _DeclineStep.success);
+          // WS3.3g: fire-and-forget notification — parent is notified of decline.
+          // Parent email not available from the grant doc (UID only), so we pass
+          // empty string; the logging implementation absorbs silently.
+          final tutorEmail =
+              ref.read(authRepositoryProvider).currentUser?.email ??
+              grant.tutorEmail;
+          unawaited(
+            ref
+                .read(tutorNotificationGatewayProvider)
+                .notifyParentOfDecline(
+                  parentEmail: '', // Parent email not on grant doc
+                  tutorEmail: tutorEmail,
+                  childName: grant.childProfileId,
+                ),
+          );
         case TutorGrantFailure(:final message):
           setState(() {
             _step = _DeclineStep.error;

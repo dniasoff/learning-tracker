@@ -4,8 +4,10 @@
 // callables. All mutations are server-side via Admin SDK (V2-R3 C3).
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:learning_tracker/core/email/transactional_email_service.dart';
 import 'package:learning_tracker/features/tutoring/data/repositories/firestore_tutor_grant_repository.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/tutor_grant_aggregate.dart';
+import 'package:learning_tracker/features/tutoring/domain/services/tutor_notification_service.dart';
 import 'package:learning_tracker/features/tutoring/domain/use_cases/tutor_grant_use_cases.dart';
 import 'package:learning_tracker/features/tutoring/domain/use_cases/tutor_invite_use_cases.dart';
 
@@ -64,3 +66,19 @@ final incomingTutorGrantsProvider = FutureProvider<List<TutorGrant>>((ref) {
   final useCase = ref.watch(listIncomingGrantsUseCaseProvider);
   return useCase();
 });
+
+// ── Notification gateway ──────────────────────────────────────────────────────
+
+/// WS3.3g: Provider for [TutorNotificationGateway].
+///
+/// Fire-and-forget lifecycle notifications for:
+///   • Tutor declines invite → parent notified ([notifyParentOfDecline])
+///   • Tutor resigns grant   → parent notified ([notifyParentOfResignation])
+///   • Parent revokes grant  → tutor notified ([notifyTutorOfRevocation])
+///
+/// Backed by [transactionalEmailServiceProvider] (currently LoggingTransactionalEmailService
+/// — no real email sent until an email provider is provisioned).
+final tutorNotificationGatewayProvider = Provider<TutorNotificationGateway>(
+  (ref) =>
+      TutorNotificationGateway(ref.watch(transactionalEmailServiceProvider)),
+);
