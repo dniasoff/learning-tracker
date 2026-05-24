@@ -13,6 +13,7 @@ import 'package:learning_tracker/features/notifications/domain/services/notifica
 import 'package:learning_tracker/features/notifications/domain/services/notification_scheduler.dart';
 import 'package:learning_tracker/features/notifications/domain/services/streak_alert_service.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
+import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/providers/sacred_location_provider.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/providers/sacred_windows_provider.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dart';
@@ -464,6 +465,79 @@ StreakAlertService streakAlertService(Ref ref) {
     profileId: profileId,
     analytics: analytics,
   );
+}
+
+// ---------------------------------------------------------------------------
+// WS5.per-profile — Schedule reminders for ALL profiles on startup (DEC-28)
+//
+// Each profile has its own reminder schedule that must fire whether or not
+// that profile is the currently-active one. [allProfilesReminderBootstrap]
+// iterates every profile in the current account and schedules daily reminder
+// notifications using that profile's stored SharedPreferences prefs. The
+// payload embeds the profileId so [NotificationInitializer._handleNotificationTap]
+// can switch into the correct profile before navigating.
+//
+// This provider is kept alive and observed at bootstrap alongside
+// [reminderSyncEffectProvider]. It does NOT replace [reminderSyncEffect] —
+// the two work together: [reminderSyncEffect] handles the active profile
+// reactively (responding to preference changes), while
+// [allProfilesReminderBootstrap] ensures inactive profiles are also scheduled.
+// ---------------------------------------------------------------------------
+
+/// Schedules daily reminder notifications for every profile in the current
+/// account, using each profile's own stored notification preferences.
+///
+/// (WS5.per-profile / DEC-28) Inactive profiles' reminders must still fire.
+///
+/// Called once at login / app startup. Does not interfere with
+/// [reminderSyncEffectProvider] which handles live-reactivity for the active
+/// profile.
+@Riverpod(keepAlive: true)
+Future<void> allProfilesReminderBootstrap(Ref ref) async {
+  // Load all profiles for this account.
+  final profiles = await ref.watch(profileListProvider.future);
+  final gateway = ref.read(notificationServiceProvider);
+  final sacredTimeActive = ref.watch(isSacredTimeActiveProvider);
+
+  if (sacredTimeActive) {
+    // Do not schedule while Sacred Time is active.
+    return;
+  }
+
+  final prefs = await SharedPreferences.getInstance();
+
+  for (final profile in profiles) {
+    final profileId = profile.id;
+
+    final enabled =
+        prefs.getBool(
+          NotificationPreferencesRepository.reminderEnabledKey(profileId),
+        ) ??
+        true;
+    if (!enabled) {
+      await gateway.cancelDailyReminderForProfile(profileId);
+      continue;
+    }
+
+    final hour =
+        prefs.getInt(
+          NotificationPreferencesRepository.reminderHourKey(profileId),
+        ) ??
+        defaultReminderHour;
+    final minute =
+        prefs.getInt(
+          NotificationPreferencesRepository.reminderMinuteKey(profileId),
+        ) ??
+        defaultReminderMinute;
+
+    await gateway.scheduleDailyReminderForProfile(
+      profileId: profileId,
+      hour: hour,
+      minute: minute,
+      title: 'Learning Reminder',
+      body: 'Time to learn! Open the app to see your tasks.',
+    );
+  }
 }
 
 /// Watches streak alert settings and evaluates whether to schedule or cancel

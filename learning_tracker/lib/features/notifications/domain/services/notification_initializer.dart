@@ -4,14 +4,35 @@ import 'package:learning_tracker/features/notifications/domain/services/notifica
 import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 
+/// Callback type for switching the active profile.
+///
+/// WS5.per-profile: the tap handler needs to be able to switch into the
+/// profile whose reminder was tapped, so the caller wires in this callback
+/// from the provider / router layer. Receives the profileId parsed from
+/// the notification payload.
+typedef ProfileSwitchCallback = void Function(int profileId);
+
 /// Initializes the notification system at app startup.
 ///
 /// Call once from [main] after [WidgetsFlutterBinding.ensureInitialized].
 class NotificationInitializer {
-  NotificationInitializer({required this.service, required this.router});
+  NotificationInitializer({
+    required this.service,
+    required this.router,
+    this.onSwitchProfile,
+  });
 
   final NotificationGateway service;
   final AppRouter router;
+
+  /// Optional callback invoked when a notification tap identifies a specific
+  /// profile (via the `daily_reminder:<profileId>` payload). The callback
+  /// should select that profile in the provider tree so the user lands in the
+  /// correct profile's Scheduler.
+  ///
+  /// If `null`, the tap opens the Scheduler for whatever profile is currently
+  /// active (pre-WS5 behaviour, fine for single-profile setups).
+  final ProfileSwitchCallback? onSwitchProfile;
 
   /// Initialize timezone data and notification plugin.
   Future<void> initialize() async {
@@ -32,7 +53,24 @@ class NotificationInitializer {
   }
 
   void _handleNotificationTap(String? payload) {
-    if (payload == dailyReminderPayload || payload == streakAlertPayload) {
+    if (payload == null) return;
+
+    // WS5.per-profile: payloads for per-profile notifications have the form
+    // `daily_reminder:<profileId>` or `streak_protection:<profileId>`.
+    // Parse the profileId and switch to that profile before navigating.
+    if (payload.startsWith('$dailyReminderPayload:') ||
+        payload.startsWith('$streakAlertPayload:')) {
+      final parts = payload.split(':');
+      if (parts.length == 2) {
+        final profileId = int.tryParse(parts[1]);
+        if (profileId != null && onSwitchProfile != null) {
+          onSwitchProfile!(profileId);
+        }
+      }
+      router.navigate(const SchedulerRoute());
+    } else if (payload == dailyReminderPayload ||
+        payload == streakAlertPayload) {
+      // Legacy payload (no profileId suffix) — open Scheduler for active profile.
       router.navigate(const SchedulerRoute());
     } else if (payload == rewardMilestonePayload) {
       router.navigate(const GamificationRoute());

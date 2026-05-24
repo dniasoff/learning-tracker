@@ -709,6 +709,67 @@ final class StreakAlertServiceProvider
 String _$streakAlertServiceHash() =>
     r'095dcecb6259740ab0957146fc6abde80d0f8d7a';
 
+/// Schedules daily reminder notifications for every profile in the current
+/// account, using each profile's own stored notification preferences.
+///
+/// (WS5.per-profile / DEC-28) Inactive profiles' reminders must still fire.
+///
+/// Called once at login / app startup. Does not interfere with
+/// [reminderSyncEffectProvider] which handles live-reactivity for the active
+/// profile.
+
+@ProviderFor(allProfilesReminderBootstrap)
+final allProfilesReminderBootstrapProvider =
+    AllProfilesReminderBootstrapProvider._();
+
+/// Schedules daily reminder notifications for every profile in the current
+/// account, using each profile's own stored notification preferences.
+///
+/// (WS5.per-profile / DEC-28) Inactive profiles' reminders must still fire.
+///
+/// Called once at login / app startup. Does not interfere with
+/// [reminderSyncEffectProvider] which handles live-reactivity for the active
+/// profile.
+
+final class AllProfilesReminderBootstrapProvider
+    extends $FunctionalProvider<AsyncValue<void>, void, FutureOr<void>>
+    with $FutureModifier<void>, $FutureProvider<void> {
+  /// Schedules daily reminder notifications for every profile in the current
+  /// account, using each profile's own stored notification preferences.
+  ///
+  /// (WS5.per-profile / DEC-28) Inactive profiles' reminders must still fire.
+  ///
+  /// Called once at login / app startup. Does not interfere with
+  /// [reminderSyncEffectProvider] which handles live-reactivity for the active
+  /// profile.
+  AllProfilesReminderBootstrapProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'allProfilesReminderBootstrapProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$allProfilesReminderBootstrapHash();
+
+  @$internal
+  @override
+  $FutureProviderElement<void> $createElement($ProviderPointer pointer) =>
+      $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<void> create(Ref ref) {
+    return allProfilesReminderBootstrap(ref);
+  }
+}
+
+String _$allProfilesReminderBootstrapHash() =>
+    r'546cb2e284327b1903594212a4d1f24bd0e343d3';
+
 /// Watches streak alert settings and evaluates whether to schedule or cancel
 /// the streak protection alert.
 ///

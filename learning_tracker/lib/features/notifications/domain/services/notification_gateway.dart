@@ -9,13 +9,58 @@ const String _channelId = 'daily_reminders';
 const String _channelName = 'Daily Reminders';
 const String _channelDescription = 'Daily learning reminder notifications';
 
-/// Notification ID for the daily reminder (single repeating notification).
+// ---------------------------------------------------------------------------
+// Per-profile notification ID allocation (WS5.key-prefs)
+//
+// Each profile is allocated a block of 1000 IDs:
+//   profile 0: IDs 0–999    → daily=0, streak=1, batch=10–23
+//   profile 1: IDs 1000–1999 → daily=1000, streak=1001, batch=1010–1023
+//   profile N: IDs N*1000 … N*1000+999
+//
+// This guarantees no collisions across profiles (up to 1000 profiles, well
+// beyond any real-world use). The block scheme replaces the old singleton
+// constants (dailyReminderId=0, streakAlertId=1, batchBaseId=10).
+// ---------------------------------------------------------------------------
+
+/// Offset for the daily reminder ID within a profile's block.
+const int _dailyReminderOffset = 0;
+
+/// Offset for the streak alert ID within a profile's block.
+const int _streakAlertOffset = 1;
+
+/// Offset for the base of the batch reminder IDs within a profile's block.
+const int _batchBaseOffset = 10;
+
+/// Size of the rolling one-shot batch (14 days, IDs offset 10–23).
+const int _batchSize = 14;
+
+/// IDs per profile block (must be > _batchBaseOffset + _batchSize).
+const int _idsPerProfile = 1000;
+
+// ---------------------------------------------------------------------------
+// Per-profile ID helpers — used instead of the old singleton constants.
+// ---------------------------------------------------------------------------
+
+/// Returns the notification ID for the daily reminder of [profileId].
+int dailyReminderIdForProfile(int profileId) =>
+    profileId * _idsPerProfile + _dailyReminderOffset;
+
+/// Returns the notification ID for the streak alert of [profileId].
+int streakAlertIdForProfile(int profileId) =>
+    profileId * _idsPerProfile + _streakAlertOffset;
+
+/// Returns the base notification ID for the batch reminders of [profileId].
+int batchBaseIdForProfile(int profileId) =>
+    profileId * _idsPerProfile + _batchBaseOffset;
+
+// Legacy singleton constants — kept for backward compatibility with callers
+// that schedule for the active profile only; prefer the per-profile helpers.
+
+/// Notification ID for the daily reminder (profile 0, legacy).
 const int dailyReminderId = 0;
 
-/// Base notification ID for the rolling 14-day one-shot batch (DNI-367).
-/// Uses IDs 10–23 (14 slots). IDs 10-23 are reserved for the batch.
+/// Base notification ID for the rolling 14-day one-shot batch (profile 0, legacy).
 const int _batchBaseId = 10;
-const int _batchSize = 14;
 
 /// Payload used when a streak protection notification is tapped.
 const String streakAlertPayload = 'streak_protection';
@@ -26,7 +71,7 @@ const String _streakChannelName = 'Streak Alerts';
 const String _streakChannelDescription =
     'Alerts when your learning streak is at risk';
 
-/// Notification ID for the streak protection alert.
+/// Notification ID for the streak protection alert (profile 0, legacy).
 const int streakAlertId = 1;
 
 /// Payload used when a reward milestone notification is tapped.
@@ -95,6 +140,25 @@ class NotificationGateway {
           ) ??
           false;
     }
+    return true;
+  }
+
+  /// Check whether the app currently has notification permission.
+  ///
+  /// Returns `true` if POST_NOTIFICATIONS is granted (Android 13+) or if
+  /// no permission is required (older Android / iOS after request). On iOS
+  /// this is always best-effort as there is no dedicated pending-check API
+  /// in flutter_local_notifications; falls back to `true`.
+  Future<bool> hasPermission() async {
+    final android = _plugin
+        .resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin
+        >();
+    if (android != null) {
+      return await android.areNotificationsEnabled() ?? false;
+    }
+    // iOS: no dedicated pending check — assume granted (permission flow is
+    // handled separately at onboarding/settings).
     return true;
   }
 
@@ -180,6 +244,88 @@ class NotificationGateway {
   Future<void> cancelBatchReminders() async {
     for (var i = 0; i < _batchSize; i++) {
       await _plugin.cancel(id: _batchBaseId + i);
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Per-profile scheduling (WS5.per-profile)
+  // ---------------------------------------------------------------------------
+
+  /// Schedule a daily reminder for [profileId] with payload
+  /// `daily_reminder:<profileId>` so the tap handler can switch to the
+  /// correct profile.
+  Future<void> scheduleDailyReminderForProfile({
+    required int profileId,
+    required int hour,
+    required int minute,
+    required String title,
+    required String body,
+  }) async {
+    final scheduledTime = _nextInstanceOfTime(hour, minute);
+
+    const androidDetails = AndroidNotificationDetails(
+      _channelId,
+      _channelName,
+      channelDescription: _channelDescription,
+      importance: Importance.defaultImportance,
+      priority: Priority.defaultPriority,
+    );
+    const notificationDetails = NotificationDetails(android: androidDetails);
+
+    await _plugin.zonedSchedule(
+      id: dailyReminderIdForProfile(profileId),
+      title: title,
+      body: body,
+      scheduledDate: scheduledTime,
+      notificationDetails: notificationDetails,
+      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      matchDateTimeComponents: DateTimeComponents.time,
+      payload: '$dailyReminderPayload:$profileId',
+    );
+  }
+
+  /// Cancel the daily reminder for [profileId].
+  Future<void> cancelDailyReminderForProfile(int profileId) async {
+    await _plugin.cancel(id: dailyReminderIdForProfile(profileId));
+  }
+
+  /// Schedule a rolling 14-day batch of reminders for [profileId].
+  Future<void> scheduleBatchRemindersForProfile({
+    required int profileId,
+    required List<tz.TZDateTime> fireTimes,
+    required String title,
+    required String body,
+  }) async {
+    await cancelBatchRemindersForProfile(profileId);
+
+    const androidDetails = AndroidNotificationDetails(
+      _channelId,
+      _channelName,
+      channelDescription: _channelDescription,
+      importance: Importance.defaultImportance,
+      priority: Priority.defaultPriority,
+    );
+    const notificationDetails = NotificationDetails(android: androidDetails);
+
+    final baseId = batchBaseIdForProfile(profileId);
+    for (var i = 0; i < fireTimes.length && i < _batchSize; i++) {
+      await _plugin.zonedSchedule(
+        id: baseId + i,
+        title: title,
+        body: body,
+        scheduledDate: fireTimes[i],
+        notificationDetails: notificationDetails,
+        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        payload: '$dailyReminderPayload:$profileId',
+      );
+    }
+  }
+
+  /// Cancel all batch reminder notifications for [profileId].
+  Future<void> cancelBatchRemindersForProfile(int profileId) async {
+    final baseId = batchBaseIdForProfile(profileId);
+    for (var i = 0; i < _batchSize; i++) {
+      await _plugin.cancel(id: baseId + i);
     }
   }
 
