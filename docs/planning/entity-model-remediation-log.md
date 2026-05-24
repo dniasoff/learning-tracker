@@ -89,6 +89,12 @@
 - detail: WS6.location done (commit a3f05552). Removed sacred_time block from outbox_sync_write_facade.dart (pushUiPreferencesSnapshot) and from ui_preferences_merger.dart merge(). Location no longer embedded in per-profile cloud doc. 6 merger round-trip tests + 2 updated existing tests = 8 new/updated, all green. Legacy sacred_time keys in existing Firestore docs silently ignored. Per-profile fields (locale, hebrew-calendar) still merge correctly. Note: WS6 agent observed pre-existing CI failures from WS5/WS8 in-flight — not caused by WS6; will verify full CI at P3 gate.
 - next: Awaiting WS4, WS5, WS7, WS8 P3 reports.
 
+## [2026-05-24 14:30] TASK-DONE — WS4 complete
+
+- stream: WS4
+- detail: WS4.banner — _ChildViewBanner added to AppShellScreen (shows "Viewing [name]" strip with Exit when child profile active, no tutor bar shown); WS4.boundary — parent portal tab-0 now gated behind _confirmSwitchIntoChild() AlertDialog; WS4.settings — settings_screen.dart restructured under DEVICE and PROFILE scope headings; WS4.login-sect — Login heading omitted (no debug toggle exists; empty section worse than no section). 7 tests added. Commits: 77a81512, 4ef1eb5a, 16720c8f. Pre-existing CI failures from WS5/WS8 in-flight noted; not caused by WS4.
+- next: Awaiting WS5, WS7, WS8 P3 reports.
+
 ## [2026-05-24 13:05] START — WS8 begins
 
 - stream: WS8
@@ -129,6 +135,30 @@
 
 - stream: WS4
 - detail: WS4.banner — _ChildViewBanner added to AppShellScreen; shown when child profile active + tutor bar absent; displays "Viewing [name]" with emerald-700 strip; exit switches to first adult profile; l10n viewingChildBanner/viewingChildBannerExit EN+HE. WS4.boundary — navigateParentPortalTab() case 0 gated behind _confirmSwitchIntoChild() AlertDialog (requires explicit confirm before entering child's full experience); ref param added; caller updated; l10n switchIntoChildTitle/Message/Confirm EN+HE. WS4.settings — settings_screen.dart restructured: DEVICE section (App Permissions) + PROFILE section (per-learner settings); old TRACKS/LEARNING feature headers removed. WS4.login-sect — Login section omitted (debug toggle absent); no empty heading shipped. 7 tests added/updated across ws4_mode_boundaries_test.dart and settings_screen_test.dart; all green. Commit 4ef1eb5a. Note: app_shell.dart + l10n changes were incidentally committed in WS5's 77a81512 (stash contamination); functional effect identical.
+- next: P3 sync gate
+
+## [2026-05-24 15:30] TASK-DONE — WS5.key-prefs
+
+- stream: WS5
+- detail: Namespaced all notification SharedPrefs keys and notification IDs by profileId. NotificationPreferencesRepository now exposes per-profile static key helpers (reminderEnabledKey, reminderHourKey, etc.). SharedPrefsNotificationPreferencesRepository takes required profileId. NotificationGateway adds per-profile ID blocks (N*1000 + offset) and per-profile schedule/cancel methods. NotificationSettingsMerger + LocalDataUploadService updated to use per-profile keys. 10 tests green. Commit df6b23cf.
+- next: WS5.per-profile
+
+## [2026-05-24 15:45] TASK-DONE — WS5.per-profile
+
+- stream: WS5
+- detail: Decoupled reminder scheduling from activeProfileIdProvider. allProfilesReminderBootstrap provider schedules reminders for ALL profiles on login, skipping sacred time. Tap handler parses daily_reminder:<profileId> payload and calls onSwitchProfile(profileId) → selectedProfileIdProvider before opening SchedulerRoute. Per-profile payload format: 'daily_reminder:42'. 10 tests green (ID allocation + payload format). Commit 689b1e9b.
+- next: WS5.two-layers
+
+## [2026-05-24 16:00] TASK-DONE — WS5.two-layers
+
+- stream: WS5
+- detail: Added DeviceNotificationToggle ConsumerStatefulWidget (Key('device_notification_toggle'), SwitchListTile, WidgetsBindingObserver). hasPermission() method added to NotificationGateway. Toggle placed in NotificationsScreen (above per-profile controls) and replaces stub in EmptyLoginScreen. 3 widget tests green. Commit c9f993fe.
+- next: WS5.clobber
+
+## [2026-05-24 16:15] TASK-DONE — WS5.clobber
+
+- stream: WS5
+- detail: Merger round-trip test: 4 tests in notification_settings_merger_round_trip_test.dart prove zero cross-profile clobber (merge profile A then B — A keys intact; merge B then A — B keys intact) plus LWW correctness (newer remote wins; older remote does not overwrite newer local). All per-profile SharedPrefs keys fully isolated. Commit 1eb69df2. Note: lint fixes for WS5 test files in commit 77a81512. make ci WS5 code is clean; pre-existing failures from parallel WS4/WS7 in-flight code — not caused by WS5.
 - next: P3 sync gate
 
 ## [2026-05-24 12:00] START — WS3 begins

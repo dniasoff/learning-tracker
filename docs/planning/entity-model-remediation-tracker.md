@@ -57,10 +57,10 @@
 
 ### WS5 — Per-Profile Notifications (DEC-27, DEC-28 + local/cloud clobber)
 
-- [ ] WS5.key-prefs    (WS5, pending)    Namespace reminder prefs AND notification IDs by profileId (shared_prefs_notification_preferences_repository.dart:18-44; notification_gateway.dart:13,17,30)
-- [ ] WS5.per-profile  (WS5, pending)    Schedule per-profile; decouple from activeProfileIdProvider; inactive profiles' reminders fire; tap → switch into that profile then open Scheduler
-- [ ] WS5.two-layers   (WS5, pending)    Add device-level OS notification toggle (layer 1, available on empty login) distinct from per-profile reminder schedules (layer 2)
-- [ ] WS5.clobber      (WS5, pending)    Fix local/cloud clobber: make local storage consistently per-profile to match Firestore per-profile singleton; merger round-trip test
+- [x] WS5.key-prefs    (WS5, done)       Namespaced reminder prefs + notification IDs by profileId; SharedPrefsNotificationPreferencesRepository takes profileId; NotificationPreferencesRepository uses per-profile key helpers; NotificationSettingsMerger + LocalDataUploadService updated; commit df6b23cf
+- [x] WS5.per-profile  (WS5, done)       Per-profile notification IDs (N*1000 blocks); scheduleDailyReminderForProfile + cancelDailyReminderForProfile; allProfilesReminderBootstrap on login; tap parses daily_reminder:<id> payload → switches to that profile then opens Scheduler; commit 689b1e9b
+- [x] WS5.two-layers   (WS5, done)       DeviceNotificationToggle widget (Key('device_notification_toggle')); placed in NotificationsScreen (layer 1) + EmptyLoginScreen; replaces stub; hasPermission() method on NotificationGateway; commit c9f993fe
+- [x] WS5.clobber      (WS5, done)       Merger round-trip test: 4 tests prove zero cross-profile clobber + LWW correctness; all per-profile keys isolated (reminderEnabled/Hour/Minute/streakEnabled/Hour/Minute/reward); commit 1eb69df2
 
 **Closes:** DEC-27 (🔴), DEC-28 (🔴), latent-local-cloud-clobber
 
