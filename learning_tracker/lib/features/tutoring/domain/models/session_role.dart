@@ -7,8 +7,8 @@
 // [ProfileSelection] is used at the navigation layer to carry the context
 // of which profile is being viewed and in what role.
 //
-// [SessionRole] is the discriminator used by [permissionsProvider] (W4.35) to
-// resolve the effective [TutorPermissions] or owner-level permissions.
+// [SessionRole] is the discriminator used to resolve the effective
+// [TutorPermissions] or owner-level permissions (see [ResolvedSession]).
 
 import 'package:learning_tracker/features/tutoring/domain/models/tutor_permissions.dart';
 
@@ -55,7 +55,7 @@ final class TutoredProfileSelection extends ProfileSelection {
 
 /// Discriminator for the authenticated user's role in the current session.
 ///
-/// Used by [permissionsProvider] (W4.35) to resolve UI affordances.
+/// Used by [ResolvedSession] to resolve UI affordances.
 enum SessionRole {
   /// Parent viewing and managing their own child's profile.
   parentOfOwn,

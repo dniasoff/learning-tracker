@@ -25,7 +25,7 @@ export 'package:learning_tracker/features/tutoring/domain/use_cases/tutor_grant_
 export 'package:learning_tracker/features/tutoring/domain/use_cases/mark_live_completion_use_case.dart';
 
 // ── Presentation providers (W4.35, W6.7, W6.9, W6.10) ────────────────────
-export 'package:learning_tracker/features/tutoring/presentation/providers/permissions_provider.dart';
+export 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart';
 export 'package:learning_tracker/features/tutoring/presentation/providers/tutor_grant_providers.dart';
 export 'package:learning_tracker/features/tutoring/presentation/providers/tutor_pin_providers.dart';
 

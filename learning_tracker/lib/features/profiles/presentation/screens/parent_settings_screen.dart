@@ -16,6 +16,7 @@ import 'package:learning_tracker/features/profiles/presentation/widgets/parent_p
 import 'package:learning_tracker/features/settings/presentation/utils/account_actions.dart';
 import 'package:learning_tracker/features/settings/presentation/widgets/backup_sync_section.dart';
 import 'package:learning_tracker/features/settings/presentation/widgets/user_profile_header_card.dart';
+import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// Configuration hub shown to a parent when their child profile is active.
@@ -46,6 +47,27 @@ class ParentSettingsScreen extends ConsumerWidget {
         .where((p) => p.id == activeProfileId)
         .firstOrNull;
     final showDeleteAccountTile = user != null || authState.isLocalBorn;
+
+    // WS3.3d: when a tutor has entered a talmid's context, gate edit tiles
+    // behind the corresponding TutorPermissions field.
+    // null  → owner mode: all tiles visible.
+    // non-null → tutored mode: only tiles with true permissions shown.
+    final tutorPerms = ref.watch(activeTutorPermissionsProvider);
+    final isTutoredContext = tutorPerms != null;
+
+    // Ownership gate helpers — whether each category tile should be shown.
+    // Owners always see every tile; tutors see only what they're permitted.
+    final canEditTracks = !isTutoredContext || tutorPerms.canEditStages;
+    final canEditPoints = !isTutoredContext || tutorPerms.canEditGoals;
+    final canEditRewards = !isTutoredContext || tutorPerms.canEditRewards;
+
+    // Owner-only tiles are completely hidden in tutored mode.
+    final showOwnerOnlyTiles = !isTutoredContext;
+
+    // Build the main edit tiles, hiding those locked by tutor permissions.
+    // If all three tiles are hidden the panel is omitted entirely to avoid
+    // an empty card.
+    final showEditPanel = canEditTracks || canEditPoints || canEditRewards;
 
     return Scaffold(
       backgroundColor: _pageBg,
@@ -84,60 +106,73 @@ class ParentSettingsScreen extends ConsumerWidget {
                   surface: UserProfileHeaderSurface.parent,
                 ),
                 const SizedBox(height: 16),
-                _WhitePanel(
-                  // WS1.consolidate: "Switch Profile" row removed — the always-on
-                  // avatar switcher in the bottom nav is the canonical path (DEC-11).
-                  child: Column(
-                    children: [
-                      _ManageRow(
-                        iconBackground: _managePurple,
-                        icon: Icons.route_rounded,
-                        iconColor: Colors.white,
-                        title: l10n.manageTracks,
-                        subtitle: l10n.manageTracksForChildSubtitle,
-                        trailing: const Icon(
-                          Icons.chevron_right_rounded,
-                          color: _chevronMuted,
-                          size: 26,
-                        ),
-                        onTap: () => context.pushRoute(
-                          const ParentTrackManagementRoute(),
-                        ),
-                      ),
-                      _rowDivider(),
-                      _ManageRow(
-                        iconBackground: _iconCircleMuted,
-                        icon: Icons.tune_rounded,
-                        iconColor: _iconMutedFg,
-                        title: l10n.pointConfiguration,
-                        subtitle: l10n.pointConfigurationSubtitle,
-                        trailing: const Icon(
-                          Icons.chevron_right_rounded,
-                          color: _chevronMuted,
-                          size: 26,
-                        ),
-                        onTap: () =>
-                            context.pushRoute(const PointConfigRoute()),
-                      ),
-                      _rowDivider(),
-                      _ManageRow(
-                        iconBackground: const Color(0xFFFFE8CC),
-                        icon: Icons.card_giftcard_rounded,
-                        iconColor: const Color(0xFFB45309),
-                        title: l10n.rewardConfigurationTitle,
-                        subtitle: l10n.rewardConfigurationSubtitle,
-                        trailing: const Icon(
-                          Icons.chevron_right_rounded,
-                          color: _chevronMuted,
-                          size: 26,
-                        ),
-                        onTap: () =>
-                            context.pushRoute(const RewardConfigurationRoute()),
-                      ),
-                    ],
+                // WS3.3d: edit panel — only shown when at least one tile is visible.
+                if (showEditPanel) ...[
+                  _WhitePanel(
+                    // WS1.consolidate: "Switch Profile" row removed — the always-on
+                    // avatar switcher in the bottom nav is the canonical path (DEC-11).
+                    child: Column(
+                      children: [
+                        // WS3.3d: canEditStages gates "Manage Tracks" for tutors.
+                        if (canEditTracks) ...[
+                          _ManageRow(
+                            iconBackground: _managePurple,
+                            icon: Icons.route_rounded,
+                            iconColor: Colors.white,
+                            title: l10n.manageTracks,
+                            subtitle: l10n.manageTracksForChildSubtitle,
+                            trailing: const Icon(
+                              Icons.chevron_right_rounded,
+                              color: _chevronMuted,
+                              size: 26,
+                            ),
+                            onTap: () => context.pushRoute(
+                              const ParentTrackManagementRoute(),
+                            ),
+                          ),
+                        ],
+                        // WS3.3d: canEditGoals gates "Point Configuration" for tutors.
+                        if (canEditPoints) ...[
+                          if (canEditTracks) _rowDivider(),
+                          _ManageRow(
+                            iconBackground: _iconCircleMuted,
+                            icon: Icons.tune_rounded,
+                            iconColor: _iconMutedFg,
+                            title: l10n.pointConfiguration,
+                            subtitle: l10n.pointConfigurationSubtitle,
+                            trailing: const Icon(
+                              Icons.chevron_right_rounded,
+                              color: _chevronMuted,
+                              size: 26,
+                            ),
+                            onTap: () =>
+                                context.pushRoute(const PointConfigRoute()),
+                          ),
+                        ],
+                        // WS3.3d: canEditRewards gates "Reward Configuration" for tutors.
+                        if (canEditRewards) ...[
+                          if (canEditTracks || canEditPoints) _rowDivider(),
+                          _ManageRow(
+                            iconBackground: const Color(0xFFFFE8CC),
+                            icon: Icons.card_giftcard_rounded,
+                            iconColor: const Color(0xFFB45309),
+                            title: l10n.rewardConfigurationTitle,
+                            subtitle: l10n.rewardConfigurationSubtitle,
+                            trailing: const Icon(
+                              Icons.chevron_right_rounded,
+                              color: _chevronMuted,
+                              size: 26,
+                            ),
+                            onTap: () => context.pushRoute(
+                              const RewardConfigurationRoute(),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
                   ),
-                ),
-                const SizedBox(height: 16),
+                  const SizedBox(height: 16),
+                ],
                 _WhitePanel(
                   child: _ManageRow(
                     iconBackground: const Color(0xFFE8D4B8),
@@ -155,85 +190,86 @@ class ParentSettingsScreen extends ConsumerWidget {
                         context.pushRoute(const LifetimeMarkingRoute()),
                   ),
                 ),
-                // WS3.3a: "Manage tutors" tile — navigates to ManageTutorsRoute
-                // (invite / revoke tutors for this child). The route was
-                // previously unreachable from any in-app navigation path.
-                const SizedBox(height: 16),
-                _WhitePanel(
-                  child: _ManageRow(
-                    iconBackground: const Color(0xFFE8F4FD),
-                    icon: Icons.school_rounded,
-                    iconColor: AppTheme.brandBlue,
-                    leadingSquare: false,
-                    title: l10n.manageTutors,
-                    subtitle: l10n.manageTutorsSubtitle,
-                    trailing: const Icon(
-                      Icons.chevron_right_rounded,
-                      color: _chevronMuted,
-                      size: 26,
-                    ),
-                    onTap: () => context.pushRoute(const ManageTutorsRoute()),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                const BackupSyncSection(parentSettingsHeroLayout: true),
-                const SizedBox(height: 22),
-                Padding(
-                  padding: const EdgeInsetsDirectional.only(
-                    start: 4,
-                    bottom: 8,
-                  ),
-                  child: Text(
-                    l10n.sectionAccountSafety,
-                    style: theme.textTheme.labelSmall?.copyWith(
-                      color: const Color(0xFF9AA3B0),
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 1.4,
-                      fontSize: 11,
+                // WS3.3a: "Manage tutors" tile — owner-only (hidden in tutored context).
+                // WS3.3d: tutors cannot manage other tutors.
+                if (showOwnerOnlyTiles) ...[
+                  const SizedBox(height: 16),
+                  _WhitePanel(
+                    child: _ManageRow(
+                      iconBackground: const Color(0xFFE8F4FD),
+                      icon: Icons.school_rounded,
+                      iconColor: AppTheme.brandBlue,
+                      leadingSquare: false,
+                      title: l10n.manageTutors,
+                      subtitle: l10n.manageTutorsSubtitle,
+                      trailing: const Icon(
+                        Icons.chevron_right_rounded,
+                        color: _chevronMuted,
+                        size: 26,
+                      ),
+                      onTap: () => context.pushRoute(const ManageTutorsRoute()),
                     ),
                   ),
-                ),
-                _WhitePanel(
-                  child: _ManageRow(
-                    iconBackground: _dangerIconBg,
-                    icon: Icons.logout_rounded,
-                    iconColor: AppColors.chartRed,
-                    title: l10n.signOut,
-                    titleColor: AppColors.chartRed,
-                    subtitle: null,
-                    leadingSquare: true,
-                    trailing: const Icon(
-                      Icons.logout_outlined,
-                      color: AppColors.chartRed,
-                      size: 24,
+                  const SizedBox(height: 16),
+                  const BackupSyncSection(parentSettingsHeroLayout: true),
+                  const SizedBox(height: 22),
+                  Padding(
+                    padding: const EdgeInsetsDirectional.only(
+                      start: 4,
+                      bottom: 8,
                     ),
-                    onTap: () => showSignOutConfirmation(context, ref),
+                    child: Text(
+                      l10n.sectionAccountSafety,
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: const Color(0xFF9AA3B0),
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 1.4,
+                        fontSize: 11,
+                      ),
+                    ),
                   ),
-                ),
-                if (showDeleteAccountTile) ...[
-                  const SizedBox(height: 12),
                   _WhitePanel(
                     child: _ManageRow(
                       iconBackground: _dangerIconBg,
-                      icon: Icons.delete_forever_rounded,
-                      iconColor: const Color(0xFFB00020),
-                      title: l10n.deleteAccountTitle,
-                      titleColor: const Color(0xFFB00020),
-                      subtitle: authState.isLocalBorn
-                          ? l10n.deleteLocalAccountSubtitle
-                          : l10n.deleteAccountSubtitle,
-                      subtitleColor: const Color(0xFFB00020),
+                      icon: Icons.logout_rounded,
+                      iconColor: AppColors.chartRed,
+                      title: l10n.signOut,
+                      titleColor: AppColors.chartRed,
+                      subtitle: null,
                       leadingSquare: true,
-                      trailing: const SizedBox.shrink(),
-                      onTap: () {
-                        if (authState.isLocalBorn) {
-                          showDeleteLocalAccountFlow(context, ref);
-                        } else if (user != null) {
-                          showDeleteAccountFlow(context, ref, user);
-                        }
-                      },
+                      trailing: const Icon(
+                        Icons.logout_outlined,
+                        color: AppColors.chartRed,
+                        size: 24,
+                      ),
+                      onTap: () => showSignOutConfirmation(context, ref),
                     ),
                   ),
+                  if (showDeleteAccountTile) ...[
+                    const SizedBox(height: 12),
+                    _WhitePanel(
+                      child: _ManageRow(
+                        iconBackground: _dangerIconBg,
+                        icon: Icons.delete_forever_rounded,
+                        iconColor: const Color(0xFFB00020),
+                        title: l10n.deleteAccountTitle,
+                        titleColor: const Color(0xFFB00020),
+                        subtitle: authState.isLocalBorn
+                            ? l10n.deleteLocalAccountSubtitle
+                            : l10n.deleteAccountSubtitle,
+                        subtitleColor: const Color(0xFFB00020),
+                        leadingSquare: true,
+                        trailing: const SizedBox.shrink(),
+                        onTap: () {
+                          if (authState.isLocalBorn) {
+                            showDeleteLocalAccountFlow(context, ref);
+                          } else if (user != null) {
+                            showDeleteAccountFlow(context, ref, user);
+                          }
+                        },
+                      ),
+                    ),
+                  ],
                 ],
               ],
             ),
