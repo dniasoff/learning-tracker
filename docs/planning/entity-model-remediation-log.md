@@ -83,6 +83,12 @@
 - detail: Five Sonnet agents dispatched simultaneously. WS4: banner+exit + parent-portal boundary + settings-by-scope (DEC-25⚪, DEC-4🟡, D2🔴). WS5: per-profile notification namespacing + device-level OS toggle (DEC-27🔴, DEC-28🔴). WS6: location device-scoped off merger (DEC-26🟡) — paired with WS5 on ui_preferences_merger.dart. WS7: rewards spend-economy full loop (DEC-18🔴, DEC-17🟡, G1). WS8: credit-policy code path convergence + route guards (latent-sentinel, DEC-19). P3 gate: all five verified.
 - next: Sit in receive-mode awaiting all 5 P3 reports. Collect all before running P3 gate + dispatching Wave 4.
 
+## [2026-05-24 14:00] TASK-DONE — WS6 complete
+
+- stream: WS6
+- detail: WS6.location done (commit a3f05552). Removed sacred_time block from outbox_sync_write_facade.dart (pushUiPreferencesSnapshot) and from ui_preferences_merger.dart merge(). Location no longer embedded in per-profile cloud doc. 6 merger round-trip tests + 2 updated existing tests = 8 new/updated, all green. Legacy sacred_time keys in existing Firestore docs silently ignored. Per-profile fields (locale, hebrew-calendar) still merge correctly. Note: WS6 agent observed pre-existing CI failures from WS5/WS8 in-flight — not caused by WS6; will verify full CI at P3 gate.
+- next: Awaiting WS4, WS5, WS7, WS8 P3 reports.
+
 ## [2026-05-24 13:05] START — WS8 begins
 
 - stream: WS8
@@ -112,6 +118,12 @@
 - stream: WS6
 - detail: (1) Removed sacred_time block from pushUiPreferencesSnapshot() in outbox_sync_write_facade.dart — location no longer embedded in per-profile ui_preferences push payload. (2) Removed sacred_time block from UiPreferencesMerger.merge() — merger ignores any legacy sacred_time in incoming Firestore docs. (3) Created test/sync/location_device_scope_test.dart with 6 merger round-trip tests (push doesn't embed sacred_time; two-profile push+merge leaves device location unchanged; legacy sacred_time block silently ignored; per-profile prefs still merge correctly). (4) Updated test/sync/sacred_time_all_profiles_test.dart to assert the new contract (sacred_time must NOT be in payload). All 8 tests green. Analyze: no issues. Pre-existing CI failures from WS5/WS8 are not caused by WS6. Committed.
 - next: P3 sync gate
+
+## [2026-05-24 14:05] START — WS4 begins
+
+- stream: WS4
+- detail: Read all required docs (plan, audit, log, tracker, product-rules, CLAUDE.md). Confirmed: app_shell.dart has _TutorModeIndicatorBar (tutor bar) but no child-view banner (DEC-25⚪). parent_portal_bottom_nav.dart:146 tab-0 does silent replaceAll to child dashboard (DEC-4🟡). settings_screen.dart uses TRACKS/LEARNING feature headers, no Device/Profile scope grouping (D2🔴). debug toggle absent — no Login section to build (WS4.login-sect). Starting WS4.banner.
+- next: WS4.banner → WS4.boundary → WS4.settings+login-sect
 
 ## [2026-05-24 12:00] START — WS3 begins
 

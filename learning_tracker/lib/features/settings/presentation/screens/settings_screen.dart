@@ -76,9 +76,30 @@ class SettingsScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 24),
             ],
+            // ── DEVICE section (D2/WS4.settings) ──────────────────────────────
+            // Device-scoped settings: applies to this physical device, shared by
+            // every login and profile on it (OS permissions, location access).
+            // WS4.login-sect: Login scope is omitted — the only Login-scoped
+            // datum (debug toggle) does not yet exist, so no empty heading is shown.
+            _SectionHeader(title: l10n.sectionDevice),
+            const SizedBox(height: 10),
+            _SurfaceCard(
+              child: PreferenceListTile.withIcon(
+                icon: Icons.security_rounded,
+                iconColor: const Color(0xFF1E7B5A),
+                iconBackground: const Color(0xFFDDF3EB),
+                title: 'App Permissions',
+                subtitle: 'Notifications and location access',
+                onTap: () => context.pushRoute(PermissionPromptRoute()),
+              ),
+            ),
+            const SizedBox(height: 24),
+            // ── PROFILE section (D2/WS4.settings) ─────────────────────────────
+            // Profile-scoped settings: per-learner preferences, tracks,
+            // notifications (reminder schedules), and parental controls.
+            _SectionHeader(title: l10n.sectionProfile),
+            const SizedBox(height: 10),
             if (!isChildProfile) ...[
-              _SectionHeader(title: l10n.sectionTracks),
-              const SizedBox(height: 10),
               _SurfaceCard(
                 child: Column(
                   children: [
@@ -105,8 +126,6 @@ class SettingsScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 12),
             ],
-            _SectionHeader(title: l10n.sectionLearning),
-            const SizedBox(height: 10),
             _SurfaceCard(
               child: Column(
                 children: [
@@ -145,17 +164,6 @@ class SettingsScreen extends ConsumerWidget {
                 title: l10n.notificationSettings,
                 subtitle: l10n.notificationSettingsSubtitle,
                 onTap: () => context.pushRoute(const NotificationsRoute()),
-              ),
-            ),
-            const SizedBox(height: 12),
-            _SurfaceCard(
-              child: PreferenceListTile.withIcon(
-                icon: Icons.security_rounded,
-                iconColor: const Color(0xFF1E7B5A),
-                iconBackground: const Color(0xFFDDF3EB),
-                title: 'App Permissions',
-                subtitle: 'Notifications and location access',
-                onTap: () => context.pushRoute(PermissionPromptRoute()),
               ),
             ),
             const SizedBox(height: 16),

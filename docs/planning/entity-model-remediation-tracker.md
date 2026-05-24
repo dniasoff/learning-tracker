@@ -48,10 +48,10 @@
 
 ### WS4 — Mode Boundaries, Banner & Scope-Legible Settings (DEC-25, DEC-4, D2, D3)
 
-- [ ] WS4.banner       (WS4, pending)    "Viewing [child]" banner + exit in app_shell.dart for parent/child-mode path (mirrors existing tutor bar)
-- [ ] WS4.boundary     (WS4, pending)    Harden parent-portal boundary: parent_portal_bottom_nav.dart:146 tab-0 silently drops into child full experience — make switch-into-child explicit or gate it (DEC-4)
-- [ ] WS4.settings     (WS4, pending)    Settings by scope: group settings_screen.dart under Device / Login / Profile headings (currently grouped by feature)
-- [ ] WS4.login-sect   (WS4, pending)    Empty Login section guard: either build/relocate debug toggle under Login heading, or omit the heading — no empty scope group shipped
+- [x] WS4.banner       (WS4, done)       "Viewing [child]" banner + exit in app_shell.dart: _ChildViewBanner shown when child profile active + tutor bar absent; exit switches to first adult profile; l10n viewingChildBanner/viewingChildBannerExit added EN+HE
+- [x] WS4.boundary     (WS4, done)       Harden parent-portal boundary: navigateParentPortalTab case 0 now calls _confirmSwitchIntoChild() dialog before navigating; l10n switchIntoChildTitle/Message/Confirm added EN+HE; ref param added; caller updated
+- [x] WS4.settings     (WS4, done)       Settings by scope: DEVICE section (App Permissions) + PROFILE section (all per-learner settings); old TRACKS/LEARNING feature headers removed; sectionDevice/sectionProfile added EN+HE
+- [x] WS4.login-sect   (WS4, done)       Empty Login section guard: debug toggle absent → Login heading omitted entirely; no empty scope group shipped; test confirms no LOGIN heading renders
 
 **Closes:** DEC-25 (⚪), DEC-4 (🟡), D2 (🔴), D3, Login-scope debug toggle (⚪)
 

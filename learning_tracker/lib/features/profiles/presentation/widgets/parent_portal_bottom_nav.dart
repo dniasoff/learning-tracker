@@ -1,7 +1,10 @@
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
+import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// Parent portal bottom bar (Dashboard · Tracks · Rewards · Parent settings).
@@ -135,15 +138,27 @@ class _NavPillItem extends StatelessWidget {
 }
 
 /// Switches between parent-portal destinations without stacking duplicate routes.
+///
+/// WS4.boundary (DEC-4): Tab 0 (Dashboard) switches the user into the child's
+/// full experience. This requires an explicit confirmation so the switch is
+/// intentional — not a silent drop into the child's view.
+///
+/// [ref] is required to read the active profile name for the confirmation copy.
 Future<void> navigateParentPortalTab(
   BuildContext context,
   int index, {
   required int currentTabIndex,
+  required WidgetRef ref,
 }) async {
   if (index == currentTabIndex) return;
   final router = context.router;
   switch (index) {
     case 0:
+      // WS4.boundary (DEC-4): Switching into the child's full experience is an
+      // explicit action, not a silent navigation. Show a confirmation dialog so
+      // the parent consciously chooses to enter the child's view.
+      final confirmed = await _confirmSwitchIntoChild(context, ref);
+      if (!confirmed || !context.mounted) return;
       await router.replaceAll([
         const AppShellRoute(children: [DashboardRoute()]),
       ]);
@@ -160,4 +175,45 @@ Future<void> navigateParentPortalTab(
     default:
       return;
   }
+}
+
+/// Shows a confirmation dialog before a parent switches into a child's full
+/// experience (child mode / child dashboard).
+///
+/// Returns [true] when the user confirms, [false] when they cancel.
+Future<bool> _confirmSwitchIntoChild(
+  BuildContext context,
+  WidgetRef ref,
+) async {
+  final l10n = AppLocalizations.of(context)!;
+  final activeProfileId = ref.read(activeProfileIdProvider);
+  final profiles =
+      await ref.read(profileListStreamProvider.future).timeout(
+        const Duration(seconds: 1),
+        onTimeout: () => [],
+      );
+  final activeProfile =
+      profiles.where((p) => p.id == activeProfileId).firstOrNull;
+  final childName = activeProfile?.displayName ?? l10n.child;
+
+  if (!context.mounted) return false;
+
+  return await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: Text(l10n.switchIntoChildTitle),
+          content: Text(l10n.switchIntoChildMessage(childName)),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(false),
+              child: Text(l10n.cancel),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(ctx).pop(true),
+              child: Text(l10n.switchIntoChildConfirm),
+            ),
+          ],
+        ),
+      ) ??
+      false;
 }

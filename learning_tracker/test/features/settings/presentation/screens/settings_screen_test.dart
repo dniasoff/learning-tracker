@@ -106,14 +106,40 @@ void main() {
   }
 
   group('SettingsScreen Widget Tests', () {
-    testWidgets('renders top section headers', (tester) async {
+    // WS4.settings (D2): Settings are grouped by scope (Device / Profile).
+    // The old TRACKS/LEARNING feature-grouped headers are replaced.
+    testWidgets('renders Device and Profile scope section headers (WS4.settings)', (tester) async {
       await tester.pumpWidget(
         createTestWidget(initialActive: [CurriculumId.mishnayos]),
       );
       await pumpUntilSettled(tester);
 
-      expect(find.text('TRACKS'), findsOneWidget);
-      expect(find.text('LEARNING'), findsOneWidget);
+      // DEVICE section (App Permissions) must be visible at top.
+      expect(find.text('DEVICE'), findsOneWidget);
+      // PROFILE section (per-learner settings) must be visible.
+      expect(find.text('PROFILE'), findsOneWidget);
+      // Old feature-based headers must be gone.
+      expect(find.text('TRACKS'), findsNothing);
+      expect(find.text('LEARNING'), findsNothing);
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(Duration.zero);
+    });
+
+    // WS4.login-sect (DEC-26): No empty Login scope group is rendered.
+    // The Login section is omitted entirely (debug toggle not yet built).
+    testWidgets('does not render an empty Login section (WS4.login-sect)', (tester) async {
+      await tester.pumpWidget(
+        createTestWidget(initialActive: [CurriculumId.mishnayos]),
+      );
+      await pumpUntilSettled(tester);
+
+      // Scroll to make sure the full list is inspectable.
+      await tester.drag(find.byType(ListView), const Offset(0, -5000));
+      await tester.pumpAndSettle();
+
+      // No "LOGIN" section heading must appear anywhere in the list.
+      expect(find.text('LOGIN'), findsNothing);
 
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pump(Duration.zero);
