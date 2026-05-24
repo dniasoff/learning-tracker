@@ -192,6 +192,25 @@ class _ChildGrantsSection extends ConsumerWidget {
             );
           },
         ),
+        // WS3.3f: "Invite a tutor" button — always visible per child section
+        // so the parent can add a tutor even when one is already active.
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+          child: OutlinedButton.icon(
+            onPressed: () => context.pushRoute(
+              InviteTutorRoute(childProfileId: profile.id.toString()),
+            ),
+            icon: const Icon(Icons.person_add_rounded, size: 18),
+            label: const Text('Invite a tutor'),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: AppTheme.brandBlue,
+              side: BorderSide(
+                color: AppTheme.brandBlue.withValues(alpha: 0.5),
+              ),
+              minimumSize: const Size(double.infinity, 40),
+            ),
+          ),
+        ),
         const Divider(height: 1, indent: 16, endIndent: 16),
       ],
     );
