@@ -1112,6 +1112,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get parentSettingsTitle => 'Parent Settings';
 
   @override
+  String get manageTutors => 'Manage Tutors';
+
+  @override
+  String get manageTutorsSubtitle => 'Invite or remove tutors for this child';
+
+  @override
   String get manageTracksForChildSubtitle =>
       'Add, edit, or archive your child\'s tracks';
 
@@ -2363,8 +2369,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get startingPositionTitle => 'Starting Position';
 
   @override
-  String get startingPositionHint =>
-      'Can start up to 30 days back from today';
+  String get startingPositionHint => 'Can start up to 30 days back from today';
 
   @override
   String startingPositionWhereAreYou(String programName) {

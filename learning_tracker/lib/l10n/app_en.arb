@@ -538,6 +538,8 @@
   "syncTitle": "Sync",
   "syncScreenBody": "Sync status and settings will appear here.",
   "parentSettingsTitle": "Parent Settings",
+  "manageTutors": "Manage Tutors",
+  "manageTutorsSubtitle": "Invite or remove tutors for this child",
   "manageTracksForChildSubtitle": "Add, edit, or archive your child's tracks",
   "pointConfiguration": "Point Configuration",
   "pointConfigurationSubtitle": "Set how many points activities are worth",

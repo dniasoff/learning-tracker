@@ -155,6 +155,26 @@ class ParentSettingsScreen extends ConsumerWidget {
                         context.pushRoute(const LifetimeMarkingRoute()),
                   ),
                 ),
+                // WS3.3a: "Manage tutors" tile — navigates to ManageTutorsRoute
+                // (invite / revoke tutors for this child). The route was
+                // previously unreachable from any in-app navigation path.
+                const SizedBox(height: 16),
+                _WhitePanel(
+                  child: _ManageRow(
+                    iconBackground: const Color(0xFFE8F4FD),
+                    icon: Icons.school_rounded,
+                    iconColor: AppTheme.brandBlue,
+                    leadingSquare: false,
+                    title: l10n.manageTutors,
+                    subtitle: l10n.manageTutorsSubtitle,
+                    trailing: const Icon(
+                      Icons.chevron_right_rounded,
+                      color: _chevronMuted,
+                      size: 26,
+                    ),
+                    onTap: () => context.pushRoute(const ManageTutorsRoute()),
+                  ),
+                ),
                 const SizedBox(height: 16),
                 const BackupSyncSection(parentSettingsHeroLayout: true),
                 const SizedBox(height: 22),

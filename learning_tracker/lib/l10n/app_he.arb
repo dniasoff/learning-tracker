@@ -533,6 +533,8 @@
   "syncTitle": "סנכרון",
   "syncScreenBody": "מצב הסנכרון וההגדרות יופיעו כאן.",
   "parentSettingsTitle": "הגדרות הורה",
+  "manageTutors": "ניהול מורים",
+  "manageTutorsSubtitle": "הזמנה או הסרה של מורים לילד זה",
   "manageTracksForChildSubtitle": "הוספה, עריכה או ארכיון של מסלולי הילד",
   "pointConfiguration": "הגדרת נקודות",
   "pointConfigurationSubtitle": "כמה נקודות שווה כל פעילות",

@@ -2069,6 +2069,18 @@ abstract class AppLocalizations {
   /// **'Parent Settings'**
   String get parentSettingsTitle;
 
+  /// No description provided for @manageTutors.
+  ///
+  /// In en, this message translates to:
+  /// **'Manage Tutors'**
+  String get manageTutors;
+
+  /// No description provided for @manageTutorsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Invite or remove tutors for this child'**
+  String get manageTutorsSubtitle;
+
   /// No description provided for @manageTracksForChildSubtitle.
   ///
   /// In en, this message translates to:

@@ -1100,6 +1100,12 @@ class AppLocalizationsHe extends AppLocalizations {
   String get parentSettingsTitle => 'הגדרות הורה';
 
   @override
+  String get manageTutors => 'ניהול מורים';
+
+  @override
+  String get manageTutorsSubtitle => 'הזמנה או הסרה של מורים לילד זה';
+
+  @override
   String get manageTracksForChildSubtitle =>
       'הוספה, עריכה או ארכיון של מסלולי הילד';
 
