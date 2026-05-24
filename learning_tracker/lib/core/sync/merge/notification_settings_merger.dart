@@ -1,6 +1,7 @@
 import 'package:learning_tracker/core/sync/codec/firestore_codec.dart';
 import 'package:learning_tracker/core/sync/merge/entity_merger.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
+import 'package:learning_tracker/features/notifications/domain/repositories/notification_preferences_repository.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// LWW merger for the `notification_settings/preferences` Firestore document
@@ -15,8 +16,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 ///   streak_alert.{enabled, hour, minute},
 ///   reward_notifications.{enabled}.
 ///
-/// SharedPreferences keys match the SyncEngine constants so both old and new
-/// sync paths share the same persisted values.
+/// (WS5.clobber) SharedPreferences keys are per-profile namespaced via
+/// [NotificationPreferencesRepository.keyForProfile], preventing cross-profile
+/// clobber when multiple profiles sync on the same device.
 ///
 /// Phase 3: the merger consults [MergeStore.remoteIsNewer] (which knows
 /// about clock-skew arbitration), and after a successful apply calls
@@ -29,17 +31,7 @@ class NotificationSettingsMerger implements EntityMerger {
 
   final MergeStore _store;
 
-  // SharedPreferences keys — must match SyncEngine constants.
-  static const _updatedAtMsKey = 'notification_settings_updated_at_ms';
-  static const _reminderEnabledKey = 'daily_reminder_enabled';
-  static const _reminderHourKey = 'daily_reminder_hour';
-  static const _reminderMinuteKey = 'daily_reminder_minute';
-  static const _streakAlertEnabledKey = 'streak_alert_enabled';
-  static const _streakAlertHourKey = 'streak_alert_hour';
-  static const _streakAlertMinuteKey = 'streak_alert_minute';
-  static const _rewardNotificationEnabledKey = 'reward_notification_enabled';
-
-  /// Single natural key — notification settings are a per-account singleton.
+  /// Single natural key — notification settings are a per-profile singleton.
   static const _naturalKey = 'preferences';
 
   @override
@@ -57,15 +49,20 @@ class NotificationSettingsMerger implements EntityMerger {
     final prefs = await SharedPreferences.getInstance();
     final remoteUpdatedAt = _parseTimestamp(remote['updated_at']);
     final remoteSyncedAt = _parseTimestamp(remote['synced_at']);
-    // Local timestamp comes from the SyncKv table (authoritative) with a
-    // SharedPreferences fallback to handle pre-Phase-3 installs.
+
+    // (WS5.clobber) Local timestamp is read from the per-profile-namespaced
+    // SyncKv table first, with a per-profile SharedPreferences fallback.
     var localUpdatedAt = await _store.currentUpdatedAt(
       kind: kind,
       profileId: profileId,
       naturalKey: _naturalKey,
     );
     if (localUpdatedAt == null) {
-      final localMs = prefs.getInt(_updatedAtMsKey);
+      final localMs = prefs.getInt(
+        NotificationPreferencesRepository.notificationSettingsUpdatedAtMsKey(
+          profileId,
+        ),
+      );
       if (localMs != null) {
         localUpdatedAt = DateTime.fromMillisecondsSinceEpoch(
           localMs,
@@ -95,33 +92,46 @@ class NotificationSettingsMerger implements EntityMerger {
     final rewardNotifications =
         remote['reward_notifications'] as Map<String, dynamic>? ?? const {};
 
+    // (WS5.clobber) Write to per-profile-namespaced keys so each profile's
+    // notification settings are independently stored.
     await prefs.setBool(
-      _reminderEnabledKey,
+      NotificationPreferencesRepository.reminderEnabledKey(profileId),
       dailyReminder['enabled'] as bool? ?? true,
     );
-    await prefs.setInt(_reminderHourKey, dailyReminder['hour'] as int? ?? 19);
     await prefs.setInt(
-      _reminderMinuteKey,
+      NotificationPreferencesRepository.reminderHourKey(profileId),
+      dailyReminder['hour'] as int? ?? 19,
+    );
+    await prefs.setInt(
+      NotificationPreferencesRepository.reminderMinuteKey(profileId),
       dailyReminder['minute'] as int? ?? 0,
     );
 
     await prefs.setBool(
-      _streakAlertEnabledKey,
+      NotificationPreferencesRepository.streakAlertEnabledKey(profileId),
       streakAlert['enabled'] as bool? ?? true,
     );
-    await prefs.setInt(_streakAlertHourKey, streakAlert['hour'] as int? ?? 21);
     await prefs.setInt(
-      _streakAlertMinuteKey,
+      NotificationPreferencesRepository.streakAlertHourKey(profileId),
+      streakAlert['hour'] as int? ?? 21,
+    );
+    await prefs.setInt(
+      NotificationPreferencesRepository.streakAlertMinuteKey(profileId),
       streakAlert['minute'] as int? ?? 0,
     );
 
     await prefs.setBool(
-      _rewardNotificationEnabledKey,
+      NotificationPreferencesRepository.rewardNotificationEnabledKey(profileId),
       rewardNotifications['enabled'] as bool? ?? true,
     );
 
     final stamp = remoteUpdatedAt ?? DateTimeFactory.nowUtc();
-    await prefs.setInt(_updatedAtMsKey, stamp.millisecondsSinceEpoch);
+    await prefs.setInt(
+      NotificationPreferencesRepository.notificationSettingsUpdatedAtMsKey(
+        profileId,
+      ),
+      stamp.millisecondsSinceEpoch,
+    );
     await _store.persistUpdatedAt(
       kind: kind,
       profileId: profileId,

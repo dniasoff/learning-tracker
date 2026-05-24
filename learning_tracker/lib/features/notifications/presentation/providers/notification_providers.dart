@@ -43,6 +43,10 @@ NotificationGateway notificationService(Ref ref) {
 }
 
 /// Manages the daily reminder enabled state.
+///
+/// (WS5.key-prefs) Reads/writes a per-profile namespaced SharedPrefs key
+/// by watching [activeProfileIdProvider] — rebuilds automatically on profile
+/// switch, isolating each profile's reminder toggle.
 @riverpod
 class ReminderEnabled extends _$ReminderEnabled {
   @override
@@ -52,24 +56,30 @@ class ReminderEnabled extends _$ReminderEnabled {
   }
 
   Future<void> _loadFromPrefs() async {
+    final profileId = ref.read(activeProfileIdProvider);
     final prefs = await SharedPreferences.getInstance();
     if (!ref.mounted) return;
     state =
-        prefs.getBool(NotificationPreferencesRepository.reminderEnabledKey) ??
+        prefs.getBool(
+          NotificationPreferencesRepository.reminderEnabledKey(profileId),
+        ) ??
         true;
   }
 
   Future<void> toggle() async {
     state = !state;
+    final profileId = ref.read(activeProfileIdProvider);
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(
-      NotificationPreferencesRepository.reminderEnabledKey,
+      NotificationPreferencesRepository.reminderEnabledKey(profileId),
       state,
     );
   }
 }
 
 /// Manages the daily reminder time.
+///
+/// (WS5.key-prefs) Per-profile namespaced SharedPrefs key.
 @riverpod
 class ReminderTime extends _$ReminderTime {
   @override
@@ -82,32 +92,40 @@ class ReminderTime extends _$ReminderTime {
   }
 
   Future<void> _loadFromPrefs() async {
+    final profileId = ref.read(activeProfileIdProvider);
     final prefs = await SharedPreferences.getInstance();
     if (!ref.mounted) return;
     final hour =
-        prefs.getInt(NotificationPreferencesRepository.reminderHourKey) ??
+        prefs.getInt(
+          NotificationPreferencesRepository.reminderHourKey(profileId),
+        ) ??
         defaultReminderHour;
     final minute =
-        prefs.getInt(NotificationPreferencesRepository.reminderMinuteKey) ??
+        prefs.getInt(
+          NotificationPreferencesRepository.reminderMinuteKey(profileId),
+        ) ??
         defaultReminderMinute;
     state = TimeOfDay(hour: hour, minute: minute);
   }
 
   Future<void> setTime(TimeOfDay time) async {
     state = time;
+    final profileId = ref.read(activeProfileIdProvider);
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt(
-      NotificationPreferencesRepository.reminderHourKey,
+      NotificationPreferencesRepository.reminderHourKey(profileId),
       time.hour,
     );
     await prefs.setInt(
-      NotificationPreferencesRepository.reminderMinuteKey,
+      NotificationPreferencesRepository.reminderMinuteKey(profileId),
       time.minute,
     );
   }
 }
 
 /// Manages the streak alert enabled state.
+///
+/// (WS5.key-prefs) Per-profile namespaced SharedPrefs key.
 @riverpod
 class StreakAlertEnabled extends _$StreakAlertEnabled {
   @override
@@ -117,26 +135,30 @@ class StreakAlertEnabled extends _$StreakAlertEnabled {
   }
 
   Future<void> _loadFromPrefs() async {
+    final profileId = ref.read(activeProfileIdProvider);
     final prefs = await SharedPreferences.getInstance();
     if (!ref.mounted) return;
     state =
         prefs.getBool(
-          NotificationPreferencesRepository.streakAlertEnabledKey,
+          NotificationPreferencesRepository.streakAlertEnabledKey(profileId),
         ) ??
         true;
   }
 
   Future<void> toggle() async {
     state = !state;
+    final profileId = ref.read(activeProfileIdProvider);
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(
-      NotificationPreferencesRepository.streakAlertEnabledKey,
+      NotificationPreferencesRepository.streakAlertEnabledKey(profileId),
       state,
     );
   }
 }
 
 /// Manages the streak alert time.
+///
+/// (WS5.key-prefs) Per-profile namespaced SharedPrefs key.
 @riverpod
 class StreakAlertTime extends _$StreakAlertTime {
   @override
@@ -149,32 +171,40 @@ class StreakAlertTime extends _$StreakAlertTime {
   }
 
   Future<void> _loadFromPrefs() async {
+    final profileId = ref.read(activeProfileIdProvider);
     final prefs = await SharedPreferences.getInstance();
     if (!ref.mounted) return;
     final hour =
-        prefs.getInt(NotificationPreferencesRepository.streakAlertHourKey) ??
+        prefs.getInt(
+          NotificationPreferencesRepository.streakAlertHourKey(profileId),
+        ) ??
         defaultStreakAlertHour;
     final minute =
-        prefs.getInt(NotificationPreferencesRepository.streakAlertMinuteKey) ??
+        prefs.getInt(
+          NotificationPreferencesRepository.streakAlertMinuteKey(profileId),
+        ) ??
         defaultStreakAlertMinute;
     state = TimeOfDay(hour: hour, minute: minute);
   }
 
   Future<void> setTime(TimeOfDay time) async {
     state = time;
+    final profileId = ref.read(activeProfileIdProvider);
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt(
-      NotificationPreferencesRepository.streakAlertHourKey,
+      NotificationPreferencesRepository.streakAlertHourKey(profileId),
       time.hour,
     );
     await prefs.setInt(
-      NotificationPreferencesRepository.streakAlertMinuteKey,
+      NotificationPreferencesRepository.streakAlertMinuteKey(profileId),
       time.minute,
     );
   }
 }
 
 /// Manages the reward notification enabled state.
+///
+/// (WS5.key-prefs) Per-profile namespaced SharedPrefs key.
 @riverpod
 class RewardNotificationEnabled extends _$RewardNotificationEnabled {
   @override
@@ -184,20 +214,24 @@ class RewardNotificationEnabled extends _$RewardNotificationEnabled {
   }
 
   Future<void> _loadFromPrefs() async {
+    final profileId = ref.read(activeProfileIdProvider);
     final prefs = await SharedPreferences.getInstance();
     if (!ref.mounted) return;
     state =
         prefs.getBool(
-          NotificationPreferencesRepository.rewardNotificationEnabledKey,
+          NotificationPreferencesRepository.rewardNotificationEnabledKey(
+            profileId,
+          ),
         ) ??
         true;
   }
 
   Future<void> toggle() async {
     state = !state;
+    final profileId = ref.read(activeProfileIdProvider);
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(
-      NotificationPreferencesRepository.rewardNotificationEnabledKey,
+      NotificationPreferencesRepository.rewardNotificationEnabledKey(profileId),
       state,
     );
   }
@@ -212,6 +246,7 @@ class RewardNotificationEnabled extends _$RewardNotificationEnabled {
 Future<void> _persistNotificationSettingsToCloud(
   Ref ref, {
   required SharedPreferences prefs,
+  required int profileId,
 }) async {
   final outboxFacade = () {
     try {
@@ -225,7 +260,9 @@ Future<void> _persistNotificationSettingsToCloud(
 
   final updatedAtMs = DateTimeFactory.nowUtc().millisecondsSinceEpoch;
   await prefs.setInt(
-    NotificationPreferencesRepository.notificationSettingsUpdatedAtMsKey,
+    NotificationPreferencesRepository.notificationSettingsUpdatedAtMsKey(
+      profileId,
+    ),
     updatedAtMs,
   );
 
@@ -233,34 +270,44 @@ Future<void> _persistNotificationSettingsToCloud(
     'schema_version': 1,
     'daily_reminder': {
       'enabled':
-          prefs.getBool(NotificationPreferencesRepository.reminderEnabledKey) ??
+          prefs.getBool(
+            NotificationPreferencesRepository.reminderEnabledKey(profileId),
+          ) ??
           true,
       'hour':
-          prefs.getInt(NotificationPreferencesRepository.reminderHourKey) ??
+          prefs.getInt(
+            NotificationPreferencesRepository.reminderHourKey(profileId),
+          ) ??
           defaultReminderHour,
       'minute':
-          prefs.getInt(NotificationPreferencesRepository.reminderMinuteKey) ??
+          prefs.getInt(
+            NotificationPreferencesRepository.reminderMinuteKey(profileId),
+          ) ??
           defaultReminderMinute,
     },
     'streak_alert': {
       'enabled':
           prefs.getBool(
-            NotificationPreferencesRepository.streakAlertEnabledKey,
+            NotificationPreferencesRepository.streakAlertEnabledKey(profileId),
           ) ??
           true,
       'hour':
-          prefs.getInt(NotificationPreferencesRepository.streakAlertHourKey) ??
+          prefs.getInt(
+            NotificationPreferencesRepository.streakAlertHourKey(profileId),
+          ) ??
           defaultStreakAlertHour,
       'minute':
           prefs.getInt(
-            NotificationPreferencesRepository.streakAlertMinuteKey,
+            NotificationPreferencesRepository.streakAlertMinuteKey(profileId),
           ) ??
           defaultStreakAlertMinute,
     },
     'reward_notifications': {
       'enabled':
           prefs.getBool(
-            NotificationPreferencesRepository.rewardNotificationEnabledKey,
+            NotificationPreferencesRepository.rewardNotificationEnabledKey(
+              profileId,
+            ),
           ) ??
           true,
     },
@@ -319,8 +366,13 @@ final notificationSettingsCloudSyncEffectProvider = FutureProvider<void>((
   ref.watch(streakAlertTimeProvider);
   ref.watch(rewardNotificationEnabledProvider);
 
+  final profileId = ref.watch(activeProfileIdProvider);
   final prefs = await SharedPreferences.getInstance();
-  await _persistNotificationSettingsToCloud(ref, prefs: prefs);
+  await _persistNotificationSettingsToCloud(
+    ref,
+    prefs: prefs,
+    profileId: profileId,
+  );
 });
 
 /// Watches reminder settings and daily tasks, then schedules or cancels

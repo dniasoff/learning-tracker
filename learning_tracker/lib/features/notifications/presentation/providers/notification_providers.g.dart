@@ -62,14 +62,26 @@ String _$notificationServiceHash() =>
     r'80ef32c7c0cd079a947bfaacca19025a6273f7dd';
 
 /// Manages the daily reminder enabled state.
+///
+/// (WS5.key-prefs) Reads/writes a per-profile namespaced SharedPrefs key
+/// by watching [activeProfileIdProvider] — rebuilds automatically on profile
+/// switch, isolating each profile's reminder toggle.
 
 @ProviderFor(ReminderEnabled)
 final reminderEnabledProvider = ReminderEnabledProvider._();
 
 /// Manages the daily reminder enabled state.
+///
+/// (WS5.key-prefs) Reads/writes a per-profile namespaced SharedPrefs key
+/// by watching [activeProfileIdProvider] — rebuilds automatically on profile
+/// switch, isolating each profile's reminder toggle.
 final class ReminderEnabledProvider
     extends $NotifierProvider<ReminderEnabled, bool> {
   /// Manages the daily reminder enabled state.
+  ///
+  /// (WS5.key-prefs) Reads/writes a per-profile namespaced SharedPrefs key
+  /// by watching [activeProfileIdProvider] — rebuilds automatically on profile
+  /// switch, isolating each profile's reminder toggle.
   ReminderEnabledProvider._()
     : super(
         from: null,
@@ -97,9 +109,13 @@ final class ReminderEnabledProvider
   }
 }
 
-String _$reminderEnabledHash() => r'a231e9700c6556798b7c13fe153a2a7fa3113a07';
+String _$reminderEnabledHash() => r'52e926998770c77f9bce3b55193fd86ace39f594';
 
 /// Manages the daily reminder enabled state.
+///
+/// (WS5.key-prefs) Reads/writes a per-profile namespaced SharedPrefs key
+/// by watching [activeProfileIdProvider] — rebuilds automatically on profile
+/// switch, isolating each profile's reminder toggle.
 
 abstract class _$ReminderEnabled extends $Notifier<bool> {
   bool build();
@@ -120,14 +136,20 @@ abstract class _$ReminderEnabled extends $Notifier<bool> {
 }
 
 /// Manages the daily reminder time.
+///
+/// (WS5.key-prefs) Per-profile namespaced SharedPrefs key.
 
 @ProviderFor(ReminderTime)
 final reminderTimeProvider = ReminderTimeProvider._();
 
 /// Manages the daily reminder time.
+///
+/// (WS5.key-prefs) Per-profile namespaced SharedPrefs key.
 final class ReminderTimeProvider
     extends $NotifierProvider<ReminderTime, TimeOfDay> {
   /// Manages the daily reminder time.
+  ///
+  /// (WS5.key-prefs) Per-profile namespaced SharedPrefs key.
   ReminderTimeProvider._()
     : super(
         from: null,
@@ -155,9 +177,11 @@ final class ReminderTimeProvider
   }
 }
 
-String _$reminderTimeHash() => r'0f5032f1a2f73cc0a18b72c973d32f4b74a103f0';
+String _$reminderTimeHash() => r'8091937cb20aa7294097ab36e72e66b470e855f7';
 
 /// Manages the daily reminder time.
+///
+/// (WS5.key-prefs) Per-profile namespaced SharedPrefs key.
 
 abstract class _$ReminderTime extends $Notifier<TimeOfDay> {
   TimeOfDay build();
@@ -178,14 +202,20 @@ abstract class _$ReminderTime extends $Notifier<TimeOfDay> {
 }
 
 /// Manages the streak alert enabled state.
+///
+/// (WS5.key-prefs) Per-profile namespaced SharedPrefs key.
 
 @ProviderFor(StreakAlertEnabled)
 final streakAlertEnabledProvider = StreakAlertEnabledProvider._();
 
 /// Manages the streak alert enabled state.
+///
+/// (WS5.key-prefs) Per-profile namespaced SharedPrefs key.
 final class StreakAlertEnabledProvider
     extends $NotifierProvider<StreakAlertEnabled, bool> {
   /// Manages the streak alert enabled state.
+  ///
+  /// (WS5.key-prefs) Per-profile namespaced SharedPrefs key.
   StreakAlertEnabledProvider._()
     : super(
         from: null,
@@ -214,9 +244,11 @@ final class StreakAlertEnabledProvider
 }
 
 String _$streakAlertEnabledHash() =>
-    r'1f38d06c6816473574458b1b169b0d0434967f0c';
+    r'b5392a9e9ed2a42d07fe93528d5a0900f82267ac';
 
 /// Manages the streak alert enabled state.
+///
+/// (WS5.key-prefs) Per-profile namespaced SharedPrefs key.
 
 abstract class _$StreakAlertEnabled extends $Notifier<bool> {
   bool build();
@@ -237,14 +269,20 @@ abstract class _$StreakAlertEnabled extends $Notifier<bool> {
 }
 
 /// Manages the streak alert time.
+///
+/// (WS5.key-prefs) Per-profile namespaced SharedPrefs key.
 
 @ProviderFor(StreakAlertTime)
 final streakAlertTimeProvider = StreakAlertTimeProvider._();
 
 /// Manages the streak alert time.
+///
+/// (WS5.key-prefs) Per-profile namespaced SharedPrefs key.
 final class StreakAlertTimeProvider
     extends $NotifierProvider<StreakAlertTime, TimeOfDay> {
   /// Manages the streak alert time.
+  ///
+  /// (WS5.key-prefs) Per-profile namespaced SharedPrefs key.
   StreakAlertTimeProvider._()
     : super(
         from: null,
@@ -272,9 +310,11 @@ final class StreakAlertTimeProvider
   }
 }
 
-String _$streakAlertTimeHash() => r'6b0e887a8529f7972754c32bc3c704ff66a67ee8';
+String _$streakAlertTimeHash() => r'd3e7c9fc2e842dbb995c0583dc47357dfd65d9b1';
 
 /// Manages the streak alert time.
+///
+/// (WS5.key-prefs) Per-profile namespaced SharedPrefs key.
 
 abstract class _$StreakAlertTime extends $Notifier<TimeOfDay> {
   TimeOfDay build();
@@ -295,14 +335,20 @@ abstract class _$StreakAlertTime extends $Notifier<TimeOfDay> {
 }
 
 /// Manages the reward notification enabled state.
+///
+/// (WS5.key-prefs) Per-profile namespaced SharedPrefs key.
 
 @ProviderFor(RewardNotificationEnabled)
 final rewardNotificationEnabledProvider = RewardNotificationEnabledProvider._();
 
 /// Manages the reward notification enabled state.
+///
+/// (WS5.key-prefs) Per-profile namespaced SharedPrefs key.
 final class RewardNotificationEnabledProvider
     extends $NotifierProvider<RewardNotificationEnabled, bool> {
   /// Manages the reward notification enabled state.
+  ///
+  /// (WS5.key-prefs) Per-profile namespaced SharedPrefs key.
   RewardNotificationEnabledProvider._()
     : super(
         from: null,
@@ -331,9 +377,11 @@ final class RewardNotificationEnabledProvider
 }
 
 String _$rewardNotificationEnabledHash() =>
-    r'99c6cddc896b03bbb67b9387ad7ac322bbe72edf';
+    r'a817651d6815d59696aa70d8616a874b849f6fbd';
 
 /// Manages the reward notification enabled state.
+///
+/// (WS5.key-prefs) Per-profile namespaced SharedPrefs key.
 
 abstract class _$RewardNotificationEnabled extends $Notifier<bool> {
   bool build();

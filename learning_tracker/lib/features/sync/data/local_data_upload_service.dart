@@ -6,6 +6,7 @@ import 'package:learning_tracker/core/time/ulid.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/learning/data/completion_writer.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_command.dart';
+import 'package:learning_tracker/features/notifications/domain/repositories/notification_preferences_repository.dart';
 import 'package:learning_tracker/features/sync/data/outbox_sync_write_facade.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -38,17 +39,9 @@ class LocalDataUploadService {
   final int _profileId;
   final AppLogger? _logger;
 
-  // Notification-settings SharedPreferences keys — must match
-  // [SyncEngine] and [NotificationSettingsMerger].
-  static const _notificationSettingsUpdatedAtMsKey =
-      'notification_settings_updated_at_ms';
-  static const _reminderEnabledKey = 'daily_reminder_enabled';
-  static const _reminderHourKey = 'daily_reminder_hour';
-  static const _reminderMinuteKey = 'daily_reminder_minute';
-  static const _streakAlertEnabledKey = 'streak_alert_enabled';
-  static const _streakAlertHourKey = 'streak_alert_hour';
-  static const _streakAlertMinuteKey = 'streak_alert_minute';
-  static const _rewardNotificationEnabledKey = 'reward_notification_enabled';
+  // Notification-settings SharedPreferences keys are now per-profile
+  // (WS5.key-prefs). Keys are resolved at call-time via
+  // [NotificationPreferencesRepository.keyForProfile].
 
   /// Push all locally-stored data to the outbox.
   ///
@@ -246,7 +239,12 @@ class LocalDataUploadService {
 
   Future<Map<String, dynamic>> _buildNotificationSettingsPayload() async {
     final prefs = await SharedPreferences.getInstance();
-    final updatedAtMs = prefs.getInt(_notificationSettingsUpdatedAtMsKey);
+    // WS5.key-prefs: keys are per-profile namespaced.
+    final updatedAtMs = prefs.getInt(
+      NotificationPreferencesRepository.notificationSettingsUpdatedAtMsKey(
+        _profileId,
+      ),
+    );
     final updatedAt = updatedAtMs == null
         ? DateTimeFactory.nowUtc()
         : DateTime.fromMillisecondsSinceEpoch(updatedAtMs, isUtc: true);
@@ -254,17 +252,51 @@ class LocalDataUploadService {
     return {
       'schema_version': 1,
       'daily_reminder': {
-        'enabled': prefs.getBool(_reminderEnabledKey) ?? true,
-        'hour': prefs.getInt(_reminderHourKey) ?? 19,
-        'minute': prefs.getInt(_reminderMinuteKey) ?? 0,
+        'enabled':
+            prefs.getBool(
+              NotificationPreferencesRepository.reminderEnabledKey(_profileId),
+            ) ??
+            true,
+        'hour':
+            prefs.getInt(
+              NotificationPreferencesRepository.reminderHourKey(_profileId),
+            ) ??
+            19,
+        'minute':
+            prefs.getInt(
+              NotificationPreferencesRepository.reminderMinuteKey(_profileId),
+            ) ??
+            0,
       },
       'streak_alert': {
-        'enabled': prefs.getBool(_streakAlertEnabledKey) ?? true,
-        'hour': prefs.getInt(_streakAlertHourKey) ?? 21,
-        'minute': prefs.getInt(_streakAlertMinuteKey) ?? 0,
+        'enabled':
+            prefs.getBool(
+              NotificationPreferencesRepository.streakAlertEnabledKey(
+                _profileId,
+              ),
+            ) ??
+            true,
+        'hour':
+            prefs.getInt(
+              NotificationPreferencesRepository.streakAlertHourKey(_profileId),
+            ) ??
+            21,
+        'minute':
+            prefs.getInt(
+              NotificationPreferencesRepository.streakAlertMinuteKey(
+                _profileId,
+              ),
+            ) ??
+            0,
       },
       'reward_notifications': {
-        'enabled': prefs.getBool(_rewardNotificationEnabledKey) ?? true,
+        'enabled':
+            prefs.getBool(
+              NotificationPreferencesRepository.rewardNotificationEnabledKey(
+                _profileId,
+              ),
+            ) ??
+            true,
       },
       'updated_at': updatedAt.toIso8601String(),
     };
