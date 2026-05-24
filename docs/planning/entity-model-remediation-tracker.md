@@ -30,14 +30,14 @@
 
 ### WS3 — Tutor Mode Wiring end-to-end (DEC-5/8/9/10/13t/14/21/22/23/24 + G3)
 
-- [ ] WS3.3a           (WS3, pending)    Parent invite entry: add "Manage tutors" to child's parent settings → navigate to InviteTutorRoute/ManageTutorsRoute/ManageGrantsRoute
-- [ ] WS3.3b           (WS3, pending)    Tutor invitations surface: show section iff ≥1 active talmid OR ≥1 pending invitation; "View invitations" + accept/decline; fix hard-coded stub grant (accept_invite_screen.dart:110)
-- [ ] WS3.3c           (WS3, pending)    Talmid access + PIN: resolve child name (not raw "Child:{id}"); make onTap non-null; fix PinScope resolution in router_provider.dart:65-71 to branch on OwnProfileSelection vs TutoredProfileSelection; instantiate TutorPinEntryGate (0 call sites) on talmid-view route
-- [ ] WS3.3d           (WS3, pending)    Combined tutor surface: consume canEdit* fields (written-never-read) so tutor sees everything + edits tracks/points/rewards; remove dead/unused permissions_provider
-- [ ] WS3.3e           (WS3, pending)    Dual-role fix: gate _isTutorSession (text_display_screen.dart:748) on active selection being TutoredProfileSelection, not on existence of any incoming grant
-- [ ] WS3.3f           (WS3, pending)    Manage/remove + co-tutors: parent add/remove-tutor UI (Firestore rules already server-only); co-tutor equality holds by construction
-- [ ] WS3.3g           (WS3, pending)    Removal lifecycle: wire tutor_notification_service (TutorNotificationGateway, 3 emails, 0 call sites) into client revoke/resign/decline flows
-- [ ] WS3.3h           (WS3, pending)    Corrections: KEEP canBulkPriorCompletion:true; wire tutor bulk-mark UI; reconcile accept-invite copy to actual editable set; remove duplicate tutorGrantRepositoryProvider
+- [x] WS3.3a           (WS3, done)       Parent invite entry: add "Manage tutors" to child's parent settings → navigate to InviteTutorRoute/ManageTutorsRoute/ManageGrantsRoute
+- [x] WS3.3b           (WS3, done)       Tutor invitations surface: show section iff ≥1 active talmid OR ≥1 pending invitation; "View invitations" + accept/decline; fix hard-coded stub grant (accept_invite_screen.dart:110)
+- [x] WS3.3c           (WS3, done)       Talmid access + PIN: resolve child name (not raw "Child:{id}"); make onTap non-null; fix PinScope resolution in router_provider.dart:65-71 to branch on OwnProfileSelection vs TutoredProfileSelection; instantiate TutorPinEntryGate (0 call sites) on talmid-view route
+- [x] WS3.3d           (WS3, done)       Combined tutor surface: consume canEdit* fields (written-never-read) so tutor sees everything + edits tracks/points/rewards; remove dead/unused permissions_provider
+- [x] WS3.3e           (WS3, done)       Dual-role fix: gate _isTutorSession (text_display_screen.dart:748) on active selection being TutoredProfileSelection, not on existence of any incoming grant
+- [x] WS3.3f           (WS3, done)       Manage/remove + co-tutors: parent add/remove-tutor UI (Firestore rules already server-only); co-tutor equality holds by construction
+- [x] WS3.3g           (WS3, done)       Removal lifecycle: wire tutor_notification_service (TutorNotificationGateway, 3 emails, 0 call sites) into client revoke/resign/decline flows
+- [x] WS3.3h           (WS3, done)       Corrections: KEEP canBulkPriorCompletion:true; wire tutor bulk-mark UI; reconcile accept-invite copy to actual editable set; remove duplicate tutorGrantRepositoryProvider
 
 **Closes:** DEC-5 (🟡), DEC-8 (⚪), DEC-9 (🔴), DEC-10 (🟡), DEC-13-tutor (⚪), DEC-14 (⚪), DEC-21 (🔴), DEC-22 (🟡), DEC-23 (🟡), DEC-24-caveat, latent-tutor-bulk-mark, latent-accept-invite-stub
 **Charter flow #1 must pass after WS3.**
