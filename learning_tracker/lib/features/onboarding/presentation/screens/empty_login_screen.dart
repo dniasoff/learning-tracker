@@ -6,8 +6,8 @@
 // Minimal surface per the entity-model remediation plan:
 //   - "Add a profile" CTA (reuses SkippedOnboardingCtaBanner)
 //   - Device settings entry
-//   - Stub tutor entry point ("I'm a tutor") — WS3 will wire the full flow
-//   - Device notification toggle stub — WS5 will wire the real toggle
+//   - Stub tutor entry point ("I'm a tutor") — WS3 wired the full flow
+//   - Device notification toggle (layer 1, WS5.two-layers)
 
 import 'dart:async';
 
@@ -17,6 +17,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/dashboard/presentation/widgets/skipped_onboarding_cta_banner.dart';
+import 'package:learning_tracker/features/notifications/presentation/widgets/device_notification_toggle.dart';
 
 @RoutePage()
 class EmptyLoginScreen extends ConsumerWidget {
@@ -24,8 +25,6 @@ class EmptyLoginScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final theme = Theme.of(context);
-
     return Scaffold(
       appBar: AppBar(
         title: const Text('Learning Tracker'),
@@ -92,49 +91,13 @@ class EmptyLoginScreen extends ConsumerWidget {
 
                 const SizedBox(height: 16),
 
-                // Device notification toggle stub — WS5 will provide the real
-                // device-level OS toggle (layer 1).
-                _NotificationToggleStub(theme: theme),
+                // Device-level OS notification toggle (layer 1, WS5.two-layers).
+                // DEC-27: available even on empty-login (before any profile exists).
+                const DeviceNotificationToggle(),
               ],
             ),
           ),
         ),
-      ),
-    );
-  }
-}
-
-/// Stub device-level notification toggle.
-///
-/// WS5 will replace this with the real two-layer notification control
-/// (device OS toggle + per-profile reminder schedules).
-class _NotificationToggleStub extends StatefulWidget {
-  const _NotificationToggleStub({required this.theme});
-
-  final ThemeData theme;
-
-  @override
-  State<_NotificationToggleStub> createState() =>
-      _NotificationToggleStubState();
-}
-
-class _NotificationToggleStubState extends State<_NotificationToggleStub> {
-  bool _notificationsEnabled = true;
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      key: const Key('empty_login_notification_toggle'),
-      elevation: 0,
-      color: Colors.white,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: SwitchListTile(
-        title: const Text('Device notifications'),
-        subtitle: const Text('Allow app to send reminders'),
-        value: _notificationsEnabled,
-        onChanged: (v) => setState(() => _notificationsEnabled = v),
-        activeThumbColor: AppTheme.brandBlue,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       ),
     );
   }

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/theme/app_colors.dart';
 import 'package:learning_tracker/features/notifications/presentation/providers/notification_providers.dart';
+import 'package:learning_tracker/features/notifications/presentation/widgets/device_notification_toggle.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 @RoutePage()
@@ -36,6 +37,11 @@ class NotificationsScreen extends ConsumerWidget {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
         children: [
+          // Layer 1: device-level OS toggle (WS5.two-layers / DEC-27).
+          // Controls whether the OS delivers any notifications from this app.
+          // Distinct from per-profile reminder schedules (layer 2 below).
+          const DeviceNotificationToggle(),
+          const SizedBox(height: 16),
           _SettingsGroupCard(
             children: [
               _NotificationSwitchRow(
