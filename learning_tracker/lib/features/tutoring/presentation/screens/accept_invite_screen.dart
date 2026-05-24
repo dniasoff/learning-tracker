@@ -73,6 +73,10 @@ class _AcceptInviteScreenState extends ConsumerState<AcceptInviteScreen> {
   String? _errorMessage;
   int? _tutorProfileId;
 
+  // WS3.3b: real grant loaded from incomingTutorGrantsProvider during init.
+  // Null if the grant is not yet in the cached list (e.g. first load).
+  TutorGrant? _loadedGrant;
+
   @override
   void initState() {
     super.initState();
@@ -94,9 +98,22 @@ class _AcceptInviteScreenState extends ConsumerState<AcceptInviteScreen> {
       return;
     }
 
-    // Load the grant from the repository using the token (= grantId).
-    // The stub repository returns an empty list; a real implementation would
-    // do a Firestore get by grantId.
+    // WS3.3b: Load the real grant from the incoming grants provider.
+    // The token IS the grantId — look it up in the already-loaded list.
+    // Falls back to a minimal grant object if not yet in the cached list
+    // (the Cloud Function validates ownership and state server-side anyway).
+    try {
+      final grants = await ref.read(incomingTutorGrantsProvider.future);
+      _loadedGrant = grants
+          .where((g) => g.grantId == widget.token)
+          .cast<TutorGrant?>()
+          .firstOrNull;
+    } catch (_) {
+      // Network unavailable — continue with null; accept will use grantId only.
+      _loadedGrant = null;
+    }
+
+    if (!mounted) return;
     setState(() => _step = _AcceptStep.readyToAccept);
   }
 
@@ -105,11 +122,12 @@ class _AcceptInviteScreenState extends ConsumerState<AcceptInviteScreen> {
     try {
       final useCase = ref.read(acceptTutorInviteUseCaseProvider);
 
-      // Build a minimal TutorGrant aggregate from the token to pass to the
-      // use case. In production, the grant is loaded from Firestore first.
-      final stubGrant = _buildStubGrant(widget.token);
+      // WS3.3b: use the real grant loaded from the provider if available;
+      // fall back to a minimal stub that satisfies the canAccept precondition.
+      // The Cloud Function validates ownership and state server-side.
+      final grant = _loadedGrant ?? _buildStubGrant(widget.token);
 
-      final result = await useCase(grant: stubGrant);
+      final result = await useCase(grant: grant);
       if (!mounted) return;
       switch (result) {
         case TutorGrantSuccess():

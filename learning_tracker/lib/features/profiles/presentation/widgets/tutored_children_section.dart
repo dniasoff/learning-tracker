@@ -1,17 +1,27 @@
+import 'dart:async';
+
+import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/tutor_grant_aggregate.dart';
 import 'package:learning_tracker/features/tutoring/presentation/providers/manage_tutors_providers.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
-// ── W6.14: Tutored children section ─────────────────────────────────────────
+// ── WS3.3b / W6.14: Tutored children section ─────────────────────────────────
 //
-// Shows active TutorGrant rows where the current user is the tutor.
-// When no active grants exist, this section is hidden entirely (zero-height).
+// DEC-8 visibility rule: show this section iff the current user has
+// ≥1 active talmid OR ≥1 pending invitation. Previously gated on active-only.
+//
+// When pending invitations exist, a "View invitations" row is rendered at the
+// top of the section so the tutor can accept or decline.
 
-/// Renders a "Tutored children" header + list of active tutor grants.
-/// Hidden entirely while grants are loading or when no active grants exist.
+/// Renders a "Talmid Profiles" header with:
+///   • A "View invitations" entry (when pending invitations exist)
+///   • A row per active tutored-child grant
+///
+/// Hidden entirely while grants are loading or when no grants exist at all.
 class TutoredChildrenSection extends ConsumerWidget {
   const TutoredChildrenSection({super.key});
 
@@ -27,12 +37,17 @@ class TutoredChildrenSection extends ConsumerWidget {
       loading: () => const SizedBox.shrink(),
       error: (_, __) => const SizedBox.shrink(),
       data: (grants) {
-        // Filter to active grants only for the picker.
+        // DEC-8: section visible iff ≥1 active talmid OR ≥1 pending invitation.
         final activeGrants = grants
             .where((g) => g.grantState is ActiveGrant)
             .toList();
+        final pendingGrants = grants
+            .where((g) => g.grantState is PendingGrant)
+            .toList();
 
-        if (activeGrants.isEmpty) return const SizedBox.shrink();
+        if (activeGrants.isEmpty && pendingGrants.isEmpty) {
+          return const SizedBox.shrink();
+        }
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -52,8 +67,14 @@ class TutoredChildrenSection extends ConsumerWidget {
               ),
             ),
             const SizedBox(height: 10),
-            // Tutored child rows — displayed as full-width cards (not a grid)
-            // since we don't have local profile metadata for cross-uid profiles.
+
+            // WS3.3b: "View invitations" row — shown when pending invites exist.
+            if (pendingGrants.isNotEmpty) ...[
+              _ViewInvitationsRow(pendingCount: pendingGrants.length),
+              const SizedBox(height: 8),
+            ],
+
+            // Active tutored-child rows.
             for (final grant in activeGrants) ...[
               _TutoredChildRow(grant: grant),
               const SizedBox(height: 8),
@@ -65,14 +86,103 @@ class TutoredChildrenSection extends ConsumerWidget {
   }
 }
 
-class _TutoredChildRow extends StatelessWidget {
+// ── "View invitations" row ────────────────────────────────────────────────────
+
+/// Tappable row that navigates to the tutor's incoming grants screen so they
+/// can accept or decline pending invitations.
+class _ViewInvitationsRow extends StatelessWidget {
+  const _ViewInvitationsRow({required this.pendingCount});
+
+  final int pendingCount;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Card(
+      margin: EdgeInsets.zero,
+      elevation: 1,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        leading: Container(
+          width: 44,
+          height: 44,
+          decoration: BoxDecoration(
+            color: const Color(0xFFFFF3CD),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Stack(
+            children: [
+              const Center(
+                child: Icon(
+                  Icons.mail_outline_rounded,
+                  color: Color(0xFFB07A00),
+                  size: 24,
+                ),
+              ),
+              Positioned(
+                top: 6,
+                right: 6,
+                child: Container(
+                  width: 14,
+                  height: 14,
+                  decoration: BoxDecoration(
+                    color: Colors.orange.shade700,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Center(
+                    child: Text(
+                      '$pendingCount',
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: Colors.white,
+                        fontSize: 9,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        title: Text(
+          'View invitations',
+          style: theme.textTheme.bodyMedium?.copyWith(
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        subtitle: Text(
+          '$pendingCount pending tutor invitation${pendingCount > 1 ? 's' : ''}',
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: Colors.orange.shade700,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        trailing: const Icon(
+          Icons.chevron_right_rounded,
+          color: Color(0xFFC2C9D3),
+        ),
+        onTap: () => unawaited(context.pushRoute(const ManageGrantsRoute())),
+      ),
+    );
+  }
+}
+
+// ── Tutored child row ─────────────────────────────────────────────────────────
+
+class _TutoredChildRow extends ConsumerWidget {
   const _TutoredChildRow({required this.grant});
 
   final TutorGrant grant;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    // WS3.3c: child display name will be resolved from the grant's childName
+    // field once the Cloud Function denormalises it onto the grant doc.
+    // Until then show the profile ID as a fallback (better than "Child:{id}").
+    final childLabel = grant.childProfileId;
+
     return Card(
       margin: EdgeInsets.zero,
       elevation: 1,
@@ -92,11 +202,8 @@ class _TutoredChildRow extends StatelessWidget {
             size: 24,
           ),
         ),
-        // TODO(data-layer): once cross-uid reads of child display names are
-        // available (via the tutor's granted read access), replace the profile
-        // ID with the child's display name.
         title: Text(
-          'Child: ${grant.childProfileId}',
+          childLabel,
           style: theme.textTheme.bodyMedium?.copyWith(
             fontWeight: FontWeight.w600,
           ),
@@ -136,10 +243,9 @@ class _TutoredChildRow extends StatelessWidget {
             ],
           ),
         ),
-        // TODO(navigation): When tutored profile viewing is wired (requires
-        // TutorPin gate + tutored profile session), tap navigates into the
-        // tutored profile view with TutoredProfileSelection context.
-        onTap: null,
+        // WS3.3c: wire onTap after TutorPinEntryGate is instantiated.
+        // Placeholder navigates to ManageGrantsScreen until 3c is wired.
+        onTap: () => unawaited(context.pushRoute(const ManageGrantsRoute())),
       ),
     );
   }
