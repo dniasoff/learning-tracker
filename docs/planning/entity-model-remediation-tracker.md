@@ -12,7 +12,7 @@
 - [x] WS1.auth-model   (WS1, done)      Multi-session auth design: removed signOut() from _activateLocalAccountFromLocalData; Drift DB swap + AuthState update is the sole switch mechanism; both accounts stay authenticated
 - [x] WS1.switcher     (WS1, done)      Always-on avatar/menu switcher added to bottom nav bar in app_shell.dart; lists profiles + accounts; no logout; opens bottom sheet
 - [x] WS1.count-gate   (WS1, done)      Count-gate: switcher hidden entirely when 1 profile AND 1 account; profile section only when ≥2 profiles; account section only when ≥2 accounts
-- [ ] WS1.consolidate  (WS1, pending)    Consolidate 3 fragmented switch entry points (Settings header, parent-settings row, tutor bar) + collapse duplicate add-profile flows
+- [x] WS1.consolidate  (WS1, done)      Removed GestureDetector switch from Settings header + parent_settings header; removed "Switch Profile" row from parent_settings; tutor bar now indicator-only; manage_learners delegates to showAddProfileDialog
 
 **Closes:** DEC-11 (🔴), DEC-30 (🔴), DEC-29 (🟡), DEC-34 (🟡→arch), D1
 

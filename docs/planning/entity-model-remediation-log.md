@@ -40,3 +40,21 @@
 - stream: WS1
 - detail: WS1.auth-model complete — removed signOut() from _activateLocalAccountFromLocalData; Drift DB swap + AuthState.setLocalBornSession() is now the sole switch mechanism; 2 new DEC-34 acceptance tests green; committed 40bdd3e1.
 - next: WS1.switcher
+
+## [2026-05-24 11:00] TASK-DONE — WS1.switcher + WS1.count-gate
+
+- stream: WS1
+- detail: Always-on avatar button added to bottom nav bar in app_shell.dart; opens bottom sheet with profiles (count-gated: shown only when ≥2) and accounts (count-gated: shown only when ≥2); account switch uses DB swap with no signOut(); committed c9570658.
+- next: WS1.consolidate
+
+## [2026-05-24 11:30] TASK-DONE — WS1.consolidate
+
+- stream: WS1
+- detail: Removed GestureDetector switch from Settings header; removed "Switch Profile" row from parent_settings_screen; tutor bar is now indicator-only (no switch affordance); manage_learners delegates to canonical showAddProfileDialog; make ci green (5791 tests).
+- next: P1 sync gate
+
+## [2026-05-24 10:31] P1-PROGRESS — WS2 verified complete; WS1 still in flight
+
+- stream: Orchestrator
+- detail: WS2 agent returned and confirmed all 3 tasks done (WS2.skip + WS2.relax + WS2.surface), 10 new tests, 5791 total tests, make ci green, committed ae0f2af8. Task #2 marked completed. WS1 has completed WS1.auth-model (committed 40bdd3e1) but WS1.switcher / WS1.count-gate / WS1.consolidate are still in progress.
+- next: Sit in receive-mode awaiting WS1 completion. When WS1 reports, verify both diffs, confirm make ci green, then run P1 gate and dispatch Wave 2 (WS3).

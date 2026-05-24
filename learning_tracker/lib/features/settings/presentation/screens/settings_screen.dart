@@ -65,14 +65,14 @@ class SettingsScreen extends ConsumerWidget {
           padding: const EdgeInsets.fromLTRB(16, 20, 16, 28),
           children: [
             if (!isChildProfile) ...[
-              GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTap: () => context.pushRoute(const ProfilePickerRoute()),
-                child: UserProfileHeaderCard(
-                  user: user,
-                  activeProfile: activeProfile,
-                  surface: UserProfileHeaderSurface.settings,
-                ),
+              // WS1.consolidate: the GestureDetector that routed to ProfilePicker
+              // has been removed — the always-on avatar switcher in the bottom nav
+              // is now the canonical switch path (DEC-11). The header card is now
+              // a read-only identity indicator only.
+              UserProfileHeaderCard(
+                user: user,
+                activeProfile: activeProfile,
+                surface: UserProfileHeaderSurface.settings,
               ),
               const SizedBox(height: 24),
             ],

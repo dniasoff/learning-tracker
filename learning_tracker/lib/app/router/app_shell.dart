@@ -83,13 +83,11 @@ class AppShellScreen extends ConsumerWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   OfflineTopBanner(visible: offlineBannerVisible),
+                  // WS1.consolidate: tutor bar is a context indicator only —
+                  // the switch affordance is removed; use the bottom-nav avatar
+                  // switcher to change profiles.
                   if (hasActiveTutoredProfiles)
-                    _TutorModeIndicatorBar(
-                      // W6.16: tapping the indicator exits to profile picker.
-                      onExitToProfiles: () => context.router.replaceAll([
-                        const ProfilePickerRoute(),
-                      ]),
-                    ),
+                    const _TutorModeIndicatorBar(),
                 ],
               ),
             ),
@@ -206,53 +204,37 @@ class _ShellNavItem extends StatelessWidget {
   }
 }
 
-// W6.15 / W6.16: Tutor mode indicator bar + exit affordance.
+// W6.15: Tutor mode indicator bar.
 //
 // A narrow banner shown below the offline-sync strip when the user has
-// active tutor grants. It is NOT a persistent full-width banner — it is
-// a subtle row that shows the tutor icon + accent colour.
-//
-// W6.16: The row is tappable and exits to the profile picker.
+// active tutor grants. It is a context indicator only — the switch
+// affordance was removed in WS1.consolidate. Use the bottom-nav avatar
+// switcher (DEC-11) to change profiles.
 class _TutorModeIndicatorBar extends StatelessWidget {
-  const _TutorModeIndicatorBar({required this.onExitToProfiles});
-
-  final VoidCallback onExitToProfiles;
+  const _TutorModeIndicatorBar();
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    return GestureDetector(
-      onTap: onExitToProfiles,
-      child: Container(
-        height: 24,
-        color: _tutorAccentColor,
-        padding: const EdgeInsets.symmetric(horizontal: 12),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.school_rounded, size: 13, color: Colors.white),
-            const SizedBox(width: 6),
-            Text(
-              l10n.tutorModeIndicator,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 0.4,
-              ),
+    return Container(
+      height: 24,
+      color: _tutorAccentColor,
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Icons.school_rounded, size: 13, color: Colors.white),
+          const SizedBox(width: 6),
+          Text(
+            l10n.tutorModeIndicator,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.4,
             ),
-            const Spacer(),
-            // W6.16: Exit-to-profiles affordance — subtle chevron + label
-            const Text(
-              '← Switch profiles',
-              style: TextStyle(
-                color: Colors.white70,
-                fontSize: 10,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

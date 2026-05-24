@@ -75,34 +75,20 @@ class ParentSettingsScreen extends ConsumerWidget {
             child: ListView(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
               children: [
-                GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTap: () => context.pushRoute(const ProfilePickerRoute()),
-                  child: UserProfileHeaderCard(
-                    user: user,
-                    activeProfile: activeProfile,
-                    surface: UserProfileHeaderSurface.parent,
-                  ),
+                // WS1.consolidate: the GestureDetector that routed to ProfilePicker
+                // has been removed — the always-on avatar switcher in the bottom nav
+                // is the canonical switch path (DEC-11).
+                UserProfileHeaderCard(
+                  user: user,
+                  activeProfile: activeProfile,
+                  surface: UserProfileHeaderSurface.parent,
                 ),
                 const SizedBox(height: 16),
                 _WhitePanel(
+                  // WS1.consolidate: "Switch Profile" row removed — the always-on
+                  // avatar switcher in the bottom nav is the canonical path (DEC-11).
                   child: Column(
                     children: [
-                      _ManageRow(
-                        iconBackground: const Color(0xFFE3F2FD),
-                        icon: Icons.swap_horiz_rounded,
-                        iconColor: AppTheme.brandBlueDeep,
-                        title: l10n.switchProfile,
-                        subtitle: l10n.switchProfileSubtitle,
-                        trailing: const Icon(
-                          Icons.chevron_right_rounded,
-                          color: _chevronMuted,
-                          size: 26,
-                        ),
-                        onTap: () =>
-                            context.pushRoute(const ProfilePickerRoute()),
-                      ),
-                      _rowDivider(),
                       _ManageRow(
                         iconBackground: _managePurple,
                         icon: Icons.route_rounded,

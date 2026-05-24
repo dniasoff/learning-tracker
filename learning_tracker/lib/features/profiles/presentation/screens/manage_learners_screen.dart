@@ -10,7 +10,7 @@ import 'package:learning_tracker/core/widgets/app_error_view.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
 import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
-import 'package:learning_tracker/features/profiles/presentation/widgets/parent_pin_setup_dialog.dart';
+import 'package:learning_tracker/features/profiles/presentation/widgets/add_profile_dialog.dart';
 import 'package:learning_tracker/features/profiles/presentation/widgets/profile_avatar.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
@@ -29,7 +29,7 @@ class ManageLearnersScreen extends ConsumerWidget {
           bottom: MediaQuery.of(context).viewPadding.bottom,
         ),
         child: FloatingActionButton(
-          onPressed: () => _showAddProfileDialog(context, ref),
+          onPressed: () => _showAddProfileDialogCanonical(context, ref),
           child: const Icon(Icons.add),
         ),
       ),
@@ -59,39 +59,14 @@ class ManageLearnersScreen extends ConsumerWidget {
     );
   }
 
-  Future<void> _showAddProfileDialog(
+  // WS1.consolidate: delegate to the canonical showAddProfileDialog from
+  // add_profile_dialog.dart instead of duplicating the creation flow.
+  Future<void> _showAddProfileDialogCanonical(
     BuildContext context,
     WidgetRef ref,
   ) async {
-    final result = await showDialog<({String name, String mode, int avatar})>(
-      context: context,
-      builder: (ctx) => _ProfileFormDialog(
-        title: AppLocalizations.of(context)!.profilesAddLearner,
-      ),
-    );
-    if (result == null) return;
-
-    final repo = ref.read(profileRepositoryProvider);
-    final accountId = ref.read(currentAccountIdProvider);
-    final created = await repo.createProfile(
-      accountId: accountId,
-      displayName: result.name,
-      mode: result.mode,
-      avatarIndex: result.avatar,
-    );
-    ref.invalidate(profileListProvider);
-    ref.invalidate(profileListStreamProvider);
-
-    // Child profiles require a parent PIN so the parent can gate access
-    // to parental controls. Prompt right after creation.
-    if (created.profileMode == ProfileMode.child && context.mounted) {
-      await showParentPinSetupDialog(
-        context,
-        ref,
-        profileId: created.id,
-        profileName: created.displayName,
-      );
-    }
+    await showAddProfileDialog(context, ref);
+    // showAddProfileDialog handles PIN prompt, provider invalidation, etc.
   }
 }
 
