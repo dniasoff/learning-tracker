@@ -1,11 +1,19 @@
-/// Acceptance test for Plan §F Phase 5 deliverable 7 — sacred-time prefs
-/// ride along on every profile's UI-prefs snapshot, not just profile 0.
+/// Regression tests for sacred-time / location scope in the UI-preferences
+/// sync path.
 ///
-/// Sacred-time (lat/lon/in-Israel/country/city) is *device*-level — it
-/// describes where the device is, not which learner is signed in — so the
-/// snapshot for every profile must include the block. Previously gated on
-/// `profileId == 0`, which silently dropped sacred-time for every adult
-/// secondary profile on a multi-profile install.
+/// **Pre-DEC-26 (Plan §F Phase 5 deliverable 7):** sacred-time rode every
+/// profile's UI-prefs snapshot so that secondary adult profiles on
+/// multi-profile devices didn't lose their sacred-window config across a
+/// reinstall. The block was written per-profile into Firestore.
+///
+/// **DEC-26 (WS6):** location is Device-scoped. The sacred_time block MUST NOT
+/// appear in the per-profile ui_preferences push payload. It is NOT a
+/// regression for it to be absent — it is the correct fix. The device-global
+/// SharedPreferences keys managed by SacredTimePreferences remain the
+/// authoritative local store; the cloud no longer overrides them per-profile.
+///
+/// Tests in this file guard against re-introducing the sacred_time block
+/// in the per-profile push payload (the old behavior = the clobber bug).
 library;
 
 import 'dart:convert';
@@ -34,18 +42,17 @@ void main() {
   });
 
   group(
-    'Plan §F Phase 5 deliverable 7 — sacred-time prefs sync for all profiles',
+    'DEC-26 — sacred-time is NOT in per-profile ui_preferences push payload',
     () {
       test(
-        'pushUiPreferencesSnapshot for profileId != 0 includes the '
-        'sacred_time block (was previously dropped — multi-profile gap)',
+        'pushUiPreferencesSnapshot for profileId != 0 does NOT include '
+        'sacred_time (DEC-26: location is device-scoped, not per-profile)',
         () async {
           final database = UserDatabase(NativeDatabase.memory());
           addTearDown(database.close);
           await seedProfile(database);
 
-          // profileId = 42 — well outside the "profile 0" sentinel that the
-          // old code gated on.
+          // profileId = 42 — well outside the "profile 0" sentinel.
           const profileId = 42;
           final facade = OutboxSyncWriteFacade(
             outboxDao: database.outboxDao,
@@ -66,25 +73,22 @@ void main() {
               jsonDecode(uiRows.single.payload) as Map<String, dynamic>;
           expect(payload['profile_id'], profileId);
 
-          final sacredTime = payload['sacred_time'];
+          // DEC-26: sacred_time MUST NOT appear in the per-profile payload.
+          // Its absence is correct — location is device-scoped and no longer
+          // synced per-profile.
           expect(
-            sacredTime,
-            isA<Map<String, dynamic>>(),
+            payload.containsKey('sacred_time'),
+            isFalse,
             reason:
-                'sacred_time MUST be present for every profile, not '
-                'just profile 0',
+                'sacred_time MUST NOT be present in the per-profile '
+                'ui_preferences payload (DEC-26: location is device-scoped, '
+                'embedding it per-profile causes cross-profile LWW clobber)',
           );
-          final block = sacredTime as Map<String, dynamic>;
-          expect(block['latitude'], closeTo(31.7683, 0.0001));
-          expect(block['longitude'], closeTo(35.2137, 0.0001));
-          expect(block['country_code'], 'IL');
-          expect(block['city_label'], 'Jerusalem');
-          expect(block['in_israel'], true);
         },
       );
 
       test(
-        'profileId == 0 still includes sacred_time (no regression)',
+        'profileId == 0 also does NOT include sacred_time (consistent with DEC-26)',
         () async {
           final database = UserDatabase(NativeDatabase.memory());
           addTearDown(database.close);
@@ -107,8 +111,13 @@ void main() {
 
           final payload =
               jsonDecode(uiRows.single.payload) as Map<String, dynamic>;
-          expect(payload['sacred_time'], isA<Map<String, dynamic>>());
-          expect((payload['sacred_time'] as Map)['in_israel'], true);
+
+          // DEC-26: sacred_time must not appear for any profile, including 0.
+          expect(
+            payload.containsKey('sacred_time'),
+            isFalse,
+            reason: 'sacred_time must not be in ui_preferences for any profile',
+          );
         },
       );
     },

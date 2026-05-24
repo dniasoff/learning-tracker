@@ -11,17 +11,17 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// [SharedPreferences] via [ProfileScopedPreferenceKeys]. The row passed to
 /// [merge] is a synthetic single-element list (see [PullPipeline.pullDocument]).
 ///
-/// Firestore shape (from SyncEngine._mergeUiPreferences):
+/// Firestore shape:
 ///   updated_at, app_locale, use_hebrew_calendar,
 ///   text_display.{font_size_index, show_nikud},
-///   learning_order_parent_controls, hebrew_terms_script,
-///   sacred_time.{latitude, longitude, country_code, city_label, source,
-///               fixed_at_ms, in_israel}
+///   learning_order_parent_controls, hebrew_terms_script
 ///
-/// Plan §F Phase 5 deliverable 7 — sacred_time is *device*-level (lat/lon/
-/// timezone/in-israel describe the physical device, not a learner) so it
-/// rides along on every profile's UI-prefs snapshot. The merger applies
-/// the incoming block to SharedPreferences regardless of profileId.
+/// DEC-26 (WS6) — sacred_time (location) is Device-scoped and is no longer
+/// embedded in the per-profile ui_preferences document. Sacred-time prefs are
+/// stored in device-global SharedPreferences keys via [SacredTimePreferences]
+/// and are not read or written here. Removing them from this merger eliminates
+/// the LWW cross-profile clobber: two profiles on the same device no longer
+/// overwrite the shared device location on every sync round-trip.
 ///
 /// Phase 3: the merger consults [MergeStore.remoteIsNewer] (clock-skew
 /// arbitration), and after a successful apply calls
@@ -132,39 +132,12 @@ class UiPreferencesMerger implements EntityMerger {
       );
     }
 
-    // Sacred Time settings are device-global (lat/lon/timezone/in-israel
-    // describe the device, not a learner). Plan §F Phase 5 deliverable 7 —
-    // every profile's UI-prefs snapshot carries the same block, so apply
-    // it on every merge regardless of profileId.
-    final sacredTime = remote['sacred_time'];
-    if (sacredTime is Map<String, dynamic>) {
-      final lat = sacredTime['latitude'];
-      final lon = sacredTime['longitude'];
-      if (lat is num && lon is num) {
-        await prefs.setDouble('sacred_time_latitude', lat.toDouble());
-        await prefs.setDouble('sacred_time_longitude', lon.toDouble());
-      }
-      final country = sacredTime['country_code'];
-      if (country is String && country.isNotEmpty) {
-        await prefs.setString('sacred_time_country_code', country);
-      }
-      final city = sacredTime['city_label'];
-      if (city is String && city.isNotEmpty) {
-        await prefs.setString('sacred_time_city_label', city);
-      }
-      final source = sacredTime['source'];
-      if (source is String && source.isNotEmpty) {
-        await prefs.setString('sacred_time_source', source);
-      }
-      final fixedAt = sacredTime['fixed_at_ms'];
-      if (fixedAt is int) {
-        await prefs.setInt('sacred_time_fixed_at_ms', fixedAt);
-      }
-      final inIsrael = sacredTime['in_israel'];
-      if (inIsrael is bool) {
-        await prefs.setBool('sacred_time_in_israel', inIsrael);
-      }
-    }
+    // DEC-26 (WS6) — sacred_time (location) is Device-scoped and is no
+    // longer part of the per-profile ui_preferences document. Any `sacred_time`
+    // block present in older Firestore documents is deliberately ignored here
+    // so that syncing a second profile cannot overwrite the device-global
+    // location that was set via SacredTimePreferences on this device. The
+    // local read path (SacredTimePreferences.readLocation) is unchanged.
 
     final stamp = remoteUpdatedAt ?? DateTimeFactory.nowUtc();
     await prefs.setInt(

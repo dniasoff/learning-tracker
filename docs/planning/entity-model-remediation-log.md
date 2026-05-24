@@ -58,3 +58,63 @@
 - stream: Orchestrator
 - detail: WS2 agent returned and confirmed all 3 tasks done (WS2.skip + WS2.relax + WS2.surface), 10 new tests, 5791 total tests, make ci green, committed ae0f2af8. Task #2 marked completed. WS1 has completed WS1.auth-model (committed 40bdd3e1) but WS1.switcher / WS1.count-gate / WS1.consolidate are still in progress.
 - next: Sit in receive-mode awaiting WS1 completion. When WS1 reports, verify both diffs, confirm make ci green, then run P1 gate and dispatch Wave 2 (WS3).
+
+## [2026-05-24 11:45] SYNC-GATE P1 — PASSED
+
+- stream: Orchestrator
+- detail: Both WS1 (4 tasks, 3 commits: 40bdd3e1, c9570658, b37c902d) and WS2 (3 tasks, 1 commit: ae0f2af8) verified via diff inspection. Key checks: (1) signOut() at account_picker_screen.dart:481 replaced with DEC-34 no-signOut comment — ✅; (2) _ProfileSwitcherButton count-gate: `profileCount >= 2 || accountCount >= 2`, solo user returns SizedBox.shrink() — ✅; (3) kOnboardingSkipped → EmptyLoginRoute at sign_in_controller.dart:462 — ✅; (4) EmptyLoginScreen exists with SkippedOnboardingCtaBanner + stubs — ✅; (5) make ci 5791 tests green — ✅. Task #1 (WS1) and #10 (P1) marked completed.
+- next: Dispatch Wave 2 — WS3 (Tutor Mode Wiring 3a–3h). Single Agent dispatch.
+
+## [2026-05-24 11:46] DISPATCH — Wave 2 (WS3)
+
+- stream: WS3
+- detail: WS3 Sonnet agent dispatched for tutor mode end-to-end wiring. Sub-stream order: 3a→3b (invite/accept surface) → 3c (PIN+access, gates 3d) → 3d (combined edit surface) → 3e (dual-role fix) → 3f→3g (manage/remove+notify) → 3h (bulk-mark corrections). Closes DEC-5🟡, DEC-8⚪, DEC-9🔴, DEC-10🟡, DEC-13-tutor⚪, DEC-14⚪, DEC-21🔴, DEC-22🟡, DEC-23🟡, DEC-24-caveat, G3. Agent may spawn sub-agents for parallel sub-tasks. P2 gate: charter flow #1 + #2 must pass.
+- next: Sit in receive-mode awaiting WS3 P2 report. When reported, verify charter flows in code, then dispatch Wave 3.
+
+## [2026-05-24 13:00] SYNC-GATE P2 — PASSED
+
+- stream: Orchestrator
+- detail: WS3 8 commits (7cc23295–c899c9ab), 74 new tests, 5865 total. Diff verified: (1) Manage Tutors tile in parent_settings_screen.dart:210 → ManageTutorsRoute ✅; (2) tutored_children_section.dart:52 gates on activeGrants.isEmpty && pendingGrants.isEmpty; _ViewInvitationsRow shown when pending ✅; (3) router_provider.dart:76 returns PinScope.tutor(profileId) when activeTutoredProfileSelectionProvider non-null ✅; (4) text_display_screen.dart:755 _isTutorSession returns activeTutoredProfileSelectionProvider != null (not grant existence) ✅; (5) parent_settings_screen.dart:65 canBulkMark = !isTutoredContext || tutorPerms.canBulkPriorCompletion ✅. Charter flow #1 wired end-to-end. Task #3 (WS3) and #11 (P2) marked completed.
+- next: Dispatch Wave 3 — WS4 + WS5 + WS6 + WS7 + WS8 in a single 5-Agent message (parallel).
+
+## [2026-05-24 13:01] DISPATCH — Wave 3 (WS4 + WS5 + WS6 + WS7 + WS8)
+
+- stream: WS4 + WS5 + WS6 + WS7 + WS8 (parallel)
+- detail: Five Sonnet agents dispatched simultaneously. WS4: banner+exit + parent-portal boundary + settings-by-scope (DEC-25⚪, DEC-4🟡, D2🔴). WS5: per-profile notification namespacing + device-level OS toggle (DEC-27🔴, DEC-28🔴). WS6: location device-scoped off merger (DEC-26🟡) — paired with WS5 on ui_preferences_merger.dart. WS7: rewards spend-economy full loop (DEC-18🔴, DEC-17🟡, G1). WS8: credit-policy code path convergence + route guards (latent-sentinel, DEC-19). P3 gate: all five verified.
+- next: Sit in receive-mode awaiting all 5 P3 reports. Collect all before running P3 gate + dispatching Wave 4.
+
+## [2026-05-24 13:05] START — WS8 begins
+
+- stream: WS8
+- detail: Read all required docs (plan, audit, log, tracker, product-rules, CLAUDE.md). Baseline CI examined. Key files explored: bulk_mark_completion_use_case.dart (sentinel at :85 confirmed), learning_ledger_repository_impl.dart (nowUtc() at :101/:156 — the bug), lifetime_marking_screen.dart:411 (calls recordCompletionsBatch directly), app_router.dart:256-265 (authGuard only). ManualCompletionUseCase: 0 production callers confirmed. Two DAOs confirmed: learning_ledger (hierarchical scope marks) vs completion_dao (leaf sefariaRef marks). Decision: Option b (add CompletionSource to LearningLedgerRepository) — Option a requires expanding hierarchy nodes to leaf refs at write time, breaking LifetimeTreeBuilder and making UI slow.
+- next: WS8.credit-path → WS8.route-guard
+
+## [2026-05-24 13:30] TASK-DONE — WS8.credit-path
+
+- stream: WS8
+- detail: Added CompletionSource parameter to LearningLedgerRepository.recordCompletionsBatch (default=lifetimeOnly); impl applies sentinel DateTime.utc(2000,1,1) for non-live sources; LifetimeMarkingScreen now passes source: CompletionSource.lifetimeOnly; ManualCompletionUseCase retired (deleted file, removed provider, deleted test, updated generated providers coverage test, re-ran build_runner); 4 WS8 sentinel tests green in learning_ledger_repository_impl_test.dart; 16/16 tests green in that file.
+- next: WS8.route-guard
+
+## [2026-05-24 13:45] TASK-DONE — WS8.route-guard
+
+- stream: WS8
+- detail: Updated app_router.dart LifetimeMarkingRoute + LifetimeCurriculumMarkingRoute guards from [authGuard] to [authGuard, childModeGuard, pinGuard]; created lifetime_route_guards_test.dart with 4 static file-inspection tests; all 4 tests green.
+- next: make ci → P3 sync gate
+
+## [2026-05-24 14:00] START — WS6 begins
+
+- stream: WS6
+- detail: Read plan, audit (DEC-26), log, tracker, product-rules, CLAUDE.md. Confirmed defect: sacred_time block embedded per-profile in pushUiPreferencesSnapshot (outbox_sync_write_facade.dart:233-247) and applied on merge in UiPreferencesMerger.merge() (merger.dart:139-167). Local SharedPrefs uses device-global keys already (SacredTimePreferences) — no local-side change needed. Starting WS6.location.
+- next: WS6.location — remove sacred_time from per-profile push + merger; write merger round-trip test
+
+## [2026-05-24 14:30] TASK-DONE — WS6.location
+
+- stream: WS6
+- detail: (1) Removed sacred_time block from pushUiPreferencesSnapshot() in outbox_sync_write_facade.dart — location no longer embedded in per-profile ui_preferences push payload. (2) Removed sacred_time block from UiPreferencesMerger.merge() — merger ignores any legacy sacred_time in incoming Firestore docs. (3) Created test/sync/location_device_scope_test.dart with 6 merger round-trip tests (push doesn't embed sacred_time; two-profile push+merge leaves device location unchanged; legacy sacred_time block silently ignored; per-profile prefs still merge correctly). (4) Updated test/sync/sacred_time_all_profiles_test.dart to assert the new contract (sacred_time must NOT be in payload). All 8 tests green. Analyze: no issues. Pre-existing CI failures from WS5/WS8 are not caused by WS6. Committed.
+- next: P3 sync gate
+
+## [2026-05-24 12:00] START — WS3 begins
+
+- stream: WS3
+- detail: Read all required docs (plan, audit, log, tracker, product-rules, hebrew-terms, CLAUDE.md). Baseline CI green (5791 tests). Key files explored: tutored_children_section.dart (lines 35/99/142 confirmed), parent_settings_screen.dart (no Manage tutors tile), router_provider.dart:65-71 (PinScope hard-coded to parent), tutor_pin_entry_gate.dart (exists, zero call sites confirmed), tutor_permissions.dart (canEdit* fields written-never-read), text_display_screen.dart:748 (_isTutorSession reads incomingTutorGrantsProvider — confirmed dual-role bug), tutor_notification_service.dart (3 methods, 0 call sites), manage_tutors_screen.dart (parent revoke UI exists), accept_invite_screen.dart:110 (stub grant confirmed). Duplicate tutorGrantRepositoryProvider confirmed in manage_tutors_providers.dart + tutor_grant_providers.g.dart. Starting 3a.
+- next: WS3.3a — add "Manage tutors" tile to parent_settings_screen.dart

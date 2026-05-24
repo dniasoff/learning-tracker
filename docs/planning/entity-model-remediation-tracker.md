@@ -66,7 +66,7 @@
 
 ### WS6 — Location Scope Consistency (DEC-26) [paired with WS5]
 
-- [ ] WS6.location     (WS6, pending)    Store/sync location at device level (registry or shared doc), off per-profile snapshot in ui_preferences_merger.dart:21; merger round-trip test
+- [x] WS6.location     (WS6, done)       Removed sacred_time from per-profile push payload (outbox_sync_write_facade.dart) + from UiPreferencesMerger; location stays in device-global SharedPrefs only; 8 merger round-trip tests green
 
 **Closes:** DEC-26 (🟡), latent-local-cloud-clobber (location half)
 
@@ -82,8 +82,8 @@
 
 ### WS8 — Learning-Credit Integrity (latent, DEC-19)
 
-- [ ] WS8.credit-path  (WS8, pending)    Pick one credit-policy code path: migrate lifetime/manual marking onto CompletionSource-aware BulkMarkCompletionUseCase path (option a preferred), retiring orphan ManualCompletionUseCase and parallel LearningLedgerRepository batch path
-- [ ] WS8.route-guard  (WS8, pending)    Guard LifetimeMarkingRoute + LifetimeCurriculumMarkingRoute with childModeGuard + pinGuard (today authGuard only, app_router.dart:256-265)
+- [x] WS8.credit-path  (WS8, done)    Option b: added CompletionSource param to recordCompletionsBatch; non-live sources write sentinel DateTime.utc(2000,1,1); LifetimeMarkingScreen passes CompletionSource.lifetimeOnly; ManualCompletionUseCase retired (0 callers); 4 sentinel tests green
+- [x] WS8.route-guard  (WS8, done)    LifetimeMarkingRoute + LifetimeCurriculumMarkingRoute now guard: [authGuard, childModeGuard, pinGuard]; 4 route-guard tests green
 
 **Closes:** latent-sentinel-date, DEC-19 harden
 

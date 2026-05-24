@@ -224,28 +224,15 @@ class OutboxSyncWriteFacade implements SyncWriteFacade {
       ),
     };
 
-    // Plan §F Phase 5 deliverable 7 — sacred-time prefs (lat/lon/timezone/
-    // in-israel) are *device*-level, not profile-specific. Every profile's
-    // UI-prefs snapshot rides the same set so secondary adult profiles on
-    // a multi-profile device don't lose their sacred-window config across
-    // a reinstall. Previously gated on `profileId == 0`, dropping the
-    // sacred-time block for every other profile.
-    final sacredTime = <String, dynamic>{};
-    final lat = prefs.getDouble('sacred_time_latitude');
-    final lon = prefs.getDouble('sacred_time_longitude');
-    if (lat != null) sacredTime['latitude'] = lat;
-    if (lon != null) sacredTime['longitude'] = lon;
-    final country = prefs.getString('sacred_time_country_code');
-    if (country != null) sacredTime['country_code'] = country;
-    final city = prefs.getString('sacred_time_city_label');
-    if (city != null) sacredTime['city_label'] = city;
-    final source = prefs.getString('sacred_time_source');
-    if (source != null) sacredTime['source'] = source;
-    final fixedAt = prefs.getInt('sacred_time_fixed_at_ms');
-    if (fixedAt != null) sacredTime['fixed_at_ms'] = fixedAt;
-    sacredTime['in_israel'] = prefs.getBool('sacred_time_in_israel') ?? false;
-    payload['sacred_time'] = sacredTime;
-
+    // DEC-26 (WS6) — location is Device-scoped. Sacred-time prefs
+    // (lat/lon/country/city/in-israel) are stored locally in device-global
+    // SharedPreferences keys and are NOT embedded in the per-profile
+    // ui_preferences document. Syncing them per-profile caused LWW clobber
+    // across profiles on the same device: whichever profile pushed last would
+    // overwrite the shared device location on every other profile's merge.
+    // The local read path (SacredTimePreferences) is already device-global
+    // and remains unchanged. Location has no cloud sync path — it is
+    // re-detected or manually set on each device.
     await _enqueue(
       OutboxEntityKind.uiPreferences,
       'ui_preferences_$_profileId',
