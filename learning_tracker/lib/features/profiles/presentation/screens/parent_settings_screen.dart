@@ -2,9 +2,11 @@ import 'dart:async';
 
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:learning_tracker/core/navigation/app_router.dart';
+import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/theme/app_colors.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_providers.dart'
@@ -151,6 +153,23 @@ class ParentSettingsScreen extends ConsumerWidget {
                             onTap: () =>
                                 context.pushRoute(const PointConfigRoute()),
                           ),
+                          // WS7.adjust: parent manual add/deduct (DEC-17).
+                          _rowDivider(),
+                          _ManageRow(
+                            iconBackground: const Color(0xFFE0EAFF),
+                            icon: Icons.add_circle_outline_rounded,
+                            iconColor: const Color(0xFF1E52D4),
+                            title: l10n.parentPointsAdjustTitle,
+                            subtitle: l10n.parentPointsAdjustSubtitle,
+                            trailing: const Icon(
+                              Icons.chevron_right_rounded,
+                              color: _chevronMuted,
+                              size: 26,
+                            ),
+                            onTap: () => unawaited(
+                              _showAdjustPointsDialog(context, ref, l10n),
+                            ),
+                          ),
                         ],
                         // WS3.3d: canEditRewards gates "Reward Configuration" for tutors.
                         if (canEditRewards) ...[
@@ -168,6 +187,23 @@ class ParentSettingsScreen extends ConsumerWidget {
                             ),
                             onTap: () => context.pushRoute(
                               const RewardConfigurationRoute(),
+                            ),
+                          ),
+                          // WS7.redeem: pending prize requests from child.
+                          _rowDivider(),
+                          _ManageRow(
+                            iconBackground: const Color(0xFFE8F5E9),
+                            icon: Icons.redeem_rounded,
+                            iconColor: const Color(0xFF388E3C),
+                            title: l10n.pendingRedemptionsTitle,
+                            subtitle: l10n.pendingRedemptionsEmpty,
+                            trailing: const Icon(
+                              Icons.chevron_right_rounded,
+                              color: _chevronMuted,
+                              size: 26,
+                            ),
+                            onTap: () => context.pushRoute(
+                              const ParentPendingRedemptionsRoute(),
                             ),
                           ),
                         ],
@@ -304,6 +340,97 @@ class ParentSettingsScreen extends ConsumerWidget {
       indent: 72,
       endIndent: 16,
       color: AppColors.surfaceE9,
+    );
+  }
+}
+
+/// WS7.adjust — show the parent points adjustment dialog (DEC-17).
+///
+/// Already PIN-gated at route level; this dialog is reached only from inside
+/// [ParentSettingsScreen] which is behind [authGuard, childModeGuard, pinGuard].
+Future<void> _showAdjustPointsDialog(
+  BuildContext context,
+  WidgetRef ref,
+  AppLocalizations l10n,
+) async {
+  var addMode = true;
+  final amountController = TextEditingController();
+  final noteController = TextEditingController();
+
+  final result = await showDialog<bool>(
+    context: context,
+    builder: (ctx) => StatefulBuilder(
+      builder: (ctx, setState) => AlertDialog(
+        title: Text(l10n.parentPointsAdjustTitle),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            SegmentedButton<bool>(
+              segments: [
+                ButtonSegment(value: true, label: Text(l10n.parentPointsAdjustAddLabel)),
+                ButtonSegment(
+                  value: false,
+                  label: Text(l10n.parentPointsAdjustDeductLabel),
+                ),
+              ],
+              selected: {addMode},
+              onSelectionChanged: (v) => setState(() => addMode = v.first),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: amountController,
+              keyboardType: TextInputType.number,
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              decoration: InputDecoration(
+                hintText: l10n.parentPointsAdjustAmountHint,
+                border: const OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: noteController,
+              decoration: InputDecoration(
+                hintText: l10n.parentPointsAdjustNoteHint,
+                border: const OutlineInputBorder(),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(l10n.cancel),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(l10n.parentPointsAdjustConfirm),
+          ),
+        ],
+      ),
+    ),
+  );
+
+  if (result != true || !context.mounted) return;
+
+  final amount = int.tryParse(amountController.text.trim()) ?? 0;
+  if (amount <= 0) return;
+
+  final db = ref.read(userDatabaseProvider);
+  final profileId = ref.read(activeProfileIdProvider);
+  final delta = addMode ? amount : -amount;
+  final note = noteController.text.trim().isEmpty
+      ? null
+      : noteController.text.trim();
+
+  await db.pointsBalanceDao.parentAdjust(profileId, delta, note: note);
+
+  amountController.dispose();
+  noteController.dispose();
+
+  if (context.mounted) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(l10n.parentPointsAdjustAppliedSnackbar)),
     );
   }
 }

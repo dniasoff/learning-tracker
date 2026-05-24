@@ -72,11 +72,11 @@
 
 ### WS7 — Rewards: Redeem→Fulfil Loop (DEC-18, DEC-17, G1=spend-economy)
 
-- [ ] WS7.balance      (WS7, pending)    Introduce stored debitable points balance (replacing/feeding monotonic SUM from points_service.dart); all readers cut over together
-- [ ] WS7.reward-price (WS7, pending)    Reward = priced item with points cost (not cumulative-threshold milestone reward_milestone.dart)
-- [ ] WS7.redeem       (WS7, pending)    Child redemption: spend points on a reward; parent approval/fulfilment state on the unlock/redemption record
-- [ ] WS7.adjust       (WS7, pending)    DEC-17 manual adjust: parent add/deduct via adjustment ledger entry, PIN-gated, in parent mode
-- [ ] WS7.child-ui     (WS7, pending)    Update child UI: "Redeem Prizes"/"Current Balance" (child_points_rewards_tab_card.dart:124,222) actually redeem
+- [x] WS7.balance      (WS7, done)    Introduce stored debitable points balance (replacing/feeding monotonic SUM from points_service.dart); all readers cut over together
+- [x] WS7.reward-price (WS7, done)    Reward = priced item with points cost (not cumulative-threshold milestone reward_milestone.dart)
+- [x] WS7.redeem       (WS7, done)    Child redemption: spend points on a reward; parent approval/fulfilment state on the unlock/redemption record
+- [x] WS7.adjust       (WS7, done)    DEC-17 manual adjust: parent add/deduct via adjustment ledger entry, PIN-gated, in parent mode
+- [x] WS7.child-ui     (WS7, done)    Update child UI: "Redeem Prizes"/"Current Balance" (child_points_rewards_tab_card.dart:124,222) actually redeem
 
 **Closes:** DEC-18 (🔴), DEC-17 (🟡)
 

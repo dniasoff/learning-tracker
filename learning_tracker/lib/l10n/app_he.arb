@@ -1759,5 +1759,49 @@
     "placeholders": {
       "term": { "type": "String" }
     }
-  }
+  },
+
+  "redeemScreenTitle": "פרס הפרסים",
+  "redeemScreenBalance": "היתרה שלך",
+  "redeemScreenNoRewards": "עדיין לא הוגדרו פרסים.\nבקש מהורה להגדיר!",
+  "redeemScreenCostLabel": "{points} נקודות",
+  "@redeemScreenCostLabel": {
+    "placeholders": { "points": { "type": "int" } }
+  },
+  "redeemScreenAffordableLabel": "פדה",
+  "redeemScreenCannotAfford": "אין מספיק נקודות",
+  "redeemScreenConfirmTitle": "לפדות \"{title}\"?",
+  "@redeemScreenConfirmTitle": {
+    "placeholders": { "title": { "type": "String" } }
+  },
+  "redeemScreenConfirmBody": "פעולה זו תנצל {points} נקודות מהיתרה שלך.",
+  "@redeemScreenConfirmBody": {
+    "placeholders": { "points": { "type": "int" } }
+  },
+  "redeemScreenConfirmButton": "בזבז ופדה",
+  "redeemScreenRequestedSnackbar": "\"{title}\" הוזמן! בקש מהורה לאשר.",
+  "@redeemScreenRequestedSnackbar": {
+    "placeholders": { "title": { "type": "String" } }
+  },
+  "redeemScreenInsufficientSnackbar": "אין מספיק נקודות לפדות פרס זה.",
+
+  "pendingRedemptionsTitle": "פרסים ממתינים",
+  "pendingRedemptionsEmpty": "אין בקשות פרס ממתינות.",
+  "pendingRedemptionsCost": "{points} נקודות",
+  "@pendingRedemptionsCost": {
+    "placeholders": { "points": { "type": "int" } }
+  },
+  "pendingRedemptionsApprove": "מלא",
+  "pendingRedemptionsDecline": "דחה",
+  "pendingRedemptionsFulfilledSnackbar": "הפרס סומן כמומש!",
+  "pendingRedemptionsDeclinedSnackbar": "בקשת הפרס נדחתה. הנקודות הוחזרו.",
+
+  "parentPointsAdjustTitle": "התאם נקודות",
+  "parentPointsAdjustSubtitle": "הוסף או הפחת נקודות מיתרת הילד.",
+  "parentPointsAdjustAddLabel": "הוסף נקודות",
+  "parentPointsAdjustDeductLabel": "הפחת נקודות",
+  "parentPointsAdjustAmountHint": "כמות",
+  "parentPointsAdjustNoteHint": "סיבה (אופציונלי)",
+  "parentPointsAdjustConfirm": "החל",
+  "parentPointsAdjustAppliedSnackbar": "היתרה עודכנה."
 }

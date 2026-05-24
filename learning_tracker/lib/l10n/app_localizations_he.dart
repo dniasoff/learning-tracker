@@ -3066,4 +3066,95 @@ class AppLocalizationsHe extends AppLocalizations {
   String allTimeTermDone(String term) {
     return '$term שנלמד';
   }
+
+  @override
+  String get redeemScreenTitle => 'פרס הפרסים';
+
+  @override
+  String get redeemScreenBalance => 'היתרה שלך';
+
+  @override
+  String get redeemScreenNoRewards =>
+      'עדיין לא הוגדרו פרסים.\nבקש מהורה להגדיר!';
+
+  @override
+  String redeemScreenCostLabel(int points) {
+    return '$points נקודות';
+  }
+
+  @override
+  String get redeemScreenAffordableLabel => 'פדה';
+
+  @override
+  String get redeemScreenCannotAfford => 'אין מספיק נקודות';
+
+  @override
+  String redeemScreenConfirmTitle(String title) {
+    return 'לפדות \"$title\"?';
+  }
+
+  @override
+  String redeemScreenConfirmBody(int points) {
+    return 'פעולה זו תנצל $points נקודות מהיתרה שלך.';
+  }
+
+  @override
+  String get redeemScreenConfirmButton => 'בזבז ופדה';
+
+  @override
+  String redeemScreenRequestedSnackbar(String title) {
+    return '\"$title\" הוזמן! בקש מהורה לאשר.';
+  }
+
+  @override
+  String get redeemScreenInsufficientSnackbar =>
+      'אין מספיק נקודות לפדות פרס זה.';
+
+  @override
+  String get pendingRedemptionsTitle => 'פרסים ממתינים';
+
+  @override
+  String get pendingRedemptionsEmpty => 'אין בקשות פרס ממתינות.';
+
+  @override
+  String pendingRedemptionsCost(int points) {
+    return '$points נקודות';
+  }
+
+  @override
+  String get pendingRedemptionsApprove => 'מלא';
+
+  @override
+  String get pendingRedemptionsDecline => 'דחה';
+
+  @override
+  String get pendingRedemptionsFulfilledSnackbar => 'הפרס סומן כמומש!';
+
+  @override
+  String get pendingRedemptionsDeclinedSnackbar =>
+      'בקשת הפרס נדחתה. הנקודות הוחזרו.';
+
+  @override
+  String get parentPointsAdjustTitle => 'התאם נקודות';
+
+  @override
+  String get parentPointsAdjustSubtitle => 'הוסף או הפחת נקודות מיתרת הילד.';
+
+  @override
+  String get parentPointsAdjustAddLabel => 'הוסף נקודות';
+
+  @override
+  String get parentPointsAdjustDeductLabel => 'הפחת נקודות';
+
+  @override
+  String get parentPointsAdjustAmountHint => 'כמות';
+
+  @override
+  String get parentPointsAdjustNoteHint => 'סיבה (אופציונלי)';
+
+  @override
+  String get parentPointsAdjustConfirm => 'החל';
+
+  @override
+  String get parentPointsAdjustAppliedSnackbar => 'היתרה עודכנה.';
 }

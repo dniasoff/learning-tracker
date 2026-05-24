@@ -39,24 +39,11 @@ class RewardMilestoneService {
     return getMilestonesForTrack(RewardMilestone.kGlobalTrackSentinel);
   }
 
-  /// Same rules as [PointsService.getGlobalTotal] — reward-eligible tracks only.
+  /// Current debitable balance for reward display (WS7.balance).
+  ///
+  /// Reads from [PointsBalanceDao] — the spend-economy source of truth (DEC-32).
   Future<int> getGlobalPointsForRewards() async {
-    final completions = await _database.completionDao.getCompletionsByProfile(
-      profileId,
-    );
-    if (completions.isEmpty) return 0;
-    final eligibility = <int, bool>{};
-    var sum = 0;
-    for (final c in completions) {
-      final eligible =
-          eligibility[c.trackId] ??
-          await trackCountsTowardRewardPoints(c.trackId);
-      eligibility[c.trackId] = eligible;
-      if (eligible) {
-        sum += c.points;
-      }
-    }
-    return sum;
+    return _database.pointsBalanceDao.getBalance(profileId);
   }
 
   Future<List<RewardMilestone>> getAllMilestones() async {

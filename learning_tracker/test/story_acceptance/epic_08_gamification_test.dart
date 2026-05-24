@@ -156,8 +156,8 @@ void main() {
       );
       expect(bavliTotal, 10);
 
-      // Global
-      final globalTotal = await pointsService.getGlobalTotal();
+      // Global (derived sum — raw completion events, not the debitable balance)
+      final globalTotal = await pointsService.getDerivedTotal();
       expect(globalTotal, 30);
     });
   });

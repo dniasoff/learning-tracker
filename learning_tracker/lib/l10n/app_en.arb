@@ -1774,5 +1774,49 @@
     "placeholders": {
       "term": { "type": "String" }
     }
-  }
+  },
+
+  "redeemScreenTitle": "Redeem Prizes",
+  "redeemScreenBalance": "Your Balance",
+  "redeemScreenNoRewards": "No prizes configured yet.\nAsk a parent to set some up!",
+  "redeemScreenCostLabel": "{points} points",
+  "@redeemScreenCostLabel": {
+    "placeholders": { "points": { "type": "int" } }
+  },
+  "redeemScreenAffordableLabel": "Redeem",
+  "redeemScreenCannotAfford": "Not enough points",
+  "redeemScreenConfirmTitle": "Redeem \"{title}\"?",
+  "@redeemScreenConfirmTitle": {
+    "placeholders": { "title": { "type": "String" } }
+  },
+  "redeemScreenConfirmBody": "This will spend {points} points from your balance.",
+  "@redeemScreenConfirmBody": {
+    "placeholders": { "points": { "type": "int" } }
+  },
+  "redeemScreenConfirmButton": "Spend & Redeem",
+  "redeemScreenRequestedSnackbar": "\"{title}\" requested! Ask a parent to approve it.",
+  "@redeemScreenRequestedSnackbar": {
+    "placeholders": { "title": { "type": "String" } }
+  },
+  "redeemScreenInsufficientSnackbar": "Not enough points to redeem this prize.",
+
+  "pendingRedemptionsTitle": "Pending Prizes",
+  "pendingRedemptionsEmpty": "No pending prize requests.",
+  "pendingRedemptionsCost": "{points} points",
+  "@pendingRedemptionsCost": {
+    "placeholders": { "points": { "type": "int" } }
+  },
+  "pendingRedemptionsApprove": "Fulfil",
+  "pendingRedemptionsDecline": "Decline",
+  "pendingRedemptionsFulfilledSnackbar": "Prize marked as fulfilled!",
+  "pendingRedemptionsDeclinedSnackbar": "Prize request declined. Points refunded.",
+
+  "parentPointsAdjustTitle": "Adjust Points",
+  "parentPointsAdjustSubtitle": "Add or deduct points from your child’s balance.",
+  "parentPointsAdjustAddLabel": "Add points",
+  "parentPointsAdjustDeductLabel": "Deduct points",
+  "parentPointsAdjustAmountHint": "Amount",
+  "parentPointsAdjustNoteHint": "Reason (optional)",
+  "parentPointsAdjustConfirm": "Apply",
+  "parentPointsAdjustAppliedSnackbar": "Balance updated."
 }

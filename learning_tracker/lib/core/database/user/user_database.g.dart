@@ -11320,6 +11320,1254 @@ class SyncKvCompanion extends UpdateCompanion<SyncKvData> {
   }
 }
 
+class $PointsBalanceTable extends PointsBalance
+    with TableInfo<$PointsBalanceTable, PointsBalanceData> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $PointsBalanceTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _profileIdMeta = const VerificationMeta(
+    'profileId',
+  );
+  @override
+  late final GeneratedColumn<int> profileId = GeneratedColumn<int>(
+    'profile_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES learner_profiles (id) ON DELETE CASCADE',
+    ),
+  );
+  static const VerificationMeta _balanceMeta = const VerificationMeta(
+    'balance',
+  );
+  @override
+  late final GeneratedColumn<int> balance = GeneratedColumn<int>(
+    'balance',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant<int>(0),
+  );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+    'updated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [profileId, balance, updatedAt];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'points_balance';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<PointsBalanceData> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('profile_id')) {
+      context.handle(
+        _profileIdMeta,
+        profileId.isAcceptableOrUnknown(data['profile_id']!, _profileIdMeta),
+      );
+    }
+    if (data.containsKey('balance')) {
+      context.handle(
+        _balanceMeta,
+        balance.isAcceptableOrUnknown(data['balance']!, _balanceMeta),
+      );
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_updatedAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {profileId};
+  @override
+  PointsBalanceData map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return PointsBalanceData(
+      profileId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}profile_id'],
+      )!,
+      balance: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}balance'],
+      )!,
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}updated_at'],
+      )!,
+    );
+  }
+
+  @override
+  $PointsBalanceTable createAlias(String alias) {
+    return $PointsBalanceTable(attachedDatabase, alias);
+  }
+}
+
+class PointsBalanceData extends DataClass
+    implements Insertable<PointsBalanceData> {
+  /// FK → learner_profiles(id) CASCADE DELETE.
+  final int profileId;
+
+  /// Current debitable balance. Never negative (enforced in PointsBalanceDao).
+  final int balance;
+  final DateTime updatedAt;
+  const PointsBalanceData({
+    required this.profileId,
+    required this.balance,
+    required this.updatedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['profile_id'] = Variable<int>(profileId);
+    map['balance'] = Variable<int>(balance);
+    map['updated_at'] = Variable<DateTime>(updatedAt);
+    return map;
+  }
+
+  PointsBalanceCompanion toCompanion(bool nullToAbsent) {
+    return PointsBalanceCompanion(
+      profileId: Value(profileId),
+      balance: Value(balance),
+      updatedAt: Value(updatedAt),
+    );
+  }
+
+  factory PointsBalanceData.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return PointsBalanceData(
+      profileId: serializer.fromJson<int>(json['profileId']),
+      balance: serializer.fromJson<int>(json['balance']),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'profileId': serializer.toJson<int>(profileId),
+      'balance': serializer.toJson<int>(balance),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+    };
+  }
+
+  PointsBalanceData copyWith({
+    int? profileId,
+    int? balance,
+    DateTime? updatedAt,
+  }) => PointsBalanceData(
+    profileId: profileId ?? this.profileId,
+    balance: balance ?? this.balance,
+    updatedAt: updatedAt ?? this.updatedAt,
+  );
+  PointsBalanceData copyWithCompanion(PointsBalanceCompanion data) {
+    return PointsBalanceData(
+      profileId: data.profileId.present ? data.profileId.value : this.profileId,
+      balance: data.balance.present ? data.balance.value : this.balance,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('PointsBalanceData(')
+          ..write('profileId: $profileId, ')
+          ..write('balance: $balance, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(profileId, balance, updatedAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is PointsBalanceData &&
+          other.profileId == this.profileId &&
+          other.balance == this.balance &&
+          other.updatedAt == this.updatedAt);
+}
+
+class PointsBalanceCompanion extends UpdateCompanion<PointsBalanceData> {
+  final Value<int> profileId;
+  final Value<int> balance;
+  final Value<DateTime> updatedAt;
+  const PointsBalanceCompanion({
+    this.profileId = const Value.absent(),
+    this.balance = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+  });
+  PointsBalanceCompanion.insert({
+    this.profileId = const Value.absent(),
+    this.balance = const Value.absent(),
+    required DateTime updatedAt,
+  }) : updatedAt = Value(updatedAt);
+  static Insertable<PointsBalanceData> custom({
+    Expression<int>? profileId,
+    Expression<int>? balance,
+    Expression<DateTime>? updatedAt,
+  }) {
+    return RawValuesInsertable({
+      if (profileId != null) 'profile_id': profileId,
+      if (balance != null) 'balance': balance,
+      if (updatedAt != null) 'updated_at': updatedAt,
+    });
+  }
+
+  PointsBalanceCompanion copyWith({
+    Value<int>? profileId,
+    Value<int>? balance,
+    Value<DateTime>? updatedAt,
+  }) {
+    return PointsBalanceCompanion(
+      profileId: profileId ?? this.profileId,
+      balance: balance ?? this.balance,
+      updatedAt: updatedAt ?? this.updatedAt,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (profileId.present) {
+      map['profile_id'] = Variable<int>(profileId.value);
+    }
+    if (balance.present) {
+      map['balance'] = Variable<int>(balance.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('PointsBalanceCompanion(')
+          ..write('profileId: $profileId, ')
+          ..write('balance: $balance, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $PointsLedgerTable extends PointsLedger
+    with TableInfo<$PointsLedgerTable, PointsLedgerData> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $PointsLedgerTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _profileIdMeta = const VerificationMeta(
+    'profileId',
+  );
+  @override
+  late final GeneratedColumn<int> profileId = GeneratedColumn<int>(
+    'profile_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES learner_profiles (id) ON DELETE CASCADE',
+    ),
+  );
+  static const VerificationMeta _entryKindMeta = const VerificationMeta(
+    'entryKind',
+  );
+  @override
+  late final GeneratedColumn<String> entryKind = GeneratedColumn<String>(
+    'entry_kind',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _deltaMeta = const VerificationMeta('delta');
+  @override
+  late final GeneratedColumn<int> delta = GeneratedColumn<int>(
+    'delta',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _noteMeta = const VerificationMeta('note');
+  @override
+  late final GeneratedColumn<String> note = GeneratedColumn<String>(
+    'note',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _redemptionIdMeta = const VerificationMeta(
+    'redemptionId',
+  );
+  @override
+  late final GeneratedColumn<int> redemptionId = GeneratedColumn<int>(
+    'redemption_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    profileId,
+    entryKind,
+    delta,
+    note,
+    redemptionId,
+    createdAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'points_ledger';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<PointsLedgerData> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('profile_id')) {
+      context.handle(
+        _profileIdMeta,
+        profileId.isAcceptableOrUnknown(data['profile_id']!, _profileIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_profileIdMeta);
+    }
+    if (data.containsKey('entry_kind')) {
+      context.handle(
+        _entryKindMeta,
+        entryKind.isAcceptableOrUnknown(data['entry_kind']!, _entryKindMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_entryKindMeta);
+    }
+    if (data.containsKey('delta')) {
+      context.handle(
+        _deltaMeta,
+        delta.isAcceptableOrUnknown(data['delta']!, _deltaMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_deltaMeta);
+    }
+    if (data.containsKey('note')) {
+      context.handle(
+        _noteMeta,
+        note.isAcceptableOrUnknown(data['note']!, _noteMeta),
+      );
+    }
+    if (data.containsKey('redemption_id')) {
+      context.handle(
+        _redemptionIdMeta,
+        redemptionId.isAcceptableOrUnknown(
+          data['redemption_id']!,
+          _redemptionIdMeta,
+        ),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  PointsLedgerData map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return PointsLedgerData(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      profileId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}profile_id'],
+      )!,
+      entryKind: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}entry_kind'],
+      )!,
+      delta: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}delta'],
+      )!,
+      note: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}note'],
+      ),
+      redemptionId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}redemption_id'],
+      ),
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+    );
+  }
+
+  @override
+  $PointsLedgerTable createAlias(String alias) {
+    return $PointsLedgerTable(attachedDatabase, alias);
+  }
+}
+
+class PointsLedgerData extends DataClass
+    implements Insertable<PointsLedgerData> {
+  final int id;
+
+  /// FK → learner_profiles(id) CASCADE DELETE.
+  final int profileId;
+
+  /// `completion` | `redemption_debit` | `redemption_refund`
+  /// | `parent_add` | `parent_deduct`
+  final String entryKind;
+
+  /// Signed delta applied to [PointsBalance.balance].
+  /// Positive = credit; negative = debit.
+  final int delta;
+
+  /// Optional description (note from parent, reward title, etc.).
+  final String? note;
+
+  /// Optional FK to [RewardRedemptions.id] for redemption-related entries.
+  final int? redemptionId;
+  final DateTime createdAt;
+  const PointsLedgerData({
+    required this.id,
+    required this.profileId,
+    required this.entryKind,
+    required this.delta,
+    this.note,
+    this.redemptionId,
+    required this.createdAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['profile_id'] = Variable<int>(profileId);
+    map['entry_kind'] = Variable<String>(entryKind);
+    map['delta'] = Variable<int>(delta);
+    if (!nullToAbsent || note != null) {
+      map['note'] = Variable<String>(note);
+    }
+    if (!nullToAbsent || redemptionId != null) {
+      map['redemption_id'] = Variable<int>(redemptionId);
+    }
+    map['created_at'] = Variable<DateTime>(createdAt);
+    return map;
+  }
+
+  PointsLedgerCompanion toCompanion(bool nullToAbsent) {
+    return PointsLedgerCompanion(
+      id: Value(id),
+      profileId: Value(profileId),
+      entryKind: Value(entryKind),
+      delta: Value(delta),
+      note: note == null && nullToAbsent ? const Value.absent() : Value(note),
+      redemptionId: redemptionId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(redemptionId),
+      createdAt: Value(createdAt),
+    );
+  }
+
+  factory PointsLedgerData.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return PointsLedgerData(
+      id: serializer.fromJson<int>(json['id']),
+      profileId: serializer.fromJson<int>(json['profileId']),
+      entryKind: serializer.fromJson<String>(json['entryKind']),
+      delta: serializer.fromJson<int>(json['delta']),
+      note: serializer.fromJson<String?>(json['note']),
+      redemptionId: serializer.fromJson<int?>(json['redemptionId']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'profileId': serializer.toJson<int>(profileId),
+      'entryKind': serializer.toJson<String>(entryKind),
+      'delta': serializer.toJson<int>(delta),
+      'note': serializer.toJson<String?>(note),
+      'redemptionId': serializer.toJson<int?>(redemptionId),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+    };
+  }
+
+  PointsLedgerData copyWith({
+    int? id,
+    int? profileId,
+    String? entryKind,
+    int? delta,
+    Value<String?> note = const Value.absent(),
+    Value<int?> redemptionId = const Value.absent(),
+    DateTime? createdAt,
+  }) => PointsLedgerData(
+    id: id ?? this.id,
+    profileId: profileId ?? this.profileId,
+    entryKind: entryKind ?? this.entryKind,
+    delta: delta ?? this.delta,
+    note: note.present ? note.value : this.note,
+    redemptionId: redemptionId.present ? redemptionId.value : this.redemptionId,
+    createdAt: createdAt ?? this.createdAt,
+  );
+  PointsLedgerData copyWithCompanion(PointsLedgerCompanion data) {
+    return PointsLedgerData(
+      id: data.id.present ? data.id.value : this.id,
+      profileId: data.profileId.present ? data.profileId.value : this.profileId,
+      entryKind: data.entryKind.present ? data.entryKind.value : this.entryKind,
+      delta: data.delta.present ? data.delta.value : this.delta,
+      note: data.note.present ? data.note.value : this.note,
+      redemptionId: data.redemptionId.present
+          ? data.redemptionId.value
+          : this.redemptionId,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('PointsLedgerData(')
+          ..write('id: $id, ')
+          ..write('profileId: $profileId, ')
+          ..write('entryKind: $entryKind, ')
+          ..write('delta: $delta, ')
+          ..write('note: $note, ')
+          ..write('redemptionId: $redemptionId, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    profileId,
+    entryKind,
+    delta,
+    note,
+    redemptionId,
+    createdAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is PointsLedgerData &&
+          other.id == this.id &&
+          other.profileId == this.profileId &&
+          other.entryKind == this.entryKind &&
+          other.delta == this.delta &&
+          other.note == this.note &&
+          other.redemptionId == this.redemptionId &&
+          other.createdAt == this.createdAt);
+}
+
+class PointsLedgerCompanion extends UpdateCompanion<PointsLedgerData> {
+  final Value<int> id;
+  final Value<int> profileId;
+  final Value<String> entryKind;
+  final Value<int> delta;
+  final Value<String?> note;
+  final Value<int?> redemptionId;
+  final Value<DateTime> createdAt;
+  const PointsLedgerCompanion({
+    this.id = const Value.absent(),
+    this.profileId = const Value.absent(),
+    this.entryKind = const Value.absent(),
+    this.delta = const Value.absent(),
+    this.note = const Value.absent(),
+    this.redemptionId = const Value.absent(),
+    this.createdAt = const Value.absent(),
+  });
+  PointsLedgerCompanion.insert({
+    this.id = const Value.absent(),
+    required int profileId,
+    required String entryKind,
+    required int delta,
+    this.note = const Value.absent(),
+    this.redemptionId = const Value.absent(),
+    required DateTime createdAt,
+  }) : profileId = Value(profileId),
+       entryKind = Value(entryKind),
+       delta = Value(delta),
+       createdAt = Value(createdAt);
+  static Insertable<PointsLedgerData> custom({
+    Expression<int>? id,
+    Expression<int>? profileId,
+    Expression<String>? entryKind,
+    Expression<int>? delta,
+    Expression<String>? note,
+    Expression<int>? redemptionId,
+    Expression<DateTime>? createdAt,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (profileId != null) 'profile_id': profileId,
+      if (entryKind != null) 'entry_kind': entryKind,
+      if (delta != null) 'delta': delta,
+      if (note != null) 'note': note,
+      if (redemptionId != null) 'redemption_id': redemptionId,
+      if (createdAt != null) 'created_at': createdAt,
+    });
+  }
+
+  PointsLedgerCompanion copyWith({
+    Value<int>? id,
+    Value<int>? profileId,
+    Value<String>? entryKind,
+    Value<int>? delta,
+    Value<String?>? note,
+    Value<int?>? redemptionId,
+    Value<DateTime>? createdAt,
+  }) {
+    return PointsLedgerCompanion(
+      id: id ?? this.id,
+      profileId: profileId ?? this.profileId,
+      entryKind: entryKind ?? this.entryKind,
+      delta: delta ?? this.delta,
+      note: note ?? this.note,
+      redemptionId: redemptionId ?? this.redemptionId,
+      createdAt: createdAt ?? this.createdAt,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (profileId.present) {
+      map['profile_id'] = Variable<int>(profileId.value);
+    }
+    if (entryKind.present) {
+      map['entry_kind'] = Variable<String>(entryKind.value);
+    }
+    if (delta.present) {
+      map['delta'] = Variable<int>(delta.value);
+    }
+    if (note.present) {
+      map['note'] = Variable<String>(note.value);
+    }
+    if (redemptionId.present) {
+      map['redemption_id'] = Variable<int>(redemptionId.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('PointsLedgerCompanion(')
+          ..write('id: $id, ')
+          ..write('profileId: $profileId, ')
+          ..write('entryKind: $entryKind, ')
+          ..write('delta: $delta, ')
+          ..write('note: $note, ')
+          ..write('redemptionId: $redemptionId, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $RewardRedemptionsTable extends RewardRedemptions
+    with TableInfo<$RewardRedemptionsTable, RewardRedemption> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $RewardRedemptionsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _profileIdMeta = const VerificationMeta(
+    'profileId',
+  );
+  @override
+  late final GeneratedColumn<int> profileId = GeneratedColumn<int>(
+    'profile_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES learner_profiles (id) ON DELETE CASCADE',
+    ),
+  );
+  static const VerificationMeta _rewardTitleMeta = const VerificationMeta(
+    'rewardTitle',
+  );
+  @override
+  late final GeneratedColumn<String> rewardTitle = GeneratedColumn<String>(
+    'reward_title',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _iconIndexMeta = const VerificationMeta(
+    'iconIndex',
+  );
+  @override
+  late final GeneratedColumn<int> iconIndex = GeneratedColumn<int>(
+    'icon_index',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant<int>(0),
+  );
+  static const VerificationMeta _pointsCostMeta = const VerificationMeta(
+    'pointsCost',
+  );
+  @override
+  late final GeneratedColumn<int> pointsCost = GeneratedColumn<int>(
+    'points_cost',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _statusMeta = const VerificationMeta('status');
+  @override
+  late final GeneratedColumn<String> status = GeneratedColumn<String>(
+    'status',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant<String>('pending_fulfilment'),
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+    'updated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    profileId,
+    rewardTitle,
+    iconIndex,
+    pointsCost,
+    status,
+    createdAt,
+    updatedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'reward_redemptions';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<RewardRedemption> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('profile_id')) {
+      context.handle(
+        _profileIdMeta,
+        profileId.isAcceptableOrUnknown(data['profile_id']!, _profileIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_profileIdMeta);
+    }
+    if (data.containsKey('reward_title')) {
+      context.handle(
+        _rewardTitleMeta,
+        rewardTitle.isAcceptableOrUnknown(
+          data['reward_title']!,
+          _rewardTitleMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_rewardTitleMeta);
+    }
+    if (data.containsKey('icon_index')) {
+      context.handle(
+        _iconIndexMeta,
+        iconIndex.isAcceptableOrUnknown(data['icon_index']!, _iconIndexMeta),
+      );
+    }
+    if (data.containsKey('points_cost')) {
+      context.handle(
+        _pointsCostMeta,
+        pointsCost.isAcceptableOrUnknown(data['points_cost']!, _pointsCostMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_pointsCostMeta);
+    }
+    if (data.containsKey('status')) {
+      context.handle(
+        _statusMeta,
+        status.isAcceptableOrUnknown(data['status']!, _statusMeta),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_updatedAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  RewardRedemption map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return RewardRedemption(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      profileId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}profile_id'],
+      )!,
+      rewardTitle: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}reward_title'],
+      )!,
+      iconIndex: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}icon_index'],
+      )!,
+      pointsCost: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}points_cost'],
+      )!,
+      status: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}status'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}updated_at'],
+      )!,
+    );
+  }
+
+  @override
+  $RewardRedemptionsTable createAlias(String alias) {
+    return $RewardRedemptionsTable(attachedDatabase, alias);
+  }
+}
+
+class RewardRedemption extends DataClass
+    implements Insertable<RewardRedemption> {
+  final int id;
+
+  /// FK → learner_profiles(id) CASCADE DELETE.
+  final int profileId;
+
+  /// Snapshot of the reward title at redemption time.
+  final String rewardTitle;
+
+  /// Snapshot of the reward icon index at redemption time.
+  final int iconIndex;
+
+  /// Points that were debited from the balance when this was created.
+  final int pointsCost;
+
+  /// `pending_fulfilment` | `fulfilled` | `declined`
+  final String status;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+  const RewardRedemption({
+    required this.id,
+    required this.profileId,
+    required this.rewardTitle,
+    required this.iconIndex,
+    required this.pointsCost,
+    required this.status,
+    required this.createdAt,
+    required this.updatedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['profile_id'] = Variable<int>(profileId);
+    map['reward_title'] = Variable<String>(rewardTitle);
+    map['icon_index'] = Variable<int>(iconIndex);
+    map['points_cost'] = Variable<int>(pointsCost);
+    map['status'] = Variable<String>(status);
+    map['created_at'] = Variable<DateTime>(createdAt);
+    map['updated_at'] = Variable<DateTime>(updatedAt);
+    return map;
+  }
+
+  RewardRedemptionsCompanion toCompanion(bool nullToAbsent) {
+    return RewardRedemptionsCompanion(
+      id: Value(id),
+      profileId: Value(profileId),
+      rewardTitle: Value(rewardTitle),
+      iconIndex: Value(iconIndex),
+      pointsCost: Value(pointsCost),
+      status: Value(status),
+      createdAt: Value(createdAt),
+      updatedAt: Value(updatedAt),
+    );
+  }
+
+  factory RewardRedemption.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return RewardRedemption(
+      id: serializer.fromJson<int>(json['id']),
+      profileId: serializer.fromJson<int>(json['profileId']),
+      rewardTitle: serializer.fromJson<String>(json['rewardTitle']),
+      iconIndex: serializer.fromJson<int>(json['iconIndex']),
+      pointsCost: serializer.fromJson<int>(json['pointsCost']),
+      status: serializer.fromJson<String>(json['status']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'profileId': serializer.toJson<int>(profileId),
+      'rewardTitle': serializer.toJson<String>(rewardTitle),
+      'iconIndex': serializer.toJson<int>(iconIndex),
+      'pointsCost': serializer.toJson<int>(pointsCost),
+      'status': serializer.toJson<String>(status),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+    };
+  }
+
+  RewardRedemption copyWith({
+    int? id,
+    int? profileId,
+    String? rewardTitle,
+    int? iconIndex,
+    int? pointsCost,
+    String? status,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+  }) => RewardRedemption(
+    id: id ?? this.id,
+    profileId: profileId ?? this.profileId,
+    rewardTitle: rewardTitle ?? this.rewardTitle,
+    iconIndex: iconIndex ?? this.iconIndex,
+    pointsCost: pointsCost ?? this.pointsCost,
+    status: status ?? this.status,
+    createdAt: createdAt ?? this.createdAt,
+    updatedAt: updatedAt ?? this.updatedAt,
+  );
+  RewardRedemption copyWithCompanion(RewardRedemptionsCompanion data) {
+    return RewardRedemption(
+      id: data.id.present ? data.id.value : this.id,
+      profileId: data.profileId.present ? data.profileId.value : this.profileId,
+      rewardTitle: data.rewardTitle.present
+          ? data.rewardTitle.value
+          : this.rewardTitle,
+      iconIndex: data.iconIndex.present ? data.iconIndex.value : this.iconIndex,
+      pointsCost: data.pointsCost.present
+          ? data.pointsCost.value
+          : this.pointsCost,
+      status: data.status.present ? data.status.value : this.status,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('RewardRedemption(')
+          ..write('id: $id, ')
+          ..write('profileId: $profileId, ')
+          ..write('rewardTitle: $rewardTitle, ')
+          ..write('iconIndex: $iconIndex, ')
+          ..write('pointsCost: $pointsCost, ')
+          ..write('status: $status, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    profileId,
+    rewardTitle,
+    iconIndex,
+    pointsCost,
+    status,
+    createdAt,
+    updatedAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is RewardRedemption &&
+          other.id == this.id &&
+          other.profileId == this.profileId &&
+          other.rewardTitle == this.rewardTitle &&
+          other.iconIndex == this.iconIndex &&
+          other.pointsCost == this.pointsCost &&
+          other.status == this.status &&
+          other.createdAt == this.createdAt &&
+          other.updatedAt == this.updatedAt);
+}
+
+class RewardRedemptionsCompanion extends UpdateCompanion<RewardRedemption> {
+  final Value<int> id;
+  final Value<int> profileId;
+  final Value<String> rewardTitle;
+  final Value<int> iconIndex;
+  final Value<int> pointsCost;
+  final Value<String> status;
+  final Value<DateTime> createdAt;
+  final Value<DateTime> updatedAt;
+  const RewardRedemptionsCompanion({
+    this.id = const Value.absent(),
+    this.profileId = const Value.absent(),
+    this.rewardTitle = const Value.absent(),
+    this.iconIndex = const Value.absent(),
+    this.pointsCost = const Value.absent(),
+    this.status = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+  });
+  RewardRedemptionsCompanion.insert({
+    this.id = const Value.absent(),
+    required int profileId,
+    required String rewardTitle,
+    this.iconIndex = const Value.absent(),
+    required int pointsCost,
+    this.status = const Value.absent(),
+    required DateTime createdAt,
+    required DateTime updatedAt,
+  }) : profileId = Value(profileId),
+       rewardTitle = Value(rewardTitle),
+       pointsCost = Value(pointsCost),
+       createdAt = Value(createdAt),
+       updatedAt = Value(updatedAt);
+  static Insertable<RewardRedemption> custom({
+    Expression<int>? id,
+    Expression<int>? profileId,
+    Expression<String>? rewardTitle,
+    Expression<int>? iconIndex,
+    Expression<int>? pointsCost,
+    Expression<String>? status,
+    Expression<DateTime>? createdAt,
+    Expression<DateTime>? updatedAt,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (profileId != null) 'profile_id': profileId,
+      if (rewardTitle != null) 'reward_title': rewardTitle,
+      if (iconIndex != null) 'icon_index': iconIndex,
+      if (pointsCost != null) 'points_cost': pointsCost,
+      if (status != null) 'status': status,
+      if (createdAt != null) 'created_at': createdAt,
+      if (updatedAt != null) 'updated_at': updatedAt,
+    });
+  }
+
+  RewardRedemptionsCompanion copyWith({
+    Value<int>? id,
+    Value<int>? profileId,
+    Value<String>? rewardTitle,
+    Value<int>? iconIndex,
+    Value<int>? pointsCost,
+    Value<String>? status,
+    Value<DateTime>? createdAt,
+    Value<DateTime>? updatedAt,
+  }) {
+    return RewardRedemptionsCompanion(
+      id: id ?? this.id,
+      profileId: profileId ?? this.profileId,
+      rewardTitle: rewardTitle ?? this.rewardTitle,
+      iconIndex: iconIndex ?? this.iconIndex,
+      pointsCost: pointsCost ?? this.pointsCost,
+      status: status ?? this.status,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (profileId.present) {
+      map['profile_id'] = Variable<int>(profileId.value);
+    }
+    if (rewardTitle.present) {
+      map['reward_title'] = Variable<String>(rewardTitle.value);
+    }
+    if (iconIndex.present) {
+      map['icon_index'] = Variable<int>(iconIndex.value);
+    }
+    if (pointsCost.present) {
+      map['points_cost'] = Variable<int>(pointsCost.value);
+    }
+    if (status.present) {
+      map['status'] = Variable<String>(status.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('RewardRedemptionsCompanion(')
+          ..write('id: $id, ')
+          ..write('profileId: $profileId, ')
+          ..write('rewardTitle: $rewardTitle, ')
+          ..write('iconIndex: $iconIndex, ')
+          ..write('pointsCost: $pointsCost, ')
+          ..write('status: $status, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+}
+
 class CompletionsViewData extends DataClass {
   final int id;
   final int profileId;
@@ -11628,6 +12876,10 @@ abstract class _$UserDatabase extends GeneratedDatabase {
   late final $PriorCompletionImportsTable priorCompletionImports =
       $PriorCompletionImportsTable(this);
   late final $SyncKvTable syncKv = $SyncKvTable(this);
+  late final $PointsBalanceTable pointsBalance = $PointsBalanceTable(this);
+  late final $PointsLedgerTable pointsLedger = $PointsLedgerTable(this);
+  late final $RewardRedemptionsTable rewardRedemptions =
+      $RewardRedemptionsTable(this);
   late final $CompletionsViewView completionsView = $CompletionsViewView(this);
   late final Index completionEventsNaturalKey = Index(
     'completion_events_natural_key',
@@ -11665,6 +12917,9 @@ abstract class _$UserDatabase extends GeneratedDatabase {
   );
   late final GoalDao goalDao = GoalDao(this as UserDatabase);
   late final PointConfigDao pointConfigDao = PointConfigDao(
+    this as UserDatabase,
+  );
+  late final PointsBalanceDao pointsBalanceDao = PointsBalanceDao(
     this as UserDatabase,
   );
   late final StageDao stageDao = StageDao(this as UserDatabase);
@@ -11723,6 +12978,9 @@ abstract class _$UserDatabase extends GeneratedDatabase {
     sacredWindowEntries,
     priorCompletionImports,
     syncKv,
+    pointsBalance,
+    pointsLedger,
+    rewardRedemptions,
     completionsView,
     completionEventsNaturalKey,
     learningLedgerProfileCreated,
@@ -11817,6 +13075,27 @@ abstract class _$UserDatabase extends GeneratedDatabase {
       result: [
         TableUpdate('prior_completion_imports', kind: UpdateKind.delete),
       ],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'learner_profiles',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('points_balance', kind: UpdateKind.delete)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'learner_profiles',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('points_ledger', kind: UpdateKind.delete)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'learner_profiles',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('reward_redemptions', kind: UpdateKind.delete)],
     ),
   ]);
 }
@@ -12455,6 +13734,72 @@ final class $$LearnerProfilesTableReferences
       manager.$state.copyWith(prefetchedData: cache),
     );
   }
+
+  static MultiTypedResultKey<$PointsBalanceTable, List<PointsBalanceData>>
+  _pointsBalanceRefsTable(_$UserDatabase db) => MultiTypedResultKey.fromTable(
+    db.pointsBalance,
+    aliasName: $_aliasNameGenerator(
+      db.learnerProfiles.id,
+      db.pointsBalance.profileId,
+    ),
+  );
+
+  $$PointsBalanceTableProcessedTableManager get pointsBalanceRefs {
+    final manager = $$PointsBalanceTableTableManager(
+      $_db,
+      $_db.pointsBalance,
+    ).filter((f) => f.profileId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_pointsBalanceRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<$PointsLedgerTable, List<PointsLedgerData>>
+  _pointsLedgerRefsTable(_$UserDatabase db) => MultiTypedResultKey.fromTable(
+    db.pointsLedger,
+    aliasName: $_aliasNameGenerator(
+      db.learnerProfiles.id,
+      db.pointsLedger.profileId,
+    ),
+  );
+
+  $$PointsLedgerTableProcessedTableManager get pointsLedgerRefs {
+    final manager = $$PointsLedgerTableTableManager(
+      $_db,
+      $_db.pointsLedger,
+    ).filter((f) => f.profileId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_pointsLedgerRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<$RewardRedemptionsTable, List<RewardRedemption>>
+  _rewardRedemptionsRefsTable(_$UserDatabase db) =>
+      MultiTypedResultKey.fromTable(
+        db.rewardRedemptions,
+        aliasName: $_aliasNameGenerator(
+          db.learnerProfiles.id,
+          db.rewardRedemptions.profileId,
+        ),
+      );
+
+  $$RewardRedemptionsTableProcessedTableManager get rewardRedemptionsRefs {
+    final manager = $$RewardRedemptionsTableTableManager(
+      $_db,
+      $_db.rewardRedemptions,
+    ).filter((f) => f.profileId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _rewardRedemptionsRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
 }
 
 class $$LearnerProfilesTableFilterComposer
@@ -12742,6 +14087,81 @@ class $$LearnerProfilesTableFilterComposer
                     $removeJoinBuilderFromRootComposer,
               ),
         );
+    return f(composer);
+  }
+
+  Expression<bool> pointsBalanceRefs(
+    Expression<bool> Function($$PointsBalanceTableFilterComposer f) f,
+  ) {
+    final $$PointsBalanceTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.pointsBalance,
+      getReferencedColumn: (t) => t.profileId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$PointsBalanceTableFilterComposer(
+            $db: $db,
+            $table: $db.pointsBalance,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> pointsLedgerRefs(
+    Expression<bool> Function($$PointsLedgerTableFilterComposer f) f,
+  ) {
+    final $$PointsLedgerTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.pointsLedger,
+      getReferencedColumn: (t) => t.profileId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$PointsLedgerTableFilterComposer(
+            $db: $db,
+            $table: $db.pointsLedger,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> rewardRedemptionsRefs(
+    Expression<bool> Function($$RewardRedemptionsTableFilterComposer f) f,
+  ) {
+    final $$RewardRedemptionsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.rewardRedemptions,
+      getReferencedColumn: (t) => t.profileId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$RewardRedemptionsTableFilterComposer(
+            $db: $db,
+            $table: $db.rewardRedemptions,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
     return f(composer);
   }
 }
@@ -13088,6 +14508,82 @@ class $$LearnerProfilesTableAnnotationComposer
         );
     return f(composer);
   }
+
+  Expression<T> pointsBalanceRefs<T extends Object>(
+    Expression<T> Function($$PointsBalanceTableAnnotationComposer a) f,
+  ) {
+    final $$PointsBalanceTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.pointsBalance,
+      getReferencedColumn: (t) => t.profileId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$PointsBalanceTableAnnotationComposer(
+            $db: $db,
+            $table: $db.pointsBalance,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<T> pointsLedgerRefs<T extends Object>(
+    Expression<T> Function($$PointsLedgerTableAnnotationComposer a) f,
+  ) {
+    final $$PointsLedgerTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.pointsLedger,
+      getReferencedColumn: (t) => t.profileId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$PointsLedgerTableAnnotationComposer(
+            $db: $db,
+            $table: $db.pointsLedger,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<T> rewardRedemptionsRefs<T extends Object>(
+    Expression<T> Function($$RewardRedemptionsTableAnnotationComposer a) f,
+  ) {
+    final $$RewardRedemptionsTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.rewardRedemptions,
+          getReferencedColumn: (t) => t.profileId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$RewardRedemptionsTableAnnotationComposer(
+                $db: $db,
+                $table: $db.rewardRedemptions,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
 }
 
 class $$LearnerProfilesTableTableManager
@@ -13114,6 +14610,9 @@ class $$LearnerProfilesTableTableManager
             bool goalsRefs,
             bool streakEventsRefs,
             bool priorCompletionImportsRefs,
+            bool pointsBalanceRefs,
+            bool pointsLedgerRefs,
+            bool rewardRedemptionsRefs,
           })
         > {
   $$LearnerProfilesTableTableManager(
@@ -13185,6 +14684,9 @@ class $$LearnerProfilesTableTableManager
                 goalsRefs = false,
                 streakEventsRefs = false,
                 priorCompletionImportsRefs = false,
+                pointsBalanceRefs = false,
+                pointsLedgerRefs = false,
+                rewardRedemptionsRefs = false,
               }) {
                 return PrefetchHooks(
                   db: db,
@@ -13198,6 +14700,9 @@ class $$LearnerProfilesTableTableManager
                     if (goalsRefs) db.goals,
                     if (streakEventsRefs) db.streakEvents,
                     if (priorCompletionImportsRefs) db.priorCompletionImports,
+                    if (pointsBalanceRefs) db.pointsBalance,
+                    if (pointsLedgerRefs) db.pointsLedger,
+                    if (rewardRedemptionsRefs) db.rewardRedemptions,
                   ],
                   addJoins:
                       <
@@ -13424,6 +14929,69 @@ class $$LearnerProfilesTableTableManager
                               ),
                           typedResults: items,
                         ),
+                      if (pointsBalanceRefs)
+                        await $_getPrefetchedData<
+                          LearnerProfile,
+                          $LearnerProfilesTable,
+                          PointsBalanceData
+                        >(
+                          currentTable: table,
+                          referencedTable: $$LearnerProfilesTableReferences
+                              ._pointsBalanceRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$LearnerProfilesTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).pointsBalanceRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.profileId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                      if (pointsLedgerRefs)
+                        await $_getPrefetchedData<
+                          LearnerProfile,
+                          $LearnerProfilesTable,
+                          PointsLedgerData
+                        >(
+                          currentTable: table,
+                          referencedTable: $$LearnerProfilesTableReferences
+                              ._pointsLedgerRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$LearnerProfilesTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).pointsLedgerRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.profileId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                      if (rewardRedemptionsRefs)
+                        await $_getPrefetchedData<
+                          LearnerProfile,
+                          $LearnerProfilesTable,
+                          RewardRedemption
+                        >(
+                          currentTable: table,
+                          referencedTable: $$LearnerProfilesTableReferences
+                              ._rewardRedemptionsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$LearnerProfilesTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).rewardRedemptionsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.profileId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
                     ];
                   },
                 );
@@ -13455,6 +15023,9 @@ typedef $$LearnerProfilesTableProcessedTableManager =
         bool goalsRefs,
         bool streakEventsRefs,
         bool priorCompletionImportsRefs,
+        bool pointsBalanceRefs,
+        bool pointsLedgerRefs,
+        bool rewardRedemptionsRefs,
       })
     >;
 typedef $$CurriculumTracksTableCreateCompanionBuilder =
@@ -21067,6 +22638,1033 @@ typedef $$SyncKvTableProcessedTableManager =
       SyncKvData,
       PrefetchHooks Function()
     >;
+typedef $$PointsBalanceTableCreateCompanionBuilder =
+    PointsBalanceCompanion Function({
+      Value<int> profileId,
+      Value<int> balance,
+      required DateTime updatedAt,
+    });
+typedef $$PointsBalanceTableUpdateCompanionBuilder =
+    PointsBalanceCompanion Function({
+      Value<int> profileId,
+      Value<int> balance,
+      Value<DateTime> updatedAt,
+    });
+
+final class $$PointsBalanceTableReferences
+    extends
+        BaseReferences<_$UserDatabase, $PointsBalanceTable, PointsBalanceData> {
+  $$PointsBalanceTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static $LearnerProfilesTable _profileIdTable(_$UserDatabase db) =>
+      db.learnerProfiles.createAlias(
+        $_aliasNameGenerator(db.pointsBalance.profileId, db.learnerProfiles.id),
+      );
+
+  $$LearnerProfilesTableProcessedTableManager get profileId {
+    final $_column = $_itemColumn<int>('profile_id')!;
+
+    final manager = $$LearnerProfilesTableTableManager(
+      $_db,
+      $_db.learnerProfiles,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_profileIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$PointsBalanceTableFilterComposer
+    extends Composer<_$UserDatabase, $PointsBalanceTable> {
+  $$PointsBalanceTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get balance => $composableBuilder(
+    column: $table.balance,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$LearnerProfilesTableFilterComposer get profileId {
+    final $$LearnerProfilesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.profileId,
+      referencedTable: $db.learnerProfiles,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$LearnerProfilesTableFilterComposer(
+            $db: $db,
+            $table: $db.learnerProfiles,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$PointsBalanceTableOrderingComposer
+    extends Composer<_$UserDatabase, $PointsBalanceTable> {
+  $$PointsBalanceTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get balance => $composableBuilder(
+    column: $table.balance,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$LearnerProfilesTableOrderingComposer get profileId {
+    final $$LearnerProfilesTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.profileId,
+      referencedTable: $db.learnerProfiles,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$LearnerProfilesTableOrderingComposer(
+            $db: $db,
+            $table: $db.learnerProfiles,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$PointsBalanceTableAnnotationComposer
+    extends Composer<_$UserDatabase, $PointsBalanceTable> {
+  $$PointsBalanceTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get balance =>
+      $composableBuilder(column: $table.balance, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  $$LearnerProfilesTableAnnotationComposer get profileId {
+    final $$LearnerProfilesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.profileId,
+      referencedTable: $db.learnerProfiles,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$LearnerProfilesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.learnerProfiles,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$PointsBalanceTableTableManager
+    extends
+        RootTableManager<
+          _$UserDatabase,
+          $PointsBalanceTable,
+          PointsBalanceData,
+          $$PointsBalanceTableFilterComposer,
+          $$PointsBalanceTableOrderingComposer,
+          $$PointsBalanceTableAnnotationComposer,
+          $$PointsBalanceTableCreateCompanionBuilder,
+          $$PointsBalanceTableUpdateCompanionBuilder,
+          (PointsBalanceData, $$PointsBalanceTableReferences),
+          PointsBalanceData,
+          PrefetchHooks Function({bool profileId})
+        > {
+  $$PointsBalanceTableTableManager(_$UserDatabase db, $PointsBalanceTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$PointsBalanceTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$PointsBalanceTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$PointsBalanceTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> profileId = const Value.absent(),
+                Value<int> balance = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
+              }) => PointsBalanceCompanion(
+                profileId: profileId,
+                balance: balance,
+                updatedAt: updatedAt,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> profileId = const Value.absent(),
+                Value<int> balance = const Value.absent(),
+                required DateTime updatedAt,
+              }) => PointsBalanceCompanion.insert(
+                profileId: profileId,
+                balance: balance,
+                updatedAt: updatedAt,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$PointsBalanceTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({profileId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (profileId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.profileId,
+                                referencedTable: $$PointsBalanceTableReferences
+                                    ._profileIdTable(db),
+                                referencedColumn: $$PointsBalanceTableReferences
+                                    ._profileIdTable(db)
+                                    .id,
+                              )
+                              as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$PointsBalanceTableProcessedTableManager =
+    ProcessedTableManager<
+      _$UserDatabase,
+      $PointsBalanceTable,
+      PointsBalanceData,
+      $$PointsBalanceTableFilterComposer,
+      $$PointsBalanceTableOrderingComposer,
+      $$PointsBalanceTableAnnotationComposer,
+      $$PointsBalanceTableCreateCompanionBuilder,
+      $$PointsBalanceTableUpdateCompanionBuilder,
+      (PointsBalanceData, $$PointsBalanceTableReferences),
+      PointsBalanceData,
+      PrefetchHooks Function({bool profileId})
+    >;
+typedef $$PointsLedgerTableCreateCompanionBuilder =
+    PointsLedgerCompanion Function({
+      Value<int> id,
+      required int profileId,
+      required String entryKind,
+      required int delta,
+      Value<String?> note,
+      Value<int?> redemptionId,
+      required DateTime createdAt,
+    });
+typedef $$PointsLedgerTableUpdateCompanionBuilder =
+    PointsLedgerCompanion Function({
+      Value<int> id,
+      Value<int> profileId,
+      Value<String> entryKind,
+      Value<int> delta,
+      Value<String?> note,
+      Value<int?> redemptionId,
+      Value<DateTime> createdAt,
+    });
+
+final class $$PointsLedgerTableReferences
+    extends
+        BaseReferences<_$UserDatabase, $PointsLedgerTable, PointsLedgerData> {
+  $$PointsLedgerTableReferences(super.$_db, super.$_table, super.$_typedResult);
+
+  static $LearnerProfilesTable _profileIdTable(_$UserDatabase db) =>
+      db.learnerProfiles.createAlias(
+        $_aliasNameGenerator(db.pointsLedger.profileId, db.learnerProfiles.id),
+      );
+
+  $$LearnerProfilesTableProcessedTableManager get profileId {
+    final $_column = $_itemColumn<int>('profile_id')!;
+
+    final manager = $$LearnerProfilesTableTableManager(
+      $_db,
+      $_db.learnerProfiles,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_profileIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$PointsLedgerTableFilterComposer
+    extends Composer<_$UserDatabase, $PointsLedgerTable> {
+  $$PointsLedgerTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get entryKind => $composableBuilder(
+    column: $table.entryKind,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get delta => $composableBuilder(
+    column: $table.delta,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get note => $composableBuilder(
+    column: $table.note,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get redemptionId => $composableBuilder(
+    column: $table.redemptionId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$LearnerProfilesTableFilterComposer get profileId {
+    final $$LearnerProfilesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.profileId,
+      referencedTable: $db.learnerProfiles,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$LearnerProfilesTableFilterComposer(
+            $db: $db,
+            $table: $db.learnerProfiles,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$PointsLedgerTableOrderingComposer
+    extends Composer<_$UserDatabase, $PointsLedgerTable> {
+  $$PointsLedgerTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get entryKind => $composableBuilder(
+    column: $table.entryKind,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get delta => $composableBuilder(
+    column: $table.delta,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get note => $composableBuilder(
+    column: $table.note,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get redemptionId => $composableBuilder(
+    column: $table.redemptionId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$LearnerProfilesTableOrderingComposer get profileId {
+    final $$LearnerProfilesTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.profileId,
+      referencedTable: $db.learnerProfiles,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$LearnerProfilesTableOrderingComposer(
+            $db: $db,
+            $table: $db.learnerProfiles,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$PointsLedgerTableAnnotationComposer
+    extends Composer<_$UserDatabase, $PointsLedgerTable> {
+  $$PointsLedgerTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get entryKind =>
+      $composableBuilder(column: $table.entryKind, builder: (column) => column);
+
+  GeneratedColumn<int> get delta =>
+      $composableBuilder(column: $table.delta, builder: (column) => column);
+
+  GeneratedColumn<String> get note =>
+      $composableBuilder(column: $table.note, builder: (column) => column);
+
+  GeneratedColumn<int> get redemptionId => $composableBuilder(
+    column: $table.redemptionId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  $$LearnerProfilesTableAnnotationComposer get profileId {
+    final $$LearnerProfilesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.profileId,
+      referencedTable: $db.learnerProfiles,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$LearnerProfilesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.learnerProfiles,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$PointsLedgerTableTableManager
+    extends
+        RootTableManager<
+          _$UserDatabase,
+          $PointsLedgerTable,
+          PointsLedgerData,
+          $$PointsLedgerTableFilterComposer,
+          $$PointsLedgerTableOrderingComposer,
+          $$PointsLedgerTableAnnotationComposer,
+          $$PointsLedgerTableCreateCompanionBuilder,
+          $$PointsLedgerTableUpdateCompanionBuilder,
+          (PointsLedgerData, $$PointsLedgerTableReferences),
+          PointsLedgerData,
+          PrefetchHooks Function({bool profileId})
+        > {
+  $$PointsLedgerTableTableManager(_$UserDatabase db, $PointsLedgerTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$PointsLedgerTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$PointsLedgerTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$PointsLedgerTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<int> profileId = const Value.absent(),
+                Value<String> entryKind = const Value.absent(),
+                Value<int> delta = const Value.absent(),
+                Value<String?> note = const Value.absent(),
+                Value<int?> redemptionId = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+              }) => PointsLedgerCompanion(
+                id: id,
+                profileId: profileId,
+                entryKind: entryKind,
+                delta: delta,
+                note: note,
+                redemptionId: redemptionId,
+                createdAt: createdAt,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required int profileId,
+                required String entryKind,
+                required int delta,
+                Value<String?> note = const Value.absent(),
+                Value<int?> redemptionId = const Value.absent(),
+                required DateTime createdAt,
+              }) => PointsLedgerCompanion.insert(
+                id: id,
+                profileId: profileId,
+                entryKind: entryKind,
+                delta: delta,
+                note: note,
+                redemptionId: redemptionId,
+                createdAt: createdAt,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$PointsLedgerTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({profileId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (profileId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.profileId,
+                                referencedTable: $$PointsLedgerTableReferences
+                                    ._profileIdTable(db),
+                                referencedColumn: $$PointsLedgerTableReferences
+                                    ._profileIdTable(db)
+                                    .id,
+                              )
+                              as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$PointsLedgerTableProcessedTableManager =
+    ProcessedTableManager<
+      _$UserDatabase,
+      $PointsLedgerTable,
+      PointsLedgerData,
+      $$PointsLedgerTableFilterComposer,
+      $$PointsLedgerTableOrderingComposer,
+      $$PointsLedgerTableAnnotationComposer,
+      $$PointsLedgerTableCreateCompanionBuilder,
+      $$PointsLedgerTableUpdateCompanionBuilder,
+      (PointsLedgerData, $$PointsLedgerTableReferences),
+      PointsLedgerData,
+      PrefetchHooks Function({bool profileId})
+    >;
+typedef $$RewardRedemptionsTableCreateCompanionBuilder =
+    RewardRedemptionsCompanion Function({
+      Value<int> id,
+      required int profileId,
+      required String rewardTitle,
+      Value<int> iconIndex,
+      required int pointsCost,
+      Value<String> status,
+      required DateTime createdAt,
+      required DateTime updatedAt,
+    });
+typedef $$RewardRedemptionsTableUpdateCompanionBuilder =
+    RewardRedemptionsCompanion Function({
+      Value<int> id,
+      Value<int> profileId,
+      Value<String> rewardTitle,
+      Value<int> iconIndex,
+      Value<int> pointsCost,
+      Value<String> status,
+      Value<DateTime> createdAt,
+      Value<DateTime> updatedAt,
+    });
+
+final class $$RewardRedemptionsTableReferences
+    extends
+        BaseReferences<
+          _$UserDatabase,
+          $RewardRedemptionsTable,
+          RewardRedemption
+        > {
+  $$RewardRedemptionsTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static $LearnerProfilesTable _profileIdTable(_$UserDatabase db) =>
+      db.learnerProfiles.createAlias(
+        $_aliasNameGenerator(
+          db.rewardRedemptions.profileId,
+          db.learnerProfiles.id,
+        ),
+      );
+
+  $$LearnerProfilesTableProcessedTableManager get profileId {
+    final $_column = $_itemColumn<int>('profile_id')!;
+
+    final manager = $$LearnerProfilesTableTableManager(
+      $_db,
+      $_db.learnerProfiles,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_profileIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$RewardRedemptionsTableFilterComposer
+    extends Composer<_$UserDatabase, $RewardRedemptionsTable> {
+  $$RewardRedemptionsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get rewardTitle => $composableBuilder(
+    column: $table.rewardTitle,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get iconIndex => $composableBuilder(
+    column: $table.iconIndex,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get pointsCost => $composableBuilder(
+    column: $table.pointsCost,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get status => $composableBuilder(
+    column: $table.status,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$LearnerProfilesTableFilterComposer get profileId {
+    final $$LearnerProfilesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.profileId,
+      referencedTable: $db.learnerProfiles,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$LearnerProfilesTableFilterComposer(
+            $db: $db,
+            $table: $db.learnerProfiles,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$RewardRedemptionsTableOrderingComposer
+    extends Composer<_$UserDatabase, $RewardRedemptionsTable> {
+  $$RewardRedemptionsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get rewardTitle => $composableBuilder(
+    column: $table.rewardTitle,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get iconIndex => $composableBuilder(
+    column: $table.iconIndex,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get pointsCost => $composableBuilder(
+    column: $table.pointsCost,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get status => $composableBuilder(
+    column: $table.status,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$LearnerProfilesTableOrderingComposer get profileId {
+    final $$LearnerProfilesTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.profileId,
+      referencedTable: $db.learnerProfiles,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$LearnerProfilesTableOrderingComposer(
+            $db: $db,
+            $table: $db.learnerProfiles,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$RewardRedemptionsTableAnnotationComposer
+    extends Composer<_$UserDatabase, $RewardRedemptionsTable> {
+  $$RewardRedemptionsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get rewardTitle => $composableBuilder(
+    column: $table.rewardTitle,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get iconIndex =>
+      $composableBuilder(column: $table.iconIndex, builder: (column) => column);
+
+  GeneratedColumn<int> get pointsCost => $composableBuilder(
+    column: $table.pointsCost,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get status =>
+      $composableBuilder(column: $table.status, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  $$LearnerProfilesTableAnnotationComposer get profileId {
+    final $$LearnerProfilesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.profileId,
+      referencedTable: $db.learnerProfiles,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$LearnerProfilesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.learnerProfiles,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$RewardRedemptionsTableTableManager
+    extends
+        RootTableManager<
+          _$UserDatabase,
+          $RewardRedemptionsTable,
+          RewardRedemption,
+          $$RewardRedemptionsTableFilterComposer,
+          $$RewardRedemptionsTableOrderingComposer,
+          $$RewardRedemptionsTableAnnotationComposer,
+          $$RewardRedemptionsTableCreateCompanionBuilder,
+          $$RewardRedemptionsTableUpdateCompanionBuilder,
+          (RewardRedemption, $$RewardRedemptionsTableReferences),
+          RewardRedemption,
+          PrefetchHooks Function({bool profileId})
+        > {
+  $$RewardRedemptionsTableTableManager(
+    _$UserDatabase db,
+    $RewardRedemptionsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$RewardRedemptionsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$RewardRedemptionsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$RewardRedemptionsTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<int> profileId = const Value.absent(),
+                Value<String> rewardTitle = const Value.absent(),
+                Value<int> iconIndex = const Value.absent(),
+                Value<int> pointsCost = const Value.absent(),
+                Value<String> status = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
+              }) => RewardRedemptionsCompanion(
+                id: id,
+                profileId: profileId,
+                rewardTitle: rewardTitle,
+                iconIndex: iconIndex,
+                pointsCost: pointsCost,
+                status: status,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required int profileId,
+                required String rewardTitle,
+                Value<int> iconIndex = const Value.absent(),
+                required int pointsCost,
+                Value<String> status = const Value.absent(),
+                required DateTime createdAt,
+                required DateTime updatedAt,
+              }) => RewardRedemptionsCompanion.insert(
+                id: id,
+                profileId: profileId,
+                rewardTitle: rewardTitle,
+                iconIndex: iconIndex,
+                pointsCost: pointsCost,
+                status: status,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$RewardRedemptionsTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({profileId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (profileId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.profileId,
+                                referencedTable:
+                                    $$RewardRedemptionsTableReferences
+                                        ._profileIdTable(db),
+                                referencedColumn:
+                                    $$RewardRedemptionsTableReferences
+                                        ._profileIdTable(db)
+                                        .id,
+                              )
+                              as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$RewardRedemptionsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$UserDatabase,
+      $RewardRedemptionsTable,
+      RewardRedemption,
+      $$RewardRedemptionsTableFilterComposer,
+      $$RewardRedemptionsTableOrderingComposer,
+      $$RewardRedemptionsTableAnnotationComposer,
+      $$RewardRedemptionsTableCreateCompanionBuilder,
+      $$RewardRedemptionsTableUpdateCompanionBuilder,
+      (RewardRedemption, $$RewardRedemptionsTableReferences),
+      RewardRedemption,
+      PrefetchHooks Function({bool profileId})
+    >;
 
 class $UserDatabaseManager {
   final _$UserDatabase _db;
@@ -21116,4 +23714,10 @@ class $UserDatabaseManager {
       );
   $$SyncKvTableTableManager get syncKv =>
       $$SyncKvTableTableManager(_db, _db.syncKv);
+  $$PointsBalanceTableTableManager get pointsBalance =>
+      $$PointsBalanceTableTableManager(_db, _db.pointsBalance);
+  $$PointsLedgerTableTableManager get pointsLedger =>
+      $$PointsLedgerTableTableManager(_db, _db.pointsLedger);
+  $$RewardRedemptionsTableTableManager get rewardRedemptions =>
+      $$RewardRedemptionsTableTableManager(_db, _db.rewardRedemptions);
 }

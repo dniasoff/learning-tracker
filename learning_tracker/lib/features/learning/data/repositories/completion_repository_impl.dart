@@ -200,6 +200,17 @@ class CompletionRepositoryImpl implements CompletionRepository {
       // B1: milestone unlocks are engagement-tier — skip for bulkInTrack /
       // lifetimeOnly sources (awardGamificationPoints = false).
       if (isChildProfile && awardGamificationPoints) {
+        // WS7.balance: credit the stored debitable balance for every point
+        // earned on a live completion. Awaited (Drift is in-process/fast; no
+        // meaningful UI delay, and awaiting avoids DB-closed races in tests).
+        if (completion.points > 0) {
+          await _database.pointsBalanceDao.creditCompletion(
+            _activeProfileId,
+            completion.points,
+            note: '${completion.curriculumId}:${completion.sefariaRef}',
+          );
+        }
+
         final trackUnlocks =
             await _rewardMilestoneService?.evaluateUnlocksForTrack(
               completion.trackId,

@@ -842,7 +842,7 @@ void main() {
     });
 
     test(
-      'unlocks global milestone when total points cross threshold',
+      'unlocks global milestone when balance crosses threshold (WS7.balance)',
       () async {
         await service.upsertMilestone(
           trackId: RewardMilestone.kGlobalTrackSentinel,
@@ -851,9 +851,9 @@ void main() {
           milestoneId: 'g1',
         );
 
-        // Add a track + goal (so completions count) and insert completions.
-        final trackId = await insertTrackWithGoal();
-        await insertCompletion(trackId: trackId, points: 600);
+        // WS7.balance: credit the stored balance directly (as
+        // PointsBalanceDao.creditCompletion would do on live completion).
+        await db.pointsBalanceDao.creditCompletion(profileId, 600);
 
         final unlocks = await service.evaluateUnlocksForGlobal();
         expect(unlocks, hasLength(1));
@@ -868,8 +868,8 @@ void main() {
         thresholdPoints: 100,
         milestoneId: 'g1',
       );
-      final trackId = await insertTrackWithGoal();
-      await insertCompletion(trackId: trackId, points: 200);
+      // WS7.balance: credit the stored balance.
+      await db.pointsBalanceDao.creditCompletion(profileId, 200);
 
       await service.evaluateUnlocksForGlobal();
       final second = await service.evaluateUnlocksForGlobal();

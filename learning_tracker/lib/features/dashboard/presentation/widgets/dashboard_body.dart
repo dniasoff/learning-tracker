@@ -316,7 +316,9 @@ class DashboardBody extends ConsumerWidget {
             theme: theme,
             numberFormat: numberFormat,
             nextRewardAsync: ref.watch(dashboardChildNextRewardProvider),
-            onOpenRewards: () => context.router.push(const GamificationRoute()),
+            // WS7.child-ui: opens the child's prize redemption screen.
+            onOpenRewards: () =>
+                context.router.push(const ChildRedemptionRoute()),
           ),
           const SizedBox(height: 18),
         ],

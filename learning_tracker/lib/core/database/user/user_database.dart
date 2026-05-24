@@ -10,6 +10,7 @@ import 'package:learning_tracker/core/database/daos/learning_ledger_dao.dart';
 import 'package:learning_tracker/core/database/daos/learning_order_dao.dart';
 import 'package:learning_tracker/core/database/daos/outbox_dao.dart';
 import 'package:learning_tracker/core/database/daos/point_config_dao.dart';
+import 'package:learning_tracker/core/database/daos/points_balance_dao.dart';
 import 'package:learning_tracker/core/database/daos/prior_completion_import_dao.dart';
 import 'package:learning_tracker/core/database/daos/profile_dao.dart';
 import 'package:learning_tracker/core/database/daos/profile_program_dao.dart';
@@ -34,6 +35,7 @@ import 'package:learning_tracker/core/database/tables/learning_ledger.dart';
 import 'package:learning_tracker/core/database/tables/learning_order.dart';
 import 'package:learning_tracker/core/database/tables/outbox_table.dart';
 import 'package:learning_tracker/core/database/tables/point_configs.dart';
+import 'package:learning_tracker/core/database/tables/points_balance.dart';
 import 'package:learning_tracker/core/database/tables/prior_completion_imports.dart';
 import 'package:learning_tracker/core/database/tables/profile_programs.dart';
 import 'package:learning_tracker/core/database/tables/sacred_window_entries.dart';
@@ -62,6 +64,10 @@ part 'user_database.g.dart';
 /// - curriculum_scopes: added updatedAt (W3.23).
 /// - calendar_cycles.sefariaRefHe + seed_metadata.contentHash: now nullable (W3.26).
 ///
+/// Schema v25 (WS7):
+/// - Added points_balance, points_ledger, reward_redemptions tables for the
+///   stored debitable points balance and the redeem→fulfil loop.
+///
 /// This database uses standard Drift migrations and holds all user-generated
 /// content: profiles, progress, configuration, streaks, and sync state.
 /// It is the only database that accepts writes at runtime.
@@ -88,6 +94,10 @@ part 'user_database.g.dart';
     SacredWindowEntries,
     PriorCompletionImports,
     SyncKv,
+    // WS7: stored debitable balance + ledger + redemptions
+    PointsBalance,
+    PointsLedger,
+    RewardRedemptions,
   ],
   views: [CompletionsView],
   daos: [
@@ -99,6 +109,7 @@ part 'user_database.g.dart';
     LearningLedgerDao,
     GoalDao,
     PointConfigDao,
+    PointsBalanceDao,
     StageDao,
     BookmarkDao,
     LearningOrderDao,
@@ -120,7 +131,7 @@ class UserDatabase extends _$UserDatabase {
   UserDatabase(super.e);
 
   @override
-  int get schemaVersion => 24;
+  int get schemaVersion => 25;
 
   // drift_dev cannot express WHERE in a Dart-defined view's `as()` body
   // (cascade `..where()` confuses the generator).  The auto-generated SQL for
@@ -146,6 +157,14 @@ class UserDatabase extends _$UserDatabase {
         await customStatement(_completionsViewSql);
       },
       // W3.19: fresh-install schema only — no upgrade path needed (pre-launch).
+      // WS7 (v25): added points_balance, points_ledger, reward_redemptions.
+      onUpgrade: (Migrator m, int from, int to) async {
+        if (from < 25) {
+          await m.createTable(pointsBalance);
+          await m.createTable(pointsLedger);
+          await m.createTable(rewardRedemptions);
+        }
+      },
     );
   }
 }

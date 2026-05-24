@@ -213,29 +213,25 @@ void main() {
 
   // ── getGlobalPointsForRewards ─────────────────────────────────────────────
 
+  // WS7.balance: getGlobalPointsForRewards now reads the stored debitable balance.
   group('RewardMilestoneService.getGlobalPointsForRewards', () {
-    test('returns 0 when profile has no completions', () async {
+    test('returns 0 when no balance exists for profile', () async {
       final total = await service.getGlobalPointsForRewards();
       expect(total, 0);
     });
 
-    test('returns 0 for completions on non-reward-eligible track', () async {
+    test('returns 0 when balance has not been credited', () async {
       final trackId = await insertTrack(curriculumId: 'mishnayos');
       await insertCompletion(trackId: trackId, points: 100);
-      // No goal → not eligible → 0
+      // Raw completions inserted without crediting balance → balance still 0
       final total = await service.getGlobalPointsForRewards();
       expect(total, 0);
     });
 
-    test('sums points across eligible tracks', () async {
-      final trackId = await insertTrack(curriculumId: 'mishnayos');
-      await insertGoal(trackId);
-      await insertCompletion(trackId: trackId, points: 25);
-      await insertCompletion(
-        trackId: trackId,
-        sefariaRef: 'Berakhot 1:2',
-        points: 25,
-      );
+    test('returns balance after crediting', () async {
+      // Credit the balance directly (as PointsBalanceDao.creditCompletion would)
+      await db.pointsBalanceDao.creditCompletion(profileId, 25);
+      await db.pointsBalanceDao.creditCompletion(profileId, 25);
 
       final total = await service.getGlobalPointsForRewards();
       expect(total, 50);
@@ -346,9 +342,9 @@ void main() {
       test(
         'unlocks global milestone when global points exceed threshold',
         () async {
-          final trackId = await insertTrack(curriculumId: 'mishnayos');
-          await insertGoal(trackId);
-          await insertCompletion(trackId: trackId, points: 200);
+          // Credit balance directly (WS7.balance: getGlobalPointsForRewards reads
+          // the stored balance, not raw completion SUM).
+          await db.pointsBalanceDao.creditCompletion(profileId, 200);
 
           await service.upsertMilestone(
             trackId: RewardMilestone.kGlobalTrackSentinel,
@@ -367,9 +363,8 @@ void main() {
       test(
         'does not re-unlock global milestone on second evaluation',
         () async {
-          final trackId = await insertTrack(curriculumId: 'mishnayos');
-          await insertGoal(trackId);
-          await insertCompletion(trackId: trackId, points: 200);
+          // Credit balance directly (WS7.balance).
+          await db.pointsBalanceDao.creditCompletion(profileId, 200);
 
           await service.upsertMilestone(
             trackId: RewardMilestone.kGlobalTrackSentinel,

@@ -668,26 +668,26 @@ final class DashboardStreakProvider
 
 String _$dashboardStreakHash() => r'0370557f7b040536a349a20b951070cb1fefa7f1';
 
-/// Global points total, scoped to active profile.
+/// Stored debitable points balance, scoped to active child profile (WS7.balance).
 ///
-/// Only completions on reward-eligible tracks (programmed or self-paced with a
-/// goal); excludes onboarding bulk prior marks and browse-only tracks.
+/// Reads from [PointsBalanceDao] — the spend-economy source of truth (DEC-32).
+/// Returns 0 for adult profiles (Rule 3: adults have no points).
 
 @ProviderFor(dashboardGlobalPoints)
 final dashboardGlobalPointsProvider = DashboardGlobalPointsProvider._();
 
-/// Global points total, scoped to active profile.
+/// Stored debitable points balance, scoped to active child profile (WS7.balance).
 ///
-/// Only completions on reward-eligible tracks (programmed or self-paced with a
-/// goal); excludes onboarding bulk prior marks and browse-only tracks.
+/// Reads from [PointsBalanceDao] — the spend-economy source of truth (DEC-32).
+/// Returns 0 for adult profiles (Rule 3: adults have no points).
 
 final class DashboardGlobalPointsProvider
     extends $FunctionalProvider<AsyncValue<int>, int, FutureOr<int>>
     with $FutureModifier<int>, $FutureProvider<int> {
-  /// Global points total, scoped to active profile.
+  /// Stored debitable points balance, scoped to active child profile (WS7.balance).
   ///
-  /// Only completions on reward-eligible tracks (programmed or self-paced with a
-  /// goal); excludes onboarding bulk prior marks and browse-only tracks.
+  /// Reads from [PointsBalanceDao] — the spend-economy source of truth (DEC-32).
+  /// Returns 0 for adult profiles (Rule 3: adults have no points).
   DashboardGlobalPointsProvider._()
     : super(
         from: null,
@@ -714,7 +714,7 @@ final class DashboardGlobalPointsProvider
 }
 
 String _$dashboardGlobalPointsHash() =>
-    r'936c0e8d7b3adac83f55c2b6debf265fef08768f';
+    r'269ebb3eaaae5edaabc3018ce62b4bba271d14f5';
 
 /// Write-path effect: strips legacy stock-template milestones for the current
 /// profile and pushes updated gamification settings to Firestore if any rows

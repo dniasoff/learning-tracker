@@ -3096,4 +3096,97 @@ class AppLocalizationsEn extends AppLocalizations {
   String allTimeTermDone(String term) {
     return '$term done';
   }
+
+  @override
+  String get redeemScreenTitle => 'Redeem Prizes';
+
+  @override
+  String get redeemScreenBalance => 'Your Balance';
+
+  @override
+  String get redeemScreenNoRewards =>
+      'No prizes configured yet.\nAsk a parent to set some up!';
+
+  @override
+  String redeemScreenCostLabel(int points) {
+    return '$points points';
+  }
+
+  @override
+  String get redeemScreenAffordableLabel => 'Redeem';
+
+  @override
+  String get redeemScreenCannotAfford => 'Not enough points';
+
+  @override
+  String redeemScreenConfirmTitle(String title) {
+    return 'Redeem \"$title\"?';
+  }
+
+  @override
+  String redeemScreenConfirmBody(int points) {
+    return 'This will spend $points points from your balance.';
+  }
+
+  @override
+  String get redeemScreenConfirmButton => 'Spend & Redeem';
+
+  @override
+  String redeemScreenRequestedSnackbar(String title) {
+    return '\"$title\" requested! Ask a parent to approve it.';
+  }
+
+  @override
+  String get redeemScreenInsufficientSnackbar =>
+      'Not enough points to redeem this prize.';
+
+  @override
+  String get pendingRedemptionsTitle => 'Pending Prizes';
+
+  @override
+  String get pendingRedemptionsEmpty => 'No pending prize requests.';
+
+  @override
+  String pendingRedemptionsCost(int points) {
+    return '$points points';
+  }
+
+  @override
+  String get pendingRedemptionsApprove => 'Fulfil';
+
+  @override
+  String get pendingRedemptionsDecline => 'Decline';
+
+  @override
+  String get pendingRedemptionsFulfilledSnackbar =>
+      'Prize marked as fulfilled!';
+
+  @override
+  String get pendingRedemptionsDeclinedSnackbar =>
+      'Prize request declined. Points refunded.';
+
+  @override
+  String get parentPointsAdjustTitle => 'Adjust Points';
+
+  @override
+  String get parentPointsAdjustSubtitle =>
+      'Add or deduct points from your child’s balance.';
+
+  @override
+  String get parentPointsAdjustAddLabel => 'Add points';
+
+  @override
+  String get parentPointsAdjustDeductLabel => 'Deduct points';
+
+  @override
+  String get parentPointsAdjustAmountHint => 'Amount';
+
+  @override
+  String get parentPointsAdjustNoteHint => 'Reason (optional)';
+
+  @override
+  String get parentPointsAdjustConfirm => 'Apply';
+
+  @override
+  String get parentPointsAdjustAppliedSnackbar => 'Balance updated.';
 }

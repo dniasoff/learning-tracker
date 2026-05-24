@@ -5458,6 +5458,162 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{term} done'**
   String allTimeTermDone(String term);
+
+  /// No description provided for @redeemScreenTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Redeem Prizes'**
+  String get redeemScreenTitle;
+
+  /// No description provided for @redeemScreenBalance.
+  ///
+  /// In en, this message translates to:
+  /// **'Your Balance'**
+  String get redeemScreenBalance;
+
+  /// No description provided for @redeemScreenNoRewards.
+  ///
+  /// In en, this message translates to:
+  /// **'No prizes configured yet.\nAsk a parent to set some up!'**
+  String get redeemScreenNoRewards;
+
+  /// No description provided for @redeemScreenCostLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'{points} points'**
+  String redeemScreenCostLabel(int points);
+
+  /// No description provided for @redeemScreenAffordableLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Redeem'**
+  String get redeemScreenAffordableLabel;
+
+  /// No description provided for @redeemScreenCannotAfford.
+  ///
+  /// In en, this message translates to:
+  /// **'Not enough points'**
+  String get redeemScreenCannotAfford;
+
+  /// No description provided for @redeemScreenConfirmTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Redeem \"{title}\"?'**
+  String redeemScreenConfirmTitle(String title);
+
+  /// No description provided for @redeemScreenConfirmBody.
+  ///
+  /// In en, this message translates to:
+  /// **'This will spend {points} points from your balance.'**
+  String redeemScreenConfirmBody(int points);
+
+  /// No description provided for @redeemScreenConfirmButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Spend & Redeem'**
+  String get redeemScreenConfirmButton;
+
+  /// No description provided for @redeemScreenRequestedSnackbar.
+  ///
+  /// In en, this message translates to:
+  /// **'\"{title}\" requested! Ask a parent to approve it.'**
+  String redeemScreenRequestedSnackbar(String title);
+
+  /// No description provided for @redeemScreenInsufficientSnackbar.
+  ///
+  /// In en, this message translates to:
+  /// **'Not enough points to redeem this prize.'**
+  String get redeemScreenInsufficientSnackbar;
+
+  /// No description provided for @pendingRedemptionsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Pending Prizes'**
+  String get pendingRedemptionsTitle;
+
+  /// No description provided for @pendingRedemptionsEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No pending prize requests.'**
+  String get pendingRedemptionsEmpty;
+
+  /// No description provided for @pendingRedemptionsCost.
+  ///
+  /// In en, this message translates to:
+  /// **'{points} points'**
+  String pendingRedemptionsCost(int points);
+
+  /// No description provided for @pendingRedemptionsApprove.
+  ///
+  /// In en, this message translates to:
+  /// **'Fulfil'**
+  String get pendingRedemptionsApprove;
+
+  /// No description provided for @pendingRedemptionsDecline.
+  ///
+  /// In en, this message translates to:
+  /// **'Decline'**
+  String get pendingRedemptionsDecline;
+
+  /// No description provided for @pendingRedemptionsFulfilledSnackbar.
+  ///
+  /// In en, this message translates to:
+  /// **'Prize marked as fulfilled!'**
+  String get pendingRedemptionsFulfilledSnackbar;
+
+  /// No description provided for @pendingRedemptionsDeclinedSnackbar.
+  ///
+  /// In en, this message translates to:
+  /// **'Prize request declined. Points refunded.'**
+  String get pendingRedemptionsDeclinedSnackbar;
+
+  /// No description provided for @parentPointsAdjustTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Adjust Points'**
+  String get parentPointsAdjustTitle;
+
+  /// No description provided for @parentPointsAdjustSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Add or deduct points from your child’s balance.'**
+  String get parentPointsAdjustSubtitle;
+
+  /// No description provided for @parentPointsAdjustAddLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Add points'**
+  String get parentPointsAdjustAddLabel;
+
+  /// No description provided for @parentPointsAdjustDeductLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Deduct points'**
+  String get parentPointsAdjustDeductLabel;
+
+  /// No description provided for @parentPointsAdjustAmountHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Amount'**
+  String get parentPointsAdjustAmountHint;
+
+  /// No description provided for @parentPointsAdjustNoteHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Reason (optional)'**
+  String get parentPointsAdjustNoteHint;
+
+  /// No description provided for @parentPointsAdjustConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Apply'**
+  String get parentPointsAdjustConfirm;
+
+  /// No description provided for @parentPointsAdjustAppliedSnackbar.
+  ///
+  /// In en, this message translates to:
+  /// **'Balance updated.'**
+  String get parentPointsAdjustAppliedSnackbar;
 }
 
 class _AppLocalizationsDelegate

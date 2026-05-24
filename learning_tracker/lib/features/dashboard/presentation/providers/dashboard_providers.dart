@@ -13,7 +13,6 @@ import 'package:learning_tracker/features/dashboard/domain/services/next_reward_
 import 'package:learning_tracker/features/dashboard/domain/services/track_completion_service.dart';
 import 'package:learning_tracker/features/dashboard/domain/use_cases/compute_pace_status_use_case.dart';
 import 'package:learning_tracker/features/gamification/domain/models/streak_recovery_info.dart';
-import 'package:learning_tracker/features/gamification/domain/services/points_service.dart';
 import 'package:learning_tracker/features/gamification/domain/services/reward_milestone_service.dart';
 import 'package:learning_tracker/features/gamification/domain/services/streak_service.dart';
 import 'package:learning_tracker/features/gamification/streak/streak_state_provider.dart';
@@ -266,10 +265,10 @@ Stream<({int currentStreak, int maxStreak})> dashboardStreak(Ref ref) async* {
       );
 }
 
-/// Global points total, scoped to active profile.
+/// Stored debitable points balance, scoped to active child profile (WS7.balance).
 ///
-/// Only completions on reward-eligible tracks (programmed or self-paced with a
-/// goal); excludes onboarding bulk prior marks and browse-only tracks.
+/// Reads from [PointsBalanceDao] — the spend-economy source of truth (DEC-32).
+/// Returns 0 for adult profiles (Rule 3: adults have no points).
 @riverpod
 Future<int> dashboardGlobalPoints(Ref ref) async {
   ref.watch<int>(completionCommittedProvider);
@@ -278,8 +277,7 @@ Future<int> dashboardGlobalPoints(Ref ref) async {
 
   final db = ref.watch(userDatabaseProvider);
   final profileId = ref.watch(activeProfileIdProvider);
-  final service = PointsService(db, profileId: profileId);
-  return service.getGlobalTotal();
+  return db.pointsBalanceDao.getBalance(profileId);
 }
 
 /// Write-path effect: strips legacy stock-template milestones for the current

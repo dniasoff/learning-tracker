@@ -154,23 +154,45 @@ void main() {
       expect(total, 20);
     });
 
-    test('global total correctly sums points across all curricula', () async {
-      await insertCompletion(
-        curriculumId: CurriculumId.mishnayos.storageKey,
-        sefariaRef: 'Mishnah Berachos 1.1',
-        stageId: 1,
-        points: 10,
-      );
-      await insertCompletion(
-        curriculumId: CurriculumId.bavli.storageKey,
-        sefariaRef: 'Berakhot 2a',
-        stageId: 1,
-        points: 10,
-      );
+    test(
+      'getDerivedTotal correctly sums points across all curricula (derived sum)',
+      () async {
+        await insertCompletion(
+          curriculumId: CurriculumId.mishnayos.storageKey,
+          sefariaRef: 'Mishnah Berachos 1.1',
+          stageId: 1,
+          points: 10,
+        );
+        await insertCompletion(
+          curriculumId: CurriculumId.bavli.storageKey,
+          sefariaRef: 'Berakhot 2a',
+          stageId: 1,
+          points: 10,
+        );
 
-      final total = await service.getGlobalTotal();
-      expect(total, 20);
-    });
+        final total = await service.getDerivedTotal();
+        expect(total, 20);
+      },
+    );
+
+    test(
+      'getGlobalTotal reads stored balance (WS7.balance — 0 until credited)',
+      () async {
+        await insertCompletion(
+          curriculumId: CurriculumId.mishnayos.storageKey,
+          sefariaRef: 'Mishnah Berachos 1.1',
+          stageId: 1,
+          points: 10,
+        );
+
+        // Balance is 0 because no creditCompletion was called.
+        expect(await service.getGlobalTotal(), 0);
+
+        // After crediting, the balance reflects the credit.
+        await db.pointsBalanceDao.creditCompletion(0, 10);
+        expect(await service.getGlobalTotal(), 10);
+      },
+    );
 
     test('points history log records correct data per event', () async {
       final now = DateTime.utc(2026, 3, 15, 12, 0);
@@ -265,7 +287,7 @@ void main() {
           ),
         );
 
-        expect(await service.getGlobalTotal(), 10);
+        expect(await service.getDerivedTotal(), 10);
       },
     );
 

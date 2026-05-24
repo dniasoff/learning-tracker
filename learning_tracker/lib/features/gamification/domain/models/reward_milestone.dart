@@ -22,7 +22,17 @@ class RewardMilestone {
   final int profileId;
   final int trackId;
   final String title;
+
+  /// Cost in points for the child to redeem this reward (WS7.reward-price).
+  ///
+  /// Stored under the `threshold_points` JSON key for backward compatibility
+  /// with existing cloud payloads. In the spend-economy (DEC-32), this is
+  /// the price the child pays to redeem — not a cumulative auto-unlock threshold.
   final int thresholdPoints;
+
+  /// Alias for [thresholdPoints]; the cost in points to redeem this reward.
+  int get pointsCost => thresholdPoints;
+
   final bool isEnabled;
   final DateTime createdAt;
   final DateTime updatedAt;

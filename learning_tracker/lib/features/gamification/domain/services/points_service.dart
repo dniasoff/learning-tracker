@@ -61,11 +61,20 @@ class PointsService {
     return _sumPointsForRewardEligibleTracks(completions);
   }
 
-  /// Total points earned across all curricula, scoped to active profile.
+  /// Current debitable points balance for this profile (WS7.balance).
   ///
-  /// Only includes completions on tracks that count toward gamification
-  /// (programmed enrollment or self-paced with a learning goal).
+  /// Returns the stored balance from [PointsBalanceDao] — the spend-economy
+  /// source of truth (DEC-32). Replaces the old derived-sum read.
   Future<int> getGlobalTotal() async {
+    return _database.pointsBalanceDao.getBalance(profileId);
+  }
+
+  /// Derived sum of completion points for reward-eligible tracks.
+  ///
+  /// Kept for backward compatibility with tests and the streak/history
+  /// subsystems that still need the raw completion sum. New UI should use
+  /// [getGlobalTotal] which reads the stored debitable balance.
+  Future<int> getDerivedTotal() async {
     final completions = await _database.completionDao.getCompletionsByProfile(
       profileId,
     );
