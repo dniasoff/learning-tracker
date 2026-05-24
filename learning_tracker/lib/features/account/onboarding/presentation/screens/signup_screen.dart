@@ -23,7 +23,6 @@ import 'package:learning_tracker/features/account/presentation/providers/auth_st
 import 'package:learning_tracker/features/account/presentation/providers/connectivity_providers.dart';
 import 'package:learning_tracker/features/onboarding/domain/validators/auth_validators.dart'
     as validators;
-import 'package:learning_tracker/features/onboarding/presentation/providers/onboarding_providers.dart';
 import 'package:learning_tracker/features/onboarding/presentation/screens/onboarding_screen.dart'
     show kOnboardingComplete;
 import 'package:learning_tracker/features/settings/presentation/providers/curriculum_activation_providers.dart';
@@ -216,7 +215,6 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
         email: email,
         password: password,
         displayName: displayName,
-        userMode: 'adult',
       );
 
       await PendingLocalSignupStore.writePayload(
@@ -358,7 +356,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
 
         await ref
             .read(auth_state.authStateProvider.notifier)
-            .promoteToCloud(googleUser);
+            .setCloudBornSessionFromFirebaseUser(googleUser);
 
         final prefsForReg = await SharedPreferences.getInstance();
         final session = SessionPersistenceService(
@@ -382,7 +380,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
         ref.invalidate(userDatabaseProvider);
         await ref
             .read(auth_state.authStateProvider.notifier)
-            .promoteToCloud(googleUser);
+            .setCloudBornSessionFromFirebaseUser(googleUser);
         final prefsForReg = await SharedPreferences.getInstance();
         final session = SessionPersistenceService(
           prefs: prefsForReg,
@@ -402,10 +400,11 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
 
       final user = ref.read(authRepositoryProvider).currentUser;
       if (user != null && mounted) {
-        final profileService = ref.read(userProfileServiceProvider);
-        final existingMode = await profileService.getUserMode(user.uid);
+        // Check if this is a returning user (account row already exists).
+        final dao = ref.read(userDatabaseProvider).userProfileDao;
+        final existingAccount = await dao.getUserProfileByFirebaseUid(user.uid);
         if (mounted) {
-          if (existingMode != null) {
+          if (existingAccount != null) {
             final activationService = ref.read(
               curriculumActivationServiceProvider,
             );

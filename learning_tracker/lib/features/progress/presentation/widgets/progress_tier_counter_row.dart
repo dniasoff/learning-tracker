@@ -25,7 +25,7 @@ import 'package:learning_tracker/l10n/app_localizations.dart';
 /// All labels are routed through `domainTermLabels(ref)` so the Hebrew Terms
 /// toggle swaps script live. Caller passes [showPoints] explicitly so the
 /// caller's own user-mode lookup is the single source of truth (the row
-/// itself doesn't gate on UserMode).
+/// itself doesn't gate on [ProfileMode]).
 ///
 /// See `docs/planning/progress-ia-redesign.md` §2 for the spec.
 class ProgressTierCounterRow extends ConsumerWidget {

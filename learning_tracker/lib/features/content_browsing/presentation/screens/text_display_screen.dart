@@ -1,7 +1,7 @@
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:learning_tracker/core/enums/user_mode.dart';
+import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/exceptions/permission_exception.dart';
 import 'package:learning_tracker/core/labels/curriculum_label_providers.dart';
 import 'package:learning_tracker/core/labels/domain_term_labels.dart';
@@ -669,7 +669,7 @@ class _CompletionSectionState extends ConsumerState<_CompletionSection> {
 
       if (mounted) {
         final userMode = ref.read(dashboardUserModeProvider).asData?.value;
-        if (userMode == UserMode.child &&
+        if (userMode == ProfileMode.child &&
             result.newMilestoneUnlocks.isNotEmpty) {
           await AchievementUnlockCelebration.showForUnlockedMilestones(
             context: context,

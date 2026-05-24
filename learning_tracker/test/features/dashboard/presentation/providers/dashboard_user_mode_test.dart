@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/daos/profile_dao.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
-import 'package:learning_tracker/core/enums/user_mode.dart';
+import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
@@ -48,7 +48,6 @@ void main() {
               email: 'test@example.com',
               tier: 'localBorn',
               displayName: 'Test Account',
-              userMode: 'adult',
               createdAt: DateTimeFactory.nowUtc(),
               updatedAt: DateTimeFactory.nowUtc(),
             ),
@@ -66,7 +65,7 @@ void main() {
       container.read(selectedProfileIdProvider.notifier).select(profileId);
 
       final mode = await container.read(dashboardUserModeProvider.future);
-      expect(mode, UserMode.child);
+      expect(mode, ProfileMode.child);
     });
 
     test('returns adult when active profile mode is adult', () async {
@@ -76,7 +75,7 @@ void main() {
       container.read(selectedProfileIdProvider.notifier).select(profileId);
 
       final mode = await container.read(dashboardUserModeProvider.future);
-      expect(mode, UserMode.adult);
+      expect(mode, ProfileMode.adult);
     });
 
     test('defaults to adult when no profile row exists', () async {
@@ -85,7 +84,7 @@ void main() {
       container.read(selectedProfileIdProvider.notifier).select(9999);
 
       final mode = await container.read(dashboardUserModeProvider.future);
-      expect(mode, UserMode.adult);
+      expect(mode, ProfileMode.adult);
     });
   });
 }

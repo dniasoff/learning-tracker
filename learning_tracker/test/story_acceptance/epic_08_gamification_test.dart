@@ -5,8 +5,8 @@ library;
 import 'package:drift/drift.dart' hide isNotNull, isNull;
 import 'package:learning_tracker/core/database/user/user_database.dart'
     hide StreakEvent;
+import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/core/enums/user_mode.dart';
 import 'package:learning_tracker/core/time/local_day_clock.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/gamification/domain/services/points_service.dart';
@@ -273,7 +273,7 @@ void main() {
               pointsAwarded: 10,
               progressBefore: 0.5,
               progressAfter: 0.6,
-              userMode: UserMode.child,
+              userMode: ProfileMode.child,
             ),
           );
 
@@ -287,7 +287,7 @@ void main() {
               pointsAwarded: 10,
               progressBefore: 0.5,
               progressAfter: 0.6,
-              userMode: UserMode.child,
+              userMode: ProfileMode.child,
             ),
           );
 
@@ -309,7 +309,7 @@ void main() {
                 pointsAwarded: 10,
                 progressBefore: 0.5,
                 progressAfter: 0.6,
-                userMode: UserMode.adult,
+                userMode: ProfileMode.adult,
               ),
             );
 
@@ -329,7 +329,7 @@ void main() {
               progressAfter: 0.6,
               streakBefore: 2,
               streakAfter: 3,
-              userMode: UserMode.child,
+              userMode: ProfileMode.child,
             ),
           );
 
@@ -347,7 +347,7 @@ void main() {
               pointsAwarded: 10,
               progressBefore: 0.5,
               progressAfter: 0.6,
-              userMode: UserMode.child,
+              userMode: ProfileMode.child,
             ),
           );
 
@@ -365,7 +365,7 @@ void main() {
               pointsAwarded: 25,
               progressBefore: 0.3,
               progressAfter: 0.4,
-              userMode: UserMode.child,
+              userMode: ProfileMode.child,
             ),
           );
 
@@ -381,7 +381,7 @@ void main() {
               pointsAwarded: 10,
               progressBefore: 0,
               progressAfter: 0.1,
-              userMode: UserMode.child,
+              userMode: ProfileMode.child,
             ),
           );
           expect(notifyCount, 1);
@@ -404,7 +404,7 @@ void main() {
                 progressAfter: 0.6,
                 streakBefore: 2,
                 streakAfter: 3,
-                userMode: UserMode.child,
+                userMode: ProfileMode.child,
               ),
             );
 
@@ -434,7 +434,7 @@ void main() {
               pointsAwarded: 10,
               progressBefore: 0.5,
               progressAfter: 0.6,
-              userMode: UserMode.adult,
+              userMode: ProfileMode.adult,
             ),
           );
 

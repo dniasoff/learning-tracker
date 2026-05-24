@@ -1,16 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
-import 'package:learning_tracker/core/enums/user_mode.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/utils/text_input_formatters.dart';
 import 'package:learning_tracker/features/account/domain/services/pending_local_signup.dart';
-import 'package:learning_tracker/features/account/presentation/providers/auth_providers.dart'
-    show authRepositoryProvider;
-import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/text_display_providers.dart';
-import 'package:learning_tracker/features/onboarding/presentation/providers/onboarding_providers.dart';
 import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
 import 'package:learning_tracker/features/profiles/domain/repositories/profile_repository.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
@@ -130,17 +125,9 @@ class _OnboardingProfileCreationStepState
       return;
     }
 
-    // Cloud-born only: sync learner mode to the Firestore-backed user doc.
-    final authState = ref.read(authStateProvider);
-    final user = ref.read(authRepositoryProvider).currentUser;
-    if (authState.isCloudBorn && user != null) {
-      final profileService = ref.read(userProfileServiceProvider);
-      await profileService.setUserMode(
-        firebaseUid: user.uid,
-        displayName: name,
-        mode: _profileMode == 'child' ? UserMode.child : UserMode.adult,
-      );
-    }
+    // WS9.flows: setUserMode (account-level userMode) removed — mode is stored
+    // in learner_profiles.mode and synced via the profile repository, not via
+    // a separate Firestore account-doc write.
 
     ref.read(selectedProfileIdProvider.notifier).select(profile.id);
     await PendingLocalSignupStore.finalizeAfterFirstProfile(ref);

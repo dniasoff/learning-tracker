@@ -1,7 +1,7 @@
 import 'package:drift/drift.dart' show Value;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
-import 'package:learning_tracker/core/enums/user_mode.dart';
+import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/features/progress/domain/services/chart_data_service.dart';
 
 import '../../../../helpers/drift_memory.dart';
@@ -169,7 +169,7 @@ void main() {
         final result = await service.getDailyPoints(
           startDate: DateTime(2026, 3, 1),
           endDate: DateTime(2026, 3, 1),
-          userMode: UserMode.adult,
+          userMode: ProfileMode.adult,
         );
 
         expect(result, isNull);
@@ -189,7 +189,7 @@ void main() {
         final result = await service.getDailyPoints(
           startDate: DateTime(2026, 3, 1),
           endDate: DateTime(2026, 3, 1),
-          userMode: UserMode.child,
+          userMode: ProfileMode.child,
         );
 
         expect(result, isNotNull);

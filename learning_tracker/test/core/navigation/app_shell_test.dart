@@ -104,7 +104,6 @@ const _authOverride = AuthState.signedIn(
     profileId: 1,
     email: 'test@test.com',
     displayName: 'Test',
-    userMode: 'adult',
   ),
   tier: Tier.localBorn,
 );

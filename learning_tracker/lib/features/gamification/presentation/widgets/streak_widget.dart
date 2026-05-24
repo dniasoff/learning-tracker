@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:learning_tracker/core/enums/user_mode.dart';
+import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 
 /// Displays the current streak count and max streak.
 ///
@@ -8,7 +8,7 @@ import 'package:learning_tracker/core/enums/user_mode.dart';
 class StreakWidget extends StatelessWidget {
   final int currentStreak;
   final int maxStreak;
-  final UserMode userMode;
+  final ProfileMode userMode;
 
   const StreakWidget({
     super.key,
@@ -19,7 +19,7 @@ class StreakWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return userMode == UserMode.child
+    return userMode.isChild
         ? _AnimatedStreakDisplay(
             currentStreak: currentStreak,
             maxStreak: maxStreak,

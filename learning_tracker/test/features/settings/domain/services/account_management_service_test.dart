@@ -48,7 +48,6 @@ void main() {
       await db.userProfileDao.upsertProfile(
         firebaseUid: 'test-uid',
         displayName: 'Test User',
-        userMode: 'adult',
         updatedAt: DateTime.now(),
       );
 
@@ -82,7 +81,6 @@ void main() {
       await db.userProfileDao.upsertProfile(
         firebaseUid: 'test-uid',
         displayName: 'Test User',
-        userMode: 'adult',
         updatedAt: DateTime.now(),
       );
 

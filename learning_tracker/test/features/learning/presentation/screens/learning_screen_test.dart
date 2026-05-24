@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/core/enums/user_mode.dart';
 import 'package:learning_tracker/core/sync/exceptions/merge_exception.dart';
 import 'package:learning_tracker/core/widgets/app_error_view.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
@@ -23,7 +23,7 @@ void main() {
             (ref) => Stream.value(<CurriculumId>[]),
           ),
           dashboardUserModeProvider.overrideWith(
-            (ref) => Future.value(UserMode.adult),
+            (ref) => Future.value(ProfileMode.adult),
           ),
           dashboardStreakProvider.overrideWith(
             (ref) => Stream.value((currentStreak: 0, maxStreak: 0)),

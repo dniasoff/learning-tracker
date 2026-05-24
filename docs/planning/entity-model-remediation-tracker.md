@@ -93,10 +93,10 @@
 
 ### WS9 — Model & Code Hygiene (latent cleanup)
 
-- [ ] WS9.enum         (WS9, pending)    Unify UserMode vs ProfileMode into one enum; add enum/check constraint on free-text learner_profiles.mode column
-- [ ] WS9.shims        (WS9, pending)    Remove "transitional shims, delete after 20.x" on production paths (auth_state_provider.dart:105-130 — promoteToCloud/demoteToLocal)
-- [ ] WS9.flows        (WS9, pending)    Collapse duplicate add-profile flows; drop vestigial Account-level userMode hardcoded 'adult'
-- [ ] WS9.dedupe       (WS9, pending)    Decide dedupeByEmail healing (device_registry_database.dart:148-166) under DEC-34 multi-session model; document the decision either way
+- [x] WS9.enum         (WS9, done)    UserMode deleted; ProfileMode canonical everywhere; CHECK constraint on learner_profiles.mode; schema v26
+- [x] WS9.shims        (WS9, done)    promoteToCloud → setCloudBornSessionFromFirebaseUser; demoteToLocal() removed; shim labels gone
+- [x] WS9.flows        (WS9, done)    WS1 consolidation confirmed; accounts.userMode column removed; export/import updated; AuthUser.userMode removed
+- [x] WS9.dedupe       (WS9, done)    Decision: KEEP dedupeByEmail — DEC-34 rationale documented in code comment (same-email/same-user dedup, not different-user)
 
 **Closes:** latent-dual-enums, latent-dup-flows, latent-shims, DEC-34 cleanup
 
@@ -107,7 +107,7 @@
 - [ ] P1               (sync, pending)   Wave 1 gate: WS1 switcher verified (profile+account, count-gated, no logout) AND WS2 empty-login reachable — both verified before WS3 starts
 - [ ] P2               (sync, pending)   Wave 2 gate: Charter flow #1 + #2 pass end-to-end; all WS3 sub-tasks verified
 - [ ] P3               (sync, pending)   Wave 3 gate: Banner+settings-by-scope; per-profile reminders fire when inactive; rewards spend loop works; sentinel/route-guard in place
-- [ ] P4               (sync, pending)   Wave 4 gate: Location no-clobber; enums unified, shims gone, dups collapsed
+- [x] P4               (sync, done)   Wave 4 gate: enums unified, shims gone, dups collapsed, dedupeByEmail decision documented; make ci green (5914 tests)
 
 ---
 

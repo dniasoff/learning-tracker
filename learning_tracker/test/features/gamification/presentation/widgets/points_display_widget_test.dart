@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/core/enums/user_mode.dart';
 import 'package:learning_tracker/features/gamification/presentation/providers/points_providers.dart';
 import 'package:learning_tracker/features/gamification/presentation/widgets/points_display_widget.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
@@ -32,7 +32,7 @@ void main() {
           child: const MaterialApp(
             localizationsDelegates: AppLocalizations.localizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
-            home: Scaffold(body: PointsDisplayWidget(userMode: UserMode.child)),
+            home: Scaffold(body: PointsDisplayWidget(userMode: ProfileMode.child)),
           ),
         ),
       );
@@ -57,7 +57,7 @@ void main() {
           child: const MaterialApp(
             localizationsDelegates: AppLocalizations.localizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
-            home: Scaffold(body: PointsDisplayWidget(userMode: UserMode.adult)),
+            home: Scaffold(body: PointsDisplayWidget(userMode: ProfileMode.adult)),
           ),
         ),
       );
@@ -74,7 +74,7 @@ void main() {
       await tester.pumpWidget(
         const MaterialApp(
           home: Scaffold(
-            body: PointsPopupWidget(pointsEarned: 10, userMode: UserMode.child),
+            body: PointsPopupWidget(pointsEarned: 10, userMode: ProfileMode.child),
           ),
         ),
       );
@@ -87,7 +87,7 @@ void main() {
       await tester.pumpWidget(
         const MaterialApp(
           home: Scaffold(
-            body: PointsPopupWidget(pointsEarned: 10, userMode: UserMode.adult),
+            body: PointsPopupWidget(pointsEarned: 10, userMode: ProfileMode.adult),
           ),
         ),
       );

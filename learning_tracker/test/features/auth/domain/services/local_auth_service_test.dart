@@ -24,7 +24,6 @@ void main() {
         email: 'alice@example.com',
         password: 'correct-horse',
         displayName: 'Alice',
-        userMode: 'adult',
       );
 
       expect(profile.email, 'alice@example.com');
@@ -39,7 +38,6 @@ void main() {
         email: '  Alice@Example.COM  ',
         password: 'correct-horse',
         displayName: 'Alice',
-        userMode: 'adult',
       );
       expect(profile.email, 'alice@example.com');
     });
@@ -49,7 +47,6 @@ void main() {
         email: 'alice@example.com',
         password: 'correct-horse',
         displayName: 'Alice',
-        userMode: 'adult',
       );
 
       expect(
@@ -57,7 +54,6 @@ void main() {
           email: 'alice@example.com',
           password: 'another-pass',
           displayName: 'Alice 2',
-          userMode: 'adult',
         ),
         throwsA(isA<DuplicateEmailException>()),
       );
@@ -69,7 +65,6 @@ void main() {
           email: 'not-an-email',
           password: 'correct-horse',
           displayName: 'Alice',
-          userMode: 'adult',
         ),
         throwsA(isA<InvalidInputException>()),
       );
@@ -81,7 +76,6 @@ void main() {
           email: 'alice@example.com',
           password: 'short',
           displayName: 'Alice',
-          userMode: 'adult',
         ),
         throwsA(isA<InvalidInputException>()),
       );
@@ -94,7 +88,6 @@ void main() {
         email: 'alice@example.com',
         password: 'correct-horse',
         displayName: 'Alice',
-        userMode: 'adult',
       );
     });
 
@@ -136,7 +129,6 @@ void main() {
       await db.userProfileDao.upsertProfile(
         firebaseUid: 'cloud-uid',
         displayName: 'Cloud Alice',
-        userMode: 'adult',
         updatedAt: DateTime.utc(2025, 1, 1),
         email: 'cloudalice@example.com',
       );

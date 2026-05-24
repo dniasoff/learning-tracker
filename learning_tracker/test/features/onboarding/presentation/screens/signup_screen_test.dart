@@ -17,8 +17,6 @@ import 'package:learning_tracker/features/account/presentation/providers/auth_pr
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart'
     as auth_state_mod;
 import 'package:learning_tracker/features/account/presentation/providers/connectivity_providers.dart';
-import 'package:learning_tracker/features/onboarding/domain/services/user_profile_service.dart';
-import 'package:learning_tracker/features/onboarding/presentation/providers/onboarding_providers.dart';
 import 'package:mocktail/mocktail.dart';
 
 import '../../../../mocks/mock_repositories.dart';
@@ -73,17 +71,6 @@ void main() {
           const AuthState.signedOut(),
         ),
         connectivityStreamProvider.overrideWith((ref) => Stream.value(online)),
-        userProfileServiceProvider.overrideWith((ref) {
-          return UserProfileService(
-            userProfileDao: database.userProfileDao,
-            pushUserProfile:
-                ({
-                  required String firebaseUid,
-                  required String displayName,
-                  required String userMode,
-                }) async {},
-          );
-        }),
       ],
       child: MaterialApp(
         home: StackRouterScope(

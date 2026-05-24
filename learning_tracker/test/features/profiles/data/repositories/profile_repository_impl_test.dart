@@ -22,7 +22,6 @@ void main() {
               email: email,
               tier: 'localBorn',
               displayName: 'Test Account',
-              userMode: 'adult',
               createdAt: DateTimeFactory.nowUtc(),
               updatedAt: DateTimeFactory.nowUtc(),
             ),

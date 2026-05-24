@@ -16,7 +16,10 @@ class LearnerProfiles extends Table {
   IntColumn get accountId =>
       integer().references(Accounts, #id, onDelete: KeyAction.cascade)();
   TextColumn get displayName => text()();
-  TextColumn get mode => text()(); // 'child' or 'adult'
+  /// Profile mode — exactly 'adult' or 'child'. Enforced by CHECK constraint
+  /// (schema v26, WS9.enum). Read via [ProfileMode.fromStorageKey].
+  TextColumn get mode =>
+      text().customConstraint("NOT NULL CHECK (mode IN ('adult', 'child'))")();
   IntColumn get avatarIndex => integer().withDefault(const Constant<int>(0))();
   DateTimeColumn get createdAt => dateTime()();
   DateTimeColumn get updatedAt => dateTime()();

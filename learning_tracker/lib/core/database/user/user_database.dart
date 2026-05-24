@@ -68,6 +68,13 @@ part 'user_database.g.dart';
 /// - Added points_balance, points_ledger, reward_redemptions tables for the
 ///   stored debitable points balance and the redeem→fulfil loop.
 ///
+/// Schema v26 (WS9.enum):
+/// - Added CHECK constraint on learner_profiles.mode: only 'adult' | 'child'
+///   are valid values. Enforced at DB level; the old free-text column accepted
+///   any string. No data migration needed (all existing rows use 'adult' or
+///   'child'). SQLite does not support adding a CHECK constraint via ALTER
+///   TABLE, so we recreate the table in-place for upgraded DBs.
+///
 /// This database uses standard Drift migrations and holds all user-generated
 /// content: profiles, progress, configuration, streaks, and sync state.
 /// It is the only database that accepts writes at runtime.
@@ -131,7 +138,7 @@ class UserDatabase extends _$UserDatabase {
   UserDatabase(super.e);
 
   @override
-  int get schemaVersion => 25;
+  int get schemaVersion => 26;
 
   // drift_dev cannot express WHERE in a Dart-defined view's `as()` body
   // (cascade `..where()` confuses the generator).  The auto-generated SQL for
@@ -158,11 +165,22 @@ class UserDatabase extends _$UserDatabase {
       },
       // W3.19: fresh-install schema only — no upgrade path needed (pre-launch).
       // WS7 (v25): added points_balance, points_ledger, reward_redemptions.
+      // WS9 (v26): added CHECK constraint on learner_profiles.mode.
       onUpgrade: (Migrator m, int from, int to) async {
         if (from < 25) {
           await m.createTable(pointsBalance);
           await m.createTable(pointsLedger);
           await m.createTable(rewardRedemptions);
+        }
+        if (from < 26) {
+          // WS9.enum: rebuild learner_profiles to add the CHECK constraint on
+          // the mode column (SQLite cannot add CHECK via ALTER TABLE).
+          await m.deleteTable('learner_profiles');
+          await m.createTable(learnerProfiles);
+          // WS9.flows: rebuild accounts to drop the vestigial user_mode column.
+          // Mode belongs to learner_profiles.mode, not to an account.
+          await m.deleteTable('accounts');
+          await m.createTable(accounts);
         }
       },
     );

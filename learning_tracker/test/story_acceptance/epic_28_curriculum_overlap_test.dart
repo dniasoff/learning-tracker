@@ -39,7 +39,6 @@ Future<int> _insertProfile(UserDatabase db) async {
           email: 'tester@example.com',
           tier: 'localBorn',
           displayName: 'Tester',
-          userMode: 'adult',
           createdAt: now,
           updatedAt: now,
         ),

@@ -107,6 +107,24 @@
 - detail: WS8.credit-path (2dc46fb8) — Option b chosen (not option a): added `CompletionSource source = CompletionSource.lifetimeOnly` param to `LearningLedgerRepository.recordCompletionsBatch` abstract + impl; non-live sources write sentinel DateTime.utc(2000,1,1); live writes real timestamp. Option a ruled out because ledger stack uses hierarchical scope keys (not leaf sefariaRef values) — migrating to BulkMarkCompletionUseCase would require expanding hierarchy nodes at write time, breaking LifetimeTreeBuilder. 4 sentinel acceptance tests green. WS8.route-guard — LifetimeMarkingRoute + LifetimeCurriculumMarkingRoute guards changed from [authGuard] to [authGuard, childModeGuard, pinGuard]; 4 route-guard source-inspection tests. Also fixed WS5/WS7 cross-stream CI regressions (NotificationGateway stubs, device_notification_toggle key rename, PointsBalanceDao test for WS7 DAO coverage). make ci green 5914 tests.
 - next: Awaiting WS7 P3 report.
 
+## [2026-05-24 16:00] TASK-DONE — WS7 complete
+
+- stream: WS7
+- detail: WS7 (commit d1d3ec7f) — schema v25: points_balance + points_ledger + reward_redemptions tables. PointsBalanceDao with atomic credit/debit/refund/adjust (never negative). All 3 balance readers cut over from derived SUM to stored balance. completion_repository_impl.dart:207 creditCompletion awaited on every live child mark. ChildRedemptionScreen: balance + cost-gated Redeem buttons + confirm dialog debits balance + creates pending_fulfilment row. ParentPendingRedemptionsScreen: Fulfil (marks done) / Decline (refunds). _showAdjustPointsDialog in parent_settings_screen.dart:351 (SegmentedButton Add/Deduct, parentAdjust). 12 DAO tests. 5919 tests total, make ci green.
+- next: Run P3 gate.
+
+## [2026-05-24 16:15] SYNC-GATE P3 — PASSED
+
+- stream: Orchestrator
+- detail: All 5 Wave 3 streams verified via diff. WS4: _ChildViewBanner in AppShellScreen ✅; parent-portal tab-0 AlertDialog gate ✅; settings DEVICE/PROFILE headings, no empty Login section ✅. WS5: per-profile key namespacing; allProfilesReminderBootstrap; DeviceNotificationToggle layer; merger round-trip 4 tests ✅. WS6: sacred_time removed from ui_preferences_merger + outbox push ✅. WS7: PointsBalance table schema v25; creditCompletion on live mark; ChildRedemptionScreen + ParentPendingRedemptionsScreen; parentAdjust dialog ✅. WS8: Option b sentinel enforced (CompletionSource param on recordCompletionsBatch); [authGuard, childModeGuard, pinGuard] on LifetimeMarkingRoute ✅. 5919 tests green. Tasks #7, #12 marked completed.
+- next: Dispatch Wave 4 — WS9 (Model & Code Hygiene). Single Agent dispatch.
+
+## [2026-05-24 16:16] DISPATCH — Wave 4 (WS9)
+
+- stream: WS9
+- detail: WS9 Sonnet agent dispatched for model/code hygiene. Tasks: unify UserMode vs ProfileMode enum + column constraint; remove transitional shims (auth_state_provider.dart:105-130); collapse duplicate add-profile flows + drop vestigial Account-level userMode 'adult'; decide dedupeByEmail under DEC-34 multi-session. Depends on WS1 auth model now settled. P4 gate: enums unified, shims gone, dups collapsed, dedupeByEmail decision documented.
+- next: Sit in receive-mode awaiting WS9 P4 report. When reported, verify diffs, then proceed to verification phase (V1 CI → V2 adversarial review → V3 fix → V4 CI → V5 task-truth → V6 smoke).
+
 ## [2026-05-24 13:05] START — WS8 begins
 
 - stream: WS8
@@ -184,6 +202,24 @@
 - stream: WS7
 - detail: WS7.balance — introduced points_balance table (schema v25), points_ledger table, reward_redemptions table; PointsBalanceDao with creditCompletion/debitRedemption/refundRedemption/parentAdjust/createRedemption/fulfilRedemption/declineRedemption/getPendingRedemptions/watchPendingRedemptions/getLedger; getGlobalTotal() and getGlobalPointsForRewards() and dashboardGlobalPoints cut over to stored balance; completion_repository_impl.dart now awaits creditCompletion on every live child completion; getDerivedTotal() added for raw-sum consumers; all test regressions fixed (unawaited race fixed, evaluateUnlocksForGlobal tests credit balance directly). WS7.reward-price — pointsCost getter added to RewardMilestone as alias for thresholdPoints (spend-economy semantics documented). WS7.redeem — ChildRedemptionScreen + ParentPendingRedemptionsScreen built; createRedemption atomic debit+row; fulfilRedemption/declineRedemption (refunds); routes registered (ChildRedemptionRoute, ParentPendingRedemptionsRoute); 12 DAO unit tests green. WS7.adjust — _showAdjustPointsDialog (inline dialog with Add/Deduct segmented control + amount + note) wired into parent_settings_screen.dart under canEditPoints guard. WS7.child-ui — onOpenRewards in dashboard_body.dart wired to ChildRedemptionRoute (was GamificationRoute). Also incidentally fixed WS8 tests that arrived in-flight (route guards already applied; sentinel date impl already done). EN+HE l10n strings added. make ci green (5914 tests passed, 125 skipped, 0 failed). dart analyze: no issues.
 - next: P3 sync gate
+
+## [2026-05-24 17:30] START — WS9 begins
+
+- stream: WS9
+- detail: Read all required docs (plan, audit, log, tracker, CLAUDE.md). Baseline CI: 5914 tests. Key files explored: core/enums/user_mode.dart (UserMode.child/adult, no helpers), core/domain/value_objects/profile_mode.dart (canonical with storageKey/fromStorageKey/.isChild/.isAdult), accounts.dart (vestigial userMode column), auth_state_provider.dart (promoteToCloud shim at :105-130), device_registry_database.dart:148 (dedupeByEmail), all callers of UserMode (32 files). Starting WS9.enum.
+- next: WS9.enum → WS9.shims → WS9.flows → WS9.dedupe
+
+## [2026-05-24 18:00] TASK-DONE — WS9 (all tasks complete)
+
+- stream: WS9
+- detail:
+  WS9.enum — Deleted core/enums/user_mode.dart; replaced all 32 UserMode references with ProfileMode across lib/ and test/. Added Drift CHECK constraint on learner_profiles.mode column (NOT NULL CHECK (mode IN ('adult','child'))). Schema bumped to v26; migration uses deleteTable+createTable for learner_profiles (CHECK) and accounts (drop userMode column).
+  WS9.shims — Renamed promoteToCloud() → setCloudBornSessionFromFirebaseUser() (no-longer-transitional, 5 callers updated). Removed dead demoteToLocal() (0 outside callers, just called signOut()). Removed 'delete after 20.x' shim label.
+  WS9.flows (a) — Confirmed WS1.consolidate already collapsed duplicate add-profile flows; manage_learners_screen.dart uses canonical showAddProfileDialog. No duplicate detected.
+  WS9.flows (b) — Removed vestigial accounts.userMode column from Accounts table and all references (AccountsCompanion inserts, AuthUser.fromProfile, upsertProfile, UserProfileService, data_export_import_service.dart export/import). Data export no longer includes userMode in userProfiles payload.
+  WS9.dedupe — Decision: KEEP dedupeByEmail. Under DEC-34, distinct accounts (distinct emails) all stay authenticated simultaneously. dedupeByEmail targets same-email/same-user duplicates (Firebase re-mints new UID after account deletion + re-signup) — not different users. Updated code comment with DEC-34 rationale.
+  All 5914 tests pass. dart analyze --fatal-infos: no issues.
+- next: Commit, update tracker, send P4 gate report to Orchestrator.
 
 ## [2026-05-24 12:00] START — WS3 begins
 

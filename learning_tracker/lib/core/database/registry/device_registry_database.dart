@@ -139,6 +139,13 @@ class DeviceRegistryDatabase extends _$DeviceRegistryDatabase {
   /// inserted a second registry row for the same email (the "two cards in
   /// the account picker" symptom).
   ///
+  /// **DEC-34 (multi-session model):** Under DEC-34, distinct accounts
+  /// (distinct emails) all remain authenticated simultaneously. This helper
+  /// is NOT about different users — it targets duplicate rows for the SAME
+  /// email (same user, different Firebase UID due to account deletion +
+  /// re-signup). De-duping same-email duplicates is still correct and
+  /// necessary; it does not conflict with the multi-session model. Kept.
+  ///
   /// For each email group, keeps the row with the most-recent `lastUsedAt`
   /// and removes the others. Does NOT delete the orphan DB files on disk —
   /// that's a separate concern (the files become unreachable from the

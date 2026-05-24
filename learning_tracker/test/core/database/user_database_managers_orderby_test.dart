@@ -36,7 +36,6 @@ void main() {
           email: email,
           tier: 'cloudBorn',
           displayName: 'User',
-          userMode: 'adult',
           createdAt: now,
           updatedAt: now,
           firebaseUid: const Value('fb-uid'),
@@ -114,13 +113,6 @@ void main() {
       expect(rows, hasLength(1));
     });
 
-    test('orderBy userMode', () async {
-      final rows = await db.managers.accounts
-          .orderBy((o) => o.userMode.asc())
-          .get();
-      expect(rows, hasLength(1));
-    });
-
     test('orderBy createdAt', () async {
       final rows = await db.managers.accounts
           .orderBy((o) => o.createdAt.desc())
@@ -152,13 +144,6 @@ void main() {
     test('filter by tier', () async {
       final rows = await db.managers.accounts
           .filter((f) => f.tier('cloudBorn'))
-          .get();
-      expect(rows, hasLength(1));
-    });
-
-    test('filter by userMode', () async {
-      final rows = await db.managers.accounts
-          .filter((f) => f.userMode('adult'))
           .get();
       expect(rows, hasLength(1));
     });

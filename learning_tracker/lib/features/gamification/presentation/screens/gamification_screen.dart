@@ -3,7 +3,7 @@ import 'dart:async' show unawaited;
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:learning_tracker/core/enums/user_mode.dart';
+import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
@@ -91,7 +91,7 @@ class _GamificationScreenState extends ConsumerState<GamificationScreen> {
     final userModeAsync = ref.watch(dashboardUserModeProvider);
     final streakAsync = ref.watch(dashboardStreakProvider);
     final calendarAsync = ref.watch(streakCalendarProvider);
-    final userMode = userModeAsync.asData?.value ?? UserMode.adult;
+    final userMode = userModeAsync.asData?.value ?? ProfileMode.adult;
     final streakData = streakAsync.asData?.value;
     final currentStreak = streakData?.currentStreak ?? 0;
     final maxStreak = streakData?.maxStreak ?? 0;

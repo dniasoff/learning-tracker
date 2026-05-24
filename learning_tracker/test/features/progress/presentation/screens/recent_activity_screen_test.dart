@@ -17,7 +17,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
-import 'package:learning_tracker/core/enums/user_mode.dart';
+import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
@@ -185,7 +185,7 @@ void main() {
           ),
           chartDataServiceProvider.overrideWith((ref) => spy),
           dashboardUserModeProvider.overrideWith(
-            (ref) => Future.value(UserMode.adult),
+            (ref) => Future.value(ProfileMode.adult),
           ),
           dashboardStreakProvider.overrideWith(
             (ref) => Stream.value((currentStreak: 3, maxStreak: 7)),

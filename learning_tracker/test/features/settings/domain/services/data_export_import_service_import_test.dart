@@ -34,16 +34,16 @@ Map<String, dynamic> minimalPayload() => {
 };
 
 /// Returns a userProfile map (imported as an account row).
+///
+/// WS9.flows: [userMode] removed — mode belongs to learner_profiles, not accounts.
 Map<String, dynamic> userProfileMap({
   int id = 1,
   String displayName = 'Test User',
   String tier = 'localBorn',
-  String userMode = 'parent',
 }) => {
   'id': id,
   'displayName': displayName,
   'tier': tier,
-  'userMode': userMode,
   'createdAt': '2026-01-01T00:00:00.000Z',
   'updatedAt': '2026-01-01T00:00:00.000Z',
 };

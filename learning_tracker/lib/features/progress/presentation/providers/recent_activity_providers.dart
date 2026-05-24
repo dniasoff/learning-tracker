@@ -1,5 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:learning_tracker/core/enums/user_mode.dart';
+import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/features/progress/domain/models/chart_data.dart';
 import 'package:learning_tracker/features/progress/domain/services/chart_data_service.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/chart_providers.dart';
@@ -109,7 +109,7 @@ final recentActivityPointsProvider = FutureProvider.autoDispose
       return service.getDailyPoints(
         startDate: window.startDate,
         endDate: window.endDate,
-        userMode: UserMode.child,
+        userMode: ProfileMode.child,
         curriculumId: window.curriculumId,
       );
     });

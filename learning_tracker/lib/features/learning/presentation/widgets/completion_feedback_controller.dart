@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:learning_tracker/core/enums/user_mode.dart';
+import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 
 /// Result of a completion that feeds the animation sequence.
 class CompletionFeedbackData {
@@ -8,7 +8,7 @@ class CompletionFeedbackData {
   final double progressAfter;
   final int? streakBefore;
   final int? streakAfter;
-  final UserMode userMode;
+  final ProfileMode userMode;
 
   const CompletionFeedbackData({
     required this.pointsAwarded,
@@ -58,7 +58,7 @@ class CompletionFeedbackController extends ChangeNotifier {
 
     switch (_phase) {
       case CompletionFeedbackPhase.checkmark:
-        if (_data!.userMode == UserMode.child && _data!.pointsAwarded > 0) {
+        if (_data!.userMode.isChild && _data!.pointsAwarded > 0) {
           _phase = CompletionFeedbackPhase.pointsPopup;
         } else {
           _phase = CompletionFeedbackPhase.progressFill;
@@ -66,7 +66,7 @@ class CompletionFeedbackController extends ChangeNotifier {
       case CompletionFeedbackPhase.pointsPopup:
         _phase = CompletionFeedbackPhase.progressFill;
       case CompletionFeedbackPhase.progressFill:
-        if (_data!.userMode == UserMode.child && _data!.isStreakIncrement) {
+        if (_data!.userMode.isChild && _data!.isStreakIncrement) {
           _phase = CompletionFeedbackPhase.streakBump;
         } else {
           _phase = CompletionFeedbackPhase.idle;

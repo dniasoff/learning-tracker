@@ -30,7 +30,6 @@ void main() {
           email: email,
           tier: 'cloudBorn',
           displayName: 'User',
-          userMode: 'adult',
           createdAt: now,
           updatedAt: now,
           firebaseUid: const Value('fb-uid'),
@@ -90,10 +89,6 @@ void main() {
       expect(await db.managers.accounts.withFields([field]).get(), isNotEmpty);
     });
 
-    test('computedField userMode', () async {
-      final field = db.managers.accounts.computedField((a) => a.userMode);
-      expect(await db.managers.accounts.withFields([field]).get(), isNotEmpty);
-    });
   });
 
   // ── learnerProfiles — remaining annotation fields ─────────────────────────

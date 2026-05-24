@@ -1,7 +1,7 @@
 import 'package:learning_tracker/core/database/daos/completion_dao.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
+import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/core/enums/user_mode.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_tier_filter.dart';
 import 'package:learning_tracker/features/progress/domain/models/chart_data.dart';
 
@@ -378,10 +378,10 @@ class ChartDataService {
   Future<List<DailyPointsData>?> getDailyPoints({
     required DateTime startDate,
     required DateTime endDate,
-    required UserMode userMode,
+    required ProfileMode userMode,
     String? curriculumId,
   }) async {
-    if (userMode == UserMode.adult) return null;
+    if (userMode.isAdult) return null;
 
     final curriculum = _resolveCurriculum(curriculumId);
     final effectiveStart = await _effectiveStartDate(

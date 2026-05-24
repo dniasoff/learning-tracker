@@ -74,17 +74,6 @@ class $AccountsTable extends Accounts with TableInfo<$AccountsTable, Account> {
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
-  static const VerificationMeta _userModeMeta = const VerificationMeta(
-    'userMode',
-  );
-  @override
-  late final GeneratedColumn<String> userMode = GeneratedColumn<String>(
-    'user_mode',
-    aliasedName,
-    false,
-    type: DriftSqlType.string,
-    requiredDuringInsert: true,
-  );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
   );
@@ -115,7 +104,6 @@ class $AccountsTable extends Accounts with TableInfo<$AccountsTable, Account> {
     passwordHash,
     tier,
     displayName,
-    userMode,
     createdAt,
     updatedAt,
   ];
@@ -179,14 +167,6 @@ class $AccountsTable extends Accounts with TableInfo<$AccountsTable, Account> {
     } else if (isInserting) {
       context.missing(_displayNameMeta);
     }
-    if (data.containsKey('user_mode')) {
-      context.handle(
-        _userModeMeta,
-        userMode.isAcceptableOrUnknown(data['user_mode']!, _userModeMeta),
-      );
-    } else if (isInserting) {
-      context.missing(_userModeMeta);
-    }
     if (data.containsKey('created_at')) {
       context.handle(
         _createdAtMeta,
@@ -236,10 +216,6 @@ class $AccountsTable extends Accounts with TableInfo<$AccountsTable, Account> {
         DriftSqlType.string,
         data['${effectivePrefix}display_name'],
       )!,
-      userMode: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}user_mode'],
-      )!,
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
@@ -273,7 +249,6 @@ class Account extends DataClass implements Insertable<Account> {
   /// `cloudBorn` | `localBorn`. Set at signup, immutable except via upgrade.
   final String tier;
   final String displayName;
-  final String userMode;
   final DateTime createdAt;
   final DateTime updatedAt;
   const Account({
@@ -283,7 +258,6 @@ class Account extends DataClass implements Insertable<Account> {
     this.passwordHash,
     required this.tier,
     required this.displayName,
-    required this.userMode,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -300,7 +274,6 @@ class Account extends DataClass implements Insertable<Account> {
     }
     map['tier'] = Variable<String>(tier);
     map['display_name'] = Variable<String>(displayName);
-    map['user_mode'] = Variable<String>(userMode);
     map['created_at'] = Variable<DateTime>(createdAt);
     map['updated_at'] = Variable<DateTime>(updatedAt);
     return map;
@@ -318,7 +291,6 @@ class Account extends DataClass implements Insertable<Account> {
           : Value(passwordHash),
       tier: Value(tier),
       displayName: Value(displayName),
-      userMode: Value(userMode),
       createdAt: Value(createdAt),
       updatedAt: Value(updatedAt),
     );
@@ -336,7 +308,6 @@ class Account extends DataClass implements Insertable<Account> {
       passwordHash: serializer.fromJson<String?>(json['passwordHash']),
       tier: serializer.fromJson<String>(json['tier']),
       displayName: serializer.fromJson<String>(json['displayName']),
-      userMode: serializer.fromJson<String>(json['userMode']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
     );
@@ -351,7 +322,6 @@ class Account extends DataClass implements Insertable<Account> {
       'passwordHash': serializer.toJson<String?>(passwordHash),
       'tier': serializer.toJson<String>(tier),
       'displayName': serializer.toJson<String>(displayName),
-      'userMode': serializer.toJson<String>(userMode),
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
     };
@@ -364,7 +334,6 @@ class Account extends DataClass implements Insertable<Account> {
     Value<String?> passwordHash = const Value.absent(),
     String? tier,
     String? displayName,
-    String? userMode,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) => Account(
@@ -374,7 +343,6 @@ class Account extends DataClass implements Insertable<Account> {
     passwordHash: passwordHash.present ? passwordHash.value : this.passwordHash,
     tier: tier ?? this.tier,
     displayName: displayName ?? this.displayName,
-    userMode: userMode ?? this.userMode,
     createdAt: createdAt ?? this.createdAt,
     updatedAt: updatedAt ?? this.updatedAt,
   );
@@ -392,7 +360,6 @@ class Account extends DataClass implements Insertable<Account> {
       displayName: data.displayName.present
           ? data.displayName.value
           : this.displayName,
-      userMode: data.userMode.present ? data.userMode.value : this.userMode,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
     );
@@ -407,7 +374,6 @@ class Account extends DataClass implements Insertable<Account> {
           ..write('passwordHash: $passwordHash, ')
           ..write('tier: $tier, ')
           ..write('displayName: $displayName, ')
-          ..write('userMode: $userMode, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt')
           ..write(')'))
@@ -422,7 +388,6 @@ class Account extends DataClass implements Insertable<Account> {
     passwordHash,
     tier,
     displayName,
-    userMode,
     createdAt,
     updatedAt,
   );
@@ -436,7 +401,6 @@ class Account extends DataClass implements Insertable<Account> {
           other.passwordHash == this.passwordHash &&
           other.tier == this.tier &&
           other.displayName == this.displayName &&
-          other.userMode == this.userMode &&
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt);
 }
@@ -448,7 +412,6 @@ class AccountsCompanion extends UpdateCompanion<Account> {
   final Value<String?> passwordHash;
   final Value<String> tier;
   final Value<String> displayName;
-  final Value<String> userMode;
   final Value<DateTime> createdAt;
   final Value<DateTime> updatedAt;
   const AccountsCompanion({
@@ -458,7 +421,6 @@ class AccountsCompanion extends UpdateCompanion<Account> {
     this.passwordHash = const Value.absent(),
     this.tier = const Value.absent(),
     this.displayName = const Value.absent(),
-    this.userMode = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
   });
@@ -469,13 +431,11 @@ class AccountsCompanion extends UpdateCompanion<Account> {
     this.passwordHash = const Value.absent(),
     required String tier,
     required String displayName,
-    required String userMode,
     required DateTime createdAt,
     required DateTime updatedAt,
   }) : email = Value(email),
        tier = Value(tier),
        displayName = Value(displayName),
-       userMode = Value(userMode),
        createdAt = Value(createdAt),
        updatedAt = Value(updatedAt);
   static Insertable<Account> custom({
@@ -485,7 +445,6 @@ class AccountsCompanion extends UpdateCompanion<Account> {
     Expression<String>? passwordHash,
     Expression<String>? tier,
     Expression<String>? displayName,
-    Expression<String>? userMode,
     Expression<DateTime>? createdAt,
     Expression<DateTime>? updatedAt,
   }) {
@@ -496,7 +455,6 @@ class AccountsCompanion extends UpdateCompanion<Account> {
       if (passwordHash != null) 'password_hash': passwordHash,
       if (tier != null) 'tier': tier,
       if (displayName != null) 'display_name': displayName,
-      if (userMode != null) 'user_mode': userMode,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
     });
@@ -509,7 +467,6 @@ class AccountsCompanion extends UpdateCompanion<Account> {
     Value<String?>? passwordHash,
     Value<String>? tier,
     Value<String>? displayName,
-    Value<String>? userMode,
     Value<DateTime>? createdAt,
     Value<DateTime>? updatedAt,
   }) {
@@ -520,7 +477,6 @@ class AccountsCompanion extends UpdateCompanion<Account> {
       passwordHash: passwordHash ?? this.passwordHash,
       tier: tier ?? this.tier,
       displayName: displayName ?? this.displayName,
-      userMode: userMode ?? this.userMode,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
@@ -547,9 +503,6 @@ class AccountsCompanion extends UpdateCompanion<Account> {
     if (displayName.present) {
       map['display_name'] = Variable<String>(displayName.value);
     }
-    if (userMode.present) {
-      map['user_mode'] = Variable<String>(userMode.value);
-    }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
@@ -568,7 +521,6 @@ class AccountsCompanion extends UpdateCompanion<Account> {
           ..write('passwordHash: $passwordHash, ')
           ..write('tier: $tier, ')
           ..write('displayName: $displayName, ')
-          ..write('userMode: $userMode, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt')
           ..write(')'))
@@ -628,6 +580,7 @@ class $LearnerProfilesTable extends LearnerProfiles
     false,
     type: DriftSqlType.string,
     requiredDuringInsert: true,
+    $customConstraints: 'NOT NULL CHECK (mode IN (\'adult\', \'child\'))',
   );
   static const VerificationMeta _avatarIndexMeta = const VerificationMeta(
     'avatarIndex',
@@ -792,6 +745,9 @@ class LearnerProfile extends DataClass implements Insertable<LearnerProfile> {
   /// W3.25: FK → accounts(id) CASCADE DELETE.
   final int accountId;
   final String displayName;
+
+  /// Profile mode — exactly 'adult' or 'child'. Enforced by CHECK constraint
+  /// (schema v26, WS9.enum). Read via [ProfileMode.fromStorageKey].
   final String mode;
   final int avatarIndex;
   final DateTime createdAt;
@@ -13108,7 +13064,6 @@ typedef $$AccountsTableCreateCompanionBuilder =
       Value<String?> passwordHash,
       required String tier,
       required String displayName,
-      required String userMode,
       required DateTime createdAt,
       required DateTime updatedAt,
     });
@@ -13120,7 +13075,6 @@ typedef $$AccountsTableUpdateCompanionBuilder =
       Value<String?> passwordHash,
       Value<String> tier,
       Value<String> displayName,
-      Value<String> userMode,
       Value<DateTime> createdAt,
       Value<DateTime> updatedAt,
     });
@@ -13189,11 +13143,6 @@ class $$AccountsTableFilterComposer
 
   ColumnFilters<String> get displayName => $composableBuilder(
     column: $table.displayName,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<String> get userMode => $composableBuilder(
-    column: $table.userMode,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -13272,11 +13221,6 @@ class $$AccountsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<String> get userMode => $composableBuilder(
-    column: $table.userMode,
-    builder: (column) => ColumnOrderings(column),
-  );
-
   ColumnOrderings<DateTime> get createdAt => $composableBuilder(
     column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
@@ -13320,9 +13264,6 @@ class $$AccountsTableAnnotationComposer
     column: $table.displayName,
     builder: (column) => column,
   );
-
-  GeneratedColumn<String> get userMode =>
-      $composableBuilder(column: $table.userMode, builder: (column) => column);
 
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
@@ -13390,7 +13331,6 @@ class $$AccountsTableTableManager
                 Value<String?> passwordHash = const Value.absent(),
                 Value<String> tier = const Value.absent(),
                 Value<String> displayName = const Value.absent(),
-                Value<String> userMode = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
               }) => AccountsCompanion(
@@ -13400,7 +13340,6 @@ class $$AccountsTableTableManager
                 passwordHash: passwordHash,
                 tier: tier,
                 displayName: displayName,
-                userMode: userMode,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
               ),
@@ -13412,7 +13351,6 @@ class $$AccountsTableTableManager
                 Value<String?> passwordHash = const Value.absent(),
                 required String tier,
                 required String displayName,
-                required String userMode,
                 required DateTime createdAt,
                 required DateTime updatedAt,
               }) => AccountsCompanion.insert(
@@ -13422,7 +13360,6 @@ class $$AccountsTableTableManager
                 passwordHash: passwordHash,
                 tier: tier,
                 displayName: displayName,
-                userMode: userMode,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
               ),

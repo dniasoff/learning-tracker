@@ -133,7 +133,6 @@ void main() {
                   email: 'child@example.com',
                   tier: 'localBorn',
                   displayName: 'Test Child',
-                  userMode: 'child',
                   createdAt: DateTime.now(),
                   updatedAt: DateTime.now(),
                 ),

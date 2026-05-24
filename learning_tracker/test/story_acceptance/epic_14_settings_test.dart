@@ -6,8 +6,8 @@ import 'dart:convert';
 
 import 'package:drift/drift.dart' hide isNotNull, isNull;
 import 'package:learning_tracker/core/database/user/user_database.dart';
+import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/enums/cross_profile_scope.dart';
-import 'package:learning_tracker/core/enums/user_mode.dart';
 import 'package:learning_tracker/features/account/domain/repositories/auth_repository.dart';
 import 'package:learning_tracker/features/account/domain/services/account_management_service.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/user_profile_service.dart';
@@ -26,7 +26,6 @@ class MockAuthRepository extends Mock implements AuthRepository {}
 Future<void> _noOpPush({
   required String firebaseUid,
   required String displayName,
-  required String userMode,
 }) async {}
 
 /// Creates a default curriculum track and returns its ID.
@@ -46,88 +45,96 @@ Future<int> _insertTrack(UserDatabase db) async {
 
 void main() {
   // ── Story 14.1: Settings screen ───────────────────────────────
+  //
+  // WS9.flows: mode belongs to learner_profiles.mode, not accounts.userMode.
+  // UserProfileService.setUserMode/getUserMode removed. Mode changes are
+  // written directly to LearnerProfiles via profileDao.
 
   group('Story 14.1 -- Settings screen', tags: ['story_14_1'], () {
     late UserDatabase db;
-    late UserProfileService profileService;
 
     setUp(() async {
       db = createTestDatabase();
       await seedProfile(db);
       await _insertTrack(db);
-      profileService = UserProfileService(
-        userProfileDao: db.userProfileDao,
-        pushUserProfile: _noOpPush,
-      );
     });
 
     tearDown(() async {
       await db.close();
     });
 
-    test('mode change persists new UserMode to profile', () async {
-      // Set initial mode to adult
-      await profileService.setUserMode(
-        firebaseUid: 'uid-1',
-        displayName: 'Test User',
-        mode: UserMode.adult,
-      );
-      expect(await profileService.getUserMode('uid-1'), UserMode.adult);
-
-      // Change to child
-      await profileService.setUserMode(
-        firebaseUid: 'uid-1',
-        displayName: 'Test User',
-        mode: UserMode.child,
-      );
-      expect(await profileService.getUserMode('uid-1'), UserMode.child);
+    test('learner profile mode defaults to adult', () async {
+      // seedProfile inserts a learner profile with mode='adult'
+      final profiles = await db.select(db.learnerProfiles).get();
+      expect(profiles, isNotEmpty);
+      final mode = ProfileMode.fromStorageKey(profiles.first.mode);
+      expect(mode, ProfileMode.adult);
     });
 
-    test('mode change from child to adult disables parent mode access', () async {
-      // Start as child
-      await profileService.setUserMode(
-        firebaseUid: 'uid-1',
-        displayName: 'Test User',
-        mode: UserMode.child,
+    test('mode change from adult to child persists to learner_profiles', () async {
+      final profiles = await db.select(db.learnerProfiles).get();
+      final profile = profiles.first;
+
+      // Update to child mode
+      await db.profileDao.updateProfile(
+        LearnerProfilesCompanion(
+          id: Value(profile.id),
+          accountId: Value(profile.accountId),
+          displayName: Value(profile.displayName),
+          mode: const Value('child'),
+          createdAt: Value(profile.createdAt),
+          updatedAt: Value(DateTime.utc(2026, 1, 2)),
+        ),
       );
 
-      // Switch to adult
-      await profileService.setUserMode(
-        firebaseUid: 'uid-1',
-        displayName: 'Test User',
-        mode: UserMode.adult,
-      );
-
-      final mode = await profileService.getUserMode('uid-1');
-      expect(mode, UserMode.adult);
-      // In adult mode, parent mode is not accessible (ChildModeGuard blocks it)
+      final updated = await db.profileDao.getProfileById(profile.id);
+      expect(updated!.mode, 'child');
+      expect(ProfileMode.fromStorageKey(updated.mode), ProfileMode.child);
     });
 
-    test('mode change from adult to child enables parent mode setup', () async {
-      // Start as adult
-      await profileService.setUserMode(
-        firebaseUid: 'uid-1',
-        displayName: 'Test User',
-        mode: UserMode.adult,
+    test('mode change from child to adult disables child gating', () async {
+      final profiles = await db.select(db.learnerProfiles).get();
+      final profile = profiles.first;
+
+      // First set to child
+      await db.profileDao.updateProfile(
+        LearnerProfilesCompanion(
+          id: Value(profile.id),
+          accountId: Value(profile.accountId),
+          displayName: Value(profile.displayName),
+          mode: const Value('child'),
+          createdAt: Value(profile.createdAt),
+          updatedAt: Value(DateTime.utc(2026, 1, 2)),
+        ),
       );
 
-      // Switch to child
-      await profileService.setUserMode(
-        firebaseUid: 'uid-1',
-        displayName: 'Test User',
-        mode: UserMode.child,
+      // Then switch back to adult
+      await db.profileDao.updateProfile(
+        LearnerProfilesCompanion(
+          id: Value(profile.id),
+          accountId: Value(profile.accountId),
+          displayName: Value(profile.displayName),
+          mode: const Value('adult'),
+          createdAt: Value(profile.createdAt),
+          updatedAt: Value(DateTime.utc(2026, 1, 3)),
+        ),
       );
 
-      final mode = await profileService.getUserMode('uid-1');
-      expect(mode, UserMode.child);
-      // In child mode, parent mode becomes available (ChildModeGuard allows)
+      final updated = await db.profileDao.getProfileById(profile.id);
+      final mode = ProfileMode.fromStorageKey(updated!.mode);
+      expect(mode, ProfileMode.adult);
+      // In adult mode, child gating is disabled
     });
 
-    test('user profile stores display name and mode', () async {
-      await profileService.setUserMode(
+    test('updateDisplayName persists display name to account', () async {
+      final profileService = UserProfileService(
+        userProfileDao: db.userProfileDao,
+        pushUserProfile: _noOpPush,
+      );
+
+      await profileService.updateDisplayName(
         firebaseUid: 'uid-1',
         displayName: 'Jane Doe',
-        mode: UserMode.child,
       );
 
       final profile = await db.userProfileDao.getUserProfileByFirebaseUid(
@@ -135,7 +142,6 @@ void main() {
       );
       expect(profile, isNotNull);
       expect(profile!.displayName, 'Jane Doe');
-      expect(profile.userMode, 'child');
     });
   });
 
@@ -301,7 +307,6 @@ void main() {
       await db.userProfileDao.upsertProfile(
         firebaseUid: 'uid-export-test',
         displayName: 'Test User',
-        userMode: 'adult',
         updatedAt: DateTime(2026, 3, 17),
       );
     }
@@ -654,7 +659,6 @@ void main() {
         await db.userProfileDao.upsertProfile(
           firebaseUid: 'uid-1',
           displayName: 'User',
-          userMode: 'adult',
           updatedAt: DateTime.now(),
         );
 
@@ -679,7 +683,6 @@ void main() {
       await db.userProfileDao.upsertProfile(
         firebaseUid: 'uid-1',
         displayName: 'User',
-        userMode: 'adult',
         updatedAt: DateTime.now(),
       );
 

@@ -159,7 +159,6 @@ void main() {
                 firebaseUid: const Value('uid_firewall_001'),
                 tier: 'cloudBorn',
                 displayName: 'New User',
-                userMode: 'adult',
                 createdAt: now,
                 updatedAt: now,
               ),

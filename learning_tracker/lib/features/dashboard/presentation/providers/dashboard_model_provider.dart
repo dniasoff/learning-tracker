@@ -1,6 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
-import 'package:learning_tracker/core/enums/user_mode.dart';
+import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/dashboard/presentation/widgets/dashboard_helpers.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
@@ -20,7 +20,7 @@ class DashboardHeaderModel {
     required this.profileName,
   });
 
-  final UserMode userMode;
+  final ProfileMode userMode;
   final int currentStreak;
   final int maxStreak;
   final int globalPoints;
@@ -117,7 +117,7 @@ final dashboardModelProvider = Provider.autoDispose<AsyncValue<DashboardModel>>(
     }
 
     final activeTracks = activeTracksAsync.value ?? const [];
-    final userMode = userModeAsync.value ?? UserMode.adult;
+    final userMode = userModeAsync.value ?? ProfileMode.adult;
     final streakData = streakAsync.value;
     final currentStreak = streakData?.currentStreak ?? 0;
     final maxStreak = streakData?.maxStreak ?? 0;

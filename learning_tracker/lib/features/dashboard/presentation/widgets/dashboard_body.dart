@@ -6,7 +6,6 @@ import 'package:intl/intl.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/core/enums/user_mode.dart';
 import 'package:learning_tracker/core/labels/domain_term_labels.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/sync/initial_sync_state.dart';
@@ -39,7 +38,7 @@ import 'package:learning_tracker/l10n/app_localizations.dart';
 
 class DashboardBody extends ConsumerWidget {
   final List<CurriculumTrack> activeTracks;
-  final UserMode userMode;
+  final ProfileMode userMode;
   final int currentStreak;
   final String? profileName;
 
@@ -307,9 +306,9 @@ class DashboardBody extends ConsumerWidget {
         // Tier counter row (engagement / achievement / lifetime [/ ⭐ points]).
         // Shared with Progress hub — same widget, same providers.
         // Child mode renders the fourth ⭐ points counter (see Task #14 brief).
-        ProgressTierCounterRow(showPoints: userMode == UserMode.child),
+        ProgressTierCounterRow(showPoints: userMode == ProfileMode.child),
         const SizedBox(height: 22),
-        if (userMode == UserMode.child) ...[
+        if (userMode == ProfileMode.child) ...[
           ChildPointsRewardsTabCard(
             totalPoints: totalPoints,
             l10n: l10n,
@@ -437,7 +436,7 @@ class DashboardBody extends ConsumerWidget {
             ),
           ),
         ),
-        if (userMode == UserMode.child) ...[
+        if (userMode == ProfileMode.child) ...[
           const SizedBox(height: 14),
           StreakRecoveryBanner(currentStreak: currentStreak),
         ],

@@ -67,7 +67,6 @@ void main() {
               firebaseUid: const Value('firebase-uid-123'),
               tier: 'cloudBorn',
               displayName: 'Alice',
-              userMode: 'adult',
               createdAt: DateTime(2026, 1, 1),
               updatedAt: DateTime(2026, 1, 1),
             ),
@@ -87,7 +86,8 @@ void main() {
 
       // Non-PII must be present
       expect(profile['displayName'], equals('Alice'));
-      expect(profile['userMode'], equals('adult'));
+      // userMode removed from export in WS9.flows — mode belongs to learner_profiles
+      expect(profile.containsKey('userMode'), isFalse);
     });
 
     // ── 26.23.4: profileId on every user-data row ──────────────────
@@ -244,7 +244,6 @@ void main() {
                 email: 'alice@placeholder.local',
                 tier: 'localBorn',
                 displayName: 'Alice',
-                userMode: 'adult',
                 createdAt: DateTime(2026, 1, 1),
                 updatedAt: DateTime(2026, 1, 1),
               ),
@@ -259,7 +258,6 @@ void main() {
                 email: 'bob@placeholder.local',
                 tier: 'localBorn',
                 displayName: 'Bob',
-                userMode: 'adult',
                 createdAt: DateTime(2026, 2, 1),
                 updatedAt: DateTime(2026, 2, 1),
               ),

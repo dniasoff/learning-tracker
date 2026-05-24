@@ -43,7 +43,6 @@ AuthState _signedIn(int profileId, Tier tier) => AuthState.signedIn(
     profileId: profileId,
     email: 'test@example.com',
     displayName: 'Test User',
-    userMode: 'adult',
   ),
   tier: tier,
 );

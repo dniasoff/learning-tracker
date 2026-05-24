@@ -1,5 +1,7 @@
 // Tests for AuthUser and AuthState — covers AuthUser.fromProfile,
 // displayIdentifier, and AuthState.copyWith.
+//
+// WS9.flows: userMode removed from AuthUser; mode lives on LearnerProfiles.
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/daos/user_profile_dao.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
@@ -14,13 +16,11 @@ void main() {
     int id = 1,
     String email = 'test@example.com',
     String displayName = 'Tester',
-    String userMode = 'parent',
     String? firebaseUid,
   }) => UserProfile(
     id: id,
     email: email,
     displayName: displayName,
-    userMode: userMode,
     tier: 'localBorn',
     firebaseUid: firebaseUid,
     createdAt: DateTime.utc(2026, 1, 1),
@@ -35,7 +35,6 @@ void main() {
         id: 42,
         email: 'user@example.com',
         displayName: 'Jane',
-        userMode: 'child',
         firebaseUid: 'uid-abc',
       );
       final user = AuthUser.fromProfile(profile);
@@ -43,7 +42,6 @@ void main() {
       expect(user.profileId, 42);
       expect(user.email, 'user@example.com');
       expect(user.displayName, 'Jane');
-      expect(user.userMode, 'child');
       expect(user.firebaseUid, 'uid-abc');
     });
 
@@ -68,7 +66,6 @@ void main() {
             AccountsCompanion.insert(
               email: 'test@example.com',
               displayName: 'Test User',
-              userMode: 'parent',
               tier: 'cloudBorn',
               createdAt: now,
               updatedAt: now,
@@ -82,7 +79,6 @@ void main() {
 
       expect(user.email, 'test@example.com');
       expect(user.displayName, 'Test User');
-      expect(user.userMode, 'parent');
       expect(user.profileId, profileId);
     });
   });
@@ -94,7 +90,6 @@ void main() {
       profileId: 1,
       email: 'user@example.com',
       displayName: 'Test',
-      userMode: 'parent',
     );
 
     test('AuthState.initializing sets sessionStatus=initializing', () {
@@ -164,7 +159,6 @@ void main() {
         profileId: 1,
         email: 'user@example.com',
         displayName: '',
-        userMode: 'parent',
       );
       const state = AuthState.signedIn(user: user, tier: UserTier.localBorn);
       expect(state.displayIdentifier, 'user@example.com');
@@ -230,7 +224,6 @@ void main() {
       profileId: 1,
       email: 'a@b.com',
       displayName: 'Alice',
-      userMode: 'parent',
     );
 
     test('returns displayName when non-empty', () {
@@ -246,7 +239,6 @@ void main() {
         profileId: 1,
         email: 'a@b.com',
         displayName: '',
-        userMode: 'parent',
       );
       const state = AuthState.signedIn(
         user: emptyNameUser,
@@ -266,7 +258,6 @@ void main() {
       profileId: 1,
       email: 'a@b.com',
       displayName: 'Alice',
-      userMode: 'parent',
     );
 
     test('returns copy with updated sessionStatus', () {

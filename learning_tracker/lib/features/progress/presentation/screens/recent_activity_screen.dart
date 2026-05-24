@@ -1,8 +1,8 @@
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/core/enums/user_mode.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/labels/domain_term_labels.dart';
 import 'package:learning_tracker/core/theme/app_colors.dart';
@@ -85,7 +85,7 @@ class _RecentActivityScreenState extends ConsumerState<RecentActivityScreen> {
     final l10n = AppLocalizations.of(context)!;
     final terms = domainTermLabels(ref);
     final userMode =
-        ref.watch(dashboardUserModeProvider).asData?.value ?? UserMode.adult;
+        ref.watch(dashboardUserModeProvider).asData?.value ?? ProfileMode.adult;
     // Hide every chazara/review reference on this screen when no active track
     // has chazara stages — per the per-track chazara rule, the absence of
     // chazara extends to all reports.
@@ -144,7 +144,7 @@ class _RecentActivityScreenState extends ConsumerState<RecentActivityScreen> {
                 child: _CumulativeChartBody(window: window),
               ),
             ),
-            if (userMode == UserMode.child) ...[
+            if (userMode.isChild) ...[
               const SizedBox(height: 14),
               _ChartSection(
                 title: l10n.chartPointsEarned,

@@ -44,7 +44,6 @@ void main() {
             email: 'test@example.com',
             tier: 'localBorn',
             displayName: 'Test Account',
-            userMode: 'adult',
             createdAt: now,
             updatedAt: now,
           ),

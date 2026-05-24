@@ -2,7 +2,7 @@ import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:learning_tracker/core/enums/user_mode.dart';
+import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/labels/curriculum_visuals.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
@@ -51,7 +51,7 @@ class ProgressScreen extends ConsumerWidget {
     );
     final profileId = ref.watch(activeProfileIdProvider);
     final userMode =
-        ref.watch(dashboardUserModeProvider).asData?.value ?? UserMode.adult;
+        ref.watch(dashboardUserModeProvider).asData?.value ?? ProfileMode.adult;
 
     final l10n = AppLocalizations.of(context)!;
     return Scaffold(
@@ -109,7 +109,7 @@ class ProgressScreen extends ConsumerWidget {
                     ),
                     const SizedBox(height: 14),
                     ProgressTierCounterRow(
-                      showPoints: userMode == UserMode.child,
+                      showPoints: userMode.isChild,
                     ),
                     const SizedBox(height: 18),
                     const _RecentActivityLensTile(),

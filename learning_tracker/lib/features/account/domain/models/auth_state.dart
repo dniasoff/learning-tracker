@@ -19,12 +19,15 @@ enum SessionStatus {
 
 /// Minimal user descriptor surfaced to the UI layer. Anything tier-
 /// specific (passwordHash, firebaseUid) lives on the DB row, not here.
+///
+/// WS9.flows: [userMode] field removed — mode belongs to [LearnerProfiles],
+/// not to an [Account]. Use [dashboardUserModeProvider] (which reads
+/// [learner_profiles.mode]) to gate child-only UI.
 class AuthUser {
   const AuthUser({
     required this.profileId,
     required this.email,
     required this.displayName,
-    required this.userMode,
     this.firebaseUid,
   });
 
@@ -32,14 +35,12 @@ class AuthUser {
     profileId: profile.id,
     email: profile.email,
     displayName: profile.displayName,
-    userMode: profile.userMode,
     firebaseUid: profile.firebaseUid,
   );
 
   final int profileId;
   final String email;
   final String displayName;
-  final String userMode;
   final String? firebaseUid;
 }
 

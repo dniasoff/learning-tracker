@@ -1,8 +1,8 @@
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/core/enums/user_mode.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/widgets/app_error_view.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
@@ -50,7 +50,7 @@ class DashboardScreen extends ConsumerWidget {
               onRetry: () => ref.refresh(dashboardActiveTracksStreamProvider),
             ),
             data: (activeTracks) {
-              final userMode = userModeAsync.asData?.value ?? UserMode.adult;
+              final userMode = userModeAsync.asData?.value ?? ProfileMode.adult;
               final streakData = streakAsync.asData?.value;
               final currentStreak = streakData?.currentStreak ?? 0;
               final profileId = ref.watch(activeProfileIdProvider);

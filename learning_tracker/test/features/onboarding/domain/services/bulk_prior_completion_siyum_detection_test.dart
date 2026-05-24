@@ -154,7 +154,6 @@ Future<int> _seedAccountAndProfile(UserDatabase db) async {
           email: 'test@example.com',
           tier: 'localBorn',
           displayName: 'Test User',
-          userMode: 'adult',
           createdAt: now,
           updatedAt: now,
         ),

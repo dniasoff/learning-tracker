@@ -35,7 +35,6 @@ void main() {
           email: email,
           tier: 'cloudBorn',
           displayName: 'XRefUser',
-          userMode: 'adult',
           createdAt: now,
           updatedAt: now,
         ),

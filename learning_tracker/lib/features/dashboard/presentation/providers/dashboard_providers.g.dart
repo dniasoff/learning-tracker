@@ -61,30 +61,43 @@ final class CrossCurriculumAggregatorProvider
 String _$crossCurriculumAggregatorHash() =>
     r'1819b08e0b5c27a2886dc5d9196d1db55ba9384f';
 
-/// Provider for the active profile's user mode, resolved from the
-/// [Profiles] table.
+/// Provider for the active profile's mode, resolved from the [LearnerProfiles]
+/// table.
 ///
-/// Defaults to [UserMode.adult] if no profile row is found. This is what
+/// Defaults to [ProfileMode.adult] if no profile row is found. This is what
 /// gates child-only gamification UI (points, streaks, celebrations).
+///
+/// WS9.enum: unified — formerly returned [UserMode]; now returns [ProfileMode]
+/// directly. [UserMode] enum has been deleted.
 
 @ProviderFor(dashboardUserMode)
 final dashboardUserModeProvider = DashboardUserModeProvider._();
 
-/// Provider for the active profile's user mode, resolved from the
-/// [Profiles] table.
+/// Provider for the active profile's mode, resolved from the [LearnerProfiles]
+/// table.
 ///
-/// Defaults to [UserMode.adult] if no profile row is found. This is what
+/// Defaults to [ProfileMode.adult] if no profile row is found. This is what
 /// gates child-only gamification UI (points, streaks, celebrations).
+///
+/// WS9.enum: unified — formerly returned [UserMode]; now returns [ProfileMode]
+/// directly. [UserMode] enum has been deleted.
 
 final class DashboardUserModeProvider
     extends
-        $FunctionalProvider<AsyncValue<UserMode>, UserMode, FutureOr<UserMode>>
-    with $FutureModifier<UserMode>, $FutureProvider<UserMode> {
-  /// Provider for the active profile's user mode, resolved from the
-  /// [Profiles] table.
+        $FunctionalProvider<
+          AsyncValue<ProfileMode>,
+          ProfileMode,
+          FutureOr<ProfileMode>
+        >
+    with $FutureModifier<ProfileMode>, $FutureProvider<ProfileMode> {
+  /// Provider for the active profile's mode, resolved from the [LearnerProfiles]
+  /// table.
   ///
-  /// Defaults to [UserMode.adult] if no profile row is found. This is what
+  /// Defaults to [ProfileMode.adult] if no profile row is found. This is what
   /// gates child-only gamification UI (points, streaks, celebrations).
+  ///
+  /// WS9.enum: unified — formerly returned [UserMode]; now returns [ProfileMode]
+  /// directly. [UserMode] enum has been deleted.
   DashboardUserModeProvider._()
     : super(
         from: null,
@@ -101,16 +114,17 @@ final class DashboardUserModeProvider
 
   @$internal
   @override
-  $FutureProviderElement<UserMode> $createElement($ProviderPointer pointer) =>
-      $FutureProviderElement(pointer);
+  $FutureProviderElement<ProfileMode> $createElement(
+    $ProviderPointer pointer,
+  ) => $FutureProviderElement(pointer);
 
   @override
-  FutureOr<UserMode> create(Ref ref) {
+  FutureOr<ProfileMode> create(Ref ref) {
     return dashboardUserMode(ref);
   }
 }
 
-String _$dashboardUserModeHash() => r'691eebf2f98e9744deb09ad27484cfb52c71264b';
+String _$dashboardUserModeHash() => r'1c87fec8197ef6b77fafc77b457a3012f71aa361';
 
 /// Provider for list of active curricula IDs, scoped to active profile.
 
@@ -714,7 +728,7 @@ final class DashboardGlobalPointsProvider
 }
 
 String _$dashboardGlobalPointsHash() =>
-    r'269ebb3eaaae5edaabc3018ce62b4bba271d14f5';
+    r'8fe91dadd16bdbd387fd4e1676826796e207afbf';
 
 /// Write-path effect: strips legacy stock-template milestones for the current
 /// profile and pushes updated gamification settings to Firestore if any rows
@@ -831,7 +845,7 @@ final class DashboardChildNextRewardProvider
 }
 
 String _$dashboardChildNextRewardHash() =>
-    r'5b2fbc543f8d2cb045bd04b9610d823128d9ef88';
+    r'1cde7c0c8cf446693fd9c00474aa689f3993a354';
 
 /// Streak recovery info — whether the streak was just saved by grace period.
 
@@ -878,7 +892,7 @@ final class DashboardStreakRecoveryProvider
 }
 
 String _$dashboardStreakRecoveryHash() =>
-    r'11004b11503d33a6f71f1940d1023eb23413c885';
+    r'590ec65489c6c1924a72e8c838b9220b3dca4c2d';
 
 /// Per-curriculum pace status for the dashboard.
 ///

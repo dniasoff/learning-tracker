@@ -26,7 +26,8 @@ class Accounts extends Table {
   TextColumn get tier => text()();
 
   TextColumn get displayName => text()();
-  TextColumn get userMode => text()();
+  // userMode removed in schema v26 (WS9.flows) — mode belongs to
+  // learner_profiles.mode (child/adult), not to an account.
   DateTimeColumn get createdAt => dateTime()();
   DateTimeColumn get updatedAt => dateTime()();
 }

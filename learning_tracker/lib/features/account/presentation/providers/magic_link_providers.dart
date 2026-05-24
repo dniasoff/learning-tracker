@@ -19,7 +19,7 @@ MagicLinkService magicLinkService(Ref ref) {
     onSignedIn: (user) async {
       await ref
           .read(auth_state.authStateProvider.notifier)
-          .promoteToCloud(user);
+          .setCloudBornSessionFromFirebaseUser(user);
     },
   );
   ref.onDispose(service.dispose);

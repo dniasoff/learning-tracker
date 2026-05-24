@@ -46,7 +46,6 @@ void main() {
           email: email,
           tier: 'cloudBorn',
           displayName: 'RefsUser',
-          userMode: 'adult',
           createdAt: now,
           updatedAt: now,
           firebaseUid: const Value('fb-refs'),

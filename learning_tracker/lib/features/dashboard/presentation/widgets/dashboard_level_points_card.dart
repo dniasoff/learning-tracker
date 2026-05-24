@@ -1,7 +1,7 @@
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:learning_tracker/core/enums/user_mode.dart';
+import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/widgets/animated_progress_bar.dart';
@@ -25,7 +25,7 @@ class DashboardLevelPointsCard extends ConsumerWidget {
     this.tasksReady = true,
   });
 
-  final UserMode userMode;
+  final ProfileMode userMode;
   final int level;
   final int totalPoints;
   final int overdueCount;

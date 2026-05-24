@@ -16,8 +16,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
+import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/core/enums/user_mode.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
@@ -109,7 +109,7 @@ TrackDualProgressMetric _dualMetric({
 /// at least one active track (so the body — and therefore the counter row —
 /// renders instead of the empty-state placeholder).
 List<Override> _overridesFor({
-  required UserMode userMode,
+  required ProfileMode userMode,
   required int currentStreak,
   required JourneyViewModel journey,
   required LifetimeTotals lifetime,
@@ -209,7 +209,7 @@ void main() {
         await tester.pumpWidget(
           _wrap(
             overrides: _overridesFor(
-              userMode: UserMode.adult,
+              userMode: ProfileMode.adult,
               currentStreak: 7,
               // 3 unit + 1 aggregate + 0 curriculum = 4 siyumim total
               journey: _journey(unit: 3, aggregate: 1),
@@ -263,7 +263,7 @@ void main() {
       await tester.pumpWidget(
         _wrap(
           overrides: _overridesFor(
-            userMode: UserMode.child,
+            userMode: ProfileMode.child,
             currentStreak: 3,
             journey: _journey(unit: 2),
             lifetime: _lifetimeTotals(learned: 15, total: 100),
@@ -310,7 +310,7 @@ void main() {
         await tester.pumpWidget(
           _wrap(
             overrides: _overridesFor(
-              userMode: UserMode.adult,
+              userMode: ProfileMode.adult,
               currentStreak: 0,
               journey: _journey(),
               lifetime: _lifetimeTotals(),
@@ -365,7 +365,7 @@ void main() {
       await tester.pumpWidget(
         _wrap(
           overrides: _overridesFor(
-            userMode: UserMode.adult,
+            userMode: ProfileMode.adult,
             currentStreak: 0,
             journey: _journey(),
             lifetime: _lifetimeTotals(),
@@ -596,7 +596,7 @@ void main() {
           (ref) => Stream.value(tracks),
         ),
         dashboardUserModeProvider.overrideWith(
-          (ref) => Future.value(UserMode.adult),
+          (ref) => Future.value(ProfileMode.adult),
         ),
         dashboardStreakProvider.overrideWith(
           (ref) => Stream.value((

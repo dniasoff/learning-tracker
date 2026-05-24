@@ -40,7 +40,6 @@ void main() {
           email: email,
           tier: 'localBorn',
           displayName: 'User',
-          userMode: 'adult',
           createdAt: now,
           updatedAt: now,
         ),

@@ -114,10 +114,12 @@ class UserProfileDao extends DatabaseAccessor<UserDatabase>
   /// When [email] is not provided on insert, a placeholder derived from
   /// [firebaseUid] is stored. The real email will be populated by the
   /// cloud-born signup flow (Epic 20 story 20.6) once that lands.
+  ///
+  /// WS9.flows: [userMode] parameter removed — mode belongs to
+  /// [learner_profiles.mode], not to an account.
   Future<void> upsertProfile({
     required String firebaseUid,
     required String displayName,
-    required String userMode,
     required DateTime updatedAt,
     String? email,
   }) async {
@@ -130,7 +132,6 @@ class UserProfileDao extends DatabaseAccessor<UserDatabase>
           firebaseUid: Value(firebaseUid),
           tier: UserTier.cloudBorn.dbValue,
           displayName: displayName,
-          userMode: userMode,
           createdAt: updatedAt,
           updatedAt: updatedAt,
         ),
@@ -139,7 +140,6 @@ class UserProfileDao extends DatabaseAccessor<UserDatabase>
       await (update(accounts)..where((t) => t.id.equals(existing.id))).write(
         AccountsCompanion(
           displayName: Value(displayName),
-          userMode: Value(userMode),
           updatedAt: Value(updatedAt),
         ),
       );

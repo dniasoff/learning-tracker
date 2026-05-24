@@ -1,15 +1,12 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/analytics/analytics_provider.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
-import 'package:learning_tracker/core/sync/providers/outbox_providers.dart'
-    show firestoreGatewayProvider;
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/bookmark_providers.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/completion_providers.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/bulk_prior_completion_service.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/curriculum_import_service.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/learning_process_wizard_service.dart';
-import 'package:learning_tracker/features/onboarding/domain/services/user_profile_service.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/scheduler/data/repositories/goal_repository_impl.dart';
 import 'package:learning_tracker/features/scheduler/domain/repositories/goal_repository.dart';
@@ -17,19 +14,6 @@ import 'package:learning_tracker/features/scheduler/domain/services/learning_pro
 import 'package:learning_tracker/features/settings/presentation/providers/curriculum_activation_providers.dart';
 import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
 import 'package:learning_tracker/features/tracks/stages/data/repositories/stage_definition_repository_impl.dart';
-import 'package:riverpod_annotation/riverpod_annotation.dart';
-
-part 'onboarding_providers.g.dart';
-
-@Riverpod(keepAlive: true)
-UserProfileService userProfileService(Ref ref) {
-  final db = ref.watch(userDatabaseProvider);
-  final gateway = ref.watch(firestoreGatewayProvider);
-  return UserProfileService(
-    userProfileDao: db.userProfileDao,
-    pushUserProfile: createFirestorePushFromGateway(gateway),
-  );
-}
 
 /// Provider for CurriculumImportService used during onboarding.
 final curriculumImportServiceProvider = Provider<CurriculumImportService>((

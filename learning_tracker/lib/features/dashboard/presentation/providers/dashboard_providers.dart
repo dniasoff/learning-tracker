@@ -4,7 +4,6 @@ import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
-import 'package:learning_tracker/core/enums/user_mode.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/time/local_day_clock.dart';
@@ -56,20 +55,21 @@ CrossCurriculumAggregator crossCurriculumAggregator(Ref ref) {
   return CrossCurriculumAggregator();
 }
 
-/// Provider for the active profile's user mode, resolved from the
-/// [Profiles] table.
+/// Provider for the active profile's mode, resolved from the [LearnerProfiles]
+/// table.
 ///
-/// Defaults to [UserMode.adult] if no profile row is found. This is what
+/// Defaults to [ProfileMode.adult] if no profile row is found. This is what
 /// gates child-only gamification UI (points, streaks, celebrations).
+///
+/// WS9.enum: unified — formerly returned [UserMode]; now returns [ProfileMode]
+/// directly. [UserMode] enum has been deleted.
 @riverpod
-Future<UserMode> dashboardUserMode(Ref ref) async {
+Future<ProfileMode> dashboardUserMode(Ref ref) async {
   final db = ref.watch(userDatabaseProvider);
   final profileId = ref.watch(activeProfileIdProvider);
   final profile = await db.profileDao.getProfileById(profileId);
-  if (profile == null) return UserMode.adult;
-  return ProfileMode.fromStorageKey(profile.mode) == ProfileMode.child
-      ? UserMode.child
-      : UserMode.adult;
+  if (profile == null) return ProfileMode.adult;
+  return ProfileMode.fromStorageKey(profile.mode);
 }
 
 /// Provider for list of active curricula IDs, scoped to active profile.
@@ -273,7 +273,7 @@ Stream<({int currentStreak, int maxStreak})> dashboardStreak(Ref ref) async* {
 Future<int> dashboardGlobalPoints(Ref ref) async {
   ref.watch<int>(completionCommittedProvider);
   final userMode = ref.watch(dashboardUserModeProvider).asData?.value;
-  if (userMode != UserMode.child) return 0;
+  if (userMode != ProfileMode.child) return 0;
 
   final db = ref.watch(userDatabaseProvider);
   final profileId = ref.watch(activeProfileIdProvider);
@@ -307,7 +307,7 @@ Future<void> stripStockMilestonesEffect(Ref ref) async {
 Future<DashboardChildNextReward?> dashboardChildNextReward(Ref ref) async {
   ref.watch<int>(completionCommittedProvider);
   final userMode = ref.watch(dashboardUserModeProvider).asData?.value;
-  if (userMode != UserMode.child) return null;
+  if (userMode != ProfileMode.child) return null;
 
   // Ensure stock template milestones are purged before reading reward state.
   // The actual strip + cloud push runs in [stripStockMilestonesEffectProvider]
@@ -360,7 +360,7 @@ Future<DashboardChildNextReward?> dashboardChildNextReward(Ref ref) async {
 @riverpod
 Future<StreakRecoveryInfo> dashboardStreakRecovery(Ref ref) async {
   final userMode = ref.watch(dashboardUserModeProvider).asData?.value;
-  if (userMode != UserMode.child) {
+  if (userMode != ProfileMode.child) {
     return const StreakRecoveryInfo(wasRecovered: false, currentStreak: 0);
   }
 

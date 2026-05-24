@@ -10,10 +10,10 @@ import 'package:flutter_test/flutter_test.dart'
 import 'package:learning_tracker/core/database/daos/completion_dao.dart'
     show Completion;
 import 'package:learning_tracker/core/database/user/user_database.dart';
+import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/enums/cross_profile_scope.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
-import 'package:learning_tracker/core/enums/user_mode.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/features/dashboard/presentation/widgets/curriculum_summary_card.dart';
 import 'package:learning_tracker/features/dashboard/presentation/widgets/points_summary_widget.dart';
@@ -209,11 +209,11 @@ void main() {
       // In adult mode, the points section should not be shown.
       // This is a logic test — the provider returns UserMode, and the
       // screen conditionally renders points.
-      const userMode = UserMode.adult;
-      expect(userMode == UserMode.child, isFalse);
+      const userMode = ProfileMode.adult;
+      expect(userMode == ProfileMode.child, isFalse);
 
-      const childMode = UserMode.child;
-      expect(childMode == UserMode.child, isTrue);
+      const childMode = ProfileMode.child;
+      expect(childMode == ProfileMode.child, isTrue);
     });
 
     test(
@@ -511,7 +511,7 @@ void main() {
             body: StreakWidget(
               currentStreak: 7,
               maxStreak: 14,
-              userMode: UserMode.child,
+              userMode: ProfileMode.child,
             ),
           ),
         ),
@@ -531,7 +531,7 @@ void main() {
             body: StreakWidget(
               currentStreak: 7,
               maxStreak: 14,
-              userMode: UserMode.adult,
+              userMode: ProfileMode.adult,
             ),
           ),
         ),
@@ -1078,14 +1078,14 @@ void main() {
       final adultResult = await chartService.getDailyPoints(
         startDate: date,
         endDate: date,
-        userMode: UserMode.adult,
+        userMode: ProfileMode.adult,
       );
       expect(adultResult, isNull);
 
       final childResult = await chartService.getDailyPoints(
         startDate: date,
         endDate: date,
-        userMode: UserMode.child,
+        userMode: ProfileMode.child,
       );
       expect(childResult, isNotNull);
       expect(childResult![0].points, equals(10));
@@ -1166,7 +1166,7 @@ void main() {
         final points = await chartService.getDailyPoints(
           startDate: baseDate,
           endDate: endDate,
-          userMode: UserMode.child,
+          userMode: ProfileMode.child,
         );
         expect(points, isNotNull);
         expect(points![5].points, equals(15)); // 10 + 5 on day 5

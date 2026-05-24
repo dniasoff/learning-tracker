@@ -375,7 +375,7 @@ class SignInController extends Notifier<SignInState> {
       }
       await _ref
           .read(auth_state.authStateProvider.notifier)
-          .promoteToCloud(user);
+          .setCloudBornSessionFromFirebaseUser(user);
       await session.setActiveAccount(existingEntry.accountId);
     } else {
       // First sign-in on this device for this email AND this uid.
@@ -390,7 +390,7 @@ class SignInController extends Notifier<SignInState> {
 
       await _ref
           .read(auth_state.authStateProvider.notifier)
-          .promoteToCloud(user);
+          .setCloudBornSessionFromFirebaseUser(user);
 
       await session.registerAccount(
         accountId: accountId,

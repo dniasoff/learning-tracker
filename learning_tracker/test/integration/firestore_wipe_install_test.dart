@@ -284,7 +284,6 @@ void main() {
               email: 'test@example.com',
               tier: 'localBorn',
               displayName: profileData['display_name'] as String? ?? 'User',
-              userMode: profileData['mode'] as String? ?? 'adult',
               createdAt: createdAt,
               updatedAt: updatedAt,
             ),

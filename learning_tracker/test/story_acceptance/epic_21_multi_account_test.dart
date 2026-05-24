@@ -170,13 +170,11 @@ void main() {
             email: 'alice@test.local',
             password: 'password1',
             displayName: 'Alice',
-            userMode: 'adult',
           );
           await bobAuth.signUp(
             email: 'bob@test.local',
             password: 'password2',
             displayName: 'Bob',
-            userMode: 'child',
           );
 
           // Alice's DB has only Alice
@@ -358,7 +356,6 @@ void main() {
               email: 'offline@test.local',
               password: 'securepass',
               displayName: 'Offline User',
-              userMode: 'adult',
             );
 
             expect(profile.tier, 'localBorn');
@@ -380,7 +377,6 @@ void main() {
             email: 'dupe@test.local',
             password: 'password1',
             displayName: 'First',
-            userMode: 'adult',
           );
 
           expect(
@@ -388,7 +384,6 @@ void main() {
               email: 'dupe@test.local',
               password: 'password2',
               displayName: 'Second',
-              userMode: 'adult',
             ),
             throwsA(isA<DuplicateEmailException>()),
           );
@@ -411,7 +406,6 @@ void main() {
           email: 'local@test.local',
           password: 'mypassword',
           displayName: 'Local',
-          userMode: 'adult',
         );
 
         final profile = await service.signIn(
@@ -434,7 +428,6 @@ void main() {
           email: 'local@test.local',
           password: 'rightpass',
           displayName: 'Local',
-          userMode: 'adult',
         );
 
         expect(
@@ -600,7 +593,6 @@ void main() {
             profileId: 1,
             email: 'cloud@test.local',
             displayName: 'Cloud',
-            userMode: 'adult',
             firebaseUid: 'fb-1',
           ),
           tier: Tier.cloudBorn,

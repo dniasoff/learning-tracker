@@ -15,8 +15,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/core/enums/user_mode.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
@@ -104,7 +104,7 @@ Widget _wrap({
   required JourneyViewModel journey,
   required LifetimeTotals totals,
   required int streak,
-  UserMode userMode = UserMode.adult,
+  ProfileMode userMode = ProfileMode.adult,
   int points = 0,
   StackRouter? router,
 }) {
@@ -227,7 +227,7 @@ void main() {
           journey: _journey(unit: 1),
           totals: _lifetime(learned: 5),
           streak: 2,
-          userMode: UserMode.child,
+          userMode: ProfileMode.child,
           points: 1250,
         ),
       );

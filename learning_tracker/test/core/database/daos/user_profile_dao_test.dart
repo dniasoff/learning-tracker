@@ -22,7 +22,6 @@ void main() {
       String firebaseUid = 'uid-123',
       String tier = 'cloudBorn',
       String displayName = 'Test User',
-      String userMode = 'adult',
       DateTime? createdAt,
       DateTime? updatedAt,
     }) {
@@ -33,7 +32,6 @@ void main() {
           firebaseUid: Value(firebaseUid),
           tier: tier,
           displayName: displayName,
-          userMode: userMode,
           createdAt: now,
           updatedAt: updatedAt ?? now,
         ),
@@ -47,7 +45,6 @@ void main() {
       expect(profile, isNotNull);
       expect(profile!.firebaseUid, 'uid-123');
       expect(profile.displayName, 'Test User');
-      expect(profile.userMode, 'adult');
       expect(profile.tier, 'cloudBorn');
     });
 
@@ -92,7 +89,6 @@ void main() {
           firebaseUid: Value(profile.firebaseUid),
           tier: Value(profile.tier),
           displayName: const Value('New Name'),
-          userMode: Value(profile.userMode),
           createdAt: Value(profile.createdAt),
           updatedAt: Value(DateTime.utc(2025, 6, 1)),
         ),
@@ -124,7 +120,6 @@ void main() {
           tier: 'localBorn',
           passwordHash: const Value(r'argon2id$hash'),
           displayName: 'Local',
-          userMode: 'adult',
           createdAt: DateTime.utc(2025, 1, 1),
           updatedAt: DateTime.utc(2025, 1, 1),
         ),
@@ -157,7 +152,6 @@ void main() {
           tier: 'localBorn',
           passwordHash: const Value(r'argon2id$hash'),
           displayName: 'Upgrade Me',
-          userMode: 'adult',
           createdAt: DateTime.utc(2025, 1, 1),
           updatedAt: DateTime.utc(2025, 1, 1),
         ),
@@ -179,7 +173,6 @@ void main() {
       await database.userProfileDao.upsertProfile(
         firebaseUid: 'new-uid',
         displayName: 'New User',
-        userMode: 'child',
         updatedAt: DateTime.utc(2025, 1, 1),
       );
 
@@ -188,7 +181,6 @@ void main() {
       );
       expect(profile, isNotNull);
       expect(profile!.displayName, 'New User');
-      expect(profile.userMode, 'child');
       expect(profile.tier, 'cloudBorn');
     });
 
@@ -203,7 +195,6 @@ void main() {
       await database.userProfileDao.upsertProfile(
         firebaseUid: 'uid-1',
         displayName: 'New Name',
-        userMode: 'child',
         updatedAt: DateTime.utc(2025, 6, 1),
       );
 
@@ -211,7 +202,6 @@ void main() {
         'uid-1',
       );
       expect(profile!.displayName, 'New Name');
-      expect(profile.userMode, 'child');
     });
 
     test('upsertProfile does not update when remote is older', () async {
@@ -225,7 +215,6 @@ void main() {
       await database.userProfileDao.upsertProfile(
         firebaseUid: 'uid-1',
         displayName: 'Old Name',
-        userMode: 'child',
         updatedAt: DateTime.utc(2025, 1, 1),
       );
 

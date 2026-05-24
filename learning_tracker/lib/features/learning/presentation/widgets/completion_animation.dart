@@ -1,19 +1,19 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
-import 'package:learning_tracker/core/enums/user_mode.dart';
+import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 
 /// Animation widget shown when a completion is successfully marked.
 ///
 /// In child mode: celebratory checkmark burst with confetti particles.
 /// In adult mode: brief checkmark with subtle fade.
 class CompletionAnimation extends StatefulWidget {
-  final UserMode userMode;
+  final ProfileMode userMode;
   final VoidCallback? onComplete;
 
   const CompletionAnimation({
     super.key,
-    this.userMode = UserMode.child,
+    this.userMode = ProfileMode.child,
     this.onComplete,
   });
 
@@ -31,7 +31,7 @@ class _CompletionAnimationState extends State<CompletionAnimation>
   void initState() {
     super.initState();
 
-    final isChild = widget.userMode == UserMode.child;
+    final isChild = widget.userMode.isChild;
     final duration = isChild
         ? const Duration(milliseconds: 800)
         : const Duration(milliseconds: 400);
@@ -69,7 +69,7 @@ class _CompletionAnimationState extends State<CompletionAnimation>
         return Stack(
           alignment: Alignment.center,
           children: [
-            if (widget.userMode == UserMode.child) ..._buildConfettiParticles(),
+            if (widget.userMode.isChild) ..._buildConfettiParticles(),
             Opacity(
               opacity: _fadeAnimation.value,
               child: Transform.scale(

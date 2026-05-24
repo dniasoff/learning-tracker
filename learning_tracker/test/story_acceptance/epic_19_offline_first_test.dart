@@ -87,7 +87,6 @@ void main() {
               email: 'test@test.local',
               tier: 'cloudBorn',
               displayName: 'Test User',
-              userMode: 'adult',
               createdAt: DateTime.now(),
               updatedAt: DateTime.now(),
             ),
@@ -114,7 +113,6 @@ void main() {
                 tier: 'localBorn',
                 passwordHash: const Value(r'argon2id$placeholder'),
                 displayName: 'Local User',
-                userMode: 'adult',
                 createdAt: DateTime.now(),
                 updatedAt: DateTime.now(),
               ),
@@ -585,7 +583,6 @@ void main() {
           profileId: 1,
           email: 'test@example.com',
           displayName: 'Test',
-          userMode: 'adult',
         ),
         tier: Tier.cloudBorn,
       );

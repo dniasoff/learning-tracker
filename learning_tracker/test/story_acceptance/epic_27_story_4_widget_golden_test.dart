@@ -16,7 +16,7 @@ import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart'
     hide expect, group, setUp, setUpAll, test;
 import 'package:learning_tracker/core/database/user/user_database.dart';
-import 'package:learning_tracker/core/enums/user_mode.dart';
+import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/gamification/presentation/widgets/streak_widget.dart';
@@ -165,7 +165,7 @@ void main() {
             child: StreakWidget(
               currentStreak: 7,
               maxStreak: 21,
-              userMode: UserMode.child,
+              userMode: ProfileMode.child,
             ),
           ),
         ),
@@ -181,7 +181,7 @@ void main() {
             child: StreakWidget(
               currentStreak: 12,
               maxStreak: 30,
-              userMode: UserMode.adult,
+              userMode: ProfileMode.adult,
             ),
           ),
         ),

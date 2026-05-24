@@ -10,9 +10,9 @@ import 'package:flutter_test/flutter_test.dart'
 import 'package:learning_tracker/core/database/daos/completion_dao.dart'
     show Completion;
 import 'package:learning_tracker/core/database/user/user_database.dart';
+import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
-import 'package:learning_tracker/core/enums/user_mode.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
@@ -59,9 +59,11 @@ Future<int> _insertTrack(UserDatabase db) async {
 void main() {
   // ── Story 9.1: Welcome flow ───────────────────────────────────
 
+  // WS9.flows: mode belongs to learner_profiles.mode (not accounts.userMode).
+  // UserProfileService.setUserMode/getUserMode removed; use profileDao directly.
+
   group('Story 9.1 -- Welcome flow', tags: ['story_9_1'], () {
     late UserDatabase db;
-    late UserProfileService profileService;
     late List<Map<String, String>> firestorePushes;
 
     setUp(() async {
@@ -69,21 +71,6 @@ void main() {
       await seedProfile(db);
       await _insertTrack(db);
       firestorePushes = [];
-      profileService = UserProfileService(
-        userProfileDao: db.userProfileDao,
-        pushUserProfile:
-            ({
-              required String firebaseUid,
-              required String displayName,
-              required String userMode,
-            }) async {
-              firestorePushes.add({
-                'firebaseUid': firebaseUid,
-                'displayName': displayName,
-                'userMode': userMode,
-              });
-            },
-      );
     });
 
     tearDown(() async {
@@ -91,26 +78,64 @@ void main() {
     });
 
     test(
-      'auth service creates account and mode selection persists child mode',
+      'onboarding creates learner profile with child mode',
       () async {
-        await profileService.setUserMode(
-          firebaseUid: 'test-uid',
-          displayName: 'Test User',
-          mode: UserMode.child,
+        // Mode is set on learner_profiles.mode at profile creation
+        final accountId = await db
+            .into(db.accounts)
+            .insert(
+              AccountsCompanion.insert(
+                email: 'child@test.local',
+                tier: 'localBorn',
+                displayName: 'Test User',
+                createdAt: DateTime.now(),
+                updatedAt: DateTime.now(),
+              ),
+            );
+        final profileId = await db
+            .into(db.learnerProfiles)
+            .insert(
+              LearnerProfilesCompanion.insert(
+                accountId: accountId,
+                displayName: 'Test User',
+                mode: ProfileMode.child.storageKey,
+                createdAt: DateTime.now(),
+                updatedAt: DateTime.now(),
+              ),
+            );
+        final profile = await db.profileDao.getProfileById(profileId);
+        expect(
+          ProfileMode.fromStorageKey(profile!.mode),
+          ProfileMode.child,
         );
-        final mode = await profileService.getUserMode('test-uid');
-        expect(mode, UserMode.child);
       },
     );
 
-    test('auth service mode selection persists adult mode', () async {
-      await profileService.setUserMode(
-        firebaseUid: 'test-uid-2',
-        displayName: 'Adult User',
-        mode: UserMode.adult,
-      );
-      final mode = await profileService.getUserMode('test-uid-2');
-      expect(mode, UserMode.adult);
+    test('onboarding creates learner profile with adult mode', () async {
+      final accountId = await db
+          .into(db.accounts)
+          .insert(
+            AccountsCompanion.insert(
+              email: 'adult@test.local',
+              tier: 'localBorn',
+              displayName: 'Adult User',
+              createdAt: DateTime.now(),
+              updatedAt: DateTime.now(),
+            ),
+          );
+      final profileId = await db
+          .into(db.learnerProfiles)
+          .insert(
+            LearnerProfilesCompanion.insert(
+              accountId: accountId,
+              displayName: 'Adult User',
+              mode: ProfileMode.adult.storageKey,
+              createdAt: DateTime.now(),
+              updatedAt: DateTime.now(),
+            ),
+          );
+      final profile = await db.profileDao.getProfileById(profileId);
+      expect(ProfileMode.fromStorageKey(profile!.mode), ProfileMode.adult);
     });
 
     test('email validation rejects invalid formats', () {
@@ -126,15 +151,28 @@ void main() {
       expect('123456'.length < 6, isFalse);
     });
 
-    test('mode selection writes to Firestore', () async {
-      await profileService.setUserMode(
+    test('updateDisplayName writes to Firestore', () async {
+      final profileService = UserProfileService(
+        userProfileDao: db.userProfileDao,
+        pushUserProfile: ({
+          required String firebaseUid,
+          required String displayName,
+        }) async {
+          firestorePushes.add({
+            'firebaseUid': firebaseUid,
+            'displayName': displayName,
+          });
+        },
+      );
+
+      await profileService.updateDisplayName(
         firebaseUid: 'uid-firestore',
         displayName: 'Test',
-        mode: UserMode.child,
       );
       expect(firestorePushes, hasLength(1));
       expect(firestorePushes.first['firebaseUid'], 'uid-firestore');
-      expect(firestorePushes.first['userMode'], 'child');
+      // userMode is no longer pushed — mode belongs to learner_profiles
+      expect(firestorePushes.first.containsKey('userMode'), isFalse);
     });
   });
 

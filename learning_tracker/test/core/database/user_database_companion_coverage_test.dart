@@ -38,7 +38,6 @@ void main() {
           email: email,
           tier: 'localBorn',
           displayName: 'User',
-          userMode: 'adult',
           createdAt: now,
           updatedAt: now,
         ),
@@ -75,7 +74,6 @@ void main() {
         email: const Variable('raw@example.com'),
         tier: const Variable('cloudBorn'),
         displayName: const Variable('Raw User'),
-        userMode: const Variable('adult'),
         createdAt: Variable(now),
         updatedAt: Variable(now),
         firebaseUid: const Variable('fb-raw'),
@@ -94,7 +92,6 @@ void main() {
         passwordHash: const Value('hash'),
         tier: const Value('localBorn'),
         displayName: const Value('Opt'),
-        userMode: const Value('adult'),
         createdAt: Value(now),
         updatedAt: Value(now),
       );

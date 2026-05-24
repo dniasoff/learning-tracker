@@ -1,9 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/core/enums/user_mode.dart';
 import 'package:learning_tracker/core/preferences/profile_scoped_preference_keys.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
-import 'package:learning_tracker/features/account/presentation/providers/auth_providers.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
@@ -77,26 +76,22 @@ final parentControlsOrderingProvider = FutureProvider<bool>((ref) async {
   );
 });
 
-/// Provides the current user's UserMode from the database.
-final userModeProvider = FutureProvider<UserMode>((ref) async {
-  final uid = ref.watch(authRepositoryProvider).currentUser?.uid;
-  if (uid == null) return UserMode.adult;
-
+/// Provides the active profile's [ProfileMode] from the [LearnerProfiles] table.
+///
+/// WS9.enum: unified — formerly read [UserMode] from the vestigial
+/// [accounts.userMode] column; now reads [ProfileMode] from the canonical
+/// [learner_profiles.mode] column via [activeProfileIdProvider].
+final userModeProvider = FutureProvider<ProfileMode>((ref) async {
   final database = ref.watch(userDatabaseProvider);
-  final profile = await database.userProfileDao.getUserProfileByFirebaseUid(
-    uid,
-  );
-  if (profile == null) return UserMode.adult;
-
-  return UserMode.values.firstWhere(
-    (m) => m.name == profile.userMode,
-    orElse: () => UserMode.adult,
-  );
+  final profileId = ref.watch(activeProfileIdProvider);
+  final profile = await database.profileDao.getProfileById(profileId);
+  if (profile == null) return ProfileMode.adult;
+  return ProfileMode.fromStorageKey(profile.mode);
 });
 
 /// True when ordering is restricted (child mode + parent controls ordering).
 final orderingRestrictedProvider = FutureProvider<bool>((ref) async {
   final parentControls = await ref.watch(parentControlsOrderingProvider.future);
   final userMode = await ref.watch(userModeProvider.future);
-  return parentControls && userMode == UserMode.child;
+  return parentControls && userMode.isChild;
 });

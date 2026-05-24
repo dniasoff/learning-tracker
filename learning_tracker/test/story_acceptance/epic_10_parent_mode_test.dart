@@ -9,11 +9,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart'
     hide expect, group, setUp, setUpAll, tearDown, tearDownAll, test;
-import 'package:learning_tracker/core/database/daos/user_profile_dao.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
+import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/enums/cross_profile_scope.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/core/enums/user_mode.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/features/dashboard/domain/services/parent_dashboard_aggregator.dart';
 import 'package:learning_tracker/features/gamification/domain/services/points_service.dart';
@@ -176,54 +175,57 @@ void main() {
     );
 
     test('parent mode access denied for adult accounts', () async {
+      // Mode lives in learner_profiles.mode (not accounts.userMode — WS9.flows).
+      // seedProfile inserts an adult learner profile (mode='adult').
       final db = createTestDatabase();
       await seedProfile(db);
       addTearDown(() => db.close());
       await _insertTrack(db);
-      await db.userProfileDao.insertUserProfile(
-        UserProfilesCompanion.insert(
-          email: 'adult@test.local',
-          firebaseUid: const Value('uid-adult'),
-          tier: 'cloudBorn',
-          displayName: 'Adult User',
-          userMode: 'adult',
-          createdAt: DateTime.now(),
-          updatedAt: DateTime.now(),
-        ),
-      );
-      final profiles = await db.userProfileDao.getAllUserProfiles();
-      final mode = UserMode.values.firstWhere(
-        (m) => m.name == profiles.first.userMode,
-        orElse: () => UserMode.adult,
-      );
-      expect(mode, UserMode.adult);
+
+      final learnerProfiles = await db.select(db.learnerProfiles).get();
+      expect(learnerProfiles, isNotEmpty);
+      final mode = ProfileMode.fromStorageKey(learnerProfiles.first.mode);
+      expect(mode, ProfileMode.adult);
     });
 
     test('parent mode access allowed for child accounts', () async {
+      // Mode lives in learner_profiles.mode (not accounts.userMode — WS9.flows).
       final db = createTestDatabase();
       await seedProfile(db);
       addTearDown(() => db.close());
       await _insertTrack(db);
-      await db.userProfileDao.insertUserProfile(
-        UserProfilesCompanion.insert(
-          email: 'child@test.local',
-          firebaseUid: const Value('uid-child'),
-          tier: 'cloudBorn',
-          displayName: 'Child User',
-          userMode: 'child',
-          createdAt: DateTime.now(),
-          updatedAt: DateTime.now(),
-        ),
+
+      // Create an account + child learner profile
+      final accountId = await db
+          .into(db.accounts)
+          .insert(
+            AccountsCompanion.insert(
+              email: 'child@test.local',
+              firebaseUid: const Value('uid-child'),
+              tier: 'cloudBorn',
+              displayName: 'Child User',
+              createdAt: DateTime.now(),
+              updatedAt: DateTime.now(),
+            ),
+          );
+      await db
+          .into(db.learnerProfiles)
+          .insert(
+            LearnerProfilesCompanion.insert(
+              accountId: accountId,
+              displayName: 'Child User',
+              mode: 'child',
+              createdAt: DateTime.now(),
+              updatedAt: DateTime.now(),
+            ),
+          );
+
+      final learnerProfiles = await db.select(db.learnerProfiles).get();
+      final childProfile = learnerProfiles.firstWhere(
+        (p) => p.mode == 'child',
       );
-      final profiles = await db.userProfileDao.getAllUserProfiles();
-      final childProfile = profiles.firstWhere(
-        (p) => p.email == 'child@test.local',
-      );
-      final mode = UserMode.values.firstWhere(
-        (m) => m.name == childProfile.userMode,
-        orElse: () => UserMode.adult,
-      );
-      expect(mode, UserMode.child);
+      final mode = ProfileMode.fromStorageKey(childProfile.mode);
+      expect(mode, ProfileMode.child);
     });
 
     test('PIN setup requires matching confirmation', () async {

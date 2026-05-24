@@ -61,11 +61,13 @@ class LocalAuthService {
   /// Create a new local-born account. Throws
   /// [DuplicateEmailException] if the email already has a local-born
   /// row, [InvalidInputException] on malformed input.
+  ///
+  /// WS9.flows: [userMode] parameter removed — mode belongs to
+  /// [LearnerProfiles], not to an account.
   Future<UserProfile> signUp({
     required String email,
     required String password,
     required String displayName,
-    required String userMode,
   }) async {
     final normalized = _normalizeEmail(email);
     _validateEmail(normalized);
@@ -85,7 +87,6 @@ class LocalAuthService {
         tier: UserTier.localBorn.dbValue,
         passwordHash: Value(hash),
         displayName: displayName,
-        userMode: userMode,
         createdAt: now,
         updatedAt: now,
       ),

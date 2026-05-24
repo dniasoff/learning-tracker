@@ -44,7 +44,6 @@ void main() {
                 firebaseUid: const Value('fbuid-1'),
                 tier: 'cloudBorn',
                 displayName: 'Cloudy',
-                userMode: 'adult',
                 createdAt: DateTime.utc(2026, 1, 1),
                 updatedAt: DateTime.utc(2026, 1, 1),
               ),
@@ -65,7 +64,6 @@ void main() {
             firebaseUid: const Value('a-fb'),
             tier: 'cloudBorn',
             displayName: 'A',
-            userMode: 'adult',
             createdAt: DateTime.utc(2026, 1, 1),
             updatedAt: DateTime.utc(2026, 1, 1),
           ),
@@ -76,7 +74,6 @@ void main() {
             tier: 'localBorn',
             passwordHash: const Value(r'argon2id$hash'),
             displayName: 'B',
-            userMode: 'adult',
             createdAt: DateTime.utc(2026, 1, 1),
             updatedAt: DateTime.utc(2026, 1, 1),
           ),
@@ -98,7 +95,6 @@ void main() {
           email: 'upgrade@test.local',
           password: 'hunter2hunter2',
           displayName: 'U',
-          userMode: 'adult',
         );
 
         await db.userProfileDao.upgradeLocalToCloud(
@@ -121,7 +117,6 @@ void main() {
           email: 'alice@test.local',
           password: 'correcthorse',
           displayName: 'Alice',
-          userMode: 'adult',
         );
         final profile = await localAuth.signIn(
           email: 'alice@test.local',
@@ -136,7 +131,6 @@ void main() {
           email: 'alice@test.local',
           password: 'correcthorse',
           displayName: 'Alice',
-          userMode: 'adult',
         );
         expect(
           () => localAuth.signIn(email: 'alice@test.local', password: 'wrong'),
@@ -158,7 +152,6 @@ void main() {
             profileId: 1,
             email: 'a@test.local',
             displayName: 'A',
-            userMode: 'adult',
           ),
           tier: Tier.localBorn,
         );
@@ -281,7 +274,6 @@ void main() {
           email: 'collide@test.local',
           password: 'hunter2hunter2',
           displayName: 'Collide',
-          userMode: 'adult',
         );
         expect(profile.tier, 'localBorn');
         expect(profile.passwordHash, isNotNull);

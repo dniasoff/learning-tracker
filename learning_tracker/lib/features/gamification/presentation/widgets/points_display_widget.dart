@@ -1,22 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:learning_tracker/core/enums/user_mode.dart';
+import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/features/gamification/presentation/providers/points_providers.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// Displays total points with curriculum breakdown.
 ///
-/// In [UserMode.child] mode, points are displayed prominently.
-/// In [UserMode.adult] mode, points are hidden.
+/// In [ProfileMode.child] mode, points are displayed prominently.
+/// In [ProfileMode.adult] mode, points are hidden.
 class PointsDisplayWidget extends ConsumerWidget {
-  final UserMode userMode;
+  final ProfileMode userMode;
 
   const PointsDisplayWidget({super.key, required this.userMode});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    if (userMode == UserMode.adult) {
+    if (userMode.isAdult) {
       return const SizedBox.shrink();
     }
 
@@ -66,10 +66,10 @@ class PointsDisplayWidget extends ConsumerWidget {
 
 /// Popup that appears on completion showing points earned.
 ///
-/// Only shown in [UserMode.child] mode.
+/// Only shown in [ProfileMode.child] mode.
 class PointsPopupWidget extends StatelessWidget {
   final int pointsEarned;
-  final UserMode userMode;
+  final ProfileMode userMode;
 
   const PointsPopupWidget({
     super.key,
@@ -79,7 +79,7 @@ class PointsPopupWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (userMode == UserMode.adult) {
+    if (userMode.isAdult) {
       return const SizedBox.shrink();
     }
 

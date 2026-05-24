@@ -102,12 +102,17 @@ class AuthStateNotifier extends _$AuthStateNotifier {
     state = const AuthState.signedOut();
   }
 
-  // ─── Transitional shims (delete after 20.6/20.7/20.9 rewrites) ──
-
-  /// Legacy: called from the deprecated `sign_in_screen`,
-  /// `signup_screen`, and magic-link providers. Keeps
-  /// those files compiling; they will be removed in 20.6/20.7.
-  Future<void> promoteToCloud(AppUser firebaseUser) async {
+  /// Ensure a cloud-born [Account] row exists for [firebaseUser] and activate
+  /// the session. Called from sign-in, signup, and magic-link flows.
+  ///
+  /// If no account row exists yet (first sign-in on this device), a placeholder
+  /// row is created so downstream code has something to read. The learner
+  /// profile (child/adult mode) is a separate [LearnerProfiles] row created
+  /// during onboarding — it is NOT set here.
+  ///
+  /// WS9.shims: renamed from [promoteToCloud]; shim label and [demoteToLocal]
+  /// alias removed. The function is a real, permanent part of the sign-in path.
+  Future<void> setCloudBornSessionFromFirebaseUser(AppUser firebaseUser) async {
     final dao = ref.read(userDatabaseProvider).userProfileDao;
     var profile = await dao.getUserProfileByFirebaseUid(firebaseUser.uid);
     if (profile == null) {
@@ -116,7 +121,6 @@ class AuthStateNotifier extends _$AuthStateNotifier {
         firebaseUid: firebaseUser.uid,
         email: firebaseUser.email ?? '${firebaseUser.uid}@cloud.placeholder',
         displayName: firebaseUser.displayName ?? '',
-        userMode: 'adult',
         updatedAt: DateTimeFactory.nowUtc(),
       );
       profile = await dao.getUserProfileByFirebaseUid(firebaseUser.uid);
@@ -125,7 +129,4 @@ class AuthStateNotifier extends _$AuthStateNotifier {
       setCloudBornSession(profile: profile);
     }
   }
-
-  /// Legacy: called from settings_screen sign-out.
-  void demoteToLocal() => signOut();
 }

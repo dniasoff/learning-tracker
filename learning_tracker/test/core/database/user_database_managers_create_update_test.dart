@@ -36,7 +36,6 @@ void main() {
           email: email,
           tier: 'cloudBorn',
           displayName: 'User',
-          userMode: 'adult',
           createdAt: now,
           updatedAt: now,
           firebaseUid: const Value('fb-uid'),

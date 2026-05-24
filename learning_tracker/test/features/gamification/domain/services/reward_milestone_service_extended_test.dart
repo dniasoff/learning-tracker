@@ -34,7 +34,6 @@ void main() {
             email: const Value('test2@example.com'),
             tier: const Value('localBorn'),
             displayName: const Value('Test User 2'),
-            userMode: const Value('adult'),
             createdAt: Value(DateTime.utc(2026, 1, 1)),
             updatedAt: Value(DateTime.utc(2026, 1, 1)),
           ),

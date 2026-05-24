@@ -9,10 +9,10 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart' show TestWidgetsFlutterBinding;
 import 'package:kosher_dart/kosher_dart.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
+import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/enums/cross_profile_scope.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
-import 'package:learning_tracker/core/enums/user_mode.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/navigation/guards/auth_guard.dart';
@@ -238,9 +238,10 @@ void main() {
       expect(TrackType.values.map((t) => t.storageKey), ['personal']);
     });
 
-    test('UserMode has 2 values', () {
-      expect(UserMode.values, hasLength(2));
-      expect(UserMode.values, containsAll([UserMode.child, UserMode.adult]));
+    // WS9.enum: UserMode deleted — ProfileMode is the canonical mode enum.
+    test('ProfileMode has 2 values (child and adult)', () {
+      expect(ProfileMode.values, hasLength(2));
+      expect(ProfileMode.values, containsAll([ProfileMode.child, ProfileMode.adult]));
     });
   });
 
