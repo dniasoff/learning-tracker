@@ -29,6 +29,12 @@
 - detail: Source docs read; key files explored. Baseline CI green (5779 tests). Core bug confirmed: _activateLocalAccountFromLocalData (account_picker_screen.dart:482) calls signOut() after setting local session — violating DEC-34. Fix: remove that signOut() call. Starting WS1.auth-model.
 - next: WS1.auth-model → WS1.switcher → WS1.count-gate → WS1.consolidate
 
+## [2026-05-24 10:30] TASK-DONE — WS2 (all tasks complete)
+
+- stream: WS2
+- detail: WS2.skip — added onSkipProfileCreation callback to OnboardingProfileCreationStep; skip button wired in OnboardingScreen, routes to EmptyLoginRoute. WS2.relax — relaxed sign_in_controller.dart:457; 0-profile account with kOnboardingSkipped=true routed to EmptyLoginRoute not OnboardingRoute. WS2.surface — created EmptyLoginScreen with SkippedOnboardingCtaBanner, stub tutor entry, device notification toggle stub; registered EmptyLoginRoute in app_router.dart. 10 WS2 regression tests all green; make ci green (5791 tests). Committed ae0f2af8.
+- next: P1 sync gate — awaiting Orchestrator proceed
+
 ## [2026-05-24 10:15] TASK-DONE — WS1.auth-model
 
 - stream: WS1

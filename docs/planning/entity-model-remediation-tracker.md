@@ -18,9 +18,9 @@
 
 ### WS2 — Empty Login / Skip-to-Tutor-Home (DEC-6, cardinality)
 
-- [ ] WS2.skip         (WS2, pending)    Add Skip affordance at/before the profile-creation phase in onboarding_screen.dart (not only post-profile)
-- [ ] WS2.relax        (WS2, pending)    Relax sign_in_controller.dart:457 — 0-profile account must reach empty-login state, not forced back to Onboarding
-- [ ] WS2.surface      (WS2, pending)    Define empty-login minimal surface (device notification toggle, device settings, hidden tutor entry); reuse skipped_onboarding_cta_banner
+- [x] WS2.skip         (WS2, done)      Add Skip affordance at/before the profile-creation phase in onboarding_screen.dart (not only post-profile)
+- [x] WS2.relax        (WS2, done)      Relax sign_in_controller.dart:457 — 0-profile account must reach empty-login state, not forced back to Onboarding
+- [x] WS2.surface      (WS2, done)      Define empty-login minimal surface (device notification toggle, device settings, hidden tutor entry); reuse skipped_onboarding_cta_banner
 
 **Closes:** DEC-6 (🔴), Login 0..N cardinality enforcement
 
