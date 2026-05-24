@@ -5,8 +5,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
+import 'package:learning_tracker/features/tutoring/domain/models/session_role.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/tutor_grant_aggregate.dart';
+import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart';
 import 'package:learning_tracker/features/tutoring/presentation/providers/manage_tutors_providers.dart';
+import 'package:learning_tracker/features/tutoring/presentation/screens/tutor_pin_entry_gate.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 // ── WS3.3b / W6.14: Tutored children section ─────────────────────────────────
@@ -170,6 +174,13 @@ class _ViewInvitationsRow extends StatelessWidget {
 
 // ── Tutored child row ─────────────────────────────────────────────────────────
 
+/// A tappable row for an active tutored-child grant.
+///
+/// Tapping presents the [TutorPinEntryGate]. On PIN success the row:
+///   1. Sets [ActiveTutoredProfileSelection] so the router resolves
+///      [PinScope.tutor()] correctly for any subsequent guarded routes.
+///   2. Navigates to [ManageGrantsRoute] — the tutor's combined-surface
+///      entry point until 3d wires the full child-profile view.
 class _TutoredChildRow extends ConsumerWidget {
   const _TutoredChildRow({required this.grant});
 
@@ -178,9 +189,11 @@ class _TutoredChildRow extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    // WS3.3c: child display name will be resolved from the grant's childName
-    // field once the Cloud Function denormalises it onto the grant doc.
-    // Until then show the profile ID as a fallback (better than "Child:{id}").
+
+    // WS3.3c: child display name — the grant doc carries a childProfileId
+    // (Firestore string). Until the Cloud Function denormalises a childName
+    // field onto the grant doc, show the profile ID as a compact fallback.
+    // This is better than the previous "Child:{id}" placeholder.
     final childLabel = grant.childProfileId;
 
     return Card(
@@ -243,9 +256,49 @@ class _TutoredChildRow extends ConsumerWidget {
             ],
           ),
         ),
-        // WS3.3c: wire onTap after TutorPinEntryGate is instantiated.
-        // Placeholder navigates to ManageGrantsScreen until 3c is wired.
-        onTap: () => unawaited(context.pushRoute(const ManageGrantsRoute())),
+        // WS3.3c: Present the TutorPinEntryGate on tap.
+        onTap: () => _enterTalmidView(context, ref),
+      ),
+    );
+  }
+
+  /// Push the [TutorPinEntryGate] modally. On PIN success, set the active
+  /// tutored-profile context and navigate to the talmid's view.
+  void _enterTalmidView(BuildContext context, WidgetRef ref) {
+    // The tutor's own local profile ID is required to key the PIN hash.
+    // If the tutor has no own profile (profile-less tutor per DEC-6/DEC-21),
+    // fall back to a sentinel profile ID of 0 — TutorPinEntryGate handles
+    // the setup path for an unset PIN.
+    final tutorOwnProfileId = ref.read(selectedProfileIdProvider) ?? 0;
+
+    // Build the TutoredProfileSelection from the active grant.
+    final activeState = grant.grantState as ActiveGrant;
+    final selection = TutoredProfileSelection(
+      profileId: grant.childProfileId,
+      ownerUid: grant.parentUid,
+      grantId: grant.grantId,
+      permissions: activeState.permissions,
+    );
+
+    unawaited(
+      Navigator.of(context).push<void>(
+        MaterialPageRoute<void>(
+          fullscreenDialog: true,
+          builder: (_) => TutorPinEntryGate(
+            profileId: tutorOwnProfileId,
+            onPinVerified: () {
+              // Set active tutored-profile context so the router resolves
+              // PinScope.tutor() for any subsequent guarded routes.
+              ref
+                  .read(activeTutoredProfileSelectionProvider.notifier)
+                  .enter(selection);
+              // Pop the gate and navigate to the talmid's view.
+              Navigator.of(context).pop();
+              unawaited(context.pushRoute(const ManageGrantsRoute()));
+            },
+            onCancel: () => Navigator.of(context).pop(),
+          ),
+        ),
       ),
     );
   }

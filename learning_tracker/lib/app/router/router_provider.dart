@@ -15,6 +15,7 @@ import 'package:learning_tracker/features/profiles/domain/services/pin_service.d
 import 'package:learning_tracker/features/profiles/presentation/providers/parent_pin_session_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/widgets/parent_pin_keypad_dialog.dart';
+import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart';
 
 /// Riverpod provider that creates and owns the [AppRouter] singleton.
 ///
@@ -62,9 +63,19 @@ final routerProvider = Provider<AppRouter>((ref) {
           analytics: ref.read(analyticsServiceProvider),
         );
       },
-      // All currently-gated routes are parent-mode. Tutor-mode routes will
-      // pass their own scope via a different closure when they land.
+      // WS3.3c: resolve PinScope from the active profile selection.
+      // OwnProfileSelection  → PinScope.parent(profileId) for parent-mode routes.
+      // TutoredProfileSelection → PinScope.tutor(profileId) for talmid-view routes.
       getScope: () {
+        // Check if there is an active tutored-profile context first.
+        final tutoredSelection = ref.read(
+          activeTutoredProfileSelectionProvider,
+        );
+        if (tutoredSelection != null) {
+          final profileId = int.tryParse(tutoredSelection.profileId);
+          if (profileId != null) return PinScope.tutor(profileId);
+        }
+        // Fall back to parent-mode scope for own-profile routes.
         final profileId = ref.read(selectedProfileIdProvider);
         if (profileId == null) return null;
         return PinScope.parent(profileId);
@@ -75,9 +86,15 @@ final routerProvider = Provider<AppRouter>((ref) {
               .read(parentPinAuthenticatedProfileIdProvider.notifier)
               .setAuthenticated(scope.profileId);
         }
+        // Tutor scope: no separate session token needed — the
+        // TutorPinEntryGate widget manages the talmid-view lifecycle directly.
       },
       onSessionLocked: () {
         ref.read(parentPinAuthenticatedProfileIdProvider.notifier).clear();
+        // If a tutored session was active, exit it on lock.
+        if (ref.read(activeTutoredProfileSelectionProvider) != null) {
+          ref.read(activeTutoredProfileSelectionProvider.notifier).exit();
+        }
       },
     ),
   );
