@@ -263,9 +263,12 @@ class _AcceptInviteScreenState extends ConsumerState<AcceptInviteScreen> {
             icon: Icons.check_circle_rounded,
             text: 'View all learning data and progress',
           ),
+          // WS3.3h: corrected copy — reflects actual default permission set.
+          // Default grant allows bulk-mark + optional track/point/reward editing
+          // (canBulkPriorCompletion: true per G3/DEC-33; edit flags set by parent).
           const _PermissionRow(
             icon: Icons.check_circle_rounded,
-            text: 'Configure curricula, goals, and study days',
+            text: 'Configure tracks, points, and rewards (if permitted)',
           ),
           const _PermissionRow(
             icon: Icons.check_circle_rounded,

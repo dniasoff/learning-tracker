@@ -60,6 +60,9 @@ class ParentSettingsScreen extends ConsumerWidget {
     final canEditTracks = !isTutoredContext || tutorPerms.canEditStages;
     final canEditPoints = !isTutoredContext || tutorPerms.canEditGoals;
     final canEditRewards = !isTutoredContext || tutorPerms.canEditRewards;
+    // WS3.3h: canBulkPriorCompletion = true by default (G3/DEC-33) — tutors
+    // always see the bulk-mark tile unless the parent explicitly disabled it.
+    final canBulkMark = !isTutoredContext || tutorPerms.canBulkPriorCompletion;
 
     // Owner-only tiles are completely hidden in tutored mode.
     final showOwnerOnlyTiles = !isTutoredContext;
@@ -173,23 +176,27 @@ class ParentSettingsScreen extends ConsumerWidget {
                   ),
                   const SizedBox(height: 16),
                 ],
-                _WhitePanel(
-                  child: _ManageRow(
-                    iconBackground: const Color(0xFFE8D4B8),
-                    icon: Icons.menu_book_rounded,
-                    iconColor: const Color(0xFF6B4E2E),
-                    leadingSquare: true,
-                    title: l10n.addWhatYouLearned,
-                    subtitle: l10n.addWhatYouLearnedSettingsSubtitle,
-                    trailing: const Icon(
-                      Icons.chevron_right_rounded,
-                      color: _chevronMuted,
-                      size: 26,
+                // WS3.3h: bulk-mark tile — shown when canBulkPriorCompletion.
+                // Default = true (G3/DEC-33); tutors always see it unless
+                // the parent explicitly disabled canBulkPriorCompletion.
+                if (canBulkMark)
+                  _WhitePanel(
+                    child: _ManageRow(
+                      iconBackground: const Color(0xFFE8D4B8),
+                      icon: Icons.menu_book_rounded,
+                      iconColor: const Color(0xFF6B4E2E),
+                      leadingSquare: true,
+                      title: l10n.addWhatYouLearned,
+                      subtitle: l10n.addWhatYouLearnedSettingsSubtitle,
+                      trailing: const Icon(
+                        Icons.chevron_right_rounded,
+                        color: _chevronMuted,
+                        size: 26,
+                      ),
+                      onTap: () =>
+                          context.pushRoute(const LifetimeMarkingRoute()),
                     ),
-                    onTap: () =>
-                        context.pushRoute(const LifetimeMarkingRoute()),
                   ),
-                ),
                 // WS3.3a: "Manage tutors" tile — owner-only (hidden in tutored context).
                 // WS3.3d: tutors cannot manage other tutors.
                 if (showOwnerOnlyTiles) ...[

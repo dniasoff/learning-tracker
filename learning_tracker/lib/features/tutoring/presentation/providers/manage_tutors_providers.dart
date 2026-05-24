@@ -5,20 +5,18 @@
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/email/transactional_email_service.dart';
-import 'package:learning_tracker/features/tutoring/data/repositories/firestore_tutor_grant_repository.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/tutor_grant_aggregate.dart';
 import 'package:learning_tracker/features/tutoring/domain/services/tutor_notification_service.dart';
 import 'package:learning_tracker/features/tutoring/domain/use_cases/tutor_grant_use_cases.dart';
 import 'package:learning_tracker/features/tutoring/domain/use_cases/tutor_invite_use_cases.dart';
+import 'package:learning_tracker/features/tutoring/presentation/providers/tutor_grant_providers.dart';
 
 // ── Repository provider ──────────────────────────────────────────────────────
-
-/// The TutorGrantRepository instance used by all tutor grant use cases.
-///
-/// Backed by [FirestoreTutorGrantRepository] (V2-R3 C3).
-final tutorGrantRepositoryProvider = Provider<TutorGrantRepository>(
-  (_) => FirestoreTutorGrantRepository(),
-);
+//
+// WS3.3h: The duplicate `tutorGrantRepositoryProvider` that previously existed
+// here (a manual Provider<TutorGrantRepository>) has been removed. The canonical
+// provider is now the @riverpod-generated `tutorGrantRepositoryProvider` in
+// `tutor_grant_providers.dart`. All use cases in this file now use that one.
 
 // ── Use case providers ───────────────────────────────────────────────────────
 
