@@ -119,6 +119,12 @@
 - detail: Updated app_router.dart LifetimeMarkingRoute + LifetimeCurriculumMarkingRoute guards from [authGuard] to [authGuard, childModeGuard, pinGuard]; created lifetime_route_guards_test.dart with 4 static file-inspection tests; all 4 tests green.
 - next: make ci → P3 sync gate
 
+## [2026-05-24 16:00] TASK-DONE — WS8 complete, make ci green
+
+- stream: WS8
+- detail: All WS8 work committed (2dc46fb8). Fixed WS5 compatibility regressions that blocked CI: added hasPermission() stub to notifications_screen_test.dart MockNotificationGateway; added _StubNotificationGateway + notificationServiceProvider override to empty_login_ws2_test.dart (DeviceNotificationToggle hits uninitialized platform plugin); updated 'empty_login_notification_toggle' key to 'device_notification_toggle' (WS5 changed the widget key); added missing stub methods (scheduleDailyReminderForProfile, cancelDailyReminderForProfile, scheduleBatchRemindersForProfile, cancelBatchRemindersForProfile, hasPermission) to overdue_notifications_test.dart _RecordingNotificationGateway; created test/core/database/daos/points_balance_dao_test.dart (7 tests) to satisfy epic_27 DAO coverage invariant. make ci: 5914 tests passed, analyze: no issues.
+- next: P3 sync gate
+
 ## [2026-05-24 14:00] START — WS6 begins
 
 - stream: WS6
