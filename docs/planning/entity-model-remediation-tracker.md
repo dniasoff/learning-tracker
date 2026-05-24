@@ -10,8 +10,8 @@
 ### WS1 — Profile & Account Switching (DEC-11, DEC-30, DEC-29, DEC-34, D1)
 
 - [x] WS1.auth-model   (WS1, done)      Multi-session auth design: removed signOut() from _activateLocalAccountFromLocalData; Drift DB swap + AuthState update is the sole switch mechanism; both accounts stay authenticated
-- [ ] WS1.switcher     (WS1, pending)    Always-on avatar/menu switcher in app_shell.dart listing active login's profiles AND signed-in accounts; no logout path
-- [ ] WS1.count-gate   (WS1, pending)    Count-gate: profile-switch entry hidden if <2 profiles; account-switch entry hidden if <2 accounts (DEC-30)
+- [x] WS1.switcher     (WS1, done)      Always-on avatar/menu switcher added to bottom nav bar in app_shell.dart; lists profiles + accounts; no logout; opens bottom sheet
+- [x] WS1.count-gate   (WS1, done)      Count-gate: switcher hidden entirely when 1 profile AND 1 account; profile section only when ≥2 profiles; account section only when ≥2 accounts
 - [ ] WS1.consolidate  (WS1, pending)    Consolidate 3 fragmented switch entry points (Settings header, parent-settings row, tutor bar) + collapse duplicate add-profile flows
 
 **Closes:** DEC-11 (🔴), DEC-30 (🔴), DEC-29 (🟡), DEC-34 (🟡→arch), D1
