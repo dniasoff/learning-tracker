@@ -56,7 +56,7 @@ const List<Map<String, Object?>> learningProgramSeeds = [
     'display_name': 'Dirshu Amud HaYomi',
     'description': 'Half-daf daily pace with review cycles and monthly tests.',
     'curriculum_type': 'bavli',
-    'is_active': false,
+    'is_active': true,
     'has_tests': true,
     'stages_config':
         '['
@@ -287,7 +287,7 @@ const List<Map<String, Object?>> learningProgramSeeds = [
     'display_name': 'Tehillim Yomi',
     'description': 'Daily Psalms cycle.',
     'curriculum_type': 'tanach',
-    'is_active': false,
+    'is_active': true,
     'has_tests': false,
     'stages_config':
         '['
@@ -303,7 +303,7 @@ const List<Map<String, Object?>> learningProgramSeeds = [
     'display_name': 'Perek Yomi',
     'description': 'One Mishnah perek per day.',
     'curriculum_type': 'mishnayos',
-    'is_active': false,
+    'is_active': true,
     'has_tests': false,
     'stages_config':
         '['
@@ -337,7 +337,7 @@ const List<Map<String, Object?>> learningProgramSeeds = [
         'Daily study of the Chofetz Chaim\'s Shemirat HaLashon (companion to '
         'Chofetz Chaim Yomi).',
     'curriculum_type': 'mussar',
-    'is_active': false,
+    'is_active': true,
     'has_tests': false,
     'stages_config':
         '['
