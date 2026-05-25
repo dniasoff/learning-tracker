@@ -183,6 +183,22 @@ class SettingsScreen extends ConsumerWidget {
             if (!isChildProfile || hasPasswordProvider) ...[
               _SectionHeader(title: l10n.sectionAccount),
               const SizedBox(height: 10),
+              // Always-available entry to add another login on this device.
+              // Previously "Add account" lived only in the count-gated profile
+              // switcher, so a single-account user had no way to reach it.
+              if (!isChildProfile) ...[
+                _SurfaceCard(
+                  child: PreferenceListTile.withIcon(
+                    icon: Icons.person_add_alt_1_rounded,
+                    iconColor: AppTheme.brandBlueBright,
+                    iconBackground: AppTheme.brandBlueSoft,
+                    title: l10n.switcherSheetAddAccount,
+                    subtitle: l10n.addAnotherAccountSubtitle,
+                    onTap: () => context.pushRoute(SignupRoute()),
+                  ),
+                ),
+                const SizedBox(height: 12),
+              ],
               if (hasPasswordProvider)
                 Column(
                   children: [

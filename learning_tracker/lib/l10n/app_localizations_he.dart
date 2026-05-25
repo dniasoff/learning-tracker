@@ -3239,6 +3239,9 @@ class AppLocalizationsHe extends AppLocalizations {
   String get switcherSheetAddAccount => 'הוספת חשבון';
 
   @override
+  String get addAnotherAccountSubtitle => 'התחבר או צור חשבון נוסף במכשיר זה';
+
+  @override
   String get acceptInviteAppBarTitle => 'אישור הזמנת מדריך';
 
   @override

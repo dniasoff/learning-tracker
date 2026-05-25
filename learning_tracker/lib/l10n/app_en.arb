@@ -1862,6 +1862,7 @@
   "switcherSheetProfiles": "Profiles",
   "switcherSheetAccounts": "Accounts",
   "switcherSheetAddAccount": "Add account",
+  "addAnotherAccountSubtitle": "Sign in to or create another account on this device",
 
   "acceptInviteAppBarTitle": "Accept Tutor Invite",
   "acceptInviteAccepting": "Accepting invite…",

@@ -5759,6 +5759,12 @@ abstract class AppLocalizations {
   /// **'Add account'**
   String get switcherSheetAddAccount;
 
+  /// No description provided for @addAnotherAccountSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in to or create another account on this device'**
+  String get addAnotherAccountSubtitle;
+
   /// No description provided for @acceptInviteAppBarTitle.
   ///
   /// In en, this message translates to:

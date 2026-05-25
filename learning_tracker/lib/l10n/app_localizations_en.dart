@@ -3271,6 +3271,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get switcherSheetAddAccount => 'Add account';
 
   @override
+  String get addAnotherAccountSubtitle =>
+      'Sign in to or create another account on this device';
+
+  @override
   String get acceptInviteAppBarTitle => 'Accept Tutor Invite';
 
   @override

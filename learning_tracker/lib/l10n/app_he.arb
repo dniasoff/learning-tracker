@@ -1847,6 +1847,7 @@
   "switcherSheetProfiles": "פרופילים",
   "switcherSheetAccounts": "חשבונות",
   "switcherSheetAddAccount": "הוספת חשבון",
+  "addAnotherAccountSubtitle": "התחבר או צור חשבון נוסף במכשיר זה",
 
   "acceptInviteAppBarTitle": "אישור הזמנת מדריך",
   "acceptInviteAccepting": "מאשר הזמנה…",
