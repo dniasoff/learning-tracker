@@ -521,13 +521,13 @@
   "tutoredChildrenStatusTutoring": "Tutoring",
   "tutoredChildrenRoleBadge": "Tutor",
   "tutorModeIndicator": "Tutor mode",
-  "viewingChildBanner": "Viewing {name}",
+  "viewingChildBanner": "Parent mode — viewing {name}",
   "@viewingChildBanner": {
     "placeholders": {
       "name": {"type": "String"}
     }
   },
-  "viewingChildBannerExit": "Exit",
+  "viewingChildBannerExit": "Exit parent mode",
   "switchIntoChildTitle": "Switch to child view",
   "switchIntoChildMessage": "You are about to enter {name}'s full experience. You can exit anytime from the banner at the top.",
   "@switchIntoChildMessage": {
@@ -1056,6 +1056,22 @@
   "profilesChildLabel": "Child",
   "profilesAdultLabel": "Adult",
   "profilesEnterLearnerName": "Enter learner name",
+  "profilesNameFieldLabel": "Name",
+  "deleteProfileTitle": "Delete Profile",
+  "deleteProfileLastTitle": "Delete your only profile?",
+  "deleteProfileBody": "Are you sure you want to delete \"{name}\"? All learning data for this profile will be permanently lost.",
+  "@deleteProfileBody": {
+    "placeholders": {
+      "name": {"type": "String"}
+    }
+  },
+  "deleteProfileLastBody": "This is your only profile. Deleting \"{name}\" will erase every track, completion, and lifetime entry on this account. You will need to create a new profile before you can keep learning.",
+  "@deleteProfileLastBody": {
+    "placeholders": {
+      "name": {"type": "String"}
+    }
+  },
+  "deleteProfileLastConfirm": "Delete anyway",
 
   "trackNameThisTrack": "Name This Track",
   "trackNameLabel": "Track Name",

@@ -65,10 +65,10 @@ class SettingsScreen extends ConsumerWidget {
           padding: const EdgeInsets.fromLTRB(16, 20, 16, 28),
           children: [
             if (!isChildProfile) ...[
-              // WS1.consolidate: the GestureDetector that routed to ProfilePicker
-              // has been removed — the always-on avatar switcher in the bottom nav
-              // is now the canonical switch path (DEC-11). The header card is now
-              // a read-only identity indicator only.
+              // Tapping the profile header (name/avatar) opens the canonical
+              // profile switcher/manager sheet (switch / add / edit / delete).
+              // This is the single switch affordance; the old bottom-nav avatar
+              // switcher was retired.
               UserProfileHeaderCard(
                 user: user,
                 activeProfile: activeProfile,

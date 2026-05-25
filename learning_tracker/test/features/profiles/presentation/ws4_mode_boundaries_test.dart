@@ -35,53 +35,51 @@ void main() {
   // ── WS4.banner tests ──────────────────────────────────────────────────────
 
   group('WS4.banner — "Viewing [child]" banner l10n strings', () {
-    testWidgets(
-      'viewingChildBanner(name) produces "Viewing Yosef"',
-      (tester) async {
-        await tester.pumpWidget(
-          ProviderScope(
-            child: _wrap(
-              Builder(
-                builder: (context) {
-                  final l10n = AppLocalizations.of(context)!;
-                  return Text(l10n.viewingChildBanner('Yosef'));
-                },
-              ),
+    testWidgets('viewingChildBanner(name) produces "Viewing Yosef"', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          child: _wrap(
+            Builder(
+              builder: (context) {
+                final l10n = AppLocalizations.of(context)!;
+                return Text(l10n.viewingChildBanner('Yosef'));
+              },
             ),
           ),
-        );
-        await tester.pump();
+        ),
+      );
+      await tester.pump();
 
-        expect(find.text('Viewing Yosef'), findsOneWidget);
+      expect(find.text('Parent mode — viewing Yosef'), findsOneWidget);
 
-        await tester.pumpWidget(const SizedBox.shrink());
-        await tester.pump(Duration.zero);
-      },
-    );
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(Duration.zero);
+    });
 
-    testWidgets(
-      'viewingChildBannerExit produces "Exit"',
-      (tester) async {
-        await tester.pumpWidget(
-          ProviderScope(
-            child: _wrap(
-              Builder(
-                builder: (context) {
-                  final l10n = AppLocalizations.of(context)!;
-                  return Text(l10n.viewingChildBannerExit);
-                },
-              ),
+    testWidgets('viewingChildBannerExit produces "Exit parent mode"', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          child: _wrap(
+            Builder(
+              builder: (context) {
+                final l10n = AppLocalizations.of(context)!;
+                return Text(l10n.viewingChildBannerExit);
+              },
             ),
           ),
-        );
-        await tester.pump();
+        ),
+      );
+      await tester.pump();
 
-        expect(find.text('Exit'), findsOneWidget);
+      expect(find.text('Exit parent mode'), findsOneWidget);
 
-        await tester.pumpWidget(const SizedBox.shrink());
-        await tester.pump(Duration.zero);
-      },
-    );
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(Duration.zero);
+    });
   });
 
   // ── WS4.boundary tests ────────────────────────────────────────────────────
@@ -134,10 +132,7 @@ void main() {
         var confirmed = false;
 
         await tester.pumpWidget(
-          dialogTestWidget(
-            childName: 'Yosef',
-            onResult: (v) => confirmed = v,
-          ),
+          dialogTestWidget(childName: 'Yosef', onResult: (v) => confirmed = v),
         );
         await tester.pump();
 
@@ -175,10 +170,7 @@ void main() {
         var confirmed = false;
 
         await tester.pumpWidget(
-          dialogTestWidget(
-            childName: 'Moshe',
-            onResult: (v) => confirmed = v,
-          ),
+          dialogTestWidget(childName: 'Moshe', onResult: (v) => confirmed = v),
         );
         await tester.pump();
 

@@ -1940,13 +1940,13 @@ abstract class AppLocalizations {
   /// No description provided for @viewingChildBanner.
   ///
   /// In en, this message translates to:
-  /// **'Viewing {name}'**
+  /// **'Parent mode — viewing {name}'**
   String viewingChildBanner(String name);
 
   /// No description provided for @viewingChildBannerExit.
   ///
   /// In en, this message translates to:
-  /// **'Exit'**
+  /// **'Exit parent mode'**
   String get viewingChildBannerExit;
 
   /// No description provided for @switchIntoChildTitle.
@@ -2090,7 +2090,7 @@ abstract class AppLocalizations {
   /// No description provided for @deleteProfileTitle.
   ///
   /// In en, this message translates to:
-  /// **'Delete Profile?'**
+  /// **'Delete Profile'**
   String get deleteProfileTitle;
 
   /// No description provided for @deleteProfileConfirm.
@@ -3940,6 +3940,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Enter learner name'**
   String get profilesEnterLearnerName;
+
+  /// No description provided for @profilesNameFieldLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Name'**
+  String get profilesNameFieldLabel;
+
+  /// No description provided for @deleteProfileLastTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete your only profile?'**
+  String get deleteProfileLastTitle;
+
+  /// No description provided for @deleteProfileBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Are you sure you want to delete \"{name}\"? All learning data for this profile will be permanently lost.'**
+  String deleteProfileBody(String name);
+
+  /// No description provided for @deleteProfileLastBody.
+  ///
+  /// In en, this message translates to:
+  /// **'This is your only profile. Deleting \"{name}\" will erase every track, completion, and lifetime entry on this account. You will need to create a new profile before you can keep learning.'**
+  String deleteProfileLastBody(String name);
+
+  /// No description provided for @deleteProfileLastConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete anyway'**
+  String get deleteProfileLastConfirm;
 
   /// No description provided for @trackNameThisTrack.
   ///

@@ -7,6 +7,7 @@ import 'package:learning_tracker/features/account/presentation/providers/auth_st
 import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
+import 'package:learning_tracker/features/profiles/presentation/widgets/profile_switcher_sheet.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// Surface for [UserProfileHeaderCard]: matches [SettingsScreen] card vs
@@ -83,6 +84,9 @@ class _UserProfileHeaderCardState extends ConsumerState<UserProfileHeaderCard> {
           theme: theme,
           authUser: authState.currentUser!,
         ),
+        onTap: widget.surface == UserProfileHeaderSurface.settings
+            ? () => showProfileSwitcherSheet(context)
+            : null,
       );
     }
 
@@ -104,6 +108,9 @@ class _UserProfileHeaderCardState extends ConsumerState<UserProfileHeaderCard> {
 
     return _wrapSurface(
       widget.surface,
+      onTap: widget.surface == UserProfileHeaderSurface.settings
+          ? () => showProfileSwitcherSheet(context)
+          : null,
       Padding(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
         child: Row(
@@ -193,22 +200,30 @@ class _UserProfileHeaderCardState extends ConsumerState<UserProfileHeaderCard> {
   }
 }
 
-Widget _wrapSurface(UserProfileHeaderSurface style, Widget child) {
+Widget _wrapSurface(
+  UserProfileHeaderSurface style,
+  Widget child, {
+  VoidCallback? onTap,
+}) {
   switch (style) {
     case UserProfileHeaderSurface.settings:
-      return _SettingsProfileSurface(child: child);
+      return _SettingsProfileSurface(onTap: onTap, child: child);
     case UserProfileHeaderSurface.parent:
       return _ParentProfileSurface(child: child);
   }
 }
 
 class _SettingsProfileSurface extends StatelessWidget {
-  const _SettingsProfileSurface({required this.child});
+  const _SettingsProfileSurface({required this.child, this.onTap});
 
   final Widget child;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
+    // R*: tapping the profile NAME/header opens the canonical profile
+    // switcher/manager sheet (switch / add / edit / delete). This restores the
+    // tap-to-switch affordance that WS1.consolidate had removed.
     return DecoratedBox(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -222,7 +237,16 @@ class _SettingsProfileSurface extends StatelessWidget {
           ),
         ],
       ),
-      child: child,
+      child: onTap == null
+          ? child
+          : Material(
+              type: MaterialType.transparency,
+              child: InkWell(
+                onTap: onTap,
+                borderRadius: BorderRadius.circular(20),
+                child: child,
+              ),
+            ),
     );
   }
 }

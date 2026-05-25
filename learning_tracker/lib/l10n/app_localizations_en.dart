@@ -1053,11 +1053,11 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String viewingChildBanner(String name) {
-    return 'Viewing $name';
+    return 'Parent mode — viewing $name';
   }
 
   @override
-  String get viewingChildBannerExit => 'Exit';
+  String get viewingChildBannerExit => 'Exit parent mode';
 
   @override
   String get switchIntoChildTitle => 'Switch to child view';
@@ -1136,7 +1136,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get displayName => 'Display Name';
 
   @override
-  String get deleteProfileTitle => 'Delete Profile?';
+  String get deleteProfileTitle => 'Delete Profile';
 
   @override
   String deleteProfileConfirm(String name) {
@@ -2187,6 +2187,25 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get profilesEnterLearnerName => 'Enter learner name';
+
+  @override
+  String get profilesNameFieldLabel => 'Name';
+
+  @override
+  String get deleteProfileLastTitle => 'Delete your only profile?';
+
+  @override
+  String deleteProfileBody(String name) {
+    return 'Are you sure you want to delete \"$name\"? All learning data for this profile will be permanently lost.';
+  }
+
+  @override
+  String deleteProfileLastBody(String name) {
+    return 'This is your only profile. Deleting \"$name\" will erase every track, completion, and lifetime entry on this account. You will need to create a new profile before you can keep learning.';
+  }
+
+  @override
+  String get deleteProfileLastConfirm => 'Delete anyway';
 
   @override
   String get trackNameThisTrack => 'Name This Track';

@@ -1042,11 +1042,11 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String viewingChildBanner(String name) {
-    return 'צופה ב-$name';
+    return 'מצב הורה — צופה ב-$name';
   }
 
   @override
-  String get viewingChildBannerExit => 'יציאה';
+  String get viewingChildBannerExit => 'יציאה ממצב הורה';
 
   @override
   String get switchIntoChildTitle => 'מעבר לתצוגת ילד';
@@ -1124,7 +1124,7 @@ class AppLocalizationsHe extends AppLocalizations {
   String get displayName => 'שם תצוגה';
 
   @override
-  String get deleteProfileTitle => 'למחוק את הפרופיל?';
+  String get deleteProfileTitle => 'מחיקת פרופיל';
 
   @override
   String deleteProfileConfirm(String name) {
@@ -2163,6 +2163,25 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String get profilesEnterLearnerName => 'הזינו שם לומד';
+
+  @override
+  String get profilesNameFieldLabel => 'שם';
+
+  @override
+  String get deleteProfileLastTitle => 'למחוק את הפרופיל היחיד שלך?';
+
+  @override
+  String deleteProfileBody(String name) {
+    return 'האם למחוק את \"$name\"? כל נתוני הלמידה של פרופיל זה יימחקו לצמיתות.';
+  }
+
+  @override
+  String deleteProfileLastBody(String name) {
+    return 'זהו הפרופיל היחיד שלך. מחיקת \"$name\" תמחק כל מסלול, השלמה ורישום מצטבר בחשבון זה. יהיה עליך ליצור פרופיל חדש כדי להמשיך ללמוד.';
+  }
+
+  @override
+  String get deleteProfileLastConfirm => 'מחק בכל זאת';
 
   @override
   String get trackNameThisTrack => 'שמרו מסלול זה';
