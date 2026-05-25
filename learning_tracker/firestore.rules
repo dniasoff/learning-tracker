@@ -55,26 +55,12 @@ service cloud.firestore {
 
     // ── Tutor grant helpers (W3.41, V2-R3 C2) ────────────────────────────────
     //
-    // isActiveTutorGrant — O(1) lookup via known grantId (stored client-side
-    // after acceptance). The client cannot forge a tutor_grants doc because
-    // all write operations on that collection are denied (see rules below);
-    // only Cloud Functions (Admin SDK) can create or mutate grant docs.
-    //
     // hasActiveTutorAccess — O(1) lookup via `tutor_active_access` secondary
     // index. Maintained by Cloud Functions: acceptInvite writes the doc,
     // revokeGrant/resignGrant/expirePendingInvites delete it. The doc-id is
     // {tutorUid}_{parentUid}_{profileId} — deterministic from path context so
     // no grantId is needed in the rules. This enables tutor subcollection reads
     // without requiring the client to pass the grantId through the path.
-
-    function isActiveTutorGrant(ownerUid, profileId, grantId) {
-      let grant = get(/databases/$(database)/documents/tutor_grants/$(grantId)).data;
-      return grant != null
-          && grant.state == 'active'
-          && grant.tutor_uid == request.auth.uid
-          && grant.parent_uid == ownerUid
-          && grant.child_profile_id == profileId;
-    }
 
     // V2-R3 C2: O(1) subcollection read check — does not require grantId in
     // the request. Cloud Functions maintain tutor_active_access as a
