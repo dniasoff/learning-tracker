@@ -77,13 +77,30 @@ class _FakePipeline extends Fake implements PushPipeline {
     return entries.map((e) => e.entityKey).toList();
   }
 
+  /// When true, [pushStreak] returns a Future that never completes — models a
+  /// Firestore write hanging on an online-but-unreachable network (the bug the
+  /// per-push timeout guards against).
+  bool hangStreak = false;
+
   @override
   Future<void> pushStreak({
     required int profileId,
     required String entityKey,
     required Map<String, dynamic> payload,
   }) async {
+    if (hangStreak) {
+      await Completer<void>().future; // never completes
+    }
     calls.add(('streak', entityKey));
+  }
+
+  @override
+  Future<void> pushLearnerProfile({
+    required int profileId,
+    required String entityKey,
+    required Map<String, dynamic> payload,
+  }) async {
+    calls.add(('learner_profile', entityKey));
   }
 
   @override
@@ -149,10 +166,11 @@ void main() {
     String entityKind = OutboxEntityKind.completion,
     String entityKey = 'key1',
     Map<String, dynamic>? payload,
+    int rowProfileId = profileId,
   }) async {
     await db.outboxDao.insertOutboxRow(
       OutboxCompanion.insert(
-        profileId: profileId,
+        profileId: rowProfileId,
         entityKind: entityKind,
         entityKey: entityKey,
         payload: jsonEncode(payload ?? {'ref': 'Berakhot.2a'}),
@@ -182,6 +200,76 @@ void main() {
       await processor.drain(profileId);
       expect(pipeline.calls, [('streak', 's1')]);
     });
+
+    test(
+      'SYNC-2: account-level row enqueued under profile 0 is swept when '
+      'draining the active profile',
+      () async {
+        // The initial learner_profile push is queued before any profile is
+        // active (facade _profileId == 0). Draining the active profile (1)
+        // must also sweep profile-0 rows, else the profile never uploads.
+        await insertRow(
+          entityKind: OutboxEntityKind.learnerProfile,
+          entityKey: '1',
+          payload: {'profile_id': 1, 'display_name': 'X'},
+          rowProfileId: 0,
+        );
+
+        final count = await processor.drain(profileId); // active profile = 1
+        expect(count, 1);
+        expect(pipeline.calls, [('learner_profile', '1')]);
+        // Row is deleted after a successful push.
+        expect(await db.outboxDao.depth(0), 0);
+      },
+    );
+
+    test(
+      'SYNC-1: a hung push times out and does NOT wedge the single-flight '
+      'guard; the row is retried on the next drain',
+      () async {
+        // Short timeout/stale window so the test runs in milliseconds.
+        final p = OutboxProcessor(
+          outboxDao: db.outboxDao,
+          pipeline: pipeline,
+          clock: FakeLocalDayClock(DateTime.utc(2026, 5, 14)),
+          pushTimeout: const Duration(milliseconds: 50),
+          drainStaleAfter: const Duration(milliseconds: 10),
+        );
+        await insertRow(entityKind: OutboxEntityKind.streak, entityKey: 's1');
+
+        // First drain: push hangs → times out → row marked attempted, NOT
+        // deleted, and the drain returns (does not hang forever).
+        pipeline.hangStreak = true;
+        final first = await p.drain(profileId);
+        expect(first, 0, reason: 'hung push commits nothing');
+        final rows = await db.outboxDao.getPendingByKind(
+          OutboxEntityKind.streak,
+          profileId,
+        );
+        expect(rows, hasLength(1));
+        expect(
+          rows.single.attempts,
+          greaterThan(0),
+          reason: 'timed-out push is recorded as an attempt, not left at 0',
+        );
+
+        // Guard not wedged: the timed-out drain completed and released the
+        // single-flight guard, so a subsequent drain runs normally. Prove it
+        // by pushing a FRESH row (the hung row itself is now in backoff).
+        pipeline.hangStreak = false;
+        await insertRow(
+          entityKind: OutboxEntityKind.completion,
+          entityKey: 'c-fresh',
+        );
+        final second = await p.drain(profileId);
+        expect(
+          second,
+          greaterThanOrEqualTo(1),
+          reason: 'guard was reclaimed; a later drain still works',
+        );
+        expect(pipeline.calls, contains(('completion', 'c-fresh')));
+      },
+    );
 
     test('pushes track rows', () async {
       await insertRow(entityKind: OutboxEntityKind.track, entityKey: 't1');

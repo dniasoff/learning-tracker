@@ -91,7 +91,7 @@ final class SacredLocationNotifierProvider
 }
 
 String _$sacredLocationNotifierHash() =>
-    r'080c97418aa1bec51c5bb52a7df479ffe93cf4a4';
+    r'51249cba653b5bb29438062cbd784a58a5216d30';
 
 /// Cached device location used for Sacred Time window calculation.
 /// Survives app restarts via SharedPreferences. App-global (not per-profile).

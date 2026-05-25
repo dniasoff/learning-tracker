@@ -59,7 +59,7 @@ final class CompletionRepositoryProvider
 }
 
 String _$completionRepositoryHash() =>
-    r'83bd55ac0ad56d397b6a3c47d9bdbbf0b333ee71';
+    r'084543269d7172dcb5d570242bc29903ea176f6e';
 
 /// Provides the mark completion use case.
 

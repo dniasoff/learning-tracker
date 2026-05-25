@@ -557,6 +557,12 @@ Future<List<DailyTask>> _buildProjectionTasks({
               // column by LocalCalendarEngine and reflects the true calendar
               // date, regardless of cadence.
               final calendarEntries = <(DateTime, String)>[];
+              // Index each day's English ref → seed-sourced day-level labels.
+              // The projection emits English refs (e.g. "Chullin 25"); this
+              // lets us re-attach the collapsed, type-aware unit name
+              // (todayRefHe / displayNameEn) to the generated DailyTask so the
+              // dashboard card renders one daf, not one amud breadcrumb.
+              final dayLabelByRef = <String, ({String? he, String? en})>{};
               for (final entry in entries) {
                 final entryDate = entry.date;
                 assert(
@@ -566,6 +572,12 @@ Future<List<DailyTask>> _buildProjectionTasks({
                 );
                 if (entryDate == null) continue;
                 calendarEntries.add((entryDate, entry.todayRef));
+                dayLabelByRef[entry.todayRef] = (
+                  he: entry.todayRefHe.isEmpty ? null : entry.todayRefHe,
+                  en: entry.todayRef.isEmpty
+                      ? null
+                      : displayProgramRef(entry.todayRef),
+                );
               }
 
               final schedule = programSchedule(
@@ -618,6 +630,7 @@ Future<List<DailyTask>> _buildProjectionTasks({
                     scheduledDate.isBefore(progAmnestyCutoff)) {
                   continue;
                 }
+                final dayLabel = dayLabelByRef[ref];
                 final taskRefs = resolvedOrFallbackProgramRefs(
                   todayRef: ref,
                   contentItems: contentItems,
@@ -638,12 +651,15 @@ Future<List<DailyTask>> _buildProjectionTasks({
                           trackLabels[curriculum] ??
                           TrackType.personal.storageKey,
                       estimatedEffortMinutes: 5,
+                      unitDisplayHe: dayLabel?.he,
+                      unitDisplayEn: dayLabel?.en,
                     ),
                   );
                 }
               }
 
               for (final ref in projection.dueToday) {
+                final dayLabel = dayLabelByRef[ref];
                 final taskRefs = resolvedOrFallbackProgramRefs(
                   todayRef: ref,
                   contentItems: contentItems,
@@ -664,6 +680,8 @@ Future<List<DailyTask>> _buildProjectionTasks({
                           trackLabels[curriculum] ??
                           TrackType.personal.storageKey,
                       estimatedEffortMinutes: 5,
+                      unitDisplayHe: dayLabel?.he,
+                      unitDisplayEn: dayLabel?.en,
                     ),
                   );
                 }
@@ -1191,6 +1209,10 @@ Future<List<DailyTask>> _applyProgramCalendarOverrides({
       final reason = isTodayUnit
           ? 'Program assignment for today'
           : 'Program day pending from previous days';
+      final unitDisplayHe = entry.todayRefHe.isEmpty ? null : entry.todayRefHe;
+      final unitDisplayEn = entry.todayRef.isEmpty
+          ? null
+          : displayProgramRef(entry.todayRef);
       result.addAll(
         refsForEntry.map((ref) {
           return DailyTask(
@@ -1206,6 +1228,8 @@ Future<List<DailyTask>> _applyProgramCalendarOverrides({
             trackLabel:
                 trackLabels[curriculum] ?? TrackType.personal.storageKey,
             estimatedEffortMinutes: 5,
+            unitDisplayHe: unitDisplayHe,
+            unitDisplayEn: unitDisplayEn,
           );
         }),
       );

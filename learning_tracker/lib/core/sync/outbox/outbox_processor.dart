@@ -78,10 +78,16 @@ class OutboxProcessor {
     // W7.7: optional analytics — fires outbox_dead_lettered when a row hits
     // the max-attempts ceiling and is silently skipped forever.
     AnalyticsService? analytics,
+    // Overridable for tests so the timeout/guard paths can be exercised
+    // without real-time waits. Production uses the defaults.
+    Duration pushTimeout = const Duration(seconds: 20),
+    Duration drainStaleAfter = const Duration(seconds: 90),
   }) : _dao = outboxDao,
        _pipeline = pipeline,
        _clock = clock,
-       _analytics = analytics;
+       _analytics = analytics,
+       _pushTimeout = pushTimeout,
+       _drainStaleAfter = drainStaleAfter;
 
   final OutboxDao _dao;
   final PushPipeline _pipeline;
@@ -124,6 +130,22 @@ class OutboxProcessor {
   /// the Flutter single-Isolate runtime.
   bool _draining = false;
 
+  /// When the in-flight drain started. Used to reclaim a wedged guard: a push
+  /// that hangs (online-but-unreachable network, no clean error) would leave
+  /// [_draining] stuck `true` forever and silently block ALL future drains.
+  DateTime? _drainingSince;
+
+  /// If a drain has held the single-flight guard longer than this, treat it as
+  /// stale and let a new drain reclaim it. Must exceed [_pushTimeout] so a
+  /// healthy (timed-out-and-retrying) drain is never pre-empted.
+  final Duration _drainStaleAfter;
+
+  /// Hard timeout on a single push operation. Firestore writes do NOT reliably
+  /// error when the device is online-but-unreachable (e.g. broken IPv6 to
+  /// firestore.googleapis.com) — the Future just hangs. Without this, one hung
+  /// push wedges the whole outbox drain indefinitely.
+  final Duration _pushTimeout;
+
   /// Drain pending outbox rows for [profileId].
   ///
   /// Completions are collected all at once and dispatched via
@@ -141,16 +163,40 @@ class OutboxProcessor {
   /// pull-complete all coinciding on app launch); this guard collapses them
   /// to one push round.
   Future<int> drain(int profileId) async {
-    if (_draining) return 0;
+    if (_draining) {
+      final since = _drainingSince;
+      // Reclaim a wedged guard: if the in-flight drain has been held past the
+      // stale threshold (a push that hung with no error/timeout), allow this
+      // drain to proceed instead of no-opping forever.
+      if (since != null &&
+          _clock.nowUtc().difference(since) < _drainStaleAfter) {
+        return 0;
+      }
+    }
     _draining = true;
+    _drainingSince = _clock.nowUtc();
     try {
       return await _doDrain(profileId);
     } finally {
       _draining = false;
+      _drainingSince = null;
     }
   }
 
+  /// Drains the active [profileId], then sweeps account-level rows enqueued
+  /// under profile 0. The initial `learner_profile` push is queued before any
+  /// profile is active (facade `_profileId == 0`), so without this sweep that
+  /// row never matches the active-profile drain and the profile never uploads
+  /// (SYNC-2 — cloud `learner_profiles` stays empty).
   Future<int> _doDrain(int profileId) async {
+    var pushed = await _drainForProfile(profileId);
+    if (profileId != 0) {
+      pushed += await _drainForProfile(0);
+    }
+    return pushed;
+  }
+
+  Future<int> _drainForProfile(int profileId) async {
     final now = _clock.nowUtc();
     var successCount = 0;
 
@@ -212,10 +258,9 @@ class OutboxProcessor {
       List<String> committed;
       Object? failedError;
       try {
-        committed = await _pipeline.pushCompletionsBatch(
-          profileId: profileId,
-          entries: entries,
-        );
+        committed = await _pipeline
+            .pushCompletionsBatch(profileId: profileId, entries: entries)
+            .timeout(_pushTimeout);
       } on BatchPushException catch (e) {
         // Partial failure: the chunks listed in `e.committed` are durable —
         // delete exactly those rows; the remaining rows are marked attempted
@@ -283,7 +328,7 @@ class OutboxProcessor {
             profileId: profileId,
             entityKey: row.entityKey,
             payload: payload,
-          );
+          ).timeout(_pushTimeout);
           await _dao.deleteRow(row.id);
           successCount++;
         } catch (e) {

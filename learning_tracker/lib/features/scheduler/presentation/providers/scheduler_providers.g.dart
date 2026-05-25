@@ -542,7 +542,7 @@ final class PaceStatusProvider
   }
 }
 
-String _$paceStatusHash() => r'9154b0c5a9bf87d385bcebe9a83472cf3af52850';
+String _$paceStatusHash() => r'2d93639ad7c6de9c1058f1ccfef75abc3ff45c90';
 
 /// Pace status for a curriculum goal.
 ///

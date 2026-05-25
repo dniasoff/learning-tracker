@@ -121,3 +121,65 @@ DailyTask? programTrackFocusTask(List<DailyTask> tasks) {
   }
   return tasks.first;
 }
+
+/// Breadcrumb segment separator emitted by the curriculum-label renderer
+/// (space + U+203A + space).
+const String kBreadcrumbSep = ' › ';
+
+/// Collapses a full amud/verse breadcrumb to its day-level unit.
+///
+/// A Daf-Yomi day is a whole daf (both amudim), so the leaf "עמוד א" /
+/// "Amud A" segment is noise — drop it so the pill reads "חולין › דף כה"
+/// rather than "חולין › דף כה › עמוד א". Used only as the *fallback* when the
+/// seed day-level label is missing; the seeded label is preferred.
+///
+/// Heuristic: when the last breadcrumb segment is an amud leaf (the renderer
+/// marks amudim as "עמוד …"/"Amud …"), strip it. Otherwise the breadcrumb is
+/// left untouched (already daf / perek / mishna level).
+String collapseAmudToDaf(String breadcrumb) {
+  final segments = breadcrumb.split(kBreadcrumbSep);
+  if (segments.length < 2) return breadcrumb;
+  final last = segments.last.trim();
+  final isAmudLeaf =
+      last.startsWith('עמוד') || last.toLowerCase().startsWith('amud');
+  if (!isAmudLeaf) return breadcrumb;
+  return segments.sublist(0, segments.length - 1).join(kBreadcrumbSep);
+}
+
+/// Collapses a set of rendered refs into a single first–last range label.
+///
+/// For a self-paced multi-unit day, render "<first> – <last>" using the leaf
+/// segment of each end so the pill reads e.g. "משנה ה׳ – משנה ט׳" rather than
+/// listing every ref or showing only the first. A single ref (or all-equal
+/// leaves) is returned unchanged.
+String collapseRefRange(List<String> rendered) {
+  final cleaned = rendered.where((r) => r.trim().isNotEmpty).toList();
+  if (cleaned.isEmpty) return '';
+  if (cleaned.length == 1) return cleaned.first;
+  String leaf(String b) => b.split(kBreadcrumbSep).last.trim();
+  final first = leaf(cleaned.first);
+  final last = leaf(cleaned.last);
+  if (first == last) return cleaned.first;
+  return '$first – $last';
+}
+
+/// Seed-sourced day-level unit label for [task] respecting Hebrew terms.
+///
+/// Returns the collapsed, type-aware unit name ("חולין דף כ״ה" / "Chullin 25",
+/// "כלים 5:7-8") that was attached at generation time from the calendar seed,
+/// or null when the task carries no day-level label (self-paced, or a program
+/// whose seed lacked one — the caller then falls back to the breadcrumb
+/// renderer). Mirrors how [renderedDisplayForRef] picks the locale: Hebrew
+/// label in Hebrew-terms mode, English otherwise.
+String? programUnitDayLabel(DailyTask task, {required bool useHebrew}) {
+  if (useHebrew) {
+    final he = task.unitDisplayHe;
+    if (he != null && he.isNotEmpty) return he;
+    final en = task.unitDisplayEn;
+    return (en != null && en.isNotEmpty) ? en : null;
+  }
+  final en = task.unitDisplayEn;
+  if (en != null && en.isNotEmpty) return en;
+  final he = task.unitDisplayHe;
+  return (he != null && he.isNotEmpty) ? he : null;
+}

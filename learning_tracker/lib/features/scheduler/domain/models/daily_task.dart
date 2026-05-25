@@ -58,5 +58,22 @@ abstract class DailyTask with _$DailyTask {
     /// Estimated effort in minutes. Defaults based on priority:
     /// newLearning = 5 min, chazara = 3 min.
     @Default(3) int estimatedEffortMinutes,
+
+    /// Seed-sourced day-level unit label in Hebrew (e.g. "חולין דף כ״ה" for a
+    /// Daf-Yomi day, "כלים 5:7-8" for a mishnayos range).
+    ///
+    /// Populated at generation time for program tasks from the calendar
+    /// entry's `todayRefHe`. This is the *collapsed, type-aware* name for the
+    /// whole day's unit — a single daf rather than one amud breadcrumb. The
+    /// dashboard track card prefers this over re-deriving an expanded amud
+    /// label from [contentItemSefariaRef] at render time, which makes the
+    /// displayed unit reliable. Null for self-paced tasks and any program
+    /// entry whose seed lacks a Hebrew label.
+    String? unitDisplayHe,
+
+    /// Seed-sourced day-level unit label in English (e.g. "Chullin 25",
+    /// "Kelim 5:7-8"). English counterpart of [unitDisplayHe]; null in the
+    /// same cases.
+    String? unitDisplayEn,
   }) = _DailyTask;
 }

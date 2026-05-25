@@ -104,22 +104,31 @@ class ActiveTrackCard extends ConsumerWidget {
         ? l10n.activeTrackNextTask
         : l10n.activeTrackCurrentFocus;
     final focusRef = todayTask?.contentItemSefariaRef;
-    // Renderer-driven: same path as reader, browse rows, daily task card.
-    // The full breadcrumb starts with the seder (e.g. "קודשים › חולין › …"),
-    // which duplicates context already shown by the curriculum chip above.
-    // Drop the top-level segment when the breadcrumb has 2+ parts so only
-    // the sub-seder onwards is displayed (e.g. "חולין › דף יד › עמוד א").
-    final focusValue = focusRef == null
-        ? l10n.noProjection
-        : _trimSederFromBreadcrumb(
-            ref.watch(renderedDisplayForRefProvider(focusRef)).asData?.value ??
-                focusRef,
-          );
-    // #6 — surface today's program unit distinctly. The focus pill above shows
-    // the oldest OVERDUE unit when the user is behind, so today's daf/mishnayos
-    // would otherwise be hidden. This dedicated "Today" pill always exposes it,
-    // rendered through the same Hebrew-terms-aware renderer. Suppressed when it
-    // would merely duplicate the focus pill (i.e. caught up → focus == today).
+    // UI-3 — type-aware, collapsed unit naming. Prefer the seed-sourced
+    // day-level label attached to the task at generation time (a whole daf,
+    // a mishnayos range), which is reliable and already collapsed. Fall back
+    // to the renderer breadcrumb collapsed to the daf level (amud dropped)
+    // for program tracks, or a first–last range for self-paced multi-ref
+    // days. The breadcrumb's leading seder is trimmed (curriculum chip above
+    // already shows it).
+    final useHebrew = terms.isHebrew;
+    String? unitLabelForTask(DailyTask? task) {
+      if (task == null) return null;
+      final seeded = programUnitDayLabel(task, useHebrew: useHebrew);
+      if (seeded != null) return seeded;
+      final r = task.contentItemSefariaRef;
+      final rendered = _trimSederFromBreadcrumb(
+        ref.watch(renderedDisplayForRefProvider(r)).asData?.value ?? r,
+      );
+      // Program tracks collapse amud → daf; self-paced keeps its leaf.
+      return hasProgramEnrollment ? collapseAmudToDaf(rendered) : rendered;
+    }
+
+    // UI-2 — "Today" is the PRIMARY element. Surface today's program unit
+    // regardless of how far behind the user is. The secondary "NEXT TASK"
+    // pill shows the oldest OVERDUE unit (the next thing to catch up on),
+    // which is distinct from today; when caught up there is no overdue unit,
+    // so only the prominent Today pill renders.
     DailyTask? todayProgramTask;
     if (hasProgramEnrollment) {
       for (final t in curriculumTasks) {
@@ -129,19 +138,50 @@ class ActiveTrackCard extends ConsumerWidget {
         }
       }
     }
-    final todayUnitRef = todayProgramTask?.contentItemSefariaRef;
-    // Always surface today's unit when the track is a program — even when
-    // caught up (focus pill == today). The user explicitly wants today's
-    // daf/mishnayos labelled and visible, not hidden behind "NEXT TASK".
-    final todayUnitValue = todayUnitRef == null
-        ? null
-        : _trimSederFromBreadcrumb(
+    final todayUnitValue = unitLabelForTask(todayProgramTask);
+
+    // Secondary (next/overdue) unit for the muted pill.
+    final DailyTask? nextTask;
+    if (hasProgramEnrollment) {
+      // Oldest missed program day, if behind.
+      nextTask = taskBuckets.missedProgram.isNotEmpty
+          ? taskBuckets.missedProgram.first
+          : null;
+    } else {
+      nextTask = todayTask;
+    }
+
+    // Self-paced multi-ref day: collapse the day's set of refs into a range
+    // label so the focus pill shows e.g. "משנה ה׳ – ט׳" rather than a single
+    // ref. Program tracks already carry a clean day-level label.
+    final String selfPacedRangeValue;
+    if (!hasProgramEnrollment && curriculumTasks.length > 1) {
+      final rendered = <String>[
+        for (final t in curriculumTasks)
+          _trimSederFromBreadcrumb(
             ref
-                    .watch(renderedDisplayForRefProvider(todayUnitRef))
+                    .watch(
+                      renderedDisplayForRefProvider(t.contentItemSefariaRef),
+                    )
                     .asData
                     ?.value ??
-                todayUnitRef,
-          );
+                t.contentItemSefariaRef,
+          ),
+      ];
+      selfPacedRangeValue = collapseRefRange(rendered);
+    } else {
+      selfPacedRangeValue = '';
+    }
+
+    final nextUnitValue = unitLabelForTask(nextTask);
+    final resolvedFocusValue = selfPacedRangeValue.isNotEmpty
+        ? selfPacedRangeValue
+        : (nextUnitValue ?? l10n.noProjection);
+    // Show the secondary pill only when it carries a distinct unit (program:
+    // only when behind; self-paced: always, as the single primary pill).
+    final showFocusPill = hasProgramEnrollment
+        ? (nextUnitValue != null && nextUnitValue != todayUnitValue)
+        : (focusRef != null);
     return Card(
       elevation: 5,
       shadowColor: Colors.black26,
@@ -219,104 +259,141 @@ class ActiveTrackCard extends ConsumerWidget {
                 ],
               ),
               const SizedBox(height: 10),
-              ActiveTrackFocusPill(label: focusLabel, value: focusValue),
-              if (todayUnitValue != null) ...[
-                const SizedBox(height: 8),
-                ActiveTrackFocusPill(label: l10n.today, value: todayUnitValue),
-              ],
-              const SizedBox(height: 10),
-              // Gate the chazara stat column on per-track stage count (Rule 8).
-              // trackHasChazaraProvider returns false while loading, which
-              // conservatively hides the chazara column until we know for sure
-              // the track has chazara stages.
-              TrackStatGrid(
-                buckets: taskBuckets,
-                l10n: l10n,
-                chazaraLabel:
-                    (ref
-                            .watch(trackHasChazaraProvider(track.id))
-                            .asData
-                            ?.value ??
-                        false)
-                    ? terms.bubbleChazara
-                    : null,
-              ),
-              if (taskBuckets.total == 0)
-                Padding(
-                  padding: const EdgeInsets.only(top: 4),
-                  child: Text(
-                    l10n.nothingDueInQueue,
-                    maxLines: 2,
-                    style: theme.textTheme.labelSmall?.copyWith(
-                      color: AppTheme.brandInkMuted,
-                      height: 1.2,
-                    ),
+              // UI-1 — the card lives in a fixed-height PageView viewport, so a
+              // tall content stack (two pills + stats) used to overflow the
+              // bottom (the Continue button showed the overflow stripes). Let
+              // the upper content shrink/scroll inside the available space
+              // while the progress labels + Continue button stay pinned below.
+              Flexible(
+                child: SingleChildScrollView(
+                  physics: const ClampingScrollPhysics(),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      // UI-2 — "Today" is the primary action: prominent accent
+                      // pill with a calendar glyph. For program tracks it is
+                      // always shown. The secondary "NEXT TASK" pill (oldest
+                      // overdue) is muted and suppressed when it would merely
+                      // duplicate today (caught up).
+                      if (hasProgramEnrollment && todayUnitValue != null) ...[
+                        ActiveTrackFocusPill(
+                          label: l10n.today,
+                          value: todayUnitValue,
+                          prominent: true,
+                          icon: Icons.today_rounded,
+                        ),
+                        if (showFocusPill) ...[
+                          const SizedBox(height: 8),
+                          ActiveTrackFocusPill(
+                            label: focusLabel,
+                            value: resolvedFocusValue,
+                          ),
+                        ],
+                      ] else
+                        // Self-paced (or program with no today unit): the
+                        // single focus pill is the prominent primary element.
+                        // No calendar glyph here — this is "current focus",
+                        // not a calendar-dated "today" unit.
+                        ActiveTrackFocusPill(
+                          label: focusLabel,
+                          value: resolvedFocusValue,
+                          prominent: true,
+                        ),
+                      const SizedBox(height: 10),
+                      // Gate the chazara stat column on per-track stage count
+                      // (Rule 8). trackHasChazaraProvider returns false while
+                      // loading, which conservatively hides the chazara column
+                      // until we know the track has chazara stages.
+                      TrackStatGrid(
+                        buckets: taskBuckets,
+                        l10n: l10n,
+                        chazaraLabel:
+                            (ref
+                                    .watch(trackHasChazaraProvider(track.id))
+                                    .asData
+                                    ?.value ??
+                                false)
+                            ? terms.bubbleChazara
+                            : null,
+                      ),
+                      if (taskBuckets.total == 0)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 4),
+                          child: Text(
+                            l10n.nothingDueInQueue,
+                            maxLines: 2,
+                            style: theme.textTheme.labelSmall?.copyWith(
+                              color: AppTheme.brandInkMuted,
+                              height: 1.2,
+                            ),
+                          ),
+                        ),
+                    ],
                   ),
                 ),
-              Expanded(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  mainAxisSize: MainAxisSize.max,
-                  children: [
-                    // Dual progress labels — Track progress (current cycle)
-                    // and Lifetime — share the same data source as the
-                    // Progress hub per-track rows. Wrap so they fall to a
-                    // second line on narrow cards instead of clipping.
-                    Wrap(
-                      spacing: 12,
-                      runSpacing: 2,
-                      children: [
-                        Text(
-                          '${l10n.trackProgress}: $currentCycleDisplay',
-                          style: theme.textTheme.labelSmall?.copyWith(
-                            color: AppTheme.brandInkMuted,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        Text(
-                          '${l10n.lifetimeLabel}: $lifetimeDisplay',
-                          style: theme.textTheme.labelSmall?.copyWith(
-                            color: AppTheme.brandInkMuted,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 10),
-                    FilledButton(
-                      onPressed: () {
-                        // If there's a concrete next-task / current focus,
-                        // jump straight to its text — that's what the
-                        // 'CURRENT FOCUS' label promised. Fall back to the
-                        // Learn tab when there's nothing scheduled.
-                        final focusRef = todayTask?.contentItemSefariaRef;
-                        if (focusRef != null && focusRef.isNotEmpty) {
-                          context.router.push(
-                            TextDisplayRoute(sefariaRef: focusRef),
-                          );
-                        } else {
-                          context.router.navigate(const LearningRoute());
-                        }
-                      },
-                      style: FilledButton.styleFrom(
-                        backgroundColor: kActiveTrackPrimaryBlue,
-                        foregroundColor: Colors.white,
-                        minimumSize: const Size(double.infinity, 48),
-                        padding: EdgeInsets.zero,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                        textStyle: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: 0.4,
+              ),
+              const SizedBox(height: 10),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Dual progress labels — Track progress (current cycle)
+                  // and Lifetime — share the same data source as the
+                  // Progress hub per-track rows. Wrap so they fall to a
+                  // second line on narrow cards instead of clipping.
+                  Wrap(
+                    spacing: 12,
+                    runSpacing: 2,
+                    children: [
+                      Text(
+                        '${l10n.trackProgress}: $currentCycleDisplay',
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: AppTheme.brandInkMuted,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
-                      child: Text(l10n.continueCta),
+                      Text(
+                        '${l10n.lifetimeLabel}: $lifetimeDisplay',
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: AppTheme.brandInkMuted,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  FilledButton(
+                    onPressed: () {
+                      // If there's a concrete next-task / current focus,
+                      // jump straight to its text — that's what the
+                      // 'CURRENT FOCUS' label promised. Fall back to the
+                      // Learn tab when there's nothing scheduled.
+                      final focusRef = todayTask?.contentItemSefariaRef;
+                      if (focusRef != null && focusRef.isNotEmpty) {
+                        context.router.push(
+                          TextDisplayRoute(sefariaRef: focusRef),
+                        );
+                      } else {
+                        context.router.navigate(const LearningRoute());
+                      }
+                    },
+                    style: FilledButton.styleFrom(
+                      backgroundColor: kActiveTrackPrimaryBlue,
+                      foregroundColor: Colors.white,
+                      minimumSize: const Size(double.infinity, 48),
+                      padding: EdgeInsets.zero,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      textStyle: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 0.4,
+                      ),
                     ),
-                  ],
-                ),
+                    child: Text(l10n.continueCta),
+                  ),
+                ],
               ),
             ],
           ),

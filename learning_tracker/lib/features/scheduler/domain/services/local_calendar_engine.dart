@@ -119,6 +119,12 @@ class LocalCalendarEngine {
             displayNameEn: def.displayNameEn,
             displayNameHe: def.displayNameHe,
             todayRef: row.sefariaRef,
+            // The day-level Hebrew label (e.g. "חולין דף כ״ה") is the
+            // reliable, seed-sourced unit name surfaced by the dashboard
+            // track card. Populate it here so range/projection consumers
+            // (which read this method) keep the collapsed label rather
+            // than re-deriving an expanded amud breadcrumb at render time.
+            todayRefHe: row.sefariaRefHe ?? '',
             apiSource: 'local',
             date: _parseDateKey(row.dateKey),
           ),
