@@ -414,10 +414,24 @@ class SignInController extends Notifier<SignInState> {
     // Firestore listeners if rebuilt.
     final orchestrator = _ref.read(syncOrchestratorProvider);
     if (orchestrator != null) {
-      await orchestrator.pullOnLaunch().timeout(
-        const Duration(seconds: 8),
-        onTimeout: () {},
-      );
+      // Offline-first: the launch pull is best-effort and MUST NOT block
+      // sign-in. A thrown pull error (e.g. a not-yet-deployed Firestore rule
+      // denying a newly added collection) previously propagated out of this
+      // method and surfaced as a SignInError even though Firebase auth had
+      // already succeeded — locking returning users out. Swallow + log; the
+      // local Drift state below drives navigation regardless.
+      try {
+        await orchestrator.pullOnLaunch().timeout(
+          const Duration(seconds: 8),
+          onTimeout: () {},
+        );
+      } catch (e, stackTrace) {
+        AppLogger.instance.warning(
+          event: 'navigate_after_sign_in_pull_failed',
+          exception: e,
+          stackTrace: stackTrace,
+        );
+      }
     }
 
     var profileCount = await _ref
@@ -439,10 +453,18 @@ class SignInController extends Notifier<SignInState> {
       cloudAccountHasProfiles = remoteProfiles.isNotEmpty;
 
       if (cloudAccountHasProfiles && orchestrator != null) {
-        await orchestrator.pullOnLaunch().timeout(
-          const Duration(seconds: 8),
-          onTimeout: () {},
-        );
+        try {
+          await orchestrator.pullOnLaunch().timeout(
+            const Duration(seconds: 8),
+            onTimeout: () {},
+          );
+        } catch (e, stackTrace) {
+          AppLogger.instance.warning(
+            event: 'navigate_after_sign_in_pull_failed',
+            exception: e,
+            stackTrace: stackTrace,
+          );
+        }
         profileCount = await _ref
             .read(userDatabaseProvider)
             .profileDao

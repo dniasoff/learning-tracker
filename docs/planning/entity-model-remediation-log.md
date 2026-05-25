@@ -502,6 +502,18 @@
 - detail: Full plan executed: WS1-9 (4 waves) + P1-P4 gates + V1 CI + V2 review (Sonnet then user-directed Opus re-run) + V3 Opus fix-all (2 design criticals planned+approved, 6 fix agents 2 waves + integration patch) + V4 integrated CI green (5926) + V5 task-truth (2 verifiers, all VERIFIED 0 demotions, residuals cleaned) + V6 smoke GO. make ci green throughout. All audit CRITICAL/HIGH closed. Remaining: minor Rule-1 fast-follow (2 files' journey-path strings) + cosmetic email display-name + architectural online-tutor-surface note. NOT yet committed (awaiting user direction on commit + fast-follow).
 - next: Report GO to user; offer to close the 2 Rule-1 fast-follow l10n gaps; await commit direction.
 
+## [2026-05-25 14:10] REGRESSION+FIX — sign-in lockout from undeployed points-sync rules
+
+- stream: Orchestrator (post-commit field bug from Daniel's device)
+- symptom: Google sign-in → Firebase auth SUCCEEDS (uid UTZNGSUVElWNWbPRHrXJimZo9P23) but SignInController → SignInError; returning user locked out.
+- diagnosis (via Settings→Send Diagnostic Logs, users/{uid}/diagnostic_logs): `[cloud_firestore/permission-denied]` on listeners + pull for channels points_ledger + reward_redemptions → `sync_orchestrator_pull_on_launch_failed` → FirestorePermissionDeniedException(collection: points_ledger, op: read). Root cause = TWO defects from the C#2 points-sync work:
+  1. OPERATIONAL: firestore.rules for points_ledger + reward_redemptions (correct, learning_tracker/firestore.rules:274-286) NOT deployed to live project torah-study-tracker → reads denied. CI didn't catch: tests use fake_cloud_firestore which does not enforce rules.
+  2. CODE/offline-first: sync_orchestrator.pullOnLaunch() runs points_ledger/reward_redemptions as sequential steps; catch at :812 rethrows (:849); _navigateAfterSignIn (sign_in_controller.dart:417,442) awaited pullOnLaunch with only .timeout (no try/catch) → thrown permission-denied propagated into signInWithGoogle catch (:730) → SignInError. Sign-in wrongly depended on a successful cloud pull (violates offline-first: sync is informational).
+- FIX (Defect 2, code, DONE): wrapped both pullOnLaunch() calls in _navigateAfterSignIn in try/catch (AppLogger.warning event:navigate_after_sign_in_pull_failed) so a pull failure is logged and sign-in proceeds on local Drift state. dart analyze clean; sign_in_controller_test.dart all pass. No test coupled pull-failure→SignInError, so no assertions broken.
+- FIX (Defect 1, operational, PENDING USER): deploy rules — `firebase deploy --only firestore:rules` from learning_tracker/ (project torah-study-tracker). Shared-infra action; awaiting user go. Needed so points actually sync + sync status stops going red.
+- memory saved: [[firestore-rules-deploy]] (deploy requirement + fake-Firestore CI gap).
+- next: user deploys rules + retries sign-in to confirm; then commit Defect-2 fix.
+
 ## [2026-05-24 12:00] START — WS3 begins
 
 - stream: WS3
